@@ -1,0 +1,252 @@
+"""Tests for ListingContext-aware claim gating (Phase 1 & 2).
+
+Covers:
+- applies_when mileage/age gating with fail-open on missing data
+- maintenance claim due/not-due/evidence logic
+- maintenance claims served without ClaimSource rows
+"""
+
+import pytest
+from backend.core.context import ListingContext
+from backend.core.matcher import MatchResult
+from backend.core.resolver import resolve_claims, _resolve_maintenance_strength
+from backend.db.models import Claim, ClaimSource, ClaimVariant
+
+
+# ── Fixtures ─────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def k9k_mileage_gated_claim(db, megane4_variants):
+    """A known_issue claim for K9K with applies_when min_mileage_km=80000."""
+    claim = Claim(
+        id="k9k_gated_v1", claim_key="k9k_gated", version=1, is_current=True,
+        title="K9K mileage-gated test claim",
+        domain="emissions", severity="medium", confidence=0.85,
+        rationale="Relevant only above 80k km.",
+        inspection_advice="Check at high mileage.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+        min_mileage_km=80000,
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="A",
+        source_url="https://example.com", quote="City cars over 80k should be checked.",
+    ))
+    db.flush()
+    return claim
+
+
+@pytest.fixture
+def k9k_age_gated_claim(db, megane4_variants):
+    """A known_issue claim for K9K with applies_when min_age_years=5."""
+    claim = Claim(
+        id="k9k_age_gated_v1", claim_key="k9k_age_gated", version=1, is_current=True,
+        title="K9K age-gated test claim",
+        domain="emissions", severity="medium", confidence=0.80,
+        rationale="Relevant only for cars older than 5 years.",
+        inspection_advice="Check on older cars.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+        min_age_years=5,
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="B",
+        source_url="https://example.com", quote="After 5 years this part degrades.",
+    ))
+    db.flush()
+    return claim
+
+
+@pytest.fixture
+def k9k_belt_maintenance_claim(db, megane4_variants):
+    """A maintenance claim for K9K belt with NO ClaimSource rows."""
+    claim = Claim(
+        id="k9k_belt_v1", claim_key="k9k_belt", version=1, is_current=True,
+        title="K9K timing belt maintenance test",
+        domain="engine", severity="high", confidence=0.95,
+        rationale="Belt due at 90k km or 5 years.",
+        inspection_advice="Ask for belt replacement invoice.",
+        status="held", promoted_by="human",
+        kind="maintenance",
+        maintenance_data={
+            "interval_km": 90000,
+            "interval_years": 5,
+            "evidence_keywords": ["triger değiş", "kayış değiş", "timing belt changed"],
+        },
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    # Deliberately NO ClaimSource — maintenance claims are exempt from has_source
+    db.flush()
+    return claim
+
+
+# ── applies_when mileage gating ───────────────────────────────────────────────
+
+def test_mileage_gate_shown(db, k9k_mileage_gated_claim):
+    """Claim is shown when mileage exceeds the minimum threshold."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=190000)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" in ids
+
+
+def test_mileage_gate_hidden(db, k9k_mileage_gated_claim):
+    """Claim is hidden when mileage is below the minimum threshold."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=30000)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" not in ids
+
+
+def test_mileage_gate_failopen_unknown_mileage(db, k9k_mileage_gated_claim):
+    """Claim is shown when mileage is unknown (fail-open — never hide on missing data)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=None)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" in ids
+
+
+def test_mileage_gate_failopen_no_ctx(db, k9k_mileage_gated_claim):
+    """Claim is shown when no ListingContext is provided at all (fail-open)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db, ctx=None)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" in ids
+
+
+def test_age_gate_hidden(db, k9k_age_gated_claim):
+    """Claim is hidden when age_years is below the minimum threshold."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(age_years=3)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_age_gated_v1" not in ids
+
+
+def test_age_gate_shown(db, k9k_age_gated_claim):
+    """Claim is shown when age_years meets or exceeds the minimum threshold."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(age_years=7)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_age_gated_v1" in ids
+
+
+def test_age_gate_failopen_unknown_age(db, k9k_age_gated_claim):
+    """Claim is shown when age is unknown (fail-open)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(age_years=None)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_age_gated_v1" in ids
+
+
+# ── maintenance interval logic ────────────────────────────────────────────────
+
+def test_maintenance_due_no_evidence(db, k9k_belt_maintenance_claim):
+    """Maintenance claim due by km, no evidence in ad → strength='due'."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=100000, description="temiz araba, iyi bakımlı")
+    results = resolve_claims(match, db, ctx)
+    belt = [r for r in results if r.claim.id == "k9k_belt_v1"]
+    assert len(belt) == 1
+    assert belt[0].strength == "due"
+
+
+def test_maintenance_due_with_evidence(db, k9k_belt_maintenance_claim):
+    """Maintenance claim due by km, ad contains evidence keyword → strength='due_stated'."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    # Description contains "triger değiş" — evidence of recent service
+    ctx = ListingContext(mileage_km=100000, description="triger değişti geçen ay, tam bakımlı")
+    results = resolve_claims(match, db, ctx)
+    belt = [r for r in results if r.claim.id == "k9k_belt_v1"]
+    assert len(belt) == 1
+    assert belt[0].strength == "due_stated"
+
+
+def test_maintenance_not_due_hidden(db, k9k_belt_maintenance_claim):
+    """Maintenance claim not due by km or age → hidden (not in results)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=50000, age_years=3)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_belt_v1" not in ids
+
+
+def test_maintenance_due_by_age(db, k9k_belt_maintenance_claim):
+    """Maintenance claim not due by km but due by age → shown as 'due'."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=50000, age_years=6)  # 6yr >= 5yr interval
+    results = resolve_claims(match, db, ctx)
+    belt = [r for r in results if r.claim.id == "k9k_belt_v1"]
+    assert len(belt) == 1
+    assert belt[0].strength == "due"
+
+
+def test_maintenance_failopen_no_ctx(db, k9k_belt_maintenance_claim):
+    """Maintenance claim shown as 'due' when no context is provided (fail-open)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db, ctx=None)
+    belt = [r for r in results if r.claim.id == "k9k_belt_v1"]
+    assert len(belt) == 1
+    assert belt[0].strength == "due"
+
+
+def test_maintenance_failopen_unknown_mileage_and_age(db, k9k_belt_maintenance_claim):
+    """Maintenance claim shown as 'due' when both mileage and age are unknown."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=None, age_years=None)
+    results = resolve_claims(match, db, ctx)
+    belt = [r for r in results if r.claim.id == "k9k_belt_v1"]
+    assert len(belt) == 1
+    assert belt[0].strength == "due"
+
+
+def test_maintenance_no_source_required(db, k9k_belt_maintenance_claim):
+    """Maintenance claims bypass the has_source filter and are served without ClaimSource rows."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=100000)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    # Should be served even though there are no ClaimSource rows
+    assert "k9k_belt_v1" in ids
+
+
+# ── _resolve_maintenance_strength unit tests ─────────────────────────────────
+
+def test_resolve_maintenance_strength_direct():
+    """Unit test _resolve_maintenance_strength directly."""
+    claim = Claim(
+        id="test", claim_key="test", version=1, is_current=True,
+        title="Test", domain="engine", severity="high", confidence=0.9,
+        rationale="Test", inspection_advice="Test",
+        status="held", kind="maintenance",
+        maintenance_data={
+            "interval_km": 90000,
+            "interval_years": 5,
+            "evidence_keywords": ["triger değiş", "timing belt changed"],
+        },
+    )
+
+    # Due by km, no evidence
+    ctx = ListingContext(mileage_km=100000, description="clean car")
+    assert _resolve_maintenance_strength(claim, ctx) == "due"
+
+    # Due by km, evidence present
+    ctx = ListingContext(mileage_km=100000, description="triger değiş yapıldı")
+    assert _resolve_maintenance_strength(claim, ctx) == "due_stated"
+
+    # Not due
+    ctx = ListingContext(mileage_km=50000, age_years=2)
+    assert _resolve_maintenance_strength(claim, ctx) is None
+
+    # Fail-open: no data
+    assert _resolve_maintenance_strength(claim, None) == "due"

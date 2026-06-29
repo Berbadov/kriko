@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-label="LemonAIde">
+  
+  <rect x="8" y="1" width="1" height="1" fill="#4B4738"></rect>
+  
+  <rect x="8" y="2" width="3" height="1" fill="#4F8985"></rect>
+  <rect x="7" y="3" width="5" height="1" fill="#4F8985"></rect>
+  <rect x="6" y="4" width="6" height="1" fill="#4F8985"></rect>
+  <rect x="10" y="3" width="1" height="2" fill="#2F6562"></rect>
+  
+  
+  
+  <rect x="4" y="5" width="8" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="3" y="6" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="4" y="6" width="8" height="1" fill="#F8E97A"></rect>
+  <rect x="5" y="6" width="2" height="1" fill="#FCF3B8"></rect>
+  <rect x="12" y="6" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="2" y="7" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="3" y="7" width="10" height="1" fill="#F8E97A"></rect>
+  <rect x="4" y="7" width="3" height="1" fill="#FCF3B8"></rect>
+  <rect x="13" y="7" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="2" y="8" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="3" y="8" width="10" height="1" fill="#F8E97A"></rect>
+  <rect x="13" y="8" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="1" y="9" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="2" y="9" width="12" height="1" fill="#F8E97A"></rect>
+  <rect x="14" y="9" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="1" y="10" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="2" y="10" width="12" height="1" fill="#F8E97A"></rect>
+  <rect x="14" y="10" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="1" y="11" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="2" y="11" width="12" height="1" fill="#F8E97A"></rect>
+  <rect x="11" y="11" width="2" height="1" fill="#E8D04A"></rect>
+  <rect x="14" y="11" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="2" y="12" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="3" y="12" width="10" height="1" fill="#F8E97A"></rect>
+  <rect x="10" y="12" width="3" height="1" fill="#E8D04A"></rect>
+  <rect x="13" y="12" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="2" y="13" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="3" y="13" width="10" height="1" fill="#F8E97A"></rect>
+  <rect x="9" y="13" width="4" height="1" fill="#E8D04A"></rect>
+  <rect x="13" y="13" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="3" y="14" width="1" height="1" fill="#BFA01A"></rect>
+  <rect x="4" y="14" width="8" height="1" fill="#F8E97A"></rect>
+  <rect x="8" y="14" width="4" height="1" fill="#E8D04A"></rect>
+  <rect x="12" y="14" width="1" height="1" fill="#BFA01A"></rect>
+  
+  <rect x="4" y="15" width="8" height="1" fill="#BFA01A"></rect>
+</svg>

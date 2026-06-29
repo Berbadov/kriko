@@ -1,0 +1,1545 @@
+part_id: k9k
+part_type: engine
+display_name: Renault K9K 1.5 dCi
+manufacturer: renault
+known_also_as:
+- 1.5 dCi
+- K9K 1.5
+production_years: 2001-present
+claims:
+- id: k9k_timing_belt_v1
+  claim_key: k9k_timing_belt
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi — timing belt due at 90,000 km or 5 years
+  kind: maintenance
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: human
+  rationale: 'The K9K 1.5 dCi uses a rubber timing belt with a Renault-specified replacement
+    interval of 90,000 km or 5 years. A snapped belt causes catastrophic valve/piston
+    contact (interference engine). The belt also drives the high-pressure fuel pump
+    on the injection rail — misalignment here is a known failure path.
+
+    '
+  inspection_advice: 'Ask for the belt replacement invoice. If none, budget for immediate
+    replacement (belt, tensioner, water pump together — ~€300–500 in labour + parts).
+
+    '
+  applies_when:
+    min_mileage_km: 80000
+  maintenance:
+    interval_km: 90000
+    interval_years: 5
+    evidence_keywords:
+    - triger değiş
+    - kayış değiş
+    - timing belt changed
+    - cam belt changed
+    - kayış yenilendi
+    - triger yenilendi
+  value_tier: core
+  sources:
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: 'The source text explicitly states the K9K 1.5 dCi timing belt failure
+      due to misalignment with the fuel pump pulley, causing catastrophic engine damage
+      if it snaps.
+
+      '
+    independent: true
+- id: k9k_injector_failure_v1
+  claim_key: k9k_injector_failure
+  version: 1
+  is_current: true
+  title: Injector failure
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Poor fuel quality and water ingress cause injector failure, leading to
+    rough idle, jerking under acceleration, hard cold starts, and exhaust smoke. Commonly
+    seen between 120,000–180,000 km, especially in city-driven vehicles.
+  inspection_advice: Check for rough running, cold-start difficulties, or black exhaust
+    smoke. Verify fuel filter condition (replace every 15,000–20,000 km if fuel quality
+    is poor). Inspect injectors for leaks or uneven spray patterns.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"The K9K engine has had sensitive injectors throughout its generations.
+      On the Megane 4, Continental injectors are more reliable than the older Delphi
+      variants, but they still suffer from poor fuel quality and water in the system.
+      The problem typically appears between 120,000 and 180,000 km, and even earlier
+      on cars that have mostly done city driving."'
+    independent: true
+- id: k9k_dpf_clogging_v1
+  claim_key: k9k_dpf_clogging
+  version: 1
+  is_current: true
+  title: DPF clogging and regeneration failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.9
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Short city trips prevent the DPF from reaching regeneration temperatures,
+    leading to clogging, loss of power, increased fuel consumption, and potential
+    engine damage if unaddressed. Common in fleet cars with low mileage (80,000–100,000
+    km).
+  inspection_advice: Check for DPF warning lights, reduced power, or burning smells.
+    Verify DPF health via diagnostic scan. Ensure the car has regular high-speed drives
+    (20–30 mins at 2,500–3,000 rpm) to trigger passive regeneration.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"The Megane 4 with the K9K engine is Euro 6 from the start, meaning a
+      stricter DPF system than the Megane 3. Short city trips are the killer for this
+      filter because the engine never reaches the temperature needed for active regeneration.
+      On examples that served as urban delivery fleet cars, the DPF can be critical
+      as early as 80,000-100,000 km."'
+    independent: true
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: The source text explicitly mentions DPF clogging due to short city trips,
+      regeneration failure, loss of power, increased fuel consumption, and limp mode
+      activation in the 1.5 dCi Euro 5 variant (K9K 110hp)
+    independent: true
+- id: k9k_egr_clogging_v1
+  claim_key: k9k_egr_clogging
+  version: 1
+  is_current: true
+  title: EGR valve clogging
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Soot buildup clogs the EGR valve, causing check engine lights, power
+    loss, black smoke, and unstable idle. Worse in city-driven cars with infrequent
+    cleaning.
+  inspection_advice: Look for check engine lights, black exhaust smoke, or rough idle.
+    Inspect EGR valve for soot buildup during diagnostics. Clean or replace if clogged
+    above 70%.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"The EGR valve on the K9K engine is a well-known weak point across all
+      generations. The Megane 4 uses an electric EGR that''s somewhat more reliable
+      than the pneumatic one on earlier K9K versions, but it still clogs up with soot,
+      especially during city driving with frequent stops. The issue is worse on cars
+      that haven''t had regular cleaning."'
+    independent: true
+- id: k9k_adblue_system_v1
+  claim_key: k9k_adblue_system
+  version: 1
+  is_current: true
+  title: AdBlue system component failures (K9K 872)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: AdBlue system (level sensor, pump, tank heater) can fail, requiring regular
+    top-ups and adherence to service schedules to avoid malfunctions.
+  inspection_advice: Verify AdBlue tank level and check for warning lights. Test pump
+    functionality and inspect for leaks or corrosion in the system. Ensure the tank
+    heater operates correctly in cold conditions.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"Mechanically it''s the most reliable version, but it introduces the AdBlue
+      system with its own potential issues: the level sensor, pump and tank heater."'
+    independent: true
+- id: k9k_oil_starvation_v1
+  claim_key: k9k_oil_starvation
+  version: 1
+  is_current: true
+  title: Compromised lubrication (oil starvation)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Abnormal oil consumption can leave critical components (main bearings,
+    turbine) under-lubricated, accelerating wear and risking seizure or catastrophic
+    failure.
+  inspection_advice: Monitor oil level and quality regularly. Use specified oil (Renault
+    RN17/RN0710) and check for leaks. Inspect bearings and turbine for wear during
+    maintenance.
+  sources:
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly mentions '1.5 dCi (K9K) Turbocharger Failure from
+      Oil Starvation' as a documented issue in the Renault Megane, directly supporting
+      the claim of compromised lubrication due to abnormal oil consumption.
+    independent: true
+- id: k9k_timing_belt_failure_v1
+  claim_key: k9k_timing_belt_failure
+  version: 1
+  is_current: true
+  title: Timing belt and hydraulic lifter failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.67
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: A snapped timing belt can cause bent valves, leading to a full cylinder
+    head rebuild. Symptoms include rattling from the front of the engine on startup,
+    uneven idle, or complete engine stop.
+  inspection_advice: Verify timing belt condition and alignment of the high-pressure
+    pump. Replace the timing belt, tensioners, and water pump no later than 100,000
+    km (Renault specifies 120,000 km or 6 years).
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"Timing belt and hydraulic lifter failure ... The K9K has a timing belt
+      (NOT a chain). Renault specifies replacement at 120,000 km or 6 years, but on
+      this engine the belt can snap earlier if it is not properly tensioned or if
+      the high-pressure pump is not properly aligned. A snapped belt means bent valves,
+      and that is a full cylinder head rebuild."'
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly describes the K9K 1.5 dCi timing belt failure as
+      causing 'interference engine' damage (bent valves/pistons) due to a misaligned
+      pulley shredding the belt, matching the claim's core failure mode.
+    independent: true
+- id: k9k_dpf_clogged_v1
+  claim_key: k9k_dpf_clogged
+  version: 1
+  is_current: true
+  title: Clogged DPF filter
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: A clogged DPF filter restricts exhaust flow, causing loss of power, forced
+    limp mode, and increased fuel consumption. Short city trips prevent proper regeneration,
+    leading to ash buildup.
+  inspection_advice: Check for DPF warning lights and perform a diagnostic test for
+    codes. For city-driven cars, force DPF regeneration every 30-40,000 km. If the
+    DPF is over 80% saturated, clean it professionally rather than disabling it.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"Clogged DPF filter ... The Megane 3 1.5 dCi with Euro 5 has a DPF that
+      often clogs up in BiH because of short city trips. Regeneration does not finish,
+      ash builds up, and after a few interrupted cycles the filter goes into limp
+      mode."'
+    independent: true
+- id: k9k_oil_pump_failure_v1
+  claim_key: k9k_oil_pump_failure
+  version: 1
+  is_current: true
+  title: Oil pump failure (90hp version)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: The oil pump is a known weak point in the 90hp K9K engine variant, potentially
+    leading to engine failure if it fails.
+  inspection_advice: Check the oil pump condition during service intervals. Replace
+    if worn or if oil pressure is inconsistent.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: The source explicitly states that the oil pump is the 'weak link' specifically
+      on the 90hp version of the K9K engine.
+    independent: true
+- id: k9k_crankshaft_seizure_v1
+  claim_key: k9k_crankshaft_seizure
+  version: 1
+  is_current: true
+  title: Crankshaft seizure due to improper oil change intervals
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Following the factory 'longlife' 30,000 km oil interval can lead to crankshaft
+    seizure, causing catastrophic engine failure.
+  inspection_advice: Verify oil change history. Ensure oil changes are done more frequently
+    than the manufacturer's 'longlife' interval, ideally every 10,000–15,000 km or
+    as recommended by a trusted mechanic.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: 'The source explicitly states that ''Cars that ran on the factory '
+    independent: true
+- id: k9k_agm_battery_failure_v1
+  claim_key: k9k_agm_battery_failure
+  version: 1
+  is_current: true
+  title: AGM battery failure (110hp Energy dCi)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: The stop/start system in the 110hp variant requires an AGM battery, which
+    can be expensive to replace when it fails.
+  inspection_advice: Check battery health, especially in cars with stop/start systems.
+    Ensure the battery is compatible with AGM specifications and replace if degraded.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: The source text explicitly mentions the 110hp Energy dCi variant's stop/start
+      system requiring an AGM battery, stating it is 'not cheap when replacement time
+      comes'.
+    independent: true
+- id: k9k_turbo_failure_v1
+  claim_key: k9k_turbo_failure
+  version: 1
+  is_current: true
+  title: Turbocharger failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A failing turbo reduces boost pressure, causing power loss, stalling,
+    or fuel cutoff under load due to insufficient airflow/fuel delivery.
+  inspection_advice: Listen for unusual turbo noise (whine, rattle). Check for oil
+    leaks around the turbo housing. Verify boost pressure with a gauge.
+  sources:
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly mentions '1.5 dCi (K9K) Turbocharger Failure from
+      Oil Starvation' as a documented issue in the Renault Megane, describing how
+      oil starvation causes turbo failure, leading to power loss and performance issues.
+    independent: true
+  - tier: C
+    source_url: https://what-breaks.com/renault/megane-2
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: The source explicitly mentions turbocharger failure in the F9Q (1.9 dCi)
+      engine, citing shaft play, oil supply issues, and heat damage causing power
+      loss and limp mode around 120,000–160,000 km
+    independent: true
+- claim_key: k9k_fuel system_premature_injector_t
+  title: Premature injector tip wear
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Injector tips wear out quickly, causing loss of precision in diesel spray,
+    leading to poor combustion and potential engine damage.
+  inspection_advice: Check for knocking (metallic clicking) at idle/acceleration,
+    black smoke from exhaust, and diesel smell in the cabin. Verify oil level for
+    unexplained rises (indicating diesel seepage).
+  sources:
+  - tier: A
+    source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/motore-1-5-dci-problemi-comuni-soluzioni
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: Premature wear of the injector tips, which cause a loss of precision in
+      the diesel spray.
+    independent: true
+- claim_key: k9k_fuel system_defective_copper_gas
+  title: Defective copper gaskets causing blow-by
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Worn copper washers allow diesel fuel and carbon residues to leak into
+    the engine oil, contaminating it and risking damage to the turbine and other components.
+  inspection_advice: Check for diesel smell in the cabin or under the hood, and verify
+    if copper gaskets have been replaced. Inspect oil for contamination.
+  sources:
+  - tier: A
+    source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/motore-1-5-dci-problemi-comuni-soluzioni
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: Defective or worn copper washers → cause ‘blow-by’, i.e. the passage of
+      diesel fuel and carbon residues into the engine oil.
+    independent: true
+- claim_key: k9k_engine_clogged_oil_ducts_af
+  title: Clogged oil ducts affecting turbocharger
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Carbon residues block oil flow to the turbine, causing overheating and
+    failure. Even minor residues can damage a new turbine.
+  inspection_advice: Check oil circuit (delivery/return pipes, sump) for clogs, and
+    ensure oil filter and fuel pipe replacements are done during turbine work.
+  sources:
+  - tier: A
+    source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/motore-1-5-dci-problemi-comuni-soluzioni
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: Clogged oil ducts → carbon residues prevent the correct flow of oil to
+      the turbine.
+    independent: true
+- claim_key: k9k_electrical_faulty_turbo_pressur
+  title: Faulty turbo pressure sensor
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A defective sensor sends incorrect turbo pressure readings, triggering
+    warning lights and power drops.
+  inspection_advice: Check for error codes related to turbo pressure or air/fuel management,
+    and verify sensor functionality during diagnostics.
+  sources: []
+- claim_key: k9k_engine_premature_main_beari
+  title: Premature main bearing wear
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Main bearings wear out early, risking crankshaft misalignment and potential
+    engine seizure, especially in Euro 4/Euro 5 1.5 dCi variants.
+  inspection_advice: Listen for increasing metallic/dull knocking noise, monitor oil
+    pressure (check for drops), and watch for irregular engine vibrations or stalling.
+  sources:
+  - tier: A
+    source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/motore-1-5-dci-problemi-comuni-soluzioni
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: Premature wear of the main bearings... if they fail, the risk of complete
+      seizure is extremely high.
+    independent: true
+- claim_key: k9k_engine_oil_degradation_and_
+  title: Oil degradation and contamination
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Poor-quality oil or extended service intervals lead to carbon buildup
+    in oil passages, reducing lubrication and accelerating bearing/turbine wear.
+  inspection_advice: Check oil quality, service history (intervals), and inspect for
+    sludge or contamination. Verify if RN0720-compliant oil was used.
+  sources: []
+- claim_key: k9k_engine_p0234_turbo_overboos
+  title: P0234 Turbo Overboost Error (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The turbocharger is experiencing excessive boost pressure, which can
+    lead to mechanical failure if unaddressed. The MAP sensor may be faulty, or the
+    turbo's wastegate may be malfunctioning, causing unsafe pressure buildup.
+  inspection_advice: Check turbo boost pressure with a gauge (should not exceed manufacturer
+    specs). Inspect wastegate functionality, MAP sensor readings, and N72 valve operation.
+    Look for signs of turbo wear or oil leaks.
+  sources: []
+- claim_key: k9k_engine_intermittent_n72_was
+  title: Intermittent N72 Wastegate Control Valve Failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The N72 wastegate control valve may be stuck or failing intermittently,
+    causing inconsistent turbo boost pressure and triggering the P0234 error. This
+    can lead to turbo stress and potential failure.
+  inspection_advice: Test the N72 valve for proper operation (should open/close smoothly).
+    Replace if stuck or leaking. Check for vacuum leaks in the wastegate system.
+  sources: []
+- claim_key: k9k_engine_map_sensor_intermitt
+  title: MAP Sensor Intermittent Failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Manifold Absolute Pressure (MAP) sensor may be giving inconsistent
+    readings, leading to incorrect boost pressure calculations and triggering error
+    codes like P0234.
+  inspection_advice: Scan for intermittent MAP sensor readings. Test sensor output
+    with a multimeter or diagnostic tool. Replace if readings fluctuate or are inaccurate.
+  sources: []
+- claim_key: k9k_engine_exhaust_gas_recircul
+  title: Exhaust Gas Recirculation (EGR) Valve Malfunction
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR valve may be sticking or failing, causing intermittent misfires
+    or boost-related issues. This can trigger error codes and reduce engine efficiency.
+  inspection_advice: Test EGR valve operation (should open/close smoothly). Clean
+    or replace if stuck. Check for carbon buildup in the valve or passages.
+  sources: []
+- claim_key: k9k_fuel system_fuel_system_failure_
+  title: Fuel System Failure (Injectors)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty injectors prevent proper fuel delivery to the engine, causing
+    delayed startup, especially noticeable in cold conditions.
+  inspection_advice: Check for clogged or malfunctioning injectors; verify fuel pressure
+    and spray pattern during inspection.
+  sources: []
+- claim_key: k9k_fuel system_fuel_filter_clogging
+  title: Fuel Filter Clogging
+  kind: known_issue
+  domain: fuel system
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A clogged fuel filter restricts fuel flow, causing delayed engine startup,
+    particularly in cold conditions.
+  inspection_advice: Inspect fuel filter for blockages; replace if resistance is detected
+    during fuel flow testing.
+  sources: []
+- claim_key: k9k_electrical_airflow_sensor_malfu
+  title: Airflow Sensor Malfunction
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A faulty airflow sensor disrupts the air-fuel mixture calculation, leading
+    to poor engine performance and delayed startup.
+  inspection_advice: Test airflow sensor readings; clean or replace if readings are
+    inconsistent or erratic.
+  sources: []
+- claim_key: k9k_engine_compression_loss
+  title: Compression Loss
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Reduced cylinder compression weakens engine power and can cause delayed
+    startup or failure to start, indicating potential internal engine damage.
+  inspection_advice: Perform a compression test on all cylinders; compare results
+    and investigate for leaks or worn components if compression is low.
+  sources: []
+- claim_key: k9k_electrical_starter_motor_failur
+  title: Starter Motor Failure
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A weak or faulty starter motor fails to crank the engine, resulting in
+    delayed or impossible startup.
+  inspection_advice: Test starter motor voltage drop during cranking; listen for grinding
+    noises and check for physical damage or wear.
+  sources: []
+- claim_key: k9k_electrical_battery_weakness
+  title: Battery Weakness
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A weak battery fails to provide sufficient power to the starter motor,
+    causing delayed engine cranking and startup issues.
+  inspection_advice: Test battery voltage under load; check for corrosion on terminals
+    and ensure proper charging system function.
+  sources: []
+- claim_key: k9k_fuel system_turbocharger_hose_le
+  title: Turbocharger hose leak
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A leak in the turbocharger hose causes a loss of boost pressure, leading
+    to power loss and potential turbo failure if ignored.
+  inspection_advice: Check turbocharger hoses for holes, cracks, or looseness during
+    inspection.
+  sources: []
+- claim_key: k9k_fuel system_intercooler_damage
+  title: Intercooler damage
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Damage to the intercooler disrupts airflow and cooling, leading to reduced
+    engine efficiency and potential turbo failure.
+  inspection_advice: Inspect the intercooler for physical damage, leaks, or blockages.
+  sources: []
+- claim_key: k9k_engine_intake_manifold_gask
+  title: Intake manifold gasket failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A failing intake manifold gasket can cause air leaks, leading to misfires,
+    power loss, and potential turbo failure.
+  inspection_advice: Check the intake manifold gasket for cracks, leaks, or oil contamination.
+  sources: []
+- claim_key: k9k_engine_boost_pressure_loss_
+  title: Boost pressure loss (P2263/DTC 2263)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Loss of boost pressure (indicated by DTC 2263/P2263) can severely degrade
+    engine performance and efficiency, risking turbo damage if unresolved.
+  inspection_advice: Scan for DTC 2263/P2263 and verify boost pressure readings with
+    a scan tool.
+  sources: []
+- claim_key: k9k_engine_cold-start_failure_w
+  title: Cold-start failure with spluttering and cutout
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine fails to start reliably after prolonged periods of inactivity,
+    spluttering and cutting out before restarting. This suggests potential issues
+    with fuel delivery, compression, or cold-start components like glow plugs.
+  inspection_advice: Check for proper glow plug functionality using a diagnostic tool
+    (CLIP). Inspect for oil leaks or low oil levels, and verify fuel system health
+    (injectors, fuel pump). Listen for unusual noises during startup and check for
+    blue smoke (indicative of oil burning).
+  sources: []
+- claim_key: k9k_engine_inadequate_oil_chang
+  title: Inadequate oil change interval (risk to turbocharger)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: 'The owner mentions halving the oil change interval from 18,000 to 9,000
+    miles for dCi engines to protect the turbocharger. While this is advice rather
+    than a confirmed issue, it highlights a known risk: insufficient oil changes can
+    lead to turbo failure or carbon buildup, exacerbating starting problems.'
+  inspection_advice: Follow the recommended oil change interval (9,000 miles for dCi
+    engines) and use high-quality synthetic oil. Monitor turbocharger performance
+    for unusual noises or excessive oil consumption.
+  sources: []
+- claim_key: k9k_electrical_starter_position_dif
+  title: Starter Position Difference Between K9K 728 and 729
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The starter motor placement differs between the K9K 728 and 729 engine
+    variants, which could affect installation compatibility and electrical wiring
+    routing.
+  inspection_advice: Verify the starter motor position and ensure the wiring harness
+    and mounting points align with the vehicle’s electrical system. Check for any
+    potential interference with surrounding components.
+  sources: []
+- claim_key: k9k_fuel system_injector_evolution_c
+  title: Injector Evolution Compatibility Risk
+  kind: known_issue
+  domain: fuel system
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EJBR01801A injectors, while usable in both 728 and 729 engines, are
+    an evolution from the older 4001D version. This suggests potential differences
+    in performance or compatibility that may arise in future use.
+  inspection_advice: Confirm the injector part number (EJBR01801A) and verify its
+    compatibility with the ECU using the correct 16-digit hex code. Check for any
+    error codes related to injector performance or fuel delivery.
+  sources: []
+- claim_key: k9k_emissions_exhaust_gas_recircul
+  title: Exhaust Gas Recirculation (EGR) system failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fault codes P0409 (EGR sensor circuit) and P0487 (EGR throttle position
+    control circuit) indicate a malfunction in the EGR system, which can lead to excessive
+    soot production, poor engine performance, and potential damage to the catalytic
+    converter or turbo if left unaddressed.
+  inspection_advice: Check for proper EGR valve operation (should be fully closed
+    at idle and full throttle). Inspect EGR sensor wiring and connections for damage
+    or corrosion. Verify EGR passage for blockages or carbon buildup. Test EGR valve
+    functionality with a multimeter or scan tool.
+  sources: []
+- claim_key: k9k_electrical_glow_plug_control_mo
+  title: Glow plug control module failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fault code P0670 indicates an open circuit in the glow plug control module,
+    which can impair cold-start performance and potentially lead to incomplete combustion
+    or rough running if unresolved.
+  inspection_advice: Test glow plug control module wiring and connections for continuity
+    and damage. Inspect for blown fuses or relay issues. Verify glow plug resistance
+    with a multimeter. Check for software updates or ECU calibration issues if hardware
+    tests pass.
+  sources: []
+- claim_key: k9k_emissions|engine_excessive_soot/smoke
+  title: Excessive soot/smoke emission
+  kind: known_issue
+  domain: emissions|engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Black soot/smoke from the exhaust suggests rich fuel mixtures, incomplete
+    combustion, or EGR system issues, which can damage the catalytic converter, turbocharger,
+    and exhaust system if prolonged.
+  inspection_advice: Inspect exhaust for soot buildup or damage. Check for fuel injector
+    leaks or clogged injectors. Verify air filter condition and intake system for
+    leaks. Test for proper fuel pressure and quality. Inspect turbocharger for excessive
+    soot or damage.
+  sources: []
+- claim_key: k9k_fuel system|engine_potential_injector_f
+  title: Potential injector fault leading to piston failure
+  kind: known_issue
+  domain: fuel system|engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mention of injector faults potentially causing piston failure indicates
+    a serious risk of catastrophic engine damage if fuel delivery is inconsistent
+    or clogged, leading to incomplete combustion and overheating.
+  inspection_advice: Inspect fuel injectors for clogging, leaks, or excessive carbon
+    buildup. Test injector resistance and spray pattern. Check for proper fuel pressure
+    and fuel filter condition. Monitor for unusual noises or knocking during operation.
+  sources: []
+- claim_key: k9k_transmission_potential_dual_mass_
+  title: Potential Dual Mass Flywheel (DMF) failure risk
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Dual Mass Flywheels (DMF) in high-mileage diesel vehicles are prone to
+    wear and eventual failure, which can cause transmission-related issues or complete
+    clutch failure.
+  inspection_advice: Check for unusual vibrations during acceleration, a grinding
+    noise when shifting gears, or a slipping clutch. Inspect the DMF for excessive
+    play or damage when the car is lifted and the engine is running.
+  sources: []
+- claim_key: k9k_emissions_diesel_particulate_f
+  title: Diesel Particulate Filter (DPF) failure risk
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPFs in high-mileage diesel vehicles can clog or fail, leading to reduced
+    performance, increased fuel consumption, or even engine shutdowns. Fleet cars
+    are particularly prone to DPF issues due to stop-start driving patterns.
+  inspection_advice: Check for error codes related to the DPF (e.g., P0420, P0430,
+    P242A). Inspect for black smoke from the exhaust or a sulfur-like smell. Verify
+    if the DPF has been regenerated recently or if it shows signs of clogging (e.g.,
+    reduced power, increased exhaust backpressure).
+  sources: []
+- claim_key: k9k_engine_timing_chain_stretch
+  title: Timing chain stretch or failure risk
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Timing chains in high-mileage diesel engines can stretch or break, leading
+    to catastrophic engine damage if the valves meet the pistons. Fleet cars with
+    high mileage are at increased risk.
+  inspection_advice: Listen for rattling noises from the timing chain area when the
+    engine is cold or idling. Check for oil leaks around the timing chain cover. Verify
+    if the timing chain has been serviced recently and if there are any signs of excessive
+    wear or stretch.
+  sources: []
+- claim_key: k9k_transmission_potential_transmissi
+  title: Potential Transmission Gear Ratio Adjustments in Nissan Note 1.5 dCi
+  kind: known_issue
+  domain: transmission
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mention of 'Pure Drive' and 'vites oranlarını uzatmışlar' (extended
+    gear ratios) suggests a modification to the transmission settings, which could
+    impact drivability and fuel efficiency but is not inherently a failure.
+  inspection_advice: Check if the vehicle exhibits unusual gear shift behavior or
+    if fuel economy differs significantly from expected values for this model.
+  sources: []
+- claim_key: k9k_engine_renault_1.6_dci_engi
+  title: Renault 1.6 dCi Engine Availability and Performance Concerns
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The user expresses skepticism about the availability and performance
+    of the 1.6 dCi 160 PS variant, suggesting potential reliability or production
+    issues with this specific engine model.
+  inspection_advice: Verify the exact engine variant and its specifications. Check
+    for common issues like turbocharger failures, fuel system problems, or emissions-related
+    faults in this engine model.
+  sources: []
+- claim_key: k9k_general_renault-sourced_dies
+  title: Renault-Sourced Diesel Parts for Nissan Micra
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The claim that Nissan Micra diesel parts are sourced from Renault raises
+    concerns about potential compatibility issues, quality control, and reliability
+    of aftermarket or shared components.
+  inspection_advice: Check for any service records indicating parts sourced from Renault.
+    Look for signs of inconsistent quality or frequent failures in diesel-related
+    components.
+  sources: []
+- claim_key: k9k_engine_engine_sump_cracking
+  title: Engine sump cracking (oil leak)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine sump may crack and leak all oil, leading to catastrophic engine
+    failure if undetected. This is a known issue for 2.0-litre diesel engines built
+    between 13 October 2014 and 26 September 2015.
+  inspection_advice: Check for oil leaks around the engine sump, especially in models
+    built between 13 October 2014 and 26 September 2015. Verify if the vehicle has
+    undergone the required software update to monitor overheating.
+  sources: []
+- claim_key: k9k_transmission_clutch_pressure_plat
+  title: Clutch pressure plate fracture
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The clutch pressure plate can fracture, causing sudden clutch failure.
+    Early signs include a burning smell and a loud thud when the plate breaks.
+  inspection_advice: Listen for unusual noises (e.g., thuds) when engaging the clutch.
+    Check for signs of burning (smell or discoloration) around the clutch area. Verify
+    if the vehicle was built between 1 August 2013 and 28 May 2018 and if a software
+    update or modified clutch kit has been applied.
+  sources: []
+- claim_key: k9k_engine_cylinder_head_cracki
+  title: Cylinder head cracking (fire risk)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The cylinder head may crack due to overheating, potentially leading to
+    engine fire in extreme cases. This is a recall-affected issue for early 1.6-litre
+    engines.
+  inspection_advice: Check if the vehicle was built before 20 December 2014. Verify
+    if the cooling system and cylinder head have been inspected, and if a coolant
+    level sensor and warning system have been installed.
+  sources: []
+- claim_key: k9k_electrical_side/knee_airbag_non
+  title: Side/knee airbag non-deployment
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Defective airbag ignitors may prevent side or knee airbags from deploying
+    in a collision, compromising passenger safety.
+  inspection_advice: Check if the vehicle was built between 28 July 2016 and 27 December
+    2016. Verify if the airbag system has been inspected and replaced if necessary.
+  sources: []
+- claim_key: k9k_general_b_pillar_trim_insula
+  title: B pillar trim insulation fire hazard
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Insulation near the seat belt pretensioner may catch fire if the pretensioner
+    activates during a collision, posing a risk to occupants.
+  inspection_advice: Check if the vehicle was built up to 19 June 2014. Verify if
+    the problematic insulation has been removed or addressed by a dealer.
+  sources: []
+- claim_key: k9k_transmission_automatic_transmissi
+  title: Automatic transmission neglect risk
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Neglected servicing of automatic transmissions may lead to costly gearbox
+    replacement. Regular servicing is critical to prevent failure.
+  inspection_advice: Review service records to ensure the automatic transmission has
+    been serviced according to Ford’s manufacturer recommendations. Look for signs
+    of fluid leaks or unusual noises during gear shifts.
+  sources: []
+- claim_key: k9k_electrical_non-engine_electrica
+  title: Non-engine electrical faults (radio, air-con, sat-nav)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report issues with non-engine electrical systems, including radio
+    signal loss, limp-home mode activation, and failures in air-conditioning and sat-nav
+    systems.
+  inspection_advice: Test the radio, air-conditioning, and sat-nav functionality during
+    the viewing. Check for error codes or limp-home mode triggers. Inspect wiring
+    and connections for damage or corrosion.
+  sources: []
+- claim_key: k9k_engine_wet_belt_(timing_bel
+  title: Wet belt (timing belt) failure risk in 1.0L EcoBoost (pre-2019)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The wet belt in the 1.0L EcoBoost engine (pre-2019) can disintegrate
+    or weaken prematurely if not properly maintained, leading to catastrophic engine
+    failure.
+  inspection_advice: Verify full service history with a fully stamped book. Check
+    for signs of belt wear or oil contamination in the timing belt area. Confirm if
+    the vehicle has the updated chain-driven system (post-mid-2019).
+  sources: []
+- claim_key: k9k_general_rear_door_latch_chil
+  title: Rear door latch child lock malfunction
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Child locks may fail to activate properly, posing a safety risk for children
+    in the rear seats.
+  inspection_advice: Test the rear door child locks during the viewing to ensure they
+    engage and release correctly.
+  sources: []
+- claim_key: k9k_brakes_brake_pedal_hinge_bo
+  title: Brake pedal hinge bolt not torqued to specification
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Incorrect torque on the brake pedal hinge bolt can compromise pedal stability
+    and braking performance.
+  inspection_advice: Check for uneven pedal movement or unusual noises when pressing
+    the brake pedal. Verify if the bolt has been properly tightened during maintenance.
+  sources: []
+- claim_key: k9k_general_rear_doors_opening_w
+  title: Rear doors opening when rear windows are lowered
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Misalignment or failure of the door release cable can cause unintended
+    door opening while driving, posing a safety risk.
+  inspection_advice: Test the rear doors and windows to ensure they operate independently
+    and securely.
+  sources: []
+- claim_key: k9k_safety_seat_belt_anchors_an
+  title: Seat belt anchors and seat bolts not secured
+  kind: known_issue
+  domain: safety
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Improperly secured seat belt anchors or seat bolts can compromise passenger
+    safety in a collision.
+  inspection_advice: Check that all seat belt anchors and seat bolts are properly
+    tightened and aligned. Test seat belt retraction and tension.
+  sources: []
+- claim_key: k9k_electrical_power_distribution_b
+  title: Power Distribution Box (PDB) intermittent poor connection
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Defective PDB pins can cause intermittent electrical failures, leading
+    to malfunctions in various systems.
+  inspection_advice: Look for signs of electrical gremlins (e.g., dashboard warning
+    lights flickering, power loss). Check for damaged wiring or loose connections
+    in the PDB area.
+  sources: []
+- claim_key: k9k_electrical_engine_wiring_loom_t
+  title: Engine wiring loom touching transmission housing
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Contact between the wiring loom and transmission housing can cause short
+    circuits or damage to wiring, leading to electrical malfunctions.
+  inspection_advice: Inspect the wiring loom near the transmission for signs of damage
+    or improper routing. Check for electrical gremlins or warning lights.
+  sources: []
+- claim_key: k9k_electrical_mild-hybrid_battery_
+  title: Mild-hybrid battery connection nut not torqued to specification
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Incorrect torque on the battery connection nut can lead to loose connections,
+    potential electrical fires, or failure of the hybrid system.
+  inspection_advice: Verify the battery connection nut is properly torqued. Check
+    for signs of overheating or damaged wiring near the battery.
+  sources: []
+- claim_key: k9k_electrical_gearbox_stud_damage_
+  title: Gearbox stud damage to wiring loom
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Damaged gearbox studs can cause wiring loom damage, leading to electrical
+    failures or short circuits.
+  inspection_advice: Inspect the gearbox area for proper stud replacement and wiring
+    loom integrity. Check for electrical gremlins or warning lights.
+  sources: []
+- claim_key: k9k_transmission_clutch_plate_defect_
+  title: Clutch plate defect (recall-related fire risk)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A recall-affected defect in the clutch plate can cause reduced performance
+    and, in extreme cases, engine bay fires if the part fails and strikes components.
+  inspection_advice: Check if the vehicle is part of the 66,497-unit recall for clutch
+    plate defects via a Ford dealer. Inspect clutch operation for unusual noises or
+    slippage.
+  sources: []
+- claim_key: k9k_transmission_hesitant_automatic_g
+  title: Hesitant automatic gearbox issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report hesitant or unreliable performance in automatic transmissions,
+    which may indicate internal wear or control module faults.
+  inspection_advice: Test drive the vehicle for delayed shifts, jerking, or hesitation
+    during acceleration. Check for transmission fluid leaks or unusual noises.
+  sources: []
+- claim_key: k9k_electrical_infotainment_system_
+  title: Infotainment system electrical glitches
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Common electrical issues include infotainment system malfunctions, such
+    as freezing, unresponsiveness, or software errors.
+  inspection_advice: Test all infotainment functions (navigation, media playback,
+    Bluetooth) during the drive. Look for error codes on the dashboard.
+  sources: []
+- claim_key: k9k_general_alloy_wheel_kerb_dam
+  title: Alloy wheel kerb damage vulnerability
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: ST-Line X and Vignale models with 18-inch alloy wheels have thinner sidewalls,
+    increasing risk of damage from curb impacts.
+  inspection_advice: Inspect wheels for dents, cracks, or uneven wear. Check tire
+    sidewalls for bulges or punctures.
+  sources: []
+- claim_key: k9k_engine_head_gasket_leaks_an
+  title: Head gasket leaks and engine failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early 1.0-litre three-cylinder EcoBoost engines (introduced in 2012)
+    were prone to head gasket failures, which could lead to complete engine failure.
+    This was a design flaw that was later addressed by Ford.
+  inspection_advice: Check for signs of coolant leaks around the engine bay, particularly
+    near the cylinder head. Look for white smoke from the exhaust, overheating issues,
+    or a sweet smell of coolant inside the cabin. Verify service history for any head
+    gasket replacement or recall work.
+  sources: []
+- claim_key: k9k_engine_nylon_cooling_pipe_o
+  title: Nylon cooling pipe overheating risk
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A recall in 2018 addressed a potential overheating issue in the cooling
+    system due to a nylon pipe, which could pose a fire or coolant leak risk if unaddressed.
+  inspection_advice: Inspect the cooling system for any visible damage or wear on
+    the pipes. Check for signs of overheating (e.g., temperature gauge fluctuations,
+    coolant leaks) and confirm whether the vehicle was part of the 2018 recall for
+    this issue.
+  sources: []
+- claim_key: k9k_engine_cylinder_head_fault_
+  title: Cylinder head fault (non-EcoBoost-specific)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A recall in 2018 also addressed a cylinder head fault in 1.6-litre EcoBoost
+    engines, though the exact cause was not directly tied to EcoBoost technology.
+    This could lead to performance issues or engine damage if ignored.
+  inspection_advice: Monitor for unusual engine noises, power loss, or misfires. Check
+    service records for any cylinder head repairs or recall-related work on a 1.6-litre
+    EcoBoost engine.
+  sources: []
+- claim_key: k9k_engine_wet_belt_system_fail
+  title: Wet belt system failure (oil pump belt)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A 2024 North American recall highlighted a critical failure in the 'wet
+    belt' system (oil pump belt) in 1.0-litre EcoBoost engines paired with automatic
+    transmissions. This could lead to catastrophic engine damage if the belt fails.
+  inspection_advice: Verify if the vehicle is a 1.0-litre EcoBoost with an automatic
+    transmission (common in Focus, EcoSport, and Fiesta). Check for any belt-related
+    noises (e.g., squealing, rattling) or oil leaks near the timing belt area. Confirm
+    whether the vehicle was part of the 2024 recall or if Ford has issued a UK-specific
+    recall for this issue.
+  sources: []
+- claim_key: k9k_engine_cambelt_replacement_
+  title: Cambelt replacement requirement
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Diesel and petrol engines require cambelt replacement every 10 years,
+    which can be costly if not maintained properly.
+  inspection_advice: Verify the last cambelt replacement date and ensure it aligns
+    with the 10-year interval. Check for any service records indicating this work
+    was done.
+  sources: []
+- claim_key: k9k_engine_engine_oil_leaks_or_
+  title: Engine oil leaks or fires (recall-related)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recalls in 2018 addressed engine faults that could cause oil leaks or
+    fires, posing a serious safety risk if unaddressed.
+  inspection_advice: Check for signs of oil leaks under the car, inspect the engine
+    bay for burnt or damaged wiring, and confirm that the 2018 recall for engine faults
+    has been completed.
+  sources: []
+- claim_key: k9k_safety/electrical_defective_airbags_(r
+  title: Defective airbags (recall-related)
+  kind: known_issue
+  domain: safety/electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recall in 2017 addressed defective airbags, which could fail during a
+    collision, posing a serious safety risk.
+  inspection_advice: Verify that the 2017 recall for defective airbags has been completed.
+    Check for any warning lights related to airbag systems and inspect airbag deployment
+    indicators.
+  sources: []
+- claim_key: k9k_engine_potential_fire_hazar
+  title: Potential fire hazard in engine bay (recall-related)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recall in 2017 addressed a potential fire hazard in the engine bay, which
+    could pose a serious safety risk if left unaddressed.
+  inspection_advice: Check for any signs of overheating, burnt smells, or damaged
+    wiring in the engine bay. Confirm that the 2017 recall for potential fire hazards
+    has been completed.
+  sources: []
+- claim_key: k9k_transmission_high_maintenance_cos
+  title: High maintenance cost for automatic transmission
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Automatic transmission models require significant maintenance, specifically
+    a costly oil change every three years.
+  inspection_advice: Check service records for automatic transmission fluid changes
+    and ensure they have been done every three years. Verify the last oil change date
+    and cost.
+  sources: []
+- claim_key: k9k_transmission_automatic_gearbox_gl
+  title: Automatic gearbox glitches/failures
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Reported issues with the automatic transmission, including malfunctions
+    and failures, which can lead to erratic shifting or complete transmission failure.
+  inspection_advice: Check for smooth shifting, unusual noises, or warning lights
+    related to the transmission. Verify service records for transmission fluid changes
+    and repairs.
+  sources: []
+- claim_key: k9k_suspension_leaking_dampers_(sho
+  title: Leaking dampers (shock absorbers)
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Leaking dampers compromise ride quality, handling, and safety by reducing
+    suspension effectiveness.
+  inspection_advice: Look for oil leaks around the shock absorbers, uneven tire wear,
+    or a bouncy/rough ride. Test for proper damping by compressing the suspension
+    and releasing.
+  sources: []
+- claim_key: k9k_electrical_headlight_failure
+  title: Headlight failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Non-functional headlights reduce visibility and pose a safety risk, especially
+    at night or in low-light conditions.
+  inspection_advice: Test all headlights (high/low beams) and bulbs. Check for blown
+    fuses or wiring issues. Inspect for corrosion or damage to connectors.
+  sources: []
+- claim_key: k9k_electrical_faulty_electric_hand
+  title: Faulty electric handbrake
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A malfunctioning electric handbrake can fail to engage properly, leading
+    to unsafe parking or reduced control over the vehicle.
+  inspection_advice: Test the electric handbrake for smooth engagement/disengagement
+    and proper holding power. Check for error codes or warning lights.
+  sources: []
+- claim_key: k9k_engine_broken_timing_chains
+  title: Broken timing chains (petrol engines)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A broken timing chain can cause catastrophic engine damage, including
+    valve collision with pistons, leading to expensive repairs or engine replacement.
+  inspection_advice: Listen for rattling noises from the engine (indicative of chain
+    stretch or misalignment). Check service records for timing chain inspections/replacements.
+    Inspect for oil leaks around the timing chain cover.
+  sources: []
+- claim_key: k9k_electrical_adaptive_cruise_cont
+  title: Adaptive cruise control malfunctions
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty adaptive cruise control can impair safety by failing to maintain
+    proper following distance or disengaging unexpectedly.
+  inspection_advice: Test the adaptive cruise control system for proper activation,
+    deactivation, and distance regulation. Check for error codes or warning lights.
+  sources: []
+- claim_key: k9k_suspension_disintegrating_rear_
+  title: Disintegrating rear wheel hub carriers
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Failed wheel hub carriers can cause wheel detachment, leading to loss
+    of control and severe accidents.
+  inspection_advice: Check for excessive play or wobble in the wheels. Inspect hub
+    carriers for cracks, corrosion, or loose bolts. Verify recall status for affected
+    models.
+  sources: []
+- claim_key: k9k_suspension_defective_front_whee
+  title: Defective front wheel bearing housings
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Failed wheel bearings can cause wheel detachment or excessive vibration,
+    compromising vehicle control and safety.
+  inspection_advice: Listen for grinding or humming noises from the wheels. Check
+    for excessive play or vibration when driving. Inspect wheel bearing housings for
+    damage or leaks.
+  sources: []
+- claim_key: k9k_fuel system_fuel_leaks
+  title: Fuel leaks
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fuel leaks pose a serious fire hazard and can lead to loss of fuel pressure
+    or engine stalling.
+  inspection_advice: Check for fuel odors, wet spots under the vehicle, or leaks around
+    fuel lines, injectors, or the fuel tank. Test for proper fuel pressure and no
+    leaks under pressure.
+  sources: []
+- claim_key: k9k_electrical_faulty_child_locks
+  title: Faulty child locks
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Non-functional child locks can compromise child safety by allowing doors
+    to open unexpectedly, especially in moving vehicles.
+  inspection_advice: Test all child locks for proper engagement and release. Check
+    for error codes or warning lights related to door locks.
+  sources: []
+- claim_key: k9k_electrical_airbag_and_seat_belt
+  title: Airbag and seat belt pre-tensioner failures
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Failed airbags or seat belt pre-tensioners can severely compromise passenger
+    safety in a collision, increasing risk of injury.
+  inspection_advice: Check for airbag warning lights on the dashboard. Verify service
+    records for airbag and seat belt pre-tensioner replacements. Test seat belt tensioners
+    if possible.
+  sources: []
+- claim_key: k9k_fuel system_injector_wear_leadin
+  title: Injector wear leading to hard starts and smoke
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Injector wear is a common issue in the 1.5 dCi (K9K) engine at higher
+    mileage, causing hard starts and visible smoke. This typically occurs around 140,000
+    km and can be mitigated with proper servicing.
+  inspection_advice: Check for signs of hard starts, excessive smoke from the exhaust,
+    or poor fuel efficiency. Verify maintenance records for injector servicing and
+    replacement history.
+  sources: []
+- claim_key: k9k_general_uncontrolled_acceler
+  title: Uncontrolled acceleration due to throttle stuck open
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Sudden acceleration without driver input suggests a mechanical or electrical
+    failure in the throttle control system, which can be dangerous and indicative
+    of a broader issue.
+  inspection_advice: Check throttle body for carbon buildup, wiring for short circuits,
+    or mechanical linkage for binding. Test throttle position sensor (TPS) and actuator
+    motor functionality.
+  sources: []
+- claim_key: k9k_fuel system_fuel_pressure_regula
+  title: Fuel pressure regulator failure
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The fuel pressure regulator was replaced but the issue persisted, indicating
+    a potential failure in the regulator or related components (e.g., fuel pump, control
+    valve).
+  inspection_advice: Verify fuel pressure readings under load (e.g., during cranking
+    and idle). Check for leaks, proper regulator operation, and fuel pump output (dead-head
+    test).
+  sources: []
+- claim_key: k9k_fuel system_blown_injector_nozzl
+  title: Blown injector nozzle (physical damage)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: 'A blown injector nozzle (e.g., injector #1 tip damaged) disrupts fuel
+    spray pattern, leading to incomplete combustion, hard starts, rough idle, and
+    potential engine damage (e.g., carbon buildup, piston wear).'
+  inspection_advice: Inspect all injectors for physical damage, spray pattern, and
+    leakage. Replace any damaged injectors and nozzles. Check for soot or carbon buildup
+    in combustion chambers.
+  sources: []
+- claim_key: k9k_engine_diesel_knock_(detona
+  title: Diesel knock (detonation) at low RPM
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Diesel knock (detonation) at low RPM indicates improper fuel injection
+    timing, low-quality fuel, or mechanical issues (e.g., worn pistons, incorrect
+    injector spray pattern). Persistent knock can cause severe engine damage.
+  inspection_advice: Check fuel quality (e.g., contamination, wrong diesel grade).
+    Inspect injectors for proper spray pattern and timing. Verify compression, piston
+    condition, and turbocharger performance. Monitor for soot or carbon buildup.
+  sources: []
+- claim_key: k9k_engine_piston_damage_(hole_
+  title: Piston damage (hole in piston)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A hole in the piston is a catastrophic failure, typically caused by detonation,
+    excessive heat, or mechanical overload. This requires complete engine rebuild
+    or replacement.
+  inspection_advice: Inspect pistons, cylinders, and rings for damage. Check for signs
+    of detonation (e.g., carbon deposits, scuffing). Verify compression and oil consumption.
+  sources: []
+- claim_key: k9k_fuel system_fuel_pump_failure_(s
+  title: Fuel pump failure (suspected metal debris in fuel system)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Metal debris in the fuel filter suggests internal failure of the fuel
+    pump or injectors, which can clog fuel lines, damage injectors, and cause erratic
+    fuel delivery.
+  inspection_advice: Replace the fuel filter and inspect for metal debris. Test fuel
+    pump output (dead-head test) and check for proper pressure regulation. Inspect
+    injectors for internal damage.
+  sources: []
+- claim_key: k9k_electrical_unknown_fault_code_(
+  title: Unknown fault code (017060)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: An unidentified fault code (017060) indicates an unresolved electrical
+    or sensor issue, which could affect engine control, fuel delivery, or emissions
+    systems.
+  inspection_advice: Use diagnostic tools to retrieve and interpret the fault code.
+    Check wiring, connectors, and sensors associated with the code. Log live data
+    to identify patterns or anomalies.
+  sources: []

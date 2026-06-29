@@ -1,0 +1,1168 @@
+part_id: h5h
+part_type: engine
+display_name: Renault-Daimler H5H 1.3 TCe
+manufacturer: renault_daimler
+known_also_as:
+- 1.3 TCe
+- M282
+- H5H 1.3
+production_years: 2017-present
+claims:
+- id: h5h_turbo_failure_v1
+  claim_key: h5h_turbo_failure
+  version: 1
+  is_current: true
+  title: Premature turbo failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Turbocharger failure can cause loss of power, excessive exhaust smoke,
+    and costly repairs if the turbo needs replacement or overhaul.
+  inspection_advice: Listen for unusual whining or rattling noises from the turbo
+    area, check for oil leaks around the turbo, and inspect for excessive exhaust
+    smoke (especially on startup or under load).
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/renault-megane-4-alacaklar-okusun--151709162
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Turbonun erken arızalanması
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly mentions '1.5 dCi (K9K) Turbocharger Failure from
+      Oil Starvation' as a documented issue in the Renault Megane, matching the claim
+      of premature turbo failure.
+    independent: true
+  - tier: C
+    source_url: https://www.carchecker.pro/reports/renault_megane_1.5_dci.html
+    source_domain: carchecker.pro
+    site_or_channel: carchecker.pro
+    quote: The source text explicitly mentions turbocharger failure as a potential
+      issue requiring attention and regular maintenance.
+    independent: true
+- claim_key: h5h_engine_thermostat_housing_c
+  title: Thermostat Housing Cracking
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The thermostat housing, a critical plastic component, cracks under stress,
+    leading to coolant loss and severe engine damage (e.g., head gasket failure, head
+    warping). This is a known failure mode for the 1.3 TCE (H5Ht/M282/HR13DDT) engine,
+    particularly in higher-power variants (140/160hp).
+  inspection_advice: Check for coolant leaks around the thermostat housing (upper
+    left of the engine bay), inspect the domed plastic part for cracks, and verify
+    coolant levels regularly (no warning light). Test drive to confirm overheating
+    tendencies.
+  sources: []
+- claim_key: h5h_engine_head_gasket_failure
+  title: Head Gasket Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Coolant loss from the cracked thermostat housing directly causes head
+    gasket failure, often accompanied by head warping and further engine damage. This
+    is a cascading failure from the primary plastic housing defect.
+  inspection_advice: Inspect for coolant in oil (milky oil), check for compression/leakdown
+    tests, and visually inspect the head for warping. Verify oil system/pump and cooling
+    system/pump integrity if the engine is removed.
+  sources: []
+- claim_key: h5h_engine_sudden_coolant_loss_
+  title: Sudden Coolant Loss Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The thermostat housing failure often occurs suddenly during long drives
+    (e.g., motorway), leading to instant coolant loss and severe engine damage without
+    prior warning.
+  inspection_advice: Test drive the vehicle on highways to monitor for sudden temperature
+    spikes or loss of coolant. Check for coolant residue near the engine bay after
+    long trips.
+  sources: []
+- claim_key: h5h_general_dealer_goodwill_resi
+  title: Dealer Goodwill Resistance
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Dealers may refuse warranty claims or goodwill adjustments for this known
+    failure, especially after warranty expiration, forcing owners to source replacement
+    engines or pay for repairs out-of-pocket.
+  inspection_advice: Review service records for evidence of the original thermostat
+    failure (e.g., old part retention) and attempt to engage dealers with documentation.
+    Consider third-party engine rebuilds or used engines with warranties.
+  sources: []
+- claim_key: h5h_engine_throttle_shaking_dur
+  title: Throttle Shaking During Acceleration
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Throttle shaking or shuddering during acceleration can indicate issues
+    with the throttle body, fuel system, or engine control unit (ECU) calibration.
+    This symptom often points to a need for inspection of throttle response, fuel
+    delivery, or potential sensor malfunctions.
+  inspection_advice: Check for proper throttle body operation, inspect fuel injectors
+    for clogging, verify engine control unit calibration, and ensure no vacuum leaks
+    or air intake issues are present.
+  sources: []
+- claim_key: h5h_electrical_potential_ignition_s
+  title: Potential Ignition System Failure (Spark Plugs/Bobins)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: The user reports a vibration or 'hiccup' at steady speeds (1500-2000
+    RPM) when the throttle is held steady, which may indicate misfiring due to worn
+    or faulty spark plugs/bobins. The last service for spark plugs was at 60,000 km,
+    which is below the expected lifespan for iridium plugs (often 60,000+ km). Bobins
+    are also suspected to be failing, as they degrade over time and can cause intermittent
+    misfires.
+  inspection_advice: Check spark plugs for wear, fouling, or damage. Inspect bobins
+    for cracks, corrosion, or electrical resistance issues. Verify proper torque on
+    spark plugs and bobins. Listen for misfires during a test drive, especially at
+    steady RPMs.
+  sources:
+  - tier: B
+    source_url: https://www.otoclubturkiye.com/forum/topic/318002-2021-megane-4-13-tce-tekleme-sorunu/
+    source_domain: otoclubturkiye.com
+    site_or_channel: otoclubturkiye.com
+    quote: '"Bujiler en son 60.000 km de serviste değişmiş gözüküyor."'
+    independent: true
+- claim_key: h5h_engine_potential_turbocharg
+  title: Potential Turbocharger or Exhaust System Issue
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The user mentions a turbocharger with 'fixed geometry but internal valves
+    and step motor for variable response,' which could indicate potential turbocharger
+    or exhaust system issues if vibrations or misfires persist. Turbo-related issues
+    can cause rough idling or vibrations at steady speeds.
+  inspection_advice: Inspect turbocharger for unusual noises, oil leaks, or excessive
+    lag. Check exhaust system for leaks or damage. Verify turbocharger boost pressure
+    and response during a test drive.
+  sources: []
+- claim_key: h5h_engine_thermostat_failure_l
+  title: Thermostat Failure Leading to Coolant Leak
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A thermostat failure can cause a coolant leak, leading to engine overheating
+    and potential catastrophic failure. The example mentions a coolant system failure
+    resulting in a costly repair.
+  inspection_advice: Inspect the engine bay for signs of coolant leaks, check the
+    coolant level regularly, and ensure the thermostat housing is intact and free
+    from leaks.
+  sources: []
+- claim_key: h5h_engine_coolant_system_compo
+  title: Coolant System Component Failure (O-Rings)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The coolant system's O-rings lose their effectiveness over time, potentially
+    leading to leaks or failure of the coolant system, which can cause engine overheating.
+  inspection_advice: Check the coolant system for leaks, inspect O-rings for wear
+    or degradation, and ensure the coolant system is properly maintained with high-quality
+    antifreeze.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/1-3-tce-motoru-nasil-bilirsiniz--160432535
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Yağ soğutucu ömürlük parça olarak görülüyor. Halbuki soğutucunun da belli
+      bir ömrü var. İstediğin kadar kaliteli yağ ve antifriz kullan bir müddet sonra
+      o minicik oringler özelliğini yitiriyor. Bir patladı mı al başına belayı.
+    independent: true
+- claim_key: h5h_engine_engine_overheating_d
+  title: Engine Overheating Due to Sensors
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine experienced a temporary loss of power due to a sensor issue,
+    which triggered a protective shutdown. This indicates potential sensor reliability
+    issues.
+  inspection_advice: Check for warning lights related to sensors, verify sensor functionality,
+    and ensure no error codes are present in the engine control system.
+  sources: []
+- claim_key: h5h_engine_high_fuel_consumptio
+  title: High Fuel Consumption
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: review
+  promoted_by: pending_human
+  rationale: The engine is consuming significantly more fuel than expected (100 km
+    with 11 liters), which could indicate inefficiency, potential sensor issues, or
+    other underlying mechanical problems.
+  inspection_advice: Check for fuel system issues, inspect for vacuum leaks, verify
+    engine performance and emissions, and ensure the fuel injectors are functioning
+    properly.
+  sources: []
+- claim_key: h5h_engine_excessive_fuel_consu
+  title: Excessive Fuel Consumption in City Driving
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: review
+  promoted_by: pending_human
+  rationale: The vehicle consumes 8 liters per 80 km in city traffic, which is unusually
+    high and suggests potential inefficiencies or issues with the engine or fuel system.
+  inspection_advice: Check for fuel system issues, inspect for vacuum leaks, verify
+    engine performance, and ensure the vehicle’s maintenance records are up to date.
+  sources: []
+- claim_key: h5h_engine_ignition_coil_failur
+  title: Ignition Coil Failure (Physical Damage)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The ignition coil for cylinder 4 had a physically broken tip, which caused
+    repeated misfires and required replacement. The coil for cylinder 5 also exhibited
+    electrical circuit issues (primary/secondary) due to socket damage, leading to
+    misfires.
+  inspection_advice: Check ignition coils for physical cracks or damage on the connector
+    tips. Verify coil socket connections for proper pin alignment and secure attachment.
+    Look for signs of misfires (rough idling, hesitation, or arıza lambası activation).
+  sources: []
+- claim_key: h5h_engine_ignition_coil_socket
+  title: Ignition Coil Socket Damage & Improper Installation
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The ignition coil socket for cylinder 5 was improperly installed, with
+    pins either misaligned or damaged due to incorrect removal/installation techniques.
+    This caused intermittent misfires and required professional repair with original
+    Mercedes-specific tools.
+  inspection_advice: Inspect ignition coil sockets for bent or misaligned pins. Ensure
+    sockets are installed correctly using manufacturer-recommended tools (e.g., Mercedes-specific
+    socket press). Check for signs of repeated misfires or arıza lambası activation.
+  sources: []
+- claim_key: h5h_engine_intermittent_misfire
+  title: Intermittent Misfire Due to Water Ingression
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Water ingress into the ignition coil socket caused intermittent misfires,
+    as noted by the socket 'kendiliğinden geri geldi ve pimi içerde kaldık' (socket
+    popped back and trapped the pin).
+  inspection_advice: Check ignition coil sockets for water damage or corrosion. Ensure
+    proper sealing of electrical connections. Look for signs of water exposure (e.g.,
+    dampness, rust) around coil sockets.
+  sources: []
+- claim_key: h5h_emissions_intake_manifold_fail
+  title: Intake Manifold Failure (P2004 Code)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The P2004 code typically indicates a problem with the intake manifold
+    runner control circuit, which can lead to poor engine performance, rough idling,
+    or even engine stalling. This is a critical failure that affects drivability and
+    emissions compliance.
+  inspection_advice: Check for leaks, cracks, or damage to the intake manifold. Verify
+    proper operation of the manifold runner control valve and test for correct electrical
+    signals and vacuum integrity.
+  sources: []
+- claim_key: h5h_engine_exhaust_camshaft_mag
+  title: Exhaust Camshaft Magnetic Solenoid Failure (2177 Code)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2177 code (or related exhaust camshaft timing issues) can cause severe
+    engine misfires, loss of power, or complete failure to start. This is a critical
+    failure that disrupts engine function and may lead to catastrophic damage if ignored.
+  inspection_advice: Inspect the exhaust camshaft magnetic solenoid for proper operation
+    and continuity. Check for error codes related to camshaft timing and verify the
+    solenoid’s electrical connections and functionality.
+  sources: []
+- claim_key: h5h_emissions_oxygen_sensor_failur
+  title: Oxygen Sensor Failure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The oxygen sensor (O2 sensor) failure can cause incorrect air-fuel mixture
+    calculations, leading to poor fuel efficiency, increased emissions, and potential
+    engine performance issues.
+  inspection_advice: Check for active 'Check Engine' light and verify oxygen sensor
+    readings using an OBD-II scanner. Inspect sensor wiring and connections for damage
+    or corrosion.
+  sources: []
+- claim_key: h5h_engine_turbocharger_issues_
+  title: Turbocharger Issues (Potential Failure or Vacuum Leak)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbocharger failure or vacuum leaks can cause loss of power, increased
+    fuel consumption, and potential engine damage if left unaddressed. Turbo revison
+    or replacement may be required.
+  inspection_advice: Listen for unusual noises (whining, rattling) from the turbo
+    area. Check turbocharger intercooler hoses for leaks or damage. Inspect vacuum
+    hoses for cracks or deterioration. Use an OBD-II scanner to check for turbo-related
+    error codes.
+  sources: []
+- claim_key: h5h_engine_thermostat_malfuncti
+  title: Thermostat Malfunction
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A faulty thermostat can cause erratic temperature readings, overheating,
+    or failure to reach operating temperature, leading to potential engine damage
+    over time.
+  inspection_advice: Monitor the temperature gauge for erratic behavior (sudden drops
+    or spikes). Check coolant levels and inspect the thermostat housing for leaks.
+    Verify thermostat operation by testing with a multimeter or replacing it if suspected
+    faulty.
+  sources: []
+- claim_key: h5h_electrical_map_sensor_failure
+  title: Map Sensor Failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A malfunctioning Manifold Absolute Pressure (MAP) sensor can disrupt
+    engine performance, fuel economy, and emissions by providing incorrect data to
+    the engine control unit.
+  inspection_advice: Use an OBD-II scanner to check for MAP sensor-related error codes.
+    Inspect the MAP sensor for physical damage, loose connections, or contamination.
+    Clean or replace the sensor if necessary.
+  sources: []
+- claim_key: h5h_engine_idling_instability_(
+  title: Idling Instability (Rough Idle)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine exhibits inconsistent RPM while idling, which can indicate
+    sensor issues, fuel system problems, or emissions system malfunctions. This is
+    particularly concerning if it occurs after warming up but not when cold.
+  inspection_advice: Check for proper sensor function (oxygen sensor, MAP sensor),
+    inspect fuel injectors for clogging, and verify emissions components like the
+    DPF (Diesel Particulate Filter) for blockages or faults. Ensure the ignition system
+    (spark plugs, coils) is functioning correctly and that the engine control unit
+    (ECU) is not triggering incorrect fuel delivery or timing adjustments.
+  sources: []
+- claim_key: h5h_engine_map_sensor_malfuncti
+  title: MAP Sensor Malfunction
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The MAP (Manifold Absolute Pressure) sensor is suspected of contributing
+    to the idling instability. A faulty MAP sensor can send incorrect pressure readings
+    to the ECU, leading to improper fuel delivery and engine performance issues.
+  inspection_advice: Inspect the MAP sensor for physical damage, contamination, or
+    loose connections. Test its output voltage with a scan tool to ensure it is within
+    the manufacturer’s specified range. Replace if readings are inconsistent or incorrect.
+  sources: []
+- claim_key: h5h_emissions_dpf_(diesel_particul
+  title: DPF (Diesel Particulate Filter) Blockage
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DPF may be clogged, causing rough idling or performance issues after
+    warming up. A blocked DPF restricts exhaust flow, leading to backpressure and
+    potential engine misfires or instability.
+  inspection_advice: Check for DPF regeneration cycles (if applicable) and inspect
+    for physical blockages or excessive soot buildup. Use a scan tool to check for
+    DPF-related error codes (e.g., P0420, P2097). If clogged, the DPF may require
+    cleaning or replacement.
+  sources: []
+- claim_key: h5h_engine_ignition_timing_or_t
+  title: Ignition Timing or Trigger Wheel Issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The discussion mentions the possibility of ignition timing issues or
+    trigger wheel misalignment, which can cause rough idling, stalling, or inconsistent
+    engine performance. These issues often arise from worn or damaged components in
+    the ignition system.
+  inspection_advice: Inspect the trigger wheel (crankshaft position sensor wheel)
+    for damage, wear, or misalignment. Check the crankshaft and camshaft position
+    sensors for proper signal output. Verify ignition timing with a timing light or
+    scan tool and adjust if necessary.
+  sources: []
+- claim_key: h5h_engine_cold-start_hesitatio
+  title: Cold-start hesitation (1200-2000 RPM range)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine exhibits a momentary loss of power or hesitation during acceleration
+    in the 1200-2000 RPM range when cold, typically within the first few minutes of
+    startup. This issue resolves once the engine warms up.
+  inspection_advice: Test the engine's response during cold starts by accelerating
+    from a standstill and observing for hesitation in the 1200-2000 RPM range. Check
+    for consistent behavior across multiple cold starts. Verify if the issue persists
+    after warming up the engine.
+  sources: []
+- claim_key: h5h_engine_persistent_cold-star
+  title: Persistent cold-start hesitation after dephaser pulley replacement
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report that replacing the dephaser pulley does not resolve the
+    cold-start hesitation issue, indicating a potential underlying problem beyond
+    the dephaser.
+  inspection_advice: Verify if the cold-start hesitation persists after replacing
+    the dephaser pulley. Check for other potential causes such as ECU software, sensors,
+    or solenoid issues.
+  sources: []
+- claim_key: h5h_engine_cold-start_performan
+  title: Cold-start performance degradation in low temperatures
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The issue becomes more pronounced in lower temperatures (around 10°C),
+    indicating a potential sensitivity to cold conditions.
+  inspection_advice: Test the engine's performance in varying cold temperatures to
+    observe if the hesitation worsens or improves. Document the behavior at different
+    ambient temperatures.
+  sources: []
+- claim_key: h5h_engine_dephaser_pulley_fail
+  title: Dephaser Pulley Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The dephaser pulley is a critical component for variable valve timing
+    (VVT) in the 1.6 VVT engine. Its failure causes startup noise and squeaking, often
+    requiring replacement of the pulley itself, timing belt kit, and alternator belt.
+    This is a known common failure in Renault 1.6 VVT engines.
+  inspection_advice: Check for unusual startup noises or squeaking from the engine
+    belt area, especially within the first 10 minutes of driving. Inspect the dephaser
+    pulley for wear or damage during a timing belt service. Verify if the vehicle
+    has undergone previous timing belt or dephaser pulley replacements.
+  sources: []
+- claim_key: h5h_engine_dephaser_pulley_as_c
+  title: Dephaser Pulley as Common Fault
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple users report the dephaser pulley as a frequent failure in the
+    1.6 VVT engine, indicating a potential design or manufacturing defect.
+  inspection_advice: Research the vehicle’s history for known dephaser pulley failures.
+    Ask the seller or check service records for any past replacements or related noises.
+  sources: []
+- claim_key: h5h_engine_high_repair_cost_for
+  title: High Repair Cost for Dephaser Pulley
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The repair cost for dephaser pulley failure is substantial, often requiring
+    a timing belt kit replacement and potentially falling outside warranty coverage.
+  inspection_advice: Confirm the cost of a timing belt service and dephaser pulley
+    replacement at a Renault dealership. Check if the vehicle is still under warranty
+    or if extended warranty options are available.
+  sources: []
+- claim_key: h5h_engine_intermittent_engine_
+  title: Intermittent engine stalling at low revs
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine repeatedly cuts out or stalls when revs drop, particularly
+    when taking foot off the pedal or at junctions, indicating a critical failure
+    in fuel delivery, ignition, or sensor input.
+  inspection_advice: Check for faulty TDC sensor, coil packs, fuel injectors, or a
+    failing dephaser pulley. Verify fuel pressure and ignition timing stability. Inspect
+    for vacuum leaks or clogged fuel filters.
+  sources: []
+- claim_key: h5h_engine_intermittent_stallin
+  title: Intermittent stalling with no idle stability
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine fails to idle properly and revs die immediately when the throttle
+    is released, suggesting a severe sensor or actuator failure (e.g., crankshaft
+    position sensor, MAF sensor, or vacuum leak).
+  inspection_advice: Test crankshaft position sensor, MAF sensor, and vacuum hoses.
+    Check for faulty injectors or a failing ECU. Verify throttle body cleanliness
+    and proper idle air control valve function.
+  sources: []
+- claim_key: h5h_engine_faulty_tdc_sensor
+  title: Faulty TDC sensor
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A malfunctioning TDC (Top Dead Center) sensor disrupts engine timing,
+    leading to misfires, stalling, or poor idle stability.
+  inspection_advice: Test the TDC sensor signal for consistency. Clean or replace
+    if faulty. Verify wiring and connections for corrosion or damage.
+  sources: []
+- claim_key: h5h_fuel system_intermittent_fuel_sy
+  title: Intermittent fuel system issues (possible clogged filter or weak injectors)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Inconsistent fuel delivery can cause stalling, hesitation, or poor acceleration,
+    especially if the fuel filter is clogged or injectors are failing.
+  inspection_advice: Replace the fuel filter if clogged. Test injectors for proper
+    spray pattern and resistance. Check fuel pressure regulator and pump performance.
+  sources: []
+- claim_key: h5h_engine_head_and_block_resur
+  title: Head and block resurfacing required due to warping
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The K-series engine often requires resurfacing of both the head and block
+    due to warping, which can lead to head gasket failure and other issues.
+  inspection_advice: Inspect the head and block surfaces for flatness. Look for uneven
+    gaps when placing a straightedge across the mating surfaces. Check for signs of
+    overheating or previous repairs.
+  sources: []
+- claim_key: h5h_engine_connecting_rod_failu
+  title: Connecting rod failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A connecting rod broke through the engine block, leading to catastrophic
+    engine failure. This is a severe and sudden failure mode.
+  inspection_advice: Check for signs of past engine failures (oil leaks, unusual noises,
+    or modifications that may have contributed to stress). Inspect the engine block
+    for cracks or signs of previous repairs. Ensure the engine is running smoothly
+    with no unusual vibrations or knocking sounds.
+  sources: []
+- claim_key: h5h_engine_thin_cylinder_liners
+  title: Thin cylinder liners prone to fracture
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The K-series engine features thin cylinder liners that are prone to fracturing,
+    leading to catastrophic engine failure. This is a design flaw that has not been
+    adequately addressed.
+  inspection_advice: Inspect the cylinder liners for cracks or signs of wear. Check
+    for oil leaks around the liner area and listen for unusual noises that could indicate
+    liner failure. Ensure the engine is not overheating, as this can exacerbate liner
+    issues.
+  sources: []
+- claim_key: h5h_transmission_clutch_cover_crack_d
+  title: Clutch cover crack due to missing nut
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A missing nut caused the clutch cover to crack over time, leading to
+    a heavy clutch and eventual failure. This is a structural failure that could have
+    been prevented with proper assembly.
+  inspection_advice: Inspect the clutch cover for cracks, check the condition of the
+    clutch cover bolts/nuts, and verify the clutch operation for smoothness and responsiveness.
+    Ensure the clutch pedal has proper travel and no unusual resistance.
+  sources: []
+- claim_key: h5h_electrical_electrical_system_fa
+  title: Electrical system failures in hybrid models
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple electrical issues reported, including failure to charge and
+    dashboard flickering, leading to vehicle downtime and reliance on loan cars.
+  inspection_advice: Test the electrical system for proper charging function, check
+    for dashboard warning lights or flickering, and verify the battery and hybrid
+    system health. Ensure all electrical components (e.g., sensors, wiring) are intact
+    and functioning correctly.
+  sources: []
+- claim_key: h5h_fuel system_injector_and_fuel_pu
+  title: Injector and fuel pump failures
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The TD5 engine required injector seals and a fuel pump replacement after
+    17 years, indicating potential wear or failure in critical fuel system components.
+  inspection_advice: Check for fuel leaks around injectors and the fuel pump, listen
+    for unusual noises from the fuel system, and verify proper fuel pressure and injector
+    operation. Inspect for fuel leaks or carbon buildup in the injectors.
+  sources: []
+- claim_key: h5h_engine_plastic_ball_valve_f
+  title: Plastic Ball Valve Failure in Water-Heated Inlet Manifold
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A tiny plastic ball valve in the water-heated inlet manifold was prone
+    to sticking after a few years, restricting coolant flow and contributing to head
+    gasket failure.
+  inspection_advice: Inspect the inlet manifold for signs of plastic degradation,
+    coolant leaks, or restricted flow. Check for any aftermarket replacements of the
+    ball valve if the engine has been modified.
+  sources: []
+- claim_key: h5h_engine_poor_cooling_system_
+  title: Poor Cooling System Design
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The K-series engine has limited cooling capacity, making it susceptible
+    to overheating. This is exacerbated by factors like a thermostat design allowing
+    shock-cold water to the head and low overall coolant volume.
+  inspection_advice: Verify the condition of the water pump, radiator, hoses, and
+    thermostat. Check for adequate coolant levels and signs of overheating (e.g.,
+    burnt coolant smell, white deposits). Ensure the radiator is structurally sound,
+    especially if it’s an Elise model.
+  sources: []
+- claim_key: h5h_engine_plastic_dowels_as_co
+  title: Plastic Dowels as Cost-Cutting Measure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The use of plastic dowels for locating components was a cost-cutting
+    measure that compromised structural integrity, potentially contributing to alignment
+    issues and stress on the head gasket.
+  inspection_advice: Inspect the engine block and head for signs of misalignment or
+    improperly fitted dowels. Check for any aftermarket metal dowel replacements if
+    the engine has been serviced.
+  sources: []
+- claim_key: h5h_engine_thermostat_design_fl
+  title: Thermostat Design Flaw
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The thermostat design allowed shock-cold water to flow directly to the
+    cylinder head, increasing thermal stress and contributing to head gasket failure.
+  inspection_advice: Check the thermostat housing and bypass routes for proper sealing
+    and functionality. Ensure the thermostat is functioning correctly and not allowing
+    abrupt temperature changes to the head.
+  sources: []
+- claim_key: h5h_engine_manufacturing_issues
+  title: Manufacturing Issues with Liner Heights
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Incorrect liner heights due to manufacturing problems could lead to improper
+    sealing and increased risk of coolant leakage or head gasket failure.
+  inspection_advice: Verify the cylinder liner heights are correct and aligned properly.
+    Check for any signs of coolant leakage or uneven compression across cylinders.
+  sources: []
+- claim_key: h5h_engine_radiator_structural_
+  title: Radiator Structural Failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The radiator in some K-series installations (particularly Elise models)
+    was prone to splitting, compromising cooling efficiency and increasing the risk
+    of overheating.
+  inspection_advice: Inspect the radiator for cracks, splits, or corrosion. Ensure
+    it is securely mounted and that hoses and connections are intact.
+  sources: []
+- claim_key: h5h_engine_incompatible_engine_
+  title: Incompatible Engine Oil for 2-Stroke Motorcycles
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: review
+  promoted_by: pending_human
+  rationale: Using 4-stroke motorcycle oil in a 2-stroke motorcycle engine can cause
+    severe mechanical damage due to incorrect lubrication properties and potential
+    contamination of the combustion chamber.
+  inspection_advice: Verify the engine type (2-stroke vs. 4-stroke) and ensure the
+    correct oil type is used as per the manufacturer’s specifications. Check for signs
+    of oil burning or unusual smoke from the exhaust.
+  sources: []
+- claim_key: h5h_engine_incorrect_oil_grade_
+  title: Incorrect Oil Grade for Honda GX160 2-Stroke Engine
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Using 10w40 oil instead of the recommended 10w30 for a 2-stroke engine
+    like the Honda GX160 may lead to increased wear or poor lubrication due to viscosity
+    mismatch.
+  inspection_advice: Confirm the correct oil viscosity grade for the specific engine
+    model. Check for unusual engine noise, overheating, or excessive wear on engine
+    components.
+  sources: []
+- claim_key: h5h_engine_potential_risk_of_us
+  title: Potential Risk of Using Mobil 1 ESP X3 0W-40 in Non-GPF Engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: auto_audit
+  rationale: Using Mobil 1 ESP X3 0W-40 oil in non-GPF (Gasoline Particulate Filter)
+    engines like 0.9 TCe or 1.2 TCe may not be suitable, as it is specifically designed
+    for GPF-equipped high-performance engines. This could lead to improper lubrication
+    or compatibility issues.
+  inspection_advice: Verify the engine’s compatibility with the oil type. Check for
+    unusual engine behavior, increased oil consumption, or potential damage to engine
+    components.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/motor-yagi-ile-ilgili-tum-paylasimlar--6792166-692
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: şimdi gpf olmayan 0.9 tce 1.2 tce motorlarda kullanılabilir mi?
+    independent: true
+- claim_key: h5h_engine_incorrect_oil_specif
+  title: Incorrect Oil Specification for Renault Mégane IV H5H Engine
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Using non-Longlife or incorrect oil specifications (e.g., 5W-30 instead
+    of 0W-20) in a Renault Mégane IV 1.3 TCe (H5H) engine may lead to suboptimal lubrication,
+    increased wear, or potential compatibility issues with emissions systems.
+  inspection_advice: Verify the oil specification matches the manufacturer’s Longlife
+    recommendations (e.g., 0W-20 for H5H). Check for proper oil change intervals and
+    signs of engine stress or emissions system malfunctions.
+  sources: []
+- claim_key: h5h_engine_timing_chain_failure
+  title: Timing Chain Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.5 diesel engines (likely PSA/DCi or Stellantis BlueHDi variants)
+    are known for timing chain issues, including stretching, jumping, or breaking,
+    which can cause catastrophic engine damage if unaddressed.
+  inspection_advice: Check for signs of timing chain wear (e.g., rattling noises from
+    the engine, oil leaks near the timing chain cover, or engine misfires). Verify
+    if the timing chain has been replaced and confirm the condition of the timing
+    chain tensioner and guides. Ensure the oil change interval is strictly followed,
+    as poor oil quality can accelerate wear.
+  sources: []
+- claim_key: h5h_engine_recall/voluntary_rec
+  title: Recall/Voluntary Recall for Timing Chain Replacement
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mention of a recall or voluntary recall program for timing chain
+    replacement indicates a widespread issue with this component, requiring proactive
+    replacement to prevent engine failure.
+  inspection_advice: Confirm whether the vehicle has undergone the recall or voluntary
+    replacement program. Check service records for evidence of timing chain replacement
+    and associated parts (e.g., tensioner, guides, oil pump). Ensure the oil filter
+    and oil type match manufacturer recommendations.
+  sources: []
+- claim_key: h5h_engine_oil_change_during_ti
+  title: Oil Change During Timing Chain Replacement
+  kind: known_issue
+  domain: engine
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: While not a critical failure, the omission of an oil change during timing
+    chain replacement could lead to prolonged exposure of the engine to old oil, accelerating
+    wear on other components.
+  inspection_advice: Confirm whether the oil and oil filter were changed during the
+    timing chain replacement. Ensure the oil type and quality meet manufacturer specifications.
+  sources: []
+- claim_key: h5h_fuel system_injector_failure_req
+  title: Injector failure requiring full replacement
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple users report that all four injectors in the 1.6 HDi (2010+ Siemens
+    injectors) fail and require full replacement, not just cleaning or recalibration.
+    This is a known issue for this engine variant.
+  inspection_advice: Check for error codes related to injectors (e.g., P0087, P0088,
+    P0089, P0090) and inspect injectors for clogging, uneven spray patterns, or signs
+    of failure (e.g., misfires, rough idle, or poor acceleration). Verify if the vehicle
+    uses Siemens injectors (common in 2010+ models) and confirm if any injectors have
+    been replaced previously.
+  sources: []
+- claim_key: h5h_electrical_ignition_coil_failur
+  title: Ignition coil failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Two ignition coils were reported as faulty and required replacement alongside
+    injector issues, indicating a potential electrical or wear-related failure.
+  inspection_advice: Test ignition coils for proper resistance (typically 0.4–1.0
+    ohms per coil) and check for misfires, weak spark, or erratic engine performance.
+    Look for error codes related to coils (e.g., P0300–P0308).
+  sources: []
+- claim_key: h5h_fuel system_improper_injector_re
+  title: Improper injector recalibration leading to repeated failures
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A service failed to properly recalibrate injectors after cleaning, leading
+    to a second failure. This highlights a critical flaw in aftermarket or unqualified
+    service practices.
+  inspection_advice: Verify if injectors were professionally recalibrated after cleaning
+    or replacement. Look for error codes related to fuel injection timing or pressure
+    (e.g., P0190–P0194). Check service records for recalibration confirmation.
+  sources: []
+- claim_key: h5h_engine_eksantrik_zincir_tak
+  title: Eksantrik Zincir Takımı Arızaları
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Eksantrik zincir takımı motorun zamanlamasını kontrol eder. Arızaları
+    motor performansını ciddi şekilde etkileyebilir ve motor hasarına yol açabilir.
+  inspection_advice: Motorun eksantrik zincir takımının gerginliğini kontrol edin.
+    Ses, titreşim veya performans düşüşü gibi arıza belirtilerine dikkat edin. Zincir
+    ve dişli takımlarının aşınma izlerini inceleyin.
+  sources:
+  - tier: C
+    source_url: https://www.saglamotomotiv.com/blog/kategori/genel
+    source_domain: saglamotomotiv.com
+    site_or_channel: saglamotomotiv.com
+    quote: Renault Clio 5 sahipleri için eksantrik zincir takımı motor sağlığı açısından
+      kritik öneme sahiptir. Bu yazıda Renault Clio 5 eksantrik zinciri arıza belirtileri,
+      kaç kilometrede kontrol edilmesi gerektiği, orijinal ve yan sanayi parça seçimi,
+      sık karşılaşılan sorunlar ve 8201714682 Renault Mais eksantrik zincir takımı
+      hakkında detaylı bilgiler bulabilirsiniz.
+    independent: true
+- claim_key: h5h_engine_turbo_hortumu_arızal
+  title: Turbo Hortumu Arızaları
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbo hortumu arızaları turbo motorunun verimliliğini azaltır ve motorun
+    performansını olumsuz etkileyebilir. Ayrıca, turbo basınç hataları ve siyah duman
+    sorunları motor sağlığını tehdit eder.
+  inspection_advice: Turbo hortumunun fiziksel hasarını, delik veya yırtılmaları kontrol
+    edin. Çekiş düşüşü, siyah duman veya turbo seslerinde anormal artışa dikkat edin.
+  sources: []
+- claim_key: h5h_emissions_adblue_depo_pompası_
+  title: AdBlue Depo Pompası Arızaları
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: AdBlue pompası arızaları emisyon kontrol sistemini etkiler ve motor performansını
+    düşürebilir. Ayrıca, arıza belirtisi olarak motor kontrol lambası yanabilir.
+  inspection_advice: Motor kontrol panosundaki arıza lambalarına dikkat edin. AdBlue
+    seviyesinin düşük olması veya pompa sesleri olmaması arıza belirtisi olabilir.
+  sources: []
+- claim_key: h5h_emissions_partikül_filtre_sens
+  title: Partikül Filtre Sensörü Arızaları
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: held
+  promoted_by: pending_human
+  rationale: Partikül filtre sensörü arızaları emisyon kontrol sistemini etkiler ve
+    motorun yakıt verimliliğini düşürebilir. Ayrıca, motor kontrol lambası yanabilir.
+  inspection_advice: Motor kontrol panosundaki arıza lambalarına dikkat edin. Motor
+    performansındaki düşüş veya yakıt tüketimindeki anormal artışlar arıza belirtisi
+    olabilir.
+  sources:
+  - tier: C
+    source_url: https://www.saglamotomotiv.com/blog/kategori/genel
+    source_domain: saglamotomotiv.com
+    site_or_channel: saglamotomotiv.com
+    quote: Megane 4, Captur, Duster ve Sandero araçlarda kullanılan 227707094R partikül
+      filtre sensörü arızaları, belirtileri, orijinal parça avantajları ve sık sorulan
+      sorular hakkında detaylı rehber.
+    independent: true
+- claim_key: h5h_electrical_park_sensörü_arızala
+  title: Park Sensörü Arızaları
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: held
+  promoted_by: pending_human
+  rationale: Park sensörü arızaları park etme ve manevra yapma konforunu ve güvenliğini
+    azaltır. Ayrıca, sensör hataları araç sistemlerinin yanlış algılamasına yol açabilir.
+  inspection_advice: Park sensörlerinin çalışıp çalışmadığını test edin. Sensörlerin
+    yanlış sesler çıkarması veya park etme konforunun düşmesi arıza belirtisi olabilir.
+  sources:
+  - tier: C
+    source_url: https://www.saglamotomotiv.com/blog/kategori/genel
+    source_domain: saglamotomotiv.com
+    site_or_channel: saglamotomotiv.com
+    quote: Renault ve Dacia araçlarda park sensörü arızası, belirtileri, arıza nedenleri
+      ve doğru parça seçimi hakkında detaylı rehber.
+    independent: true
+- claim_key: h5h_suspension_direksiyon_kutusu_ar
+  title: Direksiyon Kutusu Arızaları
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Direksiyon kutusu arızaları yol tutuşunu, manevra kabiliyetini ve sürüş
+    güvenliğini ciddi şekilde etkiler. Direksiyon sertleşmesi, titreşim veya sesler
+    güvenlik riski oluşturabilir.
+  inspection_advice: Direksiyonun sertleşmesi, boşluk hissi, titreşim veya seslere
+    dikkat edin. Yağ kaçağı veya mekanik hasar izlerine bakın.
+  sources: []
+- claim_key: h5h_fuel system_faulty_throttle_body
+  title: Faulty Throttle Body (Gaz Kelebeği)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A malfunctioning throttle body can reduce fuel pressure, cause unburned
+    fuel vapors to escape, and increase emissions and fuel consumption.
+  inspection_advice: Inspect the throttle body for carbon buildup, physical damage,
+    or improper calibration. Check for smooth operation and proper sealing.
+  sources: []
+- claim_key: h5h_emissions_faulty_exhaust_gas_t
+  title: Faulty Exhaust Gas Temperature Sensor (EGTS)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A failing exhaust gas temperature sensor disrupts proper engine operation,
+    affects turbo performance, and can lead to misfires or engine damage if left unaddressed.
+  inspection_advice: Test the exhaust gas temperature sensor for proper voltage output
+    and resistance. Check for physical damage or corrosion. Verify turbo performance
+    and engine stability during operation.
+  sources: []
+- claim_key: h5h_emissions_faulty_oxygen_(o2)_s
+  title: Faulty Oxygen (O2) Sensors
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Worn or damaged oxygen sensors fail to provide accurate air-fuel ratio
+    data to the ECU, leading to poor fuel economy, emissions issues, and potential
+    engine damage over time.
+  inspection_advice: Check oxygen sensors for physical damage, excessive heat exposure,
+    or contamination. Test sensor voltage and resistance. Replace if readings are
+    inconsistent or outside manufacturer specifications.
+  sources: []
+- claim_key: h5h_engine_faulty_mass_air_flow
+  title: Faulty Mass Air Flow (MAF) Sensor
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A dirty or failing MAF sensor disrupts the air-fuel mixture, causing
+    rough idling, poor performance, increased fuel consumption, and potential engine
+    damage.
+  inspection_advice: Inspect the MAF sensor for dirt, debris, or physical damage.
+    Clean or replace if necessary. Check for proper airflow and engine stability during
+    operation.
+  sources: []
+- claim_key: h5h_emissions_faulty_egr_valve
+  title: Faulty EGR Valve
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A malfunctioning EGR valve prevents recirculation of exhaust gases, leading
+    to unburned fuel in the exhaust, fuel system damage, black smoke, and potential
+    turbo or DPF system failure.
+  inspection_advice: Check the EGR valve for proper operation, leaks, or carbon buildup.
+    Inspect for proper vacuum or electrical operation. Look for black smoke or unusual
+    exhaust odors during operation.
+  sources: []
+- claim_key: h5h_fuel system_faulty_fuel_injector
+  title: Faulty Fuel Injectors
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty injectors disrupt fuel delivery, causing misfires, unburned fuel
+    in the exhaust, fuel system clogging, and potential DPF clogging. May also cause
+    blue/white exhaust smoke.
+  inspection_advice: Check for uneven fuel spray patterns, leaks, or clogging in injectors.
+    Test injector resistance and operation. Look for misfires, rough idling, or unusual
+    exhaust odors.
+  sources: []
+- claim_key: h5h_engine_faulty_spark_plugs_o
+  title: Faulty Spark Plugs or Ignition System
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty spark plugs, coils, or ignition wires cause misfires, poor performance,
+    and potential engine damage. Can also lead to increased emissions and fuel consumption.
+  inspection_advice: Inspect spark plugs for wear, fouling, or damage. Check coil
+    resistance and spark plug wire integrity. Look for misfires, rough idling, or
+    hesitation during acceleration.
+  sources: []
+- claim_key: h5h_engine_clogged_air_filter
+  title: Clogged Air Filter
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A clogged air filter restricts airflow, leading to poor engine performance,
+    reduced fuel efficiency, and potential engine damage over time.
+  inspection_advice: Inspect the air filter for excessive dirt or clogging. Replace
+    if airflow is restricted or if the filter appears heavily soiled.
+  sources: []
+- claim_key: h5h_emissions_catalytic_converter_
+  title: Catalytic Converter Failure Due to Wear or Damage
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A failing catalytic converter, due to age (typically 100,000–150,000
+    km) or physical damage, leads to poor emissions control, reduced engine performance,
+    and increased fuel consumption.
+  inspection_advice: Check for physical damage, excessive heat, or blockages in the
+    catalytic converter. Inspect exhaust flow and look for unusual odors or performance
+    issues.
+  sources: []

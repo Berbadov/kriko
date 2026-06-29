@@ -1,0 +1,800 @@
+part_id: h5f
+part_type: engine
+display_name: Renault H5F 1.2 TCe
+manufacturer: renault
+known_also_as:
+- 1.2 TCe
+- H5F 1.2
+production_years: 2012-2018
+claims:
+- id: h5f_exhaust_valves_v1
+  claim_key: h5f_exhaust_valves
+  version: 1
+  is_current: true
+  title: Worn exhaust valves (thermal stress)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Burning oil in the combustion chamber generates excessive heat, warping
+    or damaging exhaust valves, leading to loss of compression and potential engine
+    failure.
+  inspection_advice: Inspect exhaust valves for warping, burns, or cracks. Check for
+    blue smoke (oil burning) and abnormal combustion noises. Verify valve seals and
+    piston rings.
+  sources:
+  - tier: C
+    source_url: https://www.diagnosedan.com/renault-1-2-tce-burned-exhaust-valves-diagnosis/
+    source_domain: diagnosedan.com
+    site_or_channel: diagnosedan.com
+    quote: The source text explicitly mentions 'burned exhaust valve' as a common
+      issue in the Renault 1.2 TCe engine, linking it to thermal stress and combustion
+      chamber conditions.
+    independent: true
+- id: h5f_turbo_failure_v1
+  claim_key: h5f_turbo_failure
+  version: 1
+  is_current: true
+  title: Premature turbo failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Turbocharger failure can cause loss of power, excessive exhaust smoke,
+    and costly repairs if the turbo needs replacement or overhaul.
+  inspection_advice: Listen for unusual whining or rattling noises from the turbo
+    area, check for oil leaks around the turbo, and inspect for excessive exhaust
+    smoke (especially on startup or under load).
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/renault-megane-4-alacaklar-okusun--151709162
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Turbonun erken arızalanması
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly mentions '1.5 dCi (K9K) Turbocharger Failure from
+      Oil Starvation' as a documented issue in the Renault Megane, matching the claim
+      of premature turbo failure.
+    independent: true
+  - tier: C
+    source_url: https://www.carchecker.pro/reports/renault_megane_1.5_dci.html
+    source_domain: carchecker.pro
+    site_or_channel: carchecker.pro
+    quote: The source text explicitly mentions turbocharger failure as a potential
+      issue requiring attention and regular maintenance.
+    independent: true
+- claim_key: h5f_fuel system_high-pressure_fuel_p
+  title: High-Pressure Fuel Pump (HPFP) Wear
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The HPFP is critical for delivering fuel at high pressure in direct-injection
+    engines. Worn HPFPs can lead to poor fuel atomization, misfires, and eventual
+    engine failure if not addressed.
+  inspection_advice: Check for oil leaks around the HPFP, unusual noises (e.g., whining
+    or rattling), and verify if the SIB RSB-2014-12 upgrade has been applied. Inspect
+    for proper fuel pressure readings during a diagnostic test.
+  sources: []
+- claim_key: h5f_engine_intake_valve_carbon_
+  title: Intake Valve Carbon Buildup
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Carbon buildup on intake valves restricts airflow, leading to reduced
+    power, rough idling, and potential misfires. Common in gasoline direct-injection
+    (GDI) engines due to unburned fuel deposits.
+  inspection_advice: Check for symptoms like rough idling, loss of power, or hesitation.
+    Inspect the intake valves during an engine teardown or use a borescope to visually
+    confirm buildup if accessible.
+  sources: []
+- claim_key: h5f_electrical_ignition_coil/spark_
+  title: Ignition Coil/Spark Plug Failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty ignition coils or spark plugs can cause misfires, rough running,
+    and reduced fuel efficiency. These components are critical for proper combustion
+    in petrol engines.
+  inspection_advice: Test each ignition coil for proper resistance and check for misfires
+    using an OBD-II scanner. Inspect spark plugs for wear, fouling, or damage. Verify
+    if they are the correct type and gap for the engine.
+  sources: []
+- claim_key: h5f_engine_timing_chain_failure
+  title: Timing Chain Failure Risk (Interference Engine)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The H5F 405 is an interference engine, meaning the pistons and valves
+    share the same space. A failed timing chain or tensioner can cause catastrophic
+    internal engine damage if valves collide with pistons.
+  inspection_advice: Check for timing chain noise (e.g., rattling or clattering),
+    oil leaks around the timing chain cover, or unusual engine ticking. Verify the
+    timing chain tensioner and guides for wear. Ensure the chain has been serviced
+    according to the manufacturer’s schedule.
+  sources: []
+- claim_key: h5f_engine_oil_specification_no
+  title: Oil Specification Non-Compliance
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Using incorrect oil (e.g., non-RN0700 specification) can lead to turbocharger
+    failure, high-pressure fuel pump damage, and reduced engine longevity due to inadequate
+    lubrication and protection.
+  inspection_advice: Verify the oil type used in the vehicle (RN0700 5W-40 synthetic)
+    by checking the owner’s manual, oil filler cap, or service records. Inspect for
+    oil leaks or contamination that may indicate oil-related issues.
+  sources: []
+- claim_key: h5f_electrical_ecu_remapping_risks
+  title: ECU Remapping Risks
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: ECU remapping increases stress on the turbocharger, clutch, and fuel
+    system, potentially reducing their lifespan and voiding warranties. This can lead
+    to premature failures in these components.
+  inspection_advice: Check for signs of overstressed components such as excessive
+    turbo noise, clutch slippage, or fuel system issues (e.g., fuel pressure drops).
+    Review service history for unauthorized modifications.
+  sources: []
+- claim_key: h5f_engine_1.2_tce_engine_failu
+  title: 1.2 TCe Engine Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The post explicitly mentions a failure in the Renault 1.2 TCe engine,
+    which suggests a critical mechanical or electrical issue with this specific engine
+    variant.
+  inspection_advice: Check for unusual noises, check engine light activation, and
+    verify the engine’s performance and responsiveness. Inspect for oil leaks, unusual
+    smoke from the exhaust, or any visible damage to the engine components.
+  sources: []
+- claim_key: h5f_engine_turbo_failure_leadin
+  title: Turbo failure leading to power loss and increased fuel consumption
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Turbocharger failure can cause significant power loss and higher fuel
+    consumption, often requiring costly repairs if not addressed promptly.
+  inspection_advice: Check for unusual noises (whining, rattling) from the turbo area,
+    inspect for oil leaks around the turbo, and verify turbo boost pressure with a
+    scan tool or pressure gauge.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/megane-4-1-2-benzinli-kullananlar-hk--125767812
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: '"Turbo Sorunları: Turbo arızası, güç kaybına ve yüksek yakıt tüketimine
+      yol açabilir."'
+    independent: true
+- claim_key: h5f_engine_oil_leaks
+  title: Oil leaks
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: auto_audit
+  rationale: Oil leaks can lead to reduced lubrication, increased wear, and potential
+    engine damage if not addressed promptly. They may also indicate worn seals or
+    gaskets.
+  inspection_advice: Check under the vehicle for oil stains or puddles, inspect oil
+    filter and oil pan gaskets, and verify the condition of oil seals around the crankshaft
+    and camshaft.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/megane-4-1-2-benzinli-kullananlar-hk--125767812
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: '"Yağ Sızıntıları: Bazı modellerde yağ sızıntısı sorunları bildirilmiştir."'
+    independent: true
+- claim_key: h5f_engine_turbocharger_failure
+  title: Turbocharger failure at 15,000 km
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbo failure reported at an unusually low mileage (15,000 km), which
+    is atypical for turbocharged engines and suggests a potential manufacturing defect
+    or premature wear.
+  inspection_advice: Check for turbocharger wear, oil leaks, or damage to turbocharger
+    components (e.g., bearings, seals). Verify if the turbo was serviced with correct
+    oil specifications and intervals.
+  sources: []
+- claim_key: h5f_engine_turbocharger_oil_con
+  title: Turbocharger oil contamination or incorrect oil usage
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mention of incorrect oil (e.g., 'kar amaçlı varıl yağ') being used in
+    turbocharged engines, which can cause premature turbo failure due to high viscosity
+    or contamination.
+  inspection_advice: Verify oil type and viscosity used in the turbocharger system.
+    Check for oil leaks or contamination in the turbo area. Ensure proper oil changes
+    with manufacturer-recommended lubricants.
+  sources: []
+- claim_key: h5f_electrical_turbocharger_electro
+  title: Turbocharger electronic failure (sensor/control module)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbocharger mechanical parts appear intact, but electronic components
+    (e.g., wastegate sensor, control module) are suspected of failure, causing intermittent
+    power loss or error codes.
+  inspection_advice: Scan for engine error codes related to turbocharger sensors or
+    control modules. Inspect wiring and connectors for damage or corrosion. Test turbocharger
+    electronic components for proper functionality.
+  sources: []
+- claim_key: h5f_engine_turbocharger_hose/pi
+  title: Turbocharger hose/pipe leaks or damage
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbocharger hoses or pipes may be damaged, leading to air leaks or improper
+    turbo function, which can cause performance issues or turbo failure.
+  inspection_advice: Inspect turbocharger hoses and pipes for leaks, cracks, or improper
+    connections. Ensure all turbo-related hoses are securely fastened and free of
+    damage.
+  sources: []
+- claim_key: h5f_engine_cold-start_hesitatio
+  title: Cold-start hesitation in 1.6L K4M VVT engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine exhibits a momentary loss of power or hesitation in the 1200–2200
+    RPM range during cold starts (below 15°C), particularly after prolonged stationary
+    periods (5–6+ hours). The issue resolves once the engine warms up or if the driver
+    avoids higher RPMs during acceleration.
+  inspection_advice: Test the engine's response during cold starts by accelerating
+    from idle to 2000 RPM. Listen for hesitation or stumbling in this RPM range. Check
+    for proper VVT system operation (dephaser pulley, solenoid, and ECU calibration)
+    and verify coolant temperature sensor functionality. Inspect for software updates
+    if applicable.
+  sources: []
+- claim_key: h5f_engine_persistent_cold-star
+  title: Persistent cold-start hesitation despite VVT system repairs
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report that replacing the VVT dephaser pulley or coolant temperature
+    sensor does not resolve the cold-start hesitation issue, suggesting a deeper or
+    alternative root cause (e.g., ECU software, solenoid, or other sensor).
+  inspection_advice: If hesitation persists after replacing the dephaser pulley or
+    ECT sensor, inspect the VVT solenoid, ECU calibration, and other sensors (e.g.,
+    MAF, crankshaft position sensor). Consider diagnostic tools to check for software-related
+    issues or intermittent faults.
+  sources: []
+- claim_key: h5f_fuel system_fuel_pump_failure_kn
+  title: Fuel pump failure known issue with potential Renault warranty coverage
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The failure is recognized as a known issue, and the user suggests Renault
+    may be liable for repairs regardless of warranty status, possibly due to a recall.
+  inspection_advice: Review the vehicle’s service history for any past fuel pump replacements
+    or recalls. Confirm with Renault whether the failure is covered under warranty
+    or recall policies.
+  sources: []
+- claim_key: h5f_fuel system_fuel_pump_failure_ma
+  title: Fuel pump failure may affect 1.9 dCi engines
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The discussion hints that the fuel pump failure issue may extend beyond
+    the 1.5 dCi engines to include the 1.9 dCi engines, though this is not explicitly
+    confirmed.
+  inspection_advice: If considering a 1.9 dCi model, research service records for
+    fuel pump replacements or recalls. Check for similar symptoms (e.g., fuel system
+    damage, metallic debris) in the 1.9 dCi variant.
+  sources: []
+- claim_key: h5f_engine_crankshaft_failure
+  title: Crankshaft failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Ford/JLR 3.0 V6 TDI engines (Lion series) are prone to crankshaft
+    failures due to lubrication issues, exacerbated by extended service intervals
+    and oil specifications.
+  inspection_advice: Check for oil leaks, unusual engine noises (e.g., knocking or
+    grinding), and verify oil type (5w30 ACEA C1 vs. 5w40 C3) and service intervals.
+    Inspect for signs of bearing failure or crankshaft damage during a thorough inspection.
+  sources: []
+- claim_key: h5f_engine_lubrication-related_
+  title: Lubrication-related engine failures
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Lion engine series (Ford/JLR 3.0 V6 and 2.6/4.0 V8) suffers from
+    lubrication issues, including crank failures and spun bearings, due to oil type,
+    service intervals, and emissions system demands (e.g., DPFs).
+  inspection_advice: Verify oil type (5w40 C3 recommended), service history (intervals
+    ideally <10k miles), and check for oil leaks or contamination. Inspect for signs
+    of bearing wear or crankshaft damage.
+  sources: []
+- claim_key: h5f_engine_wet_belt_drive_syste
+  title: Wet belt drive system failures
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Ford 2.0 Ecoblue diesel engines use a wet belt drive system, which is
+    prone to failure and requires frequent inspection/maintenance, often causing reliability
+    issues for Transit drivers.
+  inspection_advice: Check the condition of the wet belt, tensioners, and pulleys
+    for wear or damage. Verify service history for belt replacements and listen for
+    unusual noises during operation.
+  sources: []
+- claim_key: h5f_engine_unreliable_turbochar
+  title: Unreliable turbocharged diesel
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The diesel engine in the Lexus IS220d is widely reported as unreliable,
+    with issues likely related to turbocharger or fuel system failures.
+  inspection_advice: Check turbocharger condition, fuel injectors, and common rail
+    system for proper function. Verify maintenance history for turbo-related services
+    and fuel system cleaning.
+  sources: []
+- claim_key: h5f_engine_wet_belt_failure_in_
+  title: Wet belt failure in 1.2 petrol engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The wet belt system in some 1.2 petrol engines is prone to failure, often
+    due to belt degradation or tensioner issues, which can lead to timing belt failure
+    and catastrophic engine damage.
+  inspection_advice: Check for signs of belt wear, tensioner functionality, and any
+    past service records related to belt replacements. Ensure the vehicle has a properly
+    maintained belt system with no visible cracks or fraying.
+  sources: []
+- claim_key: h5f_engine_camshaft_chain_wear_
+  title: Camshaft chain wear in 1.5 diesel engines (7mm chain)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The original 7mm-width camshaft chain in the 1.5 diesel engines (PSA
+    DV5RC) is prone to premature wear, elongation, and synchronization loss, which
+    can cause timing issues, bent valves, or piston damage.
+  inspection_advice: Verify the engine variant and whether it has the upgraded 8mm
+    chain. Check for signs of chain stretch (e.g., unusual engine noises, timing issues,
+    or service records mentioning chain replacement). Ensure the vehicle has undergone
+    necessary retrofits or updates.
+  sources: []
+- claim_key: h5f_engine_camshaft_chain_durab
+  title: Camshaft chain durability issue (7mm vs. 8mm upgrade)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The original 7mm-width camshaft chain in the DV5RC engine family is prone
+    to wear and elongation, leading to timing issues and potential catastrophic engine
+    failure. The 8mm-width upgrade was introduced to address this durability concern.
+  inspection_advice: Confirm the engine variant and whether it has been retrofitted
+    with the 8mm chain. Look for service records indicating chain replacement or upgrades.
+    Listen for unusual engine noises that may indicate chain stretch or misalignment.
+  sources: []
+- claim_key: h5f_electrical_excessive_electricit
+  title: Excessive electricity consumption
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The vehicle's electricity consumption is significantly lower than advertised,
+    indicating a potential issue with battery efficiency, energy management, or electrical
+    system integrity.
+  inspection_advice: Check battery health, electrical load distribution, and verify
+    if the advertised range is realistic for the vehicle's actual usage conditions.
+  sources: []
+- claim_key: h5f_electrical_random_loud_noise_re
+  title: Random loud noise resembling static discharge
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A random loud noise that sounds like static discharge through speakers
+    suggests potential issues with electrical wiring, grounding, or interference in
+    the audio system.
+  inspection_advice: Inspect wiring harnesses, audio system components, and electrical
+    connections for damage or loose connections. Test for electrical interference
+    or short circuits.
+  sources: []
+- claim_key: h5f_electrical_infotainment_system_
+  title: Infotainment system malfunctions
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Frequent failures in the infotainment system, including volume inconsistency,
+    screen failure, and radio malfunctions, indicate potential hardware or software
+    defects.
+  inspection_advice: Test the infotainment system for consistent functionality, check
+    for software updates, and inspect wiring and connections for damage or corrosion.
+  sources: []
+- claim_key: h5f_electrical_non-functional_eco_b
+  title: Non-functional Eco button
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Eco button not functioning as intended suggests a potential software
+    or sensor issue affecting the vehicle's energy management system.
+  inspection_advice: Check if the button is properly connected and if the vehicle's
+    software recognizes the input. Verify if the issue persists after a software reset.
+  sources: []
+- claim_key: h5f_general_excessive_condensati
+  title: Excessive condensation/water leak
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Excessive condensation suggests a potential water leak, which could damage
+    electrical components, interior materials, or cause rusting.
+  inspection_advice: Inspect for visible leaks, check undercarriage and engine bay
+    for water accumulation, and verify seals and gaskets for integrity.
+  sources: []
+- claim_key: h5f_suspension_lethal_standard_tire
+  title: Lethal standard tires
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mention of 'lethal' standard tires indicates a serious safety concern,
+    likely due to poor traction, handling, or durability.
+  inspection_advice: Check tire tread depth, condition, and type. Ensure tires meet
+    safety standards and are appropriate for the vehicle's use.
+  sources: []
+- claim_key: h5f_engine_head_gasket_failure_
+  title: Head gasket failure (K-series engine)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Head gasket failure in the Rover K-series engine can lead to coolant
+    loss, overheating, and severe engine damage.
+  inspection_advice: Check for coolant leaks, overheating symptoms, and inspect head
+    gaskets for cracks or damage. Verify if the engine has been previously repaired
+    with proper head gaskets.
+  sources: []
+- claim_key: h5f_electrical_crank_position_senso
+  title: Crank position sensor degradation
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A degrading crank position sensor can cause starting issues and intermittent
+    engine operation, particularly in cold conditions.
+  inspection_advice: Test the crank position sensor for proper signal output and functionality.
+    Replace if signals are erratic or non-existent.
+  sources: []
+- claim_key: h5f_engine_incomplete_or_improp
+  title: Incomplete or Improper Recall Campaign Repairs
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Some service centers are only performing partial repairs (e.g., oil change,
+    filter replacement, and ECU software updates) without addressing the root cause
+    (timing chain failure) or providing written confirmation of the issue’s resolution.
+    This leaves the vehicle at risk of future failures.
+  inspection_advice: Request written confirmation from the service center that the
+    timing chain, tensioner, and camshafts were inspected/replaced if applicable.
+    Verify if the recall campaign was fully executed (e.g., chain replacement to the
+    8mm version). Listen for unusual noises during cold starts post-service.
+  sources: []
+- claim_key: h5f_general_poor_workmanship_dur
+  title: Poor Workmanship During Service
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Some service centers exhibit sloppy workmanship, such as improperly trimming
+    plastic clips or failing to secure components properly, which could lead to future
+    issues (e.g., motor cover misalignment, potential damage to surrounding parts).
+  inspection_advice: Inspect the motor cover and surrounding components for signs
+    of poor workmanship (e.g., loose or improperly trimmed plastic clips, misaligned
+    parts). Verify that all components were securely reinstalled post-service.
+  sources: []
+- claim_key: h5f_electrical_ecu_software_update_
+  title: ECU Software Update Without Proper Diagnosis
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: ECU software updates are being performed without thorough diagnosis,
+    which may mask symptoms of underlying issues (e.g., timing chain failure) rather
+    than resolving them. This could lead to delayed detection of critical failures.
+  inspection_advice: Ask for detailed diagnostic reports confirming the root cause
+    of the issue before ECU updates. Monitor the vehicle for recurring symptoms (e.g.,
+    unusual noises) post-update.
+  sources: []
+- claim_key: h5f_general_recall_campaign_stat
+  title: Recall Campaign Status Removal Without Transparency
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Some service centers remove recall campaign status from the vehicle’s
+    records without informing the owner, leaving them unaware of potential future
+    issues or warranty coverage.
+  inspection_advice: Verify the recall campaign status by checking the chassis number
+    on Peugeot.com.tr or requesting written confirmation from the service center.
+    Ensure all recall-related repairs were documented.
+  sources: []
+- claim_key: h5f_fuel system_faulty_fuel_pump_cau
+  title: Faulty Fuel Pump Causing Idling and Performance Issues
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The fuel pump failed to maintain proper pressure in the fuel rail, causing
+    the engine to stall at idle and exhibit poor performance. This is a critical failure
+    as it directly impacts drivability and can lead to further engine damage if unresolved.
+  inspection_advice: Check for consistent fuel pressure at idle using a fuel pressure
+    gauge. Listen for the fuel pump priming when turning the key to the 'ON' position
+    (without starting the engine). Inspect the fuel pump for unusual noises or vibrations
+    during operation. Verify the fuel filter for clogs or blockages.
+  sources: []
+- claim_key: h5f_fuel system_inconsistent_fuel_pr
+  title: Inconsistent Fuel Pressure at Idle Leading to Engine Stalling
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The faulty fuel pump failed to maintain consistent fuel pressure at idle,
+    causing the engine to stall. This is a critical issue as it directly affects the
+    engine's ability to run smoothly and can lead to further complications if not
+    addressed.
+  inspection_advice: Test fuel pressure at idle using a fuel pressure gauge. Listen
+    for the fuel pump priming when turning the key to the 'ON' position. Inspect the
+    fuel pump for wear or damage. Check for any error codes related to fuel system
+    issues.
+  sources: []
+- claim_key: h5f_fuel system_injector_rail_failur
+  title: Injector rail failures
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Injector rail failures are a critical failure point in fuel delivery
+    systems, often leading to poor performance, stalling, or complete engine failure
+    if not addressed promptly.
+  inspection_advice: Check for signs of fuel leaks, unusual noises from the fuel injectors,
+    or error codes related to fuel system performance. Inspect the injector rail for
+    corrosion, leaks, or damage.
+  sources: []
+- claim_key: h5f_emissions_dpf_(diesel_particul
+  title: DPF (Diesel Particulate Filter) failures
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPF failures can cause drivability issues, reduced power, and require
+    expensive cleaning or replacement, disrupting vehicle operation.
+  inspection_advice: Look for warning lights related to emissions systems, check for
+    excessive backpressure in the exhaust, and inspect the DPF for physical damage
+    or clogging.
+  sources: []
+- claim_key: h5f_engine_turbocharger-related
+  title: Turbocharger-related issues in early TCe 1.2 (H5F) engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Turbocharger failures can lead to loss of power, excessive exhaust smoke,
+    and potential engine damage if not repaired promptly.
+  inspection_advice: Listen for unusual turbocharger noises, check for oil leaks around
+    the turbo area, and inspect for excessive exhaust smoke or loss of power.
+  sources:
+  - tier: C
+    source_url: https://enginescope.gr/blog/renault-engines-to-avoid/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: early turbocharged petrol units... TCe turbo petrol units from the early
+      2010s
+    independent: true
+- claim_key: h5f_engine_early_turbocharged_p
+  title: Early turbocharged petrol engine durability concerns
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Ambiguous downsizing without adequate durability testing can lead to
+    premature wear and failure of critical engine components, reducing overall reliability.
+  inspection_advice: Check for excessive oil consumption, unusual engine noises, and
+    inspect for signs of internal engine wear such as metal shavings in the oil.
+  sources:
+  - tier: C
+    source_url: https://enginescope.gr/blog/renault-engines-to-avoid/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: ambitious downsizing without the durability testing to match. The TCe turbo
+      petrol units from the early 2010s
+    independent: true
+- claim_key: h5f_engine_g9t_2.2_dci_reliabil
+  title: G9T 2.2 dCi reliability issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The G9T 2.2 dCi engine has a low reliability score, indicating potential
+    widespread issues that could affect performance and longevity.
+  inspection_advice: Check for any error codes, unusual engine noises, and inspect
+    for signs of injector or DPF problems.
+  sources: []
+- claim_key: h5f_engine_l7x_3.0_v6_reliabili
+  title: L7X 3.0 V6 reliability issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The L7X 3.0 V6 engine has a moderate reliability score, indicating some
+    potential issues that could affect its performance and longevity.
+  inspection_advice: Check for any error codes, unusual engine noises, and inspect
+    for signs of internal engine wear or turbocharger problems.
+  sources: []
+- claim_key: h5f_engine_sudden_loss_of_power
+  title: Sudden loss of power
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Sudden loss of power, especially on highways, can indicate severe engine
+    or fuel system failures, such as fuel pump failure, clogged injectors, or internal
+    engine damage.
+  inspection_advice: Test for consistent power delivery under acceleration. Inspect
+    fuel injectors, fuel pump, and engine sensors. Check for error codes related to
+    power loss or fuel delivery issues.
+  sources:
+  - tier: C
+    source_url: https://www.just-auto.com/news/renault-faces-legal-action-over-faulty-engines/
+    source_domain: just-auto.com
+    site_or_channel: just-auto.com
+    quote: one customer testimony collected by the complainants’ lawyer Christophe
+      Leguevaques, they experienced ‘sudden loss of power’ on a highway.
+    independent: true
+- claim_key: h5f_engine_engine_power_loss_at
+  title: Engine power loss at high RPM
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The driver reported that the car lost acceleration and failed to respond
+    to throttle input after exceeding 3,000 RPM, indicating a potential issue with
+    fuel delivery, ignition, or turbocharger function.
+  inspection_advice: Check for proper throttle response at varying RPMs, inspect turbocharger
+    function, fuel pressure, and ignition system. Verify no vacuum leaks or clogged
+    air filters.
+  sources: []
+- claim_key: h5f_engine_exhaust_gas_recircul
+  title: Exhaust Gas Recirculation (EGR) Valve or EGR Cooling Valve failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The serviced part, identified as the 'Eksantrik Mili Kumanda Valfi' (likely
+    an EGR or EGR Cooling Valve), is commonly associated with issues like poor acceleration,
+    rough idling, and increased emissions. Its failure can cause engine performance
+    problems and trigger warning lights.
+  inspection_advice: Inspect the EGR valve and EGR cooling valve for carbon buildup,
+    proper operation, and correct positioning. Check for vacuum leaks and ensure the
+    valve is not stuck open or closed.
+  sources: []

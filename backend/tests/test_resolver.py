@@ -1,0 +1,226 @@
+"""Resolver tests: verified-claim invariant, exact and union-for-ambiguous logic."""
+
+import pytest
+from backend.core.matcher import MatchResult
+from backend.core.resolver import ClaimResult, resolve_claims, _servable_claims_for
+from backend.db.models import Claim, ClaimSource, ClaimVariant, Variant
+
+
+def test_exact_match_returns_verified_claims(db, megane4_claims):
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    titles = [r.claim.title for r in results]
+    # k9k_90 should get injector, EGR, and A/C condenser claims
+    assert any("injector" in t.lower() for t in titles)
+    assert any("egr" in t.lower() for t in titles)
+
+
+def test_ambiguous_match_returns_intersection(db, megane4_claims):
+    # Both k9k_90 and k9k_110 share injector, EGR, and A/C condenser claims.
+    match = MatchResult(["megane4_k9k_90", "megane4_k9k_110"], "ambiguous", "")
+    results = resolve_claims(match, db)
+    # Should still include the shared claims (verified for both)
+    assert len(results) >= 2
+    titles = [r.claim.title for r in results]
+    assert any("injector" in t.lower() for t in titles)
+    assert any("egr" in t.lower() for t in titles)
+
+
+def test_ambiguous_match_includes_single_variant_claims(db, megane4_claims, db_add_unique_claim):
+    # Ambiguous resolution uses union: a claim grounded only to k9k_90 should
+    # still appear when matching ambiguously between k9k_90 and k9k_110 — the
+    # buyer needs to know about all possible risks, not just the intersection.
+    match = MatchResult(["megane4_k9k_90", "megane4_k9k_110"], "ambiguous", "")
+    results = resolve_claims(match, db)
+    ids = [r.claim.id for r in results]
+    assert "megane4_k9k_90_only_v1" in ids
+
+
+@pytest.fixture
+def db_add_unique_claim(db, megane4_variants):
+    """Add a claim verified only for megane4_k9k_90 (used in intersection test)."""
+    claim = Claim(
+        id="megane4_k9k_90_only_v1",
+        claim_key="megane4_k9k_90_only",
+        version=1, is_current=True,
+        title="Test claim unique to k9k_90",
+        domain="engine", severity="low",
+        confidence=0.70,
+        rationale="Test only.",
+        inspection_advice="Test only.",
+        status="verified",
+        promoted_by="human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="B",
+        source_url="https://example.com", quote="Test quote.",
+    ))
+    db.flush()
+    return claim
+
+
+def test_no_match_returns_empty(db, megane4_claims):
+    match = MatchResult([], "no_match", "")
+    assert resolve_claims(match, db) == []
+
+
+def test_empty_variant_ids_returns_empty(db, megane4_claims):
+    match = MatchResult([], "inconsistent_listing", "")
+    assert resolve_claims(match, db) == []
+
+
+def test_draft_claim_not_served(db, megane4_variants):
+    """Claims with status != 'verified' must never be served."""
+    claim = Claim(
+        id="draft_claim_v1", claim_key="draft_claim", version=1, is_current=True,
+        title="Draft claim should not appear",
+        domain="engine", severity="low", confidence=0.5,
+        rationale="Draft.", inspection_advice="Draft.",
+        status="draft",  # NOT verified
+        promoted_by=None,
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="B",
+        source_url="https://example.com", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    assert all(r.claim.id != "draft_claim_v1" for r in results)
+
+
+@pytest.mark.parametrize("status", ["review", "held"])
+def test_review_and_held_claims_are_served(db, megane4_variants, status):
+    """review/held are now served (labelled 'reported' downstream), unlike draft."""
+    claim = Claim(
+        id=f"{status}_claim_v1", claim_key=f"{status}_claim", version=1, is_current=True,
+        title=f"{status} claim should appear",
+        domain="engine", severity="medium", confidence=0.6,
+        rationale="Reported.", inspection_advice="Check it.",
+        status=status, promoted_by="pending_human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="C",
+        source_url="https://blog.example", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ids = [r.claim.id for r in resolve_claims(match, db)]
+    assert f"{status}_claim_v1" in ids
+
+
+def test_old_version_claim_not_served(db, megane4_variants):
+    """Claims with is_current=False must never be served."""
+    claim = Claim(
+        id="old_claim_v1", claim_key="old_claim", version=1, is_current=False,
+        title="Old version claim should not appear",
+        domain="engine", severity="medium", confidence=0.7,
+        rationale="Old.", inspection_advice="Old.",
+        status="verified",
+        promoted_by="human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="A",
+        source_url="https://example.com", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    assert all(r.claim.id != "old_claim_v1" for r in results)
+
+
+def test_sourceless_claim_not_served(db, megane4_variants):
+    """known_issue claims with zero source rows must not be served (invariant re-check)."""
+    claim = Claim(
+        id="no_source_v1", claim_key="no_source", version=1, is_current=True,
+        title="Claim with no sources",
+        domain="engine", severity="high", confidence=0.8,
+        rationale="No sources.", inspection_advice="No sources.",
+        status="verified",
+        promoted_by="human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    # Deliberately no ClaimSource row
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    assert all(r.claim.id != "no_source_v1" for r in results)
+
+
+def test_h5h_claims_served_for_h5h_variant(db, megane4_claims):
+    match = MatchResult(["megane4_h5h_140"], "exact", "")
+    results = resolve_claims(match, db)
+    titles = [r.claim.title for r in results]
+    # H5H is an EDC automatic — EDC transmission claims should appear
+    assert any("edc" in t.lower() or "mechatron" in t.lower() or "rough shift" in t.lower() for t in titles)
+    # K9K diesel-specific claims should NOT appear for an H5H petrol variant
+    assert not any("injector" in t.lower() for t in titles)
+
+
+def test_h5f_claims_not_in_h5h_result(db, megane4_claims):
+    match = MatchResult(["megane4_h5h_115"], "exact", "")
+    results = resolve_claims(match, db)
+    ids = [r.claim.id for r in results]
+    assert "megane4_h5f_timingchain_v1" not in ids
+
+
+def test_diesel_variants_get_dpf_claim(db, megane4_claims):
+    """DPF clogging claim should appear for all diesel Megane IV variants."""
+    diesel_variant_ids = ["megane4_k9k_90", "megane4_k9k_110", "megane4_r9m_130"]
+    for vid in diesel_variant_ids:
+        match = MatchResult([vid], "exact", "")
+        results = resolve_claims(match, db)
+        titles = [r.claim.title for r in results]
+        assert any("dpf" in t.lower() or "particulate" in t.lower() for t in titles), \
+            f"DPF claim missing for {vid}"
+
+
+def test_verified_claim_strength_is_confirmed(db, megane4_claims):
+    """Verified claims must carry strength='confirmed'."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    confirmed = [r for r in results if r.claim.status == "verified"]
+    assert all(r.strength == "confirmed" for r in confirmed)
+
+
+def test_held_claim_strength_is_reported(db, megane4_variants):
+    """held/review claims must carry strength='reported'."""
+    claim = Claim(
+        id="held_strength_v1", claim_key="held_strength", version=1, is_current=True,
+        title="Held claim strength test",
+        domain="engine", severity="medium", confidence=0.6,
+        rationale="Reported.", inspection_advice="Check it.",
+        status="held", promoted_by="pending_human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id, tier="C",
+        source_url="https://blog.example", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db)
+    held = [r for r in results if r.claim.id == "held_strength_v1"]
+    assert len(held) == 1
+    assert held[0].strength == "reported"
