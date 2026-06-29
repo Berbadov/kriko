@@ -1,14 +1,12 @@
-"""Promotion engine — weighted corroboration → verified claims.
+"""Promotion engine — corroboration count → verified claims.
 
-Tier weights per independent source that passed gate_support:
-  Tier A: 1.0  (specialist repair, engine remanufacturers)
-  Tier B: 0.5  (owner/engine forums)
-  Tier C: 0.34 (YouTube transcripts, blog anecdotes)
+Scoring: each independent source that passes gate_support and gate_refute
+contributes 1 point. Domain trust is not used — the LLM gates are the
+sole quality filter now that source discovery is open to the general web.
 
-Scoring:
-  score ≥ 1.0 → VERIFY (auto), confidence = clamp(score/2, 0.6, 0.9)
-  0.5 ≤ score < 1.0 → HUMAN review
-  score < 0.5 → HELD (never served until more corroboration)
+  score ≥ 2 → VERIFY (auto) — two independent sources corroborate
+  score ≥ 1 → HUMAN review  — single source, needs a second
+  score  = 0 → HELD (no supporting source passed gates)
 
 Overrides (always win):
   severity == "high"  → HUMAN review regardless of score
@@ -32,19 +30,13 @@ import yaml
 from knowledge.dedup import merge_candidates, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.judge import gate_generic, gate_inspection_value, gate_refute, gate_support, gate_variant
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
 
-TIER_WEIGHT: dict[Tier, float] = {
-    Tier.A: 1.0,
-    Tier.B: 0.5,
-    Tier.C: 0.34,
-}
-
 # HUMAN DECISION #2: adjust these thresholds based on measured error rate.
-SCORE_VERIFY  = 0.5     # auto-verify threshold (single Tier B or 2× Tier C)
-SCORE_REVIEW  = 0.5     # human review threshold
+SCORE_VERIFY  = 2       # auto-verify: ≥2 independent sources corroborate
+SCORE_REVIEW  = 1       # human review: 1 source — needs a second to confirm
 AUDIT_RATE    = 0.20    # 20% of auto-verified claims go to review queue
 
 
@@ -222,7 +214,7 @@ def _evaluate_claim(
             if not refute.passed:
                 override_review = True
                 continue
-            score += TIER_WEIGHT[source.tier]
+            score += 1
             grounded_sources.append(source)
         except Exception as exc:
             log.warning("gate_support/refute failed: %s", exc)
@@ -315,7 +307,6 @@ def write_promoted_claims(
     def _make_sources(r: PromotionResult) -> list[dict]:
         return [
             {
-                "tier": s.tier.value,
                 "source_url": s.url,
                 "source_domain": s.site_or_channel,
                 "site_or_channel": s.site_or_channel,
@@ -396,6 +387,7 @@ def write_promoted_claims(
 
     if new_claims or updated:
         all_claims = existing + new_claims
+        claims_dir.mkdir(parents=True, exist_ok=True)
         path.write_text(yaml.dump(all_claims, allow_unicode=True, sort_keys=False))
         log.info("Wrote %d new + %d updated claims to %s", len(new_claims), updated, path)
 
@@ -444,7 +436,6 @@ def write_promoted_part_claims(
     def _make_sources(r: PromotionResult) -> list[dict]:
         return [
             {
-                "tier": s.tier.value,
                 "source_url": s.url,
                 "source_domain": s.site_or_channel,
                 "site_or_channel": s.site_or_channel,

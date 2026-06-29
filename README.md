@@ -50,7 +50,7 @@ Top confirmed risks returned:
 ```
 Chrome extension  →  POST /analyze
                          │
-                    match_variant()       ← variants YAML (7 Megane 4 configs)
+                    match_variant()       ← variants YAML
                     resolve_claims()      ← claims DB (assembled from parts × fitment)
                          │
                     JSON response (no LLM on request path)
@@ -58,34 +58,44 @@ Chrome extension  →  POST /analyze
 
 ### Knowledge plane — the "Lego" system
 
-Research is done once per **part revision**, not per car model. A K9K claim in `backend/data/parts/engine/k9k.yaml` automatically applies to every variant that has `engine_family: k9k` in the fitment YAML — Megane 4, Clio 4, Duster, etc.
+Research is done once per **part revision**, not per car model. A K9K claim in `backend/data/parts/engine/k9k_90.yaml` automatically applies to every variant that has `engine_family: k9k` in the fitment YAML — Megane 4, Clio 4, Duster, etc.
+
+The pipeline discovers sources from the web and YouTube, runs LLM extraction and quality gates, then promotes claims into part YAMLs:
 
 ```
-knowledge/catalog/discover.py          # Step 1: given "megane_4", enumerate K9K/H5F/R9M/EDC
-knowledge/auto.py  --part k9k …        # Step 2: discover web + YouTube sources for K9K
-knowledge/process.py --part k9k …      # Step 3: extract → gate → score → write k9k.yaml
-backend/sync.py                        # Step 4: assemble parts × fitment → DB
+knowledge/catalog/discover.py  --make vw --model golf_7 --write-fitment
+                                          # enumerates EA211/EA288/DQ200 from Wikipedia
+knowledge/auto.py  --all-parts            # discover + extract + gate all parts at once
+                   --part k9k …           # or target a single part
+backend/sync.py                           # assemble parts × fitment → Postgres
 ```
+
+**Part types covered per model:** engine families, gearbox revisions, cooling system, electrical systems.
 
 ### File layout
 
 ```
 backend/
   data/
-    variants/renault_megane_4.yaml     # 7 engine/trim configs with cc/hp/year ranges
-    fitment/renault_megane_4.yaml      # variant_id → engine_family + transmission_code
+    variants/renault_megane_4.yaml        # trim configs: cc, hp, fuel, tx, years
+    variants/volkswagen_golf_7.yaml
+    fitment/renault_megane_4.yaml         # variant_id → engine_family + tx_code + ...
+    fitment/volkswagen_golf_7.yaml
     parts/
-      engine/k9k.yaml                  # K9K claims (9 verified, 7 review)
-      engine/r9m.yaml                  # R9M 1.6 dCi claims
-      engine/h5f.yaml                  # H5F 1.2 TCe claims
-      engine/h5h.yaml                  # H5H 1.3 TCe claims
-      transmission/edc.yaml            # EDC dual-clutch claims (10 verified)
-    claims/renault_megane_4.yaml       # legacy flat claims (93 rejected/parked)
+      engine/k9k_90.yaml                  # K9K 90hp claims
+      engine/ea211.yaml                   # VW EA211 TSI claims
+      engine/ea288.yaml                   # VW EA288 TDI claims
+      transmission/edc.yaml               # Renault EDC dual-clutch claims
+      transmission/dq200.yaml             # VW DQ200 7-speed DSG claims
+      transmission/dq250.yaml             # VW DQ250 6-speed DSG claims
+      cooling/golf7_cool.yaml             # Golf 7 model-wide cooling system
+      electrical/golf7_elec.yaml          # Golf 7 model-wide electrical systems
 knowledge/
-  catalog/discover.py                  # Wikipedia wikitext parser — catalog bootstrap
-  parts/search_templates.py           # part-centric Exa + YouTube queries
-  sources/curated/                    # discovered URLs per part, status=pending|processed
-  cache/                              # candidate JSON cache (--skip-extraction)
+  catalog/discover.py                     # Wikipedia wikitext parser — catalog bootstrap
+  auto.py                                 # orchestrator: all-parts mode + single-part
+  parts/search_templates.py              # part-centric Exa + YouTube queries
+  sources/curated/                        # discovered URLs per part
+  cache/                                  # candidate JSON (--skip-extraction reuses this)
 ```
 
 ---
@@ -123,32 +133,33 @@ Chrome → `chrome://extensions` → Developer mode → Load unpacked → select
 
 ## Growing the knowledge base
 
-### Discover a new model's parts
+### Add a new model end-to-end
 
 ```bash
-python -m knowledge.catalog.discover --make renault --model megane_4
-# → H5Ft (h5f, petrol), K9K (k9k, diesel), R9M (r9m, diesel), EDC (transmission) …
-```
+# 1. Bootstrap: discovers engine families from Wikipedia, creates variants + fitment YAMLs
+python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-fitment
 
-### Run the pipeline for a part
+# 2. Run the pipeline for every part type (engine, transmission, cooling, electrical)
+#    Auto-creates part stub YAMLs, discovers sources, extracts and gates claims.
+python3 -m knowledge.auto --make volkswagen --model golf_7 --all-parts
 
-```bash
-# Full run: discover → fetch → extract → gate → promote → sync
-python -m knowledge.auto --part k9k --part-type engine --fuel diesel
-
-# Re-run gates only (zero token cost — uses cached candidates)
-python -m knowledge.process --part k9k --part-type engine --skip-extraction
-```
-
-### Sync to DB after any YAML edit
-
-```bash
+# 3. Sync to DB
 docker exec deploy-api-1 python -m backend.sync
+```
+
+### Re-run a single part (e.g. after tuning gates)
+
+```bash
+# Re-run gates only — zero token cost, uses cached candidates
+python3 -m knowledge.process --part ea211 --part-type engine --skip-extraction
+
+# Full re-run with fresh sources
+python3 -m knowledge.auto --part dq200 --part-type transmission
 ```
 
 ### Promote a held claim to verified
 
-Edit `backend/data/parts/engine/k9k.yaml` — change `status: held` → `status: verified`, then re-sync.
+Edit the part YAML — change `status: held` → `status: verified`, then re-sync.
 
 ### Check what's in the DB
 
@@ -161,11 +172,12 @@ docker exec deploy-db-1 psql -U postgres -d kriko \
 
 ## Supported cars
 
-| Make | Model | Generation | Engines |
-|------|-------|------------|---------|
-| Renault | Mégane | IV (2016–) | K9K 1.5 dCi · R9M 1.6 dCi · H5F 1.2 TCe · H5H 1.3 TCe |
+| Make | Model | Generation | Engines | Gearboxes |
+|------|-------|------------|---------|-----------|
+| Renault | Mégane | IV (2016–) | K9K 1.5 dCi · R9M 1.6 dCi · H5F 1.2 TCe · H5H 1.3 TCe | EDC dual-clutch |
+| Volkswagen | Golf | VII (2013–2020) | EA211 1.0/1.4 TSI · EA288 1.6/2.0 TDI | DQ200 7-speed DSG · DQ250 6-speed DSG |
 
-Adding a new model: create `backend/data/variants/{make}_{model}.yaml`, `backend/data/fitment/{make}_{model}.yaml`, run `knowledge.catalog.discover` to get part codes, run `knowledge.auto --part` for each part, then re-sync.
+Adding a new model: run `knowledge.catalog.discover --write-fitment` to bootstrap, then `knowledge.auto --all-parts`. Part stubs are auto-generated — no hand-writing required.
 
 ---
 

@@ -1,7 +1,7 @@
-"""Tier B — semi-structured owner & engine forums.
+"""Semi-structured owner & engine forums.
 
-Medium noise, highly specific. Real diagnostic threads with anecdotal data.
-Requires ≥2 independent sources to clear promotion thresholds.
+High specificity. Real diagnostic threads with anecdotal data. Two or more
+independent sources from different sites are required to verify a claim.
 
 HUMAN DECISION #5: which exact forums/subreddits are in-scope per model
 (liveness + ToS) must be confirmed before this adapter ships.
@@ -12,7 +12,7 @@ import logging
 import httpx
 from selectolax.parser import HTMLParser
 
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
 
@@ -41,8 +41,6 @@ FORUM_SOURCES: dict[str, list[dict]] = {
 
 
 class ForumSource:
-    tier = Tier.B
-
     def fetch(self, make: str, model: str) -> list[Document]:
         docs: list[Document] = []
         sources = FORUM_SOURCES.get(model.lower(), [])
@@ -64,7 +62,6 @@ class ForumSource:
                     docs.append(Document(
                         text=text[:8000],
                         url=url,
-                        tier=Tier.B,
                         site_or_channel=source["site"],
                         meta={"make": make, "model": model},
                     ))

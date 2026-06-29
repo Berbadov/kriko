@@ -2,7 +2,7 @@
 
 import knowledge.process as process
 from knowledge.extract import CandidateClaim
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 
 def test_cache_round_trip(tmp_path, monkeypatch):
@@ -20,7 +20,6 @@ def test_cache_round_trip(tmp_path, monkeypatch):
     doc = Document(
         text="long source text",
         url="https://gaga.ba/k9k",
-        tier=Tier.A,
         site_or_channel="gaga.ba",
         meta={"make": "renault"},
     )
@@ -33,7 +32,6 @@ def test_cache_round_trip(tmp_path, monkeypatch):
     assert rc.title == claim.title
     assert rc.engine_or_variant_hint == "K9K"
     assert rd.text == doc.text
-    assert rd.tier is Tier.A
     assert rd.url == doc.url
     assert rd.meta == {"make": "renault"}
 

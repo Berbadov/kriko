@@ -1,7 +1,4 @@
-"""Tier C — YouTube mechanic video transcripts via yt-dlp.
-
-High-recall, high-noise. Used only for discovery: Tier C findings are HELD
-until corroborated by at least one Tier A or Tier B source.
+"""YouTube mechanic video transcripts via yt-dlp.
 
 No API key required — yt-dlp fetches auto-generated subtitles directly.
 Call get_transcript(video_id) to fetch and normalize a single video.
@@ -11,7 +8,7 @@ CuratedSource (sources/curated.py) is the entry point for batch use.
 import logging
 import re
 
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +84,6 @@ def _normalize_vtt(vtt: str) -> str:
 
 class YouTubeSource:
     """Kept for interface compatibility — use CuratedSource for batch fetching."""
-    tier = Tier.C
 
     def fetch_video(self, video_id: str, channel: str = "YouTube") -> Document | None:
         text = get_transcript(video_id)
@@ -96,6 +92,5 @@ class YouTubeSource:
         return Document(
             text=text[:8000],
             url=f"https://www.youtube.com/watch?v={video_id}",
-            tier=Tier.C,
             site_or_channel=channel,
         )

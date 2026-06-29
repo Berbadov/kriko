@@ -391,11 +391,15 @@ def _match_specs_to_variants(
 
         # If variant already has engine_family from hand-curation, trust it
         if v_ef and v_trans_code:
-            fitment_rows.append({
+            row: dict = {
                 "variant_id": vid,
                 "engine_family": v_ef,
                 "transmission_code": v_trans_code,
-            })
+            }
+            for extra in ("cooling_code", "electrical_code"):
+                if v.get(extra):
+                    row[extra] = v[extra]
+            fitment_rows.append(row)
             continue
 
         # Find best matching PartSpec
@@ -437,11 +441,15 @@ def _match_specs_to_variants(
         else:
             tx_code = "manual"
 
-        fitment_rows.append({
+        matched_row: dict = {
             "variant_id": vid,
             "engine_family": best.engine_family,
             "transmission_code": tx_code,
-        })
+        }
+        for extra in ("cooling_code", "electrical_code"):
+            if v.get(extra):
+                matched_row[extra] = v[extra]
+        fitment_rows.append(matched_row)
 
     return fitment_rows
 
@@ -562,16 +570,22 @@ def write_fitment_yaml(
             print(f"    {r['variant_id']}: engine_family={r['engine_family']}, tx={r['transmission_code']}")
         return fitment_rows
 
-    # Merge with existing fitment — hand-curated entries take precedence
+    # Merge with existing fitment — generated rows update existing ones (adds new
+    # fields like cooling_code/electrical_code), but hand-curated extra keys are kept.
     existing: list[dict] = []
     if path.exists():
         existing = yaml.safe_load(path.read_text()) or []
-    existing_ids = {r["variant_id"] for r in existing}
+    existing_map: dict[str, dict] = {r["variant_id"]: r for r in existing}
 
-    updated = list(existing)
+    updated = []
     new_count = 0
     for r in fitment_rows:
-        if r["variant_id"] not in existing_ids:
+        if r["variant_id"] in existing_map:
+            # Merge: generated row wins for its own keys; preserve any hand-curated extras
+            merged = dict(existing_map[r["variant_id"]])
+            merged.update(r)
+            updated.append(merged)
+        else:
             updated.append(r)
             new_count += 1
 

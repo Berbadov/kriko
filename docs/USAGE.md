@@ -154,16 +154,15 @@ Edit `knowledge/sources/curated/{make}_{model}_{gen}.yaml` directly and append:
 - type: page
   url: "https://www.enginefinders.co.uk/renault-1-5-dci-k9k-engine-problems"
   site_or_channel: "enginefinders.co.uk"
-  tier: A
   notes: "K9K injector fouling — specialist remanufacturer"
   status: pending
   added_at: "2026-06-26"
   processed_at: null
 ```
 
-Tiers: `A` = specialist/remanufacturer (weight 1.0) · `B` = owner forums (0.5) · `C` = YouTube (0.34)
+All sources carry equal weight — the LLM gates (gate_support, gate_refute, gate_variant) are the sole quality filter.
 
-A claim needs score ≥ 1.0 to auto-promote (e.g. 1× Tier A or 2× Tier B from independent sources).
+A claim needs **≥ 2 independent sources** that pass all gates to auto-verify. A single source lands in `review` (human must confirm).
 
 ---
 
@@ -200,7 +199,7 @@ strengths**, never blurring them (`backend/core/resolver.py`, `_servable_claims_
 |--------|----------|---------|
 | `verified` | **Confirmed** (green badge) | corroborated — ≥2 independent sources, or a hand-vetted seed claim |
 | `review`   | **Reported · N source(s)** (amber) | cleared the gates but thin/high-severity — shown for awareness, not asserted |
-| `held`     | **Reported · N source(s)** (amber) | genuine but thinly corroborated (one low-tier source) |
+| `held`     | **Reported · N source(s)** (amber) | genuine but thinly corroborated (zero sources passed gates) |
 | `rejected` | not served | tombstoned junk |
 | `draft`    | not served | not pipeline output |
 
@@ -208,11 +207,10 @@ Only claims with **≥1 grounded source** are served, so ungrounded score-0 nois
 OBD-code dumps) never reaches a buyer. The `/analyze` summary counts "confirmed issues" and
 "unverified reports" separately and never calls a single-source report a known issue.
 
-> **Why we serve unverified reports:** specialist (Tier A) sources are often ToS-restricted, so
-> high-trust corroboration is scarce. Rather than show an empty panel, we surface low-tier
-> reports *clearly labelled* so the cards as a whole signal the general picture, while the
-> `Confirmed` badge stays trustworthy. Verification still needs ≥2 independent sources — we do
-> **not** lower that bar.
+> **Why we serve unverified reports:** corroboration (≥2 sources) is scarce for niche reliability
+> topics. Rather than show an empty panel, we surface single-source reports *clearly labelled* so
+> the cards signal the general picture, while the `Confirmed` badge stays trustworthy.
+> Verification still needs ≥2 independent sources — we do **not** lower that bar.
 
 ### Promoting & rejecting claims (human step)
 
