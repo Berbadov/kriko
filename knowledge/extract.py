@@ -20,27 +20,30 @@ MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
 _MODEL = "ministral-8b-latest"
 
 SYSTEM_PROMPT = """You are a car reliability analyst. Given a text excerpt from a
-repair blog, forum thread, or mechanic video transcript, extract ONLY concrete,
-checkable reliability issues.
+repair blog, forum thread, or mechanic video transcript, extract ONLY chronic,
+model-specific, or part-specific engineering flaws, design defects, and exceptional
+failure cases.
 
-Rules:
-- Extract only specific mechanical or electrical failures (not cosmetic, not taste).
+Strict Rules:
+- DO NOT extract generic warnings (e.g. "if the turbocharger fails, it will cause loss of power"). Every turbocharger or engine component can fail; we only care about model-specific design defects.
+- DO NOT extract standard wear-and-tear items (e.g., brake pads, tyres, routine battery replacement, standard oil/fluid changes).
+- DO NOT extract generic maintenance advice (e.g. "regular oil changes are important").
+- Extract ONLY concrete, chronic failures, recall issues, or common engineering faults (e.g., "thermostat housing cracking on H5H 1.3 TCe petrol engines", "clutch shudder on dry-clutch DC4 transmissions").
 - Copy the supporting quote VERBATIM — do not paraphrase.
-- If the text mentions an engine code or variant (e.g. "1.5 dCi", "K9K", "H5H"),
-  include it in engine_or_variant_hint.
-- Do NOT invent claims. If no concrete reliability issue is present, return {"claims": []}.
+- If the text mentions an engine code or variant (e.g. "1.5 dCi", "K9K", "H5H"), include it in engine_or_variant_hint.
+- Do NOT invent claims. If no concrete chronic reliability issue is present, return {"claims": []}.
 - severity is your provisional assessment; the review gate may adjust it.
 
 Return ONLY valid JSON in this exact format:
 {
   "claims": [
     {
-      "title": "Short title of the reliability issue",
+      "title": "Short title of the chronic/design defect",
       "domain": "engine|transmission|electrical|emissions|fuel system|brakes|suspension|general",
       "severity": "high|medium|low",
-      "rationale": "Plain-language explanation of the issue",
-      "inspection_advice": "What a buyer should check at viewing",
-      "quote": "VERBATIM span from the source text",
+      "rationale": "Plain-language explanation of the chronic issue",
+      "inspection_advice": "What a buyer should check at viewing to identify this defect",
+      "quote": "VERBATIM span from the source text supporting this specific defect",
       "engine_or_variant_hint": "Engine code or variant if mentioned, or null"
     }
   ]

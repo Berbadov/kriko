@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 from knowledge.sources.youtube import get_transcript
 
 log = logging.getLogger(__name__)
@@ -86,7 +86,6 @@ class CuratedSource:
         return docs
 
     def _fetch_entry(self, entry: dict, make: str, model: str) -> Document | None:
-        tier = Tier[entry["tier"]]
         channel = entry.get("site_or_channel", "")
 
         if entry["type"] == "youtube":
@@ -98,7 +97,6 @@ class CuratedSource:
             return Document(
                 text=text[:8000],
                 url=f"https://www.youtube.com/watch?v={video_id}",
-                tier=tier,
                 site_or_channel=channel,
                 meta={"make": make, "model": model, "video_id": video_id},
             )
@@ -121,7 +119,6 @@ class CuratedSource:
             return Document(
                 text=text[:8000],
                 url=url,
-                tier=tier,
                 site_or_channel=channel,
                 meta={"make": make, "model": model},
             )
@@ -137,5 +134,5 @@ if __name__ == "__main__":
     model = sys.argv[2] if len(sys.argv) > 2 else "megane"
     docs  = CuratedSource().fetch(make, model)
     for d in docs:
-        print(f"\n[{d.tier.value}] {d.site_or_channel} — {d.url}")
+        print(f"\n{d.site_or_channel} — {d.url}")
         print(d.text[:300] + ("…" if len(d.text) > 300 else ""))

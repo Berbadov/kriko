@@ -125,20 +125,20 @@ def gate_variant(
     )
     prompt = (
         "Does the following evidence relate to this specific car model "
-        "or any of its engine variants listed below?\n\n"
+        "or any of its engine/transmission variants listed below?\n\n"
         # Window ≥ extraction window (extract.py uses doc.text[:6000]).
         f"Evidence:\n{evidence[:6000]}\n\nClaim: {claim_title}\n\nVariants:\n{variants_text}\n\n"
         "Answer YES if ANY of these apply:\n"
         "1. The evidence text or source URL mentions the car model/generation name "
         "(e.g. 'Megane 4', 'Megane IV', 'megane-4', 'megane4') or a Turkish/French "
         "equivalent (e.g. 'Megane Dört', 'Mégane IV').\n"
-        "2. The evidence mentions an engine code that appears in the variant list "
-        "(e.g. K9K, H5H, H5F, R9M, '1.5 dCi', '1.6 dCi', '1.3 TCe'), even without "
+        "2. The evidence mentions an engine code or transmission code that appears in the variant list "
+        "(e.g. K9K, H5H, H5F, R9M, DC4, DW5, DW6, '1.5 dCi', '1.6 dCi', '1.3 TCe', '1.2 TCe', '1.6 dCi'), even without "
         "specifying exact power output or year.\n"
-        "3. The evidence discusses a failure specific to a transmission type listed "
-        "(e.g. EDC, dual clutch) on this specific generation.\n\n"
+        "3. The evidence discusses a failure specific to a transmission type, engine type, or component listed "
+        "(e.g. EDC, dual clutch, manual, turbo, DPF, EGR, thermostat, cooling, electrical) that matches the variants.\n\n"
         "Answer NO only if the evidence is generic advice applicable to any car, "
-        "or is clearly about a different car model entirely."
+        "or is clearly about a different car model/part entirely (e.g. if the variants use Getrag EDC and the text is about VW DSG or Opel Easytronic)."
     )
     answer, reason = _ask(prompt)
     return GateResult(passed=answer, reason=reason)

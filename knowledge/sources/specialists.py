@@ -1,8 +1,7 @@
-"""Tier A — specialist repair & technical sources.
+"""Specialist repair & technical sources.
 
 These are the highest-quality sources: independent garages, parts-supplier
-technical blogs, and engine remanufacturers. One well-grounded Tier A source
-can anchor a claim if corroborated by at least one other independent source.
+technical blogs, and engine remanufacturers.
 
 HUMAN DECISION #5: which exact sites are in-scope per model (liveness + ToS)
 must be confirmed before this adapter ships to production.
@@ -13,7 +12,7 @@ import logging
 import httpx
 from selectolax.parser import HTMLParser
 
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
 
@@ -24,13 +23,11 @@ SPECIALIST_SOURCES: list[dict] = [
         "url_template": "https://www.enginefinders.co.uk/search?q={make}+{model}+problems",
         "content_selector": "article, .post-content, .entry-content",
     },
-    # Add entries here as new Tier A sources are verified.
+    # Add entries here as new specialist sources are verified.
 ]
 
 
 class SpecialistSource:
-    tier = Tier.A
-
     def fetch(self, make: str, model: str) -> list[Document]:
         docs: list[Document] = []
         for source in SPECIALIST_SOURCES:
@@ -47,9 +44,8 @@ class SpecialistSource:
                 )
                 if text:
                     docs.append(Document(
-                        text=text[:8000],  # cap per page
+                        text=text[:8000],
                         url=url,
-                        tier=Tier.A,
                         site_or_channel=source["site"],
                         meta={"make": make, "model": model},
                     ))

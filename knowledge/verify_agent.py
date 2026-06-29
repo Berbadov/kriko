@@ -29,19 +29,9 @@ log = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "backend" / "data"
 
-TIER_WEIGHT = {
-    "A": 1.0,
-    "B": 0.5,
-    "C": 0.34,
-}
-
-
-def _calculate_score(sources: list[dict]) -> float:
-    score = 0.0
-    for s in sources:
-        tier = s.get("tier", "C")
-        score += TIER_WEIGHT.get(tier, 0.34)
-    return score
+def _calculate_score(sources: list[dict]) -> int:
+    """Count independent sources that passed gates — each contributes 1 point."""
+    return len(sources)
 
 
 def run(make: str, model: str, gen: str, dry_run: bool = False) -> None:
@@ -49,7 +39,6 @@ def run(make: str, model: str, gen: str, dry_run: bool = False) -> None:
     import trafilatura
     from knowledge.judge import gate_support, gate_refute
     from knowledge.sources.curated import _fetch_html
-    from knowledge.auto import _tier_for_url
 
     exa_key = os.getenv("EXA_API_KEY")
     if not exa_key:
@@ -146,11 +135,8 @@ def run(make: str, model: str, gen: str, dry_run: bool = False) -> None:
                     print("→ gate_refute FAILED (claim contradicted)")
                     continue
                 
-                # Verified!
-                tier = _tier_for_url(url)
-                print(f"→ PASSED (corroborating source found! Tier {tier})")
+                print(f"→ PASSED (corroborating source found)")
                 new_sources_added.append({
-                    "tier": tier,
                     "source_url": url,
                     "source_domain": host,
                     "site_or_channel": host,
@@ -164,27 +150,22 @@ def run(make: str, model: str, gen: str, dry_run: bool = False) -> None:
             dirty = True
             claim.setdefault("sources", []).extend(new_sources_added)
             
-            # Recalculate score
+            # Recalculate score (count of sources passing gates)
             old_score = _calculate_score(claim.get("sources", [])[:-len(new_sources_added)])
             new_score = _calculate_score(claim["sources"])
-            print(f"  Corroboration Score: {old_score:.2f} → {new_score:.2f}")
+            print(f"  Corroboration sources: {old_score} → {new_score}")
 
-            # 4. Promotion logic
-            # High-severity claims are critical, so they require score >= 1.0 (e.g. Tier A or 2x Tier B) to auto-verify.
-            # Normal/medium/low severity claims auto-verify with score >= 0.5.
-            threshold = 1.0 if claim["severity"] == "high" else 0.5
-            
-            if new_score >= threshold:
+            # 4. Promotion logic — ≥2 sources auto-verify, 1 source → review
+            if new_score >= 2:
                 claim["status"] = "verified"
                 claim["promoted_by"] = "auto_verified_agent"
-                claim["confidence"] = round(min(0.9, max(0.6, new_score / 2)), 2)
-                print(f"  PROMOTED to 'verified'! Confidence set to {claim['confidence']}")
-            else:
-                # If score increased but not past threshold, we upgrade held -> review for visibility
-                if claim["status"] == "held" and new_score >= 0.34:
+                claim["confidence"] = 0.85
+                print(f"  PROMOTED to 'verified'! (≥2 sources)")
+            elif new_score >= 1:
+                if claim["status"] == "held":
                     claim["status"] = "review"
-                    claim["confidence"] = round(min(0.9, max(0.6, new_score / 2)), 2)
-                    print(f"  UPGRADED status to 'review'.")
+                    claim["confidence"] = 0.6
+                    print(f"  UPGRADED status to 'review' (1 source — needs a second).")
 
     # 5. Write back to claims YAML
     if dirty:

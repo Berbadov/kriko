@@ -16,13 +16,13 @@
   model: megane
   generation: "IV"
   engine_code: H5F
-  engine_family: h5f
+  engine_family: h5f_100
   fuel: petrol
   displacement_cc: 1197
   power_min_hp: 100
   power_max_hp: 100
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dc4
   year_from: 2016
   year_to: 2018
   market: TR
@@ -33,13 +33,13 @@
   model: megane
   generation: "IV"
   engine_code: H5F
-  engine_family: h5f
+  engine_family: h5f_130
   fuel: petrol
   displacement_cc: 1197
   power_min_hp: 130
   power_max_hp: 130
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dc4
   year_from: 2016
   year_to: 2018
   market: TR
@@ -50,13 +50,13 @@
   model: megane
   generation: "IV"
   engine_code: H5H
-  engine_family: h5h
+  engine_family: h5h_115
   fuel: petrol
   displacement_cc: 1332
   power_min_hp: 115
   power_max_hp: 115
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dw5
   year_from: 2018
   year_to: 2023
   market: TR
@@ -67,13 +67,13 @@
   model: megane
   generation: "IV"
   engine_code: H5H
-  engine_family: h5h
+  engine_family: h5h_140
   fuel: petrol
   displacement_cc: 1332
   power_min_hp: 140
   power_max_hp: 140
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dw5
   year_from: 2018
   year_to: 2023
   market: TR
@@ -84,7 +84,7 @@
   model: megane
   generation: "IV"
   engine_code: K9K
-  engine_family: k9k
+  engine_family: k9k_90
   fuel: diesel
   displacement_cc: 1461
   power_min_hp: 90
@@ -101,7 +101,7 @@
   model: megane
   generation: "IV"
   engine_code: K9K
-  engine_family: k9k
+  engine_family: k9k_110
   fuel: diesel
   displacement_cc: 1461
   power_min_hp: 110
@@ -118,13 +118,13 @@
   model: megane
   generation: "IV"
   engine_code: R9M
-  engine_family: r9m
+  engine_family: r9m_130
   fuel: diesel
   displacement_cc: 1598
   power_min_hp: 130
   power_max_hp: 130
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dw6
   year_from: 2016
   year_to: 2023
   market: TR
