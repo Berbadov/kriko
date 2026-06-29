@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Env / secrets
+.env
+
+# Knowledge pipeline candidate cache (regenerated per run)
+knowledge/cache/

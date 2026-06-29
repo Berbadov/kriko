@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
+  <defs>
+    <style>
+      .wordmark {
+        font-family: 'Silkscreen', 'Noto Serif', serif;
+        font-weight: 700;
+        font-size: 34px;
+        fill: #1F1D17;
+      }
+      .dot {
+        fill: #F8E97A;
+        stroke: #1F1D17;
+        stroke-width: 2.5;
+      }
+      .ai {
+        fill: #BFA01A;
+      }
+    </style>
+  </defs>
+  <rect x="6" y="22" width="36" height="36" rx="6" class="dot"></rect>
+  <text x="14" y="55" class="wordmark">L</text>
+  <text x="50" y="55" class="wordmark">emon<tspan class="ai">AI</tspan>de</text>
+</svg>

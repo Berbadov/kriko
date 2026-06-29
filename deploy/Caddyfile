@@ -1,0 +1,7 @@
+api.kriko.cc {
+    reverse_proxy api:8000
+}
+
+kriko.cc {
+    respond "Kriko" 200
+}
