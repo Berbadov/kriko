@@ -11,8 +11,9 @@
 # EA211: VAG 3/4-cylinder petrol family (1.0/1.2/1.4 TSI), same basic architecture
 # EA288: VAG 4-cylinder TDI family (1.6/2.0 TDI), replaced EA189 post-dieselgate
 #
-# cooling_code / electrical_code: model-wide part keys for system-level claims
-# not tied to a specific engine (e.g., 12V battery drain, MIB2 faults, coolant reservoir).
+# electrical_code: model-wide part key for claims not tied to a specific engine
+# (e.g., 12V battery drain, MIB2 infotainment faults, CCM water ingress).
+# Cooling is engine-specific and covered by the engine part YAMLs.
 
 - id: golf7_ea211_105
   make: volkswagen
@@ -26,7 +27,6 @@
   power_max_hp: 105
   transmission: manual
   transmission_code: manual
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2017
   year_to: 2020
@@ -45,7 +45,6 @@
   power_max_hp: 125
   transmission: manual
   transmission_code: manual
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2013
   year_to: 2020
@@ -64,7 +63,6 @@
   power_max_hp: 125
   transmission: automatic
   transmission_code: dq200
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2013
   year_to: 2020
@@ -83,7 +81,6 @@
   power_max_hp: 105
   transmission: manual
   transmission_code: manual
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2013
   year_to: 2020
@@ -102,7 +99,6 @@
   power_max_hp: 150
   transmission: manual
   transmission_code: manual
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2013
   year_to: 2020
@@ -121,7 +117,6 @@
   power_max_hp: 150
   transmission: automatic
   transmission_code: dq250
-  cooling_code: golf7_cool
   electrical_code: golf7_elec
   year_from: 2013
   year_to: 2020
