@@ -49,7 +49,6 @@ def _write_candidate_cache(make, model, gen, candidates) -> Path:
             "doc": {
                 "text": doc.text,
                 "url": doc.url,
-                "tier": doc.tier.value,
                 "site_or_channel": doc.site_or_channel,
                 "meta": doc.meta,
             },
@@ -65,7 +64,7 @@ def _write_candidate_cache(make, model, gen, candidates) -> Path:
 def _read_candidate_cache(make, model, gen):
     """Rebuild (CandidateClaim, Document) pairs from the cache JSON."""
     from knowledge.extract import CandidateClaim
-    from knowledge.sources.base import Document, Tier
+    from knowledge.sources.base import Document
 
     path = _cache_path(make, model, gen)
     if not path.exists():
@@ -78,7 +77,6 @@ def _read_candidate_cache(make, model, gen):
         doc = Document(
             text=d["text"],
             url=d["url"],
-            tier=Tier(d["tier"]),
             site_or_channel=d["site_or_channel"],
             meta=d.get("meta", {}),
         )
@@ -116,6 +114,7 @@ def _build_variant_descriptors(variants_path: Path) -> list[tuple[str, str]]:
             f"{r.get('fuel','')} "
             f"{r.get('displacement_cc','')}cc "
             f"{r.get('power_min_hp','')}–{r.get('power_max_hp','')}hp "
+            f"{r.get('transmission','')} ({r.get('transmission_code','')}) "
             f"({r.get('year_from','')}–{r.get('year_to') or 'present'})"
         ).strip()
         result.append((r["id"], desc))
@@ -298,13 +297,16 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
     """Return [(variant_id, description)] for all variants that use this part.
 
     Reads all fitment YAMLs and resolves variant descriptors for gate_variant.
-    Part type determines which fitment field to match:
-      engine       → engine_family
-      transmission → transmission_code
+    Part type determines which fitment field to match.
     """
     fitment_dir = DATA_DIR / "fitment"
     variants_dir = DATA_DIR / "variants"
-    field = "engine_family" if part_type == "engine" else "transmission_code"
+    field = {
+        "engine": "engine_family",
+        "transmission": "transmission_code",
+        "cooling": "cooling_code",
+        "electrical": "electrical_code",
+    }.get(part_type, "engine_family")
 
     matching_variant_ids: list[str] = []
     for path in sorted(fitment_dir.glob("*.yaml")):
@@ -334,6 +336,7 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
             f"{r.get('fuel','')} "
             f"{r.get('displacement_cc','')}cc "
             f"{r.get('power_min_hp','')}–{r.get('power_max_hp','')}hp "
+            f"{r.get('transmission','')} ({r.get('transmission_code','')}) "
             f"({r.get('year_from','')}–{r.get('year_to') or 'present'})"
         ).strip()
         result.append((vid, desc))

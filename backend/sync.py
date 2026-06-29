@@ -113,6 +113,9 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         rows = yaml.safe_load(path.read_text()) or []
         fitment_rows.extend(rows)
 
+    # Clear existing part-fitment links to avoid stale mappings
+    db.query(ClaimVariant).filter(ClaimVariant.grounding_note.like("Part fitment:%")).delete(synchronize_session=False)
+
     count = 0
     seen_ids: set[str] = set()
 
@@ -130,6 +133,8 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         part_keys = {
             "engine": fit.get("engine_family"),
             "transmission": fit.get("transmission_code"),
+            "cooling": fit.get("cooling_code"),
+            "electrical": fit.get("electrical_code"),
         }
 
         for part_type_key, part_id in part_keys.items():
@@ -183,7 +188,10 @@ def prune_removed_claims(db: Session, seen_ids: set[str]) -> int:
 
     YAML is the source of truth — a removed row must stop serving.
     """
-    stale = db.query(Claim).filter(Claim.id.notin_(seen_ids)).all() if seen_ids else []
+    if seen_ids:
+        stale = db.query(Claim).filter(Claim.id.notin_(seen_ids)).all()
+    else:
+        stale = db.query(Claim).all()
     for claim in stale:
         db.delete(claim)
     return len(stale)

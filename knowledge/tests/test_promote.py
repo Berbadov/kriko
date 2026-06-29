@@ -13,7 +13,7 @@ from knowledge.promote import (
     PromotionResult,
     write_promoted_claims,
 )
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 
 def _claim(title, domain="engine", severity="medium"):
@@ -28,7 +28,7 @@ def _claim(title, domain="engine", severity="medium"):
 
 
 def _result(title, disposition, domain="engine"):
-    doc = Document(text="src", url=f"https://x/{title}", tier=Tier.B, site_or_channel="forum")
+    doc = Document(text="src", url=f"https://x/{title}", site_or_channel="forum")
     return PromotionResult(
         claim=_claim(title, domain),
         disposition=disposition,

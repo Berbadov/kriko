@@ -1,0 +1,887 @@
+part_id: golf7_elec
+part_type: electrical
+display_name: Volkswagen Golf 7 Electrical Systems
+known_also_as:
+- Volkswagen Golf 7 electrical
+- Volkswagen Golf 7 electronics
+- Volkswagen Golf 7 battery
+claims:
+- claim_key: golf7_elec_electrical_infotainment_system_
+  title: Infotainment system failure and SOS malfunction
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The touchscreen infotainment system frequently fails to respond or crashes
+    entirely, and the SOS function has caused costly replacements and persistent warning
+    messages after software updates.
+  inspection_advice: Check if the vehicle has undergone dealer updates for infotainment
+    system software. Look for signs of previous repairs, such as warning lights or
+    error messages related to the infotainment system.
+  sources: []
+- claim_key: golf7_elec_electrical_faulty_crash_sensors
+  title: Faulty crash sensors in airbag and restraint systems
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Defective crash sensors in the front doors may compromise the airbag
+    and restraint system functionality, posing a safety risk.
+  inspection_advice: Verify if the vehicle was part of the recall (124 units) and
+    whether the crash sensors were checked or replaced. Look for warning lights related
+    to airbag or restraint systems.
+  sources: []
+- claim_key: golf7_elec_brakes_loose_bolted_connect
+  title: Loose bolted connection of pull rod in brake servo system
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The bolted connection between the electromechanical brake servo and brake
+    pedal may loosen, resulting in complete loss of service braking ability.
+  inspection_advice: Inspect the connection between the brake servo and pedal for
+    proper tightening. Verify if the vehicle was part of the recall (145 units) and
+    whether the bolt was checked or retightened.
+  sources: []
+- claim_key: golf7_elec_electrical_non-functioning_e-ca
+  title: Non-functioning e-call service
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The e-call service, which is designed to automatically call emergency
+    services in case of a crash, may fail to function due to software issues in the
+    Online Control Unit.
+  inspection_advice: Check if the vehicle was part of the recall (4,630 units) and
+    whether the Online Control Unit software was updated. Test the e-call functionality
+    if possible.
+  sources: []
+- claim_key: golf7_elec_fuel system_adblue_system_issues
+  title: AdBlue system issues in diesel models
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Diesel owners have reported problems with the AdBlue system, which is
+    critical for emissions control and may lead to drivability issues or failure to
+    meet emissions standards.
+  inspection_advice: Check for warning lights related to the AdBlue system. Verify
+    if the system has been serviced recently and if there are any error codes stored
+    in the vehicle's computer.
+  sources: []
+- claim_key: golf7_elec_electrical_backup_camera_failur
+  title: Backup camera failure due to infotainment dependency
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The backup camera in 2022–2024 Volkswagen Golf models is entirely dependent
+    on the infotainment system. If the infotainment system fails, the backup camera
+    fails, creating a critical safety hazard during reversing maneuvers.
+  inspection_advice: Reverse the vehicle while observing the backup camera display.
+    If the screen remains blank or fails to activate, the infotainment system may
+    be malfunctioning.
+  sources: []
+- claim_key: golf7_elec_electrical_recurrent_infotainme
+  title: Recurrent infotainment system failures despite dealer visits
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report that their 2022–2024 Volkswagen Golf infotainment systems
+    fail repeatedly, even after multiple visits to dealers and no definitive resolution.
+    This indicates a systemic design or software defect rather than isolated incidents.
+  inspection_advice: Ask the dealer for a detailed repair history and check if the
+    issue persists after attempted fixes. Document all visits and diagnostic results
+    for potential legal or warranty claims.
+  sources: []
+- claim_key: golf7_elec_electrical_driver_assistance_fe
+  title: Driver assistance features disabling due to infotainment errors
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Error messages from the infotainment system can disable critical driver
+    assistance features (e.g., parking sensors, cross-traffic alerts), compromising
+    safety and functionality.
+  inspection_advice: Check if parking sensors and cross-traffic alerts activate when
+    reversing or parking. If they fail to engage, the infotainment system may be generating
+    error messages.
+  sources: []
+- claim_key: golf7_elec_electrical_mib3_infotainment_sy
+  title: MIB3 Infotainment System Freezes/Unresponsiveness
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The MIB3 system controls critical functions like climate control, navigation,
+    and vehicle settings. Freezing mid-drive can force the driver to pull over, creating
+    a safety hazard. Early models (2020-2021) were particularly affected, though updates
+    mitigated some issues.
+  inspection_advice: Check software version (Settings > System > About > Version)
+    for version 3xxx or higher. Test touchscreen responsiveness, climate control adjustments,
+    and Android Auto/Apple CarPlay connectivity. Look for lag, freezing, or unintended
+    temperature changes during operation.
+  sources: []
+- claim_key: golf7_elec_electrical_touch-sensitive_clim
+  title: Touch-Sensitive Climate Control Failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The lack of tactile feedback and reliability issues with touch-sensitive
+    climate controls make them impractical for many drivers. Unresponsiveness, especially
+    in cold weather, can lead to discomfort and frustration during use.
+  inspection_advice: Test temperature and fan speed adjustments via touch controls
+    from a cold start. Verify if swipes are registered and if accidental adjustments
+    occur. Assess whether the design aligns with your driving preferences.
+  sources: []
+- claim_key: golf7_elec_electrical_digital_cockpit_inst
+  title: Digital Cockpit Instrument Cluster Glitches
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Flickering, freezing, or incorrect readings on the digital instrument
+    cluster can mislead the driver about speed, fuel economy, or warnings. This affects
+    safety and driver confidence, particularly in early models.
+  inspection_advice: Monitor the instrument cluster during a test drive for flickering,
+    blank screens, or incorrect speed/fuel readings. Check for unintended warning
+    light illumination.
+  sources: []
+- claim_key: golf7_elec_engine_1.5_etsi_mild_hybrid
+  title: 1.5 eTSI Mild Hybrid Start-Stop System Failures
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 48V mild hybrid system in the 1.5 eTSI engine relies on a start-stop
+    function that can fail due to battery degradation or software issues. This leads
+    to rough restarts and potential engine stalling, which can disrupt driving and
+    reduce fuel efficiency.
+  inspection_advice: Check for warning messages like 'Start-stop system temporarily
+    unavailable' and test if the engine restarts smoothly after stopping. Listen for
+    vibrations or rough idling during restarts.
+  sources: []
+- claim_key: golf7_elec_engine_ignition_coil_and_sp
+  title: Ignition coil and spark plug failures causing engine misfires
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of ignition coils and spark plugs in Mk7 Golf models
+    (2013–2017) leading to misfires, which can cause rough running, reduced fuel efficiency,
+    and potential long-term engine damage if unresolved.
+  inspection_advice: Check for misfires during a test drive (uneven idle, hesitation,
+    or stalling). Inspect ignition coils for physical damage or excessive wear and
+    verify spark plug condition (electrodes should be intact and free of deposits).
+  sources: []
+- claim_key: golf7_elec_engine_timing_chain_tension
+  title: Timing chain tensioner issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Timing chain tensioner failures in Mk7 Golf models can lead to catastrophic
+    engine damage if the chain jumps or breaks, causing severe internal damage and
+    expensive repairs. This is a known chronic issue in some engines.
+  inspection_advice: Listen for rattling noises from the timing chain area during
+    startup or warm-up. Check for oil leaks around the timing chain cover, as insufficient
+    lubrication can exacerbate tensioner failure. Verify service history for timing
+    chain inspections/replacements.
+  sources: []
+- claim_key: golf7_elec_engine_water_pump_and_therm
+  title: Water pump and thermostat housing leaks
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic leaks in the water pump and thermostat housing on Mk7 and Mk7.5
+    Golf models can lead to coolant loss, overheating, and potential engine damage
+    if not addressed promptly. This is particularly problematic in high-mileage or
+    neglected vehicles.
+  inspection_advice: Check for coolant leaks under the engine bay, especially around
+    the water pump and thermostat housing. Look for wet spots, discoloration, or corrosion.
+    Test for proper thermostat operation by monitoring engine temperature during a
+    test drive.
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"Water pump and thermostat housing leaks"'
+    independent: true
+- claim_key: golf7_elec_engine_carbon_build-up_on_p
+  title: Carbon build-up on petrol engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Carbon build-up on intake valves and combustion chambers in Mk7 Golf
+    petrol engines can cause rough idling, reduced power, and increased emissions.
+    This is a common issue in modern petrol engines due to direct fuel injection and
+    can lead to costly decarbonization procedures if ignored.
+  inspection_advice: Listen for rough idling or hesitation during acceleration. Check
+    for increased fuel consumption or reduced engine performance. Verify if the vehicle
+    has undergone a decarbonization service in its maintenance history.
+  sources: []
+- claim_key: golf7_elec_suspension_premature_suspension
+  title: Premature suspension wear and rattles
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mk7 Golf models often experience premature wear and rattles in suspension
+    components, such as bushings, control arms, and struts. This can lead to poor
+    handling, reduced ride comfort, and potential safety concerns if not addressed.
+  inspection_advice: During a test drive, pay attention to any clunking, rattling,
+    or excessive movement in the suspension. Inspect suspension components for excessive
+    play, wear, or damage. Check for uneven tire wear, which can indicate alignment
+    or suspension issues.
+  sources: []
+- claim_key: golf7_elec_transmission_dsg_gearbox_hesitati
+  title: DSG gearbox hesitation or rough shifting
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic hesitation or rough shifting in the DSG (Dual Clutch Transmission)
+    gearbox of Mk7 Golf models can indicate internal wear, software issues, or fluid
+    degradation. This can lead to poor driving experience and potential transmission
+    failure if not serviced properly.
+  inspection_advice: Test shift quality during a test drive, paying attention to any
+    delays, jerks, or grinding when changing gears. Check the transmission fluid level
+    and condition (should be pinkish and free of debris). Verify service history for
+    DSG fluid changes and software updates.
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"DSG gearbox hesitation or rough shifting"'
+    independent: true
+- claim_key: golf7_elec_transmission_dsg_gearbox_software
+  title: DSG gearbox software issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Mk7.5 Golf models with DSG transmissions may experience software-related
+    issues that cause erratic shifting, delayed engagement, or unexpected gear changes.
+    These issues can often be resolved with software updates but may recur if not
+    properly addressed.
+  inspection_advice: Test the transmission for any erratic shifting or delayed engagement.
+    Verify if the latest transmission software updates have been installed. Check
+    the vehicle’s service history for any recorded transmission software updates.
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"DSG gearbox software issues"'
+    independent: true
+- claim_key: golf7_elec_electrical_infotainment_lag_and
+  title: Infotainment lag and system crashes
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mk8 Golf models (especially 2020–2021) frequently experience infotainment
+    lag, system crashes, and touchscreen glitches due to software bugs and hardware
+    limitations. This can significantly impact the driving experience and usability
+    of the vehicle’s tech features.
+  inspection_advice: Test the infotainment system for lag, crashes, or unresponsive
+    touchscreen during a drive. Check if the latest software updates have been applied.
+    Look for signs of overheating or physical damage to the infotainment unit.
+  sources: []
+- claim_key: golf7_elec_electrical_electrical_faults_af
+  title: Electrical faults affecting driver assistance systems
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mk8 Golf models may experience electrical faults that disrupt driver
+    assistance systems, such as adaptive cruise control, lane-keeping assist, or automatic
+    emergency braking. These issues can compromise safety and functionality.
+  inspection_advice: Test driver assistance systems during a drive, paying attention
+    to any malfunctions or erratic behavior. Check for warning lights related to these
+    systems. Verify if software updates have been applied to address known electrical
+    issues.
+  sources: []
+- claim_key: golf7_elec_electrical_infotainment_crashes
+  title: Infotainment crashes and laggy touchscreen controls
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early Mk8 Golf models (2020–2021) frequently suffer from persistent infotainment
+    crashes and laggy touchscreen controls, which can be frustrating and disruptive
+    to the driving experience. This is often attributed to software bugs and insufficient
+    hardware cooling.
+  inspection_advice: Test the infotainment system for crashes, lag, or unresponsive
+    touchscreen during a drive. Check if the latest software updates have been installed.
+    Look for signs of overheating around the infotainment unit.
+  sources: []
+- claim_key: golf7_elec_electrical_delayed_system_respo
+  title: Delayed system responses and unexpected dashboard warnings
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mk8 Golf models may exhibit delayed system responses and unexpected dashboard
+    warnings due to software bugs or sensor malfunctions. This can lead to confusion
+    and potential misdiagnosis of vehicle issues.
+  inspection_advice: Test system responsiveness during a drive, paying attention to
+    any delays in command execution. Check the dashboard for unexpected warning lights
+    and verify their validity using an OBD-II scanner.
+  sources: []
+- claim_key: golf7_elec_transmission_dry-clutch_dsg7_(dq2
+  title: Dry-clutch DSG7 (DQ200) transmission clutch shudder/failure
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The dry-clutch DSG7 (DQ200) transmission in the Golf VII is prone to
+    chronic clutch shudder and premature failure, particularly in high-mileage models.
+    This defect is exacerbated by lack of maintenance or replacement history.
+  inspection_advice: Check for signs of clutch slippage, unusual noises during gear
+    shifts, or a history of clutch/mechatronics replacement. Test drive to verify
+    smooth engagement and no shuddering under load.
+  sources:
+  - source_url: https://carreliabilityreport.com/en/reliability/volkswagen-golf-2012-2019-essence
+    source_domain: carreliabilityreport.com
+    site_or_channel: carreliabilityreport.com
+    quote: '"beware of the dry-clutch DSG7 DQ200 gearbox"'
+    independent: true
+- claim_key: golf7_elec_transmission_dsg7_(dq200)_mechatr
+  title: DSG7 (DQ200) mechatronics failure risk
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DSG7 (DQ200) transmission's mechatronics unit is prone to failure,
+    especially in high-mileage models without proper maintenance (e.g., oil changes).
+    This can lead to costly repairs or transmission failure.
+  inspection_advice: Verify maintenance records for DSG/Haldex oil changes. Inspect
+    for warning lights related to transmission control issues and check for delayed
+    or rough gear shifts.
+  sources:
+  - source_url: https://carreliabilityreport.com/en/reliability/volkswagen-golf-2012-2019-essence
+    source_domain: carreliabilityreport.com
+    site_or_channel: carreliabilityreport.com
+    quote: '"DSG/Haldex oil changes"'
+    independent: true
+- claim_key: golf7_elec_engine_1.5_tsi_evo_engine_r
+  title: 1.5 TSI Evo engine requires software update for reliability
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.5 TSI Evo engine in the Golf VII facelift (7.5) may exhibit unreliability
+    if the software update has not been applied, potentially leading to performance
+    or drivability issues.
+  inspection_advice: Confirm whether the vehicle has received the required software
+    update for the 1.5 TSI Evo engine. Check for error codes or warning lights related
+    to engine management.
+  sources: []
+- claim_key: golf7_elec_general_2.0_tsi_gti/r_models
+  title: 2.0 TSI GTI/R models require higher maintenance budget
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TSI engines in GTI and R models are robust but have higher maintenance
+    costs, particularly for components like the water pump and DSG/Haldex oil changes,
+    which may lead to increased long-term expenses.
+  inspection_advice: Review maintenance records for water pump replacements and DSG/Haldex
+    oil changes. Check for signs of fluid leaks or unusual noises from the engine
+    bay that could indicate water pump failure.
+  sources: []
+- claim_key: golf7_elec_electrical_touchscreen_and_info
+  title: Touchscreen and infotainment system glitches
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Recurrent software-related failures in touchscreen functionality, Bluetooth
+    connectivity, and navigation system updates, particularly in Discover Media and
+    Discover Pro models.
+  inspection_advice: Test touchscreen responsiveness, Bluetooth pairing, and navigation
+    system functionality. Check for software version updates and verify if any modules
+    require replacement.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"One of the least expected, but common, glitches are problems with the
+      touchscreen, including the system restarting itself or freezing. There are also
+      problems with Bluetooth connectivity, where the phone cannot be paired or the
+      connection is lost during a call. Vehicles with Discover Media and Discover
+      Pro navigation may also experience software bugs over time that prevent map
+      updates or media playback."'
+    independent: true
+- claim_key: golf7_elec_electrical_spontaneous_battery_
+  title: Spontaneous battery drainage due to control unit activation
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Electronic control units waking up unnecessarily while the car is stationary,
+    causing battery drain.
+  inspection_advice: Check for unexplained battery drain when the car is stationary.
+    Verify if software updates or module replacements have been performed.
+  sources: []
+- claim_key: golf7_elec_electrical_malfunctioning_rain_
+  title: Malfunctioning rain and light sensors
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Common issues with automatic wiper and headlight systems due to sensor
+    failures.
+  inspection_advice: Test automatic wiper and headlight activation under various weather
+    conditions. Inspect sensor functionality for responsiveness and accuracy.
+  sources: []
+- claim_key: golf7_elec_fuel system_high-pressure_fuel_p
+  title: High-pressure fuel pump failure in TDI engines
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: High-pressure fuel pump failure in diesel engines causing extensive damage
+    to injectors and fuel system clogging with metal filings.
+  inspection_advice: Monitor for loss of power, twitching during acceleration, difficult
+    starts, and check engine light. Inspect fuel system for metal debris and injector
+    health.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Diesel engines have been known to experience high-pressure pump failure,
+      which can cause extensive damage to the injectors and clogging of the fuel system
+      with metal filings."'
+    independent: true
+- claim_key: golf7_elec_engine_intake_valve_carboni
+  title: Intake valve carbonisation in 1.2 TSI and 1.4 TSI petrol engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Carbon buildup on intake valves leading to uneven engine running, increased
+    fuel consumption, and loss of power.
+  inspection_advice: Check for uneven engine running, increased fuel consumption,
+    and loss of power. Inspect intake valves for carbon deposits.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Petrol TSI units (especially the 1.2 TSI and 1.4 TSI) sometimes suffer
+      from a problem with intake valve carbonisation, which results in uneven engine
+      running, increased consumption and loss of power."'
+    independent: true
+- claim_key: golf7_elec_general_corrosion_in_early_g
+  title: Corrosion in early Golf VII models (2012-2014)
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Corrosion in less visible areas such as door bottoms, sills, and fender
+    edges, including under door seals where moisture is trapped.
+  inspection_advice: Inspect door bottoms, sills, fender edges, and under door seals
+    for signs of rust and corrosion.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Although the bodywork of the Golf VII is well protected, some units produced
+      in the early years of production (2012-2014) have started to develop corrosion
+      problems in less visible areas such as door bottoms, sills and fender edges.
+      The least expected problem is corrosion under the door seals where moisture
+      is trapped."'
+    independent: true
+- claim_key: golf7_elec_general_peeling_clearcoat_in
+  title: Peeling clearcoat in wheel arches and sills
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Clearcoat peeling in areas frequently exposed to pebbles or salt spray,
+    leading to potential rust and further body damage.
+  inspection_advice: Check wheel arches, sills, and door bottoms for peeling clearcoat
+    and signs of stone chipping.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Another surprise is peeling clearcoat, especially in areas exposed to
+      frequent contact with pebbles or salt spray."'
+    independent: true
+- claim_key: golf7_elec_electrical_refrigerant_leaks_in
+  title: Refrigerant leaks in air conditioning systems
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Unexpected refrigerant leaks causing poor cooling or complete loss of
+    air conditioning functionality, even in relatively young vehicles.
+  inspection_advice: Check for poor cooling performance or complete loss of air conditioning.
+    Inspect air conditioning system for leaks, especially around the air conditioning
+    radiator.
+  sources: []
+- claim_key: golf7_elec_electrical_start-stop_system_co
+  title: Start-stop system controller failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Failure of the battery sensor or start-stop system controller, leading
+    to engine start issues or malfunctioning start-stop functionality.
+  inspection_advice: Test start-stop system functionality and check for engine start
+    issues. Inspect battery sensor and system controller for faults.
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Some owners complain that the car battery is more frequently replaced,
+      as it is subjected to a higher load with this system. [...] The start-stop system,
+      which automatically shuts off the engine when the vehicle comes to a halt, may
+      appear to be a useful fuel saver, in practice it brings with it some unexpected
+      complications. In some cars, the battery sensor or the system controller itself
+      will fail over time. This can lead to the engine refusing to start or the start-stop
+      system failing to function."'
+    independent: true
+- claim_key: golf7_elec_engine_coolant_pump_control
+  title: Coolant Pump Control Slide Failure (Overheating Risk)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early-production EA288 1.6 TDI (CRKB) engines (pre-Sept. 2014) suffer
+    from a faulty water pump control slide, causing coolant temperature to spike to
+    130°C, risking engine shutdown and severe overheating.
+  inspection_advice: Check for coolant leaks around the water pump, verify coolant
+    temperature gauge readings during a test drive, and inspect for coolant warning
+    light activation. Confirm production week (pre-Sept. 2014) via VIN.
+  sources: []
+- claim_key: golf7_elec_fuel system_continental_injector
+  title: Continental Injector Failure (Dieselgate-Related)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Continental injectors in 105 hp EA288 1.6 TDI (CRKB) variants fail prematurely
+    (50,000–100,000 km), exacerbated by Dieselgate software updates. Failures often
+    occur shortly after reprogramming, causing severe engine misfires and cold-start
+    issues.
+  inspection_advice: Listen for heavy juddering at idle, check for fault codes (e.g.,
+    individual cylinder misfires), and verify service history for Dieselgate-related
+    reprogramming. Test for uneven power delivery or 'running on three cylinders'
+    symptoms.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Injector Failure (Continental Type) from 80,000 km The Continental injectors
+      in the 105 hp variant (and related CRKB variants) fail between 50,000 and 100,000
+      km. After the Dieselgate software update failures cluster shortly after reprogramming;
+      VW only offers goodwill with a complete service history. Symptoms: Heavy juddering
+      at idle, engine running on three cylinders, difficult cold start, fault codes
+      for individual cylinders"'
+    independent: true
+- claim_key: golf7_elec_engine_turbocharger_bearing
+  title: Turbocharger Bearing Wear (Oil Coking & Thermal Stress)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA288 1.6 TDI engines (CRKB) experience turbocharger bearing failure
+    due to oil coking and thermal stress, typically after 150,000 km. Removal is labor-intensive
+    (8+ hours) and risks DPF contamination from escaping oil, leading to costly repairs
+    (~€3,500).
+  inspection_advice: Listen for whistling/wailing noises on acceleration, check for
+    power loss or limp-mode activation (fault code P0299), and inspect for oil leaks
+    around the turbocharger. Verify DPF condition for soot buildup or oil contamination.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Turbocharger Bearing Wear from 150,000 km Turbocharger bearing damage
+      results from oil coking and thermal stress. Removal is laborious: front axle
+      release, DPF removal — total cost for parts and approx. 8 hours labour can reach
+      3,500 €. Waiting too long destroys the DPF with escaping oil. Symptoms: Whistling
+      or wailing noise on acceleration, noticeable power loss, engine enters limp
+      mode (fault code P0299)"'
+    independent: true
+- claim_key: golf7_elec_engine_coolant_pump_seizure
+  title: Coolant Pump Seizure (EA288 Pre-Week 36/2014)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early EA288 2.0 TDI engines (pre-week 36/2014) suffer from coolant pump
+    seizure, causing catastrophic overheating and engine shutdown. This defect is
+    tied to a specific production window and requires costly replacement (~€880–€990).
+  inspection_advice: Check production week via VIN (pre-week 36/2014), monitor coolant
+    temperature gauge during test drives, and listen for unusual coolant pump noises.
+    Verify for coolant leaks or overheating history.
+  sources: []
+- claim_key: golf7_elec_transmission_dq200_dry-clutch_dsg
+  title: DQ200 Dry-Clutch DSG Judder & Mechatronics Wear
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DQ200 7-speed dry-clutch DSG (used in 1.2/1.4 TSI Golf 7) suffers
+    from chronic juddering on acceleration and premature mechatronics wear, requiring
+    expensive repairs (~€660–€1,650). Wet-clutch DQ250 transmissions (e.g., GTI) are
+    recommended as alternatives.
+  inspection_advice: Test for juddering during cold starts or acceleration, listen
+    for unusual noises from the transmission, and check for delayed engagement or
+    rough shifting. Verify transmission type (DQ200 vs. DQ250) via VIN.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"DQ200 7-speed dry-clutch DSG (only on 1.2/1.4 TSI): dry clutch judders,
+      mechatronics wear, repair $660–1,650"'
+    independent: true
+- claim_key: golf7_elec_transmission_haldex_awd_coupling_
+  title: Haldex AWD Coupling Oil Degradation (Golf R)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Golf R’s Haldex AWD system (CJXC 221 kW) requires oil changes every
+    **40,000 km** to prevent pump failure. Neglecting this leads to catastrophic AWD
+    failure (~€770–€4,400 in repairs).
+  inspection_advice: Confirm Haldex oil change history (should be documented every
+    40,000 km). Test for uneven power distribution, AWD warning lights, or binding
+    during cornering. Listen for unusual noises from the differential.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Haldex coupling needs oil change every 40,000 km, otherwise pump failure
+      ($770–4,400)"'
+    independent: true
+- claim_key: golf7_elec_electrical_front_assist_phantom
+  title: Front Assist Phantom Braking (Safety-Related)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Some Golf 7 models experience **false activations of the Front Assist
+    system**, causing unintended braking. This defect is safety-critical but lacks
+    a recall, meaning affected cars may require manual deactivation or software updates.
+  inspection_advice: Test the Front Assist system during a test drive, paying attention
+    to sudden braking events without obstruction. Check for error codes related to
+    radar or camera systems. Confirm if the car has received any software updates
+    for this issue.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Front Assist triggers phantom braking on some cars — safety-relevant,
+      no recall"'
+    independent: true
+- claim_key: golf7_elec_engine_intermittent_4th_coi
+  title: Intermittent 4th Coil Failure (2.0k RPM+ Surge)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2016 Volkswagen Golf 7 1.4 TSI exhibits a chronic issue where the
+    4th coil fails intermittently, causing a noticeable surge (tekleme) at 2000+ RPM.
+    The failure is not consistently detected by the OBD system, suggesting a potential
+    design flaw in coil longevity or diagnostics.
+  inspection_advice: Check for intermittent misfires at 2000+ RPM, especially in higher
+    gears. Test each coil individually (swap with known-good coils) to confirm if
+    the 4th coil is the root cause. Look for error codes (P0300-P0312) when the issue
+    occurs, as they may not always appear.
+  sources: []
+- claim_key: golf7_elec_engine_throttle_body_carbon
+  title: Throttle Body Carbon Buildup-Induced Surge
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Golf 7 1.4 TSI has a documented issue where throttle body carbon
+    deposits cause intermittent surging (tekleme) at higher RPMs, particularly after
+    2000 RPM. This is a known chronic problem in TSI engines due to direct injection
+    carbon buildup.
+  inspection_advice: Inspect the throttle body for black carbon deposits. If present,
+    a professional cleaning (or replacement) is required. Listen for surging at 2000+
+    RPM in higher gears, especially after cold starts or when the engine is warm.
+  sources: []
+- claim_key: golf7_elec_electrical_chronic_epc_(electro
+  title: Chronic EPC (Electronic Throttle Control) sensor failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Golf 7 has a recurring issue with the EPC system, where the electronic
+    throttle control sensor itself can fail, leading to drivability problems like
+    hesitation or stalling.
+  inspection_advice: Check for persistent EPC warning lights after restarting the
+    engine. Look for error codes related to throttle position sensor or EPC system
+    via a diagnostic scan.
+  sources: []
+- claim_key: golf7_elec_engine_mass_airflow_sensor_
+  title: Mass airflow sensor (MAF) issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Golf 7 experiences recurring problems with the mass airflow sensor,
+    which can cause incorrect air-fuel mixture calculations, leading to performance
+    and emissions issues.
+  inspection_advice: Check for error codes related to the MAF sensor. Inspect the
+    sensor for dirt buildup or physical damage.
+  sources: []
+- claim_key: golf7_elec_fuel system_fuel_pump_failure_(r
+  title: Fuel pump failure (recurring in Golf 7)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Golf 7 has reported cases of failing fuel pumps, which can lead to
+    fuel delivery issues, triggering warning lights and drivability problems.
+  inspection_advice: Listen for unusual noises from the fuel tank when the ignition
+    is turned on. Check for fuel pressure issues via diagnostic scan.
+  sources: []
+- claim_key: golf7_elec_engine_turbocharger_reliabi
+  title: Turbocharger reliability concerns (Golf 7 TSI models)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbocharged Golf 7 models (TSI) have reported turbocharger failures,
+    which can lead to significant performance loss, increased emissions, and potential
+    long-term engine damage.
+  inspection_advice: Check for unusual whining or grinding noises from the turbo area.
+    Inspect for oil leaks around the turbocharger and look for error codes related
+    to turbo performance.
+  sources: []
+- claim_key: golf7_elec_transmission_chronic_tcm_(transmi
+  title: Chronic TCM (Transmission Control Module) Communication Failure on MQB-EVO
+    EA211/EA888 TSI/TFSI Models
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Recurrent issue where the Transmission Control Module (TCM) fails to
+    communicate with the vehicle's data bus, leading to complete transmission failure
+    and engine shutdown. This defect is persistent across multiple instances and models,
+    often accompanied by burning smells, suggesting potential wiring or module failure.
+  inspection_advice: Check for burnt wiring harnesses, loose connections, or physical
+    damage to the TCM. Verify if the issue persists after replacing the battery and
+    ensuring proper voltage. Look for error codes related to TCM communication (e.g.,
+    U0101) and inspect the transmission control module itself for signs of overheating
+    or failure.
+  sources:
+  - source_url: https://www.golftutkusu.com/topic/26439-golf-7-sorunu-var/
+    source_domain: golftutkusu.com
+    site_or_channel: golftutkusu.com
+    quote: 'U0101 [0xC101] Data bus, transmission control module (TCM) - no communication
+
+      Durum: Bekliyo
+
+      Akü sarji yaptım. Ama olmadı. Yanık kokusu var.'
+    independent: true

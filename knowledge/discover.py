@@ -82,13 +82,17 @@ def _generate_templates(make: str, model: str, gen: str) -> list[tuple[str, str]
 
         add("engine", f"{ec} motor arıza")
         add("engine", f"{ec} engine problem reliability forum")
+        add("engine", f"{make_t} {model_t} {ec} chronic and common problems")
+
+        # ── Cooling/Thermostat (fuel-agnostic) ────────────────────────────────
+        add("engine", f"{ec} water pump thermostat failure")
+        add("engine", f"{ec} termostat arıza")
 
         if fuel == "diesel":
             add("engine",    f"{ec} EGR valve clogging {model_t}")
             add("engine",    f"{ec} EGR sorun")
             add("engine",    f"{ec} enjektör arıza")
             add("engine",    f"{litre} dCi {model_t} sorun")
-            add("engine",    f"{ec} water pump thermostat failure")
             add("engine",    f"{litre} dCi timing belt replacement interval {model_t}")
             add("emissions", f"{ec} DPF clogging regeneration failure {model_t}")
             add("emissions", f"{ec} DPF sorun")
@@ -105,6 +109,8 @@ def _generate_templates(make: str, model: str, gen: str) -> list[tuple[str, str]
 
     # ── Transmission ──────────────────────────────────────────────────────────
     transmissions = sorted({r.get("transmission", "") for r in rows if r.get("transmission")})
+    trans_codes = sorted({r.get("transmission_code", "") for r in rows if r.get("transmission_code")})
+
     for tr in transmissions:
         if tr == "automatic":
             add("gearbox", f"{gen_label} EDC sorun")
@@ -115,7 +121,18 @@ def _generate_templates(make: str, model: str, gen: str) -> list[tuple[str, str]
         elif tr == "manual":
             add("gearbox", f"{gen_label} manuel vites sorun")
 
+    for tc in trans_codes:
+        if tc != "manual":
+            tc_upper = tc.upper()
+            add("gearbox", f"{gen_label} {tc_upper} sorun")
+            add("gearbox", f"{make_t} {model_t} {tc_upper} gearbox problem reliability")
+            add("gearbox", f"{make_t} {tc_upper} dual clutch clutch pack wear problems")
+            add("gearbox", f"{make_t} {tc_upper} mechatronics transmission repair")
+            add("gearbox", f"{make_t} {model_t} {tc_upper} chronic and common problems")
+
     # ── Electrical / electronics ──────────────────────────────────────────────
+    add("cooling",    f"{make_t} {model_t} Cooling chronic problems")
+    add("electrical", f"{make_t} {model_t} electronics chronic problems")
     add("electrical", f"{gen_label} elektrik arıza")
     add("electrical", f"{gen_label} electronic problem")
 

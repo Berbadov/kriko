@@ -1,0 +1,1032 @@
+part_id: dq250
+part_type: transmission
+display_name: Volkswagen DQ250 6-speed wet DSG
+manufacturer: volkswagen
+known_also_as:
+- DQ250
+- 6-speed DSG
+- wet DSG
+- DSG6
+production_years: 2003-present
+claims:
+- claim_key: dq250_transmission_mechatronic_unit_fai
+  title: Mechatronic Unit Failure (Internal Valve Body Solenoid)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mechatronic unit in the DQ250 transmission is prone to internal valve
+    body solenoid failure, which can lead to complete transmission malfunction and
+    require costly replacement or remanufacturing.
+  inspection_advice: Check for error codes related to the mechatronic unit (e.g.,
+    18055/P1647) and inspect for signs of fluid leaks around the mechatronic unit
+    gasket, which may indicate internal damage or wear.
+  sources: []
+- claim_key: dq250_transmission_clutch_pack_wear_in_
+  title: Clutch Pack Wear in High-Torque Applications
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250’s wet clutch packs are more prone to accelerated wear when
+    paired with engines producing torque exceeding the transmission’s rated capacity
+    (e.g., heavily modified or high-output engines).
+  inspection_advice: Listen for unusual noises during gear shifts, check for delayed
+    engagement, and verify if the vehicle has been modified to exceed the DQ250’s
+    350 Nm torque limit. Inspect for clutch slip during acceleration.
+  sources: []
+- claim_key: dq250_transmission_oil_seal_leaks_(outp
+  title: Oil Seal Leaks (Output Shaft and Mechatronic Unit)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 is prone to oil seal failures at the output shaft and mechatronic
+    unit gasket, leading to fluid leaks and potential damage to internal components.
+  inspection_advice: Inspect the bell housing and surrounding areas for oil leaks.
+    Look for wet spots or oil residue on the transmission housing, particularly around
+    the output shaft and mechatronic unit.
+  sources: []
+- claim_key: dq250_transmission_transmission_overhea
+  title: Transmission Overheating (P17F0/006128)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 is susceptible to overheating, particularly in stop-and-go
+    traffic or when the transmission enters semi-clutch engagement, triggering limp
+    mode and potential long-term damage.
+  inspection_advice: Check for overheating warning codes (P17F0/006128) and inspect
+    the transmission fluid for burnt odor or discoloration. Monitor fluid temperature
+    during driving, especially in heavy traffic.
+  sources: []
+- claim_key: dq250_transmission_mechatronic_unit_sof
+  title: Mechatronic Unit Software Issues (Jerky Engagement)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250’s mechatronic unit may suffer from software glitches, causing
+    jerky engagement in 1st and 2nd gears, which can often be resolved with an ECU
+    adaptation reset or software update.
+  inspection_advice: Test for erratic or delayed gear engagement, particularly in
+    1st and 2nd gears. Check for related error codes (e.g., P0826) and verify if a
+    VAG-COM/VCDS adaptation reset resolves the issue.
+  sources: []
+- claim_key: dq250_transmission_gear_selection_hesit
+  title: Gear Selection Hesitation (Worn Clutch Packs or Incorrect Fluid)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Worn clutch packs or the use of incorrect fluid viscosity can cause hesitation
+    during gear selection, leading to poor driving experience and potential further
+    damage.
+  inspection_advice: Test for delayed or hesitant gear engagement. Verify if the correct
+    DSG-specific fluid (G 052 182 or G 052 529) is used and check for clutch slip
+    during acceleration.
+  sources: []
+- claim_key: dq250_transmission_dq250_mechatronic_un
+  title: DQ250 Mechatronic Unit Failure
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mechatronic unit in the DQ250 transmission controls gear selection
+    and clutch operation. Chronic failures in this unit lead to hard or jerky gear
+    changes, delays in gear selection, and loss of specific gears, often requiring
+    costly repairs or replacement.
+  inspection_advice: Check for warning lights, delayed gear engagement, jerky shifts,
+    or inability to select certain gears (e.g., Drive/Reverse). Test the transmission
+    under load to confirm smooth operation and responsiveness.
+  sources: []
+- claim_key: dq250_transmission_dq250_transmission_l
+  title: DQ250 Transmission Limp Mode Entry
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 transmission frequently enters limp mode unexpectedly, severely
+    restricting gear selection and power delivery. This can lead to the vehicle being
+    stuck in a single gear, limiting drivability until professional intervention.
+  inspection_advice: Test the transmission for sudden gear lockups, limited power
+    delivery, or inability to shift out of a single gear. Look for warning lights
+    or error codes related to transmission control.
+  sources: []
+- claim_key: dq250_transmission_dq250_electronic_and
+  title: DQ250 Electronic and Sensor Degradation
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 relies heavily on internal electronics and sensors, which degrade
+    over time. This leads to intermittent faults, inconsistent shifting, and random
+    warning messages, particularly when the transmission is hot.
+  inspection_advice: Monitor for warning lights, inconsistent shifting patterns, or
+    faults appearing under heat. Check for error codes related to the Transmission
+    Control Unit (TCU) or sensor malfunctions.
+  sources: []
+- claim_key: dq250_transmission_dq250_wet_clutch_eng
+  title: DQ250 Wet Clutch Engagement Issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Despite being a wet-clutch design, the DQ250 experiences chronic clutch
+    engagement problems, including shuddering when accelerating, gear slipping, and
+    poor low-speed response, impacting drivability and comfort.
+  inspection_advice: Test for shuddering or jerking during acceleration, slipping
+    between gears, or delayed response in low-speed driving. Listen for unusual noises
+    during gear engagement.
+  sources: []
+- claim_key: dq250_transmission_gear_shifts_at_too_l
+  title: Gear shifts at too low RPM
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 DSG transmission often shifts gears at abnormally low RPM,
+    which can lead to jerky or uncomfortable driving experiences and potential wear
+    on the transmission components.
+  inspection_advice: Test drive the vehicle and observe RPM readings during gear shifts.
+    If shifts occur at unusually low RPM (e.g., before reaching optimal engine speed),
+    this defect may be present.
+  sources: []
+- claim_key: dq250_transmission_aggressive/unsmooth_
+  title: Aggressive/unsmooth take-off
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ250 DSG transmission is known for abrupt or rough take-offs, which
+    can be uncomfortable and may indicate poor clutch engagement or control issues.
+  inspection_advice: Test the vehicle's response when accelerating from a standstill.
+    If the car jerks or lurches during take-off, this defect may be present.
+  sources: []
+- claim_key: dq250_transmission_engine_stalling_duri
+  title: Engine stalling during braking
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Stalling during braking is a critical safety issue, often caused by improper
+    clutch engagement or transmission control unit (TCU) faults, which can lead to
+    loss of control.
+  inspection_advice: During a test drive, apply the brakes while the vehicle is moving.
+    If the engine stalls or cuts out, this defect may be present.
+  sources: []
+- claim_key: dq250_transmission|electrical_fluctuating_rpm_need
+  title: Fluctuating RPM needle
+  kind: known_issue
+  domain: transmission|electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fluctuations in the RPM needle can indicate erratic transmission control
+    or sensor issues, which may lead to inconsistent gear shifts and potential transmission
+    damage.
+  inspection_advice: Monitor the RPM gauge during driving. If the needle fluctuates
+    erratically or jumps unexpectedly, this defect may be present.
+  sources: []
+- claim_key: dq250_transmission_bump_during_shifting
+  title: Bump during shifting from 5th to 6th gear
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A noticeable bump during shifting from 5th to 6th gear suggests a design
+    or synchronization issue in the DQ250 transmission, which can cause discomfort
+    and potential wear.
+  inspection_advice: Test drive the vehicle and pay close attention to the shift from
+    5th to 6th gear. If a noticeable bump or jerk is felt, this defect may be present.
+  sources: []
+- claim_key: dq250_transmission_hesitation_in_traffi
+  title: Hesitation in traffic (DSG DQ200 dry-clutch)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ200 dry-clutch DSG transmission, introduced in the Mk6 Golf, suffers
+    from chronic hesitation, juddering, and mechatronic failures. This is due to its
+    lightweight design and dry-clutch system, which is more prone to wear and calibration
+    drift than wet-clutch alternatives.
+  inspection_advice: Check for hesitation or delays when accelerating from a standstill,
+    especially in traffic. Listen for unusual noises like clunking or grinding, and
+    verify if the car responds erratically to throttle input. Look for warning lights
+    on the dashboard related to transmission control modules or clutch wear.
+  sources: []
+- claim_key: dq250_transmission_chronic_hesitation_a
+  title: Chronic hesitation across all DSG generations (DQ250, DQ381, DQ500)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Even after refinements, all DSG transmissions (DQ250, DQ381, and DQ500)
+    exhibit hesitation in traffic, often due to calibration drift, weak hydraulic
+    pumps, worn clutches, or failing mechatronic solenoids. This issue persists across
+    multiple generations and models, including the Golf.
+  inspection_advice: Test the transmission by accelerating from a stop in traffic
+    and observing for hesitation or delays. Check for warning lights related to transmission
+    control modules or clutch wear. Listen for unusual noises during gear shifts.
+  sources: []
+- claim_key: dq250_transmission_mechatronic_solenoid
+  title: Mechatronic solenoid failures in DSG transmissions
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Mechatronic solenoids in DSG transmissions are prone to failure, leading
+    to hesitation and erratic behavior. These components control fluid flow and clutch
+    engagement, and their failure can cause the transmission to stall or hesitate
+    during acceleration.
+  inspection_advice: Look for warning lights on the dashboard related to transmission
+    control modules. Check for hesitation or delays during gear shifts, especially
+    when accelerating from a standstill. Listen for unusual noises or vibrations during
+    operation.
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/golf-dsg-transmission
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"Other times it signals deeper mechanical trouble — ... failing mechatronic
+      solenoids."'
+    independent: true
+- claim_key: dq250_transmission_solenoid_valve_fault
+  title: Solenoid valve faults in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The mechatronic unit in the 02E DQ250 DSG frequently suffers from solenoid
+    valve failures, causing poor or delayed gear selection, loss of specific gears,
+    and limp mode activation. These faults are often irreparable and require replacement
+    of the entire mechatronic unit.
+  inspection_advice: Look for harsh gear changes (especially 2–3 or 3–4), limp mode
+    activation after extended driving, and diagnostic trouble codes related to solenoid
+    valves (e.g., P0746, P0751, P0756, P0761, P0766, P0771, P1746, P1824, P1829, P1835,
+    P2723, P2732).
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-02e-dq250-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '"Solenoid valve faults — causing poor or delayed gear selection"'
+    independent: true
+  - source_url: https://www.erenservis.net/rehber/solenoid-valf-ariza-belirtileri/
+    source_domain: erenservis.net
+    site_or_channel: erenservis.net
+    quote: '"Solenoid valve faults — causing poor or delayed gear selection"'
+    independent: true
+- claim_key: dq250_transmission_input/output_speed_s
+  title: Input/output speed sensor failures in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 02E DQ250 DSG is prone to failures in the input (G182) and output
+    (G195) speed sensors, leading to incorrect gear ratios and transmission malfunctions.
+    These sensor failures are common and often result in limp mode or complete loss
+    of transmission control.
+  inspection_advice: Check for diagnostic trouble codes P0716 (input speed sensor
+    implausible signal) and P0722 (output speed sensor no signal). Also, monitor for
+    incorrect gear ratio codes (P0731–P0735).
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-02e-dq250-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '"Sensor failures — especially input and output speed sensors"'
+    independent: true
+- claim_key: dq250_transmission_ecu_communication_er
+  title: ECU communication errors in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The mechatronic unit's ECU in the 02E DQ250 DSG frequently experiences
+    communication errors, leading to 'no comms' or CAN bus faults. This disrupts the
+    entire transmission control system, causing limp mode, loss of power, and gearbox
+    malfunctions.
+  inspection_advice: Scan for 'no communication possible with ECU' and CAN bus fault
+    codes (e.g., P0701, P1604). Also, check for limp mode activation and warning lights
+    indicating transmission issues.
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-02e-dq250-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '"ECU communication errors — resulting in ''no comms'' or CAN bus faults"'
+    independent: true
+- claim_key: dq250_transmission_hydraulic_pressure_r
+  title: Hydraulic pressure regulation issues in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The mechatronic unit's hydraulic pressure regulation system in the 02E
+    DQ250 DSG is prone to failure, leading to limp mode activation and poor gear engagement.
+    These issues are often chronic and require replacement of the mechatronic unit.
+  inspection_advice: Look for limp mode activation after extended driving, delayed
+    gear engagement, and diagnostic trouble codes related to pressure control solenoids
+    (e.g., P0746, P0766, P1746, P1824, P1829, P2723, P2732).
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-02e-dq250-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '"Hydraulic pressure regulation issues — leading to limp mode"'
+    independent: true
+- claim_key: dq250_transmission_heat_damage_to_mecha
+  title: Heat damage to mechatronic unit in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mechatronic unit in the 02E DQ250 DSG is sensitive to high fluid
+    temperatures, which can cause long-term damage and failure. Over time, heat can
+    degrade internal components, leading to solenoid faults, sensor failures, and
+    ECU malfunctions.
+  inspection_advice: Check for a history of overheating (e.g., frequent fluid changes,
+    signs of overheated transmission fluid). Monitor for symptoms of mechatronic failure
+    (e.g., limp mode, harsh gear changes) that worsen with prolonged use or in hot
+    conditions.
+  sources: []
+- claim_key: dq250_transmission_clutch_temperature_m
+  title: Clutch temperature monitoring failure in 02E DQ250 DSG
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 02E DQ250 DSG's clutch temperature monitoring system (G509) can fail,
+    potentially leading to overheating and clutch-related transmission issues. This
+    is a less common but notable failure point that can exacerbate existing mechatronic
+    problems.
+  inspection_advice: Scan for diagnostic trouble code P1740 (clutch temperature monitoring
+    defective). Monitor for limp mode activation and unusual clutch engagement behavior,
+    especially after prolonged driving.
+  sources: []
+- claim_key: dq250_transmission_neglected_dsg_fluid_
+  title: Neglected DSG fluid degradation causing judder/hesitation
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DQ250 transmission relies on fluid that degrades over time, leading
+    to judder, hesitation, and rough shifts if not serviced. VW claims it's a 'lifetime
+    fill,' but this is not true—fluid must be changed every 40,000–60,000 km to prevent
+    failure.
+  inspection_advice: Check for signs of fluid neglect (burnt smell, dark/burnt fluid)
+    and confirm if the last DSG fluid service was performed within the recommended
+    interval (every 40,000–60,000 km).
+  sources:
+  - source_url: https://enginescope.gr/engine/vw-dsg-dq250/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: '"DSG fluid service (often neglected) — moderate, repair cost €150–€300,
+      40,000 km–60,000 km. VW says ''lifetime fill'' but fluid degrades. Change every
+      40-60k km for longevity. Many Greek VW owners skip this. €150-300 at any VAG
+      workshop. Do it every 50k km."'
+    independent: true
+- claim_key: dq250_transmission_clutch_pack_wear_and
+  title: Clutch Pack Wear and Shuddering (DQ200 dry-clutch variant)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Dry-clutch DQ200 DSG transmissions, found in lighter cars like the 1.4
+    and 1.8 TSI Jetta and Golf, are particularly prone to clutch shuddering and juddering
+    between **100,000 and 150,000 km**. This is due to accelerated wear from stop-and-go
+    driving, leading to slipping sensations and poor acceleration.
+  inspection_advice: Test for shuddering/juddering during acceleration from a stop,
+    especially in DQ200-equipped models. Listen for unusual noises or delayed engagement
+    when shifting from neutral to drive.
+  sources: []
+- claim_key: dq250_transmission_premature_mechatroni
+  title: Premature Mechatronic/Clutch Failure Due to Neglected Fluid & Filter Service
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Wet-clutch DSGs (DQ250 and DQ500) rely on shared fluid for clutch lubrication
+    and mechatronic function. Volkswagen recommends fluid/filter changes every **60,000
+    km**, but many owners neglect this, leading to contaminated fluid carrying debris
+    that accelerates mechatronic and clutch failure.
+  inspection_advice: Check service records for DSG fluid/filter changes. Look for
+    signs of fluid contamination (dark, burnt smell) or unusual noises from the transmission.
+    Verify if the vehicle has undergone a DSG service within the last 60,000 km.
+  sources:
+  - source_url: https://foreignautomotive.ca/blogs/news/vw-dsg-transmission-problems
+    source_domain: foreignautomotive.ca
+    site_or_channel: foreignautomotive.ca
+    quote: '"Old, contaminated fluid is one of the leading causes of premature mechatronic
+      and clutch failure."'
+    independent: true
+- claim_key: dq250_transmission_mekatronik_arızaları
+  title: Mekatronik arızaları ve hidrolik basınç kaybı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DQ250 şanzımanında mekatronik ünite ve hidrolik kontrol sisteminde kronik
+    arızalar yaşanır. Bu, vites geçişlerinde gecikme, sertlik veya hatta failsafe
+    moduna geçme gibi ciddi sorunlara yol açar. Özellikle çift kavrama ve valf gövdesi
+    ile ilgili sorunlar, uzun vadede şanzımanın tamamen arızalanmasına neden olabilir.
+  inspection_advice: Vites geçişlerinde sertlik veya gecikme hissedildiğinde, mekatronik
+    ünite ve hidrolik basınç sistemini kontrol ettirin. Ayrıca, şanzımanın failsafe
+    moduna geçip geçmediğini gözlemleyin. Yağ seviyesini ve kalitesini düzenli olarak
+    kontrol edin.
+  sources: []
+- claim_key: dq250_transmission_aşırı_ısınma_ve_kavr
+  title: Aşırı ısınma ve kavrama kayması
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: DQ250 şanzımanı, uzun süreli agresif kullanım veya yetersiz soğutma durumunda
+    aşırı ısınır. Bu, kavrama sisteminde kayma ve aşınmaya neden olur. Özellikle yoğun
+    trafik veya pist kullanımı sırasında sorunlar daha belirgin hale gelir.
+  inspection_advice: Şanzımanın aşırı ısınmasını kontrol edin. Sürüş sonrası şanzımanın
+    soğuması için bekleyin. Yağ seviyesini ve kalitesini düzenli olarak kontrol edin
+    ve şanzıman soğutma sistemini test edin.
+  sources:
+  - source_url: https://teknikotomatiksanziman.com/dq250-dsg-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: '**❌ Isınma Sorunu** → Uzun süreli agresif kullanımda şanzıman aşırı ısınabilir.
+
+
+      📌 **Aşırı Isınma ve Kavrama Kayması**
+
+      🔍 Sebep: Uzun süre agresif kullanım veya yetersiz soğutma.'
+    independent: true
+- claim_key: dq250_transmission_yüksek_onarım_maliye
+  title: Yüksek onarım maliyeti ve çift kavrama sisteminin hassasiyeti
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DQ250 şanzımanının çift kavrama sistemi ve mekatronik ünitesi, arızalanması
+    durumunda çok yüksek onarım maliyetlerine neden olur. Bu, kullanıcıların düzenli
+    bakım ve önleyici tedbirleri almasını zorunlu kılar.
+  inspection_advice: Çift kavrama sisteminin ve mekatronik ünitenin durumunu düzenli
+    olarak kontrol ettirin. Kavrama kayması veya vites geçişlerinde sertlik hissedildiğinde
+    hemen bir mekanik kontrolü yapın.
+  sources: []
+- claim_key: dq250_transmission_yağ_değişimi_gerekli
+  title: Yağ değişimi gerekliliği ve yanlış yağ kullanımı riski
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: DQ250 şanzımanında, 'ömür boyu yağ' iddiasına rağmen her 60.000 km'de
+    yağ değişimi yapılması gerekiyor. Yanlış yağ kullanımı ciddi hasarlara yol açabilir.
+    Bu, şanzımanın uzun vadeli performansını ve dayanıklılığını etkiler.
+  inspection_advice: Yağ değişim aralıklarını takip edin ve sadece VW G 052 182 A2
+    veya Motul Multi DCTF gibi uygun yağları kullanın. Yağ seviyesini ve kalitesini
+    düzenli olarak kontrol edin.
+  sources:
+  - source_url: https://teknikotomatiksanziman.com/dq250-dsg-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: '**❌ Yağ Değişimi Gerekliliği** → ''Ömür boyu yağ'' iddiasına rağmen her
+      60.000 km’de değişim önerilir.
+
+
+      🛢 **DQ250 Yağ Tipi ve Kapasitesi**
+
+      ✔ Yanlış yağ kullanımı, şanzımanda ciddi hasara neden olabilir!'
+    independent: true
+- claim_key: dq250_transmission_dq200_kavrama_aşınma
+  title: DQ200 Kavrama Aşınması (Golf, Polo, Audi A1/A3, Skoda Octavia)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG DQ200 şanzımanının kuru kavrama sistemi, tipik olarak 80.000–120.000
+    km aralığında aşınarak arızalanır. Bu, tek kavrama sisteminin bozulmasına ve vites
+    geçişlerinde ciddi sorunlara yol açar.
+  inspection_advice: Şanzıman sıvısını kontrol edin (koyu renk, yanma kokusu veya
+    kirlenme işaretleri). Vites geçişlerinde gecikme, titreşim veya viteslerin çalışmaması
+    durumunda kavrama aşınması olabilir. Mekatronik ünitesinin hatalarını VAG-COM
+    ile taramakta fayda var.
+  sources: []
+- claim_key: dq250_transmission_dq250/380/381_hidrol
+  title: DQ250/380/381 Hidrolik Sistem ve Valf Gövdesi Aşınması (Passat, Tiguan, Audi
+    A4/A6)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG DQ250/380/381 şanzımanlarında hidrolik sistem ve valf gövdesi, tipik
+    olarak 150.000–200.000 km aralığında aşınır. Bu, vites geçişlerinde gecikme, sert
+    darbe veya hatta viteslerin çalışmamasına neden olur.
+  inspection_advice: Vites geçişlerinde sert vuruntu veya gecikme varsa, hidrolik
+    sıvıyı kontrol edin (koyu renk, kirlenme veya yanma kokusu). Valf gövdesi arızası
+    durumunda, şanzıman sıvısını değiştirme ve VAG-COM ile sistem hatalarını taramak
+    gerekebilir.
+  sources: []
+- claim_key: dq250_transmission_dq500_yüksek_tork_aş
+  title: DQ500 Yüksek Tork Aşınması (Golf R, Audi S3, RS Modeller)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG DQ500 şanzımanı, yüksek torklu performanslı modellerde (Golf R, Audi
+    S3, RS) agresif kullanım sonucu 60.000–100.000 km’de aşınır. Bu, kavrama ve hidrolik
+    sistemlerin erken bozulmasına yol açar.
+  inspection_advice: Ağır bir performans arabasıysa, şanzıman sıvısını düzenli olarak
+    kontrol edin. Vites geçişlerinde gecikme, titreşim veya viteslerin çalışmaması
+    durumunda DQ500 spesifik arızalarını araştırın.
+  sources: []
+- claim_key: dq250_transmission_dsg_1,_3,_5,_7_vites
+  title: DSG 1, 3, 5, 7 Vitesleri Çalışmıyor (Tek Kavrama Sistemi Arızası)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: DSG şanzımanında tek kavrama sistemi arızalandığında, tek haneli vitesler
+    (1, 3, 5, 7) veya çift haneli vitesler (2, 4, 6, R) çalışmayabilir. Bu, kavrama
+    aktüatörü, mekatronik kart veya hidrolik basınç kaybından kaynaklanır.
+  inspection_advice: Vites seçerken belirli viteslerin çalışmaması durumunda, mekatronik
+    ünitesini VAG-COM ile taramak ve şanzıman sıvısını kontrol etmek gereklidir. Kavrama
+    aktüatörü veya hidrolik basınç sorunları olabilir.
+  sources:
+  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
+    source_domain: oztepeotomatiksanziman.com
+    site_or_channel: oztepeotomatiksanziman.com
+    quote: '"DSG şanzımanında tek kavrama sistemi arızalandığında, sadece tek haneli
+      vitesler (1, 3, 5, 7) veya çift haneli vitesler (2, 4, 6, R) çalışmayabilir.
+      Sebepleri: Kavrama aktüatörü arızası, mekatronik kart hasarı, hidrolik basınç
+      kaybı, sensör arızaları."'
+    independent: true
+- claim_key: dq250_transmission_dsg_2’den_3’e_geçerk
+  title: DSG 2’den 3’e Geçerken Vuruntu (Valf Gövdesi Aşınması)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG şanzımanında 2’den 3’e geçerken sert darbe veya vuruntu, valf gövdesi
+    aşınması, kirli şanzıman yağı veya adaptasyon değerleri bozukluğundan kaynaklanır.
+    Bu, hidrolik kontrol sisteminin bozulmasına işaret eder.
+  inspection_advice: Vites geçişlerinde sert vuruntu veya titreşim varsa, şanzıman
+    sıvısını değiştirin ve valf gövdesini kontrol edin. Yazılım güncellemesi veya
+    adaptasyon sıfırlama da gerekebilir.
+  sources: []
+- claim_key: dq250_transmission_dsg_yokuşta_geri_kaç
+  title: DSG Yokuşta Geri Kaçırma (Hill-Hold Sistem Arızası)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Yokuşta araç geri kaçırması, hill-hold sensörü, elektronik handbrake
+    (EPB) veya mekatronik yazılım hatasından kaynaklanır. Bu, güvenlik riski oluşturur
+    ve acil çözüm gerektirir.
+  inspection_advice: Yokuşta araç geri kaçırırsa, hill-hold sensörünü, EPB sistemini
+    ve mekatronik yazılımını kontrol edin. Yazılım güncellemesi veya sensör kalibrasyonu
+    gerekebilir.
+  sources: []
+- claim_key: dq250_transmission_dsg_mekatronik_kart_
+  title: DSG Mekatronik Kart Arızaları (Gecikmeli Vites Geçişleri, Rastgele Vites
+    Atlaması)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG şanzımanının beyni olan mekatronik kart arızalandığında, vites geçişlerinde
+    gecikme, rastgele vites atlaması, titreşim veya hatta motor başlatma sorunları
+    yaşanır. Bu, elektronik hatalar veya yazılım bozukluklarından kaynaklanır.
+  inspection_advice: Vites geçişlerinde gecikme veya rastgele vites atlaması varsa,
+    mekatronik kartı VAG-COM ile taramak ve yazılımını güncellemek gerekebilir. Kart
+    tamiri veya değiştirme maliyetleri yüksektir.
+  sources: []
+- claim_key: dq250_transmission_dq250_hidrolik_probl
+  title: DQ250 Hidrolik Problemi ve Valf Gövdesi Aşınması (Audi A3 8P Kasa)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Audi A3 8P kasa (2003–2012) modelinde DQ250 şanzımanı, hidrolik sistem
+    ve valf gövdesi aşınması nedeniyle arızalar yaşar. Ayrıca Quattro sistem entegrasyonu
+    sorunları da mevcuttur.
+  inspection_advice: Audi A3 8P kasa modelinde vites geçişlerinde gecikme veya sert
+    vuruntu varsa, hidrolik sistem ve valf gövdesini kontrol edin. Şanzıman sıvısını
+    değiştirme ve VAG-COM ile sistem hatalarını taramak gerekebilir.
+  sources:
+  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
+    source_domain: oztepeotomatiksanziman.com
+    site_or_channel: oztepeotomatiksanziman.com
+    quote: '"Audi A3 DSG Sorunları: 8P Kasa (2003-2012): DQ250 hidrolik problemi –
+      valf gövdesi yaygın arıza, Quattro sistem entegrasyonu – AWD özel sorunları."'
+    independent: true
+- claim_key: dq250_transmission_dsg_vites_göstergesi
+  title: DSG Vites Göstergesi Yanıp Sönen (Konum Sensörü veya CAN-Bus Hatası)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG şanzımanında vites göstergesinin yanıp sönmesi veya yanlış vites
+    göstermesi, konum sensörü arızası, kablo bağlantı sorunu veya CAN-Bus iletişim
+    hatasından kaynaklanır. Bu, şanzımanın doğru çalışmasını engeller.
+  inspection_advice: Vites göstergesinin yanıp sönmesi veya yanlış vites gösterdiği
+    durumlarda, konum sensörlerini kontrol edin ve VAG-COM ile CAN-Bus hatalarını
+    taramak gerekebilir.
+  sources: []
+- claim_key: dq250_transmission_chronic_dry-clutch_d
+  title: Chronic dry-clutch DQ200 failure due to high friction and heat buildup
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ200 (7-speed dry-clutch DSG) suffers from chronic failures due
+    to excessive friction in its dual-clutch design, leading to heat buildup, pressure
+    loss, oil degradation, and electronic stress. This causes clutch plate slippage,
+    sensor overload, and mechatronic valve malfunctions, often requiring revamping
+    or replacement.
+  inspection_advice: Check clutch wear measurements (mm), hydraulic pressure levels
+    (bar), solenoid response times, and mechatronic module diagnostics. Look for signs
+    of overheating (burnt smells, unusual noises) and verify if the vehicle has undergone
+    regular oil and filter changes every 60,000 km.
+  sources: []
+- claim_key: dq250_transmission_dq250_(6-speed_wet-c
+  title: DQ250 (6-speed wet-clutch DSG) heat-related failures despite improved durability
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: While the DQ250 (6-speed wet-clutch DSG) is more durable than the DQ200,
+    it still exhibits chronic issues due to heat buildup from dual-clutch friction.
+    This leads to sensor overload, clutch plate slippage, and mechatronic valve errors,
+    particularly after 120,000 km.
+  inspection_advice: Inspect clutch wear values, hydraulic pressure, solenoid reaction
+    times, and mechatronic diagnostics. Verify if the vehicle has undergone regular
+    oil and filter changes every 60,000 km and check for overheating symptoms.
+  sources: []
+- claim_key: dq250_transmission_dsg_09g_cooling_modu
+  title: DSG 09G cooling module retrofit required for overheating issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 09G cooling module retrofit is necessary to mitigate severe overheating
+    problems in DSG transmissions, which can lead to further component failure if
+    unaddressed.
+  inspection_advice: Check if the vehicle has undergone a 09G cooling module retrofit.
+    Look for overheating symptoms (burnt smells, unusual noises) and verify transmission
+    fluid condition.
+  sources: []
+- claim_key: dq250_transmission_dsg_dq200_(kuru_kavr
+  title: DSG DQ200 (kuru kavrama) - Kavrama plaketleri aşınması ve metal tozunun mekatronik
+    kart hasarına yol açması
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Kuru kavrama DSG'lerde (örneğin DQ200) kavrama plaketleri aşındıkça oluşan
+    metal tozlar mekatronik kartı kirletir ve hasar verir. Bu durumda kavrama plaketleri
+    ve mekatronik kartın değiştirilmesi gerekebilir, erken müdahaleye göre maliyet
+    iki katına çıkar.
+  inspection_advice: Vites geçişlerinde vuruntu, takılma veya gecikme varsa; soğuk
+    havalarda ilk kalkışta belirginleşen gecikmeli geri vites geçişi; düşük hızlarda
+    titreşim hissi; ve yanık koku kontrol edilmelidir. Mekatronik kart uyarı lambası
+    yanıyorsa hata kodunu okutmak önemlidir.
+  sources: []
+- claim_key: dq250_transmission_dsg_dq200_-_volant_h
+  title: DSG DQ200 - Volant hasarı ve kavrama plaketleri arasındaki ilişki
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DQ200 kuru kavrama DSG'lerinde kavrama plaketleri aşınması, volant hasarına
+    yol açar. Bu durumda volantın değiştirilmesi gerekebilir ve maliyet artar. Ayrıca,
+    kavrama plaketleri ve volant hasarı birlikte ortaya çıkabilir.
+  inspection_advice: Vites geçişlerinde vuruntu, sert geçiş veya gecikmeli hareket
+    hissi varsa, volant hasarını kontrol etmek gerekir. Özellikle DQ200 modellerinde
+    bu sorun daha sık görülür.
+  sources: []
+- claim_key: dq250_transmission_dsg_dq200_-_kavrama_
+  title: DSG DQ200 - Kavrama plaketleri aşınması ve sıvı değişiminin etkisizliği
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DQ200 kuru kavrama DSG'lerinde kavrama plaketleri aşınması, sıvı değişiminin
+    etkisiz olduğu bir sorundur. Bu nedenle sıvı değişimi kavrama sorununu çözmez
+    ve plaketlerin değiştirilmesi gerekebilir.
+  inspection_advice: Kavrama plaketleri aşınması belirtileri varsa (vuruntu, titreşim,
+    sert geçiş), sıvı değişiminin yeterli olmayacağını unutmamak gerekir. Kavrama
+    seti revizyon servisi gerekebilir.
+  sources: []
+- claim_key: dq250_transmission_dsg_kavrama_arızalar
+  title: DSG kavrama arızaları - Mekatronik kart hasarı ve metal toz birikimi
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG kavrama arızalarında kavrama plaketleri aşındıkça oluşan metal tozlar
+    mekatronik kartı kirletir ve hasar verir. Bu durumda kavrama plaketleri ve mekatronik
+    kartın değiştirilmesi gerekebilir, erken müdahaleye göre maliyet iki katına çıkar.
+  inspection_advice: Vites geçişlerinde vuruntu, sert geçiş veya yanık koku varsa,
+    mekatronik kartın durumunu kontrol ettirmek gerekir. Mekatronik kart uyarı lambası
+    yanıyorsa hata kodunu okutmak önemlidir.
+  sources: []
+- claim_key: dq250_transmission_dq200_dsg_solenoid_v
+  title: DQ200 DSG solenoid valve pressure tube wear/loosening
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ200 (dry clutch) DSG transmission exhibits a chronic issue with
+    solenoid valve pressure tubes loosening or failing, leading to erratic pressure
+    control and transmission shifts.
+  inspection_advice: Check for unusual 'clunk' noises during 1→2 or 2→3 gear shifts
+    in DQ200 models. Inspect solenoid valve pressure tubes for wear, looseness, or
+    leaks during a test bench analysis.
+  sources: []
+- claim_key: dq250_transmission_dq200/dq250_dsg_sole
+  title: DQ200/DQ250 DSG solenoid valve hydraulic pump protection failure (P17BF)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Faulty solenoid valves can trigger the hydraulic pump protection mode
+    (P17BF), leading to limp mode and potential transmission damage if ignored.
+  inspection_advice: Check OBD-II for P17BF or P17xx codes. Look for limp mode activation,
+    erratic shifting, or loss of reverse gear. Inspect solenoid valves and mechatronic
+    unit for failure.
+  sources:
+  - source_url: https://www.erenservis.net/rehber/solenoid-valf-ariza-belirtileri/
+    source_domain: erenservis.net
+    site_or_channel: erenservis.net
+    quote: '"OBD cihazında görülen ''Hydraulic Pump Protection'' hatası genellikle
+      hatalı çalışan solenoidlerden kaynaklanır."'
+    independent: true
+- claim_key: dq250_transmission_dsg_tüp_(clutch_tube
+  title: DSG Tüp (Clutch Tube) Failure in 1.3 TCe EDC Clio
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the DSG clutch tube, including issues like tüp (tube)
+    loosening, clutch disc cracking, and premature burning, even in newer models (post-2016).
+    This is a known issue with the 7-speed EDC wet clutch system in 1.3 TCe engines.
+  inspection_advice: Check for signs of clutch tube wear, loose fittings, or burnt
+    clutch discs. Verify if the vehicle has undergone clutch tube replacements or
+    if there are service records for DSG-related issues.
+  sources: []
+- claim_key: dq250_transmission_dsg_mekatronik_(mech
+  title: DSG Mekatronik (Mechatronic Unit) Failure in Older Models
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recurrent mekatronik (mechatronic control unit) failures in DSG-equipped
+    vehicles, even at high mileage (e.g., 150,000 km). This suggests a chronic design
+    or manufacturing defect in the mechatronic system of older DSG transmissions.
+  inspection_advice: Check for error codes related to the mekatronik unit. Look for
+    previous repairs or service records mentioning mekatronik failures. Listen for
+    unusual noises or delays in gear engagement.
+  sources: []
+- claim_key: dq250_engine_puretech_1.2l_timing
+  title: PureTech 1.2L Timing Chain/Triger Kayış (Timing Belt) Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the timing chain or belt in 1.2L PureTech engines,
+    often due to incorrect oil usage or lack of timely oil changes. Reports indicate
+    failures as early as 20,000 km, with some cases of complete timing belt failure.
+  inspection_advice: Verify the type of oil used in the engine and check service records
+    for oil changes. Inspect the timing chain/cover for signs of wear, leaks, or past
+    replacements. Listen for unusual engine noises that may indicate timing issues.
+  sources: []
+- claim_key: dq250_transmission_dsg_micro-switch_fai
+  title: DSG Micro-Switch Failure
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recurrent micro-switch failures in DSG transmissions, particularly in
+    models like the 2017 Polo Allstar, requiring warranty claims for replacements.
+  inspection_advice: Check for error codes related to micro-switch failures. Look
+    for service records mentioning micro-switch replacements or transmission-related
+    issues.
+  sources: []
+- claim_key: dq250_transmission_clutch_shudder_and_d
+  title: Clutch shudder and delayed shifts due to mechatronic unit failures
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mechatronic control unit, which manages clutch operation and gear
+    selection, is prone to failure, leading to noticeable jerking, shuddering, or
+    delayed shifts. This can require partial replacement of the control board or full
+    unit replacement, indicating a chronic design or reliability flaw in the DSG's
+    electronic control system.
+  inspection_advice: Check for delayed or rough shifts, especially under acceleration
+    or when switching between gears. Listen for unusual noises or vibrations during
+    gear changes. Inspect for error codes related to the mechatronic unit and verify
+    if the transmission fluid is clean and at the correct level.
+  sources: []
+- claim_key: dq250_transmission_solenoid_failures_ca
+  title: Solenoid failures causing shifting irregularities
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty solenoids are a common issue in the DQ250 transmission, contributing
+    to shifting delays, hesitation, or erratic behavior. This is a recurring problem
+    linked to fluid contamination or wear over time.
+  inspection_advice: Test for delayed or erratic shifts, especially when accelerating
+    or decelerating. Check for error codes related to solenoid malfunctions and inspect
+    the transmission fluid for contamination or unusual debris.
+  sources: []
+- claim_key: dq250_transmission_dsg_mechatronic_unit
+  title: DSG mechatronic unit dependency on specialized software
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DSG’s mechatronic unit relies on brand-specific software for proper
+    diagnostics, servicing, and recalibration. Non-specialist shops cannot perform
+    clutch adaptations, read DSG-specific fault codes, or verify fluid specifications,
+    leading to undiagnosed or improperly serviced issues.
+  inspection_advice: Ensure the service shop uses VW-specific tooling and software.
+    Verify if the shop has experience with DSG mechatronic unit diagnostics and clutch
+    adaptations.
+  sources:
+  - source_url: https://www.germantechmotorworks.com/volkswagen-dsg-transmission-what-owners-need-to-know
+    source_domain: germantechmotorworks.com
+    site_or_channel: germantechmotorworks.com
+    quote: '"The mechatronic unit at the heart of the DSG is a precision component
+      that requires brand-specific software to diagnose properly, service correctly,
+      and recalibrate after repairs. Shops without VW-specific tooling cannot perform
+      a proper clutch adaptation,"'
+    independent: true
+- claim_key: dq250_transmission_dq200_dry-clutch_req
+  title: DQ200 dry-clutch requiring software adaptations
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ200 dry-clutch transmission requires periodic software adaptations
+    to maintain proper clutch performance. Failure to perform these adaptations can
+    lead to shuddering, hesitation, and other drivability issues.
+  inspection_advice: Check for shuddering or hesitation symptoms. Ensure the vehicle
+    has undergone recent clutch adaptations using factory diagnostic software. Verify
+    service records for software updates.
+  sources: []
+- claim_key: dq250_transmission_dq200_internal_hydra
+  title: DQ200 internal hydraulic fluid leakage
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DQ200’s dry-clutch design lacks oil bath lubrication for the mechatronic
+    unit, causing internal seals to degrade faster. This leads to hydraulic fluid
+    leaks, reduced pressure, and erratic shifting behavior, often manifesting as gears
+    slipping or failing to engage.
+  inspection_advice: Check for transmission fluid leaks around the gearbox (e.g.,
+    dark stains under the vehicle). Listen for unusual whining or clunking noises
+    during gear shifts, which may indicate low hydraulic pressure. Verify if the fluid
+    level is consistently low despite topping up.
+  sources: []
+- claim_key: dq250_transmission_dsg_transmission_shu
+  title: DSG transmission shuddering/shaking (flywheel, fluid, clutches)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic shuddering or shaking during braking or acceleration is linked
+    to specific DSG transmission defects, including faulty dual mass flywheels, low/contaminated
+    fluid, or worn clutches.
+  inspection_advice: Test-drive the vehicle to check for vibrations or shuddering
+    when braking gently or accelerating from a stop. Inspect for signs of fluid leaks
+    or low fluid levels, and listen for unusual noises from the flywheel or clutches.
+  sources: []
+- claim_key: dq250_transmission_dsg_gear_slippage_(f
+  title: DSG gear slippage (fluid, solenoid, clutches)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Gear slippage, particularly during shifts (e.g., 2nd to 3rd gear), is
+    a chronic issue tied to low/contaminated fluid, faulty solenoid valves, or worn
+    clutches in DSG transmissions.
+  inspection_advice: Monitor for delayed or incomplete gear engagement, especially
+    when shifting from lower to higher gears. Check DSG fluid condition and level,
+    and listen for unusual noises or hesitation during shifts.
+  sources: []

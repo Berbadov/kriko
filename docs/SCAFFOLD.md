@@ -62,25 +62,12 @@ File: `knowledge/sources/curated/{make}_{model}_{gen}.yaml`
 | `url` | string | if page | Full URL for `type: page` |
 | `video_id` | string | if youtube | YouTube video ID for `type: youtube` |
 | `site_or_channel` | string | yes | Domain (page) or channel name (YouTube) |
-| `tier` | string | yes | `A`, `B`, or `C` — see tier rules below |
 | `notes` | string | recommended | Article title or short description |
 | `status` | string | no | `pending` (default), `processed`, or `skipped` |
 | `added_at` | date | recommended | ISO date when added, e.g. `'2026-06-29'` |
 | `processed_at` | date/null | auto | Set automatically on pipeline run |
 
-**Tier assignment rules:**
-
-| Tier | Weight | Rule |
-|---|---|---|
-| A | 1.0 | Specialist repair shops, technical databases. One Tier A source alone auto-verifies a claim. |
-| B | 0.5 | Owner clubs, established reliability media, high-signal forums. Two Tier B sources auto-verify. |
-| C | 0.34 | YouTube, general blogs, unknown domains. Three Tier C sources auto-verify; two go to held. |
-
-Known Tier A domains: `asrgearboxrepairs.co.uk`, `eco-torque.co.uk`, `enginecode.uk`, `gaga.ba`, `fiches-auto.fr`
-
-Known Tier B domains: `meganeownersclub.co.uk`, `honestjohn.co.uk`, `pistonheads.com`, `donanimhaber.com`, `whatcar.com`, `sikayetvar.com`
-
-Reddit and any domain containing `forum`, `forums`, `community`, `club`, `owners` → Tier B. Everything else → Tier C.
+All sources carry equal weight. A claim needs **≥2 independent sources** that pass all LLM gates to auto-verify. A single source lands in `review`.
 
 ---
 
@@ -93,7 +80,6 @@ Add the entry to the curated YAML with `status: pending`, then run `process.py`:
 - type: page
   url: https://example.com/megane-4-problems
   site_or_channel: example.com
-  tier: B
   notes: "Forum thread on common Megane 4 issues"
   status: pending
   added_at: '2026-06-29'
@@ -103,7 +89,6 @@ Add the entry to the curated YAML with `status: pending`, then run `process.py`:
 - type: youtube
   video_id: dQw4w9WgXcQ
   site_or_channel: SomeChannel
-  tier: C
   notes: "Megane 4 K9K injector review"
   status: pending
   added_at: '2026-06-29'

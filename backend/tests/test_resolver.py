@@ -169,10 +169,18 @@ def test_h5h_claims_served_for_h5h_variant(db, megane4_claims):
     match = MatchResult(["megane4_h5h_140"], "exact", "")
     results = resolve_claims(match, db)
     titles = [r.claim.title for r in results]
-    # H5H is an EDC automatic — EDC transmission claims should appear
-    assert any("edc" in t.lower() or "mechatron" in t.lower() or "rough shift" in t.lower() for t in titles)
+    # H5H uses DW5 (wet clutch EDC) — dry-clutch DC4 specific claims should NOT appear
+    assert not any("dc4" in t.lower() or "dry clutch" in t.lower() for t in titles)
     # K9K diesel-specific claims should NOT appear for an H5H petrol variant
     assert not any("injector" in t.lower() for t in titles)
+
+
+def test_h5f_gets_dc4_claims(db, megane4_claims):
+    match = MatchResult(["megane4_h5f_100"], "exact", "")
+    results = resolve_claims(match, db)
+    titles = [r.claim.title for r in results]
+    # H5F uses DC4 (dry clutch EDC) — dry-clutch claims should appear
+    assert any("dc4" in t.lower() or "dry clutch" in t.lower() for t in titles)
 
 
 def test_h5f_claims_not_in_h5h_result(db, megane4_claims):

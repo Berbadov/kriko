@@ -28,6 +28,31 @@ def _part_meta(part_id: str) -> dict:
     return {}
 
 
+def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
+    """Find make and model associated with a part ID by scanning the fitment catalog."""
+    fitment_dir = PARTS_DIR.parent / "fitment"
+    field = {
+        "engine": "engine_family",
+        "transmission": "transmission_code",
+        "cooling": "cooling_code",
+        "electrical": "electrical_code",
+    }.get(part_type, "engine_family")
+
+    for path in fitment_dir.glob("*.yaml"):
+        stem_parts = path.stem.split("_")
+        if len(stem_parts) >= 2:
+            make = stem_parts[0]
+            model = stem_parts[1]
+            try:
+                rows = yaml.safe_load(path.read_text()) or []
+                for row in rows:
+                    if row.get(field) == part_id:
+                        return make, model
+            except Exception:
+                continue
+    return "", ""
+
+
 def templates_for_part(
     part_id: str,
     part_type: str,
@@ -43,6 +68,10 @@ def templates_for_part(
     aliases = meta.get("known_also_as", [])
     fuel = (hints or {}).get("fuel", "")
 
+    make, model = _find_make_model_for_part(part_id, part_type)
+    make_t = make.title() if make else ""
+    model_t = model.title() if model else ""
+
     templates: list[tuple[str, str]] = []
     seen: set[str] = set()
 
@@ -52,27 +81,43 @@ def templates_for_part(
             templates.append((domain, query))
 
     # ── Primary code queries ──────────────────────────────────────────────────
-    add("engine", f"{part_id.upper()} engine problems reliability")
-    add("engine", f"{part_id.upper()} motor arıza sorun")
-    add("engine", f"{display} common problems forum")
-    add("engine", f"{display} known issues reliability")
+    if make_t and model_t:
+        if part_type == "engine":
+            add("engine", f"{make_t} {model_t} {part_id.upper()} chronic and common problems")
+        elif part_type == "transmission":
+            add("transmission", f"{make_t} {model_t} {part_id.upper()} chronic and common problems")
+        elif part_type == "cooling":
+            add("cooling", f"{make_t} {model_t} Cooling chronic problems")
+        elif part_type == "electrical":
+            add("electrical", f"{make_t} {model_t} electronics chronic problems")
+
+    add(part_type, f"{part_id.upper()} {part_type} problems reliability")
+    add(part_type, f"{part_id.upper()} motor arıza sorun")
+    add(part_type, f"{display} common problems forum")
+    add(part_type, f"{display} known issues reliability")
 
     # ── Alias queries ──────────────────────────────────────────────────────────
     for alias in aliases[:3]:  # cap aliases to avoid explosion
-        add("engine", f"{alias} engine reliability issues")
-        add("engine", f"{alias} arıza sorun forum")
+        add(part_type, f"{alias} reliability issues")
+        add(part_type, f"{alias} arıza sorun forum")
 
-    # ── Fuel-type specific ─────────────────────────────────────────────────────
-    if fuel == "diesel":
-        add("engine",    f"{part_id.upper()} timing belt replacement interval")
-        add("engine",    f"{part_id.upper()} EGR valve clogging failure")
-        add("engine",    f"{part_id.upper()} enjektör arıza")
-        add("emissions", f"{part_id.upper()} DPF regeneration failure")
-        add("emissions", f"{part_id.upper()} DPF sorun")
-    elif fuel == "petrol":
-        add("engine", f"{part_id.upper()} timing chain tensioner failure")
-        add("engine", f"{part_id.upper()} oil consumption turbo")
-        add("engine", f"{part_id.upper()} zincirleme arıza")
+    # ── Fuel-type specific (Engine only) ───────────────────────────────────────
+    if part_type == "engine":
+        if fuel == "diesel":
+            add("engine",    f"{part_id.upper()} timing belt replacement interval")
+            add("engine",    f"{part_id.upper()} EGR valve clogging failure")
+            add("engine",    f"{part_id.upper()} enjektör arıza")
+            add("emissions", f"{part_id.upper()} DPF regeneration failure")
+            add("emissions", f"{part_id.upper()} DPF sorun")
+        elif fuel == "petrol":
+            add("engine", f"{part_id.upper()} timing chain tensioner failure")
+            add("engine", f"{part_id.upper()} oil consumption turbo")
+            add("engine", f"{part_id.upper()} zincirleme arıza")
+
+        # Engine cooling/thermostat (fuel-agnostic)
+        add("engine", f"{part_id.upper()} thermostat housing cracking failure")
+        add("engine", f"{part_id.upper()} water pump coolant leak")
+        add("engine", f"{part_id.upper()} termostat arıza")
 
     # ── Transmission-specific ─────────────────────────────────────────────────
     if part_type == "transmission":

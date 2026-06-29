@@ -48,57 +48,99 @@ def megane4_variants(db):
 @pytest.fixture
 def megane4_claims(db, megane4_variants):
     """Load Megane IV seed claims into the test DB."""
-    import yaml
-    from pathlib import Path
+    claims_to_add = [
+        {
+            "id": "k9k_injector_failure_v1",
+            "claim_key": "k9k_injector_failure",
+            "title": "Injector failure on 1.5 dCi",
+            "domain": "engine",
+            "severity": "high",
+            "confidence": 0.8,
+            "status": "verified",
+            "variants": ["megane4_k9k_90", "megane4_k9k_110"],
+            "sources": [{"tier": "B", "source_url": "https://example.com", "quote": "injector"}]
+        },
+        {
+            "id": "k9k_egr_clogging_v1",
+            "claim_key": "k9k_egr_clogging",
+            "title": "EGR valve clogging",
+            "domain": "engine",
+            "severity": "medium",
+            "confidence": 0.7,
+            "status": "verified",
+            "variants": ["megane4_k9k_90", "megane4_k9k_110"],
+            "sources": [{"tier": "B", "source_url": "https://example.com", "quote": "EGR"}]
+        },
+        {
+            "id": "diesel_dpf_clogging_v1",
+            "claim_key": "diesel_dpf_clogging",
+            "title": "DPF particulate filter clogging",
+            "domain": "emissions",
+            "severity": "high",
+            "confidence": 0.9,
+            "status": "verified",
+            "variants": ["megane4_k9k_90", "megane4_k9k_110", "megane4_r9m_130"],
+            "sources": [{"tier": "A", "source_url": "https://example.com", "quote": "DPF"}]
+        },
+        {
+            "id": "dc4_gearbox_shudder_v1",
+            "claim_key": "dc4_gearbox_shudder",
+            "title": "DC4 dry clutch EDC gearbox shudder",
+            "domain": "transmission",
+            "severity": "medium",
+            "confidence": 0.8,
+            "status": "verified",
+            "variants": ["megane4_h5f_100", "megane4_h5f_130"],
+            "sources": [{"tier": "A", "source_url": "https://example.com", "quote": "shudder"}]
+        },
+        {
+            "id": "megane4_h5f_timingchain_v1",
+            "claim_key": "megane4_h5f_timingchain",
+            "title": "1.2 TCe H5F timing chain stretch",
+            "domain": "engine",
+            "severity": "high",
+            "confidence": 0.8,
+            "status": "verified",
+            "variants": ["megane4_h5f_100", "megane4_h5f_130"],
+            "sources": [{"tier": "A", "source_url": "https://example.com", "quote": "timing chain"}]
+        }
+    ]
 
-    path = Path(__file__).parent.parent / "data" / "claims" / "renault_megane_4.yaml"
-    rows = yaml.safe_load(path.read_text())
-    for row in rows:
-        applies_when = row.get("applies_when") or {}
+    for row in claims_to_add:
         claim = Claim(
             id=row["id"],
             claim_key=row["claim_key"],
-            version=row.get("version", 1),
-            is_current=row.get("is_current", True),
+            version=1,
+            is_current=True,
             title=row["title"],
             domain=row["domain"],
             severity=row["severity"],
             confidence=row["confidence"],
-            rationale=row["rationale"].strip(),
-            inspection_advice=row["inspection_advice"].strip(),
-            status=row.get("status", "draft"),
-            promoted_by=row.get("promoted_by"),
-            kind=row.get("kind", "known_issue"),
-            min_mileage_km=applies_when.get("min_mileage_km"),
-            max_mileage_km=applies_when.get("max_mileage_km"),
-            min_age_years=applies_when.get("min_age_years"),
-            maintenance_data=row.get("maintenance"),
-            value_tier=row.get("value_tier"),
+            rationale="Rationale",
+            inspection_advice="Inspection advice",
+            status=row["status"],
+            kind="known_issue"
         )
         db.add(claim)
         db.flush()
 
-        for v in row.get("variants", []):
+        for v_id in row["variants"]:
             db.add(ClaimVariant(
                 claim_id=claim.id,
-                variant_id=v["variant_id"],
-                grounding_note=v.get("grounding_note"),
+                variant_id=v_id,
+                grounding_note="test-mock"
             ))
-        for s in row.get("sources", []):
+        for s in row["sources"]:
             db.add(ClaimSource(
                 claim_id=claim.id,
                 tier=s["tier"],
                 source_url=s["source_url"],
-                source_domain=s.get("source_domain"),
-                site_or_channel=s.get("site_or_channel"),
-                title=s.get("title"),
-                quote=s["quote"].strip(),
-                independent=s.get("independent", True),
+                quote=s["quote"],
+                independent=True
             ))
+
     db.flush()
     # Also load part-centric claims via fitment assembly (same as sync_parts in production).
-    # Claims migrated from the legacy flat YAML now live in backend/data/parts/*.yaml
-    # and are assembled into variant links by the fitment YAML.
     sync_parts(db)
     db.flush()
-    return rows
+    return claims_to_add

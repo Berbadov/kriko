@@ -120,7 +120,7 @@ Risk cards are in `hover_lite/risk_card.js`. Icons in `hover_lite/icons.js`.
 ### Source curation
 **`knowledge/sources/curated/{make}_{model}.yaml`**
 
-One file per make+model. Each entry has `type: youtube|page`, identifiers, `tier: A|B|C`,
+One file per make+model. Each entry has `type: youtube|page`, identifiers,
 and lifecycle fields:
 ```yaml
 status: pending | processed | skipped
@@ -169,14 +169,13 @@ Called internally by `promote()`. Groups same-claim candidates from different so
 ### Promotion scoring
 **`knowledge/promote.py`** — `promote(candidates, variant_descriptors)`
 
-Tier weights: `A=1.0, B=0.5, C=0.34`
-
-Per source that passes gate_support + gate_refute: `score += tier_weight[source.tier]`
+Each source that passes gate_support + gate_refute contributes 1 point. Domain trust is
+not used — the LLM gates are the sole quality filter.
 
 Disposition rules:
-- `score ≥ 1.0` → `VERIFY` (auto-promote), 20% sampled for audit → `REVIEW`
-- `score ≥ 0.5` → `REVIEW` (human must approve before serving)
-- `score < 0.5` → `HELD`
+- `score ≥ 2` → `VERIFY` (auto-promote), 20% sampled for audit → `REVIEW`
+- `score ≥ 1` → `REVIEW` (single source — human must confirm with a second)
+- `score = 0` → `HELD`
 - `severity == "high"` → always `REVIEW` regardless of score
 - `gate_generic` failed → `REJECT`
 - `gate_variant` failed → `HELD`
@@ -240,8 +239,7 @@ ORM: `backend/db/models.py`. Session: `backend/db/session.py`.
     - variant_id: megane4_h5h_140
       grounding_note: "..."
   sources:
-    - tier: B                         # A|B|C
-      source_url: "https://..."
+    - source_url: "https://..."
       site_or_channel: "Reddit r/Renault"
       quote: "verbatim quote..."
       independent: true
@@ -253,7 +251,6 @@ ORM: `backend/db/models.py`. Session: `backend/db/session.py`.
   video_id: "abc123xyz"           # for youtube
   # url: "https://..."            # for page
   site_or_channel: "Auto Tanı TR"
-  tier: C
   notes: "human note"
   status: pending                 # pending | processed | skipped
   added_at: "2026-06-26"

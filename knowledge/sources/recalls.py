@@ -15,7 +15,7 @@ import logging
 import httpx
 from selectolax.parser import HTMLParser
 
-from knowledge.sources.base import Document, Tier
+from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
 
@@ -23,8 +23,6 @@ CAR_RECALLS_URL = "https://www.car-recalls.eu/search/?q={make}+{model}"
 
 
 class RecallsSource:
-    tier = Tier.A  # Manufacturer recalls are Tier A: authoritative, specific
-
     def fetch(self, make: str, model: str) -> list[Document]:
         docs: list[Document] = []
         try:
@@ -43,7 +41,6 @@ class RecallsSource:
                 docs.append(Document(
                     text=text[:10000],
                     url=url,
-                    tier=Tier.A,
                     site_or_channel="car-recalls.eu",
                     meta={"make": make, "model": model, "type": "recall"},
                 ))

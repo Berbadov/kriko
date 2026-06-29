@@ -1,0 +1,644 @@
+part_id: dc4
+part_type: transmission
+display_name: Renault EDC (DC4) — dry dual-clutch transmission
+manufacturer: renault
+known_also_as:
+- EDC
+- Easy Drive Clutch
+production_years: 2010-present
+claims:
+- claim_key: dc4_transmission_chronic_clutch-like_
+  title: Chronic clutch-like slippage in DC4 automatic transmissions (1st→2nd gear)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Excessive slippage during gear engagement, particularly from 1st to 2nd
+    gear, mimicking a manual clutch failure. This is not a standard progressive engagement
+    behavior but rather a defect in the automatic transmission's clutch packs or hydraulic
+    system.
+  inspection_advice: Check for unusual hesitation or slippage when shifting from 1st
+    to 2nd gear, especially during acceleration or uphill driving. Listen for grinding
+    or unusual noises during gear changes. Test drive on inclines to confirm slippage
+    behavior.
+  sources: []
+- claim_key: dc4_transmission_false_negatives_in_r
+  title: False negatives in Renault DC4 transmission diagnostics (no fault codes despite
+    defects)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The transmission exhibits chronic defects (slippage, erratic shifts)
+    but no fault codes are detected by Renault Technical Experts, indicating a potential
+    flaw in the diagnostic system or a non-capturable transmission issue.
+  inspection_advice: If a Renault dealership reports no fault codes despite observed
+    transmission issues, consider seeking a second opinion from an independent transmission
+    specialist or mechanic. Look for persistent symptoms even when diagnostics show
+    'no issues'.
+  sources: []
+- claim_key: dc4_transmission_chronic_dct_shift_de
+  title: Chronic DCT shift delay/non-response in early i4 models
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Dual-Clutch Transmission (DCT) in early i4 models suffered from significant
+    delays and non-response when shifting between gears (R, N, D), requiring multiple
+    lever movements and taking an eternity to engage. This was a known flaw that required
+    a software update to fix.
+  inspection_advice: Check if the car has the latest software update installed. Test
+    the DCT by shifting between gears (R, N, D) and observe if there are noticeable
+    delays or multiple lever movements required. Early models may exhibit sluggish
+    or non-responsive shifts.
+  sources: []
+- claim_key: dc4_transmission_initial_dct_software
+  title: Initial DCT software flaw in i4 models led to poor press reviews
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The flawed DCT software in early i4 models caused poor initial reviews
+    due to delayed and unreliable gear shifts, which negatively impacted sales and
+    public perception before a software fix was applied.
+  inspection_advice: Verify if the car has the latest software update. If not, the
+    DCT may exhibit sluggish or non-responsive shifts, particularly between R, N,
+    and D gears.
+  sources: []
+- claim_key: dc4_transmission_chronic_output_beari
+  title: Chronic output bearing failure in BMW N62 7-speed DCT transmissions
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 7-speed dual-clutch transmission (DCT) in the BMW Z4 35i (N62 engine)
+    appears to suffer from premature output bearing failure, even at low mileage (~57k).
+    The noise is localized to the rear of the transmission, suggesting internal wear
+    or a design flaw in the sealed unit, which lacks serviceability or spare parts
+    from independent garages.
+  inspection_advice: Listen for a rotational metallic clicking noise from the rear
+    of the transmission, especially when the car is elevated (e.g., on a ramp). Check
+    for any signs of oil leaks (even historical) around the transmission mount, as
+    internal lubrication failure may be the root cause. Verify if the transmission
+    has been previously serviced or if there are any service records indicating unusual
+    wear.
+  sources: []
+- claim_key: dc4_transmission_lack_of_independent_
+  title: Lack of independent serviceability for BMW 7-speed DCT transmissions
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 7-speed DCT in the BMW Z4 35i is a sealed unit with no available
+    spares or service options from independent transmission specialists, forcing owners
+    to rely solely on BMW dealerships for repairs. This creates a chronic reliability
+    issue due to limited access to diagnostics and repairs outside official channels.
+  inspection_advice: Confirm whether the transmission has been serviced exclusively
+    by BMW or an authorized dealer. Check if the car has any service history documenting
+    transmission-related issues or repairs. Attempt to locate an independent mechanic
+    experienced with DCT coding or transmission swaps, as these may not be straightforward.
+  sources: []
+- claim_key: dc4_transmission_mechatronic_unit_fai
+  title: Mechatronic unit failures in DCT/DSG transmissions
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mechatronic control unit is critical for smooth gear shifts. Failures
+    in this component can cause erratic shifting behavior, delayed responses, or complete
+    loss of automatic shifting functionality.
+  inspection_advice: Test for erratic shifting patterns, delayed gear engagement,
+    or error codes related to the transmission control module. Check for warning lights
+    on the dashboard indicating transmission issues.
+  sources: []
+- claim_key: dc4_transmission_kavrama_aşınması/dam
+  title: Kavrama Aşınması/Damar Hasarı (DCT Şanzıman)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Çift kavramalı şanzımanlarda kullanılan kavramalar zamanla aşınabilir
+    veya hasar görerek vites geçişlerinde sarsıntı, takılma veya vites kaybına neden
+    olabilir.
+  inspection_advice: Şanzımanın sarsıntılı vites geçişleri, takılma veya vites kaybı
+    gibi belirtilerini kontrol edin. Ayrıca, şanzıman kasasında anormal gıcırdama
+    veya uğultu sesleri dinleyin. Uzman bir mekanik tarafından şanzıman yağının durumu
+    ve kavramaların aşınma derecesi kontrol edilmelidir.
+  sources: []
+- claim_key: dc4_transmission_yazılım_bağımlılığı_
+  title: Yazılım Bağımlılığı ve Sorunları (DCT Şanzıman)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DCT şanzımanların yazılım hataları, vites geçişlerinde sorunlara yol
+    açabilir. Bu sorunlar, şanzımanın düzgün çalışmamasına veya anormal davranışlara
+    neden olabilir.
+  inspection_advice: Şanzımanın vites geçişlerinde sarsıntı, takılma veya anormal
+    sesler ürettiği durumlarda, yazılım güncellemelerini kontrol edin veya yetkili
+    serviste yazılım sorunlarını tespit ettirin. Ayrıca, şanzımanın hatırladığı hatalar
+    veya kodlar varsa bunları kontrol edin.
+  sources: []
+- claim_key: dc4_transmission_yağ_pompası_arızası_
+  title: Yağ Pompası Arızası (DCT Şanzıman)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Yağ pompası arızası, şanzımanın yağlanmasını engelleyerek kavramaların
+    aşınmasına ve şanzımanın hasar görmesine yol açabilir. Bu durum, vites geçişlerinde
+    sorunlara ve şanzıman ömrünün kısalmasına neden olabilir.
+  inspection_advice: Şanzıman kasasında yağ sızıntısı veya anormal sesler varsa, yağ
+    pompasının çalışma durumunu kontrol ettirin. Ayrıca, şanzıman yağının renk ve
+    kokusunu kontrol edin. Yağın kararmış veya yanmış kokusu varsa, yağ pompasının
+    arızalanmış olabileceğini düşünün.
+  sources: []
+- claim_key: dc4_transmission_sarsıntılı_vites_geç
+  title: Sarsıntılı Vites Geçişleri (Hyundai 7 İleri DCT)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Şanzımanın vites geçişlerinde sarsıntı veya takılma yaşama eğilimi, kavrama
+    veya şanzıman iç mekanizmalarındaki sorunların belirtisi olabilir. Bu durum, sürüş
+    konforunu ve güvenliği olumsuz etkileyebilir.
+  inspection_advice: Şanzımanın vites geçişlerinde sarsıntı veya takılma yaşadığını
+    gözlemleyin. Bu belirtiler varsa, şanzımanın bakım ve onarımını yapın veya yetkili
+    serviste kontrol ettirin.
+  sources: []
+- claim_key: dc4_electrical_kömür_ve_komütatör_a
+  title: Kömür ve Komütatör Aşınması
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DC motorlarda kömürlerin aşınması ve komütatörle düzgün temasını kaybetmesi,
+    motorun çalışmasını doğrudan etkiler. Bu durumda motor ya çalışmaz ya da düzensiz
+    çalışır.
+  inspection_advice: Kömürlerin aşınma durumunu kontrol edin ve komütatör yüzeyinde
+    çizik veya aşınma izleri olup olmadığını inceleyin. Komütatör yüzeyinin düzgünlüğünü
+    ve kömürlerin teması için el ile dokunarak kontrol edilebilir.
+  sources: []
+- claim_key: dc4_electrical_sargı_yanıkları
+  title: Sargı Yanıkları
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Yüksek akım veya izolasyon problemleri nedeniyle oluşan sargı yanıkları,
+    motorun tamamen devre dışı kalmasına neden olabilir. Bu durumda motorun yeniden
+    sarılması gereklidir.
+  inspection_advice: Sargı direncini ölçerek yanık olup olmadığını kontrol edin. Aşırı
+    ısınma veya yanık kokusu varsa, sargı yanıkları olabilir.
+  sources: []
+- claim_key: dc4_mechanical_rulman_arızaları
+  title: Rulman Arızaları
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Rulmanların aşınması veya kırılması, motorun titreşim ve gürültüye neden
+    olmasına yol açar ve performans düşüklüğüne sebep olur.
+  inspection_advice: Motor çalışırken titreşim veya anormal gürültü olup olmadığını
+    dinleyin. Rulmanların aşınma veya hasar izlerini görsel olarak kontrol edin.
+  sources: []
+- claim_key: dc4_electrical_kollektör_yüzey_bozu
+  title: Kollektör Yüzey Bozulmaları
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Kollektör yüzeyinde çizikler, yanık izleri veya kir birikmeleri, motorun
+    düzgün çalışmasını engeller.
+  inspection_advice: Kollektör yüzeyini temizleyin ve çizik, yanık izi veya kir birikimi
+    olup olmadığını kontrol edin. Temizlenemeyen bozulmaların yeniden işlenmesi gerekebilir.
+  sources: []
+- claim_key: dc4_electrical_düşük_yalıtım_direnc
+  title: Düşük Yalıtım Direnci
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: İzolasyon direncinin düşmesi, nem, toz veya aşırı sıcaklık nedeniyle
+    elektriksel kaçaklara ve kısa devre riskine yol açar.
+  inspection_advice: İzolasyon testi yaparak düşük yalıtım direnci olup olmadığını
+    kontrol edin. Motorun nem veya kirlenme izleri olup olmadığını da gözlemleyin.
+  sources: []
+- claim_key: dc4_electrical_aşırı_isınma
+  title: Aşırı Isınma
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Motorun aşırı ısınması, sargı problemleri veya aşırı yükten kaynaklanabilir
+    ve iç yapıda ciddi arızalara yol açabilir.
+  inspection_advice: Motorun çalışırken el ile dokunarak aşırı ısınma olup olmadığını
+    kontrol edin. Aşırı ısınma durumunda motoru hemen durdurun ve arızayı tespit edin.
+  sources: []
+- claim_key: dc4_mechanical_gürültülü_çalışma
+  title: Gürültülü Çalışma
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DC motorun çalışırken anormal gürültü çıkarması, rulman arızası veya
+    iç mekanik parçaların dengesizliğini gösterir.
+  inspection_advice: Motor çalışırken ses çıkarması olup olmadığını dinleyin. Anormal
+    gürültü varsa motoru hemen servise gönderin.
+  sources: []
+- claim_key: dc4_electrical_düşen_devir_ve_tork
+  title: Düşen Devir ve Tork
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Motorun devir ve tork kaybı, iç dirençlerin artması veya elektriksel
+    verimsizliklerin oluşumunu gösterir.
+  inspection_advice: Motorun devir ve tork performansını kontrol edin. Eskisi kadar
+    hızlı dönmüyorsa veya tork kaybı varsa, komütatör temizliği ve kömür kontrolü
+    yapın.
+  sources: []
+- claim_key: dc4_transmission_kuru_tip_dc4_şanzıma
+  title: Kuru tip DC4 şanzımanlarda debriyaj balatası aşınması ve incelmesi
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Kuru tip EDC şanzımanlarda debriyaj balatasının aşınması ve incelmesi,
+    vites geçişlerinde titreme ve sarsıntıya neden olur. Bu, özellikle 1. vitesten
+    2. vitese geçişlerde veya yokuş yukarı kalkışlarda daha belirgin hale gelir.
+  inspection_advice: Şanzımanın kuru tip olup olmadığını kontrol edin. Debriyaj balatasının
+    aşınma durumunu görsel olarak inceleyin veya titreme ve sarsıntı belirtilerine
+    dikkat edin. Ayrıca, vites geçişlerinde anormal sesler veya titreme varsa, debriyaj
+    balatasının değiştirilmesi gerekebilir.
+  sources: []
+- claim_key: dc4_transmission_islak_tip_edc_şanzım
+  title: Islak tip EDC şanzımanlarda yağ kalitesinin bozulması ve metal çapakları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Islak tip EDC şanzımanlarda (örneğin DW6 veya DW5) yağ kalitesinin bozulması,
+    metal çapaklarının birikmesine ve hassas hidrolik valflerin tıkanmasına yol açar.
+    Bu, şanzıman performansını ciddi şekilde etkiler ve uzun vadede mekatronik ünite
+    veya dişli grubunun hasar görmesine neden olabilir.
+  inspection_advice: Şanzıman yağının renk ve kokusunu kontrol edin. Koyu renk, yanma
+    veya bozulma işaretidir. Ayrıca, şanzımanın ısınma uyarıları veya vites geçişlerinde
+    anormal sesler varsa, yağ değişimi ve sistem temizliği gerekebilir.
+  sources: []
+- claim_key: dc4_transmission_mekatronik_ünite_arı
+  title: Mekatronik ünite arızaları (elektriksel kısa devre veya hidrolik sızıntılar)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mekatronik ünite (TCU ve hidrolik valf gövdesi), EDC şanzımanın beyni
+    ve kontrol sistemidir. Elektriksel kısa devre veya hidrolik sızıntılar, vitese
+    geçme sorunlarına, araç durmasına veya anormal vites atlamalarına neden olabilir.
+  inspection_advice: Şanzıman kontrol uyarıları veya vitese geçme sorunları varsa,
+    mekatronik ünitenin elektriksel ve hidrolik durumunu kontrol ettirin. Ayrıca,
+    şanzıman sıvısının düzeyini ve renk durumunu kontrol edin; sızıntı veya koku bozulması
+    varsa, mekatronik ünite arızası olabilir.
+  sources: []
+- claim_key: dc4_transmission_yazılım_adaptasyon_e
+  title: Yazılım adaptasyon eksikliği veya hatalı kavrama ayarları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: EDC şanzımanında kavrama seti değiştirildikten sonra, yazılım adaptasyonu
+    yapılmazsa, yeni parçalar bile düzgün çalışmayabilir. Bu, vites geçişlerinde pürüzlülük,
+    titreme veya hatta araç durmasına neden olabilir.
+  inspection_advice: Kavrama seti değiştirildikten sonra şanzımanın vites geçişlerini
+    kontrol edin. Eğer yeni parçalarla bile sorun devam ederse, yazılım adaptasyonunun
+    yapıldığını doğrulayın. Ayrıca, servis tarafından orijinal Renault diagnostic
+    cihazları kullanılıp kullanılmadığını sorgulayın.
+  sources: []
+- claim_key: dc4_electrical_dc_motor:_kutup_sarg
+  title: 'DC Motor: Kutup Sargılarında Devre Kopukluğu'
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Devre kopukluğu, bobin içindeki kısa devre veya dış etkenlerden kaynaklanan
+    darbeler nedeniyle kutup sargılarında meydana gelir. Bu, motorun elektriksel performansını
+    olumsuz etkileyebilir ve arızaların daha büyük sorunlara dönüşmesine neden olabilir.
+  inspection_advice: Kutup sargılarının ara bağlantılarının yalıtkanlığı kaldırılıp,
+    seri lamba kullanılarak her bobinin ayrı ayrı kontrolü yapılarak devre kopukluğu
+    tespit edilmelidir. Yanmayan bobin kopukluğa işaret eder.
+  sources: []
+- claim_key: dc4_electrical_dc_motor:_rotor_gövd
+  title: 'DC Motor: Rotor Gövdeye Kaçak'
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Rotorun ısınması sonucu gövdeye kaçak oluşur ve motor ark yaparak çalışır.
+    Bu, motorun çalışmasını ciddi şekilde etkiler ve hasara yol açabilir.
+  inspection_advice: Rotor yerinden sökülüp, seri lambayla gövde ile kollektör arası
+    kontrol edilmelidir. Ark yaparak çalışan motorlarda rotor gövdeye kaçak olabilir.
+  sources: []
+- claim_key: dc4_electrical_dc_motor:_kollektör_
+  title: 'DC Motor: Kollektör Kısa Devre'
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Kollektör dilimleri arasında kısa devre, mikadaki kömür tozu, pislik,
+    yağ ve ark nedeniyle oluşur. Bu, motorun performansını olumsuz etkiler ve arızaların
+    artmasına neden olur.
+  inspection_advice: Kollektör dilimleri ayrılarak, komşu dilimlerin seri lamba ile
+    kontrolü yapılarak kısa devre tespit edilmelidir. Kömürleşmiş mikalar temizlenmelidir.
+  sources: []
+- claim_key: dc4_electrical_dc_motor:_fırça_ve_y
+  title: 'DC Motor: Fırça ve Yay Basınç Arızaları'
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fırçaların kırılması veya yay basınçlarının azalması, motorun düzgün
+    çalışmasını engeller ve ark oluşumuna neden olur. Bu, motorun performansını ve
+    ömrünü kısaltır.
+  inspection_advice: Fırçaların boyut ve basınç kontrolü yapılarak, yay basınçları
+    ayarlanmalı veya yenilenmelidir. Fırçaların kollektöre temas ettiği kısımlar düzgün
+    oturmalıdır.
+  sources: []
+- claim_key: dc4_mechanical_dc_motor:_yatak_ve_m
+  title: 'DC Motor: Yatak ve Mekanik Aşınma'
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Yatakların aşınması veya kapakların düzgün sıkılmaması, rotor milinin
+    aşınmasına ve kutup sargılarının kopmasına neden olabilir. Bu, motorun çalışmasını
+    tamamen bozabilir.
+  inspection_advice: Yataklar ve kapaklar kontrol edilmeli, rotor milinin aşınma izleri
+    ve kapakların sıkılma durumu incelenmelidir. Havalandırma sistemi de kontrol edilmelidir.
+  sources: []
+- claim_key: dc4_electrical_dc_motor:_i̇zolasyon_
+  title: 'DC Motor: İzolasyon Bozulması ve Pislik'
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Pislik, yağ ve tozların bobin ve kollektör dilimleri arasına girmesi,
+    izolasyonun bozulmasına ve motorun arızalanmasına neden olur. Bu, motorun çalışmasını
+    ciddi şekilde etkiler.
+  inspection_advice: Motor periyodik olarak temizlenmeli ve izolasyon muayenesi yapılarak,
+    izolasyon azaldığında motor fırınlanarak kurutulmalıdır.
+  sources: []
+- claim_key: dc4_transmission_chronic_edc_(electro
+  title: Chronic EDC (Electronic Diesel Control) Transmission Failure in 1.5 dCi Renault
+    Models
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The user reports repeated transmission failure in a 2012 Renault Grand
+    Scenic with a 1.5 dCi engine and EDC 6-speed automatic transmission. The vehicle
+    failed to shift gears properly, stalled, and exhibited erratic behavior, suggesting
+    a chronic issue with the EDC system or transmission control module.
+  inspection_advice: Check for OBD-II error codes related to transmission control
+    (e.g., P0700–P0799 series). Inspect the transmission fluid for unusual color,
+    smell, or metallic particles. Test the vehicle for smooth gear shifts and responsiveness
+    to throttle input. Verify if the issue persists after a transmission fluid flush
+    or replacement.
+  sources: []
+- claim_key: dc4_transmission_dc4_dry-clutch_trans
+  title: DC4 Dry-Clutch Transmission Stall in D Gear (190k km)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The dry-clutch DC4 transmission (common in Renault Clio models) has been
+    reported to exhibit sudden stalling or loss of power in D gear, particularly at
+    low speeds or under load, even at relatively low mileage (190k km). This suggests
+    a potential chronic design or clutch engagement issue in this transmission variant.
+  inspection_advice: Check for unusual clutch engagement noise, delayed response when
+    shifting into D gear, or a 'dead' feeling in acceleration. Verify if the clutch
+    pedal feels spongy or if there is excessive play. Inspect for signs of clutch
+    wear or improper clutch alignment, which could cause the described symptoms.
+  sources: []
+- claim_key: dc4_transmission_excessive_heat_sensi
+  title: Excessive heat sensitivity and overheating risk in dry-clutch 6DCT250 transmissions
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The dry-clutch system is highly sensitive to heat, leading to premature
+    failure when subjected to prolonged stop-and-go traffic or aggressive driving,
+    as it lacks the cooling benefits of wet-clutch systems.
+  inspection_advice: Inspect for signs of overheating (e.g., burnt smell, unusual
+    noises, or warning lights) and check if the transmission has been used in heavy
+    stop-and-go traffic conditions. Verify if the mekatronik oil has been changed
+    regularly and if the transmission has been cooled properly after aggressive use.
+  sources:
+  - tier: C
+    source_url: https://teknikotomatiksanziman.com/edc-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: ❌ 🏁 Isınma Sorunu → Özellikle yoğun trafikte dur-kalk sırasında kavrama
+      çok fazla ısınabilir.
+    independent: true
+- claim_key: dc4_transmission_tcu_or_mekatronik_va
+  title: TCU or mekatronik valve body failure causing failsafe mode
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Faults in the Transmission Control Unit (TCU) or mekatronik valve body
+    can lead to the transmission entering failsafe mode, where gear shifts fail entirely,
+    rendering the vehicle inoperable.
+  inspection_advice: Check for warning lights or erratic behavior in gear shifts.
+    If the transmission enters failsafe mode, have the TCU and mekatronik valve body
+    inspected and diagnosed for faults.
+  sources:
+  - tier: C
+    source_url: https://teknikotomatiksanziman.com/edc-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: '📌 Failsafe Moduna Geçme (Vites Değişmemesi)
+
+      🔍 Sebep: TCU veya mekatronik valf gövdesi arızası.'
+    independent: true
+- claim_key: dc4_transmission_mekatronik_unit_and_
+  title: Mekatronik unit and pressure regulator failure at high mileage
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mekatronik unit and pressure regulator in the 6DCT250 transmissions
+    are prone to failure after extended use, particularly if maintenance intervals
+    are not followed. This can lead to transmission malfunctions or complete failure.
+  inspection_advice: At 80,000+ km, inspect the mekatronik unit and pressure regulator
+    for wear or failure. Check for warning lights or unusual noises during gear shifts.
+    Ensure the transmission fluid has been changed regularly.
+  sources: []
+- claim_key: dc4_transmission_sensitivity_to_incor
+  title: Sensitivity to incorrect mekatronik oil type and degradation
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Using incorrect or degraded mekatronik oil can cause severe damage to
+    the transmission components, including the mekatronik unit and clutches, leading
+    to premature failure.
+  inspection_advice: Verify the type of oil used (Renault EDC DCTF-LV or Motul Multi
+    DCTF) and ensure it has been changed every 60,000 km. Check for signs of oil degradation
+    or contamination.
+  sources:
+  - tier: C
+    source_url: https://teknikotomatiksanziman.com/edc-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: ⚠️ Yanlış yağ kullanımı, şanzımanda ciddi hasara neden olabilir!
+    independent: true
+- claim_key: dc4_transmission_transmission_damage_
+  title: Transmission damage from improper parking (not fully stopped)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: held
+  promoted_by: pending_human
+  rationale: Improperly parking the vehicle without ensuring it is fully stopped can
+    cause damage to the transmission gears, leading to shifting issues or gear damage.
+  inspection_advice: Ensure the vehicle is fully stopped before shifting into park.
+    Inspect for unusual noises or shifting problems that may indicate gear damage.
+  sources:
+  - tier: C
+    source_url: https://teknikotomatiksanziman.com/edc-sanziman/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: 🔹 🅿 Park konumuna almadan önce tam durduğunuzdan emin olun → Şanzıman dişlilerine
+      zarar verebilirsiniz.
+    independent: true
+- claim_key: dc4_transmission_clutch_shudder_on_dr
+  title: Clutch shudder on dry-clutch DC4 transmissions
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DC4 is a dry dual-clutch transmission (DCT) which, while common in
+    many brands, has a well-documented issue with clutch shuddering due to its design.
+    This can lead to erratic shifting and premature wear.
+  inspection_advice: Listen for unusual vibrations or shuddering during gear shifts,
+    especially when accelerating. Check for delayed or rough transitions between gears,
+    which may indicate clutch wear or failure in the dry-clutch system.
+  sources: []
+- claim_key: dc4_transmission_7dct_300_clutch_sque
+  title: 7DCT 300 Clutch Squeak/Friction Noise (3rd to 4th Gear Shift)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 7DCT 300 wet dual-clutch transmission (used in Renault Clio/Megan
+    1.3 TCe, BMW X, Mini, and Ford Puma 1.0 Ecoboost) exhibits a chronic friction
+    noise during upshifts from 3rd to 4th gear, often starting as early as **15,000–20,000
+    km** or around **70,000 km**. This requires premature clutch plate replacement
+    and valve replacement, which is atypical for wet DCTs.
+  inspection_advice: Listen for a distinct **squeaking/friction noise** during 3rd-to-4th
+    gear upshifts. Check for **clutch plate wear** and **valve condition**—both may
+    need replacement earlier than expected. Test drive to confirm the noise's recurrence.
+  sources:
+  - tier: C
+    source_url: https://www.youtube.com/watch?v=uOalbxU_wBw
+    source_domain: And Mehmet Çetin
+    site_or_channel: And Mehmet Çetin
+    quote: '"Yalnız bu vites kutusunda şöyle problem var arkadaşlar 3üncü vitesten
+      problem var... 3C vitesten 4 viteste geçerken bir böyle vup diye kullanıcıların
+      betimlediği bir sürtünme sesi çıkıyor... Sorunun kaynağı kavrama serviste kavram
+      ile beraber volanın değişmesi gerekiyor... bu esasında alışılmadık bir durum
+      Çünkü bu dediğimiz gibi ıslak tip bir şanzıman kuru tiplerde dq200 gibi bu kadar
+      erken kavrama değişimiyle karşılaşıyoruz da"'
+    independent: true
+- claim_key: dc4_transmission_clutch_master_cylind
+  title: Clutch Master Cylinder (CMC) Failure Leading to Transmission Engagement Issues
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The video describes a case where the clutch master cylinder (CMC) is
+    broken, leading to the vehicle not moving despite the clutch pedal being pressed.
+    This suggests a chronic failure in the clutch actuation system, which can cause
+    the transmission to fail to engage properly.
+  inspection_advice: Check the clutch master cylinder for leaks, cracks, or deformities.
+    Ensure the clutch pedal moves smoothly and fully to the floor. Listen for unusual
+    noises or vibrations when engaging the clutch.
+  sources: []

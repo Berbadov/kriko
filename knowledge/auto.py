@@ -30,74 +30,6 @@ log = logging.getLogger(__name__)
 
 CURATED_DIR = Path(__file__).parent / "sources" / "curated"
 
-# ── Tier assignment ───────────────────────────────────────────────────────────
-# Known specialist domains → Tier A (weight 1.0).
-# Forum/community heuristics → Tier B (weight 0.5).
-# Everything else → Tier C (weight 0.34, high-recall/high-noise).
-# Two unknowns: 0.34+0.34=0.68 → HELD. Three: 1.02 → barely promotes.
-# A+C: 1.34 → promotes (safe, A is human-vetted). B alone: 0.5 → HELD.
-
-TIER_A_DOMAINS: set[str] = {
-    "enginefinders.co.uk",
-    "balancemotorworks.co.uk",
-    "autoricambitritella.it",
-    "gaga.ba",
-    "fiches-auto.fr",
-    "asrgearboxrepairs.co.uk",  # UK specialist gearbox repair — EDC / dual-clutch
-    "eco-torque.co.uk",         # UK specialist gearbox — Renault EDC DC4/DW5/DW6
-    "enginecode.uk",            # K9K / H5F / H5H engine reliability reports
-}
-
-# Owner clubs, established reliability/review sites, and high-signal Turkish forums.
-# A single Tier B source (weight 0.5) is sufficient for auto-verification of
-# non-high-severity claims; two Tier B sources always auto-verify.
-TIER_B_DOMAINS: set[str] = {
-    # English owner clubs and reliability media
-    "meganeownersclub.co.uk",
-    "renaultownersclub.co.uk",
-    "capturownersclub.co.uk",
-    "honestjohn.co.uk",
-    "pistonheads.com",
-    "whatcar.com",
-    "carbuyer.co.uk",
-    "autoexpress.co.uk",
-    "parkers.co.uk",
-    "vehiclewise.co.uk",
-    "daciaforum.co.uk",
-    # Turkish high-signal communities (complaint volume = signal)
-    "donanimhaber.com",
-    "sikayetvar.com",
-    "arabam.com.tr",
-    "arabakolik.net",
-    "kronikuzman.com",
-    "kroniksorunlar.net",
-}
-
-# Domains to target with include_domains searches for high-value reliability content.
-# Queried directly with Exa to guarantee at least some high-tier results per run.
-_SPECIALIST_TARGET_DOMAINS: list[str] = [
-    "meganeownersclub.co.uk",
-    "honestjohn.co.uk",
-    "pistonheads.com",
-    "donanimhaber.com",
-    "whatcar.com",
-    "carbuyer.co.uk",
-]
-
-_FORUM_SIGNALS = {"forum", "forums", "community", "club", "owners", "subreddit"}
-
-
-def _tier_for_url(url: str) -> str:
-    host = urlparse(url).netloc.lower().removeprefix("www.")
-    if host in TIER_A_DOMAINS:
-        return "A"
-    if host in TIER_B_DOMAINS:
-        return "B"
-    if "reddit.com" in host or any(s in host for s in _FORUM_SIGNALS):
-        return "B"
-    return "C"  # unknown domain — Tier C (high-recall/high-noise), needs 3× or A+C to promote
-
-
 # ── Dedup helpers ─────────────────────────────────────────────────────────────
 
 
@@ -161,9 +93,8 @@ def _exa_search(
         url = r.url
         if url in known_urls:
             continue
-        tier = _tier_for_url(url)
         host = urlparse(url).netloc.lower().removeprefix("www.")
-        found.append({"url": url, "tier": tier, "site_or_channel": host,
+        found.append({"url": url, "site_or_channel": host,
                       "notes": (getattr(r, "title", "") or query)[:80]})
         known_urls.add(url)
     return found
@@ -172,11 +103,7 @@ def _exa_search(
 def _discover_web(
     templates: list[tuple[str, str]],
     known_urls: set[str],
-    make: str,
-    model: str,
-    gen_label: str,
     max_per_query: int = 5,
-    specialist_domains: list[str] | None = None,
 ) -> list[dict]:
     try:
         from exa_py import Exa
@@ -192,24 +119,8 @@ def _discover_web(
     exa = Exa(api_key=api_key)
     found: list[dict] = []
 
-    # ── Broad template queries ────────────────────────────────────────────────
     for _, query in templates:
         found.extend(_exa_search(exa, query, known_urls, num_results=max_per_query))
-
-    # ── Specialist domain pass — guarantee ≥1 Tier B hit per key domain ───────
-    # Each target domain gets a focused reliability query so we always pull from
-    # owner clubs / established review sites rather than relying on Tier C pages.
-    # In part-centric mode, pass only part-relevant forums (owner clubs, Turkish
-    # forums) — generic car review sites (whatcar, carbuyer) return other-car content.
-    if specialist_domains is None:
-        specialist_domains = _SPECIALIST_TARGET_DOMAINS
-    reliability_query = f"{make.title()} {model.title()} {gen_label} problems reliability known issues"
-    for domain in specialist_domains:
-        results = _exa_search(exa, reliability_query, known_urls,
-                              num_results=3, include_domains=[domain])
-        if results:
-            print(f"  [specialist:{domain[:30]}] {len(results)} result(s)")
-        found.extend(results)
 
     return found
 
@@ -257,7 +168,7 @@ def _discover_youtube(
     return found
 
 
-# ── Cap selection — prioritise Tier A/B, trim Tier C YouTube first ────────────
+# ── Cap selection — pages first, then YouTube ─────────────────────────────────
 
 
 def _select_capped(
@@ -265,14 +176,10 @@ def _select_capped(
     videos: list[dict],
     cap: int,
 ) -> tuple[list[dict], list[dict]]:
-    """Keep at most `cap` sources, ordered by trust: Tier A pages, then Tier B
-    pages, then Tier C pages, then YouTube (all Tier C, highest-noise → trimmed
-    first). Search is cheap; LLM extraction is not, so we cap what we extract.
+    """Keep at most `cap` sources. Pages first (in discovery order), then YouTube.
+    Search is cheap; LLM extraction is not, so we cap what we extract.
     """
-    tier_rank = {"A": 0, "B": 1, "C": 2}
-    ordered_pages = sorted(pages, key=lambda p: tier_rank.get(p["tier"], 3))
-
-    kept_pages = ordered_pages[:cap]
+    kept_pages = pages[:cap]
     remaining = cap - len(kept_pages)
     kept_videos = videos[:remaining] if remaining > 0 else []
     return kept_pages, kept_videos
@@ -299,7 +206,6 @@ def _write_discovered(
                 "type": "page",
                 "url": p["url"],
                 "site_or_channel": p["site_or_channel"],
-                "tier": p["tier"],
                 "notes": p["notes"],
                 "status": "pending",
                 "added_at": today,
@@ -315,7 +221,6 @@ def _write_discovered(
                 "site_or_channel": (v.get("channel") or v.get("uploader") or "YouTube")[
                     :60
                 ],
-                "tier": "C",
                 "notes": (v.get("title") or "")[:80],
                 "status": "pending",
                 "added_at": today,
@@ -336,7 +241,7 @@ def run(
     dry_run: bool = False,
     web: bool = True,
     youtube: bool = True,
-    max_web: int = 3,
+    max_web: int = 5,
     max_yt: int = 3,
     max_sources: int = 25,
 ) -> None:
@@ -355,26 +260,15 @@ def run(
         f"Generated {len(templates)} search queries across {len(domains)} domains: {', '.join(sorted(domains))}\n"
     )
 
-    # Derive the human-readable generation label used in specialist searches.
-    try:
-        import yaml as _yaml
-        from pathlib import Path as _Path
-        _vpath = _Path(__file__).parent.parent / "backend" / "data" / "variants" / f"{make}_{model}_{gen}.yaml"
-        _rows = _yaml.safe_load(_vpath.read_text()) if _vpath.exists() else []
-        gen_label = (_rows[0].get("generation", gen) if _rows else gen)
-    except Exception:
-        gen_label = gen
-
     # ── Web ───────────────────────────────────────────────────────────────────
     pages: list[dict] = []
     if web:
         known_urls = _load_known_urls()
-        print(f"Searching web (Exa) — {max_web} results per query + specialist domain pass…")
-        pages = _discover_web(templates, known_urls, make=make, model=model,
-                              gen_label=gen_label, max_per_query=max_web)
+        print(f"Searching web (Exa) — {max_web} results per query…")
+        pages = _discover_web(templates, known_urls, max_per_query=max_web)
         if pages:
             for p in pages:
-                print(f"  [{p['tier']}] {p['url'][:75]}")
+                print(f"  {p['url'][:75]}")
         print(f"  → {len(pages)} new page(s)\n")
 
     # ── YouTube ───────────────────────────────────────────────────────────────
@@ -391,14 +285,14 @@ def run(
         )
         return
 
-    # ── Cap — prioritise Tier A/B, trim Tier C YouTube first ──────────────────
+    # ── Cap — pages first, then YouTube ───────────────────────────────────────
     total_found = len(pages) + len(videos)
     pages, videos = _select_capped(pages, videos, max_sources)
     kept = len(pages) + len(videos)
     if kept < total_found:
         print(
             f"Capped {total_found} → {kept} source(s) "
-            f"(max-sources={max_sources}; dropped {total_found - kept}, Tier C first)\n"
+            f"(max-sources={max_sources}; dropped {total_found - kept} YouTube)\n"
         )
 
     if dry_run:
@@ -426,7 +320,7 @@ def run_part(
     dry_run: bool = False,
     web: bool = True,
     youtube: bool = True,
-    max_web: int = 3,
+    max_web: int = 5,
     max_yt: int = 3,
     max_sources: int = 25,
 ) -> None:
@@ -461,23 +355,10 @@ def run_part(
     if web:
         known_urls = _load_known_urls()
         print(f"Searching web (Exa) — {max_web} results per query…")
-        # For part-centric searches, only use owner clubs and Turkish forums as
-        # specialist domains — generic car review sites (whatcar, carbuyer) return
-        # off-brand content because they index all car models.
-        _PART_SPECIALIST_DOMAINS = [
-            "meganeownersclub.co.uk",
-            "honestjohn.co.uk",
-            "pistonheads.com",
-            "donanimhaber.com",
-        ]
-        pages = _discover_web(
-            templates, known_urls,
-            make=part_id, model=part_type, gen_label=f"{part_id} {part_type}",
-            max_per_query=max_web, specialist_domains=_PART_SPECIALIST_DOMAINS,
-        )
+        pages = _discover_web(templates, known_urls, max_per_query=max_web)
         if pages:
             for p in pages:
-                print(f"  [{p['tier']}] {p['url'][:75]}")
+                print(f"  {p['url'][:75]}")
         print(f"  → {len(pages)} new page(s)\n")
 
     videos: list[dict] = []
@@ -507,6 +388,193 @@ def run_part(
     process_run_part(part_id, part_type)
 
 
+# ── Orchestrator — all-parts mode ────────────────────────────────────────────
+
+REPO_ROOT = Path(__file__).parent.parent
+VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
+
+
+def _infer_part_type(part_id: str) -> str | None:
+    """Return 'engine'|'transmission'|'cooling'|'electrical' by scanning parts dir."""
+    for subdir in ("engine", "transmission", "cooling", "electrical"):
+        if (PARTS_DIR / subdir / f"{part_id}.yaml").exists():
+            return subdir
+    return None
+
+
+def _ensure_part_stub(
+    part_id: str,
+    part_type: str,
+    make: str,
+    model: str,
+    variants: list[dict],
+    *,
+    dry_run: bool = False,
+) -> None:
+    """Create a minimal part stub YAML if one doesn't exist yet."""
+    stub_path = PARTS_DIR / part_type / f"{part_id}.yaml"
+    if stub_path.exists():
+        return
+    if dry_run:
+        print(f"  [dry-run] Would create part stub: {stub_path.relative_to(REPO_ROOT)}")
+        return
+
+    make_pretty = make.replace("_", " ").title()
+    model_pretty = model.replace("_", " ").title()
+
+    if part_type == "engine":
+        codes: list[str] = []
+        descs: list[str] = []
+        for v in variants:
+            if (v.get("engine_family") or "").lower() == part_id.lower():
+                ec = (v.get("engine_code") or "").upper()
+                if ec and ec not in codes:
+                    codes.append(ec)
+                fuel = (v.get("fuel") or "").lower()
+                cc = v.get("displacement_cc")
+                if cc:
+                    litre = f"{cc / 1000:.1f}"
+                    fuel_tag = "TSI" if fuel == "petrol" else "TDI" if fuel == "diesel" else fuel.upper()
+                    label = f"{litre} {fuel_tag}"
+                    if label not in descs:
+                        descs.append(label)
+        display_name = f"{make_pretty} {part_id.upper()} Engine"
+        known_also_as = codes + descs
+
+    elif part_type == "transmission":
+        display_name = f"{make_pretty} {part_id.upper()} Transmission"
+        known_also_as = [part_id.upper()]
+
+    elif part_type == "cooling":
+        display_name = f"{make_pretty} {model_pretty} Cooling System"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} cooling",
+            f"{make_pretty} {model_pretty} coolant",
+            f"{make_pretty} {model_pretty} thermostat",
+        ]
+
+    elif part_type == "electrical":
+        display_name = f"{make_pretty} {model_pretty} Electrical Systems"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} electrical",
+            f"{make_pretty} {model_pretty} electronics",
+            f"{make_pretty} {model_pretty} battery",
+        ]
+
+    else:
+        display_name = f"{make_pretty} {model_pretty} {part_id.upper()}"
+        known_also_as = [part_id.upper()]
+
+    stub_path.parent.mkdir(parents=True, exist_ok=True)
+    stub_path.write_text(
+        yaml.dump(
+            {
+                "part_id": part_id,
+                "part_type": part_type,
+                "display_name": display_name,
+                "known_also_as": known_also_as,
+                "claims": [],
+            },
+            allow_unicode=True,
+            sort_keys=False,
+        )
+    )
+    print(f"  Created part stub: {stub_path.relative_to(REPO_ROOT)}")
+
+
+def run_all_parts(
+    make: str,
+    model: str,
+    **kwargs,
+) -> None:
+    """Discover all engine families and transmission codes from the variants YAML
+    and run the pipeline for each part sequentially.
+
+    Usage:
+        python -m knowledge.auto --make volkswagen --model golf_7 --all-parts
+    """
+    variants_path = VARIANTS_DIR / f"{make}_{model}.yaml"
+    if not variants_path.exists():
+        print(f"Variants YAML not found: {variants_path}")
+        sys.exit(1)
+
+    variants: list[dict] = yaml.safe_load(variants_path.read_text()) or []
+
+    # Collect unique parts per type from variants YAML
+    engines: dict[str, str] = {}   # engine_family → fuel
+    transmissions: set[str] = set()
+    cooling_codes: set[str] = set()
+    electrical_codes: set[str] = set()
+
+    for v in variants:
+        ef = (v.get("engine_family") or "").strip()
+        if ef and ef != "manual":
+            fuel = (v.get("fuel") or "").lower()
+            engines.setdefault(ef, fuel)
+
+        for code, bucket in (
+            ("transmission_code", transmissions),
+            ("cooling_code", cooling_codes),
+            ("electrical_code", electrical_codes),
+        ):
+            val = (v.get(code) or "").strip()
+            if val and val != "manual":
+                bucket.add(val)
+
+    total = len(engines) + len(transmissions) + len(cooling_codes) + len(electrical_codes)
+    print(f"\nModel: {make} {model}")
+    print(f"Parts to process: {len(engines)} engine(s) + {len(transmissions)} transmission(s)"
+          f" + {len(cooling_codes)} cooling + {len(electrical_codes)} electrical\n")
+    for ef, fuel in sorted(engines.items()):
+        print(f"  engine      : {ef}" + (f" ({fuel})" if fuel else ""))
+    for tc in sorted(transmissions):
+        print(f"  transmission: {tc}")
+    for cc in sorted(cooling_codes):
+        print(f"  cooling     : {cc}")
+    for ec in sorted(electrical_codes):
+        print(f"  electrical  : {ec}")
+    print()
+
+    dry_run = kwargs.get("dry_run", False)
+    done = 0
+    for ef, fuel in sorted(engines.items()):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] ENGINE: {ef}  fuel={fuel or '?'}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(ef, "engine", make, model, variants, dry_run=dry_run)
+        run_part(ef, "engine", fuel=fuel, **kwargs)
+
+    for tc in sorted(transmissions):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] TRANSMISSION: {tc}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(tc, "transmission", make, model, variants, dry_run=dry_run)
+        run_part(tc, "transmission", **kwargs)
+
+    for cc in sorted(cooling_codes):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] COOLING: {cc}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(cc, "cooling", make, model, variants, dry_run=dry_run)
+        run_part(cc, "cooling", **kwargs)
+
+    for ec in sorted(electrical_codes):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] ELECTRICAL: {ec}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(ec, "electrical", make, model, variants, dry_run=dry_run)
+        run_part(ec, "electrical", **kwargs)
+
+    print(f"\n{'═' * 60}")
+    print(f"All {total} part pipeline(s) complete for {make} {model}.")
+    print(f"{'═' * 60}")
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
@@ -515,15 +583,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Auto-discover sources and run the full knowledge pipeline."
     )
-    # Model-centric positional args (mutually exclusive with --part mode)
-    parser.add_argument("make", nargs="?", help="Car make (model-centric mode)")
-    parser.add_argument("model", nargs="?", help="Car model (model-centric mode)")
-    parser.add_argument("gen", nargs="?", help="Generation key (model-centric mode)")
+    # Model-centric positional args (old mode, kept for backward compat)
+    parser.add_argument("make_pos", nargs="?", metavar="make",
+                        help="Car make (model-centric mode, positional)")
+    parser.add_argument("model_pos", nargs="?", metavar="model",
+                        help="Car model (model-centric mode, positional)")
+    parser.add_argument("gen_pos", nargs="?", metavar="gen",
+                        help="Generation key (model-centric mode, positional)")
+    # Named make/model (used with --all-parts and --part)
+    parser.add_argument("--make", help="Car make (e.g. volkswagen, renault)")
+    parser.add_argument("--model", help="Model key matching variants YAML (e.g. golf_7)")
+    # All-parts mode
+    parser.add_argument("--all-parts", action="store_true",
+                        help="Run pipeline for every engine family and transmission in the variants YAML")
     # Part-centric mode
     parser.add_argument("--part", metavar="PART_ID",
-                        help="Part ID for part-centric mode (e.g. k9k, edc, ea211)")
-    parser.add_argument("--part-type", choices=["engine", "transmission"],
-                        help="Part type (required with --part)")
+                        help="Part ID (e.g. k9k, edc, ea211, dq200)")
+    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical"],
+                        help="Part type (required with --part unless auto-detected)")
     parser.add_argument("--fuel", default="",
                         choices=["", "diesel", "petrol"],
                         help="Fuel type hint for part-specific queries")
@@ -532,9 +609,9 @@ def main() -> None:
                         help="Discover only — print what would be added, no writes")
     parser.add_argument("--no-web", action="store_true", help="Skip Exa web search")
     parser.add_argument("--no-youtube", action="store_true", help="Skip YouTube search")
-    parser.add_argument("--max-web", type=int, default=3)
+    parser.add_argument("--max-web", type=int, default=5)
     parser.add_argument("--max-yt", type=int, default=3)
-    parser.add_argument("--max-sources", type=int, default=25)
+    parser.add_argument("--max-sources", type=int, default=15)
     args = parser.parse_args()
 
     shared = dict(
@@ -546,14 +623,31 @@ def main() -> None:
         max_sources=args.max_sources,
     )
 
-    if args.part:
-        if not args.part_type:
-            parser.error("--part requires --part-type")
-        run_part(args.part.lower(), args.part_type, fuel=args.fuel, **shared)
+    if args.all_parts:
+        make = (args.make or args.make_pos or "").lower()
+        model = (args.model or args.model_pos or "").lower()
+        if not make or not model:
+            parser.error("--all-parts requires --make and --model")
+        run_all_parts(make, model, **shared)
+
+    elif args.part:
+        part_id = args.part.lower()
+        part_type = args.part_type
+        if not part_type:
+            part_type = _infer_part_type(part_id)
+            if not part_type:
+                parser.error(f"--part-type not given and no part YAML found for {part_id!r}")
+            print(f"Auto-detected part type: {part_type}")
+        run_part(part_id, part_type, fuel=args.fuel, **shared)
+
     else:
-        if not (args.make and args.model and args.gen):
-            parser.error("model-centric mode requires make, model, and gen arguments")
-        run(args.make.lower(), args.model.lower(), args.gen.lower(), **shared)
+        # Legacy positional model-centric mode
+        make = (args.make or args.make_pos or "").lower()
+        model = (args.model or args.model_pos or "").lower()
+        gen = args.gen_pos or ""
+        if not (make and model and gen):
+            parser.error("model-centric mode requires make, model, and gen (positional or --make/--model/--gen)")
+        run(make, model, gen.lower(), **shared)
 
 
 if __name__ == "__main__":

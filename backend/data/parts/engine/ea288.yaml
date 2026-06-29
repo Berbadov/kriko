@@ -1,0 +1,1511 @@
+part_id: ea288
+part_type: engine
+display_name: Volkswagen EA288 TDI
+manufacturer: volkswagen
+known_also_as:
+- 1.6 TDI
+- 2.0 TDI
+- EA288
+- EA189
+- CLHA
+- CRVA
+- DFBA
+production_years: 2012-present
+claims:
+- claim_key: ea288_emissions_dpf_blockage_due_to_
+  title: DPF blockage due to city driving
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Diesel Particulate Filter (DPF) is prone to clogging in vehicles
+    used primarily in city driving conditions, leading to costly repairs and limp
+    mode activation. Proper highway use is required to clear the DPF through regeneration
+    cycles.
+  inspection_advice: Check for DPF warning lights and limp mode activation. Verify
+    if the vehicle has been used mostly in city driving conditions without sufficient
+    highway runs (minimum 30+ minutes at 100+ km/h every 2-3 weeks). Inspect for soot
+    buildup in the DPF during a thorough inspection.
+  sources: []
+- claim_key: ea288_emissions_egr_fouling_leading_
+  title: EGR fouling leading to rough idle and smoke
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Exhaust Gas Recirculation (EGR) fouling is a recurring issue, though
+    less severe than in the EA189 engine. This can cause rough idle and slight smoke
+    emissions, requiring periodic cleaning or replacement of the EGR system.
+  inspection_advice: Listen for rough idle and check for any visible smoke from the
+    exhaust. Inspect the EGR cooler and passages for soot buildup or blockages. Verify
+    if the vehicle has undergone EGR cleaning or replacement in the past.
+  sources: []
+- claim_key: ea288_emissions_dpf-related_driving_
+  title: DPF-related driving habit sensitivity
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EA288 2.0 TDI retains susceptibility to DPF clogging if driven primarily
+    on short trips, despite design improvements over predecessors. This is a chronic
+    issue tied to real-world driving patterns rather than a pure design flaw, but
+    it remains a notable reliability concern.
+  inspection_advice: Check for DPF regeneration cycles in service history; inspect
+    for soot buildup or error codes related to DPF regeneration (e.g., P0420, P2455).
+    Verify if the vehicle has been used for frequent short trips (<10 miles) without
+    proper warm-up cycles.
+  sources: []
+- claim_key: ea288_emissions_potential_dieselgate
+  title: Potential Dieselgate-era defeat device carryover
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: While the EA288 was introduced *after* the Dieselgate scandal (2015),
+    the text implies that *initial releases* of this engine may still carry software-based
+    emissions manipulation risks, particularly if tied to pre-2015 production or unpatched
+    firmware. This suggests a chronic issue with emissions compliance in early EA288
+    variants.
+  inspection_advice: Verify the vehicle’s **software version** (via VCDS/INPA) for
+    emissions-related patches. Check for **recall notices** (e.g., VW Recall 15V-XXX)
+    or **error codes** (e.g., P0420, P2097) linked to emissions manipulation. Confirm
+    the production year—early EA288 models (pre-2016) are higher risk.
+  sources: []
+- claim_key: ea288_engine_carbon_buildup_on_in
+  title: Carbon buildup on intake components
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EA288’s direct injection and EGR system design predisposes it to
+    carbon deposits on intake valves/throttle bodies—a chronic issue in modern direct-injection
+    engines. While not unique to the EA288, the text highlights it as a persistent
+    concern for this model.
+  inspection_advice: Inspect intake valves, throttle body, and EGR valve for black
+    carbon deposits during a pre-purchase inspection. Look for **error codes** (e.g.,
+    P0171, P0174) or **rough idle** symptoms. Confirm if the vehicle has undergone
+    **intake cleaning** in service history.
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/2-0-tdi-ea288-revision-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"The utilization of direct injection and pollution control mechanisms,
+      like the positive crankcase ventilation and EGR valve, can contribute to the
+      buildup of carbon deposits on the intake components."'
+    independent: true
+- claim_key: ea288_emissions_scr/adblue_system_co
+  title: SCR/AdBlue system complexity and fault-proneness
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The SCR (Selective Catalytic Reduction) system with AdBlue is a major
+    source of faults in the 2.0 TDI (EA288 Evo) engine, contributing to its moderate
+    reliability rating (5.5/10). The system's complexity increases the likelihood
+    of failures.
+  inspection_advice: Check for warning lights related to the SCR/AdBlue system, verify
+    AdBlue fluid levels and condition, and inspect for error codes linked to emissions
+    control components. Ensure the system has been properly maintained and serviced.
+  sources: []
+- claim_key: ea288_fuel system_injector_crystalliza
+  title: Injector crystallization in SCR-equipped engines
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Injectors in the 2.0 TDI (EA288 Evo) engine can crystallize due to the
+    SCR/AdBlue system, leading to warning lights or reduced power. This issue typically
+    arises around 80,000 km and can cause performance issues if not addressed early.
+  inspection_advice: Look for warning lights on the dashboard related to fuel injection
+    or engine performance. Check for error codes associated with injectors and verify
+    if the engine has experienced reduced power or unusual operating conditions. Inspect
+    for maintenance records addressing injector issues.
+  sources: []
+- claim_key: ea288_engine_defective_coolant_pu
+  title: Defective Coolant Pump (N499 sensor-dependent failure)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA288 1.6–2.0 TDI engines suffer from a design flaw in the electric coolant
+    pump (N499 sensor-controlled), where the pump fails intermittently due to a metal
+    cover mechanism that malfunctions, leading to overheating. This is exacerbated
+    by poor antifreeze maintenance, causing debris buildup and premature pump failure.
+  inspection_advice: Check for coolant leaks around the pump housing, unusual noises
+    (grinding/clunking) from the pump area, and verify if the pump engages properly
+    when the engine is started. Look for signs of overheating (e.g., coolant temperature
+    warnings) or a 'clunking' sound when the metal cover mechanism fails to operate
+    correctly.
+  sources:
+  - source_url: https://www.rsamotorsports.com/blog/vag-1-6-2-0-tdi-sorunlar-ve-coezuemleri-ea-288
+    source_domain: rsamotorsports.com
+    site_or_channel: rsamotorsports.com
+    quote: '"Hararet: Yüksek Motor Soğutma Sıvısı Sıcaklığı (Hararet): Bu uyarıyı
+      ekranda gördüğünüz zaman aracınızı daha fazla sürmeden ilk olarak kenara park
+      etmelisiniz. Aşağıda paylaşmış olduğumuz soğutma pompası (devir-daim) bozuluyor
+      ve bu sorun bundan kaynaklanıyor. EA288 motorlarda farklı sıcaklıklarda, farklı
+      su çevrimi oluyor. Pompa elektrikli ve n499 sensörden aldığı verilere göre su
+      pompalamakta veya pompalamamaktadır. Pompanın üstüne metal kapak kapanıp/açılarak
+      su çevrimini durdurmakta veya başlatmaktadır. Soğutma pompasını sistem aktif
+      edemediğinde ise motor soğutma sıvısının sıcaklığı yükselerek ekranda uyarıyı
+      verir. Kontak açıp kapatılarak takılı kalmış pompa düzelebilir fakat bu geçici
+      çözümdür, bir süre sonra tekrarlayacaktır.
+
+
+      Sebepleri:
+
+      - Üretim hatasına sahip soğutma sıvısı pompası.
+
+      - Uygun kullanılmayan/değişmeyen antifreeze ve sonucu pompanın üzerinde biriken
+      kalıntıların pompayı bozması"'
+    independent: true
+- claim_key: ea288_engine_egr_valve_gear_failu
+  title: EGR Valve Gear Failure (V399 gear breakage)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR system in EA288 TDI engines (specifically the V399 gear mechanism)
+    is prone to failure, including gear breakage, even at low mileage. This is a chronic
+    design flaw leading to EGR malfunction.
+  inspection_advice: Listen for unusual rattling or grinding noises from the EGR valve
+    area. Check for carbon buildup around the EGR valve and inspect the EGR pipe for
+    cracks or leaks. Verify if the EGR valve opens/closes properly during engine operation.
+  sources:
+  - source_url: https://www.rsamotorsports.com/blog/vag-1-6-2-0-tdi-sorunlar-ve-coezuemleri-ea-288
+    source_domain: rsamotorsports.com
+    site_or_channel: rsamotorsports.com
+    quote: '"Nadir Karşılaşılan Sorunlar:
+
+      - EGR Arızası
+
+      EGR’nin içiresinde bulunan motorların dişlileri bozulabiliyor, kırılabiliyor
+      (V399). Düşük kilometreli araçlarda da karşılaşılabiliyor. EGR’yi değiştirmelisiniz."'
+    independent: true
+- claim_key: ea288_engine_turbo_balance_failur
+  title: Turbo Balance Failure (2012–2013 early models)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early EA288 TDI models (2012 late–2013 Q1) exhibit turbo imbalance issues,
+    causing whining or hissing noises at mid-to-high RPM. This is likely due to manufacturing
+    defects in the turbo assembly.
+  inspection_advice: Listen for unusual whining or hissing noises from the turbo area,
+    especially during acceleration or at mid-to-high RPM. Check for oil leaks around
+    the turbo housing and inspect the turbo for proper spin balance (e.g., excessive
+    vibration).
+  sources: []
+- claim_key: ea288_engine_coolant_leak_due_to_
+  title: Coolant Leak Due to Worn Coolant Pump
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: If there is no visible leak in the cooling system, the coolant pump (N499-dependent)
+    is likely the root cause of coolant loss, necessitating replacement due to chronic
+    failure.
+  inspection_advice: Check for coolant leaks around the pump housing and verify coolant
+    levels regularly. If no external leak is visible but coolant is consistently low,
+    the pump may be failing internally.
+  sources:
+  - source_url: https://www.rsamotorsports.com/blog/vag-1-6-2-0-tdi-sorunlar-ve-coezuemleri-ea-288
+    source_domain: rsamotorsports.com
+    site_or_channel: rsamotorsports.com
+    quote: '"Soğutma Sıvısı Eksiltme:
+
+      Soğutma sisteminde delik yok ise yüksek ihtimal soğutma sıvısı pompanız ömrünü
+      tamamlamıştır. Değiştirmelisiniz."'
+    independent: true
+- claim_key: ea288_engine_agr-ventil_und_agr-k
+  title: 'AGR-Ventil und AGR-Kühler: Verkokung, Haarrisse und Kühlmittelverlust'
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: Der EA288 leidet unter systematischer Verkokung im AGR-Ventil durch Ruß-
+    und Öldämpfe sowie Haarrissen im AGR-Kühler, die Kühlmittel in den Abgastrakt
+    leiten können. Dies führt zu Motorruckeln, Kühlmittelverlust ohne sichtbare Lecks
+    und sogar Wasserschlag im Brennraum, was Motorschäden verursacht.
+  inspection_advice: Prüfen auf Motorruckeln im Leerlauf oder bei Beschleunigung,
+    Kühlmittelverlust ohne sichtbare Undichtigkeit, sowie Fehlercode P0401. Bei Verdacht
+    AGR-Einheit und AGR-Kühler auf Risse und Verkokung untersuchen lassen.
+  sources:
+  - source_url: https://www.motorzentrale.de/magazin/vw-ea288-motorprobleme-symptome-loesungen/
+    source_domain: motorzentrale.de
+    site_or_channel: motorzentrale.de
+    quote: '"Eines der am häufigsten auftretenden Probleme beim EA288 betrifft die
+      Abgasrückführung (AGR) – insbesondere das AGR-Ventil und den AGR-Kühler. [...]
+      Verkokung im AGR-Ventil durch Ruß- und Öldämpfe, Haarrisse im AGR-Kühler, die
+      Kühlmittel in den Abgastrakt leiten können. [...] Kühlmittelverlust ohne sichtbares
+      Leck, Motorschutz-Notlauf."'
+    independent: true
+  - source_url: https://motorenlager.de/blog/vw-ea288-2-0-tdi-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Eines der am häufigsten auftretenden Probleme beim EA288 betrifft die
+      Abgasrückführung (AGR) – insbesondere das AGR-Ventil und den AGR-Kühler. [...]
+      Verkokung im AGR-Ventil durch Ruß- und Öldämpfe, Haarrisse im AGR-Kühler, die
+      Kühlmittel in den Abgastrakt leiten können. [...] Kühlmittelverlust ohne sichtbares
+      Leck, Motorschutz-Notlauf."'
+    independent: true
+- claim_key: ea288_emissions_dpf-regenerationspro
+  title: DPF-Regenerationsprobleme und Verstopfung durch Kurzstreckenbetrieb
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Der EA288 hat Probleme mit der automatischen DPF-Regeneration, besonders
+    bei Kurzstrecken- oder Stadtverkehrsfahrern. Der Filter verstopft durch unvollständige
+    Verbrennung von Ruß und Asche, was zu Überdruck im Abgassystem, Leistungseinbruch
+    und potenziellen Turboschäden führt.
+  inspection_advice: Achten auf häufige Aktivierung der Motor-Kontrollleuchte, Meldung
+    'Partikelfilter beladen', erhöhten Kraftstoffverbrauch und Ruckeln im Notlauf.
+    DPF auf Verstopfung und Überdruck prüfen lassen.
+  sources:
+  - source_url: https://www.motorzentrale.de/magazin/vw-ea288-motorprobleme-symptome-loesungen/
+    source_domain: motorzentrale.de
+    site_or_channel: motorzentrale.de
+    quote: '"Auch der beim EA288 verbaute Dieselpartikelfilter (DPF) sorgt bei vielen
+      Fahrzeughaltern für Kopfzerbrechen. Besonders bei viel Stadtverkehr oder Kurzstreckenbetrieb
+      wird die automatische Regeneration gestört – was auf Dauer zur Verstopfung des
+      Filters führt. [...] Erhöhter Kraftstoffverbrauch, Ruckeln oder Notlauf-Modus
+      bei starker Beladung."'
+    independent: true
+- claim_key: ea288_engine_zahnriemenverschleiß
+  title: Zahnriemenverschleiß und Rissgefahr trotz Ölbadschmierung
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Der EA288 nutzt einen nasslaufenden Zahnriemen im Ölbad, der trotz Ölschmierung
+    durch Materialverschleiß ausfransen und abreißen kann. Dies führt zu Motorschäden,
+    da der Riemenabrieb den Ölkreislauf verschmutzt und kritische Komponenten wie
+    Turbolader, Nockenwellenversteller oder Ölpumpe gefährdet.
+  inspection_advice: Auf Pfeifgeräusche im Leerlauf oder bei Gasstößen achten, Öl
+    auf Riemenfasern oder schwarzen Schlamm prüfen. Zahnriemen ab 150.000 km auf Verschleiß
+    untersuchen lassen, auch wenn der Serviceplan dies nicht vorsieht.
+  sources:
+  - source_url: https://www.motorzentrale.de/magazin/vw-ea288-motorprobleme-symptome-loesungen/
+    source_domain: motorzentrale.de
+    site_or_channel: motorzentrale.de
+    quote: '"Anders als viele ältere VW-Dieselaggregate besitzt der EA288 keinen Steuerkettentrieb,
+      sondern einen Zahnriemen, der jedoch ebenfalls nicht wartungsfrei ist – entgegen
+      früherer Werbeaussagen. [...] Pfeifgeräusche im Leerlauf oder bei Gasstößen,
+      Ölverunreinigungen mit Riemenfasern im Motor, unregelmäßige Motorleistung oder
+      sporadische Fehlzündungen. [...] Spätestens ab 150.000 km: Riemenriss-Gefahr
+      mit Motorschaden."'
+    independent: true
+- claim_key: ea288_fuel system_frühverschleiß_der_h
+  title: Frühverschleiß der Hochdruckpumpe durch Metallabrieb im Common-Rail-System
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Bei frühen EA288-Varianten mit nasslaufendem Zahnriemen kommt es zu Metallabrieb
+    in der Hochdruckpumpe, der sich im gesamten Kraftstoffsystem verteilt. Dies beschädigt
+    Injektoren, Kraftstoffdruckregler und Rail, was zu Startschwierigkeiten, Geräuschen
+    und im schlimmsten Fall zum Motorstillstand führt.
+  inspection_advice: Auf metallische Geräusche (Nageln/Klopfen) beim Starten achten,
+    Startschwierigkeiten oder Fehlercodes für Kraftstoffdruck prüfen. Bei Verdacht
+    Kraftstoffsystem auf Metallpartikel untersuchen lassen.
+  sources: []
+- claim_key: ea288_engine_turboladerprobleme_d
+  title: Turboladerprobleme durch Folgeschäden aus DPF/Ölkreislauf oder mangelnder
+    Wartung
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Der Turbolader des EA288 ist anfällig für Schäden durch Folgeschäden
+    aus dem DPF-System, Ölkreislaufproblemen oder mangelnder Wartung. Dies führt zu
+    Leistungsverlust, Pfeifgeräuschen und potenziellen Lagerschäden mit hohen Reparaturkosten.
+  inspection_advice: Auf Träger Motor bei Beschleunigung, Pfeif-/Jaulgeräusche, Öl
+    im Ladeluftschlauch oder Fehlercode P0299 achten. Ladedrucksystem prüfen und Ölversorgung/Leitungen
+    auf Undichtigkeiten kontrollieren lassen.
+  sources: []
+- claim_key: ea288_engine_elektrisch_gesteuert
+  title: Elektrisch gesteuerte Kühlmittelpumpe und Thermostat mit neuen Fehlerquellen
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Der EA288 setzt auf eine elektrisch geregelte Kühlmittelpumpe und einen
+    elektronisch gesteuerten Thermostat, was präzisere Temperaturregelung ermöglicht,
+    aber auch neue Fehlerquellen schafft, die beim Vorgänger EA189 nicht auftraten.
+  inspection_advice: Auf ungewöhnliche Kühlmitteltemperaturverhalten oder Fehlercodes
+    im Zusammenhang mit der Kühlmittelpumpe oder dem Thermostat achten. Elektronische
+    Steuergeräte auf Defekte prüfen lassen.
+  sources:
+  - source_url: https://www.motorzentrale.de/magazin/vw-ea288-motorprobleme-symptome-loesungen/
+    source_domain: motorzentrale.de
+    site_or_channel: motorzentrale.de
+    quote: '"Im Gegensatz zu einfacher konstruierten Motoren setzt der EA288 auf eine
+      elektrisch geregelte Kühlmittelpumpe sowie einen elektronisch gesteuerten Thermostat.
+      Das erlaubt dem Motorsteuergerät eine präzisere Temperaturregelung – schafft
+      aber auch eine neue Fehlerquelle, die beim Vorgänger EA189 so nicht existierte."'
+    independent: true
+- claim_key: ea288_engine_ölpumpen-mitnehmer:_
+  title: 'Ölpumpen-Mitnehmer: Unterschätzter Totalschadenauslöser'
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Der Ölpumpen-Mitnehmer des EA288 2.0 TDI kann ein kritischer Auslöser
+    für Motorschäden sein. Ein Defekt führt zu Ölpumpenversagen, was zu massivem Ölverlust
+    und im schlimmsten Fall zum Motortotalschaden führt. Dies ist ein schwerwiegendes
+    Problem, das oft erst spät erkannt wird.
+  inspection_advice: Prüfen Sie auf ungewöhnliche Geräusche aus dem Ölkreislauf, Ölverlust
+    ohne sichtbare Lecks (z. B. Ölpfützen unter dem Auto) und Fehlercodes, die auf
+    Ölpumpenprobleme hindeuten. Ein Motorteststand kann helfen, die Funktionsfähigkeit
+    der Ölpumpe zu überprüfen.
+  sources: []
+- claim_key: ea288_engine_oil_leaks_due_to_wor
+  title: Oil Leaks Due to Worn or Loose Oil Seals
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Oil leaks are a recurring issue in the 1.6 TDI engine, often caused by
+    worn or loose oil seals. This can lead to oil loss, reduced lubrication, and potential
+    engine damage if not addressed promptly.
+  inspection_advice: Inspect the engine bay for oil leaks, particularly around oil
+    seals and gaskets. Check for oil spots under the vehicle or on the engine block.
+    Listen for unusual engine noises that may indicate insufficient lubrication.
+  sources: []
+- claim_key: ea288_emissions_egr_valve_clogging/c
+  title: EGR Valve Clogging/Carbon Buildup (1.6 TDI)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic carbon deposits in the EGR system cause clogging, leading to
+    rough idling, stalling, reduced performance, and increased emissions. This is
+    a known systemic issue in the 1.6 TDI engines due to their design and operating
+    conditions.
+  inspection_advice: Check for carbon buildup in the EGR valve and passages. Look
+    for soot deposits around the intake manifold and combustion chamber. Listen for
+    rough idling or stalling, which may indicate a clogged EGR system.
+  sources: []
+- claim_key: ea288_engine_glow_plug_failure_(1
+  title: Glow Plug Failure (1.6 TDI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of glow plugs, especially in cold weather, leads to prolonged
+    cranking times, difficulty starting, and poor engine performance. This is exacerbated
+    by the reliance on glow plugs for cold starts in diesel engines.
+  inspection_advice: Test glow plugs for functionality using a multimeter or glow
+    plug tester. Look for delayed cranking or failure to start in cold conditions.
+    Check for faulty glow plug relays or wiring issues.
+  sources: []
+- claim_key: ea288_engine_chronic_turbocharger
+  title: Chronic Turbocharger Failures (1.6 TDI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple reports of turbocharger failures in 1.6 TDI engines, leading
+    to loss of power, increased emissions, and potential catastrophic engine damage
+    if unaddressed.
+  inspection_advice: Listen for unusual whining or rattling noises from the turbo.
+    Check for oil leaks around the turbocharger housing. Look for reduced power output
+    or excessive smoke from the exhaust.
+  sources: []
+- claim_key: ea288_engine_oil_leaks_(1.6_tdi)
+  title: Oil Leaks (1.6 TDI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic oil leaks in the 1.6 TDI engines, often due to aging gaskets
+    or seals, leading to low oil pressure and potential engine damage if left unchecked.
+  inspection_advice: Inspect the engine bay for oil stains or puddles around gaskets,
+    valve covers, and oil filter housing. Check oil levels frequently and listen for
+    unusual engine noises that may indicate low oil pressure.
+  sources: []
+- claim_key: ea288_engine_chronic_carbon_build
+  title: Chronic Carbon Buildup (1.6 TDI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Systemic carbon buildup on intake valves, pistons, and combustion chambers
+    in 1.6 TDI engines, caused by inefficient combustion and poor maintenance. This
+    leads to reduced performance, fuel efficiency, and potential starting issues.
+  inspection_advice: Inspect the combustion chamber and intake valves for black carbon
+    deposits. Look for symptoms like reduced power, difficulty starting, and increased
+    emissions. Check for a clogged EGR system, which exacerbates carbon buildup.
+  sources: []
+- claim_key: ea288_emissions_chronic_dpf/egr_clog
+  title: Chronic DPF/EGR Clogging at Low Mileage (140k km)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The B8 1.6 TDI exhibits premature and severe clogging of the Diesel Particulate
+    Filter (DPF) and Exhaust Gas Recirculation (EGR) system, even at relatively low
+    mileage (~140k km). This leads to persistent idling vibrations, start-stop system
+    failures, and power cuts due to restricted exhaust flow.
+  inspection_advice: Check for excessive soot buildup in the DPF and EGR system. Look
+    for error codes related to DPF regeneration failure or EGR blockage. Inspect the
+    exhaust manifold and turbocharger for carbon deposits or physical obstructions.
+  sources: []
+- claim_key: ea288_general_chronic_idling_vibra
+  title: Chronic Idling Vibrations (Volant/Clutch Pedal Connection Issue)
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The B8 1.6 TDI exhibits chronic idling vibrations that are linked to
+    the volant (flywheel) or clutch pedal connection. This defect causes persistent
+    shaking at idle, which worsens with start-stop system activation and is exacerbated
+    by clutch pedal adjustments.
+  inspection_advice: Inspect the volant/flywheel for warping or damage. Check the
+    clutch pedal linkage and mounting points for wear or misalignment. Verify the
+    condition of the clutch master/slave cylinder and hydraulic lines.
+  sources: []
+- claim_key: ea288_emissions_recurrent_dpf/egr_cl
+  title: Recurrent DPF/EGR Cleaning Failures (Design Defect in Exhaust System)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The B8 1.6 TDI’s DPF and EGR systems frequently fail to clear blockages
+    even after professional cleaning, indicating a fundamental design flaw in the
+    exhaust system. This leads to repeated failures and persistent performance issues.
+  inspection_advice: Look for recurring DPF/EGR blockages despite professional cleaning.
+    Check for design flaws in the exhaust manifold or turbocharger interface that
+    may contribute to soot accumulation.
+  sources: []
+- claim_key: ea288_engine_premature_turbocharg
+  title: Premature Turbocharger/Injector Failures (Chronic Reliability Issues)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The B8 1.6 TDI is plagued by premature failures in turbochargers and
+    injectors, even at lower mileage (~300k km). This results in erratic idling, power
+    loss, and potential long-term engine damage.
+  inspection_advice: Inspect turbocharger for carbon buildup, oil leaks, or mechanical
+    wear. Check injectors for clogging, improper spray patterns, or electrical faults.
+    Monitor for error codes related to turbocharger or injector failures.
+  sources: []
+- claim_key: ea288_electrical_start-stop_system_in
+  title: Start-Stop System Incompatibility with DPF/EGR Issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The B8 1.6 TDI’s start-stop system fails to activate properly due to
+    DPF/EGR blockages, leading to erratic idling and power interruptions. This suggests
+    a lack of integration between emissions control systems and start-stop functionality.
+  inspection_advice: Check for error codes related to start-stop system failures or
+    DPF/EGR blockages. Verify the compatibility of the start-stop system with the
+    emissions control software.
+  sources: []
+- claim_key: ea288_engine_idle_speed_fluctuati
+  title: Idle Speed Fluctuations (Fuel Rail Pressure Sensor or Flywheel Wear)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA288 engines may experience idle instability due to either a failing
+    fuel rail pressure sensor or a worn flywheel. The latter causes RPM fluctuations
+    during idle, while the former may lead to erratic fuel delivery.
+  inspection_advice: Check for RPM fluctuations at idle (use an RPM gauge if possible).
+    If the issue persists after warming up, inspect the flywheel for wear (thinness
+    or uneven surface). Test the fuel rail pressure sensor for accuracy—if readings
+    are erratic, replacement is needed.
+  sources:
+  - source_url: https://www.rsamotorsports.com/blog/vag-1-6-2-0-tdi-sorunlar-ve-coezuemleri-ea-288
+    source_domain: rsamotorsports.com
+    site_or_channel: rsamotorsports.com
+    quote: '"Devir sabit kalıyor ve motor kulaklarından olmadığından eminseniz, yüksek
+      ihtimal aracınızın volanı ömrünü tamamlamıştır. Rölanti devrinde anlık değişimler
+      / dalgalanmalar gerçekleşiyor ise rail hattı basınç sensörü kontrol edilmelidir."'
+    independent: true
+- claim_key: ea288_fuel system_hochdruckpumpe:_meta
+  title: 'Hochdruckpumpe: Metallabrieb durch Zahnriemenverschleiß'
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Bei frühen EA288-Varianten mit nasslaufendem Zahnriemen kann Metallabrieb
+    aus der Hochdruckpumpe ins Kraftstoffsystem gelangen, wenn der Riemen verschleißt
+    oder das Öl nicht mehr ausreichend schmiert. Dies beschädigt Injektoren, Druckregler
+    und Rail, was zu Startschwierigkeiten oder Motorstillstand führt.
+  inspection_advice: Auf metallische Geräusche beim Starten achten, Startschwierigkeiten
+    oder Fehlercodes für Kraftstoffdruck prüfen. Bei Verdacht Hochdruckpumpe und Kraftstoffsystem
+    auf Metallpartikel untersuchen lassen.
+  sources: []
+- claim_key: ea288_engine_turbocharger_whistli
+  title: Turbocharger Whistling Noise and Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.6 TDI turbochargers are known to develop whistling noises due to
+    worn bearings or damaged turbines, leading to reduced power and poor fuel economy.
+    This is a chronic issue that often requires costly replacement or refurbishment.
+  inspection_advice: Listen for a whistling noise from the turbocharger area, check
+    for check engine light activation, and monitor for loss of power or reduced fuel
+    economy.
+  sources: []
+- claim_key: ea288_emissions_diesel_particulate_f
+  title: Diesel Particulate Filter (DPF) Clogging
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.6 TDI DPF is prone to clogging due to short trips or city driving,
+    which prevents the filter from regenerating properly. This leads to poor engine
+    performance, stalling, and reduced fuel economy.
+  inspection_advice: Check for check engine light or DPF warning light activation,
+    monitor for reduced fuel economy, and verify if the engine runs poorly or stalls.
+    Ensure the vehicle is driven at higher speeds for regeneration.
+  sources: []
+- claim_key: ea288_emissions_egr_valve_failure_(c
+  title: EGR Valve Failure (Clogging/Sticking)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic clogging or improper operation of the EGR valve due to carbon
+    buildup, leading to rough idling, stalling, reduced performance, and increased
+    emissions. This is a known systemic issue in the 1.6 TDI engines.
+  inspection_advice: Check for carbon deposits around the EGR valve and surrounding
+    components. Look for signs of rough idling, stalling, or reduced power—common
+    symptoms of a failing EGR system.
+  sources: []
+- claim_key: ea288_fuel system_injector_insulation_
+  title: Injector Insulation Failure (2009–2013 Siemens Injectors)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of Siemens injectors (2009–2013 models) due to defective
+    insulation, leading to fuel delivery issues, misfires, and long-term engine damage.
+  inspection_advice: Check for misfires, poor acceleration, or fuel leaks around injector
+    locations. Verify if the vehicle falls within the 2009–2013 production range for
+    Siemens injectors.
+  sources: []
+- claim_key: ea288_engine_oil_leaks_(chronic_s
+  title: Oil Leaks (Chronic Sealing Issues)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Frequent oil leaks in 1.6 TDI engines, often due to faulty gaskets or
+    seals, leading to low oil pressure and potential engine damage if left unaddressed.
+  inspection_advice: Inspect under the vehicle for oil stains or puddles, particularly
+    around the valve cover, oil filter housing, and rear main seal. Check for oil
+    residue on engine components.
+  sources: []
+- claim_key: ea288_engine_chronic_idling_vibra
+  title: Chronic Idling Vibrations Linked to Volant (Flywheel) Issues in 1.6 TDI B8
+    Engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report persistent idling vibrations in **1.6 TDI B8 engines**,
+    which are attributed to volant (flywheel) issues. The vibrations worsen at idle
+    and are mitigated by slight throttle input, suggesting a chronic imbalance or
+    defect in the volant/flywheel assembly.
+  inspection_advice: Inspect the volant/flywheel for warping, cracks, or uneven wear.
+    Check for proper balancing and alignment with the crankshaft. Listen for unusual
+    noises or vibrations during idle and acceleration.
+  sources: []
+- claim_key: ea288_engine_recurring_turbocharg
+  title: Recurring Turbocharger Power Loss Due to EGR/DPF Interaction in 1.6 TDI Engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The **1.6 TDI engines** (including B8) exhibit a chronic issue where
+    the EGR and DPF systems interact to cause turbocharger power loss, leading to
+    stalling and reduced performance. This is linked to carbon buildup and clogging,
+    which is unresponsive to standard cleaning procedures.
+  inspection_advice: Monitor for turbocharger lag or power loss during acceleration.
+    Check for excessive backpressure in the exhaust system, which may indicate DPF
+    or EGR clogging. Look for soot deposits around the turbocharger and EGR valve.
+  sources: []
+- claim_key: ea288_emissions_exhaust_gas_temperat
+  title: Exhaust Gas Temperature Sensor Failure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The exhaust gas temperature sensor in the VW Golf VII 1.6 TDI is prone
+    to failure, causing false DPF warnings and other related error codes. Replacement
+    of this sensor resolves the issue in many cases.
+  inspection_advice: Inspect for error codes related to the exhaust gas temperature
+    sensor. Check if the sensor has been replaced previously or if there are repeated
+    service records for this component.
+  sources:
+  - source_url: https://forum.donanimhaber.com/golf-vii-1-6tdi-ariza-isigi-yardim--128785504
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Aynı sorunu yaşayan kuzenim vardı.Egzoz gazı sıcaklık sensörü değiştirildi.Sorun
+      halloldu.Video da belirttiğiniz gibi aynı ikaz lambalarını yakıyordu.
+    independent: true
+- claim_key: ea288_fuel system_chronic_p0101_(maf_s
+  title: Chronic P0101 (MAF Sensor) Failure with 1.6 TDI CAYMAN Engine
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recurrent failure of the Mass Airflow Sensor (MAF) in the 1.6 TDI CAYMAN
+    engine, leading to persistent P0101 error codes despite multiple replacements.
+    This suggests a design or material flaw in the sensor or its integration, causing
+    premature failure and chronic issues.
+  inspection_advice: Check for repeated P0101 error codes after MAF sensor replacement.
+    Look for signs of sensor contamination, wiring issues, or physical damage to the
+    sensor housing. Verify if the engine is running properly after sensor replacement—if
+    the issue persists, it may indicate a deeper design flaw.
+  sources: []
+- claim_key: ea288_emissions_chronic_egr_system_f
+  title: Chronic EGR System Failure in 1.6 TDI CAYMAN Engine
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR system was reportedly disabled twice (once by the previous owner
+    and again by the current owner after repeated failures), indicating a chronic
+    design flaw or material weakness in the EGR components or their integration.
+  inspection_advice: Check for EGR-related error codes (e.g., P0400, P0401) and inspect
+    the EGR cooler, valves, and passages for leaks, carbon buildup, or physical damage.
+    Verify if the EGR system has been tampered with or if there are repeated failures
+    despite replacements.
+  sources: []
+- claim_key: ea288_fuel system_chronic_fuel_injecto
+  title: Chronic Fuel Injector Failures (Clogging/Gasket Issues)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TDI engines suffer from frequent fuel injector failures due to
+    clogging and gasket issues, leading to misfires, poor performance, and AFR (air-fuel
+    ratio) disruptions. This is a known chronic issue tied to material or design shortcomings
+    in the injector system.
+  inspection_advice: Check for signs of misfires, excessive smoke, or poor idling.
+    Inspect for black soot deposits around injectors and listen for unusual noises
+    during startup. Verify fuel system maintenance history (e.g., use of high-quality
+    fuel and injector cleaning).
+  sources: []
+- claim_key: ea288_engine_premature_timing_bel
+  title: Premature Timing Belt Tensioner Failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The timing belt tensioner in 2.0 TDI engines is prone to premature failure
+    due to material weaknesses, leading to catastrophic engine damage if the timing
+    belt slips (causing piston-valve collision). This is a critical failure mode requiring
+    proactive inspection.
+  inspection_advice: Listen for a ticking noise from the engine and check for misfires.
+    Verify timing belt and tensioner replacement history—this component should be
+    inspected every **80,000 miles** as a preventive measure.
+  sources: []
+- claim_key: ea288_engine_cylinder_head_cracki
+  title: Cylinder head cracking
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TDI (EA188) engine, particularly variants **BKD (140 hp)** and
+    **BMN (170 hp)**, is prone to cracks in the cylinder head, often leading to coolant
+    loss and potential catastrophic engine failure if undetected early. Older model
+    years are more frequently affected.
+  inspection_advice: Check for signs of coolant leaks (oil stains, sweet smell in
+    the cabin, or visible coolant residue under the engine bay). Inspect the cylinder
+    head for cracks using a dye penetrant test or ultrasonic inspection if available.
+    Verify service records for cylinder head replacements or repairs.
+  sources: []
+- claim_key: ea288_engine_premature_oil_pump_f
+  title: Premature oil pump failure due to hexagonal shaft wear
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The oil pump drive shaft in the 2.0 TDI (EA188) engines, particularly
+    older variants like **BMP**, features a hexagonal shaft that wears prematurely.
+    This can cause sudden oil pump failure, leading to complete loss of lubrication
+    and severe engine damage, including turbocharger destruction.
+  inspection_advice: Listen for unusual engine noises (grinding, whining) during startup
+    or under load, which may indicate oil pump failure. Check for oil pressure warnings
+    on the dashboard. Inspect the oil pump and shaft for wear or damage during a full
+    engine teardown. Verify service records for oil pump replacements.
+  sources: []
+- claim_key: ea288_emissions_defective_egr_valve_
+  title: Defective EGR valve causing power loss
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TDI (EA188) engine frequently experiences issues with the EGR
+    (Exhaust Gas Recirculation) valve, which can clog or malfunction, leading to power
+    loss. Improper cleaning of the EGR valve can cause permanent damage to the engine,
+    making this a critical maintenance point.
+  inspection_advice: Check for symptoms of power loss, rough idling, or black smoke
+    from the exhaust. Inspect the EGR valve for carbon buildup or physical damage.
+    Verify if the valve has been cleaned or replaced recently, as improper cleaning
+    can exacerbate the issue.
+  sources: []
+- claim_key: ea288_fuel system_carbon_buildup_in_in
+  title: Carbon buildup in injectors and EGR valve
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TDI (EA188) is prone to carbon buildup in fuel injectors and
+    the EGR valve, which can lead to costly repairs if not addressed. This issue is
+    common in diesel engines and can cause performance degradation, increased emissions,
+    and potential long-term engine damage.
+  inspection_advice: Look for symptoms like rough running, misfires, or reduced fuel
+    efficiency. Inspect the EGR valve and injectors for carbon deposits during maintenance.
+    Use fuel additives as a preventive measure, but be aware that they may not fully
+    resolve existing buildup.
+  sources: []
+- claim_key: ea288_fuel system_early_siemens_piezo_
+  title: Early Siemens Piezo Injector Failures (170hp models)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early Siemens piezo injectors in 170hp 2.0 TDI engines were prone to
+    sudden failure, causing engine misfires and shutdowns, particularly shortly after
+    purchase. Many were recalled or replaced.
+  inspection_advice: Check for misfires, running lean conditions, or sudden engine
+    stalls. Verify if the injectors are original Siemens units (common in pre-2010
+    models) and inspect for recall notices or replacement records.
+  sources: []
+- claim_key: ea288_engine_oil_pump_gear_proble
+  title: Oil Pump Gear Problems (BKP 2.0 TDI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The BKP variant of the 2.0 TDI engine suffers from oil pump gear failures,
+    which can lead to oil starvation and potential engine damage if not addressed
+    promptly.
+  inspection_advice: Listen for unusual noises from the oil pump area, check for oil
+    leaks around the oil pump housing, and monitor oil pressure for irregularities
+    during operation.
+  sources: []
+- claim_key: ea288_electrical_fan_controller_failu
+  title: Fan Controller Failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The fan controller in the 2.0 TDI engines can fail, leading to overheating
+    issues due to improper cooling fan operation.
+  inspection_advice: Test the cooling fan operation under load (e.g., during idling
+    or light driving). Check for erratic fan behavior (e.g., fan not turning on when
+    it should or turning on unexpectedly). Inspect wiring and connections for damage
+    or corrosion.
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/2-0tdi-common-problems-and-issues.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"Fan controller issues"'
+    independent: true
+- claim_key: ea288_transmission_flywheel_problems_&_
+  title: Flywheel Problems & Lumpy Idle
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Flywheel issues in the 2.0 TDI engines can cause a lumpy or uneven idle,
+    leading to drivability problems and potential transmission wear over time.
+  inspection_advice: Check for a rough or uneven idle, vibrations at idle, and listen
+    for unusual noises from the flywheel area. Inspect the flywheel for warping or
+    uneven wear during a transmission service.
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/2-0tdi-common-problems-and-issues.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"Flywheel problems and lumpy idle"'
+    independent: true
+- claim_key: ea288_engine_defective_oil_pump_d
+  title: Defective oil pump drive shaft causing turbocharger failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A chronic defect in the oil pump drive shaft has been reported to cause
+    complete oil pump failure, leading to catastrophic turbocharger damage due to
+    lubrication loss.
+  inspection_advice: Check for signs of oil pump failure (e.g., oil pressure warning
+    lights, unusual engine noises) and inspect the turbocharger for wear or damage.
+    Verify oil pump functionality during a test drive or diagnostic check.
+  sources: []
+- claim_key: ea288_fuel system_chronic_injector_fai
+  title: Chronic injector failures in 2.0 TDI PD (Pompa Düse) 170 HP (and some 140
+    HP) engines
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple users report repeated injector failures in VW 2.0 TDI PD engines
+    (170 HP and some 140 HP variants), with some experiencing multiple replacements
+    even within warranty periods. VW acknowledges this as a chronic issue in Europe,
+    extending goodwill warranties on the pump-düse component for up to 7 years.
+  inspection_advice: Check for repeated injector replacement history, especially in
+    2.0 TDI PD engines. Look for error codes related to fuel injection or unusual
+    fuel consumption patterns. Verify if the vehicle has undergone multiple injector
+    replacements under warranty or goodwill guarantees.
+  sources: []
+- claim_key: ea288_fuel system_recurrent_injector_f
+  title: Recurrent injector failures triggering warranty replacement rights
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report that repeated injector failures (4+ replacements within
+    a year) are considered chronic issues, potentially triggering vehicle replacement
+    rights under warranty policies. This indicates a systemic design or manufacturing
+    defect in the injector components.
+  inspection_advice: Review service records for repeated injector replacements. Confirm
+    if the vehicle has undergone multiple injector failures within a short timeframe,
+    as this may qualify for warranty-based vehicle replacement or compensation.
+  sources: []
+- claim_key: ea288_fuel system_vw’s_acknowledgment_
+  title: VW’s acknowledgment of chronic injector issues with extended goodwill warranties
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: VW’s decision to extend goodwill warranties on the pump-düse component
+    for up to 7 years confirms the chronic nature of injector failures in these engines,
+    indicating a design or manufacturing defect.
+  inspection_advice: Check if the vehicle has received extended goodwill warranties
+    or guarantees related to injector or pump-düse components. Look for official acknowledgments
+    or communications from VW regarding these issues.
+  sources: []
+- claim_key: ea288_emissions_chronic_egr_(exhaust
+  title: Chronic EGR (Exhaust Gas Recirculation) System Issues
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mention of EGR in conjunction with DPF issues suggests a broader
+    emissions system reliability problem, often linked to clogging or failure of the
+    EGR cooler or valve, which can lead to further engine performance degradation
+    and emissions-related faults.
+  inspection_advice: Check for EGR-related warning lights or error codes. Inspect
+    the EGR valve and cooler for carbon buildup, leaks, or physical damage. Look for
+    soot accumulation around the EGR port, which can indicate chronic EGR system failures.
+  sources: []
+- claim_key: ea288_fuel system_potential_fuel_pump_
+  title: Potential fuel pump failure in 2.0 TDI Passat
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: User suggests the fuel pump may be the root cause of issues in the 2.0
+    TDI Passat, which could lead to fuel delivery problems, stalling, or poor engine
+    performance.
+  inspection_advice: Check for unusual noises from the fuel system, erratic engine
+    behavior, or warning lights related to fuel pressure. Test the fuel pump's operation
+    and inspect for leaks or damage.
+  sources: []
+- claim_key: ea288_engine_zahnriemen/spannroll
+  title: Zahnriemen/Spannrolle failure leading to slippage and premature wear (EA288
+    2.0 TDI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue with the **EA288 2.0 TDI** (DFM CRD7A) where the **Zahnriemen
+    (timing belt) and tensioner roller** combination fails, causing the belt to slip,
+    wear unevenly, and eventually shred. This defect was prevalent in production years
+    **up to 2019**, often manifesting as a **non-synchronized noise frequency** (unlike
+    typical engine RPM-related sounds) and **AdBlue line vibration** due to mechanical
+    coupling. A **Technischer Produktivitätsindex (TPI) 2043523** exists for this
+    issue, indicating a known Volkswagen recall or service campaign.
+  inspection_advice: Check for **uneven wear or fraying on the Zahnriemen**, **loose
+    or damaged tensioner roller**, and **misalignment of the belt teeth**. Listen
+    for **non-RPM-synchronized rattling or squeaking** (especially cold starts) and
+    inspect the **AdBlue line for unusual vibration**. Verify if the vehicle falls
+    under **TPI 2043523** (2.0 TDI EA288 pre-2019).
+  sources: []
+- claim_key: ea288_transmission_dsg_7_ileri_dq200_me
+  title: DSG 7 ileri DQ200 mekatronik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the DQ200 7-speed dual-clutch transmission's mechatronic
+    unit, leading to rough gear shifts and check engine lights due to hydraulic unit
+    or electronic control card failures.
+  inspection_advice: Check for rough gear shifts, delayed engagement, or warning lights.
+    Listen for unusual noises during gear transitions and verify if the transmission
+    fluid is properly maintained.
+  sources: []
+- claim_key: ea288_transmission_dsg_kavrama_balatala
+  title: DSG kavrama balataları aşınması (DQ200)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Excessive wear of clutch friction plates in the DSG 7-speed dual-clutch
+    transmission, causing shuddering during acceleration and jerking in reverse.
+  inspection_advice: Inspect for unusual vibrations or shuddering during acceleration,
+    especially in low gears and reverse. Check for delayed engagement or slipping
+    during gear shifts.
+  sources: []
+- claim_key: ea288_engine_1.4/1.5_tsi_act_(sil
+  title: 1.4/1.5 TSI ACT (silindir kapatma) solenoid/mekanizma arızası
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the ACT (Atmospheric Valve Control) system solenoid
+    or mechanism in 1.4/1.5 TSI engines, causing engine misfires and check engine
+    lights.
+  inspection_advice: Listen for engine ticking or misfires. Check for warning lights
+    and verify if the engine runs smoothly under load or idling.
+  sources: []
+- claim_key: ea288_engine_2.0_tdi_egr_soğutucu
+  title: 2.0 TDI EGR soğutucu kaçağı (su izolasyon hatası)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic internal cracking in the EGR cooler of 2.0 TDI engines, leading
+    to coolant leaks and white smoke from the exhaust.
+  inspection_advice: Check for white smoke from the exhaust, coolant leaks around
+    the EGR cooler, and inspect for any visible cracks or corrosion on the cooler.
+  sources: []
+- claim_key: ea288_emissions_2.0_tdi_scr_katalizö
+  title: 2.0 TDI SCR katalizör çatlağı
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic thermal cracking in the SCR (Selective Catalytic Reduction) catalyst
+    of 2.0 TDI engines, causing reduced NOx efficiency and potential failure.
+  inspection_advice: Monitor for reduced engine performance, check engine lights,
+    and inspect the SCR catalyst for visible cracks or damage.
+  sources: []
+- claim_key: ea288_fuel system_2.0_tdi_adblue_pompa
+  title: 2.0 TDI AdBlue pompa/ısıtıcı arızası
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the AdBlue pump or heater in 2.0 TDI engines, leading
+    to AdBlue system warnings and potential engine shutdowns.
+  inspection_advice: Check for AdBlue system warnings, verify the AdBlue level, and
+    listen for unusual noises from the AdBlue pump area.
+  sources: []
+- claim_key: ea288_engine_1.4/2.0_tsi_trigger_
+  title: 1.4/2.0 TSI trigger kayışı diş atlaması riski
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure risk of the timing belt in 1.4/2.0 TSI engines, leading
+    to potential catastrophic engine failure due to timing misalignment.
+  inspection_advice: Check the timing belt for wear, cracks, or oil leaks. Ensure
+    it is replaced within the manufacturer's recommended interval (60,000–90,000 km).
+  sources: []
+- claim_key: ea288_engine_soğutma_sıvısı_pompa
+  title: Soğutma sıvısı pompası (plastik gövde) çatlakları
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic cracking of the plastic housing in the coolant pump of certain
+    models, leading to coolant leaks and overheating.
+  inspection_advice: Check for coolant leaks around the coolant pump, inspect the
+    pump housing for cracks, and verify the pump’s operation by ensuring the water
+    temperature gauge is functioning correctly.
+  sources: []
+- claim_key: ea288_engine_termostat_gövdesi_ça
+  title: Termostat gövdesi çatlağı
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic cracking of the thermostat housing, leading to overheating and
+    potential engine damage.
+  inspection_advice: Check for overheating warnings, inspect the thermostat housing
+    for cracks, and verify coolant flow through the radiator.
+  sources: []
+- claim_key: ea288_engine_turbo_wastegate_kolu
+  title: Turbo wastegate kolu sıkışması
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic build-up and jamming of the turbo wastegate arm in TDI engines,
+    causing power loss and reduced performance.
+  inspection_advice: Check for reduced engine power, unusual noises from the turbo
+    area, and inspect the wastegate arm for dirt buildup or mechanical restrictions.
+  sources: []
+- claim_key: ea288_electrical_marş_motoru_(starter
+  title: Marş motoru (starter motor) erken arızası
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic premature failure of the starter motor due to solenoid wear,
+    causing difficulty in engine starting.
+  inspection_advice: Check for prolonged cranking times, unusual noises when attempting
+    to start the engine, and verify starter motor operation.
+  sources: []
+- claim_key: ea288_electrical_alternatör_volan_kas
+  title: Alternatör volan kasnağı (one-way bearing) arızası
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the alternator pulley's one-way bearing, causing idle
+    speed fluctuations and potential electrical system issues.
+  inspection_advice: Check for idle speed fluctuations, unusual noises from the alternator
+    area, and verify alternator output with a multimeter.
+  sources: []
+- claim_key: ea288_suspension_ön_amortisör_takoz/r
+  title: Ön amortisör takoz/rulmanları aşınması
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic wear of the front shock absorber bushings and bearings, causing
+    clunking noises during steering input.
+  inspection_advice: Listen for clunking noises when turning the steering wheel, inspect
+    the front suspension for excessive play or wear, and check for uneven tire wear.
+  sources: []
+- claim_key: ea288_suspension_arka_süspansiyon_bur
+  title: Arka süspansiyon burçları (kauçuk yırtılması)
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the rear suspension bushings due to rubber cracking
+    or tearing, causing excessive noise and poor ride quality.
+  inspection_advice: Check for clunking noises over rough roads, inspect the rear
+    suspension bushings for cracks or tears, and verify alignment and tire wear.
+  sources: []
+- claim_key: ea288_suspension_direksiyon_kutusu_(e
+  title: Direksiyon kutusu (elektrikli) motor/dişli aşınması
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic wear of the electric power steering motor and gears, causing
+    erratic steering behavior and sudden stiffness.
+  inspection_advice: Check for sudden stiffness or erratic behavior in the steering
+    wheel, listen for unusual noises from the steering column, and verify steering
+    fluid levels.
+  sources: []
+- claim_key: ea288_brakes_epb_(elektronik_park
+  title: EPB (elektronik park freni) motoru dişli kırılması
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the electronic parking brake motor gears, causing
+    the EPB to fail to engage or disengage properly.
+  inspection_advice: Test the electronic parking brake functionality, listen for unusual
+    noises when activating the EPB, and check for warning lights related to the parking
+    brake system.
+  sources: []
+- claim_key: ea288_general_klima_kompresörü_kon
+  title: Klima kompresörü kontrol valfi arızası
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the climate control compressor control valve, leading
+    to insufficient cooling performance.
+  inspection_advice: Check for inadequate cooling from the climate control system,
+    listen for unusual noises from the compressor area, and verify the operation of
+    the climate control settings.
+  sources: []
+- claim_key: ea288_electrical_klima_fan_rezistansı
+  title: Klima fan rezistansı yanması
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the climate control fan resistor, causing the fan
+    to stop working entirely.
+  inspection_advice: Check if the climate control fan operates at all speeds, listen
+    for unusual noises, and verify electrical connections and wiring.
+  sources: []
+- claim_key: ea288_electrical_mib2_multimedya_donm
+  title: MIB2 multimedya donması (yazılım hatası)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic software glitches causing the MIB2 multimedia system to freeze
+    or lag.
+  inspection_advice: Test the multimedia system for responsiveness, check for software
+    updates, and verify hardware connections.
+  sources: []
+- claim_key: ea288_electrical_geri_görüş_kamerası_
+  title: Geri görüş kamerası sızdırmazlık sorunu
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic sealing issues in the rearview camera leading to fogging and
+    reduced visibility.
+  inspection_advice: Check the rearview camera display for fogging or blurriness,
+    inspect the camera housing for any visible damage or leaks.
+  sources: []
+- claim_key: ea288_electrical_ccm_beyin_su_basması
+  title: CCM beyin su basması (su izolasyon hatası)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic water ingress into the Central Control Module (CCM), causing
+    issues with central locking and window controls.
+  inspection_advice: Check for malfunctioning central locking, windows, or other electrical
+    systems, inspect the CCM for water damage, and verify proper sealing.
+  sources: []
+- claim_key: ea288_brakes_arka_fren_kaliper_pi
+  title: Arka fren kaliper pistonları korozyonu
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic corrosion of rear brake caliper pistons, causing the parking
+    brake to stick and not release properly.
+  inspection_advice: Check for difficulty in releasing the parking brake, inspect
+    brake calipers for corrosion, and verify brake fluid levels and condition.
+  sources: []
+- claim_key: ea288_emissions_vacuum-controlled_eg
+  title: Vacuum-Controlled EGR Valve Leaks in VAG Platforms
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Vacuum-controlled EGR valves in VW Group vehicles (including Golf, Passat,
+    Tiguan, Audi A3/A4, Skoda Octavia, and SEAT Leon) are prone to vacuum line leaks,
+    causing insufficient EGR flow and triggering the P0401 fault code.
+  inspection_advice: Inspect vacuum lines connected to the EGR valve for leaks or
+    damage. Verify proper vacuum supply during diagnostics.
+  sources: []
+- claim_key: ea288_emissions_carbon-clogged_egr_v
+  title: Carbon-Clogged EGR Valve/Pipes in VW Group Engines
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: EGR valves and pipes across VW Group vehicles (1.2 TSI, 1.4 TSI, 1.8
+    TSI, 1.6 TDI, 2.0 TDI, etc.) are prone to heavy carbon buildup, leading to restricted
+    airflow and triggering the P0401 fault code. This is a widespread issue requiring
+    periodic cleaning or replacement.
+  inspection_advice: Inspect EGR pipes and valves for heavy soot/carbon buildup. Clean
+    if necessary, but be aware of recurring issues in some models.
+  sources: []
+- claim_key: ea288_electrical_faulty_egr_solenoid_
+  title: Faulty EGR Solenoid (N18) in VW Group Vehicles
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR solenoid (N18) in VW Group vehicles (including TSI/TFSI engines)
+    can fail, leading to insufficient EGR flow and triggering the P0401 fault code.
+    This is a known chronic failure point requiring replacement.
+  inspection_advice: Use VCDS Output Test to verify if the N18 valve moves properly.
+    If it fails to actuate, the solenoid may need replacement.
+  sources: []
+- claim_key: ea288_fuel system_common_rail_fuel_pre
+  title: Common Rail fuel pressure drop (P0087) due to clogged fuel filter
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A saturated fuel filter increases flow resistance, preventing the low-pressure
+    pump from delivering sufficient fuel to the high-pressure pump. This causes cavitation
+    in the high-pressure pump, triggering P0087 even when the pump and injectors are
+    intact.
+  inspection_advice: Check for a clogged fuel filter by measuring the pressure at
+    the fuel filter housing. If the pressure drops below 3.0 bar, the filter is likely
+    the cause. Replace the filter if it is saturated or clogged.
+  sources: []
+- claim_key: ea288_fuel system_low-pressure_fuel_pu
+  title: Low-pressure fuel pump failure (Vorförderpumpe) leading to P0087
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The low-pressure fuel pump in the tank provides the necessary fuel pressure
+    (0.3–0.5 bar) for the high-pressure pump. A worn-out pump after 150,000–200,000
+    km can cause a drop in fuel pressure, leading to P0087.
+  inspection_advice: Measure the pressure at the fuel filter housing using a pressure
+    gauge. If the pressure drops below 3.0 bar and remains low even after opening
+    the filter housing, the low-pressure pump is likely faulty.
+  sources: []
+- claim_key: ea288_fuel system_internal_leakage_in_
+  title: Internal leakage in Common Rail injectors causing P0087
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Worn-out Common Rail injectors can leak internally, causing excess fuel
+    to return via the return line. This reduces rail pressure, triggering P0087 even
+    when the pump is functioning correctly.
+  inspection_advice: Use ODIS to perform an individual cylinder return flow measurement.
+    If there is a deviation of more than 10% between cylinders, the corresponding
+    injector is likely leaking internally.
+  sources: []
+- claim_key: ea288_fuel system_metallic_contaminati
+  title: Metallic contamination of fuel system due to failed CP4.1 pump
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A failed CP4.1 pump can release metallic particles (from the tappet and
+    camshaft journals) into the fuel system, contaminating the entire high-pressure
+    circuit. This accelerates wear on injector sealing rings, causes needle blockages,
+    and leads to internal injector leaks, necessitating replacement of the pump, injectors,
+    and rail.
+  inspection_advice: Check the fuel tank filter for metallic particles. Test injectors
+    for increased internal leakage using ODIS return flow measurement. Inspect the
+    rail interior for deposits using a magnet pin through the pressure sensor connection.
+  sources: []
+- claim_key: ea288_fuel system_mengensteuerventil_(
+  title: Mengensteuerventil (flow control valve) failure in CP4.1 pump
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The flow control valve in the CP4.1 pump can fail either electrically
+    or mechanically. Electrical failure can be tested via ODIS, while mechanical failure
+    would require physical inspection.
+  inspection_advice: Use ODIS to directly actuate the flow control valve and check
+    its response. If the valve does not react correctly to the actuation signal, it
+    may be electrically faulty. For mechanical defects, further physical inspection
+    is required.
+  sources: []
+- claim_key: ea288_fuel system_increased_risk_of_cp
+  title: Increased risk of CP4.1 pump failure due to extended fuel filter intervals
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Neglecting the recommended fuel filter change interval (60,000 km) significantly
+    increases the risk of CP4.1 pump failure, especially under varying fuel quality
+    conditions.
+  inspection_advice: Follow the recommended fuel filter change interval of 40,000
+    km (instead of 60,000 km) to prevent accelerated wear of the CP4.1 pump.
+  sources: []
+- claim_key: ea288_fuel system_chronic_injector_iss
+  title: Chronic injector issues in Euro 5 2.0 TDI engines
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple users report persistent injector problems in Euro 5 2.0 TDI
+    engines, including clogging, failure, and high replacement costs. This is a known
+    chronic issue in this engine variant.
+  inspection_advice: Check for signs of injector failure such as rough idling, misfires,
+    or reduced power. Look for error codes related to injectors and inspect for soot
+    buildup or carbon deposits in the injectors during maintenance.
+  sources: []
+- claim_key: ea288_engine_performance_loss_in_
+  title: Performance loss in high-performance Audi models due to local fuel quality
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Specific mention of power loss in high-performance Audi models (e.g.,
+    S3) due to local fuel quality, indicating a potential design or calibration sensitivity
+    to fuel standards.
+  inspection_advice: Check for reduced power output, error codes related to fuel delivery,
+    and inspect for carbon buildup in intake and combustion chambers. Ensure the vehicle
+    is running on high-quality fuel.
+  sources: []
