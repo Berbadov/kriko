@@ -1,0 +1,56 @@
+{
+    "manifest_version": 3,
+    "name": "Kriko.ai",
+    "description": "Shows possible issues for second-hand car listings.",
+    "version": "0.2.0",
+    "permissions": ["activeTab", "storage", "scripting"],
+    "host_permissions": ["http://127.0.0.1/*", "https://*.sahibinden.com/*"],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "icons": {
+        "16": "assets/icons/icon-16.png",
+        "32": "assets/icons/icon-32.png",
+        "48": "assets/icons/icon-48.png",
+        "128": "assets/icons/icon-128.png"
+    },
+    "action": {
+        "default_title": "Kriko.ai",
+        "default_icon": {
+            "16": "assets/icons/icon-16.png",
+            "32": "assets/icons/icon-32.png",
+            "48": "assets/icons/icon-48.png"
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*.sahibinden.com/*",
+                "https://www.carchecker.pro/*"
+            ],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://*.sahibinden.com/*",
+                "https://www.carchecker.pro/*"
+            ],
+            "js": [
+                "hover_lite/icons.js",
+                "hover_lite/risk_card.js",
+                "hover_lite/hover_lite.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["hover_lite/hover_lite.css"],
+            "matches": [
+                "https://*.sahibinden.com/*",
+                "https://www.carchecker.pro/*"
+            ]
+        }
+    ]
+}

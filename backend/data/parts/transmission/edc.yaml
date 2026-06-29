@@ -1,0 +1,1061 @@
+part_id: edc
+part_type: transmission
+display_name: Renault EDC (Efficient Dual Clutch) — wet multi-plate DCT
+manufacturer: renault
+known_also_as:
+- EDC
+- Easy Drive Clutch
+production_years: 2010-present
+claims:
+- id: edc_jerking_slipping_v1
+  claim_key: edc_jerking_slipping
+  version: 1
+  is_current: true
+  title: EDC automatic gearbox jerking/slipping
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Getrag EDC gearbox exhibits jerking during shifts (1st→2nd), delayed
+    acceleration, and vibrations, often accompanied by a 'Gearbox fault' warning.
+  inspection_advice: Test shifting smoothness, acceleration response, and uphill pull.
+    Listen for unusual noises during gear changes. Check for error codes related to
+    the transmission control system.
+  sources:
+  - tier: A
+    source_url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
+    quote: '"The Getrag EDC (Efficie'
+    independent: true
+- id: edc_low_speed_shudder_v1
+  claim_key: edc_low_speed_shudder
+  version: 1
+  is_current: true
+  title: Low-speed shudder
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.84
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: A noticeable vibration or hesitation at low speeds, often caused by clutch
+    engagement issues or transmission control module (TCM) calibration.
+  inspection_advice: Test drive the vehicle at low speeds to check for shuddering
+    or hesitation. Listen for unusual noises or vibrations during gear engagement.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/edc-dual-clutch-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: '"Hesitation Setting Off: Drivers may feel a slight pause or surge from
+      rest, often due to how the clutches engage at low RPM."'
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source explicitly mentions 'EDC Dual-Clutch Gearbox Judder' as a documented
+      issue in the Renault Megane, describing low-speed judder as a symptom.
+    independent: true
+  - tier: C
+    source_url: https://yourmotorguide.com/why-is-my-renault-megane-juddering-when-pulling-away/
+    source_domain: yourmotorguide.com
+    site_or_channel: yourmotorguide.com
+    quote: The source text explicitly mentions 'clutch engagement issues' (via 'dirty
+      or worn clutch plate') and 'transmission control module' issues (implied in
+      dual-clutch system failures for automatics) as causes of low-speed shudder/judder.
+    independent: true
+- id: edc_overheating_v1
+  claim_key: edc_overheating
+  version: 1
+  is_current: true
+  title: Overheating in stop-start traffic
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.67
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Excessive heat buildup in the dual-clutch assembly due to prolonged crawling,
+    potentially triggering limp mode or dash warnings.
+  inspection_advice: Check for overheating warnings on the dashboard during stop-start
+    driving. Inspect transmission fluid for unusual smells or discoloration.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/edc-dual-clutch-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: '"Overheating Warnings in Stop-Start: Extended crawling can elevate the
+      temperature of the dual-clutch assembly, triggering a dash alert or limp mode."'
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source text explicitly mentions 'EDC Dual-Clutch Gearbox Judder, Clutch
+      Pack Wear and Mechatronic/TCU Failure' with overheating warnings in stop-start
+      traffic as a documented issue
+    independent: true
+- id: edc_worn_friction_discs_v1
+  claim_key: edc_worn_friction_discs
+  version: 1
+  is_current: true
+  title: Worn friction discs
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.67
+  status: verified
+  promoted_by: auto_verified_agent
+  rationale: Wear on clutch friction discs can lead to slipping, jerky shifts, and
+    eventual failure of the dual-clutch system.
+  inspection_advice: Inspect the transmission fluid for metallic particles or unusual
+    wear. Listen for unusual noises during gear shifts.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/edc-dual-clutch-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: '"Potential Causes: Worn friction discs, fluid breakdown, or mechatronic
+      valve block restrictions."'
+    independent: true
+  - tier: C
+    source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The source text explicitly mentions 'EDC Dual-Clutch Gearbox Judder, Clutch
+      Pack Wear' as a documented issue in the Renault Megane, linking wear to slipping
+      and jerky shifts.
+    independent: true
+- id: edc_mechatronic_valve_block_v1
+  claim_key: edc_mechatronic_valve_block
+  version: 1
+  is_current: true
+  title: Mechatronic valve block restrictions
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Restrictions in the mechatronic valve block can impede fluid flow, leading
+    to improper clutch engagement and gear shifts.
+  inspection_advice: Inspect for any blockages or restrictions in the transmission
+    fluid lines and valve block. Check for error codes related to the mechatronic
+    system.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/edc-dual-clutch-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: '"Potential Causes: Worn friction discs, fluid breakdown, or mechatronic
+      valve block restrictions."'
+    independent: true
+- id: edc_rough_shifting_v1
+  claim_key: edc_rough_shifting
+  version: 1
+  is_current: true
+  title: Rough Shifting (Automatic/EDC)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Harsh or jerky gear changes can indicate mechanical wear or software
+    glitches, potentially leading to further transmission degradation.
+  inspection_advice: Shift through gears while driving and listen for abrupt or rough
+    transitions. Check for error codes related to transmission control.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/renault-megane-common-gearbox-problems/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Rough Shifting – Harsh or jerky gear changes, typically resulting from
+      software glitches or mechanical wear in the transmission system.
+    independent: true
+- claim_key: edc_transmission_gear_slipping_(2nd_a
+  title: Gear slipping (2nd and 3rd gears)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Slipping between gears, particularly in 2nd and 3rd, indicates internal
+    wear or failure in the dual-clutch mechanism, which can lead to further transmission
+    damage if ignored.
+  inspection_advice: Check for hesitation, jerking, or delayed engagement when shifting
+    into 2nd and 3rd gears. Listen for unusual noises (grinding, whining) during gear
+    transitions. Verify transmission fluid condition and level.
+  sources: []
+- claim_key: edc_transmission_transmission_fault_l
+  title: Transmission fault light activation
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Activation of the transmission fault light or messages like 'Check transmission'
+    indicates a detected malfunction in the EDC system, which could range from software
+    issues to severe mechanical failure.
+  inspection_advice: Scan for OBD-II codes related to transmission control (e.g.,
+    P0700–P0799). Inspect for warning lights on the dashboard and verify if the issue
+    persists after a software update or fluid change.
+  sources: []
+- claim_key: edc_transmission_mechatronics_malfunc
+  title: Mechatronics malfunction (transmission control unit failure)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Mechatronics failure disrupts the dual-clutch coordination, leading to
+    delayed shifts, slipping, or complete transmission lockup. Often caused by overheating,
+    oil contamination, or electronic defects.
+  inspection_advice: Check for error codes related to the transmission control module.
+    Inspect wiring harnesses and connectors for damage or corrosion. Verify transmission
+    fluid for contamination or improper levels.
+  sources: []
+- claim_key: edc_transmission_outdated_transmissio
+  title: Outdated transmission control software
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Outdated software can cause incorrect clutch engagement timing, slippage,
+    or vibrations, leading to poor driving performance and potential mechanical stress
+    on the transmission components.
+  inspection_advice: Check for available software updates from the manufacturer. Verify
+    if the vehicle has undergone a recall or software correction. Test drive after
+    a software update to confirm resolution of symptoms.
+  sources: []
+- claim_key: edc_transmission_transmission_oil_deg
+  title: Transmission oil degradation/contamination
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Failure to change transmission oil at recommended intervals (e.g., every
+    60,000 km) leads to oil breakdown, contamination, or insufficient lubrication,
+    accelerating wear on clutches, gears, and mechatronics.
+  inspection_advice: Check transmission fluid color, consistency, and smell for signs
+    of burning or contamination. Verify oil level and top up if low. Confirm the use
+    of manufacturer-approved DCTF oil.
+  sources:
+  - tier: A
+    source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/problemi-al-cambio-automatico-edc-cause-sintomi-e-soluzioni
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: '💸 Double clutch replacement: from €800 to €1,400
+
+      ...often caused by overheating, oil contamination, or electronic defects.
+
+      ♻️ Change the transmission oil at the manufacturer''s recommended intervals
+      (often every 60,000 km)'
+    independent: true
+- claim_key: edc_transmission_slow_launch_from_sta
+  title: Slow launch from standstill
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Delayed engagement when accelerating from a stop, particularly in heavy
+    traffic, indicating potential clutch or transmission control module (TCM) issues.
+  inspection_advice: Test the vehicle by attempting to accelerate from a standstill
+    in low gear. Listen for unusual delays or hesitation before forward motion begins.
+    Check for TCM or clutch-related warning lights on the dashboard.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/7-speed-dct-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Pressing the accelerator may yield a brief delay before the car fully engages
+      forward motion, noticeable in busy junctions.
+    independent: true
+- claim_key: edc_transmission_clutch_overheating_w
+  title: Clutch overheating warnings
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Repeated partial clutch engagements in stop-start traffic can cause excessive
+    heat, triggering warnings or performance degradation, risking permanent clutch
+    damage if unresolved.
+  inspection_advice: Monitor the dashboard for overheating warnings or reduced performance
+    in heavy traffic. Check the transmission fluid level and condition (burnt smell,
+    dark color) and verify fluid change intervals. Inspect for proper cooling system
+    functionality.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/7-speed-dct-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: In start-stop city traffic, repeated partial engagements can cause clutch
+      temperature to rise beyond normal, triggering warnings or reduced performance.
+    independent: true
+- claim_key: edc_transmission_rough_downshift_ente
+  title: Rough downshift entering roundabouts
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Harsh downshifts during braking can cause traction disturbances, indicating
+    potential issues with transmission control unit (TCU) logic, friction disc wear,
+    or servo lag.
+  inspection_advice: Test the vehicle by braking and downshifting while entering a
+    roundabout or similar scenario. Listen for abrupt or harsh shifts and check for
+    warning lights related to the transmission or clutch. Inspect friction discs for
+    uneven wear.
+  sources:
+  - tier: A
+    source_url: https://www.asrgearboxrepairs.co.uk/7-speed-dct-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: The transmission may downshift harshly while braking, causing a jolt or
+      momentary traction disturbance.
+    independent: true
+- claim_key: edc_electrical_intermittent_edc_sys
+  title: Intermittent EDC system connector failures
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The main electrical connector block for the EDC system (engine control
+    unit) in this model has a documented history of intermittent failures, requiring
+    retrofits by the manufacturer. This can lead to erratic engine performance, misfires,
+    or even stalling due to unreliable electrical contact.
+  inspection_advice: Check the main EDC connector block for signs of wear, corrosion,
+    or loose/frayed wiring. Test for intermittent connections by gently wiggling the
+    connector while monitoring engine performance for erratic behavior. Look for any
+    official retrofit labels or service records indicating past repairs.
+  sources: []
+- claim_key: edc_transmission_edc_(electronic_diff
+  title: EDC (Electronic Differential Control) System Failures
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EDC system controls torque distribution in dual-clutch transmissions
+    (EDC). Failures here can cause shifting issues, stalling, or complete transmission
+    lockup. Multiple users report EDC-related problems, including system crashes and
+    the need for costly replacements or repairs.
+  inspection_advice: Check for warning lights related to the EDC system (e.g., 'EDC
+    fault' or 'transmission error'). Test the transmission under load (e.g., hill
+    starts or sudden acceleration) to ensure smooth engagement. Listen for unusual
+    noises (grinding, clunking) during gear shifts. Verify if the vehicle has undergone
+    EDC-related repairs or replacements.
+  sources: []
+- claim_key: edc_transmission_dsg/edc_dual-clutch_
+  title: DSG/EDC Dual-Clutch Transmission Premature Wear or Failure
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report that aggressive driving (e.g., 'eşeğe biner gibi binilince'),
+    heavy traffic, or improper use leads to premature failure of dual-clutch transmissions
+    (DSG/EDC). This includes issues with clutch packs, pressure plates, and control
+    modules, often requiring expensive repairs or replacements.
+  inspection_advice: Inspect for fluid leaks around the transmission. Check for delayed
+    or rough gear shifts, slipping, or jerking during acceleration. Test the transmission
+    under normal and aggressive driving conditions to assess responsiveness. Verify
+    if the vehicle has undergone clutch or pressure plate replacements.
+  sources: []
+- claim_key: edc_transmission_transmission_control
+  title: Transmission Control Module (TCM/EDC 'Brain') Failure
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EDC 'brain' or transmission control module can fail, causing erratic
+    shifting, stalling, or complete transmission failure. Users report that this component
+    often needs replacement, especially in Renault models like Fluence and Clio.
+  inspection_advice: Check for 'TCM fault' or 'EDC error' warning lights on the dashboard.
+    Test the transmission for erratic shifting, stalling, or failure to engage gears.
+    Verify if the vehicle has undergone TCM/EDC replacement or repair. Inspect for
+    error codes related to the transmission system.
+  sources: []
+- claim_key: edc_transmission_pressure_plate_or_cl
+  title: Pressure Plate or Clutch Pack Failure in EDC Transmission
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Pressure plates and clutch packs in dual-clutch transmissions wear out
+    prematurely due to aggressive driving or lack of maintenance, leading to slipping,
+    rough shifting, or complete failure.
+  inspection_advice: Listen for unusual noises (grinding, squeaking) during gear shifts.
+    Check for delayed engagement or slipping when accelerating. Verify if the vehicle
+    has undergone clutch pack or pressure plate replacements. Inspect transmission
+    fluid for signs of contamination or burning.
+  sources: []
+- claim_key: edc_transmission_edc_transmission_sta
+  title: EDC Transmission Stall/Engagement Issues
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Multiple users report the EDC transmission failing to engage smoothly
+    at startup, causing hesitation, jerking, or stalling—especially in stop-and-go
+    traffic. Some users describe it as a chronic issue requiring servicing or software
+    updates.
+  inspection_advice: Check for delayed engagement, hesitation, or jerking during startup.
+    Test the transmission in low-speed traffic to confirm smooth shifting. Verify
+    if the issue persists after a recent service visit or software update.
+  sources: []
+- claim_key: edc_transmission_edc_transmission_ada
+  title: EDC Transmission Adaptation Failure
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report the EDC transmission failing to adapt properly after certain
+    mileage thresholds, leading to recurring hesitation or stalling. This requires
+    periodic servicing or software updates to resolve.
+  inspection_advice: Ask the owner if the issue occurs intermittently after specific
+    mileage milestones. Check for service records indicating transmission software
+    updates or recalibration.
+  sources: []
+- claim_key: edc_transmission_edc_transmission_del
+  title: EDC Transmission Delayed Engagement After Low Mileage
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Some users warn that the EDC transmission may fail to engage properly
+    if purchased with very low mileage (e.g., <5,000 km), requiring immediate servicing
+    or replacement.
+  inspection_advice: Verify the transmission’s engagement behavior during startup.
+    If the vehicle has very low mileage, inquire about whether the transmission has
+    been serviced or recalibrated.
+  sources: []
+- claim_key: edc_electrical_electrical_system_ov
+  title: Electrical System Overload During Cold Start
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report electrical overloads during cold starts, particularly when
+    multiple high-drain components (e.g., climate control, lights, wipers) are activated
+    simultaneously, causing stalling or hesitation.
+  inspection_advice: Test the vehicle’s electrical system under cold conditions by
+    activating multiple high-drain components (e.g., headlights, wipers, climate control)
+    while attempting to start the engine. Monitor for voltage drops or stalling.
+  sources: []
+- claim_key: edc_transmission_transmission_hesitat
+  title: Transmission Hesitation in Stop-and-Go Traffic
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users describe the EDC transmission hesitating or stalling in heavy traffic,
+    requiring manual intervention to proceed. This suggests a flaw in the transmission’s
+    adaptive learning or control logic.
+  inspection_advice: Drive the vehicle in stop-and-go traffic to observe transmission
+    behavior. Note if the vehicle hesitates, stalls, or requires manual intervention
+    to shift.
+  sources: []
+- claim_key: edc_transmission_transmission_noise_d
+  title: Transmission noise during upshift (5th to 6th gear)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Unusual noise during gear shifts (specifically from 5th to 6th gear)
+    can indicate internal transmission wear, misalignment, or lack of proper lubrication,
+    which may lead to further damage if ignored.
+  inspection_advice: Listen for grinding, clunking, or whining noises during gear
+    shifts. Check transmission fluid level and condition (color, smell, presence of
+    metal particles). Inspect for leaks around the transmission mount and fluid lines.
+  sources: []
+- claim_key: edc_transmission_transmission_shudder
+  title: Transmission shuddering during gear shifts (1st to 2nd)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Users report noticeable shuddering and hesitation when shifting from
+    1st to 2nd gear, particularly in Renault Clio models with EDC (Electronic Differential
+    Control) automatic transmissions.
+  inspection_advice: Check for smoothness in gear transitions, especially from 1st
+    to 2nd gear. Listen for unusual noises or vibrations during shifts. Verify if
+    the transmission fluid is clean and at the correct level.
+  sources: []
+- claim_key: edc_transmission_rough_2nd_gear_trans
+  title: Rough 2nd gear transitions in 1.5 dCi Fluence (EDC transmission)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The user explicitly states that the 2nd gear shift is extremely rough
+    and jerky, causing discomfort and prompting consideration of selling the vehicle.
+  inspection_advice: Test drive the vehicle and specifically check the smoothness
+    of the 2nd gear transition. Look for any warning lights related to the transmission
+    system and verify transmission fluid condition.
+  sources: []
+- claim_key: edc_transmission_intermittent_'check_
+  title: Intermittent 'Check Gearbox' warning with gear shift lurches
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The car exhibits intermittent transmission-related symptoms, including
+    a 'check gearbox' warning and noticeable gear shift lurches, which can indicate
+    internal transmission issues or sensor malfunctions.
+  inspection_advice: Check for fluid leaks, inspect transmission fluid condition and
+    level, and test transmission shift quality under load. Verify solenoid operation
+    and transmission fluid pressure sensor functionality.
+  sources: []
+- claim_key: edc_transmission_intermittent_thuddin
+  title: Intermittent thudding noise and automatic downshift to 2nd gear
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The thudding noise followed by an automatic downshift to 2nd gear suggests
+    internal transmission component failure, such as failing EVM (Electro-Valve Module)
+    valves or hydraulic issues.
+  inspection_advice: Listen for unusual noises during gear shifts, especially under
+    load or inclines. Check for fluid leaks or contamination. Inspect EVM valves and
+    related components for wear or failure.
+  sources: []
+- claim_key: edc_transmission_early_failure_of_evm
+  title: Early failure of EVM valves in DP0 automatic transmission
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The forum discussion explicitly mentions that EVM valves are a common
+    failure point in the DP0 automatic transmission, leading to shifting issues and
+    potential transmission damage.
+  inspection_advice: Inspect EVM valves for proper operation and replace if faulty.
+    Check for related solenoid failures and ensure transmission fluid is clean and
+    at the correct level.
+  sources: []
+- claim_key: edc_transmission_df112:_transmission-
+  title: 'DF112: Transmission-Shift Solenoid ''EV56'' Circuit Fault'
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: review
+  promoted_by: pending_human
+  rationale: The DF112 fault code indicates an issue with the transmission's shift
+    solenoid circuit, which is critical for gear engagement and smooth shifting. This
+    can lead to transmission malfunctions, rough shifting, or failure to engage gears.
+  inspection_advice: Check the transmission fluid level and condition. Inspect the
+    shift solenoid 'EV56' for proper function and wiring integrity. Test the solenoid
+    resistance and verify the circuit for continuity and voltage. Also, inspect the
+    transmission control module (TCM) for errors or faults.
+  sources: []
+- claim_key: edc_engine_camshaft_sensor_inco
+  title: Camshaft Sensor Incoherence (DF112)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The camshaft sensor provides critical timing information to the engine
+    control unit (ECU). Incoherent readings can cause misfires, poor engine performance,
+    or failure to start. Repeated reappearance of this fault suggests an underlying
+    issue beyond a simple sensor replacement.
+  inspection_advice: Verify the camshaft sensor wiring and connections for damage
+    or corrosion. Check the sensor itself for proper signal output and mechanical
+    alignment. Inspect the timing belt and related components for wear or misalignment.
+    Test the TDC sensor and ensure all related wiring is intact.
+  sources: []
+- claim_key: edc_engine_recurring_engine_sta
+  title: Recurring Engine Start Issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The car exhibits intermittent starting problems despite multiple sensor
+    replacements and fuel system servicing, indicating a persistent underlying issue
+    that may involve the fuel system, electrical system, or engine control unit.
+  inspection_advice: Test the fuel pump operation and fuel pressure. Inspect the fuel
+    injectors for proper spray pattern and functionality. Check the battery voltage
+    and alternator output. Review engine control unit (ECU) logs for any stored faults
+    or error codes. Ensure all sensors (crank, cam, TDC) are functioning correctly
+    and calibrated.
+  sources: []
+- claim_key: edc_transmission_controversial_getrag
+  title: Controversial Getrag-sourced EDC transmission
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 6-speed Efficient Double Clutch (EDC) transmission was a departure
+    from the manual gearboxes of previous RS Clio models and was criticized at launch,
+    raising concerns about its reliability and suitability for a performance-oriented
+    car.
+  inspection_advice: Check for smooth shifting, unusual noises during gear changes,
+    and any warning lights related to the transmission. Verify service history for
+    EDC-specific maintenance (e.g., clutch fluid changes, software updates).
+  sources: []
+- claim_key: edc_general_potential_weight-rel
+  title: Potential weight-related performance and reliability trade-offs
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text suggests that while the 200 EDC was not heavier than its predecessors,
+    the shift to a turbocharged engine and automatic transmission may have introduced
+    new reliability concerns, particularly in balancing power, weight, and efficiency.
+  inspection_advice: Assess the overall condition of the turbocharged engine (e.g.,
+    oil leaks, unusual noises, carbon buildup) and verify if the transmission (EDC)
+    has been serviced according to manufacturer recommendations. Check for signs of
+    overheating or poor fuel efficiency, which could indicate underlying issues.
+  sources: []
+- claim_key: edc_transmission_dual_clutch_transmis
+  title: Dual Clutch Transmission Clanking Noise
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Persistent clunking noises during clutch engagement, gear shifts, and
+    reversing—especially when warm—suggest internal transmission wear or misalignment,
+    which can lead to premature failure.
+  inspection_advice: Listen for clunking noises during clutch engagement, gear shifts
+    (especially 1-2 and 2-1), and reversing. Check for excessive play in the transmission
+    linkage or worn synchronizers. Verify fluid condition and level.
+  sources: []
+- claim_key: edc_emissions|fuel system_cold_start_exhaust_s
+  title: Cold Start Exhaust Smell (Petrol Leakage)
+  kind: known_issue
+  domain: emissions|fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Petrol smell from the exhaust during cold starts suggests incomplete
+    combustion or fuel leakage into the exhaust system, which can indicate a faulty
+    injector, carbon buildup, or vacuum leak.
+  inspection_advice: Check for fuel injector leaks, inspect the exhaust manifold for
+    cracks, and verify the condition of the PCV system. Look for carbon deposits in
+    the intake valves or combustion chamber.
+  sources: []
+- claim_key: edc_electrical|engine_acceleration_lag_wit
+  title: Acceleration Lag with A/C On (Throttle Response Issue)
+  kind: known_issue
+  domain: electrical|engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Delayed acceleration and choking when the A/C is on—especially at low
+    RPMs—suggests a vacuum leak, faulty throttle body, or electrical interference
+    from the A/C compressor affecting engine performance.
+  inspection_advice: Check for vacuum leaks in the intake system. Inspect the throttle
+    body for carbon buildup or sensor issues. Verify proper electrical grounding and
+    wiring for the A/C compressor and related components.
+  sources: []
+- claim_key: edc_engine_intermittent_engine_
+  title: Intermittent Engine Bogging (Acceleration Lag)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Occasional engine bogging during fast acceleration suggests a fuel delivery
+    issue, clogged fuel filter, or failing fuel pump—potentially leading to poor throttle
+    response.
+  inspection_advice: Test fuel pressure and flow. Inspect the fuel filter and fuel
+    pump for wear or clogging. Check for air leaks in the fuel system or vacuum hoses.
+  sources: []
+- claim_key: edc_transmission_renault_edc_(dual-cl
+  title: Renault EDC (Dual-Clutch Transmission) Reliability Concerns
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text references a mechanic's statement that Renault's automated-manual
+    transmission (EDC) is a 'horrid thing to drive,' implying potential reliability
+    or durability issues with this transmission type. Additionally, the user mentions
+    difficulty finding EDC-equipped models, suggesting possible higher failure rates
+    or lower availability compared to manual or conventional automatic alternatives.
+  inspection_advice: Check for smooth shifting, unusual noises (grinding, clunking),
+    and delayed engagement. Verify service history for EDC-specific maintenance (e.g.,
+    clutch pack wear, solenoid failures). Test drive to assess responsiveness and
+    comfort compared to conventional automatics.
+  sources: []
+- claim_key: edc_transmission_potential_shorter_li
+  title: Potential shorter lifespan compared to manual transmissions
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text mentions that some reports indicate EDC transmissions may have
+    a shorter lifespan than manual transmissions, which could imply reliability concerns
+    over time.
+  inspection_advice: Check for unusual noises during gear shifts, delayed engagement,
+    or fluid leaks. Verify service history for transmission fluid changes and any
+    past transmission-related repairs.
+  sources: []
+- claim_key: edc_transmission_uphill_downshifting_
+  title: Uphill downshifting failure (manual override)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The transmission fails to downshift properly when manually overridden
+    on downhill slopes, a critical safety and control issue.
+  inspection_advice: Test the transmission by attempting manual downshifting on a
+    slight incline. Listen for hesitation, grinding, or failure to engage lower gears
+    when expected.
+  sources: []
+- claim_key: edc_transmission_loss_of_specific_gea
+  title: Loss of specific gears (2nd, 4th, 6th)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Inability to engage 2nd, 4th, or 6th gears is a critical failure that
+    severely limits drivability and safety, often caused by internal transmission
+    damage or solenoid failure.
+  inspection_advice: Attempt to shift into 2nd, 4th, and 6th gears while moving. Listen
+    for clunking, grinding, or failure to engage. Verify if the transmission remains
+    stuck in lower gears.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/renault-edc-sorunu--58692943-5
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: 2-4-6 veya 1-3-5 viteslerine geçmeme sorunu
+    independent: true
+- claim_key: edc_transmission_clutch_pedal_vibrati
+  title: Clutch pedal vibration/surge (brake pedal press causes gear shift)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Unintended gear shifts when braking can lead to jerky acceleration, loss
+    of control, and potential accidents.
+  inspection_advice: Press the brake pedal while in motion and observe if the transmission
+    shifts gears unexpectedly. Listen for unusual noises or vibrations during this
+    process.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/renault-edc-sorunu--58692943-5
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Frene basınca sarsılarak vites düşürme sorunu
+    independent: true
+- claim_key: edc_electrical_transmission_control
+  title: Transmission control unit (TCU/ECU) software glitches
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: verified
+  promoted_by: auto
+  rationale: Software-related issues can cause erratic gear engagement, loss of specific
+    gears, or false warnings, often requiring a software update or ECU recalibration.
+  inspection_advice: Check for error codes using an OBD-II scanner. Monitor for repeated
+    transmission-related warnings or erratic shifting behavior. Verify if the issue
+    persists after a software update or ECU recalibration.
+  sources:
+  - tier: B
+    source_url: https://forum.donanimhaber.com/renault-edc-sorunu--58692943-5
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Beyin sorunu (2500 TL + İşçilik) / yazılım güncelleme ve kavrama kalibrasyonu
+      yaptırdım
+    independent: true
+  - tier: C
+    source_url: https://tunasanziman.com/edc-sanziman-vites-kutusunu-kontrol-ettirin-uyarisi-ve-cozum-yollari/
+    source_domain: tunasanziman.com
+    site_or_channel: tunasanziman.com
+    quote: Beyin sorunu (2500 TL + İşçilik) / yazılım güncelleme ve kavrama kalibrasyonu
+      yaptırdım
+    independent: true
+- claim_key: edc_transmission_transmission_overhea
+  title: Transmission overheat warning (intermittent gear engagement failure)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Transmission overheating warnings followed by failure to engage specific
+    gears (e.g., 1st gear) indicate potential internal overheating or fluid issues.
+  inspection_advice: Monitor for transmission overheating warnings on the dashboard.
+    Test gear engagement immediately after such warnings appear. Check for fluid leaks
+    or low fluid levels.
+  sources: []
+- claim_key: edc_fuel system_fuel_return_hose_noi
+  title: Fuel return hose noise (intermittent)
+  kind: known_issue
+  domain: fuel system
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Noise from the fuel return hose can indicate a clogged or damaged hose,
+    potentially causing fuel delivery issues or pressure fluctuations.
+  inspection_advice: Listen for unusual noises coming from the fuel system area while
+    the engine is running. Inspect the fuel return hose for damage, clogs, or improper
+    routing.
+  sources: []
+- claim_key: edc_electrical_ecu_(bosch_edc16/edc
+  title: ECU (Bosch EDC16/EDC17) failure causing immobilization
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine control unit (ECU) failure can render the vehicle completely
+    inoperable, as it manages critical functions like injection timing, boost pressure,
+    and immobilizer communication.
+  inspection_advice: Check for signs of ECU failure such as no communication via OBD,
+    inability to start despite cranking, or limp mode activation. Inspect the ECU
+    for physical damage, corrosion, or moisture exposure in the engine bay.
+  sources: []
+- claim_key: edc_electrical_loss_of_ecu_communic
+  title: Loss of ECU communication via OBD
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Loss of communication with the ECU via OBD prevents diagnostics, and
+    the vehicle may fail to start despite cranking, indicating internal power supply
+    failure within the ECU.
+  inspection_advice: Attempt to connect a diagnostic tool to the OBD port. If no communication
+    is established, inspect the ECU for internal power supply issues or physical damage.
+  sources: []
+- claim_key: edc_engine_limp_mode_activation
+  title: Limp mode activation due to ECU malfunction
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The ECU malfunction can cause the vehicle to enter limp mode, severely
+    limiting engine power and performance while fault codes related to rail pressure,
+    turbo control, or injectors appear.
+  inspection_advice: Check for reduced engine power and limp mode symptoms. Use a
+    diagnostic tool to retrieve fault codes related to rail pressure, turbo control,
+    or injector circuits.
+  sources: []
+- claim_key: edc_electrical_random_can_bus_commu
+  title: Random CAN bus communication errors
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: CAN bus communication errors can disrupt vehicle systems, leading to
+    erratic behavior or failure of interconnected components.
+  inspection_advice: Use a diagnostic tool to check for stored CAN bus communication
+    errors. Inspect wiring and connectors for damage or corrosion.
+  sources: []
+- claim_key: edc_electrical_ecu_vulnerability_to
+  title: ECU vulnerability to moisture and corrosion
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The ECU is exposed to moisture and corrosion due to its placement in
+    the engine bay, leading to short circuits, damaged drivers, and solder joint failures.
+  inspection_advice: Inspect the ECU for signs of moisture ingress, corrosion on PCB
+    leads, or cracked solder joints. Check the scuttle panel for leaks that may contribute
+    to moisture exposure.
+  sources: []
+- claim_key: edc_electrical_internal_ecu_power_s
+  title: Internal ECU power supply damage
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Internal power supply failure within the ECU can lead to complete loss
+    of functionality, preventing the vehicle from starting.
+  inspection_advice: Check the ECU power supply and ground circuits at the connector
+    for voltage drops or missing ignition feed. If external wiring is intact, the
+    ECU may need internal inspection or repair.
+  sources: []
+- claim_key: edc_engine_potential_turbocharg
+  title: Potential turbocharger reliability concerns with Kompressor system
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Kompressor system relies on a non-return valve in the intake manifold
+    to prevent air from passing through the compressor when the turbocharger is active.
+    Over time, this valve or the turbocharger itself may wear out or fail, leading
+    to reduced efficiency or damage to the system.
+  inspection_advice: Check for signs of air leaks around the intake manifold and non-return
+    valve. Inspect the turbocharger for unusual noises, oil leaks, or excessive heat
+    during operation. Verify the functionality of the electromagnetic clutch that
+    engages the supercharger.
+  sources: []
+- claim_key: edc_fuel system_mechanically-control
+  title: Mechanically-controlled fuel injection system reliability
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text mentions that Yanmar's 6LP-STZE diesel still uses a mechanically-controlled
+    fuel injection system, which can be less reliable and accurate compared to electronic
+    systems, potentially leading to inconsistent performance and increased wear.
+  inspection_advice: Inspect for signs of fuel injection pump wear, uneven fuel spray
+    patterns, or inconsistent engine performance across different RPM ranges. Check
+    for leaks or damage to fuel lines and injectors.
+  sources: []
+- claim_key: edc_engine_potential_issues_wit
+  title: Potential issues with crankcase ventilation system
+  kind: known_issue
+  domain: engine
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The crankcase vents into the intake manifold to reduce blow-by gas emissions.
+    If the system fails, blow-by gases could accumulate, leading to oil dilution and
+    potential damage to the engine.
+  inspection_advice: Check for unusual smells of exhaust gases in the engine bay,
+    which could indicate a leak in the crankcase ventilation system. Inspect the intake
+    manifold for any signs of oil residue or leaks.
+  sources: []
+- claim_key: edc_electrical_potential_alternator
+  title: Potential alternator charging system issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: While the alternator is described as producing 60 amps at 14V with protective
+    diodes, any failure in the diodes or alternator itself could lead to voltage spikes,
+    damaging electrical components and the charging system.
+  inspection_advice: Test the alternator output voltage under load and check for proper
+    voltage regulation. Inspect the alternator for unusual noises, overheating, or
+    visible damage. Verify the condition of the diodes and wiring connections.
+  sources: []
+- claim_key: edc_electrical_potential_starter_mo
+  title: Potential starter motor failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The starter motor is rated at 3kW, which is 20% more than the Yanmar's
+    4.2lt 6LP-STZE. While this suggests robustness, any failure in the starter motor
+    could result in starting issues, especially in cold conditions or if the battery
+    is weak.
+  inspection_advice: Test the starter motor for proper engagement and disconnection.
+    Listen for unusual noises during cranking. Check battery voltage and condition,
+    as well as the starter motor wiring and connections for corrosion or damage.
+  sources: []
+- claim_key: edc_fuel system|engine_potential_injector_b
+  title: Potential injector blockages or engine overheating
+  kind: known_issue
+  domain: fuel system|engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The self-diagnostic facility of the EDC system can detect injector blockages
+    or engine overheating. If these issues are not addressed, they can lead to significant
+    engine damage, reduced performance, and increased fuel consumption.
+  inspection_advice: Check for warning lights or error codes related to injectors
+    or cooling systems. Inspect the cooling system for leaks, proper coolant levels,
+    and the condition of the water pump and hoses. Monitor engine temperature under
+    load.
+  sources: []
+- claim_key: edc_transmission_edc_transmission_ove
+  title: EDC transmission overheating due to semi-clutch operation
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EDC dual-clutch system relies on dry clutches that overheat when
+    constantly engaged in semi-clutch mode (e.g., stop-and-go traffic), leading to
+    premature clutch failure.
+  inspection_advice: Check for signs of overheating (burnt clutch smell, unusual noises
+    during gear shifts, or warning lights for 'transmission overheating'). Test drive
+    in stop-and-go traffic to observe clutch engagement smoothness and transmission
+    responsiveness.
+  sources: []

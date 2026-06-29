@@ -1,0 +1,32 @@
+# Gold set — human-judged claims for measuring the judge's accuracy.
+#
+# Format: each entry is a (claim, source_quote, verdict) triple.
+# verdict: "correct" | "incorrect"
+#
+# Used by eval_judge.py to measure gate precision/recall.
+# Grow this to 100-300 entries before tuning gate thresholds.
+#
+# CURRENT STATE: 2 seed entries to bootstrap. Expand as the pipeline runs.
+
+- claim_key: megane4_k9k_injectors
+  title: "1.5 dCi (K9K) Delphi injector fouling and return flow failure"
+  domain: engine
+  severity: medium
+  rationale: "K9K Delphi injectors foul at high mileage, causing rough idle and hesitation."
+  quote: >
+    The Delphi units used in 2010-onwards K9K engines develop reduced return flow
+    at high mileage, causing lean running and rough idle. In markets with lower
+    diesel quality the failure timeline is accelerated.
+  verdict: correct
+  verdict_notes: "Widely confirmed by engine remanufacturers and owner forums."
+
+- claim_key: megane4_k9k_generic_oil_change
+  title: "Regular oil changes prevent engine wear"
+  domain: engine
+  severity: low
+  rationale: "Not changing oil causes engine wear in all cars."
+  quote: >
+    Regular oil changes are essential for engine longevity. Neglecting them
+    leads to increased wear on all engines.
+  verdict: incorrect
+  verdict_notes: "Gate should flag this as generic — true of all cars, not K9K-specific."

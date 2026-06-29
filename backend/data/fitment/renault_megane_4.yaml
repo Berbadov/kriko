@@ -1,0 +1,32 @@
+# Fitment catalog for Renault Megane IV (TR market)
+# Maps variant_id → engine_family + transmission_code.
+# sync.py reads this to materialize claim_variants from part YAMLs.
+# Source: Renault TR spec sheets, cross-validated against variants YAML.
+
+- variant_id: megane4_h5f_100
+  engine_family: h5f
+  transmission_code: edc
+
+- variant_id: megane4_h5f_130
+  engine_family: h5f
+  transmission_code: edc
+
+- variant_id: megane4_h5h_115
+  engine_family: h5h
+  transmission_code: edc
+
+- variant_id: megane4_h5h_140
+  engine_family: h5h
+  transmission_code: edc
+
+- variant_id: megane4_k9k_90
+  engine_family: k9k
+  transmission_code: manual
+
+- variant_id: megane4_k9k_110
+  engine_family: k9k
+  transmission_code: manual
+
+- variant_id: megane4_r9m_130
+  engine_family: r9m
+  transmission_code: edc
