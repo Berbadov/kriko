@@ -10,12 +10,12 @@
   body_code: clio5_body
 - variant_id: clio5_h5d_100_edc
   engine_family: h5d_100
-  transmission_code: edc
+  transmission_code: dc4
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_h5h_130
   engine_family: h5h_130
-  transmission_code: edc
+  transmission_code: dc4
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_k9k_85

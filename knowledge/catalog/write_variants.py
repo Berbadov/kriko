@@ -58,14 +58,14 @@ TR_MARKET_TRIMS: dict[str, list[dict]] = {
         {
             "id": "clio5_h5d_100_edc", "generation": "V", "engine_code": "H5Dt", "engine_family": "h5d_100",
             "fuel": "petrol", "displacement_cc": 999, "power_min_hp": 100, "power_max_hp": 100,
-            "transmission": "automatic", "transmission_code": "edc",
-            "year_from": 2019, "year_to": None, "notes": "TCe 100 EDC — same engine as manual, 7-speed dual-clutch",
+            "transmission": "automatic", "transmission_code": "dc4",
+            "year_from": 2019, "year_to": None, "notes": "TCe 100 EDC — same engine as manual, 7-speed dual-clutch (DC4 unit — same part as Megane 4's H5F EDC, already researched)",
         },
         {
             "id": "clio5_h5h_130", "generation": "V", "engine_code": "H5Ht", "engine_family": "h5h_130",
             "fuel": "petrol", "displacement_cc": 1332, "power_min_hp": 130, "power_max_hp": 130,
-            "transmission": "automatic", "transmission_code": "edc",
-            "year_from": 2019, "year_to": 2022, "notes": "TCe 130 — EDC only, GT-Line trim; same engine family as Megane 4 H5H but a distinct power tune/part",
+            "transmission": "automatic", "transmission_code": "dc4",
+            "year_from": 2019, "year_to": 2022, "notes": "TCe 130 — EDC only, GT-Line trim; same engine family as Megane 4 H5H but a distinct power tune/part. Transmission (DC4) is shared with Megane 4's EDC, already researched.",
         },
         {
             "id": "clio5_k9k_85", "generation": "V", "engine_code": "K9K", "engine_family": "k9k_85",
