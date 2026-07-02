@@ -31,6 +31,7 @@ from knowledge.dedup import merge_candidates, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.judge import gate_generic, gate_inspection_value, gate_refute, gate_support, gate_variant
 from knowledge.sources.base import Document
+from knowledge.stoplists import code_tokens
 
 log = logging.getLogger(__name__)
 
@@ -48,16 +49,6 @@ AUDIT_RATE    = 0.20    # 20% of auto-verified claims go to review queue
 _DIESEL_RE = re.compile(r"\b(k9k|r9m|d[ck]i|diesel|dizel|adblue)\b", re.I)
 _PETROL_RE = re.compile(r"\b(h5f|h5h|h4m|tce|petrol|benzin|gasoline)\b", re.I)
 
-# Engine/transmission code tokens (EA211, DQ200, K9K, H5H, R9M, DC4, ...): 1-4
-# letters, a digit, then up to 3 more alphanumerics. Matches every code format
-# used in this catalog's variant descriptors.
-_CODE_TOKEN_RE = re.compile(r"\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b")
-
-
-def _code_tokens(text: str) -> set[str]:
-    return {t.upper() for t in _CODE_TOKEN_RE.findall(text or "")}
-
-
 def _shares_code_token(evidence_tokens: set[str], variant_descs: list[str]) -> bool:
     """True if the evidence and any candidate variant description share an
     engine/transmission code token (e.g. EA211, DQ200, K9K), verbatim and
@@ -70,7 +61,7 @@ def _shares_code_token(evidence_tokens: set[str], variant_descs: list[str]) -> b
     "non-TSI" distinction. A literal code match is unambiguous ground truth
     and should short-circuit the unreliable LLM call rather than defer to it.
     """
-    return any(evidence_tokens & _code_tokens(desc) for desc in variant_descs)
+    return any(evidence_tokens & code_tokens(desc) for desc in variant_descs)
 
 
 def _claim_fuel(claim: CandidateClaim) -> str | None:
@@ -199,7 +190,7 @@ def _evaluate_claim(
             sources[0].text if sources else "",
         ) if part
     )
-    evidence_tokens = _code_tokens(evidence)
+    evidence_tokens = code_tokens(evidence)
     gate_passed = bool(evidence_tokens) and _shares_code_token(evidence_tokens, variant_descs)
     if not gate_passed:
         try:

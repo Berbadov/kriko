@@ -9,7 +9,8 @@ though the exact code was present in both — repeatably, not a one-off flake.
 That silently stranded genuine claims as `held` ("no variant grounded").
 """
 
-from knowledge.promote import _code_tokens, _shares_code_token
+from knowledge.promote import _shares_code_token
+from knowledge.stoplists import code_tokens as _code_tokens
 
 GOLF7_EA211_DESCS = [
     "Volkswagen Golf VII EA211 petrol 998cc 105–105hp manual (manual) (2017–2020)",
