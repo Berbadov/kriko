@@ -396,7 +396,7 @@ def _match_specs_to_variants(
                 "engine_family": v_ef,
                 "transmission_code": v_trans_code,
             }
-            for extra in ("cooling_code", "electrical_code"):
+            for extra in ("cooling_code", "electrical_code", "body_code"):
                 if v.get(extra):
                     row[extra] = v[extra]
             fitment_rows.append(row)
