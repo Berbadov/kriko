@@ -51,12 +51,13 @@
   power_min_hp: 100
   power_max_hp: 100
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dc4
   electrical_code: clio5_elec
   year_from: 2019
   year_to: null
   market: TR
-  notes: TCe 100 EDC — same engine as manual, 7-speed dual-clutch
+  notes: TCe 100 EDC — same engine as manual, 7-speed dual-clutch (DC4 unit — same
+    part as Megane 4's H5F EDC, already researched)
   body_code: clio5_body
   drivetrain: fwd
 - id: clio5_h5h_130
@@ -70,13 +71,14 @@
   power_min_hp: 130
   power_max_hp: 130
   transmission: automatic
-  transmission_code: edc
+  transmission_code: dc4
   electrical_code: clio5_elec
   year_from: 2019
   year_to: 2022
   market: TR
   notes: TCe 130 — EDC only, GT-Line trim; same engine family as Megane 4 H5H but
-    a distinct power tune/part
+    a distinct power tune/part. Transmission (DC4) is shared with Megane 4's EDC,
+    already researched.
   body_code: clio5_body
   drivetrain: fwd
 - id: clio5_k9k_85
