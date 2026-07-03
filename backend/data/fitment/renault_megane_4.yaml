@@ -1,42 +1,35 @@
 - variant_id: megane4_h5f_100
   engine_family: h5f_100
   transmission_code: dc4
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_h5f_130
   engine_family: h5f_130
   transmission_code: dc4
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_h5h_115
   engine_family: h5h_115
   transmission_code: dw5
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_h5h_140
   engine_family: h5h_140
   transmission_code: dw5
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_k9k_90
   engine_family: k9k_90
   transmission_code: manual
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_k9k_110
   engine_family: k9k_110
   transmission_code: manual
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
 - variant_id: megane4_r9m_130
   engine_family: r9m_130
   transmission_code: dw6
-  cooling_code: cooling
-  electrical_code: electrical
+  electrical_code: megane4_elec
   body_code: megane4_body
