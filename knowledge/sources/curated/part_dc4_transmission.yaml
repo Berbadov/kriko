@@ -1,115 +1,4 @@
 - type: page
-  url: https://www.capturownersclub.co.uk/threads/renault-captur-edc-check-auto-gearbox-error.7892/
-  site_or_channel: capturownersclub.co.uk
-  tier: B
-  notes: Renault Captur EDC Check Auto Gearbox Error | Renault Captur Forums
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.v-twinforum.com/threads/easy-clutch-installation.74124/
-  site_or_channel: v-twinforum.com
-  tier: B
-  notes: Easy clutch installation | V-Twin Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.capturownersclub.co.uk/threads/check-autogearbox.5978/
-  site_or_channel: capturownersclub.co.uk
-  tier: B
-  notes: Check Autogearbox - Renault Captur Forums
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=10902
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: Poor Automatic Gearbox - The Mégane II Owners' Club
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.honestjohn.co.uk/askhj/answer/185587/is-the-ford-focus-dual-clutch-7-speed-transmission-reliable-
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Is the Ford Focus dual clutch 7 speed transmission reliable? | Ask Honest
-    John |
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
-  url: https://www.honestjohn.co.uk/askhj/answer/64745/ford-powershift-gearbox-fault---unacceptable-issue-
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Ford Powershift gearbox fault - unacceptable issue? | Ask Honest John | Honest
-    J
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
-  url: https://www.honestjohn.co.uk/advice/owning-advice/dsg-gearbox/
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: 'VW DSG gearbox problems: Which models to avoid & how to spot faults | Honest
-    Joh'
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=&h=0&t=2117849
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Fiat Ducato Series 8 & 9spd autobox - Page 1 - Tents, Caravans & Motorhomes
-    - Pi
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=272&h=0&t=2099494
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Have they fixed the DCT with a software update? - Page 1 - Emira - PistonHeads
-    U
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=72&h=0&t=1829029
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Z4 35i 7 Speed Auto DCT Gearbox Issue - Page 1 - BMW General - PistonHeads
-    UK
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/dct-sanziman-ile-dsg-ayni-mi-ayni-sorunlar-gorulur-mu--130766767
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 'DCT ile DSG Şanzımanları: Farklar, Ortak Sorunlar ve Ömür Beklentisi | DonanımHa'
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/hyundai-7-dct-sanziman-problemi--123289408
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 'Hyundai 7 İleri DCT Şanzıman: Sorunlar ve Çözümler | Kapsamlı Kılavuz |
-    DonanımH'
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/c4-sanzuman-sorunlari--142423336
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: C4 ŞANZUMAN SORUNLARI | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
   url: https://www.youtube.com/watch?v=e3r_8Uyf1q4
   site_or_channel: youtube.com
   tier: C
@@ -151,14 +40,6 @@
   added_at: '2026-06-29'
   processed_at: null
 - type: page
-  url: https://otopark.com/forum/threads/edc-sorunu.2101/
-  site_or_channel: otopark.com
-  tier: C
-  notes: KAPALI - EDC SORUNU | OTOPARK.COM | Sürücünün Adresi
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
   url: https://www.thevog.net/threads/easy-clutch-safe-or-not.13647/
   site_or_channel: thevog.net
   tier: C
@@ -182,14 +63,6 @@
   status: pending
   added_at: '2026-06-29'
   processed_at: null
-- type: page
-  url: https://otopark.com/forum/threads/sanirim-edc-kavramam-bitiyor.13117/
-  site_or_channel: otopark.com
-  tier: C
-  notes: AÇIK - Sanırım EDC Kavramam Bitiyor | OTOPARK.COM | Sürücünün Adresi
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
 - type: page
   url: https://teknikotomatiksanziman.com/edc-sanziman/
   site_or_channel: teknikotomatiksanziman.com

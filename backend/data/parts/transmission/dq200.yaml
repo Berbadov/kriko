@@ -144,8 +144,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The aluminium housing plate of the DQ200 mechatronics unit is prone to
     micro-cracks due to high pressure (60-70 bar) from the accumulator, leading to
@@ -156,35 +156,7 @@ claims:
     cracks. Inspect the mechatronics unit for signs of micro-cracks on the accumulator
     housing plate and listen for jerky or hard shifts during gear changes. Look for
     burnt or damaged clutch components if the issue has been neglected.
-  sources:
-  - source_url: https://www.team-bhp.com/news/understanding-vw-skoda-dsg-dq200-failures-detail
-    source_domain: team-bhp.com
-    site_or_channel: team-bhp.com
-    quote: '**The fragile design of the mech unit sets it up for easy failure. Even
-      in the mech unit, it is mainly the accumulator housing plate (its even called
-      the valve body plate or accumulator body) that is causing the issue. The housing
-      plate is made from aluminium and the walls of this housing (where the accumulator
-      screws in) are quite slim and are unable to withstand the 60-70 bar pressure
-      the accumulator generates. Over a period of time micro cracks occur and the
-      accumulator fails to build enough pressure. This initially results in jerky
-      or hard shifts. From there it just goes downhill.**
-
-
-      **The dreaded - P17BF & P189C DTCs point to a clear case of crack in housing.
-      The issue starts with micro cracks like this. But this whole area is now compromised,
-      as time passes the crack only spreads.**
-
-
-      **In the initial stages it is just the accumulator and housing which will need
-      replacing but as the issue aggravates the hydraulic pump and motor will fail
-      due to overheating. And even before they fail sometimes some of the solenoids
-      might give up etc. Overtime a bad mechatronic will affect clutch life too as
-      inconsistent hydraulic pressure doesn’t allow the smooth and accurate engagement
-      of the clutch. In extreme cases even the gear cogs get affected.**
-
-
-      **When you don''t address it on time - aluminium will break off like a biscuit.**'
-    independent: true
+  sources: []
 - claim_key: dq200_transmission_dq200_tcu_heat_and_c
   title: DQ200 TCU Heat and Corrosion Failures
   kind: known_issue

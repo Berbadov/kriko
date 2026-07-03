@@ -38,8 +38,12 @@ def megane4_variants(db):
 
     path = Path(__file__).parent.parent / "data" / "variants" / "renault_megane_4.yaml"
     rows = yaml.safe_load(path.read_text())
+    # Variants YAML also carries fitment-only keys (electrical_code, body_code, …)
+    # that aren't Variant columns — sync.py tolerates these via setattr; mirror
+    # that here rather than failing the fixture on every new fitment axis.
+    valid_columns = {c.name for c in Variant.__table__.columns}
     for row in rows:
-        v = Variant(**row)
+        v = Variant(**{k: v for k, v in row.items() if k in valid_columns})
         db.add(v)
     db.flush()
     return rows
@@ -102,7 +106,7 @@ def megane4_claims(db, megane4_variants):
             "confidence": 0.8,
             "status": "verified",
             "variants": ["megane4_h5f_100", "megane4_h5f_130"],
-            "sources": [{"tier": "A", "source_url": "https://example.com", "quote": "timing chain"}]
+            "sources": [{"source_url": "https://example.com", "quote": "timing chain"}]
         }
     ]
 
@@ -133,7 +137,6 @@ def megane4_claims(db, megane4_variants):
         for s in row["sources"]:
             db.add(ClaimSource(
                 claim_id=claim.id,
-                tier=s["tier"],
                 source_url=s["source_url"],
                 quote=s["quote"],
                 independent=True

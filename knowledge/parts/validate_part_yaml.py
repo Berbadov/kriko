@@ -18,7 +18,7 @@ import yaml
 PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
 
 REQUIRED_PART_FIELDS = {"part_id", "part_type", "display_name", "manufacturer", "claims"}
-VALID_PART_TYPES = {"engine", "transmission", "turbo", "fuel_intake", "exhaust", "cooling", "electrical"}
+VALID_PART_TYPES = {"engine", "transmission", "turbo", "fuel_intake", "exhaust", "cooling", "electrical", "body"}
 REQUIRED_CLAIM_FIELDS = {"claim_key", "title", "kind", "domain", "severity", "status", "rationale", "inspection_advice"}
 VALID_KINDS = {"known_issue", "maintenance", "recall"}
 VALID_SEVERITIES = {"high", "medium", "low"}

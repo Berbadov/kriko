@@ -9,3 +9,6 @@ venv/
 
 # Knowledge pipeline candidate cache (regenerated per run)
 knowledge/cache/
+
+# Claude Code local tool state (worktrees, local settings)
+.claude/

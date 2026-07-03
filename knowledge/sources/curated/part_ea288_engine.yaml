@@ -83,34 +83,6 @@
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
 - type: page
-  url: https://www.volkswagenforum.co.uk/threads/ea288-euro-6-engine-g40-camshaft-position-sensor.44212/
-  site_or_channel: volkswagenforum.co.uk
-  notes: EA288 Euro 6 engine - G40 Camshaft Position Sensor | UK Volkswagen Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.vwaudiforum.co.uk/forum/showthread.php/201304-EA288-2-0-TDI-Compression-pressures
-  site_or_channel: vwaudiforum.co.uk
-  notes: 'Thread:  EA288 2.0 TDI Compression pressures'
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
-  url: https://www.volkswagenforum.co.uk/threads/2-0-tdi-184-cupa-tappet-noise.50741/
-  site_or_channel: volkswagenforum.co.uk
-  notes: 2.0 TDI 184 CUPA tappet noise | UK Volkswagen Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.vwaudiforum.co.uk/forum/showthread.php/200542-Ea288-2-0tdi-crlb-dpf-system-non-adblue
-  site_or_channel: vwaudiforum.co.uk
-  notes: 'Thread:  Ea288 2.0tdi crlb dpf system non adblue'
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
   url: https://automotivesimple.com/exploring-the-common-audi-vw-2-0-tdi-ea288-engine-problems/
   site_or_channel: automotivesimple.com
   notes: Exploring the Common Audi/VW 2.0 TDI EA288 Engine Problems
@@ -167,28 +139,6 @@
   added_at: '2026-06-29'
   processed_at: null
 - type: page
-  url: https://forum.donanimhaber.com/b8-1-6-tdi-rolantide-sarsinti-ve-yolda-gaz-kesme-sorunu--150167207
-  site_or_channel: forum.donanimhaber.com
-  notes: B8 1.6 TDI Rölantide sarsıntı ve yolda gaz kesme sorunu | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/golf-vii-1-6tdi-ariza-isigi-yardim--128785504
-  site_or_channel: forum.donanimhaber.com
-  notes: GOLF VII 1.6TDI ARIZA IŞIĞI YARDIM - DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.golftutkusu.com/topic/16936-golf-6-1-6-tdi-kizdirma-buji-lambasi-yanip-sonuyor/
-  site_or_channel: golftutkusu.com
-  notes: Golf 6 1.6 tdi kızdırma buji lambası yanıp sönüyor | Golftutkusu - Otomobil
-    Tutk
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
   url: https://www.techturkey.com/forum/dizel/240724-golf_1_6_tdi_silkeleme_tekleme_sorunu_.html
   site_or_channel: techturkey.com
   notes: Golf 1.6 TDI silkeleme tekleme sorunu ?
@@ -231,64 +181,12 @@
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
 - type: page
-  url: https://forum.donanimhaber.com/passat-2-0-tdi-170-hp-enjektor-turbo-problemi--68508443
-  site_or_channel: forum.donanimhaber.com
-  notes: Passat 2.0 TDI 170 HP Enjektör + Turbo Problemi. | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/2-0-tdi-surekli-fan-aciyor--158025826
-  site_or_channel: forum.donanimhaber.com
-  notes: 2.0 tdi sürekli fan açıyor | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/passat-2-0-tdi-sikayet--142605962
-  site_or_channel: forum.donanimhaber.com
-  notes: Passat 2.0 TDI sikayet | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.otomobilforumlari.com/threads/passat-2-0-tdi-rampada-hararet-yapiyor.355/
-  site_or_channel: otomobilforumlari.com
-  notes: Passat 2.0 TDI Rampada Hararet Yapıyor - Otomobil Forumları
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
   url: http://www.techturkey.com/forum/archive/index.php/t-130244.html
   site_or_channel: techturkey.com
   notes: Vag 2.0 tdi için dikkat edilmesi gerekenler [Arşiv]  - TechTurkey
   status: pending
   added_at: '2026-06-29'
   processed_at: null
-- type: page
-  url: https://www.motor-talk.de/forum/kreischen-ea288-t8497291.html
-  site_or_channel: motor-talk.de
-  notes: Kreischen EA288 - Startseite Forum Auto Volkswagen Passat Passat B8... |
-    MOTOR-T
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.motor-talk.de/forum/motorgeraeusche-2-0-tdi-184-ps-t8458643.html
-  site_or_channel: motor-talk.de
-  notes: Motorgeräusche 2.0 TDI 184 PS - Startseite Forum Auto Volkswagen Sh... |
-    MOTOR-T
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://vwforum.com.tr/threads/2014-2022-b8-passat-modelin-kronik-arizalari-ve-cozumleri.804/
-  site_or_channel: vwforum.com.tr
-  notes: 2014-2022 B8 Passat Modelin Kronik Arızaları Ve Çözümleri | Volkswagen Forum
-    Tür
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
 - type: page
   url: https://www.repxpert.us/en-us/training-information/ea-288-engine-belt-change
   site_or_channel: repxpert.us
@@ -303,13 +201,6 @@
   status: pending
   added_at: '2026-06-29'
   processed_at: null
-- type: page
-  url: https://forums.tdiclub.com/index.php?threads%2Ftiming-belt-change-interval.440178%2F=
-  site_or_channel: forums.tdiclub.com
-  notes: Timing belt change interval | TDIClub Forums
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
 - type: page
   url: https://www.techtips.ie/REPXPERT/timing-belt-replacement---vag-16-and-20-liter-tdi-ea288
   site_or_channel: techtips.ie
@@ -343,13 +234,6 @@
   url: https://kfz-dietrich.com/blog/vw-ea288-hochdruck-p0087-diagnose/
   site_or_channel: kfz-dietrich.com
   notes: VW EA288 TDI P0087 – ODIS-Diagnose vor Pumpentausch | KFZ Dietrich
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/211-000-kmde-2-0-tdi-enjektor-degerlerim-sasirtti--148550885
-  site_or_channel: forum.donanimhaber.com
-  notes: 211.000 KMde 2.0 TDI enjektör değerlerim şaşırttı
   status: processed
   added_at: '2026-06-29'
   processed_at: '2026-06-29'

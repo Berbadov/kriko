@@ -453,8 +453,8 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Recurrent software-related failures in touchscreen functionality, Bluetooth
     connectivity, and navigation system updates, particularly in Discover Media and
@@ -462,17 +462,7 @@ claims:
   inspection_advice: Test touchscreen responsiveness, Bluetooth pairing, and navigation
     system functionality. Check for software version updates and verify if any modules
     require replacement.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"One of the least expected, but common, glitches are problems with the
-      touchscreen, including the system restarting itself or freezing. There are also
-      problems with Bluetooth connectivity, where the phone cannot be paired or the
-      connection is lost during a call. Vehicles with Discover Media and Discover
-      Pro navigation may also experience software bugs over time that prevent map
-      updates or media playback."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_electrical_spontaneous_battery_
   title: Spontaneous battery drainage due to control unit activation
   kind: known_issue
@@ -504,83 +494,54 @@ claims:
   kind: known_issue
   domain: fuel system
   severity: high
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: High-pressure fuel pump failure in diesel engines causing extensive damage
     to injectors and fuel system clogging with metal filings.
   inspection_advice: Monitor for loss of power, twitching during acceleration, difficult
     starts, and check engine light. Inspect fuel system for metal debris and injector
     health.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"Diesel engines have been known to experience high-pressure pump failure,
-      which can cause extensive damage to the injectors and clogging of the fuel system
-      with metal filings."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_engine_intake_valve_carboni
   title: Intake valve carbonisation in 1.2 TSI and 1.4 TSI petrol engines
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Carbon buildup on intake valves leading to uneven engine running, increased
     fuel consumption, and loss of power.
   inspection_advice: Check for uneven engine running, increased fuel consumption,
     and loss of power. Inspect intake valves for carbon deposits.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"Petrol TSI units (especially the 1.2 TSI and 1.4 TSI) sometimes suffer
-      from a problem with intake valve carbonisation, which results in uneven engine
-      running, increased consumption and loss of power."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_general_corrosion_in_early_g
   title: Corrosion in early Golf VII models (2012-2014)
   kind: known_issue
   domain: general
   severity: high
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Corrosion in less visible areas such as door bottoms, sills, and fender
     edges, including under door seals where moisture is trapped.
   inspection_advice: Inspect door bottoms, sills, fender edges, and under door seals
     for signs of rust and corrosion.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"Although the bodywork of the Golf VII is well protected, some units produced
-      in the early years of production (2012-2014) have started to develop corrosion
-      problems in less visible areas such as door bottoms, sills and fender edges.
-      The least expected problem is corrosion under the door seals where moisture
-      is trapped."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_general_peeling_clearcoat_in
   title: Peeling clearcoat in wheel arches and sills
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Clearcoat peeling in areas frequently exposed to pebbles or salt spray,
     leading to potential rust and further body damage.
   inspection_advice: Check wheel arches, sills, and door bottoms for peeling clearcoat
     and signs of stone chipping.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"Another surprise is peeling clearcoat, especially in areas exposed to
-      frequent contact with pebbles or salt spray."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_electrical_refrigerant_leaks_in
   title: Refrigerant leaks in air conditioning systems
   kind: known_issue
@@ -600,25 +561,14 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Failure of the battery sensor or start-stop system controller, leading
     to engine start issues or malfunctioning start-stop functionality.
   inspection_advice: Test start-stop system functionality and check for engine start
     issues. Inspect battery sensor and system controller for faults.
-  sources:
-  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
-    source_domain: en.volkswagenclub.net
-    site_or_channel: en.volkswagenclub.net
-    quote: '"Some owners complain that the car battery is more frequently replaced,
-      as it is subjected to a higher load with this system. [...] The start-stop system,
-      which automatically shuts off the engine when the vehicle comes to a halt, may
-      appear to be a useful fuel saver, in practice it brings with it some unexpected
-      complications. In some cars, the battery sensor or the system controller itself
-      will fail over time. This can lead to the engine refusing to start or the start-stop
-      system failing to function."'
-    independent: true
+  sources: []
 - claim_key: golf7_elec_engine_coolant_pump_control
   title: Coolant Pump Control Slide Failure (Overheating Risk)
   kind: known_issue
@@ -863,8 +813,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: Recurrent issue where the Transmission Control Module (TCM) fails to
     communicate with the vehicle's data bus, leading to complete transmission failure
@@ -875,13 +825,4 @@ claims:
     ensuring proper voltage. Look for error codes related to TCM communication (e.g.,
     U0101) and inspect the transmission control module itself for signs of overheating
     or failure.
-  sources:
-  - source_url: https://www.golftutkusu.com/topic/26439-golf-7-sorunu-var/
-    source_domain: golftutkusu.com
-    site_or_channel: golftutkusu.com
-    quote: 'U0101 [0xC101] Data bus, transmission control module (TCM) - no communication
-
-      Durum: Bekliyo
-
-      Akü sarji yaptım. Ama olmadı. Yanık kokusu var.'
-    independent: true
+  sources: []

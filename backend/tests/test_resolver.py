@@ -55,7 +55,7 @@ def db_add_unique_claim(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="B",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Test quote.",
     ))
     db.flush()
@@ -86,7 +86,7 @@ def test_draft_claim_not_served(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="B",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Quote.",
     ))
     db.flush()
@@ -110,7 +110,7 @@ def test_review_and_held_claims_are_served(db, megane4_variants, status):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="C",
+        claim_id=claim.id,
         source_url="https://blog.example", quote="Quote.",
     ))
     db.flush()
@@ -134,7 +134,7 @@ def test_old_version_claim_not_served(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="A",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Quote.",
     ))
     db.flush()
@@ -222,7 +222,7 @@ def test_held_claim_strength_is_reported(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="C",
+        claim_id=claim.id,
         source_url="https://blog.example", quote="Quote.",
     ))
     db.flush()

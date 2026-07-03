@@ -15,7 +15,7 @@ def _add_claim(db, cid, variant="megane4_k9k_90"):
         rationale="r", inspection_advice="a", status="verified", promoted_by="human",
     ))
     db.add(ClaimVariant(claim_id=cid, variant_id=variant))
-    db.add(ClaimSource(claim_id=cid, tier="A", source_url="https://x", quote="q"))
+    db.add(ClaimSource(claim_id=cid, source_url="https://x", quote="q"))
     db.flush()
 
 

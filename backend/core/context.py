@@ -10,3 +10,7 @@ class ListingContext:
     fuel_type: str | None = None
     transmission: str | None = None
     description: str = field(default="")  # lowercased ad text for keyword checks
+    # Sahibinden "Donanım" block: {category: [feature, ...]}. None = extraction
+    # found nothing at all (unknown); {} would mean "confirmed no equipment",
+    # which the scraper never actually produces — treat both as "unknown".
+    equipment: dict[str, list[str]] | None = None

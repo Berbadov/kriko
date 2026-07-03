@@ -36,6 +36,7 @@ def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
         "transmission": "transmission_code",
         "cooling": "cooling_code",
         "electrical": "electrical_code",
+        "body": "body_code",
     }.get(part_type, "engine_family")
 
     for path in fitment_dir.glob("*.yaml"):
@@ -90,16 +91,18 @@ def templates_for_part(
             add("cooling", f"{make_t} {model_t} Cooling chronic problems")
         elif part_type == "electrical":
             add("electrical", f"{make_t} {model_t} electronics chronic problems")
+        elif part_type == "body":
+            add("body", f"{make_t} {model_t} water leak chronic problems")
 
     add(part_type, f"{part_id.upper()} {part_type} problems reliability")
     add(part_type, f"{part_id.upper()} motor arıza sorun")
-    add(part_type, f"{display} common problems forum")
+    add(part_type, f"{display} common problems")
     add(part_type, f"{display} known issues reliability")
 
     # ── Alias queries ──────────────────────────────────────────────────────────
     for alias in aliases[:3]:  # cap aliases to avoid explosion
         add(part_type, f"{alias} reliability issues")
-        add(part_type, f"{alias} arıza sorun forum")
+        add(part_type, f"{alias} arıza sorun")
 
     # ── Fuel-type specific (Engine only) ───────────────────────────────────────
     if part_type == "engine":
@@ -126,6 +129,24 @@ def templates_for_part(
         add("transmission", f"{display} şanzıman arıza")
         add("transmission", f"{display} clutch shudder judder problem")
         add("transmission", f"{display} TCU software update fault")
-        add("transmission", f"{part_id.upper()} transmission sorun forum")
+        add("transmission", f"{part_id.upper()} transmission sorun")
+
+    # ── Body / water-sealing specific ──────────────────────────────────────────
+    # part_id (e.g. "golf7_body") is an internal fitment key, not a real-world
+    # search term, so these lean on make/model rather than part_id.upper().
+    if part_type == "body" and make_t and model_t:
+        add("body", f"{make_t} {model_t} boot trunk water leak")
+        add("body", f"{make_t} {model_t} bagaj su alma sızıntı")
+        add("body", f"{make_t} {model_t} sunroof drain blocked flooding")
+        add("body", f"{make_t} {model_t} sunroof drenaj tıkanması")
+        add("body", f"{make_t} {model_t} tailgate wiring loom corrosion rear camera fault")
+        add("body", f"{make_t} {model_t} arka cam sileceği kablo demeti arıza")
+        add("body", f"{make_t} {model_t} rear light cluster seal leak condensation")
+        add("body", f"{make_t} {model_t} stop lambası sızdırma buğulanma")
+        add("body", f"{make_t} {model_t} windscreen cowl scuttle drain clogged")
+        add("body", f"{make_t} {model_t} footwell wet carpet damp mould")
+        add("body", f"{make_t} {model_t} ayak altı nem küf halı ıslanma")
+        add("body", f"{make_t} {model_t} door seal water ingress wind noise")
+        add("body", f"{make_t} {model_t} wheel arch liner corrosion drainage")
 
     return templates

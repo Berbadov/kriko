@@ -22,6 +22,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from backend.core.context import ListingContext
+from backend.core.equipment import listing_has_equipment
 from backend.core.matcher import MatchResult
 from backend.db.models import Claim, ClaimSource, ClaimVariant
 
@@ -63,6 +64,8 @@ def _apply_context(claims: list[Claim], ctx: ListingContext | None) -> list[Clai
     """Apply mileage/age gating and maintenance interval logic, return ClaimResults."""
     results = []
     for claim in claims:
+        if not _passes_equipment_gate(claim, ctx):
+            continue
         if claim.kind == "maintenance":
             strength = _resolve_maintenance_strength(claim, ctx)
             if strength is None:
@@ -93,6 +96,24 @@ def _passes_applies_when(claim: Claim, ctx: ListingContext | None) -> bool:
         if ctx.age_years < claim.min_age_years:
             return False
     return True
+
+
+def _passes_equipment_gate(claim: Claim, ctx: ListingContext | None) -> bool:
+    """Hide claims that require optional equipment (e.g. sunroof) the listing
+    confirms the car doesn't have. Unlike mileage/age, this fails CLOSED on a
+    confirmed mismatch — a 4WD/sunroof-only claim on a 2WD/no-sunroof car isn't
+    a probabilistic risk, it's categorically wrong and undermines trust.
+
+    Still fails open when equipment wasn't scraped at all (ctx.equipment is
+    None/empty): we can't distinguish "car doesn't have it" from "extraction
+    didn't find the Donanım block", so we never hide on that ambiguity.
+    """
+    tags = claim.requires_equipment or []
+    if not tags:
+        return True
+    if ctx is None or not ctx.equipment:
+        return True
+    return all(listing_has_equipment(tag, ctx.equipment) for tag in tags)
 
 
 def _resolve_maintenance_strength(
