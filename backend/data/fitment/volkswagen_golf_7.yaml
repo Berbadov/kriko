@@ -28,3 +28,18 @@
   transmission_code: dq250
   electrical_code: golf7_elec
   body_code: golf7_body
+- variant_id: golf7_ea888_220
+  engine_family: ea888_220
+  transmission_code: dq250
+  electrical_code: golf7_elec
+  body_code: golf7_body
+- variant_id: golf7_ea888_230
+  engine_family: ea888_230
+  transmission_code: dq381
+  electrical_code: golf7_elec
+  body_code: golf7_body
+- variant_id: golf7_ea888_300
+  engine_family: ea888_300
+  transmission_code: dq381
+  electrical_code: golf7_elec
+  body_code: golf7_body

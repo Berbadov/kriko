@@ -31,6 +31,7 @@ from knowledge.dedup import merge_candidates, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.judge import gate_generic, gate_inspection_value, gate_refute, gate_support, gate_variant
 from knowledge.sources.base import Document
+from knowledge.stoplists import code_tokens
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,20 @@ AUDIT_RATE    = 0.20    # 20% of auto-verified claims go to review queue
 # fuel-agnostic claims (A/C, electrical) stay broad by design.
 _DIESEL_RE = re.compile(r"\b(k9k|r9m|d[ck]i|diesel|dizel|adblue)\b", re.I)
 _PETROL_RE = re.compile(r"\b(h5f|h5h|h4m|tce|petrol|benzin|gasoline)\b", re.I)
+
+def _shares_code_token(evidence_tokens: set[str], variant_descs: list[str]) -> bool:
+    """True if the evidence and any candidate variant description share an
+    engine/transmission code token (e.g. EA211, DQ200, K9K), verbatim and
+    case-insensitive.
+
+    gate_variant (a small LLM judge, ministral-8b) has been observed to
+    hallucinate a mismatch even when the exact code is present in both the
+    evidence and the variant description — e.g. rejecting "EA211 1.4 TSI"
+    evidence against a "...EA211 petrol 1395cc..." variant on an invented
+    "non-TSI" distinction. A literal code match is unambiguous ground truth
+    and should short-circuit the unreliable LLM call rather than defer to it.
+    """
+    return any(evidence_tokens & code_tokens(desc) for desc in variant_descs)
 
 
 def _claim_fuel(claim: CandidateClaim) -> str | None:
@@ -175,12 +190,14 @@ def _evaluate_claim(
             sources[0].text if sources else "",
         ) if part
     )
-    gate_passed = False
-    try:
-        vg = gate_variant(claim.title, evidence, variant_ids, variant_descs)
-        gate_passed = vg.passed
-    except Exception as exc:
-        log.warning("gate_variant failed: %s", exc)
+    evidence_tokens = code_tokens(evidence)
+    gate_passed = bool(evidence_tokens) and _shares_code_token(evidence_tokens, variant_descs)
+    if not gate_passed:
+        try:
+            vg = gate_variant(claim.title, evidence, variant_ids, variant_descs)
+            gate_passed = vg.passed
+        except Exception as exc:
+            log.warning("gate_variant failed: %s", exc)
 
     # Gate says "relevant to this model"; now restrict to the claim's fuel so a
     # diesel-only issue never grounds to a petrol variant.
