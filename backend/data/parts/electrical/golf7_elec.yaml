@@ -1,6 +1,7 @@
 part_id: golf7_elec
 part_type: electrical
 display_name: Volkswagen Golf 7 Electrical Systems
+manufacturer: volkswagen
 known_also_as:
 - Volkswagen Golf 7 electrical
 - Volkswagen Golf 7 electronics

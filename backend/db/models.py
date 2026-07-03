@@ -52,7 +52,6 @@ class Claim(Base):
     max_mileage_km    = Column(Integer, nullable=True)
     min_age_years     = Column(Integer, nullable=True)
     maintenance_data  = Column(JSON, nullable=True)    # the maintenance: block from YAML
-    value_tier        = Column(String, nullable=True)  # "core" | "routine_inspection" | "generic_warning"
     requires_equipment = Column(JSON, nullable=True)   # tags auto-derived from title/rationale, e.g. ["sunroof"]
 
     sources  = relationship("ClaimSource", back_populates="claim", cascade="all, delete-orphan")

@@ -46,8 +46,6 @@ CREATE TABLE IF NOT EXISTS claims (
   min_age_years    INT,
   -- Phase 2: maintenance-due claims
   maintenance_data JSONB,                  -- {interval_km, interval_years, evidence_keywords}
-  -- Phase 3: offline relevance filter
-  value_tier       TEXT,                   -- "core"|"routine_inspection"|"generic_warning"
   -- Phase 4: listing-equipment gating
   requires_equipment JSONB                 -- tags auto-derived from title/rationale, e.g. ["sunroof"]
 );
@@ -61,10 +59,10 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS max_mileage_km INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS min_age_years INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS maintenance_data JSONB;
--- ALTER TABLE claims ADD COLUMN IF NOT EXISTS value_tier TEXT;
 -- ALTER TABLE claim_sources DROP COLUMN IF EXISTS tier;
 -- ALTER TABLE variants ADD COLUMN IF NOT EXISTS drivetrain TEXT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS requires_equipment JSONB;
+-- ALTER TABLE claims DROP COLUMN IF EXISTS value_tier;  -- dead scaffolding, never populated by the pipeline
 CREATE INDEX IF NOT EXISTS idx_claims_serve ON claims(is_current, status);
 
 CREATE TABLE IF NOT EXISTS claim_variants (
