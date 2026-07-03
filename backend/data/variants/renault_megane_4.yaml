@@ -16,6 +16,7 @@
   notes: 1.2 TCe 100 EDC — discontinued 2018
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_h5f_130
   make: renault
   model: megane
@@ -34,6 +35,7 @@
   notes: 1.2 TCe 130 EDC — discontinued 2018
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_h5h_115
   make: renault
   model: megane
@@ -52,6 +54,7 @@
   notes: 1.3 TCe 115 EDC (Renault-Daimler H5H)
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_h5h_140
   make: renault
   model: megane
@@ -70,6 +73,7 @@
   notes: 1.3 TCe 140 EDC (Renault-Daimler H5H)
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_k9k_90
   make: renault
   model: megane
@@ -88,6 +92,7 @@
   notes: 1.5 dCi 90 — manual only
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_k9k_110
   make: renault
   model: megane
@@ -106,6 +111,7 @@
   notes: 1.5 dCi 110 — manual (EDC version exists but was not sold in TR)
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
 - id: megane4_r9m_130
   make: renault
   model: megane
@@ -124,3 +130,4 @@
   notes: 1.6 dCi 130 EDC — auto only
   body_code: megane4_body
   drivetrain: fwd
+  electrical_code: megane4_elec
