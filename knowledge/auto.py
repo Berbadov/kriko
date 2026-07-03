@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 import yaml
 from dotenv import load_dotenv
 
+from knowledge.parts.search_templates import _search_code
 from knowledge.stoplists import FORUM_DOMAINS
 
 # load dotenv
@@ -439,12 +440,12 @@ def _ensure_part_stub(
                     label = f"{litre} {fuel_tag}"
                     if label not in descs:
                         descs.append(label)
-        display_name = f"{make_pretty} {part_id.upper()} Engine"
+        display_name = f"{make_pretty} {_search_code(part_id)} Engine"
         known_also_as = codes + descs
 
     elif part_type == "transmission":
-        display_name = f"{make_pretty} {part_id.upper()} Transmission"
-        known_also_as = [part_id.upper()]
+        display_name = f"{make_pretty} {_search_code(part_id)} Transmission"
+        known_also_as = [_search_code(part_id)]
 
     elif part_type == "cooling":
         display_name = f"{make_pretty} {model_pretty} Cooling System"
@@ -471,8 +472,8 @@ def _ensure_part_stub(
         ]
 
     else:
-        display_name = f"{make_pretty} {model_pretty} {part_id.upper()}"
-        known_also_as = [part_id.upper()]
+        display_name = f"{make_pretty} {model_pretty} {_search_code(part_id)}"
+        known_also_as = [_search_code(part_id)]
 
     stub_path.parent.mkdir(parents=True, exist_ok=True)
     stub_path.write_text(

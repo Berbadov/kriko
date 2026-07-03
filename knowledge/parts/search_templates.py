@@ -12,11 +12,27 @@ Usage (called by auto.py with --part flag):
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
 
 PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
+
+# Part IDs follow a power-split convention (k9k_85, h5h_130, ea888_230, ...) —
+# each power tune is researched as its own part (see write_variants.py). The
+# trailing "_<hp>" is an internal bookkeeping suffix, not part of the real
+# engine code: nobody writes "K9K_85 turbo arıza" on a forum, they write "K9K".
+# Search text must use the bare code; file lookups (_part_meta, fitment
+# matching) must keep using the exact part_id, since that's the file key.
+_POWER_SUFFIX_RE = re.compile(r"_\d+$")
+
+
+def _search_code(part_id: str) -> str:
+    """Real-world engine/transmission code for search text (strips a trailing
+    power suffix): "k9k_85" -> "K9K", "h5h_130" -> "H5H", "dq200" -> "DQ200".
+    """
+    return _POWER_SUFFIX_RE.sub("", part_id).upper()
 
 
 def _part_meta(part_id: str) -> dict:
@@ -64,8 +80,9 @@ def templates_for_part(
     hints: optional dict with keys like fuel ("diesel"|"petrol"), displacement ("1.5"),
     manufacturer, etc. — used to make queries more specific.
     """
+    code = _search_code(part_id)
     meta = _part_meta(part_id)
-    display = meta.get("display_name", part_id.upper())
+    display = meta.get("display_name", code)
     aliases = meta.get("known_also_as", [])
     fuel = (hints or {}).get("fuel", "")
 
@@ -84,9 +101,9 @@ def templates_for_part(
     # ── Primary code queries ──────────────────────────────────────────────────
     if make_t and model_t:
         if part_type == "engine":
-            add("engine", f"{make_t} {model_t} {part_id.upper()} chronic and common problems")
+            add("engine", f"{make_t} {model_t} {code} chronic and common problems")
         elif part_type == "transmission":
-            add("transmission", f"{make_t} {model_t} {part_id.upper()} chronic and common problems")
+            add("transmission", f"{make_t} {model_t} {code} chronic and common problems")
         elif part_type == "cooling":
             add("cooling", f"{make_t} {model_t} Cooling chronic problems")
         elif part_type == "electrical":
@@ -94,8 +111,8 @@ def templates_for_part(
         elif part_type == "body":
             add("body", f"{make_t} {model_t} water leak chronic problems")
 
-    add(part_type, f"{part_id.upper()} {part_type} problems reliability")
-    add(part_type, f"{part_id.upper()} motor arıza sorun")
+    add(part_type, f"{code} {part_type} problems reliability")
+    add(part_type, f"{code} motor arıza sorun")
     add(part_type, f"{display} common problems")
     add(part_type, f"{display} known issues reliability")
 
@@ -107,29 +124,31 @@ def templates_for_part(
     # ── Fuel-type specific (Engine only) ───────────────────────────────────────
     if part_type == "engine":
         if fuel == "diesel":
-            add("engine",    f"{part_id.upper()} timing belt replacement interval")
-            add("engine",    f"{part_id.upper()} EGR valve clogging failure")
-            add("engine",    f"{part_id.upper()} enjektör arıza")
-            add("emissions", f"{part_id.upper()} DPF regeneration failure")
-            add("emissions", f"{part_id.upper()} DPF sorun")
+            add("engine",    f"{code} timing belt replacement interval")
+            add("engine",    f"{code} EGR valve clogging failure")
+            add("engine",    f"{code} enjektör arıza")
+            add("engine",    f"{code} turbo actuator failure")
+            add("engine",    f"{code} turbo arıza")
+            add("emissions", f"{code} DPF regeneration failure")
+            add("emissions", f"{code} DPF sorun")
         elif fuel == "petrol":
-            add("engine", f"{part_id.upper()} timing chain tensioner failure")
-            add("engine", f"{part_id.upper()} oil consumption turbo")
-            add("engine", f"{part_id.upper()} zincirleme arıza")
+            add("engine", f"{code} timing chain tensioner failure")
+            add("engine", f"{code} oil consumption turbo")
+            add("engine", f"{code} zincirleme arıza")
 
         # Engine cooling/thermostat (fuel-agnostic)
-        add("engine", f"{part_id.upper()} thermostat housing cracking failure")
-        add("engine", f"{part_id.upper()} water pump coolant leak")
-        add("engine", f"{part_id.upper()} termostat arıza")
+        add("engine", f"{code} thermostat housing cracking failure")
+        add("engine", f"{code} water pump coolant leak")
+        add("engine", f"{code} termostat arıza")
 
     # ── Transmission-specific ─────────────────────────────────────────────────
     if part_type == "transmission":
-        add("transmission", f"{part_id.upper()} gearbox problems reliability")
+        add("transmission", f"{code} gearbox problems reliability")
         add("transmission", f"{display} mechatronics failure")
         add("transmission", f"{display} şanzıman arıza")
         add("transmission", f"{display} clutch shudder judder problem")
         add("transmission", f"{display} TCU software update fault")
-        add("transmission", f"{part_id.upper()} transmission sorun")
+        add("transmission", f"{code} transmission sorun")
 
     # ── Body / water-sealing specific ──────────────────────────────────────────
     # part_id (e.g. "golf7_body") is an internal fitment key, not a real-world
