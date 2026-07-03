@@ -112,3 +112,61 @@
   notes: 2.0 TDI 150 (CRVA/EA288) — 6-speed wet DSG (DQ250)
   body_code: golf7_body
   drivetrain: fwd
+- id: golf7_ea888_220
+  make: volkswagen
+  model: golf
+  generation: VII
+  engine_code: EA888
+  engine_family: ea888_220
+  fuel: petrol
+  displacement_cc: 1984
+  power_min_hp: 220
+  power_max_hp: 220
+  transmission: automatic
+  transmission_code: dq250
+  electrical_code: golf7_elec
+  year_from: 2013
+  year_to: 2016
+  market: TR
+  notes: GTI (pre-facelift) — 2.0 TSI EA888 Gen3, 6-speed wet DSG or 6MT
+  body_code: golf7_body
+  drivetrain: fwd
+- id: golf7_ea888_230
+  make: volkswagen
+  model: golf
+  generation: VII
+  engine_code: EA888
+  engine_family: ea888_230
+  fuel: petrol
+  displacement_cc: 1984
+  power_min_hp: 230
+  power_max_hp: 245
+  transmission: automatic
+  transmission_code: dq381
+  electrical_code: golf7_elec
+  year_from: 2017
+  year_to: 2020
+  market: TR
+  notes: GTI/GTI Performance (facelift) — 2.0 TSI EA888 Gen3, 7-speed wet DSG or 6MT
+  body_code: golf7_body
+  drivetrain: fwd
+- id: golf7_ea888_300
+  make: volkswagen
+  model: golf
+  generation: VII
+  engine_code: EA888
+  engine_family: ea888_300
+  fuel: petrol
+  displacement_cc: 1984
+  power_min_hp: 300
+  power_max_hp: 310
+  transmission: automatic
+  transmission_code: dq381
+  electrical_code: golf7_elec
+  year_from: 2014
+  year_to: 2020
+  market: TR
+  notes: R — 2.0 TSI EA888 Gen3, Haldex AWD, DQ250 pre-facelift/DQ381 facelift (simplified
+    to dq381 here)
+  body_code: golf7_body
+  drivetrain: awd

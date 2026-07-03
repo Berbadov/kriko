@@ -13,7 +13,12 @@ import re
 import time
 from dataclasses import dataclass
 
-from knowledge.stoplists import INSPECTION_COVERED, WARNING_LIGHT_PATTERNS
+from knowledge.stoplists import (
+    AMBIGUOUS_INSPECTION_TERMS,
+    INSPECTION_COVERED,
+    WARNING_LIGHT_PATTERNS,
+    has_specificity_signal,
+)
 
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
 _MODEL = "ministral-8b-latest"
@@ -188,6 +193,19 @@ def gate_inspection_value(claim_title: str, claim_rationale: str) -> GateResult:
     # Fast stoplist pass — runs before the API key guard, truly zero cost.
     if any(kw in text for kw in INSPECTION_COVERED):
         return GateResult(passed=False, reason="matches inspection-covered stoplist")
+
+    # Ambiguous terms ("oil consumption", ...) cover both a routine inspection
+    # check and well-documented, mileage-specific chronic defects (see
+    # stoplists.has_specificity_signal). Reject only when no engine/mileage
+    # signal accompanies the term; otherwise treat that signal as evidence
+    # this is config-specific and keep it without spending an LLM call — the
+    # LLM alone doesn't reliably separate these (see stoplists.py docstring).
+    ambiguous_hit = next((kw for kw in AMBIGUOUS_INSPECTION_TERMS if kw in text), None)
+    if ambiguous_hit is not None:
+        if has_specificity_signal(text):
+            return GateResult(passed=True, reason=f"'{ambiguous_hit}' with engine/mileage specificity — kept")
+        return GateResult(passed=False, reason=f"generic '{ambiguous_hit}' mention, no engine/mileage specificity")
+
     for pat in WARNING_LIGHT_PATTERNS:
         if pat.search(text):
             return GateResult(passed=False, reason="generic dashboard warning light")

@@ -42,6 +42,21 @@ def _power_overlaps(a, b, tol: int = 5) -> bool:
     return a_min <= b_max and b_min <= a_max
 
 
+# Pairs where cc+power+transmission genuinely collide within tolerance, but no
+# catalog fix exists — these are real, closely-spaced trims of the same engine
+# code (not a scaffolding mistake), so the matcher's designed-for-this
+# ambiguous-match fallback (return the union of both candidates' claims —
+# see matcher.py's module docstring and resolver.py's resolve_claims) is the
+# correct behaviour, not a defect. Each entry needs a one-line reason; add
+# here only after confirming no available field (transmission, engine_code,
+# etc.) can narrow it — that's a real catalog fix, not an allowlist entry.
+ACCEPTED_OVERLAPS: frozenset[frozenset[str]] = frozenset({
+    frozenset({"clio5_k9k_85", "clio5_k9k_100"}),  # Blue dCi 85 vs 100 — same
+    # engine code, manual-only both, no field distinguishes an ad reporting
+    # hp in the 85-95 range; matcher.py tol=10 genuinely can't tell them apart.
+})
+
+
 def _transmission_disambiguates(a, b) -> bool:
     """True if both variants carry a distinct, populated `transmission` value.
 
@@ -74,6 +89,8 @@ def find_overlaps(variants: list[dict]) -> list[str]:
             continue
         # They share make/model/fuel/year — now check cc + power overlap
         if _transmission_disambiguates(a, b):
+            continue
+        if frozenset({a["id"], b["id"]}) in ACCEPTED_OVERLAPS:
             continue
         if _cc_overlaps(a, b) and _power_overlaps(a, b):
             errors.append(
