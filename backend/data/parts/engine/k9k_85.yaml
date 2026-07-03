@@ -5,4 +5,1000 @@ manufacturer: renault
 known_also_as:
 - K9K
 - 1.5 TDI
-claims: []
+claims:
+- claim_key: k9k_85_emissions_egr_valve_deactivati
+  title: EGR valve deactivation due to low atmospheric pressure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.5 K9K diesel engine has a documented issue where the EGR (Exhaust
+    Gas Recirculation) valve is deactivated when atmospheric pressure is too low,
+    which can lead to improper emissions control and potential engine performance
+    issues.
+  inspection_advice: Check for any fault codes related to the EGR system and verify
+    atmospheric pressure conditions during diagnostics. Monitor EGR valve operation
+    under varying atmospheric pressures to confirm functionality.
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"Atmospheric pressure too low, the EGR valve is deactivated"'
+    independent: true
+- claim_key: k9k_85_emissions_intermittent_egr-rel
+  title: Intermittent EGR-related concerns in electro-mechanical valves
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.5 K9K engine's electro-mechanical EGR valves may exhibit intermittent
+    malfunctions that are not always captured by fault codes, leading to unreliable
+    emissions control and potential engine performance fluctuations.
+  inspection_advice: Use diagnostic equipment to check for stored fault codes and
+    perform repeated tests to identify intermittent EGR valve issues. Monitor idle
+    quality and engine performance under varying conditions.
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"For electro-mechanical valves, a normal result indicates that the EGR-related
+      concern is intermittent, check for stored fault codes with diagnostic equipment."'
+    independent: true
+- claim_key: k9k_85_emissions_egr_passages_cloggin
+  title: EGR passages clogging leading to restricted flow
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR passages in the 1.5 K9K engine are prone to partial or complete
+    clogging, which restricts exhaust gas flow and can degrade engine performance
+    and emissions compliance.
+  inspection_advice: Inspect EGR passages for blockages during diagnostics. A slight
+    change in idle quality may indicate partially clogged passages, while no change
+    may suggest a completely restricted system.
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"If there is no change in idle quality, then either the EGR valve is inoperative
+      or the EGR passages are completely restricted. A slight change in idle quality
+      is indicative of partially clogged passages."'
+    independent: true
+- claim_key: k9k_85_fuel system_enjektör_ucu_kurumla
+  title: Enjektör ucu kurumlanması (1.5 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Enjektör ucunun kurumlanması yakıt püskürtmeyi bozar, motor performansını
+    düşürür ve yakıt tüketimini artırır. Özellikle 1.5 dCi motorlarda yaygın bir sorundur.
+  inspection_advice: Motoru soğuk çalıştırın ve enjektör ucundan gelen sesleri dinleyin.
+    Kurumlanma sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, egzozdan
+    siyah/gri duman çıkarsa bu da kurumlanma sorununu gösterir.
+  sources: []
+- claim_key: k9k_85_fuel system_enjektör_sızdırma_(1
+  title: Enjektör sızdırma (1.5 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Enjektör sızdırması yakıtın yanlış püskürtülmesine ve motorun düzensiz
+    çalışmasına neden olur. Bu sorun yakıt tüketimini artırır ve emisyon değerlerini
+    olumsuz etkiler.
+  inspection_advice: Motoru çalıştırın ve enjektörlerden gelen sesleri dinleyin. Sızdırma
+    sesleri olarak metalik tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun
+    rölantide dalgalanması da sızdırma sorununu gösterebilir.
+  sources:
+  - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
+    source_domain: cetinrenault.com
+    site_or_channel: cetinrenault.com
+    quote: '"Renault Clio 4 – 1.5 dCi: Enjektör sızdırma"'
+    independent: true
+- claim_key: k9k_85_fuel system_enjektör_contası_yan
+  title: Enjektör contası yanması (1.5 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Enjektör contasının yanması yakıt basıncını ve püskürtme zamanlamasını
+    bozar. Bu sorun motor performansını ciddi şekilde etkiler ve yakıt tüketimini
+    artırır.
+  inspection_advice: Motoru çalıştırın ve enjektörlerden gelen sesleri dinleyin. Conta
+    yanması sesleri olarak metalik tıkırtı veya takırtı sesleri duyulabilir. Ayrıca,
+    motor arıza lambasının yanması da bu sorunu gösterebilir.
+  sources: []
+- claim_key: k9k_85_fuel system_basınç_sensörü_hatal
+  title: Basınç sensörü hataları (1.5/1.6 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Basınç sensörü hataları yakıt basıncının doğru ölçülmemesine neden olur.
+    Bu sorun yakıt püskürtme zamanlamasını ve miktarını etkiler, motor performansını
+    düşürür ve yakıt tüketimini artırır.
+  inspection_advice: Motor arıza lambasının yanıp söndüğünü kontrol edin. Ayrıca,
+    motorun düzensiz çalışması ve çekiş kaybı da bu sorunu gösterebilir. Basınç sensörünü
+    test etmek için bir mekanik araç tezgahına götürmek gerekebilir.
+  sources: []
+- claim_key: k9k_85_fuel system_püskürtme_düzensizli
+  title: Püskürtme düzensizliği (1.5/1.6 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Püskürtme düzensizliği yakıtın yanlış püskürtülmesine ve yanma odasında
+    homojen karışımın sağlanamamasına neden olur. Bu sorun motor performansını düşürür,
+    yakıt tüketimini artırır ve emisyon değerlerini olumsuz etkiler.
+  inspection_advice: Motoru çalıştırın ve enjektör seslerini dinleyin. Düzensiz püskürtme
+    sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun rölantide
+    dalgalanması ve çekiş kaybı da bu sorunu gösterebilir.
+  sources:
+  - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
+    source_domain: cetinrenault.com
+    site_or_channel: cetinrenault.com
+    quote: '"Renault Megane 3 – 1.5 / 1.6 dCi: Püskürtme düzensizliği"'
+    independent: true
+- claim_key: k9k_85_engine_sabit_rölanti_sorunu
+  title: Sabit rölanti sorunu (Symbol)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Sabit rölanti sorunu motorun idling devrinin kontrol edilememesine neden
+    olur. Bu sorun yakıt püskürtme sistemindeki arızalardan kaynaklanabilir ve motorun
+    çalışmasını etkiler.
+  inspection_advice: Motoru çalıştırın ve rölanti devrini kontrol edin. Sabit olmayan
+    rölanti devri ve motorun titreşimi bu sorunu gösterebilir.
+  sources: []
+- claim_key: k9k_85_fuel system_enjektör_keçesi_arız
+  title: Enjektör keçesi arızası (1.5 dCi, Dacia Duster)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Enjektör keçesi arızası yakıt akışını engeller veya bozar, motor performansını
+    düşürür ve yakıt tüketimini artırır. Bu sorun yakıt püskürtme sisteminin en kritik
+    parçalarından birinin arızalanmasıyla ortaya çıkar.
+  inspection_advice: Motoru çalıştırın ve enjektör seslerini dinleyin. Keçenin arızalanması
+    sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun çalışmaması
+    veya zor çalışması da bu sorunu gösterebilir.
+  sources: []
+- claim_key: k9k_85_fuel system_su_buharı_kondenzasy
+  title: Su buharı kondenzasyonu (1.5 dCi, Dacia Duster)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Su buharı kondenzasyonu enjektörlerin içindeki su birikimine neden olur.
+    Bu sorun yakıt püskürtmeyi bozar ve motor performansını etkiler. Özellikle soğuk
+    iklimlerde daha belirginleşir.
+  inspection_advice: Motoru soğuk çalıştırın ve enjektör seslerini dinleyin. Su buharı
+    kondenzasyonu sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca,
+    motorun soğuk çalıştırmada düzensiz çalışması da bu sorunu gösterebilir.
+  sources: []
+- claim_key: k9k_85_engine_turbocharger_actuato
+  title: Turbocharger actuator failure (K9K 834)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The variable-geometry turbocharger (VGT) actuator is a chronic weak point,
+    particularly in city-driven models where frequent short trips and high thermal
+    loads exacerbate failures. This leads to power loss and requires costly repairs.
+  inspection_advice: Check for error codes related to turbo actuator failure (e.g.,
+    P0299, P029A) and listen for unusual turbo noise or loss of power. Inspect for
+    oil leaks around the turbocharger housing, as actuator failure is often linked
+    to lubrication issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-834-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The K9K 834''s primary reliability risk is turbocharger actuator failure,
+      with elevated incidence in vehicles subjected to frequent short trips and high
+      thermal loads. Renault internal data indicated a high frequency of actuator
+      faults in city-driven Clio and Captur models... The most frequent issues are
+      turbo actuator failure causing power loss..."'
+    independent: true
+- claim_key: k9k_85_emissions_dpf_clogging_due_to_
+  title: DPF clogging due to insufficient regeneration (K9K 834)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Diesel Particulate Filter (DPF) fails to regenerate properly in urban
+    driving conditions, leading to clogging, reduced performance, and frequent emissions
+    test failures. This is a common issue in city-driven Renault Clio IV and Captur
+    models.
+  inspection_advice: Check for DPF regeneration error codes (e.g., P0420, P2455) and
+    inspect the exhaust system for blackened or clogged DPF. Verify if the vehicle
+    has been driven on highways regularly to allow DPF regeneration. Look for warning
+    lights related to emissions systems.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-834-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The K9K 834''s primary reliability risk... is turbocharger actuator failure,
+      with elevated incidence in vehicles subjected to frequent short trips and high
+      thermal loads. UK DVSA records show DPF-related issues as a common cause of
+      emissions test failures... The most frequent issues... are DPF clogging due
+      to insufficient regeneration..."'
+    independent: true
+- claim_key: k9k_85_emissions_egr_valve_clogging_(
+  title: EGR valve clogging (K9K 834)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Exhaust Gas Recirculation (EGR) valve clogs frequently, leading to
+    running problems, reduced efficiency, and potential engine misfires. This is exacerbated
+    by urban driving patterns and lack of high-temperature operation.
+  inspection_advice: Check for EGR-related error codes (e.g., P0400, P0401, P0402,
+    P0403) and inspect the EGR valve and passages for carbon buildup. Listen for unusual
+    engine noises or hesitation during acceleration, which may indicate EGR system
+    issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-834-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues... are EGR valve clogging leading to running
+      problems..."'
+    independent: true
+- claim_key: k9k_85_engine_glow_plug_failures_(
+  title: Glow plug failures (K9K 834)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Glow plugs in the K9K 834 engine tend to fail as the engine ages, particularly
+    in cold climates or when the engine is frequently started and stopped in short
+    urban trips. This can lead to cold-start issues and prolonged cranking.
+  inspection_advice: Check for glow plug-related error codes (e.g., P0420, P0455)
+    and listen for clicking noises from the glow plugs during cold starts. Inspect
+    for visible damage or corrosion on the glow plug connectors.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-834-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues... are glow plug failures also common as the
+      engine ages..."'
+    independent: true
+- claim_key: k9k_85_engine_interference_engine_
+  title: Interference engine risk (K9K 834)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K 834 is an interference engine, meaning that failure of the timing
+    chain or a jump in timing could cause catastrophic internal damage due to piston-valve
+    collisions. While the chain is durable, this is a critical risk if the chain fails.
+  inspection_advice: Verify the timing chain condition during an inspection, especially
+    if the vehicle has undergone a timing chain replacement. Check for any signs of
+    oil leaks or unusual noises from the timing chain area. Ensure oil changes are
+    performed on schedule to maintain chain lubrication.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-834-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"Yes, it has moderate tuning potential... However, pushing beyond this
+      is not recommended without upgrading the turbo actuator and ensuring the DPF
+      can handle increased soot loads. **The K9K 834 is an interference engine.**
+      If the timing chain were to fail (which is very rare) or jump timing, the pistons
+      would collide with the open valves, causing catastrophic internal damage..."'
+    independent: true
+- claim_key: k9k_85_fuel system_high-pressure_fuel_p
+  title: High-pressure fuel pump failures (pre-2015 K9K 820)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Pre-2015 Renault K9K 820 engines suffer from a notably higher incidence
+    of high-pressure fuel pump failures, particularly when exposed to poor fuel quality
+    or infrequent highway driving. This is a documented issue in Renault internal
+    service data and UK DVSA MOT statistics.
+  inspection_advice: Check for error codes related to fuel injection (e.g., P0087,
+    P0088) and inspect for fuel leaks or unusual noises from the fuel pump area. Verify
+    maintenance records for fuel pump replacements and ensure high-quality diesel
+    has been used.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-820-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The K9K 820''s primary reliability focus is **high-pressure fuel pump
+      failure**, with elevated incidence in vehicles subjected to poor fuel quality
+      or infrequent highway use. Renault internal service data indicated a notable
+      rate of pump-related faults in pre-2015 builds, while UK DVSA MOT data shows
+      DPF issues remain a leading cause of failure for diesel vehicles of this era."'
+    independent: true
+- claim_key: k9k_85_emissions_dpf_blockages_from_s
+  title: DPF blockages from short trips (K9K 820)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K 820's Diesel Particulate Filter (DPF) is prone to clogging due
+    to frequent short trips, which prevent full regeneration. This is a well-documented
+    issue in Renault service bulletins and UK diesel vehicle failure statistics.
+  inspection_advice: Check for DPF error codes (e.g., P0420, P2455) and inspect for
+    excessive black smoke or reduced power. Verify driving habits and ensure the DPF
+    regenerates properly (e.g., occasional long-distance driving).
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-820-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues are [...] **DPF blockages from short trips**
+      [...]. These are well-documented in Renault service bulletins and align with
+      common diesel engine failure modes for this generation."'
+    independent: true
+- claim_key: k9k_85_engine_turbo_actuator_malfu
+  title: Turbo actuator malfunctions (K9K 820)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The variable geometry turbocharger (VGT) actuator in the K9K 820 has
+    been identified as a failure point, contributing to performance and emissions
+    issues. This is part of the broader list of common diesel engine faults for this
+    model.
+  inspection_advice: Listen for unusual turbo noises, check for error codes related
+    to turbocharger performance (e.g., P0299, P245A), and inspect for leaks or unusual
+    exhaust backpressure.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-820-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues are high-pressure fuel pump failures (pre-2015),
+      **DPF blockages from short trips, turbo actuator malfunctions**, and glow plug/module
+      faults."'
+    independent: true
+- claim_key: k9k_85_engine_glow_plug/module_fau
+  title: Glow plug/module faults (K9K 820)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Glow plug and glow plug module failures are a recurring issue in the
+    K9K 820, particularly in cold-start scenarios, contributing to starting difficulties
+    and emissions irregularities.
+  inspection_advice: Test for glow plug functionality (e.g., check for error codes
+    like P0420, P0500) and inspect for delayed engine starts or rough idling in cold
+    conditions.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-820-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues are high-pressure fuel pump failures (pre-2015),
+      DPF blockages from short trips, turbo actuator malfunctions, and **glow plug/module
+      faults**."'
+    independent: true
+- claim_key: k9k_85_emissions_dpf_damage_from_inco
+  title: DPF damage from incorrect oil use (K9K 820)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Using non-RN0710 (low-SAPS) oil in the K9K 820 can cause DPF clogging
+    and damage, as the oil ash accumulates in the filter. This is a critical issue
+    due to Renault’s strict oil specification requirements.
+  inspection_advice: Confirm the oil type used in service records is RN0710 (5W-30)
+    and check for DPF error codes or excessive soot buildup. Inspect the oil filter
+    and engine bay for signs of incorrect oil usage.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-820-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"Renault mandates **RN0710 specification oil**, typically 5W-30. This
+      is a low-SAPS (low ash) oil and is **essential for vehicles equipped with a
+      DPF to prevent filter clogging**. Using the wrong oil will damage the DPF and
+      potentially invalidate warranties."'
+    independent: true
+- claim_key: k9k_85_emissions_premature_dpf_cloggi
+  title: Premature DPF clogging in urban-use vehicles
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K 837 diesel engine suffers from frequent Diesel Particulate Filter
+    (DPF) clogging, particularly in vehicles driven primarily in city conditions with
+    short trip cycles. This leads to early DPF-related interventions, often before
+    100,000 km, and requires costly maintenance or replacement.
+  inspection_advice: Check for DPF warning lights on the dashboard, unusual exhaust
+    smells, or reduced engine performance. Inspect the DPF for physical blockages
+    or excessive soot buildup during a visual inspection or diagnostic scan. Verify
+    if the vehicle has a history of frequent short trips, which exacerbates DPF issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-837-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The K9K 837''s primary reliability risk is DPF clogging in urban-use
+      vehicles, with elevated incidence in short-trip driving cycles. Renault internal
+      service data indicates a significant number of DPF-related interventions before
+      100,000 km under these conditions, while UK DVSA records show EGR-related faults
+      remain a common cause of emissions test failures."'
+    independent: true
+- claim_key: k9k_85_emissions_egr_valve/carbon_bui
+  title: EGR valve/carbon buildup failures
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Exhaust Gas Recirculation (EGR) system on the K9K 837 engine is prone
+    to carbon buildup and failure, contributing to emissions test failures and reduced
+    engine efficiency. This is a common issue across diesel engines of this era and
+    requires regular maintenance to mitigate.
+  inspection_advice: Look for EGR-related warning lights on the dashboard or error
+    codes during a diagnostic scan. Check for carbon deposits around the EGR valve
+    and inspect the EGR cooler for leaks or blockages. Verify if the vehicle has a
+    history of emissions test failures, which may indicate EGR system issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-837-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"UK DVSA records show EGR-related faults remain a common cause of emissions
+      test failures."'
+    independent: true
+- claim_key: k9k_85_engine_variable-geometry_tu
+  title: Variable-geometry turbo actuator faults
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The variable-geometry turbo (VGT) actuator on the K9K 837 engine is prone
+    to failure, leading to reduced performance, poor acceleration, and potential long-term
+    turbo damage if not addressed promptly.
+  inspection_advice: Listen for unusual turbo noises or whining during acceleration.
+    Check for turbo boost pressure inconsistencies using a scan tool. Inspect for
+    turbo actuator warning lights or error codes related to boost control systems.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-837-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"The most frequent issues are DPF clogging (especially in city cars),
+      EGR valve/carbon buildup, **variable-geometry turbo actuator faults**, and glow
+      plug/relay failures."'
+    independent: true
+- claim_key: k9k_85_engine_critical_oil_specifi
+  title: Critical oil specification requirement (RN0700/RN0710)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K 837 engine requires strict adherence to RN0700 or RN0710 oil
+    specifications (typically 5W-30 synthetic) to prevent DPF clogging and other long-term
+    reliability issues. Using incorrect or generic oil can lead to severe engine damage.
+  inspection_advice: Check the vehicle’s service records to confirm the type of oil
+    used during maintenance. Verify if the oil meets the RN0700 or RN0710 specification
+    or at least ACEA B4 standards. Look for signs of oil contamination or improper
+    oil changes that could exacerbate engine issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/k9k-837-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"Renault mandates oil meeting the RN0700 or RN0710 specification, typically
+      a 5W-30 synthetic. This is critical for DPF-equipped engines as it produces
+      low ash content. Using ACEA B4-compliant oil is the absolute minimum. Never
+      use generic or incorrect oil."'
+    independent: true
+- claim_key: k9k_85_engine_chronic_turbocharger
+  title: Chronic turbocharger bearing wear on 1.5 dCi engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text repeatedly highlights turbocharger bearing (yatak) failure as
+    a common issue requiring replacement, often due to poor lubrication or contamination,
+    leading to performance loss and potential catastrophic failure if ignored.
+  inspection_advice: Check for unusual turbo noise (high-pitched whine or grinding),
+    excessive oil consumption, or blue smoke from the exhaust—signs of turbo bearing
+    wear. Inspect for oil leaks around the turbo housing during a test drive or under-hood
+    inspection.
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Yataklar: Aşınmışsa değiştirilmeli.'
+    independent: true
+- claim_key: k9k_85_engine_carbon_buildup_in_tu
+  title: Carbon buildup in turbocharger and intake system (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text explicitly mentions carbon deposits (karbon birikimi) as a recurring
+    issue, particularly when low-quality fuel is used, clogging turbo components and
+    reducing efficiency.
+  inspection_advice: Inspect the turbo inlet and vanes for black carbon deposits.
+    A visual inspection of the intake manifold and turbo housing may reveal soot buildup,
+    especially if the vehicle has high mileage or a history of poor fuel quality.
+  sources: []
+- claim_key: k9k_85_engine_turbocharger_seal/le
+  title: Turbocharger seal/leakage failures (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The text notes that turbo seals (conta ve keçeler) frequently fail, leading
+    to oil leaks and loss of boost pressure, which directly impacts performance and
+    can cause further damage if unaddressed.
+  inspection_advice: Look for oil leaks around the turbo housing or oil streaks on
+    the turbocharger itself. Check for a loss of boost pressure (weak acceleration,
+    poor throttle response) or excessive oil consumption.
+  sources: []
+- claim_key: k9k_85_engine_oil_filter_clogging_
+  title: Oil filter clogging causing turbocharger damage (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text explicitly states that clogged oil filters restrict oil flow,
+    leading to inadequate lubrication of turbo bearings and accelerated wear.
+  inspection_advice: Check the oil filter for clogging during routine maintenance.
+    Monitor oil pressure—low oil pressure could indicate restricted flow due to a
+    clogged filter, which may contribute to turbo bearing failure.
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Yağ Filtre Tıkanıklığı: Yağın serbest akışını engelleyen tıkanıklıklar
+      turbo yataklarına zarar verebilir.'
+    independent: true
+- claim_key: k9k_85_engine_turbocharger_wheel_i
+  title: Turbocharger wheel imbalance requiring professional rebalancing (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text mentions that turbo wheels (pervaneler) often require rebalancing
+    to prevent vibration and premature wear, indicating a chronic issue with turbo
+    assembly quality or wear.
+  inspection_advice: Listen for unusual vibrations or rattling from the turbo during
+    operation. If the turbo has been previously repaired or replaced, check for signs
+    of imbalance (e.g., uneven wear on turbo components or unusual noise).
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: Turbo pervaneleri, dengesiz çalışmayı önlemek için dengeleme makinesinde
+      ayarlanır.
+    independent: true
+- claim_key: k9k_85_emissions_dpf_regeneration_ala
+  title: DPF regeneration alarm issues on K9K 1.5 dCi engines (2014-2020)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DPF regeneration process on these engines frequently triggers false
+    or persistent alarms, indicating a potential design or software flaw in the regeneration
+    monitoring system.
+  inspection_advice: Check for recurring DPF regeneration alarms in the vehicle's
+    diagnostic history or via the app. Look for signs of incomplete or failed regenerations,
+    such as black smoke from the exhaust or reduced engine performance during regeneration
+    events.
+  sources: []
+- claim_key: k9k_85_emissions_dpf_thermal_damage_f
+  title: DPF thermal damage from failed regeneration cycles
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Short city trips prevent DPF passive regeneration, forcing the ECU to
+    trigger active regenerations. If these cycles are interrupted or incomplete, soot
+    builds up, causing temperature spikes that melt or crack the ceramic substrate,
+    rendering the DPF unusable.
+  inspection_advice: Check for DPF warning lights and limp mode. Look for signs of
+    thermal damage (melted/cracked DPF) and verify driving habits (frequent short
+    trips). Scan for regeneration-related codes (e.g., P242F).
+  sources: []
+- claim_key: k9k_85_emissions_egr_cooler_corrosion
+  title: EGR cooler corrosion and failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR cooler condenses exhaust gases, creating a corrosive sludge that
+    clogs passages and damages the cooler. Cracked EGR coolers leak coolant into the
+    exhaust, damaging the DPF and turbocharger, creating a feedback loop of failure.
+  inspection_advice: Check for coolant leaks in the exhaust system, rough idle, or
+    dark exhaust smoke. Look for EGR-related codes (e.g., P0401, P0402) and inspect
+    the EGR cooler for cracks or sludge buildup. Verify if the car has a history of
+    short trips or poor-quality diesel.
+  sources: []
+- claim_key: k9k_85_emissions_egr_valve_wear_and_s
+  title: EGR valve wear and sticking
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR valve is exposed to extreme heat and carbon buildup, leading
+    to wear, sticking, and failure. A stuck-open EGR valve dilutes the air-fuel mix,
+    causing poor engine performance and accelerating DPF clogging.
+  inspection_advice: Check for rough idle, shuddering, or dark exhaust smoke. Scan
+    for EGR-related codes (e.g., P0401, P0402). Inspect the EGR valve for carbon buildup
+    or mechanical failure. Verify if the car has a history of short trips or poor
+    maintenance.
+  sources: []
+- claim_key: k9k_85_emissions_dpf_and_egr_system_i
+  title: DPF and EGR system interdependency leading to cascading failures
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DPF and EGR systems are interconnected; failure in one accelerates
+    failure in the other. EGR issues create excess soot, clogging the DPF faster,
+    while DPF restrictions increase backpressure, stressing the EGR system further.
+  inspection_advice: Check for both DPF and EGR warning lights, reduced power, and
+    limp mode. Verify if the car has a history of short trips, poor oil quality, or
+    coolant leaks. Scan for related codes (e.g., P2002, P242F, P0401, P0402).
+  sources: []
+- claim_key: k9k_85_emissions_diesel_particulate_f
+  title: Diesel Particulate Filter (DPF) Regeneration Sensitivity
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The K9K engine relies on proper DPF regeneration to avoid clogging, which
+    can lead to restricted exhaust flow and potential engine damage if neglected.
+    Improper regeneration can cause long-term DPF failure, requiring costly replacement.
+  inspection_advice: Check for DPF warning lights on the dashboard and verify if the
+    vehicle has been driven at highway speeds regularly to ensure DPF regeneration
+    occurs. Inspect exhaust backpressure if performance issues are suspected.
+  sources: []
+- claim_key: k9k_85_fuel system_common_rail_fuel_pre
+  title: Common Rail Fuel Pressure Regulation Failure (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K engine's common rail fuel pressure regulation system is prone
+    to malfunction, as indicated by the presence of a dedicated diagnostic trouble
+    code (DTC P0089). This suggests a chronic issue with the system's ability to maintain
+    proper fuel pressure, which can lead to poor engine performance or failure.
+  inspection_advice: Check for DTC P0089 in the engine control system. Inspect the
+    common rail fuel pressure sensor and related wiring for damage or corrosion. Verify
+    the functionality of the high-pressure pump and fuel injectors.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0089 Common rail fuel pressure regulation function
+    independent: true
+- claim_key: k9k_85_fuel system_fuel_flow_capacity_i
+  title: Fuel Flow Capacity Issues (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The presence of DTC P0087 indicates a chronic problem with the fuel flow
+    capacity function, which can result in inadequate fuel delivery to the engine,
+    leading to misfires or poor performance.
+  inspection_advice: Look for DTC P0087 in the engine control system. Inspect the
+    fuel pump, fuel lines, and injectors for blockages or malfunctions. Ensure the
+    fuel filter is clean and functioning properly.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0087 Fuel flow capacity function
+    independent: true
+- claim_key: k9k_85_fuel system_injector_circuit_fai
+  title: Injector Circuit Failures (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Multiple DTCs (P0200, P0201, P0202, P0203, P0204) related to injector
+    circuits suggest a chronic issue with injector reliability or wiring in the K9K
+    engine, which can cause misfires and engine performance issues.
+  inspection_advice: Check for any of the injector-related DTCs (P0200-P0204). Inspect
+    the wiring harness for the injectors, ensuring there are no signs of corrosion,
+    damage, or poor connections. Test individual injectors for proper operation.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0200 Injector control circuit
+
+      DTC P0201 Injector circuit cylinder 1
+
+      DTC P0202 Injector circuit cylinder 2
+
+      DTC P0203 Injector circuit cylinder 3
+
+      DTC P0204 Injector circuit cylinder 4'
+    independent: true
+- claim_key: k9k_85_engine_cylinder_misfires_(k
+  title: Cylinder Misfires (K9K)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The presence of multiple misfire DTCs (P0301, P0302, P0303, P0304) indicates
+    chronic misfire issues in the K9K engine, which can be caused by faulty injectors,
+    sensors, or other engine components.
+  inspection_advice: Check for misfire DTCs (P0301-P0304). Perform a compression test
+    and inspect spark plugs, injectors, and sensors for faults. Look for signs of
+    carbon buildup or mechanical issues in the cylinders.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0301 Cylinder 1 misfire
+
+      DTC P0302 Cylinder 2 misfire
+
+      DTC P0303 Cylinder 3 misfire
+
+      DTC P0304 Cylinder 4 misfire'
+    independent: true
+- claim_key: k9k_85_electrical_crankshaft_position_
+  title: Crankshaft Position Sensor (CKP) Failure (K9K)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The presence of DTC P0335 indicates a chronic issue with the crankshaft
+    position sensor, which is critical for engine timing and operation. Sensor failure
+    can lead to severe engine malfunctions or failure to start.
+  inspection_advice: Check for DTC P0335. Inspect the CKP sensor and its wiring for
+    damage or corrosion. Verify the sensor’s signal output and replace if faulty.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0335 CKP sensor (POS)
+    independent: true
+- claim_key: k9k_85_emissions_egr_system_control_c
+  title: EGR System Control Circuit Failures (K9K)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The presence of multiple DTCs related to the EGR system (P0400, P0403,
+    P0409) suggests chronic issues with the EGR volume control solenoid valve circuit
+    and sensor, which can lead to poor emissions control and potential engine performance
+    issues.
+  inspection_advice: Check for EGR-related DTCs (P0400, P0403, P0409). Inspect the
+    EGR valve, solenoid, and related wiring for damage or malfunction. Clean or replace
+    the EGR valve if carbon buildup is present.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0400 EGR volume control solenoid valve circuit
+
+      DTC P0403 EGR control circuit
+
+      DTC P0409 EGR position sensor'
+    independent: true
+- claim_key: k9k_85_electrical_ecm_(engine_control_
+  title: ECM (Engine Control Module) Issues (K9K)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Multiple DTCs (P0604, P0606, P0608, P0609, P0685) related to the ECM
+    indicate chronic electrical or software problems, which can cause erratic engine
+    behavior, poor performance, or failure to start.
+  inspection_advice: Check for ECM-related DTCs (P0604, P0606, P0608, P0609, P0685).
+    Inspect the ECM wiring and connections for damage or corrosion. Consider ECM reprogramming
+    or replacement if issues persist.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0604 ECM memory
+
+      DTC P0606 ECM
+
+      DTC P0608 Sensor supply voltage
+
+      DTC P0609 Supply voltage APP sensor 2
+
+      DTC P0685 ECM relay control'
+    independent: true
+- claim_key: k9k_85_electrical_can_communication_li
+  title: CAN Communication Line Failure (K9K)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The presence of DTC C001 indicates chronic issues with the CAN communication
+    line, which is critical for communication between various engine control modules
+    and sensors. Failure here can lead to widespread electrical and engine control
+    issues.
+  inspection_advice: Check for DTC C001. Inspect the CAN communication wiring and
+    connectors for damage or corrosion. Verify the integrity of the communication
+    line and related components.
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC C001 CAN communication line
+    independent: true
+- claim_key: k9k_85_fuel system_common_injector_fail
+  title: Common injector failures leading to misfiring, power loss, and increased
+    fuel consumption
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: High-mileage Renault Clio 1.5 dCi (K9K engine) users report frequent
+    injector failures, causing misfires, power loss, and higher fuel consumption.
+    This is exacerbated by poor maintenance and low-quality fuel.
+  inspection_advice: Check for misfires, unusual engine noises, and excessive fuel
+    consumption. Verify if injectors have been recently serviced or replaced. Listen
+    for irregular firing during test drives.
+  sources:
+  - source_url: https://www.araclo.com/blog/renault-clio-1.5-dci-incelemesi-kronik-sorunlar-yakit-tuketimi-ve-yorumlar
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"K9K 1.5 dCi, genel olarak ekonomik ve dayanıklı kabul edilen bir motordur;
+      bazı teknik kaynaklar bu üniteyi ''hafızalara kazınan kronik bir arızası olmayan''
+      bir motor olarak değerlendirir. Yine de yüksek kilometrelerde ve bakım ihmal
+      edildiğinde bazı başlıklar öne çıkmaktadır. Kullanıcı bildirimlerine göre yüksek
+      kilometreli araçlarda en sık konuşulan başlık enjektör arızalarıdır. Yakıtın
+      doğru püskürtülememesi nedeniyle teklemenin, güç kaybının ve yakıt tüketiminde
+      artışın raporlandığı belirtilmektedir."'
+    independent: true
+- claim_key: k9k_85_engine_turbocharger_whining
+  title: Turbocharger whining noise and hesitation during acceleration
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Some users report a high-pitched whining noise from the turbocharger,
+    particularly in poorly maintained Clio 1.5 dCi models, leading to hesitation during
+    acceleration. This suggests potential turbo failure or contamination.
+  inspection_advice: During a test drive, listen closely for unusual whining or hissing
+    noises from the turbo area, especially under acceleration. Check for power loss
+    or sluggish response when pressing the gas pedal.
+  sources:
+  - source_url: https://www.araclo.com/blog/renault-clio-1.5-dci-incelemesi-kronik-sorunlar-yakit-tuketimi-ve-yorumlar
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Bazı kullanıcılar, özellikle bakımı aksatılan araçlarda turbodan tiz
+      bir ıslık sesi geldiğini ve hızlanmalarda isteksizlik yaşadıklarını aktarmıştır."'
+    independent: true
+- claim_key: k9k_85_emissions_dpf_tıkanması_nedeni
+  title: DPF tıkanması nedeniyle seramik yapı erimesi/çatlaması
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPF'nin yanmamış hidrokarbonlar, motor yağı kalıntıları veya metal oksit
+    külleri ile tıkanması, egzoz gazlarının akışını tamamen engeller. Bu durum, filtre
+    içindeki seramik yapının aşırı ısıdan erimesine veya çatlamasına yol açar, kalıcı
+    hasara neden olur ve motorun performansını ciddi şekilde etkiler.
+  inspection_advice: Gösterge panelindeki sarı ikaz lambasını kontrol edin. Egzoz
+    hattında yüksek geri basınç veya egzozdan kötü koku varsa, DPF tıkanması olabilir.
+    Motor performansındaki düşüş, yakıt tüketimindeki artış veya rölanti dalgalanmaları
+    da tıkanma belirtisi olabilir. Uzman kontrolü için araçta 'Limp Mode' moduna geçmişse
+    veya turbo sisteminde anormal sesler duyuluyorsa, DPF'nin fiziksel hasar riski
+    yüksek olabilir.
+  sources: []
+- claim_key: k9k_85_emissions_dpf_rejenerasyon_işl
+  title: DPF rejenerasyon işleminin başarısızlığı ve motor koruma moduna geçiş
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPF rejenerasyonu (yakıtın yüksek sıcaklıkta yanmasıyla temizleme) başarısız
+    olursa, motorun performansı kısıtlanır ve 'Limp Mode' moduna geçer. Bu durum,
+    sürücüye hız ve devir sınırlamaları getirir ve motoru korumak için sistematik
+    bir performans düşüşüne neden olur.
+  inspection_advice: Motorun 'Limp Mode' moduna geçip geçmediğini kontrol edin. Start-Stop
+    sisteminin devre dışı kalması veya motor fanının uzun süre çalışmaya devam etmesi
+    de rejenerasyon başarısızlığına işaret edebilir. Egzozdan kötü koku veya motorun
+    düzensiz çalışması da bu sorunun belirtisi olabilir.
+  sources: []
+- claim_key: k9k_85_engine_dpf_tıkanması_nedeni
+  title: DPF tıkanması nedeniyle turbo sistem hasarı
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPF tıkanması, turboşarjın yüksek ısı ve basınç altında çalışmasına neden
+    olur. Bu durum, mil kesmesi, kanatçık hasarı gibi ciddi turbo arızalarına yol
+    açar ve motor performansını tamamen etkiler.
+  inspection_advice: Turbo sisteminde anormal sesler veya performans kayıpları varsa,
+    DPF tıkanması nedeniyle turboya zarar gelmiş olabilir. Egzoz akışının bozulması
+    da turbo tepkilerini geciktirebilir. Bu nedenle, turbo seslerini ve performans
+    kayıplarını kontrol edin.
+  sources: []
