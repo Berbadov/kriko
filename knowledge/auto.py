@@ -23,6 +23,8 @@ from urllib.parse import urlparse
 import yaml
 from dotenv import load_dotenv
 
+from knowledge.stoplists import FORUM_DOMAINS
+
 # load dotenv
 load_dotenv()
 
@@ -63,11 +65,9 @@ _EXCLUDE_DOMAINS = [
     "pinterest.com", "ebay.com", "ebay.co.uk", "ebay.de", "ebay.fr",
     "sahibinden.com", "arabam.com", "otomoto.pl", "mobile.de",
     "autotrader.co.uk", "gumtree.com",
-    # JS-challenge / login-gated forums — fetchable only with a full browser;
-    # trafilatura returns ~57 chars (JS challenge payload), no actual content.
-    "renaultforums.co.uk",
-    "frenchcarforum.co.uk",
-    "daciaforum.co.uk",
+    # Forums, owner clubs, and complaint boards — one-time/anecdotal issues
+    # read like chronic patterns once extracted. See knowledge/stoplists.py.
+    *FORUM_DOMAINS,
 ]
 
 
@@ -396,8 +396,8 @@ PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
 
 
 def _infer_part_type(part_id: str) -> str | None:
-    """Return 'engine'|'transmission'|'cooling'|'electrical' by scanning parts dir."""
-    for subdir in ("engine", "transmission", "cooling", "electrical"):
+    """Return 'engine'|'transmission'|'cooling'|'electrical'|'body' by scanning parts dir."""
+    for subdir in ("engine", "transmission", "cooling", "electrical", "body"):
         if (PARTS_DIR / subdir / f"{part_id}.yaml").exists():
             return subdir
     return None
@@ -462,6 +462,14 @@ def _ensure_part_stub(
             f"{make_pretty} {model_pretty} battery",
         ]
 
+    elif part_type == "body":
+        display_name = f"{make_pretty} {model_pretty} Body & Water Sealing"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} body",
+            f"{make_pretty} {model_pretty} boot leak",
+            f"{make_pretty} {model_pretty} water ingress",
+        ]
+
     else:
         display_name = f"{make_pretty} {model_pretty} {part_id.upper()}"
         known_also_as = [part_id.upper()]
@@ -506,6 +514,7 @@ def run_all_parts(
     transmissions: set[str] = set()
     cooling_codes: set[str] = set()
     electrical_codes: set[str] = set()
+    body_codes: set[str] = set()
 
     for v in variants:
         ef = (v.get("engine_family") or "").strip()
@@ -517,15 +526,16 @@ def run_all_parts(
             ("transmission_code", transmissions),
             ("cooling_code", cooling_codes),
             ("electrical_code", electrical_codes),
+            ("body_code", body_codes),
         ):
             val = (v.get(code) or "").strip()
             if val and val != "manual":
                 bucket.add(val)
 
-    total = len(engines) + len(transmissions) + len(cooling_codes) + len(electrical_codes)
+    total = len(engines) + len(transmissions) + len(cooling_codes) + len(electrical_codes) + len(body_codes)
     print(f"\nModel: {make} {model}")
     print(f"Parts to process: {len(engines)} engine(s) + {len(transmissions)} transmission(s)"
-          f" + {len(cooling_codes)} cooling + {len(electrical_codes)} electrical\n")
+          f" + {len(cooling_codes)} cooling + {len(electrical_codes)} electrical + {len(body_codes)} body\n")
     for ef, fuel in sorted(engines.items()):
         print(f"  engine      : {ef}" + (f" ({fuel})" if fuel else ""))
     for tc in sorted(transmissions):
@@ -534,6 +544,8 @@ def run_all_parts(
         print(f"  cooling     : {cc}")
     for ec in sorted(electrical_codes):
         print(f"  electrical  : {ec}")
+    for bc in sorted(body_codes):
+        print(f"  body        : {bc}")
     print()
 
     dry_run = kwargs.get("dry_run", False)
@@ -570,6 +582,14 @@ def run_all_parts(
         _ensure_part_stub(ec, "electrical", make, model, variants, dry_run=dry_run)
         run_part(ec, "electrical", **kwargs)
 
+    for bc in sorted(body_codes):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] BODY: {bc}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(bc, "body", make, model, variants, dry_run=dry_run)
+        run_part(bc, "body", **kwargs)
+
     print(f"\n{'═' * 60}")
     print(f"All {total} part pipeline(s) complete for {make} {model}.")
     print(f"{'═' * 60}")
@@ -599,7 +619,7 @@ def main() -> None:
     # Part-centric mode
     parser.add_argument("--part", metavar="PART_ID",
                         help="Part ID (e.g. k9k, edc, ea211, dq200)")
-    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical"],
+    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical", "body"],
                         help="Part type (required with --part unless auto-detected)")
     parser.add_argument("--fuel", default="",
                         choices=["", "diesel", "petrol"],

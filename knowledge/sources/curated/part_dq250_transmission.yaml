@@ -91,61 +91,9 @@
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
 - type: page
-  url: https://www.volkswagenforum.co.uk/threads/02e-dq250-6-speed-dsg-transmission-engine-almost-stalling.45319/
-  site_or_channel: volkswagenforum.co.uk
-  notes: 02E DQ250 6 speed DSG Transmission - Engine almost stalling | UK Volkswagen
-    Foru
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forums.ross-tech.com/index.php?threads%2F41586%2F=
-  site_or_channel: forums.ross-tech.com
-  notes: Resolved - Jerky 1st and Reverse - DSG 6 speed DQ250
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.vwaudiforum.co.uk/forum/showthread.php/200918-Diagnosing-DSG-DQ250-failing-basic-settings-and-loosing-second-gear
-  site_or_channel: vwaudiforum.co.uk
-  notes: 'Thread:  Diagnosing DSG DQ250 failing basic settings and loosing second
-    gear'
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
-  url: https://www.vwvortex.com/threads/dsg-dq250-erratic-behaviour.9563860/
-  site_or_channel: vwvortex.com
-  notes: DSG DQ250 erratic behaviour
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.vwvortex.com/threads/everything-you-ever-wanted-to-know-about-the-02e-dq250-direct-shift-gearbox.7121065/
-  site_or_channel: vwvortex.com
-  notes: 'Everything you ever wanted to know about the 02E(DQ250) Direct Shift Gearbox.
-    | '
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.honestjohn.co.uk/askhj/answer/132373/which-volkswagen-dsg-gearboxes-are-reliable-
-  site_or_channel: honestjohn.co.uk
-  notes: Which Volkswagen DSG gearboxes are reliable? | Ask Honest John | Honest John
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
   url: https://tvsengineering.com/en/dsg-gearbox/dq250/
   site_or_channel: tvsengineering.com
   notes: DQ250 - TVS Engineering
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.otoclubturkiye.com/forum/topic/317227-dsg-de-son-durum-nedir-2021-10tsi-polo-%C5%9Fanz%C4%B1man%C4%B1-dq200-m%C3%BC-dq250-peugeot-208-12-motor/
-  site_or_channel: otoclubturkiye.com
-  notes: DSG de Son Durum Nedir? 2021 1.0TSI Polo Şanzımanı DQ200 mü ...
   status: processed
   added_at: '2026-06-29'
   processed_at: '2026-06-29'

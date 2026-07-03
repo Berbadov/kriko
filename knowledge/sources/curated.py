@@ -6,6 +6,11 @@ specific YouTube video IDs and page URLs that a human has reviewed.
 YouTube entries → fetched via yt-dlp (get_transcript)
 Page entries    → fetched via trafilatura (universal article extractor)
 
+Fetched text is dropped if it's predominantly German (is_german_text) — the
+extraction LLM has been observed echoing German source text verbatim instead
+of translating it (see knowledge/stoplists.py). Interim gate, not a
+translation fix.
+
 Usage:
     from knowledge.sources.curated import CuratedSource
     docs = CuratedSource().fetch("renault", "megane")
@@ -18,6 +23,7 @@ import yaml
 
 from knowledge.sources.base import Document
 from knowledge.sources.youtube import get_transcript
+from knowledge.stoplists import is_german_text
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +100,9 @@ class CuratedSource:
             if not text:
                 log.warning("No transcript for video_id=%s", video_id)
                 return None
+            if is_german_text(text):
+                log.warning("Skipping German-language transcript for video_id=%s", video_id)
+                return None
             return Document(
                 text=text[:8000],
                 url=f"https://www.youtube.com/watch?v={video_id}",
@@ -115,6 +124,9 @@ class CuratedSource:
             text = trafilatura.extract(html, include_comments=False, include_tables=False)
             if not text:
                 log.warning("trafilatura extracted no content from: %s", url)
+                return None
+            if is_german_text(text):
+                log.warning("Skipping German-language page: %s", url)
                 return None
             return Document(
                 text=text[:8000],

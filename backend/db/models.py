@@ -24,6 +24,7 @@ class Variant(Base):
     power_max_hp      = Column(Integer)
     transmission      = Column(String)
     transmission_code = Column(String)     # revision-level gearbox code (edc, dq200, dq250, …)
+    drivetrain        = Column(String)     # "fwd" | "awd" | "rwd" — catalog-fixed per variant/trim
     year_from         = Column(Integer, nullable=False)
     year_to           = Column(Integer)
     market            = Column(String, default="TR")
@@ -52,6 +53,7 @@ class Claim(Base):
     min_age_years     = Column(Integer, nullable=True)
     maintenance_data  = Column(JSON, nullable=True)    # the maintenance: block from YAML
     value_tier        = Column(String, nullable=True)  # "core" | "routine_inspection" | "generic_warning"
+    requires_equipment = Column(JSON, nullable=True)   # tags auto-derived from title/rationale, e.g. ["sunroof"]
 
     sources  = relationship("ClaimSource", back_populates="claim", cascade="all, delete-orphan")
     variants = relationship("ClaimVariant", back_populates="claim", cascade="all, delete-orphan")
@@ -72,7 +74,6 @@ class ClaimSource(Base):
 
     id              = Column(Integer, primary_key=True, autoincrement=True)
     claim_id        = Column(String, ForeignKey("claims.id", ondelete="CASCADE"))
-    tier            = Column(String, nullable=False)
     source_url      = Column(String, nullable=False)
     source_domain   = Column(String)
     site_or_channel = Column(String)

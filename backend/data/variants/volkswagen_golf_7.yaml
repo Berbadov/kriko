@@ -1,24 +1,7 @@
-# Volkswagen Golf VII (2013–2020) — Turkish market variant catalog
-# Hand-curated from VW TR spec sheets and press releases.
-#
-# ID format: golf7_{engine_family}_{power_hp}[_{tx_suffix}]
-# engine_family: lowercase engineering code used as the part-research key.
-# transmission_code: revision-level gearbox code.
-#   DQ200 — 7-speed dry dual-clutch (low/medium petrol torque, ≤250Nm)
-#   DQ250 — 6-speed wet dual-clutch (higher diesel torque, ≥250Nm)
-#   manual — standard manual gearbox (no known DSG issues)
-#
-# EA211: VAG 3/4-cylinder petrol family (1.0/1.2/1.4 TSI), same basic architecture
-# EA288: VAG 4-cylinder TDI family (1.6/2.0 TDI), replaced EA189 post-dieselgate
-#
-# electrical_code: model-wide part key for claims not tied to a specific engine
-# (e.g., 12V battery drain, MIB2 infotainment faults, CCM water ingress).
-# Cooling is engine-specific and covered by the engine part YAMLs.
-
 - id: golf7_ea211_105
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA211
   engine_family: ea211
   fuel: petrol
@@ -31,12 +14,13 @@
   year_from: 2017
   year_to: 2020
   market: TR
-  notes: "1.0 TSI 105 — 3-cylinder, manual only in TR"
-
+  notes: 1.0 TSI 105 — 3-cylinder, manual only in TR
+  body_code: golf7_body
+  drivetrain: fwd
 - id: golf7_ea211_125
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA211
   engine_family: ea211
   fuel: petrol
@@ -49,12 +33,13 @@
   year_from: 2013
   year_to: 2020
   market: TR
-  notes: "1.4 TSI 125 ACT — manual"
-
+  notes: 1.4 TSI 125 ACT — manual
+  body_code: golf7_body
+  drivetrain: fwd
 - id: golf7_ea211_125_dsg
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA211
   engine_family: ea211
   fuel: petrol
@@ -67,12 +52,13 @@
   year_from: 2013
   year_to: 2020
   market: TR
-  notes: "1.4 TSI 125 ACT — 7-speed dry DSG (DQ200)"
-
+  notes: 1.4 TSI 125 ACT — 7-speed dry DSG (DQ200)
+  body_code: golf7_body
+  drivetrain: fwd
 - id: golf7_ea288_105
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA288
   engine_family: ea288
   fuel: diesel
@@ -85,12 +71,13 @@
   year_from: 2013
   year_to: 2020
   market: TR
-  notes: "1.6 TDI 105 (CLHA/EA189 updated to EA288 post-2016) — manual only in TR"
-
+  notes: 1.6 TDI 105 (CLHA/EA189 updated to EA288 post-2016) — manual only in TR
+  body_code: golf7_body
+  drivetrain: fwd
 - id: golf7_ea288_150
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA288
   engine_family: ea288
   fuel: diesel
@@ -103,12 +90,13 @@
   year_from: 2013
   year_to: 2020
   market: TR
-  notes: "2.0 TDI 150 (CRVA/EA288) — manual"
-
+  notes: 2.0 TDI 150 (CRVA/EA288) — manual
+  body_code: golf7_body
+  drivetrain: fwd
 - id: golf7_ea288_150_dsg
   make: volkswagen
   model: golf
-  generation: "VII"
+  generation: VII
   engine_code: EA288
   engine_family: ea288
   fuel: diesel
@@ -121,4 +109,6 @@
   year_from: 2013
   year_to: 2020
   market: TR
-  notes: "2.0 TDI 150 (CRVA/EA288) — 6-speed wet DSG (DQ250)"
+  notes: 2.0 TDI 150 (CRVA/EA288) — 6-speed wet DSG (DQ250)
+  body_code: golf7_body
+  drivetrain: fwd

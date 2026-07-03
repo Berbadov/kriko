@@ -27,14 +27,6 @@ claims:
     under the engine bay, and signs of overheating (e.g., burnt coolant smell, dashboard
     warning lights). Verify if the water pump has been replaced preventively.
   sources:
-  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
-    source_domain: gaga.ba
-    site_or_channel: gaga.ba
-    quote: '"The EA211 uses a plastic water pump housing integrated with the thermostat.
-      The plastic deforms over time from heat and starts leaking, usually between
-      80,000 and 140,000 km. The problem is more common on examples that sat idle
-      for long periods or went through multiple overheating cycles."'
-    independent: true
   - source_url: https://www.accio.com/blog/ea211-engine-problems
     source_domain: accio.com
     site_or_channel: accio.com
@@ -56,8 +48,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The wastegate lever, connecting mechanical and electronic components,
     suffers from metal corrosion and seizing due to moisture exposure, leading to
@@ -65,21 +57,14 @@ claims:
   inspection_advice: Listen for rattling or knocking noises from the turbo area on
     cold starts. Check for EPC warning lights or power loss. Verify if the wastegate
     lever has been cleaned/lubricated or if the electronic actuator has failed.
-  sources:
-  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
-    source_domain: gaga.ba
-    site_or_channel: gaga.ba
-    quote: '"The wastegate on the EA211 turbo uses a lever between the mechanical
-      arm and the electronic actuator. The junction of two different metals corrodes
-      and seizes up over time, especially on cars stored in damp conditions."'
-    independent: true
+  sources: []
 - claim_key: ea211_transmission_dq200_mechatronics_v
   title: DQ200 mechatronics valve body cracking (automatic transmission)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The DQ200 dry-clutch DSG mechatronic unit has a valve body prone to internal
     cracking, causing pressure loss and clutch control failure. This is particularly
@@ -87,22 +72,14 @@ claims:
   inspection_advice: Check for jerking during acceleration, delayed gear engagement,
     PRNDS dashboard flashing, or limp mode activation. Verify transmission fluid condition
     and service history for mechatronic unit replacements.
-  sources:
-  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
-    source_domain: gaga.ba
-    site_or_channel: gaga.ba
-    quote: '"The mechatronic unit (electro-hydraulic control unit) has a weak point
-      in the valve body that cracks internally, loses pressure, and can''t control
-      the clutch. The problem is especially pronounced on cars driven predominantly
-      in city traffic with frequent stop-and-go driving."'
-    independent: true
+  sources: []
 - claim_key: ea211_engine_act_system_rocker_ar
   title: ACT system rocker arm wear (140/150 HP variants)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The ACT (Adaptive Cylinder Technology) cylinder deactivation system in
     140/150 HP variants causes accelerated wear on rocker arms for cylinders 2 and
@@ -110,14 +87,7 @@ claims:
   inspection_advice: For ACT-equipped models (CHPA/CZDA), check for unusual noise
     or performance issues from cylinders 2 and 3. Verify if rocker arms have been
     inspected or replaced.
-  sources:
-  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
-    source_domain: gaga.ba
-    site_or_channel: gaga.ba
-    quote: '"The ACT version carries an additional risk of rocker arm wear on cylinders
-      2 and 3 after 100,000 km - a specific fault that doesn''t exist on the weaker
-      variants without ACT."'
-    independent: true
+  sources: []
 - claim_key: ea211_engine_timing_belt_design_f
   title: Timing belt design flaw requiring mandatory replacement
   kind: known_issue
@@ -875,8 +845,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The user reports intermittent stumbling or shaking during idle or low-load
     conditions (e.g., traffic stops), which suggests a recurring issue with ignition,
@@ -885,9 +855,4 @@ claims:
   inspection_advice: Monitor for consistent misfires under idle conditions, check
     for faulty sensors (e.g., MAF, crankshaft position sensor), and verify if the
     issue persists after coil replacement.
-  sources:
-  - source_url: https://www.golftutkusu.com/topic/27381-1-4-tsi-motor-titreme-bobin-degisimi/
-    source_domain: golftutkusu.com
-    site_or_channel: golftutkusu.com
-    quote: '"Özellikle dururken veya trafikte beklerken ara ara hafif sarsıntı hissediyorum"'
-    independent: true
+  sources: []

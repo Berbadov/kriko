@@ -306,6 +306,7 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
         "transmission": "transmission_code",
         "cooling": "cooling_code",
         "electrical": "electrical_code",
+        "body": "body_code",
     }.get(part_type, "engine_family")
 
     matching_variant_ids: list[str] = []
