@@ -1,9 +1,12 @@
 """Catalog linter — hard CI gate.
 
 Within one (make, model, fuel, year), no two variants may overlap on
-BOTH displacement_cc range AND power range. Overlapping would make the
-matcher produce an unresolvable ambiguity that can never be narrowed to
-a single variant.
+displacement_cc range AND power range AND transmission. Overlapping on
+all three would make the matcher produce an unresolvable ambiguity that
+can never be narrowed to a single variant — matcher.py's
+_narrow_by_transmission can disambiguate two variants that only collide
+on cc+power if they carry distinct `transmission` values (manual vs
+automatic ad text narrows them), so that case is not a true overlap.
 
 This test reads all variant YAML files and fails the build if any overlap
 is detected.
@@ -39,6 +42,17 @@ def _power_overlaps(a, b, tol: int = 5) -> bool:
     return a_min <= b_max and b_min <= a_max
 
 
+def _transmission_disambiguates(a, b) -> bool:
+    """True if both variants carry a distinct, populated `transmission` value.
+
+    Mirrors matcher.py's _narrow_by_transmission: when the ad states manual
+    vs automatic, the matcher can pick a single winner even if cc+power
+    collide, so that's not a true unresolvable overlap.
+    """
+    ta, tb = a.get("transmission"), b.get("transmission")
+    return bool(ta) and bool(tb) and ta != tb
+
+
 def load_all_variants() -> list[dict]:
     variants = []
     for path in sorted(DATA_DIR.glob("*.yaml")):
@@ -59,6 +73,8 @@ def find_overlaps(variants: list[dict]) -> list[str]:
         if not years_a & years_b:
             continue
         # They share make/model/fuel/year — now check cc + power overlap
+        if _transmission_disambiguates(a, b):
+            continue
         if _cc_overlaps(a, b) and _power_overlaps(a, b):
             errors.append(
                 f"OVERLAP: {a['id']} and {b['id']} share "
