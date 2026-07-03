@@ -331,8 +331,21 @@ def run_part(
     model-centric ones. Sources are written to knowledge/sources/curated/part_{part_id}.yaml
     and then processed through the standard extraction + promotion pipeline.
     """
-    from knowledge.parts.search_templates import templates_for_part
+    from knowledge.parts.search_templates import _find_make_model_for_part, templates_for_part
     from knowledge.process import run_part as process_run_part
+
+    # Ensure a scaffold stub exists before writing any claims — mirrors what
+    # run_all_parts does per part. Without this, write_promoted_part_claims
+    # (promote.py) writes a bare {"claims": [...]} for a genuinely new part,
+    # missing part_id/part_type/display_name/manufacturer entirely (only ever
+    # unnoticed before because every prior --part invocation targeted a part
+    # --all-parts had already scaffolded).
+    make, model = _find_make_model_for_part(part_id, part_type)
+    if make and model:
+        variants_path = VARIANTS_DIR / f"{make}_{model}.yaml"
+        if variants_path.exists():
+            variants = yaml.safe_load(variants_path.read_text()) or []
+            _ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
     hints = {"fuel": fuel} if fuel else {}
     templates = templates_for_part(part_id, part_type, hints)
