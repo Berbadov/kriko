@@ -5,4 +5,635 @@ manufacturer: volkswagen
 known_also_as:
 - EA888
 - 2.0 TSI
-claims: []
+claims:
+- claim_key: ea888_230_engine_hidrolik_tensioner_f
+  title: Hidrolik tensioner failure leading to timing chain stretch and catastrophic
+    engine damage
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Third-gen EA888 engines suffer from premature timing chain stretch due
+    to hydraulic tensioner failures under thermal/mechanical stress. The lack of secondary
+    mechanical locking in OEM tensioners causes catastrophic engine damage (bent valves,
+    piston-valve contact) when hydraulic failure occurs, often requiring expensive
+    repairs (~$7,200).
+  inspection_advice: Check for signs of hydraulic tensioner failure (e.g., uneven
+    chain tension, excessive chain stretch before 80,000 miles), listen for unusual
+    noises, and verify if the engine has had hydraulic tensioner replacements or remanufactured
+    kits installed.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"3. nesil EA888 motorlar, özellikle sürekli termal ve mekanik stres altında
+      bozulan, yağ basıncına bağlı hidrolik gerdiriciler nedeniyle 80.000 mil öncesinde
+      zamanlama zinciri uzamasına eğilimlidir. Bu erken uzama, gevşeklik ve hizalanmamışlık
+      yaratır ve piston-valf teması gibi felaket sonuçlu arızaların riskini artırır.
+      ... OEM EA888 gerdiricileri ikincil mekanik kilitleme mekanizmalarına sahip
+      değildir; bu nedenle hidrolik çökme anında zamanlama kaybı, bükülmüş supaplar
+      ve ortalama 7.200 ABD Doları tutarındaki motor tamiri kaçınılmaz hâle gelir."'
+    independent: true
+- claim_key: ea888_230_cooling system_aluminum_water_pump_
+  title: Aluminum water pump housing corrosion due to coolant pH imbalance
+  kind: known_issue
+  domain: cooling system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA888 engines with high mileage experience accelerated corrosion in aluminum
+    water pump housings when coolant pH deviates from the optimal range (7.5–10.5),
+    leading to structural weakening and potential failure.
+  inspection_advice: Inspect the water pump housing for pitting, corrosion, or structural
+    weakness. Check coolant pH levels and ensure they are within the recommended range.
+    Look for signs of coolant leaks or contamination.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Yüksek Kilometreli EA888 Ünitelerinde Alüminyum Gövde Korozyonu ve Çark
+      Kavitasyonu: Yaşlanan EA888 motorlarda alüminyum su pompası muhafazaları, soğutma
+      sıvısı pH değerinin optimal aralığın (genellikle 7,5–10,5) dışına çıkması durumunda
+      hızlandırılmış elektrolitik korozyona uğrar; bu da çukurlaşmaya ve yapısal bütünlüğün
+      zayıflamasına neden olur."'
+    independent: true
+- claim_key: ea888_230_cooling system_water_pump_cavitatio
+  title: Water pump cavitation damage and seal failure
+  kind: known_issue
+  domain: cooling system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA888 engines experience cavitation in water pump impellers when RPM
+    exceeds 40,000, causing blade erosion and metal particle contamination. This contaminates
+    seals, accelerating wear and leading to leaks.
+  inspection_advice: Check the water pump impeller for signs of erosion or pitting.
+    Inspect seals for wear or leaks, and verify if the pump has been replaced with
+    a remanufactured unit featuring improved seal materials.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Aynı zamanda, pompanın milinin devir sayısı 40.000 RPM’yi aştığında meydana
+      gelen kavitasyon nedeniyle çark kanatları aşınır ve metal parçacıklar oluşur.
+      Bu kirleticiler mile monte edilen salmastra contalarını aşındırarak sızıntıyı
+      hızlandırır."'
+    independent: true
+- claim_key: ea888_230_engine_excessive_crankshaft
+  title: Excessive crankshaft axial play causing bearing and oil pump failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Excessive crankshaft axial play (beyond OEM tolerances of 0.006–0.010
+    inches) disrupts load distribution in main bearings, accelerates wear, and starves
+    adjacent systems (e.g., oil pump) of lubrication. This leads to increased vibration,
+    fatigue cracks in bearing surfaces, and premature failure.
+  inspection_advice: Check for excessive crankshaft endplay by measuring axial movement.
+    Listen for unusual noise patterns (e.g., increased vibration) and inspect main
+    bearings and oil pump for signs of wear or failure.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Aşırı krank mili uç oyunu—fabrika tolerans aralığını (0,006–0.010 inç)
+      aşması—kademeli mekanik arızalara neden olur. Anormal eksenel kuvvetler ana
+      yatakların yük dağılımını bozar, aşınmayı hızlandırır ve yağ pompası gibi komşu
+      sistemleri sürekli yağlamadan mahrum bırakır. Titreşim %300’e kadar artar; bu
+      da mekanik salmastra üzerindeki gerilimi artırır ve yatak yüzeylerinde yorulma
+      çatlaklarının oluşumunu teşvik eder."'
+    independent: true
+- claim_key: ea888_230_engine_oem_pushrods_lacking
+  title: OEM pushrods lacking material consistency and surface finish
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: OEM pushrods in EA888 engines lack the material precision and surface
+    finish of remanufactured alternatives, leading to micro-welding during thermal
+    cycling and inconsistent lubrication film retention, which accelerates wear in
+    crankshaft bearings.
+  inspection_advice: Inspect pushrods for inconsistent hardness or surface finish.
+    Check for signs of micro-welding or excessive wear in crankshaft bearings. Verify
+    if pushrods have been replaced with remanufactured units featuring improved material
+    consistency.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Reman itme pulları, genel amaçlı yedek parçalar tarafından eşlenemeyen
+      metalurjik titizlikle OEM eksikliklerini giderir. Yüzey sertliği 55–60 HRC (Rockwell
+      C ölçeği), termal döngü sırasında krank mili yataklarına mikro-kaynak oluşumunu
+      önler; aynı zamanda ultra-pürüzsüz 8–12 Ra mikroinç yüzey pürüzlülüğü, hidrodinamik
+      yağ filmi tutunumunu en üst düzeye çıkarır."'
+    independent: true
+- claim_key: ea888_230_engine_chronic_carbon_depos
+  title: Chronic carbon deposits on intake valves (Gen 1/2)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Direct injection in Gen 1/2 2.0 TSI engines causes unchecked carbon buildup
+    on intake valves, leading to restricted valve movement, misfires, and eventual
+    valve failure. Port injection in Gen 3 mitigates this issue.
+  inspection_advice: Check for carbon deposits on intake valves by inspecting valve
+    heads for black buildup or misaligned valve movement. Look for check engine light
+    codes related to misfires (P0300-P0308).
+  sources:
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
+    quote: '"Carbon deposits are one of the biggest concerns with this engine. This
+      engine is using direct injection and if you are familiar with this system, you
+      know that it is very problematic... This allows carbon deposits to develop and
+      prevent the valves from opening and closing correctly. This will eventually
+      result in complete valve failure and you will start to experience misfires."'
+    independent: true
+- claim_key: ea888_230_engine_premature_spark_plug
+  title: Premature spark plug and coil failures (Gen 1/2)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Direct injection in Gen 1/2 engines accelerates wear on spark plugs and
+    ignition coils, often leading to failures within 50,000 miles. This causes misfires,
+    rough idling, and poor performance.
+  inspection_advice: Inspect spark plugs for excessive wear or fouling. Check ignition
+    coils for resistance values (typically 0.4–0.7 ohms per coil) and listen for misfires
+    or rough idle. Look for check engine light codes (P0300-P0308).
+  sources:
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
+    quote: '"Spark plug and ignition coils are also common on the 2.0 TSI/TFSI engine.
+      They tend to fail at a large scale... This system is very demanding and can
+      wear these components out in 50,000 miles or less in some cases."'
+    independent: true
+- claim_key: ea888_230_fuel system_high-pressure_fuel_p
+  title: High-pressure fuel pump (HPFP) failures (Gen 1/2)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The HPFP in Gen 1/2 engines frequently fails due to design or material
+    weaknesses, causing fuel delivery issues, leaks, or erratic engine behavior. Replacement
+    is often required, and newer generations (Gen 3) show improved reliability.
+  inspection_advice: Listen for unusual noises (e.g., whining or grinding) near the
+    fuel pump. Check for fuel leaks around the pump or fuel rail. Look for check engine
+    light codes (P0190-P0194).
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"High-pressure fuel pump failures were also noted on these 2.0 engines...
+      This pump is located usually on top of the engine and this pump sends high-pressure
+      fuel into the fuel rails... The HPFP will fail and this will cause running issues,
+      check engine light, leaks, or possibly some weird sounds."'
+    independent: true
+- claim_key: ea888_230_fuel system_fuel_injector_failur
+  title: Fuel injector failures (Gen 1/2)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Fuel injectors in Gen 1/2 engines are prone to failure, likely due to
+    direct injection stress, leading to poor fuel atomization, misfires, and reduced
+    engine performance.
+  inspection_advice: Monitor for rough idling, hesitation, or misfires. Use an OBD-II
+    scanner to check for fuel-related codes (e.g., P0171-P0175). Listen for unusual
+    noises from the injector area during engine startup.
+  sources:
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
+    quote: '"Fuel injector failures are also common on the 2.0 TSI/TFSI engine."'
+    independent: true
+- claim_key: ea888_230_fuel system_chronic_fuel_injecto
+  title: Chronic fuel injector failure (leaking/clogging)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: High-pressure direct injectors in the 2.0T TSI (EA111) are prone to leaking
+    or clogging due to extreme heat and pressure, often leading to single-cylinder
+    misfires, poor performance, and eventual failure. Replacement is labor-intensive
+    and typically requires replacing all four injectors simultaneously.
+  inspection_advice: Check for signs of fuel leaks (dripping gas from the engine bay),
+    misfires (check engine light with P0300 codes), or poor acceleration/idling. Listen
+    for unusual noises or excessive carbon buildup on spark plugs (indicating injector
+    issues).
+  sources: []
+- claim_key: ea888_230_engine_plastic_water_pump_h
+  title: Plastic water pump housing failure (leaks/cracks)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0T TSI (EA111) uses a plastic-housed water pump that is prone to
+    failure due to high heat and pressure, often leading to coolant leaks, overheating,
+    and engine limp mode. Failures are common enough to trigger recalls and lawsuits,
+    with some reports citing failure as early as 50,000 miles.
+  inspection_advice: Inspect the water pump housing for cracks or leaks (check coolant
+    levels, look for puddles under the engine, and listen for unusual noises). Verify
+    no engine overheating or low coolant warnings (P3081, P2181, etc.).
+  sources: []
+- claim_key: ea888_230_transmission_dsg_transmission_tit
+  title: DSG Transmission Titration and Kavrama Failure
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DSG (dual-clutch) transmission in the Scirocco 2.0 TSI exhibits chronic
+    issues with shuddering, delayed shifts, and clutch plate wear, particularly in
+    high-mileage examples. This is exacerbated by urban stop-and-go driving and delayed
+    maintenance.
+  inspection_advice: Test drive for shuddering during acceleration, delayed or rough
+    gear shifts, and listen for unusual noises from the transmission. Check transmission
+    fluid condition and level.
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"70 binde vitesler kütlemeye, araç titremeye başladı. Yazılımla kurtardık
+      ama DSG resmen pimi çekilmiş el bombası gibi."'
+    independent: true
+- claim_key: ea888_230_engine_turbocharger_leakage
+  title: Turbocharger Leakage and Boost System Failures
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 2.0 TSI turbocharger system is prone to intercooler hose cracks,
+    boost leaks, and turbo bearing wear, leading to sudden power loss and abnormal
+    turbo whine noises. This is a common failure mode in high-performance TSI engines.
+  inspection_advice: Listen for unusual whining or hissing noises from the turbo area,
+    especially under acceleration. Check for visible cracks in turbo hoses and inspect
+    for oil leaks around the turbocharger.
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"Hızlanırken gelen o ıslık sesi meğer vedaymış. Turbo borusunda kaçak
+      varmış, performansı geri alana kadar canım çıktı."'
+    independent: true
+- claim_key: ea888_230_engine_piston_and_ring_wear
+  title: Piston and Ring Wear (Oil Consumption)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 2.0 TSI engine suffers from chronic piston and ring wear, leading
+    to excessive oil consumption, blue smoke from the exhaust, and eventual catastrophic
+    engine failure if unaddressed. This is a well-known issue in high-mileage TSI
+    engines.
+  inspection_advice: Check for blue smoke from the exhaust, excessive oil consumption
+    (oil level dropping rapidly), and listen for unusual engine noises. Inspect for
+    oil leaks around the valve cover and oil filter housing.
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"100 bin km’yi geçince araba yağ içmeye başladı. Segman aşınması dediler,
+      masrafı duyunca arabayı satıp kurtuldum."'
+    independent: true
+- claim_key: ea888_230_electrical_ignition_coil_and_sp
+  title: Ignition Coil and Spark Plug Failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 2.0 TSI engine's ignition coils and spark plugs are prone to failure,
+    leading to misfires, reduced performance, and increased fuel consumption. This
+    can also contribute to catalytic converter damage if left unaddressed.
+  inspection_advice: Check for misfires, rough idle, and reduced acceleration. Inspect
+    ignition coils for signs of failure (e.g., resistance checks) and replace spark
+    plugs as recommended.
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"Motor teklemesi, çekiş düşüşü, yakıt tüketim artışı. Genellikle bobin
+      değişimiyle çözülüyor."'
+    independent: true
+- claim_key: ea888_230_engine_chronic_high_oil_con
+  title: Chronic high oil consumption in 2.0 TSI engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TSI engines in the Volkswagen Passat exhibit excessive oil consumption,
+    often exceeding 1 liter per 1000 km, particularly under high RPM and long-distance
+    driving. This is attributed to internal component wear or manufacturing defects,
+    leading to costly repairs if neglected.
+  inspection_advice: Check for blue smoke from the exhaust when starting the engine,
+    monitor oil consumption at high speeds, and listen for unusual noises during cold
+    starts. Verify service records for regular oil changes, inspect oil seals for
+    leaks, and conduct oil consumption tests and compression tests.
+  sources: []
+- claim_key: ea888_230_transmission_dsg_transmission_mec
+  title: DSG transmission mechatronic unit and clutch failures
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The DSG transmission in the Volkswagen Passat 2.0 TSI frequently suffers
+    from mechatronic unit failures and clutch issues, causing jerky gear shifts, delays,
+    and even complete transmission failure. This leads to costly repairs and potential
+    breakdowns.
+  inspection_advice: Test gear shifts at various speeds, check for delays during acceleration
+    or deceleration, and assess transmission response during hill starts. Verify service
+    records for transmission fluid changes and mechatronic unit replacements.
+  sources: []
+- claim_key: ea888_230_engine_turbocharger_failure
+  title: Turbocharger failure and wastegate valve issues in 2.0 TSI engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The turbochargers in the 2.0 TSI engines are prone to failure, causing
+    power loss, increased fuel consumption, and potential engine stalling. Wastegate
+    valve malfunctions and turbo housing cracks are common chronic issues.
+  inspection_advice: Listen for unusual noises (whistling, hissing) from the turbo,
+    check for power loss at high RPM, and inspect turbo hoses for cracks or leaks.
+    Verify turbo history and ensure proper lubrication systems are functioning.
+  sources: []
+- claim_key: ea888_230_transmission_dsg_şanzıman_düşük_h
+  title: DSG Şanzıman Düşük Hız Sarsıntıları ve Geç Tepki
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG şanzımanı, düşük hızlarda (özellikle 1-2 vites geçişlerinde) sarsıntılar
+    ve anormal tepki süreleri yaşayabilir. Dur-kalk trafikte kararsız davranışlar
+    ve ani hızlanmalarda gecikmeler sıkça bildirilmiştir. Yüksek kilometrelerde mekatronik
+    arızaları riski de artmaktadır.
+  inspection_advice: Test sürüşünde düşük hızlarda ve dur-kalk trafikte şanzımanın
+    davranışlarını gözlemleyin. Vites geçişlerinde sarsıntı, vuruntu veya anormal
+    sesler olup olmadığını dinleyin. Yokuş kalkış desteğinin sorunsuz çalıştığını
+    kontrol edin. Şanzıman yağı değişim tarihlerini ve arıza kayıtlarını inceleyin.
+  sources: []
+- claim_key: ea888_230_transmission_dsg_şanzıman_mekatro
+  title: DSG Şanzıman Mekatronik Arızaları (Yüksek Kilometreler)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DSG şanzımanında yüksek kilometrelerde mekatronik arızaları sıkça görülmektedir.
+    Bu arızalar, ciddi onarım masrafları gerektirebilir ve aracın kullanımını kesintiye
+    uğratabilir.
+  inspection_advice: Şanzımanın servis kayıtlarını kontrol edin ve mekatronik arıza
+    geçmişi olup olmadığını araştırın. Mümkünse, uzman bir mekanikçi tarafından şanzımanın
+    durumunu değerlendirin.
+  sources: []
+- claim_key: ea888_230_engine_wastegate_valfi_ve_t
+  title: Wastegate Valfi ve Turbo Boru Çatlak/Kaçakları
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: 2.0 TSI motorunda wastegate valfi tıkanma veya arızaları ve turbo borularında
+    çatlak/kaçaklar sıkça bildirilmiştir. Bu sorunlar güç kaybı, anormal sesler ve
+    arıza lambasının yanması gibi belirtilerle kendini gösterir.
+  inspection_advice: Test sürüşünde turbo ve wastegate bölgesinden anormal sesler
+    olup olmadığını dinleyin. Turbo borularında çatlak veya kaçaklar için fiziksel
+    inceleme yapın. Arıza lambasının yanıp yanmadığını kontrol edin. Turbo basıncını
+    ölçen bir cihazla test sürüşü yapın.
+  sources:
+  - source_url: https://kronikyorum.com/seat-leon-20-tsi-kullanici-yorumlari-deneyimler
+    source_domain: kronikyorum.com
+    site_or_channel: kronikyorum.com
+    quote: '"Wastegate arızası yüzünden araba sürekli arıza lambası yakıyor, bıktım
+      artık."'
+    independent: true
+- claim_key: ea888_230_engine_turbo_basıncı_düşüşü
+  title: Turbo Basıncı Düşüşü ve Güç Kaybı
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbo basıncında düşüş ve wastegate valfi arızaları nedeniyle motorun
+    güç kaybı yaşanabilmektedir. Bu sorunlar performansı olumsuz etkiler ve sürüş
+    keyfini azaltır.
+  inspection_advice: Test sürüşünde yüksek devirlerde turbo basıncını ve ivme performansını
+    gözlemleyin. Turbo bölgesinden gelen anormal sesleri dinleyin. Arıza lambasının
+    yanıp yanmadığını kontrol edin.
+  sources: []
+- claim_key: ea888_230_engine_turbo_ve_wastegate_s
+  title: Turbo ve Wastegate Ses Bozuklukları
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbo ve wastegate sisteminden gelen ıslık sesleri, yüksek devirlerde
+    sıkça bildirilmiştir. Bu sesler, turbo veya wastegate valfi arızalarının bir göstergesi
+    olabilir.
+  inspection_advice: Yüksek devirlerde turbo bölgesinden gelen anormal sesleri dinleyin.
+    Seslerin kaynağını tespit etmek için uzman bir mekanikçi ile danışın.
+  sources: []
+- claim_key: ea888_230_engine_defective_2.0t_timin
+  title: Defective 2.0T timing chain tensioner causing timing jump and valve/piston
+    contact
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The timing chain tensioner in EA888 2.0T engines (CCTA, CBFA, CAEB, CAEA,
+    CDNC, CPMA) was chronically defective, causing the timing chain to jump teeth,
+    leading to valve-piston contact and catastrophic engine failure, often at startup.
+    This defect was widespread from 2008–2013 and prompted class-action lawsuits and
+    recalls.
+  inspection_advice: Check if the vehicle is a 2.0T (TSI) from 2008–2013 with engine
+    codes CCTA, CBFA, CAEB, CAEA, CDNC, or CPMA. Verify if the timing chain tensioner
+    has been replaced (look for the absence of a metal bracket on the part contacting
+    the chain guide, indicating the updated version). Confirm service history for
+    tensioner replacement, as failure risk persists if unaddressed.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '"The specific defect in these engines is the chain tensioner responsible
+      for the timing jumping teeth. With the timing messed up, the valves will hit
+      the pistons and bend ie. total failure. Most reports of engines failing right
+      at startup."'
+    independent: true
+- claim_key: ea888_230_engine_timing_cover_bending
+  title: Timing cover bending during removal due to sealant adhesion
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The timing cover in 2.0T engines is stamped metal and often bends during
+    removal due to being stuck with sealant, leading to potential leaks or misalignment
+    after replacement.
+  inspection_advice: Inspect the timing cover for signs of bending or warping. Check
+    for proper sealing and alignment if the cover has been removed or replaced.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '"There is no specific gasket for this. This is a common source for leaks
+      after replacing the tensioner."'
+    independent: true
+- claim_key: ea888_230_engine_cam_bridge_bracket_s
+  title: Cam bridge bracket screen dislodging and clogging oil passages
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The fine screen on the Cam Bridge Bracket in 2.0T engines can dislodge
+    and clog narrow oil passages, causing lubrication issues and potential failure.
+  inspection_advice: Inspect the Cam Bridge Bracket for signs of screen damage or
+    debris in oil passages. Consider replacing the bracket if the engine has high
+    mileage or history of oil-related issues.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '"On the Camshaft Bracket there’s a fine screen that commonly dislodges
+      and gets sucked into the narrow oil passages, effectively becoming everything
+      it is fighting against."'
+    independent: true
+- claim_key: ea888_230_engine_timing_chain_stretch
+  title: Timing chain stretch and brittle plastic guides failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Timing chains in 2.0T engines can stretch over time, and plastic guides
+    may become brittle, leading to premature failure and requiring replacement.
+  inspection_advice: Check for visible chain stretch (excessive slack) and inspect
+    plastic guides for cracks or brittleness during timing chain replacement procedures.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '"You might as well replace the brittle plastic guides at the same time."'
+    independent: true
+- claim_key: ea888_230_engine_class-action_lawsuit
+  title: Class-action lawsuit exclusion for post-2013 2.0T engines despite reported
+    failures
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Despite the class-action lawsuit targeting pre-2014 2.0T engines, owners
+    of post-2013 models (e.g., 2016 Audi TTS) reported timing chain failures and engine
+    damage, suggesting the defect persisted beyond the recall period.
+  inspection_advice: Verify if the vehicle is a 2.0T from **any year** with timing
+    chain tensioner issues, even if outside the lawsuit window. Check for symptoms
+    of timing chain jump (e.g., misfires, startup failures) and confirm tensioner
+    replacement status.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '"I have a 2016 Audi TTS with 30,000 miles where the timing chain jumped
+      several teeth causing engine failure—called Audi and they said lawsuit was only
+      for 2013 and older—what can I do to get any help??"'
+    independent: true
+- claim_key: ea888_230_engine_chronic_timing_chain
+  title: Chronic timing chain tensioner wear on EA888 2.0T engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888 2.0T engines (2016–2023) suffer from gradual internal wear
+    in the hydraulic timing chain tensioner, leading to momentary chain slack at cold
+    start. This is exacerbated by oil quality, PCV-related oil consumption, and heat-induced
+    plastic guide rail wear, risking catastrophic engine damage if ignored.
+  inspection_advice: Listen for a brief metallic rattle at cold start that fades within
+    1–3 seconds. Check for intermittent check engine/EPC lights, and verify oil level
+    and condition. Inspect for signs of oil consumption (low oil levels despite recent
+    top-ups).
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-timing-chain-tensioner-failure-guide/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"A brief metallic rattle on cold start that fades within a few seconds
+      — most Audi owners dismiss it as normal engine noise, especially when everything
+      seems fine once the car is warm. But on the 2.0T EA888 engine found across the
+      A3, A4, Q5, and Q3 from 2016 through 2023, that rattle is often the first audible
+      sign that the timing chain tensioner is losing its ability to maintain proper
+      chain tension."'
+    independent: true
+- claim_key: ea888_230_engine_internal_check_valve
+  title: Internal check valve and piston bore wear in EA888 Gen 3 tensioners
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The hydraulic tensioner’s internal check valve and piston bore wear over
+    time, causing the tensioner to bleed down and lose tension when the engine is
+    off. This results in chain slack at startup, leading to the characteristic rattle
+    and eventual timing issues.
+  inspection_advice: Check for a metallic rattle at cold start that persists or worsens
+    over time. Look for timing fault codes (P0016, P0017, P0341) in scan data, even
+    if no mechanical noise is immediately audible.
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-timing-chain-tensioner-failure-guide/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"The reason the tensioner is a wear item — despite not being listed in
+      most maintenance schedules — is that the internal check valve and piston bore
+      wear gradually with every engine cycle. As the bore develops clearance, the
+      tensioner bleeds down slightly when the engine is off, allowing a small amount
+      of chain slack until oil pressure rebuilds on the next startup."'
+    independent: true
