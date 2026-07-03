@@ -289,3 +289,110 @@
   status: processed
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
+- type: page
+  url: https://mycaros.com/cars/renault/clio/mk4
+  site_or_channel: mycaros.com
+  notes: Renault Clio Mk4 (2012-2019) - Complete Guide | CarOS
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+  site_or_channel: autotrader.co.za
+  notes: How reliable is the Renault Clio Mk4 / X98 ? - Buying a Car - AutoTrader
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.tyhemotors.com/tr/blog/common-dc-motor-problems-and-how-to-fix-them584
+  site_or_channel: tyhemotors.com
+  notes: DC Motorlarda Sık Görülen Problemler ve Çözümleri
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://arizatespitcihazi.com/flex-getrag-dc4-gen2-sanzimanlar-icin-bench-ve-boot-modlarinda-gelismis-programlama-cozumleri
+  site_or_channel: arizatespitcihazi.com
+  notes: FLEX Getrag DC4 Gen2 Şanzımanlar İçin Bench ve Boot Modlarında Gelişmiş Programl
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://tr.duowei-motors.com/blog/how-to-troubleshoot-a-12v-pmdc-motor-that-won-t-start-1710669.html
+  site_or_channel: tr.duowei-motors.com
+  notes: Çalışmayan bir 12V PMDC motorun sorunlarını nasıl giderebilirim? - Blog
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: http://www.energychoicematters.com/stories/20260413d.html
+  site_or_channel: energychoicematters.com
+  notes: PJM's Proposed Reliability Backstop Procurement Would Allocate Costs To EDCs,
+    No
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.esc.vic.gov.au/sites/default/files/documents/Letter%20from%20the%20Minster%20for%20Energy%20Environment%20and%20Climate%20Change%20-%20Electricity%20distribution%20code%20review%20-%20Issues%20for%20consideration.pdf
+  site_or_channel: esc.vic.gov.au
+  notes: Symons
+  status: pending
+  added_at: '2026-07-03'
+  processed_at: null
+- type: page
+  url: https://www.khmertimeskh.com/501927524/edc-launches-first-mobile-power-substation-to-meet-growing-electricity-demand/
+  site_or_channel: khmertimeskh.com
+  notes: EDC launches first mobile power substation to meet growing electricity demand
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.ge.com/news/press-releases/ges-energy-consultants-study-operation-and-security-cambodian-electrical-grid
+  site_or_channel: ge.com
+  notes: 'GE''s Energy Consultants to Study Operation and Security of Cambodian Electrical '
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.energyglobal.com/other-renewables/13022024/exergy-receives-third-repeat-order-with-edc/
+  site_or_channel: energyglobal.com
+  notes: Exergy receives third repeat order with EDC | Energy Global
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+  site_or_channel: kiyiotomotiv.com.tr
+  notes: EDC Şanzıman Nedir? Sorunları Nelerdir? - Kıyı Otomotiv
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://parcaekseni.com/edc-beyni-arizasi-nasil-anlasilir/
+  site_or_channel: parcaekseni.com
+  notes: EDC Beyni Arızası Nasıl Anlaşılır? EDC Kavrama ve Şanzıman
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.renaultelektronikservisi.com.tr/icerik/392/17/edc-beyin
+  site_or_channel: renaultelektronikservisi.com.tr
+  notes: EDC BEYİN
+  status: processed
+  added_at: '2026-07-03'
+  processed_at: '2026-07-03'
+- type: page
+  url: https://www.thetruckersreport.com/truckingindustryforum/threads/05-379-easy-pedal-adjustment-issues.1929833/
+  site_or_channel: thetruckersreport.com
+  notes: '05 379 Easy Pedal adjustment issues? | TruckersReport.com Trucking Forum
+    | #1 CD'
+  status: pending
+  added_at: '2026-07-03'
+  processed_at: null
+- type: page
+  url: https://buggiesgonewild.com/showthread.php?t=155875
+  site_or_channel: buggiesgonewild.com
+  notes: Drive Clutch not closing completely
+  status: pending
+  added_at: '2026-07-03'
+  processed_at: null

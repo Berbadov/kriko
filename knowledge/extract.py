@@ -11,6 +11,7 @@ import json
 import os
 import re
 import time
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -53,7 +54,7 @@ Return ONLY valid JSON in this exact format:
 class CandidateClaim(BaseModel):
     title: str = Field(description="Short title of the reliability issue")
     domain: str = Field(description="Category: engine|transmission|electrical|emissions|fuel system|brakes|suspension|general")
-    severity: str = Field(description="Provisional: high|medium|low")
+    severity: Literal["high", "medium", "low"] = Field(description="Provisional: high|medium|low")
     rationale: str = Field(description="Plain-language explanation of the issue")
     inspection_advice: str = Field(description="What a buyer should check at viewing")
     quote: str = Field(description="VERBATIM span from the source text that supports this claim")
