@@ -372,7 +372,6 @@ def _upsert_claim_row(db: Session, row: dict) -> Claim:
     obj.max_mileage_km   = applies_when.get("max_mileage_km")
     obj.min_age_years    = applies_when.get("min_age_years")
     obj.maintenance_data = row.get("maintenance")
-    obj.value_tier       = row.get("value_tier")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
     return obj
 
@@ -401,7 +400,6 @@ def _upsert_part_claim(db: Session, claim_id: str, claim_data: dict) -> Claim:
     obj.max_mileage_km   = applies_when.get("max_mileage_km")
     obj.min_age_years    = applies_when.get("min_age_years")
     obj.maintenance_data = claim_data.get("maintenance")
-    obj.value_tier       = claim_data.get("value_tier")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
     return obj
 

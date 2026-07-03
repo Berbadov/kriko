@@ -481,6 +481,7 @@ def _ensure_part_stub(
                 "part_id": part_id,
                 "part_type": part_type,
                 "display_name": display_name,
+                "manufacturer": make,
                 "known_also_as": known_also_as,
                 "claims": [],
             },
