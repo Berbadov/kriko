@@ -56,6 +56,7 @@ def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
         fuel_type    = meta.get("fuel_type"),
         transmission = meta.get("transmission"),
         description  = (meta.get("description") or "").lower(),
+        equipment    = meta.get("equipment") or None,
     )
 
     try:

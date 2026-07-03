@@ -1,20 +1,7 @@
-# Renault Megane IV (2016-2023) — Turkish market variant catalog
-# Hand-written from Renault TR spec sheets + press releases.
-# Invariant: within (make, model, fuel, year) no two variants may overlap
-# on both displacement_cc range AND power range. CI linter enforces this.
-#
-# ID format: {model}_{engine_code}_{power_hp}[_{tx_suffix}]
-# Variant IDs are stable forever — add variants, never rename live ones.
-#
-# engine_family: lowercase engineering code used as the part-research key.
-# transmission_code: revision-level gearbox code for part-centric research.
-#   Renault EDC (Efficient Dual Clutch, wet multi-plate, all automatics): edc
-#   Manual variants: manual (no known-issue research target for this model)
-
 - id: megane4_h5f_100
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: H5F
   engine_family: h5f_100
   fuel: petrol
@@ -26,12 +13,13 @@
   year_from: 2016
   year_to: 2018
   market: TR
-  notes: "1.2 TCe 100 EDC — discontinued 2018"
-
+  notes: 1.2 TCe 100 EDC — discontinued 2018
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_h5f_130
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: H5F
   engine_family: h5f_130
   fuel: petrol
@@ -43,12 +31,13 @@
   year_from: 2016
   year_to: 2018
   market: TR
-  notes: "1.2 TCe 130 EDC — discontinued 2018"
-
+  notes: 1.2 TCe 130 EDC — discontinued 2018
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_h5h_115
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: H5H
   engine_family: h5h_115
   fuel: petrol
@@ -60,12 +49,13 @@
   year_from: 2018
   year_to: 2023
   market: TR
-  notes: "1.3 TCe 115 EDC (Renault-Daimler H5H)"
-
+  notes: 1.3 TCe 115 EDC (Renault-Daimler H5H)
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_h5h_140
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: H5H
   engine_family: h5h_140
   fuel: petrol
@@ -77,12 +67,13 @@
   year_from: 2018
   year_to: 2023
   market: TR
-  notes: "1.3 TCe 140 EDC (Renault-Daimler H5H)"
-
+  notes: 1.3 TCe 140 EDC (Renault-Daimler H5H)
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_k9k_90
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: K9K
   engine_family: k9k_90
   fuel: diesel
@@ -94,12 +85,13 @@
   year_from: 2016
   year_to: 2023
   market: TR
-  notes: "1.5 dCi 90 — manual only"
-
+  notes: 1.5 dCi 90 — manual only
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_k9k_110
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: K9K
   engine_family: k9k_110
   fuel: diesel
@@ -111,12 +103,13 @@
   year_from: 2016
   year_to: 2023
   market: TR
-  notes: "1.5 dCi 110 — manual (EDC version exists but was not sold in TR)"
-
+  notes: 1.5 dCi 110 — manual (EDC version exists but was not sold in TR)
+  body_code: megane4_body
+  drivetrain: fwd
 - id: megane4_r9m_130
   make: renault
   model: megane
-  generation: "IV"
+  generation: IV
   engine_code: R9M
   engine_family: r9m_130
   fuel: diesel
@@ -128,4 +121,6 @@
   year_from: 2016
   year_to: 2023
   market: TR
-  notes: "1.6 dCi 130 EDC — auto only"
+  notes: 1.6 dCi 130 EDC — auto only
+  body_code: megane4_body
+  drivetrain: fwd

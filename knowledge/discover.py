@@ -62,7 +62,7 @@ def _generate_templates(make: str, model: str, gen: str) -> list[tuple[str, str]
     add("general",    f"{gen_label} arıza")
     add("general",    f"{gen_label} sorun")
     add("general",    f"{make_t} {model_t} common problems reliability")
-    add("general",    f"{make_t} {model_t} used car problems forum owners")
+    add("general",    f"{make_t} {model_t} used car problems owners")
     add("general",    f"{make_t} {model_t} buying guide used reliability issues")
     add("general",    f"{gen_label} kronik sorunları deneyimler")
 
@@ -81,7 +81,7 @@ def _generate_templates(make: str, model: str, gen: str) -> list[tuple[str, str]
         litre = f"{cc / 1000:.1f}" if cc else ""
 
         add("engine", f"{ec} motor arıza")
-        add("engine", f"{ec} engine problem reliability forum")
+        add("engine", f"{ec} engine problem reliability")
         add("engine", f"{make_t} {model_t} {ec} chronic and common problems")
 
         # ── Cooling/Thermostat (fuel-agnostic) ────────────────────────────────

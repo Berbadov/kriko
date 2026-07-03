@@ -245,7 +245,7 @@ claims:
   domain: engine
   severity: high
   confidence: 0.9
-  status: review
+  status: rejected
   promoted_by: pending_human
   rationale: Der EA288 leidet unter systematischer Verkokung im AGR-Ventil durch Ruß-
     und Öldämpfe sowie Haarrissen im AGR-Kühler, die Kühlmittel in den Abgastrakt
@@ -279,7 +279,7 @@ claims:
   domain: emissions
   severity: high
   confidence: 0.6
-  status: review
+  status: rejected
   promoted_by: pending_human
   rationale: Der EA288 hat Probleme mit der automatischen DPF-Regeneration, besonders
     bei Kurzstrecken- oder Stadtverkehrsfahrern. Der Filter verstopft durch unvollständige
@@ -304,7 +304,7 @@ claims:
   domain: engine
   severity: high
   confidence: 0.6
-  status: review
+  status: rejected
   promoted_by: pending_human
   rationale: Der EA288 nutzt einen nasslaufenden Zahnriemen im Ölbad, der trotz Ölschmierung
     durch Materialverschleiß ausfransen und abreißen kann. Dies führt zu Motorschäden,
@@ -330,7 +330,7 @@ claims:
   domain: fuel system
   severity: high
   confidence: 0.0
-  status: held
+  status: rejected
   promoted_by: pending_human
   rationale: Bei frühen EA288-Varianten mit nasslaufendem Zahnriemen kommt es zu Metallabrieb
     in der Hochdruckpumpe, der sich im gesamten Kraftstoffsystem verteilt. Dies beschädigt
@@ -347,7 +347,7 @@ claims:
   domain: engine
   severity: high
   confidence: 0.0
-  status: held
+  status: rejected
   promoted_by: pending_human
   rationale: Der Turbolader des EA288 ist anfällig für Schäden durch Folgeschäden
     aus dem DPF-System, Ölkreislaufproblemen oder mangelnder Wartung. Dies führt zu
@@ -362,7 +362,7 @@ claims:
   domain: engine
   severity: medium
   confidence: 0.6
-  status: review
+  status: rejected
   promoted_by: pending_human
   rationale: Der EA288 setzt auf eine elektrisch geregelte Kühlmittelpumpe und einen
     elektronisch gesteuerten Thermostat, was präzisere Temperaturregelung ermöglicht,
@@ -385,7 +385,7 @@ claims:
   domain: engine
   severity: high
   confidence: 0.0
-  status: held
+  status: rejected
   promoted_by: pending_human
   rationale: Der Ölpumpen-Mitnehmer des EA288 2.0 TDI kann ein kritischer Auslöser
     für Motorschäden sein. Ein Defekt führt zu Ölpumpenversagen, was zu massivem Ölverlust
@@ -592,7 +592,7 @@ claims:
   domain: fuel system
   severity: high
   confidence: 0.0
-  status: held
+  status: rejected
   promoted_by: pending_human
   rationale: Bei frühen EA288-Varianten mit nasslaufendem Zahnriemen kann Metallabrieb
     aus der Hochdruckpumpe ins Kraftstoffsystem gelangen, wenn der Riemen verschleißt
@@ -713,8 +713,8 @@ claims:
   kind: known_issue
   domain: emissions
   severity: medium
-  confidence: 0.6
-  status: review
+  confidence: 0.0
+  status: held
   promoted_by: pending_human
   rationale: The exhaust gas temperature sensor in the VW Golf VII 1.6 TDI is prone
     to failure, causing false DPF warnings and other related error codes. Replacement
@@ -722,13 +722,7 @@ claims:
   inspection_advice: Inspect for error codes related to the exhaust gas temperature
     sensor. Check if the sensor has been replaced previously or if there are repeated
     service records for this component.
-  sources:
-  - source_url: https://forum.donanimhaber.com/golf-vii-1-6tdi-ariza-isigi-yardim--128785504
-    source_domain: forum.donanimhaber.com
-    site_or_channel: forum.donanimhaber.com
-    quote: Aynı sorunu yaşayan kuzenim vardı.Egzoz gazı sıcaklık sensörü değiştirildi.Sorun
-      halloldu.Video da belirttiğiniz gibi aynı ikaz lambalarını yakıyordu.
-    independent: true
+  sources: []
 - claim_key: ea288_fuel system_chronic_p0101_(maf_s
   title: Chronic P0101 (MAF Sensor) Failure with 1.6 TDI CAYMAN Engine
   kind: known_issue

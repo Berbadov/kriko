@@ -1,9 +1,13 @@
-"""Tests for ListingContext-aware claim gating (Phase 1 & 2).
+"""Tests for ListingContext-aware claim gating (Phase 1, 2 & 4).
 
 Covers:
 - applies_when mileage/age gating with fail-open on missing data
 - maintenance claim due/not-due/evidence logic
 - maintenance claims served without ClaimSource rows
+- equipment gating (Phase 4): claims tagged requires_equipment are hidden when
+  the listing's scraped equipment confirms the feature is absent, but shown
+  when equipment wasn't scraped at all (fail-open on missing data, fail-closed
+  only on a confirmed mismatch)
 """
 
 import pytest
@@ -31,7 +35,7 @@ def k9k_mileage_gated_claim(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="A",
+        claim_id=claim.id,
         source_url="https://example.com", quote="City cars over 80k should be checked.",
     ))
     db.flush()
@@ -54,7 +58,7 @@ def k9k_age_gated_claim(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="B",
+        claim_id=claim.id,
         source_url="https://example.com", quote="After 5 years this part degrades.",
     ))
     db.flush()
@@ -81,6 +85,29 @@ def k9k_belt_maintenance_claim(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     # Deliberately NO ClaimSource — maintenance claims are exempt from has_source
+    db.flush()
+    return claim
+
+
+@pytest.fixture
+def sunroof_claim(db, megane4_variants):
+    """A known_issue claim requiring the 'sunroof' equipment tag."""
+    claim = Claim(
+        id="sunroof_drain_v1", claim_key="sunroof_drain", version=1, is_current=True,
+        title="Sunroof drain tube blockage",
+        domain="body", severity="medium", confidence=0.85,
+        rationale="Panoramic sunroof drain tubes clog and cause water ingress.",
+        inspection_advice="Check sunroof drain tubes for blockage.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+        requires_equipment=["sunroof"],
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id,
+        source_url="https://example.com", quote="Sunroof drain tubes clog on this model.",
+    ))
     db.flush()
     return claim
 
@@ -250,3 +277,61 @@ def test_resolve_maintenance_strength_direct():
 
     # Fail-open: no data
     assert _resolve_maintenance_strength(claim, None) == "due"
+
+
+# ── equipment gating (Phase 4) ────────────────────────────────────────────────
+
+def test_equipment_gate_hidden_when_confirmed_absent(db, sunroof_claim):
+    """Claim requiring sunroof is hidden when the listing's equipment block was
+    scraped and does not mention a sunroof — fail CLOSED on confirmed mismatch."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(equipment={"Exterior": ["Alloy Wheels", "LED Headlights"]})
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "sunroof_drain_v1" not in ids
+
+
+def test_equipment_gate_shown_when_present(db, sunroof_claim):
+    """Claim requiring sunroof is shown when the listing's equipment mentions it."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(equipment={"Exterior": ["Panoramik Cam Tavan", "Alloy Wheels"]})
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "sunroof_drain_v1" in ids
+
+
+def test_equipment_gate_failopen_no_equipment_scraped(db, sunroof_claim):
+    """Claim requiring sunroof is shown when equipment wasn't scraped at all
+    (None) — never hide on missing data, only on a confirmed mismatch."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(equipment=None)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "sunroof_drain_v1" in ids
+
+
+def test_equipment_gate_failopen_empty_equipment_dict(db, sunroof_claim):
+    """An empty equipment dict ({}) is treated the same as None — extraction
+    producing nothing is indistinguishable from extraction not running."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(equipment={})
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "sunroof_drain_v1" in ids
+
+
+def test_equipment_gate_failopen_no_ctx(db, sunroof_claim):
+    """Claim requiring sunroof is shown when no ListingContext is provided at all."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db, ctx=None)
+    ids = [r.claim.id for r in results]
+    assert "sunroof_drain_v1" in ids
+
+
+def test_equipment_gate_does_not_affect_untagged_claims(db, k9k_mileage_gated_claim):
+    """A claim with no requires_equipment tags is unaffected by equipment gating."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=190000, equipment={"Exterior": ["Alloy Wheels"]})
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" in ids
