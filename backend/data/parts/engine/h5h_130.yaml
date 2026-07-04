@@ -71,7 +71,7 @@ claims:
 - claim_key: h5h_130_electrical|engine_rapid_wear_of_spark_
   title: Rapid wear of spark plugs and ignition coils
   kind: known_issue
-  domain: electrical|engine
+  domain: electrical
   severity: medium
   confidence: 0.6
   status: review
@@ -108,20 +108,25 @@ claims:
       valve"'
     independent: true
 - claim_key: h5h_130_electrical_recurring_obd-ii_arı
-  title: Recurring OBD-II Arıza Kodları (P0130, P0136, P0141, P0420) on Renault Megane
-    4 O2 Sensors
+  title: Frequent Recurring OBD-II Fault Codes (P0130, P0136, P0141, P0420) for Oxygen
+    Sensors on Renault Mégane 4
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: The Renault Megane 4 frequently triggers specific OBD-II error codes
-    (P0130, P0136, P0141, P0420) related to oxygen sensor failures, indicating a chronic
-    issue with sensor reliability or ECU compatibility.
-  inspection_advice: Check for active OBD-II error codes using a diagnostic tool.
-    Look for recurring codes related to oxygen sensors (P0130, P0136, P0141, P0420)
-    during a test drive or inspection.
+  rationale: The Renault Mégane 4 model frequently triggers persistent OBD-II diagnostic
+    trouble codes (P0130, P0136, P0141, P0420), all of which are directly linked to
+    oxygen sensor malfunctions. This pattern suggests a systemic reliability issue
+    with the oxygen sensors themselves or an incompatibility between the sensors and
+    the vehicle’s Engine Control Unit (ECU).
+  inspection_advice: Use a professional diagnostic tool to scan for active OBD-II
+    fault codes. During a test drive or inspection, specifically monitor for recurring
+    codes P0130 (Bank 1 Sensor 1 Threshold Below Threshold), P0136 (Bank 2 Sensor
+    1 Threshold Below Threshold), P0141 (Bank 2 Sensor 2 Threshold Below Threshold),
+    and P0420 (Catalytic Converter Efficiency Below Threshold), all of which indicate
+    oxygen sensor or catalytic converter-related failures.
   sources: []
 - claim_key: h5h_130_engine_oxygen_sensor_corros
   title: Oxygen Sensor Corrosion Due to Coolant Leaks
@@ -195,8 +200,7 @@ claims:
       Bozuk enjektörlü araçlarda mavi beyaz karışımı kokulu egzoz gazı çıkışı gözlemlenir."'
     independent: true
 - claim_key: h5h_130_engine_mass_air_flow_(maf)_
-  title: Mass Air Flow (MAF) sensor failure causing rough idling, poor fuel economy,
-    and potential engine damage
+  title: MAF sensor failure (H5H 1.3 TCe)
   kind: known_issue
   domain: engine
   severity: medium
@@ -245,47 +249,6 @@ claims:
       nedeniyle bu sensörün zamanla değiştirilmesi gerekir. Oksijen sensörü, ECU’ya
       hayati öneme sahip hava-yakıt karışımı bilgilerini sağlar."'
     independent: true
-- claim_key: h5h_130_engine_connecting_rod_beari
-  title: Connecting Rod Bearing Wear (K9K 1.5 dCi)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Design-sensitive bearing shells can spin from around 100,000–150,000
-    km, causing catastrophic engine failure if oil changes are delayed or incorrect
-    oil is used.
-  inspection_advice: Check for knocking noises, oil pressure warning lights, or sudden
-    engine stalls. Verify full service history for oil change intervals.
-  sources: []
-- claim_key: h5h_130_fuel system_high-pressure_fuel_p
-  title: High-Pressure Fuel Pump Failure (Delphi, K9K 1.5 dCi)
-  kind: known_issue
-  domain: fuel system
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Delphi high-pressure pumps fail prematurely (~80,000 km), contaminating
-    the fuel circuit and damaging injectors and common rail, leading to engine stalls
-    and injection faults.
-  inspection_advice: Listen for starting difficulties or sudden stalls. Check for
-    'injection fault' messages on the dashboard.
-  sources: []
-- claim_key: h5h_130_engine_timing_belt_failure_
-  title: Timing Belt Failure (Interference Engine Risk, K9K 1.5 dCi)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Interference belt engine with documented early failures before scheduled
-    intervals, risking valve-piston collision and total engine destruction.
-  inspection_advice: Verify timing belt replacement history. Listen for metallic noises
-    before failure; sudden engine stall without warning is a critical sign.
-  sources: []
 - claim_key: h5h_130_engine_timing_cover_leakage
   title: Timing Cover Leakage & Recall Risk (R9M 1.6 dCi)
   kind: known_issue
@@ -478,8 +441,8 @@ claims:
   domain: engine
   severity: medium
   confidence: 0.9
-  status: review
-  promoted_by: auto_audit
+  status: verified
+  promoted_by: auto
   rationale: Direct injection engines like the H5Ht 1.3 TCe suffer from carbon deposits
     on intake valves, causing unstable idling. Neglecting this issue can lead to more
     severe problems requiring head removal for cleaning.
@@ -695,18 +658,20 @@ claims:
     signs of damage, short circuits, or improper connections.
   sources: []
 - claim_key: h5h_130_general_chronic_limescale_(k
-  title: Chronic Limescale (Kireçlenme) Accumulation in Falke HT-BT Combis
+  title: Long-term buildup of mineral deposits (limescale) in the Falke HT-BT combination
+    heat exchanger units
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Chronic limescale buildup causing operational inefficiency and potential
-    system failures, especially in newly installed units.
-  inspection_advice: Check for signs of limescale buildup in the heat exchanger, pipes,
-    and filters. Look for reduced efficiency, unusual noises, or error codes related
-    to overheating or sensor malfunctions.
+  rationale: Persistent accumulation of limescale is causing reduced system efficiency
+    and increasing the risk of component failure, particularly in newly installed
+    units
+  inspection_advice: Inspect for limescale deposits in the heat exchanger, piping,
+    and filter assemblies. Monitor for decreased performance, abnormal operational
+    noises, or diagnostic trouble codes (DTCs) related to overheating or sensor malfunctions
   sources: []
 - claim_key: h5h_130_engine_timing_chain_tension
   title: Timing chain tensioner failure (hydraulic dependency)
@@ -811,3 +776,29 @@ claims:
     during startup. Review service records for proper oil change procedures (avoid
     draining oil for extended periods).
   sources: []
+- claim_key: h5h_130_emissions_egr_valve_failure_ca
+  title: EGR valve failure causing misfires, black smoke, and turbo/DPF system malfunctions
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR (Exhaust Gas Recirculation) valve failure is explicitly mentioned
+    as a chronic issue in this engine variant. When the EGR valve malfunctions, unburned
+    exhaust gases bypass the catalytic converter, leading to **black smoke, poor fuel
+    economy, and damage to the turbocharger, injectors, and DPF system**.
+  inspection_advice: Inspect the EGR valve for carbon buildup, physical damage, or
+    clogging. Check for black smoke from the exhaust and listen for unusual engine
+    noises (e.g., backfiring). Verify if the DPF system is clogged or if the turbocharger
+    is overheating.
+  sources:
+  - source_url: https://m.maslakdpf.com/tag/renault/
+    source_domain: m.maslakdpf.com
+    site_or_channel: m.maslakdpf.com
+    quote: '"Egr Valfi: Egr valfi, egzoz gazını tekrar kullanmayı ve emisyon oranını
+      düşürmeyi hedefleyen elektropnömatik valf sistemidir. Çalışmadığı durumlarda
+      ise araçta egzoz gazı yanmadan atmosfere atılır. Yakıt tertibatına zarar verir.
+      Siyah duman kötü egzoz kokusu ve turbo enjektör dpf gibi sistemlerin çalışmasına
+      engel olur."'
+    independent: true

@@ -31,6 +31,45 @@ claims:
       the rings into the combustion chamber, and a meaningful percentage of these
       engines ended up burning a quart every 1,000 miles or worse."'
     independent: true
+  - source_url: https://vwtuning.co/vw-ea888-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: '"This is a hot topic for the Gen 2 engines, both 1.8 and 2.0 series. This
+      is also the main reason this Volkswagen engine gets a bad reputation. Excessive
+      oil consumption is what it sounds like, the engine takes in more oil than the
+      acceptable range of oil during normal conditions. [...] Volkswagen made the
+      piston rings too thin out of the factory. Unfortunately, if you have a Gen2,
+      you will have to replace the pistons and piston rings with the previous Gen
+      1."'
+    independent: true
+  - source_url: https://www.ampauto.io/symptoms/audi-2-0t-ea888-problems
+    source_domain: ampauto.io
+    site_or_channel: ampauto.io
+    quote: '"This is a hot topic for the Gen 2 engines, both 1.8 and 2.0 series. This
+      is also the main reason this Volkswagen engine gets a bad reputation. Excessive
+      oil consumption is what it sounds like, the engine takes in more oil than the
+      acceptable range of oil during normal conditions. [...] Volkswagen made the
+      piston rings too thin out of the factory. Unfortunately, if you have a Gen2,
+      you will have to replace the pistons and piston rings with the previous Gen
+      1."'
+    independent: true
+  - source_url: https://aboutthecars.com/vw/engine-volkswagen-ea888-20-tsi/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"This is a hot topic for the Gen 2 engines, both 1.8 and 2.0 series. This
+      is also the main reason this Volkswagen engine gets a bad reputation. Excessive
+      oil consumption is what it sounds like, the engine takes in more oil than the
+      acceptable range of oil during normal conditions. [...] Volkswagen made the
+      piston rings too thin out of the factory. Unfortunately, if you have a Gen2,
+      you will have to replace the pistons and piston rings with the previous Gen
+      1."'
+    independent: true
+  - source_url: https://www.carsniffer.com/buyers-guides/engines/volkswagen/ea888-family/
+    source_domain: carsniffer.com
+    site_or_channel: carsniffer.com
+    quote: 'All: May experience excessive oil consumption due to the PCV system. Volkswagen
+      has released several updated PCV valves over the years which fix this.'
+    independent: true
 - claim_key: ea888_220_engine_timing_chain_tension
   title: Timing chain tensioner failure leading to valve damage
   kind: known_issue
@@ -494,7 +533,7 @@ claims:
 - claim_key: ea888_220_cooling system_plastic_water_pump_h
   title: Plastic water pump housing cracks
   kind: known_issue
-  domain: cooling system
+  domain: cooling
   severity: high
   confidence: 0.9
   status: review
@@ -915,92 +954,101 @@ claims:
     Check for recurring issues after servicing.
   sources: []
 - claim_key: ea888_220_engine_triger_zinciri/siste
-  title: Triger zinciri/sistemi sorunları (chain drive failure)
+  title: Timing Chain or Timing System Failure
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: The trigger chain or timing system failure in VAG engines can lead to
-    catastrophic engine damage if not addressed promptly, including misfires, loss
-    of power, or even engine seizure.
-  inspection_advice: Listen for rattling noises from the timing cover, check for oil
-    leaks around the chain tensioner, and verify proper chain tension and alignment
-    during an engine inspection.
+  rationale: Failure of the timing chain or timing system in Volkswagen Group (VAG)
+    engines can cause severe engine damage if not addressed immediately. This includes
+    engine misfires, loss of power, or even complete engine seizure due to improper
+    valve timing or piston-to-valve contact.
+  inspection_advice: Listen for rattling noises emanating from the timing cover area.
+    Inspect for oil leaks around the timing chain tensioner. During an engine inspection,
+    verify the correct tension and alignment of the timing chain.
   sources: []
 - claim_key: ea888_220_engine_zincir_atlama_ve_ses
-  title: Zincir atlama ve ses yapma sorunları (chain skipping/noise in 1.4 TSI)
+  title: Chain Skipping and Noise Issues in 1.4 TSI Engine
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: The timing chain in 1.4 TSI engines is prone to skipping or excessive
-    noise, often due to wear or improper tensioning, which can lead to timing issues
-    and engine damage.
-  inspection_advice: Inspect the timing chain for wear, check the tensioner and guides
-    for proper function, and listen for unusual noises during engine operation.
+  rationale: The timing chain in 1.4 TSI engines is prone to skipping teeth or generating
+    excessive noise, typically caused by wear on the chain, tensioner, or guides,
+    or due to incorrect tensioning. This can result in timing misalignment and potential
+    engine damage if left unaddressed.
+  inspection_advice: Visually inspect the timing chain for signs of wear or elongation,
+    verify the functionality of the timing chain tensioner and guides, and actively
+    listen for abnormal noises (e.g., rattling, clattering) during engine operation
+    under various RPM conditions.
   sources: []
 - claim_key: ea888_220_fuel system_enjektör_arızaları_(
-  title: Enjektör arızaları (fuel injector failures in 2.0 TDI)
+  title: Fuel Injector Failures in 2.0 TDI Engines
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fuel injectors in 2.0 TDI engines frequently fail, leading to misfires,
-    poor fuel economy, and potential engine damage if left unaddressed.
-  inspection_advice: Check for uneven fuel delivery, misfires, or black smoke from
-    the exhaust. Use an OBD-II scanner to identify injector-related codes and perform
-    a visual inspection of injectors for clogging or leaks.
+  rationale: The fuel injectors in 2.0 TDI engines are prone to frequent failures,
+    which can cause misfires, reduced fuel efficiency, and potential engine damage
+    if not addressed promptly.
+  inspection_advice: Inspect for irregular fuel delivery, misfires, or black exhaust
+    smoke. Use an OBD-II scanner to retrieve injector-related diagnostic trouble codes
+    (DTCs) and conduct a visual examination of the injectors for clogging or leaks.
   sources: []
 - claim_key: ea888_220_engine_turbo_kaçırma_(turbo
-  title: Turbo kaçırma (turbo failure in 2.0 TDI)
+  title: Turbo Failure in 2.0 TDI Engines
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Turbocharger failure in 2.0 TDI engines, often due to oil contamination
-    or wear, can cause loss of power, excessive smoke, and potential engine damage
-    if the turbo fails internally.
-  inspection_advice: Listen for unusual whining or grinding noises from the turbo
-    area, check for oil leaks around the turbo, and inspect the intercooler and intake
-    system for proper function.
+  rationale: The turbocharger in 2.0 TDI engines may fail due to oil contamination
+    or component wear, leading to power loss, excessive black or blue exhaust smoke,
+    and potential internal engine damage if the turbocharger seizes or ruptures internally.
+  inspection_advice: Listen for abnormal whining, grinding, or rattling noises emanating
+    from the turbocharger housing. Inspect for oil leaks around the turbocharger seals
+    and bearings, and verify the intercooler and intake manifold system for proper
+    airflow and cooling functionality. Check for oil dilution in the intake system,
+    which can indicate turbocharger oil leakage into the combustion chamber.
   sources: []
 - claim_key: ea888_220_engine_subap_kurumlanması_(
-  title: Subap kurumlanması (valve carbon buildup in FSI and TSI engines)
+  title: Carbon Buildup on Valves in FSI and TSI Engines
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Carbon buildup on valves in FSI and TSI engines can cause misfires, reduced
-    performance, and increased emissions, often requiring a valve cleaning procedure
-    to resolve.
-  inspection_advice: Check for misfires, rough idle, and reduced power. Use an OBD-II
-    scanner to identify misfire codes and perform a visual inspection of valves for
-    carbon deposits during maintenance.
+  rationale: Carbon deposits forming on the valves in FSI (Fuel Stratified Injection)
+    and TSI (Turbocharged Stratified Injection) engines can lead to misfires, decreased
+    engine performance, and elevated emissions. This issue typically requires a valve
+    cleaning procedure to restore proper function.
+  inspection_advice: Inspect for misfires, rough idle conditions, and loss of power.
+    Use an OBD-II scanner to diagnose misfire codes (e.g., P0300–P0308) and conduct
+    a visual examination of the valves for carbon deposits during scheduled maintenance
+    or failure diagnostics.
   sources: []
 - claim_key: ea888_220_engine_termostat_ve_soğutma
-  title: Termostat ve soğutma sistemi problemleri (thermostat and cooling system failures)
+  title: Issues with the thermostat and cooling system
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Faulty thermostats and cooling system issues in VAG engines can lead
-    to overheating, reduced efficiency, and potential engine damage if the cooling
-    system fails.
-  inspection_advice: Check for inconsistent temperature readings on the dashboard,
-    overheating warnings, and inspect the thermostat, radiator, and hoses for leaks
-    or blockages.
+  rationale: Defective thermostats and cooling system malfunctions in Volkswagen Group
+    (VAG) engines can cause overheating, reduced engine efficiency, and potential
+    engine damage if the cooling system fails to function properly.
+  inspection_advice: Verify for inconsistent temperature readings on the dashboard
+    or overheating warnings. Physically inspect the thermostat, radiator, and cooling
+    hoses for leaks, blockages, or mechanical failures.
   sources: []
 - claim_key: ea888_220_engine_turbo_recirculation_
   title: Turbo recirculation valve (N249) brittle diaphragm failure
@@ -1123,7 +1171,7 @@ claims:
 - claim_key: ea888_220_cooling system_thermostat_housing_l
   title: Thermostat housing leaks and cracks
   kind: known_issue
-  domain: cooling system
+  domain: cooling
   severity: medium
   confidence: 0.6
   status: review
@@ -1144,7 +1192,7 @@ claims:
 - claim_key: ea888_220_cooling system_water_pump_impeller_
   title: Water pump impeller failure
   kind: known_issue
-  domain: cooling system
+  domain: cooling
   severity: medium
   confidence: 0.6
   status: review
@@ -1166,7 +1214,7 @@ claims:
 - claim_key: ea888_220_turbocharger/fuel system_diverter_valve_(dv)_
   title: Diverter valve (DV) membrane cracking
   kind: known_issue
-  domain: turbocharger/fuel system
+  domain: engine
   severity: medium
   confidence: 0.6
   status: review

@@ -319,9 +319,27 @@ def prune_removed_claims(db: Session, seen_ids: set[str]) -> int:
     return len(stale)
 
 
+def _validate_part_yaml_or_raise() -> None:
+    """sync.py is the one-way gate from pipeline-written YAML into the
+    servable DB — validate here, not just in the pipeline scripts, so a
+    hand-edited file or a future pipeline that skips promote.py's gates
+    still can't push invalid/contaminated claims live (docs/design_flaws.md
+    Flaw 1: a manual `python -m backend.sync` bypassed every pipeline-side
+    check, which is exactly how contaminated data would reach buyers)."""
+    print("Validating part YAML…")
+    from knowledge.parts.validate_part_yaml import validate_all
+    n_errors = validate_all(list(PARTS_DIR.rglob("*.yaml")))
+    if n_errors:
+        raise SystemExit(
+            f"Refusing to sync: {n_errors} part YAML validation error(s) (see above). "
+            f"Fix them or run the relevant cleanup script first."
+        )
+
+
 def run():
     print("Creating tables if needed…")
     Base.metadata.create_all(engine)
+    _validate_part_yaml_or_raise()
 
     with Session(engine) as db:
         n_variants = sync_variants(db)

@@ -18,6 +18,7 @@
     at high mileage, causing lean running and rough idle. In markets with lower
     diesel quality the failure timeline is accelerated.
   verdict: correct
+  expected_issues: []
   verdict_notes: "Widely confirmed by engine remanufacturers and owner forums."
 
 - claim_key: megane4_k9k_generic_oil_change
@@ -29,4 +30,170 @@
     Regular oil changes are essential for engine longevity. Neglecting them
     leads to increased wear on all engines.
   verdict: incorrect
+  expected_issues: [generic]
   verdict_notes: "Gate should flag this as generic — true of all cars, not K9K-specific."
+
+# --- 2026-07-04: expanded per user feedback ("data quality and mismatches are
+# horrible... not P0312 fail may cause x, we need just injector problems with
+# brief descriptions. Do harder benchmarks.") Categories added below:
+# dtc_litany (title dominated by raw diagnostic codes instead of describing
+# the general failure), factually_impossible (contradicts the vehicle's own
+# powertrain/fuel type), cross_brand (evidence from an unrelated manufacturer),
+# non_automotive (source content isn't even about a car), verbose_paragraph
+# (title/rationale collapsed into one unreadable block), no_variant_anchor
+# (bare-generic component name with no engine/variant code — CLAUDE.md wants
+# config-SPECIFIC risk, "injector problems" alone is as useless as "brakes
+# wear", it needs the K9K/EA211/etc. anchor to be actionable).
+
+- claim_key: dq200_dtc_litany
+  title: "Mechatronics adaptation not completed (P1781/18189)"
+  domain: transmission
+  severity: medium
+  rationale: "DQ200 mechatronic unit throws fault codes P1781 and 18189 when clutch adaptation fails."
+  quote: >
+    Owners report the transmission control unit logging P1781 and VAG fault
+    18189 after a battery disconnect or software update, requiring a dealer
+    adaptation reset before normal shifting resumes.
+  verdict: incorrect
+  expected_issues: [dtc_code, no_variant_anchor]
+  verdict_notes: >
+    dtc_litany — leads with raw fault codes instead of the general chronic
+    pattern (DQ200 clutch adaptation/calibration loss). Should generalize to
+    something like "DQ200 dry-clutch adaptation loss after battery
+    disconnect/software update" with the codes demoted to inspection_advice,
+    not deleted (the underlying issue is real and worth surfacing).
+
+- claim_key: h5h130_oxygen_sensor_dtc_litany
+  title: "Frequent Recurring OBD-II Fault Codes (P0130, P0136, P0141, P0420) for Oxygen Sensors on Renault Mégane 4"
+  domain: emissions
+  severity: medium
+  rationale: "Oxygen sensors on the H5H fail repeatedly, triggering multiple OBD-II codes."
+  quote: >
+    Several Megane 4 1.3 TCe owners report recurring O2 sensor fault codes
+    within 60-80k km, requiring repeated sensor replacement.
+  verdict: incorrect
+  expected_issues: [dtc_code, verbose, no_variant_anchor]
+  verdict_notes: >
+    dtc_litany + verbose — four codes crammed into the title. Generalize to
+    "Recurring oxygen sensor failures (H5H 1.3 TCe)", codes move to
+    inspection_advice.
+
+- claim_key: megane_etech_ev_p0420_impossible
+  title: "False P0420 Code Trigger in Fully Electric Renault Megane E-Tech (2026)"
+  domain: emissions
+  severity: low
+  rationale: "The catalytic converter efficiency code P0420 triggers falsely on the E-Tech."
+  quote: "Some owners report a P0420 code appearing on the dash."
+  verdict: incorrect
+  expected_issues: [dtc_code, no_variant_anchor]
+  verdict_notes: >
+    factually_impossible — P0420 is a catalytic-converter-efficiency code; a
+    fully electric car has no catalytic converter. This is DROP, not
+    generalize — rewriting it briefer would just produce a tidier false claim.
+    NOTE: dtc_code happens to catch this instance (title has a raw code), but
+    that's incidental — there is NO dedicated check yet for "does this claim
+    make physical sense for the vehicle's actual powertrain/fuel type." Known
+    gap, not covered by this benchmark.
+
+- claim_key: dc4_ford_cross_brand
+  title: "7DCT 300 Clutch Squeak/Friction Noise (3rd to 4th Gear Shift)"
+  domain: transmission
+  severity: high
+  own_makes: [renault]
+  expect_flagged: true
+  rationale: >
+    The 7DCT 300 wet dual-clutch transmission (used in Renault Clio/Megane
+    1.3 TCe, BMW X, Mini, and Ford Puma 1.0 Ecoboost) exhibits friction noise.
+  quote: "3rd to 4th gear shows a distinct friction/squeak noise on the 7DCT 300."
+  verdict: correct
+  expected_issues: []
+  verdict_notes: >
+    NOT cross-brand contamination despite naming Ford/BMW/Mini — the 7DCT300
+    is a Getrag-supplied unit genuinely shared across those brands AND
+    Renault's own EDC/DC4, and the rationale explicitly ties it back to
+    Renault Clio/Megane 1.3 TCe. Included as a hard case: gate_variant must
+    not reject cross-brand mentions outright, only when there's no tie back
+    to the researched variant (see h4d_75_buick_cross_brand below).
+
+- claim_key: h4d_75_buick_cross_brand
+  title: "Software Fault and ECU Update Requirement (Buick Enclave)"
+  domain: electrical
+  severity: medium
+  own_makes: [renault]
+  expect_flagged: true
+  rationale: "The Buick Enclave requires an ECU software update to resolve an infotainment fault."
+  quote: "2019 Buick Enclave owners reported needing a dealer ECU flash."
+  verdict: incorrect
+  expected_issues: [cross_brand, no_variant_anchor]
+  verdict_notes: >
+    cross_brand — Buick has no corporate/platform relationship with
+    Renault/Dacia (unlike the Getrag 7DCT300 case above), and nothing in the
+    claim ties it back to the H4D-engined variants being researched. DROP.
+
+- claim_key: h5d100_scooter_non_automotive
+  title: "Loose Folding Mechanism (Handlebar Ferrule)"
+  domain: suspension
+  severity: low
+  rationale: >
+    A chronically loose folding mechanism can be annoying and may indicate
+    poor assembly or design.
+  quote: "Check the folding mechanism for excessive play in the ferrule and shaft."
+  verdict: incorrect
+  expected_issues: []
+  verdict_notes: >
+    non_automotive — this is an e-scooter/folding-bike claim (folding
+    mechanism, handlebar ferrule), not a car part at all. Source-level
+    contamination unrelated to the H5D engine. DROP. NOTE: no automated check
+    exists for this category yet — none of dtc_code/verbose/cross_brand/
+    generic reliably catch "this isn't even about a car." Known gap.
+
+- claim_key: ea288_verbose_paragraph_title
+  title: >
+    Customers with 2.0 TDI Pump-Düse (PD) engines—particularly those rated
+    at 170 horsepower and some 140 horsepower models—are experiencing
+    frequent and repeated failures of the fuel injectors. Owners have
+    reported needing multiple injector replacements, even while still under
+    original warranty coverage.
+  domain: fuel system
+  severity: high
+  rationale: "Same content repeated in the title as in the rationale."
+  quote: "Multiple injector replacements were needed under warranty."
+  verdict: incorrect
+  expected_issues: [verbose]
+  verdict_notes: >
+    verbose_paragraph — title is a full paragraph duplicating the rationale
+    (a real regression caught and fixed this session). Generalize to a brief
+    title: "Chronic fuel injector failures (2.0 TDI PD, 140/170hp)".
+
+- claim_key: k9k_injector_no_variant_anchor
+  title: "Injector problems"
+  domain: engine
+  severity: medium
+  rationale: "Injectors can fail and cause rough running."
+  quote: "Injectors sometimes fail on diesel engines."
+  verdict: incorrect
+  expected_issues: [no_variant_anchor]
+  verdict_notes: >
+    no_variant_anchor — this is the OTHER failure mode the user's "we need
+    just injector problems with brief descriptions" request could be
+    misread as: bare-generic with no engine/variant code is exactly as
+    useless as "brakes wear over time" (CLAUDE.md's own example of what NOT
+    to surface). "Brief" must still mean "Injector fouling (K9K 1.5 dCi)" —
+    brief AND config-specific, not brief instead of config-specific.
+
+- claim_key: k9k_injector_brief_and_specific
+  title: "Chronic injector fouling (K9K 1.5 dCi)"
+  domain: engine
+  severity: medium
+  rationale: >
+    K9K Delphi injectors foul at high mileage in markets with lower diesel
+    quality, causing rough idle and hesitation.
+  quote: >
+    The Delphi units used in 2010-onwards K9K engines develop reduced return
+    flow at high mileage, causing lean running and rough idle.
+  verdict: correct
+  expected_issues: []
+  verdict_notes: >
+    This is the TARGET shape: brief title, general failure pattern (not a
+    DTC code), engine-code anchor kept. Same underlying evidence as
+    megane4_k9k_injectors above, phrased the way the user wants going forward.

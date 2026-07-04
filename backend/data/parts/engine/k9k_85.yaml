@@ -71,33 +71,37 @@ claims:
       is indicative of partially clogged passages."'
     independent: true
 - claim_key: k9k_85_fuel system_enjektör_ucu_kurumla
-  title: Enjektör ucu kurumlanması (1.5 dCi)
+  title: Fuel Injector Tip Clogging (1.5 dCi Engine)
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Enjektör ucunun kurumlanması yakıt püskürtmeyi bozar, motor performansını
-    düşürür ve yakıt tüketimini artırır. Özellikle 1.5 dCi motorlarda yaygın bir sorundur.
-  inspection_advice: Motoru soğuk çalıştırın ve enjektör ucundan gelen sesleri dinleyin.
-    Kurumlanma sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, egzozdan
-    siyah/gri duman çıkarsa bu da kurumlanma sorununu gösterir.
+  rationale: Clogging of the fuel injector tip disrupts fuel atomization, reduces
+    engine performance, and increases fuel consumption. This is a common issue particularly
+    in the 1.5 dCi engine. The clogging causes poor fuel spray patterns, leading to
+    incomplete combustion, power loss, and higher fuel consumption due to inefficient
+    fuel delivery.
+  inspection_advice: Start the engine while it is cold and listen for noises emanating
+    from the fuel injector tip. Clogging may produce rattling or ticking sounds. Additionally,
+    if black or gray smoke is observed exiting the exhaust, this may indicate a clogging
+    issue in the injectors.
   sources: []
 - claim_key: k9k_85_fuel system_enjektör_sızdırma_(1
-  title: Enjektör sızdırma (1.5 dCi)
+  title: Fuel Injector Leakage (1.5 dCi)
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Enjektör sızdırması yakıtın yanlış püskürtülmesine ve motorun düzensiz
-    çalışmasına neden olur. Bu sorun yakıt tüketimini artırır ve emisyon değerlerini
-    olumsuz etkiler.
-  inspection_advice: Motoru çalıştırın ve enjektörlerden gelen sesleri dinleyin. Sızdırma
-    sesleri olarak metalik tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun
-    rölantide dalgalanması da sızdırma sorununu gösterebilir.
+  rationale: Fuel injector leakage causes incorrect fuel spray, leading to engine
+    misfiring. This issue increases fuel consumption and negatively impacts emission
+    values.
+  inspection_advice: Start the engine and listen for noises coming from the injectors.
+    Leakage sounds may include metallic ticking or clicking noises. Additionally,
+    engine RPM fluctuations at idle can indicate a leakage problem.
   sources:
   - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
     source_domain: cetinrenault.com
@@ -105,49 +109,50 @@ claims:
     quote: '"Renault Clio 4 – 1.5 dCi: Enjektör sızdırma"'
     independent: true
 - claim_key: k9k_85_fuel system_enjektör_contası_yan
-  title: Enjektör contası yanması (1.5 dCi)
+  title: Fuel Injector O-Ring Burnout (1.5 dCi Engine)
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Enjektör contasının yanması yakıt basıncını ve püskürtme zamanlamasını
-    bozar. Bu sorun motor performansını ciddi şekilde etkiler ve yakıt tüketimini
-    artırır.
-  inspection_advice: Motoru çalıştırın ve enjektörlerden gelen sesleri dinleyin. Conta
-    yanması sesleri olarak metalik tıkırtı veya takırtı sesleri duyulabilir. Ayrıca,
-    motor arıza lambasının yanması da bu sorunu gösterebilir.
+  rationale: The burnout of the fuel injector O-ring disrupts fuel pressure and spray
+    timing. This issue severely impacts engine performance and increases fuel consumption.
+  inspection_advice: Start the engine and listen for noises coming from the injectors.
+    Burned-out O-ring noises may include metallic ticking or rattling sounds. Additionally,
+    the engine warning light may illuminate, indicating this problem.
   sources: []
 - claim_key: k9k_85_fuel system_basınç_sensörü_hatal
-  title: Basınç sensörü hataları (1.5/1.6 dCi)
+  title: Fuel Pressure Sensor Failures (1.5/1.6 dCi engines)
   kind: known_issue
   domain: fuel system
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Basınç sensörü hataları yakıt basıncının doğru ölçülmemesine neden olur.
-    Bu sorun yakıt püskürtme zamanlamasını ve miktarını etkiler, motor performansını
-    düşürür ve yakıt tüketimini artırır.
-  inspection_advice: Motor arıza lambasının yanıp söndüğünü kontrol edin. Ayrıca,
-    motorun düzensiz çalışması ve çekiş kaybı da bu sorunu gösterebilir. Basınç sensörünü
-    test etmek için bir mekanik araç tezgahına götürmek gerekebilir.
+  rationale: Fuel pressure sensor failures cause incorrect measurement of fuel pressure.
+    This issue affects the timing and quantity of fuel injection, reducing engine
+    performance and increasing fuel consumption.
+  inspection_advice: Check if the engine check light is flashing intermittently. Uneven
+    engine operation and loss of power are also symptoms of this issue. Testing the
+    fuel pressure sensor may require taking the vehicle to an automotive diagnostic
+    bay.
   sources: []
 - claim_key: k9k_85_fuel system_püskürtme_düzensizli
-  title: Püskürtme düzensizliği (1.5/1.6 dCi)
+  title: Fuel Injection Irregularity (1.5/1.6 dCi)
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Püskürtme düzensizliği yakıtın yanlış püskürtülmesine ve yanma odasında
-    homojen karışımın sağlanamamasına neden olur. Bu sorun motor performansını düşürür,
-    yakıt tüketimini artırır ve emisyon değerlerini olumsuz etkiler.
-  inspection_advice: Motoru çalıştırın ve enjektör seslerini dinleyin. Düzensiz püskürtme
-    sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun rölantide
-    dalgalanması ve çekiş kaybı da bu sorunu gösterebilir.
+  rationale: Fuel injection irregularity causes improper fuel delivery and prevents
+    the formation of a homogeneous mixture in the combustion chamber. This issue reduces
+    engine performance, increases fuel consumption, and negatively impacts emission
+    values.
+  inspection_advice: Start the engine and listen for the sound of injectors. Irregular
+    injection noises may be detected as ticking or clicking sounds. Additionally,
+    engine idling fluctuations and loss of power may indicate this problem.
   sources:
   - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
     source_domain: cetinrenault.com
@@ -155,49 +160,59 @@ claims:
     quote: '"Renault Megane 3 – 1.5 / 1.6 dCi: Püskürtme düzensizliği"'
     independent: true
 - claim_key: k9k_85_engine_sabit_rölanti_sorunu
-  title: Sabit rölanti sorunu (Symbol)
+  title: Stuck Idle Problem (Symbol)
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Sabit rölanti sorunu motorun idling devrinin kontrol edilememesine neden
-    olur. Bu sorun yakıt püskürtme sistemindeki arızalardan kaynaklanabilir ve motorun
-    çalışmasını etkiler.
-  inspection_advice: Motoru çalıştırın ve rölanti devrini kontrol edin. Sabit olmayan
-    rölanti devri ve motorun titreşimi bu sorunu gösterebilir.
+  rationale: The stuck idle problem prevents the engine from maintaining a stable
+    idle speed. This issue can arise from faults in the fuel injection system, which
+    can impair engine operation.
+  inspection_advice: Start the engine and check the idle speed. An unstable idle speed
+    and engine vibration indicate this problem.
   sources: []
 - claim_key: k9k_85_fuel system_enjektör_keçesi_arız
-  title: Enjektör keçesi arızası (1.5 dCi, Dacia Duster)
+  title: Fuel Injector O-Ring Failure (1.5 dCi, Dacia Duster)
   kind: known_issue
   domain: fuel system
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Enjektör keçesi arızası yakıt akışını engeller veya bozar, motor performansını
-    düşürür ve yakıt tüketimini artırır. Bu sorun yakıt püskürtme sisteminin en kritik
-    parçalarından birinin arızalanmasıyla ortaya çıkar.
-  inspection_advice: Motoru çalıştırın ve enjektör seslerini dinleyin. Keçenin arızalanması
-    sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca, motorun çalışmaması
-    veya zor çalışması da bu sorunu gösterebilir.
-  sources: []
+  rationale: A failed fuel injector O-ring blocks or disrupts fuel flow, reducing
+    engine performance and increasing fuel consumption. This issue arises from the
+    failure of one of the most critical components in the fuel injection system.
+  inspection_advice: Start the engine and listen for injector noises. A faulty O-ring
+    may produce rattling or clicking sounds. Additionally, the engine may fail to
+    start or run poorly, indicating this issue.
+  sources:
+  - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
+    source_domain: cetinrenault.com
+    site_or_channel: cetinrenault.com
+    quote: '"Dacia Duster – 1.5 dCi: Enjektör keçesi arızası"'
+    independent: true
 - claim_key: k9k_85_fuel system_su_buharı_kondenzasy
-  title: Su buharı kondenzasyonu (1.5 dCi, Dacia Duster)
+  title: Water Vapor Condensation (1.5 dCi, Dacia Duster)
   kind: known_issue
   domain: fuel system
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Su buharı kondenzasyonu enjektörlerin içindeki su birikimine neden olur.
-    Bu sorun yakıt püskürtmeyi bozar ve motor performansını etkiler. Özellikle soğuk
-    iklimlerde daha belirginleşir.
-  inspection_advice: Motoru soğuk çalıştırın ve enjektör seslerini dinleyin. Su buharı
-    kondenzasyonu sesleri olarak tıkırtı veya takırtı sesleri duyulabilir. Ayrıca,
-    motorun soğuk çalıştırmada düzensiz çalışması da bu sorunu gösterebilir.
-  sources: []
+  rationale: Water vapor condensation causes water accumulation inside the injectors.
+    This issue disrupts fuel injection and negatively impacts engine performance,
+    particularly in cold climates.
+  inspection_advice: Start the engine cold and listen for injector noises. Water vapor
+    condensation may produce rattling or clicking sounds. Additionally, irregular
+    cold-start engine operation can indicate this problem.
+  sources:
+  - source_url: https://www.cetinrenault.com/blog/icerik/renault-enjektor-arizasi-belirtileri-dizel-benzinli-modeller-icin-detayli-rehber
+    source_domain: cetinrenault.com
+    site_or_channel: cetinrenault.com
+    quote: '"Dacia Duster – 1.5 dCi: Su buharı kondenzasyonu"'
+    independent: true
 - claim_key: k9k_85_engine_turbocharger_actuato
   title: Turbocharger actuator failure (K9K 834)
   kind: known_issue
@@ -248,6 +263,15 @@ claims:
       thermal loads. UK DVSA records show DPF-related issues as a common cause of
       emissions test failures... The most frequent issues... are DPF clogging due
       to insufficient regeneration..."'
+    independent: true
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"DPF almost always boils down to two things: oil ash and failed regeneration
+      cycles... If you’re not running the specific Renault RN0720 low-ash (low-SAPS)
+      oil, you’re leaving behind non-combustible residue every time the engine burns
+      even a tiny bit of oil. Over time, that ash builds up in the DPF... Once it
+      hits about 60 grams per liter, that filter is pretty much done for."'
     independent: true
 - claim_key: k9k_85_emissions_egr_valve_clogging_(
   title: EGR valve clogging (K9K 834)
@@ -316,6 +340,13 @@ claims:
       can handle increased soot loads. **The K9K 834 is an interference engine.**
       If the timing chain were to fail (which is very rare) or jump timing, the pistons
       would collide with the open valves, causing catastrophic internal damage..."'
+    independent: true
+  - source_url: https://www.enginecode.uk/renault/k9k-837-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: '"Yes, the K9K 837 is an interference engine. If the timing chain were
+      to fail or jump, the pistons would collide with the open valves, causing catastrophic
+      internal engine damage."'
     independent: true
 - claim_key: k9k_85_fuel system_high-pressure_fuel_p
   title: High-pressure fuel pump failures (pre-2015 K9K 820)
@@ -657,8 +688,8 @@ claims:
   kind: known_issue
   domain: emissions
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EGR cooler condenses exhaust gases, creating a corrosive sludge that
     clogs passages and damages the cooler. Cracked EGR coolers leak coolant into the
@@ -667,7 +698,16 @@ claims:
     dark exhaust smoke. Look for EGR-related codes (e.g., P0401, P0402) and inspect
     the EGR cooler for cracks or sludge buildup. Verify if the car has a history of
     short trips or poor-quality diesel.
-  sources: []
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"The EGR cooler takes hot exhaust gas and chills it before sending it
+      back into the intake. That cooling creates condensation, which then mixes with
+      soot. What do you get? A thick, corrosive sludge that clogs up the cooler’s
+      tiny passages and gums up the EGR valve itself... If the internal core cracks,
+      it leaks coolant directly into the exhaust stream."'
+    independent: true
 - claim_key: k9k_85_emissions_egr_valve_wear_and_s
   title: EGR valve wear and sticking
   kind: known_issue
@@ -951,54 +991,57 @@ claims:
       bir ıslık sesi geldiğini ve hızlanmalarda isteksizlik yaşadıklarını aktarmıştır."'
     independent: true
 - claim_key: k9k_85_emissions_dpf_tıkanması_nedeni
-  title: DPF tıkanması nedeniyle seramik yapı erimesi/çatlaması
+  title: DPF Clogging Leading to Ceramic Structure Melting/Cracking
   kind: known_issue
   domain: emissions
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DPF'nin yanmamış hidrokarbonlar, motor yağı kalıntıları veya metal oksit
-    külleri ile tıkanması, egzoz gazlarının akışını tamamen engeller. Bu durum, filtre
-    içindeki seramik yapının aşırı ısıdan erimesine veya çatlamasına yol açar, kalıcı
-    hasara neden olur ve motorun performansını ciddi şekilde etkiler.
-  inspection_advice: Gösterge panelindeki sarı ikaz lambasını kontrol edin. Egzoz
-    hattında yüksek geri basınç veya egzozdan kötü koku varsa, DPF tıkanması olabilir.
-    Motor performansındaki düşüş, yakıt tüketimindeki artış veya rölanti dalgalanmaları
-    da tıkanma belirtisi olabilir. Uzman kontrolü için araçta 'Limp Mode' moduna geçmişse
-    veya turbo sisteminde anormal sesler duyuluyorsa, DPF'nin fiziksel hasar riski
-    yüksek olabilir.
+  rationale: Clogging of the **Diesel Particulate Filter (DPF)** due to unburned hydrocarbons,
+    motor oil residues, or metal oxide ash deposits completely blocks exhaust gas
+    flow. This causes the internal **ceramic structure** to overheat, leading to **melting
+    or cracking**, resulting in permanent damage and significantly impairing engine
+    performance.
+  inspection_advice: Check for a **yellow warning light** on the dashboard. High backpressure
+    in the exhaust system or foul-smelling exhaust emissions may indicate **DPF clogging**.
+    Decreased engine performance, increased fuel consumption, or idle instability
+    are also warning signs. If the vehicle enters **Limp Mode** or abnormal noises
+    from the **turbo system** are detected, there is a high risk of **physical DPF
+    damage**—seek professional inspection.
   sources: []
 - claim_key: k9k_85_emissions_dpf_rejenerasyon_işl
-  title: DPF rejenerasyon işleminin başarısızlığı ve motor koruma moduna geçiş
+  title: Failed DPF Regeneration and Engine Protection Mode Activation
   kind: known_issue
   domain: emissions
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DPF rejenerasyonu (yakıtın yüksek sıcaklıkta yanmasıyla temizleme) başarısız
-    olursa, motorun performansı kısıtlanır ve 'Limp Mode' moduna geçer. Bu durum,
-    sürücüye hız ve devir sınırlamaları getirir ve motoru korumak için sistematik
-    bir performans düşüşüne neden olur.
-  inspection_advice: Motorun 'Limp Mode' moduna geçip geçmediğini kontrol edin. Start-Stop
-    sisteminin devre dışı kalması veya motor fanının uzun süre çalışmaya devam etmesi
-    de rejenerasyon başarısızlığına işaret edebilir. Egzozdan kötü koku veya motorun
-    düzensiz çalışması da bu sorunun belirtisi olabilir.
+  rationale: If the Diesel Particulate Filter (DPF) regeneration process—where fuel
+    is combusted at high temperatures to clear accumulated soot—fails, the engine’s
+    performance is restricted and the system enters **Engine Protection Mode (Limp
+    Mode)**. This results in enforced speed and RPM limitations for the driver, systematically
+    reducing power output to safeguard the engine.
+  inspection_advice: Check if the engine has entered **Limp Mode**. Disabling the
+    Start-Stop system or the engine fan running continuously for extended periods
+    may indicate failed regeneration. Unusual exhaust odors or erratic engine operation
+    are also symptoms of this issue.
   sources: []
 - claim_key: k9k_85_engine_dpf_tıkanması_nedeni
-  title: DPF tıkanması nedeniyle turbo sistem hasarı
+  title: Turbo System Damage Due to Clogged DPF
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DPF tıkanması, turboşarjın yüksek ısı ve basınç altında çalışmasına neden
-    olur. Bu durum, mil kesmesi, kanatçık hasarı gibi ciddi turbo arızalarına yol
-    açar ve motor performansını tamamen etkiler.
-  inspection_advice: Turbo sisteminde anormal sesler veya performans kayıpları varsa,
-    DPF tıkanması nedeniyle turboya zarar gelmiş olabilir. Egzoz akışının bozulması
-    da turbo tepkilerini geciktirebilir. Bu nedenle, turbo seslerini ve performans
-    kayıplarını kontrol edin.
+  rationale: A clogged **Diesel Particulate Filter (DPF)** forces the **turbocharger**
+    to operate under excessive **heat and pressure**. This can lead to severe turbo
+    failures, including **shaft breakage, blade damage**, and a complete loss of engine
+    performance.
+  inspection_advice: If abnormal **turbo noises** or **performance loss** is detected,
+    the turbo may have been damaged due to a **clogged DPF**. Restricted **exhaust
+    flow** can also delay turbo response. Monitor **turbo sounds** and **performance
+    drops** for signs of this issue.
   sources: []

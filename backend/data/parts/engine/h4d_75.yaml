@@ -214,98 +214,116 @@ claims:
       Using the correct oil is non-negotiable to protect the DPF and fuel injectors.
     independent: true
 - claim_key: h4d_75_engine_chronic_idling_fluct
-  title: Chronic Idling Fluctuations (Rölanti Dalgalanması)
+  title: Persistent Engine Idling Instability
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Chronic idling issues caused by persistent sensor failures (MAP sensor)
-    and air leaks in the intake manifold, which are not addressed by routine maintenance
-    alone.
-  inspection_advice: Check for MAP sensor responsiveness, inspect intake manifold
-    for cracks or leaks, and verify throttle body cleanliness during a pre-purchase
-    inspection.
+  rationale: Recurring problems with the engine idling smoothly are caused by repeated
+    failures in the **Manifold Absolute Pressure (MAP) sensor** and **air leaks in
+    the intake manifold**, which cannot be fully resolved through standard maintenance
+    procedures alone.
+  inspection_advice: During a pre-purchase inspection, verify the **MAP sensor’s functionality
+    and signal responsiveness**, thoroughly inspect the **intake manifold for cracks,
+    gaps, or air leaks**, and ensure the **throttle body is clean and free of obstructions**.
   sources: []
 - claim_key: h4d_75_engine_turbocharger_pressur
-  title: Turbocharger Pressure Drop (0.9 TCe Turbo Basınç Düşüşü)
+  title: Turbocharger Pressure Drop (Turbo Performance Decline in 0.9 TCe Engine)
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Chronic turbo failure due to wastegate valve failure and turbo hose cracking,
-    leading to performance loss and potential turbo unit damage if ignored.
-  inspection_advice: Inspect turbo hoses for cracks, check wastegate valve functionality,
-    and listen for unusual noises during acceleration. Verify turbo boost pressure
-    with a scan tool.
+  rationale: The turbocharger is failing repeatedly due to a malfunctioning wastegate
+    valve and cracked turbocharger intake/exhaust hoses. This causes a loss of engine
+    power and, if left unaddressed, can lead to further damage to the turbocharger
+    unit itself.
+  inspection_advice: Check the turbocharger hoses for cracks or leaks, verify the
+    wastegate valve is operating correctly, and listen for abnormal noises during
+    acceleration. Use a scan tool to confirm the turbo boost pressure readings are
+    within specifications.
   sources: []
 - claim_key: h4d_75_fuel system_chronic_injector_fai
-  title: Chronic Injector Failure (1.5 dCi Enjektör Sorunu)
+  title: Persistent Fuel Injector Malfunction (1.5 dCi Injector Problem)
   kind: known_issue
   domain: fuel system
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: High-mileage injector degradation leading to misfires, rough idle, and
-    increased fuel consumption, exacerbated by fuel quality issues.
-  inspection_advice: Test for injector spray pattern consistency, check for misfires
-    with an OBD-II scanner, and inspect for fuel leaks or clogged injectors.
+  rationale: The fuel injectors degrade over high mileage, causing misfires, an uneven
+    or rough idle, and higher fuel consumption. This condition is worsened by poor-quality
+    fuel.
+  inspection_advice: Verify injector spray pattern uniformity, scan for misfires using
+    an OBD-II diagnostic tool, and visually inspect for fuel leaks or clogged injectors.
   sources: []
 - claim_key: h4d_75_engine_chronic_engine_knock
-  title: Chronic Engine Knock (Motor Takozu Aşınması)
+  title: Persistent Engine Knocking (Severe Piston and Cylinder Head Wear)
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Hardened upper cylinder head gasket or piston rings causing knocking
-    during acceleration, often due to prolonged use without proper maintenance.
-  inspection_advice: Listen for knocking noises during acceleration, check for oil
-    leaks around the cylinder head, and inspect for carbon buildup in combustion chambers.
+  rationale: The issue stems from hardened upper cylinder head gaskets or worn piston
+    rings, which cause knocking sounds during acceleration. This typically occurs
+    due to extended vehicle use without adequate maintenance, such as insufficient
+    oil changes or neglect of combustion chamber cleaning.
+  inspection_advice: During a diagnostic check, listen closely for knocking noises—especially
+    under acceleration. Inspect for oil leaks around the cylinder head area, and visually
+    examine combustion chambers for excessive carbon deposits.
   sources: []
 - claim_key: h4d_75_fuel system_fuel_pump_failure_(y
-  title: Fuel Pump Failure (Yakıt Pompası Zayıflığı)
+  title: Fuel Pump Failure (Weakness in Fuel Pump)
   kind: known_issue
   domain: fuel system
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Chronic fuel pump degradation leading to difficulty starting the engine,
-    especially in hot conditions or after prolonged inactivity.
-  inspection_advice: Test fuel pump pressure, listen for unusual noises from the fuel
-    tank, and check for voltage drop at the fuel pump relay during cranking.
+  rationale: The fuel pump has experienced long-term wear and degradation, causing
+    the engine to struggle to start—particularly in hot weather or after periods of
+    inactivity.
+  inspection_advice: Measure the fuel pump pressure to verify output; listen for abnormal
+    noises emanating from the fuel tank; and check for a voltage drop at the fuel
+    pump relay while the engine is cranking.
   sources: []
 - claim_key: h4d_75_electrical_multimedia_system_fr
-  title: Multimedia System Freezing (Multimedya Donması)
+  title: R-Link Multimedia System Freezing (Touchscreen Lockup, Audio Interruptions,
+    or System Crashes)
   kind: known_issue
   domain: electrical
   severity: low
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Software-related freezes in R-Link multimedia systems due to outdated
-    firmware, causing intermittent loss of functionality.
-  inspection_advice: Check for available software updates for the R-Link system, test
-    multimedia responsiveness under load, and verify system connectivity.
+  rationale: The R-Link multimedia system is freezing due to outdated firmware, causing
+    temporary loss of function—such as unresponsive touchscreen inputs, sudden audio
+    cuts, or complete system lockups. These issues occur intermittently and are directly
+    tied to the software version.
+  inspection_advice: Check for the latest R-Link firmware updates. Perform load testing
+    by engaging navigation, media playback, Bluetooth calls, and other system functions
+    to confirm responsiveness. Ensure all physical connections (power cables, data
+    links, and system wiring) are secure and free of damage.
   sources: []
 - claim_key: h4d_75_electrical_keycard_ignition_sys
-  title: Keycard Ignition System Failure (Kartlı Çalıştırma Sorunu)
+  title: Keycard Ignition System Failure (Failure to Start with Keycard)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Chronic failure of the keycard module, preventing the vehicle from starting
-    due to electronic lock system malfunctions.
-  inspection_advice: Test keycard module functionality with a backup key, inspect
-    wiring and connectors for damage, and verify battery voltage to the module.
+  rationale: The keycard module repeatedly fails, causing the vehicle to refuse starting
+    due to persistent issues with the electronic lock system.
+  inspection_advice: Attempt to start the vehicle using a backup key to verify keycard
+    module functionality. Inspect all wiring harnesses and electrical connectors associated
+    with the keycard system for signs of damage, corrosion, or improper connections.
+    Measure and confirm the battery voltage supplied to the keycard module is within
+    the manufacturer’s specified range.
   sources: []
 - claim_key: h4d_75_engine_high_oil_consumption
   title: High oil consumption due to scraper ring wear
@@ -349,66 +367,68 @@ claims:
       the valve clearance.
     independent: true
 - claim_key: h4d_75_electrical_htrac_4x4_sensör_has
-  title: Htrac 4x4 Sensör Hassasiyeti ve Yanlış Veri Algılama
+  title: HTRAC 4x4 System Sensor Sensitivity and False Data Detection
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Hyundai Tucson'un Htrac 4x4 sisteminde, elektronik sensörlerin hassas
-    yapısı nedeniyle küçük veri tutarsızlıkları bile sistemin koruma moduna geçmesine
-    neden olabilir. Bu, genellikle elektriksel iletişim hataları veya sensörlerin
-    yanlış okumaları sonucu ortaya çıkar.
-  inspection_advice: OBD2 tarayıcı ile hata kodlarını kontrol edin. ABS ve tekerlek
-    hız sensörlerinin kirlenmesi veya hasarını inceleyin. Ayrıca, transfer kutusuna
-    giden elektriksel bağlantılar ve sigortaları kontrol edin.
+  rationale: In the Hyundai Tucson’s HTRAC 4x4 system, the electronic sensors’ delicate
+    design means even minor data inconsistencies—often caused by electrical communication
+    errors or sensor misreads—can trigger the system to enter a protective mode.
+  inspection_advice: Check for error codes using an OBD2 scanner. Inspect the ABS
+    and wheel speed sensors for contamination or damage. Also, verify electrical connections
+    and fuses leading to the transfer case.
   sources: []
 - claim_key: h4d_75_electrical_abs_ve_tekerlek_hız_
-  title: ABS ve Tekerlek Hız Sensörleri Kirlenmesi
+  title: ABS and Wheel Speed Sensor Contamination
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yol koşulları nedeniyle ABS ve tekerlek hız sensörlerinin kirlenmesi,
-    sistemin yanlış tekerlek hızlarını algılamasına ve koruma moduna geçmesine neden
-    olabilir. Bu, özellikle çamur, toz veya lastik tozunun birikmesiyle daha sık görülür.
-  inspection_advice: ABS sensörlerini temizleyin ve kablolarını hasar veya gevşemeyi
-    kontrol edin. Sensörlerin üzerindeki kirlenme veya hasarları tespit edin.
+  rationale: Contamination of the ABS and wheel speed sensors due to road conditions
+    can cause the system to incorrectly detect wheel speeds and trigger a protective
+    mode. This is particularly common when there is an accumulation of mud, dust,
+    or tire debris.
+  inspection_advice: Clean the ABS sensors and check the wiring for damage or looseness.
+    Inspect for contamination or damage on the sensors themselves.
   sources: []
 - claim_key: h4d_75_suspension_lastik_basıncı_ve_aş
-  title: Lastik Basıncı ve Aşınma Farklılıklarının Sistem Arızasına Etkisi
+  title: Impact of Tire Pressure and Wear Differences on System Faults
   kind: known_issue
   domain: suspension
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Htrac sisteminin çalışması için tüm tekerleklerin aynı dış çap ve dönme
-    hızına sahip olması gerekir. Farklı marka, model veya aşınma seviyesindeki lastikler,
-    sistemde yanlış algılama ve koruma moduna geçme riskini artırır.
-  inspection_advice: Tüm lastiklerin aynı marka, model ve aşınma seviyesinde olup
-    olmadığını kontrol edin. Lastik basınçlarını üretici standartlarına uygun olarak
-    ayarlayın. Farklı aşınma seviyelerine sahip lastiklerin akslarda doğru şekilde
-    yerleştirilmesini sağlayın.
+  rationale: For the **HTRAC (Hill Descent Control / Hill Start Assist / Traction
+    Control) system** to function correctly, all wheels must have the **same external
+    diameter and rotational speed**. Tires of different brands, models, or varying
+    wear levels increase the risk of **incorrect sensor readings** and triggering
+    the system’s **limp-home or protective mode** due to mismatched wheel dynamics.
+  inspection_advice: Verify that **all tires are the same brand, model, and tread
+    wear level**. Set tire pressures to the manufacturer’s specified standards. Ensure
+    tires with **different wear levels are positioned correctly on the axle** to avoid
+    system misalignment.
   sources: []
 - claim_key: h4d_75_transmission_transfer_kutusu_ve_k
-  title: Transfer Kutusu ve Kavrama Sistemi Aşırı Isınması
+  title: Transfer Case and Clutch System Overheating
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Zorlu arazi koşulları veya aşırı yük altında transfer kutusu ve kavrama
-    sistemi aşırı ısınabilir. Bu durumda Htrac sisteminin koruma moduna geçmesi, mekanik
-    hasar riskini azaltmak için tasarlanmıştır. Ancak, bu aşırı ısınma sürekli olarak
-    meydana gelirse, uzun vadede sistemde kalıcı hasara yol açabilir.
-  inspection_advice: Aracı soğumaya bırakın ve transfer kutusunun ve kavrama sisteminin
-    aşırı ısınma izlerini kontrol edin. Transfer kutusunun ve kavrama sisteminin elektriksel
-    bağlantılarını ve yağ seviyesini düzenli olarak kontrol edin.
+  rationale: Under severe off-road conditions or excessive load, the transfer case
+    and clutch system can overheat. While the HTRAC system is designed to enter a
+    protective mode in such cases to reduce the risk of mechanical damage, repeated
+    overheating may lead to permanent system failure over time.
+  inspection_advice: Allow the vehicle to cool down and check for signs of overheating
+    in the transfer case and clutch system. Regularly inspect the electrical connections
+    and fluid levels of the transfer case and clutch system.
   sources: []
 - claim_key: h4d_75_electrical_intermittent_dashboa
   title: Intermittent dashboard display failure (black screen) due to software bug
@@ -442,50 +462,54 @@ claims:
     or restarts unexpectedly during driving.
   sources: []
 - claim_key: h4d_75_electrical_arka_klima_kontrol_a
-  title: Arka Klima Kontrol Anahtarı Devre Aralığı/Performans Sorunu (Gelişmiş İklim
-    Kontrol Sistemli Modeller)
+  title: Rear Climate Control Key Circuit Range/Performance Issue (Advanced Climate
+    Control System Models)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Bazı araçlarda (örneğin Chevrolet Tahoe, GMC Yukon, Cadillac Escalade)
-    arka klima kontrol anahtarının devre aralığı veya performansı, elektrik kontakları,
-    kablolama veya yazılım hataları nedeniyle kronik olarak bozulur. Bu, arka yolcuların
-    konforunu olumsuz etkiler ve hatanın tekrarlanma eğilimi vardır.
-  inspection_advice: Arka klima kontrol anahtarını ve konnektörlerini kir, oksitlenme
-    veya fiziksel hasar açısından kontrol edin. Kablolamanın bütünlüğünü ve voltaj/direnc
-    değerlerini multimetre ile ölçün. Ayrıca, iklim kontrol ünitesinin yazılım güncellemelerini
-    kontrol edin.
+  rationale: In certain vehicles (such as Chevrolet Tahoe, GMC Yukon, Cadillac Escalade),
+    the rear climate control key exhibits chronic circuit range or performance failures
+    due to electrical contact issues, wiring defects, or software glitches. This negatively
+    impacts passenger comfort in the rear and has a high recurrence rate.
+  inspection_advice: Inspect the rear climate control key and connectors for dirt,
+    oxidation, or physical damage. Verify wiring integrity and measure voltage/resistance
+    values using a multimeter. Additionally, check for available software updates
+    for the climate control unit.
   sources: []
 - claim_key: h4d_75_electrical_arka_klima_kontrol_m
-  title: Arka Klima Kontrol Modülü Arızası (Üçüncü Sıra Koltuklu Modeller)
+  title: Fault in the Rear Climate Control Module (Third-Row Seating Models)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Cadillac Escalade gibi üçüncü sıra koltuklu modellerde arka klima kontrol
-    modülü, kronik arızalar nedeniyle hatayı tetikler. Bu, yazılım hataları veya fiziksel
-    arızalar sonucu olabilir ve arka yolcuların konforunu ciddi şekilde etkiler.
-  inspection_advice: Arka klima kontrol modülünü fiziksel hasar, kirlenme veya yazılım
-    hataları açısından kontrol edin. Modülün güncellenmesi veya değiştirilmesi gerekebilir.
+  rationale: In third-row seating models like the Cadillac Escalade, the rear climate
+    control module repeatedly triggers faults due to chronic failures. This can result
+    from software errors or physical malfunctions, significantly impacting the comfort
+    of rear passengers.
+  inspection_advice: Inspect the rear climate control module for physical damage,
+    contamination, or software errors. The module may require a software update or
+    replacement.
   sources: []
 - claim_key: h4d_75_electrical_yazılım_arızası_ve_e
-  title: Yazılım Arızası ve ECU Güncelleme Gereksinimi (Buick Enclave)
+  title: Software Fault and ECU Update Requirement (Buick Enclave)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Buick Enclave gibi modellerde B0404 hatası, yazılım arızalarından kaynaklanabilir.
-    Bu, elektrik devresinin yanlış okumalarına veya performans sorunlarına neden olabilir
-    ve yazılım güncellemesi ile çözülebilir.
-  inspection_advice: Araçın ECU yazılımını güncellemeyi veya servis merkezinden teşhis
-    yapmasını sağlayın. Yazılım hatalarını tespit etmek için OBD2 tarayıcısı kullanın.
+  rationale: In models like the Buick Enclave, the **B0404** diagnostic trouble code
+    (DTC) can stem from a **software fault**. This may cause incorrect readings in
+    the electrical circuit or performance issues, which can be resolved with a **software
+    update** to the ECU (Engine Control Unit).
+  inspection_advice: Ensure the vehicle’s **ECU software is updated** or have it diagnosed
+    at a service center. Use an **OBD-II scanner** to detect **software-related faults**
+    before proceeding with updates.
   sources: []
 - claim_key: h4d_75_engine_turbocharger_prematu
   title: Turbocharger premature wear (city driving)

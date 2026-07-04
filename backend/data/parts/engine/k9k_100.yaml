@@ -495,80 +495,84 @@ claims:
     verify fuel injection timing with a diagnostic scan tool.
   sources: []
 - claim_key: k9k_100_fuel system_piezo_enjektör_iç_ka
-  title: Piezo enjektör iç kaçak ve püskürtme düzensizliği
+  title: Internal Leakage and Irregular Spraying in Piezo Injectors
   kind: known_issue
   domain: fuel system
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Bosch marka ilk nesil 1.6 TDI motorlarda piezo enjektörlerin zamanla
-    iç kaçak yapması veya püskürtme düzensizliği oluşması, motor performansını ciddi
-    şekilde etkiler. Bu sorun, dengesiz rölanti, motor sarsıntıları ve yakıt tüketiminde
-    artışa neden olur.
-  inspection_advice: Motorun rölanti çalışmasını dinleyin. Dengesiz çalışma veya sarsıntı
-    varsa, enjektörlerin kontrol edilmesi gerekmektedir. Ayrıca, yakıt tüketiminde
-    anormal artış veya motor performansında düşüş gözlemlenirse, enjektörlerin test
-    edilmesi önerilir.
+  rationale: In first-generation 1.6 TDI engines manufactured by Bosch, piezo injectors
+    may develop internal leakage over time or exhibit irregular spraying patterns,
+    significantly impacting engine performance. This issue causes uneven idling, engine
+    vibrations, and increased fuel consumption.
+  inspection_advice: Listen to the engine running at idle. If there is uneven operation
+    or vibrations, the injectors should be inspected. Additionally, if there is an
+    abnormal increase in fuel consumption or a decline in engine performance, testing
+    the injectors is recommended.
   sources: []
 - claim_key: k9k_100_engine_turbo_şaftı_yatak_aş
-  title: Turbo şaftı yatak aşınması ve yağ sızıntısı
+  title: Turbo Shaft Bearing Wear and Oil Leakage
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Turbo şaftı üzerindeki yatakların aşınması, yağ sızıntısına ve turbo
-    arızasına yol açar. Bu sorun, düşük devirde aşırı yüklenme durumlarında daha hızlı
-    ortaya çıkar ve turbo ömrünü kısaltır.
-  inspection_advice: Motorun alt kısmında yağ damlaları veya yağ izleri kontrol edin.
-    Ayrıca, turbo ötmesi (ıslık sesi) veya çekiş düşüklüğü varsa, turbo sisteminin
-    detaylı kontrol edilmesi gerekmektedir.
+  rationale: Wear on the bearings of the turbo shaft leads to oil leakage and turbo
+    failure. This issue manifests more quickly under low-speed overload conditions
+    and shortens the turbo’s lifespan.
+  inspection_advice: Check for oil droplets or oil streaks on the underside of the
+    engine. If there is turbo whining (squealing noise) or reduced power, a detailed
+    inspection of the turbo system is required.
   sources: []
 - claim_key: k9k_100_emissions_egr_valfi_ve_egr_soğ
-  title: EGR valfi ve EGR soğutucusunun kuruma ve tıkanması
+  title: Clogging and Drying of the EGR Valve and EGR Cooler
   kind: known_issue
   domain: emissions
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: EGR sistemi kurumla dolarak valfin çalışmasını engeller. Şehir içi kısa
-    mesafelerde sık kullanım, bu sorunu hızlandırır ve motor performansında düşüş,
-    yakıt tüketiminde artış ve arıza lambasının yanmasına neden olur.
-  inspection_advice: Motor performansında düşüş veya yakıt tüketiminde anormal artış
-    gözlemlenirse, EGR sisteminin temizlenmesi veya değiştirilmesi gerekebilir. Ayrıca,
-    arıza lambasının yanması durumunda EGR valfinin kontrol edilmesi önerilir.
+  rationale: The EGR system clogs due to drying, preventing the valve from functioning
+    properly. Frequent short urban trips accelerate this issue, leading to reduced
+    engine performance, increased fuel consumption, and activation of the malfunction
+    indicator lamp (MIL).
+  inspection_advice: If a decrease in engine performance or abnormal increase in fuel
+    consumption is observed, cleaning or replacement of the EGR system may be required.
+    Additionally, if the malfunction indicator lamp illuminates, inspection of the
+    EGR valve is recommended.
   sources: []
 - claim_key: k9k_100_emissions_dpf_(partikül_filtre
-  title: DPF (Partikül Filtresi) tıkanması
+  title: DPF (Diesel Particulate Filter) Clogging
   kind: known_issue
   domain: emissions
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DPF'nin kuruma ve tıkanması, kısa mesafelerde sık kullanım nedeniyle
-    rejenerasyon yapamamasıyla ortaya çıkar. Bu sorun, motor çekişinin düşmesi, yakıt
-    tüketiminin artması ve DPF uyarı lambasının yanmasına neden olur.
-  inspection_advice: Motor çekişinde düşüş veya yakıt tüketiminde anormal artış gözlemlenirse,
-    DPF'nin rejenerasyon sürecinin kontrol edilmesi veya filtre değiştirilmesi gerekebilir.
-    Ayrıca, DPF uyarı lambasının yanması durumunda filtre tıkanması olabilir.
+  rationale: DPF clogging and drying out occur due to frequent short-distance driving,
+    preventing the filter from completing regeneration cycles. This issue causes reduced
+    engine power, increased fuel consumption, and activation of the DPF warning light.
+  inspection_advice: If there is a noticeable decrease in engine power or abnormal
+    increase in fuel consumption, the DPF regeneration process should be checked or
+    the filter should be replaced. Additionally, if the DPF warning light is illuminated,
+    clogging of the filter may be present.
   sources: []
 - claim_key: k9k_100_engine_turbo_bağlantı_nokta
-  title: Turbo bağlantı noktaları ve yağ keçelerinden yağ kaçakları
+  title: Oil leaks from turbo connection points and oil seals
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Turbo bağlantı noktaları, yağ keçeleri veya üst kapak contalarından zamanla
-    oluşan yağ kaçakları, motorun 150.000 km üzeri kilometrelerde sıkça görülür. Bu
-    sorun, motor bloğunda yağlanma ve alt damlama izlerine neden olur.
-  inspection_advice: Motorun alt kısmında yağ damlaları veya yağ izleri kontrol edin.
-    Özellikle 150.000 km ve üzeri kilometrelerdeki araçlarda bu sorun daha yaygındır.
+  rationale: Oil leaks that develop over time from turbo connection points, oil seals,
+    or valve cover gaskets are commonly observed in engines with over **150,000 km**
+    of mileage. This issue causes oil leakage and drips on the engine block, leading
+    to poor lubrication and staining below.
+  inspection_advice: Check for oil drips or stains on the underside of the engine.
+    This problem is particularly common in vehicles with **150,000 km or more** mileage.
   sources: []
 - claim_key: k9k_100_engine_connecting_rod_failu
   title: Connecting rod failure due to delayed oil changes

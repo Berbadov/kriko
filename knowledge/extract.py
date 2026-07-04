@@ -13,8 +13,9 @@ import re
 import time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from knowledge.domains import normalize_domain
 from knowledge.sources.base import Document
 
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
@@ -30,17 +31,38 @@ Strict Rules:
 - DO NOT extract standard wear-and-tear items (e.g., brake pads, tyres, routine battery replacement, standard oil/fluid changes).
 - DO NOT extract generic maintenance advice (e.g. "regular oil changes are important").
 - Extract ONLY concrete, chronic failures, recall issues, or common engineering faults (e.g., "thermostat housing cracking on H5H 1.3 TCe petrol engines", "clutch shudder on dry-clutch DC4 transmissions").
-- Copy the supporting quote VERBATIM — do not paraphrase.
+- Copy the supporting quote VERBATIM in its ORIGINAL language — do not paraphrase or translate it.
+- The source text may be in Turkish, German, French, or any other language. Regardless of
+  source language, `title`, `rationale`, and `inspection_advice` MUST be written in natural
+  English — buyers reading these are not assumed to read the source language. Only `quote`
+  keeps the original language (verbatim, for sourcing authenticity).
 - If the text mentions an engine code or variant (e.g. "1.5 dCi", "K9K", "H5H"), include it in engine_or_variant_hint.
 - Do NOT invent claims. If no concrete chronic reliability issue is present, return {"claims": []}.
 - severity is your provisional assessment; the review gate may adjust it.
+
+Title rules (buyers read this first — it must be a short, general, human phrase,
+never a diagnostic-code litany or a repeated paragraph):
+- `title` is a BRIEF phrase (aim for under 12 words) naming the GENERAL failure and
+  the engine/transmission code it affects, e.g. "Chronic injector fouling (K9K 1.5 dCi)",
+  "DQ200 dry-clutch adaptation loss after battery disconnect", "Thermostat housing
+  cracking (H5H 1.3 TCe)".
+- NEVER put a raw diagnostic trouble code (P0300, P17BF, DTC numbers, VAG fault
+  numbers, ...) in the title — describe the failure in plain words instead
+  ("random multi-cylinder misfire", not "P0300"). Codes belong in
+  inspection_advice, where a buyer's mechanic can use them to verify.
+- NEVER restate the rationale inside the title. The title is a label, the
+  rationale is the explanation — they must not be the same text twice.
+- Still keep the engine/variant code anchor — "injector problems" alone is
+  useless (as generic as "brakes wear"); "injector fouling (K9K 1.5 dCi)" is
+  the target: brief AND specific to this engine/transmission, not brief
+  INSTEAD OF specific.
 
 Return ONLY valid JSON in this exact format:
 {
   "claims": [
     {
       "title": "Short title of the chronic/design defect",
-      "domain": "engine|transmission|electrical|emissions|fuel system|brakes|suspension|general",
+      "domain": "engine|transmission|electrical|emissions|fuel system|brakes|suspension|cooling|body|general — pick exactly ONE, never combine",
       "severity": "high|medium|low",
       "rationale": "Plain-language explanation of the chronic issue",
       "inspection_advice": "What a buyer should check at viewing to identify this defect",
@@ -53,7 +75,7 @@ Return ONLY valid JSON in this exact format:
 
 class CandidateClaim(BaseModel):
     title: str = Field(description="Short title of the reliability issue")
-    domain: str = Field(description="Category: engine|transmission|electrical|emissions|fuel system|brakes|suspension|general")
+    domain: str = Field(description="Category: engine|transmission|electrical|emissions|fuel system|brakes|suspension|cooling|body|general")
     severity: Literal["high", "medium", "low"] = Field(description="Provisional: high|medium|low")
     rationale: str = Field(description="Plain-language explanation of the issue")
     inspection_advice: str = Field(description="What a buyer should check at viewing")
@@ -62,6 +84,15 @@ class CandidateClaim(BaseModel):
         default=None,
         description="Engine code or variant if mentioned (e.g. 'K9K', '1.5 dCi', 'H5H')"
     )
+
+    @field_validator("domain", mode="after")
+    @classmethod
+    def _coerce_domain(cls, v: str) -> str:
+        # Coerce, never reject: an unmappable/malformed domain (multi-value
+        # joins, invented synonyms) falls back to "general" rather than
+        # failing validation and silently dropping the whole claim (see
+        # knowledge/domains.py docstring).
+        return normalize_domain(v)
 
 
 def _parse_json(text: str) -> dict:
