@@ -12,8 +12,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.9
+  status: review
   promoted_by: pending_human
   rationale: The 1.8L and 2.0L TSI engines (EA888 Gen 3) in the Mk7 Golf (2013-2016)
     suffer from chronic timing chain tensioner failures, causing rattling noises on
@@ -22,14 +22,32 @@ claims:
   inspection_advice: Check for evidence of a timing chain tensioner replacement or
     service under a VW Technical Service Bulletin. Listen for rattling noises during
     cold starts, especially in 2013-2016 models with EA888 engines.
-  sources: []
+  sources:
+  - source_url: https://vwownersclub.co.uk/vw-golf-mk7-common-problems-the-issues-owners-actually-report/
+    source_domain: vwownersclub.co.uk
+    site_or_channel: vwownersclub.co.uk
+    quote: '"The 1.8 and 2.0 TSI engines (EA888 Gen 3) can suffer from timing chain
+      tensioner problems, particularly on earlier production models from 2013-2016.
+      Symptoms include a rattling noise on cold start-up that disappears after a few
+      seconds, or in severe cases, a check engine light with timing-related fault
+      codes."'
+    independent: true
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"The 1.8 and 2.0 TSI engines (EA888 Gen 3) can suffer from timing chain
+      tensioner problems, particularly on earlier production models from 2013-2016.
+      Symptoms include a rattling noise on cold start-up that disappears after a few
+      seconds, or in severe cases, a check engine light with timing-related fault
+      codes."'
+    independent: true
 - claim_key: golf7_body_engine_plastic_water_pump_h
   title: Plastic Water Pump Housing Cracking (TSI Engines)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The plastic water pump housing in TSI engines is prone to cracking and
     leaking internally between 60,000 and 100,000 miles, leading to coolant loss,
@@ -37,14 +55,22 @@ claims:
   inspection_advice: Inspect the water pump housing for cracks or coolant leaks. Check
     for sweet smells in the engine bay or temperature gauge fluctuations, especially
     in TSI models with high mileage.
-  sources: []
+  sources:
+  - source_url: https://vwownersclub.co.uk/vw-golf-mk7-common-problems-the-issues-owners-actually-report/
+    source_domain: vwownersclub.co.uk
+    site_or_channel: vwownersclub.co.uk
+    quote: '"The plastic water pump housing on TSI engines has a reputation for cracking
+      and leaking, typically between 60,000 and 100,000 miles. You might notice coolant
+      loss without visible leaks (it often seeps internally), a sweet smell from the
+      engine bay, or temperature gauge fluctuations."'
+    independent: true
 - claim_key: golf7_body_engine_carbon_build-up_on_d
   title: Carbon Build-Up on Direct Injection Engines (TSI)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: All TSI engines in the Mk7 Golf suffer from carbon deposits on intake
     valves due to direct injection, causing rough idling, reduced power, and poor
@@ -52,7 +78,15 @@ claims:
   inspection_advice: Check for rough idling, loss of power, or poor fuel economy.
     Confirm if the car has undergone walnut blasting or carbon cleaning. Ask about
     maintenance history for fuel additives or high-RPM driving.
-  sources: []
+  sources:
+  - source_url: https://vwownersclub.co.uk/vw-golf-mk7-common-problems-the-issues-owners-actually-report/
+    source_domain: vwownersclub.co.uk
+    site_or_channel: vwownersclub.co.uk
+    quote: '"All Mk7 TSI engines use direct injection, which means fuel doesn’t wash
+      over the intake valves. Over time, carbon deposits build up, causing rough idling,
+      reduced power, and poor fuel economy. This typically becomes noticeable around
+      60,000-80,000 miles."'
+    independent: true
 - claim_key: golf7_body_general_rear_light_seal_fail
   title: Rear light seal failure allowing water ingress
   kind: known_issue
@@ -163,8 +197,8 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: A programming error in the On-Board Supply Control Unit can cause incorrect
     light fault detection, leading to undisplayed light failures or false alerts.
@@ -172,11 +206,20 @@ claims:
   inspection_advice: Test all exterior lights (headlights, brake lights, turn signals)
     during a test drive. Verify that the instrument cluster accurately reflects light
     status. Check for any software updates or recalls related to the control unit.
-  sources: []
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"It is possible that the failure of one of the vehicle lights may not
+      be recognised by the control unit and therefore not shown in the instrument
+      cluster. It is also possible that vehicle lights may be shown as faulty when
+      they are not. Furthermore, a failure of a dipped beam may not trigger a replacement
+      response (activation of side lights)."'
+    independent: true
 - claim_key: golf7_body_safety_airbag_and_seatbelt_
   title: Airbag and seatbelt pretensioner non-deployment (recall)
   kind: known_issue
-  domain: safety
+  domain: general
   severity: high
   confidence: 0.0
   status: held
@@ -206,7 +249,7 @@ claims:
 - claim_key: golf7_body_safety_faulty_airbag_inflat
   title: Faulty airbag inflator gas generator weld (recall)
   kind: known_issue
-  domain: safety
+  domain: general
   severity: high
   confidence: 0.6
   status: review
@@ -277,8 +320,8 @@ claims:
   kind: known_issue
   domain: emissions
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Pre-2016 TDI models were affected by the Dieselgate scandal, requiring
     mandatory software updates to comply with emissions regulations. Failure to apply
@@ -287,7 +330,14 @@ claims:
   inspection_advice: Check the DVSA recall checker for the specific Vehicle Registration
     Mark (VRM) to confirm the recall fix has been applied. Any TDI model without the
     update is a red flag.
-  sources: []
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"Dieselgate recall status (TDI models): check DVSA recall checker for
+      the specific VRM. All affected TDI variants should have the software update.
+      A car without the update on a 2013–2015 TDI is a red flag."'
+    independent: true
 - claim_key: golf7_body_fuel system_dpf_blockages_(tdi_m
   title: DPF blockages (TDI models)
   kind: known_issue
@@ -344,8 +394,8 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Advanced Driver Assistance Systems (ADAS) such as Front Assist and Lane
     Assist, particularly on 2014+ models with 'Discover Pro' infotainment, are prone
@@ -354,14 +404,22 @@ claims:
   inspection_advice: Check for any persistent warning lights related to ADAS systems.
     Test the Front Assist and Lane Assist features during the drive to ensure they
     function correctly.
-  sources: []
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"Front assist / lane assist sensor faults: ADAS systems (Front Assist,
+      Lane Assist, Adaptive Cruise Control) on 2014+ cars with the ''Discover Pro''
+      infotainment are prone to radar sensor failures and software lockups. These
+      generate persistent warning lights and may disable safety features until rectified."'
+    independent: true
 - claim_key: golf7_body_general_outstanding_dvsa_rec
   title: Outstanding DVSA recalls
   kind: known_issue
   domain: general
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Mk7 Golf has 14 recalls, meaning there is a significant risk that
     at least one recall has not been addressed. Unresolved recalls can lead to safety
@@ -369,14 +427,21 @@ claims:
   inspection_advice: Pull the full DVSA recall history for the vehicle. Ensure all
     outstanding recalls have been remedied by the seller. Do not purchase a car with
     unresolved recalls.
-  sources: []
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"Pull the full DVSA recall history — 14 recalls means there is a material
+      chance at least one is outstanding on any given car. Verify all outstanding
+      recalls are the seller''s responsibility."'
+    independent: true
 - claim_key: golf7_body_transmission_dsg_7-speed_dry-clut
   title: DSG 7-speed dry-clutch transmission shuddering and sluggish shifts
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic issue with the 7-speed dry-clutch DSG transmission in Golf 7,
     particularly in 1.2 TSI and 1.4 TSI models, causing shuddering at low speeds,
@@ -384,14 +449,22 @@ claims:
   inspection_advice: Check for unusual vibrations or delays during gear changes, especially
     at low speeds. Listen for grinding or unusual noises from the transmission during
     operation.
-  sources: []
+  sources:
+  - source_url: https://www.otomobilce.com/volkswagen-golf-7-kronik-sorunlari-bilmeniz-gerekenler.html
+    source_domain: otomobilce.com
+    site_or_channel: otomobilce.com
+    quote: '"Özellikle 7 ileri kuru kavrama DSG şanzıman tipi, düşük hızlarda sarsıntı,
+      geç algılama, titreme ve vites geçişlerinde kararsızlık gibi problemlere sebep
+      olabilir. Bu sorunlar, özellikle 1.2 TSI ve 1.4 TSI motorlu modellerde daha
+      yaygındır."'
+    independent: true
 - claim_key: golf7_body_general_water_leakage_at_bag
   title: Water leakage at bagage compartment and door seals
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic water ingress issues due to faulty or hardened seals around the
     bagage compartment and door sills, leading to moisture buildup, bad odors, and
@@ -399,21 +472,34 @@ claims:
   inspection_advice: Inspect the bagage compartment and door sills for water stains,
     rust, or dampness after rain. Check the condition of the rubber seals around doors
     and the bagage lid for cracks or hardening.
-  sources: []
+  sources:
+  - source_url: https://www.otomobilce.com/volkswagen-golf-7-kronik-sorunlari-bilmeniz-gerekenler.html
+    source_domain: otomobilce.com
+    site_or_channel: otomobilce.com
+    quote: '"Golf 7 sahiplerinin sıklıkla şikayet ettiği bir diğer kronik sorun, özellikle
+      bagaj ve kapı fitillerinde su sızdırmasıdır. Yoğun yağış sonrasında bagaj havuzu,
+      stop lambaları çevresi ya da kapı altlarında su birikintileri görülebilir."'
+    independent: true
 - claim_key: golf7_body_suspension_steering_system_stif
   title: Steering system stiffness or delayed response
   kind: known_issue
   domain: suspension
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic stiffness or delayed response in the steering system, often linked
     to software updates or steering column issues, affecting driver feedback and control.
   inspection_advice: Test steering responsiveness at various speeds. Check for unusual
     stiffness or delayed reactions when turning the wheel. Listen for unusual noises
     from the steering column.
-  sources: []
+  sources:
+  - source_url: https://www.otomobilce.com/volkswagen-golf-7-kronik-sorunlari-bilmeniz-gerekenler.html
+    source_domain: otomobilce.com
+    site_or_channel: otomobilce.com
+    quote: '"Direksiyon sisteminde bazen hızlı tepkime kaybı veya sertleşme şikayetleri
+      de gözlemlenmiştir."'
+    independent: true
 - claim_key: golf7_body_suspension_steering_rack_play_a
   title: Steering rack play and suspension noise
   kind: known_issue
@@ -458,134 +544,196 @@ claims:
       ince sac yapısından dolayı küçük darbelerde bile göçük oluşabiliyor."'
     independent: true
 - claim_key: golf7_body_engine_soğutma_sistemi_kaça
-  title: Soğutma Sistemi Kaçakları ve Termostat Arızaları
+  title: Cooling System Leaks and Thermostat Failures
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Golf VII'de soğutma sistemi hataları (radyatör, termostat, genleşme kabı,
-    termostat müşürü ve hortumlardaki su kaçağı) sıklıkla motor aşınmasına ve ciddi
-    hasarlara yol açar. Bu, motorun aşırı ısınmasına ve uzun vadeli motor hasarına
-    neden olabilir.
-  inspection_advice: 'Soğutma sistemini kontrol edin: radyatör, termostat, genleşme
-    kabı ve hortumlarda sızdırık veya deformasyon aramak. Soğutma suyu seviyesini
-    kontrol edin ve termostatın düzgün çalışıp çalışmadığını test edin.'
-  sources: []
+  rationale: In the Volkswagen Golf VII, cooling system failures (including leaks
+    in the radiator, thermostat, expansion tank, thermostat housing, and hoses) frequently
+    lead to engine wear and severe damage. This can cause the engine to overheat and
+    result in long-term engine failure.
+  inspection_advice: Inspect the cooling system for leaks or deformation in the radiator,
+    thermostat, expansion tank, and hoses. Check the coolant level and test whether
+    the thermostat is functioning correctly.
+  sources:
+  - source_url: https://www.reeloto.com/volkswagen-golf-vii-2012-2019-ariza-lambalari-golf-mk7-uyari-ve-ikaz-isaretleri-anlamlari/
+    source_domain: reeloto.com
+    site_or_channel: reeloto.com
+    quote: '"Motor soğutulmadığı zaman yüksek sıcaklıklara ulaşırsa göstergede kırmızı
+      hararet ışığı yanacaktır. Bu arıza ışığı yanmasının temel nedeni soğutma sisteminde
+      gerçekleşen herhangi bir sorun olabiliyor. Radyatör, termostat, genleşme kabı,
+      termostat müşürü ve hortumlardaki su kaçağı olarak sıralanabilir. Ayrıca soğutma
+      suyu eksikliği de motora hararet yaptıran baş aktörlerden birisi olarak bilinmektedir."'
+    independent: true
 - claim_key: golf7_body_engine_yağ_pompası_ve_yağ_s
-  title: Yağ Pompası ve Yağ Sensörü Arızaları
+  title: Oil Pump and Oil Sensor Failures
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Yağ pompası veya yağ sensörü arızaları yağlama sisteminin bozulmasına
-    neden olur. Bu, motor parçalarının aşınmasına ve ciddi motor hasarına yol açabilir.
-    Yağ lambasının yanması, motorun yeterli yağlanmadığını gösterir ve acil müdahale
-    gerektirir.
-  inspection_advice: Yağ seviyesini kontrol edin ve yağ lambasının yanıp yanmadığını
-    gözlemleyin. Yağ pompasının ve sensörünün çalışıp çalışmadığını test edin. Yağ
-    lambası yanıyorsa motoru hemen durdurun.
-  sources: []
+  rationale: Failures in the oil pump or oil sensor disrupt the lubrication system,
+    leading to wear of engine components and potentially severe engine damage. The
+    oil warning light illuminating indicates insufficient lubrication and requires
+    immediate attention.
+  inspection_advice: Check the oil level and observe whether the oil warning light
+    is on or off. Test the functionality of the oil pump and sensor. If the oil warning
+    light is illuminated, stop the engine immediately.
+  sources:
+  - source_url: https://www.reeloto.com/volkswagen-golf-vii-2012-2019-ariza-lambalari-golf-mk7-uyari-ve-ikaz-isaretleri-anlamlari/
+    source_domain: reeloto.com
+    site_or_channel: reeloto.com
+    quote: '"Motor ve içindeki metalden üretilen parçalar aşınma ve kilitlenme gibi
+      ciddi problemler ile karşılaşılmaması için motor yağı kullanmak zorunlu bir
+      durumdur. Karterdeki yağ, yağ pompası tarafından çekilerek motor içine aktarılmaktadır.
+      Yağ seviyesindeki eksiklik, yağ pompası ve yağ sensör arızası ve çeşitli diğer
+      sorunlar bu işlemin gerçekleşmesini engeller ve sürücüye gerekli yağlama işlemi
+      yapılamadığında dair ekran panelinde yağ lambası yanacaktır."'
+    independent: true
 - claim_key: golf7_body_brakes_fren_hidrolik_sistem
-  title: Fren Hidrolik Sistem Kaçakları
+  title: Hydraulic Brake System Leaks
   kind: known_issue
   domain: brakes
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Fren hidrolik sistemindeki kaçaklar (hortum ve merkezlerdeki deformasyon
-    veya arızalar) fren etkinliğini ciddi şekilde azaltır. Bu, trafikte tehlikeli
-    durumlara yol açabilir ve acil frenleme durumlarında etkisiz kalınmasına neden
-    olabilir.
-  inspection_advice: Fren hidrolik yağı seviyesini kontrol edin ve fren hortumlarında
-    veya merkezlerinde sızdırık veya deformasyon aramak. Fren sisteminin etkinliğini
-    test edin.
-  sources: []
+  rationale: Leaks in the hydraulic brake system (such as deformations or failures
+    in hoses and calipers) significantly reduce braking effectiveness. This can lead
+    to dangerous situations while driving and may result in the brakes failing to
+    engage during emergency braking situations.
+  inspection_advice: Check the hydraulic brake fluid level and inspect brake hoses
+    and calipers for leaks or deformations. Test the functionality of the brake system.
+  sources:
+  - source_url: https://www.reeloto.com/volkswagen-golf-vii-2012-2019-ariza-lambalari-golf-mk7-uyari-ve-ikaz-isaretleri-anlamlari/
+    source_domain: reeloto.com
+    site_or_channel: reeloto.com
+    quote: '"Fren sisteminin çalışabilmesi için fren hidrolik yağı belirlenen seviyede
+      olması gerekir. Hidrolik yağı eksik olduğunda etkin fren yapılamaz. Fren hortumlarından
+      ve merkezlerden arıza ya da deformasyon sonucu kaçak oluşursa ekran panelinde
+      kırmızı ünlem şeklinde uyarı ışığı yanacaktır."'
+    independent: true
 - claim_key: golf7_body_engine_chronic_volant_(flyw
-  title: Chronic Volant (Flywheel) Dişli Wear in VW Golf 7
+  title: Long-term wear of the flywheel gears in the Volkswagen Golf 7
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: The dual-mass flywheel (DMF) in VW Golf 7 models experiences **chronic
-    dişli (gear) wear** due to time and usage, even with proper driving habits. This
-    leads to **balans (balance) issues** and eventual failure, requiring replacement
-    every **100,000 km** regardless of driving conditions.
-  inspection_advice: Check for **excessive play or grinding noises** in the flywheel
-    when starting the engine. Listen for **metalik tıkırtı (clinking)** at idle or
-    during gear shifts. Inspect for **visible wear on the flywheel teeth** or **damaged
-    mounting points**.
-  sources: []
+  rationale: The dual-mass flywheel (DMF) in Volkswagen Golf 7 vehicles experiences
+    **persistent gear wear** over time and mileage, even when driven normally. This
+    causes **balance problems** and can eventually lead to failure, necessitating
+    replacement approximately every **100,000 kilometers**, regardless of driving
+    conditions.
+  inspection_advice: Look for **excessive play or grinding sounds** in the flywheel
+    when starting the engine. Listen for **metallic clinking noises** at idle or during
+    gear shifts. Visually inspect for **worn flywheel teeth** or **damaged mounting
+    points**.
+  sources:
+  - source_url: https://www.aracarizasi.com/golf-7-volant-arizasi-nasil-anlasilir/
+    source_domain: aracarizasi.com
+    site_or_channel: aracarizasi.com
+    quote: '"Volan dişlilerinin aşınması: Kilometre arttıkça zamana bağlı olarak karşılaşılan
+      bir sorundur. Aracı düzgün kullansanız bile volan dişlisinin her 100 bin km
+      de değiştirilmesi gerekir."'
+    independent: true
 - claim_key: golf7_body_engine_volant_vidalarının_g
-  title: Volant Vidalarının Gevşemesi (Flywheel Bolt Loosening) in Golf 7
+  title: Flywheel Bolt Loosening in the Volkswagen Golf 7
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Agresif sürüş (aggressive driving) and **patinaj (wheelspin)** cause
-    **flywheel bolts to loosen**, leading to **vibrations, imbalance, and potential
-    catastrophic failure** if unaddressed.
-  inspection_advice: Inspect flywheel bolts for **looseness or corrosion**. Listen
-    for **high-pitched metal sürtünme (friction) sounds** during acceleration or deceleration.
-    Check for **excessive play** when the engine is running.
-  sources: []
+  rationale: Aggressive driving and **wheelspin** cause the **flywheel bolts to loosen**,
+    which can lead to **vibrations, engine imbalance, and potential catastrophic failure**
+    if not addressed promptly.
+  inspection_advice: Inspect the **flywheel bolts** for **looseness or corrosion**.
+    Listen for **high-pitched metal-on-metal friction noises** during acceleration
+    or deceleration. Check for **excessive play** in the flywheel when the engine
+    is running.
+  sources:
+  - source_url: https://www.aracarizasi.com/golf-7-volant-arizasi-nasil-anlasilir/
+    source_domain: aracarizasi.com
+    site_or_channel: aracarizasi.com
+    quote: '"Volant vidalarının gevşemesi: Agresif sürüş tarzı, patinaj yapmak gibi
+      faktörler nedeniyle olabilir."'
+    independent: true
 - claim_key: golf7_body_engine_volant_kırılması_(fl
-  title: Volant Kırılması (Flywheel Shattering) Risk in Golf 7
+  title: Risk of Flywheel Shattering in Volkswagen Golf 7
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Continuing to drive with an **ignored flywheel failure** can lead to
-    **complete flywheel shattering**, causing **severe motor (engine) and şanzıman
-    (transmission) damage** due to metal debris entering critical components.
-  inspection_advice: If **metalik çarpma (clanging) sounds** occur at shutdown or
-    during gear shifts, **immediate inspection is critical**. Look for **cracks or
-    deformations** in the flywheel structure.
-  sources: []
+  rationale: Driving with an **unrepaired flywheel failure** can result in **complete
+    flywheel fragmentation**, leading to **extensive engine and transmission damage**
+    due to metal debris contaminating critical internal components.
+  inspection_advice: If **metallic clanging noises** are heard during engine shutdown
+    or while shifting gears, **immediate inspection is mandatory**. Visually check
+    for **cracks or deformations** in the flywheel’s structural integrity.
+  sources:
+  - source_url: https://www.aracarizasi.com/golf-7-volant-arizasi-nasil-anlasilir/
+    source_domain: aracarizasi.com
+    site_or_channel: aracarizasi.com
+    quote: '"Volant çatlaması: Aşırı yüksek ve değişken hızlarda agresif şekilde kullanmak."'
+    independent: true
 - claim_key: golf7_body_transmission_dsg_şanzıman_vites_g
-  title: DSG Şanzıman Vites Geçiş Sorunları (DSG Transmission Shift Issues Due to
-    Flywheel Failure)
+  title: DSG Transmission Shift Problems (Caused by Dual-Mass Flywheel Failure)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: A failing **dual-mass flywheel** in **DSG-equipped Golf 7 models** causes
-    **vites geçişlerinde vuruntu (shift jerking/slippage)**, leading to **performance
-    loss and potential transmission damage** over time.
-  inspection_advice: Test **vites geçişleri (gear shifts)** for **delay, harshness,
-    or clunking noises**. Pay attention to **1. viteste (1st gear) or geri viteste
-    (reverse) kalkışta (launch) sarsıntılar (jerks)**. Listen for **metalik sesler
-    (metallic sounds)** during upshifts.
-  sources: []
+  rationale: A failing **dual-mass flywheel** in **DSG-equipped Volkswagen Golf 7
+    models** causes **jerking or slippage during gear shifts (vites geçişlerinde vuruntu)**,
+    resulting in **reduced performance and potential transmission damage** if left
+    unaddressed.
+  inspection_advice: Check **gear shifts (vites geçişleri)** for **delay, harshness,
+    or clunking noises**. Focus on **jerks during launch in 1st gear (1. viteste)
+    or reverse (geri viteste)**. Listen for **metallic sounds (metalik sesler)** during
+    upshifts.
+  sources:
+  - source_url: https://www.aracarizasi.com/golf-7-volant-arizasi-nasil-anlasilir/
+    source_domain: aracarizasi.com
+    site_or_channel: aracarizasi.com
+    quote: '"Volant arızası vites geçişlerinin gecikmesine veya geçişlerde vuruntu/sarsıntı
+      yapmasına neden olur."'
+    independent: true
 - claim_key: golf7_body_engine_volant_arızası_çekiş
-  title: Volant Arızası Çekiş Etkisi (Flywheel Failure Impact on Power Delivery)
+  title: Flywheel Failure Impact on Power Delivery
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: A failing flywheel causes **güç aktarımında kesinti (power delivery interruptions)**,
-    leading to **sarsıntılı (jerky) acceleration**, **motor devri ile çekiş uyumsuzluğu
-    (engine RPM-torque mismatch)**, and **reduced atik (responsiveness)**—even if
-    beygir gücü (horsepower) remains intact.
-  inspection_advice: Check for **hızlanırken silkeleme (jerking during acceleration)**.
-    Compare **engine RPM to wheel response**—if the car feels **lazy or unresponsive**,
-    the flywheel may be failing. Listen for **gıcırdama (grinding) or metalik sesler
-    (metallic clunks)** during acceleration.
-  sources: []
+  rationale: A failing flywheel causes **interruptions in power delivery**, resulting
+    in **jerky acceleration**, **mismatch between engine RPM and torque output**,
+    and **reduced responsiveness**—even if the engine’s horsepower remains unchanged.
+    This occurs due to **slippage or wear in the flywheel’s clutch or friction surfaces**,
+    preventing smooth energy transfer from the engine to the drivetrain.
+  inspection_advice: Inspect for **jerking or stuttering during acceleration**. Compare
+    **engine RPM readings to wheel response**—if the vehicle feels **slow to react
+    or unresponsive**, the flywheel may be failing. Listen for **grinding noises**
+    or **metallic clunking sounds** during acceleration, particularly when shifting
+    from idle or under load, as these indicate **damaged or warped flywheel surfaces**
+    or **failing clutch components**.
+  sources:
+  - source_url: https://www.aracarizasi.com/golf-7-volant-arizasi-nasil-anlasilir/
+    source_domain: aracarizasi.com
+    site_or_channel: aracarizasi.com
+    quote: '"Güç Aktarımında Kesinti (Silkeleme): Volantın içindeki yaylar görevini
+      yapamadığında, gaza bastığınızda motorun gücü tekerleklere doğrudan ve istikrarlı
+      bir şekilde iletilemez."'
+    independent: true
 - claim_key: golf7_body_general_boot_latch_handle_dr
   title: Boot latch handle drain tube failure causing water retention
   kind: known_issue
@@ -609,8 +757,8 @@ claims:
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Poor design placement of rear air intake grilles on the Golf 7 allows
     water from the roof drain to flow directly into the intake, risking electrical
@@ -619,14 +767,22 @@ claims:
   inspection_advice: Check for water stains, rust, or corrosion around the rear air
     intake grilles and under the rear hatch area. Test by spraying water over the
     roof and observing if it pools or enters the grille area.
-  sources: []
+  sources:
+  - source_url: https://www.vwforum.nl/viewtopic.php?start=15&t=210052
+    source_domain: vwforum.nl
+    site_or_channel: vwforum.nl
+    quote: '"Ze zitten bij de Golf 7 domweg op een niet al te slimme plek... al het
+      water wat over het dak langs de achterklep omlaag loopt, loopt langs deze roosters...
+      hadden ze de roosters verder naar de zijkant verplaatst dan hadden we dit probleem
+      niet gehad... Simpelweg een ontwerpfoutje"'
+    independent: true
 - claim_key: golf7_body_electrical_speaker_housing_wate
   title: Speaker housing water ingress due to degraded gaskets (Golf 7)
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic issue with water seeping into the rear speaker housings of the
     VW Golf 7 due to degraded or improperly fitted gaskets. This leads to water accumulation
@@ -634,14 +790,20 @@ claims:
   inspection_advice: Check the rear speaker housings for signs of water leakage, such
     as dampness or rust around the edges. Verify if the gaskets are intact and properly
     seated. Look for any visible gaps or wear on the rubber seals around the speakers.
-  sources: []
+  sources:
+  - source_url: https://www.motor-talk.de/forum/wasser-hinten-im-innenraum-links-und-rechts-vw-golf-7-t7545678.html?page=1
+    source_domain: motor-talk.de
+    site_or_channel: motor-talk.de
+    quote: '"Die Dichtung um den LS wird aber weggegammelt sein. Wenn Du den nicht
+      tauschen willst, LS mit Paste einschmieren, so dass alles dicht ist."'
+    independent: true
 - claim_key: golf7_body_electrical_poorly_designed_spea
   title: Poorly designed speaker housing mounting (Golf 7)
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The speaker housings in the VW Golf 7 are riveted in place, making removal
     and replacement of gaskets difficult. This design flaw leads to persistent water
@@ -650,14 +812,21 @@ claims:
   inspection_advice: Inspect the rear speaker housings for rivets and check if they
     are securely fastened. Look for signs of water leakage around the riveted edges.
     Verify if the gaskets are properly fitted and intact.
-  sources: []
+  sources:
+  - source_url: https://www.motor-talk.de/forum/wasser-hinten-im-innenraum-links-und-rechts-vw-golf-7-t7545678.html?page=1
+    source_domain: motor-talk.de
+    site_or_channel: motor-talk.de
+    quote: '"Habe hinten rechts auch Wassereinbruch, aber der LS funktioniert noch.
+      Muss diesen zum Glück nicht tauschen. Aufbohren und z. B. Mit Blindnietmuttern
+      etc. neu verschrauben."'
+    independent: true
 - claim_key: golf7_body_general_inadequate_water_dra
   title: Inadequate water drainage in rear door panels (Golf 7)
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The rear door panels of the VW Golf 7 have design flaws in their water
     drainage system, allowing water to accumulate inside the cabin during prolonged
@@ -667,7 +836,13 @@ claims:
     leakage, such as dampness or mold. Inspect the gaskets around the doors and windows
     for wear or degradation. Look for any visible water stains or rust inside the
     door panels.
-  sources: []
+  sources:
+  - source_url: https://www.motor-talk.de/forum/wasser-hinten-im-innenraum-links-und-rechts-vw-golf-7-t7545678.html?page=1
+    source_domain: motor-talk.de
+    site_or_channel: motor-talk.de
+    quote: '"Da war innen bei der Türverkleidung was undicht bei längeren Regen (weiß
+      nicht mehr ob es wie bei @commander216 die Box war), oder irgendwas anderes."'
+    independent: true
 - claim_key: golf7_body_general_sunroof_drain_tube_d
   title: Sunroof drain tube displacement due to thermal expansion (Golf 7)
   kind: known_issue
@@ -697,8 +872,8 @@ claims:
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 7's integrated windshield washer system design appears to have
     a chronic issue with water leakage, likely due to improper sealing or a poorly
@@ -707,4 +882,10 @@ claims:
   inspection_advice: Check for any visible water leaks around the windshield washer
     area, especially near the integrated cap or seal. Look for signs of corrosion,
     water stains, or dampness around the washer fluid reservoir or hoses.
-  sources: []
+  sources:
+  - source_url: https://otopark.com/forum/threads/tikanan-silecek-suyu-sistemi.4353/
+    source_domain: otopark.com
+    site_or_channel: otopark.com
+    quote: '"VW orayı entegre tesis gibi yapmış.. heralde küçük bir kapak var önünde
+      fıskıyenin, o açılıp su fışkırıyor.."'
+    independent: true

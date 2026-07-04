@@ -5,75 +5,6 @@ manufacturer: volkswagen
 known_also_as:
 - DQ381
 claims:
-- claim_key: dq381_transmission_dq200_dry-clutch_pre
-  title: DQ200 dry-clutch pressure circuit failure (accumulator/pump)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ200 dry-clutch DSG in VW Golf models suffers from chronic hydraulic
-    pressure generation/storage issues due to a weak accumulator and pump. This causes
-    hesitation, 'neutral-then-thump' take-offs, and a triad of codes (P189C, P17BF,
-    P0841) that require mechatronic servicing, accumulator/pump replacement, and adaptations
-    to resolve.
-  inspection_advice: Check for hesitation or 'neutral-then-thump' take-offs, especially
-    in hot or stop-start traffic. Verify if codes P189C, P17BF, or P0841 are present.
-    Inspect for heat-soak behavior and confirm if the accumulator/pump has been serviced
-    recently.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"The DQ200 is a dry-clutch unit paired to smaller petrol/diesel engines;
-      its weak point is hydraulic pressure generation and storage (pump/accumulator),
-      which shows up as hesitation and ''neutral-then-thump'' take-offs."'
-    independent: true
-- claim_key: dq381_transmission_dq200_p189c_(insuffi
-  title: DQ200 P189C (insufficient pressure build) and P17BF (hydraulic pump protection)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Codes P189C and P17BF are directly tied to the DQ200's inability to build
-    or hold hydraulic pressure, leading to hesitation and neutral-like behavior. The
-    issue stems from a failing accumulator and pump, exacerbated by heat-soak behavior.
-  inspection_advice: Test for hesitation or neutral-like behavior at take-off, especially
-    in hot conditions. Confirm the presence of codes P189C and P17BF. Check if the
-    mechatronic has been serviced with accumulator/pump remediation.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"P189C (006300) — Function restriction due to insufficient pressure build...
-      The usual root is a tired accumulator and/or pump, often accompanied by heat-soak
-      behaviour."'
-    independent: true
-- claim_key: dq381_transmission_dq200_p0841_(hydraul
-  title: DQ200 P0841 (hydraulic pressure sensor implausible)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Code P0841 indicates a mismatch between the hydraulic pressure sensor
-    reading and actual pressure, often caused by wiring/sensor faults or mechatronic
-    instability. This results in hesitation or 'no-drive then sudden bite' symptoms.
-  inspection_advice: Look for hesitation or intermittent 'no-drive then sudden bite'
-    behavior. Verify the presence of code P0841 and check wiring, sensor functionality,
-    and mechatronic stability. Confirm if adaptations were performed after repairs.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"P0841 / P084100 — Hydraulic pressure sensor signal implausible... Fix
-      ranges from sensor replacement to mechatronic rebuild if pressure control is
-      unstable."'
-    independent: true
 - claim_key: dq381_transmission_dq381_wet-clutch_mec
   title: DQ381 wet-clutch mechatronic sensor/clutch position faults
   kind: known_issue
@@ -798,19 +729,19 @@ claims:
       more often in city traffic.
     independent: true
 - claim_key: dq381_transmission_mekatronik_valf_gövd
-  title: Mekatronik valf gövdesi arızaları
+  title: Mekatronic valve body failures
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ381 şanzımanında mekatronik valf gövdesi zamanla arızalanabilir, bu
-    da vites geçişlerinde gecikme, sarsıntı veya hatta şanzımanın failsafe moduna
-    geçmesine neden olabilir. Bu bir kronik sorundur ve onarımı pahalıdır.
-  inspection_advice: Şanzımanın vites geçişlerinde gecikme veya sarsıntı hissedilirse,
-    mekatronik ünitenin kontrol edilmesi ve hidrolik sıvı seviyesinin denetlenmesi
-    gerekmektedir. Ayrıca, servis arızaları okunmalıdır.
+  rationale: In the DQ381 transmission, the mekatronic valve body can fail over time,
+    causing delays, jerks, or even forcing the transmission into failsafe mode during
+    gear shifts. This is a chronic issue and repairs are expensive.
+  inspection_advice: If there are delays or jerks during gear shifts, the mekatronic
+    unit should be inspected and the hydraulic fluid level checked. Additionally,
+    service fault codes should be read.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
     source_domain: teknikotomatiksanziman.com
@@ -819,19 +750,19 @@ claims:
       arızalar görülebilir.
     independent: true
 - claim_key: dq381_transmission_düşük_hızlarda_sarsı
-  title: Düşük hızlarda sarsıntılı vites geçişleri
+  title: Rough or jerky gear shifts at low speeds
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ381 şanzımanında dur-kalk trafikte veya düşük hızlarda vites geçişlerinde
-    sarsıntı hissedilmesi sıkça bildirilmektedir. Bu, şanzımanın çift kavrama mekanizmasının
-    aşınması veya hidrolik sorunlarıyla ilişkilendirilebilir.
-  inspection_advice: Dur-kalk trafikte veya düşük hızlarda vites geçişlerinde sarsıntı
-    hissedilirse, şanzıman yağı seviyesinin kontrol edilmesi ve mekatronik sistemin
-    test edilmesi gerekmektedir.
+  rationale: The DQ381 transmission frequently experiences jerky or rough shifts during
+    stop-and-go traffic or at low speeds. This is commonly associated with wear in
+    the dual-clutch mechanism or hydraulic issues within the transmission.
+  inspection_advice: If jerky or rough shifts are felt during stop-and-go traffic
+    or at low speeds, check the transmission fluid level and test the mechatronic
+    system.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
     source_domain: teknikotomatiksanziman.com
@@ -840,19 +771,20 @@ claims:
       hissedilebilir.
     independent: true
 - claim_key: dq381_transmission_aşırı_ısınma_ve_kavr
-  title: Aşırı ısınma ve kavrama kayması
+  title: Overheating and Clutch Slippage
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ381 şanzımanında uzun süre yüksek hızda veya aşırı yüklenme durumunda
-    aşırı ısınma sorunu yaşanabilir. Bu, kavrama kaymasına ve şanzıman hasarına yol
-    açabilir. Özellikle yaz aylarında veya tam gaz kullanımında daha belirginleşir.
-  inspection_advice: Şanzımanın aşırı ısındığı durumlarda, kavrama ve soğutma sisteminin
-    kontrol edilmesi ve şanzıman yağı seviyesinin denetlenmesi gerekmektedir. Ayrıca,
-    uzun süreli yüksek hızlı sürüşten kaçınılmalıdır.
+  rationale: The **DQ381 transmission** may experience **excessive overheating** during
+    prolonged high-speed driving or under excessive load. This can lead to **clutch
+    slippage** and **transmission damage**. The issue is particularly noticeable during
+    summer months or when driving at full throttle.
+  inspection_advice: When the transmission **overheats**, inspect the **clutch components**
+    and **cooling system**, and check the **transmission fluid level**. Additionally,
+    avoid prolonged high-speed driving.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
     source_domain: teknikotomatiksanziman.com
@@ -861,18 +793,18 @@ claims:
       yaşanabilir.
     independent: true
 - claim_key: dq381_transmission_hidrolik_pompa_veya_
-  title: Hidrolik pompa veya sensör arızaları (failsafe moduna geçme)
+  title: Hydraulic pump or sensor failures (failsafe mode activation)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ381 şanzımanında hidrolik pompa veya sensör arızaları nedeniyle şanzıman
-    failsafe moduna geçebilir ve vites değiştirmeyi tamamen durdurabilir. Bu, şanzımanın
-    tamamen işlevsiz kalmasına neden olabilir.
-  inspection_advice: Vites değiştirmeyi durdurduğunda veya failsafe moduna geçtiğinde,
-    arıza kodları okunmalı ve hidrolik pompa ile sensörlerin kontrol edilmesi gerekmektedir.
+  rationale: In the DQ381 transmission, hydraulic pump or sensor failures can cause
+    the transmission to enter failsafe mode, completely halting gear shifting. This
+    can render the transmission non-functional.
+  inspection_advice: When gear shifting stops or failsafe mode is activated, fault
+    codes must be read and the hydraulic pump and sensors must be inspected.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
     source_domain: teknikotomatiksanziman.com
@@ -881,18 +813,19 @@ claims:
       arızası.
     independent: true
 - claim_key: dq381_transmission_kavrama_değişimi_ger
-  title: Kavrama değişimi gerektiren aşınma
+  title: Wear requiring clutch replacement
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ381 şanzımanında kavrama parçaları zamanla aşınabilir ve değiştirilmesi
-    gerekebilir. Bu onarım pahalıdır ve şanzımanın performansını olumsuz etkiler.
-  inspection_advice: Vites geçişlerinde gecikme veya sarsıntı hissedilirse veya şanzıman
-    aşırı ısındığında, kavrama parçalarının kontrol edilmesi ve gerektiğinde değiştirilmesi
-    gerekmektedir.
+  rationale: The DQ381 transmission’s clutch components can wear over time and may
+    require replacement. This repair is costly and negatively impacts transmission
+    performance.
+  inspection_advice: If there is hesitation or shuddering during gear shifts or if
+    the transmission overheats, the clutch components should be inspected and replaced
+    as needed.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
     source_domain: teknikotomatiksanziman.com
@@ -900,107 +833,23 @@ claims:
     quote: ❌ 💰 Yüksek Onarım Maliyeti → DSG şanzımanların kavrama değişimi pahalı
       olabilir.
     independent: true
-- claim_key: dq381_transmission_chronic_half-clutch_
-  title: Chronic half-clutch shudder on DSG-7 (DQ200 dry clutch) during takeoff and
-    2nd gear shifts
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The dry clutch system in DQ200 transmissions suffers from premature wear
-    of the friction plates (baskı balata), leading to shuddering during acceleration
-    and gear transitions. This is exacerbated by improper clutch clearance adjustments,
-    causing persistent mechanical vibrations.
-  inspection_advice: Check for excessive shuddering/vibrations during takeoff or when
-    shifting from 2nd to 1st gear. Inspect the clutch plates for uneven wear and verify
-    the clutch pedal play (volant boşluk). Ensure the K1/K2 clutch clearances are
-    correctly adjusted (micrometer precision required).
-  sources: []
-- claim_key: dq381_transmission_dq200_dry_clutch_mek
-  title: DQ200 dry clutch mekatronik pressure tube failure due to insufficient structural
-    integrity
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The original pressure tubes in DQ200 transmissions fail under high hydraulic
-    pressure (60 bar), causing leaks and complete clutch system failure. The thin
-    teeth used to attach the tube to the mekatronic housing shear off under stress,
-    leading to catastrophic clutch failure in stop-and-go traffic.
-  inspection_advice: Check for signs of hydraulic leaks around the mekatronic housing.
-    Look for burnt clutch plates (turning blue) or excessive wear on the clutch discs.
-    Verify if the pressure tube is properly secured with the reinforced steel tube
-    and flange system (not the original thin-toothed design).
-  sources: []
-- claim_key: dq381_transmission_dq200_dry_clutch_sys
-  title: DQ200 dry clutch system overheating and mekatronic tube rupture in stop-and-go
-    traffic
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The dry clutch system lacks lubrication, causing excessive heat buildup
-    in friction plates during prolonged engagement (e.g., holding 'D' gear while stopped
-    at traffic lights). This can rupture the mekatronic pressure tube, leading to
-    complete transmission failure.
-  inspection_advice: Check for overheating symptoms (e.g., warning lights like 'P17BF'
-    or 'P189C') and inspect the mekatronic housing for leaks. Ensure the clutch is
-    disengaged (placed in 'N' gear) when stationary for extended periods.
-  sources: []
-- claim_key: dq381_transmission_dq200_transmission_s
-  title: DQ200 transmission shifting stalls due to mekatronic pressure failure (P17BF/P189C)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The DQ200 dry clutch system's mekatronic housing fails to maintain proper
-    hydraulic pressure, causing gear shifts to stall. This is a chronic design flaw
-    where the pressure regulation system is unreliable under stress.
-  inspection_advice: Monitor for warning lights (e.g., 'P17BF' or 'P189C') and check
-    if gear shifts stall or fail to engage. Verify if the mekatronic pressure tube
-    has been upgraded to a reinforced version.
-  sources: []
-- claim_key: dq381_transmission_critical_clutch_clea
-  title: Critical clutch clearance adjustments (K1/K2) must be precise; improper settings
-    cause recurring shuddering
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The DQ200 dry clutch system requires micrometer-level precision in adjusting
-    the K1/K2 clutch clearances. If not properly set, even new clutch plates will
-    cause shuddering within 2,000 km, indicating a chronic design flaw in the adjustment
-    process.
-  inspection_advice: Verify that the clutch clearances (K1/K2) have been professionally
-    adjusted using micrometer precision tools. Check for burnt or uneven clutch plates
-    (turning blue). Ensure only OEM (LUK) or reinforced clutch components are used.
-  sources: []
 - claim_key: dq381_transmission_can-bus_iletişim_kes
-  title: CAN-BUS iletişim kesintileri (DSG DQ200–DQ250–DQ381 şanzımanlar)
+  title: CAN-Bus communication failures (DSG DQ200–DQ250–DQ381 transmissions)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG şanzımanların mechatronic kontrol ünitesi (TCM) ile motor ECU arasında
-    CAN-BUS iletişim hataları sıkça ortaya çıkar. Bu hatalar şanzımanın pasif modda
-    kalmasına, vitese geçememeye veya tamamen devre dışı kalmasına neden olur. Uzun
-    süreli ihmal durumunda TCM değiştirilmesi gerekebilir.
-  inspection_advice: Aracı kontrol ederken, DSG şanzımanlı modellerde CAN-BUS hatlarını,
-    TCM besleme hatlarını (sigorta/röle) ve TCM ünitesini fiziksel olarak kontrol
-    edin. Ayrıca, vitese geçme sorunları veya şanzıman kontrol lambasının yanması
-    gibi belirtiler aranmalıdır.
+  rationale: DSG transmissions frequently experience communication errors between
+    the mechatronic control unit (TCM) and the engine ECU over the CAN-Bus network.
+    These errors can cause the transmission to remain in passive mode, fail to shift
+    gears, or completely disengage. If left unaddressed for an extended period, replacement
+    of the TCM may be required.
+  inspection_advice: When inspecting the vehicle, check for CAN-Bus communication
+    faults, verify TCM power supply circuits (fuses/relays), and physically inspect
+    the TCM unit in DSG transmission models. Additionally, look for symptoms such
+    as gearshift failures or activation of the transmission control warning light.
   sources:
   - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
     source_domain: teknikotomatiksanziman.com
@@ -1016,19 +865,19 @@ claims:
       📌 Uzun süre ihmal edilirse mechatronic değişimi gerekebilir'
     independent: true
 - claim_key: dq381_transmission_tcm_(mechatronic)_ar
-  title: TCM (Mechatronic) arızaları (DSG şanzımanlar)
+  title: TCM (Mechatronic Transmission Control Module) Failures (DSG Transmissions)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG şanzımanların mechatronic kontrol ünitesi (TCM) aşırı ısı, su girişi
-    veya yazılımsal hatalar nedeniyle arızalanabilir. Bu durumda şanzıman tamamen
-    devre dışı kalabilir veya vitese geçme sorunları yaşanabilir.
-  inspection_advice: TCM ünitesini fiziksel olarak hasar izleri (sıvı sızıntısı, yanma
-    izleri) ve besleme hatlarını kontrol edin. Ayrıca, şanzıman kontrol lambasının
-    yanması veya vitese geçme sorunları gibi belirtiler aranmalıdır.
+  rationale: The mechatronic transmission control module (TCM) in DSG transmissions
+    can fail due to excessive heat, water ingress, or software errors. In such cases,
+    the transmission may completely shut down or experience shifting issues.
+  inspection_advice: Inspect the TCM unit for physical damage (fluid leaks, burn marks)
+    and check power supply connections. Additionally, look for symptoms such as the
+    transmission control light illuminating or shifting problems.
   sources:
   - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
     source_domain: teknikotomatiksanziman.com
@@ -1038,19 +887,20 @@ claims:
       🔥 Aşırı ısı veya su girişi nedeniyle TCM hasarı'
     independent: true
 - claim_key: dq381_transmission_can-bus_hatları_ve_i
-  title: CAN-BUS hatları ve iletişim hataları (tork konvertörlü otomatik şanzımanlar)
+  title: CAN-BUS Wiring and Communication Faults (Torque Converter Automatic Transmissions)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Tork konvertörlü otomatik şanzımanlarda ayrı TCM ünitesi kullanıldığından,
-    CAN-BUS iletişim hataları daha hassas bir sorun teşkil eder. Bu hatalar vitese
-    geçişlerin tamamen durmasına veya aracın sürülemez hale gelmesine neden olabilir.
-  inspection_advice: CAN-BUS hatlarını direnç ve süreklilik açısından kontrol edin.
-    Ayrıca, TCM ünitesinin besleme hatlarını ve fiziksel durumunu inceleyin. Vites
-    geçiş sorunları veya şanzıman kontrol lambasının yanması gibi belirtiler aranmalıdır.
+  rationale: In torque converter automatic transmissions, a separate Transmission
+    Control Module (TCM) is used, making CAN-BUS communication errors a more critical
+    issue. These errors can cause complete failure of gear shifts or render the vehicle
+    undrivable.
+  inspection_advice: Check CAN-BUS wiring for resistance and continuity. Also, inspect
+    the TCM unit’s power connections and physical condition. Look for symptoms such
+    as gear shift malfunctions or activation of the transmission control warning light.
   sources:
   - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
     source_domain: teknikotomatiksanziman.com
@@ -1062,46 +912,25 @@ claims:
       📉 Araç sürülemez hale gelebilir'
     independent: true
 - claim_key: dq381_transmission_tcm_yazılımsal_kilit
-  title: TCM yazılımsal kilitlenmesi ve adaptasyon sorunları
+  title: Transmission Control Module (TCM) software lockups and adaptation issues
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: TCM ünitesinde yazılımsal kilitlenmeler veya adaptasyon hataları, CAN-BUS
-    iletişim kesintilerine yol açabilir. Bu sorunlar genellikle yeniden kodlama ve
-    adaptasyon işlemleri ile çözülebilir, ancak kalıcı hasar durumunda TCM değiştirilmesi
-    gerekebilir.
-  inspection_advice: TCM ünitesinin yazılımını ve adaptasyonlarını kontrol edin. Ayrıca,
-    CAN-BUS hatlarını ve besleme hatlarını kontrol edin. Şanzıman kontrol lambasının
-    yanması veya vitese geçme sorunları gibi belirtiler aranmalıdır.
+  rationale: Software lockups or adaptation errors in the TCM unit can cause disruptions
+    in CAN-BUS communication. These issues are typically resolved through re-coding
+    and adaptation procedures, but if permanent damage occurs, the TCM may need to
+    be replaced.
+  inspection_advice: Check the TCM unit’s software and adaptations. Inspect CAN-BUS
+    wiring and power supply lines. Look for symptoms such as the transmission control
+    lamp illuminating or shifting issues.
   sources:
   - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
     source_domain: teknikotomatiksanziman.com
     site_or_channel: teknikotomatiksanziman.com
     quote: 💻 Kontrol üniteleri arasında yazılımsal kilitlenme
-    independent: true
-- claim_key: dq381_transmission_aluminum_mechatronic
-  title: Aluminum mechatronics plate structural vulnerability in DQ200
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The aluminum mechatronics plate in the DQ200 DSG transmission is inherently
-    weak, prone to microcracks, and contributes to jerky shifts and gear engagement
-    issues.
-  inspection_advice: Check for unusual jerks or jolts during acceleration or braking,
-    especially at start-up and gear changes. Listen for any unusual noises or vibrations
-    that may indicate internal mechatronics damage.
-  sources:
-  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
-    source_domain: volkkarihuolto.fi
-    site_or_channel: volkkarihuolto.fi
-    quote: '"the aluminum mechatronics plate is structurally vulnerable; ... characteristic
-      ''jumping'' and jerking at start and gear changes."'
     independent: true
 - claim_key: dq381_transmission_overheating_and_cool
   title: Overheating and cooling system failure in wet DSGs (DQ250, DQ381)
@@ -1211,27 +1040,6 @@ claims:
       per part number, that would mean at least 600,000 affected transmissions—and
       likely over a million, considering unknown production volumes."'
     independent: true
-- claim_key: dq381_transmission_dq200_solenoid_valve
-  title: DQ200 Solenoid Valve Control Failures
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ200 mekatronik kart (electronic control unit) manages solenoid
-    valves, which control hydraulic pressure for clutch and gear engagement. Failures
-    in solenoid valve control can lead to delayed gear shifts, shuddering, and transmission
-    malfunctions.
-  inspection_advice: Look for delayed or rough gear shifts, vibrations during acceleration,
-    and error codes such as **P189C (solenoid valve open circuit/short circuit)**.
-    Perform a test drive to observe hydraulic pressure management issues.
-  sources:
-  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
-    source_domain: dsgservisi.com
-    site_or_channel: dsgservisi.com
-    quote: 'Neden: Solenoid valf kontrolü bozulmuş, basınç yönetimi hatalı'
-    independent: true
 - claim_key: dq381_transmission_dq380/dq381_wet-clut
   title: DQ380/DQ381 Wet-Clutch DSG Adaptation Failures
   kind: known_issue
@@ -1277,19 +1085,19 @@ claims:
       kalır, vites değiştirilemez'
     independent: true
 - claim_key: dq381_transmission_vites_konum_sensörü_
-  title: Vites Konum Sensörü (Gear Position Sensor) Failures
+  title: Gear Position Sensor Failures
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Failures in the gear position sensor can cause incorrect gear readings,
-    leading to erratic shifting behavior, incorrect display of the gear position (e.g.,
-    showing 'PRND' with an incorrect symbol), and potential transmission malfunctions.
-  inspection_advice: Observe the gear position display for incorrect or flashing symbols
-    (e.g., an incorrect 'PRND' indicator). Check for delayed or incorrect gear engagement
-    during driving.
+  rationale: When the gear position sensor fails, it can result in incorrect gear
+    readings, causing unpredictable shifting behavior, wrong gear position displays
+    (such as showing 'PRND' with the wrong symbol), and possible transmission malfunctions.
+  inspection_advice: Look for incorrect or flashing symbols on the gear position display
+    (for example, an incorrect 'PRND' indicator). Also, check for delayed or improper
+    gear engagement while driving.
   sources:
   - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
     source_domain: dsgservisi.com

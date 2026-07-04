@@ -55,22 +55,30 @@ claims:
     if necessary.
   sources: []
 - claim_key: clio5_body_engine_soğutma_devresi_(coo
-  title: Soğutma devresi (cooling system) boşaltma sonrası yanlış doldurma riski
+  title: Risk of incorrect refill after cooling system drainage
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Soğutma devresi boşaltıldıktan sonra, yanlış soğutma sıvısı (soğuk su)
-    kullanımı motorun aşırı ısınmasına veya hasara yol açabilir. Bu, Renault Clio
-    5 için bir dikkat edilmesi gereken kronik sorun değildir, ancak yanlış uygulamalar
-    sonucu ortaya çıkan bir risktir. Teknik Departman tarafından onaylanmamış ürünler
-    kullanımı da sorunlara yol açabilir.
-  inspection_advice: Soğutma devresi boşaltılmışsa, servis tarafından doğru oranlarda
-    ve onaylanmış soğutma sıvısı ile doldurulmuş olup olmadığını kontrol edin. Soğutma
-    sıvısı seviyesini ve kalitesini gözden geçirin.
-  sources: []
+  rationale: After draining the cooling system, using the wrong coolant (plain water)
+    can cause the engine to overheat or suffer damage. This is not a chronic issue
+    to watch for in the Renault Clio 5, but it is a risk that can arise from incorrect
+    procedures. Using unauthorized or non-OEM-approved products may also lead to problems.
+  inspection_advice: If the cooling system has been drained, verify that the service
+    technician refilled it with the correct proportion and approved coolant. Check
+    the coolant level and condition.
+  sources:
+  - source_url: https://www.user-manual.renault.com/tr/b%C3%B6l%C3%BCm-5-pratik-tavsiyeler/calisma-arizalari
+    source_domain: user-manual.renault.com
+    site_or_channel: user-manual.renault.com
+    quote: '"Belirgin miktarda soğutma sıvısı eksikliği halinde, motor çok sıcakken
+      kesinlikle soğuk soğutma sıvısıyla dolum yapmamanız gerektiğini unutmayınız.
+      Aracın soğutma devresinin kısmen dahi olsa, boşaltılmasını gerektiren bir müdahaleden
+      sonra devre, miktarı iyi ayarlanmış yeni bir karışımla doldurulmalıdır. Hatırlatma:
+      sadece Teknik Departmanımız tarafından onaylanan ürünler bu amaçla kullanılabilir."'
+    independent: true
 - claim_key: clio5_body_general_structural_corrosion
   title: Structural corrosion and chassis weakness
   kind: known_issue
@@ -143,7 +151,7 @@ claims:
 - claim_key: clio5_body_steering_steering_rack_leaks
   title: Steering rack leaks
   kind: known_issue
-  domain: steering
+  domain: suspension
   severity: medium
   confidence: 0.0
   status: held
@@ -180,25 +188,26 @@ claims:
     by the wipers. Check for any chips that may have propagated into larger cracks.
   sources: []
 - claim_key: clio5_body_engine_chronic_crankshaft_p
-  title: Chronic crankshaft position sensor (krank sensörü) or camshaft position sensor
-    (eksantrik mili sensörü) failure causing delayed starts and poor throttle response
+  title: Sensor failures cause slow starts, weak throttle (1.3 TCe)
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: The text describes a chronic issue where the Renault Clio 5 (1.3 TCe)
-    exhibits delayed starts and poor throttle response, which is linked to sensor
-    failures (krank sensörü/eksantrik mili sensörleri). These sensors are critical
-    for proper engine timing and fuel delivery, and their failure can cause misfires,
-    rough idling, and delayed ignition—especially after multiple repairs (e.g., fuel
-    pressure regulator, injectors, spark plugs, and battery replacement).
-  inspection_advice: Check for error codes related to crankshaft or camshaft position
-    sensors (e.g., P0335, P0340). Inspect wiring harnesses for corrosion or damage,
-    and verify sensor signal integrity with a diagnostic tool. Listen for unusual
-    engine noises (e.g., rattling or ticking) during startup, which may indicate sensor-related
-    misfires.
+  rationale: This issue describes a persistent problem where the Renault Clio 5 (1.3
+    TCe) engine struggles with slow starts and weak acceleration, directly caused
+    by failures in the crankshaft position sensor (krank sensörü) or camshaft position
+    sensor (eksantrik mili sensörü). These sensors are essential for accurate engine
+    timing and fuel injection control. When they fail, the engine may experience misfires,
+    rough idling, and delayed ignition—particularly after multiple prior repairs,
+    such as replacements of the fuel pressure regulator, injectors, spark plugs, or
+    battery
+  inspection_advice: Verify the presence of diagnostic trouble codes (DTCs) related
+    to crankshaft (P0335) or camshaft (P0340) position sensors. Inspect the wiring
+    harnesses for corrosion, fraying, or physical damage. Use a diagnostic tool to
+    confirm sensor signal integrity. Listen for abnormal engine noises, such as rattling
+    or ticking during startup, which may indicate sensor-related misfires
   sources:
   - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
     source_domain: yoldakiusta.com
@@ -258,8 +267,7 @@ claims:
       hem emisyon hem de enjeksiyon hatalarına neden olur."'
     independent: true
 - claim_key: clio5_body_electrical_chronic_ecu_(engine_
-  title: Chronic ECU (Engine Control Unit) software issues causing persistent error
-    codes and performance degradation
+  title: ECU software glitches on 1.5 dCi
   kind: known_issue
   domain: electrical
   severity: medium
@@ -284,19 +292,26 @@ claims:
       sağlanabilir."'
     independent: true
 - claim_key: clio5_body_electrical_bagaj_açma_sinyal_mo
-  title: Bagaj Açma Sinyal Modülü Çalışmazlıkları
+  title: Trunk Release Signal Module Malfunctions
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Renault Clio V (2019-2024) modellerinde bagaj açma sinyal modülünde yaylı
-    buton iç lastiği deformasyonu veya kırılması, yanıt vermeyen butonlar, tıklama
-    olmaması gibi sorunlar sıklıkla görülmektedir. Bu modülün çalışmazlığı bagaj açma
-    komutunun iletilmesini engeller.
-  inspection_advice: Butona basıldığında tıklama veya tepki olup olmadığını kontrol
-    edin. Buton iç lastiği deformasyon veya kırık olup olmadığını görmek için bagaj
-    iç döşemesini çıkartın. Ayrıca, kilit motorunun sesini kontrol edin; ses yoksa
-    sorun bu modülde olabilir.
-  sources: []
+  rationale: In Renault Clio V (2019–2024) models, the trunk release signal module
+    frequently exhibits issues such as deformation or rupture of the internal spring-loaded
+    button rubber diaphragm, unresponsive buttons, or lack of tactile feedback. Malfunction
+    of this module prevents the transmission of the trunk release command.
+  inspection_advice: Check for tactile feedback or response when pressing the button.
+    Remove the trunk lining to inspect the internal button rubber diaphragm for deformation
+    or damage. Also, verify the lock motor sound; if no sound is present, the issue
+    may lie within this module.
+  sources:
+  - source_url: https://parcaekseni.com/urun/clio-5-bagaj-kapagi-acma-kontrol-unitesi/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: "\"Bagaj kapağı açılmıyor\", \"Butona basıldığında tıklama yok veya tepki\
+      \ yok\", \"Bagaj açık uyarısı çıkıyor ama kapak kilitli\", \"Buton içi yay kırılmış\
+      \ / iç lastik deformasyonu olmuÅ\x9F\""
+    independent: true

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from knowledge.stoplists import (
     AMBIGUOUS_INSPECTION_TERMS,
+    GENERIC_MAINTENANCE_TERMS,
     INSPECTION_COVERED,
     WARNING_LIGHT_PATTERNS,
     has_specificity_signal,
@@ -160,6 +161,16 @@ def gate_generic(claim_title: str, claim_rationale: str) -> GateResult:
     for pat in WARNING_LIGHT_PATTERNS:
         if pat.search(text):
             return GateResult(passed=False, reason="generic dashboard warning light (fast-reject)")
+
+    # ministral-8b has been caught answering "keep" on its own textbook trivial
+    # example while its own stated reason said the opposite (see
+    # GENERIC_MAINTENANCE_TERMS docstring) — don't trust the LLM on the
+    # clear-cut cases. Escape valve: a specificity signal (engine code,
+    # displacement+fuel-tech label, mileage figure) means this phrasing is
+    # config-specific despite the generic-sounding words, so still ask the LLM.
+    generic_hit = next((kw for kw in GENERIC_MAINTENANCE_TERMS if kw in text), None)
+    if generic_hit is not None and not has_specificity_signal(text):
+        return GateResult(passed=False, reason=f"'{generic_hit}' with no engine/mileage specificity (fast-reject)")
 
     if not MISTRAL_API_KEY:
         raise RuntimeError("MISTRAL_API_KEY not set")
