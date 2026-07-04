@@ -39,8 +39,10 @@ VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
 #
 # engine_family follows the current power-split convention (e.g. "h5h_130", not
 # bare "h5h") — each power tune is researched as its own part, consistent with
-# volkswagen_golf_7.yaml (ea211/ea288 are the one exception, kept as engine-family-
-# wide research keys rather than split further).
+# volkswagen_golf_7.yaml (ea211/ea288/ea888 are exceptions, kept as engine-family-
+# wide research keys rather than split further — see docs/design_flaws.md Flaw 2:
+# power tune doesn't change engineering identity, so splitting on it just pays
+# for duplicate research of the same physical engine).
 TR_MARKET_TRIMS: dict[str, list[dict]] = {
     "renault_clio_5": [
         {
@@ -82,19 +84,19 @@ TR_MARKET_TRIMS: dict[str, list[dict]] = {
     ],
     "volkswagen_golf_7": [
         {
-            "id": "golf7_ea888_220", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888_220",
+            "id": "golf7_ea888_220", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888",
             "fuel": "petrol", "displacement_cc": 1984, "power_min_hp": 220, "power_max_hp": 220,
             "transmission": "automatic", "transmission_code": "dq250",
             "year_from": 2013, "year_to": 2016, "notes": "GTI (pre-facelift) — 2.0 TSI EA888 Gen3, 6-speed wet DSG or 6MT",
         },
         {
-            "id": "golf7_ea888_230", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888_230",
+            "id": "golf7_ea888_230", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888",
             "fuel": "petrol", "displacement_cc": 1984, "power_min_hp": 230, "power_max_hp": 245,
             "transmission": "automatic", "transmission_code": "dq381",
             "year_from": 2017, "year_to": 2020, "notes": "GTI/GTI Performance (facelift) — 2.0 TSI EA888 Gen3, 7-speed wet DSG or 6MT",
         },
         {
-            "id": "golf7_ea888_300", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888_300",
+            "id": "golf7_ea888_300", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888",
             "fuel": "petrol", "displacement_cc": 1984, "power_min_hp": 300, "power_max_hp": 310,
             "transmission": "automatic", "transmission_code": "dq381",
             "year_from": 2014, "year_to": 2020, "notes": "R — 2.0 TSI EA888 Gen3, Haldex AWD, DQ250 pre-facelift/DQ381 facelift (simplified to dq381 here)",

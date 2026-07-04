@@ -117,7 +117,7 @@
   model: golf
   generation: VII
   engine_code: EA888
-  engine_family: ea888_220
+  engine_family: ea888
   fuel: petrol
   displacement_cc: 1984
   power_min_hp: 220
@@ -136,7 +136,7 @@
   model: golf
   generation: VII
   engine_code: EA888
-  engine_family: ea888_230
+  engine_family: ea888
   fuel: petrol
   displacement_cc: 1984
   power_min_hp: 230
@@ -155,7 +155,7 @@
   model: golf
   generation: VII
   engine_code: EA888
-  engine_family: ea888_300
+  engine_family: ea888
   fuel: petrol
   displacement_cc: 1984
   power_min_hp: 300

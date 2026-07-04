@@ -17,7 +17,8 @@ from pathlib import Path
 
 import yaml
 
-PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
+REPO_ROOT = Path(__file__).parent.parent.parent
+PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
 
 # Part IDs follow a power-split convention (k9k_85, h5h_130, ea888_230, ...) —
 # each power tune is researched as its own part (see write_variants.py). The
@@ -44,8 +45,126 @@ def _part_meta(part_id: str) -> dict:
     return {}
 
 
+def generate_part_scaffold(
+    part_id: str, part_type: str, make: str, model: str, variants: list[dict],
+) -> dict:
+    """Build the part_id/part_type/display_name/manufacturer/known_also_as
+    scaffold for a new part YAML. Shared by auto._ensure_part_stub (create
+    path) and catalog.repair_missing_stub_scaffold (repair path) so the two
+    can't drift — see docs/pipeline_postmortem.md and design_flaws.md Flaw 2
+    for the bug this caused when run_part() forgot to call it.
+    """
+    make_pretty = make.replace("_", " ").title()
+    model_pretty = model.replace("_", " ").title()
+
+    if part_type == "engine":
+        codes: list[str] = []
+        descs: list[str] = []
+        for v in variants:
+            if (v.get("engine_family") or "").lower() == part_id.lower():
+                ec = (v.get("engine_code") or "").upper()
+                if ec and ec not in codes:
+                    codes.append(ec)
+                fuel = (v.get("fuel") or "").lower()
+                cc = v.get("displacement_cc")
+                if cc:
+                    litre = f"{cc / 1000:.1f}"
+                    fuel_tag = "TSI" if fuel == "petrol" else "TDI" if fuel == "diesel" else fuel.upper()
+                    label = f"{litre} {fuel_tag}"
+                    if label not in descs:
+                        descs.append(label)
+        display_name = f"{make_pretty} {_search_code(part_id)} Engine"
+        known_also_as = codes + descs
+
+    elif part_type == "transmission":
+        display_name = f"{make_pretty} {_search_code(part_id)} Transmission"
+        known_also_as = [_search_code(part_id)]
+
+    elif part_type == "cooling":
+        display_name = f"{make_pretty} {model_pretty} Cooling System"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} cooling",
+            f"{make_pretty} {model_pretty} coolant",
+            f"{make_pretty} {model_pretty} thermostat",
+        ]
+
+    elif part_type == "electrical":
+        display_name = f"{make_pretty} {model_pretty} Electrical Systems"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} electrical",
+            f"{make_pretty} {model_pretty} electronics",
+            f"{make_pretty} {model_pretty} battery",
+        ]
+
+    elif part_type == "body":
+        display_name = f"{make_pretty} {model_pretty} Body & Water Sealing"
+        known_also_as = [
+            f"{make_pretty} {model_pretty} body",
+            f"{make_pretty} {model_pretty} boot leak",
+            f"{make_pretty} {model_pretty} water ingress",
+        ]
+
+    else:
+        display_name = f"{make_pretty} {model_pretty} {_search_code(part_id)}"
+        known_also_as = [_search_code(part_id)]
+
+    return {
+        "part_id": part_id,
+        "part_type": part_type,
+        "display_name": display_name,
+        "manufacturer": make,
+        "known_also_as": known_also_as,
+    }
+
+
+def ensure_part_stub(
+    part_id: str,
+    part_type: str,
+    make: str,
+    model: str,
+    variants: list[dict],
+    *,
+    dry_run: bool = False,
+) -> None:
+    """Create a minimal part stub YAML if one doesn't exist yet.
+
+    Shared by every run_part() entry point (knowledge.auto and
+    knowledge.process) — write_promoted_part_claims only *preserves*
+    existing scaffold metadata, it never creates it, so any pipeline path
+    that skips this on a genuinely new part_id writes a file containing only
+    {"claims": [...]}, missing part_id/part_type/display_name/manufacturer
+    entirely (see docs/design_flaws.md Flaw 2 postmortem note: this bug hit
+    twice, once in auto.py's --part path and once in process.py's, because
+    the two entry points didn't share this call).
+    """
+    stub_path = PARTS_DIR / part_type / f"{part_id}.yaml"
+    if stub_path.exists():
+        return
+    if dry_run:
+        print(f"  [dry-run] Would create part stub: {stub_path.relative_to(REPO_ROOT)}")
+        return
+
+    scaffold = generate_part_scaffold(part_id, part_type, make, model, variants)
+
+    stub_path.parent.mkdir(parents=True, exist_ok=True)
+    stub_path.write_text(
+        yaml.dump({**scaffold, "claims": []}, allow_unicode=True, sort_keys=False)
+    )
+    print(f"  Created part stub: {stub_path.relative_to(REPO_ROOT)}")
+
+
 def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
-    """Find make and model associated with a part ID by scanning the fitment catalog."""
+    """Find make and model associated with a part ID by scanning the fitment catalog.
+
+    Fitment filenames are "{make}_{model}.yaml" where model itself may contain
+    underscores (a generation suffix: "golf_7", "megane_4", "clio_5") — the
+    model is everything after the first underscore, not just stem_parts[1].
+    Truncating to stem_parts[1] (e.g. "golf" instead of "golf_7") silently
+    breaks every caller that reassembles f"{make}_{model}.yaml" to find the
+    variants file, since that file doesn't exist under the truncated name —
+    this is why the ensure_part_stub call in both auto.py and process.py's
+    run_part() looked correct but never actually fired for any real model.
+    """
     fitment_dir = PARTS_DIR.parent / "fitment"
     field = {
         "engine": "engine_family",
@@ -59,7 +178,7 @@ def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
         stem_parts = path.stem.split("_")
         if len(stem_parts) >= 2:
             make = stem_parts[0]
-            model = stem_parts[1]
+            model = "_".join(stem_parts[1:])
             try:
                 rows = yaml.safe_load(path.read_text()) or []
                 for row in rows:
@@ -88,7 +207,7 @@ def templates_for_part(
 
     make, model = _find_make_model_for_part(part_id, part_type)
     make_t = make.title() if make else ""
-    model_t = model.title() if model else ""
+    model_t = model.replace("_", " ").title() if model else ""
 
     templates: list[tuple[str, str]] = []
     seen: set[str] = set()

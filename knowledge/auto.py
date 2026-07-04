@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 import yaml
 from dotenv import load_dotenv
 
-from knowledge.parts.search_templates import _search_code
+from knowledge.parts.search_templates import ensure_part_stub
 from knowledge.stoplists import FORUM_DOMAINS
 
 # load dotenv
@@ -426,84 +426,7 @@ def _ensure_part_stub(
     *,
     dry_run: bool = False,
 ) -> None:
-    """Create a minimal part stub YAML if one doesn't exist yet."""
-    stub_path = PARTS_DIR / part_type / f"{part_id}.yaml"
-    if stub_path.exists():
-        return
-    if dry_run:
-        print(f"  [dry-run] Would create part stub: {stub_path.relative_to(REPO_ROOT)}")
-        return
-
-    make_pretty = make.replace("_", " ").title()
-    model_pretty = model.replace("_", " ").title()
-
-    if part_type == "engine":
-        codes: list[str] = []
-        descs: list[str] = []
-        for v in variants:
-            if (v.get("engine_family") or "").lower() == part_id.lower():
-                ec = (v.get("engine_code") or "").upper()
-                if ec and ec not in codes:
-                    codes.append(ec)
-                fuel = (v.get("fuel") or "").lower()
-                cc = v.get("displacement_cc")
-                if cc:
-                    litre = f"{cc / 1000:.1f}"
-                    fuel_tag = "TSI" if fuel == "petrol" else "TDI" if fuel == "diesel" else fuel.upper()
-                    label = f"{litre} {fuel_tag}"
-                    if label not in descs:
-                        descs.append(label)
-        display_name = f"{make_pretty} {_search_code(part_id)} Engine"
-        known_also_as = codes + descs
-
-    elif part_type == "transmission":
-        display_name = f"{make_pretty} {_search_code(part_id)} Transmission"
-        known_also_as = [_search_code(part_id)]
-
-    elif part_type == "cooling":
-        display_name = f"{make_pretty} {model_pretty} Cooling System"
-        known_also_as = [
-            f"{make_pretty} {model_pretty} cooling",
-            f"{make_pretty} {model_pretty} coolant",
-            f"{make_pretty} {model_pretty} thermostat",
-        ]
-
-    elif part_type == "electrical":
-        display_name = f"{make_pretty} {model_pretty} Electrical Systems"
-        known_also_as = [
-            f"{make_pretty} {model_pretty} electrical",
-            f"{make_pretty} {model_pretty} electronics",
-            f"{make_pretty} {model_pretty} battery",
-        ]
-
-    elif part_type == "body":
-        display_name = f"{make_pretty} {model_pretty} Body & Water Sealing"
-        known_also_as = [
-            f"{make_pretty} {model_pretty} body",
-            f"{make_pretty} {model_pretty} boot leak",
-            f"{make_pretty} {model_pretty} water ingress",
-        ]
-
-    else:
-        display_name = f"{make_pretty} {model_pretty} {_search_code(part_id)}"
-        known_also_as = [_search_code(part_id)]
-
-    stub_path.parent.mkdir(parents=True, exist_ok=True)
-    stub_path.write_text(
-        yaml.dump(
-            {
-                "part_id": part_id,
-                "part_type": part_type,
-                "display_name": display_name,
-                "manufacturer": make,
-                "known_also_as": known_also_as,
-                "claims": [],
-            },
-            allow_unicode=True,
-            sort_keys=False,
-        )
-    )
-    print(f"  Created part stub: {stub_path.relative_to(REPO_ROOT)}")
+    ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
 
 def run_all_parts(
