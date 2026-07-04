@@ -1,0 +1,1321 @@
+part_id: ea888
+part_type: engine
+display_name: Volkswagen EA888 Engine
+manufacturer: volkswagen
+known_also_as:
+- EA888
+- 2.0 TSI
+claims:
+- claim_key: ea888_cooling_water_pump_impeller_
+  title: Water pump impeller brittle fracture (EA888 2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888’s water pump uses a plastic impeller that degrades over time,
+    leading to sudden coolant loss and overheating. This is a common failure mode
+    across all generations, requiring costly repairs if undetected.
+  inspection_advice: Check for coolant leaks around the water pump pulley or radiator
+    hoses. Look for **P0128** (coolant temperature too low) or **P0115–P0118** (coolant
+    sensor issues) if overheating occurs intermittently. Visually inspect the impeller
+    for cracks or brittleness during a coolant system flush. Confirm coolant level
+    and condition (discoloration or debris may indicate pump failure).
+  sources:
+  - source_url: https://problemsbyvin.com/engines/vw-audi-2-0t-ea888/
+    source_domain: problemsbyvin.com
+    site_or_channel: problemsbyvin.com
+    quote: The water pump on these engines uses a plastic impeller that gets brittle
+      with age and breaks. When that happens you get sudden coolant loss and overheat.
+    independent: true
+  - source_url: https://aboutthecars.com/vw/engine-volkswagen-ea888-20-tsi/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: The water pump on these engines uses a plastic impeller that gets brittle
+      with age and breaks. When that happens you get sudden coolant loss and overheat.
+    independent: true
+- claim_key: ea888_fuel system_hpfp_cam_follower_we
+  title: HPFP cam follower wear (EA888 2.0T direct-injection variants)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Certain EA888 variants suffer from premature wear of the high-pressure
+    fuel pump (HPFP) cam follower, which can damage the camshaft over time. This is
+    an inspectable issue with relatively low repair cost if caught early.
+  inspection_advice: Remove the high-pressure fuel pump and inspect the cam follower
+    for wear or pitting. Look for **P0087/P0088** (fuel pressure too low/high) or
+    **P0190–P0194** (fuel system performance codes). Check for fuel leaks or erratic
+    idle conditions. Confirm if the engine uses direct injection (common in EA888
+    TDI or turbocharged petrol variants).
+  sources:
+  - source_url: https://problemsbyvin.com/engines/vw-audi-2-0t-ea888/
+    source_domain: problemsbyvin.com
+    site_or_channel: problemsbyvin.com
+    quote: The HPFP cam follower wears through over time on certain variants and damages
+      the camshaft when it fails. Inspection is easy — pop the high-pressure fuel
+      pump off and look. Replacement is cheap if caught early.
+    independent: true
+  - source_url: https://www.ampauto.io/symptoms/vw-2-0t-tsi-problems
+    source_domain: ampauto.io
+    site_or_channel: ampauto.io
+    quote: The HPFP cam follower wears through over time on certain variants and damages
+      the camshaft when it fails. Inspection is easy — pop the high-pressure fuel
+      pump off and look. Replacement is cheap if caught early.
+    independent: true
+- claim_key: ea888_electrical_sudden_engine_shutdo
+  title: Sudden engine shutdown (EA888 2.0T, all generations)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Multiple owner reports describe sudden, unexplained engine shutdowns
+    with no prior warning lights or symptoms. This suggests latent electrical or fuel
+    system failures (e.g., EPC system malfunctions, fuel pump relay issues, or software
+    glitches) that can lead to catastrophic failure on the road.
+  inspection_advice: Test the **EPC system** (Electronic Power Control) for faults
+    using a diagnostic scanner (**P0500–P0507** for speed sensor issues, **P0560–P0563**
+    for voltage problems). Check for **P0171/P0174** (lean fuel mixture) or **P0600–P0608**
+    (ECU communication errors). Inspect the fuel pump relay, high-pressure fuel pump,
+    and wiring harness for damage. Verify if the **BlueDriver** or OBD-II scanner
+    shows no stored codes despite failure (indicative of intermittent or software-related
+    issues).
+  sources:
+  - source_url: https://problemsbyvin.com/engines/vw-audi-2-0t-ea888/
+    source_domain: problemsbyvin.com
+    site_or_channel: problemsbyvin.com
+    quote: The engine could not be started after 13 years and 103,000+ miles. I had
+      to get the car towed to my garage at night, after several prior trips same day.
+      There were no check engine lights or any other indicators.
+    independent: true
+- claim_key: ea888_body_water_intrusion_caus
+  title: Water intrusion causing multiple warning lights (EA888 2.0T)
+  kind: known_issue
+  domain: body
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Water intrusion in the cabin or electrical system can trigger false warning
+    lights (airbag, ABS, traction control, tire pressure) without mechanical failure.
+    This is often linked to poor sealing or environmental exposure but can mask underlying
+    electrical or sensor issues.
+  inspection_advice: Check for water stains, corrosion, or dampness in the cabin or
+    under the dashboard. Test all warning lights individually (e.g., isolate the ABS
+    sensor, tire pressure monitor, and airbag control module) using a multimeter or
+    diagnostic scanner. Look for **U-code errors** (e.g., **U0100–U0140**) indicating
+    communication failures between modules. Inspect the **EPC system** and **fuse
+    box** for moisture damage.
+  sources: []
+- claim_key: ea888_engine_sudden_engine_stall_
+  title: Sudden engine stall with no prior symptoms (EA888 2.0T)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Multiple accounts describe engines stalling abruptly without warning
+    lights, misfires, or prior symptoms. This suggests latent failures in the fuel
+    system, electrical components, or software that can cause catastrophic failure
+    without advance notice.
+  inspection_advice: Use a diagnostic scanner to check for **P0171/P0174** (lean fuel
+    mixture), **P0300–P0308** (random misfires), or **P0600–P0608** (ECU issues).
+    Test the **fuel pump** (listen for consistent hum when ignition is on), **ignition
+    coils** (scan for resistance), and **oxygen sensors** (look for **P0130–P0161**
+    codes). Inspect the **fuel filter** and **fuel lines** for clogs or leaks. Confirm
+    if the issue recurs after a battery disconnect (indicative of learned adapter
+    or software issues).
+  sources:
+  - source_url: https://problemsbyvin.com/engines/vw-audi-2-0t-ea888/
+    source_domain: problemsbyvin.com
+    site_or_channel: problemsbyvin.com
+    quote: Driving on interstate at 70 mph with cruise control on when car suddenly
+      slowed and warning lights began flashing. I slowed to 60 mph and within a minute
+      the engine shut off and was almost rear ended by a semi truck before I could
+      get to the shoulder of the highway. Engine would not restart and I...
+    independent: true
+- claim_key: ea888_fuel system_gas_smell_and_sudden
+  title: Gas smell and sudden shutdown (EA888 2.0T)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A gas smell followed by sudden shutdown suggests a fuel leak or vapor
+    intrusion into the engine bay, which can trigger a shutdown to prevent fire risk.
+    This may indicate a failing fuel pump, cracked fuel lines, or vapor intrusion
+    through poor sealing.
+  inspection_advice: Inspect fuel lines, connections, and the fuel tank for leaks
+    or cracks. Test the **fuel pump** for proper pressure (**P0087/P0088** codes)
+    and listen for consistent hum when ignition is on. Check the **fuel filter** for
+    clogs. Look for **P0171/P0174** (lean fuel mixture) or **P0190–P0194** (fuel system
+    performance issues). Verify if the **EPC system** or **fuel pump relay** is functioning
+    correctly.
+  sources:
+  - source_url: https://problemsbyvin.com/engines/vw-audi-2-0t-ea888/
+    source_domain: problemsbyvin.com
+    site_or_channel: problemsbyvin.com
+    quote: Was driving on the highway, smelled gas, pulled over, car died, epc light
+      came on.
+    independent: true
+- claim_key: ea888_cooling_thermostat_housing_c
+  title: Thermostat housing coolant leak (EA888 Gen3 1.8T/2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: The thermostat housing in EA888 Gen3 engines (1.8T and 2.0T) is prone
+    to **coolant leaks**, compromising the coolant outlet and thermostat function.
+    This is a **common failure mode** in this generation, often requiring replacement
+    of the housing or thermostat assembly.
+  inspection_advice: Look for **coolant leaks around the thermostat housing**, **overheating
+    tendencies**, or **coolant residue under the engine**. Check for **P0128 (coolant
+    temp too low) or P0118 (coolant temp sensor circuit malfunction)**. Verify engine
+    generation (Gen3-specific) and inspect the housing for cracks or corrosion.
+  sources:
+  - source_url: https://vwtuning.co/vw-ea888-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: A thermostat housing leak is more prominent in gen3 engines and unfortunately
+      is fairly common. The thermostat housing is the coolant outlet and, believe
+      it or not, houses the thermostat, which regulates coolant flow.
+    independent: true
+  - source_url: https://rxmechanic.com/ea888-gen-3-problems/
+    source_domain: rxmechanic.com
+    site_or_channel: rxmechanic.com
+    quote: A thermostat housing leak is more prominent in gen3 engines and unfortunately
+      is fairly common. The thermostat housing is the coolant outlet and, believe
+      it or not, houses the thermostat, which regulates coolant flow.
+    independent: true
+- claim_key: ea888_fuel system_carbon_buildup_in_in
+  title: Carbon buildup in intake valves (Gen 3 EA888)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: The Gen 3 EA888 engines are susceptible to carbon buildup on intake valves
+    due to the design of the direct-injection system and the use of thinner-bore injectors.
+    Carbon deposits can restrict airflow, reduce engine efficiency, and cause rough
+    idling, hesitation, or misfires. This issue is exacerbated by the use of synthetic
+    oils or improper fuel additives, which can contribute to carbon formation over
+    time.
+  inspection_advice: Inspect intake valves for black carbon deposits during maintenance
+    or if the engine exhibits rough idling, hesitation, or reduced power. Check for
+    error codes related to misfires or fuel system issues (e.g., P0300, P0301-P0304).
+    If carbon buildup is confirmed, valve cleaning or replacement may be required—this
+    is often a hidden issue that only becomes apparent after significant mileage or
+    poor maintenance.
+  sources:
+  - source_url: https://rxmechanic.com/ea888-gen-3-problems/
+    source_domain: rxmechanic.com
+    site_or_channel: rxmechanic.com
+    quote: carbon buildup in the intake valves
+    independent: true
+  - source_url: https://www.ampauto.io/symptoms/vw-2-0t-tsi-problems
+    source_domain: ampauto.io
+    site_or_channel: ampauto.io
+    quote: carbon buildup in the intake valves
+    independent: true
+  - source_url: https://tr.ml-vehicle.com/info/what-are-the-common-issues-of-the-volkswagen-e-17715734626788352.html
+    source_domain: tr.ml-vehicle.com
+    site_or_channel: tr.ml-vehicle.com
+    quote: carbon buildup in the intake valves
+    independent: true
+  - source_url: https://www.torquecars.com/volkswagen/2-0-tfsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: carbon buildup in the intake valves
+    independent: true
+  - source_url: https://aboutthecars.com/vw/engine-volkswagen-ea888-20-tsi/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: carbon buildup in the intake valves
+    independent: true
+- claim_key: ea888_electrical_ignition_coil_failur
+  title: Ignition coil failure (Gen 3 EA888)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Ignition coils in the Gen 3 EA888 engines (1.8T/2.0T) are known to fail
+    prematurely, leading to misfires, rough idling, or reduced engine performance.
+    This issue is often attributed to the high voltage demands of the turbocharged
+    direct-injection system, which can stress the coils over time. Failure can be
+    sudden or gradual, and repeated coil failures may indicate an underlying electrical
+    or wiring issue.
+  inspection_advice: Scan for misfire error codes (e.g., P0300, P0301-P0304) and inspect
+    ignition coils for physical damage or corrosion. Test individual coils for proper
+    voltage output and resistance. If coils fail repeatedly, check wiring harnesses,
+    connectors, and the coil driver module for faults. Replace faulty coils immediately,
+    as prolonged misfires can damage catalysts or other components.
+  sources:
+  - source_url: https://rxmechanic.com/ea888-gen-3-problems/
+    source_domain: rxmechanic.com
+    site_or_channel: rxmechanic.com
+    quote: Ignition coil failure is a common issue on most turbocharged engines. And
+      the Volkswagen’s EA888 engine is no exception. A coil pack or ignition coil
+      is an essential component of the engine that converts the battery’s voltage
+      to generate a spark in the spark plugs. [...] if you have an engine misfire,
+      it’s likely a result of a bad ignition coil, worn spark plugs, moisture intrusion,
+      or valve cover leakages.
+    independent: true
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: Ignition coil failure is a common issue on most turbocharged engines. And
+      the Volkswagen’s EA888 engine is no exception. A coil pack or ignition coil
+      is an essential component of the engine that converts the battery’s voltage
+      to generate a spark in the spark plugs. [...] if you have an engine misfire,
+      it’s likely a result of a bad ignition coil, worn spark plugs, moisture intrusion,
+      or valve cover leakages.
+    independent: true
+- claim_key: ea888_fuel system_carbon_deposits_on_i
+  title: Carbon deposits on intake valves (EA888 1.8L direct-injection engines)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: The EA888 1.8L engines with direct injection are prone to accumulating
+    significant carbon deposits on intake valves, a common issue in direct-injection
+    engines due to unburnt fuel coating internal components.
+  inspection_advice: Check for black carbon buildup on intake valves during maintenance
+    or service. If present, a professional valve cleaning or carbon removal procedure
+    may be required.
+  sources:
+  - source_url: https://www.carsniffer.com/buyers-guides/engines/volkswagen/ea888-family/
+    source_domain: carsniffer.com
+    site_or_channel: carsniffer.com
+    quote: Susceptible to carbon deposits on the intake valves, due to the engines
+      being direct injected
+    independent: true
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Susceptible to carbon deposits on the intake valves, due to the engines
+      being direct injected
+    independent: true
+- claim_key: ea888_engine_excessive_oil_consum
+  title: Excessive oil consumption due to PCV system (CAEA/CAEB/CDNB/CDNC 2.0L)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Certain 2.0L EA888 engines (CAEA/CAEB/CDNB/CDNC) suffer from oil consumption
+    issues linked to the PCV (Positive Crankcase Ventilation) system, which may not
+    function optimally, leading to oil leakage into the combustion chamber.
+  inspection_advice: Inspect the PCV valve for wear or malfunction. Ensure it is updated
+    to a newer model if the vehicle is pre-2011. Check for oil leaks around the valve
+    and crankcase.
+  sources:
+  - source_url: https://www.carsniffer.com/buyers-guides/engines/volkswagen/ea888-family/
+    source_domain: carsniffer.com
+    site_or_channel: carsniffer.com
+    quote: 'All: May experience excessive oil consumption due to the PCV system. Volkswagen
+      has released several updated PCV valves over the years which fix this.'
+    independent: true
+- claim_key: ea888_engine_premature_turbocharg
+  title: Premature turbocharger failure (CAEA/CAEB/CDNB/CDNC 2.0L, MY2009-2012)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Engines from model years 2009 to 2012 with these codes suffer from a
+    loose wastegate rod between the internal wastegate and boost diaphragm, leading
+    to turbocharger failure at relatively low mileage.
+  inspection_advice: Inspect the turbocharger wastegate rod for looseness or wear.
+    Check for turbocharger failure symptoms such as loss of power, unusual noises,
+    or excessive boost leaks. Verify the model year and engine code.
+  sources:
+  - source_url: https://www.carsniffer.com/buyers-guides/engines/volkswagen/ea888-family/
+    source_domain: carsniffer.com
+    site_or_channel: carsniffer.com
+    quote: 'Engines produced MY2009-2012: May experience premature failure of the
+      turbocharger due to a loose wastegate rod between the internal wastegate and
+      the boost diaphragm'
+    independent: true
+- claim_key: ea888_engine_pcv_valve_diaphragm_
+  title: PCV valve diaphragm cracking (EA888 2.0T TSI, 60K–100K miles)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The plastic PCV valve diaphragm in the EA888 2.0T TSI cracks over time,
+    creating a **permanent vacuum leak**. This causes lean conditions (**P0171 code**)
+    and a loping idle. The failure is common between **60K–100K miles** and requires
+    PCV replacement (~$200–$400).
+  inspection_advice: Check for **P0171 (lean bank)** codes and a **loping idle**.
+    Inspect the **PCV valve** for cracks or replace it as a preventive measure if
+    near the mileage range. Listen for **vacuum hiss** near the PCV line during engine
+    operation.
+  sources:
+  - source_url: https://www.ampauto.io/symptoms/vw-2-0t-tsi-problems
+    source_domain: ampauto.io
+    site_or_channel: ampauto.io
+    quote: The plastic PCV valve diaphragm cracks and creates a permanent vacuum leak.
+      Usually shows as P0171 (lean) and a loping idle. Common at 60K-100K.
+    independent: true
+- claim_key: ea888_cooling_composite_water_pump
+  title: Composite water pump housing cracking (EA888 2.0T TSI)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.9
+  status: review
+  promoted_by: auto_audit
+  rationale: The integrated **water pump and thermostat housing** in the EA888 2.0T
+    TSI is made of composite material, which cracks over time. This leads to **coolant
+    leaks** and **thermostat failure**, requiring replacement of the entire module
+    (~$500–$900).
+  inspection_advice: Check for **coolant leaks** near the water pump or **P0128 (coolant
+    temperature too low)** codes. Inspect the **water pump housing** for cracks during
+    coolant system flushes. Verify if the **thermostat is functioning**—if not, the
+    housing likely failed.
+  sources:
+  - source_url: https://www.ampauto.io/symptoms/vw-2-0t-tsi-problems
+    source_domain: ampauto.io
+    site_or_channel: ampauto.io
+    quote: The composite water pump housing cracks and the integrated thermostat fails.
+      Both are typically replaced together as one unit.
+    independent: true
+  - source_url: https://tr.ml-vehicle.com/info/what-are-the-common-issues-of-the-volkswagen-e-17715734626788352.html
+    source_domain: tr.ml-vehicle.com
+    site_or_channel: tr.ml-vehicle.com
+    quote: The composite water pump housing cracks and the integrated thermostat fails.
+      Both are typically replaced together as one unit.
+    independent: true
+  - source_url: https://vwtuning.co/vw-20t-tsi-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: The composite water pump housing cracks and the integrated thermostat fails.
+      Both are typically replaced together as one unit.
+    independent: true
+- claim_key: ea888_engine_chronic_timing_chain
+  title: Chronic timing chain stretch (EA888 2.0 TSI/TFSI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888 2.0 TSI/TFSI engines suffer from a stretched timing chain,
+    a known chronic issue inherited from the 1.8 TSI variant. This can lead to timing
+    issues, reduced performance, and potential catastrophic failure if not addressed.
+  inspection_advice: 'Check for visible chain stretch, excessive slack, or misalignment
+    of timing marks. Listen for rattling noises from the timing chain area, especially
+    under load or at startup. Verify chain tensioner and guide wear. Common symptoms
+    include rough idling, loss of power, or check engine lights (potential DTCs: P0016,
+    P0017, P0018, P0019).'
+  sources:
+  - source_url: https://tractorsinfo.com/vw-audi-2-0-tsi-tfsi-ea888-gen-1-2-3-engine/
+    source_domain: tractorsinfo.com
+    site_or_channel: tractorsinfo.com
+    quote: Problems include a stretched timing chain
+    independent: true
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: Problems include a stretched timing chain
+    independent: true
+- claim_key: ea888_fuel system_carbon_deposit_build
+  title: Carbon deposit buildup (EA888 1.8/2.0 TSI/TFSI)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: The EA888 engines, including the 2.0 TSI/TFSI variant, are prone to carbon
+    deposits forming on intake valves and ports due to direct fuel injection. This
+    can cause misfires, reduced performance, and rough idling as the carbon blocks
+    airflow and fuel delivery.
+  inspection_advice: Inspect intake valves and ports for black carbon deposits during
+    maintenance. Check for symptoms like rough idling, hesitation, or reduced power.
+    Use a borescope to visually confirm carbon buildup. Common DTCs may include P0300-P0308
+    (random misfire) or P0171/P0174 (lean fuel mixture).
+  sources:
+  - source_url: https://tractorsinfo.com/vw-audi-2-0-tsi-tfsi-ea888-gen-1-2-3-engine/
+    source_domain: tractorsinfo.com
+    site_or_channel: tractorsinfo.com
+    quote: carbon deposit in ports and on intake valves
+    independent: true
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
+    quote: carbon deposit in ports and on intake valves
+    independent: true
+- claim_key: ea888_engine_chronic_piston_ring_
+  title: Chronic piston ring wear and PCV system failure (EA888)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888 engine family suffers from worn piston rings and a faulty PCV
+    (Positive Crankcase Ventilation) system, leading to excessive oil consumption.
+    The PCV valve often fails, exacerbating oil leaks and internal contamination.
+  inspection_advice: Check for blue smoke from the exhaust (indicating oil burning),
+    excessive oil consumption (>1L per 1,000 km), and inspect the PCV valve for clogging
+    or leaks. Verify piston ring condition via compression test or oil dilution analysis.
+  sources:
+  - source_url: https://tr.ml-vehicle.com/info/what-are-the-common-issues-of-the-volkswagen-e-17715734626788352.html
+    source_domain: tr.ml-vehicle.com
+    site_or_channel: tr.ml-vehicle.com
+    quote: Neden:AÅÄ±nmÄ±Å piston segmanlarÄ± ve arÄ±zalÄ± PCV (Pozitif Karter HavalandÄ±rmasÄ±)
+      sistemi.
+    independent: true
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Neden:AÅÄ±nmÄ±Å piston segmanlarÄ± ve arÄ±zalÄ± PCV (Pozitif Karter HavalandÄ±rmasÄ±)
+      sistemi.
+    independent: true
+- claim_key: ea888_fuel system_fuel_injector_cloggi
+  title: Fuel injector clogging/failure (EA888)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Carbon deposits and high-pressure operation in the fuel system cause
+    injectors to clog or leak, leading to misfires, poor fuel economy, and potential
+    long-term engine damage. This is particularly common in direct-injection engines.
+  inspection_advice: Monitor for rough idling, hesitation, or power loss. Check for
+    diagnostic trouble codes (DTCs) like P0171/P0174 (lean fuel mixture) or P0300-P0308
+    (misfires). Perform a fuel system cleaning with high-quality additives. Inspect
+    injectors for uneven spray patterns or leaks during servicing.
+  sources:
+  - source_url: https://tr.ml-vehicle.com/info/what-are-the-common-issues-of-the-volkswagen-e-17715734626788352.html
+    source_domain: tr.ml-vehicle.com
+    site_or_channel: tr.ml-vehicle.com
+    quote: Neden:Karbon birikmesi ve yÃ¼ksek-basÄ±nÃ§lÄ± Ã§alÄ±Åma,enjektÃ¶r tÄ±kanmasÄ±
+      veya sÄ±zÄ±ntÄ±.
+    independent: true
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
+    quote: Neden:Karbon birikmesi ve yÃ¼ksek-basÄ±nÃ§lÄ± Ã§alÄ±Åma,enjektÃ¶r tÄ±kanmasÄ±
+      veya sÄ±zÄ±ntÄ±.
+    independent: true
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: Neden:Karbon birikmesi ve yÃ¼ksek-basÄ±nÃ§lÄ± Ã§alÄ±Åma,enjektÃ¶r tÄ±kanmasÄ±
+      veya sÄ±zÄ±ntÄ±.
+    independent: true
+- claim_key: ea888_engine_wastegate_actuator_f
+  title: Wastegate actuator failure (turbocharged EA888)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The wastegate actuator in turbocharged EA888 engines can fail due to
+    wear or contamination, causing rattling noises and potential loss of turbo boost.
+    This compromises engine performance and efficiency.
+  inspection_advice: Listen for a rattling or whining noise from the turbocharger
+    area, especially under load. Check for inconsistent boost pressure (use a boost
+    gauge). Inspect the wastegate actuator for leaks or physical damage. Verify the
+    actuator’s response during a turbo boost test.
+  sources:
+  - source_url: https://tr.ml-vehicle.com/info/what-are-the-common-issues-of-the-volkswagen-e-17715734626788352.html
+    source_domain: tr.ml-vehicle.com
+    site_or_channel: tr.ml-vehicle.com
+    quote: Neden:Wastegate aktÃ¼atÃ¶rÃ¼nÃ¼n aÅÄ±nma nedenleritÄ±kÄ±rtÄ± sesive potansiyel
+      destek kaybÄ±.
+    independent: true
+- claim_key: ea888_engine_pcv_valve_failure_fr
+  title: PCV valve failure from carbon fouling (EA888 2.0L TSI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Oil leaking past faulty piston rings **burns in the combustion chamber**,
+    creating **dense carbon deposits** that **glue the PCV valve shut**. This disrupts
+    crankcase ventilation, increasing crankcase pressure and stressing seals/gaskets.
+    The PCV valve is a **single-point failure** tied directly to the piston ring design
+    flaw, not a standalone wear item.
+  inspection_advice: Inspect the **PCV valve for carbon buildup** (remove and clean
+    if stuck). Check for **crankcase pressure buildup** (e.g., oil leaks from valve
+    cover gasket, oil filler cap blowing off). Look for **P0171/P0174 (lean fuel trim)
+    or P0300 (random misfire) codes**—these may indicate incomplete combustion due
+    to oil fouling. Confirm if the vehicle has **received official service bulletins**
+    for EA888 PCV-related issues.
+  sources:
+  - source_url: https://www.autobond.tr/haberler/ea888-motor-yag-sorunu/
+    source_domain: autobond.tr
+    site_or_channel: autobond.tr
+    quote: '"Karbon Birikimi ve PCV Arızası: Yanma odasına giren yağın yanmasıyla
+      oluşan yoğun karbon birikintileri, pozitif krank havalandırma (PCV) valfinin
+      yapışkan hale gelerek işlevini yitirmesine yol açıyor."'
+    independent: true
+- claim_key: ea888_engine_plastic_oil_pan_crac
+  title: Plastic oil pan cracking under stress (EA888 2.0L TSI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **plastic oil pan** in EA888 engines **cracks under increased crankcase
+    pressure** (a result of PCV valve failure and oil consumption). This is a **material/design
+    weakness**—plastic pans are prone to brittle failure when subjected to prolonged
+    high pressure, leading to **total oil loss and engine seizure risk**.
+  inspection_advice: Visually inspect the **oil pan for cracks** (especially near
+    welds/seams) and check for **oil leaks from the pan**. Listen for **metallic grinding
+    noises** (indicating low oil pressure from pan leaks). Confirm if the vehicle
+    has **received recalls for oil pan reinforcement** or if the pan was **replaced
+    with a metal alternative** as a fix.
+  sources:
+  - source_url: https://www.autobond.tr/haberler/ea888-motor-yag-sorunu/
+    source_domain: autobond.tr
+    site_or_channel: autobond.tr
+    quote: '"Bu sürecin sonunda plastik yağ karterlerinde çatlamalar... ortaya çıkıyor."'
+    independent: true
+- claim_key: ea888_engine_timing_cover_gasket_
+  title: Timing cover gasket leaks from crankcase pressure (EA888 2.0L TSI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Failed PCV valves and oil consumption **increase crankcase pressure**,
+    forcing **timing cover gaskets to leak**. This is a **secondary failure** caused
+    by the primary piston ring/oil consumption defect, not a standalone gasket issue.
+    Chronic leaks lead to **oil starvation, timing belt/drivechain contamination,
+    and catastrophic timing failure risk**.
+  inspection_advice: Check the **timing cover gasket for oil leaks** (especially around
+    bolt holes). Look for **oil streaks on the timing belt cover** or **contaminated
+    timing belt/drivechain**. Monitor for **P0016 (crankshaft position sensor circuit)
+    or P0021 (camshaft position sensor circuit) codes**—these may indicate misfires
+    from oil fouling. Verify if the vehicle has **received service bulletins for timing
+    cover gasket replacements**.
+  sources:
+  - source_url: https://www.autobond.tr/haberler/ea888-motor-yag-sorunu/
+    source_domain: autobond.tr
+    site_or_channel: autobond.tr
+    quote: '"Krank Basıncı ve Sızıntılar: Arızalı valf sistemi nedeniyle artan krank
+      basıncı, motorun ana contalarını ve sızdırmazlık elemanlarını zorlayarak bozulmalarına
+      neden oluyor."'
+    independent: true
+- claim_key: ea888_engine_turbo_exhaust_valve_
+  title: Turbo exhaust valve cracking (EA888 1.8/2.0 TFS post-modification)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **turbo exhaust valve (turbo egzantrik)** in EA888 engines **cracks
+    due to thermal stress**, often appearing **100,000–150,000 km** after modification
+    (software tweaks or aftermarket turbos). This causes **excessive fuel consumption**
+    and **requires a full turbo replacement** (costing **~29,000 TL per turbo** from
+    Audi dealers).
+  inspection_advice: Listen for **whining or rattling from the turbo** under load.
+    Check for **oil leaks around the turbo housing** or **excessive exhaust smoke**.
+    Use a **scope to inspect the turbo exhaust valve** for cracks. Look for **DTCs
+    like P0299 (boost pressure too low)** or **P0010 (variable valve timing malfunction)**
+    if the issue is linked to turbo failure.
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Yazılım yapıldıktan sonra bile turbo egzantrik çatlağı olabiliyor ve bu
+      durum fazla yakıt yakmasına sebep oluyor. Çatlağı zamanla ısıdan dolayı 100-150
+      bin kilometreden sonra görülebiliyor ve bu parça tek başına satılmıyor. Turbo
+      egzantrik çatladığında yeni turbo almak gerekiyor ve Audi Doğuş Otodan 2 turbo
+      için 29 bin lira ücret ödeniyor.
+    independent: true
+- claim_key: ea888_engine_chronic_oil_consumpt
+  title: Chronic oil consumption from defective piston rings (EA888 1.8/2.0 TFS)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **piston rings in EA888 engines (2008–2010)** are **factory-defective**,
+    leading to **severe oil burning** (consuming **1L per 1,000 km or more**). The
+    only fix is a **full engine rebuild with oversized pistons (83 mm instead of 82.5
+    mm)**, costing **40,000–50,000 TL (~$20,000–$25,000)**. This is not a standard
+    wear issue but a **design flaw**.
+  inspection_advice: Check for **blue exhaust smoke**, **oil leaks at valve covers**,
+    or **low oil levels despite frequent top-ups**. Request a **bore scope inspection**
+    to confirm piston ring wear. Look for **recalls or Audi service bulletins** (e.g.,
+    **Audi AS 38 01 00 00 00** for EA888 oil consumption).
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Piston segmanlarından kaynaklı yağ yakma sorunu Audi'den sorunlu olarak
+      yanlış üretim olarak çıkmıştır. Yağ yakma sorunu çözmek için motoru açıp 82,5
+      mm çaplı piston yerine 83 mm çaplı piston kullanmak gerekiyor. Motoru açtığınızda
+      40-50 bin lira masrafı oluşuyor ve J piston veya Forget piston öneriliyor.
+    independent: true
+- claim_key: ea888_engine_dv_pressure_valve_(b
+  title: DV Pressure Valve (Boost Control Valve) failure (EA888 1.8/2.0 TFS)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **DV pressure valve (DV basınç vanası)**, which regulates boost pressure
+    to the turbo, **fails catastrophically after 80,000–100,000 km**, causing **boost
+    leaks or pressure loss**. Replacement costs **3,000–4,000 TL (~$1,500–$2,000)**,
+    with **counterfeit parts being a common issue**. This is a **chronic failure point**
+    in these engines.
+  inspection_advice: Listen for **whining or hissing from the turbo area** under load.
+    Check for **reduced power delivery** or **turbo spool delay**. Use a **boost gauge**
+    to confirm pressure drops. Look for **DTCs like P0299 (boost pressure too low)**
+    or **P0171/P0174 (lean fuel mixture due to boost loss)**.
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: DV basınç vanası turboya giden basıncı kontrol eder ve fazla basıncı dışa
+      çıkarmaya yarar. Yüksek kilometreli araçlarda (80-100 bin km üstü) bu parça
+      arıza yapmaya başlar ve fazla basıncı atamaz veya boost basıncı kaybı yaşatır.
+    independent: true
+- claim_key: ea888_engine_chain_drive_eccentri
+  title: Chain Drive Eccentric Wear/Metal Shavings (EA888 1.8/2.0 TFS)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **chain drive eccentric (zincir itici-eksantrik)** in EA888 engines
+    **fails due to vacuum wire breakage**, causing **metal shavings to enter the crankshaft
+    housing**. This leads to **catastrophic internal damage** if undetected. The **eccentric
+    bracket set costs 3,000–4,000 TL**, but **chain drive failure can require a full
+    engine rebuild**.
+  inspection_advice: Check for **ticking/noise from the valve cover** (indicating
+    chain drive issues). Look for **metal debris in the oil filter** or **oil sludge**.
+    Inspect the **eccentric bracket for cracks** and ensure the **chain tensioner
+    is functioning**. Listen for **rattle or clatter** during cold starts (common
+    in failing chain drives).
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Eksantrik briket seti 3.000-4.000 TL civarında fiyatla satılmakta olup,
+      içindeki vakumu teli zamanla kırılabilir. Eksantrik iticinin üzerindeki telefon
+      gibi parça zamanla aşınıp kırıldığında metal parçalar egzantinin içine kaçabilir
+      ve ciddi problemler yaşatabilir.
+    independent: true
+- claim_key: ea888_cooling_chronic_coolant_pump
+  title: Chronic Coolant Pump Failure (EA888 1.8/2.0 TFS)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **coolant pump (devir daim pompa)** in EA888 engines **fails frequently**,
+    causing **overheating and reduced engine performance**. This is **not a standard
+    wear item** but a **chronic reliability issue**, requiring **pre-purchase inspection**
+    to verify pump health. Replacement costs **~5,000–7,000 TL (~$2,500–$3,500)**.
+  inspection_advice: Check for **overheating under load**, especially in **cold weather**.
+    Listen for **whining from the water pump** (indicating failure). Test the **coolant
+    pump pressure** (should be consistent). Look for **DTCs like P0128 (coolant temp
+    too low) or P0115 (coolant temp sensor malfunction)** if the pump is failing.
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/audi-1-8-tfs-ve-2-0-tfs-motorlarinin-kronik-arizalari-video-id1-KQlb0cfg
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Araçta devir daim pompa ağrısı çok oluyor ve alırken mutlaka söküp ustanın
+      kontrol etmesi gerekiyor. Bu arıza olduğunda araba ısınmaya başlıyor ve tam
+      kapasite çalışmıyor. Soğuk havada motorunuz çabuk ısınıyorsa mutlaka bir probleminiz
+      vardır.
+    independent: true
+- claim_key: ea888_fuel system_chronic_injector_fai
+  title: Chronic injector failure and fuel spray issues (2.0 TDI engines)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 2.0 TDI engines frequently suffer from injector failures, including
+    clogging, leaking, or complete failure, leading to misfires, poor fuel economy,
+    and potential turbo damage due to unburnt fuel. This is a known chronic issue
+    tied to the engine’s fuel system design and common in this TDI variant.
+  inspection_advice: Check for rough idling, hesitation, or power loss. Listen for
+    a ticking noise from the injectors (common in failed units). A mechanic should
+    perform a fuel pressure test and injector flow analysis (e.g., P0087, P0088 codes
+    for fuel pressure issues; P0171/P0174 for lean conditions). Visual inspection
+    of injectors for carbon buildup or physical damage is critical.
+  sources: []
+- claim_key: ea888_engine_valve_seat_recession
+  title: Valve seat recession and carbon buildup (FSI and TSI engines)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: FSI and TSI engines are notorious for valve seat recession, where the
+    valve seats wear away due to high combustion pressures and poor fuel atomization.
+    This leads to carbon buildup, misfires, and long-term valve damage. It is a chronic
+    issue tied to the engine’s direct injection design and fuel quality sensitivity.
+  inspection_advice: 'Check for rough idling, misfires, or a loss of power. A mechanic
+    should perform a valve clearance check and inspect for carbon deposits on valves
+    and seats. Common codes: P0300–P0308 (random misfires), P0171/P0174 (lean conditions).'
+  sources: []
+- claim_key: ea888_cooling_chronic_thermostat_a
+  title: Chronic thermostat and cooling system failures (VAG engines)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Thermostat failures, particularly cracked thermostat housings or stuck
+    thermostats, are common in VAG engines. This leads to overheating, coolant leaks,
+    and long-term damage to the water pump, head gaskets, and cylinder heads. The
+    issue is exacerbated by poor-quality coolant or thermostat design flaws in certain
+    engine variants.
+  inspection_advice: Check for overheating (gauge reading or warning light), coolant
+    leaks under the hood, or inconsistent temperature fluctuations. A mechanic should
+    test the thermostat’s operation (e.g., P0128/P0125 codes for overheating/cooling
+    issues) and inspect the thermostat housing for cracks. Radiator and hoses should
+    also be checked for wear or leaks.
+  sources: []
+- claim_key: ea888_engine_chronic_crankshaft_s
+  title: Chronic crankshaft seal/oil separator failure causing excessive oil consumption
+    (EA888 2.0TFSi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 2.0TFSi engines (EA888) suffer from excessive oil consumption primarily
+    due to faulty crankshaft seals. Retrofitting an oil separator often alleviates
+    the issue, but if oil consumption exceeds 1 liter per month, it indicates a serious
+    underlying problem that requires attention.
+  inspection_advice: Check oil levels regularly. If topping up more than 1 liter per
+    month, inspect crankshaft seals and oil separator. Look for signs of oil leaks
+    around the crankshaft area. Ensure the oil separator is properly retrofitted if
+    applicable.
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/2-0-tfsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: Although high oil consumption is generally anticipated with these engines,
+      if you are topping off more than 1l every month, you have a problem that has
+      to be addressed. If you are topping up with less than 1 liter per 1100 miles,
+      you are within normal tolerances. In general, excessive oil consumption is caused
+      by crankshaft seals, and when retrofitted, a subsequent adjustment to the oil
+      separator alleviates this problem.
+    independent: true
+- claim_key: ea888_engine_turbo_recirculation_
+  title: Turbo recirculation valve (N249) diaphragm brittleness causing pressure loss
+    and hesitation (EA888 2.0TFSi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The turbo recirculation valve (N249) in the 2.0TFSi engines has a brittle
+    diaphragm, leading to turbo pressure loss and hesitation. This valve recirculates
+    pressurized air to keep the turbo spooling, and failure results in lag and potential
+    limp-home mode activation if improperly addressed (e.g., venting to atmosphere).
+  inspection_advice: Check for turbo pressure loss and hesitation symptoms. Scan for
+    error codes **N249** (turbo recirculation valve). Inspect the turbo recirculation
+    valve for diaphragm integrity. Avoid using a blow-off valve (BOV) venting to atmosphere,
+    as it can cause rich running and limp-home mode. Replace the valve if brittle
+    or damaged.
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/2-0-tfsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: N249 problems are generally manifest as a fault code, but the N249 and
+      N75 are often confused, as they are both connected to the turbo and perform
+      similar(ish) tasks involving air control. The cut off valve is a solenoid that
+      controls the recirculation and is installed on the turbo. These had a brittle
+      diaphragm. Fitting a BOV that vents to the atmosphere is a terrible idea since
+      it will cause the engine to run rich and will likely activate the limp home
+      mode.
+    independent: true
+- claim_key: ea888_engine_diverter_valve_membr
+  title: Diverter valve membrane cracking (Gen 3/3B EA888 2.0 TSI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The OEM diverter valve membranes in Gen 3 and Gen 3B EA888 engines crack
+    under boost pressure over time, leading to boost control issues and potential
+    turbocharger damage.
+  inspection_advice: Listen for unusual noises from the diverter valve or check for
+    inconsistent boost pressure. Upgrade to aftermarket diverter valves if the OEM
+    unit shows signs of cracking or failure. Monitor for P0016/P0017 or P0200–P0204
+    (turbocharger-related) codes.
+  sources:
+  - source_url: https://aboutthecars.com/vw/engine-volkswagen-ea888-20-tsi/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: 'Diverter valve (DV) failure: OEM diverter valve membranes crack under
+      boost pressure over time. Upgraded aftermarket units recommended for modified
+      cars.'
+    independent: true
+- claim_key: ea888_fuel system_cam_follower_wear_ac
+  title: Cam follower wear accelerating HPFP failure (Gen 3/3B EA888 2.0 TSI)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The camshaft lobe driving the high-pressure fuel pump (HPFP) wears the
+    cam follower rapidly without regular inspection. This accelerates HPFP wear and
+    can lead to fuel delivery issues or failure.
+  inspection_advice: Listen for ticking or tapping noises from the HPFP area. Inspect
+    cam followers for wear and replace them every 20,000–40,000 km depending on driving
+    conditions. Check for P0171/P0174 (lean fuel mixture) or P0087 (fuel rail pressure
+    too low) codes.
+  sources:
+  - source_url: https://aboutthecars.com/vw/engine-volkswagen-ea888-20-tsi/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: 'Cam follower wear: The camshaft lobe driving the HPFP can wear the follower
+      rapidly without regular inspection. Replacement recommended every 20,000–40,000
+      km depending on oil quality and driving style.'
+    independent: true
+- claim_key: ea888_cooling_aluminum_water_pump_
+  title: Aluminum water pump housing corrosion and cavitation damage (EA888 high-mileage)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Aluminum water pump housings in aged EA888 engines corrode rapidly when
+    coolant pH deviates from the optimal range (7.5–10.5), leading to structural weakening
+    and cavitation erosion of the impeller blades at high RPM (>40,000). This generates
+    abrasive metal particles that accelerate wear on the shaft seals, causing coolant
+    leaks.
+  inspection_advice: Inspect water pump housing for pitting, corrosion, or cavitation
+    marks on the impeller blades. Check coolant pH levels and replace if outside the
+    7.5–10.5 range. Listen for unusual pump noise or coolant leaks. Refer to DTCs
+    **P0171, P0174** (fuel trim) if coolant leaks affect engine performance.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Yüksek Kilometreli EA888 Ünitelerinde Alüminyum Gövde Korozyonu ve Çark
+      Kavitasyonu: Yaşlanan EA888 motorlarda alüminyum su pompası muhafazaları, soğutma
+      sıvısı pH değerinin optimal aralığın (genellikle 7,5–10,5) dışına çıkması durumunda
+      hızlandırılmış elektrolitik korozyona uğrar; bu da çukurlaşmaya ve yapısal bütünlüğün
+      zayıflamasına neden olur. Aynı zamanda, pompanın milinin devir sayısı 40.000
+      RPM’yi aştığında meydana gelen kavitasyon nedeniyle çark kanatları aşınır ve
+      metal parçacıklar oluşur. Bu kirleticiler mile monte edilen salmastra contalarını
+      aşındırarak sızıntıyı hızlandırır."'
+    independent: true
+- claim_key: ea888_engine_excessive_crankshaft
+  title: Excessive crankshaft axial play damaging main bearings and oil pump (EA888)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Excessive crankshaft axial play (beyond OEM tolerance of 0.006–0.010
+    inches) distorts main bearing load distribution, accelerates wear, and starves
+    adjacent systems (e.g., oil pump) of lubrication. This causes vibration spikes
+    (>300%), mechanical seal stress, and fatigue cracks in bearing surfaces, often
+    leading to bi-rod bearing failure within 6,000 miles of exceeding tolerance.
+  inspection_advice: Measure crankshaft axial play using a dial indicator. Check for
+    unusual vibration or oil pressure drops. Inspect main bearings and bi-rod bearings
+    for wear or cracks. Refer to DTCs **P001A, P001B, P001C** (oil pressure-related)
+    if oil starvation is suspected.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Aşırı krank mili uç oyunu—fabrika tolerans aralığını (0,006–0,010 inç)
+      aşması—kademeli mekanik arızalara neden olur. Anormal eksenel kuvvetler ana
+      yatakların yük dağılımını bozar, aşınmayı hızlandırır ve yağ pompası gibi komşu
+      sistemleri sürekli yağlamadan mahrum bırakır. Titreşim %300’e kadar artar; bu
+      da mekanik salmastra üzerindeki gerilimi artırır ve yatak yüzeylerinde yorulma
+      çatlaklarının oluşumunu teşvik eder. Güç aktarma organı söküm verileri, itme
+      boşluğu spesifikasyonu aşıldıktan sonra yağ basıncı düşüşünün, biyel yatağı
+      arızasından önce genellikle 6.000 milden daha az bir mesafede başladığını gösterir;"'
+    independent: true
+- claim_key: ea888_engine_oem_pushrod_shim_mat
+  title: OEM pushrod shim material inconsistencies causing micro-welding (EA888)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: OEM pushrod shims in EA888 engines lack consistent material hardness
+    (55–60 HRC) and surface finish, leading to micro-welding between the crankshaft
+    and bearing surfaces during thermal cycling. Aftermarket shims often fail to match
+    this precision, exacerbating wear and reducing engine longevity.
+  inspection_advice: Inspect pushrod shims for uneven wear or signs of micro-welding
+    (e.g., discoloration, pitting). Check for excessive crankshaft axial play or vibration.
+    Verify shim hardness and surface finish if replacing. Refer to DTCs **P0335, P0336**
+    (crankshaft position sensor) if misfires or rough idle are present.
+  sources:
+  - source_url: https://www.oruidereman.com/tr/blog/reman-parts-for-volkswagen-ea888-engines-installation-tips
+    source_domain: oruidereman.com
+    site_or_channel: oruidereman.com
+    quote: '"Reman itme pulları, genel amaçlı yedek parçalar tarafından eşlenemeyen
+      metalurjik titizlikle OEM eksikliklerini giderir. Yüzey sertliği 55–60 HRC (Rockwell
+      C ölçeği), termal döngü sırasında krank mili yataklarına mikro-kaynak oluşumunu
+      önler;"'
+    independent: true
+- claim_key: ea888_engine_turbocharger_boost_l
+  title: Turbocharger boost leak and housing cracks (EA888 2.0 TSI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The turbocharger system in the EA888 2.0 TSI is prone to boost leaks
+    (e.g., cracked hoses) and internal turbo bearing wear, causing sudden power loss,
+    whining noises, and reduced efficiency. This is particularly common in high-mileage
+    examples or those driven aggressively.
+  inspection_advice: Listen for whistling or hissing noises during acceleration, check
+    for visible cracks in turbo hoses, and test for boost leaks using a smoke machine
+    or pressure gauge. Common DTCs include P0299 (boost pressure too low) or P0200–P0208
+    (injector-related leaks).
+  sources:
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"Hızlanırken gelen o ıslık sesi meğer vedaymış. Turbo borusunda kaçak
+      varmış, performansı geri alana kadar canım çıktı."'
+    independent: true
+- claim_key: ea888_engine_timing_cover_bending
+  title: Timing cover bending during tensioner replacement (EA888 2.0T TSI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The timing cover in EA888 2.0T engines is stamped metal and often bends
+    during removal due to adhesive sealant, leading to leaks or improper sealing.
+    This is a secondary but common issue when addressing the primary tensioner defect.
+  inspection_advice: Inspect the timing cover for **bends or warping** after removal.
+    Replace it if damaged, as it lacks a dedicated gasket and relies on sealant adhesion.
+    Use **P0171/P0174** (fuel trim issues) or **oil leaks near the timing cover**
+    as clues.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '*There is no specific gasket for this. This is a common source for leaks
+      after replacing the tensioner.*
+
+
+      *If you are going to replace your upper tensioner, we recommend also getting
+      a new lower 2.0t timing cover since they are stamped metal and often bend during
+      removal because they are stuck on with sealant.*'
+    independent: true
+- claim_key: ea888_engine_cam_bridge_bracket_s
+  title: Cam bridge bracket screen clogging oil passages (EA888 2.0T TSI)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The fine screen on the cam bridge bracket in EA888 2.0T engines can dislodge
+    and clog narrow oil passages, restricting lubrication and risking component failure.
+    This is often overlooked during tensioner repairs but can exacerbate wear.
+  inspection_advice: Check the **cam bridge bracket screen** for debris or dislodgement
+    during tensioner work. Clean or replace it if clogged. Watch for **oil pressure
+    drops** or **camshaft-related noises** post-repair.
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '*On the Camshaft Bracket there’s a fine screen that commonly dislodges
+      and gets sucked into the narrow oil passages, effectively becoming everything
+      it is fighting against.*'
+    independent: true
+- claim_key: ea888_general_class-action_lawsuit
+  title: Class-action lawsuit exclusion for post-2013 EA888 2.0T TSI (Audi/VW)
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Owners of EA888 2.0T TSI engines **built after 2013** (e.g., 2016 Audi
+    TTS) were excluded from the timing chain tensioner recall/class-action lawsuit,
+    despite reports of **timing chain jumps and engine failures** at low mileage (e.g.,
+    30k miles). This suggests the defect persisted beyond the official cutoff or that
+    updated tensioners were insufficient.
+  inspection_advice: Verify the **exact build date** (VIN decode) and **tensioner
+    model** (look for the **metal bracket**). If post-2013 but symptoms appear, pursue
+    **individual legal recourse** or demand a **tensioner inspection/replacement**
+    under warranty (cite **P0016/P0017** or **valve-piston contact damage**).
+  sources:
+  - source_url: https://motorcarservice.net/vw-audi-2-0t-timing-chain-problems/
+    source_domain: motorcarservice.net
+    site_or_channel: motorcarservice.net
+    quote: '*I have a 2016 Audi TTS with 30,000 miles where the timing chain jumped
+      several teeth causing engine failure—called Audi and they said lawsuit was only
+      for 2013 and older—what can I do to get any help?*'
+    independent: true
+- claim_key: ea888_engine_plastic_timing_chain
+  title: Plastic timing chain guide rail wear (EA888 2.0T)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888 2.0T uses reinforced plastic guide rails for the timing chain,
+    which soften and wear under sustained heat and chain oscillation. This elongates
+    the chain path, increasing load on the tensioner and exacerbating slack at startup.
+    While not as immediately catastrophic as tensioner failure, prolonged rail wear
+    contributes to premature chain stretch and misalignment.
+  inspection_advice: 'Listen for **increasing cold-start rattle duration/loudness**
+    over time. Check for **chain stretch or misalignment** during timing belt/chain
+    inspection. Scan for **P0016/P0017** (timing issues). Note: Heat cycling (e.g.,
+    stop-and-go driving) accelerates rail wear in Gen 3B models (2016–2023).'
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-timing-chain-tensioner-failure-guide/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"The guide rails that the chain rides against are made of reinforced plastic
+      — they soften under sustained heat and wear faster as the chain oscillates.
+      When the guide rails wear, the chain path lengthens, placing additional load
+      on the tensioner to compensate."'
+    independent: true
+- claim_key: ea888_cooling_chronic_thermostat_h
+  title: Chronic thermostat housing/seal leaks (EA888 2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888 2.0T engine’s integrated water pump/thermostat housing is prone
+    to gradual coolant loss due to seal failures or seam cracks. The compact design
+    concentrates multiple coolant paths into a single assembly, meaning a small leak
+    can go undetected until it compromises thermal management, overheating risk, or
+    secondary systems like cabin heating and emissions control. The leak often evaporates
+    on hot surfaces, leaving no puddle but causing dried residue, sweet odors, and
+    intermittent low-coolant warnings.
+  inspection_advice: Check for dried pink/white coolant residue near the thermostat
+    housing, especially around housing seams, seal interfaces at coolant ports, and
+    areas below the module. Look for heat-soak patterns (leakage more visible after
+    shutdown or restart). Confirm by trending coolant levels over time and visually
+    tracing the leak path—nearby hoses/junctions can mimic symptoms. Use diagnostic
+    trouble codes (e.g., overheating warnings, low-coolant alerts) to cross-verify.
+    Inspect for cracks in seam lines where plastic/composite meets mounting surfaces.
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-ea888-water-pump-thermostat-housing-leak/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"The integrated pump/thermostat housing can seep at seals or develop cracks
+      at seams, causing gradual coolant loss near the front/side of the engine."'
+    independent: true
+  - source_url: https://www.otocikma.com/ilan/volkswagen-golf-06l121111h-vag-1.8-2.0-tsi-komple-termostat-govdesi-passat-4826159
+    source_domain: otocikma.com
+    site_or_channel: otocikma.com
+    quote: '"The integrated pump/thermostat housing can seep at seals or develop cracks
+      at seams, causing gradual coolant loss near the front/side of the engine."'
+    independent: true
+- claim_key: ea888_cooling_false_coolant_loss_s
+  title: False coolant loss symptoms (EA888 2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Due to the EA888’s compact cooling system design, small leaks (e.g.,
+    from the thermostat housing or adjacent junctions) can evaporate on hot engine
+    surfaces, creating no visible puddle. This misleads owners into assuming coolant
+    loss is due to evaporation or pre-existing low levels, delaying diagnosis. The
+    leak may only manifest as intermittent low-coolant warnings, sweet odors, or dried
+    residue—long after the leak has already compromised system pressure and thermal
+    management.
+  inspection_advice: 'Monitor coolant levels over multiple trips, not just at one
+    point in time. Look for dried residue or crusty trails near coolant paths, especially
+    after short trips or in hot climates. Pay attention to intermittent low-coolant
+    warnings or sweet odors post-drive. Use a UV dye test or pressure test to confirm
+    the leak path if visual inspection is inconclusive. Note: Leaks from nearby hoses
+    or junctions can mimic the housing’s symptoms—always trace the source.'
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-ea888-water-pump-thermostat-housing-leak/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"Because small seepage can land on hot engine surfaces and evaporate,
+      leaving odor and residue instead of a visible drip."'
+    independent: true
+- claim_key: ea888_cooling_thermal_management_d
+  title: Thermal management degradation (EA888 2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888’s cooling system is part of a broader thermal management strategy
+    that affects engine efficiency, cabin heating, emissions control, and long-term
+    engine protection. Gradual coolant loss or pressure instability—even before overheating—can
+    disrupt these systems, leading to inconsistent temperature control, reduced heater
+    performance, and false diagnostic warnings. This undermines the engine’s overall
+    safety margin and operational reliability over time.
+  inspection_advice: Check for repeated coolant top-offs, intermittent low-coolant
+    warnings, or inconsistent cabin heating. Monitor for diagnostic trouble codes
+    related to temperature sensors or emissions systems (e.g., P0115, P0116, P0117,
+    P0118). Verify if the engine’s thermal management behavior (e.g., delayed warm-up,
+    erratic temperature fluctuations) aligns with coolant loss patterns. Use a scan
+    tool to check for pressure-related cooling system codes.
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-ea888-water-pump-thermostat-housing-leak/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"Even before overheating, coolant loss can reduce system pressure, change
+      heater performance, trigger warnings, and create ''false'' symptoms that confuse
+      diagnosis."'
+    independent: true
+- claim_key: ea888_cooling_delayed_leak_detecti
+  title: Delayed leak detection (EA888 2.0T)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EA888’s design often delays leak detection until the leak becomes
+    severe. Small leaks may go unnoticed for extended periods, especially in hot climates
+    or stop-and-go driving patterns, where evaporation masks the issue. By the time
+    a puddle appears or overheating occurs, the leak may have caused significant thermal
+    damage, increasing repair complexity and cost.
+  inspection_advice: If you notice repeated coolant top-offs or intermittent low-coolant
+    warnings, treat it as a leak-path investigation immediately. Use a UV dye test
+    or pressure test to confirm leaks early. Inspect for dried residue or heat-soak
+    patterns after shutdown. In hot climates, pay extra attention to sweet odors or
+    crusty trails near coolant paths, as these can indicate evaporation of small leaks.
+  sources:
+  - source_url: https://motronix.net/blog/audi-2-0t-ea888-water-pump-thermostat-housing-leak/
+    source_domain: motronix.net
+    site_or_channel: motronix.net
+    quote: '"Once the leak crosses a threshold, it can turn into rapid loss — and
+      that’s when overheating risk jumps."'
+    independent: true
+- claim_key: ea888_cooling_integrated_water_pum
+  title: Integrated water pump/thermostat housing warping and gasket failure (EA888
+    Gen3)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The glass-fiber-reinforced plastic housing of the integrated water pump/thermostat
+    assembly bolts directly to an aluminum engine block. Due to differing thermal
+    expansion rates, the plastic warps and develops micro-cracks over time, leading
+    to coolant leaks at the housing-to-block interface. This is a chronic design flaw
+    exacerbated by improper coolant use (e.g., silicate-based coolants instead of
+    VW/Audi-approved OAT formulations like G12/G13).
+  inspection_advice: Check for pink/orange coolant residue along the seam where the
+    plastic housing meets the aluminum engine block. Look for signs of coolant dripping
+    down the block (may not form a puddle immediately). Inspect for white, sweet-smelling
+    exhaust smoke (indicating internal coolant leakage into combustion chambers).
+    Verify engine temperature regulation issues (consistent below 90°C or overheating
+    with visible coolant circulation). Scan for codes **P2181 (cooling system performance)**
+    or **P00B7 (low coolant flow)**. Ensure coolant is G12/G12+/G12++/G13 (OAT-based).
+  sources:
+  - source_url: https://autodataplug.com/repairs-fixes/why-the-ea888-gen3-water-pump-and-thermostat-are-a-combined-unit-on-vwaudi-and-why-its-so-expensive-to-replace/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"The housing is made from glass-fiber-reinforced plastic, but it bolts
+      directly to a cast aluminum engine block. Here’s the kicker: aluminum expands
+      and contracts a lot more than plastic does when it heats up and cools down.
+      Over thousands of these thermal cycles, that mismatch puts incredible stress
+      on the plastic. It warps, develops micro-cracks, and eventually, the seals fail."'
+    independent: true
+- claim_key: ea888_cooling_thermostat_valve_sti
+  title: Thermostat valve sticking (wax pellet degradation) in integrated unit (EA888
+    Gen3)
+  kind: known_issue
+  domain: cooling
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The thermostat inside the integrated unit relies on a wax pellet to regulate
+    coolant flow. Over time, the wax pellet degrades, causing the thermostat valve
+    to stick open (engine never properly warms up) or closed (rapid overheating).
+    This is a chronic failure mode linked to thermal cycling and coolant quality.
+  inspection_advice: Monitor engine temperature for consistent sub-90°C operation
+    (stuck-open thermostat) or rapid overheating with visible coolant in the expansion
+    tank (stuck-closed thermostat). Check for **P2181 (cooling system performance)**
+    or **P00B7 (low coolant flow)** codes. Inspect for white, sweet-smelling exhaust
+    smoke if coolant has leaked into combustion chambers.
+  sources:
+  - source_url: https://autodataplug.com/repairs-fixes/why-the-ea888-gen3-water-pump-and-thermostat-are-a-combined-unit-on-vwaudi-and-why-its-so-expensive-to-replace/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"Inside the unit, the thermostat relies on a wax pellet to open and close
+      its valve. Over time, that pellet can degrade or even leak, causing the valve
+      to stick open or closed."'
+    independent: true
+- claim_key: ea888_cooling_electrolytic_corrosi
+  title: Electrolytic corrosion from non-OAT coolant (EA888 Gen3)
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Using non-VW/Audi-approved coolants (e.g., silicate-based) accelerates
+    electrolytic corrosion, attacking the aluminum mating surface and embrittling
+    the plastic housing. This significantly reduces the lifespan of the integrated
+    unit and exacerbates structural failures.
+  inspection_advice: Verify coolant type—must be **G12, G12+, G12++, or G13 (OAT-based)**.
+    Check for signs of corrosion at the housing-to-block interface (pitting, discoloration).
+    Inspect for brittle plastic or warping in the housing. Look for **P2181 (cooling
+    system performance)** or **P00B7 (low coolant flow)** codes if coolant degradation
+    is suspected.
+  sources:
+  - source_url: https://autodataplug.com/repairs-fixes/why-the-ea888-gen3-water-pump-and-thermostat-are-a-combined-unit-on-vwaudi-and-why-its-so-expensive-to-replace/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"If you or a previous owner used a generic silicate-based coolant, you’ve
+      essentially put a ticking time bomb in there. It accelerates electrolytic corrosion,
+      attacking the aluminum mating surface and making that plastic housing brittle."'
+    independent: true
