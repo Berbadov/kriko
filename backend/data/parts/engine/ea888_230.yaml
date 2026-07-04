@@ -39,7 +39,7 @@ claims:
 - claim_key: ea888_230_cooling system_aluminum_water_pump_
   title: Aluminum water pump housing corrosion due to coolant pH imbalance
   kind: known_issue
-  domain: cooling system
+  domain: cooling
   severity: high
   confidence: 0.6
   status: review
@@ -63,7 +63,7 @@ claims:
 - claim_key: ea888_230_cooling system_water_pump_cavitatio
   title: Water pump cavitation damage and seal failure
   kind: known_issue
-  domain: cooling system
+  domain: cooling
   severity: high
   confidence: 0.6
   status: review
@@ -159,6 +159,12 @@ claims:
       prevent the valves from opening and closing correctly. This will eventually
       result in complete valve failure and you will start to experience misfires."'
     independent: true
+  - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
+    source_domain: modpark.com
+    site_or_channel: modpark.com
+    quote: '"60 binde araç resmen küstü, sarsıntıdan duramıyordum. Karbon temizliği
+      şartmış, yaptırdım ama her 40 binde bir bu stres yaşanmaz."'
+    independent: true
 - claim_key: ea888_230_engine_premature_spark_plug
   title: Premature spark plug and coil failures (Gen 1/2)
   kind: known_issue
@@ -199,6 +205,14 @@ claims:
   - source_url: https://www.modpark.com/blog/otomotiv/volkswagen-scirocco-2-0-tsi-kronik-sorunlari-performans-canavari-mi-masraf-bombasi-mi/
     source_domain: modpark.com
     site_or_channel: modpark.com
+    quote: '"High-pressure fuel pump failures were also noted on these 2.0 engines...
+      This pump is located usually on top of the engine and this pump sends high-pressure
+      fuel into the fuel rails... The HPFP will fail and this will cause running issues,
+      check engine light, leaks, or possibly some weird sounds."'
+    independent: true
+  - source_url: https://www.carsandwrenches.com/vw-2-0-tsi-tfsi-engine-problems/
+    source_domain: carsandwrenches.com
+    site_or_channel: carsandwrenches.com
     quote: '"High-pressure fuel pump failures were also noted on these 2.0 engines...
       This pump is located usually on top of the engine and this pump sends high-pressure
       fuel into the fuel rails... The HPFP will fail and this will cause running issues,
@@ -392,52 +406,52 @@ claims:
     Verify turbo history and ensure proper lubrication systems are functioning.
   sources: []
 - claim_key: ea888_230_transmission_dsg_şanzıman_düşük_h
-  title: DSG Şanzıman Düşük Hız Sarsıntıları ve Geç Tepki
+  title: DSG Transmission Low-Speed Jerking and Delayed Response
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DSG şanzımanı, düşük hızlarda (özellikle 1-2 vites geçişlerinde) sarsıntılar
-    ve anormal tepki süreleri yaşayabilir. Dur-kalk trafikte kararsız davranışlar
-    ve ani hızlanmalarda gecikmeler sıkça bildirilmiştir. Yüksek kilometrelerde mekatronik
-    arızaları riski de artmaktadır.
-  inspection_advice: Test sürüşünde düşük hızlarda ve dur-kalk trafikte şanzımanın
-    davranışlarını gözlemleyin. Vites geçişlerinde sarsıntı, vuruntu veya anormal
-    sesler olup olmadığını dinleyin. Yokuş kalkış desteğinin sorunsuz çalıştığını
-    kontrol edin. Şanzıman yağı değişim tarihlerini ve arıza kayıtlarını inceleyin.
+  rationale: The DSG transmission may experience jerking and abnormal response times
+    at low speeds, particularly during 1st-to-2nd gear shifts. Erratic behavior in
+    stop-and-go traffic and delayed acceleration under sudden speed demands are frequently
+    reported. The risk of mechatronic failures also increases with higher mileage.
+  inspection_advice: During a test drive, observe the transmission’s behavior at low
+    speeds and in stop-and-go traffic. Listen for jerking, clunking, or unusual noises
+    during gear shifts. Verify that hill-hold assist functions smoothly. Review the
+    transmission fluid change history and fault codes.
   sources: []
 - claim_key: ea888_230_transmission_dsg_şanzıman_mekatro
-  title: DSG Şanzıman Mekatronik Arızaları (Yüksek Kilometreler)
+  title: DSG Transmission Mechatronic Failures (High Mileage)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DSG şanzımanında yüksek kilometrelerde mekatronik arızaları sıkça görülmektedir.
-    Bu arızalar, ciddi onarım masrafları gerektirebilir ve aracın kullanımını kesintiye
-    uğratabilir.
-  inspection_advice: Şanzımanın servis kayıtlarını kontrol edin ve mekatronik arıza
-    geçmişi olup olmadığını araştırın. Mümkünse, uzman bir mekanikçi tarafından şanzımanın
-    durumunu değerlendirin.
+  rationale: DSG transmissions frequently experience mechatronic failures at high
+    mileage. These failures can require significant repair costs and disrupt vehicle
+    operation.
+  inspection_advice: Check the transmission service records for any history of mechatronic
+    failures. If possible, have a specialist mechanic assess the transmission’s condition.
   sources: []
 - claim_key: ea888_230_engine_wastegate_valfi_ve_t
-  title: Wastegate Valfi ve Turbo Boru Çatlak/Kaçakları
+  title: Cracks or Leaks in Wastegate Valve and Turbocharger Pipes
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: 2.0 TSI motorunda wastegate valfi tıkanma veya arızaları ve turbo borularında
-    çatlak/kaçaklar sıkça bildirilmiştir. Bu sorunlar güç kaybı, anormal sesler ve
-    arıza lambasının yanması gibi belirtilerle kendini gösterir.
-  inspection_advice: Test sürüşünde turbo ve wastegate bölgesinden anormal sesler
-    olup olmadığını dinleyin. Turbo borularında çatlak veya kaçaklar için fiziksel
-    inceleme yapın. Arıza lambasının yanıp yanmadığını kontrol edin. Turbo basıncını
-    ölçen bir cihazla test sürüşü yapın.
+  rationale: The 2.0 TSI engine frequently experiences clogging or failures in the
+    wastegate valve and cracks or leaks in the turbocharger pipes. These issues manifest
+    as power loss, unusual noises, and the activation of the malfunction indicator
+    lamp (MIL).
+  inspection_advice: During a test drive, listen for abnormal noises coming from the
+    turbocharger and wastegate valve area. Physically inspect the turbocharger pipes
+    for cracks or leaks. Check if the malfunction indicator lamp (MIL) is illuminated.
+    Perform a test drive using a device to measure turbocharger boost pressure.
   sources:
   - source_url: https://kronikyorum.com/seat-leon-20-tsi-kullanici-yorumlari-deneyimler
     source_domain: kronikyorum.com
@@ -446,33 +460,33 @@ claims:
       artık."'
     independent: true
 - claim_key: ea888_230_engine_turbo_basıncı_düşüşü
-  title: Turbo Basıncı Düşüşü ve Güç Kaybı
+  title: Turbo Pressure Drop and Power Loss
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Turbo basıncında düşüş ve wastegate valfi arızaları nedeniyle motorun
-    güç kaybı yaşanabilmektedir. Bu sorunlar performansı olumsuz etkiler ve sürüş
-    keyfini azaltır.
-  inspection_advice: Test sürüşünde yüksek devirlerde turbo basıncını ve ivme performansını
-    gözlemleyin. Turbo bölgesinden gelen anormal sesleri dinleyin. Arıza lambasının
-    yanıp yanmadığını kontrol edin.
+  rationale: Power loss in the engine can occur due to a drop in turbo pressure and
+    wastegate valve failures. These issues negatively impact performance and reduce
+    driving enjoyment.
+  inspection_advice: During a test drive, observe turbo pressure at high RPMs and
+    acceleration performance. Listen for abnormal noises coming from the turbo area.
+    Check if the malfunction indicator lamp is illuminated.
   sources: []
 - claim_key: ea888_230_engine_turbo_ve_wastegate_s
-  title: Turbo ve Wastegate Ses Bozuklukları
+  title: Turbo and Wastegate Noises
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Turbo ve wastegate sisteminden gelen ıslık sesleri, yüksek devirlerde
-    sıkça bildirilmiştir. Bu sesler, turbo veya wastegate valfi arızalarının bir göstergesi
-    olabilir.
-  inspection_advice: Yüksek devirlerde turbo bölgesinden gelen anormal sesleri dinleyin.
-    Seslerin kaynağını tespit etmek için uzman bir mekanikçi ile danışın.
+  rationale: Whining noises originating from the turbo and wastegate system have been
+    frequently reported at high RPM. These sounds may indicate a fault in the turbo
+    or wastegate valve.
+  inspection_advice: Listen for abnormal noises coming from the turbo area at high
+    RPM. Consult a qualified mechanic to pinpoint the source of the noises.
   sources: []
 - claim_key: ea888_230_engine_defective_2.0t_timin
   title: Defective 2.0T timing chain tensioner causing timing jump and valve/piston

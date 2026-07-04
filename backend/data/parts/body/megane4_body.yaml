@@ -221,7 +221,7 @@ claims:
 - claim_key: megane4_body_engine|brakes|suspension_turbocharger_and_bra
   title: Turbocharger and brake/suspension wear in performance versions (RS, GT)
   kind: known_issue
-  domain: engine|brakes|suspension
+  domain: engine
   severity: high
   confidence: 0.6
   status: review
@@ -240,18 +240,19 @@ claims:
       brakes, and suspension condition**."'
     independent: true
 - claim_key: megane4_body_engine_steuerkettenlängerun
-  title: Steuerkettenlängerung & Nockenwellensteuerungsfehler (H5F 1.2 TCe)
+  title: Timing Chain Extension & Camshaft Timing Failure (H5F 1.2 TCe)
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.6
   status: rejected
   promoted_by: pending_human
-  rationale: Der H5F 1.2 TCe leidet unter Steuerkettenlängerung und dokumentierten
-    Nockenwellensteuerungsfehlern, die zu plötzlichem Totalausfall führen können.
-    Sammelklage in Frankreich bestätigt das Problem.
-  inspection_advice: Auf Rasseln beim Kaltstart achten, Fehlercodes DTC 001178/001478
-    prüfen, Steuerkette und Nockenwellenverstellung auf Verschleiß kontrollieren.
+  rationale: The H5F 1.2 TCe engine suffers from **timing chain elongation** and documented
+    **camshaft timing malfunctions**, which can cause sudden complete engine failure.
+    A class-action lawsuit in France confirms the issue.
+  inspection_advice: Listen for **rattling noises at cold start**, check for **DTC
+    error codes 001178/001478**, and inspect the **timing chain and camshaft phasing
+    system for wear**.
   sources:
   - source_url: https://what-breaks.com/renault/megane-4
     source_domain: what-breaks.com
@@ -280,17 +281,17 @@ claims:
       abreißen."'
     independent: true
 - claim_key: megane4_body_brakes_bremsscheiben_mit_ho
-  title: Bremsscheiben mit hoher Mängelquote (T4 Megane)
+  title: Brake discs with a high defect rate (T4 Megane)
   kind: known_issue
   domain: brakes
   severity: medium
   confidence: 0.6
   status: rejected
   promoted_by: pending_human
-  rationale: Bremsscheiben zeigen eine achtmal höhere Mängelquote als der Durchschnitt
-    bei 2–3-jährigen Fahrzeugen, was auf Material- oder Designprobleme hindeutet.
-  inspection_advice: Bremsscheiben auf Risse, Ausfransungen oder ungleichmäßigen Verschleiß
-    prüfen, Bremsbeläge und -flüssigkeit kontrollieren.
+  rationale: Brake discs exhibit an eightfold higher defect rate than average in 2–3-year-old
+    vehicles, suggesting issues with material or design.
+  inspection_advice: Inspect brake discs for cracks, fraying, or uneven wear; check
+    brake pads and brake fluid.
   sources:
   - source_url: https://what-breaks.com/renault/megane-4
     source_domain: what-breaks.com
@@ -299,17 +300,19 @@ claims:
       bei 2–3-jährigen Fahrzeugen."'
     independent: true
 - claim_key: megane4_body_engine_metallpartikel_im_öl
-  title: Metallpartikel im Öldruckregelventil (M5P 1.8L RS)
+  title: Metal particles found in the oil pressure control valve (M5P 1.8L RS engine)
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.6
   status: rejected
   promoted_by: pending_human
-  rationale: Rückruf wegen Metallpartikeln im Öldruckregelventil, die zu schweren
-    Motorschäden führen können. Betrifft eine spezifische Produktionsperiode.
-  inspection_advice: VIN prüfen, ob das Fahrzeug im Rückrufzeitraum (12/2017–05/2019)
-    produziert wurde. Öldruck und -qualität regelmäßig kontrollieren.
+  rationale: Recall due to metal particles in the oil pressure control valve, which
+    can cause severe engine damage. Affects vehicles produced during a specific manufacturing
+    period.
+  inspection_advice: Check the VIN to confirm if the vehicle was produced within the
+    recall period (December 2017–May 2019). Regularly monitor oil pressure and oil
+    quality.
   sources:
   - source_url: https://what-breaks.com/renault/megane-4
     source_domain: what-breaks.com
@@ -318,18 +321,18 @@ claims:
       12/2017–05/2019) – VIN-Check Pflicht."'
     independent: true
 - claim_key: megane4_body_transmission_kupplungsüberhitzung
-  title: Kupplungsüberhitzung (EDC Doppelkupplungsgetriebe GT TCe 205)
+  title: Clutch Overheating (EDC Dual-Clutch Transmission GT TCe 205)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: rejected
   promoted_by: pending_human
-  rationale: Dokumentierte Kupplungsüberhitzung führte zu einem Rückruf (2015–2017).
-    Trocken-Doppelkupplung neigt zu vorzeitigem Verschleiß und teuren Reparaturen.
-  inspection_advice: Kupplungsverschleiß und Getriebeölstand prüfen, auf ungewöhnliche
-    Geräusche oder Ruckeln beim Schalten achten. Getriebeöl alle 50.000–60.000 km
-    wechseln.
+  rationale: Documented clutch overheating led to a recall (2015–2017). The dry dual-clutch
+    system is prone to premature wear and costly repairs.
+  inspection_advice: Check for clutch wear and transmission fluid level; monitor for
+    unusual noises or jerks during shifting. Replace transmission fluid every 50,000–60,000
+    km.
   sources:
   - source_url: https://what-breaks.com/renault/megane-4
     source_domain: what-breaks.com
@@ -556,6 +559,13 @@ claims:
     quote: '"EDC dual-clutch transmissions are sensitive to heat and software calibration
       issues."'
     independent: true
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"Early EDC dual-clutch transmissions may exhibit **jerkiness when shifting
+      from 1st to 2nd gear**; post-2020 facelift models received improved software
+      that significantly reduced this complaint."'
+    independent: true
 - claim_key: megane4_body_emissions_adblue_crystallizati
   title: AdBlue crystallization and NOx sensor failures in 1.5 Blue dCi engines
   kind: known_issue
@@ -641,19 +651,19 @@ claims:
     or if it also fails with the same error.
   sources: []
 - claim_key: megane4_body_electrical_ibs_(akü_sensörü)_ar
-  title: IBS (Akü Sensörü) Arızalanması
+  title: Failure of the IBS (Battery Health Sensor)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: IBS (Akü Sağlık Sensörü) arızalanması, Start-Stop sisteminin devreye
-    girmesini engelleyerek yakıt tüketimini artırır ve akü sağlığını daha da kötüleştirebilir.
-    Bu, akü sağlık testinin (SOH) gerekliliğini gösterir.
-  inspection_advice: Aracı servise götürerek akü sağlık testini (SOH) yaptırın. IBS
-    sensörünün çalışıp çalışmadığını kontrol edin. Eğer sistem sürekli devreye girmiyorsa,
-    bu sensörün arızalanmış olabileceğini düşünün.
+  rationale: Failure of the IBS (Battery Health Sensor) prevents the Start-Stop system
+    from activating, increasing fuel consumption and further degrading battery health.
+    This highlights the need for a battery health test (State of Health, SOH).
+  inspection_advice: Take the vehicle to a service center to perform a battery health
+    test (SOH). Check if the IBS sensor is functioning. If the system fails to activate
+    consistently, consider that the sensor may have failed.
   sources:
   - source_url: https://www.saglamotomotiv.com/blog/icerik/megane-4-start-stop-arizasi
     source_domain: saglamotomotiv.com
@@ -664,23 +674,23 @@ claims:
       IBS (Akü Sensörü) arızalanmış demektir."'
     independent: true
 - claim_key: megane4_body_fuel system_partikül_filtresi_(d
-  title: Partikül Filtresi (DPF) Rejenerasyonu ile Start-Stop Sisteminin Devre Dışı
-    Kalması
+  title: Start-Stop System Disabling During Diesel Particulate Filter (DPF) Regeneration
   kind: known_issue
   domain: fuel system
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: 1.5 dCi veya Blue dCi motorlu Megane 4'lerde, partikül filtresi (DPF)
-    rejenerasyonu sırasında Start-Stop sistemi devreye girmez. Bu, DPF'nin temizlenmesi
-    için gereken ek motor gücünü engellemek için tasarlanmış bir koruma mekanizmasıdır.
-    Ancak, rejenerasyon süreci uzun sürerse, sürücüler bu durumu arıza sanabilir.
-  inspection_advice: Eğer aracınız 1.5 dCi veya Blue dCi motorluysa ve Start-Stop
-    sistemi sürekli devreye girmiyorsa, DPF rejenerasyonu yapılıyor olabilir. Uzun
-    bir yolculuk yaparak DPF rejenerasyonunu tamamlamaya çalışın. Eğer rejenerasyon
-    süreci sık sık yaşanıyorsa, yakıt kalitesini ve sürüş alışkanlıklarını gözden
-    geçirin.
+  rationale: In Renault Megane 4 vehicles equipped with the 1.5 dCi or Blue dCi diesel
+    engine, the Start-Stop system is disabled during **DPF regeneration**. This is
+    an intentional safety mechanism designed to prevent the engine from shutting off
+    during regeneration, which requires additional power to clean the **DPF**. However,
+    if regeneration takes too long, drivers may misinterpret this as a fault condition.
+  inspection_advice: If your vehicle is fitted with a **1.5 dCi or Blue dCi diesel
+    engine** and the **Start-Stop system remains inactive repeatedly**, it may indicate
+    that **DPF regeneration is active**. Attempt to complete the regeneration by driving
+    longer distances. If **DPF regeneration occurs frequently**, review **fuel quality**
+    and **driving habits** to mitigate the issue.
   sources:
   - source_url: https://www.saglamotomotiv.com/blog/icerik/megane-4-start-stop-arizasi
     source_domain: saglamotomotiv.com
@@ -690,21 +700,20 @@ claims:
       kadar motor çalışmaya devam etmek zorundadır."'
     independent: true
 - claim_key: megane4_body_engine_trigger_kayışı_kopma
-  title: Trigger Kayışı Kopması ve Subap-Piston Çarpışması (1.5 dCi)
+  title: Timing Belt Failure and Valve-Piston Collision (1.5 dCi Engine)
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Trigger kayışı kopması, dizel motorlarda subapların pistonlara çarpmasına
-    ve ciddi motor hasarına yol açar. Bu, 1.5 dCi motorlarda sıkça karşılaşılan bir
-    sorundur ve zamanında değiştirilmezse motorun tamamen kullanılamaz hale gelmesine
-    neden olabilir.
-  inspection_advice: Kayışın gerilimini ve durumunu kontrol edin. Kayışın kopuk veya
-    aşınmış olup olmadığını, ayrıca kayışın zamanında değiştirilip değiştirilmediğini
-    doğrulayın. Ayrıca, motorun çalışma sesini dinleyerek anormal gürültü veya çarpma
-    sesi olup olmadığını tespit edin.
+  rationale: Timing belt failure in diesel engines can cause valves to collide with
+    pistons, resulting in severe engine damage. This is a common issue in 1.5 dCi
+    engines and, if not addressed in time, can render the engine completely inoperable.
+  inspection_advice: Check the tension and condition of the timing belt. Verify if
+    the belt is cracked or worn out and confirm whether it was replaced at the manufacturer-recommended
+    interval. Additionally, listen to the engine’s operation for any abnormal noises
+    or collision sounds.
   sources:
   - source_url: https://www.renaultcikmaparca.com/2025/09/24/megane-4-cikma-motor/
     source_domain: renaultcikmaparca.com
@@ -715,21 +724,21 @@ claims:
       olur."'
     independent: true
 - claim_key: megane4_body_engine_turbo_arızaları_ve_p
-  title: Turbo Arızaları ve Performans Kaybı
+  title: Turbo Failures and Performance Loss
   kind: known_issue
   domain: engine
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Turbo beslemeli motorlarda turbo arızaları sıkça görülür. Turbo arızaları,
-    performans kaybı, anormal sesler veya egzozdan çıkan mavi duman gibi belirtilerle
-    kendini gösterir. Bu sorun, motorun verimliliğini ve uzun ömürlülüğünü olumsuz
-    etkileyebilir.
-  inspection_advice: Turbo beslemeli motorlarda egzozdan çıkan dumanın rengini kontrol
-    edin (mavi duman turbo arızası işareti olabilir). Motorun çalışma sesini dinleyerek
-    anormal sesler olup olmadığını tespit edin. Ayrıca, turboya ait bağlantı noktalarını
-    ve borularını kontrol edin.
+  rationale: Turbocharged engines frequently experience turbo failures. Turbo failures
+    manifest through symptoms such as performance loss, unusual noises, or blue smoke
+    from the exhaust. This issue can negatively impact the engine’s efficiency and
+    longevity.
+  inspection_advice: In turbocharged engines, check the color of the smoke from the
+    exhaust (blue smoke may indicate a turbo failure). Listen to the engine’s operating
+    sounds to detect any abnormal noises. Also, inspect the turbo’s connection points
+    and hoses.
   sources:
   - source_url: https://www.renaultcikmaparca.com/2025/09/24/megane-4-cikma-motor/
     source_domain: renaultcikmaparca.com
@@ -739,20 +748,20 @@ claims:
       çıkan mavi duman, turbo arızasının habercisi olabilir."'
     independent: true
 - claim_key: megane4_body_engine_soğutma_sistemi_soru
-  title: Soğutma Sistemi Sorunları ve Motor Aşırı Isınması
+  title: Cooling System Issues and Engine Overheating
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Soğutma sistemi arızaları (radyatör tıkanıklığı, su kaçağı, arızalı termostat)
-    motorun aşırı ısınmasına ve pistonların sıkışmasına (piston sarma) yol açar. Bu
-    durum motorun tamamen kullanılamaz hale gelmesine neden olabilir.
-  inspection_advice: Radyatörün temizliğini ve integritesini kontrol edin. Soğutma
-    sıvısı seviyesini ve renk durumunu kontrol edin (karanlık veya kirli sıvı soğutma
-    sistemi sorununu işaret edebilir). Ayrıca, termostatın çalışıp çalışmadığını ve
-    motorun normal sıcaklığa ulaşma süresini gözlemleyin.
+  rationale: Cooling system failures (radiator blockage, coolant leaks, faulty thermostat)
+    cause the engine to overheat and lead to piston scuffing (piston scoring). This
+    condition can render the engine completely inoperable.
+  inspection_advice: Check the radiator for cleanliness and integrity. Inspect the
+    coolant level and condition (dark or dirty coolant may indicate a cooling system
+    issue). Additionally, verify the thermostat’s functionality and observe the time
+    it takes for the engine to reach normal operating temperature.
   sources:
   - source_url: https://www.renaultcikmaparca.com/2025/09/24/megane-4-cikma-motor/
     source_domain: renaultcikmaparca.com
@@ -763,21 +772,21 @@ claims:
       gelmesiyle sonuçlanır."'
     independent: true
 - claim_key: megane4_body_electrical_o2_sensör_kablo_deme
-  title: O2 Sensör Kablo Demeti Korozyon ve Hasar (Renault Mégane)
+  title: Oxygen Sensor Harness Corrosion and Damage (Renault Mégane)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Kronik bir sorun olarak, Renault Mégane modellerinde oksijen sensörünün
-    kablo demetinde korozyon ve hasar oluşması, motor arıza ışığının yanmasına ve
-    yakıt tüketiminde artışa neden olabilmektedir. Bu, elektrik bağlantısının bozulması
-    sonucu ortaya çıkan bir sorundur.
-  inspection_advice: Egzoz sistemini takip ederek, oksijen sensörünün vidalandığı
-    yere yakın kablo demetini kontrol edin. Özellikle korozyon ve hasar izlerine dikkat
-    edin. Kablo demetinin sensörün bağlandığı bölgeyi temizleyin ve bağlantının sağlam
-    olup olmadığını doğrulayın.
+  rationale: As a chronic issue, corrosion and damage occurring in the oxygen sensor
+    harness of Renault Mégane models can cause the check engine light to illuminate
+    and lead to increased fuel consumption. This is a problem resulting from the failure
+    of the electrical connection in the harness.
+  inspection_advice: Follow the exhaust system to inspect the oxygen sensor harness
+    near the point where the sensor is bolted. Pay close attention to signs of corrosion
+    and damage. Clean the area where the harness connects to the sensor and verify
+    that the connection is secure.
   sources:
   - source_url: https://www.mycarly.com/tr/community/megane-oksijen-sensoru-arizali-baglanti-413a7641-16cc-4005-b716-43ae0d4cf665/
     source_domain: mycarly.com
@@ -804,3 +813,40 @@ claims:
     dashboard, and inside the footwells. Test the vent blowers while running them
     to see if water sprays out, indicating blocked drainage.
   sources: []
+- claim_key: megane4_body_general_windshield/window_se
+  title: Windshield/window seal design flaw (A-pillar water runoff)
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The windshield/window seal at the top off-side corner of the windscreen
+    (A-pillar region) is poorly designed, allowing water to run down the pillar and
+    into the cabin during rain or storms. This is a chronic issue across Renault Mégane
+    II models.
+  inspection_advice: Check the A-pillar (window frame) for water stains, rust, or
+    dampness inside the cabin. Look for improper sealing at the windshield/window
+    junction—water should not pool or trickle down the pillar. Test by running water
+    down the windshield to see if it funnels into the cabin.
+  sources: []
+- claim_key: megane4_body_engine_high_oil_consumption
+  title: High oil consumption in 1.2 TCe (H5Ft) petrol engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.2 TCe (H5Ft) petrol engine has been reported to have higher-than-expected
+    oil consumption, which can lead to reduced engine life if not managed properly.
+  inspection_advice: Check the oil level frequently and verify if the vehicle has
+    a history of frequent oil top-ups. Inspect for blue smoke from the exhaust, which
+    indicates oil burning in the combustion chamber.
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"The 1.2 TCe (H5Ft) gasoline engine used until 2018 can suffer from **higher
+      oil consumption** or premature timing chain stretch in some cases."'
+    independent: true

@@ -443,7 +443,7 @@ def run_part(
     print(f"Promoting {len(all_candidates)} candidate claim(s)…")
     results = promote(
         all_candidates, variant_descriptors,
-        claim_key_prefix=part_id, variant_fuels=variant_fuels,
+        claim_key_prefix=part_id, variant_fuels=variant_fuels, own_part_id=part_id,
     )
 
     counts = {d: 0 for d in ["verified", "review", "held", "rejected"]}
@@ -483,7 +483,7 @@ def main() -> None:
     parser.add_argument("gen",   nargs="?", help="Generation key (model-centric mode)")
     parser.add_argument("--part", metavar="PART_ID",
                         help="Part ID for part-centric mode (e.g. k9k, edc, ea211)")
-    parser.add_argument("--part-type", choices=["engine", "transmission"],
+    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical", "body"],
                         help="Part type (required with --part)")
     parser.add_argument("--dry-run", action="store_true", help="Print what would run, no writes")
     parser.add_argument(

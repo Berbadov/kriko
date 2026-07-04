@@ -119,21 +119,6 @@ claims:
     for coolant residue, leaks, or corrosion. Check for sweet-smelling coolant fumes
     in the engine bay.
   sources: []
-- claim_key: h5d_100_fuel system_1.5_dci_(k9k)_fuel_i
-  title: 1.5 dCi (K9K) Fuel Injector and Injection Pump Failure
-  kind: known_issue
-  domain: fuel system
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Chronic failure of fuel injectors and the common rail injection pump
-    in the 1.5 dCi (K9K) diesel engine, leading to poor fuel delivery, misfires, and
-    potential engine stalling or shutdown.
-  inspection_advice: Listen for unusual noises (e.g., ticking or rattling) from the
-    fuel pump or injectors. Check for fuel leaks around the injection pump and inspect
-    for error codes related to fuel delivery.
-  sources: []
 - claim_key: h5d_100_transmission_edc_dual-clutch_gear
   title: EDC Dual-Clutch Gearbox Judder
   kind: known_issue
@@ -162,7 +147,7 @@ claims:
 - claim_key: h5d_100_transmission|electrical_tcu_faults_and_clutc
   title: TCU Faults and Clutch Failure
   kind: known_issue
-  domain: transmission|electrical
+  domain: transmission
   severity: high
   confidence: 0.0
   status: held
@@ -177,7 +162,7 @@ claims:
 - claim_key: h5d_100_electrical|suspension_electric_power_steer
   title: Electric Power Steering (EPS) Column Failure
   kind: known_issue
-  domain: electrical|suspension
+  domain: electrical
   severity: high
   confidence: 0.0
   status: held
@@ -207,7 +192,7 @@ claims:
 - claim_key: h5d_100_electrical|engine_ignition_coil_pack_f
   title: Ignition Coil Pack Failure
   kind: known_issue
-  domain: electrical|engine
+  domain: electrical
   severity: medium
   confidence: 0.0
   status: held
@@ -317,160 +302,169 @@ claims:
     ignition coils, and wiring for signs of wear, corrosion, or damage.
   sources: []
 - claim_key: h5d_100_electrical_motor_hall_kablo_dur
-  title: Motor Hall Kablo Durumu Arızası (E01)
+  title: Motor Hall Sensor Wire Fault (E01)
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Motor hall sensör kablolarının hatalı bağlantısı veya bozulması, motorun
-    doğru şekilde çalışmasını engelleyebilir veya arızalarına neden olabilir. Bu,
-    elektrikli scooterlerin performansını ve güvenliğini olumsuz etkiler.
-  inspection_advice: Motor hall kablolarını ve bağlantılarını kontrol edin. Kablo
-    izolasyonunda hasar, gevşek bağlantılar veya oksidasyon varsa, bu bir arıza belirtisidir.
+  rationale: Faulty connections or damage to the motor hall sensor wires can prevent
+    the motor from operating correctly or cause failures. This negatively impacts
+    the performance and safety of electric scooters.
+  inspection_advice: Inspect the motor hall wires and connections for damage. Look
+    for broken insulation, loose connections, or oxidation, as these are indicators
+    of a fault.
   sources: []
 - claim_key: h5d_100_brakes_fren_sistemi_arızası
-  title: Fren Sistemi Arızası (E02)
+  title: Brake System Failure (E02)
   kind: known_issue
   domain: brakes
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fren sisteminde arıza, scooterin güvenli durmasını engelleyebilir. Bu,
-    fren hidrolik hatlarında sızdırma, fren diskleri veya fren kolu arızaları gibi
-    sorunları içerebilir.
-  inspection_advice: Fren disklerini, fren kolunu ve hidrolik hatlarını kontrol edin.
-    Disklerde aşınma, kol hareketlerinde sertlik veya fren sızdırması varsa, bu bir
-    arıza belirtisidir.
+  rationale: A brake system failure can prevent the scooter from stopping safely.
+    This may include issues such as leaks in the brake hydraulic lines, brake disc
+    failures, or brake caliper malfunctions.
+  inspection_advice: Inspect the brake discs, brake calipers, and hydraulic lines.
+    Look for signs of wear on the discs, stiffness in caliper movement, or brake fluid
+    leaks, as these indicate potential failure.
   sources: []
 - claim_key: h5d_100_engine_motor_arızası_(e07)
-  title: Motor Arızası (E07)
+  title: Motor Failure (E07)
   kind: known_issue
   domain: engine
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Motor arızası, elektrikli scooterin tamamen çalışmamasına veya performansını
-    ciddi şekilde düşürmesine neden olabilir. Bu, motorun elektriksel veya mekanik
-    bileşenlerinde hasara işaret eder.
-  inspection_advice: Motorun çalışmasını ve sesini dinleyin. Anormal gürültüler, titreşimler
-    veya motorun çalışmaması durumunda, motorun arızalanmış olabileceğini düşünün.
+  rationale: Motor failure can cause the electric scooter to either not operate at
+    all or experience a significant drop in performance. This indicates potential
+    damage to the motor’s electrical or mechanical components.
+  inspection_advice: Check the motor’s operation and listen for its sound. If abnormal
+    noises, vibrations, or complete motor failure are detected, consider that the
+    motor may have failed.
   sources: []
 - claim_key: h5d_100_suspension|general_gidon_arızası_(e08)
-  title: Gidon Arızası (E08)
+  title: Steering Fault (E08)
   kind: known_issue
-  domain: suspension|general
+  domain: suspension
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Gidon arızası, scooterin kontrolünü ve sürüş güvenliğini olumsuz etkileyebilir.
-    Bu, gidon bağlantılarının gevşemesi, hasar görmesi veya mekanik arızalarını içerebilir.
-  inspection_advice: Gidon bağlantılarını, vidaları ve kelepçeleri kontrol edin. Gevşek
-    bağlantılar, hasar veya anormal hareketler varsa, bu bir arıza belirtisidir.
+  rationale: A steering fault can negatively impact the scooter’s handling and driving
+    safety. This includes loosening, damage, or mechanical failure of the steering
+    connections.
+  inspection_advice: Inspect the steering connections, bolts, and clamps. Loose connections,
+    damage, or abnormal movement indicate a potential fault.
   sources: []
 - claim_key: h5d_100_electrical_kontrol_ünitesi_arız
-  title: Kontrol Ünitesi Arızası (E09)
+  title: Control Unit Failure (E09)
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Kontrol ünitesi (ECU) arızası, scooterin tamamen çalışmamasına veya elektriksel
-    sistemlerde anormal davranışlara neden olabilir. Bu, scooterin genel güvenliğini
-    ve işlevselliğini ciddi şekilde etkiler.
-  inspection_advice: Kontrol ünitesinin bağlantı vidalarını ve kablolarını kontrol
-    edin. Ayrıca, scooterin genel davranışını gözlemleyin. Anormal arıza kodları veya
-    sistem hataları varsa, kontrol ünitesinin arızalanmış olabileceğini düşünün.
+  rationale: A control unit (ECU) failure can cause the scooter to fail to operate
+    entirely or exhibit abnormal behavior in electrical systems. This significantly
+    impacts the scooter’s overall safety and functionality.
+  inspection_advice: Check the control unit’s connection bolts and wiring. Also, observe
+    the scooter’s overall behavior. If abnormal fault codes or system errors appear,
+    consider that the control unit may have failed.
   sources: []
 - claim_key: h5d_100_electrical_usb_şarj_koruma_modu
-  title: USB Şarj Koruma Modu (Aşırı Yük Akımı)
+  title: USB Charging Overload Protection Mode
   kind: known_issue
   domain: electrical
   severity: low
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: USB şarj koruma modu, aşırı yük akımının scooterin bataryasına zarar
-    vermesini önlemek için otomatik olarak açılır. Bu, scooterin şarj sisteminin güvenliğini
-    sağlar ancak kullanıcıya bir sorun olduğunu gösterir.
-  inspection_advice: USB şarj simgesinin yanıp sönmesi durumunda, şarj cihazını kontrol
-    edin ve şarj akımını azaltın. Ayrıca, batarya ve şarj kablolarını hasar veya aşınma
-    için kontrol edin.
+  rationale: The USB charging overload protection mode activates automatically to
+    prevent excessive current from damaging the scooter’s battery. This ensures the
+    safety of the scooter’s charging system but indicates to the user that there may
+    be an issue.
+  inspection_advice: If the USB charging symbol flashes, inspect the charging device
+    and reduce the charging current. Additionally, check the battery and charging
+    cables for damage or wear.
   sources: []
 - claim_key: h5d_100_general_rulman_arızaları_ve_
-  title: Rulman arızaları ve yüksek devirli seramik/ülser rulmanların kritik önemi
+  title: Bearing failures and the critical importance of high-speed ceramic/ultrasonic
+    bearings
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: HSD spindle motorlarda en sık arızalanan parça yüksek devirli seramik
-    veya hassas rulmanlardır. Yanlış veya düşük kaliteli rulmanlar, motorun performansını
-    ciddi şekilde etkileyebilir ve kısa sürede tekrar arıza riski oluşturur.
-  inspection_advice: Rulmanların durumunu kontrol edin. Orijinal kalite rulmanların
-    kullanıldığından emin olun. Titreşim ve anormal sesler rulman arızalarının işareti
-    olabilir.
+  rationale: In HSD spindle motors, the most frequently failing component is the high-speed
+    ceramic or precision bearing. Poor-quality or substandard bearings can severely
+    impact motor performance and create a high risk of repeated failure in a short
+    time.
+  inspection_advice: Check the condition of the bearings. Ensure that original-quality
+    bearings are being used. Vibration and unusual noises are indicators of bearing
+    failures.
   sources: []
 - claim_key: h5d_100_general_dinamik_balans_ayarı
-  title: Dinamik balans ayarının ihmal edilmesi ve motorun kısa ömürlü olma riski
+  title: Neglecting dynamic balancing and the risk of the engine having a short lifespan
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yüksek devirli motorlarda balans ayarı mil hassasiyeti için hayati öneme
-    sahiptir. Balans yapılmadan teslim edilen motorlar kısa sürede tekrar arızalanabilir.
-  inspection_advice: Motorun balans ayarının yapılıp yapılmadığını kontrol edin. Titreşim
-    ve anormal sesler balans eksikliğinin işareti olabilir.
+  rationale: Dynamic balancing is critical for high-speed engine crankshaft precision.
+    Engines delivered without balancing can fail repeatedly within a short period
+    of time.
+  inspection_advice: Check if the engine has undergone dynamic balancing. Excessive
+    vibration and unusual noises are indicators of insufficient balancing.
   sources: []
 - claim_key: h5d_100_electrical_stator_sargı_yanmala
-  title: Stator sargı yanmaları ve izolasyon testlerinin ihmal edilmesi
+  title: Neglect of Stator Winding Burns and Insulation Testing
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yanmış veya zayıflamış stator sargıları, motorun performansını ve ömrünü
-    ciddi şekilde etkileyebilir. İzolasyon testleri (Megger testi) bu tür arızaların
-    önlenmesinde kritik rol oynar.
-  inspection_advice: Sargıların durumunu ve izolasyon testlerinin yapılıp yapılmadığını
-    kontrol edin. Yanma izleri veya aşınma belirtileri arızaların işareti olabilir.
+  rationale: Burned or degraded stator windings can severely impact engine performance
+    and lifespan. Insulation tests (Megger tests) play a critical role in preventing
+    such failures.
+  inspection_advice: Check the condition of the windings and whether insulation tests
+    were performed. Burn marks or signs of wear are indicators of potential faults.
   sources: []
 - claim_key: h5d_100_general_gövde_çatlakları_ve_
-  title: Gövde çatlakları ve mil hasarı nedeniyle motor değişimi gerekliliği
+  title: Engine replacement required due to body cracks and shaft damage
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Gövdede çatlaklar veya milde ciddi hasarlar, motorun onarımla kurtarılmasının
-    mümkün olmadığı durumları ifade eder. Bu tür hasarlar motorun güvenli ve etkili
-    çalışmasını sağlayamaz.
-  inspection_advice: Motor gövdesini ve milini fiziksel olarak incelerken çatlaklar
-    veya hasar izleri aramak önemlidir.
+  rationale: Cracks in the engine block or severe damage to the shaft indicate situations
+    where the engine cannot be salvaged through repairs. Such damage compromises the
+    engine’s ability to operate safely and efficiently.
+  inspection_advice: When physically inspecting the engine block and shaft, it is
+    critical to look for cracks or signs of damage.
   sources: []
 - claim_key: h5d_100_electrical_tekrarlayan_sargı_ya
-  title: Tekrarlayan sargı yanmaları ve ekonomik ömrünün tamamlanması
+  title: Recurring piston ring failures and reaching the end of economic life
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Tekrarlayan sargı yanmaları, motorun kalitesiz bakım veya yanlış kullanım
-    sonucu ciddi bir sorun yaşadığını gösterir. Ekonomik ömrünün tamamlanmış olması,
-    motorun daha fazla kullanımının ekonomik olarak mantıksız olabileceğini belirtir.
-  inspection_advice: Sargıların durumunu ve geçmiş arızalarını kontrol edin. Yanma
-    izleri veya tekrar eden arızalar motorun değiştirilmesi gerektiğini gösterir.
+  rationale: Recurring piston ring failures indicate that the engine has experienced
+    a serious issue due to poor maintenance or incorrect usage. Reaching the end of
+    economic life suggests that further use of the engine may no longer be economically
+    justified.
+  inspection_advice: Inspect the condition of the piston rings and review past failure
+    records. Evidence of burning or recurring failures indicates that the engine should
+    be replaced.
   sources: []
 - claim_key: h5d_100_electrical_motor_hall_wire_stat
   title: Motor Hall Wire Status Failure (E01)
@@ -517,7 +511,7 @@ claims:
 - claim_key: h5d_100_suspension|electrical_handlebar_failure_(e
   title: Handlebar Failure (E08)
   kind: known_issue
-  domain: suspension|electrical
+  domain: suspension
   severity: medium
   confidence: 0.0
   status: held
@@ -732,36 +726,6 @@ claims:
       miles. [...] The chain is too thin to go more than that and may stretch badly
       at higher mileage."'
     independent: true
-- claim_key: h5d_100_emissions_adblue_system_issues
-  title: AdBlue system issues on 1.5 dCi K9K BluedCi engines
-  kind: known_issue
-  domain: emissions
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 1.5 dCi K9K engine, particularly in its AdBlue-equipped variants
-    (BluedCi), suffers from a persistent AdBlue-related problem, which is a known
-    chronic issue for this engine family.
-  inspection_advice: Check for any leaks, corrosion, or improper installation of the
-    AdBlue system components. Look for error codes related to AdBlue in the vehicle's
-    diagnostics and verify if the system is functional and properly maintained.
-  sources: []
-- claim_key: h5d_100_engine_chronic_low_power_ou
-  title: Chronic low power output on 1.5 dCi K9K 90 HP variant
-  kind: known_issue
-  domain: engine
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 1.5 dCi K9K engine, particularly the 90 HP variant, is noted for
-    consistently underperforming, with a top speed capped around 110 km/h, making
-    it unsuitable for higher-speed driving.
-  inspection_advice: Test drive the vehicle to verify its top speed and acceleration.
-    Check for any error codes or performance limitations in the engine diagnostics
-    that might indicate power restrictions or software limitations.
-  sources: []
 - claim_key: h5d_100_engine_1.2_tce_engine_not_r
   title: 1.2 TCe engine not recommended
   kind: known_issue
@@ -880,139 +844,143 @@ claims:
     wiring and connections for corrosion or damage.
   sources: []
 - claim_key: h5d_100_general_fan_motor_rulman_aşı
-  title: Fan Motor Rulman Aşınması ve Dengesizlik
+  title: Fan Motor Bearing Wear and Imbalance
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fan motorunun rulmanlarının aşınması veya kanatçıkların dengesiz dönmesi,
-    sesli arızalar ve kısa süreli çalışma sorunlarına yol açar. Bu, kombinin güvenli
-    çalışmasını engeller ve karbonmonoksit birikimi riskini artırır.
-  inspection_advice: Kombi çalışırken fan motorundan çıkan uğultu, tıslama veya sürtünme
-    seslerine dikkat edin. Fanın dönüşünü görsel olarak kontrol edin; yavaş veya dengesiz
-    dönüş veya tamamen durma, rulman veya mekanik arızalarını gösterir.
+  rationale: Wear of the fan motor bearings or imbalance of the fan blades causes
+    noisy malfunctions and short-term operation issues. This impairs the heater/air
+    conditioning (combined system) performance, disrupts safe operation, and increases
+    the risk of carbon monoxide buildup.
+  inspection_advice: Pay attention to any humming, whining, or grinding noises coming
+    from the fan motor while the heater/air conditioning system is running. Visually
+    inspect the fan’s rotation; slow, uneven, or complete stoppage indicates bearing
+    failure or mechanical issues.
   sources: []
 - claim_key: h5d_100_electrical_hava_basınç_sensörü_
-  title: Hava Basınç Sensörü Bozulması
+  title: Air Pressure Sensor Failure
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Hava basınç sensörünün bozulması, fan motorunun düzgün çalışmasını algılayamamasına
-    ve F5 hata kodunun sürekli olarak ortaya çıkmasına neden olur. Bu, kombinin güvenlik
-    mekanizmalarını tetikler ve cihazın çalışmasını engeller.
-  inspection_advice: F5 hatası sıkça tekrar ediyorsa, hava basınç sensörünün doğru
-    sinyalleri göndermediği veya bozulduğu olasıdır. Profesyonel bir kontrol gerektirir;
-    kullanıcı tarafından görsel olarak tespit edilemez.
+  rationale: Failure of the air pressure sensor prevents the fan motor from operating
+    correctly and causes the continuous appearance of the F5 error code. This triggers
+    the vehicle’s safety mechanisms, disabling the device’s function.
+  inspection_advice: If the F5 error code repeatedly occurs, the air pressure sensor
+    may not be sending correct signals or is faulty. Professional inspection is required;
+    the issue cannot be visually detected by the user.
   sources: []
 - claim_key: h5d_100_electrical_elektrik_dalgalanmal
-  title: Elektrik Dalgalanmaları ve Fan Motoru Performans Düşüklüğü
+  title: Electrical Voltage Fluctuations and Cooling Fan Motor Performance Degradation
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Elektrik dalgalanmaları veya voltaj düşüklüğü, fan motorunun devir hızını
-    azaltır ve sensörün yeterli hava akışını algılamamasını sağlar. Bu, F5 hatasının
-    sıkça ortaya çıkmasına neden olur ve cihazın güvenli çalışmasını engeller.
-  inspection_advice: Elektrik hatlarının stabil olup olmadığını kontrol edin. Özellikle
-    eski binalarda veya voltaj regülatörü sorunlu olan yerlerde bu sorun daha sık
-    görülür. Fan motorunun çalışma sesini dinleyin; yavaş veya düzensiz dönüş voltaj
-    sorununu işaret edebilir.
+  rationale: Electrical voltage fluctuations or voltage drops reduce the fan motor’s
+    rotational speed, preventing the sensor from detecting adequate airflow. This
+    frequently triggers the F5 fault code and impairs the device’s safe operation.
+  inspection_advice: Check for stable electrical wiring. This issue is more common
+    in older buildings or locations with faulty voltage regulators. Listen to the
+    fan motor’s operation—slow or irregular rotation indicates a voltage problem.
   sources: []
 - claim_key: h5d_100_emissions_baca_tıkanıklığı_ve_
-  title: Baca Tıkanıklığı ve Hava Akışı Engellemesi
+  title: Exhaust Backpressure and Airflow Obstruction
   kind: known_issue
   domain: emissions
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Baca çıkışındaki tıkanıklık (kuş yuvası, yaprak, toz vb.), fan motorunun
-    havayı dışarı atamasını engeller. Bu, F5 hatasının ortaya çıkmasına ve kombinin
-    güvenlik moduna geçmesine neden olur. Ayrıca karbonmonoksit birikimi riskini artırır.
-  inspection_advice: Baca çıkışını düzenli olarak temizleyin ve tıkanıklıkların olup
-    olmadığını kontrol edin. Dış cepheye monte edilmiş kombilerde, rüzgârla gelen
-    yabancı maddelerin tıkanma oluşturabileceğine dikkat edin.
+  rationale: Obstruction in the exhaust outlet (e.g., bird’s nest, leaves, dust) prevents
+    the fan motor from expelling air effectively. This causes the F5 error code to
+    appear and triggers the cabin’s safety mode. It also increases the risk of carbon
+    monoxide buildup inside the vehicle.
+  inspection_advice: Regularly clean the exhaust outlet and check for blockages. In
+    externally mounted cabin heaters, be aware that windborne debris can cause clogging.
   sources: []
 - claim_key: h5d_100_electrical_fan_motoru_bobin_yan
-  title: Fan Motoru Bobin Yanıkları ve Elektriksel Arızalar
+  title: Fan Motor Coil Burns and Electrical Failures
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fan motorunun içindeki bobin yanıkları veya kısa devreler, motorun çalışmasını
-    tamamen engeller veya kısa süreli çalışma sorunlarına yol açar. Bu, kombinin sık
-    sık reset istemesi ve F5 hatasının tekrar etmesiyle sonuçlanır.
-  inspection_advice: Kombi sık sık reset istiyorsa, fan motorunun bobin yanıkları
-    veya rulman aşınmaları olabilir. Profesyonel bir kontrol gerektirir; kullanıcı
-    tarafından görsel olarak tespit edilemez.
+  rationale: Burns or short circuits in the coils inside the fan motor completely
+    prevent the motor from operating or cause intermittent operation issues. This
+    results in the HVAC (combi) system frequently requesting resets and the reoccurrence
+    of the F5 error code.
+  inspection_advice: If the HVAC system frequently resets, the fan motor may have
+    coil burns or bearing wear. Professional inspection is required; visual detection
+    by the user is not possible.
   sources: []
 - claim_key: h5d_100_general_nem_ve_su_sızıntısı_
-  title: Nem ve Su Sızıntısı ile İlgili Fan Motoru Arızaları
+  title: Fan Motor Failures Related to Moisture and Water Leakage
   kind: known_issue
   domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fan motorunun nemden etkilenmesi, paslanmaya veya kısa devre yapmasına
-    neden olur. Bu, kombinin çalışmasını kısa süreli olarak durdurur ve güvenlik riskini
-    artırır.
-  inspection_advice: Kombi etrafında su sızıntısı veya nem birikimi olup olmadığını
-    kontrol edin. Nemli ortamlarda fan motorunun çalışmasını düzenli olarak izleyin;
-    paslanma veya kısa devre belirtileri arayın.
+  rationale: Exposure of the fan motor to moisture can cause corrosion or short-circuiting.
+    This temporarily halts the heater/air conditioning (combined HVAC) system operation
+    and increases safety risks.
+  inspection_advice: Check for water leakage or moisture accumulation around the HVAC
+    system. Monitor the fan motor operation regularly in damp environments; look for
+    signs of corrosion or short-circuiting.
   sources: []
 - claim_key: h5d_100_electrical_elektronik_kart_ve_f
-  title: Elektronik Kart ve Fan Motoru İletişim Sorunları
+  title: Electronic Control Unit and Fan Motor Communication Issues
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Elektronik kartın fan motoruna doğru voltajı gönderememesi, hatta sağlam
-    bir motor bile çalışmayabilir. Bu, kombinin güvenli çalışmasını engeller ve F5
-    hatasına neden olur.
-  inspection_advice: Fan motoru değiştirildikten sonra hata devam ediyorsa, elektronik
-    kartın test edilmesi gerekir. Profesyonel bir kontrol gerektirir.
+  rationale: The electronic control unit (ECU) may fail to send the correct voltage
+    to the fan motor, potentially causing even a functional motor to not operate.
+    This disrupts the cooling system’s safe operation and triggers the F5 fault code.
+  inspection_advice: If the error persists after replacing the fan motor, the electronic
+    control unit must be tested. Professional diagnostics are required.
   sources: []
 - claim_key: h5d_100_electrical_ntc_(sıcaklık_sensör
-  title: NTC (Sıcaklık Sensörü) Arızası ve Kireçlenmesi
+  title: Fault and Limescale Deposition in the NTC (Temperature Sensor) in the Hot
+    Water Outlet
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Vaillant kombilerde kullanım suyu çıkışında bulunan NTC sıcaklık sensörü,
-    zamanla kireçlenme veya elektriksel ömrünü tamamlayarak arıza verebilir. Bu, sensörün
-    sinyal gönderememesi veya yanlış veriler iletmesi sonucu E5 hatasına yol açar.
-  inspection_advice: Sensörün fiziksel durumunu kontrol edin. Kireçlenme veya fiziksel
-    hasar izleri aramak için sensörün çıkış noktasını inceleyin. Ayrıca, sensör bağlantı
-    noktalarını temiz ve oksitlenme izi olmadan kontrol edin.
+  rationale: In Vaillant boilers, the NTC temperature sensor located at the hot water
+    outlet may fail over time due to limescale buildup or reaching the end of its
+    electrical lifespan. This results in the sensor being unable to transmit signals
+    or sending incorrect data, leading to the E5 error code.
+  inspection_advice: Inspect the physical condition of the sensor. Examine the sensor’s
+    outlet for signs of limescale or physical damage. Additionally, check the sensor
+    connection points to ensure they are clean and free of oxidation.
   sources: []
 - claim_key: h5d_100_electrical_sensör-kart_bağlantı
-  title: Sensör-Kart Bağlantı Kablolarının Oksitlenmesi/Kopukluğu
+  title: Corrosion or Damage to Sensor-to-Control Module Wiring Harness
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Sensör ile elektronik kart arasındaki kabloların kopması, yerinden çıkması
-    veya nem sebebiyle oksitlenmesi, sinyal iletiminde bozulmaya neden olur. Bu, E5
-    hatasının başlıca nedenlerinden biridir.
-  inspection_advice: Sensör ve elektronik kart arasındaki kablo bağlantılarını kontrol
-    edin. Kablo bağlantılarını temizleyin ve oksitlenme veya kopukluk izleri aramak
-    için kablo yollarını inceleyin.
+  rationale: Breakage, detachment, or corrosion of wiring between sensors and electronic
+    control modules disrupts signal transmission. This is a primary cause of the **E5**
+    fault code.
+  inspection_advice: Inspect the wiring connections between sensors and the electronic
+    control module. Clean the connections and examine the wiring paths for signs of
+    corrosion or damage.
   sources: []
 - claim_key: h5d_100_engine_turbocharger_failure
   title: Turbocharger failure in 115 hp 1.0 TSI variants
