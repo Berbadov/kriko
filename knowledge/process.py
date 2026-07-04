@@ -357,6 +357,7 @@ def run_part(
     Variant descriptors for gate_variant come from all variants with matching fitment.
     """
     from knowledge.extract import extract_claims
+    from knowledge.parts.search_templates import _find_make_model_for_part, ensure_part_stub
     from knowledge.promote import promote, write_promoted_part_claims
     from knowledge.sources.curated import CuratedSource
 
@@ -364,6 +365,19 @@ def run_part(
     slug_make  = "part"
     slug_model = part_id
     slug_gen   = part_type
+
+    # Create the scaffold (part_id/part_type/display_name/manufacturer) before
+    # writing any claims — write_promoted_part_claims only *preserves* existing
+    # scaffold metadata, it never creates it. Without this, a genuinely new
+    # part_id ends up with a claims-only file missing part_id/part_type
+    # entirely (bit us twice: once in auto.py's --part path, fixed in
+    # 02bf5be, then again here since this entry point didn't share the fix).
+    make, model = _find_make_model_for_part(part_id, part_type)
+    if make and model:
+        variants_path = DATA_DIR / "variants" / f"{make}_{model}.yaml"
+        if variants_path.exists():
+            variants = yaml.safe_load(variants_path.read_text()) or []
+            ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
     variant_descriptors = _load_all_variants_for_part(part_id, part_type)
     if not variant_descriptors:
