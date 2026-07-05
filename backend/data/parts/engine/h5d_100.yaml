@@ -843,23 +843,6 @@ claims:
     and check for motor burn-out signs (burnt smells, excessive vibration). Inspect
     wiring and connections for corrosion or damage.
   sources: []
-- claim_key: h5d_100_general_fan_motor_rulman_aşı
-  title: Fan Motor Bearing Wear and Imbalance
-  kind: known_issue
-  domain: general
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Wear of the fan motor bearings or imbalance of the fan blades causes
-    noisy malfunctions and short-term operation issues. This impairs the heater/air
-    conditioning (combined system) performance, disrupts safe operation, and increases
-    the risk of carbon monoxide buildup.
-  inspection_advice: Pay attention to any humming, whining, or grinding noises coming
-    from the fan motor while the heater/air conditioning system is running. Visually
-    inspect the fan’s rotation; slow, uneven, or complete stoppage indicates bearing
-    failure or mechanical issues.
-  sources: []
 - claim_key: h5d_100_electrical_hava_basınç_sensörü_
   title: Air Pressure Sensor Failure
   kind: known_issue
@@ -875,21 +858,6 @@ claims:
     may not be sending correct signals or is faulty. Professional inspection is required;
     the issue cannot be visually detected by the user.
   sources: []
-- claim_key: h5d_100_electrical_elektrik_dalgalanmal
-  title: Electrical Voltage Fluctuations and Cooling Fan Motor Performance Degradation
-  kind: known_issue
-  domain: electrical
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Electrical voltage fluctuations or voltage drops reduce the fan motor’s
-    rotational speed, preventing the sensor from detecting adequate airflow. This
-    frequently triggers the F5 fault code and impairs the device’s safe operation.
-  inspection_advice: Check for stable electrical wiring. This issue is more common
-    in older buildings or locations with faulty voltage regulators. Listen to the
-    fan motor’s operation—slow or irregular rotation indicates a voltage problem.
-  sources: []
 - claim_key: h5d_100_emissions_baca_tıkanıklığı_ve_
   title: Exhaust Backpressure and Airflow Obstruction
   kind: known_issue
@@ -904,68 +872,6 @@ claims:
     monoxide buildup inside the vehicle.
   inspection_advice: Regularly clean the exhaust outlet and check for blockages. In
     externally mounted cabin heaters, be aware that windborne debris can cause clogging.
-  sources: []
-- claim_key: h5d_100_electrical_fan_motoru_bobin_yan
-  title: Fan Motor Coil Burns and Electrical Failures
-  kind: known_issue
-  domain: electrical
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Burns or short circuits in the coils inside the fan motor completely
-    prevent the motor from operating or cause intermittent operation issues. This
-    results in the HVAC (combi) system frequently requesting resets and the reoccurrence
-    of the F5 error code.
-  inspection_advice: If the HVAC system frequently resets, the fan motor may have
-    coil burns or bearing wear. Professional inspection is required; visual detection
-    by the user is not possible.
-  sources: []
-- claim_key: h5d_100_general_nem_ve_su_sızıntısı_
-  title: Fan Motor Failures Related to Moisture and Water Leakage
-  kind: known_issue
-  domain: general
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Exposure of the fan motor to moisture can cause corrosion or short-circuiting.
-    This temporarily halts the heater/air conditioning (combined HVAC) system operation
-    and increases safety risks.
-  inspection_advice: Check for water leakage or moisture accumulation around the HVAC
-    system. Monitor the fan motor operation regularly in damp environments; look for
-    signs of corrosion or short-circuiting.
-  sources: []
-- claim_key: h5d_100_electrical_elektronik_kart_ve_f
-  title: Electronic Control Unit and Fan Motor Communication Issues
-  kind: known_issue
-  domain: electrical
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The electronic control unit (ECU) may fail to send the correct voltage
-    to the fan motor, potentially causing even a functional motor to not operate.
-    This disrupts the cooling system’s safe operation and triggers the F5 fault code.
-  inspection_advice: If the error persists after replacing the fan motor, the electronic
-    control unit must be tested. Professional diagnostics are required.
-  sources: []
-- claim_key: h5d_100_electrical_ntc_(sıcaklık_sensör
-  title: Fault and Limescale Deposition in the NTC (Temperature Sensor) in the Hot
-    Water Outlet
-  kind: known_issue
-  domain: electrical
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: In Vaillant boilers, the NTC temperature sensor located at the hot water
-    outlet may fail over time due to limescale buildup or reaching the end of its
-    electrical lifespan. This results in the sensor being unable to transmit signals
-    or sending incorrect data, leading to the E5 error code.
-  inspection_advice: Inspect the physical condition of the sensor. Examine the sensor’s
-    outlet for signs of limescale or physical damage. Additionally, check the sensor
-    connection points to ensure they are clean and free of oxidation.
   sources: []
 - claim_key: h5d_100_electrical_sensör-kart_bağlantı
   title: Corrosion or Damage to Sensor-to-Control Module Wiring Harness
@@ -1039,22 +945,6 @@ claims:
   inspection_advice: Test the engine for sluggish acceleration, poor throttle response,
     and overall weak power delivery. Listen for unusual turbocharger whine or lag
     during acceleration.
-  sources: []
-- claim_key: h5d_100_transmission_dsg_dq200_7-speed_dr
-  title: DSG DQ200 7-speed dry clutch transmission shudder and jerking
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 7-speed dry clutch DSG transmission paired with the 1.0 TSI engine
-    exhibits chronic issues including rough gear shifts at low speeds, jerking uphill,
-    delayed engagement in stop-and-go traffic, and degraded clutch alignment over
-    time. These problems are exacerbated in high-traffic urban environments like Istanbul.
-  inspection_advice: Check for abrupt gear shifts during test drives, especially at
-    low speeds and on inclines. Listen for unusual noises or vibrations during acceleration
-    and deceleration. Verify clutch responsiveness and smoothness in stop-and-go traffic.
   sources: []
 - claim_key: h5d_100_engine_chronic_oil_consumpt
   title: Chronic oil consumption in select 1.0 TSI production years
