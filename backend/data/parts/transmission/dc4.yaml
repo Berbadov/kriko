@@ -126,324 +126,312 @@ claims:
     on the dashboard indicating transmission issues.
   sources: []
 - claim_key: dc4_transmission_kavrama_aşınması/dam
-  title: Kavrama Aşınması/Damar Hasarı (DCT Şanzıman)
+  title: Clutch Wear/Damage (DCT Transmission)
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Çift kavramalı şanzımanlarda kullanılan kavramalar zamanla aşınabilir
-    veya hasar görerek vites geçişlerinde sarsıntı, takılma veya vites kaybına neden
-    olabilir.
-  inspection_advice: Şanzımanın sarsıntılı vites geçişleri, takılma veya vites kaybı
-    gibi belirtilerini kontrol edin. Ayrıca, şanzıman kasasında anormal gıcırdama
-    veya uğultu sesleri dinleyin. Uzman bir mekanik tarafından şanzıman yağının durumu
-    ve kavramaların aşınma derecesi kontrol edilmelidir.
+  rationale: In dual-clutch transmissions, the clutches can wear out or sustain damage
+    over time, causing jerking, sticking, or loss of gears during gear shifts.
+  inspection_advice: Check the transmission for symptoms such as jerky gear shifts,
+    sticking, or loss of gears. Also, listen for abnormal grinding or whining noises
+    from the transmission housing. A qualified mechanic should inspect the condition
+    of the transmission fluid and the degree of clutch wear.
   sources: []
 - claim_key: dc4_transmission_yazılım_bağımlılığı_
-  title: Yazılım Bağımlılığı ve Sorunları (DCT Şanzıman)
+  title: Software Dependency and Issues (DCT Transmission)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DCT şanzımanların yazılım hataları, vites geçişlerinde sorunlara yol
-    açabilir. Bu sorunlar, şanzımanın düzgün çalışmamasına veya anormal davranışlara
-    neden olabilir.
-  inspection_advice: Şanzımanın vites geçişlerinde sarsıntı, takılma veya anormal
-    sesler ürettiği durumlarda, yazılım güncellemelerini kontrol edin veya yetkili
-    serviste yazılım sorunlarını tespit ettirin. Ayrıca, şanzımanın hatırladığı hatalar
-    veya kodlar varsa bunları kontrol edin.
+  rationale: Software errors in Dual-Clutch Transmissions (DCT) can cause problems
+    during gear shifts. These issues may result in improper transmission operation
+    or abnormal behavior.
+  inspection_advice: If the transmission exhibits jerking, stalling, or unusual noises
+    during gear shifts, check for available software updates or have the transmission
+    serviced by an authorized technician to diagnose software-related issues. Additionally,
+    review any stored error codes or faults recorded by the transmission.
   sources: []
 - claim_key: dc4_transmission_yağ_pompası_arızası_
-  title: Yağ Pompası Arızası (DCT Şanzıman)
+  title: Oil Pump Failure (DCT Transmission)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yağ pompası arızası, şanzımanın yağlanmasını engelleyerek kavramaların
-    aşınmasına ve şanzımanın hasar görmesine yol açabilir. Bu durum, vites geçişlerinde
-    sorunlara ve şanzıman ömrünün kısalmasına neden olabilir.
-  inspection_advice: Şanzıman kasasında yağ sızıntısı veya anormal sesler varsa, yağ
-    pompasının çalışma durumunu kontrol ettirin. Ayrıca, şanzıman yağının renk ve
-    kokusunu kontrol edin. Yağın kararmış veya yanmış kokusu varsa, yağ pompasının
-    arızalanmış olabileceğini düşünün.
+  rationale: Oil pump failure can prevent proper lubrication of the transmission,
+    leading to wear and damage of the clutches. This condition can cause issues during
+    gear shifts and reduce the transmission's lifespan.
+  inspection_advice: Check for oil leaks or unusual noises in the transmission casing,
+    and verify the operation of the oil pump. Also, inspect the transmission oil’s
+    color and smell. If the oil is darkened or has a burnt odor, the oil pump may
+    be faulty.
   sources: []
 - claim_key: dc4_transmission_sarsıntılı_vites_geç
-  title: Sarsıntılı Vites Geçişleri (Hyundai 7 İleri DCT)
+  title: Rough or Jerky Gear Shifts (Hyundai 7-Speed Dual Clutch Transmission)
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Şanzımanın vites geçişlerinde sarsıntı veya takılma yaşama eğilimi, kavrama
-    veya şanzıman iç mekanizmalarındaki sorunların belirtisi olabilir. Bu durum, sürüş
-    konforunu ve güvenliği olumsuz etkileyebilir.
-  inspection_advice: Şanzımanın vites geçişlerinde sarsıntı veya takılma yaşadığını
-    gözlemleyin. Bu belirtiler varsa, şanzımanın bakım ve onarımını yapın veya yetkili
-    serviste kontrol ettirin.
+  rationale: The tendency for the transmission to experience rough or jerky gear shifts
+    may indicate issues with the clutch packs or internal transmission mechanisms.
+    This condition can negatively impact driving comfort and safety.
+  inspection_advice: Observe if the transmission exhibits rough or jerky gear shifts.
+    If these symptoms are present, perform maintenance and repairs on the transmission
+    or have it inspected at an authorized service center.
   sources: []
 - claim_key: dc4_electrical_kömür_ve_komütatör_a
-  title: Kömür ve Komütatör Aşınması
+  title: Carbon Brush and Commutator Wear
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DC motorlarda kömürlerin aşınması ve komütatörle düzgün temasını kaybetmesi,
-    motorun çalışmasını doğrudan etkiler. Bu durumda motor ya çalışmaz ya da düzensiz
-    çalışır.
-  inspection_advice: Kömürlerin aşınma durumunu kontrol edin ve komütatör yüzeyinde
-    çizik veya aşınma izleri olup olmadığını inceleyin. Komütatör yüzeyinin düzgünlüğünü
-    ve kömürlerin teması için el ile dokunarak kontrol edilebilir.
+  rationale: In DC motors, the **carbon brushes** wear out and lose proper contact
+    with the **commutator**, directly impacting motor operation. This results in the
+    motor either failing to run or operating erratically.
+  inspection_advice: Inspect the **carbon brushes** for wear and check the **commutator
+    surface** for scoring or wear marks. The commutator’s smoothness and brush contact
+    can be verified by manually feeling the surface.
   sources: []
 - claim_key: dc4_electrical_sargı_yanıkları
-  title: Sargı Yanıkları
+  title: Stator Windings Burnout
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yüksek akım veya izolasyon problemleri nedeniyle oluşan sargı yanıkları,
-    motorun tamamen devre dışı kalmasına neden olabilir. Bu durumda motorun yeniden
-    sarılması gereklidir.
-  inspection_advice: Sargı direncini ölçerek yanık olup olmadığını kontrol edin. Aşırı
-    ısınma veya yanık kokusu varsa, sargı yanıkları olabilir.
+  rationale: High current or insulation issues causing stator windings burnout can
+    lead to complete engine failure. In this case, the stator windings must be rewound.
+  inspection_advice: Check stator winding resistance to detect burnout. If there is
+    excessive heating or a burnt smell, stator windings burnout may be present.
   sources: []
 - claim_key: dc4_mechanical_rulman_arızaları
-  title: Rulman Arızaları
+  title: Bearing Failures
   kind: known_issue
-  domain: mechanical
+  domain: general
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Rulmanların aşınması veya kırılması, motorun titreşim ve gürültüye neden
-    olmasına yol açar ve performans düşüklüğüne sebep olur.
-  inspection_advice: Motor çalışırken titreşim veya anormal gürültü olup olmadığını
-    dinleyin. Rulmanların aşınma veya hasar izlerini görsel olarak kontrol edin.
+  rationale: Wear or failure of bearings causes engine vibration and noise, leading
+    to reduced performance.
+  inspection_advice: Listen for vibration or abnormal noise while the engine is running.
+    Visually inspect bearings for signs of wear or damage.
   sources: []
 - claim_key: dc4_electrical_kollektör_yüzey_bozu
-  title: Kollektör Yüzey Bozulmaları
+  title: Distributor Surface Failures
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Kollektör yüzeyinde çizikler, yanık izleri veya kir birikmeleri, motorun
-    düzgün çalışmasını engeller.
-  inspection_advice: Kollektör yüzeyini temizleyin ve çizik, yanık izi veya kir birikimi
-    olup olmadığını kontrol edin. Temizlenemeyen bozulmaların yeniden işlenmesi gerekebilir.
+  rationale: Scratches, burn marks, or deposits on the distributor surface prevent
+    the engine from operating smoothly.
+  inspection_advice: Clean the distributor surface and check for scratches, burn marks,
+    or deposits. If the damage cannot be cleaned, the surface may require reconditioning.
   sources: []
 - claim_key: dc4_electrical_düşük_yalıtım_direnc
-  title: Düşük Yalıtım Direnci
+  title: Low Insulation Resistance
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: İzolasyon direncinin düşmesi, nem, toz veya aşırı sıcaklık nedeniyle
-    elektriksel kaçaklara ve kısa devre riskine yol açar.
-  inspection_advice: İzolasyon testi yaparak düşük yalıtım direnci olup olmadığını
-    kontrol edin. Motorun nem veya kirlenme izleri olup olmadığını da gözlemleyin.
+  rationale: A decrease in insulation resistance can lead to electrical leakage and
+    short-circuit risks due to moisture, dust, or excessive heat exposure.
+  inspection_advice: Perform an insulation test to check for low insulation resistance.
+    Also, visually inspect the engine for signs of moisture or contamination.
   sources: []
 - claim_key: dc4_electrical_aşırı_isınma
-  title: Aşırı Isınma
+  title: Overheating
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Motorun aşırı ısınması, sargı problemleri veya aşırı yükten kaynaklanabilir
-    ve iç yapıda ciddi arızalara yol açabilir.
-  inspection_advice: Motorun çalışırken el ile dokunarak aşırı ısınma olup olmadığını
-    kontrol edin. Aşırı ısınma durumunda motoru hemen durdurun ve arızayı tespit edin.
+  rationale: The engine overheating can be caused by wiring issues or excessive load
+    and may lead to severe internal failures.
+  inspection_advice: Check for overheating by touching the engine while it is running.
+    If overheating is detected, shut down the engine immediately and diagnose the
+    issue.
   sources: []
 - claim_key: dc4_mechanical_gürültülü_çalışma
-  title: Gürültülü Çalışma
+  title: Noisy Operation
   kind: known_issue
-  domain: mechanical
+  domain: general
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: DC motorun çalışırken anormal gürültü çıkarması, rulman arızası veya
-    iç mekanik parçaların dengesizliğini gösterir.
-  inspection_advice: Motor çalışırken ses çıkarması olup olmadığını dinleyin. Anormal
-    gürültü varsa motoru hemen servise gönderin.
+  rationale: The DC motor producing abnormal noise during operation indicates a bearing
+    failure or imbalance in internal mechanical components.
+  inspection_advice: Listen for noise while the motor is running. If abnormal noise
+    is detected, immediately send the motor to the service center.
   sources: []
 - claim_key: dc4_electrical_düşen_devir_ve_tork
-  title: Düşen Devir ve Tork
+  title: Loss of RPM and Torque
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Motorun devir ve tork kaybı, iç dirençlerin artması veya elektriksel
-    verimsizliklerin oluşumunu gösterir.
-  inspection_advice: Motorun devir ve tork performansını kontrol edin. Eskisi kadar
-    hızlı dönmüyorsa veya tork kaybı varsa, komütatör temizliği ve kömür kontrolü
-    yapın.
+  rationale: Loss of engine RPM and torque indicates increased internal friction or
+    the development of electrical inefficiencies.
+  inspection_advice: Check the engine’s RPM and torque performance. If it doesn’t
+    spin up as quickly as before or shows torque loss, clean the commutator and inspect
+    the brushes.
   sources: []
 - claim_key: dc4_transmission_kuru_tip_dc4_şanzıma
-  title: Kuru tip DC4 şanzımanlarda debriyaj balatası aşınması ve incelmesi
+  title: Worn and Thinned Clutch Friction Plates in Dry-Type DC4 Transmissions
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Kuru tip EDC şanzımanlarda debriyaj balatasının aşınması ve incelmesi,
-    vites geçişlerinde titreme ve sarsıntıya neden olur. Bu, özellikle 1. vitesten
-    2. vitese geçişlerde veya yokuş yukarı kalkışlarda daha belirgin hale gelir.
-  inspection_advice: Şanzımanın kuru tip olup olmadığını kontrol edin. Debriyaj balatasının
-    aşınma durumunu görsel olarak inceleyin veya titreme ve sarsıntı belirtilerine
-    dikkat edin. Ayrıca, vites geçişlerinde anormal sesler veya titreme varsa, debriyaj
-    balatasının değiştirilmesi gerekebilir.
-  sources: []
-- claim_key: dc4_transmission_islak_tip_edc_şanzım
-  title: Islak tip EDC şanzımanlarda yağ kalitesinin bozulması ve metal çapakları
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Islak tip EDC şanzımanlarda (örneğin DW6 veya DW5) yağ kalitesinin bozulması,
-    metal çapaklarının birikmesine ve hassas hidrolik valflerin tıkanmasına yol açar.
-    Bu, şanzıman performansını ciddi şekilde etkiler ve uzun vadede mekatronik ünite
-    veya dişli grubunun hasar görmesine neden olabilir.
-  inspection_advice: Şanzıman yağının renk ve kokusunu kontrol edin. Koyu renk, yanma
-    veya bozulma işaretidir. Ayrıca, şanzımanın ısınma uyarıları veya vites geçişlerinde
-    anormal sesler varsa, yağ değişimi ve sistem temizliği gerekebilir.
+  rationale: Wear and thinning of the clutch friction plates in dry-type EDC transmissions
+    cause vibration and shuddering during gear shifts. This is particularly noticeable
+    when shifting from 1st to 2nd gear or when climbing uphill.
+  inspection_advice: Verify whether the transmission is dry-type. Visually inspect
+    the wear condition of the clutch friction plates or pay attention to symptoms
+    of vibration and shuddering. If abnormal noises or shuddering occur during gear
+    shifts, replacement of the clutch friction plates may be necessary.
   sources: []
 - claim_key: dc4_transmission_mekatronik_ünite_arı
-  title: Mekatronik ünite arızaları (elektriksel kısa devre veya hidrolik sızıntılar)
+  title: Mekatronik unit failures (electrical short circuits or hydraulic leaks)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Mekatronik ünite (TCU ve hidrolik valf gövdesi), EDC şanzımanın beyni
-    ve kontrol sistemidir. Elektriksel kısa devre veya hidrolik sızıntılar, vitese
-    geçme sorunlarına, araç durmasına veya anormal vites atlamalarına neden olabilir.
-  inspection_advice: Şanzıman kontrol uyarıları veya vitese geçme sorunları varsa,
-    mekatronik ünitenin elektriksel ve hidrolik durumunu kontrol ettirin. Ayrıca,
-    şanzıman sıvısının düzeyini ve renk durumunu kontrol edin; sızıntı veya koku bozulması
-    varsa, mekatronik ünite arızası olabilir.
+  rationale: The mekatronik unit (TCU and hydraulic valve body) is the brain and control
+    system of the EDC transmission. Electrical short circuits or hydraulic leaks can
+    cause shifting issues, vehicle stalling, or abnormal gear jumps.
+  inspection_advice: If transmission control warnings or shifting problems occur,
+    inspect the mekatronik unit for electrical and hydraulic faults. Additionally,
+    check the transmission fluid level and condition; if leaks or odor degradation
+    are present, a mekatronik unit failure may be indicated.
   sources: []
 - claim_key: dc4_transmission_yazılım_adaptasyon_e
-  title: Yazılım adaptasyon eksikliği veya hatalı kavrama ayarları
+  title: Missing software adaptation or incorrect clutch pack settings
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: EDC şanzımanında kavrama seti değiştirildikten sonra, yazılım adaptasyonu
-    yapılmazsa, yeni parçalar bile düzgün çalışmayabilir. Bu, vites geçişlerinde pürüzlülük,
-    titreme veya hatta araç durmasına neden olabilir.
-  inspection_advice: Kavrama seti değiştirildikten sonra şanzımanın vites geçişlerini
-    kontrol edin. Eğer yeni parçalarla bile sorun devam ederse, yazılım adaptasyonunun
-    yapıldığını doğrulayın. Ayrıca, servis tarafından orijinal Renault diagnostic
-    cihazları kullanılıp kullanılmadığını sorgulayın.
+  rationale: If the clutch pack set in the EDC transmission is replaced but software
+    adaptation is not performed, the new parts may not function correctly. This can
+    cause rough shifting, vibration, or even vehicle stalling during gear changes.
+  inspection_advice: After replacing the clutch pack set, check the transmission’s
+    gear shifts for proper operation. If issues persist even with the new parts, verify
+    that software adaptation was performed. Also, confirm whether the service used
+    original Renault diagnostic tools.
   sources: []
 - claim_key: dc4_electrical_dc_motor:_kutup_sarg
-  title: 'DC Motor: Kutup Sargılarında Devre Kopukluğu'
+  title: 'DC Motor: Open Circuit in Field Windings'
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Devre kopukluğu, bobin içindeki kısa devre veya dış etkenlerden kaynaklanan
-    darbeler nedeniyle kutup sargılarında meydana gelir. Bu, motorun elektriksel performansını
-    olumsuz etkileyebilir ve arızaların daha büyük sorunlara dönüşmesine neden olabilir.
-  inspection_advice: Kutup sargılarının ara bağlantılarının yalıtkanlığı kaldırılıp,
-    seri lamba kullanılarak her bobinin ayrı ayrı kontrolü yapılarak devre kopukluğu
-    tespit edilmelidir. Yanmayan bobin kopukluğa işaret eder.
+  rationale: An open circuit in the field windings occurs due to either an internal
+    short circuit in the coils or external impacts causing mechanical damage. This
+    can negatively impact the motor’s electrical performance and may lead to further
+    failures escalating into larger issues.
+  inspection_advice: Inspect the field windings by removing insulation from the interconnections
+    and testing each coil individually using a series lamp. A coil that does not light
+    up indicates an open circuit.
   sources: []
 - claim_key: dc4_electrical_dc_motor:_rotor_gövd
-  title: 'DC Motor: Rotor Gövdeye Kaçak'
+  title: 'DC Motor: Rotor Body Short Circuit'
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Rotorun ısınması sonucu gövdeye kaçak oluşur ve motor ark yaparak çalışır.
-    Bu, motorun çalışmasını ciddi şekilde etkiler ve hasara yol açabilir.
-  inspection_advice: Rotor yerinden sökülüp, seri lambayla gövde ile kollektör arası
-    kontrol edilmelidir. Ark yaparak çalışan motorlarda rotor gövdeye kaçak olabilir.
+  rationale: The rotor overheats, causing a short circuit to the body, which makes
+    the motor run with arcing. This significantly impairs motor operation and can
+    lead to damage.
+  inspection_advice: The rotor must be removed and tested with a continuity lamp between
+    the body and the commutator. Motors running with arcing may have a short circuit
+    between the rotor and the body.
   sources: []
 - claim_key: dc4_electrical_dc_motor:_kollektör_
-  title: 'DC Motor: Kollektör Kısa Devre'
+  title: 'DC Motor: Brush Short Circuit (Commutator Short)'
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Kollektör dilimleri arasında kısa devre, mikadaki kömür tozu, pislik,
-    yağ ve ark nedeniyle oluşur. Bu, motorun performansını olumsuz etkiler ve arızaların
-    artmasına neden olur.
-  inspection_advice: Kollektör dilimleri ayrılarak, komşu dilimlerin seri lamba ile
-    kontrolü yapılarak kısa devre tespit edilmelidir. Kömürleşmiş mikalar temizlenmelidir.
+  rationale: A short circuit between commutator segments occurs due to carbon dust,
+    dirt, oil, and arcing in the brush holder. This negatively impacts motor performance
+    and increases the risk of failures.
+  inspection_advice: Check for short circuits between adjacent commutator segments
+    using a series lamp while separating the commutator segments. Clean the carbonized
+    brush holders thoroughly.
   sources: []
 - claim_key: dc4_electrical_dc_motor:_fırça_ve_y
-  title: 'DC Motor: Fırça ve Yay Basınç Arızaları'
+  title: 'DC Motor: Brush and Spring Pressure Failures'
   kind: known_issue
   domain: electrical
   severity: medium
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Fırçaların kırılması veya yay basınçlarının azalması, motorun düzgün
-    çalışmasını engeller ve ark oluşumuna neden olur. Bu, motorun performansını ve
-    ömrünü kısaltır.
-  inspection_advice: Fırçaların boyut ve basınç kontrolü yapılarak, yay basınçları
-    ayarlanmalı veya yenilenmelidir. Fırçaların kollektöre temas ettiği kısımlar düzgün
-    oturmalıdır.
+  rationale: The breaking of brushes or reduction in spring pressure prevents the
+    motor from operating smoothly and causes arcing. This reduces the motor’s performance
+    and lifespan.
+  inspection_advice: Check brush dimensions and pressure, then adjust or replace the
+    spring pressures as needed. Ensure the brushes seat correctly against the commutator.
   sources: []
 - claim_key: dc4_mechanical_dc_motor:_yatak_ve_m
-  title: 'DC Motor: Yatak ve Mekanik Aşınma'
+  title: 'DC Motor: Bearing Wear and Mechanical Wear'
   kind: known_issue
-  domain: mechanical
+  domain: general
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Yatakların aşınması veya kapakların düzgün sıkılmaması, rotor milinin
-    aşınmasına ve kutup sargılarının kopmasına neden olabilir. Bu, motorun çalışmasını
-    tamamen bozabilir.
-  inspection_advice: Yataklar ve kapaklar kontrol edilmeli, rotor milinin aşınma izleri
-    ve kapakların sıkılma durumu incelenmelidir. Havalandırma sistemi de kontrol edilmelidir.
+  rationale: Wear of the bearings or improper sealing of the end covers can cause
+    wear of the rotor shaft and damage to the pole windings. This can completely disrupt
+    the motor's operation.
+  inspection_advice: Check the bearings and end covers for wear, inspect the rotor
+    shaft for signs of wear, and verify the sealing condition of the end covers. Also,
+    inspect the ventilation system.
   sources: []
 - claim_key: dc4_electrical_dc_motor:_i̇zolasyon_
-  title: 'DC Motor: İzolasyon Bozulması ve Pislik'
+  title: 'DC Motor: Insulation Failure and Contamination'
   kind: known_issue
   domain: electrical
   severity: high
   confidence: 0.0
   status: held
   promoted_by: pending_human
-  rationale: Pislik, yağ ve tozların bobin ve kollektör dilimleri arasına girmesi,
-    izolasyonun bozulmasına ve motorun arızalanmasına neden olur. Bu, motorun çalışmasını
-    ciddi şekilde etkiler.
-  inspection_advice: Motor periyodik olarak temizlenmeli ve izolasyon muayenesi yapılarak,
-    izolasyon azaldığında motor fırınlanarak kurutulmalıdır.
+  rationale: Contamination from dirt, oil, and dust entering between the coil windings
+    and commutator segments causes insulation breakdown and motor failure. This severely
+    impacts motor operation.
+  inspection_advice: The motor should be periodically cleaned, and insulation inspections
+    should be conducted. When insulation degradation is detected, the motor must be
+    baked in an oven to dry it out.
   sources: []
 - claim_key: dc4_transmission_chronic_edc_(electro
   title: Chronic EDC (Electronic Diesel Control) Transmission Failure in 1.5 dCi Renault
@@ -641,4 +629,701 @@ claims:
   inspection_advice: Check the clutch master cylinder for leaks, cracks, or deformities.
     Ensure the clutch pedal moves smoothly and fully to the floor. Listen for unusual
     noises or vibrations when engaging the clutch.
+  sources: []
+- claim_key: dc4_electrical_r-link_infotainment_
+  title: R-Link Infotainment System Freezing & Connectivity Issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The R-Link infotainment system, while innovative, has been plagued by
+    freezing, slow response times, and connectivity problems, often requiring software
+    updates to resolve.
+  inspection_advice: Test the R-Link system for freezing, lag, or unresponsiveness.
+    Confirm the software version is up-to-date, as older versions are more prone to
+    issues.
+  sources: []
+- claim_key: dc4_electrical_electric_power_steer
+  title: Electric Power Steering Faults & Loss of Assistance
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The electric power steering system in the Renault Clio Mk4 can develop
+    faults, leading to warning lights and a complete or partial loss of power steering
+    assistance, indicating a potential wiring, sensor, or actuator defect.
+  inspection_advice: During the test drive, check for warning lights related to power
+    steering and verify that steering feels smooth and responsive without excessive
+    effort.
+  sources: []
+- claim_key: dc4_general_boot_release_mechani
+  title: Boot Release Mechanism Failure
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The boot release mechanism in the Renault Clio Mk4 is prone to failure,
+    often seizing and preventing the boot from opening, likely due to a design flaw
+    or lack of maintenance.
+  inspection_advice: Test the boot release mechanism multiple times to ensure it operates
+    smoothly and without hesitation. Check for signs of corrosion or wear on the release
+    mechanism.
+  sources: []
+- claim_key: dc4_general_driver's_side_window
+  title: Driver's Side Window Regulator Failure
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The window regulators, particularly on the driver's side, are known to
+    fail prematurely, which can be attributed to material fatigue or design weaknesses
+    in the mechanism.
+  inspection_advice: Operate the driver's window multiple times to check for smooth
+    operation, unusual noises, or resistance. Inspect for visible wear or damage to
+    the window regulator tracks.
+  sources: []
+- claim_key: dc4_emissions_dpf_issues_on_1.5_dc
+  title: DPF Issues on 1.5 dCi Diesel Engines
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.5 dCi diesel engines in the Renault Clio Mk4 suffer from Diesel
+    Particulate Filter (DPF) problems, particularly in cars used for short journeys,
+    indicating a mismatch between the engine's emissions system and typical driving
+    patterns.
+  inspection_advice: For diesel models, verify the vehicle's usage history to ensure
+    it has been driven on regular longer journeys. Check for DPF regeneration warnings
+    or reduced engine performance.
+  sources: []
+- claim_key: dc4_brakes_handbrake_cable_seiz
+  title: Handbrake Cable Seizure in Corrosive Environments
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Handbrake cables in Renault Clio Mk4 models exposed to winter salt or
+    coastal environments are prone to seizing, likely due to corrosion weakening the
+    mechanism.
+  inspection_advice: Check the handbrake cables for rust, corrosion, or stiffness.
+    Test the handbrake operation to ensure it engages and releases smoothly without
+    excessive force.
+  sources: []
+- claim_key: dc4_general_air_conditioning_com
+  title: Air Conditioning Compressor Failures (2013-2015 Models)
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Air conditioning compressors in Renault Clio Mk4 models from 2013 to
+    2015 are more prone to failure, potentially due to design or material issues in
+    the early production run.
+  inspection_advice: Test the air conditioning system to ensure it cools effectively
+    and operates without unusual noises. Check for warning lights related to the A/C
+    system.
+  sources: []
+- claim_key: dc4_suspension_front_wheel_bearing_
+  title: Front Wheel Bearing Failures (40,000-60,000 Miles)
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Front wheel bearings in the Renault Clio Mk4 are known to fail prematurely,
+    typically between 40,000 and 60,000 miles, indicating a potential design weakness
+    or insufficient durability in the bearing assembly.
+  inspection_advice: During a test drive, listen for unusual noises (e.g., grinding
+    or humming) from the front wheels, especially at higher speeds. Check for play
+    or looseness in the wheel bearings by applying force to the top and bottom of
+    the tire while the wheel is off the ground.
+  sources: []
+- claim_key: dc4_engine_timing_chain_stretch
+  title: Timing chain stretch and catastrophic failure at ~150k km
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 0.9 TCe 90 (H4Bt 400) engine is prone to timing chain stretching,
+    which can lead to catastrophic engine failure around 150,000 km, often preceded
+    by noticeable oil consumption.
+  inspection_advice: Check for oil consumption patterns, unusual engine noises (e.g.,
+    rattling or ticking), and verify timing chain condition during maintenance. Look
+    for service records confirming timing chain inspections/replacements.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"In some specialist forums, it''s been noted that around 150 000km, there
+      have been engine failures after oil consumption was noticed."'
+    independent: true
+- claim_key: dc4_engine_failing_ignition_coi
+  title: Failing ignition coils and catastrophic engine failure due to neglected timing
+    belt
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.2 16v 75 (D4F 740) engine suffers from ignition coil failures and,
+    if the timing belt is not replaced at specified intervals, catastrophic engine
+    failure can occur.
+  inspection_advice: Inspect ignition coils for wear or failure, verify timing belt
+    condition and service history, and listen for unusual engine noises (e.g., misfires,
+    rattling).
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"Reported issues include failing ignition coils and catastrophic engine
+      failure if the timing belts haven''t been changed at the specified intervals."'
+    independent: true
+- claim_key: dc4_engine_class-action_lawsuit
+  title: Class-action lawsuit due to extreme oil consumption and timing chain issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.2 TCe 120 (H5F 408) engine is notorious for extreme oil consumption
+    (up to 1 liter per 1,000 km), timing chain stretch, carbon buildup, and oil leaks
+    from the crankshaft oil seal and crankcase ventilation pipe. This severity led
+    to a class-action lawsuit.
+  inspection_advice: Check oil levels frequently and verify oil consumption patterns.
+    Inspect for oil leaks around the crankshaft oil seal and crankcase ventilation
+    pipe. Listen for unusual engine noises and check for carbon buildup during maintenance.
+    Review service history for timing chain replacements.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"Unfortunately, this engine is probably the least reliable out of the
+      lot. To the point that there was a class-action lawsuit surrounding the engine.
+      Oil consumption is notoriously high, to the point where there were reports of
+      engines consuming 1 litre per 1000km. Timing chain stretch and carbon buildup
+      have been reported in this direct-injection engine. Other oil-leak locations
+      include the crankshaft oil seal and the crankcase ventilation pipe."'
+    independent: true
+- claim_key: dc4_brakes_front_brake_hose_rec
+  title: Front brake hose recall due to incorrect installation
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Front brake hoses were incorrectly fitted, leading to leaks. This recall
+    affected vehicles manufactured between 2013 and 2014.
+  inspection_advice: Check the front brake hoses for proper installation, signs of
+    leaks, or damage. Verify if the vehicle falls within the 2013-2014 manufacturing
+    range and confirm if the recall was addressed.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"There was a front brake hose recall due to hoses being fitted incorrectly,
+      resulting in leaks, and the rear retaining clips may be incorrect. This issue
+      affected vehicles manufactured between 2013 and 2014."'
+    independent: true
+- claim_key: dc4_suspension_premature_wear_of_su
+  title: Premature wear of suspension components
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Anti-roll bar links, shock absorbers, and control arm bushings wear out
+    prematurely, impacting ride quality and handling.
+  inspection_advice: Inspect suspension components for wear, cracks, or excessive
+    play. Check for uneven tire wear and unusual noises or vibrations while driving.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"Some suspension components wear prematurely, such as the anti-roll bar
+      links, shock absorbers and control arm bushings."'
+    independent: true
+- claim_key: dc4_transmission_getrag_transmission_
+  title: Getrag transmission gear change issues and worn mechatronics
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Getrag transmission, used in 1.2-litre turbo variants and Clio RS
+    models, suffers from gear change issues, particularly in early variants where
+    mechatronics units wear out prematurely. Rough operation can also result from
+    careless driving habits.
+  inspection_advice: Check for smooth gear shifts and listen for unusual noises during
+    gear changes. Inspect the mechatronics unit for wear, especially in early models.
+    Verify service history for transmission maintenance.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"The Getrag transmission, which is also used in the 1.2-litre turbo variants,
+      does suffer from gear change issues. In the performance RS variant, much of
+      it is due to careless operation. Still, other reported problems include early
+      Clio variants experiencing worn mechatronics units and software glitches."'
+    independent: true
+- claim_key: dc4_electrical_software_glitches_in
+  title: Software glitches in early Clio variants
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Early Clio Mk4 variants may experience software glitches related to mechatronics
+    units, which can cause erratic behavior in the transmission and other systems.
+  inspection_advice: Check for any error messages or erratic behavior in the vehicle's
+    systems. Verify if the vehicle is an early variant and if software updates have
+    been applied.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-mk4-x98/16595
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"other reported problems include early Clio variants experiencing worn
+      mechatronics units and software glitches."'
+    independent: true
+- claim_key: dc4_electrical_fırça_aşınması_ve_uy
+  title: Brush wear and use of inappropriate brush material
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In DC motors, the rate of brush wear can be rapid depending on the suitability
+    of the brush material and environmental factors (such as humidity). This can negatively
+    impact motor performance and lead to failures.
+  inspection_advice: Check the wear condition of the brushes. Verify if the brushes
+    are shorter than the manufacturer-recommended length, if the collector surface
+    is smooth, and if humidity levels are controlled.
+  sources: []
+- claim_key: dc4_electrical_kolektör_ve_armatürd
+  title: Irregular Wear on Distributor and Armature
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Irregular wear on the distributor and armature can cause engine vibration
+    and unusual noises. This reduces engine efficiency and may lead to long-term failures.
+  inspection_advice: Inspect the distributor surface for smoothness and signs of irregular
+    wear. If vibration or unusual noises are present, the distributor may require
+    reconditioning or replacement.
+  sources: []
+- claim_key: dc4_general_yatak_aşınması_ve_ku
+  title: Bearing Wear and Drying Out
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In DC motors, bearing wear or drying out can cause unusual noises and
+    vibrations that affect motor operation. This can shorten the motor’s lifespan
+    and lead to failures.
+  inspection_advice: Inspect the bearings for wear or drying-out signs. If present,
+    repair or replace the bearings with proper lubrication.
+  sources: []
+- claim_key: dc4_electrical_termal_koruma_devrey
+  title: Engine shutdown due to thermal protection system activation
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Activation of the thermal protection system can cause unexpected engine
+    shutdowns due to the engine overheating. This may occur as a result of the engine
+    being overloaded or due to issues within the cooling system.
+  inspection_advice: Check for signs of engine overheating. Inspect the load conditions
+    and cooling system, and ensure the thermal protection systems are functioning
+    correctly.
+  sources: []
+- claim_key: dc4_electrical_armatür_sargısında_k
+  title: Short circuit or open circuit in the ignition coil winding
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A short circuit or open circuit in the ignition coil winding can completely
+    stop the engine from running or severely degrade its performance. This can lead
+    to engine failure and damage.
+  inspection_advice: Test the ignition coil winding for short circuit or open circuit.
+    Verify the health of the windings by performing continuity and insulation resistance
+    tests.
+  sources: []
+- claim_key: dc4_general_eksen_kaçıklığı_nede
+  title: Vibration due to misalignment of the drive shaft
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Misalignment between the engine and the driven equipment can cause vibration
+    and wear, which may shorten the engine’s lifespan and negatively impact performance.
+  inspection_advice: Check the alignment of the crankshaft and the driven equipment’s
+    shaft. If misalignment is detected, correct the alignment.
+  sources: []
+- claim_key: dc4_electrical_fırça_yay_gerilimini
+  title: Incorrect brush spring tension adjustment
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Incorrect brush spring tension adjustment can prevent the brushes from
+    making proper contact, negatively affecting engine performance. This can accelerate
+    brush wear and lead to failures.
+  inspection_advice: Check and adjust the brush spring tension according to manufacturer
+    specifications if necessary.
+  sources: []
+- claim_key: dc4_electrical_kolektör_kirlenmesi_
+  title: Distributor contamination and lubrication
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Contamination of the distributor surface with dirt, oil, or carbon deposits
+    can disrupt brush contact and negatively impact engine performance. This can accelerate
+    brush wear and lead to failures.
+  inspection_advice: Inspect the distributor surface for dirt, oil, or carbon deposits.
+    Clean if necessary using appropriate materials.
+  sources: []
+- claim_key: dc4_electrical_elektrik_kısa_devrel
+  title: Electrical Short Circuits and Damaged Insulation
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Electrical short circuits and damaged insulation can cause the engine
+    to overheat and fail. This can significantly shorten the engine's lifespan.
+  inspection_advice: Inspect the windings and insulation for condition. If any short
+    circuits or damaged insulation are found, perform necessary repairs.
+  sources: []
+- claim_key: dc4_electrical_pmdc_motor_friction_
+  title: PMDC Motor Friction Brush Wear and Failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Friction brushes in PMDC motors wear down over time, leading to poor
+    electrical contact with the commutator, which can cause the motor to fail to start
+    or operate inefficiently. Severe wear or damage necessitates replacement.
+  inspection_advice: Check the brushes for wear beyond half their original length
+    and inspect for cracks or chipping. Ensure they maintain proper contact with the
+    commutator.
+  sources: []
+- claim_key: dc4_electrical_pmdc_motor_commutato
+  title: PMDC Motor Commutator Damage and Contamination
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The commutator in PMDC motors can become contaminated with dirt, dust,
+    or carbon deposits, or suffer physical damage (e.g., grooves, cracks), leading
+    to poor electrical contact with the brushes and causing motor failure or erratic
+    operation.
+  inspection_advice: Inspect the commutator for signs of contamination (dirt, carbon
+    buildup) and physical damage (grooves, cracks). Clean it gently with fine sandpaper
+    or replace it if severely damaged.
+  sources: []
+- claim_key: dc4_electrical_pmdc_motor_winding_f
+  title: PMDC Motor Winding Failure (Short/Open Circuit)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Motor windings can suffer short circuits or open circuits, rendering
+    the motor inoperable. This is often indicated by abnormal resistance readings
+    or visible burn marks.
+  inspection_advice: Use a multimeter to measure winding resistance and compare it
+    to manufacturer specifications. Check for signs of overheating or burning, which
+    indicate severe winding damage.
+  sources: []
+- claim_key: dc4_electrical_pmdc_motor_environme
+  title: PMDC Motor Environmental Corrosion (High Humidity)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Exposure to high humidity can cause corrosion in motor components, particularly
+    brushes and commutators, leading to poor electrical performance or failure.
+  inspection_advice: Check for signs of rust or corrosion on brushes, commutators,
+    and other metal parts. Store or operate the motor in a dry environment if exposed
+    to high humidity.
+  sources: []
+- claim_key: dc4_transmission_1st-to-2nd_gear_vurd
+  title: 1st-to-2nd gear vurdurma (jerk/clunk)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic issue with EDC transmissions where the shift from 1st to 2nd
+    gear is often accompanied by a noticeable jerk or clunk, particularly in Renault/Dacia
+    models. This is linked to design quirks in the dual-clutch system and is a common
+    complaint in affected vehicles.
+  inspection_advice: Test drive the vehicle and pay close attention to the transition
+    from 1st to 2nd gear. Listen for abrupt shifts, jerks, or clunking noises during
+    acceleration from a standstill. Check for any hesitation or roughness in this
+    specific gear change.
+  sources:
+  - source_url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+    source_domain: kiyiotomotiv.com.tr
+    site_or_channel: kiyiotomotiv.com.tr
+    quote: '"EDC şanzıman sorunları; ... 1. vites ile 2. vites geçişlerinde EDC şanzıman
+      vurdurma sorunu"'
+    independent: true
+- claim_key: dc4_transmission_accelerated_wear_of_
+  title: Premature wear of dual-clutch transmission pressure plates (clutch friction
+    plates)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The dual-clutch transmission (EDC) architecture in these vehicles subjects
+    the pressure plates to higher stress cycles compared to conventional single-clutch
+    transmissions, resulting in accelerated friction material degradation. This leads
+    to reduced clutch engagement efficiency, premature failure, and the need for more
+    frequent pressure plate replacements than expected under normal driving conditions.
+  inspection_advice: Review the vehicle’s service records for repeated pressure plate
+    replacements. Look for transmission fluid leaks around the clutch housing, unusual
+    grinding or slipping noises during gear shifts, or delayed clutch engagement when
+    accelerating. A qualified technician can confirm wear by disassembling the transmission
+    and inspecting the clutch friction plates, release bearings, and pressure plate
+    springs for excessive wear, scoring, or contamination.
+  sources:
+  - source_url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+    source_domain: kiyiotomotiv.com.tr
+    site_or_channel: kiyiotomotiv.com.tr
+    quote: '"İkili kavrama şanzımanlarda kullanılan baskı balatası, standart şanzımanlara
+      göre daha fazla aşınma riskiyle karşı karşıyadır ve bu nedenle daha sık değiştirilmesi
+      gerekebilir. Aşınma genellikle belirli bir kilometre sonrasında belirgin hale
+      gelir."'
+    independent: true
+- claim_key: dc4_transmission_transmission_lock-up
+  title: Transmission lock-up (kilitleme) due to poor maintenance
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EDC transmissions are prone to locking up or seizing if not properly
+    maintained, often due to neglected fluid changes or lack of servicing. This can
+    lead to complete transmission failure and costly repairs.
+  inspection_advice: Review the vehicle’s service records for transmission fluid changes
+    and clutch servicing. During a test drive, check for sudden jerks, grinding noises,
+    or the inability to shift gears smoothly. If the transmission feels sluggish or
+    unresponsive, it may indicate internal damage or fluid degradation.
+  sources:
+  - source_url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+    source_domain: kiyiotomotiv.com.tr
+    site_or_channel: kiyiotomotiv.com.tr
+    quote: '"Bakımının yapılmamasından kaynaklı EDC şanzıman kitleme sorunu"'
+    independent: true
+- claim_key: dc4_transmission_electronic_control_u
+  title: Electronic control unit (ECU) issues in EDC transmissions
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: The EDC transmission’s electronic control system can experience malfunctions,
+    particularly due to improper usage or extreme driving conditions. This can result
+    in erratic shifting behavior or complete transmission failure.
+  inspection_advice: Monitor the vehicle’s dashboard for warning lights related to
+    the transmission or electronic systems. During a test drive, observe if the transmission
+    shifts erratically, hesitates, or fails to engage gears smoothly. Check for error
+    codes using an OBD-II scanner if available.
+  sources:
+  - source_url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+    source_domain: kiyiotomotiv.com.tr
+    site_or_channel: kiyiotomotiv.com.tr
+    quote: '"Kötü kullanımdan dolayı EDC şanzıman beyninde meydana gelen sorunlar"'
+    independent: true
+  - source_url: https://www.renaultelektronikservisi.com.tr/icerik/392/17/edc-beyin
+    source_domain: renaultelektronikservisi.com.tr
+    site_or_channel: renaultelektronikservisi.com.tr
+    quote: '"Kötü kullanımdan dolayı EDC şanzıman beyninde meydana gelen sorunlar"'
+    independent: true
+- claim_key: dc4_transmission_chronic_1st-to-2nd_g
+  title: Chronic 1st-to-2nd gear shift roughness (pre-2019 models)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Pre-2019 EDC transmissions, particularly in Renault/Dacia models, frequently
+    exhibit rough or jerky shifts between 1st and 2nd gears. This issue is often attributed
+    to design refinements that were addressed in later models.
+  inspection_advice: Test drive the vehicle and focus on the transition from 1st to
+    2nd gear. Listen for abrupt shifts, hesitation, or roughness during acceleration.
+    If the vehicle is pre-2019, be particularly vigilant for this issue, as it is
+    more common in earlier models.
+  sources:
+  - source_url: https://www.kiyiotomotiv.com.tr/edc-sanziman-nedir-sorunlari-nelerdir/
+    source_domain: kiyiotomotiv.com.tr
+    site_or_channel: kiyiotomotiv.com.tr
+    quote: '"2019 Temmuz öncesi EDC şanzımanlarında sıkça görülen arızaları ele alarak,
+      özellikle 1. vitesten 2. vitese geçiş sırasında yaşanan sarsıntılar ve kararsızlık
+      gibi sorunları çözmekteyiz."'
+    independent: true
+- claim_key: dc4_transmission_tcu_(edc_beyni)_yazı
+  title: TCU (Engine/Transmission Control Unit - EDC Software) Failure and Electronic
+    Errors
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Software errors or calibration faults in the TCU (Transmission Control
+    Unit) can cause severe issues such as **loss of gear engagement**, **incorrect
+    gear position detection**, and even **vehicle immobility**. These errors often
+    remain hidden during cold starts but frequently manifest after **30-40 minutes
+    of stop-and-go traffic conditions**, particularly during prolonged idling or gear
+    shifts.
+  inspection_advice: Check for **loss of gear engagement**, **gear position errors**
+    (e.g., displaying **N or P** when shifting to **D or R**), or **‘Check Transmission
+    System’ warnings** when the ignition is turned off. Additionally, test for **abnormal
+    gear shift behavior** (e.g., hesitation, slipping, or failure to engage) **after
+    prolonged stop-and-go traffic conditions**.
+  sources:
+  - source_url: https://parcaekseni.com/edc-beyni-arizasi-nasil-anlasilir/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: '"Vites Kaybı: Araç sadece tekli viteslere (1-3-5) veya sadece çiftli viteslere
+      (2-4-6) geçer. Diğer vitesleri tamamen atlar."'
+    independent: true
+- claim_key: dc4_transmission_edc_çift_kavrama_dis
+  title: Wear and Slippage of the EDC Dual Clutch Plates (Clutch Discs)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EDC dual clutch plates wear out over time and begin to slip. This
+    causes the vehicle to experience symptoms such as the engine revving up when the
+    accelerator is pressed without the speed increasing, vibrations, hesitation (where
+    the engine speed rises but the vehicle does not accelerate), and metallic clunking
+    noises during gear shifts. These issues are particularly noticeable when climbing
+    hills and when shifting from 1st to 2nd gear.
+  inspection_advice: Check if the vehicle exhibits vibrations, hesitation (where the
+    engine revs but the speed does not increase), metallic clunking noises during
+    gear shifts, and instability during takeoff, especially when climbing hills or
+    shifting from 1st to 2nd gear. Also, verify if there is any stiffness or abnormal
+    delay during gear shifts.
+  sources:
+  - source_url: https://parcaekseni.com/edc-beyni-arizasi-nasil-anlasilir/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: '"Titreme ve Silkeleme: Özellikle yokuş kalkışlarında veya 1. vitesten
+      2. vitese geçerken araçta ciddi bir titreme hissedilir."'
+    independent: true
+- claim_key: dc4_transmission_edc_kavrama_adaptasy
+  title: Failure of EDC Clutch Adaptation
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: If the clutch or Transmission Control Unit (TCU) is replaced without
+    performing the adaptation process, issues such as harsh gear shifts, clutch engagement
+    errors, and unstable acceleration may occur. This indicates that the system requires
+    recalibration.
+  inspection_advice: Check for harshness during gear shifts, abnormal clutch engagement
+    behavior, or unstable acceleration. Also, verify whether the adaptation process
+    was performed and whether it was done correctly.
+  sources:
+  - source_url: https://parcaekseni.com/edc-beyni-arizasi-nasil-anlasilir/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: '"Bu yüzden sadece parçayı değiştirmek değil, adaptasyonu doğru yapmak
+      gerekiyor."'
+    independent: true
+- claim_key: dc4_transmission_edc_aktüatör_veya_vi
+  title: Issues with the EDC Actuator or Gearshift Motor
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A failure in the EDC actuator or gearshift motor can cause delays, stiffness,
+    or even a complete failure to engage during gear shifts. These issues may also
+    affect other components such as the Transmission Control Unit (TCU) or clutch
+    discs.
+  inspection_advice: Check for delays, stiffness, or unusual noises during gear shifts.
+    Also, verify if the vehicle fails to move when the gearshift is placed in the
+    D (Drive) or R (Reverse) positions.
+  sources:
+  - source_url: https://parcaekseni.com/edc-beyni-arizasi-nasil-anlasilir/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: '"EDC lambası veya EDC arıza ışığı; şanzıman beyninde, kavrama sisteminde,
+      aktüatörlerde ya da yazılım-kalibrasyon tarafında bir sorun algılandığında yanabilir."'
+    independent: true
+- claim_key: dc4_brakes_faulty_brake_light_s
+  title: Faulty Brake Light Switches Causing MOT Failures
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty brake light switches can trigger warning messages and lead to
+    MOT failures, suggesting a potential design flaw or poor quality control in the
+    switch mechanism.
+  inspection_advice: Test all brake lights to ensure they function correctly. Check
+    for warning lights related to brake systems and verify the brake light switch
+    operation during a test drive.
   sources: []

@@ -1,0 +1,598 @@
+part_id: k9k_100
+part_type: engine
+display_name: Renault K9K Engine
+manufacturer: renault
+known_also_as:
+- K9K
+- 1.5 TDI
+claims:
+- claim_key: k9k_100_engine_connecting_rod_beari
+  title: Connecting rod bearing failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The connecting rod bearings on the K9K engine are prone to jamming and
+    turning, leading to catastrophic engine failure. This is a chronic issue due to
+    material or design weaknesses.
+  inspection_advice: Listen for unusual noises (e.g., knocking or rattling) during
+    operation, check for oil leaks around the crankshaft area, and inspect for excessive
+    play or damage to the bearings if the engine is disassembled.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The material of the earbuds is fine. The reason for jamming and turning
+      is indicated in the shortcomings.
+    independent: true
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: The material of the earbuds is fine. The reason for jamming and turning
+      is indicated in the shortcomings.
+    independent: true
+- claim_key: k9k_100_fuel system_delphi_injection_pum
+  title: Delphi injection pump and injector failure
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Delphi injectors on the K9K engine are particularly susceptible to failure
+    when exposed to low-quality diesel fuel, often failing within 10,000 km in poor
+    conditions. This is a chronic issue tied to the fuel system design and compatibility
+    with certain fuel standards.
+  inspection_advice: Check for erratic engine performance, misfires, or black smoke
+    from the exhaust. Use diagnostic tools to check for injector faults and inspect
+    injectors for physical damage or excessive wear.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Injection pump, injectors - power systems from Delphi die very early on
+      substandard Russian diesel fuel. The cost of one nozzle is about 8-12 thousand
+      rubles. In modifications with a simple system and 'normal' nozzles, you can
+      save a lot by trying to restore their functionality. In the case of piezoelectric
+      injectors, the only solution is replacement.
+    independent: true
+- claim_key: k9k_100_engine_boost_pressure_senso
+  title: Boost pressure sensor failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The boost pressure sensor on the K9K engine can fail, leading to loss
+    of traction and requiring replacement. This is a chronic issue affecting turbocharged
+    diesel engines.
+  inspection_advice: Monitor for sudden loss of power or traction, erratic turbocharger
+    behavior, and check sensor readings with diagnostic tools. Listen for unusual
+    whining or hissing noises from the turbo area.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Boost pressure sensor - its failure is not common, but it does happen.
+      If it fails, traction disappears.
+    independent: true
+- claim_key: k9k_100_electrical_crankshaft_position_
+  title: Crankshaft position sensor failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The crankshaft position sensor on the K9K engine is prone to failure,
+    especially on high-mileage vehicles. This leads to symptoms like detonation, idle
+    instability, and starting issues, often requiring replacement.
+  inspection_advice: Check for symptoms like rough idle, engine misfires, or difficulty
+    starting. Use a diagnostic scanner to check for sensor error codes and inspect
+    the sensor for physical damage or corrosion.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The crankshaft position sensor - quite often fails on cars with high mileage.
+      The malfunction manifests itself as detonation, instability of idle speed, decreased
+      dynamics, jerking of the car in motion, play of revs, and will not start from
+      the starter.
+    independent: true
+- claim_key: k9k_100_engine_turbocharger_failure
+  title: Turbocharger failure (BorgWarner KP35)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Turbochargers on the K9K engine, particularly the BorgWarner KP35, can
+    fail prematurely after around 60,000 km, leading to loss of power and efficiency.
+    This is a chronic issue tied to the turbocharger design and usage conditions.
+  inspection_advice: Listen for unusual whining or rattling noises from the turbo
+    area, check for excessive exhaust smoke, and monitor for loss of power or reduced
+    acceleration. Inspect the turbocharger for physical damage or oil leaks.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The turbocharger on some copies can cause trouble after 60 thousand km.
+    independent: true
+- claim_key: k9k_100_engine_liner_cranking_and_p
+  title: Liner cranking and piston burnout
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K engine is prone to liner cranking and piston burnout due to poorly
+    functioning injectors, leading to catastrophic internal engine damage. This is
+    a chronic failure mode tied to fuel system reliability.
+  inspection_advice: Monitor for unusual engine noises (e.g., scraping or grinding),
+    excessive oil consumption, or blue smoke from the exhaust. Check for metal particles
+    in the oil and inspect the cylinder liners and pistons for signs of wear or damage
+    if the engine is disassembled.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Sometimes there are cases of cranking of liners and burnout of pistons
+      - due to poorly functioning injectors.
+    independent: true
+- claim_key: k9k_100_emissions_egr_valve_malfunctio
+  title: EGR valve malfunction
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR (Exhaust Gas Recirculation) valve on the K9K engine is prone
+    to malfunction, a common issue in diesel engines that can lead to poor performance,
+    increased emissions, and potential engine damage if left unaddressed.
+  inspection_advice: Check for symptoms like rough idle, loss of power, or increased
+    exhaust emissions. Inspect the EGR valve for carbon buildup, physical damage,
+    or improper operation. Use diagnostic tools to check for related error codes.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: malfunctions of the EGR exhaust gas recirculation valve, which are common
+      for diesel engines.
+    independent: true
+- claim_key: k9k_100_transmission_dual-mass_flywheel_f
+  title: Dual-mass flywheel failure (higher power versions)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The dual-mass flywheel on higher-power versions of the K9K engine is
+    prone to failure, leading to vibration, clutch issues, and potential transmission
+    damage. This is a chronic failure tied to the design of the drivetrain components.
+  inspection_advice: Listen for unusual vibrations or rattling from the engine bay,
+    especially when the engine is idling or accelerating. Check for excessive play
+    or damage to the flywheel if the engine is disassembled.
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: problems occur with the dual-mass flywheel.
+    independent: true
+- claim_key: k9k_100_emissions_particulate_filter_f
+  title: Particulate filter failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The particulate filter on the K9K engine is prone to failure, which can
+    lead to expensive repairs and potential engine damage if the filter clogs or fails.
+    This is a chronic issue in modern diesel engines.
+  inspection_advice: Monitor for reduced engine performance, increased exhaust backpressure,
+    or diagnostic trouble codes related to the particulate filter. Inspect the filter
+    for clogging or physical damage and check for proper regeneration cycles.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: Another common problem with modern diesel engines is the particulate filter,
+      which can be expensive.
+    independent: true
+- claim_key: k9k_100_fuel system_common_rail_delphi_f
+  title: Common Rail Delphi fuel system fragility
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The Delphi Common Rail fuel system (pre-2009) is highly sensitive to
+    air in the system, clogged fuel filters, and poor-quality diesel fuel. These issues
+    cause metal debris to form, clogging injectors and accelerating wear on the turbocharger
+    and oil pump.
+  inspection_advice: Inspect the fuel filter for clogging or contamination. Check
+    for air in the fuel system (e.g., spongy throttle response, hesitation). Look
+    for signs of injector failure (e.g., misfires, black smoke, or poor idle stability).
+    Verify fuel quality and ensure the system is bled properly after maintenance.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"The bulk of diesel engines until 2009 were equipped with the Common Rail
+      Delphi system, which does not tolerate airing, a clogged fuel filter and bad
+      diesel fuel. For any of these reasons, it begins to drive chips and primarily
+      clogs the nozzles. Also, this metal pollen significantly reduces the life of
+      the turbine and oil pump."'
+    independent: true
+  - source_url: https://oborudow.ru/en/engine/dvigatel-k9k-1-5-dci-tip-ustanovlennyh-forsunok-slabye-mesta-i/
+    source_domain: oborudow.ru
+    site_or_channel: oborudow.ru
+    quote: '"The bulk of diesel engines until 2009 were equipped with the Common Rail
+      Delphi system, which does not tolerate airing, a clogged fuel filter and bad
+      diesel fuel. For any of these reasons, it begins to drive chips and primarily
+      clogs the nozzles. Also, this metal pollen significantly reduces the life of
+      the turbine and oil pump."'
+    independent: true
+- claim_key: k9k_100_engine_oil_pressure_drop_du
+  title: Oil pressure drop due to valve/spring failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K engine may experience a drop in lubricant pressure due to failure
+    of the oil filter valve or the pressure-reducing valve spring, leading to inadequate
+    oil flow and potential engine damage.
+  inspection_advice: Monitor oil pressure gauges for erratic readings or low pressure
+    during operation. Check for unusual engine noise (e.g., ticking or knocking) that
+    may indicate insufficient lubrication. Inspect the oil filter and pressure-reducing
+    valve for wear or failure.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"Much less often, such motors fail due to a drop in lubricant pressure
+      in the system. This is due to the oil filter valve and the oil pump pressure
+      reducing valve spring."'
+    independent: true
+- claim_key: k9k_100_engine_recurrent_water_pump
+  title: Recurrent water pump failures
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The water pump failed twice, which is highly unusual for a component
+    typically expected to last much longer. This suggests a chronic defect in the
+    water pump design or cooling system of the 1.5 TDI variant.
+  inspection_advice: Check for coolant leaks under the engine, unusual engine overheating,
+    or a squealing noise from the water pump. Inspect the water pump belt for wear
+    or damage.
+  sources: []
+- claim_key: k9k_100_engine_engine_back_compress
+  title: Engine back compression post-software update
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The engine developed back compression after a software update related
+    to the 'diesel gate scam,' indicating a software-induced mechanical failure or
+    design flaw in the 1.5 TDI variant.
+  inspection_advice: Listen for unusual knocking or rattling noises from the engine,
+    especially under load. Check for reduced power, increased fuel consumption, or
+    unusual exhaust smoke. Verify if the car was updated with the controversial software.
+  sources: []
+- claim_key: k9k_100_fuel system_recurrent_vacuum_pum
+  title: Recurrent vacuum pump failure
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The vacuum pump was replaced once, which, while not as severe as other
+    failures, still indicates a potential chronic issue with this component in the
+    1.5 TDI variant.
+  inspection_advice: Listen for unusual hissing noises from the engine bay, check
+    for vacuum leaks (e.g., around hoses and connections), and monitor for reduced
+    engine performance or rough idling.
+  sources: []
+- claim_key: k9k_100_electrical_recurrent_alternator
+  title: Recurrent alternator failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The alternator was replaced once, which, while not uncommon, could indicate
+    a chronic issue with electrical components in this variant if it occurs frequently.
+  inspection_advice: Check for dimming headlights, electrical gremlins (e.g., power
+    windows, radio), or a warning light on the dashboard related to the charging system.
+  sources: []
+- claim_key: k9k_100_engine_turbocharger_leakage
+  title: Turbocharger Leakage in Diesel Engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where turbocharger intercooler hoses exhibit leaks, leading
+    to performance loss and potential turbo failure.
+  inspection_advice: Check for visible leaks or cracks in turbocharger connection
+    hoses and inspect for excessive heat or unusual noises from the turbo area.
+  sources: []
+- claim_key: k9k_100_engine_motor_valve_adjustme
+  title: Motor Valve Adjustment Issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with incorrect valve clearance or misalignment, leading
+    to poor engine performance, increased wear, and potential valve failure.
+  inspection_advice: Listen for unusual tapping noises from the valve train and check
+    for excessive play or misalignment in valve components during inspection.
+  sources: []
+- claim_key: k9k_100_engine_low_compression_in_d
+  title: Low Compression in Diesel Engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where compression levels are consistently low due to worn
+    piston rings, valves, or cylinder head gasket failures, leading to poor power
+    delivery and potential engine damage.
+  inspection_advice: Perform a compression test to verify if cylinders are below manufacturer
+    specifications, indicating internal wear or damage.
+  sources: []
+- claim_key: k9k_100_engine_intercooler_blockage
+  title: Intercooler Blockage or Leakage
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where intercoolers become clogged or develop leaks, affecting
+    engine efficiency and performance.
+  inspection_advice: Inspect intercooler for blockages (e.g., debris, insect nests)
+    and check for leaks or unusual pressure drops in the intake system.
+  sources: []
+- claim_key: k9k_100_fuel system_fuel_injector_malfun
+  title: Fuel Injector Malfunctions
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with fuel injectors failing or misfiring, leading to
+    poor fuel delivery, increased emissions, and potential engine damage.
+  inspection_advice: Check for uneven fuel spray patterns, misfires, or black smoke
+    from the exhaust, and verify injector resistance with a multimeter.
+  sources: []
+- claim_key: k9k_100_engine_cylinder_head_gasket
+  title: Cylinder Head Gasket Failure (Indicated by Water in Cylinders)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where cylinder head gaskets fail, allowing coolant to enter
+    cylinders, leading to white smoke, overheating, and potential engine damage.
+  inspection_advice: Check for coolant in the oil, white smoke from the exhaust, or
+    overheating symptoms; perform a compression test to confirm coolant presence in
+    cylinders.
+  sources: []
+- claim_key: k9k_100_fuel system_fuel_pump_malfunctio
+  title: Fuel Pump Malfunction
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue with fuel pumps failing or misadjusting, leading to inconsistent
+    fuel delivery and potential engine stalling or poor performance.
+  inspection_advice: Listen for unusual noises from the fuel pump, check fuel pressure,
+    and verify fuel delivery consistency.
+  sources: []
+- claim_key: k9k_100_engine_air_intake_filter_co
+  title: Air Intake Filter Contamination
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where air filters become excessively clogged, restricting
+    airflow and reducing engine performance.
+  inspection_advice: Inspect air filter for excessive dirt buildup and check for reduced
+    airflow through the filter housing.
+  sources: []
+- claim_key: k9k_100_engine_cooling_system_issue
+  title: Cooling System Issues (Radiator or Pump Failure)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with radiator blockages, faulty radiator caps, or failing
+    water pumps, leading to engine overheating and potential damage.
+  inspection_advice: Check coolant levels, inspect radiator for blockages, and test
+    water pump functionality for proper coolant circulation.
+  sources: []
+- claim_key: k9k_100_engine_turbocharger_pressur
+  title: Turbocharger Pressure Issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with turbochargers failing to maintain proper boost pressure,
+    leading to reduced engine performance and potential turbo failure.
+  inspection_advice: Check boost pressure using a gauge; listen for unusual turbo
+    noises and inspect for leaks in the turbo system.
+  sources: []
+- claim_key: k9k_100_engine_engine_rod_or_piston
+  title: Engine Rod or Piston Noise
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic internal engine noise indicating severe wear or damage to rods,
+    pistons, or connecting rods, leading to catastrophic engine failure if ignored.
+  inspection_advice: Listen for distinct knocking, rattling, or metallic noises from
+    the engine block, especially under load; perform a compression test and oil analysis
+    if suspected.
+  sources: []
+- claim_key: k9k_100_electrical_air-fuel_ratio_senso
+  title: Air-Fuel Ratio Sensor (LDA) Failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue with the air-fuel ratio sensor failing, leading to incorrect
+    fuel mixture and poor engine performance.
+  inspection_advice: Check for error codes related to the air-fuel ratio sensor and
+    verify sensor readings with a diagnostic tool.
+  sources: []
+- claim_key: k9k_100_fuel system_fuel_injection_timin
+  title: Fuel Injection Timing Issues
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with incorrect fuel injection timing, leading to poor
+    combustion, increased emissions, and potential engine damage.
+  inspection_advice: Check for misfires, poor acceleration, and unusual exhaust smells;
+    verify fuel injection timing with a diagnostic scan tool.
+  sources: []
+- claim_key: k9k_100_fuel system_piezo_enjektör_iç_ka
+  title: Internal Leakage and Irregular Spraying in Piezo Injectors
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In first-generation 1.6 TDI engines manufactured by Bosch, piezo injectors
+    may develop internal leakage over time or exhibit irregular spraying patterns,
+    significantly impacting engine performance. This issue causes uneven idling, engine
+    vibrations, and increased fuel consumption.
+  inspection_advice: Listen to the engine running at idle. If there is uneven operation
+    or vibrations, the injectors should be inspected. Additionally, if there is an
+    abnormal increase in fuel consumption or a decline in engine performance, testing
+    the injectors is recommended.
+  sources: []
+- claim_key: k9k_100_engine_turbo_şaftı_yatak_aş
+  title: Turbo Shaft Bearing Wear and Oil Leakage
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Wear on the bearings of the turbo shaft leads to oil leakage and turbo
+    failure. This issue manifests more quickly under low-speed overload conditions
+    and shortens the turbo’s lifespan.
+  inspection_advice: Check for oil droplets or oil streaks on the underside of the
+    engine. If there is turbo whining (squealing noise) or reduced power, a detailed
+    inspection of the turbo system is required.
+  sources: []
+- claim_key: k9k_100_emissions_egr_valfi_ve_egr_soğ
+  title: Clogging and Drying of the EGR Valve and EGR Cooler
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The EGR system clogs due to drying, preventing the valve from functioning
+    properly. Frequent short urban trips accelerate this issue, leading to reduced
+    engine performance, increased fuel consumption, and activation of the malfunction
+    indicator lamp (MIL).
+  inspection_advice: If a decrease in engine performance or abnormal increase in fuel
+    consumption is observed, cleaning or replacement of the EGR system may be required.
+    Additionally, if the malfunction indicator lamp illuminates, inspection of the
+    EGR valve is recommended.
+  sources: []
+- claim_key: k9k_100_emissions_dpf_(partikül_filtre
+  title: DPF (Diesel Particulate Filter) Clogging
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: DPF clogging and drying out occur due to frequent short-distance driving,
+    preventing the filter from completing regeneration cycles. This issue causes reduced
+    engine power, increased fuel consumption, and activation of the DPF warning light.
+  inspection_advice: If there is a noticeable decrease in engine power or abnormal
+    increase in fuel consumption, the DPF regeneration process should be checked or
+    the filter should be replaced. Additionally, if the DPF warning light is illuminated,
+    clogging of the filter may be present.
+  sources: []
+- claim_key: k9k_100_engine_turbo_bağlantı_nokta
+  title: Oil leaks from turbo connection points and oil seals
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Oil leaks that develop over time from turbo connection points, oil seals,
+    or valve cover gaskets are commonly observed in engines with over **150,000 km**
+    of mileage. This issue causes oil leakage and drips on the engine block, leading
+    to poor lubrication and staining below.
+  inspection_advice: Check for oil drips or stains on the underside of the engine.
+    This problem is particularly common in vehicles with **150,000 km or more** mileage.
+  sources: []
+- claim_key: k9k_100_engine_connecting_rod_failu
+  title: Connecting rod failure due to delayed oil changes
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The K9K 1.5 DCI engine is prone to catastrophic connecting rod failure
+    when oil changes are delayed beyond recommended intervals, typically occurring
+    between 150,000–200,000 km.
+  inspection_advice: Check for signs of oil leaks, unusual engine noises (e.g., knocking
+    or rattling), or visible damage to the connecting rods during inspection. Verify
+    oil change history and confirm the use of high-quality oil (e.g., RN0720 or equivalent).
+  sources:
+  - source_url: https://oborudow.ru/en/engine/dvigatel-k9k-1-5-dci-tip-ustanovlennyh-forsunok-slabye-mesta-i/
+    source_domain: oborudow.ru
+    site_or_channel: oborudow.ru
+    quote: '"The main disadvantage of K9K is the increased sensitivity to poor-quality
+      oil, to the late replacement of oil, as a result of which, when run 150000-200000
+      km, the connecting rods occurs."'
+    independent: true

@@ -1,0 +1,804 @@
+part_id: h5h_130
+part_type: engine
+display_name: Renault H5H Engine
+manufacturer: renault_daimler
+known_also_as:
+- H5HT
+- 1.3 TSI
+claims:
+- claim_key: h5h_130_engine_carbon_deposits_on_i
+  title: Carbon deposits on intake valves causing running issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht engine suffers from carbon buildup on intake valves, which can
+    cause running problems that require specialized cleaning tools to resolve.
+  inspection_advice: Check for signs of misfires, rough idling, or hesitation under
+    load. Inspect intake valves for carbon deposits during maintenance.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5ht/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"The only massive problem with this turbo engine is floating speed. Like
+      all direct injection combustion engines, this one suffers from carbon deposits
+      on the intake valves. However, if the problem is not running, then they are
+      cleaned with special tools quite easily."'
+    independent: true
+- claim_key: h5h_130_engine_increased_oil_consum
+  title: Increased oil consumption due to piston gap growth
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht engine features an aluminum block with an open cooling jacket,
+    which can lead to increased piston gap over time, resulting in higher oil consumption
+    in some cases.
+  inspection_advice: Monitor oil levels regularly and check for blue smoke from the
+    exhaust, which may indicate oil burning due to excessive piston gap.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5ht/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"Most owners of cars with this engine do not complain about oil consumption,
+      but there are such cases and they are not so few. You need to understand that
+      here is an aluminum block with an open cooling jacket, which leads with mileage
+      and the piston gap grows."'
+    independent: true
+- claim_key: h5h_130_engine_turbine_pipe_failure
+  title: Turbine pipe failure causing loss of traction
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht engine has reported cases of turbine pipe failure, leading to
+    loss of traction and potential power loss.
+  inspection_advice: Inspect the turbine pipe for cracks, leaks, or signs of wear.
+    Check for sudden power drops or loss of acceleration under load.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5ht/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"on the network you can find complaints about the loss of traction due
+      to the fault of a flown turbine pipe"'
+    independent: true
+- claim_key: h5h_130_electrical|engine_rapid_wear_of_spark_
+  title: Rapid wear of spark plugs and ignition coils
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Owners report frequent failure of spark plugs and ignition coils, indicating
+    potential design or material issues in the ignition system.
+  inspection_advice: Check for misfires, difficulty starting, or check engine lights.
+    Inspect spark plugs and ignition coils for wear or damage during maintenance.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5ht/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"on the network you can find complaints about ... the rapid wear of spark
+      plugs and ignition coils"'
+    independent: true
+- claim_key: h5h_130_emissions_failure_of_adsorber_
+  title: Failure of adsorber valve
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The adsorber valve in the H5Ht engine has been reported to fail, which
+    can affect emissions performance and potentially trigger check engine lights.
+  inspection_advice: Monitor for check engine lights or unusual smells from the exhaust.
+    Inspect the adsorber valve for leaks or malfunctions during emissions-related
+    diagnostics.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5ht/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"on the network you can find complaints about ... the failure of the adsorber
+      valve"'
+    independent: true
+- claim_key: h5h_130_electrical_recurring_obd-ii_arı
+  title: Frequent Recurring OBD-II Fault Codes (P0130, P0136, P0141, P0420) for Oxygen
+    Sensors on Renault Mégane 4
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Mégane 4 model frequently triggers persistent OBD-II diagnostic
+    trouble codes (P0130, P0136, P0141, P0420), all of which are directly linked to
+    oxygen sensor malfunctions. This pattern suggests a systemic reliability issue
+    with the oxygen sensors themselves or an incompatibility between the sensors and
+    the vehicle’s Engine Control Unit (ECU).
+  inspection_advice: Use a professional diagnostic tool to scan for active OBD-II
+    fault codes. During a test drive or inspection, specifically monitor for recurring
+    codes P0130 (Bank 1 Sensor 1 Threshold Below Threshold), P0136 (Bank 2 Sensor
+    1 Threshold Below Threshold), P0141 (Bank 2 Sensor 2 Threshold Below Threshold),
+    and P0420 (Catalytic Converter Efficiency Below Threshold), all of which indicate
+    oxygen sensor or catalytic converter-related failures.
+  sources: []
+- claim_key: h5h_130_engine_oxygen_sensor_corros
+  title: Oxygen Sensor Corrosion Due to Coolant Leaks
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Coolant siphoning into the exhaust system (e.g., from a cracked head
+    gasket or coolant leak) can contaminate oxygen sensors, causing premature failure—a
+    known issue in Renault engines.
+  inspection_advice: Check for coolant residue or corrosion on oxygen sensors during
+    inspection. Look for signs of coolant leaks (e.g., sweet smell in exhaust, white
+    smoke, or coolant in oil).
+  sources: []
+- claim_key: h5h_130_engine_oxygen_sensor_short-
+  title: Oxygen Sensor Short-Life Expectancy Due to High Exhaust Temperatures
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Megane 4’s oxygen sensors are exposed to prolonged high exhaust
+    temperatures, accelerating wear and failure—especially in turbocharged or high-mileage
+    models.
+  inspection_advice: Check for excessive soot buildup or physical damage on oxygen
+    sensors. Look for signs of overheating (e.g., cracked sensor housing or warped
+    mounting).
+  sources: []
+- claim_key: h5h_130_emissions_oxygen_sensor_failur
+  title: Oxygen Sensor Failure Causing Emissions Test Failures
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faulty oxygen sensors in the Renault Megane 4 can cause the vehicle to
+    fail emissions tests due to improper fuel-air ratio adjustments, leading to excessive
+    hydrocarbon or CO emissions.
+  inspection_advice: Test the vehicle for emissions compliance. Check for active OBD-II
+    codes related to sensor or emissions system failures. Inspect for rich/lean fuel
+    mixture symptoms (e.g., black smoke, poor acceleration).
+  sources: []
+- claim_key: h5h_130_fuel system_faulty_fuel_injector
+  title: Faulty fuel injectors causing misfires, blue/white exhaust smoke, and DPF
+    clogging
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text explicitly states that **faulty fuel injectors** lead to **unburned
+    fuel in exhaust gases**, causing **blue/white smoke**, **DPF (Diesel Particulate
+    Filter) clogging**, and **fuel system corrosion**. This is a **chronic issue**
+    in turbocharged Renault engines like the **H5H 1.3 TCe**.
+  inspection_advice: Listen for **rough idling or misfires**. Check for **blue/white
+    exhaust smoke** (indicative of unburned fuel or oil burning). Inspect injectors
+    for **leaks, carbon buildup, or physical damage**. Verify if the **DPF system
+    is clogged** (common in turbocharged engines).
+  sources:
+  - source_url: https://m.maslakdpf.com/tag/renault/
+    source_domain: m.maslakdpf.com
+    site_or_channel: m.maslakdpf.com
+    quote: '"Enjektörler: Enjektörler, motora giden yakıt miktarını ayarlayamadığında,
+      motor sağlıksız çalışır. Egzoz gazı yanmadan araçtan tahliye olur. Buda yakıt
+      tertibatında kurumlanmalara sebep olur. DPF sistemini hızlı bir şekilde doldurur.
+      Bozuk enjektörlü araçlarda mavi beyaz karışımı kokulu egzoz gazı çıkışı gözlemlenir."'
+    independent: true
+- claim_key: h5h_130_engine_mass_air_flow_(maf)_
+  title: MAF sensor failure (H5H 1.3 TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The **MAF sensor** is explicitly mentioned as a **common failure point**
+    in this engine variant. When it fails, it disrupts **air-fuel mixture calculations**,
+    leading to **rough idling, poor performance, and increased fuel consumption**.
+    This is a **known chronic issue** in turbocharged Renault engines.
+  inspection_advice: Check for **rough idling, stalling, or hesitation** during acceleration.
+    Inspect the MAF sensor for **dirt buildup, physical damage, or corrosion**. Use
+    an OBD-II scanner to check for **related error codes** (e.g., P0100-P0104).
+  sources:
+  - source_url: https://m.maslakdpf.com/tag/renault/
+    source_domain: m.maslakdpf.com
+    site_or_channel: m.maslakdpf.com
+    quote: '"Kütle Hava Akış Sensörü: Kirli veya parçacık bakımından zengin havaya
+      maruz kaldığında, Kütle Hava Akışı (MAF) sensörü arızalanabilir. Oksijen sensörleri
+      gibi, MAF sensörü de motora giren hava miktarını ölçer ve uygun hava-yakıt karışımının
+      sağlanmasına yardımcı olur. Arızalı bir MAF sensörü, motorunuzun teklemesine,
+      sonuçta zayıf yakıt ekonomisine, performansa ve motorunuzda potansiyel olarak
+      daha gereksiz hasara neden olur."'
+    independent: true
+- claim_key: h5h_130_emissions_oxygen_(o2)_sensor_f
+  title: Oxygen (O2) sensor failure due to prolonged high-temperature exposure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text explicitly states that **oxygen sensors** in this engine variant
+    **fail over time due to prolonged exposure to high-temperature exhaust gases**,
+    leading to **incorrect air-fuel ratio calculations** and **poor engine performance**.
+    This is a **common chronic issue** in turbocharged engines.
+  inspection_advice: Check for **P0130, P0135, P0140, or P0150 error codes** (common
+    O2 sensor failures). Inspect the sensor for **physical damage, corrosion, or excessive
+    heat discoloration**. Monitor for **rough idling, poor fuel economy, or check
+    engine lights**.
+  sources:
+  - source_url: https://m.maslakdpf.com/tag/renault/
+    source_domain: m.maslakdpf.com
+    site_or_channel: m.maslakdpf.com
+    quote: '"Oksijen Sensörü: Yüksek Sıcaklıktaki egzoz gazına uzun süre maruz kalması
+      nedeniyle bu sensörün zamanla değiştirilmesi gerekir. Oksijen sensörü, ECU’ya
+      hayati öneme sahip hava-yakıt karışımı bilgilerini sağlar."'
+    independent: true
+- claim_key: h5h_130_engine_timing_cover_leakage
+  title: Timing Cover Leakage & Recall Risk (R9M 1.6 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recall on 160 hp versions due to timing cover leaks, with potential for
+    severe engine failure if unaddressed.
+  inspection_advice: Verify recall status for 160 hp R9M models. Check for oil leaks
+    around the timing cover.
+  sources: []
+- claim_key: h5h_130_engine_intercooler_condensa
+  title: Intercooler Condensation & Connecting Rod Failure (R9M 1.6 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Condensation water from the intercooler causes connecting rod failures,
+    especially with short oil change intervals and frequent short trips.
+  inspection_advice: Listen for loud knocking noises. Check for oil pressure loss
+    or sudden engine stalls. Verify oil change history.
+  sources: []
+- claim_key: h5h_130_emissions_egr_cooler_crack_&_c
+  title: EGR Cooler Crack & Coolant Loss (R9M 1.6 dCi)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: EGR cooler cracks allow coolant into the intake system, causing power
+    loss and potential engine damage from water ingestion.
+  inspection_advice: Check for coolant loss without visible leaks, white smoke, or
+    exhaust smells in the cabin.
+  sources: []
+- claim_key: h5h_130_engine_timing_chain_stretch
+  title: Timing Chain Stretch (R9M 1.6 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Timing chain stretches prematurely (~140,000–150,000 km), risking valve
+    contact and catastrophic engine failure despite a claimed 250,000 km lifespan.
+  inspection_advice: Listen for rattling noises on cold start or harsh engine noise.
+    Check for engine warning lights.
+  sources: []
+- claim_key: h5h_130_engine_valve_cover/cylinder
+  title: Valve Cover/Cylinder Head Damage Risk (M9R 2.0 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Improper injector removal damages the valve cover (also serving as the
+    camshaft bearing), inevitably destroying the cylinder head.
+  inspection_advice: Verify no history of improper injector removal. Check for signs
+    of cylinder head damage during inspections.
+  sources: []
+- claim_key: h5h_130_electrical_r-link_2_infotainmen
+  title: R-Link 2 Infotainment & Weak 12V Battery
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Infotainment system and battery issues contribute to reliability concerns,
+    with weak 12V batteries causing potential electrical failures.
+  inspection_advice: Test the 12V battery voltage and check for R-Link 2 system responsiveness
+    or errors.
+  sources: []
+- claim_key: h5h_130_engine_vvt_solenoid_failure
+  title: VVT solenoid failure (H5F TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5F TCe petrol engine (2012) suffers from variable valve timing (VVT)
+    solenoid failures, which can disrupt engine performance and efficiency.
+  inspection_advice: Check for error codes related to VVT solenoids and listen for
+    unusual noises during cold starts, which may indicate solenoid or phaser issues.
+  sources:
+  - source_url: https://www.enginecode.uk/renault
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: 'H5F TCe (2012)
+
+      Intake and exhaust phasing
+
+      VVT solenoid failure'
+    independent: true
+- claim_key: h5h_130_engine_oil_contamination_ca
+  title: Oil contamination causing VVT phaser sticking (H5H TCe)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5H TCe petrol engine (2017) experiences VVT phaser sticking due
+    to oil contamination, leading to potential engine misfires or loss of performance.
+  inspection_advice: Inspect for oil leaks around the cam phasers and check for unusual
+    noises or hesitation during acceleration, which may indicate phaser sticking.
+  sources:
+  - source_url: https://www.enginecode.uk/renault
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: 'H5H TCe (2017)
+
+      Continuous variable timing
+
+      Oil contamination causes sticking'
+    independent: true
+- claim_key: h5h_130_engine_cam_phaser_wear_(h5h
+  title: Cam phaser wear (H5H TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5H TCe engine (2017) is prone to cam phaser wear, which can lead
+    to reduced efficiency, increased emissions, and potential engine damage if unaddressed.
+  inspection_advice: Listen for rattling noises during cold starts and check for error
+    codes related to VVT systems. Inspect phasers for excessive wear if the engine
+    is disassembled.
+  sources:
+  - source_url: https://www.enginecode.uk/renault
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: 'H5H TCe (2017)
+
+      Continuous variable timing
+
+      Cam phaser wear'
+    independent: true
+- claim_key: h5h_130_engine_oil_pressure_sensiti
+  title: Oil pressure sensitivity in VVT systems (H5H TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5H TCe engine (2017) VVT system is sensitive to oil pressure fluctuations,
+    which can cause phaser malfunctions and engine performance issues.
+  inspection_advice: Monitor oil pressure during operation and check for error codes
+    related to VVT systems. Ensure proper oil type and regular oil changes are performed.
+  sources:
+  - source_url: https://www.enginecode.uk/renault
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: 'H5H TCe (2017)
+
+      Continuous variable timing
+
+      Oil pressure sensitivity'
+    independent: true
+- claim_key: h5h_130_engine_avoid_early_1.2_tce_
+  title: Avoid early 1.2 TCe engines due to oil-related issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Early 1.2 TCe petrol engines are known for oil-related problems, which
+    can lead to significant reliability issues and costly repairs.
+  inspection_advice: Verify the specific variant and production year of the 1.2 TCe
+    engine. Check for oil leaks, unusual noises, and ensure proper maintenance history
+    is documented.
+  sources:
+  - source_url: https://www.enginecode.uk/renault
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: Avoid early 1.2 TCe engines due to oil
+    independent: true
+- claim_key: h5h_130_engine_carbon_buildup_on_in
+  title: Carbon buildup on intake valves (direct injection issue)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Direct injection engines like the H5Ht 1.3 TCe suffer from carbon deposits
+    on intake valves, causing unstable idling. Neglecting this issue can lead to more
+    severe problems requiring head removal for cleaning.
+  inspection_advice: Check for signs of unstable idling at idle. If present, inspect
+    intake valves for carbon buildup. Use carb cleaners or professional valve cleaning
+    if needed.
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"First of all, this is all about the intake valves forming some carbon
+      buildup. This is a direct injection engine and it isn’t protected from this.
+      Good news – you can use carb cleaners or other products to regularly clean valves.
+      If the problem is neglected for some time, the head will need to be taken off
+      to clean the intake valves."'
+    independent: true
+  - source_url: https://uscarsnew.com/renault-1-3-tce-h5ht-engine/
+    source_domain: uscarsnew.com
+    site_or_channel: uscarsnew.com
+    quote: '"First of all, this is all about the intake valves forming some carbon
+      buildup. This is a direct injection engine and it isn’t protected from this.
+      Good news – you can use carb cleaners or other products to regularly clean valves.
+      If the problem is neglected for some time, the head will need to be taken off
+      to clean the intake valves."'
+    independent: true
+- claim_key: h5h_130_engine_aluminum_block_warpi
+  title: Aluminum block warping and oil consumption at high mileage
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The aluminum block of the H5Ht engine can warp over time, creating gaps
+    between cylinder walls and piston rings. This allows oil to leak into the combustion
+    chamber, leading to increased oil consumption and potential overheating if neglected.
+  inspection_advice: Monitor oil levels closely, especially after exceeding 150,000
+    km (100,000 miles). Check for excessive blue smoke from the exhaust, indicating
+    oil burning. Inspect for block warping via compression tests or engine scanning
+    for misfires.
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"After about 150,000 kilometers (100,000 miles), this engine starts burning
+      some oil. It’s usually not a lot, so you shouldn’t worry much. But this is a
+      good milestone to start checking the oil level more often. The block is aluminum
+      and after some time it may change its shape a little which leads to gaps between
+      cylinder walls and piston rings. These tiny gaps lead to oil leaking into the
+      combustion chamber and burning."'
+    independent: true
+- claim_key: h5h_130_engine_premature_failure_of
+  title: Premature failure of spark plugs and ignition coils
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht 1.3 TCe engine’s spark plugs and ignition coils have a tendency
+    to fail earlier than expected, leading to costly replacements and potential drivability
+    issues.
+  inspection_advice: Check spark plugs and ignition coils for signs of wear or failure
+    (e.g., misfires, rough idle, or check engine lights). Replace them proactively
+    if approaching the expected lifespan (often less than manufacturer recommendations).
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"As in almost all modern tiny engines, the coils and plugs are not durable
+      in the 1.3 TCe. There is nothing to say – they just tend to die much earlier
+      than you may expect and they cost pretty much which takes up the costs of owning
+      the engine."'
+    independent: true
+- claim_key: h5h_130_engine_turbocharger_pipe_de
+  title: Turbocharger pipe detachment (fastening defect)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht 1.3 TCe engine suffers from a chronic issue where turbocharger
+    pipes detach due to faulty clamps, leading to sudden loss of power and potential
+    turbo damage.
+  inspection_advice: Inspect turbocharger pipes for secure fastening. Check for any
+    signs of leaks, vibrations, or unusual noises near the turbo area. Ensure all
+    clamps are tight and intact.
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"Turbocharger pipes falling off. I like this one. The turbos have some
+      common issues of badly fastened pipes. They keep falling off since the start
+      of these engines in 2017 and Renault can’t come up with a better clamp or something.
+      You buy this engine in 2024 and it still has a faulty pipe fastening."'
+    independent: true
+- claim_key: h5h_130_engine_variable_oil_pump_re
+  title: Variable oil pump reliability issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht 1.3 TCe engine’s variable oil pump, designed to adjust oil pressure
+    based on load and RPM, is prone to failure. Symptoms are often subtle, making
+    early detection difficult.
+  inspection_advice: Monitor oil pressure at idle and under load. Watch for warning
+    signs like oil pressure fluctuations, unusual engine noises, or warning lights.
+    If oil pressure drops unexpectedly, the pump may be failing.
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"Oil pumps in these engines have one serious upgrade – they offer variable
+      pressure of oil depending on the engine load and RPM. So, at idle, these pumps
+      lower the pressure of oil significantly to save energy and economize two drops
+      of fuel. As my experience shows, these variable oil pumps are not super reliable.
+      And the bad thing is that you can’t clearly say when they fail."'
+    independent: true
+- claim_key: h5h_130_engine_sensitivity_to_oil_v
+  title: Sensitivity to oil viscosity (oil injector failure risk)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H5Ht 1.3 TCe engine relies on oil injectors to cool pistons and lubricate
+    them. Using incorrect oil viscosity can cause these injectors to fail, leading
+    to overheating and potential engine damage.
+  inspection_advice: Strictly adhere to the manufacturer’s recommended oil viscosity
+    (0w40 or 5w40). Monitor for overheating symptoms, unusual engine noises, or warning
+    lights indicating potential oil injector failure.
+  sources:
+  - source_url: https://motoranimal.com/renault-1-3-tce-h5ht-engine-problems-and-durability/
+    source_domain: motoranimal.com
+    site_or_channel: motoranimal.com
+    quote: '"Renault says you should use 0w40 or 5w40 oil for this engine and I wouldn’t
+      dare to argue with that. Thin oil should be OK to lubricate all those tiny parts
+      and go through all the tiny passages in the turbocharger. Also, the engine has
+      oil injectors for the pistons to cool them down and lubricate better. If you
+      play with oil viscosity, those injectors will fail and the engine will most
+      likely overheat."'
+    independent: true
+- claim_key: h5h_130_fuel system_gas_blockage_in_falk
+  title: Gas Blockage in Falke HT-BT Combis
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue where the gas blockage prevents ignition and operation,
+    requiring servicing to resolve.
+  inspection_advice: Check for proper gas supply and ensure no blockages exist in
+    the gas line or burner assembly. Verify the combustion chamber and gas valve functionality.
+  sources: []
+- claim_key: h5h_130_electrical_overheating_due_to_f
+  title: Overheating Due to Faulty Safety Thermostat
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the safety thermostat triggering overheating protection,
+    often due to prolonged dry operation or insufficient water pressure.
+  inspection_advice: Check for proper water pressure and ensure the safety thermostat
+    is functioning correctly. Look for signs of overheating or dry combustion.
+  sources: []
+- claim_key: h5h_130_emissions_exhaust_gas_system_f
+  title: Exhaust Gas System Failures in Falke HT (Hermetic) and Falke BT (Chimney)
+    Combis
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic defects in the exhaust system, including fan failure, electronic
+    card issues, or improper installation of exhaust air ducts in hermetic models,
+    and baca-related problems in chimney models.
+  inspection_advice: 'For Falke HT: Inspect the fan, electronic control card, and
+    exhaust air duct installation. For Falke BT: Check baca for proper draft, blockages,
+    and baca sensor functionality.'
+  sources: []
+- claim_key: h5h_130_electrical_water_pressure_senso
+  title: Water Pressure Sensor Failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the water pressure sensor causing incorrect readings
+    and operational issues.
+  inspection_advice: Verify water pressure levels and inspect the water pressure sensor
+    for proper functionality and wiring integrity.
+  sources: []
+- claim_key: h5h_130_electrical_faulty_hot_water_tem
+  title: Faulty Hot Water Temperature Sensor (NTC)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic failure of the hot water temperature sensor (NTC) leading to
+    incorrect temperature readings and operational errors.
+  inspection_advice: Check the hot water temperature sensor and its wiring for any
+    signs of damage, short circuits, or improper connections.
+  sources: []
+- claim_key: h5h_130_general_chronic_limescale_(k
+  title: Long-term buildup of mineral deposits (limescale) in the Falke HT-BT combination
+    heat exchanger units
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Persistent accumulation of limescale is causing reduced system efficiency
+    and increasing the risk of component failure, particularly in newly installed
+    units
+  inspection_advice: Inspect for limescale deposits in the heat exchanger, piping,
+    and filter assemblies. Monitor for decreased performance, abnormal operational
+    noises, or diagnostic trouble codes (DTCs) related to overheating or sensor malfunctions
+  sources: []
+- claim_key: h5h_130_engine_timing_chain_tension
+  title: Timing chain tensioner failure (hydraulic dependency)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The hydraulic timing chain tensioner in EA111 TSI engines relies on oil
+    pressure to function. On cold starts, insufficient oil pressure causes the tensioner
+    to fail temporarily, leading to rattling noises. If this persists beyond 2-3 seconds,
+    it indicates stretched chain and imminent failure risk.
+  inspection_advice: Listen for rattling noises at cold start that persist longer
+    than 2-3 seconds. This is abnormal and suggests tensioner or chain wear. Confirm
+    if the tensioner was replaced during any timing chain service.
+  sources: []
+- claim_key: h5h_130_engine_sprocket_wear_and_pr
+  title: Sprocket wear and premature failure (timing chain system)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The timing chain sprockets (camshaft and crankshaft) wear out prematurely
+    due to the stretched chain. The crankshaft sprocket, in particular, is double-tracked
+    and rotates at double the speed of camshaft sprockets, accelerating wear. Replacing
+    only the chain without the sprockets risks repeated failure.
+  inspection_advice: Verify if the full timing chain kit (chain, tensioners, slide
+    rails, and **all sprockets**) was replaced during service. Ask for the service
+    invoice to confirm. Check for uneven wear on the camshaft or crankshaft sprocket
+    teeth.
+  sources: []
+- claim_key: h5h_130_general_dealer_network_cover
+  title: Dealer network cover-up of timing chain failures
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Dealers have allegedly concealed timing chain failures by replacing chains
+    under warranty without disclosing the defect. This practice misleads buyers and
+    risks repeated failures if substandard components are reused. Foreign markets
+    report dealers dismissing rattling noises as normal, leading to engine damage
+    post-warranty.
+  inspection_advice: Request the full service history, including invoices for timing
+    chain replacements. Ask if the failure was attributed to manufacturing defects
+    or normal wear. Check for recurring complaints about rattling noises in the timing
+    chain area.
+  sources: []
+- claim_key: h5h_130_engine_post-warranty_timing
+  title: Post-warranty timing chain failure risk
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners report dealers refusing to honor claims for timing chain failures
+    after warranty expiration, despite persistent rattling noises. This forces owners
+    to pay for expensive repairs (e.g., NOK 20,000+) out-of-pocket, risking catastrophic
+    engine damage if ignored.
+  inspection_advice: Confirm the remaining warranty coverage for the timing chain
+    system. Ask if the dealer has a history of dismissing rattling noises as normal
+    wear. Check for signs of prior chain stretch (e.g., oil leaks, uneven sprocket
+    wear).
+  sources: []
+- claim_key: h5h_130_engine_piston_failure_due_t
+  title: Piston failure due to design stress and fuel quality
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.4 TSI engine, particularly pre-2012 models, suffers from piston
+    failure due to weak piston design and cumulative stress factors. Poor fuel quality,
+    clogged injectors, and engine knock further exacerbate the issue, leading to catastrophic
+    engine failure.
+  inspection_advice: Check for signs of oil consumption, unusual knocking noises,
+    or excessive smoke from the exhaust. Verify service history for fuel quality (premium
+    97-99 RON recommended) and injector maintenance. Inspect for oil leaks or carbon
+    buildup, which may indicate pre-existing stress on the pistons.
+  sources: []
+- claim_key: h5h_130_engine_timing_chain_failure
+  title: Timing chain failure risk due to improper parking and oil pressure delay
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.4 TSI lacks a ratchet mechanism on the timing chain tensioner,
+    increasing the risk of timing chain slippage when the car is left in gear and
+    rolls backward. This can misalign the timing, causing catastrophic valve-to-piston
+    contact. Additionally, incomplete oil drain during oil changes can delay oil pressure
+    buildup, further risking chain tensioner failure.
+  inspection_advice: Verify the car is never left in gear when parked, especially
+    on slopes or uneven surfaces. Check for signs of oil leaks or unusual engine noises
+    during startup. Review service records for proper oil change procedures (avoid
+    draining oil for extended periods).
+  sources: []
+- claim_key: h5h_130_emissions_egr_valve_failure_ca
+  title: EGR valve failure causing misfires, black smoke, and turbo/DPF system malfunctions
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR (Exhaust Gas Recirculation) valve failure is explicitly mentioned
+    as a chronic issue in this engine variant. When the EGR valve malfunctions, unburned
+    exhaust gases bypass the catalytic converter, leading to **black smoke, poor fuel
+    economy, and damage to the turbocharger, injectors, and DPF system**.
+  inspection_advice: Inspect the EGR valve for carbon buildup, physical damage, or
+    clogging. Check for black smoke from the exhaust and listen for unusual engine
+    noises (e.g., backfiring). Verify if the DPF system is clogged or if the turbocharger
+    is overheating.
+  sources:
+  - source_url: https://m.maslakdpf.com/tag/renault/
+    source_domain: m.maslakdpf.com
+    site_or_channel: m.maslakdpf.com
+    quote: '"Egr Valfi: Egr valfi, egzoz gazını tekrar kullanmayı ve emisyon oranını
+      düşürmeyi hedefleyen elektropnömatik valf sistemidir. Çalışmadığı durumlarda
+      ise araçta egzoz gazı yanmadan atmosfere atılır. Yakıt tertibatına zarar verir.
+      Siyah duman kötü egzoz kokusu ve turbo enjektör dpf gibi sistemlerin çalışmasına
+      engel olur."'
+    independent: true

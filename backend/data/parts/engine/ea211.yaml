@@ -27,14 +27,6 @@ claims:
     under the engine bay, and signs of overheating (e.g., burnt coolant smell, dashboard
     warning lights). Verify if the water pump has been replaced preventively.
   sources:
-  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
-    source_domain: gaga.ba
-    site_or_channel: gaga.ba
-    quote: '"The EA211 uses a plastic water pump housing integrated with the thermostat.
-      The plastic deforms over time from heat and starts leaking, usually between
-      80,000 and 140,000 km. The problem is more common on examples that sat idle
-      for long periods or went through multiple overheating cycles."'
-    independent: true
   - source_url: https://www.accio.com/blog/ea211-engine-problems
     source_domain: accio.com
     site_or_channel: accio.com
@@ -46,6 +38,14 @@ claims:
   - source_url: https://autopartswd.com/volkswagen-ea211-engine-guide/
     source_domain: autopartswd.com
     site_or_channel: autopartswd.com
+    quote: '"The EA211 uses a plastic water pump housing integrated with the thermostat.
+      The plastic deforms over time from heat and starts leaking, usually between
+      80,000 and 140,000 km. The problem is more common on examples that sat idle
+      for long periods or went through multiple overheating cycles."'
+    independent: true
+  - source_url: https://gaga.ba/en/najcesci-kvarovi/golf-7-1-4-tsi
+    source_domain: gaga.ba
+    site_or_channel: gaga.ba
     quote: '"The EA211 uses a plastic water pump housing integrated with the thermostat.
       The plastic deforms over time from heat and starts leaking, usually between
       80,000 and 140,000 km. The problem is more common on examples that sat idle
@@ -123,8 +123,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 1.4 TSI is an interference engine, meaning catastrophic failure
     can occur if the timing belt breaks. The belt design necessitates a mandatory
@@ -133,14 +133,20 @@ claims:
   inspection_advice: Verify the last timing belt replacement date and confirm it was
     done at the manufacturer-recommended 60,000 km interval. Check for any signs of
     past belt failure (e.g., damaged camshaft lobes, bent valves).
-  sources: []
+  sources:
+  - source_url: https://enginescope.gr/engine/vw-ea211-14/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: Timing belt — mandatory replacement — Preventive only — interference engine.
+      Belt design for efficiency. 60k km replacement mandatory. Key maintenance item.
+    independent: true
 - claim_key: ea211_engine_cylinder_deactivatio
   title: Cylinder deactivation shudder (software-induced mechanical vibration)
   kind: known_issue
   domain: engine
   severity: low
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 1.4 TSI exhibits a chronic shuddering issue at 1,000–1,500
     RPM when the Active Cylinder Technology (ACT) deactivates cylinders, caused by
@@ -150,14 +156,21 @@ claims:
     at 1,000–1,500 RPM, particularly when the engine is in CoD (Cylinder on Demand)
     mode. Confirm whether the vehicle has received the latest software update, as
     this is the primary fix.
-  sources: []
+  sources:
+  - source_url: https://enginescope.gr/engine/vw-ea211-14/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: Cylinder deactivation shudder (software) — Slight vibration at 1,000-1,500
+      RPM in CoD mode. Software update resolves most cases. Not mechanical. Free fix
+      at Greek VW dealer. Latest software calibration available.
+    independent: true
 - claim_key: ea211_engine_timing_belt_wear_and
   title: Timing belt wear and chirp/timing correlation faults
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engines use a timing belt (not a chain), which is prone to
     premature wear and failure. This can cause timing belt chirp noises and timing
@@ -165,14 +178,19 @@ claims:
   inspection_advice: Check the timing belt for wear, cracks, or glazing during a service
     inspection. Listen for chirping or rattling noises from the timing belt area,
     especially under load or acceleration.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Timing belt issues"'
+    independent: true
 - claim_key: ea211_engine_turbo_wastegate_ratt
   title: Turbo wastegate rattle and underboost
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The turbocharger wastegate in EA211 engines is known to rattle and cause
     underboost conditions, particularly under high heat cycles. This can lead to poor
@@ -180,14 +198,19 @@ claims:
   inspection_advice: Listen for a rattling noise from the turbo area, especially during
     acceleration or under load. Check for consistent boost pressure using an OBD scanner
     or turbo pressure gauge.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Turbo wastegate rattle"'
+    independent: true
 - claim_key: ea211_engine_carbon_build-up_caus
   title: Carbon build-up causing misfires (GDI engines)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 GDI (Gasoline Direct Injection) engines are prone to carbon
     build-up on intake valves and combustion chambers, leading to cold misfires and
@@ -195,14 +218,19 @@ claims:
   inspection_advice: Check for misfires on cold starts and rough idle. Use an OBD
     scanner to monitor misfire counts and perform a carbon cleaning if misfires persist
     after warm-up.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Carbon build misfires"'
+    independent: true
 - claim_key: ea211_engine_1.5_tsi_act_(adaptiv
   title: 1.5 TSI ACT (Adaptive Cylinder Deactivation) low-RPM surge
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The ACT system in 1.5 TSI EA211 engines (e.g., DADA, DACA variants) can
     cause low-RPM surges or hesitation due to cylinder deactivation malfunctions.
@@ -210,14 +238,19 @@ claims:
   inspection_advice: Test drive the vehicle and monitor for surges or hesitation at
     low RPMs, particularly during light-throttle acceleration. Use an OBD scanner
     to check for ACT-related error codes.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"1.5 TSI ACT low-RPM surge"'
+    independent: true
 - claim_key: ea211_engine_insistent_coil_failu
   title: Insistent coil failure
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engines are prone to coil failures, which can cause intermittent
     or persistent misfires. This is often due to design or manufacturing inconsistencies
@@ -225,14 +258,19 @@ claims:
   inspection_advice: Check for misfire codes (P0300-P0308) using an OBD scanner. Inspect
     coils for physical damage or failure and replace as needed. Monitor for recurring
     misfires after coil replacement.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Insistent failure of coils"'
+    independent: true
 - claim_key: ea211_engine_o2/nox_sensor_failur
   title: O2/NOx sensor failures
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engines frequently experience failures in O2 (oxygen) and NOx
     (nitrogen oxides) sensors, which can lead to inaccurate fuel trims, poor emissions
@@ -240,14 +278,19 @@ claims:
   inspection_advice: Scan for O2/NOx sensor-related error codes (e.g., P0130, P0170,
     P0420, P0430). Inspect sensors for physical damage and replace if faulty. Monitor
     fuel trims for accuracy post-replacement.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Regular issues with the O2/NOx sensors"'
+    independent: true
 - claim_key: ea211_engine_thermostat_heater_fa
   title: Thermostat heater failure (intermittent)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The thermostat heaters in EA211 engines can fail intermittently, causing
     erratic coolant temperature control and triggering error codes. This can lead
@@ -255,22 +298,37 @@ claims:
   inspection_advice: Monitor coolant temperature for erratic fluctuations and check
     for thermostat-related error codes (e.g., P0128, P1105). Inspect the thermostat
     and heater assembly for functionality during a service.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Thermostat heaters fail intermittently while throwing obvious codes"'
+    independent: true
 - claim_key: ea211_fuel system_injector_or_hpfp_(hi
   title: Injector or HPFP (High-Pressure Fuel Pump) failures
   kind: known_issue
   domain: fuel system
   severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
   rationale: Injectors and the high-pressure fuel pump in EA211 engines can fail,
     leading to hard cold starts, poor acceleration, and inconsistent fuel delivery.
     This is often due to wear or contamination in the fuel system.
   inspection_advice: Test for hard starts, hesitation, or poor acceleration. Use an
     OBD scanner to check for injector or fuel pump-related error codes (e.g., P0087,
     P0088, P0190). Inspect injectors and the HPFP for functionality and cleanliness.
-  sources: []
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Injectors or HPFP complaints"'
+    independent: true
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Injectors or HPFP complaints"'
+    independent: true
 - claim_key: ea211_engine_timing_belt_longevit
   title: Timing Belt Longevity Misrepresentation
   kind: known_issue
@@ -291,8 +349,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The timing belt in certain 1.2 TSI EA211 engines (primarily 2014 models)
     could tear due to a defect in the camshaft gears, leading to severe engine damage.
@@ -302,14 +360,22 @@ claims:
     on the timing belt cover. Verify service records for timing belt replacement and
     recall visits. Look for signs of past engine damage or unusual noise from the
     timing belt area.
-  sources: []
+  sources:
+  - source_url: https://carclubsusa.com/volkswagen/jetta/blog/volkswagen-ea211-14-tsi-common-problems/
+    source_domain: carclubsusa.com
+    site_or_channel: carclubsusa.com
+    quote: '"In some 1.2 TSI engines of the EA211 series, serious engine damage has
+      occurred. The cause of this was the timing belt, which could tear due to a defect
+      in the camshaft gears. The engines primarily affected were from the production
+      year 2014."'
+    independent: true
 - claim_key: ea211_engine_isolated_camshaft_ad
   title: Isolated camshaft adjuster failures (EA211)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engine, particularly in models like the VW Beetle, Golf, and
     Polo from 2013 to 2015, may experience isolated failures of the camshaft adjuster,
@@ -317,14 +383,22 @@ claims:
   inspection_advice: Check for recall service records, especially for camshaft adjuster
     replacements. Look for unusual engine noises or performance issues that could
     indicate camshaft adjuster failure.
-  sources: []
+  sources:
+  - source_url: https://carclubsusa.com/volkswagen/jetta/blog/volkswagen-ea211-14-tsi-common-problems/
+    source_domain: carclubsusa.com
+    site_or_channel: carclubsusa.com
+    quote: '"According to VW, isolated failures of the camshaft adjuster may occur
+      in VW vehicles with the EA211 engine. During the associated recall workshop
+      visit, the camshaft adjuster is replaced. Models affected include the Beetle,
+      Golf, and Polo from 2013 to 2015."'
+    independent: true
 - claim_key: ea211_fuel system_carbon_deposits_and_
   title: Carbon deposits and coked injectors (direct gasoline injection)
   kind: known_issue
   domain: fuel system
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engine, due to its direct gasoline injection system, is prone
     to coked injectors and carbon deposits in the intake tract. This can lead to performance
@@ -332,54 +406,87 @@ claims:
   inspection_advice: Check for signs of reduced performance, increased fuel consumption,
     or unusual engine noises. Inspect the intake tract for carbon buildup during maintenance.
     Verify if fuel additives have been used regularly.
-  sources: []
+  sources:
+  - source_url: https://carclubsusa.com/volkswagen/jetta/blog/volkswagen-ea211-14-tsi-common-problems/
+    source_domain: carclubsusa.com
+    site_or_channel: carclubsusa.com
+    quote: '"The EA211 will have to contend with coked injectors and carbon deposits
+      in the intake tract. To at least delay the resulting problems (loss of performance,
+      higher consumption, etc.), the preventive use of cleaning fuel additives, added
+      regularly during refueling, is recommended."'
+    independent: true
 - claim_key: ea211_engine_timing_belt_replacem
   title: Timing belt replacement interval critical
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 engine uses a timing belt instead of a chain, which must be
     replaced every 90,000–120,000 km. Failure to replace it on time can lead to catastrophic
     engine failure.
   inspection_advice: Verify the timing belt replacement history in maintenance records.
     Look for signs of belt wear or tensioner issues during an inspection.
-  sources: []
+  sources:
+  - source_url: https://autopartswd.com/volkswagen-ea211-engine-guide/
+    source_domain: autopartswd.com
+    site_or_channel: autopartswd.com
+    quote: '"The EA211’s belt requires replacement every 90,000–120,000 km (or per
+      local recommendation). Ignoring belt changes can lead to catastrophic engine
+      failure."'
+    independent: true
 - claim_key: ea211_fuel system_carbon_build-up_on_i
   title: Carbon build-up on intake valves (direct-injection variants)
   kind: known_issue
   domain: fuel system
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Direct-injection TSI variants of the EA211 engine are prone to carbon
     deposits forming on intake valves, which can affect performance and fuel efficiency.
   inspection_advice: Check for rough idling, reduced power, or hesitation. Inspect
     intake valves for carbon buildup if the engine is showing symptoms of poor performance.
-  sources: []
+  sources:
+  - source_url: https://autopartswd.com/volkswagen-ea211-engine-guide/
+    source_domain: autopartswd.com
+    site_or_channel: autopartswd.com
+    quote: '"On direct-injection variants (TSI), carbon deposits can form on intake
+      valves."'
+    independent: true
 - claim_key: ea211_engine_turbocharger_wastega
   title: Turbocharger wastegate actuator failure
   kind: known_issue
   domain: engine
   severity: low
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
   rationale: Occasionally, the turbocharger wastegate actuator may stick or cause
     a whistling noise, typically due to carbon buildup or lubrication issues.
   inspection_advice: Listen for unusual whistling noises from the turbocharger area
     and check for proper lubrication and cleanliness of the turbo system.
-  sources: []
+  sources:
+  - source_url: https://autopartswd.com/volkswagen-ea211-engine-guide/
+    source_domain: autopartswd.com
+    site_or_channel: autopartswd.com
+    quote: '"Occasionally, the wastegate actuator may stick or the turbo may whistle.
+      Usually caused by carbon buildup or lubrication issues; not a widespread flaw."'
+    independent: true
+  - source_url: https://uscarsnew.com/vw-audi-1-4-tsi-tfsi-ea111-engine/
+    source_domain: uscarsnew.com
+    site_or_channel: uscarsnew.com
+    quote: '"Occasionally, the wastegate actuator may stick or the turbo may whistle.
+      Usually caused by carbon buildup or lubrication issues; not a widespread flaw."'
+    independent: true
 - claim_key: ea211_engine_timing_chain_tension
   title: Timing Chain Tensioner Failure (EA111)
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The timing chain tensioners in early EA111 engines are prone to failure,
     risking misalignment of engine components and severe piston damage if the timing
@@ -387,14 +494,20 @@ claims:
   inspection_advice: Listen for rattling noises from the timing chain area, especially
     under load. Check for oil leaks around the tensioner housing and verify chain
     tension visually during inspection.
-  sources: []
+  sources:
+  - source_url: https://vwtuning.co/vw-1-4-tsi-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: '"Tensioner failure is very common in Volkswagen’s as they were not built
+      very durable out of the factory. The tensioners in this engine are no exception."'
+    independent: true
 - claim_key: ea211_engine_ignition_coil_failur
   title: Ignition Coil Failure (Premature Wear)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: While not exclusive to the 1.4 TSI, ignition coils in these engines often
     fail prematurely (before 100,000 miles), leading to misfires, poor performance,
@@ -402,14 +515,20 @@ claims:
   inspection_advice: Scan for misfire codes (P0300-P0304) and check for illuminated
     check engine lights. Inspect coils for physical damage or resistance irregularities
     during replacement.
-  sources: []
+  sources:
+  - source_url: https://vwtuning.co/vw-1-4-tsi-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: '"Ignition coil and spark plug failure are common in most turbocharged
+      engines nowadays."'
+    independent: true
 - claim_key: ea211_engine_turbolader_failure_d
   title: Turbolader failure due to carbon buildup and thermal stress
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 Evo’s variable-geometry turbochargers (VTG) are prone to premature
     failure due to carbon deposits and overheating, leading to wastegate or bearing
@@ -418,29 +537,53 @@ claims:
   inspection_advice: Listen for unusual turbo noises (pitching, rattling) and check
     for performance drops. Inspect turbocharger condition during a pre-purchase inspection
     or diagnostic scan for error codes related to turbo function.
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Probleme mit dem Turbolader Kohleablagerungen oder Hitzebelastung führen
+      zu Lagerausfall oder Wastegate-Problemen. VTG-Lader sind anfälliger."'
+    independent: true
 - claim_key: ea211_engine_carbon_buildup_in_in
   title: Carbon buildup in intake tract and valves (direct-injection specific)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
   rationale: Direct injection causes excessive carbon deposits on AGR valves and intake
     valves, leading to rough idle and power loss. Requires periodic cleaning (e.g.,
     walnut blaster) or fuel additives to mitigate.
   inspection_advice: Check for rough idle, hesitation, or unusual noises from the
     intake system. Inspect intake valves and AGR system for carbon buildup during
     a thorough inspection.
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Verkokung im Ansaugtrakt und an Ventilen Typisch für Direkteinspritzer:
+      Rußbildung am AGR-Ventil und Einlassventilen."'
+    independent: true
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Verkokung im Ansaugtrakt und an Ventilen Typisch für Direkteinspritzer:
+      Rußbildung am AGR-Ventil und Einlassventilen."'
+    independent: true
+  - source_url: https://www.torquecars.com/volkswagen/1-4-tfsi-tsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"Verkokung im Ansaugtrakt und an Ventilen Typisch für Direkteinspritzer:
+      Rußbildung am AGR-Ventil und Einlassventilen."'
+    independent: true
 - claim_key: ea211_engine_act_(active_cylinder
   title: ACT (Active Cylinder Management) transition issues (1.5 TSI)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 1.5 TSI’s ACT system (deactivating two cylinders at low load) can
     cause noticeable vibrations or noises during transitions between 2- and 4-cylinder
@@ -449,14 +592,21 @@ claims:
   inspection_advice: During a test drive, pay attention to vibrations or unusual noises
     when accelerating from low RPM or shifting gears. Check for software updates applied
     to the vehicle.
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Zylinderabschaltung (ACT) – Übergänge spürbar Bei 1.5 TSI: Vibrationen
+      oder Geräusche beim Wechsel zwischen 2- und 4-Zylinder-Betrieb. Evo2 optimiert,
+      aber nicht perfekt."'
+    independent: true
 - claim_key: ea211_engine_nockenwellenverstell
   title: Nockenwellenversteller (camshaft phaser) failures (early models)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early EA211 models (2013–2015) experienced camshaft phaser failures,
     leading to recall campaigns. Symptoms may include rough idle, misfires, or check-engine
@@ -464,14 +614,19 @@ claims:
   inspection_advice: Check for error codes related to camshaft timing (e.g., P0010–P0016)
     during a diagnostic scan. Verify if the vehicle falls within the recalled batch
     (2013–2015).
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Seltene Nockenwellenversteller-Ausfälle (Rückrufe bei frühen Modellen)"'
+    independent: true
 - claim_key: ea211_emissions_otto-partikelfilter_
   title: Otto-Partikelfilter (OPF) clogging on short trips
   kind: known_issue
   domain: emissions
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The integrated OPF can clog prematurely if the vehicle is frequently
     driven on short trips, leading to restricted exhaust flow and potential engine
@@ -479,42 +634,61 @@ claims:
   inspection_advice: Check for error codes related to the OPF (e.g., P0420, P2455)
     during a diagnostic scan. Inspect exhaust backpressure and ensure the vehicle
     has regular long-distance driving to regenerate the filter.
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"OPF-Verstopfung bei Kurzstrecken"'
+    independent: true
 - claim_key: ea211_engine_cold-start_and_low-r
   title: Cold-start and low-RPM stumbling (especially with manual transmission)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EA211 Evo exhibits stumbling or hesitation during cold starts and
     low RPM, often linked to turbo lag and ACT transitions. Software updates (e.g.,
     2019–2025) have mitigated this but may not fully resolve it for all cases.
   inspection_advice: Test the vehicle during cold starts and low-speed acceleration
     for hesitation or stumbling. Verify if the latest software updates have been applied.
-  sources: []
+  sources:
+  - source_url: https://motorenlager.de/blog/vw-ea211-evo-typische-probleme/
+    source_domain: motorenlager.de
+    site_or_channel: motorenlager.de
+    quote: '"Ruckeln und Anfahrschwäche (besonders mit Schaltgetriebe) Häufig bei
+      kaltem Motor oder niedrigen Drehzahlen, kombiniert mit Turbo-Lag und ACT-Übergängen."'
+    independent: true
 - claim_key: ea211_engine_balancer_shaft_drive
   title: Balancer shaft drive gear failure due to lubrication issues
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The balancer shaft drive gear in 1.4 TFSI (EA211) engines suffers from
     lubrication problems, causing motor vibrations and abnormal noises. Low oil pressure
     exacerbates the risk of severe engine damage.
   inspection_advice: Listen for unusual noises and vibrations, especially if the vehicle
     is between 50,000–120,000 km. Check oil pressure and balancer shaft condition.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Turbo Dişli Aktarma Mili (Balans Mili) Arızası: EA211 1.4 TFSI motorlarda
+      balans milinin yağlanma sorunları yaşanabilmekte; bu durum motor titreşimine
+      ve anormal seslere yol açmaktadır. Yağ basıncı düşüklüğüyle birleşince ciddi
+      motor hasarına dönüşebilir. (50.000 – 120.000 km arası)"'
+    independent: true
 - claim_key: ea211_transmission_dsg_(dq200)_transmis
   title: DSG (DQ200) transmission shuddering and jerking
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 7-speed DSG (DQ200, dry clutch) transmission paired with 1.4 TFSI
     engines suffers from shuddering at low speeds, delayed gear shifts, and 'locking'
@@ -522,49 +696,82 @@ claims:
   inspection_advice: Test drive to check for shuddering at low speeds, delayed gear
     shifts, and jerking sensations. Inspect DSG condition if the vehicle is between
     20,000–80,000 km.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"DSG (S-Tronic) Şanzıman Titreşimi ve Sarsıntı: 7 ileri DSG (DQ200, kuru
+      kavrama) şanzımanla eşleştirilen versiyonlarda düşük hızlarda ve manevralarda
+      sarsıntı, vites geçişlerinde gecikme ve ''takılma'' hissi yaygın şikayetler
+      arasındadır. Mecatronik ünitesi de bu şanzımanlarda zayıf nokta olarak öne çıkar.
+      (20.000 – 80.000 km arası)"'
+    independent: true
 - claim_key: ea211_engine_thermostat_and_cooli
   title: Thermostat and cooling system failures
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The thermostat in 1.4 TFSI engines fails prematurely, causing delayed
     or excessive engine overheating. Cooling hoses may also crack, exacerbating the
     issue.
   inspection_advice: Check for delayed engine warm-up or overheating. Inspect thermostat
     and cooling hoses for cracks if the vehicle is between 60,000–120,000 km.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Termostat ve Soğutma Sistemi Arızaları: 1.4 TFSI motorlarda termostatın
+      erken arızalanması, motorun çalışma sıcaklığına geç ulaşması veya aşırı ısınma
+      şeklinde kendini gösterir. Soğutma suyu hortumlarında çatlama da bu motor ailesinde
+      görülmektedir. (60.000 – 120.000 km arası)"'
+    independent: true
 - claim_key: ea211_engine_premature_ignition_s
   title: Premature ignition system failure (spark plugs and ignition coils)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: High-pressure operation in TFSI engines causes spark plugs and ignition
     coils to wear out faster than standard, leading to idle vibrations, power loss,
     and increased fuel consumption.
   inspection_advice: Check for idle vibrations, power loss, and increased fuel consumption.
     Inspect ignition system components if the vehicle is between 40,000–70,000 km.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Ateşleme Sistemi (Buji ve Ateşleme Bobini) Erken Yıpranması: TFSI motorlarda
+      yüksek basınçlı çalışma koşulları nedeniyle bujiler ve ateşleme bobinleri standart
+      aralıklardan daha erken yıpranabilmektedir. Rölantide titreşim, güç kaybı ve
+      yakıt tüketim artışı belirtiler arasındadır. (40.000 – 70.000 km arası)"'
+    independent: true
 - claim_key: ea211_engine_cylinder_head_oil_le
   title: Cylinder head oil leakage (valve cover gasket)
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Oil leaks from the valve cover gasket are common in 1.4 TFSI engines,
     causing oil stains on the engine's lower parts and a burnt oil smell.
   inspection_advice: Check for oil stains on the engine's lower parts and burnt oil
     smell. Inspect valve cover gasket condition if the vehicle is between 70,000–130,000
     km.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Silindir Kapağı Yağ Kaçağı (Valf Kapağı Contası): Motor üst kısmındaki
+      valf kapağı contasından yağ sızıntısı bu motor ailesinde sıkça raporlanmaktadır.
+      Motorun alt kısmında yağ izleri ve yanık yağ kokusu tipik belirtilerdir. (70.000
+      – 130.000 km arası)"'
+    independent: true
 - claim_key: ea211_engine_piston_segment_chann
   title: Piston segment channel fractures (LSPI-induced) in 1.4 TSI engines
   kind: known_issue
@@ -648,8 +855,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The turbocharger in EA211 1.4 TFSI engines often leaks oil due to degraded
     oil seals, leading to blue-white smoke from the exhaust. This issue is more frequent
@@ -658,14 +865,23 @@ claims:
   inspection_advice: Check for blue-white smoke from the exhaust, oil leaks around
     the turbo housing, and inspect oil seals for degradation. Listen for unusual turbo
     noises during acceleration.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Turbo Yağ Kaçağı ve Turbo Arızası: 1.4 TFSI motorun turboşarjeri, yağ
+      sızdırmazlık contalarının zamanla bozulmasıyla yağ yakmaya başlayabilir. Egzozdan
+      mavi-beyaz duman, bu arızanın tipik belirtisidir. Özellikle turbo soğutulmadan
+      motor kapatılan araçlarda daha erken görülür. 90.000 – 160.000 km arasında sıkça
+      raporlanmaktadır."'
+    independent: true
 - claim_key: ea211_emissions_egr_valve_clogging_a
   title: EGR valve clogging and failure
   kind: known_issue
   domain: emissions
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The EGR valve in EA211 1.4 TFSI engines often clogs due to carbon buildup,
     especially in city driving conditions. This causes rough idling, power loss, and
@@ -673,14 +889,22 @@ claims:
   inspection_advice: Check for rough idling, power loss, and increased fuel consumption.
     Inspect the EGR valve for carbon buildup and verify its proper operation. Listen
     for unusual noises from the EGR system.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"EGR Valfi Tıkanması ve Arızası: 1.4 TFSI motorlarda EGR valfi, özellikle
+      şehir içi kullanımda karbon birikimi nedeniyle tıkanabilir ya da tam kapanmayabilir.
+      Bu durum rölantide titreşim, güç kaybı ve artan yakıt tüketimine yol açar. 60.000
+      – 120.000 km arasında sıkça görülmektedir."'
+    independent: true
 - claim_key: ea211_engine_intake_manifold_and_
   title: Intake manifold and valve carbon deposits
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Direct-injection EA211 1.4 TFSI engines accumulate significant carbon
     deposits on intake valves and manifolds due to insufficient cleaning by fuel.
@@ -689,14 +913,23 @@ claims:
   inspection_advice: Check for rough starts, power loss, and rough idling. Inspect
     intake valves and manifold for carbon deposits. Listen for unusual noises from
     the intake system.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Emme Manifoldu ve Supap Karbon Birikimi: Doğrudan enjeksiyon sistemine
+      sahip bu motorda yakıt, emme supaplarını yıkamaz. Bu nedenle supap arkalarında
+      ve emme manifoldunda yoğun karbon birikimi oluşur. Belirtiler; soğuk çalışmada
+      sarsıntı, güç kaybı ve düzensiz ralantıdır. 80.000 km üzerindeki araçlarda yaygın
+      olarak tespit edilmektedir."'
+    independent: true
 - claim_key: ea211_engine_cooling_system_water
   title: Cooling system water pump failure
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The plastic-cased water pump in EA211 engines can crack over time, leading
     to coolant leaks and risk of overheating. This issue typically appears between
@@ -704,14 +937,22 @@ claims:
   inspection_advice: Check for coolant leaks around the water pump, overheating symptoms,
     and inspect the pump housing for cracks. Verify the pump's operation and belt
     tension.
-  sources: []
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Soğutma Sistemi Su Pompası Arızası: EA211 bloklarında plastik gövdeli
+      su pompası, zamanla çatlayarak soğutma sıvısı kaçağına neden olabilir. Aşırı
+      ısınma riskini beraberinde getiren bu sorun, genellikle 80.000 – 140.000 km
+      arasında kendini gösterir."'
+    independent: true
 - claim_key: ea211_electrical_chronic_48v_hybrid_s
   title: Chronic 48V Hybrid System Communication Failures (Golf 8 eTSI)
   kind: known_issue
   domain: electrical
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 8 eTSI's 48V mild-hybrid system suffers from persistent communication
     failures between the Gateway module (J533), 48V battery management system (BMS),
@@ -722,32 +963,51 @@ claims:
     Energy Control Module' or 'P0C2F00' error codes via OBD2 scan. Verify 12V battery
     health (voltage stability, terminal corrosion, and connection tightness). Inspect
     Gateway (J533) and BMS module firmware for outdated software versions.
-  sources: []
+  sources:
+  - source_url: https://fmhaber.com.tr/volkswagen-golf-8-etsi-motorlarda-tahrik-sistemi-arizasi-uyarisi-nasil-silinir
+    source_domain: fmhaber.com.tr
+    site_or_channel: fmhaber.com.tr
+    quote: '"Gösterge panelinde beliren ''Tahrik sistemi arızası! Lütfen servise başvurun''
+      uyarısı, sürücüler arasında en yaygın karşılaşılan can sıkıcı durumlardan biridir.
+      Bu uyarının arkasındaki mekanizmayı anlamak, motor kontrol ünitesi (ECU) veya
+      merkezi ağ geçidi (Gateway - J533) modülünün, sistem bileşenlerinden milisaniyelik
+      bir süre boyunca hatalı veya eksik veri almasıyla oluşur... Çoğu zaman fiziksel
+      hiçbir hasar olmasa bile, sadece bu anlık iletişim kopukluğu arıza kaydının
+      hafızada kalıcı hale gelmesine neden olur."'
+    independent: true
 - claim_key: ea211_electrical_48v_lityum_i̇yon_bata
-  title: 48V Lityum İyon Batarya Sağlığı ve Yazılım Bağımlılığı (Golf 8 eTSI)
+  title: Health and Firmware Dependency of the 48V Lithium-Ion Battery (Golf 8 eTSI)
   kind: known_issue
   domain: electrical
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: The 48V lithium-ion battery in the Golf 8 eTSI is prone to chronic health
-    degradation, exacerbated by outdated firmware in the Battery Management System
-    (BMS) and Gateway modules. Voltage instability (e.g., 12V battery dropping below
-    12.2V) triggers DC/DC converter delays, causing CAN-Bus communication errors and
-    persistent 'Drive System Fault' warnings.
-  inspection_advice: Verify 48V battery health via diagnostic tools (e.g., VCDS) and
-    check for outdated firmware in Gateway (J533) and BMS modules. Monitor 12V battery
-    voltage stability under load (e.g., during engine start or accessory use).
-  sources: []
+  rationale: The 48V lithium-ion battery in the Golf 8 eTSI experiences chronic degradation
+    in health, worsened by outdated firmware in the Battery Management System (BMS)
+    and Gateway (J533) modules. Voltage instability—such as the 12V battery dropping
+    below **12.2V**—triggers delays in the DC/DC converter, leading to CAN-Bus communication
+    errors and recurring **‘Drive System Fault’** warnings.
+  inspection_advice: Confirm the 48V battery’s health using diagnostic tools (e.g.,
+    **VCDS**) and check for outdated firmware in the **Gateway (J533)** and **BMS**
+    modules. Monitor the stability of the **12V battery voltage** under load (e.g.,
+    during engine start or accessory operation).
+  sources:
+  - source_url: https://fmhaber.com.tr/volkswagen-golf-8-etsi-motorlarda-tahrik-sistemi-arizasi-uyarisi-nasil-silinir
+    source_domain: fmhaber.com.tr
+    site_or_channel: fmhaber.com.tr
+    quote: '"Kronikleşen hataların önüne geçmek adına yetkili serviste 48V lityum
+      iyon batarya sağlığının test edilmesi ve en güncel yazılım güncellemelerinin
+      (özellikle Gateway ve BMS modülleri için) yüklenmesi hayati önem taşır."'
+    independent: true
 - claim_key: ea211_electrical_12v_starter_battery_
   title: 12V Starter Battery Degradation Triggering Hybrid System Failures (Golf 8
     eTSI)
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 12V starter battery, critical for DC/DC converter operation, frequently
     fails prematurely (3–4 years) in Golf 8 eTSI models. Voltage drops below 12.2V
@@ -757,14 +1017,22 @@ claims:
   inspection_advice: Test 12V battery voltage under load (e.g., during engine cranking)
     and check for sulfation, terminal corrosion, or loose connections. Prioritize
     AGM/EFB batteries with verified capacity (e.g., 70+ Ah).
-  sources: []
+  sources:
+  - source_url: https://fmhaber.com.tr/volkswagen-golf-8-etsi-motorlarda-tahrik-sistemi-arizasi-uyarisi-nasil-silinir
+    source_domain: fmhaber.com.tr
+    site_or_channel: fmhaber.com.tr
+    quote: '"12V akünün voltaj seviyesi anlık olarak 12.2 voltun altına düştüğünde,
+      DC/DC konvertör sistemi dengelemekte gecikebilir... Bu durum, CAN-Bus iletişim
+      hattında bir gecikmeye yol açar ve sistem kendisini korumaya alarak tahrik sistemi
+      uyarısını aktif hale getirir."'
+    independent: true
 - claim_key: ea211_electrical_early-production_sof
   title: Early-Production Software Instability (2020–2022 Golf 8 eTSI)
   kind: known_issue
   domain: electrical
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early 2020–2022 Golf 8 eTSI models exhibit chronic software instability
     in the 48V hybrid system, including desynchronization between the Gateway (J533),
@@ -773,7 +1041,14 @@ claims:
   inspection_advice: Check for unapplied software updates (especially for Gateway
     and BMS modules) via VCDS/OBDeleven. Look for repeated 'Lost Communication' codes
     (e.g., U011100) during diagnostics.
-  sources: []
+  sources:
+  - source_url: https://fmhaber.com.tr/volkswagen-golf-8-etsi-motorlarda-tahrik-sistemi-arizasi-uyarisi-nasil-silinir
+    source_domain: fmhaber.com.tr
+    site_or_channel: fmhaber.com.tr
+    quote: '"Volkswagen Golf 8 eTSI modellerinde yer alan mikro hibrit (mild-hybrid)
+      teknolojisi... özellikle ilk üretim yıllarındaki modellerde (2020-2022) elektriksel
+      kararsızlıklara ve yazılımsal çakışmalara oldukça duyarlıdır."'
+    independent: true
 - claim_key: ea211_engine_software-induced_col
   title: Software-induced cold-start hesitation ('kangaroo')
   kind: known_issue
@@ -798,8 +1073,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Inconsistent use of timing belts/chains across 1.4 TFSI/TSI models (including
     EA211/EA111) creates confusion over service intervals. Some models lack clear
@@ -808,14 +1083,20 @@ claims:
   inspection_advice: Verify the timing system type (belt/chain) via service records
     or visual inspection. Ensure belts are replaced at manufacturer-recommended intervals
     (typically 60,000–100,000 miles).
-  sources: []
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/1-4-tfsi-tsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"There is no clear year from what I can make out as to when this was changed
+      over [timing belt vs. chain]."'
+    independent: true
 - claim_key: ea211_engine_thermostat_reporting
   title: Thermostat Reporting Issues (False Slow Warm-Up)
   kind: known_issue
   domain: engine
   severity: low
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: While the 1.4 TFSI/TSI engine is designed for quick warm-up, some thermostats
     report inaccurate water temperature, causing perceived slow warm-up. This is a
@@ -823,14 +1104,21 @@ claims:
   inspection_advice: Test for slow warm-up by checking engine bay temperature sensors.
     Replace the thermostat if the gauge shows delayed temperature rise despite the
     engine warming normally.
-  sources: []
+  sources:
+  - source_url: https://www.torquecars.com/volkswagen/1-4-tfsi-tsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"If your car is taking a long time to warm up, most of the problems are
+      actually just with the thermostat and the way it reports the water temperature
+      to you."'
+    independent: true
 - claim_key: ea211_engine_premature_timing_cha
   title: Premature timing chain stretch
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The timing chain in the 1.4 TSI EA111 is designed for the entire engine
     life but stretches significantly before 60,000 miles, leading to potential catastrophic
@@ -838,14 +1126,20 @@ claims:
   inspection_advice: Check for rattling noises from the timing chain area and inspect
     for visible chain stretch or tensioner wear during maintenance. Verify if the
     chain has been replaced before 60,000 miles.
-  sources: []
+  sources:
+  - source_url: https://uscarsnew.com/vw-audi-1-4-tsi-tfsi-ea111-engine/
+    source_domain: uscarsnew.com
+    site_or_channel: uscarsnew.com
+    quote: this chain will stretch out somewhere after 60k miles – long before the
+      engine lifespan ends.
+    independent: true
 - claim_key: ea211_engine_1.4_tsi_misfire_reco
   title: 1.4 TSI misfire recovery requiring intake manifold cleaning
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Some 1.4 TSI engines exhibit persistent misfires and carbon fouling that
     requires intake manifold cleaning to resolve, indicating a chronic issue with
@@ -853,14 +1147,24 @@ claims:
   inspection_advice: Check for carbon deposits in the intake manifold and valves.
     Look for repeated misfires or check engine light (CEL) codes related to cylinder
     1, especially after low-speed city driving.
-  sources: []
+  sources:
+  - source_url: https://www.golftutkusu.com/topic/24081-golf-7-1-4-tsi-motor-ariza-lambasi-yanip-sonmesi/
+    source_domain: golftutkusu.com
+    site_or_channel: golftutkusu.com
+    quote: '"düzelseydi yanlış hatırlamıyorsam gel manifold temizliği yapalım demişlerdi"
+      (If it didn’t fix itself, they said intake manifold cleaning would be needed.)
+
+      "Yetkili servis bana da subaplarda kurum birikmesi olabilir, emme manifoldu
+      sökülüp temizlenmesi gerekebilir demişti." (Authorized service suggested intake
+      manifold cleaning due to carbon buildup on valves.)'
+    independent: true
 - claim_key: ea211_engine_1.4_tsi_ignition_tim
   title: 1.4 TSI ignition timing update required after prolonged buji/bobin use
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Some 1.4 TSI engines require ignition timing updates (ateşleme güncelleme)
     after prolonged use of older spark plugs (bujiler), indicating a potential design
@@ -868,7 +1172,15 @@ claims:
   inspection_advice: Check if the engine has had repeated spark plug replacements
     without resolution. Look for misfires or erratic idle behavior that persists after
     new plugs are installed.
-  sources: []
+  sources:
+  - source_url: https://www.golftutkusu.com/topic/24081-golf-7-1-4-tsi-motor-ariza-lambasi-yanip-sonmesi/
+    source_domain: golftutkusu.com
+    site_or_channel: golftutkusu.com
+    quote: '"bujiler değiştirmişler tekleme devam edince ateşlemeyi güncellemişler
+      yine devam ederse kurum temizliği yaparız demişlerdi" (They replaced spark plugs,
+      but misfires continued, so they updated ignition timing; if that didn’t work,
+      manifold cleaning was next.)'
+    independent: true
 - claim_key: ea211_engine_chronic_intermittent
   title: Chronic intermittent engine stumble during idle or low-load conditions (Golf
     7 1.4 TSI)
@@ -890,4 +1202,121 @@ claims:
     source_domain: golftutkusu.com
     site_or_channel: golftutkusu.com
     quote: '"Özellikle dururken veya trafikte beklerken ara ara hafif sarsıntı hissediyorum"'
+    independent: true
+- claim_key: ea211_engine_excessive_oil_consum
+  title: Excessive oil consumption due to PCV valve/cover failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: The PCV (Positive Crankcase Ventilation) valve or cover is a known chronic
+    failure point in the EA211 engine family, leading to significant oil consumption.
+    This often results in visible smoke on overrun, oily spark plugs, and lean fuel
+    trims.
+  inspection_advice: Check for excessive oil consumption (e.g., frequent top-ups),
+    oily spark plugs, and smoke on deceleration. Verify the condition of the PCV valve/cover
+    and surrounding seals during a service inspection.
+  sources:
+  - source_url: https://www.accio.com/blog/ea211-engine-problems
+    source_domain: accio.com
+    site_or_channel: accio.com
+    quote: '"Excessive oil consumption tied to PCV value"'
+    independent: true
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Excessive oil consumption tied to PCV value"'
+    independent: true
+  - source_url: https://vwtuning.co/vw-1-4-tsi-engine-problems/
+    source_domain: vwtuning.co
+    site_or_channel: vwtuning.co
+    quote: '"In the early EA111’s, the pistons and piston rings weren’t the most reliable,
+      which causes this issue."'
+    independent: true
+  - source_url: https://www.carsece.com/14-tsi-piston-kirma-ve-yag-yakma-kesin-cozum-rehberi-23
+    source_domain: carsece.com
+    site_or_channel: carsece.com
+    quote: '"In the early EA111’s, the pistons and piston rings weren’t the most reliable,
+      which causes this issue."'
+    independent: true
+  - source_url: https://uscarsnew.com/vw-audi-1-4-tsi-tfsi-ea111-engine/
+    source_domain: uscarsnew.com
+    site_or_channel: uscarsnew.com
+    quote: '"In the early EA111’s, the pistons and piston rings weren’t the most reliable,
+      which causes this issue."'
+    independent: true
+- claim_key: ea211_engine_high_oil_consumption
+  title: High oil consumption in early 1.4 TSI units
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Early 1.4 TSI engines in the EA211 family are prone to increased oil
+    consumption due to piston ring wear or issues with the PCV valve.
+  inspection_advice: Check oil levels frequently and look for signs of blue smoke
+    from the exhaust, which indicates oil burning. Ensure the vehicle has been serviced
+    with VW-approved oil.
+  sources:
+  - source_url: https://autopartswd.com/volkswagen-ea211-engine-guide/
+    source_domain: autopartswd.com
+    site_or_channel: autopartswd.com
+    quote: '"Mostly affects early 1.4 TSI units; related to piston ring wear or PCV
+      valve issues."'
+    independent: true
+  - source_url: https://www.torquecars.com/volkswagen/1-4-tfsi-tsi-problems.php
+    source_domain: torquecars.com
+    site_or_channel: torquecars.com
+    quote: '"Mostly affects early 1.4 TSI units; related to piston ring wear or PCV
+      valve issues."'
+    independent: true
+- claim_key: ea211_engine_turbocharger_oil_lea
+  title: Turbocharger oil leakage and performance degradation
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The 1.4 TFSI turbocharger is prone to oil leaks and gradual performance
+    loss, leading to blue smoke from the exhaust, power loss, and increased oil consumption.
+    Irregular oil changes accelerate this issue.
+  inspection_advice: Check for blue smoke from the exhaust, power loss, and oil leaks
+    around the turbocharger. Inspect turbo condition if the vehicle is between 80,000–150,000
+    km.
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-avant-1.4-tfsi/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Turbo Arızası ve Turbo Yağ Kaçağı: 1.4 TFSI turboşarjörünün yağ sızdırması
+      ve zamanla verim kaybetmesi bilinen bir sorundur. Egzozdan mavi duman, güç kaybı
+      ve aşırı yağ tüketimi bu arızanın belirtileridir. Düzensiz yağ değişimi bu süreci
+      hızlandırır. (80.000 – 150.000 km arası)"'
+    independent: true
+- claim_key: ea211_engine_piston_ring_wear_lea
+  title: Piston ring wear leading to high oil consumption
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: First-generation EA211 1.4 TFSI engines suffer from premature piston
+    ring wear, causing excessive oil consumption (up to 0.5L per 1,000 km) between
+    60,000–120,000 km. If neglected, this can lead to severe engine damage.
+  inspection_advice: Check for blue smoke from the exhaust (indicating burnt oil)
+    and verify oil levels after a test drive. Inspect for carbon deposits in the combustion
+    chamber and check piston ring condition if the engine is disassembled.
+  sources:
+  - source_url: https://www.araclo.com/vehicles/audi-a4-sedan-1.4-tfsi-sport/degerlendirmeler/kullanici-sorunlari
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Bu motor, özellikle ilk nesil EA211 bloklarında piston segmanlarının
+      erken aşınmasına bağlı olarak yüksek yağ tüketimi sorunuyla bilinir. 1.000 km''de
+      0,5 litreye kadar çıkabilen yağ tüketimi, genellikle 60.000 – 120.000 km arasında
+      kendini gösterir. Uzun süre kontrol edilmeden kullanılan araçlarda motor hasarına
+      yol açabilir."'
     independent: true

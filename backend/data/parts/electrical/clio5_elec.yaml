@@ -1,0 +1,1078 @@
+part_id: clio5_elec
+part_type: electrical
+display_name: Renault Clio 5 Electrical Systems
+manufacturer: renault
+known_also_as:
+- Renault Clio 5 electrical
+- Renault Clio 5 electronics
+- Renault Clio 5 battery
+claims:
+- claim_key: clio5_elec_electrical_power_steering_syste
+  title: Power steering system failure (recall)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A specific batch of Renault Clio models (June–November 2019) suffered
+    power steering failure requiring a free recall replacement of the steering column.
+    This affects steering assist and may trigger warning messages.
+  inspection_advice: Check if the vehicle was made between **1 June and 31 November
+    2019** and verify if the recall (steering column replacement) has been completed.
+    Look for warning messages in the instrument cluster or reduced power steering
+    assist.
+  sources: []
+- claim_key: clio5_elec_electrical_hybrid_models_prone_
+  title: Hybrid models prone to electrical issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Owners of **petrol and hybrid Renault Clio models (2019–present)** frequently
+    reported electrical faults requiring dealer intervention, particularly in hybrid
+    variants.
+  inspection_advice: Test all electrical systems (infotainment, hybrid-specific diagnostics,
+    lighting, power windows) during the viewing. Ask the owner if they’ve experienced
+    frequent electrical faults or hybrid-related issues.
+  sources: []
+- claim_key: clio5_elec_electrical_ecu_wiring_loom_chaf
+  title: ECU wiring loom chafing and electrical interference
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The wiring loom in the engine bay, specifically the top left section
+    near the ECU, is prone to chafing through due to the hard rubber silicone cover
+    rubbing against the ECU cover. This causes electrical interference, leading to
+    widespread electrical faults and potential ECU damage. Renault dealers acknowledge
+    this as a design fault and provide updated looms without the problematic silicone
+    cover.
+  inspection_advice: Check the wiring loom near the ECU (top left side of the engine
+    bay) for signs of chafing, exposed wires, or the presence of hard rubber silicone
+    covering the loom. Ensure the loom is not frayed or damaged. If the loom has the
+    hard rubber silicone cover, it is likely affected by this defect.
+  sources: []
+- claim_key: clio5_elec_engine_ignition_coil_misfir
+  title: Ignition coil misfires (0.9 TCe Mk4)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic misfires due to faulty ignition coils, requiring coil and sometimes
+    spark plug replacement in 0.9 TCe engines from the Mk4 generation.
+  inspection_advice: Check for misfire codes (P0300-P0308) and inspect ignition coils
+    for wear or failure. Listen for irregular firing sounds during idle or acceleration.
+  sources: []
+- claim_key: clio5_elec_brakes_brake_pedal_switch_f
+  title: Brake pedal switch false alarms (general)
+  kind: known_issue
+  domain: brakes
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Common false triggering of the 'braking fault' warning due to a faulty
+    brake pedal switch, requiring replacement or adjustment.
+  inspection_advice: Scan for 'braking fault' or 'STOP' warning lights and verify
+    if the brake pedal switch is functioning correctly. Test the brake system with
+    a diagnostic tool to isolate the issue.
+  sources: []
+- claim_key: clio5_elec_electrical_intermittent_electri
+  title: Intermittent electrical glitches (Mk3)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic intermittent electrical issues in Mk3 Clio models, including
+    warning lights, central locking malfunctions, and minor cabin electrics failures,
+    often linked to battery or charging system problems.
+  inspection_advice: Check battery condition, voltage, and charging system. Look for
+    warning lights, central locking quirks, or erratic cabin electrics. Conduct a
+    diagnostic scan to pinpoint the affected system.
+  sources: []
+- claim_key: clio5_elec_engine_rough_idling/stallin
+  title: Rough idling/stalling (Mk3)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic rough idling and stalling issues in Mk3 Clio models, often caused
+    by oily grime buildup around the throttle body or failing sensors, particularly
+    in stop-start driving conditions.
+  inspection_advice: Inspect the throttle body for oily grime buildup and clean if
+    necessary. Check for sensor failures via diagnostic scan and test idle stability
+    under various conditions.
+  sources: []
+- claim_key: clio5_elec_suspension_worn_top_bushes_on_f
+  title: Worn top bushes on front shock absorbers (general)
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic wear of top bushes on front shock absorbers leading to heavy
+    steering and front-end noise, requiring replacement of the bushes as a pair.
+  inspection_advice: Check for heavy steering, knocking, or creaking noises from the
+    front suspension. Inspect the top bushes of the front shock absorbers for wear
+    and looseness.
+  sources: []
+- claim_key: clio5_elec_electrical_faulty_alternator_pu
+  title: Faulty alternator pulley/squeaking engine bay noise (general)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic squeaking or chirping noises from the engine bay often due to
+    a worn alternator pulley or failing alternator, requiring pulley replacement or
+    alternator inspection/replacement.
+  inspection_advice: Listen for persistent squeaking or chirping sounds from the engine
+    bay. Inspect the alternator pulley for wear and check the alternator for proper
+    functioning.
+  sources: []
+- claim_key: clio5_elec_general_worn_window_regulato
+  title: Worn window regulator mechanisms (general)
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic noise in electric windows due to wear or looseness in the window
+    regulator mechanism, requiring tightening, adjustment, or replacement.
+  inspection_advice: Test electric windows for noise during operation. Inspect the
+    window regulator and mounting points for wear or looseness.
+  sources: []
+- claim_key: clio5_elec_brakes_abs/wheel_speed_sens
+  title: ABS/wheel speed sensor faults (general)
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic ABS and wheel speed sensor faults leading to 'braking fault'
+    warnings, often accompanied by ABS/ESP lights, requiring sensor and wiring checks.
+  inspection_advice: Check for 'braking fault' or ABS/ESP warning lights. Inspect
+    ABS sensors and wiring for faults and verify proper sensor function.
+  sources: []
+- claim_key: clio5_elec_electrical_low_12v_battery_trig
+  title: Low 12V battery triggering false warnings (general)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic false warnings, including 'braking fault,' triggered by low 12V
+    battery voltage or charging system glitches, requiring battery and charging system
+    checks.
+  inspection_advice: Check battery voltage and charging system. Look for multiple
+    warning lights appearing simultaneously, especially 'braking fault' or 'STOP'
+    warnings.
+  sources: []
+- claim_key: clio5_elec_engine_cooling_system_failu
+  title: Cooling system failures (pre-2015 models)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recurrent failures in the cooling system, including water pump and thermostat,
+    leading to overheating and potential engine damage, particularly in older Renault
+    Clio models.
+  inspection_advice: Check for signs of coolant leaks, inspect the water pump and
+    thermostat for wear or failure, and verify the condition of hoses and radiators.
+    Ensure the cooling system has been properly maintained according to the service
+    schedule.
+  sources: []
+- claim_key: clio5_elec_emissions_clogged_particulate_
+  title: Clogged particulate filters (diesel engines)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Diesel engines frequently suffer from clogged particulate filters, especially
+    when driven on short trips, leading to reduced performance and higher emissions.
+  inspection_advice: Check for warning lights related to emissions systems and verify
+    the condition of the particulate filter. Ensure the car has been driven on longer
+    trips regularly to prevent clogging.
+  sources: []
+- claim_key: clio5_elec_engine_turbo_failure_(diese
+  title: Turbo failure (diesel engines)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Turbochargers in diesel engines tend to fail around 150,000 kilometers,
+    causing significant power loss and potential engine damage if neglected.
+  inspection_advice: Listen for unusual noises from the turbo area, check for oil
+    leaks around the turbo, and verify the service history for turbo-related maintenance.
+  sources: []
+- claim_key: clio5_elec_fuel system_fuel_pump_and_inject
+  title: Fuel pump and injector failures (petrol direct injection engines)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Petrol engines with direct injection frequently experience failures in
+    the fuel pump and injectors, leading to poor performance and potential long-term
+    engine damage.
+  inspection_advice: Monitor for rough idling, misfires, or loss of power. Check for
+    warning lights related to fuel systems and verify the condition of injectors and
+    fuel pump during maintenance.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Petrol engines with direct injection have problems with the fuel pump
+      and injectors.’
+    independent: true
+- claim_key: clio5_elec_transmission_cvt_gearbox_jerks_an
+  title: CVT gearbox jerks and delayed responses
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Older CVT (Continuously Variable Transmission) gearboxes in automatic
+    transmissions suffer from jerky shifts and delayed responses, indicating internal
+    wear or failure.
+  inspection_advice: Test drive the car to check for jerky or delayed gear shifts.
+    Listen for unusual noises and verify the condition of the transmission fluid and
+    service history.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Automatic gearboxes, especially the older CVT version, suffer from faults.
+      Jerks when changing gear and delayed responses point to problems.’
+    independent: true
+- claim_key: clio5_elec_transmission_gear_linkage_wear_(o
+  title: Gear linkage wear (older models)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Gear linkage mechanisms in older models wear out, leading to notchy shifts
+    or missing gears due to worn gear cables or internal components.
+  inspection_advice: Test drive the car to check for notchy or erratic gear shifts.
+    Inspect the gear linkage and cables for wear or damage.
+  sources: []
+- claim_key: clio5_elec_electrical_multimedia_system_ma
+  title: Multimedia system malfunctions (4th and 5th generation)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Fourth and fifth-generation Clio models frequently experience issues
+    with the multimedia system, including touchscreen freezing or slow response, and
+    unstable connectivity with smartphones.
+  inspection_advice: Test the multimedia system for responsiveness, touchscreen functionality,
+    and connectivity with smartphones. Check for software updates or hardware defects.
+  sources: []
+- claim_key: clio5_elec_electrical_parking/lane-keeping
+  title: Parking/lane-keeping sensor false alarms
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Sensors for parking assistance and lane-keeping assistance frequently
+    give false alarms or fail completely, triggering unnecessary warning lights on
+    the dashboard.
+  inspection_advice: Test the parking and lane-keeping sensors during a test drive.
+    Check for false alarms or complete failure of these systems.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Sensors for parking assistance and lane-keeping assistance give false
+      alarms or fail completely. This triggers warning lights on the dashboard.’
+    independent: true
+- claim_key: clio5_elec_electrical_climate_sensor_fault
+  title: Climate sensor faults (air conditioning)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Faults in climate sensors cause poor temperature control in the air conditioning
+    system, leading to discomfort for occupants.
+  inspection_advice: Test the air conditioning system for proper temperature control
+    and functionality. Check for error messages related to climate sensors.
+  sources: []
+- claim_key: clio5_elec_electrical_electrical_window_mo
+  title: Electrical window motor/switch failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Windows that no longer operate electrically are often caused by defective
+    switch modules or motors, leading to inconvenience and potential safety hazards.
+  inspection_advice: Test all electrical windows for proper operation. Check for signs
+    of wear or damage to window motors and switch modules.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Windows that no longer operate electrically point to defective switch
+      modules or motors.’
+    independent: true
+- claim_key: clio5_elec_electrical_dashboard/led_lighti
+  title: Dashboard/LED lighting failures
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Dashboard and interior lighting failures are often due to loose connections
+    or defective LED modules, causing inconvenience and potential safety issues.
+  inspection_advice: Check all dashboard and interior lighting for functionality.
+    Inspect wiring and connections for any signs of damage or looseness.
+  sources: []
+- claim_key: clio5_elec_electrical_central_locking_fail
+  title: Central locking failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Central locking problems are often caused by flat batteries in the key
+    or defective locks, leading to inconvenience and potential security risks.
+  inspection_advice: Test the central locking system for proper functionality. Check
+    the condition of keys and locks, and ensure the battery in the key fob is functional.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Central locking problems are often caused by a flat battery in the key.
+      In other cases, a defective lock is to blame.’
+    independent: true
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: ‘Central locking problems are often caused by a flat battery in the key.
+      In other cases, a defective lock is to blame.’
+    independent: true
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: ‘Central locking problems are often caused by a flat battery in the key.
+      In other cases, a defective lock is to blame.’
+    independent: true
+- claim_key: clio5_elec_electrical_non-functioning_trip
+  title: Non-functioning trip computers
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Owners frequently report non-functioning trip computers, which can be
+    inconvenient for tracking mileage and fuel efficiency.
+  inspection_advice: Test the trip computer for functionality and accuracy. Check
+    for software updates or hardware defects.
+  sources:
+  - source_url: https://carnews.nl/en/car-problems/car-problems-renault/renault-clio/
+    source_domain: carnews.nl
+    site_or_channel: carnews.nl
+    quote: ‘Owners regularly report non-functioning trip computers.’
+    independent: true
+- claim_key: clio5_elec_engine_p0300_random/multipl
+  title: P0300 Random/Multiple Cylinder Misfire (Clio 5 2026)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Clio 5 2026 model exhibits a chronic issue where the engine
+    control unit (ECU) frequently detects random or multiple cylinder misfires (P0300
+    code). This is not a generic failure but a persistent problem in this specific
+    model, leading to severe performance degradation, fuel inefficiency, and potential
+    long-term damage to catalytic converters and other emissions components.
+  inspection_advice: Check for irregular engine vibrations, power loss during acceleration,
+    and unusual exhaust smells. Inspect ignition coils, spark plugs, fuel injectors,
+    and vacuum leaks in the intake manifold. Verify the condition of the crankshaft
+    and camshaft position sensors, as well as the fuel system (pump, filter, and injectors).
+  sources: []
+- claim_key: clio5_elec_engine_ignition_coil_failur
+  title: Ignition Coil Failures (Clio 5)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Renault Clio 5 has a chronic issue with ignition coils failing individually
+    or in clusters, leading to random misfires (P0300 code). This is not a standard
+    wear-and-tear issue but a design or manufacturing flaw causing premature coil
+    failure due to internal short circuits, cracks, or degradation from moisture,
+    heat, or improper maintenance.
+  inspection_advice: Inspect ignition coils for physical damage, cracks, or signs
+    of moisture ingress. Test each coil individually for proper voltage output to
+    the spark plugs. Look for carbon buildup or corrosion on coil connectors.
+  sources:
+  - source_url: https://mithaber.com.tr/renault-clio-5-2026-modeli-motor-ariza-lambasi-p0300-kodu-neden-yanar
+    source_domain: mithaber.com.tr
+    site_or_channel: mithaber.com.tr
+    quote: Ateşleme bobinleri (ignition coils) ise bujilere yüksek voltajı ileten
+      elemanlardır. Bir bobinin içindeki kısa devre, çatlaklar veya genel yaşlanma,
+      yeterli voltajın bujiye ulaşmasını engeller. Birden fazla bobinin aynı anda
+      veya rastgele aralıklarla arızalanması, doğrudan P0300 kodunu tetikleyebilir.
+      Nem, aşırı ısı veya motor yıkama sırasında su teması da bobinlerin performansını
+      olumsuz etkileyebilir.
+    independent: true
+- claim_key: clio5_elec_fuel system_fuel_injector_cloggi
+  title: Fuel Injector Clogging/Biased Performance (Clio 5)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Clio 5's fuel injectors are prone to clogging or inconsistent performance
+    due to low-quality fuel, leading to either overly lean or overly rich fuel mixtures.
+    This causes random misfires (P0300) and long-term engine damage. The issue is
+    exacerbated by the model's sensitivity to fuel quality.
+  inspection_advice: Check for uneven exhaust emissions, rough idling, or hesitation
+    during acceleration. Inspect fuel injectors for carbon deposits or debris buildup.
+    Test fuel pressure and flow rate to confirm clogging or sizing issues.
+  sources:
+  - source_url: https://mithaber.com.tr/renault-clio-5-2026-modeli-motor-ariza-lambasi-p0300-kodu-neden-yanar
+    source_domain: mithaber.com.tr
+    site_or_channel: mithaber.com.tr
+    quote: Enjektörler, yakıtı silindirlere hassas bir şekilde püskürtmekle görevlidir.
+      Tıkanmış veya sızıntı yapan bir enjektör, ya çok az yakıt gönderir (fakir karışım)
+      ya da çok fazla yakıt gönderir (zengin karışım), her iki durumda da düzensiz
+      yanmaya neden olur... Özellikle düşük kaliteli yakıt kullanımı, Clio 5'in hassas
+      enjektörlerinde birikinti oluşturarak püskürtme paternini bozabilir.
+    independent: true
+- claim_key: clio5_elec_engine_vacuum_leaks_in_inta
+  title: Vacuum Leaks in Intake System (Clio 5)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Clio 5's intake manifold and vacuum hoses are prone to leaks, causing
+    uncontrolled air intake. This disrupts the air-fuel ratio calculation by the ECU,
+    leading to lean mixtures and misfires (P0300). This is a chronic issue due to
+    design or material weaknesses in the intake components.
+  inspection_advice: Listen for hissing sounds near the intake manifold or vacuum
+    hoses. Check for cracks, loose connections, or degraded seals in the intake system,
+    including the PCV valve and vacuum lines.
+  sources:
+  - source_url: https://mithaber.com.tr/renault-clio-5-2026-modeli-motor-ariza-lambasi-p0300-kodu-neden-yanar
+    source_domain: mithaber.com.tr
+    site_or_channel: mithaber.com.tr
+    quote: Emme sistemi veya vakum hatlarındaki herhangi bir sızıntı, motorun kontrolsüz
+      bir şekilde 'ekstra' hava çekmesine neden olur... Eğer motora beklenenden daha
+      fazla hava girerse, karışım 'fakir' kalır ve bu da yanma verimliliğini düşürerek
+      tekleme sorunlarına neden olur.
+    independent: true
+- claim_key: clio5_elec_engine_ateşleme_sisteminde_
+  title: 'Ignition system failures: spark plug/bobbin issues (TCe engines)'
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In turbocharged petrol engines such as the 1.0 TCe and 1.3 TCe, worn-out
+    spark plugs or end-of-life ignition coils cause misfires (combustion errors).
+    This is detected by the Engine Control Unit (ECU), triggering the 'Check Injection'
+    warning and activating 'Limp Mode'. As a result, engine performance drops significantly
+    and permanent damage may occur due to cascading effects.
+  inspection_advice: Inspect the spark plugs and ignition coils. Replace them if there
+    are signs of wear on the plugs (e.g., electrode gap widening) or if resistance
+    measurements on the coils deviate from specifications. Additionally, check for
+    oxidation and looseness in the wiring connections.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Özellikle TCe motorlu benzinli Clio 5 modellerinde, ateşleme sistemindeki
+      en ufak bir zayıflık doğrudan bu hatayı tetikler. Aşınmış bujiler veya ömrünü
+      tamamlamış ateşleme bobinleri, silindir içindeki hava-yakıt karışımını olması
+      gerektiği gibi ateşleyemez. Bu durum silindirde tekleme (misfire) meydana getirir.
+      Krank mili konum sensöründen gelen verileri inceleyen ECU, hangi silindirde
+      yanma gerçekleşmediğini anında tespit eder ve motoru korumak için enjeksiyon
+      uyarısını aktif hale getirir."'
+    independent: true
+- claim_key: clio5_elec_fuel system_yakıt_basınç_pompası
+  title: Fuel pressure pump/fuel rail pressure sensor failures (direct injection engines)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In high-pressure direct injection systems, failure of the fuel pump or
+    pressure sensor reduces the pressure in the fuel rail. This causes the engine
+    to run on a lean mixture and is detected by the ECU as an 'injection error'. If
+    the issue remains unresolved, it can cause permanent damage to the fuel injectors
+    and internal engine components.
+  inspection_advice: Verify the operation of the fuel pressure pump and measure the
+    pressure in the fuel rail (typically within the range of 300-600 bar) using a
+    diagnostic device. Also, inspect for clogging in the fuel filter and check for
+    any damage to sensor connections.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Doğrudan enjeksiyonlu yeni nesil Clio motorlarında, yakıtın silindirlere
+      yüksek bir basınçla püskürtülmesi gerekir. Yakıt deposundaki alçak basınç pompası
+      veya motordaki yüksek basınç pompası görevini tam yapamadığında, yakıt rayı
+      üzerindeki basınç sensörü yetersiz değer okur. Sistemde oluşan bu basınç kayıpları,
+      motorun fakir karışımla çalışmasına yol açarak enjeksiyon sisteminde yapısal
+      bir hata olarak kaydedilir."'
+    independent: true
+- claim_key: clio5_elec_emissions_egr_valfi_kurum_tıka
+  title: EGR Valve Clogging (1.5 dCi Engines)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR (Exhaust Gas Recirculation) valve allows a portion of exhaust
+    gases to be redirected back into the cylinders. In 1.5 dCi engines frequently
+    used in heavy city traffic, if the EGR valve becomes clogged or stuck due to carbon
+    buildup, combustion efficiency is compromised, forcing the engine into **Limp
+    Mode**. This negatively impacts long-term engine performance and fuel consumption.
+  inspection_advice: Inspect the EGR valve for physical carbon deposits. Check if
+    the valve moves freely, examine connection points for soot buildup, and verify
+    that retaining clips are secure. Additionally, inspect the EGR hose for any clogging.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Eğer 1.5 dCi motorlu bir Clio 5 kullanıyorsanız, bu uyarının arkasında
+      büyük oranda emisyon sistemleri yatar. Özellikle yoğun şehir içi trafikte kullanılan
+      araçlarda, EGR valfi kurum bağlayarak açık veya kapalı konumda sıkışabilir."'
+    independent: true
+- claim_key: clio5_elec_emissions_dpf_(dizel_partikül_
+  title: DPF (Diesel Particulate Filter) Blockage (1.5 dCi Engine)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DPF captures particulates from the exhaust gases and gradually clogs
+    over time. When clogged, exhaust backpressure rises, restricting the engine’s
+    airflow, and the ECU interprets this as an 'injection fault'. If the DPF is not
+    cleared, it increases the risk of engine damage and performance loss.
+  inspection_advice: Check for DPF blockage using exhaust pressure sensor data or
+    a DPF cleaning device. Also, review the vehicle’s usage pattern (e.g., frequent
+    city driving?) and the last DPF cleaning date.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Benzer şekilde, Dizel Partikül Filtresi (DPF) dolduğunda egzoz geri basıncı
+      yükselir. Bu durum egzoz gazlarının tahliyesini zorlaştırarak motorun nefes
+      almasını engeller ve ECU sistemi doğrudan enjeksiyon arızasına yönlendirir."'
+    independent: true
+- claim_key: clio5_elec_engine_turbo_hortumları_ve_
+  title: Turbo and intercooler leaks (turbocharged engines)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In turbocharged engines, air leaks (such as cracked hoses, loose clamps,
+    or intercooler body leaks) cause inconsistencies between the **MAP (Manifold Absolute
+    Pressure) sensor** and **MAF (Mass Air Flow) sensor** readings. This disrupts
+    the air-fuel ratio, reducing combustion efficiency and triggering an **injection
+    error** as detected by the **ECU (Engine Control Unit)**. Prolonged leaks can
+    lead to **turbocharger and intercooler damage**.
+  inspection_advice: Inspect **turbo hoses**, the **intercooler body**, and all connection
+    points for **air leaks**. Pay special attention to hose flexibility and clamp
+    tightness, particularly in cold weather. Additionally, verify the **cleanliness
+    and connections** of the **MAP and MAF sensors**.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Turbo beslemeli Clio 5 motorlarında, emilen hava miktarının ve basıncının
+      çok hassas ölçülmesi gerekir. Turbo hortumlarında meydana gelen mikro çatlaklar,
+      gevşemiş kelepçeler veya intercooler gövdesindeki sızıntılar, motora giren havanın
+      dışarı kaçmasına neden olur. Manifold Mutlak Basınç (MAP) sensörü ile Kütle
+      Hava Akış (MAF) sensörü arasındaki tutarsızlık, hava-yakıt oranını bozarak enjeksiyon
+      uyarısının ekranda belirmesine yol açar."'
+    independent: true
+- claim_key: clio5_elec_emissions_oksijen_(lambda)_sen
+  title: Oxygen (Lambda) Sensor Clogging or Failure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Lambda sensor measures the amount of oxygen remaining after combustion.
+    If it clogs or fails, the Engine Control Unit (ECU) cannot properly adjust the
+    fuel mixture. This leads to an 'injection error' warning and reduced engine performance.
+    If the sensor failure persists, it can cause catalytic converter damage and increased
+    fuel consumption.
+  inspection_advice: Inspect the physical cleanliness of the Lambda sensor. Check
+    for contamination on the sensor’s electrodes, oxidation at connection points,
+    and resistance readings. Additionally, verify exhaust system seals for leaks.
+  sources:
+  - source_url: https://kshaber.com.tr/renault-clio-5-modelinde-ekranda-beliren-enjeksiyonu-kontrol-ettirin-uyarisi-nasil-giderilir
+    source_domain: kshaber.com.tr
+    site_or_channel: kshaber.com.tr
+    quote: '"Oksijen (Lambda) sensörü verimsizliği: Egzoz hattı üzerinde yer alan
+      oksijen sensörleri, yanma sonrasında ortaya çıkan gazların içindeki oksijen
+      miktarını ölçerek ECU''ya geri bildirim gönderir. Eğer sensörün üzeri kurumla
+      kaplanırsa veya sensör arızalanırsa, ECU motorun zengin mi yoksa fakir mi çalıştığını
+      anlayamaz."'
+    independent: true
+- claim_key: clio5_elec_electrical_can-bus_iletişim_kab
+  title: Corrosion of CAN-bus wiring and increased resistance
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In Renault Clio 5 models, CAN-bus line corrosion causes signal reflections
+    and communication interruptions. This can completely sever critical communication
+    between the Engine Control Unit (ECU) and other electronic modules, triggering
+    the U0100 fault code. Corrosion, particularly in the humid engine bay environment,
+    increases resistance at the pins where CAN-bus wiring passes, weakening or cutting
+    off the signal.
+  inspection_advice: Inspect the CAN-bus wiring and socket connections in the engine
+    bay. Look for signs of corrosion or oxidation, especially around the engine fuse
+    box (UPC) and ECU socket areas. Verify the CAN-bus line resistance using a multimeter
+    to confirm compliance with the 60-ohm specification. Also, check for loose or
+    corroded chassis mounting points.
+  sources:
+  - source_url: https://mrthaber.com.tr/renault-clio-5-dtc-u0100-iletisim-hatasi-cozumu-nedir
+    source_domain: mrthaber.com.tr
+    site_or_channel: mrthaber.com.tr
+    quote: '"Clio 5''in motor bölmesinde, sol farın hemen arkasında bulunan motor
+      sigorta kutusu (UPC) ve ECU soketleri çevresel etkilere oldukça açıktır. Özellikle
+      motor yıkama işlemleri, yoğun yağmurlar veya ön cam tahliye kanallarının tıkanması
+      sonucu bu bölgeye su sızabilir. Soketlerin içine sızan nem, zamanla mikroskobik
+      düzeyde yeşil renkli bakır korozyonuna (oksitlenme) yol açar. Bu korozyon, CAN-bus
+      hatlarının geçtiği pinlerde direnci artırarak sinyalin zayıflamasına veya tamamen
+      kesilmesine sebep olur."'
+    independent: true
+- claim_key: clio5_elec_electrical_can-bus_hattının_dir
+  title: CAN-bus line resistance deviations and incorrect termination resistor connections
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In the Renault Clio 5, if the 120-ohm termination resistors located at
+    both ends of the CAN-bus line are incorrectly connected or connected in parallel,
+    causing the total resistance to deviate from 60 ohms, signal reflections occur,
+    triggering the U0100 fault code. This disrupts communication between electronic
+    control modules, forcing the vehicle into a fail-safe or protection mode.
+  inspection_advice: Verify the CAN-bus line resistance using a multimeter to confirm
+    compliance with the 60-ohm specification. Check that the termination resistors
+    are correctly connected. If the resistance values fall outside the expected range,
+    this may be the cause of the issue.
+  sources:
+  - source_url: https://mrthaber.com.tr/renault-clio-5-dtc-u0100-iletisim-hatasi-cozumu-nedir
+    source_domain: mrthaber.com.tr
+    site_or_channel: mrthaber.com.tr
+    quote: '"CAN-Bus hattı ve Sinyal Kesintilerinin Fiziği: Controller Area Network
+      (CAN-bus), araçtaki modüllerin birbirleriyle çift bükümlü iki kablo (CAN-High
+      ve CAN-Low) üzerinden haberleşmesini sağlayan protokoldür. Bu iki kablo arasındaki
+      voltaj farkı (diferansiyel voltaj) veriyi oluşturur. Clio 5''in CAN-bus hattının
+      iki ucunda 120 ohm değerinde sonlandırma dirençleri bulunur. Bu dirençlerin
+      paralel bağlanmasıyla hat üzerindeki toplam direnç 60 ohm olmalıdır. Bu direnç
+      değerindeki sapmalar doğrudan sinyal yansımasına ve dolayısıyla U0100 iletişim
+      hatasına neden olur."'
+    independent: true
+- claim_key: clio5_elec_electrical_zayıf_akü_voltajı_ve
+  title: Weak battery voltage and faulty operation of the smart charging system
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Clio 5 models use smart alternator technology that only charges the
+    battery under specific conditions. An insufficient or fully depleted battery can
+    cause the voltage to drop below 9-10 volts during cranking, triggering an ECU
+    microprocessor reboot while other modules remain active. This condition activates
+    the **U0100** fault code.
+  inspection_advice: Measure the battery’s performance under load at the millivolt
+    level. Check the battery’s health and capacity. Additionally, test the alternator
+    to confirm proper operation. If the battery voltage is low or the battery is degraded,
+    it may be the cause of this fault.
+  sources:
+  - source_url: https://mrthaber.com.tr/renault-clio-5-dtc-u0100-iletisim-hatasi-cozumu-nedir
+    source_domain: mrthaber.com.tr
+    site_or_channel: mrthaber.com.tr
+    quote: '"Yeni nesil Clio 5 modelleri, emisyon değerlerini düşürmek amacıyla ''akıllı
+      alternatör'' teknolojisini kullanır. Bu sistem, aküyü sadece araç kompresyona
+      bindiğinde veya belirli limitlerin altına düştüğünde şarj eder. Eğer aracınızda
+      orijinal olmayan, kapasitesi yetersiz veya ömrünü tamamlamış bir EFB/AGM akü
+      varsa, marş esnasında voltaj anlık olarak 9-10 voltun altına düşebilir. Bu ani
+      ''marş çökmesi'', hassas ECU mikroişlemcisinin anlık olarak kendini kapatıp
+      yeniden başlatmasına (reboot) neden olur. Diğer modüller (ABS, BCM) uyanık kalırken
+      ECU''nun milisaniyeler boyunca çevrimdışı kalması, sistem tarafından ''iletişim
+      koptu'' olarak algılanır ve U0100 kodu tetiklenir."'
+    independent: true
+- claim_key: clio5_elec_electrical_gevşek_şase_noktalar
+  title: Loose chassis ground points and grounding issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In the Renault Clio 5, loosening or corrosion of chassis (grounding)
+    connections prevents the electrical circuit from completing. This causes increased
+    resistance and signal distortion in CAN-bus communication, triggering the U0100
+    fault code.
+  inspection_advice: Inspect the chassis connections and ground points for looseness
+    or corrosion, as these may be the cause of the fault. Also, check chassis wiring
+    for any physical damage.
+  sources:
+  - source_url: https://mrthaber.com.tr/renault-clio-5-dtc-u0100-iletisim-hatasi-cozumu-nedir
+    source_domain: mrthaber.com.tr
+    site_or_channel: mrthaber.com.tr
+    quote: '"Elektrik akımının devresini tamamlayabilmesi için şase (topraklama) bağlantısının
+      kusursuz olması gerekir. Clio 5''te akü eksi kutup başından gövdeye ve motor
+      bloğuna giden kalın şase kabloları bulunur. Fabrikasyon montaj esnasında veya
+      kullanım sırasında bu bağlantılar gevşeyebilir veya korozyona uğrayabilir."'
+    independent: true
+- claim_key: clio5_elec_electrical_electrical_power_ste
+  title: Electrical Power Steering System Failures (Renault Clio 5)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic issues with the electrical power steering system causing stiffness,
+    error warnings, and difficulty in turning, often requiring software updates or
+    system resets.
+  inspection_advice: Check for 'power steering fault' warning lights and test steering
+    responsiveness while the engine is off (manual steering should remain functional).
+  sources:
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: '"Elektrikli Direksiyon Sistemi Arızası Belirtiler: Direksiyon sertleşmesi,
+      ''direksiyon arızası'' uyarısı, dönüşlerde zorlanma. Çözüm: Elektrik destek
+      ünitesi kontrol edilmeli, yazılım güncellemesi veya sistem sıfırlaması gerekebilir."'
+    independent: true
+- claim_key: clio5_elec_electrical_multimedia_screen_fr
+  title: Multimedia Screen Freezes/Crashes (Easy Link System)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Recurrent software-related failures in the multimedia system, causing
+    the screen to freeze or shut down without user input, often resolved via software
+    updates or resets.
+  inspection_advice: Test the touchscreen responsiveness and check for any error messages
+    or repeated freezes during demonstration.
+  sources:
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: '"Multimedya Ekranı (Easy Link) Donma ve Kapanma Belirtiler: Ekran açılmıyor,
+      dokunmatik komutlara yanıt vermiyor. Çözüm: Yazılım güncellemesi veya ekran
+      modülünün sıfırlanması gerekir."'
+    independent: true
+- claim_key: clio5_elec_electrical_start-stop_system_ma
+  title: Start-Stop System Malfunction
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic failure of the start-stop system, where the engine fails to shut
+    off automatically when the vehicle stops, often due to sensor or battery issues.
+  inspection_advice: Test the start-stop functionality by stopping the vehicle and
+    verifying if the engine turns off automatically. Check for warning lights related
+    to the system.
+  sources:
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: '"Start-Stop Sisteminin Devreye Girmemesi Belirtiler: Araç durduğunda motorun
+      otomatik olarak durmaması, sistem uyarısı çıkması. Çözüm: Akü zayıflığı, sensör
+      arızası veya fren pedal sensörü kontrol edilmeli."'
+    independent: true
+- claim_key: clio5_elec_emissions_adblue_system_faults
+  title: AdBlue System Faults (dCi Engines)
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic failures in the AdBlue system, causing false warnings like 'AdBlue
+    low' or 'engine will not start' due to sensor issues, internal clogging, or calibration
+    problems.
+  inspection_advice: Check for warning lights related to the AdBlue system and verify
+    the AdBlue tank for leaks or blockages. Test the system for false error triggers.
+  sources:
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: '"AdBlue Sistemi Arızası (dCi motorlar) Belirtiler: ''AdBlue eksik'', ''motor
+      çalışmayacak'' uyarıları. Çözüm: Sensör arızası, tank içi donmalar veya sistem
+      kalibrasyonu yapılmalıdır."'
+    independent: true
+- claim_key: clio5_elec_brakes_hard_or_unresponsive
+  title: Hard or Unresponsive Brake Pedal
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic stiffness or unresponsiveness in the brake pedal, often due to
+    vacuum pump failure or issues in the brake master cylinder system.
+  inspection_advice: Test the brake pedal for excessive resistance or sponginess.
+    Check for warning lights related to the brake system and verify brake fluid levels.
+  sources:
+  - source_url: https://arizacilik.com/konu/renault-clio-5-2019-gunumuz-kronik-arizalar-rehberi.946/
+    source_domain: arizacilik.com
+    site_or_channel: arizacilik.com
+    quote: '"Fren Pedalında Sertleşme / Tepkisizlik Belirtiler: Fren pedalının çok
+      sertleşmesi, araç geç durması. Çözüm: Vakum pompası, fren hidroliği ve fren
+      merkezi sistemi kontrol edilmelidir."'
+    independent: true
+- claim_key: clio5_elec_electrical_steering_column_moto
+  title: Steering Column Motor Control Failure (2019 models)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Internal failure in the steering column motor control can lead to loss
+    of steering assistance, particularly at low speeds or when stationary, posing
+    a safety risk.
+  inspection_advice: Check for warning lights related to steering assistance and test
+    the steering response at low speeds. Verify if the vehicle was part of the 2019
+    recall batch.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"A recall issued on February 24, 2020, for Renault Clio V models produced
+      in 2019 due to a potential internal failure in the steering column motor control.
+      This defect could result in the loss of steering assistance when stationary
+      or driving at low speeds."'
+    independent: true
+- claim_key: clio5_elec_transmission_automatic_gear_selec
+  title: Automatic Gear Selection Lever Switch Failure (2019 models)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Malfunctioning stop switch for the automatic gear selection lever can
+    impair drivability, leading to potential stalling or inability to engage gears
+    properly.
+  inspection_advice: Test the gear selection lever for responsiveness and check for
+    warning lights or error codes related to the gearbox. Verify if the vehicle was
+    part of the 2019 recall batch.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"Another recall for the 2019 Renault Clio V models was announced on February
+      23, 2020. The stop switch controlling the automatic gear selection lever may
+      malfunction, affecting the vehicle’s drivability."'
+    independent: true
+- claim_key: clio5_elec_transmission_e-tech_gearbox_hesit
+  title: E-Tech Gearbox Hesitations and Jerky Transitions (Hybrid models)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The E-Tech hybrid gearbox in Clio Hybrid models has reported issues with
+    hesitations and jerky transitions between electric and petrol power, which can
+    degrade the driving experience and potentially cause stress on drivetrain components.
+  inspection_advice: Test the gearbox for smooth transitions between electric and
+    petrol power modes. Check for software updates that may address these issues,
+    and listen for unusual noises or delays during gear shifts.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"The Clio Hybrid uses Renault’s E-Tech hybrid gearbox, which has had some
+      reports of hesitations and jerky transitions between electric and petrol power.
+      These issues can sometimes be addressed with software updates."'
+    independent: true
+- claim_key: clio5_elec_engine_oil_leaks_from_fault
+  title: Oil Leaks from Faulty Gaskets/Seals
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Chronic oil leaks from the engine are commonly attributed to faulty gaskets
+    or seals, which can lead to engine damage if left unaddressed and require frequent
+    maintenance or part replacements.
+  inspection_advice: Inspect the engine bay for oil stains, leaks around gaskets,
+    and check oil levels regularly. Look for signs of oil residue on the engine block
+    or under the vehicle.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"Oil leaks from the engine are a common complaint, often traced to faulty
+      gaskets or seals."'
+    independent: true
+- claim_key: clio5_elec_engine_turbocharger_failure
+  title: Turbocharger Failures (Turbocharged Models)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Turbocharged Clio models have reported turbocharger failures, leading
+    to reduced performance and costly repairs, suggesting potential design or durability
+    issues with the turbocharging system.
+  inspection_advice: Listen for unusual turbocharger noises (e.g., whining or rattling)
+    and check for excessive smoke from the exhaust. Monitor performance for signs
+    of reduced power or lag.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"In models equipped with turbocharged engines, there have been instances
+      of turbo failure, leading to reduced performance and expensive repairs."'
+    independent: true
+- claim_key: clio5_elec_engine_underpowered_feel_an
+  title: Underpowered Feel and Increased Engine Noise (Hybrid Models)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Hybrid Clio models sometimes feel underpowered, particularly when the
+    battery charge is low, and exhibit increased engine noise, which can detract from
+    the driving experience and indicate potential inefficiencies or design compromises.
+  inspection_advice: Test the vehicle’s performance under varying battery charge levels
+    and listen for unusual engine noises. Check for software updates that may address
+    power delivery issues.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"Owners have mentioned that the Clio Hybrid can sometimes feel underpowered,
+      particularly when the battery charge is low and the car relies more heavily
+      on the internal combustion engine. There have been complaints about increased
+      engine noise under certain conditions, which can detract from the overall driving
+      experience."'
+    independent: true
+- claim_key: clio5_elec_electrical_dashboard_display_ma
+  title: Dashboard Display Malfunctions
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Intermittent or complete failure of dashboard displays can indicate electrical
+    or software issues, potentially affecting driver information and vehicle diagnostics.
+  inspection_advice: Check for consistent display functionality and test for error
+    messages or glitches on the dashboard.
+  sources:
+  - source_url: https://www.clickmechanic.com/blog/common-problems-with-renault-clio/
+    source_domain: clickmechanic.com
+    site_or_channel: clickmechanic.com
+    quote: '"The Clio has been known to have various electrical problems, including
+      issues with the central locking system, electric windows, and dashboard displays."'
+    independent: true
+- claim_key: clio5_elec_electrical_electrical_faults_an
+  title: Electrical faults and short-circuiting risk
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Electrical faults are a known chronic issue in Renault Clio models, with
+    specific recalls for short-circuiting risks in certain batches.
+  inspection_advice: Verify the vehicle’s build date and check for any recall notices
+    related to electrical faults. Inspect wiring harnesses and connections for signs
+    of damage or corrosion.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-5/11786
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"electrical faults tend to be common on Renault Clios, and with this generation,
+      2019 models have been recalled for risk of short-circuiting."'
+    independent: true
+- claim_key: clio5_elec_electrical_power_steering_failu
+  title: Power steering failure requiring steering column replacement
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A specific batch of 2019 Clio models (June–November) experienced power
+    steering failure, necessitating replacement of the steering column—a costly and
+    inconvenient defect.
+  inspection_advice: Confirm the vehicle’s production month/year if it falls within
+    the 2019 June–November range. Test the power steering for responsiveness and check
+    for warning lights or unusual noises.
+  sources:
+  - source_url: https://www.autotrader.co.za/cars/news-and-advice/buying-a-car/how-reliable-is-the-renault-clio-5/11786
+    source_domain: autotrader.co.za
+    site_or_channel: autotrader.co.za
+    quote: '"A small number of models built in 2019 from June to November suffered
+      from power steering failure resulting in a replacement steering column."'
+    independent: true

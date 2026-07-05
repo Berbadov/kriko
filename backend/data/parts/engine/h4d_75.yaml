@@ -1,0 +1,659 @@
+part_id: h4d_75
+part_type: engine
+display_name: Renault H4D Engine
+manufacturer: renault
+known_also_as:
+- H4D
+- 1.0 TSI
+claims:
+- claim_key: h4d_75_engine_premature_timing_cha
+  title: Premature timing chain stretch/rattle due to oil quality
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H4D engine's fine-pitch timing chain is highly sensitive to oil quality
+    and maintenance intervals. Late oil changes lead to accelerated wear of chain
+    pins and rollers, causing a distinctive cold-start rattle and eventual chain stretch.
+    Ignoring this symptom risks catastrophic failure (e.g., bent valves) due to chain
+    skipping.
+  inspection_advice: Listen for a cold-start rattle (lasting a few seconds) that subsides
+    as oil pressure builds. Check oil change history—engines serviced at 10,000-mile
+    intervals with RN17-approved oil rarely develop this issue before 120,000 miles.
+  sources:
+  - source_url: https://oil-select.com/best-engine-oil-for-renault-clio-5-1-0-tce/
+    source_domain: oil-select.com
+    site_or_channel: oil-select.com
+    quote: '"The first symptom is a distinctive rattle on cold start, lasting a few
+      seconds before oil pressure reaches the hydraulic chain tensioner. This rattle
+      indicates that the tensioner is taking up more slack than it was designed for,
+      meaning the chain has stretched beyond its normal tolerance. At this stage,
+      the chain and tensioner should be replaced promptly. Ignoring the rattle risks
+      the chain skipping a tooth on the sprocket, which will bend valves and destroy
+      the engine."'
+    independent: true
+- claim_key: h4d_75_engine_timing_chain_failure
+  title: Timing chain failure risk (H4Dt 1.0 TCe)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The thin timing chain on the H4Dt 1.0 TCe engine is prone to failure
+    between **120,000–150,000 km**, risking catastrophic valve damage if it snaps.
+    This is a critical failure mode due to the lack of hydraulic tensioners and the
+    chain's fragility under prolonged use.
+  inspection_advice: Check for **timing chain stretch or rattling noises** during
+    startup (especially when cold). Verify service records for **timing chain kit
+    replacements**—this should be done at **~120,000 km** to prevent failure. Inspect
+    for **oil leaks around the timing chain cover** (indicating potential wear).
+  sources: []
+- claim_key: h4d_75_engine_intake_camshaft_phas
+  title: Intake camshaft phaser failure (H4Dt 1.0 TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The single intake phaser on the H4Dt engine develops **noise (crackling)
+    around 150,000 km (90,000 miles)** and may fail, leading to **power loss and rough
+    idle**. While replaceable, it’s a non-trivial maintenance item that owners often
+    overlook until symptoms appear.
+  inspection_advice: Listen for **ticking or rattling noises from the intake side
+    of the engine** (especially under load). Check for **oil leaks around the phaser
+    housing** (indicating wear). If the phaser fails, the engine may **hesitate or
+    stall**, particularly during acceleration.
+  sources: []
+- claim_key: h4d_75_engine_early_software-relat
+  title: Early software-related power loss (2018–2019 H4Dt 1.0 TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Pre-2020 H4Dt engines suffered from **software glitches causing intermittent
+    power loss**, likely due to calibration issues. Renault addressed this with a
+    **firmware update**, but affected units may still exhibit **erratic throttle response
+    or limp mode** if unpatched.
+  inspection_advice: Check the **vehicle’s software version** via a diagnostic tool
+    (e.g., OBD-II scan). If the car is **pre-2020**, confirm whether the **Renault
+    software update (ECU recalibration) has been applied**. Look for **check engine
+    lights (P0010–P0020 range for phaser/valvetronic issues)** or **sudden power drops
+    under acceleration**.
+  sources: []
+- claim_key: h4d_75_engine_manual_valve_adjustm
+  title: Manual valve adjustment requirement (H4Dt 1.0 TCe)
+  kind: known_issue
+  domain: engine
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The absence of **hydraulic lifters** means the H4Dt engine requires **manual
+    valve adjustment every 60,000 km (40,000 miles)**. Neglecting this leads to **valve
+    lash buildup, power loss, and rough running**, though it’s not a catastrophic
+    failure mode.
+  inspection_advice: Listen for **ticking noises from the valve train** (especially
+    under load). Check for **reduced engine responsiveness or hesitation**. Confirm
+    **service records for valve adjustments**—this is a **non-negotiable maintenance
+    task** for longevity.
+  sources: []
+- claim_key: h4d_75_emissions_dpf_clogging_from_sh
+  title: DPF clogging from short trips
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H4D 400's diesel particulate filter (DPF) is prone to clogging when
+    used primarily for short trips, which prevents proper regeneration and leads to
+    costly failures.
+  inspection_advice: Check for DPF warning lights, excessive backpressure, or soot
+    buildup around the exhaust system. Verify maintenance records for DPF regeneration
+    cycles.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/h4d-400-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: The H4D 400's primary reliability focus is maintaining its DPF and fuel
+      injection system. Renault internal data indicates that adherence to service
+      schedules is the strongest predictor of long-term reliability, while UK DVSA
+      statistics show DPF-related issues are the most common cause of emissions test
+      failures for this engine.
+    independent: true
+- claim_key: h4d_75_fuel system_injector_pilot_valve
+  title: Injector pilot valve sticking
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The pilot valves in the fuel injectors of the H4D 400 are prone to sticking,
+    leading to poor fuel atomization and potential misfires or incomplete combustion.
+  inspection_advice: Listen for unusual noises from the injectors, check for rough
+    idling, or look for diagnostic trouble codes (DTCs) related to fuel system performance.
+    Verify if Renault SIB RSB-2015-03 has been applied.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/h4d-400-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: The most frequent issues are DPF clogging due to short trips, **injector
+      pilot valve sticking (addressed by SIB RSB-2015-03)**, EGR valve carbon buildup,
+      and turbo actuator failures.
+    independent: true
+- claim_key: h4d_75_emissions_egr_valve_carbon_bui
+  title: EGR valve carbon buildup
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The EGR (Exhaust Gas Recirculation) valve in the H4D 400 accumulates
+    carbon deposits over time, restricting airflow and causing performance issues
+    or emissions failures.
+  inspection_advice: Inspect the EGR valve for excessive carbon buildup during maintenance.
+    Check for reduced engine efficiency, increased emissions, or warning lights related
+    to the EGR system.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/h4d-400-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: The most frequent issues are DPF clogging due to short trips, injector
+      pilot valve sticking (addressed by SIB RSB-2015-03), **EGR valve carbon buildup**,
+      and turbo actuator failures.
+    independent: true
+- claim_key: h4d_75_engine_turbo_actuator_failu
+  title: Turbo actuator failures
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The turbo actuator in the H4D 400 can fail, leading to turbo lag, reduced
+    boost pressure, or complete loss of turbo function, impacting performance and
+    efficiency.
+  inspection_advice: Listen for unusual turbo noises, check for inconsistent boost
+    levels, or diagnose for turbo-related DTCs. Verify turbo actuator response during
+    engine testing.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/h4d-400-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: The most frequent issues are DPF clogging due to short trips, injector
+      pilot valve sticking (addressed by SIB RSB-2015-03), EGR valve carbon buildup,
+      and **turbo actuator failures**.
+    independent: true
+- claim_key: h4d_75_engine_sensitivity_to_incor
+  title: Sensitivity to incorrect oil specification
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H4D 400 requires **RN0720 specification oil** (typically 5W-30 low-ash
+    synthetic). Using incorrect oil can lead to DPF clogging, injector damage, and
+    reduced engine longevity.
+  inspection_advice: Verify the oil type used in service records and check the oil
+    filler cap or owner’s manual for the correct specification. Inspect for oil leaks
+    or unusual engine deposits.
+  sources:
+  - source_url: https://www.enginecode.uk/renault/h4d-400-specs
+    source_domain: enginecode.uk
+    site_or_channel: enginecode.uk
+    quote: Renault mandates RN0720 specification oil, typically a 5W-30 low-ash synthetic.
+      Using the correct oil is non-negotiable to protect the DPF and fuel injectors.
+    independent: true
+- claim_key: h4d_75_engine_chronic_idling_fluct
+  title: Persistent Engine Idling Instability
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Recurring problems with the engine idling smoothly are caused by repeated
+    failures in the **Manifold Absolute Pressure (MAP) sensor** and **air leaks in
+    the intake manifold**, which cannot be fully resolved through standard maintenance
+    procedures alone.
+  inspection_advice: During a pre-purchase inspection, verify the **MAP sensor’s functionality
+    and signal responsiveness**, thoroughly inspect the **intake manifold for cracks,
+    gaps, or air leaks**, and ensure the **throttle body is clean and free of obstructions**.
+  sources: []
+- claim_key: h4d_75_engine_turbocharger_pressur
+  title: Turbocharger Pressure Drop (Turbo Performance Decline in 0.9 TCe Engine)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The turbocharger is failing repeatedly due to a malfunctioning wastegate
+    valve and cracked turbocharger intake/exhaust hoses. This causes a loss of engine
+    power and, if left unaddressed, can lead to further damage to the turbocharger
+    unit itself.
+  inspection_advice: Check the turbocharger hoses for cracks or leaks, verify the
+    wastegate valve is operating correctly, and listen for abnormal noises during
+    acceleration. Use a scan tool to confirm the turbo boost pressure readings are
+    within specifications.
+  sources: []
+- claim_key: h4d_75_fuel system_chronic_injector_fai
+  title: Persistent Fuel Injector Malfunction (1.5 dCi Injector Problem)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The fuel injectors degrade over high mileage, causing misfires, an uneven
+    or rough idle, and higher fuel consumption. This condition is worsened by poor-quality
+    fuel.
+  inspection_advice: Verify injector spray pattern uniformity, scan for misfires using
+    an OBD-II diagnostic tool, and visually inspect for fuel leaks or clogged injectors.
+  sources: []
+- claim_key: h4d_75_engine_chronic_engine_knock
+  title: Persistent Engine Knocking (Severe Piston and Cylinder Head Wear)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The issue stems from hardened upper cylinder head gaskets or worn piston
+    rings, which cause knocking sounds during acceleration. This typically occurs
+    due to extended vehicle use without adequate maintenance, such as insufficient
+    oil changes or neglect of combustion chamber cleaning.
+  inspection_advice: During a diagnostic check, listen closely for knocking noises—especially
+    under acceleration. Inspect for oil leaks around the cylinder head area, and visually
+    examine combustion chambers for excessive carbon deposits.
+  sources: []
+- claim_key: h4d_75_fuel system_fuel_pump_failure_(y
+  title: Fuel Pump Failure (Weakness in Fuel Pump)
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The fuel pump has experienced long-term wear and degradation, causing
+    the engine to struggle to start—particularly in hot weather or after periods of
+    inactivity.
+  inspection_advice: Measure the fuel pump pressure to verify output; listen for abnormal
+    noises emanating from the fuel tank; and check for a voltage drop at the fuel
+    pump relay while the engine is cranking.
+  sources: []
+- claim_key: h4d_75_electrical_multimedia_system_fr
+  title: R-Link Multimedia System Freezing (Touchscreen Lockup, Audio Interruptions,
+    or System Crashes)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The R-Link multimedia system is freezing due to outdated firmware, causing
+    temporary loss of function—such as unresponsive touchscreen inputs, sudden audio
+    cuts, or complete system lockups. These issues occur intermittently and are directly
+    tied to the software version.
+  inspection_advice: Check for the latest R-Link firmware updates. Perform load testing
+    by engaging navigation, media playback, Bluetooth calls, and other system functions
+    to confirm responsiveness. Ensure all physical connections (power cables, data
+    links, and system wiring) are secure and free of damage.
+  sources: []
+- claim_key: h4d_75_electrical_keycard_ignition_sys
+  title: Keycard Ignition System Failure (Failure to Start with Keycard)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The keycard module repeatedly fails, causing the vehicle to refuse starting
+    due to persistent issues with the electronic lock system.
+  inspection_advice: Attempt to start the vehicle using a backup key to verify keycard
+    module functionality. Inspect all wiring harnesses and electrical connectors associated
+    with the keycard system for signs of damage, corrosion, or improper connections.
+    Measure and confirm the battery voltage supplied to the keycard module is within
+    the manufacturer’s specified range.
+  sources: []
+- claim_key: h4d_75_engine_high_oil_consumption
+  title: High oil consumption due to scraper ring wear
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The H4D engine exhibits excessive oil consumption (~100k km) due to the
+    failure of oil scraper rings, a chronic issue in this model.
+  inspection_advice: Check for blue smoke from the exhaust (burning oil), low oil
+    levels between changes, or oil deposits on the valve cover. Inspect piston rings
+    and scraper rings if the engine is disassembled.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h4d/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: After 100 thousand km, oil consumption occurs due to the occurrence of
+      oil scraper rings;
+    independent: true
+- claim_key: h4d_75_engine_non-hydraulic_valve_
+  title: Non-hydraulic valve lifters requiring manual adjustment
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The absence of hydraulic lifters necessitates manual valve clearance
+    adjustment every 100,000 km, increasing maintenance complexity and potential for
+    misalignment if neglected.
+  inspection_advice: Verify service records for valve clearance adjustments. Listen
+    for unusual valve train noises (e.g., clacking) that may indicate misalignment
+    or wear.
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h4d/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: There are no hydraulic lifters and every 100,000 km you have to adjust
+      the valve clearance.
+    independent: true
+- claim_key: h4d_75_electrical_htrac_4x4_sensör_has
+  title: HTRAC 4x4 System Sensor Sensitivity and False Data Detection
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In the Hyundai Tucson’s HTRAC 4x4 system, the electronic sensors’ delicate
+    design means even minor data inconsistencies—often caused by electrical communication
+    errors or sensor misreads—can trigger the system to enter a protective mode.
+  inspection_advice: Check for error codes using an OBD2 scanner. Inspect the ABS
+    and wheel speed sensors for contamination or damage. Also, verify electrical connections
+    and fuses leading to the transfer case.
+  sources: []
+- claim_key: h4d_75_electrical_abs_ve_tekerlek_hız_
+  title: ABS and Wheel Speed Sensor Contamination
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Contamination of the ABS and wheel speed sensors due to road conditions
+    can cause the system to incorrectly detect wheel speeds and trigger a protective
+    mode. This is particularly common when there is an accumulation of mud, dust,
+    or tire debris.
+  inspection_advice: Clean the ABS sensors and check the wiring for damage or looseness.
+    Inspect for contamination or damage on the sensors themselves.
+  sources: []
+- claim_key: h4d_75_suspension_lastik_basıncı_ve_aş
+  title: Impact of Tire Pressure and Wear Differences on System Faults
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: For the **HTRAC (Hill Descent Control / Hill Start Assist / Traction
+    Control) system** to function correctly, all wheels must have the **same external
+    diameter and rotational speed**. Tires of different brands, models, or varying
+    wear levels increase the risk of **incorrect sensor readings** and triggering
+    the system’s **limp-home or protective mode** due to mismatched wheel dynamics.
+  inspection_advice: Verify that **all tires are the same brand, model, and tread
+    wear level**. Set tire pressures to the manufacturer’s specified standards. Ensure
+    tires with **different wear levels are positioned correctly on the axle** to avoid
+    system misalignment.
+  sources: []
+- claim_key: h4d_75_transmission_transfer_kutusu_ve_k
+  title: Transfer Case and Clutch System Overheating
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Under severe off-road conditions or excessive load, the transfer case
+    and clutch system can overheat. While the HTRAC system is designed to enter a
+    protective mode in such cases to reduce the risk of mechanical damage, repeated
+    overheating may lead to permanent system failure over time.
+  inspection_advice: Allow the vehicle to cool down and check for signs of overheating
+    in the transfer case and clutch system. Regularly inspect the electrical connections
+    and fluid levels of the transfer case and clutch system.
+  sources: []
+- claim_key: h4d_75_electrical_intermittent_dashboa
+  title: Intermittent dashboard display failure (black screen) due to software bug
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A software defect causes the dashboard to intermittently black out during
+    driving, obscuring critical speed and fuel information, posing a safety risk.
+    This affects all Tucson models (hybrid, plug-in hybrid, and petrol) regardless
+    of engine variant.
+  inspection_advice: Check for intermittent blackouts or resets of the dashboard display
+    while the engine is running. Verify if critical information (speed, fuel level)
+    disappears or flickers unexpectedly during operation.
+  sources: []
+- claim_key: h4d_75_electrical_recurrent_dashboard_
+  title: Recurrent dashboard reset causing temporary blank screen
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The dashboard display resets intermittently while the vehicle is in operation,
+    resulting in a blank screen that disrupts critical driver information. This is
+    a chronic software defect affecting all Tucson variants.
+  inspection_advice: Test the dashboard display by monitoring for unexpected resets
+    or blank screens while the vehicle is running. Confirm if the display flickers
+    or restarts unexpectedly during driving.
+  sources: []
+- claim_key: h4d_75_electrical_arka_klima_kontrol_a
+  title: Rear Climate Control Key Circuit Range/Performance Issue (Advanced Climate
+    Control System Models)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In certain vehicles (such as Chevrolet Tahoe, GMC Yukon, Cadillac Escalade),
+    the rear climate control key exhibits chronic circuit range or performance failures
+    due to electrical contact issues, wiring defects, or software glitches. This negatively
+    impacts passenger comfort in the rear and has a high recurrence rate.
+  inspection_advice: Inspect the rear climate control key and connectors for dirt,
+    oxidation, or physical damage. Verify wiring integrity and measure voltage/resistance
+    values using a multimeter. Additionally, check for available software updates
+    for the climate control unit.
+  sources: []
+- claim_key: h4d_75_electrical_arka_klima_kontrol_m
+  title: Fault in the Rear Climate Control Module (Third-Row Seating Models)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In third-row seating models like the Cadillac Escalade, the rear climate
+    control module repeatedly triggers faults due to chronic failures. This can result
+    from software errors or physical malfunctions, significantly impacting the comfort
+    of rear passengers.
+  inspection_advice: Inspect the rear climate control module for physical damage,
+    contamination, or software errors. The module may require a software update or
+    replacement.
+  sources: []
+- claim_key: h4d_75_electrical_yazılım_arızası_ve_e
+  title: Software Fault and ECU Update Requirement (Buick Enclave)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In models like the Buick Enclave, the **B0404** diagnostic trouble code
+    (DTC) can stem from a **software fault**. This may cause incorrect readings in
+    the electrical circuit or performance issues, which can be resolved with a **software
+    update** to the ECU (Engine Control Unit).
+  inspection_advice: Ensure the vehicle’s **ECU software is updated** or have it diagnosed
+    at a service center. Use an **OBD-II scanner** to detect **software-related faults**
+    before proceeding with updates.
+  sources: []
+- claim_key: h4d_75_engine_turbocharger_prematu
+  title: Turbocharger premature wear (city driving)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The turbocharger in the 1.0 TSI (EA211) engine exhibits accelerated wear
+    under city driving conditions, particularly if oil change intervals are extended.
+    This leads to noticeable performance loss and unusual noises around 80,000 km.
+  inspection_advice: Check for unusual turbo noises (whining, rattling) and verify
+    oil change history. Look for oil leaks or contamination around the turbo area.
+  sources: []
+- claim_key: h4d_75_cooling_integrated_water_pum
+  title: Integrated water pump/thermostat module leaks
+  kind: known_issue
+  domain: cooling
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The integrated water pump and thermostat module in the 1.0 TSI engine
+    is prone to leaks, requiring costly replacement of the entire assembly rather
+    than individual components.
+  inspection_advice: Inspect for coolant leaks around the thermostat housing and check
+    for overheating symptoms. Verify if the water pump/thermostat assembly has been
+    replaced before.
+  sources: []
+- claim_key: h4d_75_engine_carbon_buildup_on_in
+  title: Carbon buildup on intake valves (direct injection)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Due to direct injection, fuel does not adequately wash the intake valves,
+    leading to rapid carbon deposit accumulation—especially in short urban trips—potentially
+    causing misfires or reduced performance.
+  inspection_advice: Check for rough idling, hesitation, or misfires. Inspect intake
+    valves for black carbon deposits if the engine is disassembled.
+  sources: []
+- claim_key: h4d_75_engine_timing_belt_degradat
+  title: Timing belt degradation in oil bath (EA211 evo)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In EA211 evo versions, the timing belt operates in an oil bath, which
+    was intended to extend its lifespan. However, cases of accelerated degradation—including
+    clogging the oil pickup—have been reported.
+  inspection_advice: Verify timing belt replacement history. Check for oil contamination
+    in the timing belt area and listen for unusual belt noise. Inspect the oil pickup
+    for blockages if the engine is opened.
+  sources: []
+- claim_key: h4d_75_transmission_dsg_transmission_jer
+  title: DSG transmission jerky starts (software calibration)
+  kind: known_issue
+  domain: transmission
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 110–115 hp 1.0 TSI engine paired with a DSG transmission may exhibit
+    jerky starts due to software calibration issues, though this can sometimes be
+    mitigated with a firmware update.
+  inspection_advice: Test drive the vehicle to check for abrupt or jerky starts, especially
+    at low speeds. Confirm if the DSG firmware has been updated recently.
+  sources: []
+- claim_key: h4d_75_emissions_gpf_(gasoline_partic
+  title: GPF (Gasoline Particulate Filter) regeneration issues in urban use
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The GPF on the 1.0 TSI EA211 may require frequent regenerations when
+    the vehicle is used almost exclusively in the city, leading to increased fuel
+    consumption and emissions warning lights.
+  inspection_advice: Check for emissions warning lights and increased fuel consumption.
+    Ensure the vehicle gets extra-urban trips of 20–30 minutes every 300–400 km to
+    prevent excessive GPF regeneration cycles.
+  sources: []
+- claim_key: h4d_75_transmission_dsg_transmission_low
+  title: DSG transmission low-speed jerks and clutch/mechatronics issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 7-speed DSG transmission in the 1.0 TSI Polo may exhibit low-speed
+    jerks and potential clutch/mechatronics failures, requiring interventions to maintain
+    smooth operation.
+  inspection_advice: During a road test, pay attention to any low-speed jerks or unusual
+    shifts. Listen for any unusual noises or delays in gear engagement.
+  sources: []
+- claim_key: h4d_75_electrical_electronic_defects_(
+  title: Electronic defects (infotainment freezing, sensor warnings, Start&Stop failure)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.0 TSI Polo has a higher incidence of electronic issues, including
+    infotainment freezing, random sensor warning lights (ABS, airbag, TPMS), and Start&Stop
+    system failures, often linked to battery issues.
+  inspection_advice: Test the 12V battery and check for infotainment freezing or sensor
+    warning lights during a demonstration. Ensure the Start&Stop system functions
+    properly.
+  sources: []
+- claim_key: h4d_75_engine_chronic_chain_tensio
+  title: Chronic chain tensioner issues in cold start
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The chain tensioner system in the 1.0 TSI engine frequently causes noise
+    during cold starts, indicating potential wear or misalignment of the timing chain
+    components.
+  inspection_advice: Listen for rattling or clattering noises from the timing chain
+    area when the engine is started from cold. Check for excessive play or wear in
+    the chain tensioner components.
+  sources: []
+- claim_key: h4d_75_engine_chronic_cooling_syst
+  title: Chronic cooling system circulation problems
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The 1.0 TSI engine suffers from persistent issues with the thermostat
+    and cooling system circulation, which can lead to overheating and potential engine
+    damage if not addressed.
+  inspection_advice: Check for proper thermostat operation by verifying coolant temperature
+    rise during engine warm-up. Inspect for leaks or blockages in the cooling system
+    and test thermostat functionality.
+  sources: []

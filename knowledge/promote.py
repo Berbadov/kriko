@@ -9,9 +9,13 @@ sole quality filter now that source discovery is open to the general web.
   score  = 0 → HELD (no supporting source passed gates)
 
 Overrides (always win):
-  severity == "high"  → HUMAN review regardless of score
+  severity == "high" or gate_refute disagreed → HUMAN review, PROVIDED at
+      least one source passed gate_support (score ≥ 1) — otherwise HELD.
+      A "high severity, zero corroborating sources" claim must not reach a
+      servable status with nothing backing it (backend/data/parts validator
+      rejects an empty `sources:` list on verified/review claims); it stays
+      HELD until a source actually supports it.
   gate_variant returned no match → HELD
-  gate_refute disagreed → HUMAN review
   gate_generic flagged → REJECT
 
 HUMAN DECISION #2: auto-promote thresholds and audit sample rate are
@@ -21,6 +25,7 @@ risk-appetite decisions that must be reviewed before production.
 import logging
 import random
 import re
+import unicodedata
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -31,6 +36,7 @@ from knowledge.dedup import merge_candidates, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.judge import gate_generic, gate_inspection_value, gate_refute, gate_support, gate_variant
 from knowledge.sources.base import Document
+from knowledge.stoplists import code_tokens, mentions_sibling_code
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +53,155 @@ AUDIT_RATE    = 0.20    # 20% of auto-verified claims go to review queue
 # fuel-agnostic claims (A/C, electrical) stay broad by design.
 _DIESEL_RE = re.compile(r"\b(k9k|r9m|d[ck]i|diesel|dizel|adblue)\b", re.I)
 _PETROL_RE = re.compile(r"\b(h5f|h5h|h4m|tce|petrol|benzin|gasoline)\b", re.I)
+
+def _shares_code_token(evidence_tokens: set[str], variant_descs: list[str]) -> bool:
+    """True if the evidence and any candidate variant description share an
+    engine/transmission code token (e.g. EA211, DQ200, K9K), verbatim and
+    case-insensitive.
+
+    gate_variant (a small LLM judge, ministral-8b) has been observed to
+    hallucinate a mismatch even when the exact code is present in both the
+    evidence and the variant description — e.g. rejecting "EA211 1.4 TSI"
+    evidence against a "...EA211 petrol 1395cc..." variant on an invented
+    "non-TSI" distinction. A literal code match is unambiguous ground truth
+    and should short-circuit the unreliable LLM call rather than defer to it.
+    """
+    return any(evidence_tokens & code_tokens(desc) for desc in variant_descs)
+
+
+# ── Deterministic model-name bypass ─────────────────────────────────────────
+# gate_variant's own prompt says "answer YES if the evidence names the car
+# model/generation" (criterion #1) — but the LLM (ministral-8b) has been
+# observed to `held` claims that do exactly that, for no clear reason (body-
+# domain claims naming the model directly — see project memory, same class of
+# unreliability already fixed for engine/transmission codes via
+# _shares_code_token above). A literal "Megane 4" / "Megane IV" / "megane4" /
+# "Megane Dört" mention is unambiguous ground truth; check it before spending
+# an LLM call on a question that's really just substring matching.
+_ROMAN_TO_INT = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
+_INT_TO_ROMAN = {v: k for k, v in _ROMAN_TO_INT.items()}
+_INT_TO_TR_WORD = {1: "bir", 2: "iki", 3: "üç", 4: "dört", 5: "beş", 6: "altı", 7: "yedi", 8: "sekiz", 9: "dokuz", 10: "on"}
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def _generation_number(generation: str) -> int | None:
+    g = generation.strip().upper()
+    if g in _ROMAN_TO_INT:
+        return _ROMAN_TO_INT[g]
+    if g.isdigit():
+        return int(g)
+    return None
+
+
+def _model_mention_variants(model: str, generation: str) -> set[str]:
+    """Every plausible way this model+generation is written in prose."""
+    model_n = _strip_accents(model).lower()
+    gen_forms = {generation.lower()}
+    n = _generation_number(generation)
+    if n is not None:
+        gen_forms.add(str(n))
+        if n in _INT_TO_ROMAN:
+            gen_forms.add(_INT_TO_ROMAN[n].lower())
+        if n in _INT_TO_TR_WORD:
+            gen_forms.add(_INT_TO_TR_WORD[n])
+    variants: set[str] = set()
+    for g in gen_forms:
+        g = _strip_accents(g)   # match text side, which is also accent-stripped
+        variants.add(f"{model_n} {g}")
+        variants.add(f"{model_n}-{g}")
+        variants.add(f"{model_n}{g}")
+    return variants
+
+
+def _shares_model_mention(evidence: str, variant_descs: list[str]) -> bool:
+    """True if the evidence literally names one of the candidate model+generations.
+
+    variant_descs come from `_build_variant_descriptors`/`_load_all_variants_for_part`,
+    always formatted "{Make} {Model} {Generation} {EngineCode} ...".
+    """
+    text = _strip_accents(evidence).lower()
+    seen: set[tuple[str, str]] = set()
+    for desc in variant_descs:
+        parts = desc.split()
+        if len(parts) < 3:
+            continue
+        model, generation = parts[1], parts[2]
+        key = (model.lower(), generation.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        if any(v in text for v in _model_mention_variants(model, generation)):
+            return True
+    return False
+
+
+# ── Cross-brand contamination guard ─────────────────────────────────────────
+# The deterministic bypasses above check evidence that includes the FULL
+# source page/transcript text (see the `evidence` assembly in
+# _evaluate_claim), not just the specific claim's own span — a deliberate
+# earlier fix so a code mentioned elsewhere in the article still grounds a
+# claim whose clipped quote omits it. Cost: a source that compares several
+# manufacturers' parts (e.g. "DCT transmission problems across brands") lets
+# an off-topic claim ride in on an unrelated code mention anywhere in that
+# same long page. Caught live: a Ford-badge "7DCT 300 Clutch Squeak" claim
+# reached `review` status (servable) in dc4.yaml (a Renault EDC part file),
+# and Hyundai/Chevrolet/Buick-specific claims sat in h4d_75.yaml.
+#
+# This checks only the CLAIM's own text (title/rationale/hint/quote — never
+# the full source text, which is exactly what caused the contamination) for
+# an explicit other-brand mention. A hit vetoes the deterministic bypass and
+# forces the LLM gate_variant call instead, which sees the specific claim in
+# context and should reasonably reject an obviously different manufacturer's
+# part — same shape as the code-token/model-mention bypasses, but as a
+# negative signal rather than a positive one.
+#
+# Group-platform siblings: badge-engineered/platform-sharing brands whose
+# mention alongside a shared-part claim is legitimate evidence, not
+# contamination. Dacia is Renault's own sibling brand (K9K, H4D, DC4, ...
+# engines/gearboxes are shared verbatim). Audi/Skoda/Seat/Cupra share the
+# same VW Group MQB-era engines and DSG gearboxes as Volkswagen (EA211,
+# EA288, EA888, DQ200, DQ250, DQ381 all appear across the group) — caught
+# live: a "DQ250 Hydraulic Issues (Audi A3 8P Chassis)" claim is genuine
+# shared-part evidence for a Golf 7 DQ250, not contamination.
+GROUP_SIBLINGS: dict[str, frozenset[str]] = {
+    "renault": frozenset({"dacia"}),
+    "volkswagen": frozenset({"audi", "skoda", "seat", "cupra"}),
+}
+
+OTHER_BRANDS: frozenset[str] = frozenset({
+    "ford", "chevrolet", "chevy", "buick", "cadillac", "gmc", "chrysler",
+    "dodge", "jeep", "ram", "toyota", "honda", "nissan", "mazda", "subaru",
+    "mitsubishi", "lexus", "acura", "infiniti", "hyundai", "kia", "genesis",
+    "bmw", "mercedes", "audi", "skoda", "seat", "peugeot", "citroen",
+    "citroën", "fiat", "alfa romeo", "opel", "vauxhall", "volvo", "saab",
+    "mini", "land rover", "jaguar", "tesla", "suzuki", "isuzu", "daihatsu",
+    "ssangyong", "lada",
+})
+
+
+def _claim_own_text(claim: CandidateClaim) -> str:
+    return " ".join(
+        p for p in (claim.title, claim.rationale, claim.engine_or_variant_hint, claim.quote) if p
+    )
+
+
+def _mentions_other_brand(claim_text: str, own_makes: set[str]) -> bool:
+    """True if the claim's own text names a car brand other than one of
+    `own_makes` (the make(s) of the candidate variants for this part) or
+    one of their GROUP_SIBLINGS."""
+    allowed = set(own_makes)
+    for make in own_makes:
+        allowed |= GROUP_SIBLINGS.get(make, frozenset())
+    text = claim_text.lower()
+    for brand in OTHER_BRANDS:
+        if brand in allowed:
+            continue
+        if re.search(rf"\b{re.escape(brand)}\b", text):
+            return True
+    return False
 
 
 def _claim_fuel(claim: CandidateClaim) -> str | None:
@@ -104,11 +259,17 @@ def promote(
     candidate_variants: list[tuple[str, str]],  # [(variant_id, description), ...]
     claim_key_prefix: str = "",
     variant_fuels: dict[str, str] | None = None,  # {variant_id: "diesel"|"petrol"}
+    own_part_id: str | None = None,
 ) -> list[PromotionResult]:
     """Run gates + scoring on a batch of (claim, source) pairs.
 
     `variant_fuels` lets a fuel-specific claim ground only to same-fuel variants
     (see _fuel_grounded_variants). Omitting it preserves the old broad grounding.
+
+    `own_part_id` is the part file this batch is being promoted into (e.g.
+    "dq381") — used only by the sibling-code contamination guard (see
+    _evaluate_claim). Omit it (per-model claims pipeline, which has no single
+    part identity) to skip that guard.
 
     Returns one PromotionResult per merged claim group.
     """
@@ -117,7 +278,7 @@ def promote(
 
     for claim, sources in groups:
         result = _evaluate_claim(
-            claim, sources, candidate_variants, claim_key_prefix, variant_fuels
+            claim, sources, candidate_variants, claim_key_prefix, variant_fuels, own_part_id
         )
         results.append(result)
 
@@ -130,6 +291,7 @@ def _evaluate_claim(
     candidate_variants: list[tuple[str, str]],
     claim_key_prefix: str,
     variant_fuels: dict[str, str] | None = None,
+    own_part_id: str | None = None,
 ) -> PromotionResult:
     variant_ids   = [v for v, _ in candidate_variants]
     variant_descs = [d for _, d in candidate_variants]
@@ -175,12 +337,31 @@ def _evaluate_claim(
             sources[0].text if sources else "",
         ) if part
     )
-    gate_passed = False
-    try:
-        vg = gate_variant(claim.title, evidence, variant_ids, variant_descs)
-        gate_passed = vg.passed
-    except Exception as exc:
-        log.warning("gate_variant failed: %s", exc)
+    # Cross-brand contamination guard: if the CLAIM ITSELF (not the wider
+    # source text) names a different manufacturer, don't let it ride in on
+    # the deterministic bypasses below — force the LLM call instead, which
+    # sees the specific claim in context. See OTHER_BRANDS docstring.
+    own_makes = {desc.split()[0].lower() for desc in variant_descs if desc.split()}
+    claim_own_text = _claim_own_text(claim)
+    contaminated = (
+        _mentions_other_brand(claim_own_text, own_makes)
+        or mentions_sibling_code(claim_own_text, own_part_id or "")
+    )
+
+    evidence_tokens = code_tokens(evidence)
+    gate_passed = (
+        not contaminated
+        and bool(evidence_tokens)
+        and _shares_code_token(evidence_tokens, variant_descs)
+    )
+    if not gate_passed and not contaminated:
+        gate_passed = _shares_model_mention(evidence, variant_descs)
+    if not gate_passed:
+        try:
+            vg = gate_variant(claim.title, evidence, variant_ids, variant_descs)
+            gate_passed = vg.passed
+        except Exception as exc:
+            log.warning("gate_variant failed: %s", exc)
 
     # Gate says "relevant to this model"; now restrict to the claim's fuel so a
     # diesel-only issue never grounds to a petrol variant.
@@ -220,7 +401,14 @@ def _evaluate_claim(
             log.warning("gate_support/refute failed: %s", exc)
 
     # ── Apply promotion rules ─────────────────────────────────────────────────
-    if claim.severity == "high" or override_review:
+    if (claim.severity == "high" or override_review) and score == 0:
+        # Nothing passed gate_support — forcing this to REVIEW would write a
+        # servable claim with an empty sources list (validator-invalid, and
+        # leaves a human reviewer nothing to actually review). Stays HELD
+        # until a source corroborates it.
+        disposition = Disposition.HELD
+        promoted_by = "pending_human"
+    elif claim.severity == "high" or override_review:
         disposition = Disposition.REVIEW
         promoted_by = "pending_human"
     elif score >= SCORE_VERIFY:

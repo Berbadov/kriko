@@ -59,13 +59,19 @@ claims:
       can fail due to oil contamination, solenoid wear, or electronic faults. Results
       in transmission entering limp mode or refusing to engage gears."'
     independent: true
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Leaks in high-pressure valves, electrical shorts, or software glitches
+      in the mechatronics unit can disrupt gear changes.
+    independent: true
 - claim_key: dq200_transmission_hesitation_and_jerky
   title: Hesitation and jerky take-off below 20 km/h
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Delayed clutch engagement logic and software calibration issues cause
     noticeable hesitation and jerky take-off, particularly at low speeds (below 20
@@ -75,14 +81,20 @@ claims:
     from a standstill, especially below 20 km/h. Confirm if the vehicle has received
     the latest TCM software updates, as many of these issues were resolved via recalls
     and technical service bulletins (TSBs).
-  sources: []
+  sources:
+  - source_url: https://aboutthecars.com/vw/transmission-volkswagen-dsg7-dq200/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"Hesitation and jerky take-off: Particularly noticeable below 20 km/h;
+      caused by delayed clutch engagement logic and software calibration issues."'
+    independent: true
 - claim_key: dq200_transmission_mechatronics_hydraul
   title: Mechatronics hydraulic seal failure (Recall 23X7)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: A recall (23X7) was issued for **2012–2015 DQ200 units** due to hydraulic
     seal failure in the mechatronics unit, causing unexpected gear disengagement.
@@ -90,14 +102,21 @@ claims:
   inspection_advice: Check if the vehicle falls within the **2012–2015 production
     range** and whether the recall has been addressed. Look for oil leaks around the
     mechatronics unit and monitor for limp mode activation or gear disengagement issues.
-  sources: []
+  sources:
+  - source_url: https://aboutthecars.com/vw/transmission-volkswagen-dsg7-dq200/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"Recall 23X7 (market-specific): Related to mechatronics hydraulic seal
+      failure causing unexpected gear disengagement — affected 2012–2015 production
+      units."'
+    independent: true
 - claim_key: dq200_transmission_gear_selector_positi
   title: Gear selector position sensor failures
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The gear selector position sensor in the DQ200 can fail, causing incorrect
     gear reporting or refusal to select certain gears. This is a chronic issue tied
@@ -106,14 +125,20 @@ claims:
     to engage gears. Look for OBD codes like **P0826** (Up/down shift switch circuit)
     or **P0816** (Downshift switch circuit low input). Inspect wiring and connectors
     for corrosion or damage.
-  sources: []
+  sources:
+  - source_url: https://aboutthecars.com/vw/transmission-volkswagen-dsg7-dq200/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"Gear selector position sensor failures: Can cause incorrect gear reporting
+      or refusal to select certain gears."'
+    independent: true
 - claim_key: dq200_transmission_oil_leaks_from_mecha
   title: Oil leaks from mechatronics unit
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Degradation of seals in the hydraulic circuit can lead to fluid loss
     and mechatronics faults, requiring costly repairs. This is a chronic issue tied
@@ -122,23 +147,35 @@ claims:
     hydraulic components. Check for OBD codes related to hydraulic pressure loss (e.g.,
     **P17BE**). Verify if the transmission fluid has been changed regularly to mitigate
     contamination.
-  sources: []
+  sources:
+  - source_url: https://aboutthecars.com/vw/transmission-volkswagen-dsg7-dq200/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"Oil leaks from mechatronics: Seal degradation in the hydraulic circuit
+      can lead to fluid loss and mechatronics faults."'
+    independent: true
 - claim_key: dq200_transmission_mechatronics_adaptat
-  title: Mechatronics adaptation not completed (P1781/18189)
+  title: Mechatronics clutch calibration failure
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Failure to complete mechatronics adaptation after clutch replacement
     or mechatronics unit replacement can cause shifting errors or limp mode activation.
     This is a chronic issue tied to improper post-repair calibration.
-  inspection_advice: Check for OBD codes **P1781** or **18189** (Mechatronics adaptation
+  inspection_advice: 'Check for OBD codes **P1781** or **18189** (Mechatronics adaptation
     not completed). Verify if the vehicle has undergone proper clutch adaptation using
     VCDS, OBD11, or official VW diagnostic tools after clutch replacement or mechatronics
-    replacement.
-  sources: []
+    replacement. Diagnostic code(s) to check for: P1781.'
+  sources:
+  - source_url: https://aboutthecars.com/vw/transmission-volkswagen-dsg7-dq200/
+    source_domain: aboutthecars.com
+    site_or_channel: aboutthecars.com
+    quote: '"18189 / P1781 — Mechatronics adaptation not completed; causes: battery
+      disconnection, mechatronics replacement without adaptation run."'
+    independent: true
 - claim_key: dq200_transmission_dq200_mechatronics_u
   title: DQ200 Mechatronics Unit Accumulator Housing Plate Cracks
   kind: known_issue
@@ -190,8 +227,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Transmission Control Unit (TCU) in the DQ200 is prone to failure
     due to excessive heat and corrosion, leading to unpredictable gear shifts, delayed
@@ -200,7 +237,19 @@ claims:
   inspection_advice: Look for signs of TCU failure such as erratic gear shifts, delayed
     engagement, or failure to engage certain gears. Inspect TCU connectors for corrosion
     or damage, and check for overheating symptoms (e.g., burnt wiring harnesses).
-  sources: []
+  sources:
+  - source_url: https://www.team-bhp.com/news/understanding-vw-skoda-dsg-dq200-failures-detail
+    source_domain: team-bhp.com
+    site_or_channel: team-bhp.com
+    quote: '**There are two main causes for TCU issues – heat and corrosion. Excessive
+      heat is the enemy for any circuit board. The TCU is no different. Overtime this
+      results in malfunctions or complete failure. Unpredictable gearbox behaviour
+      (failure to engage certain gears, delayed or premature shifting) is a clear
+      sign of a bad TCU.**
+
+
+      **The TCU connectors are another weak link, they corrode or fail due to overheat.**'
+    independent: true
 - claim_key: dq200_transmission_hesitation_in_traffi
   title: Hesitation in traffic (DSG DQ200 dry-clutch)
   kind: known_issue
@@ -232,8 +281,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: While newer DSG variants (DQ381, DQ500) improved robustness and smoothness,
     hesitation in traffic remains a persistent issue across all DSG-equipped Golf
@@ -243,31 +292,21 @@ claims:
     stop, especially in traffic. Note if the hesitation is accompanied by a rev flare
     or dull thump. Check for official software updates that may address calibration
     issues. Inspect for warning lights or fault codes related to the DSG system.
-  sources: []
-- claim_key: dq200_transmission_mechatronic_solenoid
-  title: Mechatronic solenoid failures (DSG DQ250, DQ381, DQ500)
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Failing mechatronic solenoids in DSG transmissions can cause hesitation,
-    as these components control clutch engagement and hydraulic pressure. This is
-    a recurring issue across multiple DSG variants, including the DQ250, DQ381, and
-    DQ500.
-  inspection_advice: Look for hesitation or delayed engagement when shifting gears.
-    Check for fault codes related to the DSG system (e.g., solenoid-related errors)
-    via a diagnostic scan. Listen for unusual noises or vibrations during gear shifts,
-    which may indicate solenoid or clutch wear.
-  sources: []
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/golf-dsg-transmission
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"This hesitation is not random, nor is it unique to a handful of unlucky
+      cars. It is one of the most common real-world symptoms across Volkswagen’s DSG
+      family... Even DQ250 and DQ381 owners reported delays and pauses in traffic."'
+    independent: true
 - claim_key: dq200_transmission_wet-clutch_dsg_hesit
   title: Wet-clutch DSG hesitation (DQ381, DQ500)
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: While wet-clutch DSG variants like the DQ381 and DQ500 are more robust
     than the dry-clutch DQ200, they still exhibit hesitation issues due to calibration
@@ -277,28 +316,59 @@ claims:
     in newer models with DQ381 or DQ500 transmissions. Check for software updates
     that may address calibration issues. Listen for unusual noises or vibrations during
     gear shifts, which may indicate internal wear or hydraulic issues.
-  sources: []
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/golf-dsg-transmission
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"Even DQ250 and DQ381 owners reported delays and pauses in traffic...
+      The DQ500 was stronger, but occasional mechatronic faults still led to hesitation
+      complaints."'
+    independent: true
 - claim_key: dq200_transmission_dq200/dq250_dry-clut
   title: DQ200/DQ250 dry-clutch shudder and vibration
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
+  confidence: 0.9
+  status: review
+  promoted_by: auto_audit
   rationale: The DQ200 uses a dry-clutch design, which inherently causes rough launches
     during repeated starts from a stop. This is a chronic issue due to the dry-clutch
     nature of the transmission, not just wear-and-tear.
   inspection_advice: Check for rough engagement when starting from a stop, especially
     in cold conditions. Listen for unusual vibrations or shuddering during acceleration.
-  sources: []
+  sources:
+  - source_url: https://gearsmagazine.com/magazine/dq200-they-just-keep-coming/
+    source_domain: gearsmagazine.com
+    site_or_channel: gearsmagazine.com
+    quote: '"repeated starts from a stop will yield some not-so-smooth launches, which
+      is typical for any dry clutch unit."'
+    independent: true
+  - source_url: https://enginescope.gr/engine/vw-dsg-dq200/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: '"repeated starts from a stop will yield some not-so-smooth launches, which
+      is typical for any dry clutch unit."'
+    independent: true
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"repeated starts from a stop will yield some not-so-smooth launches, which
+      is typical for any dry clutch unit."'
+    independent: true
+  - source_url: https://www.germantechmotorworks.com/volkswagen-dsg-transmission-what-owners-need-to-know
+    source_domain: germantechmotorworks.com
+    site_or_channel: germantechmotorworks.com
+    quote: '"repeated starts from a stop will yield some not-so-smooth launches, which
+      is typical for any dry clutch unit."'
+    independent: true
 - claim_key: dq200_transmission_dq200_valve_body_cas
   title: DQ200 valve body casting failure (aluminum cracking under high pressure)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The valve body casting in the DQ200, particularly around the accumulator,
     is prone to cracking due to high-pressure oil (up to 70 bar) acting on an aluminum
@@ -308,14 +378,20 @@ claims:
     while the vehicle is idling at operating temperature. A pressure drop to 40 bar
     with no components functioning indicates an internal leak. Visually inspect for
     cracks or leaks around the accumulator area during disassembly.
-  sources: []
+  sources:
+  - source_url: https://gearsmagazine.com/magazine/dq200-they-just-keep-coming/
+    source_domain: gearsmagazine.com
+    site_or_channel: gearsmagazine.com
+    quote: '"The most common failure in the DQ200 unit is the casting failure at the
+      accumulator... With time, the housing cracks and begins to leak."'
+    independent: true
 - claim_key: dq200_transmission_dq200_tcm_(transmiss
   title: DQ200 TCM (Transmission Control Module) failure patterns
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The DQ200 has a documented pattern of TCM-related failures, including
     locked gears, no movement, or intermittent faults. This suggests chronic software
@@ -324,14 +400,23 @@ claims:
     for TCM faults. Look for symptoms like no movement, no reverse, or the transmission
     locking into a single gear. Always update the TCM programming to the latest OEM
     version.
-  sources: []
+  sources:
+  - source_url: https://gearsmagazine.com/magazine/dq200-they-just-keep-coming/
+    source_domain: gearsmagazine.com
+    site_or_channel: gearsmagazine.com
+    quote: '"Several drivability and functional issues are addressed with this transmission
+      by updating the TCM programming... Unfortunately, just pulling trouble codes
+      and following the diagnostic path doesn’t always lead you to the root cause
+      of the problem. You should be aware that this unit has a pattern of failures
+      that occur quite frequently."'
+    independent: true
 - claim_key: dq200_transmission_dq200_clutch_shudder
   title: DQ200 clutch shudder, slipping, and vibrations
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The DQ200 experiences chronic clutch shudder, slipping, and vibrations,
     which are not just wear-and-tear issues but indicative of design or manufacturing
@@ -339,14 +424,27 @@ claims:
   inspection_advice: Test drive the vehicle to check for clutch shudder, slipping,
     or unusual vibrations during acceleration. Listen for rattling noises, especially
     under load.
-  sources: []
+  sources:
+  - source_url: https://gearsmagazine.com/magazine/dq200-they-just-keep-coming/
+    source_domain: gearsmagazine.com
+    site_or_channel: gearsmagazine.com
+    quote: '"clutch shudder, slipping, and vibrations"'
+    independent: true
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"Jerking or Shuddering During Gear Changes: This is perhaps the most common
+      complaint. You might feel a distinct jerk or shudder, especially during low-speed
+      manoeuvres, when pulling away from a standstill, or during shifts between lower
+      gears (e.g., 1st to 2nd, or 2nd to 3rd)."'
+    independent: true
 - claim_key: dq200_transmission_dq200_accumulator_bl
   title: DQ200 accumulator blowout risk
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The accumulator in the DQ200 Mechatronic system is charged with high-pressure
     inert gas (up to 70 bar) and poses a severe risk of catastrophic failure if the
@@ -355,14 +453,21 @@ claims:
   inspection_advice: Always treat the Mechatronic assembly as if the accumulator may
     have failed before servicing. Use extreme caution when removing the accumulator
     cover, as the force of discharge can cause severe injury or death.
-  sources: []
+  sources:
+  - source_url: https://gearsmagazine.com/magazine/dq200-they-just-keep-coming/
+    source_domain: gearsmagazine.com
+    site_or_channel: gearsmagazine.com
+    quote: '"The accumulator is charged with an inert gas that acts on a piston on
+      one side, while oil is pumped into the other side... The force of the accumulator’s
+      discharge can severely injure or kill you."'
+    independent: true
 - claim_key: dq200_transmission_dry_clutch_overheati
   title: Dry clutch overheating and wear in DQ200 DSG7
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.9
+  status: review
   promoted_by: pending_human
   rationale: The dry clutch system in the DQ200 DSG7 is prone to overheating and accelerated
     wear, particularly in urban driving conditions with frequent stop-and-go traffic.
@@ -371,14 +476,26 @@ claims:
   inspection_advice: Check for signs of overheating (burnt smell, unusual noises during
     gear shifts) and inspect clutch packs and dual-mass flywheel for excessive wear
     or damage during a transmission service.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: The 7-speed DQ200 uses a dry clutch system, which, while efficient, is
+      prone to overheating and wear in urban driving conditions.
+    independent: true
+  - source_url: https://www.euroracingparts.fr/en/blogs/guide-dachat-pour-volkswagen/fiabilite-boite-double-embrayage-dsg-7-en-occasion-notre-guide-vag
+    source_domain: euroracingparts.fr
+    site_or_channel: euroracingparts.fr
+    quote: The 7-speed DQ200 uses a dry clutch system, which, while efficient, is
+      prone to overheating and wear in urban driving conditions.
+    independent: true
 - claim_key: dq200_transmission_corrosion_and_electr
   title: Corrosion and electrical shorts due to synthetic oil in early DQ200 models
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early DQ200 transmissions were filled with synthetic oil, which caused
     corrosion and electrical shorts in the gearbox lead frame. This defect was later
@@ -386,14 +503,20 @@ claims:
   inspection_advice: Verify the type of transmission fluid used and check for signs
     of corrosion or electrical faults in the mechatronics unit. Look for service records
     confirming fluid changes to mineral-based oil.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Early models of the DQ200 were filled with synthetic oil, which caused
+      corrosion and electrical shorts in the gearbox lead frame.
+    independent: true
 - claim_key: dq200_transmission_premature_wear_of_cl
   title: Premature wear of clutch packs and dual-mass flywheel
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Prolonged city driving, towing, or frequent stop-start conditions accelerate
     the wear of clutch packs and the dual-mass flywheel in the DQ200, leading to jerky
@@ -401,14 +524,20 @@ claims:
   inspection_advice: Inspect clutch packs and the dual-mass flywheel for excessive
     wear or damage during a transmission service. Listen for unusual noises or vibrations
     during gear shifts.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Prolonged city driving, towing, or frequent stop-start conditions accelerate
+      the wear of clutch packs and the dual-mass flywheel.
+    independent: true
 - claim_key: dq200_transmission_jerking_and_delayed_
   title: Jerking and delayed gear changes (mechatronics unit malfunction)
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Jerking or hesitation during gear shifts, particularly at low speeds
     or when accelerating, often indicates a malfunction in the mechatronics unit of
@@ -416,14 +545,21 @@ claims:
   inspection_advice: Test the transmission by accelerating and shifting gears, paying
     attention to any jerks or hesitations. Check for warning lights on the dashboard
     and diagnose the mechatronics unit if symptoms are present.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Drivers may experience jerks or hesitation during gear shifts, particularly
+      at low speeds or when accelerating. This often indicates a malfunction in the
+      mechatronics unit.
+    independent: true
 - claim_key: dq200_transmission_gear_slipping_or_fai
   title: Gear slipping or failure to engage (mechanical or electronic failure)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Gears failing to engage properly or slipping can leave the vehicle stuck
     in neutral or unable to shift gears, often due to mechanical wear or electronic
@@ -431,35 +567,53 @@ claims:
   inspection_advice: Test the transmission by attempting to shift gears and check
     for any slipping or failure to engage. Look for warning lights on the dashboard
     and inspect the mechatronics unit and clutch packs for damage.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: A common issue where gears fail to engage properly, leaving the vehicle
+      stuck in neutral or unable to shift from one gear to another.
+    independent: true
 - claim_key: dq200_transmission_unusual_noises_(scra
   title: Unusual noises (scratching, rattling, grinding) during gear changes
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Scratching, rattling, or grinding sounds during gear changes often indicate
     mechanical wear in the transmission components of the DQ200, such as worn gears
     or clutch packs.
   inspection_advice: Listen for unusual noises during gear shifts and inspect the
     transmission for worn or damaged components during a service.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Scratching, rattling, or grinding sounds during gear changes often point
+      to mechanical wear in the transmission components.
+    independent: true
 - claim_key: dq200_transmission_vibrations_during_ge
   title: Vibrations during gear shifts (DQ200-specific issue)
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Vibrations, especially when shifting from first to second gear or vice
     versa, are frequently reported in models equipped with the DQ200 gearbox, indicating
     potential alignment or clutch issues.
   inspection_advice: Test the transmission by shifting gears and feel for vibrations.
     Inspect the clutch packs and dual-mass flywheel for wear or damage.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/common-problems-with-the-dsg-7-speed-dsg-transmission/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Vibrations, especially when shifting from first to second gear or vice
+      versa, are frequently reported in models equipped with the DQ200 gearbox.
+    independent: true
 - claim_key: dq200_transmission_mechatronic_unit_fai
   title: Mechatronic unit failure (DQ200)
   kind: known_issue
@@ -511,74 +665,109 @@ claims:
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Delayed or hesitant engagement when selecting 'D' or 'R' suggests Mechatronics
     Unit or hydraulic system issues, impairing the gearbox's ability to respond promptly
     to driver input.
   inspection_advice: Attempt to shift into 'D' or 'R' from a standstill and observe
     any noticeable delay or resistance before the gear engages.
-  sources: []
+  sources:
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"Hesitation or Delayed Engagement: The car might hesitate when selecting
+      ''D'' or ''R'', or take an unusual amount of time to engage a gear after you''ve
+      pressed the accelerator. This can be particularly noticeable when moving from
+      a standstill or reversing."'
+    independent: true
 - claim_key: dq200_transmission_dq200_limp-mode_acti
   title: DQ200 limp-mode activation (power loss)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Severe Mechatronics Unit or clutch failure can trigger limp-mode, severely
-    limiting speed and power to prevent catastrophic damage—a clear sign of advanced
-    transmission failure.
-  inspection_advice: Monitor for sudden loss of power, restricted top speed, or a
-    dashboard limp-mode warning (often accompanied by warning lights).
-  sources: []
-- claim_key: dq200_transmission_dq200_bearing/gear_w
-  title: DQ200 bearing/gear wear (noise and engagement issues)
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: While less common than clutch or Mechatronics Unit issues, bearing and
-    gear wear can cause clunking, grinding, or rattling noises, particularly at idle
-    or during shifts.
-  inspection_advice: Listen for unusual noises (clunking, grinding, whirring) emanating
-    from the gearbox area, especially during idle or gear changes.
-  sources: []
-- claim_key: dq200_transmission_dq200_software_glitc
-  title: DQ200 software glitches/calibration issues
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Outdated software or incorrect calibration in the Mechatronics Unit can
-    cause erratic shifting even when mechanical components are intact, requiring updates
-    or recalibration.
-  inspection_advice: If shifting issues persist after mechanical checks, consider
-    whether the vehicle has received recent software updates or recalibration. Erratic
-    behavior without mechanical symptoms may indicate this.
-  sources: []
-- claim_key: dq200_transmission_mekatronik_ünite_aşı
-  title: Mekatronik ünite aşırı ısınma ve arızaları
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG DQ200 şanzımanının mekatronik ünitesi, sıcak havalarda veya yoğun
-    trafikte aşırı ısınma riskine maruz kalır ve bu durumda arıza yapabilir. Mekatronik
-    ünite arızaları, vites geçişlerinde sorunlara ve hatta şanzımanın failsafe moduna
-    geçmesine neden olabilir.
-  inspection_advice: Şanzımanın sıcaklığını kontrol edin. Uyarı ışıkları yanıyorsa
-    veya vites geçişlerinde anormal ısınma hissediyorsanız, mekatronik ünitenin durumunu
-    bir mekanik tarafından kontrol ettirin. Ayrıca, vites geçişlerinde titreme veya
-    sertlik varsa, mekatronik ünite veya kavrama seti arızası olabilir.
+  rationale: Severe Mechatronics Unit or clutch failure can trigger limp-mode, severely
+    limiting speed and power to prevent catastrophic damage—a clear sign of advanced
+    transmission failure.
+  inspection_advice: Monitor for sudden loss of power, restricted top speed, or a
+    dashboard limp-mode warning (often accompanied by warning lights).
+  sources:
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"In more severe cases, the gearbox might enter ''limp home'' mode, limiting
+      the car''s speed and power to prevent further damage."'
+    independent: true
+- claim_key: dq200_transmission_dq200_bearing/gear_w
+  title: DQ200 bearing/gear wear (noise and engagement issues)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: While less common than clutch or Mechatronics Unit issues, bearing and
+    gear wear can cause clunking, grinding, or rattling noises, particularly at idle
+    or during shifts.
+  inspection_advice: Listen for unusual noises (clunking, grinding, whirring) emanating
+    from the gearbox area, especially during idle or gear changes.
+  sources:
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"Unusual Noises: Clunking, grinding, whirring, or rattling noises coming
+      from the gearbox area, especially at idle or during shifts, are red flags. These
+      can indicate issues with bearings, gears, or internal components."'
+    independent: true
+- claim_key: dq200_transmission_dq200_software_glitc
+  title: DQ200 software glitches/calibration issues
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.9
+  status: verified
+  promoted_by: auto
+  rationale: Outdated software or incorrect calibration in the Mechatronics Unit can
+    cause erratic shifting even when mechanical components are intact, requiring updates
+    or recalibration.
+  inspection_advice: If shifting issues persist after mechanical checks, consider
+    whether the vehicle has received recent software updates or recalibration. Erratic
+    behavior without mechanical symptoms may indicate this.
+  sources:
+  - source_url: https://willandservicecentre.co.uk/worth-repairing-dsg-clutch/
+    source_domain: willandservicecentre.co.uk
+    site_or_channel: willandservicecentre.co.uk
+    quote: '"Software Glitches and Calibration Issues: Sometimes, the mechanical components
+      are sound, but the gearbox''s behaviour is erratic due to outdated software
+      or incorrect calibration."'
+    independent: true
+  - source_url: https://www.euroracingparts.fr/en/blogs/guide-dachat-pour-volkswagen/fiabilite-boite-double-embrayage-dsg-7-en-occasion-notre-guide-vag
+    source_domain: euroracingparts.fr
+    site_or_channel: euroracingparts.fr
+    quote: '"Software Glitches and Calibration Issues: Sometimes, the mechanical components
+      are sound, but the gearbox''s behaviour is erratic due to outdated software
+      or incorrect calibration."'
+    independent: true
+- claim_key: dq200_transmission_mekatronik_ünite_aşı
+  title: Overheating and failures of the mechatronic unit
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The mechatronic unit of the DSG DQ200 transmission is prone to overheating
+    in hot weather or heavy traffic, which can lead to failure. Mechatronic unit failures
+    can cause issues during gear shifts and may even trigger the transmission to enter
+    failsafe mode.
+  inspection_advice: Check the transmission temperature. If warning lights are illuminated
+    or you feel abnormal heat during gear shifts, have the mechatronic unit inspected
+    by a mechanic. Additionally, if there is shuddering or roughness during gear shifts,
+    it may indicate a mechatronic unit or clutch set failure.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dsg-sanziman-dq200/
     source_domain: teknikotomatiksanziman.com
@@ -592,20 +781,20 @@ claims:
       🔍 Sebep: Mekatronik ünitenin aşırı ısınması veya arızalanması.'
     independent: true
 - claim_key: dq200_transmission_kuru_kavrama_sistemi
-  title: Kuru kavrama sistemine bağlı erken debriyaj/kavrama aşınması
+  title: Early clutch/drive plate wear due to dry clutch system failure
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG DQ200 şanzımanının kuru kavrama sistemi, yağsız çalıştığı için aşırı
-    ısınma ve aşınmaya daha yatkındır. Bu, özellikle yoğun trafikte veya agresif sürüşte,
-    kavrama setinin erken aşınmasına neden olabilir.
-  inspection_advice: Vites geçişlerinde titreme veya sertlik hissediyorsanız, kavrama
-    setinin aşınma durumunu kontrol ettirin. Ayrıca, sık dur-kalk trafiklerinde aşırı
-    kullanımın kavrama ömrünü kısardığını unutmayın. Mekatronik yağı düzenli olarak
-    değiştirin ve yanlış yağ kullanımından kaçının.
+  rationale: The DSG DQ200 transmission’s dry clutch system, operating without lubrication,
+    is prone to excessive heat and wear. This can lead to premature wear of the clutch
+    set, particularly under heavy traffic conditions or aggressive driving.
+  inspection_advice: If you feel vibration or roughness during gear shifts, check
+    the clutch set’s wear condition. Also, remember that frequent stop-and-go traffic
+    accelerates clutch wear. Regularly change the mechatronic fluid and avoid using
+    incorrect lubricants.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dsg-sanziman-dq200/
     source_domain: teknikotomatiksanziman.com
@@ -624,19 +813,19 @@ claims:
       🔍 Sebep: Mekatronik veya kavrama kaynaklı aşınma.'
     independent: true
 - claim_key: dq200_transmission_yokuşta_tutunma_prob
-  title: Yokuşta tutunma problemi (kuru kavrama nedeniyle yetersiz tork iletimi)
+  title: Uphill traction failure (insufficient torque transfer due to dry clutch)
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Kuru kavrama sistemi, tork iletiminde yetersiz kalabilir ve yokuşta kayma
-    veya tutunma sorunlarına neden olabilir. Bu, özellikle Hill Hold Assist sisteminin
-    çalışmadığı durumlarda daha belirgin olur.
-  inspection_advice: Yokuşta kayma veya tutunma sorunu yaşadıysanız, Hill Hold Assist
-    sistemini kontrol ettirin. Mekatronik adaptasyonunu da yeniden yapmak faydalı
-    olabilir.
+  rationale: The dry clutch system may fail to deliver adequate torque transfer, leading
+    to slipping or traction issues when driving uphill. This becomes particularly
+    noticeable when the Hill Hold Assist system is not functioning.
+  inspection_advice: If you experience slipping or traction issues while driving uphill,
+    inspect the Hill Hold Assist system. Reconfiguring the mechatronic adaptation
+    may also be beneficial.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dsg-sanziman-dq200/
     source_domain: teknikotomatiksanziman.com
@@ -646,19 +835,19 @@ claims:
       🔍 Sebep: Kuru kavrama nedeniyle yetersiz tork iletimi.'
     independent: true
 - claim_key: dq200_transmission_geri_vitese_geçerken
-  title: Geri vitese geçerken gecikme veya ses
+  title: Delay or noise when shifting into reverse
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG DQ200 şanzımanında geri vitese geçerken gecikme veya ses, kavrama
-    seti veya mekatronik ünite aşınması nedeniyle ortaya çıkabilir. Bu, şanzımanın
-    genel sağlığını etkileyen bir sorundur.
-  inspection_advice: Geri vitese geçerken ses veya gecikme hissediyorsanız, kavrama
-    seti ve mekatronik ünitenin durumunu kontrol ettirin. Gerekiyorsa, bu bileşenleri
-    değiştirin.
+  rationale: Delay or noise when shifting into reverse in a DSG DQ200 transmission
+    can occur due to wear in the clutch pack or the mechatronic unit. This is a concern
+    that impacts the overall health of the transmission.
+  inspection_advice: If you experience noise or delay when shifting into reverse,
+    inspect the condition of the clutch pack and mechatronic unit. Replace these components
+    if necessary.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dsg-sanziman-dq200/
     source_domain: teknikotomatiksanziman.com
@@ -668,19 +857,18 @@ claims:
       🔍 Sebep: Mekatronik veya kavrama kaynaklı aşınma.'
     independent: true
 - claim_key: dq200_transmission_aşırı_ısınma_ve_yağ_
-  title: Aşırı ısınma ve yağ kaçakları
+  title: Overheating and Oil Leaks
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG DQ200 şanzımanının kuru kavrama sistemi, aşırı yüklenme veya yanlış
-    kullanım nedeniyle aşırı ısınabilir ve yağ kaçaklarına neden olabilir. Bu durum,
-    şanzımanın hasar görmesine yol açabilir.
-  inspection_advice: Şanzımanın sıcaklığını kontrol edin ve yağ kaçaklarını arayın.
-    Dur-kalk trafiklerinde mümkün olduğunca dikkatli sürüş yapın ve gereksiz gaz/frenlemelerden
-    kaçının.
+  rationale: The DSG DQ200 transmission’s dry clutch system can overheat due to excessive
+    load or improper usage, leading to oil leaks. This condition may cause damage
+    to the transmission.
+  inspection_advice: Check the transmission temperature and inspect for oil leaks.
+    Drive carefully in stop-and-go traffic and avoid unnecessary acceleration/braking.
   sources:
   - source_url: https://teknikotomatiksanziman.com/dsg-sanziman-dq200/
     source_domain: teknikotomatiksanziman.com
@@ -716,8 +904,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Volkswagen acknowledged chronic reliability issues in DSG transmissions
     before 2013, which were significantly addressed in later models. However, without
@@ -725,28 +913,34 @@ claims:
   inspection_advice: Check the service history for regular maintenance, especially
     for the DSG transmission. Look for signs of previous or ongoing transmission issues
     such as delayed gear shifts, unusual noises, and warning lights.
-  sources: []
+  sources:
+  - source_url: https://fdyotomotiv.com/blog/dq200-dsg-7-ska-sorulan-sorular-sss
+    source_domain: fdyotomotiv.com
+    site_or_channel: fdyotomotiv.com
+    quote: '"Volkswagen, DSG şanzımanlardaki kronik sorunları 2013 sonrası üretimlerde
+      büyük ölçüde iyileştirdi."'
+    independent: true
 - claim_key: dq200_transmission_mekatronik_basınç_tü
-  title: Mekatronik Basınç Tüpü Metal Yorgunluğu ve Çatlama
+  title: Mekatronic Pressure Tube Metal Fatigue and Fracturing
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DQ200 şanzımanlarında kullanılan orijinal mekatronik basınç tüpü, sürekli
-    40-60 bar basınç döngüsüne maruz kaldığında metal yorgunluğu nedeniyle mikroskobik
-    çatlaklar geliştirir. Bu çatlaklar, hidrolik sıvının basıncını tutamayarak P17BF
-    (hidrolik pompa koruma) ve P189C (eksik basınç oluşumu) arıza kodlarına yol açar.
-    Bu bir kronik tasarım zayıflığıdır ve standart OEM parçalarının değiştirilmesi
-    sorunu sadece geçici olarak çözer.
-  inspection_advice: Şanzımanın mekatronik ünitesini açarak basınç tüpünü fiziksel
-    olarak kontrol edin. Çatlaklar, delinmeler veya aşınma izleri aramak için ışık
-    kaynağı ve büyütme aracı kullanın. Ayrıca, P17BF ve P189C arıza kodlarının sıkça
-    görüldüğü durumlarda, tüpün değiştirilmesinin ardından tekrar aynı sorunun ortaya
-    çıkması durumunda, tüpün metal yapısının zayıflığına dikkat edilmelidir. Servis
-    tarihleri ve arıza geçmişi incelenerek, bu tüpün kronik sorunlu olduğu modellerde
-    dikkatli olunmalıdır.
+  rationale: The original mekatronic pressure tube used in DQ200 transmissions develops
+    microscopic cracks due to metal fatigue when subjected to continuous 40-60 bar
+    pressure cycles. These cracks cause the tube to fail in retaining hydraulic fluid
+    pressure, resulting in the fault codes **P17BF (hydraulic pump protection)** and
+    **P189C (low pressure condition)**. This is a chronic design flaw, and replacing
+    standard OEM parts only provides a temporary solution.
+  inspection_advice: Inspect the mekatronic unit of the transmission by physically
+    opening it and examining the pressure tube for cracks, perforations, or wear signs
+    using a light source and magnifying tool. Additionally, if **P17BF** and **P189C**
+    fault codes recur frequently or reappear after tube replacement, pay close attention
+    to the inherent weakness in the tube’s metal structure. Review service records
+    and failure history to identify chronically problematic models where this tube
+    is prone to recurring issues.
   sources:
   - source_url: https://fdyotomotiv.com/blog/p17bf-ve-p189c-ariza-kodu-nedir-dq200-sanzimanlar-icin-anlam-ve-cozum-rehberi
     source_domain: fdyotomotiv.com
@@ -761,8 +955,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The DQ200 7-speed DSG transmission (pre-2014 **0CW** variant) suffers
     from a chronic issue where the hydraulic system fails to generate sufficient pressure,
@@ -773,21 +967,26 @@ claims:
     the transmission control module. Test for delayed or rough gear engagement, slipping,
     or a noticeable drop in acceleration. Verify if the vehicle has undergone software
     updates, as some cases may be mitigated by ECU or mechatronic unit firmware patches.
-  sources: []
+  sources:
+  - source_url: https://fdyotomotiv.com/dsg-7-dq200-sanziman-mekatronik-icin-yaygin-hata-kodlari
+    source_domain: fdyotomotiv.com
+    site_or_channel: fdyotomotiv.com
+    quote: '"Sorun: Yetersiz Basınç Artışı (Performans Kısıtlaması)"'
+    independent: true
 - claim_key: dq200_transmission_dq200_kavrama_aşınma
-  title: DQ200 Kavrama Aşınması (Golf, Polo, Audi A1/A3, Skoda Octavia)
+  title: DQ200 Clutch Wear (Golf, Polo, Audi A1/A3, Škoda Octavia)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG DQ200 şanzımanında tek kavrama sistemi aşırı aşınır ve tipik olarak
-    80.000–120.000 km'de arıza verir. Bu, vites geçişlerinde hatalı davranışlara ve
-    şanzımanın tamamen arızalanmasına yol açar.
-  inspection_advice: Şanzıman sıcaklığı ve vites geçişlerinde gecikme/şok kontrol
-    edin. Kavrama sesleri (örn. metalik tıkırtılar) veya viteslerin tek haneli/çift
-    haneli olarak çalışmaması dikkat çekici bir belirtidir.
+  rationale: The DSG DQ200 transmission features a single-clutch system that experiences
+    excessive wear, typically failing between **80,000–120,000 km**. This leads to
+    incorrect shifting behavior and, in severe cases, complete transmission failure.
+  inspection_advice: Check for **transmission overheating** and **delayed/shock-like
+    shifts**. Listen for **clutch-related noises** (e.g., metallic clunks) or **single-digit/dual-digit
+    gear engagement issues**, which are key warning signs.
   sources:
   - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
     source_domain: oztepeotomatiksanziman.com
@@ -795,51 +994,42 @@ claims:
     quote: '"DQ200 (7 İleri Kuru Kavrama): Kavrama aşınması, mekatronik arızası –
       En yaygın sorunlar. Tipik arıza yaşı: 80.000-120.000 km."'
     independent: true
-- claim_key: dq200_transmission_dq250/380/381_hidrol
-  title: DQ250/380/381 Hidrolik Sistem ve Valf Gövdesi Aşınması (Passat, Tiguan, Audi
-    A4/A6)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: DQ250/380/381 şanzımanlarında hidrolik sistem ve valf gövdesi aşınması
-    yaygındır. Bu, vites geçişlerinde gecikme, vuruntu veya hatalı adaptasyonlara
-    neden olur. Tipik arıza yaşı 150.000–200.000 km'dir.
-  inspection_advice: Vites geçişlerinde sert darbe veya sarsıntı hissedilirse, valf
-    gövdesi veya hidrolik basınç sorunu olabilir. Şanzıman yağı kirlenmiş veya yanmışsa,
-    bu da bir belirtidir.
-  sources: []
 - claim_key: dq200_transmission_dq500_yüksek_tork_aş
-  title: DQ500 Yüksek Tork Aşınması (Golf R, Audi S3, RS Modeller)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: DQ500 şanzımanı yüksek torklu performans modellerde (Golf R, Audi S3,
-    RS) daha erken aşınır. Agresif kullanımda 60.000–100.000 km'de kavrama ve hidrolik
-    sistem arızaları sık görülür.
-  inspection_advice: Vites geçişlerinde gecikme, titreşim veya şanzıman sıcaklığı
-    anormal yükselirse, DQ500'nin aşınma sorunu olabilir. Özellikle performans modellerinde
-    dikkatli olunmalıdır.
-  sources: []
-- claim_key: dq200_transmission_dsg_mekatronik_kart_
-  title: DSG Mekatronik Kart Arızaları (Genel DSG Şanzımanları)
+  title: High Torque Wear in DQ500 Transmission (Golf R, Audi S3, RS Models)
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: DSG şanzımanının beyni olan mekatronik kart, elektronik hatalar, yazılım
-    sorunları veya fiziksel hasarlardan dolayı arızalanır. Bu, vites geçişlerinde
-    gecikme, rastgele vites atlaması veya hatta motor başlatma sorunlarına yol açar.
-  inspection_advice: Vites geçişlerinde 2-3 saniye gecikme, titreşim veya motor başlatma
-    sorunu varsa, mekatronik kartın kontrol edilmesi gerekir. Dashboard'da uyarı ışıkları
-    veya hata kodları da bir belirtidir.
+  rationale: The DQ500 transmission experiences premature wear in high-torque performance
+    models (Golf R, Audi S3, RS). Under aggressive use, clutch and hydraulic system
+    failures are frequently observed between **60,000–100,000 km**.
+  inspection_advice: If there is **delay in gear shifts**, **vibration**, or **unusually
+    high transmission temperature**, the DQ500 may be suffering from wear issues.
+    **Particular caution is advised for performance models**.
+  sources:
+  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
+    source_domain: oztepeotomatiksanziman.com
+    site_or_channel: oztepeotomatiksanziman.com
+    quote: '"DQ500 (7 İleri Performans): Yüksek tork nedeniyle aşınma – Yaygın sorunlar.
+      Tipik arıza yaşı: 60.000-100.000 km (agresif kullanım)."'
+    independent: true
+- claim_key: dq200_transmission_dsg_mekatronik_kart_
+  title: DSG Mekatronik Control Unit Failures (General DSG Transmissions)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DSG transmission’s control brain, the mekatronik kart (mechatronic
+    control unit), can fail due to electronic faults, software issues, or physical
+    damage. This can cause delays in gear shifts, random gear jumps, or even issues
+    starting the engine.
+  inspection_advice: If there are 2-3 second delays during gear shifts, vibrations,
+    or engine starting problems, the mekatronik kart should be inspected. Warning
+    lights on the dashboard or error codes are also indicators.
   sources:
   - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
     source_domain: oztepeotomatiksanziman.com
@@ -850,63 +1040,57 @@ claims:
       alamama."'
     independent: true
 - claim_key: dq200_transmission_golf_6_(2008-2012)_d
-  title: Golf 6 (2008-2012) DQ200 Mekatronik ve Titreşim Sorunları
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Golf 6 (2008-2012) modelinde DQ200 şanzımanı, kavrama aşınması ve mekatronik
-    arızalarıyla birlikte düşük RPM'de titreşim sorunları yaşar. Bu, elektronik hatalar
-    ve yazılım eksikliklerinden kaynaklanır.
-  inspection_advice: Düşük hızlarda titreşim veya vites geçişlerinde gecikme varsa,
-    Golf 6 DQ200 şanzımanının mekatronik kartı ve yazılımı kontrol edilmelidir.
-  sources: []
-- claim_key: dq200_transmission_audi_a3_(8p_kasa)_dq
-  title: Audi A3 (8P Kasa) DQ250 Hidrolik ve Quattro Sorunları
+  title: Golf 6 (2008–2012) DQ200 Transmission Clutch Wear and Mekatronik Vibration
+    Issues
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
   status: review
   promoted_by: pending_human
-  rationale: Audi A3 (8P Kasa) DQ250 şanzımanında hidrolik sistem ve valf gövdesi
-    aşınması sık görülür. Ayrıca, Quattro AWD entegrasyonu nedeniyle özel sorunlar
-    yaşanır. S3 yüksek performans modellerinde de agresif kullanım sonucu aşınma artar.
-  inspection_advice: Vites geçişlerinde sert darbe veya hidrolik sorunlar varsa, Audi
-    A3 DQ250 şanzımanının hidrolik sistemini ve valf gövdesini kontrol edin. Özellikle
-    Quattro modellerinde dikkatli olunmalıdır.
+  rationale: The Golf 6 (2008–2012) DQ200 transmission exhibits clutch wear, mekatronik
+    (electronic control unit) failures, and vibration issues at low RPM. These problems
+    stem from electronic faults and software deficiencies in the transmission control
+    system.
+  inspection_advice: If the vehicle experiences vibrations at low speeds or delays
+    during gear shifts, the Golf 6 DQ200 transmission’s mekatronik control unit and
+    software must be inspected for faults.
   sources:
   - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
     source_domain: oztepeotomatiksanziman.com
     site_or_channel: oztepeotomatiksanziman.com
-    quote: '"Audi A3 DSG Sorunları: DQ250 hidrolik problemi (valf gövdesi yaygın arıza),
-      Quattro sistem entegrasyonu (AWD özel sorunları), S3 yüksek performans (agresif
-      kullanım sonucu aşınma)."'
+    quote: '"Golf 6 (2008-2012) DSG Problemleri: DQ200 kavrama aşınması, Mekatronik
+      arızası, Titreşim problemi (düşük RPM’de), Software hatası."'
     independent: true
 - claim_key: dq200_transmission_dsg_vites_göstergesi
-  title: DSG Vites Göstergesi ve Konum Sensörü Sorunları
+  title: DSG Transmission Gear Indicator and Position Sensor Issues
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: DSG şanzımanında vites göstergesi yanıp sönüyorsa, konum sensörü arızası,
-    kablo bağlantı sorunu veya CAN-Bus iletişim hatası olabilir. Bu, şanzımanın doğru
-    çalışmasını engeller ve güvenlik riski oluşturur.
-  inspection_advice: Dashboard'daki vites göstergesi yanıp sönüyorsa veya yanlış vites
-    gösteriyorsa, konum sensörlerini, kablo bağlantılarını ve CAN-Bus iletişimini
-    kontrol edin.
-  sources: []
+  rationale: If the gear indicator on a DSG transmission is flickering or not displaying
+    correctly, the issue could be a **gear position sensor failure**, a **wiring connection
+    problem**, or a **CAN-Bus communication error**. This prevents the transmission
+    from functioning properly and poses a safety risk.
+  inspection_advice: If the gear indicator on the dashboard is flickering or showing
+    incorrect gear selection, inspect the **gear position sensors**, **wiring connections**,
+    and **CAN-Bus communication** for faults.
+  sources:
+  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
+    source_domain: oztepeotomatiksanziman.com
+    site_or_channel: oztepeotomatiksanziman.com
+    quote: '"DSG Şanzıman Vites Göstergesi Yanıp Sönüyor: Konum sensörü arızası, Kablo
+      harness problemi, Dashboard arızası, CAN-Bus iletişim hatası."'
+    independent: true
 - claim_key: dq200_transmission_dq200_tcu/m_pump_pro
   title: DQ200 TCU/M Pump Protection Protocol Triggering
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Transmission Control Unit (TCU) activates a pump protection protocol
     (anti-play protection) when the accumulator struggles to build pressure due to
@@ -917,14 +1101,25 @@ claims:
     DTCs related to transmission control or pump protection. Look for repeated occurrences
     of the car getting stuck after restarting, which indicates ongoing mechatronics
     unit failure.
-  sources: []
+  sources:
+  - source_url: https://www.team-bhp.com/forum/technical-stuff/288240-understanding-vw-skoda-dsg-dq200-failures-masterclass-srinivas.html
+    source_domain: team-bhp.com
+    site_or_channel: team-bhp.com
+    quote: '**This results in car being stuck and unable to change gear. This is a
+      clear indication that the mechatronics is done. But even after this the car
+      will drive. You just need to turn off the ignition and restart the car, it will
+      drive normally for some distance (sometimes even few days or weeks can pass)
+      before the issue reoccurs. Unfortunately, most owners don’t understand that
+      this is just a limp/safety mode and continue to drive in this manner for months
+      which exacerbates the issue.**'
+    independent: true
 - claim_key: dq200_transmission_dsg_mechatronic_cont
   title: DSG Mechatronic Control Unit Failures (Wet/Dry Clutch Variants)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Multiple reports of DSG mechatronic control unit failures causing gear
     engagement issues (missing gears 1/3/5/7) across different VAG models. This defect
@@ -934,14 +1129,21 @@ claims:
     gear engagement failures, delayed shifts). Look for signs of overheating or fluid
     leaks around the transmission. Verify service history for gearbox oil changes,
     as neglect is a common contributing factor.
-  sources: []
+  sources:
+  - source_url: https://www.pistonheads.com/gassing/topic.asp?f=86&h=0&t=2099516
+    source_domain: pistonheads.com
+    site_or_channel: pistonheads.com
+    quote: '"Mine decided to miss 1/3/5/7 and only engage 2/4/6/ gears...problem pointed
+      to the Mechatronic...there were 4or 5 cars parked outside the unit, all with
+      faulty Mechatronics!"'
+    independent: true
 - claim_key: dq200_transmission_dsg_clutch_pack_wear
   title: DSG Clutch Pack Wear/Juddering (Early 7-Speed Variants)
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early 7-speed DSG variants (e.g., 1.4 TSI) are noted for marginal clutch
     packs that can judder or misbehave prematurely, particularly under heavy load
@@ -951,14 +1153,21 @@ claims:
     or under acceleration. Check for delayed engagement or slipping in gears. Verify
     if the vehicle has undergone tuning or excessive towing, as these exacerbate clutch
     wear.
-  sources: []
+  sources:
+  - source_url: https://www.pistonheads.com/gassing/topic.asp?f=86&h=0&t=2099516
+    source_domain: pistonheads.com
+    site_or_channel: pistonheads.com
+    quote: '"I don’t know the exact details of that gearbox; certainly earlier versions
+      of it were known for marginal clutchpacks that could start juddering or misbehaving
+      with a few miles on."'
+    independent: true
 - claim_key: dq200_transmission_dsg_gearbox_oil_negl
   title: DSG Gearbox Oil Neglect Leading to Premature Failure
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: DSG gearboxes are highly sensitive to oil changes, yet many owners (and
     dealerships) overlook this. Neglect accelerates wear on mechatronic units and
@@ -967,14 +1176,20 @@ claims:
     standard intervals). Look for fluid discoloration or burning smells during inspection.
     Ask if the owner follows VAG’s (vague) recommendations for towing-related oil
     changes.
-  sources: []
+  sources:
+  - source_url: https://www.pistonheads.com/gassing/topic.asp?f=86&h=0&t=2099516
+    source_domain: pistonheads.com
+    site_or_channel: pistonheads.com
+    quote: '"The cause is often owners either don’t know or are unwilling to spend
+      the money on oil changes for them...Dealerships don’t seem to mention it."'
+    independent: true
 - claim_key: dq200_transmission_dsg_tuning-induced_t
   title: DSG Tuning-Induced Transmission Stress (TCU Mismatch)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Tuning a DSG without updating the Transmission Control Unit (TCU) software
     can overload the gearbox, causing premature wear or failure. The TCU expects specific
@@ -982,7 +1197,14 @@ claims:
   inspection_advice: Check for aftermarket tuning modifications. Verify if the TCU
     software has been updated to match power output. Listen for unusual noises or
     erratic shifting post-tuning.
-  sources: []
+  sources:
+  - source_url: https://www.pistonheads.com/gassing/topic.asp?f=86&h=0&t=2099516
+    source_domain: pistonheads.com
+    site_or_channel: pistonheads.com
+    quote: '"If you tune any automatic car it’s essential that the gearbox software
+      is also updated to suit. If the TCU expects 200nm and you throw 400nm through
+      it you’ll give it a fit and break/wear stuff."'
+    independent: true
 - claim_key: dq200_transmission_faulty_mechatronics_
   title: Faulty mechatronics (DQ200, pre-2015)
   kind: known_issue
@@ -1017,14 +1239,26 @@ claims:
   kind: known_issue
   domain: transmission
   severity: low
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early DSG7 transmissions exhibited latency during downshifts, particularly
     in city driving, due to software limitations.
   inspection_advice: Test for delayed or sluggish downshifts, especially in stop-and-go
     traffic. Confirm if the transmission software has been updated.
-  sources: []
+  sources:
+  - source_url: https://www.euroracingparts.fr/en/blogs/guide-dachat-pour-volkswagen/fiabilite-boite-double-embrayage-dsg-7-en-occasion-notre-guide-vag
+    source_domain: euroracingparts.fr
+    site_or_channel: euroracingparts.fr
+    quote: '"Slower response
+
+      - Latency during downshifts
+
+      - Poor management in the city
+
+      More of an inconvenience than a breakdown, but a recurring issue on poorly updated
+      systems."'
+    independent: true
 - claim_key: dq200_transmission_dsg_dq200_transmissi
   title: DSG DQ200 transmission shuddering and power loss
   kind: known_issue
@@ -1046,8 +1280,8 @@ claims:
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The DQ200 G2 transmission in the 1.0 TSI Polo exhibits chronic shuddering/jerking
     during downshifts in manual mode, even with ECU tuning (e.g., Ecutuned). This
@@ -1056,14 +1290,20 @@ claims:
   inspection_advice: Test the transmission in manual mode by repeatedly downshifting
     from higher gears to lower gears. Listen for abrupt, jarring shifts or vibrations
     during the transition. Check for any error codes related to the DSG system.
-  sources: []
+  sources:
+  - source_url: https://otopark.com/forum/threads/dsg-dq200-gen2-vites-dusururken-sarsinti-sorunu.16196/
+    source_domain: otopark.com
+    site_or_channel: otopark.com
+    quote: '"DSG optimizasyonu olmasına rağmen (Ecutuned), manuel modda downshift
+      yaparken vitesleri aşırı sarsıntılı düşürüyor."'
+    independent: true
 - claim_key: dq200_transmission_dsg_mechatronic_flui
   title: DSG mechatronic fluid degradation and improper servicing
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The mechatronic fluid in DSG transmissions is often marketed as 'lifetime'
     fluid, but this is misleading. The fluid degrades over time and must be changed
@@ -1072,15 +1312,22 @@ claims:
   inspection_advice: Check the service history for mechatronic fluid changes. Look
     for signs of fluid leakage, unusual transmission noises, or delayed engagement.
     Ensure the transmission has been properly serviced according to manufacturer recommendations.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/yeni-nesil-dsg-sorun-devam-ediyor-mu-2021-sonrasi-golf--157658892-3
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: DSG otomatik şanzıman değildir. Dq200 ve türevlerini otomatik şanzıman
+      gibi kullanamazsınız. Kavrama bittiğinde silkeleme yapar, servis mekatronik
+      yağı ömürlük dese de iki yılda bir değişimi yapılması gerekir vs.
+    independent: true
 - claim_key: dq200_transmission_dsg_transmission_fai
   title: DSG transmission failure due to improper usage (e.g., aggressive driving,
     high mileage)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: DSG transmissions are sensitive to aggressive driving habits, such as
     rapid gear shifts, high RPM usage, and excessive towing. This leads to premature
@@ -1089,29 +1336,44 @@ claims:
   inspection_advice: Assess the driving history for aggressive usage patterns. Look
     for signs of overheating, unusual noises, or delayed gear shifts. Check for proper
     maintenance records, especially for fluid changes and clutch replacements.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/yeni-nesil-dsg-sorun-devam-ediyor-mu-2021-sonrasi-golf--157658892-3
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Amerikalılar dünyanın geri kalanı gibi insan gibi yol yapmıyor... çok çabuk
+      yüksek km yapıyorlar ve eskiyor araçlar. çoğu doğru düzgün otomobil kullanmayı
+      da bilmez, ilgilenmeyi de bakıma falan götürmeyi de sevmez... Dsg gibi kompleks
+      ve narin teknolojiler onlara boylarından fazla.
+    independent: true
 - claim_key: dq200_transmission_dsg_tüp_(clutch_tube
-  title: DSG Tüp (Clutch Tube) Failure in 1.3 TCe EDC Models
+  title: Chronic failure of the DSG clutch tube in Renault Clio 1.3 TCe EDC models
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
-  rationale: Reports indicate chronic issues with the DSG clutch tube failing (gearing
-    loose, cracking, or burning) in Renault Clio 1.3 TCe EDC models, even in newer
-    variants (post-2016). This is a known chronic defect in the transmission system.
-  inspection_advice: Check for signs of clutch tube wear, loose fittings, or burnt
-    smells near the DSG unit. Verify if the vehicle has undergone clutch tube replacements
-    or if there are service records for related transmission issues.
-  sources: []
+  rationale: Multiple reports confirm persistent failures of the DSG clutch tube—including
+    gearing issues, cracking, and burning—across Renault Clio 1.3 TCe EDC models,
+    including newer post-2016 variants. This is a documented recurring defect within
+    the transmission system.
+  inspection_advice: Inspect for visible wear on the clutch tube, loose connections,
+    or burnt odors emanating from the DSG unit. Confirm whether the vehicle has undergone
+    clutch tube replacements or if service records reference prior transmission-related
+    concerns.
+  sources:
+  - source_url: https://www.otoclubturkiye.com/forum/topic/317227-dsg-de-son-durum-nedir-2021-10tsi-polo-%C5%9Fanz%C4%B1man%C4%B1-dq200-m%C3%BC-dq250-peugeot-208-12-motor/
+    source_domain: otoclubturkiye.com
+    site_or_channel: otoclubturkiye.com
+    quote: '"tüpü gevşeyen, tası çatlayan, kavraması yanan dsg den"'
+    independent: true
 - claim_key: dq200_transmission_dsg_mekatronik_unit_
   title: DSG Mekatronik Unit Failures in Older Models
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Multiple reports confirm chronic mekatronik (electronic control unit)
     failures in DSG-equipped vehicles, particularly in older models (pre-2016). This
@@ -1119,28 +1381,39 @@ claims:
   inspection_advice: Check for error codes related to the DSG mekatronik unit. Look
     for signs of overheating, unusual noises, or delayed engagement in gears. Verify
     if the vehicle has a history of mekatronik replacements.
-  sources: []
+  sources:
+  - source_url: https://www.otoclubturkiye.com/forum/topic/317227-dsg-de-son-durum-nedir-2021-10tsi-polo-%C5%9Fanz%C4%B1man%C4%B1-dq200-m%C3%BC-dq250-peugeot-208-12-motor/
+    source_domain: otoclubturkiye.com
+    site_or_channel: otoclubturkiye.com
+    quote: '"Bacanakta Super b var 2016 model otomatik DSG araç şu anda 150.000 km
+      civarında daha bu sene mekatronik arızası verdi sadece"'
+    independent: true
 - claim_key: dq200_transmission_dsg_micro-switch_fai
   title: DSG Micro-Switch Failures
   kind: known_issue
   domain: transmission
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic micro-switch failures in DSG-equipped Volkswagen Polo models,
     leading to transmission malfunctions and requiring warranty claims for replacements.
   inspection_advice: Check for error codes related to the DSG micro-switch. Look for
     erratic shifting or delayed engagement in gears. Verify if the vehicle has a history
     of micro-switch replacements under warranty.
-  sources: []
+  sources:
+  - source_url: https://www.otoclubturkiye.com/forum/topic/317227-dsg-de-son-durum-nedir-2021-10tsi-polo-%C5%9Fanz%C4%B1man%C4%B1-dq200-m%C3%BC-dq250-peugeot-208-12-motor/
+    source_domain: otoclubturkiye.com
+    site_or_channel: otoclubturkiye.com
+    quote: '"DSG olarak bir sorun yaşamadık ama mikroşalter arızası verdi"'
+    independent: true
 - claim_key: dq200_engine_1.2_puretech_timing_
   title: 1.2 PureTech Timing Belt/Ribbon Failure
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Chronic issues with the timing belt/ribbon (trigger belt) in Peugeot
     1.2 PureTech engines, leading to catastrophic failures such as belt snapping as
@@ -1148,7 +1421,13 @@ claims:
   inspection_advice: Check the condition of the timing belt/ribbon for cracks, wear,
     or signs of oil contamination. Verify if the vehicle has undergone timing belt
     replacements or if the correct oil type has been used.
-  sources: []
+  sources:
+  - source_url: https://www.otoclubturkiye.com/forum/topic/317227-dsg-de-son-durum-nedir-2021-10tsi-polo-%C5%9Fanz%C4%B1man%C4%B1-dq200-m%C3%BC-dq250-peugeot-208-12-motor/
+    source_domain: otoclubturkiye.com
+    site_or_channel: otoclubturkiye.com
+    quote: '"puretech içinde yanlış yağ kullanımı veya zamanında yağ değişiminin yapılmaması
+      trigerin kopmasına sebep veriyormuş... 20bin km de kopartanlar var diyorlardı"'
+    independent: true
 - claim_key: dq200_transmission_valve_body_cracking_
   title: Valve body cracking in DQ200 0AM mechatronic unit
   kind: known_issue
@@ -1202,15 +1481,21 @@ claims:
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: High-pressure leaks are very common and often require a rebuild or complete
     replacement of the mechatronic unit, leading to loss of drivability and rough
     gear changes.
   inspection_advice: Check for hydraulic leaks around the mechatronic unit, listen
     for unusual noises, and monitor for rough gear shifts or dashboard warning lights.
-  sources: []
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/dsg-7-speed-gearbox-problems/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: '"Internal high-pressure hydraulic leaks - Very common - Requires rebuild
+      or complete replacement mechatronic unit."'
+    independent: true
 - claim_key: dq200_transmission_dsg_6/7_software-ind
   title: DSG 6/7 software-induced gear shift stuttering (1-3-5-7 pattern lock)
   kind: known_issue
