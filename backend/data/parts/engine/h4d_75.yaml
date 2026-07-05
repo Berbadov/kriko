@@ -511,20 +511,6 @@ claims:
     at a service center. Use an **OBD-II scanner** to detect **software-related faults**
     before proceeding with updates.
   sources: []
-- claim_key: h4d_75_engine_turbocharger_prematu
-  title: Turbocharger premature wear (city driving)
-  kind: known_issue
-  domain: engine
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The turbocharger in the 1.0 TSI (EA211) engine exhibits accelerated wear
-    under city driving conditions, particularly if oil change intervals are extended.
-    This leads to noticeable performance loss and unusual noises around 80,000 km.
-  inspection_advice: Check for unusual turbo noises (whining, rattling) and verify
-    oil change history. Look for oil leaks or contamination around the turbo area.
-  sources: []
 - claim_key: h4d_75_cooling_integrated_water_pum
   title: Integrated water pump/thermostat module leaks
   kind: known_issue
@@ -554,21 +540,6 @@ claims:
   inspection_advice: Check for rough idling, hesitation, or misfires. Inspect intake
     valves for black carbon deposits if the engine is disassembled.
   sources: []
-- claim_key: h4d_75_engine_timing_belt_degradat
-  title: Timing belt degradation in oil bath (EA211 evo)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: In EA211 evo versions, the timing belt operates in an oil bath, which
-    was intended to extend its lifespan. However, cases of accelerated degradation—including
-    clogging the oil pickup—have been reported.
-  inspection_advice: Verify timing belt replacement history. Check for oil contamination
-    in the timing belt area and listen for unusual belt noise. Inspect the oil pickup
-    for blockages if the engine is opened.
-  sources: []
 - claim_key: h4d_75_transmission_dsg_transmission_jer
   title: DSG transmission jerky starts (software calibration)
   kind: known_issue
@@ -582,21 +553,6 @@ claims:
     mitigated with a firmware update.
   inspection_advice: Test drive the vehicle to check for abrupt or jerky starts, especially
     at low speeds. Confirm if the DSG firmware has been updated recently.
-  sources: []
-- claim_key: h4d_75_emissions_gpf_(gasoline_partic
-  title: GPF (Gasoline Particulate Filter) regeneration issues in urban use
-  kind: known_issue
-  domain: emissions
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The GPF on the 1.0 TSI EA211 may require frequent regenerations when
-    the vehicle is used almost exclusively in the city, leading to increased fuel
-    consumption and emissions warning lights.
-  inspection_advice: Check for emissions warning lights and increased fuel consumption.
-    Ensure the vehicle gets extra-urban trips of 20–30 minutes every 300–400 km to
-    prevent excessive GPF regeneration cycles.
   sources: []
 - claim_key: h4d_75_transmission_dsg_transmission_low
   title: DSG transmission low-speed jerks and clutch/mechatronics issues

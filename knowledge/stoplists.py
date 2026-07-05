@@ -124,7 +124,10 @@ SIBLING_CODE_FAMILIES: tuple[frozenset[str], ...] = (
     frozenset({"DQ200", "DQ250", "DQ381"}),   # VW Group dry/wet DSG generations
     frozenset({"DC4", "DW5", "DW6"}),          # Renault EDC dual-clutch generations
     frozenset({"EA211", "EA288", "EA888"}),    # VW Group EA-series engine families
-    frozenset({"K9K", "H4D", "H5D", "H5H"}),   # Renault small diesel/petrol engine codes
+    frozenset({"K9K", "H4D", "H5D", "H5H", "H5F", "R9M", "M9R"}),  # Renault-Nissan-Mercedes
+    # small-to-mid diesel/petrol engine codes — commonly co-mentioned in
+    # cross-engine comparison articles regardless of displacement/fuel, same
+    # failure mode as the K9K/H4D/H5D/H5H group this family already covered.
 )
 
 # Part IDs follow a power-split convention (k9k_85, ea888_220, ...) — the

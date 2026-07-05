@@ -37,6 +37,20 @@ def test_sibling_codes_for_unregistered_part_is_empty():
     assert sibling_codes_for("golf7_body") == frozenset()
 
 
+def test_sibling_codes_for_h5h_includes_h5f():
+    # Regression: H5F was missing from the Renault small-engine family, so a
+    # claim about the H5F engine could sit undetected in h5h_130.yaml and
+    # reach a Clio 5 H5H buyer (found live in production data this session).
+    assert "H5F" in sibling_codes_for("h5h_130")
+
+
+def test_sibling_codes_for_r9m_and_m9r_are_registered_siblings():
+    # Regression: R9M/M9R (Renault-Nissan-Mercedes 1.6/2.0 dCi) had no family
+    # at all, so R9M/M9R claims mislabeled under h5h_130.yaml went undetected.
+    assert {"M9R", "H5H"} <= sibling_codes_for("r9m_130")
+    assert {"R9M", "H5H"} <= sibling_codes_for("m9r")
+
+
 def test_mentions_sibling_code_detects_dq200_in_dq381_text():
     assert mentions_sibling_code("DQ200 dry-clutch pressure circuit failure", "dq381")
 
