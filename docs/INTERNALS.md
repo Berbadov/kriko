@@ -144,9 +144,12 @@ duplicate cues from YouTube's rolling-window auto-captions.
 ### Claim extraction
 **`knowledge/extract.py`** — `extract_claims(doc) → list[CandidateClaim]`
 
-Sends `doc.text[:6000]` to `qwen/qwen-2.5-72b-instruct` via OpenRouter with structured output.
-Returns typed `CandidateClaim` objects: title, domain, severity, rationale, inspection_advice,
-verbatim quote, optional engine_or_variant_hint.
+Sends `doc.text[:6000]` to `ministral-8b-latest` via `knowledge/langextract_client.py`
+(langextract, grounded/few-shot extraction — see that module's docstring for why: each
+claim's quote is aligned to an exact character span in the source rather than trusted as
+a self-reported string). Returns typed `CandidateClaim` objects: title, domain, severity,
+rationale, inspection_advice, verbatim quote, optional engine_or_variant_hint, and
+`quote_grounded` (whether the quote's span aligned exactly).
 
 ### Deduplication
 **`knowledge/dedup.py`** — `merge_candidates(candidates)`

@@ -4,10 +4,8 @@
 httpx>=0.27.0
 selectolax>=0.3.21       # fast HTML parsing (forums.py / specialists.py)
 pyyaml>=6.0.1
-mistralai>=1.0.0          # Mistral SDK for extraction + gates
-langchain>=0.2.0
-langchain-openai>=0.1.0  # OpenRouter via OpenAI-compatible API
-openai>=1.0.0            # required by langchain-openai
+mistralai>=1.0.0          # Mistral SDK for judge.py's gates
+langextract>=1.6.0        # grounded, few-shot extraction (knowledge/extract.py)
 yt-dlp>=2024.1.1         # YouTube transcript download (no API key needed)
 trafilatura>=1.9.0       # universal web article extractor
 textual>=0.60.0          # terminal UI for discover.py
