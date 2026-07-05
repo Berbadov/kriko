@@ -1,0 +1,719 @@
+part_id: megane4_elec
+part_type: electrical
+display_name: Renault Megane 4 Electrical Systems
+manufacturer: renault
+known_also_as:
+- Renault Megane 4 electrical
+- Renault Megane 4 electronics
+- Renault Megane 4 battery
+claims:
+- claim_key: megane4_elec_emissions_dpf_clogging_in_1.5_
+  title: DPF clogging in 1.5 dCi/1.9 dCi engines
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Short urban trips prevent the DPF from reaching regeneration temperature,
+    causing soot buildup, restricted exhaust flow, and limp-mode entry, leading to
+    permanent performance degradation if unaddressed.
+  inspection_advice: Check for DPF warning light activation, increased fuel consumption,
+    and power loss during city driving. Inspect exhaust backpressure if limp mode
+    is triggered.
+  sources:
+  - source_url: https://autoguide.top/renault-megane-common-problems-in-depth-analysis-symptoms-and-proven-solutions/
+    source_domain: autoguide.top
+    site_or_channel: autoguide.top
+    quote: '"Diesel-powered Renault Megane models—particularly 1.5 dCi and 1.9 dCi
+      engines—are prone to reduced engine performance during short, low-speed journeys.
+      [...] The diesel particulate filter (DPF) fails to reach regeneration temperature
+      during short trips. This leads to soot accumulation, restricted exhaust flow,
+      and degraded combustion efficiency."'
+    independent: true
+- claim_key: megane4_elec_engine_oil_pressure_solenoi
+  title: Oil pressure solenoid valve failure (petrol/diesel)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A failing oil pressure solenoid valve causes erratic oil pressure regulation,
+    leading to dangerous pressure spikes that damage seals, gaskets, and internal
+    engine components, especially under heat.
+  inspection_advice: Look for illuminated check engine light, rough engine operation
+    when hot, or oil pressure warnings. Verify oil pressure consistency under load.
+  sources:
+  - source_url: https://autoguide.top/renault-megane-common-problems-in-depth-analysis-symptoms-and-proven-solutions/
+    source_domain: autoguide.top
+    site_or_channel: autoguide.top
+    quote: '"Oil pressure irregularities in petrol and diesel Megane engines frequently
+      stem from a malfunctioning oil pressure control solenoid. [...] As engine oil
+      temperature rises, viscosity decreases. A failing solenoid valve restricts oil
+      flow, causing dangerous pressure spikes that threaten seals, gaskets, and internal
+      engine components."'
+    independent: true
+- claim_key: megane4_elec_electrical_electric_power_steer
+  title: Electric power steering voltage sensitivity
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Megane’s electric power steering system is highly vulnerable to voltage
+    fluctuations from weak batteries or failing alternators, leading to sudden loss
+    of assist and steering instability.
+  inspection_advice: Test for heavy steering at low speeds, intermittent steering
+    assist loss, or an active steering warning light. Check battery voltage and alternator
+    output during operation.
+  sources: []
+- claim_key: megane4_elec_electrical_heater_blower_resist
+  title: Heater blower resistor failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Thermal fatigue and electrical resistance buildup cause the heater blower
+    resistor to fail, restricting airflow at higher fan speeds and leading to inconsistent
+    cabin heating.
+  inspection_advice: Test heater performance at all fan speeds; inconsistent airflow
+    or cold cabin conditions despite high/low settings may indicate resistor failure.
+    Inspect wiring connectors for corrosion.
+  sources:
+  - source_url: https://autoguide.top/renault-megane-common-problems-in-depth-analysis-symptoms-and-proven-solutions/
+    source_domain: autoguide.top
+    site_or_channel: autoguide.top
+    quote: '"Cabin heating inconsistencies often trace back to a defective heater
+      blower resistor. [...] Thermal fatigue and electrical resistance buildup cause
+      the resistor to fail, limiting current flow at higher fan speeds."'
+    independent: true
+- claim_key: megane4_elec_engine_ignition_coil_pack_f
+  title: Ignition coil pack failure (petrol engines)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Individual ignition coil failures disrupt combustion balance, causing
+    misfires, rough idling, and increased fuel consumption. Multiple coils often fail
+    simultaneously due to shared electrical issues.
+  inspection_advice: Listen for misfires under load, rough idle, or check engine light
+    activation. Scan for live cylinder misfires and replace all coils if one fails.
+  sources:
+  - source_url: https://autoguide.top/renault-megane-common-problems-in-depth-analysis-symptoms-and-proven-solutions/
+    source_domain: autoguide.top
+    site_or_channel: autoguide.top
+    quote: '"Ignition coil failure is one of the most frequently reported petrol-engine
+      issues in the Renault Megane. [...] Each cylinder relies on a dedicated coil.
+      Failure in a single unit disrupts combustion balance, reducing engine efficiency."'
+    independent: true
+- claim_key: megane4_elec_electrical_power_window_regulat
+  title: Power window regulator failure (cable-driven)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Worn cable-driven window regulators degrade over time due to tension
+    loss or motor strain, leading to sluggish or inoperable windows, particularly
+    in both front and rear doors.
+  inspection_advice: Test window movement for sluggishness, clicking sounds, or windows
+    stuck mid-position. Inspect regulators for visible wear or misalignment.
+  sources: []
+- claim_key: megane4_elec_electrical_system-wide_electric
+  title: System-wide electrical instability (battery/ECU sensitivity)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Insufficient or unstable battery output disrupts critical systems (power
+    steering, windows, start-stop, dashboard lights), often exacerbated by age-related
+    battery degradation or improper replacements.
+  inspection_advice: Check for intermittent power steering failure, slow/non-functional
+    windows/mirrors, or dashboard warning light flickering. Test battery voltage under
+    load and perform ECU resets post-replacement.
+  sources:
+  - source_url: https://autoguide.top/renault-megane-common-problems-in-depth-analysis-symptoms-and-proven-solutions/
+    source_domain: autoguide.top
+    site_or_channel: autoguide.top
+    quote: '"Multiple Renault Megane problems stem from insufficient or unstable battery
+      output. [...] Affected Systems: power steering, windows and mirrors, start-stop
+      systems, dashboard warning lights."'
+    independent: true
+- claim_key: megane4_elec_electrical_heat_pump_insulation
+  title: Heat pump insulation fault causing charging aborts
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Early 2022 Renault Mégane E-Tech models suffer from a chronic heat-pump
+    insulation defect that prevents charging entirely, often requiring warranty or
+    goodwill resolution. This defect is linked to a known weakness acknowledged by
+    Renault.
+  inspection_advice: Check if the vehicle is from early 2022 and verify the heat-pump
+    insulation history via fault memory. Look for signs of reduced heating output
+    in winter or increased energy consumption.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"a heat-pump insulation fault that prevents charging entirely — acknowledged
+      by Renault as a known weakness, mostly under warranty/goodwill."'
+    independent: true
+- claim_key: megane4_elec_electrical_openr-link_software_
+  title: OpenR-Link software crashes and black screens
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The OpenR-Link software, particularly in versions below 3.5, exhibits
+    frequent crashes and black screens, impacting usability and connectivity features.
+  inspection_advice: Check the software version under settings. Versions below 3.5
+    are known to have persistent bugs. Look for frequent reboots or unresponsive touchscreen
+    issues.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"OpenR-Link software with crashes and black screens, which only newer
+      updates (from version 3.5) calm down."'
+    independent: true
+- claim_key: megane4_elec_HVAC_heat_pump_failure_le
+  title: Heat pump failure leading to increased energy consumption and charging aborts
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The heat pump in the Mégane E-Tech Electric is a known weak point that
+    can fail around 70,000 km, causing increased energy consumption and triggering
+    charging problems. Repair is lengthy and costly.
+  inspection_advice: Check for reduced heating output in winter, increased energy
+    consumption, or frequent charging aborts. Verify if the vehicle has undergone
+    heat pump repairs.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"The heat pump on the Mégane E-Tech Electric is a known weak point. Failure
+      massively increases heating energy consumption and can trigger charging problems.
+      Repair requires a lengthy workshop stay."'
+    independent: true
+- claim_key: megane4_elec_electrical_charging_aborts_and_
+  title: Charging aborts and 'battery charging impossible' fault messages
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: Multiple reports indicate charging aborts and the error message 'battery
+    charging impossible,' often occurring after OTA updates. This is frequently linked
+    to heat pump defects or software issues.
+  inspection_advice: Attempt to charge the vehicle and monitor for the 'battery charging
+    impossible' error or an orange LED on the charging cable. Check for recent OTA
+    updates.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Several Megane E-Tech drivers report charging aborts and the fault message
+      ''battery charging impossible'', often after OTA updates. Heat pump defects
+      have been identified as a frequent cause."'
+    independent: true
+- claim_key: megane4_elec_brakes_parking_brake_sensor
+  title: Parking brake sensor misalignment recall (0EWQ)
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.9
+  status: review
+  promoted_by: pending_human
+  rationale: A factory recall for model years 2024–2025 due to a misaligned sensor
+    in the parking brake actuator, causing the parking brake to fail and risking the
+    vehicle rolling away.
+  inspection_advice: Check if the vehicle is within the 2024–2025 model years and
+    verify if the parking brake sensor recall has been addressed. Test the parking
+    brake functionality to ensure it engages properly.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Factory recall for model years 2024–2025: a misaligned sensor in the
+      parking brake actuator stops the brake engaging properly on parking — the vehicle
+      can roll away. Free repair."'
+    independent: true
+  - source_url: https://www.autoplus.fr/pratique/entretien-fiabilite/renault-megane-e-tech-quelles-sont-les-pannes-les-plus-frequentes-1451143.html
+    source_domain: autoplus.fr
+    site_or_channel: autoplus.fr
+    quote: '"Factory recall for model years 2024–2025: a misaligned sensor in the
+      parking brake actuator stops the brake engaging properly on parking — the vehicle
+      can roll away. Free repair."'
+    independent: true
+- claim_key: megane4_elec_electrical_phantom_warning_noti
+  title: Phantom warning notifications in infotainment system
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The infotainment system intermittently displays false alerts, which can
+    cause unnecessary concern and confusion for the driver.
+  inspection_advice: Test the infotainment system for random warning notifications
+    while the vehicle is stationary and the engine off. Check if these alerts persist
+    after a hard reset of the system.
+  sources: []
+- claim_key: megane4_elec_electrical_inaccurate_range_est
+  title: Inaccurate range estimation in EV mode
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The vehicle’s battery range display is unreliable, potentially misleading
+    drivers about actual driving range, which could lead to unexpected range anxiety
+    or improper charging habits.
+  inspection_advice: Check the range display while driving and compare it with real-world
+    driving conditions. Verify if the displayed range significantly deviates from
+    actual performance over multiple trips.
+  sources: []
+- claim_key: megane4_elec_electrical_climate_control_malf
+  title: Climate control malfunctions in infotainment system
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Software glitches can cause the climate control system to malfunction,
+    leading to discomfort for passengers and potential overheating or freezing issues.
+  inspection_advice: Test the climate control system for erratic behavior, such as
+    sudden temperature changes, fan failures, or unresponsive controls. Ensure the
+    system responds correctly to manual adjustments.
+  sources: []
+- claim_key: megane4_elec_electrical_over-the-air_(ota)_u
+  title: Over-the-air (OTA) update failures or bug introductions
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: OTA updates may fail to install or introduce new software bugs, exacerbating
+    existing issues or creating new ones, which can disrupt vehicle functionality
+    and user experience.
+  inspection_advice: Check the vehicle’s software version history and confirm whether
+    recent OTA updates have introduced new issues or failed to resolve existing ones.
+    Look for error messages or system instability post-update.
+  sources: []
+- claim_key: megane4_elec_electrical_steering_assistance_
+  title: Steering Assistance Motor Failure (E-Tech)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issue with the electric steering assistance motor causing heavy
+    steering, likely due to overheating or system faults. This is not a standard wear-and-tear
+    issue but a known defect in the Renault Megane E-Tech model.
+  inspection_advice: Check for warning lights related to steering assistance and test
+    steering responsiveness under normal driving conditions. Listen for unusual noises
+    or vibrations from the steering column.
+  sources: []
+- claim_key: megane4_elec_electrical_air_conditioning_com
+  title: Air Conditioning Compressor/Fan Overheating (E-Tech)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The air conditioning compressor and ventilation fan may run excessively
+    (over 30 minutes) after the ignition is switched off, indicating a chronic electrical
+    or thermal management issue in the system.
+  inspection_advice: Test the air conditioning system by activating it and monitoring
+    its behavior after turning off the ignition. Check for unusual noises, overheating,
+    or prolonged operation of the fan/compressor.
+  sources: []
+- claim_key: megane4_elec_electrical_programmable_air_con
+  title: Programmable Air Conditioning Fault (E-Tech)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The programmable air conditioning system may fail to operate due to electrical
+    faults, unrelated to basic usage conditions like battery charge.
+  inspection_advice: Verify the programmable air conditioning settings and check if
+    the system responds correctly to user inputs. Look for error messages on the dashboard
+    related to climate control.
+  sources: []
+- claim_key: megane4_elec_electrical_card_key_synchroniza
+  title: Card Key Synchronization Issues (E-Tech)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic problem with the card key desynchronization, requiring manual
+    intervention to reset synchronization, which can be inconvenient and indicative
+    of a design flaw in the key system.
+  inspection_advice: Test the card key by attempting to unlock the door and start
+    the vehicle. If synchronization issues persist, check for error messages on the
+    dashboard and attempt to resynchronize the card.
+  sources: []
+- claim_key: megane4_elec_electrical_corroded_gas_pedal_c
+  title: Corroded Gas Pedal Connector Causing Power Loss (Renault Mégane E-Tech)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: A specific case where corrosion in the gas pedal connector caused power
+    loss and warning lights, resolved by cleaning the connector with an electrical
+    contact cleaner. This suggests a potential design or environmental exposure flaw
+    in the connector placement or material.
+  inspection_advice: Inspect the gas pedal connector for corrosion or oxidation. Clean
+    the connector with an electrical contact cleaner if necessary. Verify if the issue
+    resolves after cleaning.
+  sources:
+  - source_url: https://www.mycarly.com/tr/community/megane-elektrik-guc-kaybi-bfe267bd-747d-463a-a19c-e04687b187ab/
+    source_domain: mycarly.com
+    site_or_channel: mycarly.com
+    quote: '"gaz pedalındaki paslı bir konektörden kaynaklanıyordu. Sadece elektrik
+      kontak temizleyici ile temizledim ve düzgün bir şekilde yerine oturttum ve sorun
+      tamamen ortadan kalktı"'
+    independent: true
+- claim_key: megane4_elec_suspension_direksiyon_sertleşme
+  title: Steering stiffness and electric power steering motor failure
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Steering stiffness and electric power steering motor failures in the
+    Renault Megane can occur due to overheating of the electric steering system or
+    a faulty power steering motor. This can negatively impact driving safety.
+  inspection_advice: Test the steering for stiffness at low speeds. Monitor the force
+    required to turn the steering wheel. If there is an electric power steering motor
+    failure, the steering wheel will require more effort to turn.
+  sources: []
+- claim_key: megane4_elec_electrical_kart_kilitleme_siste
+  title: Key immobilizer system failures and synchronization issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In the Renault Megane, common issues with the key immobilizer system
+    include the key battery failing, key synchronization errors, and secondary 12V
+    battery drain caused by electromagnetic radiation interference. These problems
+    can lead to safety risks such as the vehicle failing to unlock or start.
+  inspection_advice: Check the condition of the key battery. Resynchronize the key
+    and inspect the secondary 12V battery for drain due to electromagnetic radiation
+    interference. Attempt to unlock the door using the internal key.
+  sources: []
+- claim_key: megane4_elec_electrical_e-tech_ev_şarj_siste
+  title: E-Tech EV Charging System Failures
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: E-Tech fully electric Renault Megane models frequently experience faults
+    in the charging cable and charging system, including issues where the battery
+    cannot be charged and the charging cable fails to lock properly. These problems
+    can render the vehicle unusable.
+  inspection_advice: Check the status of the lights on the charging cover. Verify
+    that the charging cable is properly locked and test for current at the charging
+    socket. Test the charging cable for faults.
+  sources: []
+- claim_key: megane4_elec_electrical_klima_ve_havalandırm
+  title: Faults in the air conditioning and ventilation system
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: In the air conditioning and ventilation system, the air conditioning
+    and ventilation fan continuing to operate after the ignition is turned off or
+    while the vehicle is being charged can indicate issues such as programmed air
+    conditioning faults and electrical faults. These problems can negatively impact
+    comfort and safety.
+  inspection_advice: Check if the air conditioning and ventilation fan operates after
+    the ignition is turned off or during charging. Test the air conditioning programming
+    and electrical circuits. Verify the battery charging status.
+  sources: []
+- claim_key: megane4_elec_electrical_charging_impossible_
+  title: Charging Impossible error due to AC Charger sensitivity to grid grounding
+    resistance
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Megane E-Tech's AC charging system (Chameleon Charger) is
+    overly sensitive to grid grounding resistance fluctuations, causing false 'Charging
+    Impossible' errors even with adequate infrastructure. This requires a software
+    update to adjust tolerance thresholds.
+  inspection_advice: Check if the vehicle frequently triggers 'Charging Impossible'
+    errors at home or public charging stations. Verify grid grounding resistance (should
+    be <2 Ohms) and confirm the latest BMS (Battery Management System) tolerance update
+    has been applied via a service visit.
+  sources: []
+- claim_key: megane4_elec_electrical|general_heat_pump_(climate_c
+  title: Heat pump (climate control) vibration/noise in cold weather
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Megane E-Tech exhibits excessive vibration and noise (described
+    as 'tractör benzeri uğultu') from the heat pump system when operating in temperatures
+    below -5°C. This requires an official acoustic isolation kit to mitigate the issue.
+  inspection_advice: Test the vehicle in cold conditions (below -5°C) and listen for
+    abnormal noise/vibration from the front of the car when the climate system is
+    activated. Confirm the servis has applied the Renault-provided acoustic isolation
+    kit (e.g., vibration dampeners on compressor mounts).
+  sources: []
+- claim_key: megane4_elec_electrical_openr_link_infotainm
+  title: OpenR Link infotainment system instability (CarPlay/Donma)
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Early software versions of the Megane E-Tech's OpenR Link system suffered
+    from Apple CarPlay freezing or screen blackouts during use. This was later resolved
+    via a firmware update (OpenR Link 2.2) and a manual reset procedure.
+  inspection_advice: Check if the infotainment system exhibits random freezes, black
+    screens, or CarPlay instability. Verify the latest software version (OpenR Link
+    2.2+) is installed. Test the manual reset procedure (holding the volume button
+    for 10 seconds).
+  sources: []
+- claim_key: megane4_elec_electrical_potential_misdiagnos
+  title: Potential Misdiagnosis Due to Generic OBD-II Scanner Use
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Generic OBD-II scanners designed for internal combustion engine vehicles
+    may incorrectly interpret or trigger P0420 codes in fully electric vehicles, leading
+    to false positives.
+  inspection_advice: Use an EV-specific OBD-II scanner to avoid misdiagnosis. Confirm
+    the scanner is compatible with Renault’s E-Tech Electric diagnostic protocols.
+  sources: []
+- claim_key: megane4_elec_electrical_confusion_between_fu
+  title: Confusion Between Fully Electric and Hybrid E-Tech Models
+  kind: known_issue
+  domain: electrical
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Renault’s E-Tech lineup includes both fully electric and hybrid models.
+    Misidentification of the vehicle type could lead to incorrect triggering of P0420
+    codes, as hybrid models have catalytic converters.
+  inspection_advice: Verify the vehicle’s powertrain configuration (fully electric
+    vs. hybrid) to rule out confusion between model variants. Check the vehicle identification
+    number (VIN) or consult the manufacturer’s documentation.
+  sources: []
+- claim_key: megane4_elec_electrical_infotainment_system_
+  title: Infotainment system instability (Megane E-TECH)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The mention of a dedicated 'Notice Megane E-TECH' section implies chronic
+    issues with the vehicle's infotainment or electrical systems, likely tied to software
+    or hardware incompatibilities.
+  inspection_advice: Test the infotainment system for crashes, unresponsiveness, or
+    graphical glitches. Verify connectivity with OpenR Link (Renault’s telematics
+    system) and check for error messages during operation.
+  sources: []
+- claim_key: megane4_elec_electrical_premature_motor_fail
+  title: Premature motor failures (130ch & 220ch)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Some Renault Megane E-Tech electric motors (both 130ch and 220ch variants)
+    have failed after only a few thousand kilometers, requiring costly replacements
+    and prolonged vehicle downtime.
+  inspection_advice: Check for service records confirming motor replacements or extended
+    warranty coverage for electrical propulsion components. Listen for unusual noises
+    or vibrations during acceleration.
+  sources: []
+- claim_key: megane4_elec_suspension_premature_cardan_and
+  title: Premature cardan and wheel bearing failures
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Cardan joints and wheel bearings have failed prematurely between 80,000
+    and 115,000 km, requiring expensive replacements (€2,000–€2,500 for a pair of
+    cardans).
+  inspection_advice: Listen for unusual clacking or rumbling noises while driving
+    on rough roads or during cornering. Check for excessive play in wheel bearings
+    and inspect cardan joints for wear or damage.
+  sources: []
+- claim_key: megane4_elec_general_fragile_2022-series_
+  title: Fragile 2022-series climate control compressor
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Climate control compressors on 2022-model Megane E-Tech vehicles have
+    shown premature failure, particularly after rapid charging sessions.
+  inspection_advice: Test the climate control system during inspection, especially
+    if the vehicle is a 2022 model. Listen for unusual noises from the compressor
+    and check for refrigerant leaks or reduced cooling performance.
+  sources: []
+- claim_key: megane4_elec_electrical_faulty_ac_charging_s
+  title: Faulty AC charging system (22 kW charger)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The AC charging system may fail to initiate or stop abruptly with error
+    messages, disrupting charging reliability.
+  inspection_advice: Test the charging functionality by plugging into a 22 kW charger
+    and monitoring for error messages or interruptions. Check for software updates
+    related to charging systems.
+  sources: []
+- claim_key: megane4_elec_electrical_malfunctioning_charg
+  title: Malfunctioning charging door/trappe de recharge
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The charging door may jam or fail to close properly after charging, potentially
+    causing charging interruptions or safety hazards.
+  inspection_advice: Manually test the charging door’s operation, ensuring it opens
+    and closes smoothly without sticking or misalignment. Verify if software updates
+    have addressed this issue.
+  sources: []
+- claim_key: megane4_elec_electrical_defective_multimedia
+  title: Defective multimedia system and instrument cluster bugs
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The OpenR Link multimedia system and instrument cluster suffer from frequent
+    bugs, including screen freezes, Bluetooth disconnections, rear camera failures,
+    and erroneous dashboard readings.
+  inspection_advice: Test the multimedia system, instrument cluster, and rear camera
+    during inspection. Check for software updates and verify if previous bugs have
+    been resolved. Look for signs of screen damage or overheating.
+  sources: []
+- claim_key: megane4_elec_general_poignées_de_porte_(d
+  title: Poignées de porte (door handles) malfunctioning in cold/humid conditions
+  kind: known_issue
+  domain: general
+  severity: low
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Door handles may fail to retract properly, particularly in cold or humid
+    conditions, causing inconvenience but not compromising safety.
+  inspection_advice: Test the door handles in various weather conditions to ensure
+    smooth operation. Check for signs of corrosion or mechanical wear.
+  sources: []
+- claim_key: megane4_elec_electrical_multimedia_screen_fr
+  title: Multimedia screen freezing and touch sensitivity issues
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The Renault Megane's multimedia system exhibits chronic freezing and
+    inconsistent touch responsiveness, likely due to software or hardware limitations
+    in the touchscreen interface.
+  inspection_advice: Check for screen responsiveness and lag during operation. Look
+    for signs of overheating or physical damage to the touchscreen area.
+  sources:
+  - source_url: https://www.youtube.com/watch?v=1AUCrXAlI6A
+    source_domain: Oto Tayfa
+    site_or_channel: Oto Tayfa
+    quote: '"multimedya ekranında donmalar ve dokunmatik hassasiyet sorunları"'
+    independent: true
+- claim_key: megane4_elec_electrical_dc_charging_power_co
+  title: DC charging power collapse in winter without preconditioning
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The DC charging performance significantly drops in cold weather if preconditioning
+    is not activated, reducing charging efficiency and range.
+  inspection_advice: Test the charging performance in winter conditions and confirm
+    if preconditioning is enabled. Look for reduced charging speeds or inconsistent
+    power delivery.
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-5-ev
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"DC charging power that collapses in winter without preconditioning."'
+    independent: true
+- claim_key: megane4_elec_electrical_false_p0420_code_tri
+  title: False P0420 Code Trigger in Fully Electric Renault Megane E-Tech (2026)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Megane E-Tech Electric (2026) is a fully electric vehicle
+    with no internal combustion engine or catalytic converter. The appearance of the
+    P0420 code, which is related to catalytic converter efficiency, is an anomaly
+    and likely stems from misdiagnosis or misinterpretation by generic OBD-II scanners
+    or software.
+  inspection_advice: Verify the vehicle’s OBD-II system is using the correct EV-specific
+    diagnostic protocol. Check for potential confusion with hybrid E-Tech models (which
+    do have catalytic converters) or faulty scanner misinterpretation. Inspect for
+    software or firmware anomalies in the vehicle’s ECU.
+  sources: []

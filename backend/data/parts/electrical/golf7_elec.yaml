@@ -1,6 +1,7 @@
 part_id: golf7_elec
 part_type: electrical
 display_name: Volkswagen Golf 7 Electrical Systems
+manufacturer: volkswagen
 known_also_as:
 - Volkswagen Golf 7 electrical
 - Volkswagen Golf 7 electronics
@@ -129,8 +130,8 @@ claims:
   kind: known_issue
   domain: electrical
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The MIB3 system controls critical functions like climate control, navigation,
     and vehicle settings. Freezing mid-drive can force the driver to pull over, creating
@@ -140,14 +141,22 @@ claims:
     for version 3xxx or higher. Test touchscreen responsiveness, climate control adjustments,
     and Android Auto/Apple CarPlay connectivity. Look for lag, freezing, or unintended
     temperature changes during operation.
-  sources: []
+  sources:
+  - source_url: https://carhealth.co.uk/blog/vw-golf-mk8-buyers-guide-2025
+    source_domain: carhealth.co.uk
+    site_or_channel: carhealth.co.uk
+    quote: '"System freezing or becoming unresponsive... Climate control temperature
+      changes unintentionally... Laggy response to touch inputs (1-3 second delays)...
+      Wireless Android Auto/Apple CarPlay disconnecting frequently... Sat-nav freezing
+      or providing incorrect routes..."'
+    independent: true
 - claim_key: golf7_elec_electrical_touch-sensitive_clim
   title: Touch-Sensitive Climate Control Failures
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The lack of tactile feedback and reliability issues with touch-sensitive
     climate controls make them impractical for many drivers. Unresponsiveness, especially
@@ -155,7 +164,14 @@ claims:
   inspection_advice: Test temperature and fan speed adjustments via touch controls
     from a cold start. Verify if swipes are registered and if accidental adjustments
     occur. Assess whether the design aligns with your driving preferences.
-  sources: []
+  sources:
+  - source_url: https://carhealth.co.uk/blog/vw-golf-mk8-buyers-guide-2025
+    source_domain: carhealth.co.uk
+    site_or_channel: carhealth.co.uk
+    quote: '"Difficult to use while driving (no tactile feedback)... Accidental adjustments
+      from resting hand... Unresponsive in cold weather (first 5-10 minutes)... Slider
+      not always registering swipes..."'
+    independent: true
 - claim_key: golf7_elec_electrical_digital_cockpit_inst
   title: Digital Cockpit Instrument Cluster Glitches
   kind: known_issue
@@ -176,8 +192,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 48V mild hybrid system in the 1.5 eTSI engine relies on a start-stop
     function that can fail due to battery degradation or software issues. This leads
@@ -186,7 +202,13 @@ claims:
   inspection_advice: Check for warning messages like 'Start-stop system temporarily
     unavailable' and test if the engine restarts smoothly after stopping. Listen for
     vibrations or rough idling during restarts.
-  sources: []
+  sources:
+  - source_url: https://carhealth.co.uk/blog/vw-golf-mk8-buyers-guide-2025
+    source_domain: carhealth.co.uk
+    site_or_channel: carhealth.co.uk
+    quote: '"Warning: ''Start-stop system temporarily unavailable''... Engine fails
+      to restart after stop (requiring manual restart)... Rough restarts with vibration..."'
+    independent: true
 - claim_key: golf7_elec_engine_ignition_coil_and_sp
   title: Ignition coil and spark plug failures causing engine misfires
   kind: known_issue
@@ -207,8 +229,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Timing chain tensioner failures in Mk7 Golf models can lead to catastrophic
     engine damage if the chain jumps or breaks, causing severe internal damage and
@@ -217,7 +239,12 @@ claims:
     startup or warm-up. Check for oil leaks around the timing chain cover, as insufficient
     lubrication can exacerbate tensioner failure. Verify service history for timing
     chain inspections/replacements.
-  sources: []
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"Timing chain tensioner issues on some engines"'
+    independent: true
 - claim_key: golf7_elec_engine_water_pump_and_therm
   title: Water pump and thermostat housing leaks
   kind: known_issue
@@ -423,8 +450,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 1.5 TSI Evo engine in the Golf VII facelift (7.5) may exhibit unreliability
     if the software update has not been applied, potentially leading to performance
@@ -432,14 +459,19 @@ claims:
   inspection_advice: Confirm whether the vehicle has received the required software
     update for the 1.5 TSI Evo engine. Check for error codes or warning lights related
     to engine management.
-  sources: []
+  sources:
+  - source_url: https://carreliabilityreport.com/en/reliability/volkswagen-golf-2012-2019-essence
+    source_domain: carreliabilityreport.com
+    site_or_channel: carreliabilityreport.com
+    quote: '"the 1.5 TSI is also recommendable if the software update has been performed"'
+    independent: true
 - claim_key: golf7_elec_general_2.0_tsi_gti/r_models
   title: 2.0 TSI GTI/R models require higher maintenance budget
   kind: known_issue
   domain: general
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 2.0 TSI engines in GTI and R models are robust but have higher maintenance
     costs, particularly for components like the water pump and DSG/Haldex oil changes,
@@ -447,7 +479,13 @@ claims:
   inspection_advice: Review maintenance records for water pump replacements and DSG/Haldex
     oil changes. Check for signs of fluid leaks or unusual noises from the engine
     bay that could indicate water pump failure.
-  sources: []
+  sources:
+  - source_url: https://carreliabilityreport.com/en/reliability/volkswagen-golf-2012-2019-essence
+    source_domain: carreliabilityreport.com
+    site_or_channel: carreliabilityreport.com
+    quote: '"GTI and R versions (2.0 TSI) are robust but require a significant maintenance
+      budget (water pump, DSG/Haldex oil changes)"'
+    independent: true
 - claim_key: golf7_elec_electrical_touchscreen_and_info
   title: Touchscreen and infotainment system glitches
   kind: known_issue
@@ -491,14 +529,20 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Common issues with automatic wiper and headlight systems due to sensor
     failures.
   inspection_advice: Test automatic wiper and headlight activation under various weather
     conditions. Inspect sensor functionality for responsiveness and accuracy.
-  sources: []
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Another weak spot is the rain and light sensors, which can start to exhibit
+      errors - most commonly a malfunctioning automatic wiper or headlight start."'
+    independent: true
 - claim_key: golf7_elec_fuel system_high-pressure_fuel_p
   title: High-pressure fuel pump failure in TDI engines
   kind: known_issue
@@ -586,15 +630,24 @@ claims:
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Unexpected refrigerant leaks causing poor cooling or complete loss of
     air conditioning functionality, even in relatively young vehicles.
   inspection_advice: Check for poor cooling performance or complete loss of air conditioning.
     Inspect air conditioning system for leaks, especially around the air conditioning
     radiator.
-  sources: []
+  sources:
+  - source_url: https://en.volkswagenclub.net/article/most-unexpected-faults-and-problems-volkswagen-golf-vii-a7-2012-2021-111
+    source_domain: en.volkswagenclub.net
+    site_or_channel: en.volkswagenclub.net
+    quote: '"Another less expected problem is a refrigerant leak from the air conditioning
+      system, which manifests itself as poor cooling or a complete loss of air conditioning
+      functionality. In some cases, the fault occurs in cars as young as three to
+      five years old, with no apparent cause (e.g. damage to the air conditioning
+      radiator from stones)."'
+    independent: true
 - claim_key: golf7_elec_electrical_start-stop_system_co
   title: Start-stop system controller failure
   kind: known_issue
@@ -624,8 +677,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early-production EA288 1.6 TDI (CRKB) engines (pre-Sept. 2014) suffer
     from a faulty water pump control slide, causing coolant temperature to spike to
@@ -633,7 +686,15 @@ claims:
   inspection_advice: Check for coolant leaks around the water pump, verify coolant
     temperature gauge readings during a test drive, and inspect for coolant warning
     light activation. Confirm production week (pre-Sept. 2014) via VIN.
-  sources: []
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Water Pump Faulty (EA288 until Sept. 2014) from 60,000 km On early-production
+      EA288 1.6 TDI CRKB units (until September 2014), a faulty water pump control
+      slide can lead to overheating. Coolant temperature rises to up to 130°C. Symptoms:
+      Coolant warning light, temperature rise to 130°C, engine protection shutdown"'
+    independent: true
 - claim_key: golf7_elec_fuel system_continental_injector
   title: Continental Injector Failure (Dieselgate-Related)
   kind: known_issue
@@ -692,8 +753,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Early EA288 2.0 TDI engines (pre-week 36/2014) suffer from coolant pump
     seizure, causing catastrophic overheating and engine shutdown. This defect is
@@ -701,7 +762,13 @@ claims:
   inspection_advice: Check production week via VIN (pre-week 36/2014), monitor coolant
     temperature gauge during test drives, and listen for unusual coolant pump noises.
     Verify for coolant leaks or overheating history.
-  sources: []
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"The coolant pump on EA288 engines built before week 36/2014 can seize
+      (VW TPI, engine overheating, $880–990)"'
+    independent: true
 - claim_key: golf7_elec_transmission_dq200_dry-clutch_dsg
   title: DQ200 Dry-Clutch DSG Judder & Mechatronics Wear
   kind: known_issue
@@ -772,8 +839,8 @@ claims:
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The 2016 Volkswagen Golf 7 1.4 TSI exhibits a chronic issue where the
     4th coil fails intermittently, causing a noticeable surge (tekleme) at 2000+ RPM.
@@ -783,14 +850,22 @@ claims:
     gears. Test each coil individually (swap with known-good coils) to confirm if
     the 4th coil is the root cause. Look for error codes (P0300-P0312) when the issue
     occurs, as they may not always appear.
-  sources: []
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/volkswagen-golf-7-1-4-tsi-tekleme-sorunu-279.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"ilk fark ettiğimde, motor arıza ışığı yandığı için aracı bilgisayara
+      bağlatmıştım ve yapılan kontrolde **4. bobinin arıza verdiği tespit edilmişti**.
+      Ancak, dün aynı sorunu tekrar yaşadığımda ve yeniden bilgisayara bağlattığımda,
+      bu kez herhangi bir hata kodu veya arıza kaydı çıkmadı."'
+    independent: true
 - claim_key: golf7_elec_engine_throttle_body_carbon
   title: Throttle Body Carbon Buildup-Induced Surge
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 7 1.4 TSI has a documented issue where throttle body carbon
     deposits cause intermittent surging (tekleme) at higher RPMs, particularly after
@@ -799,14 +874,21 @@ claims:
   inspection_advice: Inspect the throttle body for black carbon deposits. If present,
     a professional cleaning (or replacement) is required. Listen for surging at 2000+
     RPM in higher gears, especially after cold starts or when the engine is warm.
-  sources: []
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/volkswagen-golf-7-1-4-tsi-tekleme-sorunu-279.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"sorunun boğaz kelebeği ile ilgili olabileceğini, kelebeğin sökülerek
+      detaylı bir temizlik işlemi yapılması gerektiğini ve kurum birikmesinin bu tür
+      dalgalanmalara sebep olabileceğini söylediler."'
+    independent: true
 - claim_key: golf7_elec_electrical_chronic_epc_(electro
   title: Chronic EPC (Electronic Throttle Control) sensor failure
   kind: known_issue
   domain: electrical
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 7 has a recurring issue with the EPC system, where the electronic
     throttle control sensor itself can fail, leading to drivability problems like
@@ -814,41 +896,56 @@ claims:
   inspection_advice: Check for persistent EPC warning lights after restarting the
     engine. Look for error codes related to throttle position sensor or EPC system
     via a diagnostic scan.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/golf-7-epc-ve-motor-ariza-isigi--114225867
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Bozuk gaz pedalı sensörü
+    independent: true
 - claim_key: golf7_elec_engine_mass_airflow_sensor_
   title: Mass airflow sensor (MAF) issues
   kind: known_issue
   domain: engine
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 7 experiences recurring problems with the mass airflow sensor,
     which can cause incorrect air-fuel mixture calculations, leading to performance
     and emissions issues.
   inspection_advice: Check for error codes related to the MAF sensor. Inspect the
     sensor for dirt buildup or physical damage.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/golf-7-epc-ve-motor-ariza-isigi--114225867
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Hava akış sensörü sorunları
+    independent: true
 - claim_key: golf7_elec_fuel system_fuel_pump_failure_(r
   title: Fuel pump failure (recurring in Golf 7)
   kind: known_issue
   domain: fuel system
   severity: medium
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: The Golf 7 has reported cases of failing fuel pumps, which can lead to
     fuel delivery issues, triggering warning lights and drivability problems.
   inspection_advice: Listen for unusual noises from the fuel tank when the ignition
     is turned on. Check for fuel pressure issues via diagnostic scan.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/golf-7-epc-ve-motor-ariza-isigi--114225867
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Yakıt pompası arızası
+    independent: true
 - claim_key: golf7_elec_engine_turbocharger_reliabi
   title: Turbocharger reliability concerns (Golf 7 TSI models)
   kind: known_issue
   domain: engine
   severity: high
-  confidence: 0.0
-  status: held
+  confidence: 0.6
+  status: review
   promoted_by: pending_human
   rationale: Turbocharged Golf 7 models (TSI) have reported turbocharger failures,
     which can lead to significant performance loss, increased emissions, and potential
@@ -856,10 +953,14 @@ claims:
   inspection_advice: Check for unusual whining or grinding noises from the turbo area.
     Inspect for oil leaks around the turbocharger and look for error codes related
     to turbo performance.
-  sources: []
+  sources:
+  - source_url: https://forum.donanimhaber.com/golf-7-epc-ve-motor-ariza-isigi--114225867
+    source_domain: forum.donanimhaber.com
+    site_or_channel: forum.donanimhaber.com
+    quote: Turboşarj sorunları
+    independent: true
 - claim_key: golf7_elec_transmission_chronic_tcm_(transmi
-  title: Chronic TCM (Transmission Control Module) Communication Failure on MQB-EVO
-    EA211/EA888 TSI/TFSI Models
+  title: TCM communication failure on MQB-EVO TSI/TFSI
   kind: known_issue
   domain: transmission
   severity: high
@@ -884,4 +985,26 @@ claims:
       Durum: Bekliyo
 
       Akü sarji yaptım. Ama olmadı. Yanık kokusu var.'
+    independent: true
+- claim_key: golf7_elec_engine_wet_timing_belt_(oil
+  title: Wet Timing Belt (Oil Bath) Interval Neglect (EA288)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: EA288 engines use a **wet timing belt** (not a chain), which requires
+    strict interval maintenance (typically 120,000–150,000 km). Neglecting this can
+    lead to catastrophic engine damage due to belt failure.
+  inspection_advice: Verify timing belt service history (must be checked every 120,000–150,000
+    km). Listen for unusual engine noises (e.g., rattling) during test drives, which
+    may indicate belt wear. Confirm oil bath condition for contamination.
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Wet Belt in Oil Bath — Interval Often Overlooked from 130,000 km The
+      EA288 uses a wet timing belt instead of a chain. The 120,000–150,000 km interval
+      is critical; neglecting it risks catastrophic engine failure."'
     independent: true

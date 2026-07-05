@@ -7,21 +7,24 @@ Every request is a plain DB lookup: match variant → read claims → return.
 import time
 import uuid
 import logging
-from datetime import date
+from dataclasses import asdict
+from datetime import date, datetime, timezone
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from backend.api.schemas import (
     AnalyzeRequest, AnalyzeResponse, CoverageState, RiskItem, SourceRef,
 )
+from backend import config
 from backend.config import ALLOWED_ORIGINS, STANDARD_DISCLAIMER
 from backend.core.context import ListingContext
 from backend.core.matcher import MatchResult, match_variant
 from backend.core.resolver import ClaimResult, resolve_claims
 from backend.db.models import AnalysisLog, ClaimSource
 from backend.db.session import db_reachable, get_db
+from backend.observability import log_analysis_jsonl, read_recent
 
 log = logging.getLogger(__name__)
 
@@ -44,11 +47,15 @@ def health():
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
 
-@app.post("/analyze", response_model=AnalyzeResponse)
-def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
-    started = time.monotonic()
-    meta    = payload.ad_metadata or {}
+def run_analysis(
+    meta: dict, db: Session,
+) -> tuple[ListingContext, MatchResult, list[ClaimResult], AnalyzeResponse]:
+    """The actual serve path: ad_metadata -> (context, match, served claims, response).
 
+    Pulled out of the /analyze route so backend/tools/replay.py can re-run a
+    logged request through the *real* pipeline rather than a hand-copied
+    reimplementation that could silently drift from it.
+    """
     ctx = ListingContext(
         mileage_km   = meta.get("mileage_km"),
         age_years    = (date.today().year - meta["year"]) if meta.get("year") else None,
@@ -56,18 +63,11 @@ def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
         fuel_type    = meta.get("fuel_type"),
         transmission = meta.get("transmission"),
         description  = (meta.get("description") or "").lower(),
+        equipment    = meta.get("equipment") or None,
     )
 
-    try:
-        match  = match_variant(meta, db)
-        served = resolve_claims(match, db, ctx)
-    except Exception:
-        log.exception("analyze error for meta=%r", _safe_meta(meta))
-        # HUMAN DECISION: return 200+UNAVAILABLE vs raise 5xx.
-        # 5xx causes background.js to show "Analysis failed" (honest).
-        # 200+UNAVAILABLE with risks=[] looks identical to 0 risks in current UI.
-        # We return 200+UNAVAILABLE and rely on summary text to signal it.
-        return _unavailable_response()
+    match  = match_variant(meta, db)
+    served = resolve_claims(match, db, ctx)
 
     state = _coverage_state(match, served)
     risks = [_claim_to_risk(cr, db) for cr in served]
@@ -82,9 +82,45 @@ def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=match.variant_ids,
     )
+    return ctx, match, served, resp
+
+
+@app.post("/analyze", response_model=AnalyzeResponse)
+def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
+    started = time.monotonic()
+    meta    = payload.ad_metadata or {}
+
+    try:
+        ctx, match, served, resp = run_analysis(meta, db)
+    except Exception as exc:
+        log.exception("analyze error for meta=%r", _safe_meta(meta))
+        # HUMAN DECISION: return 200+UNAVAILABLE vs raise 5xx.
+        # 5xx causes background.js to show "Analysis failed" (honest).
+        # 200+UNAVAILABLE with risks=[] looks identical to 0 risks in current UI.
+        # We return 200+UNAVAILABLE and rely on summary text to signal it.
+        resp = _unavailable_response()
+        _log_analysis_jsonl(payload, None, None, resp, started, error=str(exc))
+        return resp
 
     _log_analysis(db, meta, match, served, resp, started)
+    _log_analysis_jsonl(payload, ctx, match, resp, started)
     return resp
+
+
+# ── Debug read path (docs/design_flaws.md "Observability gap") ─────────────
+
+@app.get("/debug/analyses")
+def debug_analyses(limit: int = 20, model: str | None = None):
+    """Recent full /analyze payloads, off by default — see ENABLE_DEBUG_ENDPOINT.
+
+    Primary read path is the CLI (`python -m backend.tools.analyses`), which reads
+    the same JSONL file with no auth story needed. This endpoint exists for when
+    only HTTP access (not shell access) to the deploy host is available, and must
+    be explicitly turned on to use it.
+    """
+    if not config.ENABLE_DEBUG_ENDPOINT:
+        raise HTTPException(status_code=404)
+    return {"analyses": read_recent(limit=limit, model=model)}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -221,3 +257,40 @@ def _log_analysis(
 def _safe_meta(meta: dict) -> dict:
     """Minimal fields safe to log without PII."""
     return {k: meta.get(k) for k in ("make", "model", "year", "fuel_type")}
+
+
+def _log_analysis_jsonl(
+    payload: AnalyzeRequest,
+    ctx: ListingContext | None,
+    match: MatchResult | None,
+    resp: AnalyzeResponse,
+    started: float,
+    error: str | None = None,
+) -> None:
+    """Full-payload log — request + gating context + full response, one line per
+    analysis. Answers "what did the buyer see and why" after the fact, and is the
+    input backend/tools/replay.py needs to re-run a logged request through a fix.
+
+    Entire body is best-effort, same as _log_analysis: logging must never break
+    the serve path, including record construction, not just the file write.
+    """
+    try:
+        record = {
+            "id": str(uuid.uuid4()),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "listing_url": payload.listing_url,
+            "ad_metadata": payload.ad_metadata,
+            "debug": payload.debug,
+            "context": asdict(ctx) if ctx is not None else None,
+            "match": (
+                {"variant_ids": match.variant_ids, "method": match.method, "notes": match.notes}
+                if match is not None else None
+            ),
+            "response": resp.model_dump(mode="json"),
+            "duration_ms": int((time.monotonic() - started) * 1000),
+        }
+        if error is not None:
+            record["error"] = error
+        log_analysis_jsonl(record)
+    except Exception:
+        log.warning("Failed to build analyses.jsonl record", exc_info=True)
