@@ -249,71 +249,6 @@ claims:
       nedeniyle bu sensörün zamanla değiştirilmesi gerekir. Oksijen sensörü, ECU’ya
       hayati öneme sahip hava-yakıt karışımı bilgilerini sağlar."'
     independent: true
-- claim_key: h5h_130_engine_timing_cover_leakage
-  title: Timing Cover Leakage & Recall Risk (R9M 1.6 dCi)
-  kind: known_issue
-  domain: engine
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Recall on 160 hp versions due to timing cover leaks, with potential for
-    severe engine failure if unaddressed.
-  inspection_advice: Verify recall status for 160 hp R9M models. Check for oil leaks
-    around the timing cover.
-  sources: []
-- claim_key: h5h_130_engine_intercooler_condensa
-  title: Intercooler Condensation & Connecting Rod Failure (R9M 1.6 dCi)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Condensation water from the intercooler causes connecting rod failures,
-    especially with short oil change intervals and frequent short trips.
-  inspection_advice: Listen for loud knocking noises. Check for oil pressure loss
-    or sudden engine stalls. Verify oil change history.
-  sources: []
-- claim_key: h5h_130_emissions_egr_cooler_crack_&_c
-  title: EGR Cooler Crack & Coolant Loss (R9M 1.6 dCi)
-  kind: known_issue
-  domain: emissions
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: EGR cooler cracks allow coolant into the intake system, causing power
-    loss and potential engine damage from water ingestion.
-  inspection_advice: Check for coolant loss without visible leaks, white smoke, or
-    exhaust smells in the cabin.
-  sources: []
-- claim_key: h5h_130_engine_timing_chain_stretch
-  title: Timing Chain Stretch (R9M 1.6 dCi)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Timing chain stretches prematurely (~140,000–150,000 km), risking valve
-    contact and catastrophic engine failure despite a claimed 250,000 km lifespan.
-  inspection_advice: Listen for rattling noises on cold start or harsh engine noise.
-    Check for engine warning lights.
-  sources: []
-- claim_key: h5h_130_engine_valve_cover/cylinder
-  title: Valve Cover/Cylinder Head Damage Risk (M9R 2.0 dCi)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Improper injector removal damages the valve cover (also serving as the
-    camshaft bearing), inevitably destroying the cylinder head.
-  inspection_advice: Verify no history of improper injector removal. Check for signs
-    of cylinder head damage during inspections.
-  sources: []
 - claim_key: h5h_130_electrical_r-link_2_infotainmen
   title: R-Link 2 Infotainment & Weak 12V Battery
   kind: known_issue
@@ -327,28 +262,6 @@ claims:
   inspection_advice: Test the 12V battery voltage and check for R-Link 2 system responsiveness
     or errors.
   sources: []
-- claim_key: h5h_130_engine_vvt_solenoid_failure
-  title: VVT solenoid failure (H5F TCe)
-  kind: known_issue
-  domain: engine
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The H5F TCe petrol engine (2012) suffers from variable valve timing (VVT)
-    solenoid failures, which can disrupt engine performance and efficiency.
-  inspection_advice: Check for error codes related to VVT solenoids and listen for
-    unusual noises during cold starts, which may indicate solenoid or phaser issues.
-  sources:
-  - source_url: https://www.enginecode.uk/renault
-    source_domain: enginecode.uk
-    site_or_channel: enginecode.uk
-    quote: 'H5F TCe (2012)
-
-      Intake and exhaust phasing
-
-      VVT solenoid failure'
-    independent: true
 - claim_key: h5h_130_engine_oil_contamination_ca
   title: Oil contamination causing VVT phaser sticking (H5H TCe)
   kind: known_issue
@@ -589,19 +502,6 @@ claims:
       play with oil viscosity, those injectors will fail and the engine will most
       likely overheat."'
     independent: true
-- claim_key: h5h_130_fuel system_gas_blockage_in_falk
-  title: Gas Blockage in Falke HT-BT Combis
-  kind: known_issue
-  domain: fuel system
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Chronic issue where the gas blockage prevents ignition and operation,
-    requiring servicing to resolve.
-  inspection_advice: Check for proper gas supply and ensure no blockages exist in
-    the gas line or burner assembly. Verify the combustion chamber and gas valve functionality.
-  sources: []
 - claim_key: h5h_130_electrical_overheating_due_to_f
   title: Overheating Due to Faulty Safety Thermostat
   kind: known_issue
@@ -615,22 +515,6 @@ claims:
   inspection_advice: Check for proper water pressure and ensure the safety thermostat
     is functioning correctly. Look for signs of overheating or dry combustion.
   sources: []
-- claim_key: h5h_130_emissions_exhaust_gas_system_f
-  title: Exhaust Gas System Failures in Falke HT (Hermetic) and Falke BT (Chimney)
-    Combis
-  kind: known_issue
-  domain: emissions
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Chronic defects in the exhaust system, including fan failure, electronic
-    card issues, or improper installation of exhaust air ducts in hermetic models,
-    and baca-related problems in chimney models.
-  inspection_advice: 'For Falke HT: Inspect the fan, electronic control card, and
-    exhaust air duct installation. For Falke BT: Check baca for proper draft, blockages,
-    and baca sensor functionality.'
-  sources: []
 - claim_key: h5h_130_electrical_water_pressure_senso
   title: Water Pressure Sensor Failure
   kind: known_issue
@@ -643,35 +527,6 @@ claims:
     and operational issues.
   inspection_advice: Verify water pressure levels and inspect the water pressure sensor
     for proper functionality and wiring integrity.
-  sources: []
-- claim_key: h5h_130_electrical_faulty_hot_water_tem
-  title: Faulty Hot Water Temperature Sensor (NTC)
-  kind: known_issue
-  domain: electrical
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Chronic failure of the hot water temperature sensor (NTC) leading to
-    incorrect temperature readings and operational errors.
-  inspection_advice: Check the hot water temperature sensor and its wiring for any
-    signs of damage, short circuits, or improper connections.
-  sources: []
-- claim_key: h5h_130_general_chronic_limescale_(k
-  title: Long-term buildup of mineral deposits (limescale) in the Falke HT-BT combination
-    heat exchanger units
-  kind: known_issue
-  domain: general
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Persistent accumulation of limescale is causing reduced system efficiency
-    and increasing the risk of component failure, particularly in newly installed
-    units
-  inspection_advice: Inspect for limescale deposits in the heat exchanger, piping,
-    and filter assemblies. Monitor for decreased performance, abnormal operational
-    noises, or diagnostic trouble codes (DTCs) related to overheating or sensor malfunctions
   sources: []
 - claim_key: h5h_130_engine_timing_chain_tension
   title: Timing chain tensioner failure (hydraulic dependency)
