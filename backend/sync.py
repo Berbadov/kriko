@@ -190,10 +190,23 @@ def _drivetrain_compatible(claim_data: dict, variant_drivetrain: str | None) -> 
 
 def sync_variants(db: Session) -> int:
     count = 0
+    skipped_drafts = 0
     for path in sorted(DATA_DIR.glob("variants/*.yaml")):
         with open(path) as f:
             rows = yaml.safe_load(f)
         for row in rows:
+            # knowledge.catalog.discover's write_variants_yaml() scaffolds
+            # draft rows (engine/transmission/fuel only — no verified hp/year
+            # figures, since Wikipedia's infobox doesn't reliably give a
+            # precise per-market power breakdown and inventing one would be
+            # exactly the kind of fabricated car data this project exists to
+            # reduce). A human fills in real numbers and removes `draft` before
+            # it's servable — refuse to sync it in the meantime rather than
+            # silently ignoring the unmapped column.
+            if row.get("draft"):
+                skipped_drafts += 1
+                continue
+            row = {k: v for k, v in row.items() if k != "draft"}
             obj = db.get(Variant, row["id"])
             if obj is None:
                 obj = Variant()
@@ -201,6 +214,11 @@ def sync_variants(db: Session) -> int:
             for k, v in row.items():
                 setattr(obj, k, v)
             count += 1
+    if skipped_drafts:
+        log.warning(
+            "Skipped %d draft variant row(s) — fill in power/year figures and "
+            "remove 'draft: true' before they're servable.", skipped_drafts,
+        )
     return count
 
 
