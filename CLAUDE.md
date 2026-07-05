@@ -38,3 +38,26 @@ engine/gearbox/mileage and predictable from the ad?"* If yes, it's what we exist
 > Aligning it — mileage-gated claims, explicit maintenance-interval/"not mentioned in ad"
 > claims, and an "inspection already covers this" filter — is open work. Honour this principle
 > in any claim-selection change.
+
+## Scalability principle — no hardcoded car data (READ THIS BEFORE ADDING A MAKE/MODEL/CODE LIST)
+
+Kriko must generalize to thousands of cars, not the handful onboarded today. Hardcoding
+specific makes, models, engine codes, or gearbox codes as Python constants is a
+**scalability bug, not a shortcut** — every hardcoded list is a manual edit someone has
+to remember to make for every new car, and history here shows that edit gets forgotten
+(`SIBLING_CODE_FAMILIES` going stale was Flaw 1 in `docs/design_flaws.md`; `normalize.py`'s
+`_MAKE_MAP`/`_MODEL_MAP` were the same failure mode).
+
+**Before adding a fixed list of car-specific values, ask:** can this be *derived* from the
+catalog (`backend/data/**/*.yaml`) instead of hand-enumerated? `catalog_code_manufacturers()`
+in `knowledge/stoplists.py` is the reference pattern — it reads manufacturer-per-code
+straight off the part YAMLs, so a new part is covered the moment its stub exists, with no
+separate registration step to forget.
+
+**Exception:** small, genuinely closed vocabularies (fuel types, transmission
+technologies, a handful of spelling/abbreviation aliases) are fine as constants — this
+rule is about data that grows with car *coverage*, not fixed engineering categories.
+
+Onboarding a new car model must never require a manual Python dict/list edit in
+`normalize.py` or `stoplists.py` — only new YAML data, ideally pipeline-generated rather
+than hand-authored (see `docs/USAGE.md`'s onboarding steps).
