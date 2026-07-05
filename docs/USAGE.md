@@ -71,35 +71,38 @@ export EXA_API_KEY=...
 ## 4. Add a new car model (part-centric "Lego" pipeline)
 
 Kriko researches each **part revision** once (K9K engine, EDC gearbox) and assembles
-claims per variant at sync time. Adding a new model is four steps:
+claims per variant at sync time. Adding a new model is five steps — the pipeline
+scaffolds Steps 1 and 3 for you; a human reviews and fills in the figures Wikipedia
+doesn't reliably give (per-market horsepower, exact trim years) before they're used.
 
-**Step 1 — Variants YAML** — what configs exist
-
-Create `backend/data/variants/{make}_{model}.yaml`. Copy from `renault_megane_4.yaml`.
-Each row is one engine/trim combination with cc, hp, year range, fuel, transmission.
-
-**Step 2 — Catalog discovery** — enumerate the part codes
+**Step 1 — Catalog discovery + variants scaffold** — what configs exist
 
 ```bash
-python -m knowledge.catalog.discover --make renault --model megane_4
+python -m knowledge.catalog.discover --make renault --model megane_4 --write-variants
 # → K9K (k9k, diesel), H5H (h5h, petrol), EDC (edc, transmission) …
 ```
 
-This reads the Wikipedia article for the model and extracts engine codes from the infobox.
-Use `--write-fitment --dry-run` to preview the fitment YAML it would generate.
+This reads the Wikipedia article for the model, extracts engine/transmission codes
+from the infobox, and writes a **draft** `backend/data/variants/{make}_{model}.yaml`
+(one row per engine × transmission combination, marked `draft: true`). Wikipedia
+doesn't reliably give per-market power figures or exact trim years, so those fields
+are left unset rather than guessed — fill them in from a manufacturer spec sheet or
+TecDoc, then remove `draft: true`. `backend/sync.py` refuses to sync draft rows.
+If `backend/data/variants/{make}_{model}.yaml` already exists, this step is skipped
+(never overwrites hand-filled data). Use `--dry-run` to preview without writing.
+
+**Step 2 — (included above)** catalog discovery also prints the research targets
+(part codes) needed for Step 4.
 
 **Step 3 — Fitment YAML** — map variant_id → part codes
 
-Create `backend/data/fitment/{make}_{model}.yaml`:
-```yaml
-- variant_id: megane4_k9k_90
-  engine_family: k9k
-  transmission_code: manual
-
-- variant_id: megane4_h5h_140
-  engine_family: h5h
-  transmission_code: edc
+```bash
+python -m knowledge.catalog.discover --make renault --model megane_4 --write-fitment
 ```
+
+Matches the discovered engine/transmission specs to the variants YAML from Step 1 and
+writes/updates `backend/data/fitment/{make}_{model}.yaml` automatically — hand-curated
+extra keys on existing rows are preserved. Use `--dry-run` to preview.
 
 **Step 4 — Run the pipeline per part**
 
