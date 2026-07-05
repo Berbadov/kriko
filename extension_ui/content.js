@@ -148,8 +148,21 @@ function mapTechnicalDetails(details) {
       mapped.engine_volume_cc = value;
       continue;
     }
-    if (key.includes("motor gücü") || key.includes("motor gucu") || key.includes("maksimum güç") || key.includes("maksimum guc")) {
+    if (key.includes("motor gücü") || key.includes("motor gucu")) {
+      // Clean single value (e.g. "140 hp") — always wins over the composite
+      // "Maksimum Güç" field below, which also carries kW and rpm.
       mapped.power_hp = value;
+      continue;
+    }
+    if (key.includes("maksimum güç") || key.includes("maksimum guc")) {
+      if (!mapped.power_hp) {
+        // "Maksimum Güç" is composite (e.g. "140 hp (103 kw) / 5.000 rpm").
+        // Extracting the raw string here and letting numberFromText() strip
+        // all non-digits later concatenates hp+kW+rpm into garbage like
+        // "1401035000" — pull out just the hp figure instead.
+        const hpMatch = value.match(/(\d+)\s*hp/i);
+        mapped.power_hp = hpMatch ? hpMatch[1] : value;
+      }
       continue;
     }
     if (key.includes("kasa tipi")) {
