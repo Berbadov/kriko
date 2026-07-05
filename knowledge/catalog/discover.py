@@ -552,6 +552,72 @@ def discover(
                         transmissions=all_tx_codes, source="wikitext")
 
 
+def write_variants_yaml(
+    make: str, model: str, catalog: ModelCatalog, dry_run: bool = False
+) -> list[dict]:
+    """Scaffold backend/data/variants/{make}_{model}.yaml from discovered engine
+    codes and transmissions — closes docs/USAGE.md's onboarding Step 1, the one
+    fully-manual step left in the 4-step flow (Step 3, fitment, already had an
+    automated path via write_fitment_yaml() above; this is its counterpart).
+
+    Wikipedia's infobox reliably gives engine code, fuel, and displacement, but
+    NOT a precise per-market power (hp) figure or exact per-trim year range —
+    inventing one here would be exactly the kind of fabricated car data this
+    whole initiative exists to reduce (see CLAUDE.md, knowledge/extract.py).
+    So every row is written with power_min_hp/power_max_hp/year_to left
+    unset and a `draft: true` marker; backend/sync.py refuses to sync draft
+    rows into the servable DB. A human fills in real figures (manufacturer
+    spec sheet, TecDoc) and removes the marker before this feeds the pipeline.
+
+    Never overwrites an existing variants file (would blow away real hp/year
+    data already filled in) — only writes when the file doesn't exist yet.
+    """
+    path = VARIANTS_DIR / f"{make}_{model}.yaml"
+    if path.exists():
+        print(f"  {path} already exists — not overwriting. Delete it first to rescaffold.")
+        return []
+
+    gen_m = re.search(r'_(\d+)$', model)
+    base_model = model[:gen_m.start()] if gen_m else model
+    generation = gen_m.group(1) if gen_m else None
+
+    rows: list[dict] = []
+    for spec in catalog.engines:
+        tx_codes = spec.transmission_codes or ["manual"]
+        for tx in tx_codes:
+            vid = f"{model}_{spec.engine_family}" + (f"_{tx}" if tx != "manual" else "")
+            row = {
+                "id": vid,
+                "make": make,
+                "model": base_model,
+                "engine_code": spec.engine_code,
+                "engine_family": spec.engine_family,
+                "fuel": spec.fuel,
+                "displacement_cc": spec.displacement_cc,
+                "transmission": "manual" if tx == "manual" else "automatic",
+                "transmission_code": tx,
+                "draft": True,
+            }
+            if generation:
+                row["generation"] = generation
+            rows.append(row)
+
+    if dry_run:
+        print(f"  DRY RUN — would write {len(rows)} draft variant row(s) to {path}")
+        for r in rows:
+            print(f"    {r['id']}: {r['engine_family']}/{r['transmission_code']} ({r['fuel']})")
+        return rows
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.dump(rows, allow_unicode=True, sort_keys=False))
+    print(
+        f"  Wrote {len(rows)} DRAFT variant row(s) to {path} — fill in "
+        f"power_min_hp/power_max_hp/year_from/year_to and remove 'draft: true' "
+        f"before running write-fitment or syncing."
+    )
+    return rows
+
+
 def write_fitment_yaml(
     make: str, model: str, catalog: ModelCatalog, dry_run: bool = False
 ) -> list[dict]:
@@ -612,6 +678,9 @@ def main() -> None:
                         help="Fetch and parse but do not write any files")
     parser.add_argument("--force", action="store_true",
                         help="Ignore cache and re-fetch from Wikipedia")
+    parser.add_argument("--write-variants", action="store_true",
+                        help="Scaffold a draft variants YAML (Step 1) if one doesn't exist yet — "
+                             "review and fill in power/year figures before using")
     parser.add_argument("--write-fitment", action="store_true",
                         help="Write/update the fitment YAML after matching to variants")
     args = parser.parse_args()
@@ -643,6 +712,10 @@ def main() -> None:
         print(f"  python -m knowledge.auto --part {fam} --part-type engine {fuel_flag}")
     for tx in non_manual_tx:
         print(f"  python -m knowledge.auto --part {tx} --part-type transmission")
+
+    if args.write_variants:
+        print("\nScaffolding draft variants YAML…")
+        write_variants_yaml(args.make, args.model, catalog, dry_run=args.dry_run)
 
     if args.write_fitment:
         print("\nWriting fitment YAML…")
