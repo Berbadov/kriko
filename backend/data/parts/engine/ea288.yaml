@@ -2,6 +2,7 @@ part_id: ea288
 part_type: engine
 display_name: Volkswagen EA288 TDI
 manufacturer: volkswagen
+code_family: vw_ea_series
 known_also_as:
 - 1.6 TDI
 - 2.0 TDI

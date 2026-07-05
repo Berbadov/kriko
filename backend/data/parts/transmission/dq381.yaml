@@ -2,6 +2,7 @@ part_id: dq381
 part_type: transmission
 display_name: Volkswagen DQ381 Transmission
 manufacturer: volkswagen
+code_family: vw_dsg_dct
 known_also_as:
 - DQ381
 claims:

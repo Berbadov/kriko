@@ -50,6 +50,17 @@ def validate_part(path: Path) -> list[str]:
     if part_id != path.stem:
         errors.append(f"{path}: part_id {part_id!r} does not match filename {path.stem!r}")
 
+    # code_family is how catalog_sibling_families() (knowledge/stoplists.py)
+    # derives sibling-code groups without a hand-maintained registry — only
+    # meaningful for engine/transmission parts, which are the ones that carry
+    # an alphanumeric engineering code at risk of cross-part confusion
+    # (docs/design_flaws.md Flaw 1). generate_part_scaffold() defaults new
+    # parts to a singleton family, so this should never actually fire for a
+    # part created after that fix — a hard check catches anything hand-edited
+    # around it.
+    if part_type in ("engine", "transmission") and not data.get("code_family"):
+        errors.append(f"{path}: missing required field 'code_family' (engine/transmission parts must declare one)")
+
     claims = data.get("claims", [])
     if not isinstance(claims, list):
         errors.append(f"{path}: 'claims' must be a list")

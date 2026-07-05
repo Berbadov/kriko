@@ -2,6 +2,7 @@ part_id: h4d_75
 part_type: engine
 display_name: Renault H4D Engine
 manufacturer: renault
+code_family: renault_nissan_small_engines
 known_also_as:
 - H4D
 - 1.0 TSI

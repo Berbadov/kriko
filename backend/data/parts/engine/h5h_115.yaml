@@ -2,6 +2,7 @@ part_id: h5h_115
 part_type: engine
 display_name: Renault H5H (1.3 TCe) 115hp
 manufacturer: renault_daimler
+code_family: renault_nissan_small_engines
 known_also_as:
 - 1.3 TCe
 - M282

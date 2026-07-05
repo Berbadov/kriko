@@ -2,6 +2,7 @@ part_id: dc4
 part_type: transmission
 display_name: Renault EDC (DC4) — dry dual-clutch transmission
 manufacturer: renault
+code_family: renault_edc_dct
 known_also_as:
 - EDC
 - Easy Drive Clutch

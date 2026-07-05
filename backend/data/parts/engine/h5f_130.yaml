@@ -2,6 +2,7 @@ part_id: h5f_130
 part_type: engine
 display_name: Renault H5F (1.2 TCe) 130hp
 manufacturer: renault
+code_family: renault_nissan_small_engines
 known_also_as:
 - 1.2 TCe
 - H5F 1.2

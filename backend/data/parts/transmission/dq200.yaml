@@ -2,6 +2,7 @@ part_id: dq200
 part_type: transmission
 display_name: Volkswagen DQ200 7-speed dry DSG
 manufacturer: volkswagen
+code_family: vw_dsg_dct
 known_also_as:
 - DQ200
 - 7-speed DSG

@@ -119,20 +119,12 @@ def code_tokens(text: str) -> set[str]:
 # checks the full source page for ANY code match, and a DSG comparison
 # article mentions "DQ381" somewhere too.
 #
-# This is the single registry backing both promote.py's sibling-code veto
-# (runtime, forces the slower LLM gate_variant call instead of the free
-# deterministic pass) and validate_part_yaml.py's hard check (write/CI time)
-# — one source of truth so the two enforcement points can't drift apart.
-## Uppercase, to match code_tokens()'s output convention directly.
-SIBLING_CODE_FAMILIES: tuple[frozenset[str], ...] = (
-    frozenset({"DQ200", "DQ250", "DQ381"}),   # VW Group dry/wet DSG generations
-    frozenset({"DC4", "DW5", "DW6"}),          # Renault EDC dual-clutch generations
-    frozenset({"EA211", "EA288", "EA888"}),    # VW Group EA-series engine families
-    frozenset({"K9K", "H4D", "H5D", "H5H", "H5F", "R9M", "M9R"}),  # Renault-Nissan-Mercedes
-    # small-to-mid diesel/petrol engine codes — commonly co-mentioned in
-    # cross-engine comparison articles regardless of displacement/fuel, same
-    # failure mode as the K9K/H4D/H5D/H5H group this family already covered.
-)
+# This used to be a hand-maintained SIBLING_CODE_FAMILIES tuple living only
+# here — exactly the failure mode CLAUDE.md's scalability principle now bans:
+# H5F/R9M/M9R went unrecognized for a while because nobody remembered to add
+# them to this separate list. Family membership is now declared per-part, via
+# each part YAML's own `code_family` field (see catalog_sibling_families()
+# below) — the same derive-from-catalog pattern as catalog_code_manufacturers().
 
 # Part IDs follow a power-split convention (k9k_85, ea888_220, ...) — the
 # trailing "_<hp>" is bookkeeping, not part of the engineering code. Also,
@@ -157,10 +149,11 @@ def sibling_codes_for(part_id: str) -> frozenset[str]:
     own = _part_base_code(part_id)
     if not own:
         return frozenset()
-    for family in SIBLING_CODE_FAMILIES:
-        if own & family:
-            return family - own
-    return frozenset()
+    families = catalog_sibling_families()
+    siblings: set[str] = set()
+    for code in own:
+        siblings |= families.get(code, frozenset())
+    return frozenset(siblings) - own
 
 
 def mentions_sibling_code(text: str, part_id: str) -> bool:
@@ -201,12 +194,13 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
     """code -> manufacturer token(s), derived from every part YAML's own
     part_id + manufacturer field.
 
-    Deliberately NOT a hand-maintained registry like SIBLING_CODE_FAMILIES —
-    that design is exactly what let H5F/R9M/M9R go unrecognized (docs/
-    design_flaws.md remediation, 2026-07-05): a manually-updated list drifts
-    the moment someone onboards a new engine code and forgets to register it
-    anywhere. Reading it off the catalog itself means a new part's code is
-    covered the moment its stub exists (knowledge/auto.py's
+    Deliberately NOT a hand-maintained registry — a manually-updated list
+    drifts the moment someone onboards a new engine code and forgets to
+    register it anywhere (that design let H5F/R9M/M9R go unrecognized, docs/
+    design_flaws.md remediation, 2026-07-05, and separately let
+    SIBLING_CODE_FAMILIES go stale — see catalog_sibling_families() below,
+    which replaced it the same way). Reading it off the catalog itself means
+    a new part's code is covered the moment its stub exists (knowledge/auto.py's
     _ensure_part_stub / generate_part_scaffold already writes part_id +
     manufacturer before any research runs), with no separate registration
     step to forget. Cached — rebuild by calling
@@ -227,6 +221,43 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
         for code in _part_base_code(part_id):
             owners.setdefault(code, set()).update(tokens)
     return {code: frozenset(makers) for code, makers in owners.items()}
+
+
+@lru_cache(maxsize=1)
+def catalog_sibling_families() -> dict[str, frozenset[str]]:
+    """code -> sibling codes (same engineering family, excluding itself),
+    derived from every part YAML's own `code_family` field (plus an optional
+    `code_family_extra` list of known-sibling codes that don't have their own
+    part file yet, e.g. M9R — declared once, on the part that discovered the
+    relationship, e.g. r9m_130.yaml, rather than in a separate list).
+
+    Replaces the old hand-maintained SIBLING_CODE_FAMILIES tuple (design_flaws.md
+    Flaw 1) — same rationale as catalog_code_manufacturers() above: a part's
+    family membership is covered the moment its own YAML declares it, with no
+    separate cross-cutting registry to remember to update. Cached — rebuild by
+    calling catalog_sibling_families.cache_clear() if the catalog changes
+    within a process lifetime (tests do this).
+    """
+    groups: dict[str, set[str]] = {}
+    for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        part_id = data.get("part_id")
+        family = data.get("code_family")
+        if not part_id or not family:
+            continue
+        codes = groups.setdefault(str(family), set())
+        codes |= _part_base_code(part_id)
+        for extra in data.get("code_family_extra") or []:
+            codes.add(str(extra).upper())
+
+    result: dict[str, set[str]] = {}
+    for codes in groups.values():
+        for code in codes:
+            result.setdefault(code, set()).update(codes - {code})
+    return {code: frozenset(siblings) for code, siblings in result.items()}
 
 
 def mentions_foreign_manufacturer_code(text: str, own_makes: set[str]) -> bool:
