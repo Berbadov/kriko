@@ -2,6 +2,7 @@ part_id: ea211
 part_type: engine
 display_name: Volkswagen EA211 TSI
 manufacturer: volkswagen
+code_family: vw_ea_series
 known_also_as:
 - 1.4 TSI
 - 1.0 TSI

@@ -2,6 +2,7 @@ part_id: h5h_130
 part_type: engine
 display_name: Renault H5H Engine
 manufacturer: renault_daimler
+code_family: renault_nissan_small_engines
 known_also_as:
 - H5HT
 - 1.3 TSI

@@ -14,6 +14,7 @@ part_id: dq381
 part_type: transmission
 display_name: Volkswagen DQ381 Transmission
 manufacturer: volkswagen
+code_family: dq381
 claims:
 - claim_key: dq381_bad
   title: DQ200 dry-clutch pressure circuit failure
@@ -33,6 +34,7 @@ part_id: dq381
 part_type: transmission
 display_name: Volkswagen DQ381 Transmission
 manufacturer: volkswagen
+code_family: dq381
 claims:
 - claim_key: dq381_good
   title: DQ381 wet-clutch pack wear

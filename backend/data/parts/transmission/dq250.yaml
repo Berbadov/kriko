@@ -2,6 +2,7 @@ part_id: dq250
 part_type: transmission
 display_name: Volkswagen DQ250 6-speed wet DSG
 manufacturer: volkswagen
+code_family: vw_dsg_dct
 known_also_as:
 - DQ250
 - 6-speed DSG
