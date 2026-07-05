@@ -2,6 +2,7 @@ part_id: dw5
 part_type: transmission
 display_name: Renault EDC (DW5) — 7-speed wet dual-clutch transmission
 manufacturer: renault
+code_family: renault_edc_dct
 known_also_as:
 - DW5
 - EDC7

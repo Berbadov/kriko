@@ -108,13 +108,23 @@ def generate_part_scaffold(
         display_name = f"{make_pretty} {model_pretty} {_search_code(part_id)}"
         known_also_as = [_search_code(part_id)]
 
-    return {
+    scaffold = {
         "part_id": part_id,
         "part_type": part_type,
         "display_name": display_name,
         "manufacturer": make,
         "known_also_as": known_also_as,
     }
+    if part_type in ("engine", "transmission"):
+        # Default a new part to its own singleton family (no known siblings
+        # yet) — the field is always present so validate_part_yaml.py's hard
+        # check passes immediately, with no separate registration step. If a
+        # human later discovers this code is a sibling of an existing family
+        # (e.g. a new DSG generation joining vw_dsg_dct), they just edit this
+        # one line on this one file — see knowledge/stoplists.py's
+        # catalog_sibling_families() for how this field is consumed.
+        scaffold["code_family"] = _search_code(part_id).lower()
+    return scaffold
 
 
 def ensure_part_stub(
