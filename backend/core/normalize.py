@@ -1,5 +1,15 @@
 """Turkish-language → internal canonical value maps for matcher input."""
 
+import logging
+import re
+import unicodedata
+from functools import lru_cache
+from pathlib import Path
+
+import yaml
+
+log = logging.getLogger(__name__)
+
 _FUEL_MAP: dict[str, str] = {
     "benzin": "petrol",
     "benzinli": "petrol",       # Sahibinden's adjective form ("petrol-fueled")
@@ -40,79 +50,57 @@ _TX_MAP: dict[str, str] = {
     "eld": "automatic",           # Renault ELD (single-clutch auto)
 }
 
-_MAKE_MAP: dict[str, str] = {
-    "renault": "renault",
-    "volkswagen": "volkswagen",
+# Genuine spelling/abbreviation aliases for makes — NOT fixable by _slugify()
+# alone (an abbreviation or compound name, not an accent/punctuation variant).
+# Kept as a small hardcoded exception per CLAUDE.md's scalability principle:
+# this is a closed vocabulary of alternate spellings for the SAME brand, not a
+# per-car-model registry that has to grow with catalog coverage.
+_MAKE_ALIASES: dict[str, str] = {
     "vw": "volkswagen",
-    "toyota": "toyota",
-    "bmw": "bmw",
-    "mercedes": "mercedes",
     "mercedes-benz": "mercedes",
-    "audi": "audi",
-    "opel": "opel",
-    "ford": "ford",
-    "fiat": "fiat",
-    "hyundai": "hyundai",
-    "kia": "kia",
-    "peugeot": "peugeot",
-    "citroen": "citroen",
-    "citroën": "citroen",
-    "nissan": "nissan",
-    "honda": "honda",
-    "mazda": "mazda",
-    "skoda": "skoda",
-    "seat": "seat",
-    "volvo": "volvo",
-    "dacia": "dacia",
-    "suzuki": "suzuki",
-    "mini": "mini",
 }
 
-_MODEL_MAP: dict[str, str] = {
-    # Renault
-    "megane": "megane",
-    "mégane": "megane",
-    "clio": "clio",
-    "captur": "captur",
-    "kadjar": "kadjar",
-    "kangoo": "kangoo",
-    "fluence": "fluence",
-    "scenic": "scenic",
-    "laguna": "laguna",
-    "talisman": "talisman",
-    "zoe": "zoe",
-    "symbol": "symbol",
-    "latitude": "latitude",
-    # Volkswagen
-    "golf": "golf",
-    "polo": "polo",
-    "passat": "passat",
-    "tiguan": "tiguan",
-    "touareg": "touareg",
-    "jetta": "jetta",
-    "caddy": "caddy",
-    "transporter": "transporter",
-    # Toyota
-    "corolla": "corolla",
-    "yaris": "yaris",
-    "rav4": "rav4",
-    "c-hr": "chr",
-    "chr": "chr",
-    "camry": "camry",
-    "hilux": "hilux",
-    # Dacia
-    "duster": "duster",
-    "sandero": "sandero",
-    "logan": "logan",
-    "spring": "spring",
-    # Peugeot
-    "208": "208",
-    "308": "308",
-    "2008": "2008",
-    "3008": "3008",
-    "508": "508",
-    # others added as needed
-}
+_VARIANTS_DIR = Path(__file__).parent.parent / "data" / "variants"
+
+
+def _slugify(val: str) -> str:
+    """Lowercase, strip accents, drop all non-alphanumeric characters.
+
+    "Mégane" -> "megane", "Citroën" -> "citroen", "C-HR" -> "chr" — this is
+    what lets normalize_make/normalize_model recognize any make/model without
+    a per-car hardcoded map entry (see CLAUDE.md's scalability principle).
+    """
+    nfkd = unicodedata.normalize("NFKD", val)
+    ascii_only = "".join(c for c in nfkd if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]", "", ascii_only.lower())
+
+
+@lru_cache(maxsize=1)
+def _catalog_makes_models() -> tuple[frozenset[str], frozenset[str]]:
+    """Distinct (make, model) slugs already onboarded, read straight off the
+    variants catalog — not hand-maintained, so it grows automatically as new
+    models are onboarded (same pattern as knowledge/stoplists.py's
+    catalog_code_manufacturers()).
+
+    Used only for a soft "not yet onboarded" log signal, never to reject a
+    normalization result — a make/model outside this set still normalizes via
+    _slugify() and simply won't match anything in matcher.py's DB query
+    (fail-open, not fail-closed; see docs/design_flaws.md's praise of
+    resolver.py for the same distinction).
+    """
+    makes: set[str] = set()
+    models: set[str] = set()
+    for path in _VARIANTS_DIR.glob("*.yaml"):
+        try:
+            rows = yaml.safe_load(path.read_text()) or []
+        except yaml.YAMLError:
+            continue
+        for row in rows:
+            if row.get("make"):
+                makes.add(str(row["make"]).lower())
+            if row.get("model"):
+                models.add(str(row["model"]).lower())
+    return frozenset(makes), frozenset(models)
 
 
 def _norm(val: str | None, mapping: dict[str, str]) -> str | None:
@@ -120,6 +108,22 @@ def _norm(val: str | None, mapping: dict[str, str]) -> str | None:
         return None
     key = val.strip().lower()
     return mapping.get(key)
+
+
+def _normalize_car_field(raw: str | None, known: frozenset[str], field: str) -> str | None:
+    if not raw:
+        return None
+    key = raw.strip().lower()
+    if field == "make":
+        key = _MAKE_ALIASES.get(key, key)
+    slug = _slugify(key)
+    if slug not in known:
+        log.info(
+            "normalize_%s: %r -> %r not yet in the onboarded catalog — "
+            "matching will fail-open to no_match rather than a false positive",
+            field, raw, slug,
+        )
+    return slug
 
 
 def normalize_fuel(raw: str | None) -> str | None:
@@ -141,8 +145,10 @@ def normalize_transmission(raw: str | None) -> str | None:
 
 
 def normalize_make(raw: str | None) -> str | None:
-    return _norm(raw, _MAKE_MAP)
+    makes, _ = _catalog_makes_models()
+    return _normalize_car_field(raw, makes, "make")
 
 
 def normalize_model(raw: str | None) -> str | None:
-    return _norm(raw, _MODEL_MAP)
+    _, models = _catalog_makes_models()
+    return _normalize_car_field(raw, models, "model")
