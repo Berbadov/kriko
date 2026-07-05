@@ -48,7 +48,8 @@ _TRANS_CODE_RE = re.compile(r"\b(dq\s?200|dq\s?250|dq\s?381|dq\s?500|dc4|dw5|dw6
 _AUTO_ONLY_RE = re.compile(
     r"\bdsg\b|dual[- ]clutch|mechatronic|çift kavrama|kavrama plaket|"
     r"otomatik şanzıman|kuru kavrama|wet[- ]clutch|"
-    r"\btcm\b|transmission control module",
+    r"\btcm\b|transmission control module|"
+    r"\bcvt\b|e-tech|\bhybrid\b|otomatik vites",
     re.I,
 )
 _MANUAL_ONLY_RE = re.compile(
@@ -107,6 +108,46 @@ def _fuel_compatible(claim_data: dict, variant_fuel: str) -> bool:
     if is_diesel and not is_petrol and fuel and fuel != "diesel":
         return False
     if is_petrol and not is_diesel and fuel and fuel != "petrol":
+        return False
+    return True
+
+
+# ── Powertrain-type grounding ────────────────────────────────────────────────
+#
+# Fourth axis, same gap shape again: universal parts (electrical) attached to
+# every variant of a model absorb hybrid/EV-only content — Megane E-Tech
+# Electric heat-pump/charging failures, Clio E-Tech hybrid gearbox behaviour —
+# from a source about a *different, electrified* trim or even a different
+# model (Megane E-Tech Electric is not a Megane 4 trim at all), then broadcast
+# it to plain petrol/diesel variants that share none of that hardware.
+#
+# No variant in the current catalog has fuel outside {petrol, diesel} — there
+# is no hybrid/electric row to protect — so this grounds unconditionally
+# against Variant.fuel rather than a dedicated powertrain field. If a real
+# hybrid/EV variant is ever catalogued, this needs its own Variant field
+# (fuel alone won't distinguish an E-Tech Hybrid, which is still petrol,
+# from the plain petrol engine it's paired with).
+_EV_HYBRID_RE = re.compile(
+    r"e-tech|\bhybrid\b|dc charging|ac charging|heat pump|state of charge|"
+    r"precondition|traction battery|\bhv battery\b|"
+    r"charging (?:port|door|impossible|abort)|trappe de recharge|"
+    r"onboard charger|regenerative braking|\bev mode\b|\bkwh\b|fully electric",
+    re.I,
+)
+_ICE_ONLY_FUELS = {"petrol", "diesel"}
+
+
+def _powertrain_compatible(claim_data: dict, variant_fuel: str) -> bool:
+    """Does this claim's own text describe hybrid/EV-only hardware a plain
+    petrol/diesel variant does not have?
+
+    One-directional by design (see catalog note above): today every variant
+    is ICE-only, so hybrid/EV signal always excludes; there's no hybrid/EV
+    variant side to symmetrically protect yet.
+    """
+    text = f"{claim_data.get('title', '')} {claim_data.get('rationale', '')}"
+    fuel = (variant_fuel or "").lower()
+    if fuel in _ICE_ONLY_FUELS and _EV_HYBRID_RE.search(text):
         return False
     return True
 
@@ -285,6 +326,8 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
                 if not _fuel_compatible(claim_data, variant.fuel):
                     continue
                 if not _drivetrain_compatible(claim_data, variant.drivetrain):
+                    continue
+                if not _powertrain_compatible(claim_data, variant.fuel):
                     continue
 
                 # Create variant link if it doesn't exist
