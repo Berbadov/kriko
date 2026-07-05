@@ -16,7 +16,7 @@ from pathlib import Path
 import yaml
 
 from knowledge.domains import VALID_DOMAINS
-from knowledge.stoplists import mentions_sibling_code
+from knowledge.stoplists import mentions_foreign_manufacturer_code, mentions_sibling_code
 
 PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
 
@@ -55,6 +55,7 @@ def validate_part(path: Path) -> list[str]:
         errors.append(f"{path}: 'claims' must be a list")
         return errors
 
+    own_makes: set[str] = set(str(data.get("manufacturer") or "").lower().split("_"))
     seen_keys: set[str] = set()
     for i, claim in enumerate(claims):
         loc = f"{path}[{i}]"
@@ -112,6 +113,16 @@ def validate_part(path: Path) -> list[str]:
                 f"{loc}: claim text names a sibling component's code but not "
                 f"{part_id}'s own — likely filed under the wrong part (run "
                 f"knowledge.fix_sibling_contamination): {claim.get('title', '')!r}"
+            )
+
+        # Cross-manufacturer contamination: a claim naming another
+        # manufacturer's engine/transmission code with no shared brand word
+        # at all (e.g. a Renault part's claim citing VW's "EA211") — see
+        # mentions_foreign_manufacturer_code's docstring.
+        if mentions_foreign_manufacturer_code(claim_text, own_makes):
+            errors.append(
+                f"{loc}: claim text names another manufacturer's engine/transmission "
+                f"code — likely filed under the wrong part: {claim.get('title', '')!r}"
             )
 
     return errors
