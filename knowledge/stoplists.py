@@ -255,6 +255,51 @@ def mentions_foreign_manufacturer_code(text: str, own_makes: set[str]) -> bool:
     return False
 
 
+def document_is_foreign_to_part(text: str, make: str, model: str) -> bool:
+    """True if a fetched SOURCE DOCUMENT (not an extracted claim) is very
+    likely entirely about a DIFFERENT manufacturer's part — names a
+    foreign-manufacturer engine/transmission code and never mentions this
+    part's own code or its own manufacturer anywhere in the text.
+
+    `make`/`model` are passed straight through from
+    knowledge.sources.curated.CuratedSource._fetch_entry's own parameters:
+    for the part-centric pipeline, `model` IS the part_id
+    (knowledge.process.run_part's "part_id doubles as model slug"
+    convention) — resolved here via catalog_code_manufacturers(); for the
+    model-centric pipeline, `model` won't resolve to a registered code, so
+    `make` (already the real manufacturer name) is used directly. No signal
+    on either side fails open — never exclude without a genuine mismatch.
+
+    Runs at FETCH time, before a single extraction call is spent on the
+    document. This is what mentions_foreign_manufacturer_code (claim-text
+    level) and mentions_sibling_code both structurally can't catch: an
+    extracted claim's own title/rationale can read as generic and plausible
+    ("Connecting rod bearing failure") even though the SOURCE PAGE it was
+    extracted from is 100% about a different engine entirely (found live in
+    k9k_100.yaml's curated sources — several pages about VW's 1.5/1.6 TDI,
+    not Renault's K9K — docs/design_flaws.md remediation, 2026-07-05).
+    """
+    owners = catalog_code_manufacturers()
+    own_code = _part_base_code(model)
+    if own_code and any(c in owners for c in own_code):
+        own_makes: set[str] = set()
+        for c in own_code:
+            own_makes |= owners[c]
+    else:
+        own_makes = {make.lower()} if make else set()
+
+    if not own_makes:
+        return False
+
+    text_tokens = code_tokens(text)
+    if text_tokens & own_code:
+        return False
+    lowered = text.lower()
+    if any(m and re.search(rf"\b{re.escape(m)}\b", lowered) for m in own_makes):
+        return False
+    return mentions_foreign_manufacturer_code(text, own_makes)
+
+
 def has_specificity_signal(text: str) -> bool:
     """True if text names a specific engine/transmission code (EA211, DQ200, K9K),
     a displacement+fuel-tech label (e.g. "1.4 TSI"), or an explicit mileage

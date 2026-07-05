@@ -11,6 +11,13 @@ extraction LLM has been observed echoing German source text verbatim instead
 of translating it (see knowledge/stoplists.py). Interim gate, not a
 translation fix.
 
+Fetched text is also dropped if it's about a different manufacturer's part
+entirely (document_is_foreign_to_part) — e.g. a "K9K engine problems" search
+surfacing a page that's actually about VW's 1.5 TDI. Extraction can turn a
+100%-off-topic page into claims that still read as plausible for the part
+being researched, so this has to be caught before extraction runs, not after
+(see knowledge/stoplists.py; docs/design_flaws.md remediation, 2026-07-05).
+
 Usage:
     from knowledge.sources.curated import CuratedSource
     docs = CuratedSource().fetch("renault", "megane")
@@ -23,7 +30,7 @@ import yaml
 
 from knowledge.sources.base import Document
 from knowledge.sources.youtube import get_transcript
-from knowledge.stoplists import is_german_text
+from knowledge.stoplists import document_is_foreign_to_part, is_german_text
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +110,9 @@ class CuratedSource:
             if is_german_text(text):
                 log.warning("Skipping German-language transcript for video_id=%s", video_id)
                 return None
+            if document_is_foreign_to_part(text, make, model):
+                log.warning("Skipping off-topic (different manufacturer) transcript for video_id=%s", video_id)
+                return None
             return Document(
                 text=text[:8000],
                 url=f"https://www.youtube.com/watch?v={video_id}",
@@ -127,6 +137,9 @@ class CuratedSource:
                 return None
             if is_german_text(text):
                 log.warning("Skipping German-language page: %s", url)
+                return None
+            if document_is_foreign_to_part(text, make, model):
+                log.warning("Skipping off-topic (different manufacturer) page: %s", url)
                 return None
             return Document(
                 text=text[:8000],
