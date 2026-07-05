@@ -23,6 +23,10 @@ Interim until extraction-time translation compliance is fixed properly.
 """
 
 import re
+from functools import lru_cache
+from pathlib import Path
+
+import yaml
 
 # Items a standard pre-purchase mechanic inspection (ekspertiz) covers as routine.
 # A claim matching any of these keywords is low value by the CLAUDE.md principle.
@@ -175,6 +179,80 @@ def mentions_sibling_code(text: str, part_id: str) -> bool:
     if text_tokens & _part_base_code(part_id):
         return False
     return bool(text_tokens & siblings)
+
+
+# Manufacturer groups that legitimately co-mention each other's codes: badge-
+# engineered siblings (Dacia is Renault's own brand — K9K/H4D/DC4 etc. are
+# shared verbatim) and shared-platform group companies (VW Group's MQB-era
+# engines/DSGs appear across Audi/Skoda/Seat/Cupra too). Single source of
+# truth for both promote.py's brand-name guard and
+# mentions_foreign_manufacturer_code below — a claim naming one of these
+# isn't contamination, it's genuine shared-part evidence.
+GROUP_SIBLINGS: dict[str, frozenset[str]] = {
+    "renault": frozenset({"dacia"}),
+    "volkswagen": frozenset({"audi", "skoda", "seat", "cupra"}),
+}
+
+_CATALOG_PARTS_DIR = Path(__file__).parent.parent / "backend" / "data" / "parts"
+
+
+@lru_cache(maxsize=1)
+def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
+    """code -> manufacturer token(s), derived from every part YAML's own
+    part_id + manufacturer field.
+
+    Deliberately NOT a hand-maintained registry like SIBLING_CODE_FAMILIES —
+    that design is exactly what let H5F/R9M/M9R go unrecognized (docs/
+    design_flaws.md remediation, 2026-07-05): a manually-updated list drifts
+    the moment someone onboards a new engine code and forgets to register it
+    anywhere. Reading it off the catalog itself means a new part's code is
+    covered the moment its stub exists (knowledge/auto.py's
+    _ensure_part_stub / generate_part_scaffold already writes part_id +
+    manufacturer before any research runs), with no separate registration
+    step to forget. Cached — rebuild by calling
+    catalog_code_manufacturers.cache_clear() if the catalog changes within a
+    process lifetime (tests do this).
+    """
+    owners: dict[str, set[str]] = {}
+    for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        part_id = data.get("part_id")
+        manufacturer = data.get("manufacturer")
+        if not part_id or not manufacturer:
+            continue
+        tokens = frozenset(str(manufacturer).lower().split("_"))
+        for code in _part_base_code(part_id):
+            owners.setdefault(code, set()).update(tokens)
+    return {code: frozenset(makers) for code, makers in owners.items()}
+
+
+def mentions_foreign_manufacturer_code(text: str, own_makes: set[str]) -> bool:
+    """True if `text` names an engine/transmission code registered anywhere
+    in the catalog to a manufacturer other than one of `own_makes` or their
+    GROUP_SIBLINGS.
+
+    Complements mentions_sibling_code (same-manufacturer code confusion,
+    e.g. DQ200 filed under dq381.yaml) and promote.py's OTHER_BRANDS guard
+    (catches "Ford"/"Toyota" mentioned by brand name). Neither catches
+    cross-manufacturer contamination expressed as code/tech jargon with no
+    brand word at all — e.g. a Renault h4d_75 claim's rationale saying "the
+    1.0 TSI (EA211) engine" never says "Volkswagen", so a brand-name check
+    can't see it (live bug found 2026-07-05, see docs/design_flaws.md).
+    """
+    owners = catalog_code_manufacturers()
+    if not owners:
+        return False
+    allowed = set(own_makes)
+    for make in own_makes:
+        allowed |= GROUP_SIBLINGS.get(make, frozenset())
+    for token in code_tokens(text):
+        makers = owners.get(token)
+        if makers and not (makers & allowed):
+            return True
+    return False
 
 
 def has_specificity_signal(text: str) -> bool:
