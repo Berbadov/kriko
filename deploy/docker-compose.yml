@@ -30,6 +30,7 @@ services:
       - "8000:8000"
     volumes:
       - ../backend/data:/app/backend/data:ro
+      - ../logs:/app/logs
 
   caddy:
     image: caddy:2

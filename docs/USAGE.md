@@ -253,6 +253,29 @@ docker exec deploy-db-1 psql -U postgres -d kriko \
   -c "SELECT id, fuel, displacement_cc, power_min_hp FROM variants;"
 ```
 
+`analysis_log` above only has IDs and counts. For the full request/response payload
+(what a specific buyer actually saw, and why — mileage/equipment/description that drove
+gating), read `logs/analyses.jsonl` instead — no `docker exec`/psql needed:
+
+```bash
+# Last 20 analyses, one-line summaries
+python -m backend.tools.analyses --last 20
+
+# Filter by model, full JSON per record
+python -m backend.tools.analyses --last 20 --model golf --json
+
+# Re-run a logged request through the CURRENT pipeline and diff the result —
+# use this to confirm a promote.py/gate/fitment fix actually changed the served
+# claims for a request that was previously wrong.
+python -m backend.tools.replay <analysis-id>
+python -m backend.tools.replay --last 5
+```
+
+`GET /debug/analyses?limit=20&model=golf` exposes the same JSONL over HTTP, but is
+**off (404) by default** — it dumps full request/response history, so only set
+`ENABLE_DEBUG_ENDPOINT=true` in `deploy/.env` temporarily if you don't have shell
+access to the deploy host.
+
 ---
 
 ## 9. Eval the LLM gates (optional)
