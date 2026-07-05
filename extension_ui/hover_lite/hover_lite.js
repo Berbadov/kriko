@@ -16,7 +16,7 @@
   if (window.__krikoPanelInstalled) return;
   window.__krikoPanelInstalled = true;
 
-  const { iconSvg } = window.__KrikoPanelIcons;
+  const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
   const { renderRiskCard, updateRiskCard } = window.__KrikoPanelRiskCard;
 
   const HOST_TAG = "kriko-panel-host";
@@ -935,16 +935,74 @@
       return;
     }
 
+    // Group by domain, preserving global indices for toggleOne/setAllOpen
+    const groups = {};
     state.result.risks.forEach((risk, i) => {
-      const wrap = document.createElement("div");
-      wrap.className = "lite-risk-anim";
-      wrap.style.animationDelay = (80 + i * 70) + "ms";
-      const card = renderRiskCard(risk, { open: state.openIds.has(i), compact: state.compact });
-      const btn = card.querySelector(".lite-rc-toggle");
-      btn.addEventListener("click", () => toggleOne(i, card));
-      wrap.appendChild(card);
-      risksListEl.appendChild(wrap);
+      const d = (risk.domain || "other").toLowerCase().trim();
+      if (!groups[d]) groups[d] = [];
+      groups[d].push({ risk, idx: i });
     });
+
+    const domainLabels = {
+      engine: "Engine", transmission: "Transmission", emissions: "Emissions",
+      electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
+      suspension: "Suspension", brakes: "Brakes", exhaust: "Exhaust",
+      interior: "Interior", "body/structure": "Body", steering: "Steering",
+    };
+
+    let delayCounter = 0;
+    for (const [domain, items] of Object.entries(groups)) {
+      const label = domainLabels[domain] || domain.charAt(0).toUpperCase() + domain.slice(1);
+      const high = items.filter(i => i.risk.severity === "high").length;
+      const med  = items.filter(i => i.risk.severity === "medium").length;
+      const low  = items.filter(i => i.risk.severity === "low").length;
+
+      // Build severity dots summary
+      const sevHtml = [];
+      if (high) sevHtml.push('<span class="lite-domain-sev-dot" data-sev="high"></span>' + high);
+      if (med)  sevHtml.push('<span class="lite-domain-sev-dot" data-sev="med"></span>' + med);
+      if (low)  sevHtml.push('<span class="lite-domain-sev-dot" data-sev="low"></span>' + low);
+
+      const groupEl = document.createElement("div");
+      groupEl.className = "lite-domain-group";
+      groupEl.dataset.open = "1";
+      groupEl.innerHTML = `
+        <button type="button" class="lite-domain-head" aria-expanded="true">
+          <span class="lite-domain-icon">${domainIconSvg(domain, { size: 15 })}</span>
+          <span class="lite-domain-name">${label}</span>
+          <span class="lite-domain-count">${items.length}</span>
+          <span class="lite-domain-sev">${sevHtml.join('')}</span>
+          <span class="lite-domain-toggle">&minus;</span>
+        </button>
+        <div class="lite-domain-body"></div>
+      `;
+
+      // Populate body with risk cards
+      const bodyEl = groupEl.querySelector(".lite-domain-body");
+      items.forEach(({ risk, idx }) => {
+        const wrap = document.createElement("div");
+        wrap.className = "lite-risk-anim";
+        wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
+        delayCounter++;
+        const card = renderRiskCard(risk, { open: state.openIds.has(idx), compact: state.compact });
+        const btn = card.querySelector(".lite-rc-toggle");
+        btn.addEventListener("click", () => toggleOne(idx, card));
+        wrap.appendChild(card);
+        bodyEl.appendChild(wrap);
+      });
+
+      // Wire group toggle
+      const head = groupEl.querySelector(".lite-domain-head");
+      const toggleSpan = groupEl.querySelector(".lite-domain-toggle");
+      head.addEventListener("click", () => {
+        const isOpen = head.getAttribute("aria-expanded") === "true";
+        head.setAttribute("aria-expanded", isOpen ? "false" : "true");
+        groupEl.dataset.open = isOpen ? "0" : "1";
+        toggleSpan.textContent = isOpen ? "+" : "\u2212";
+      });
+
+      risksListEl.appendChild(groupEl);
+    }
   }
 
   function renderBody() {

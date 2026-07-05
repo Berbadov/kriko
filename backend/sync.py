@@ -16,6 +16,7 @@ Usage:
 """
 
 import glob
+import logging
 import re
 import sys
 from pathlib import Path
@@ -24,6 +25,12 @@ import yaml
 from sqlalchemy.orm import Session
 
 from backend.core.equipment import derive_equipment_tags
+from backend.core.title_sim import title_similar
+from backend.core.transmission_signal import (
+    AUTO_ONLY_RE, MANUAL_ONLY_RE, mentioned_transmission_codes,
+)
+
+log = logging.getLogger(__name__)
 from backend.db.models import Base, Claim, ClaimSource, ClaimVariant, Variant
 from backend.db.session import engine
 
@@ -44,18 +51,12 @@ FITMENT_DIR = DATA_DIR / "fitment"
 #
 # This check runs at sync time (not extraction time) so it applies immediately
 # to already-written part YAMLs without re-running any LLM gates.
-_TRANS_CODE_RE = re.compile(r"\b(dq\s?200|dq\s?250|dq\s?381|dq\s?500|dc4|dw5|dw6|edc)\b", re.I)
-_AUTO_ONLY_RE = re.compile(
-    r"\bdsg\b|dual[- ]clutch|mechatronic|çift kavrama|kavrama plaket|"
-    r"otomatik şanzıman|kuru kavrama|wet[- ]clutch|"
-    r"\btcm\b|transmission control module|"
-    r"\bcvt\b|e-tech|\bhybrid\b|otomatik vites",
-    re.I,
-)
-_MANUAL_ONLY_RE = re.compile(
-    r"\bclutch pedal\b|\bshift cable\b|\bmanuel vites\b|\bdebriyaj pedal",
-    re.I,
-)
+#
+# The specific-code registry (dq200/dq250/.../EDC aliases) is derived from
+# the transmission part catalog itself, not hand-maintained here — see
+# backend/core/transmission_signal.py's _transmission_code_aliases().
+# AUTO_ONLY_RE / MANUAL_ONLY_RE also live there — resolver.py's serve-time
+# ad-transmission gate needs the same vocabulary.
 
 
 def _transmission_compatible(claim_data: dict, variant_transmission_code: str) -> bool:
@@ -67,14 +68,14 @@ def _transmission_compatible(claim_data: dict, variant_transmission_code: str) -
     text = f"{claim_data.get('title', '')} {claim_data.get('rationale', '')}"
     tc = (variant_transmission_code or "").lower().replace(" ", "")
 
-    codes_mentioned = {m.lower().replace(" ", "") for m in _TRANS_CODE_RE.findall(text)}
+    codes_mentioned = mentioned_transmission_codes(text)
     if codes_mentioned and tc not in codes_mentioned:
         return False
 
     if tc == "manual":
-        if _AUTO_ONLY_RE.search(text):
+        if AUTO_ONLY_RE.search(text):
             return False
-    elif not codes_mentioned and _MANUAL_ONLY_RE.search(text):
+    elif not codes_mentioned and MANUAL_ONLY_RE.search(text):
         return False
 
     return True
@@ -264,6 +265,8 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
     if not parts:
         return 0, set()
 
+    _warn_cross_file_duplicates(parts)
+
     # Load all fitment YAMLs
     fitment_rows: list[dict] = []
     for path in sorted(FITMENT_DIR.glob("*.yaml")):
@@ -377,6 +380,41 @@ def _validate_part_yaml_or_raise() -> None:
             f"Refusing to sync: {n_errors} part YAML validation error(s) (see above). "
             f"Fix them or run the relevant cleanup script first."
         )
+
+
+def _warn_cross_file_duplicates(parts: dict[str, dict]) -> None:
+    """Log warnings for near-duplicate claim titles across different part files.
+
+    This is advisory-only: it never blocks sync, but helps the knowledge pipeline
+    operator spot claims that should be consolidated between sibling parts.
+    """
+    claims_by_domain: dict[str, list[dict]] = {}
+    for part_id, part_data in parts.items():
+        for claim in (part_data.get("claims") or []):
+            domain = (claim.get("domain") or "unknown").lower().strip()
+            claims_by_domain.setdefault(domain, []).append({
+                "part_id": part_id,
+                "claim_key": claim.get("claim_key", "?"),
+                "title": claim.get("title", ""),
+                "domain": domain,
+            })
+
+    for domain, domain_claims in claims_by_domain.items():
+        if len(domain_claims) < 2:
+            continue
+        for i in range(len(domain_claims)):
+            for j in range(i + 1, len(domain_claims)):
+                a, b = domain_claims[i], domain_claims[j]
+                if a["part_id"] == b["part_id"]:
+                    continue  # same part — expected similarity
+                if title_similar(a["title"], b["title"]):
+                    log.warning(
+                        "Cross-file dup [%s]: %s/%s ~ %s/%s  |  %r vs %r",
+                        domain,
+                        a["part_id"], a["claim_key"],
+                        b["part_id"], b["claim_key"],
+                        a["title"], b["title"],
+                    )
 
 
 def run():

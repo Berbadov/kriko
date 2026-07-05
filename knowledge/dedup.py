@@ -7,35 +7,12 @@ This module runs OFFLINE only — never on the /analyze request path.
 """
 
 import logging
-import re
 
+from backend.core.title_sim import title_tokens, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.sources.base import Document
 
 log = logging.getLogger(__name__)
-
-_STOPWORDS = {"the", "a", "an", "of", "in", "on", "at", "for", "with", "and",
-              "or", "to", "is", "are", "was", "were", "has", "have", "had",
-              "its", "it", "this", "that", "from", "by", "be", "not", "no"}
-
-
-def _title_tokens(title: str) -> set[str]:
-    words = re.sub(r"[^a-z0-9 ]", " ", title.lower()).split()
-    return {w for w in words if w not in _STOPWORDS and len(w) > 1}
-
-
-def title_similar(title_a: str, title_b: str, threshold: float = 0.4) -> bool:
-    """Title-word Jaccard ≥ threshold, with no domain/type constraint.
-
-    Used for cross-run dedup of a candidate against claims already written to the
-    YAML (plain dicts, not CandidateClaim), where the caller has already matched
-    on domain. Same tokeniser/threshold as same_claim.
-    """
-    tok_a = _title_tokens(title_a)
-    tok_b = _title_tokens(title_b)
-    if not tok_a or not tok_b:
-        return False
-    return len(tok_a & tok_b) / len(tok_a | tok_b) >= threshold
 
 
 def same_claim(a: CandidateClaim, b: CandidateClaim) -> bool:
@@ -47,8 +24,8 @@ def same_claim(a: CandidateClaim, b: CandidateClaim) -> bool:
     if a.domain != b.domain:
         return False
 
-    tok_a = _title_tokens(a.title)
-    tok_b = _title_tokens(b.title)
+    tok_a = title_tokens(a.title)
+    tok_b = title_tokens(b.title)
     if not tok_a or not tok_b:
         return False
 

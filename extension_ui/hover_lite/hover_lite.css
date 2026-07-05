@@ -841,6 +841,115 @@
 }
 
 /* ─────────────────────────────────────────────
+   Domain groups (grouped risk cards)
+   ───────────────────────────────────────────── */
+.lite-domain-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lite-domain-group {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.lite-domain-group[data-open="0"] > .lite-domain-body {
+  display: none;
+}
+
+.lite-domain-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg-surface);
+  border: none;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease-out);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lite-domain-head:hover {
+  background: var(--bg-item);
+}
+
+.lite-domain-icon {
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+}
+
+.lite-domain-name {
+  flex: 0 0 auto;
+}
+
+.lite-domain-count {
+  margin-left: auto;
+  color: var(--fg-muted);
+  font-weight: 500;
+  font-size: 11px;
+  background: var(--bg-base);
+  border-radius: 8px;
+  padding: 0 6px;
+  line-height: 16px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.lite-domain-sev {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+.lite-domain-sev-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.lite-domain-sev-dot[data-sev="high"] { background: var(--high-ink); }
+.lite-domain-sev-dot[data-sev="med"]  { background: var(--med-ink); }
+.lite-domain-sev-dot[data-sev="low"]  { background: var(--low-ink); }
+
+.lite-domain-toggle {
+  flex: 0 0 auto;
+  width: 14px;
+  text-align: center;
+  color: var(--fg-faint);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.lite-domain-body {
+  border-top: 1px solid var(--border);
+}
+
+.lite-domain-body .lite-rc:last-child {
+  border-bottom: none;
+}
+
+.lite-domain-body .lite-rc {
+  border-radius: 0;
+}
+
+/* ─────────────────────────────────────────────
    Reduced motion
    ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
