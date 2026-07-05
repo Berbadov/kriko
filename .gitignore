@@ -9,3 +9,9 @@ venv/
 
 # Knowledge pipeline candidate cache (regenerated per run)
 knowledge/cache/
+
+# Full-payload /analyze log (backend/observability.py) — local/deploy-host only
+logs/
+
+# Claude Code local tool state (worktrees, local settings)
+.claude/

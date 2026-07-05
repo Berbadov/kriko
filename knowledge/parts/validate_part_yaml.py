@@ -15,10 +15,13 @@ from pathlib import Path
 
 import yaml
 
+from knowledge.domains import VALID_DOMAINS
+from knowledge.stoplists import mentions_sibling_code
+
 PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
 
 REQUIRED_PART_FIELDS = {"part_id", "part_type", "display_name", "manufacturer", "claims"}
-VALID_PART_TYPES = {"engine", "transmission", "turbo", "fuel_intake", "exhaust", "cooling", "electrical"}
+VALID_PART_TYPES = {"engine", "transmission", "turbo", "fuel_intake", "exhaust", "cooling", "electrical", "body"}
 REQUIRED_CLAIM_FIELDS = {"claim_key", "title", "kind", "domain", "severity", "status", "rationale", "inspection_advice"}
 VALID_KINDS = {"known_issue", "maintenance", "recall"}
 VALID_SEVERITIES = {"high", "medium", "low"}
@@ -76,6 +79,13 @@ def validate_part(path: Path) -> list[str]:
         if sev not in VALID_SEVERITIES:
             errors.append(f"{loc}: invalid severity {sev!r}")
 
+        domain = claim.get("domain", "")
+        if domain not in VALID_DOMAINS:
+            errors.append(
+                f"{loc}: invalid domain {domain!r}, must be one of {sorted(VALID_DOMAINS)} "
+                f"(run knowledge.normalize_domains to fix)"
+            )
+
         status = claim.get("status", "")
         if status not in VALID_STATUSES:
             errors.append(f"{loc}: invalid status {status!r}")
@@ -87,6 +97,22 @@ def validate_part(path: Path) -> list[str]:
             sources = claim.get("sources", [])
             if not sources:
                 errors.append(f"{loc}: servable non-maintenance claim has no sources")
+
+        # Sibling-code contamination (docs/design_flaws.md Flaw 1): a claim
+        # naming a sibling component's code (same family, different physical
+        # part — e.g. DQ200 in a dq381.yaml claim) without also naming this
+        # part's own code is almost certainly mislabeled, not evidence about
+        # this part. Hard check so bad output fails at write time instead of
+        # relying on a one-off cleanup pass.
+        claim_text = " ".join(
+            str(claim.get(f, "") or "") for f in ("title", "rationale")
+        )
+        if mentions_sibling_code(claim_text, part_id):
+            errors.append(
+                f"{loc}: claim text names a sibling component's code but not "
+                f"{part_id}'s own — likely filed under the wrong part (run "
+                f"knowledge.fix_sibling_contamination): {claim.get('title', '')!r}"
+            )
 
     return errors
 

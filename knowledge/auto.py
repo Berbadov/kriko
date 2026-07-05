@@ -23,6 +23,9 @@ from urllib.parse import urlparse
 import yaml
 from dotenv import load_dotenv
 
+from knowledge.parts.search_templates import ensure_part_stub
+from knowledge.stoplists import FORUM_DOMAINS
+
 # load dotenv
 load_dotenv()
 
@@ -63,11 +66,9 @@ _EXCLUDE_DOMAINS = [
     "pinterest.com", "ebay.com", "ebay.co.uk", "ebay.de", "ebay.fr",
     "sahibinden.com", "arabam.com", "otomoto.pl", "mobile.de",
     "autotrader.co.uk", "gumtree.com",
-    # JS-challenge / login-gated forums — fetchable only with a full browser;
-    # trafilatura returns ~57 chars (JS challenge payload), no actual content.
-    "renaultforums.co.uk",
-    "frenchcarforum.co.uk",
-    "daciaforum.co.uk",
+    # Forums, owner clubs, and complaint boards — one-time/anecdotal issues
+    # read like chronic patterns once extracted. See knowledge/stoplists.py.
+    *FORUM_DOMAINS,
 ]
 
 
@@ -330,8 +331,21 @@ def run_part(
     model-centric ones. Sources are written to knowledge/sources/curated/part_{part_id}.yaml
     and then processed through the standard extraction + promotion pipeline.
     """
-    from knowledge.parts.search_templates import templates_for_part
+    from knowledge.parts.search_templates import _find_make_model_for_part, templates_for_part
     from knowledge.process import run_part as process_run_part
+
+    # Ensure a scaffold stub exists before writing any claims — mirrors what
+    # run_all_parts does per part. Without this, write_promoted_part_claims
+    # (promote.py) writes a bare {"claims": [...]} for a genuinely new part,
+    # missing part_id/part_type/display_name/manufacturer entirely (only ever
+    # unnoticed before because every prior --part invocation targeted a part
+    # --all-parts had already scaffolded).
+    make, model = _find_make_model_for_part(part_id, part_type)
+    if make and model:
+        variants_path = VARIANTS_DIR / f"{make}_{model}.yaml"
+        if variants_path.exists():
+            variants = yaml.safe_load(variants_path.read_text()) or []
+            _ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
     hints = {"fuel": fuel} if fuel else {}
     templates = templates_for_part(part_id, part_type, hints)
@@ -396,8 +410,8 @@ PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
 
 
 def _infer_part_type(part_id: str) -> str | None:
-    """Return 'engine'|'transmission'|'cooling'|'electrical' by scanning parts dir."""
-    for subdir in ("engine", "transmission", "cooling", "electrical"):
+    """Return 'engine'|'transmission'|'cooling'|'electrical'|'body' by scanning parts dir."""
+    for subdir in ("engine", "transmission", "cooling", "electrical", "body"):
         if (PARTS_DIR / subdir / f"{part_id}.yaml").exists():
             return subdir
     return None
@@ -412,75 +426,7 @@ def _ensure_part_stub(
     *,
     dry_run: bool = False,
 ) -> None:
-    """Create a minimal part stub YAML if one doesn't exist yet."""
-    stub_path = PARTS_DIR / part_type / f"{part_id}.yaml"
-    if stub_path.exists():
-        return
-    if dry_run:
-        print(f"  [dry-run] Would create part stub: {stub_path.relative_to(REPO_ROOT)}")
-        return
-
-    make_pretty = make.replace("_", " ").title()
-    model_pretty = model.replace("_", " ").title()
-
-    if part_type == "engine":
-        codes: list[str] = []
-        descs: list[str] = []
-        for v in variants:
-            if (v.get("engine_family") or "").lower() == part_id.lower():
-                ec = (v.get("engine_code") or "").upper()
-                if ec and ec not in codes:
-                    codes.append(ec)
-                fuel = (v.get("fuel") or "").lower()
-                cc = v.get("displacement_cc")
-                if cc:
-                    litre = f"{cc / 1000:.1f}"
-                    fuel_tag = "TSI" if fuel == "petrol" else "TDI" if fuel == "diesel" else fuel.upper()
-                    label = f"{litre} {fuel_tag}"
-                    if label not in descs:
-                        descs.append(label)
-        display_name = f"{make_pretty} {part_id.upper()} Engine"
-        known_also_as = codes + descs
-
-    elif part_type == "transmission":
-        display_name = f"{make_pretty} {part_id.upper()} Transmission"
-        known_also_as = [part_id.upper()]
-
-    elif part_type == "cooling":
-        display_name = f"{make_pretty} {model_pretty} Cooling System"
-        known_also_as = [
-            f"{make_pretty} {model_pretty} cooling",
-            f"{make_pretty} {model_pretty} coolant",
-            f"{make_pretty} {model_pretty} thermostat",
-        ]
-
-    elif part_type == "electrical":
-        display_name = f"{make_pretty} {model_pretty} Electrical Systems"
-        known_also_as = [
-            f"{make_pretty} {model_pretty} electrical",
-            f"{make_pretty} {model_pretty} electronics",
-            f"{make_pretty} {model_pretty} battery",
-        ]
-
-    else:
-        display_name = f"{make_pretty} {model_pretty} {part_id.upper()}"
-        known_also_as = [part_id.upper()]
-
-    stub_path.parent.mkdir(parents=True, exist_ok=True)
-    stub_path.write_text(
-        yaml.dump(
-            {
-                "part_id": part_id,
-                "part_type": part_type,
-                "display_name": display_name,
-                "known_also_as": known_also_as,
-                "claims": [],
-            },
-            allow_unicode=True,
-            sort_keys=False,
-        )
-    )
-    print(f"  Created part stub: {stub_path.relative_to(REPO_ROOT)}")
+    ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
 
 def run_all_parts(
@@ -506,6 +452,7 @@ def run_all_parts(
     transmissions: set[str] = set()
     cooling_codes: set[str] = set()
     electrical_codes: set[str] = set()
+    body_codes: set[str] = set()
 
     for v in variants:
         ef = (v.get("engine_family") or "").strip()
@@ -517,15 +464,16 @@ def run_all_parts(
             ("transmission_code", transmissions),
             ("cooling_code", cooling_codes),
             ("electrical_code", electrical_codes),
+            ("body_code", body_codes),
         ):
             val = (v.get(code) or "").strip()
             if val and val != "manual":
                 bucket.add(val)
 
-    total = len(engines) + len(transmissions) + len(cooling_codes) + len(electrical_codes)
+    total = len(engines) + len(transmissions) + len(cooling_codes) + len(electrical_codes) + len(body_codes)
     print(f"\nModel: {make} {model}")
     print(f"Parts to process: {len(engines)} engine(s) + {len(transmissions)} transmission(s)"
-          f" + {len(cooling_codes)} cooling + {len(electrical_codes)} electrical\n")
+          f" + {len(cooling_codes)} cooling + {len(electrical_codes)} electrical + {len(body_codes)} body\n")
     for ef, fuel in sorted(engines.items()):
         print(f"  engine      : {ef}" + (f" ({fuel})" if fuel else ""))
     for tc in sorted(transmissions):
@@ -534,6 +482,8 @@ def run_all_parts(
         print(f"  cooling     : {cc}")
     for ec in sorted(electrical_codes):
         print(f"  electrical  : {ec}")
+    for bc in sorted(body_codes):
+        print(f"  body        : {bc}")
     print()
 
     dry_run = kwargs.get("dry_run", False)
@@ -570,6 +520,14 @@ def run_all_parts(
         _ensure_part_stub(ec, "electrical", make, model, variants, dry_run=dry_run)
         run_part(ec, "electrical", **kwargs)
 
+    for bc in sorted(body_codes):
+        done += 1
+        print(f"\n{'═' * 60}")
+        print(f"[{done}/{total}] BODY: {bc}")
+        print(f"{'═' * 60}\n")
+        _ensure_part_stub(bc, "body", make, model, variants, dry_run=dry_run)
+        run_part(bc, "body", **kwargs)
+
     print(f"\n{'═' * 60}")
     print(f"All {total} part pipeline(s) complete for {make} {model}.")
     print(f"{'═' * 60}")
@@ -599,7 +557,7 @@ def main() -> None:
     # Part-centric mode
     parser.add_argument("--part", metavar="PART_ID",
                         help="Part ID (e.g. k9k, edc, ea211, dq200)")
-    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical"],
+    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical", "body"],
                         help="Part type (required with --part unless auto-detected)")
     parser.add_argument("--fuel", default="",
                         choices=["", "diesel", "petrol"],

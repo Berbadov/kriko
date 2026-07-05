@@ -14,20 +14,35 @@ Maintenance claims (kind="maintenance") are exempt from the has_source
 requirement — their grounding is the manufacturer service interval, not a
 ClaimSource row. They are gated instead by interval logic in
 _resolve_maintenance_strength.
+
+High-severity human-review gate (docs/design_flaws.md Flaw 4): `severity ==
+"high"` already forces `promote.py` to mark a claim `review`/`held` pending a
+human sign-off that, in practice, never happens — nearly everything in the
+catalog sits at `promoted_by: pending_human`. Serving those anyway made the
+effective quality bar "survived a ministral-8b gate", for exactly the claims
+most likely to weigh on a buyer's decision. A high-severity claim is now
+withheld until a human actually promotes it to `verified`; medium/low
+review/held claims still serve as "reported" — same as before.
 """
 
 from dataclasses import dataclass
 
-from sqlalchemy import or_
+from sqlalchemy import and_, not_, or_
 from sqlalchemy.orm import Session
 
 from backend.core.context import ListingContext
+from backend.core.equipment import listing_has_equipment
 from backend.core.matcher import MatchResult
 from backend.db.models import Claim, ClaimSource, ClaimVariant
 
 # Statuses a buyer may see. `verified` → "confirmed"; review/held → "reported".
 # `draft` is never servable. The card labels strength so the two never blur.
+# See the module docstring: severity=="high" narrows this further at query time.
 SERVABLE_STATUSES = ("verified", "review", "held")
+
+# review/held statuses withheld from serving when severity is high — see the
+# module docstring's "High-severity human-review gate".
+_UNREVIEWED_STATUSES = ("review", "held")
 
 
 @dataclass
@@ -63,6 +78,8 @@ def _apply_context(claims: list[Claim], ctx: ListingContext | None) -> list[Clai
     """Apply mileage/age gating and maintenance interval logic, return ClaimResults."""
     results = []
     for claim in claims:
+        if not _passes_equipment_gate(claim, ctx):
+            continue
         if claim.kind == "maintenance":
             strength = _resolve_maintenance_strength(claim, ctx)
             if strength is None:
@@ -93,6 +110,24 @@ def _passes_applies_when(claim: Claim, ctx: ListingContext | None) -> bool:
         if ctx.age_years < claim.min_age_years:
             return False
     return True
+
+
+def _passes_equipment_gate(claim: Claim, ctx: ListingContext | None) -> bool:
+    """Hide claims that require optional equipment (e.g. sunroof) the listing
+    confirms the car doesn't have. Unlike mileage/age, this fails CLOSED on a
+    confirmed mismatch — a 4WD/sunroof-only claim on a 2WD/no-sunroof car isn't
+    a probabilistic risk, it's categorically wrong and undermines trust.
+
+    Still fails open when equipment wasn't scraped at all (ctx.equipment is
+    None/empty): we can't distinguish "car doesn't have it" from "extraction
+    didn't find the Donanım block", so we never hide on that ambiguity.
+    """
+    tags = claim.requires_equipment or []
+    if not tags:
+        return True
+    if ctx is None or not ctx.equipment:
+        return True
+    return all(listing_has_equipment(tag, ctx.equipment) for tag in tags)
 
 
 def _resolve_maintenance_strength(
@@ -157,11 +192,17 @@ def _servable_claims_for(variant_id: str, db: Session) -> list[Claim]:
     """Fetch claims, re-checking invariants at query time.
 
     Invariant: status ∈ SERVABLE_STATUSES AND is_current AND (≥1 source OR
-    kind="maintenance") AND variant link. Re-checked here, not trusted from
-    the YAML/sync path. The has_source requirement drops the ungrounded score=0
-    noise (those claims are persisted with zero sources), so only grounded
-    reports reach a buyer. Maintenance claims are exempted — their grounding is
-    the manufacturer service interval.
+    kind="maintenance") AND variant link AND NOT (kind!="maintenance" AND
+    severity=="high" AND status unreviewed). Re-checked here, not trusted
+    from the YAML/sync path. The has_source requirement drops the ungrounded
+    score=0 noise (those claims are persisted with zero sources), so only
+    grounded reports reach a buyer.
+
+    Maintenance claims are exempted from BOTH has_source and the severity
+    gate — their trust model is the manufacturer service interval
+    (_resolve_maintenance_strength), not LLM corroboration count, so the
+    "pending_human sign-off never happens" problem the severity gate exists
+    for (see module docstring) doesn't apply to them the same way.
     """
     has_source = (
         db.query(ClaimSource)
@@ -178,6 +219,10 @@ def _servable_claims_for(variant_id: str, db: Session) -> list[Claim]:
             or_(
                 Claim.kind == "maintenance",
                 has_source,
+            ),
+            or_(
+                Claim.kind == "maintenance",
+                not_(and_(Claim.severity == "high", Claim.status.in_(_UNREVIEWED_STATUSES))),
             ),
         )
         .all()

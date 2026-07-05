@@ -1,0 +1,317 @@
+part_id: clio5_body
+part_type: body
+display_name: Renault Clio 5 Body & Water Sealing
+manufacturer: renault
+known_also_as:
+- Renault Clio 5 body
+- Renault Clio 5 boot leak
+- Renault Clio 5 water ingress
+claims:
+- claim_key: clio5_body_general_chronic_water_ingres
+  title: Chronic water ingress via bulkhead drain hole
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: The Renault Clio Mk2 has a persistent design flaw where a hidden drain
+    hole in the bulkhead/scuttle area fails to properly channel rainwater away, leading
+    to water pooling inside the cabin during heavy rain. This can cause long-term
+    issues like electrical faults, rust, and discomfort for occupants.
+  inspection_advice: Check the scuttle area (behind the windshield) for water pooling
+    or dampness after a rain shower. Look for signs of rust or corrosion near the
+    drain hole, and ensure the wiper mechanism and heater blower area are dry. Lift
+    the wiper arms and inspect the area beneath them for water accumulation.
+  sources: []
+- claim_key: clio5_body_engine_coolant_leakage_link
+  title: Coolant leakage linked to air conditioning operation
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic coolant loss (~0.5L over 5 months) specifically triggered by
+    air conditioning use, suggesting a design or gasket failure at the interface between
+    the cooling system and A/C components.
+  inspection_advice: Check for coolant residue around the heater core housing, radiator
+    cap, or expansion tank. Look for cracks in the thermostat housing or coolant passages
+    when the A/C is engaged.
+  sources: []
+- claim_key: clio5_body_emissions_blocked_air_conditio
+  title: Blocked air conditioning drain pipe causing water pooling
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: A clogged A/C drain pipe can cause water to back up and leak into the
+    cabin, particularly when the A/C is active, leading to interior water damage and
+    potential mold growth.
+  inspection_advice: Locate the A/C drain pipe (typically near the firewall or under
+    the dashboard) and check for blockages or improper routing. Clear debris or re-route
+    if necessary.
+  sources: []
+- claim_key: clio5_body_engine_soğutma_devresi_(coo
+  title: Risk of incorrect refill after cooling system drainage
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: After draining the cooling system, using the wrong coolant (plain water)
+    can cause the engine to overheat or suffer damage. This is not a chronic issue
+    to watch for in the Renault Clio 5, but it is a risk that can arise from incorrect
+    procedures. Using unauthorized or non-OEM-approved products may also lead to problems.
+  inspection_advice: If the cooling system has been drained, verify that the service
+    technician refilled it with the correct proportion and approved coolant. Check
+    the coolant level and condition.
+  sources:
+  - source_url: https://www.user-manual.renault.com/tr/b%C3%B6l%C3%BCm-5-pratik-tavsiyeler/calisma-arizalari
+    source_domain: user-manual.renault.com
+    site_or_channel: user-manual.renault.com
+    quote: '"Belirgin miktarda soğutma sıvısı eksikliği halinde, motor çok sıcakken
+      kesinlikle soğuk soğutma sıvısıyla dolum yapmamanız gerektiğini unutmayınız.
+      Aracın soğutma devresinin kısmen dahi olsa, boşaltılmasını gerektiren bir müdahaleden
+      sonra devre, miktarı iyi ayarlanmış yeni bir karışımla doldurulmalıdır. Hatırlatma:
+      sadece Teknik Departmanımız tarafından onaylanan ürünler bu amaçla kullanılabilir."'
+    independent: true
+- claim_key: clio5_body_general_structural_corrosion
+  title: Structural corrosion and chassis weakness
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Corrosion affecting structural components like the subframe and body
+    mountings is a chronic issue in Renault Clio models, potentially compromising
+    safety and rigidity.
+  inspection_advice: Check for rust on subframe, body mountings, and chassis areas.
+    Look for weakened or corroded sections that may require reinforcement or replacement.
+  sources: []
+- claim_key: clio5_body_emissions_exhaust_emissions_ex
+  title: Exhaust emissions exceeding limits
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issues with emissions systems, including catalytic converter
+    inefficiency and DPF (Diesel Particulate Filter) problems, are common and can
+    lead to MOT failure.
+  inspection_advice: Verify the catalytic converter’s functionality and check for
+    DPF warnings or clogging. Inspect exhaust system for leaks or damage that may
+    affect emissions performance.
+  sources: []
+- claim_key: clio5_body_brakes_brake_pipe_corrosion
+  title: Brake pipe corrosion
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Corrosion in brake pipes can lead to leaks or reduced braking efficiency,
+    posing a safety risk.
+  inspection_advice: Inspect brake pipes for rust, pitting, or leaks. Check for any
+    signs of fluid loss or reduced brake pedal firmness.
+  sources: []
+- claim_key: clio5_body_suspension_shock_absorber_leaks
+  title: Shock absorber leaks or misting
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Leaking or misting shock absorbers compromise ride quality and handling,
+    potentially leading to further suspension damage.
+  inspection_advice: Inspect shock absorbers for oil leaks or misting. Test for proper
+    damping by compressing and releasing the suspension; excessive bounce indicates
+    failure.
+  sources: []
+- claim_key: clio5_body_suspension_coil_spring_breakage
+  title: Coil spring breakage
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Broken coil springs can cause severe handling issues, vehicle instability,
+    and pose a safety risk.
+  inspection_advice: Visually inspect coil springs for cracks or breaks. Check for
+    uneven ride height or vehicle sagging on one side.
+  sources: []
+- claim_key: clio5_body_steering_steering_rack_leaks
+  title: Steering rack leaks
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Leaking steering racks can lead to loss of hydraulic fluid, compromised
+    steering performance, and potential failure of the steering system.
+  inspection_advice: Inspect steering rack boots for cracks or leaks. Check for fluid
+    leaks around the steering rack and test for proper steering response and alignment.
+  sources: []
+- claim_key: clio5_body_electrical_headlamp_and_indicat
+  title: Headlamp and indicator failures
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Chronic issues with lighting components can compromise visibility and
+    safety, especially in low-light conditions.
+  inspection_advice: Test all headlamps, indicators, and brake lights for functionality.
+    Check wiring and connections for corrosion or damage.
+  sources: []
+- claim_key: clio5_body_general_windscreen_crack_in_
+  title: Windscreen crack in swept area
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.0
+  status: held
+  promoted_by: pending_human
+  rationale: Cracks in the windscreen, particularly in the swept area, can obstruct
+    the driver’s view and pose a safety risk.
+  inspection_advice: Inspect the windscreen for cracks, especially in the area swept
+    by the wipers. Check for any chips that may have propagated into larger cracks.
+  sources: []
+- claim_key: clio5_body_engine_chronic_crankshaft_p
+  title: Sensor failures cause slow starts, weak throttle (1.3 TCe)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: This issue describes a persistent problem where the Renault Clio 5 (1.3
+    TCe) engine struggles with slow starts and weak acceleration, directly caused
+    by failures in the crankshaft position sensor (krank sensörü) or camshaft position
+    sensor (eksantrik mili sensörü). These sensors are essential for accurate engine
+    timing and fuel injection control. When they fail, the engine may experience misfires,
+    rough idling, and delayed ignition—particularly after multiple prior repairs,
+    such as replacements of the fuel pressure regulator, injectors, spark plugs, or
+    battery
+  inspection_advice: Verify the presence of diagnostic trouble codes (DTCs) related
+    to crankshaft (P0335) or camshaft (P0340) position sensors. Inspect the wiring
+    harnesses for corrosion, fraying, or physical damage. Use a diagnostic tool to
+    confirm sensor signal integrity. Listen for abnormal engine noises, such as rattling
+    or ticking during startup, which may indicate sensor-related misfires
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Krank sensörü veya eksantrik mili sensörleri düzgün çalışıyor mu? (Bozulursa
+      düzensiz yanmaya ve marşta gecikmeye neden olabilir.)"'
+    independent: true
+- claim_key: clio5_body_emissions_chronic_catalytic_co
+  title: Chronic catalytic converter clogging causing loss of power and poor throttle
+    response
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text describes a scenario where the Renault Clio 5 exhibits a loss
+    of power and poor throttle response, which is attributed to potential catalytic
+    converter clogging. This is a known chronic issue in turbocharged engines where
+    exhaust backpressure builds up, restricting exhaust flow and reducing engine performance.
+    The mention of 'katalitik konvertör tıkalı olabilir' (catalytic converter may
+    be clogged) supports this defect.
+  inspection_advice: Check for excessive backpressure in the exhaust system using
+    a manifold vacuum gauge or exhaust flow tester. Inspect the catalytic converter
+    for physical damage or excessive heat buildup. Listen for unusual exhaust noises
+    (e.g., rattling or hissing) that may indicate a clogged converter.
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Katalitik konvertör tıkalı olabilir. Eğer motor gaz yemiyorsa, egzoz
+      gazları düzgün atılamıyordur."'
+    independent: true
+- claim_key: clio5_body_engine_chronic_mass_air_flo
+  title: Chronic Mass Air Flow (MAF) sensor failure causing incorrect air-fuel mixture
+    and emissions errors
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text highlights that a faulty or dirty MAF sensor can disrupt the
+    air-fuel mixture, leading to emissions and fuel injection errors. This is a chronic
+    issue in Renault vehicles, where a malfunctioning MAF sensor can cause inconsistent
+    engine performance, poor fuel economy, and triggering of emissions-related error
+    codes (e.g., 'Egzoz Emisyon Kontrol Ettirin').
+  inspection_advice: Inspect the MAF sensor for dirt or damage. Use a diagnostic tool
+    to check for error codes related to the MAF sensor (e.g., P0100, P0101). Clean
+    the sensor with appropriate MAF cleaner or replace it if necessary. Monitor engine
+    performance for improvements after cleaning or replacement.
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Kirli veya hatalı ölçüm yapan MAF sensörü, yakıt-hava karışımını bozarak
+      hem emisyon hem de enjeksiyon hatalarına neden olur."'
+    independent: true
+- claim_key: clio5_body_electrical_chronic_ecu_(engine_
+  title: ECU software glitches on 1.5 dCi
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: The text suggests that even after addressing mechanical issues, persistent
+    error codes and performance problems may stem from outdated or corrupted ECU software.
+    This is a known chronic issue in Renault vehicles, where ECU software may not
+    adapt correctly to changes in engine components or driving conditions, leading
+    to recurring errors and poor engine response.
+  inspection_advice: Check for available ECU software updates from Renault. Perform
+    an ECU adaptation reset or recalibration at an authorized service center. Monitor
+    error codes and engine performance after the update or reset to determine if the
+    issue is resolved.
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"ECU, enjektör veya hava-yakıt karışımında eski verileri kullanıyor olabilir.
+      Serviste adaptasyon sıfırlaması yaptırarak ECU’nun yeni verilere uyum sağlaması
+      sağlanabilir."'
+    independent: true
+- claim_key: clio5_body_electrical_bagaj_açma_sinyal_mo
+  title: Trunk Release Signal Module Malfunctions
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  status: review
+  promoted_by: pending_human
+  rationale: In Renault Clio V (2019–2024) models, the trunk release signal module
+    frequently exhibits issues such as deformation or rupture of the internal spring-loaded
+    button rubber diaphragm, unresponsive buttons, or lack of tactile feedback. Malfunction
+    of this module prevents the transmission of the trunk release command.
+  inspection_advice: Check for tactile feedback or response when pressing the button.
+    Remove the trunk lining to inspect the internal button rubber diaphragm for deformation
+    or damage. Also, verify the lock motor sound; if no sound is present, the issue
+    may lie within this module.
+  sources:
+  - source_url: https://parcaekseni.com/urun/clio-5-bagaj-kapagi-acma-kontrol-unitesi/
+    source_domain: parcaekseni.com
+    site_or_channel: parcaekseni.com
+    quote: "\"Bagaj kapağı açılmıyor\", \"Butona basıldığında tıklama yok veya tepki\
+      \ yok\", \"Bagaj açık uyarısı çıkıyor ama kapak kilitli\", \"Buton içi yay kırılmış\
+      \ / iç lastik deformasyonu olmuÅ\x9F\""
+    independent: true

@@ -47,27 +47,11 @@
   added_at: '2026-06-27'
   processed_at: '2026-06-27'
 - type: page
-  url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-4-1-5-dci
-  site_or_channel: gaga.ba
-  tier: A
-  notes: Renault Megane 4 1.5 dCi · faults, EDC & AdBlue
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
   url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/motore-1-2-tce-h5ft-problemi-consumo-olio-catena
   site_or_channel: autoricambitritella.it
   tier: A
   notes: 1.2 TCe (H5Ft) ENGINE – PROBLEMS, OIL CONSUMPTION, TIMING CHAIN ​​AND  –
     Autoric
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://gaga.ba/en/najcesci-kvarovi/renault-megane-3-1-5-dci
-  site_or_channel: gaga.ba
-  tier: A
-  notes: Renault Megane 3 1.5 dCi · common K9K faults | Auto Gas Gaga
   status: processed
   added_at: '2026-06-27'
   processed_at: '2026-06-27'
@@ -95,373 +79,6 @@
   status: processed
   added_at: '2026-06-27'
   processed_at: '2026-06-27'
-- type: page
-  url: https://www.capturownersclub.co.uk/threads/1-2tce-timing-chain-bad-mpg.4262/
-  site_or_channel: capturownersclub.co.uk
-  tier: B
-  notes: 1.2TCE timing chain & bad MPG - Renault Captur Forums
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://forum.donanimhaber.com/megane-2-1-5-dci-gaz-kesme--95241854
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 'Renault Megane 2 1.5 dCi Gaz Kesme Sorunu: Nedenleri ve Çözümleri | DonanımHaber'
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://www.renaultforums.co.uk/threads/egr-valve-on-1-6-trafic-blanking.616075/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Egr valve on 1.6 trafic blanking | Independent Renault Forums
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://www.renaultforums.co.uk/threads/renault-megane-4-2017-diesel-1-6-dci-engine-issue.604284/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: RENAULT MEGANE 4 (2017) DIESEL 1.6 dCi engine issue
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://www.renaultforums.co.uk/threads/megane-2010-1-5-dci-check-automatic-gearbox.593245/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: megane 2010 1.5 dci check automatic gearbox | Independent Renault Forums
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://www.renaultforums.co.uk/threads/gearbox-problem-on-automatic-renault-megane-1-6.137507/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: gearbox problem on automatic Renault Megane 1.6
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://forum.donanimhaber.com/megane-4-mekanik-sorunlar--149263233
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: Megane 4 Mekanik Sorunlar | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://www.renaultforums.co.uk/threads/electric-handbrake-fault-megane-iv.619218/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Electric handbrake fault Megane IV | Independent Renault Forums
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://forum.donanimhaber.com/renault-megane-4-alacaklar-okusun--151709162
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: Renault Megane 4 alacaklar Okusun - DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-27'
-  processed_at: '2026-06-27'
-- type: page
-  url: https://forum.donanimhaber.com/megane-iv-yan-kapi-citasi-catladi--157603012
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: Megane IV Yan Kapı Çıtası Çatladı | DonanımHaber Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.capturownersclub.co.uk/threads/timing-chain-slipped.8085/
-  site_or_channel: capturownersclub.co.uk
-  tier: B
-  notes: Timing Chain Slipped?? - Renault Captur Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.daciaforum.co.uk/threads/dacia-logan-k9k-diesel-with-adblue-the-warning-light-mystery-solved.38728/
-  site_or_channel: daciaforum.co.uk
-  tier: B
-  notes: Dacia Logan K9K Diesel with ADblue - The warning light...
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://forum.donanimhaber.com/megane-4-edc-arizasi--155937272
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: MEGANE 4 EDC ARIZASI | DonanımHaber Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=20823
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: 1.5 DCI Auto Gearbox problem - The Mégane II Owners' Club
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.megane4-forum.de/forum/thread/3990-software-issues-with-renault-megane-iv-gt-line-from-2017/
-  site_or_channel: megane4-forum.de
-  tier: B
-  notes: Software issues with Renault Megane IV GT Line from 2017  - Megane 4 - Allgemein
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.meganeelectricforums.com/viewtopic.php?t=618
-  site_or_channel: meganeelectricforums.com
-  tier: B
-  notes: New owner facing multiples issues - Renault Megane E-Tech Electric Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://forum.donanimhaber.com/renault-megane-4-sikayetleri-kronik-sorunlar-arizalari--140780614
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: renault megane 4 şikayetleri ,kronik sorunlar,arızaları
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.daciaforum.co.uk/threads/1-2-tce-h5f404-vs-h5f408.37084/
-  site_or_channel: daciaforum.co.uk
-  tier: B
-  notes: 1.2 tce H5F404 vs h5F408 | UK Dacia Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.daciaforum.co.uk/threads/1-2tce-engine-suspect.41276/
-  site_or_channel: daciaforum.co.uk
-  tier: B
-  notes: 1.2TCE engine suspect? - UK Dacia Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://en.renault-club.cz/forum-topic/timing-chain-tensioner-42666?select=42702
-  site_or_channel: en.renault-club.cz
-  tier: B
-  notes: Timing Chain Tensioner - Mégane III - Forum - Renault club
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://forum.donanimhaber.com/1-2-tce-motor--161660356
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 1.2 TCE motor | DonanımHaber Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.daciaforum.co.uk/threads/duster-1-3-tce.43834/
-  site_or_channel: daciaforum.co.uk
-  tier: B
-  notes: Duster 1.3 TCE - UK Dacia Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://en.renault-club.cz/forum-topic/timing-chain-tensioner-42666
-  site_or_channel: en.renault-club.cz
-  tier: B
-  notes: Timing Chain Tensioner - Mégane III - Forum - Renault club
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/timing-belt-1-5-dci-k9k-engines-shredded-due-to-misaligned-fuel-pump.539378/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Timing belt 1.5 DCI K9K engines shredded due to misaligned Fuel Pump | Independe
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=23&h=0&t=1231904
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: The DCi engine from Renault / Nissan - Page 1 - General Gassing
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/megane-2-1-5dci-k9k-722-engine-stall-and-other-problems.150129/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Megane 2 1.5dci k9k 722, engine stall and other problems | Independent Renault
-    F
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://forum.autodiagnostic.it/topic/73094-renault-megane-4-052019-1461cc-k9k-u8-85kw-diesel-adblue-renault-megane-4/
-  site_or_channel: forum.autodiagnostic.it
-  tier: B
-  notes: '[Renault Megane 4 05/2019 1461cc k9k u8 85Kw Diesel] AdBlue Renault Megane
-    4 - M'
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/r9m.609690/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: R9M | Independent Renault Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/r9m-452-1-6-dci-engine-replacement-wont-start-with-p0016.612070/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: r9m 452 / 1.6 dci engine replacement - won't start with P0016 | Independent
-    Rena
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://frenchcarforum.co.uk/forum/viewtopic.php?t=76276
-  site_or_channel: frenchcarforum.co.uk
-  tier: B
-  notes: Renault R9M timing chain - French Car Forum
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/mk3-1-5-dci-dpf-replace.616148/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: MK3 1.5 DCI - DPF REPLACE | Independent Renault Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/megane-4-kavrama-ses-sorunu-ve-garanti-kapsaminda-degisim-talebi
-  site_or_channel: sikayetvar.com
-  tier: B
-  notes: Renault Megane 4 Kavrama Ses Sorunu Ve Garanti Kapsamında Değişim Talebi
-    - Şikay
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/another-edc-auto-box-fault-2015-clio-rs-220-trophy.616001/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Another EDC auto box fault. 2015 clio RS 220 trophy | Independent Renault
-    Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/megane-iv-anti-roll-bar-link-steel-vs-aluminium.605087/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Megane IV Anti roll bar link - Steel vs aluminium? | Independent Renault
-    Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.renaultforums.co.uk/threads/suspensions.607699/
-  site_or_channel: renaultforums.co.uk
-  tier: B
-  notes: Suspensions? | Independent Renault Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://meganeownersclub.co.uk/forum/viewtopic.php?t=25725
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: Renault Megane Dymanique 1.5 dCI / 1.9 dCI - The Mégane II ...
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=15513
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: MK3 reliability - how good/bad?? - The Mégane II Owners' Club
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=18276
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: 1.9 dci common faults - The Mégane II Owners' Club
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.honestjohn.co.uk/owner-reviews/renault/megane-e-tech-electric-2022/?review=10029
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Renault Megane  E-Tech Electric (2022 on) - Owners' Reviews | Honest John
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.honestjohn.co.uk/owner-reviews/renault/megane-e-tech-2022/?review=10029
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Renault Megane E-Tech (2022 on) - Owners' Reviews | Honest John
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.honestjohn.co.uk/renault/megane/2016/
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Renault Megane (2016 – 2022) Review  | Honest John
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=255&h=0&t=1989869
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Renault Mégane 1.6 TCE GT - Page 1 - Car Buying - PistonHeads UK
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=160&h=0&t=1934805
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Renault Megane reliability around 2011 - Page 1 - PistonHeads
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.pistonheads.com/gassing/topic.asp?f=255&h=0&t=2050232
-  site_or_channel: pistonheads.com
-  tier: B
-  notes: Renault megane 1.6 16v dynamique mk3 reliability - Car Buying
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://forum.donanimhaber.com/renault-megane-4-alacaklar-okusun--151709162-2
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 'Renault Megane 4 Kronik Sorunları: Bilmeniz Gerekenler | DonanımHaber Forum
-    » Sa'
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
 - type: page
   url: https://www.whatcar.com/renault/megane-e-tech/hatchback/used-review/n28391/reliability
   site_or_channel: whatcar.com
@@ -584,23 +201,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://arabakolik.net/renault-megane-4-13-tce-kronik-sorunlari
-  site_or_channel: arabakolik.net
-  tier: C
-  notes: Renault megane 4 1.3 Tce Kronik Sorunları - ArabaKolik.Net
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://kronikuzman.com/renault-megane-13-tce-kronik-sorunlari-tavsiye-edenler
-  site_or_channel: kronikuzman.com
-  tier: C
-  notes: 'Renault Megane 1.3 TCe Kronik Sorunları: Tavsiye edenler - KronikUzman.com
-    | Ara'
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://otomobiloji.com/renault-1-5-dci-motor-sorunlari-ve-cozumu/
   site_or_channel: otomobiloji.com
   tier: C
@@ -707,14 +307,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://kroniksorunlar.net/renault-megane-16-kullanici-sikayetleri-sikayetler
-  site_or_channel: kroniksorunlar.net
-  tier: C
-  notes: 'Renault Megane 1.6 Kullanıcı Şikayetleri: Şikayetler - KronikSorunlar.Net'
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://m.maslakdpf.com/mercedes-w205-partikul-filtresi-dpf-c200-1-6-r9m-2015-19/
   site_or_channel: m.maslakdpf.com
   tier: C
@@ -739,59 +331,10 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-edc-sanziman-vites-gecisinde-anormal-ses-sorunu
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane EDC Şanzıman Vites Geçişinde Anormal Ses Sorunu - Şikayetvar
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://www.otocikma.com/blog/sanziman/renault-edc-sanz%C4%B1man-arizalari
   site_or_channel: otocikma.com
   tier: C
   notes: Renault EDC Şanzıman Arızaları | Kronik Sorunlar ve Çözüm Rehberi
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://otopark.com/forum/threads/megane-4-mekanik-sorunlar-vites-gecisleri-ve-klima-sesi.13616/
-  site_or_channel: otopark.com
-  tier: C
-  notes: AÇIK - Megane 4 Mekanik Sorunlar / Vites Geçişleri ve Klima Sesi
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://arizaisaretleri.com/renault-tehlike-elektrik-arizasi-nasil-giderilir/
-  site_or_channel: arizaisaretleri.com
-  tier: C
-  notes: Renault “Tehlike Elektrik Arızası” nasıl giderilir? – Ariza işaretleri
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://arizaisaretleri.com/renault-tehlike-elektrik-arizasi-ne-demek/
-  site_or_channel: arizaisaretleri.com
-  tier: C
-  notes: Renault tehlike elektrik arızası ne demek ? – Ariza işaretleri
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-multimedya-sistemi-surekli-donma-ve-ekran-kararmasi-yetkili-servis-cozum-saglamiyor
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Multimedya Sistemi Sürekli Donma Ve Ekran Kararması Yetkili
-    Ser
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-ekran-donmasi-ve-kapanmasi-cozulmedi
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane Ekran Donması Ve Kapanması Çözülmedi - Şikayetvar
   status: skipped
   added_at: '2026-06-27'
   processed_at: null
@@ -836,40 +379,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4te-bagaj-su-almasi-ve-ekran-sorunu-yetkili-servisten-yardim-alinamiyor
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4'te Bagaj Su Alması Ve Ekran Sorunu Yetkili Servisten Yardım
-    Alı
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-kronik-kapi-citasi-ve-cam-birlesim-deformasyonu-magduriyeti
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Kronik Kapı Çıtası Ve Cam Birleşim Deformasyonu Mağduriyeti
-    - Ş
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/uzun-yolculuklarda-renault-megane-klimam-sogutmayi-tamamen-birakiyor
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Uzun Yolculuklarda Renault Megane Klimam Soğutmayı Tamamen Bırakıyor - Şikayetva
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/megane/megane-4-klima-sorunu
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Klima Sorunu Şikayet ve Kullanıcı Yorumları
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://www.akbayrenault.com/urun/renault-megane-4-iv-kalorifer-radyatoru-271154677r
   site_or_channel: akbayrenault.com
   tier: C
@@ -891,14 +400,6 @@
   site_or_channel: yoldakiusta.com
   tier: C
   notes: En Önemli Renault Megane 4 Arıza Kodları | YoldakiUsta.Com
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/megane-4-kronik-sorun
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Kronik Sorun Şikayetleri - Şikayetvar
   status: skipped
   added_at: '2026-06-27'
   processed_at: null
@@ -1007,15 +508,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://kronikuzman.com/renault-megane-15-blue-dci-kronik-sorunlari-deneyimler
-  site_or_channel: kronikuzman.com
-  tier: C
-  notes: 'Renault Megane 1.5 Blue dCi Kronik Sorunları: Deneyimler - KronikUzman.com
-    | Ara'
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://www.motorzentrale.de/motor/r9m/
   site_or_channel: motorzentrale.de
   tier: C
@@ -1048,14 +540,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://kroniksorunlar.net/megane-16-coupe-kronik-sorunlari-ve-detayli-kullanici-yorumlari
-  site_or_channel: kroniksorunlar.net
-  tier: C
-  notes: Megane 1.6 Coupe Kronik Sorunları ve Detaylı Kullanıcı Yorumları ? - KronikSorun
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://m.maslakdpf.com/mercedes-vito-partikul-filtresi/
   site_or_channel: m.maslakdpf.com
   tier: C
@@ -1073,31 +557,6 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://www.sikayetvar.com/renault/garanti-suresi-bitmek-uzere-renault-megane-edc-sanziman-ses-sorunu-cozulmedi
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Garanti Süresi Bitmek Üzere Renault Megane EDC Şanzıman Ses Sorunu Çözülmedi
-    - Ş
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-debriyaj-sorunu-ve-yetersiz-servis-hizmeti
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Debriyaj Sorunu Ve Yetersiz Servis Hizmeti - Şikayetvar
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-ekran-sorunu-video
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Ekran Sorunu - Şikayetvar
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://www.reeloto.com/renault-megane-iv-ariza-lambalari-anlami-megane-4-uyari-ve-ikaz-isaretleri-anlamlari/
   site_or_channel: reeloto.com
   tier: C
@@ -1107,36 +566,10 @@
   added_at: '2026-06-27'
   processed_at: null
 - type: page
-  url: https://arabakolik.net/renault-megane-4-15-dci-kronik-sorunlari
-  site_or_channel: arabakolik.net
-  tier: C
-  notes: Renault Megane 4 1.5 dCi Kronik Sorunları ? - ArabaKolik.Net
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
   url: https://www.teknorot.com/katalog/renault/megane/rotilli-salincak-u/
   site_or_channel: teknorot.com
   tier: C
   notes: Renault Megane Rotilli Salıncak ve Ön Takım Yedek Parçaları
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-kapi-kollari-soyulmasi-garanti-kapsaminda-degisim-talebi
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane Kapı Kolları Soyulması Garanti Kapsamında Değişim Talebi -
-    Şikaye
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-klimasi-2-aydir-arizali-servislerden-cozum-alinamiyor
-  site_or_channel: sikayetvar.com
-  tier: C
-  notes: Renault Megane 4 Kliması 2 Aydır Arızalı, Servislerden Çözüm Alınamıyor -
-    Şikaye
   status: skipped
   added_at: '2026-06-27'
   processed_at: null
@@ -1154,22 +587,6 @@
   site_or_channel: carcostcheck.co.uk
   tier: C
   notes: Renault Megane Common Problems, Faults & Repair Costs (2026) | CarCostCheck
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.speakev.com/threads/megane-second-hand-checks.189898/
-  site_or_channel: speakev.com
-  tier: C
-  notes: Megane second hand checks | Speak EV - Electric Car Forums
-  status: skipped
-  added_at: '2026-06-27'
-  processed_at: null
-- type: page
-  url: https://www.speakev.com/threads/renault-megane-a-cautionary-tale.182874/
-  site_or_channel: speakev.com
-  tier: C
-  notes: Renault Megane - a cautionary tale | Speak EV - Electric Car Forums
   status: skipped
   added_at: '2026-06-27'
   processed_at: null
@@ -1385,89 +802,6 @@
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
 - type: page
-  url: https://www.sikayetvar.com/renault/megane/megane-4-kronik-sorun
-  site_or_channel: sikayetvar.com
-  tier: B
-  notes: Renault Megane 4 Kronik Sorun Şikayetleri ve Kullanıcı Yorumları - Şikayetvar
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.autodiagnostic.it/topic/79393-renault-scenic-4-022019-1332cc-h5h-b4-103kw-benzina-renault-scenici-4/
-  site_or_channel: forum.autodiagnostic.it
-  tier: B
-  notes: '[renault scenic 4 02/2019 1332cc H5H  B4 103Kw Benzina] renault scenici  4
-    - Mec'
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forums.moneysavingexpert.com/discussion/5652775/psa-group-1-6-hdi-engine-renault-nis-1-5d-dci
-  site_or_channel: forums.moneysavingexpert.com
-  tier: B
-  notes: PSA Group 1.6 'HDi' engine / Renault-Nis 1.5d Dci
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://kroniksorunlar.net/megane-15-dci-sport-tourer-kronik-sorunlar-ve-kullanici-yorumlari
-  site_or_channel: kroniksorunlar.net
-  tier: B
-  notes: Megane 1.5 dCi Sport Tourer - Kronik Sorunlar ve Kullanıcı Yorumları ? -
-    KronikS
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=34297
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: 2ltr dci egr valve location - The Mégane II Owners' Club
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-edc-sanziman-sorunu-ve-garanti-talebi
-  site_or_channel: sikayetvar.com
-  tier: B
-  notes: Renault Megane 4 EDC Şanzıman Sorunu Ve Garanti Talebi - Şikayetvar
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.sikayetvar.com/renault/renault-megane-4-iconda-elektronik-el-freni-ve-vites-sogutma-uyarisi-sorunu
-  site_or_channel: sikayetvar.com
-  tier: B
-  notes: Renault Megane 4 Icon’da Elektronik El Freni Ve Vites Soğutma Uyarısı Sorunu
-    - Ş
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/renault-megane-4-edc-sanziman-yagi-degisimi--161285187
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: Renault Megane 4 EDC şanzıman yağı değişimi | DonanımHaber Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?start=15&t=8855
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: Common Issues - Read this first - Page 2 - The Mégane II Owners' Club
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.honestjohn.co.uk/owner-reviews/renault/megane-e-tech-2022/
-  site_or_channel: honestjohn.co.uk
-  tier: B
-  notes: Renault Megane  E-Tech (2022 on) - Owners' Reviews | Honest John
-  status: pending
-  added_at: '2026-06-29'
-  processed_at: null
-- type: page
   url: https://www.carbuyer.co.uk/renault/megane/owner-reviews
   site_or_channel: carbuyer.co.uk
   tier: B
@@ -1578,22 +912,6 @@
   tier: C
   notes: Termostat 1.3 Tce H5H M5M Renault Clio 5 Megane 4 Kadjar Talisman Dacia Duster
     1
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=10419
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: coolant fan always on - The Mégane II Owners' Club
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=26137
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: Renault Megane 2006 2.0l 16v - Overheating - The Mégane II Owners' Club
   status: processed
   added_at: '2026-06-29'
   processed_at: '2026-06-29'
@@ -1787,39 +1105,6 @@
   site_or_channel: m.maslakdpf.com
   tier: C
   notes: Mercedes C200 Partikül Filtresi 1.6d W205 R9M Motor - Maslak | DPF
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.vauxhallownersnetwork.co.uk/threads/poorly-r9m.912740/
-  site_or_channel: vauxhallownersnetwork.co.uk
-  tier: B
-  notes: Poorly R9M | Vauxhall Owners Network Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.meganeownersclub.co.uk/forum/viewtopic.php?t=27577
-  site_or_channel: meganeownersclub.co.uk
-  tier: B
-  notes: Megane 1.6 Gt line dci - The Mégane II Owners' Club
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://www.megane4-forum.de/forum/thread/389-probleme-mit-dem-edc/?pageNo=223
-  site_or_channel: megane4-forum.de
-  tier: B
-  notes: Probleme mit dem EDC - Seite 223 - Renault Megane 4 Forum
-  status: processed
-  added_at: '2026-06-29'
-  processed_at: '2026-06-29'
-- type: page
-  url: https://forum.donanimhaber.com/2016-model-1-2-otomatik-lpg-li-megane-4-cozulemeyen-ariza--161373720
-  site_or_channel: forum.donanimhaber.com
-  tier: B
-  notes: 2016 model 1.2 otomatik (lpg’li) Megane 4 çözülemeyen arıza | DonanımHaber
-    Forum
   status: processed
   added_at: '2026-06-29'
   processed_at: '2026-06-29'

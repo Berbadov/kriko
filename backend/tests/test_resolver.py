@@ -1,6 +1,7 @@
 """Resolver tests: verified-claim invariant, exact and union-for-ambiguous logic."""
 
 import pytest
+from backend.core.context import ListingContext
 from backend.core.matcher import MatchResult
 from backend.core.resolver import ClaimResult, resolve_claims, _servable_claims_for
 from backend.db.models import Claim, ClaimSource, ClaimVariant, Variant
@@ -55,7 +56,7 @@ def db_add_unique_claim(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="B",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Test quote.",
     ))
     db.flush()
@@ -86,7 +87,7 @@ def test_draft_claim_not_served(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="B",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Quote.",
     ))
     db.flush()
@@ -110,7 +111,7 @@ def test_review_and_held_claims_are_served(db, megane4_variants, status):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="C",
+        claim_id=claim.id,
         source_url="https://blog.example", quote="Quote.",
     ))
     db.flush()
@@ -134,7 +135,7 @@ def test_old_version_claim_not_served(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="A",
+        claim_id=claim.id,
         source_url="https://example.com", quote="Quote.",
     ))
     db.flush()
@@ -163,6 +164,81 @@ def test_sourceless_claim_not_served(db, megane4_variants):
     match = MatchResult(["megane4_k9k_90"], "exact", "")
     results = resolve_claims(match, db)
     assert all(r.claim.id != "no_source_v1" for r in results)
+
+
+@pytest.mark.parametrize("status", ["review", "held"])
+def test_high_severity_unreviewed_claims_not_served(db, megane4_variants, status):
+    """docs/design_flaws.md Flaw 4: severity=='high' claims sitting at
+    review/held (promoted_by=pending_human, i.e. the human sign-off never
+    happened) must be withheld — unlike medium/low, which still serve as
+    'reported' (see test_review_and_held_claims_are_served)."""
+    claim = Claim(
+        id=f"high_{status}_v1", claim_key=f"high_{status}", version=1, is_current=True,
+        title=f"High severity {status} claim should NOT appear",
+        domain="engine", severity="high", confidence=0.6,
+        rationale="Unreviewed high severity.", inspection_advice="Check it.",
+        status=status, promoted_by="pending_human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id,
+        source_url="https://blog.example", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ids = [r.claim.id for r in resolve_claims(match, db)]
+    assert f"high_{status}_v1" not in ids
+
+
+def test_high_severity_verified_claim_still_served(db, megane4_variants):
+    """The gate only withholds unreviewed statuses — a properly verified
+    high-severity claim (human/corroboration-backed) still serves."""
+    claim = Claim(
+        id="high_verified_v1", claim_key="high_verified", version=1, is_current=True,
+        title="High severity verified claim should appear",
+        domain="engine", severity="high", confidence=0.9,
+        rationale="Corroborated high severity.", inspection_advice="Check it.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id,
+        source_url="https://blog.example", quote="Quote.",
+    ))
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ids = [r.claim.id for r in resolve_claims(match, db)]
+    assert "high_verified_v1" in ids
+
+
+def test_high_severity_maintenance_claim_still_served(db, megane4_variants):
+    """Maintenance claims are exempt from the severity gate — their trust
+    model is the manufacturer interval, not LLM corroboration count (see
+    resolver.py's _servable_claims_for docstring)."""
+    claim = Claim(
+        id="high_maint_v1", claim_key="high_maint", version=1, is_current=True,
+        title="High severity maintenance claim should appear",
+        domain="engine", severity="high", confidence=0.9,
+        rationale="Belt due at 90k km.", inspection_advice="Ask for invoice.",
+        status="held", promoted_by="human",
+        kind="maintenance",
+        maintenance_data={"interval_km": 90000, "evidence_keywords": []},
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    # Deliberately no ClaimSource — maintenance claims are exempt from has_source too.
+    db.flush()
+
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=100000)
+    ids = [r.claim.id for r in resolve_claims(match, db, ctx)]
+    assert "high_maint_v1" in ids
 
 
 def test_h5h_claims_served_for_h5h_variant(db, megane4_claims):
@@ -222,7 +298,7 @@ def test_held_claim_strength_is_reported(db, megane4_variants):
     db.add(claim)
     db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
     db.add(ClaimSource(
-        claim_id=claim.id, tier="C",
+        claim_id=claim.id,
         source_url="https://blog.example", quote="Quote.",
     ))
     db.flush()

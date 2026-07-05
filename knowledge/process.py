@@ -306,6 +306,7 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
         "transmission": "transmission_code",
         "cooling": "cooling_code",
         "electrical": "electrical_code",
+        "body": "body_code",
     }.get(part_type, "engine_family")
 
     matching_variant_ids: list[str] = []
@@ -356,6 +357,7 @@ def run_part(
     Variant descriptors for gate_variant come from all variants with matching fitment.
     """
     from knowledge.extract import extract_claims
+    from knowledge.parts.search_templates import _find_make_model_for_part, ensure_part_stub
     from knowledge.promote import promote, write_promoted_part_claims
     from knowledge.sources.curated import CuratedSource
 
@@ -363,6 +365,19 @@ def run_part(
     slug_make  = "part"
     slug_model = part_id
     slug_gen   = part_type
+
+    # Create the scaffold (part_id/part_type/display_name/manufacturer) before
+    # writing any claims — write_promoted_part_claims only *preserves* existing
+    # scaffold metadata, it never creates it. Without this, a genuinely new
+    # part_id ends up with a claims-only file missing part_id/part_type
+    # entirely (bit us twice: once in auto.py's --part path, fixed in
+    # 02bf5be, then again here since this entry point didn't share the fix).
+    make, model = _find_make_model_for_part(part_id, part_type)
+    if make and model:
+        variants_path = DATA_DIR / "variants" / f"{make}_{model}.yaml"
+        if variants_path.exists():
+            variants = yaml.safe_load(variants_path.read_text()) or []
+            ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
     variant_descriptors = _load_all_variants_for_part(part_id, part_type)
     if not variant_descriptors:
@@ -442,7 +457,7 @@ def run_part(
     print(f"Promoting {len(all_candidates)} candidate claim(s)…")
     results = promote(
         all_candidates, variant_descriptors,
-        claim_key_prefix=part_id, variant_fuels=variant_fuels,
+        claim_key_prefix=part_id, variant_fuels=variant_fuels, own_part_id=part_id,
     )
 
     counts = {d: 0 for d in ["verified", "review", "held", "rejected"]}
@@ -482,7 +497,7 @@ def main() -> None:
     parser.add_argument("gen",   nargs="?", help="Generation key (model-centric mode)")
     parser.add_argument("--part", metavar="PART_ID",
                         help="Part ID for part-centric mode (e.g. k9k, edc, ea211)")
-    parser.add_argument("--part-type", choices=["engine", "transmission"],
+    parser.add_argument("--part-type", choices=["engine", "transmission", "cooling", "electrical", "body"],
                         help="Part type (required with --part)")
     parser.add_argument("--dry-run", action="store_true", help="Print what would run, no writes")
     parser.add_argument(

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS variants (
   power_max_hp     INT,
   transmission     TEXT,                   -- "manual" | "automatic"
   transmission_code TEXT,                  -- revision-level gearbox code (e.g. edc, dq200, dq250)
+  drivetrain       TEXT,                   -- "fwd" | "awd" | "rwd" — catalog-fixed per variant/trim
   year_from        INT NOT NULL,
   year_to          INT,
   market           TEXT DEFAULT 'TR',
@@ -45,8 +46,8 @@ CREATE TABLE IF NOT EXISTS claims (
   min_age_years    INT,
   -- Phase 2: maintenance-due claims
   maintenance_data JSONB,                  -- {interval_km, interval_years, evidence_keywords}
-  -- Phase 3: offline relevance filter
-  value_tier       TEXT                    -- "core"|"routine_inspection"|"generic_warning"
+  -- Phase 4: listing-equipment gating
+  requires_equipment JSONB                 -- tags auto-derived from title/rationale, e.g. ["sunroof"]
 );
 
 -- Migration: if the table already exists, add the new columns.
@@ -58,7 +59,10 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS max_mileage_km INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS min_age_years INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS maintenance_data JSONB;
--- ALTER TABLE claims ADD COLUMN IF NOT EXISTS value_tier TEXT;
+-- ALTER TABLE claim_sources DROP COLUMN IF EXISTS tier;
+-- ALTER TABLE variants ADD COLUMN IF NOT EXISTS drivetrain TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS requires_equipment JSONB;
+-- ALTER TABLE claims DROP COLUMN IF EXISTS value_tier;  -- dead scaffolding, never populated by the pipeline
 CREATE INDEX IF NOT EXISTS idx_claims_serve ON claims(is_current, status);
 
 CREATE TABLE IF NOT EXISTS claim_variants (
@@ -72,7 +76,6 @@ CREATE INDEX IF NOT EXISTS idx_cv_variant ON claim_variants(variant_id);
 CREATE TABLE IF NOT EXISTS claim_sources (
   id              SERIAL PRIMARY KEY,
   claim_id        TEXT REFERENCES claims(id) ON DELETE CASCADE,
-  tier            TEXT NOT NULL,           -- 'A' | 'B' | 'C'
   source_url      TEXT NOT NULL,
   source_domain   TEXT,
   site_or_channel TEXT,
