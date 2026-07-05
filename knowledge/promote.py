@@ -36,7 +36,9 @@ from knowledge.dedup import merge_candidates, title_similar
 from knowledge.extract import CandidateClaim
 from knowledge.judge import gate_generic, gate_inspection_value, gate_refute, gate_support, gate_variant
 from knowledge.sources.base import Document
-from knowledge.stoplists import code_tokens, mentions_sibling_code
+from knowledge.stoplists import (
+    GROUP_SIBLINGS, code_tokens, mentions_foreign_manufacturer_code, mentions_sibling_code,
+)
 
 log = logging.getLogger(__name__)
 
@@ -158,27 +160,21 @@ def _shares_model_mention(evidence: str, variant_descs: list[str]) -> bool:
 # part — same shape as the code-token/model-mention bypasses, but as a
 # negative signal rather than a positive one.
 #
-# Group-platform siblings: badge-engineered/platform-sharing brands whose
-# mention alongside a shared-part claim is legitimate evidence, not
-# contamination. Dacia is Renault's own sibling brand (K9K, H4D, DC4, ...
-# engines/gearboxes are shared verbatim). Audi/Skoda/Seat/Cupra share the
-# same VW Group MQB-era engines and DSG gearboxes as Volkswagen (EA211,
-# EA288, EA888, DQ200, DQ250, DQ381 all appear across the group) — caught
-# live: a "DQ250 Hydraulic Issues (Audi A3 8P Chassis)" claim is genuine
-# shared-part evidence for a Golf 7 DQ250, not contamination.
-GROUP_SIBLINGS: dict[str, frozenset[str]] = {
-    "renault": frozenset({"dacia"}),
-    "volkswagen": frozenset({"audi", "skoda", "seat", "cupra"}),
-}
+# GROUP_SIBLINGS (badge-engineered/platform-sharing brands whose mention
+# alongside a shared-part claim is legitimate evidence, not contamination —
+# Dacia is Renault's own brand; Audi/Skoda/Seat/Cupra share VW Group MQB-era
+# engines/DSGs) now lives in knowledge.stoplists, single source of truth
+# shared with mentions_foreign_manufacturer_code, which needs the same
+# sibling-brand knowledge to avoid double-flagging a group-shared code.
 
 OTHER_BRANDS: frozenset[str] = frozenset({
     "ford", "chevrolet", "chevy", "buick", "cadillac", "gmc", "chrysler",
     "dodge", "jeep", "ram", "toyota", "honda", "nissan", "mazda", "subaru",
     "mitsubishi", "lexus", "acura", "infiniti", "hyundai", "kia", "genesis",
-    "bmw", "mercedes", "audi", "skoda", "seat", "peugeot", "citroen",
-    "citroën", "fiat", "alfa romeo", "opel", "vauxhall", "volvo", "saab",
-    "mini", "land rover", "jaguar", "tesla", "suzuki", "isuzu", "daihatsu",
-    "ssangyong", "lada",
+    "bmw", "mercedes", "volkswagen", "vw", "audi", "skoda", "seat", "cupra",
+    "peugeot", "citroen", "citroën", "fiat", "alfa romeo", "opel", "vauxhall",
+    "volvo", "saab", "mini", "land rover", "jaguar", "tesla", "suzuki",
+    "isuzu", "daihatsu", "ssangyong", "lada",
 })
 
 
@@ -338,14 +334,18 @@ def _evaluate_claim(
         ) if part
     )
     # Cross-brand contamination guard: if the CLAIM ITSELF (not the wider
-    # source text) names a different manufacturer, don't let it ride in on
-    # the deterministic bypasses below — force the LLM call instead, which
-    # sees the specific claim in context. See OTHER_BRANDS docstring.
+    # source text) names a different manufacturer — by brand word
+    # (_mentions_other_brand) or by an engine/transmission code registered to
+    # a different manufacturer (mentions_foreign_manufacturer_code, e.g. "1.0
+    # TSI (EA211)" inside a Renault claim, which never says "Volkswagen") —
+    # don't let it ride in on the deterministic bypasses below; force the LLM
+    # call instead, which sees the specific claim in context.
     own_makes = {desc.split()[0].lower() for desc in variant_descs if desc.split()}
     claim_own_text = _claim_own_text(claim)
     contaminated = (
         _mentions_other_brand(claim_own_text, own_makes)
         or mentions_sibling_code(claim_own_text, own_part_id or "")
+        or mentions_foreign_manufacturer_code(claim_own_text, own_makes)
     )
 
     evidence_tokens = code_tokens(evidence)
