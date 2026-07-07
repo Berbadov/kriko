@@ -34,7 +34,15 @@ def backfill_cache_dir(conn, cache_dir: Path) -> tuple[int, int]:
     ev_added = 0
     for path in sorted(cache_dir.glob("*_candidates.json")):
         hint = path.stem.removeprefix("part_").removesuffix("_candidates")
-        for item in json.loads(path.read_text()):
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, ValueError) as exc:
+            print(f"  skipping malformed {path.name}: {exc}")
+            continue
+        if not isinstance(data, list):
+            print(f"  skipping malformed {path.name}: top-level value is not a list")
+            continue
+        for item in data:
             claim, doc = item.get("claim") or {}, item.get("doc") or {}
             text = doc.get("text") or ""
             if not text or not claim.get("title"):
@@ -58,7 +66,17 @@ def backfill_claims_dir(conn, claims_dir: Path) -> tuple[int, int]:
     docs_before = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     ev_added = 0
     for path in sorted(claims_dir.glob("*.yaml")):
-        for claim in yaml.safe_load(path.read_text()) or []:
+        try:
+            data = yaml.safe_load(path.read_text())
+        except yaml.YAMLError as exc:
+            print(f"  skipping malformed {path.name}: {exc}")
+            continue
+        if data is None:
+            data = []
+        if not isinstance(data, list):
+            print(f"  skipping malformed {path.name}: top-level value is not a list")
+            continue
+        for claim in data:
             for src in claim.get("sources") or []:
                 quote = src.get("quote") or ""
                 if not quote or not claim.get("title"):
