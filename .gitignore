@@ -15,3 +15,7 @@ logs/
 
 # Claude Code local tool state (worktrees, local settings)
 .claude/
+
+# Evidence ledger (append-only database and exports)
+knowledge/ledger.db
+knowledge/ledger_export/
