@@ -50,4 +50,33 @@ def test_backfill_claims_dir(tmp_path):
     }]))
     docs, ev = ingest.backfill_claims_dir(conn, claims)
     assert (docs, ev) == (1, 1)
+    # Verify stored row's field mapping
+    row = conn.execute(
+        "SELECT d.target_hint, d.source_type, d.raw_text FROM documents d"
+    ).fetchone()
+    assert row["target_hint"] == "renault_megane_4"
+    assert row["source_type"] == "backfill_yaml"
+    assert row["raw_text"] == "K9K injectors foul at high mileage"
     assert ingest.backfill_claims_dir(conn, claims) == (0, 0)  # idempotent
+
+
+def test_backfill_skips_malformed_files(tmp_path):
+    conn = db.connect(tmp_path / "l.db")
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    # Corrupt JSON file
+    (cache / "part_bad_engine_candidates.json").write_text("{not json")
+    # Valid file
+    (cache / "part_dq381_transmission_candidates.json").write_text(json.dumps([{
+        "claim": {"title": "DQ200 hydraulic pressure failure", "domain": "transmission",
+                  "severity": "high", "rationale": "r", "inspection_advice": "i",
+                  "quote": "q", "engine_or_variant_hint": "DQ200"},
+        "doc": {"text": "full page text about DSG", "url": "https://x.test/dsg",
+                "site_or_channel": "x.test"},
+    }]))
+    # Should skip malformed file and ingest valid file
+    docs, ev = ingest.backfill_cache_dir(conn, cache)
+    assert (docs, ev) == (1, 1)
+    # Verify the valid file was ingested
+    row = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+    assert row == 1
