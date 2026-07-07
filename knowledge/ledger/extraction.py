@@ -9,8 +9,6 @@ Token accounting is estimated (len//4 input, flat 350 output per chunk):
 langextract does not surface Mistral usage numbers. Estimates are charged
 to the Budget so --max-usd still binds."""
 
-import re
-
 from knowledge.langextract_client import extract_grounded
 from knowledge.ledger import db
 from knowledge.ledger.chunking import chunk_has_signal, chunk_text
@@ -62,20 +60,24 @@ def extract_document(conn, doc_id: int, budget: Budget) -> int:
         tin, tout = estimate_chunk_tokens(chunk.text)
         budget.charge(EXTRACTION_MODEL, tin, tout)  # raises BudgetExceeded → resumable
         for claim in extract_grounded(chunk.text):
-            quote = claim.get("quote") or ""
-            pos = text.find(quote, chunk.start) if quote else -1
-            if pos < 0:
-                pos = text.find(quote) if quote else -1
-            ev_id = db.insert_evidence(
-                conn, doc_id=doc_id, claim=claim,
-                span_start=pos if pos >= 0 else None,
-                span_end=pos + len(quote) if pos >= 0 else None,
-                extractor_version=EXTRACTOR_VERSION,
-            )
-            reason = _deterministic_low_value_reason(claim)
-            if reason:
-                db.flag_low_value(conn, ev_id, reason)
-            added += 1
+            try:
+                quote = claim.get("quote") or ""
+                pos = text.find(quote, chunk.start) if quote else -1
+                if pos < 0:
+                    pos = text.find(quote) if quote else -1
+                ev_id = db.insert_evidence(
+                    conn, doc_id=doc_id, claim=claim,
+                    span_start=pos if pos >= 0 else None,
+                    span_end=pos + len(quote) if pos >= 0 else None,
+                    extractor_version=EXTRACTOR_VERSION,
+                )
+                reason = _deterministic_low_value_reason(claim)
+                if reason:
+                    db.flag_low_value(conn, ev_id, reason)
+                added += 1
+            except Exception as exc:
+                print(f"  skipped malformed claim: {exc}")
+                continue
         conn.execute("INSERT INTO extraction_done VALUES (?,?,?)",
                      (h, chunk.index, EXTRACTOR_VERSION))
         conn.commit()

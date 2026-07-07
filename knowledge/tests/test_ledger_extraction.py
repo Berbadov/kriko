@@ -74,3 +74,40 @@ def test_budget_abort_leaves_ledger_resumable(conn, monkeypatch):
         extraction.extract_document(conn, doc_id, costs.Budget(max_usd=0.000001))
     done = conn.execute("SELECT COUNT(*) FROM extraction_done").fetchone()[0]
     assert done >= 1  # settled chunks stay cached; rerun resumes, not restarts
+
+
+def test_malformed_claims_do_not_break_chunk_cache(conn, monkeypatch):
+    calls = []
+    def fake_extract(text):
+        calls.append(text)
+        return [
+            # valid claim
+            {"title": "DQ200 accumulator failure", "domain": "transmission",
+             "severity": "high", "rationale": "hydraulic pressure loss",
+             "inspection_advice": "scan for P189C", "quote": text[:30],
+             "engine_or_variant_hint": "DQ200", "quote_grounded": True},
+            # malformed claim (missing domain and severity)
+            {"title": "missing fields"}
+        ]
+    monkeypatch.setattr(extraction, "extract_grounded", fake_extract)
+
+    # use short text to ensure only 1 chunk
+    text = "the DQ200 accumulator is a chronic failure " * 50
+    doc_id = _page(conn, text)
+    budget = costs.Budget()
+
+    # first run: processes both claims, but only valid one is inserted
+    added = extraction.extract_document(conn, doc_id, budget)
+    assert added == 1  # only valid claim inserted
+    assert len(calls) >= 1  # extract_grounded called at least once
+
+    # verify chunk is marked as done
+    from knowledge.ledger.chunking import chunk_text
+    n_chunks = len(list(chunk_text(text)))
+    done_count = conn.execute("SELECT COUNT(*) FROM extraction_done").fetchone()[0]
+    assert done_count == n_chunks  # all chunks settled
+
+    # second run: fully cached, zero LLM calls, zero new evidence
+    added = extraction.extract_document(conn, doc_id, budget)
+    assert added == 0
+    assert len(calls) == 1  # no new calls (same as before, cached)
