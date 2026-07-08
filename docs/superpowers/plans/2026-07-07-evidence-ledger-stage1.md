@@ -2148,10 +2148,15 @@ from knowledge.ledger import parity
 def test_compare_reports_matched_and_missing(tmp_path):
     old = tmp_path / "old"; old.mkdir()
     new = tmp_path / "new"; new.mkdir()
-    (old / "dq381.yaml").write_text(yaml.dump([
-        {"title": "DQ381 mechatronic solenoid wear", "domain": "transmission"},
-        {"title": "DQ200 hydraulic pressure failure", "domain": "transmission"},
-    ]))
+    # existing backend part files are a dict with a `claims:` list; the ledger
+    # export is a bare list — _load must read both (dict shape covered here).
+    (old / "dq381.yaml").write_text(yaml.dump({
+        "part_id": "dq381", "part_type": "transmission",
+        "claims": [
+            {"title": "DQ381 mechatronic solenoid wear", "domain": "transmission"},
+            {"title": "DQ200 hydraulic pressure failure", "domain": "transmission"},
+        ],
+    }))
     (new / "dq381.yaml").write_text(yaml.dump([
         {"title": "Mechatronic solenoid wear on DQ381", "domain": "transmission"},
     ]))
@@ -2187,7 +2192,8 @@ def _load(dirs: list[Path]) -> dict[str, list[dict]]:
         for p in sorted(d.glob("**/*.yaml")):
             data = yaml.safe_load(p.read_text()) or []
             claims = data if isinstance(data, list) else data.get("claims") or []
-            out.setdefault(p.stem, []).extend(c for c in claims if c.get("title"))
+            out.setdefault(p.stem, []).extend(
+                c for c in claims if isinstance(c, dict) and c.get("title"))
     return out
 
 
