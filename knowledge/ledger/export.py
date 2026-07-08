@@ -109,7 +109,11 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         _validate(v, errors, row["id"])
 
         sources = [
-            {"source_url": s["url"], "site_or_channel": s["site_or_channel"],
+            {"source_url": s["url"],
+             "source_domain": (urlparse(s["url"]).netloc.removeprefix("www.")
+                               if s["url"].startswith("http")
+                               else (s["site_or_channel"] or "")),
+             "site_or_channel": s["site_or_channel"],
              "quote": s["quote"], "independent": True}
             for s in conn.execute(
                 "SELECT DISTINCT d.url, d.site_or_channel, e.quote"
@@ -122,6 +126,7 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         by_component.setdefault(row["component_id"], []).append({
             "id": f"{key}_v1", "claim_key": key, "version": 1, "is_current": True,
             "title": v["title_en"], "title_tr": v["title_tr"],
+            "kind": "known_issue",   # matches the served per-part claim schema
             "domain": domain, "severity": v["severity"],
             "confidence": 0.8 if status == "verified" else 0.6,
             "rationale": v["rationale_en"], "rationale_tr": v["rationale_tr"],
