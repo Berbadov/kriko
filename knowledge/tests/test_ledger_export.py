@@ -69,6 +69,9 @@ def test_export_writes_existing_claim_schema(populated, tmp_path):
     assert c["is_current"] is True
     assert len(c["sources"]) == 2
     assert c["title"] == "DQ381 mechatronic solenoid wear"
+    assert c["kind"] == "known_issue"           # served per-part claim field
+    # source_domain is derived from the URL netloc (www stripped)
+    assert {s["source_domain"] for s in c["sources"]} == {"a.test", "b.test"}
 
 
 def test_attribution_mismatch_not_exported(populated, tmp_path):

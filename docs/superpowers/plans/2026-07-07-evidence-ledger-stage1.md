@@ -1654,7 +1654,9 @@ git commit -m "feat(ledger): single Haiku batch verdict per cluster, hash-cached
 
 **Interfaces:**
 - Consumes: verdicts/clusters/evidence/documents tables; `knowledge.stoplists.title_has_dtc_code/title_is_verbose/is_likely_non_english`.
-- Produces: `ExportError(RuntimeError)`, `slug(title) -> str`, `independent_source_count(conn, cluster_id) -> int` (distinct URL netlocs / channels), `disposition(verdict: dict, n_independent: int, has_structured: bool) -> str | None` (`"verified"`/`"review"`/None per spec §2.5: high severity always review; verified needs ≥2 independent or structured corroboration), `export_all(conn, out_dir: Path) -> list[Path]` (one YAML per component, existing claim schema, deterministic ordering; skips clusters whose verdict attribution disagrees with the cluster's component — logged as contamination catches). Export **fails** (`ExportError`) on any English-copy violation: non-English `title_en`, DTC code in title, title > 100 chars, bad severity/domain.
+- Produces: `ExportError(RuntimeError)`, `slug(title) -> str`, `independent_source_count(conn, cluster_id) -> int` (distinct URL netlocs / channels), `disposition(verdict: dict, n_independent: int, has_structured: bool) -> str | None` (`"verified"`/`"review"`/None per spec §2.5: high severity always review; verified needs ≥2 independent or structured corroboration), `export_all(conn, out_dir: Path) -> list[Path]` (one YAML per component to a gitignored build dir, deterministic ordering; skips clusters whose verdict attribution disagrees with the cluster's component — logged as contamination catches). Export **fails** (`ExportError`) on any English-copy violation: non-English `title_en`, DTC code in title, title > 100 chars, bad severity/domain.
+
+  **Schema note (scope):** each written file is a *claims list* whose entries carry the served per-part claim fields (`claim_key`, `title`, `kind`, `domain`, `severity`, `confidence`, `status`, `rationale`, `inspection_advice`, `sources[source_url/source_domain/site_or_channel/quote/independent]`) plus the ledger's own additions — `id`/`version`/`is_current` (claim versioning) and `title_tr`/`rationale_tr`/`inspection_advice_tr` (inline bilingual copy that replaces the retired separate translate step). This is a *Stage-1 intermediate* consumed by the Task 11 parity diff (which matches on component-stem + domain + title Jaccard, not exact fields), NOT a drop-in serving file: it deliberately does not read or write `backend/data/parts` and so omits the per-part wrapper (`part_id`/`part_type`/`display_name`/`manufacturer`/`code_family`/`known_also_as`). Wrapping these claims into the real per-part file and reconciling id/version is the Stage-2 serving-plane wiring, out of scope here.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1711,8 +1713,12 @@ def populated(tmp_path):
 
 
 def _add_verdict(conn, v):
-    conn.execute("INSERT INTO verdicts VALUES (1,'h','m',?,10,10,0.0,'now')",
-                 (json.dumps(v),))
+    # Verdicts are content-addressed: store under cluster 1's real input_hash so
+    # export_all — which looks the verdict up by recomputing that hash — finds it.
+    from knowledge.ledger.verdict import cluster_payload, input_hash
+    h = input_hash(cluster_payload(conn, 1))
+    conn.execute("INSERT INTO verdicts VALUES (?,'m',?,10,10,0.0,'now')",
+                 (h, json.dumps(v)))
     conn.commit()
 
 
@@ -1862,7 +1868,11 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         _validate(v, errors, row["id"])
 
         sources = [
-            {"source_url": s["url"], "site_or_channel": s["site_or_channel"],
+            {"source_url": s["url"],
+             "source_domain": (urlparse(s["url"]).netloc.removeprefix("www.")
+                               if s["url"].startswith("http")
+                               else (s["site_or_channel"] or "")),
+             "site_or_channel": s["site_or_channel"],
              "quote": s["quote"], "independent": True}
             for s in conn.execute(
                 "SELECT DISTINCT d.url, d.site_or_channel, e.quote"
@@ -1875,6 +1885,7 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         by_component.setdefault(row["component_id"], []).append({
             "id": f"{key}_v1", "claim_key": key, "version": 1, "is_current": True,
             "title": v["title_en"], "title_tr": v["title_tr"],
+            "kind": "known_issue",   # matches the served per-part claim schema
             "domain": domain, "severity": v["severity"],
             "confidence": 0.8 if status == "verified" else 0.6,
             "rationale": v["rationale_en"], "rationale_tr": v["rationale_tr"],
