@@ -79,3 +79,19 @@ def test_batch_precheck_blocks_unaffordable_submit(conn, monkeypatch):
                         lambda: (_ for _ in ()).throw(AssertionError("must not connect")))
     with pytest.raises(costs.BudgetExceeded):
         verdict.run_verdicts(conn, costs.Budget(max_usd=0.0000001), use_batch=False)
+
+
+def test_unparseable_verdict_still_charges_budget(conn, monkeypatch):
+    # The API bills for the tokens regardless of whether the JSON parses; the
+    # budget must reflect that spend so an unparseable reply can't slip a run
+    # past --max-usd. No verdict row is stored, and the run reports 0 saved.
+    class FakeClient:
+        class messages:
+            @staticmethod
+            def create(**kw):
+                return _FakeMsg("this is not json")
+    monkeypatch.setattr(verdict, "_client", lambda: FakeClient())
+    b = costs.Budget()
+    assert verdict.run_verdicts(conn, b, use_batch=False) == 0
+    assert b.total_usd > 0  # charged despite the parse failure
+    assert conn.execute("SELECT COUNT(*) FROM verdicts").fetchone()[0] == 0
