@@ -67,9 +67,16 @@ CREATE TABLE IF NOT EXISTS cluster_members (
     evidence_id INTEGER NOT NULL REFERENCES evidence(id),
     PRIMARY KEY (cluster_id, evidence_id)
 );
+-- Content-addressed verdict cache: keyed on the payload input_hash, NOT the
+-- cluster id. Clusters are wiped and rebuilt wholesale with reassigned ids
+-- every run, so tying verdicts to cluster_id both crashed the rebuild (FK
+-- into a table being wiped) and lost the cache whenever ids shifted (e.g.
+-- onboarding a second car re-judged the first car's unchanged clusters). By
+-- hash, an unchanged cluster hits cache regardless of its new id, and rebuild
+-- never touches this table. A cluster maps to its verdict by recomputing the
+-- hash (verdict.input_hash), so no cluster_id column is needed here.
 CREATE TABLE IF NOT EXISTS verdicts (
-    cluster_id INTEGER PRIMARY KEY REFERENCES clusters(id),
-    input_hash TEXT NOT NULL,
+    input_hash TEXT PRIMARY KEY,
     model TEXT NOT NULL,
     verdict_json TEXT NOT NULL,
     tokens_in INTEGER NOT NULL, tokens_out INTEGER NOT NULL, usd REAL NOT NULL,

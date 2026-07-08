@@ -55,3 +55,17 @@ def test_rebuild_is_deterministic(conn):
     second = cluster.rebuild_clusters(conn)
     rows2 = conn.execute("SELECT * FROM cluster_members ORDER BY 1,2").fetchall()
     assert first == second and [tuple(r) for r in rows1] == [tuple(r) for r in rows2]
+
+
+def test_rebuild_preserves_content_addressed_verdicts(conn):
+    # Regression: verdicts are keyed by input_hash, not cluster_id. A rebuild
+    # with a live verdict row must neither raise a FOREIGN KEY error nor evict
+    # the cached verdict (that is what makes reruns cost $0).
+    _resolved_evidence(conn, "EA888 timing chain tensioner failure", "stretch")
+    cluster.rebuild_clusters(conn)
+    conn.execute(
+        "INSERT INTO verdicts (input_hash, model, verdict_json, tokens_in,"
+        " tokens_out, usd, created_at) VALUES ('h1','m','{}',1,1,0.0,'now')")
+    conn.commit()
+    cluster.rebuild_clusters(conn)  # must not raise
+    assert conn.execute("SELECT COUNT(*) FROM verdicts").fetchone()[0] == 1
