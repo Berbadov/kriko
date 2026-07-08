@@ -1573,12 +1573,15 @@ def pending_verdict_estimate(conn) -> tuple[int, float]:
 
 
 def _store(conn, budget, price_key, cid, h, text, tin, tout) -> bool:
+    # The API billed these tokens whether or not the JSON parses, so charge
+    # first — otherwise an unparseable verdict silently under-reports real
+    # spend and could slip a run past --max-usd.
+    usd = budget.charge(price_key, tin, tout)
     try:
         v = parse_verdict(text)
     except ValueError as exc:
         print(f"  cluster {cid}: unparseable verdict skipped ({exc})")
         return False
-    usd = budget.charge(price_key, tin, tout)
     conn.execute(
         "INSERT OR REPLACE INTO verdicts (input_hash, model,"
         " verdict_json, tokens_in, tokens_out, usd, created_at)"
