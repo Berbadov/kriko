@@ -24,7 +24,10 @@ def jaccard(a: str, b: str) -> float:
 
 
 def rebuild_clusters(conn) -> int:
-    conn.execute("DELETE FROM verdicts WHERE cluster_id NOT IN (SELECT id FROM clusters)")
+    # Derived tables, rebuilt wholesale. Verdicts are content-addressed by
+    # input_hash (db.py), decoupled from cluster ids, so the rebuild leaves the
+    # verdict cache untouched — an unchanged cluster still hits cache under its
+    # reassigned id. cluster_members must go before clusters (FK).
     conn.execute("DELETE FROM cluster_members")
     conn.execute("DELETE FROM clusters")
     components = [r[0] for r in conn.execute(

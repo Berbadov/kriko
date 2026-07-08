@@ -179,9 +179,15 @@ CREATE TABLE IF NOT EXISTS cluster_members (
     evidence_id INTEGER NOT NULL REFERENCES evidence(id),
     PRIMARY KEY (cluster_id, evidence_id)
 );
+-- Content-addressed verdict cache: keyed on the payload input_hash, NOT the
+-- cluster id. Clusters are wiped/rebuilt wholesale with reassigned ids every
+-- run, so a cluster_id key both crashed rebuild (FK into a wiped table) and
+-- lost the cache when ids shifted (onboarding a 2nd car re-judged the 1st
+-- car's unchanged clusters). By hash, an unchanged cluster hits cache under
+-- its new id and rebuild never touches this table. A cluster maps to its
+-- verdict by recomputing verdict.input_hash — no cluster_id column needed.
 CREATE TABLE IF NOT EXISTS verdicts (
-    cluster_id INTEGER PRIMARY KEY REFERENCES clusters(id),
-    input_hash TEXT NOT NULL,
+    input_hash TEXT PRIMARY KEY,
     model TEXT NOT NULL,
     verdict_json TEXT NOT NULL,
     tokens_in INTEGER NOT NULL, tokens_out INTEGER NOT NULL, usd REAL NOT NULL,
@@ -1264,7 +1270,10 @@ def jaccard(a: str, b: str) -> float:
 
 
 def rebuild_clusters(conn) -> int:
-    conn.execute("DELETE FROM verdicts WHERE cluster_id NOT IN (SELECT id FROM clusters)")
+    # Derived tables, rebuilt wholesale. Verdicts are content-addressed by
+    # input_hash (db.py), decoupled from cluster ids, so the rebuild leaves the
+    # verdict cache untouched — an unchanged cluster still hits cache under its
+    # reassigned id. cluster_members must go before clusters (FK).
     conn.execute("DELETE FROM cluster_members")
     conn.execute("DELETE FROM clusters")
     components = [r[0] for r in conn.execute(
@@ -1300,7 +1309,7 @@ def rebuild_clusters(conn) -> int:
     return total
 ```
 
-Note: the first `DELETE FROM verdicts` line removes verdicts orphaned by a wipe; verdicts for re-created identical clusters are re-attached by input-hash matching in Task 8 (`run_verdicts` skips clusters whose payload hash already has a stored verdict via `INSERT OR REPLACE` keyed on the new cluster id — cost is still zero because the verdict cache check is by `input_hash`, see `pending_clusters`).
+Note: `rebuild_clusters` deliberately does NOT touch the `verdicts` table. Verdicts are content-addressed by `input_hash` (see the `verdicts` schema in Task 1), so wiping and rebuilding clusters — which reassigns cluster ids — never evicts a cached verdict. Task 8's `run_verdicts` recomputes each cluster's `input_hash` and skips any cluster whose hash already has a stored verdict, so an unchanged cluster costs $0 on rerun regardless of the id it was rebuilt under. This also removes the earlier `cluster_id`-keyed design's foreign-key crash (verdicts FK-referencing a table being wiped).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1546,8 +1555,7 @@ def pending_clusters(conn) -> list[tuple[int, dict, str]]:
         payload = cluster_payload(conn, row["id"])
         h = input_hash(payload)
         hit = conn.execute(
-            "SELECT 1 FROM verdicts WHERE cluster_id=? AND input_hash=?",
-            (row["id"], h)).fetchone()
+            "SELECT 1 FROM verdicts WHERE input_hash=?", (h,)).fetchone()
         if not hit:
             out.append((row["id"], payload, h))
     return out
@@ -1572,10 +1580,10 @@ def _store(conn, budget, price_key, cid, h, text, tin, tout) -> bool:
         return False
     usd = budget.charge(price_key, tin, tout)
     conn.execute(
-        "INSERT OR REPLACE INTO verdicts (cluster_id, input_hash, model,"
+        "INSERT OR REPLACE INTO verdicts (input_hash, model,"
         " verdict_json, tokens_in, tokens_out, usd, created_at)"
-        " VALUES (?,?,?,?,?,?,?, datetime('now'))",
-        (cid, h, VERDICT_MODEL, json.dumps(v, ensure_ascii=False), tin, tout, usd),
+        " VALUES (?,?,?,?,?,?, datetime('now'))",
+        (h, VERDICT_MODEL, json.dumps(v, ensure_ascii=False), tin, tout, usd),
     )
     conn.commit()
     return True
@@ -1754,6 +1762,7 @@ from urllib.parse import urlparse
 
 import yaml
 
+from knowledge.ledger.verdict import cluster_payload, input_hash
 from knowledge.stoplists import (
     is_likely_non_english, title_has_dtc_code, title_is_verbose,
 )
@@ -1825,12 +1834,19 @@ def export_all(conn, out_dir: Path) -> list[Path]:
     by_component: dict[str, list[dict]] = {}
     errors: list[str] = []
 
+    # Verdicts are content-addressed by input_hash (not cluster_id), so recover
+    # each cluster's verdict by recomputing its hash — the same value run_verdicts
+    # cached it under. Clusters with no verdict yet are simply skipped.
     rows = conn.execute(
-        "SELECT c.id, c.component_id, c.domain, v.verdict_json FROM clusters c"
-        " JOIN verdicts v ON v.cluster_id = c.id ORDER BY c.id").fetchall()
+        "SELECT id, component_id, domain FROM clusters ORDER BY id").fetchall()
     import json as _json
     for row in rows:
-        v = _json.loads(row["verdict_json"])
+        vr = conn.execute(
+            "SELECT verdict_json FROM verdicts WHERE input_hash=?",
+            (input_hash(cluster_payload(conn, row["id"])),)).fetchone()
+        if vr is None:
+            continue
+        v = _json.loads(vr["verdict_json"])
         att_comp = (v.get("attribution") or {}).get("component_id") or ""
         if att_comp not in ("", "foreign", "none") and att_comp != row["component_id"]:
             print(f"  contamination catch: cluster {row['id']} filed under"
