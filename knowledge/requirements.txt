@@ -11,3 +11,4 @@ trafilatura>=1.9.0       # universal web article extractor
 textual>=0.60.0          # terminal UI for discover.py
 exa-py>=2.14.0           # web search for auto.py (neural search, no scraping)
 pytest>=8.0.0            # for eval_judge.py
+anthropic
