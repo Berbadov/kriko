@@ -4,6 +4,31 @@ from knowledge.ledger import db, ingest
 from knowledge.sources.base import Document
 
 
+def test_flag_blocked_sources_marks_only_blocked_domains(tmp_path):
+    conn = db.connect(tmp_path / "l.db")
+    good = db.insert_document(conn, url="https://what-breaks.com/k9k", source_type="page",
+                              raw_text="belt engine", target_hint="k9k")
+    bad = db.insert_document(conn, url="https://www.enginecode.uk/k9k-820-specs",
+                             source_type="page", raw_text="timing chain", target_hint="k9k")
+    ev_good = db.insert_evidence(conn, doc_id=good, claim={
+        "title": "K9K timing belt", "domain": "engine", "severity": "high",
+        "rationale": "r", "inspection_advice": "i", "quote": "q",
+        "engine_or_variant_hint": "K9K", "quote_grounded": True},
+        span_start=None, span_end=None, extractor_version=0)
+    ev_bad = db.insert_evidence(conn, doc_id=bad, claim={
+        "title": "K9K timing chain", "domain": "engine", "severity": "high",
+        "rationale": "r", "inspection_advice": "i", "quote": "q",
+        "engine_or_variant_hint": "K9K", "quote_grounded": True},
+        span_start=None, span_end=None, extractor_version=0)
+
+    assert ingest.flag_blocked_sources(conn) == 1
+    flags = dict(conn.execute("SELECT evidence_id, reason FROM evidence_flags").fetchall())
+    assert flags == {ev_bad: "blocked_source"}
+    assert ev_good not in flags
+    # Idempotent: a second pass flags nothing new.
+    assert ingest.flag_blocked_sources(conn) == 0
+
+
 def test_ingest_document_stores_hint_not_attribution(tmp_path):
     conn = db.connect(tmp_path / "l.db")
     doc = Document(text="DQ200 accumulator fails", url="https://x.test/dsg",
