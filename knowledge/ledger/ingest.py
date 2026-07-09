@@ -14,6 +14,7 @@ import yaml
 
 from knowledge.ledger import db
 from knowledge.sources.base import Document
+from knowledge.stoplists import is_blocked_source_domain
 
 
 def ingest_document(conn, doc: Document, source_type: str, target_hint: str) -> int:
@@ -102,3 +103,22 @@ def backfill_claims_dir(conn, claims_dir: Path) -> tuple[int, int]:
                 ev_added += 1
     docs_after = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     return docs_after - docs_before, ev_added
+
+
+def flag_blocked_sources(conn) -> int:
+    """Flag (exclude from clustering) every un-flagged evidence row whose source
+    document is a blocked domain — forums and unreliable-content sites
+    (knowledge.stoplists). A re-runnable derivation, not a one-off: backfilled
+    evidence never passed through extraction's deterministic gate, so this is
+    where blocked sources get marked for it. Idempotent — already-flagged rows
+    are skipped, so re-running after adding a domain only marks the new hits."""
+    flagged = 0
+    rows = conn.execute(
+        "SELECT e.id, d.url FROM evidence e JOIN documents d ON d.id = e.doc_id"
+        " LEFT JOIN evidence_flags f ON f.evidence_id = e.id"
+        " WHERE f.evidence_id IS NULL").fetchall()
+    for row in rows:
+        if row["url"] and is_blocked_source_domain(row["url"]):
+            db.flag_low_value(conn, row["id"], "blocked_source")
+            flagged += 1
+    return flagged

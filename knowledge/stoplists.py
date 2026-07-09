@@ -25,6 +25,7 @@ Interim until extraction-time translation compliance is fixed properly.
 import re
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 
@@ -382,6 +383,33 @@ FORUM_DOMAINS: frozenset[str] = frozenset({
     "diynot.com", "motorsforum.com", "justanswer.co.uk", "dhtauto.com",
     "howtomendit.com", "forum.rac.co.uk",
 })
+
+# Not forums — auto-generated "engine spec" content farms that state confident
+# but factually wrong mechanical details (e.g. enginecode.uk describes the
+# belt-driven Renault K9K 1.5 dCi as having a "timing chain"). Blocked as
+# sources for the same reason as forums: the content can't be trusted, and a
+# plausible-sounding factual error is harder to catch downstream than an
+# obvious one. Separate constant from FORUM_DOMAINS so each stays semantically
+# honest; is_blocked_source_domain() unions them.
+UNRELIABLE_DOMAINS: frozenset[str] = frozenset({
+    "enginecode.uk",
+})
+
+
+def is_blocked_source_domain(url_or_host: str) -> bool:
+    """True if a URL or bare host resolves to a blocked source domain (forum or
+    unreliable-content site). Matches the exact host or any subdomain of it, so
+    'www.enginecode.uk' and 'm.enginecode.uk' are both caught."""
+    host = url_or_host.lower()
+    if "://" in host or "/" in host:
+        host = urlparse(url_or_host).netloc.lower()
+    host = host.removeprefix("www.")
+    if not host:
+        return False
+    for blocked in FORUM_DOMAINS | UNRELIABLE_DOMAINS:
+        if host == blocked or host.endswith("." + blocked):
+            return True
+    return False
 
 # German function words with no English collision (word-boundary matched, so
 # substrings like "ist" inside "list"/"exist" never hit). Used as a cheap
