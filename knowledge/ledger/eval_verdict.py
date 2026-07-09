@@ -2,8 +2,8 @@
 
 Acceptance bar before judge.py's gates may be retired: every gold entry with
 verdict: incorrect must NOT come back supported + product_value=high. Prints
-per-entry outcomes; exit 1 on any must-catch failure. Costs ~11 sync Haiku
-calls (~$0.02)."""
+per-entry outcomes; exit 1 on any must-catch failure. Costs ~11 sync
+deepseek-v4-flash calls."""
 
 import sys
 from pathlib import Path
@@ -34,13 +34,14 @@ def main() -> int:
                 "target_hint": e.get("claim_key", ""),
             }],
         }
-        m = client.messages.create(
+        m = client.chat.completions.create(
             model=verdict.VERDICT_MODEL, max_tokens=1200,
+            response_format={"type": "json_object"},
             messages=[{"role": "user", "content": verdict.build_prompt(payload)}])
         budget.charge(verdict.VERDICT_MODEL,
-                      m.usage.input_tokens, m.usage.output_tokens)
+                      m.usage.prompt_tokens, m.usage.completion_tokens)
         try:
-            v = verdict.parse_verdict(m.content[0].text)
+            v = verdict.parse_verdict(m.choices[0].message.content)
             kept = v["supported"] and v["product_value"] == "high"
         except ValueError:
             kept = False

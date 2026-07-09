@@ -1,24 +1,37 @@
 """One strong-model verdict per claim-cluster.
 
 Replaces judge.py's five ministral gates and promote.py's bypass/veto stack
-(design_flaws.md Flaw 5): a single claude-haiku-4-5 call sees the whole
+(design_flaws.md Flaw 5): a single deepseek-v4-flash call sees the whole
 cluster, the component, its sibling codes, and the product principle, and
 answers attribution + support + value + severity + TR/EN copy in one JSON
 object. Verdicts are cached by input hash — unchanged evidence never pays
-twice. Batches >4 clusters go through the Message Batches API (50% off)."""
+twice. DeepSeek has no batch/async job API (unlike Anthropic/Mistral/OpenAI,
+per api-docs.deepseek.com) — every call is synchronous."""
 
 import hashlib
 import json
+import os
 import re
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from knowledge.ledger.costs import Budget, estimate_cost
 from knowledge.stoplists import sibling_codes_for
 
-VERDICT_MODEL = "claude-haiku-4-5"
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+VERDICT_MODEL = "deepseek-v4-flash"
 PROMPT_VERSION = 1
-_MAX_TOKENS = 1200
-_EST_OUT_TOKENS = 350
+# A complete verdict is 12 keys with bilingual (EN+TR) title/rationale/advice;
+# real completions run ~1000-2200 output tokens, so a 1200 cap truncated ~1/4 of
+# them mid-string into unparseable JSON. Size the cap and the cost estimate to
+# the observed distribution with headroom.
+_MAX_TOKENS = 3000
+_EST_OUT_TOKENS = 1100
+# DeepSeek has no batch API, but each verdict call is I/O-bound (a synchronous
+# HTTP round-trip). Fanning the calls across a thread pool turns a ~9h serial
+# run over ~1k clusters into minutes; the OpenAI SDK retries 429s with backoff,
+# so moderate concurrency self-heals against rate limits.
+_MAX_WORKERS = 16
 
 REQUIRED_KEYS = frozenset({
     "attribution", "supported", "refuted_by", "product_value", "severity",
@@ -35,8 +48,8 @@ inspection catches (fluids, brake wear, compression, injector bench tests)."""
 
 
 def _client():
-    from anthropic import Anthropic
-    return Anthropic()
+    from openai import OpenAI
+    return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=_DEEPSEEK_BASE_URL)
 
 
 def cluster_payload(conn, cluster_id: int) -> dict:
@@ -125,22 +138,21 @@ def pending_clusters(conn) -> list[tuple[int, dict, str]]:
     return out
 
 
-def _est_usd(todo, batch: bool) -> float:
-    key = VERDICT_MODEL + ("#batch" if batch else "")
-    return sum(estimate_cost(key, len(build_prompt(p)) // 4, _EST_OUT_TOKENS)
+def _est_usd(todo) -> float:
+    return sum(estimate_cost(VERDICT_MODEL, len(build_prompt(p)) // 4, _EST_OUT_TOKENS)
                for _, p, _ in todo)
 
 
 def pending_verdict_estimate(conn) -> tuple[int, float]:
     todo = pending_clusters(conn)
-    return len(todo), _est_usd(todo, batch=len(todo) > 4)
+    return len(todo), _est_usd(todo)
 
 
-def _store(conn, budget, price_key, cid, h, text, tin, tout) -> bool:
+def _store(conn, budget, cid, h, text, tin, tout) -> bool:
     # The API billed these tokens whether or not the JSON parses, so charge
     # first — otherwise an unparseable verdict silently under-reports real
     # spend and could slip a run past --max-usd.
-    usd = budget.charge(price_key, tin, tout)
+    usd = budget.charge(VERDICT_MODEL, tin, tout)
     try:
         v = parse_verdict(text)
     except ValueError as exc:
@@ -156,41 +168,36 @@ def _store(conn, budget, price_key, cid, h, text, tin, tout) -> bool:
     return True
 
 
-def run_verdicts(conn, budget: Budget, use_batch: bool = True) -> int:
+def _call(client, payload: dict) -> tuple[str, int, int]:
+    m = client.chat.completions.create(
+        model=VERDICT_MODEL, max_tokens=_MAX_TOKENS,
+        response_format={"type": "json_object"},
+        messages=[{"role": "user", "content": build_prompt(payload)}])
+    return (m.choices[0].message.content,
+            m.usage.prompt_tokens, m.usage.completion_tokens)
+
+
+def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
     todo = pending_clusters(conn)
     if not todo:
         return 0
-    batch_mode = use_batch and len(todo) > 4
-    budget.precheck(_est_usd(todo, batch_mode))  # batches can't abort mid-flight
+    budget.precheck(_est_usd(todo))
     client = _client()
     saved = 0
-    if batch_mode:
-        price_key = VERDICT_MODEL + "#batch"
-        batch = client.messages.batches.create(requests=[
-            {"custom_id": str(cid),
-             "params": {"model": VERDICT_MODEL, "max_tokens": _MAX_TOKENS,
-                        "messages": [{"role": "user", "content": build_prompt(p)}]}}
-            for cid, p, _ in todo
-        ])
-        while True:
-            b = client.messages.batches.retrieve(batch.id)
-            if b.processing_status == "ended":
-                break
-            time.sleep(30)
-        by_id = {str(cid): (cid, h) for cid, _, h in todo}
-        for r in client.messages.batches.results(batch.id):
-            if r.result.type != "succeeded":
-                print(f"  cluster {r.custom_id}: batch item {r.result.type}")
+    # Only the LLM round-trips run concurrently; every DB write and budget
+    # charge is marshalled back to this thread via _store (sqlite3 connections
+    # and Budget are single-threaded). A failed call leaves its cluster pending
+    # for the next resume — verdicts are content-hash cached and committed
+    # per-row, so nothing is lost.
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_call, client, payload): (cid, h)
+                   for cid, payload, h in todo}
+        for fut in as_completed(futures):
+            cid, h = futures[fut]
+            try:
+                text, tin, tout = fut.result()
+            except Exception as exc:  # noqa: BLE001 — one bad call must not sink the batch
+                print(f"  cluster {cid}: verdict call failed, resume will retry ({exc})")
                 continue
-            m = r.result.message
-            cid, h = by_id[r.custom_id]
-            saved += _store(conn, budget, price_key, cid, h, m.content[0].text,
-                            m.usage.input_tokens, m.usage.output_tokens)
-    else:
-        for cid, payload, h in todo:
-            m = client.messages.create(
-                model=VERDICT_MODEL, max_tokens=_MAX_TOKENS,
-                messages=[{"role": "user", "content": build_prompt(payload)}])
-            saved += _store(conn, budget, VERDICT_MODEL, cid, h, m.content[0].text,
-                            m.usage.input_tokens, m.usage.output_tokens)
+            saved += _store(conn, budget, cid, h, text, tin, tout)
     return saved
