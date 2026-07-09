@@ -39,7 +39,7 @@ def _cmd_verdict(conn, args, budget) -> None:
         n, usd = verdict.pending_verdict_estimate(conn)
         print(f"verdict --dry-run: {n} cluster call(s) planned, estimated ${usd:.4f}")
         return
-    saved = verdict.run_verdicts(conn, budget, use_batch=not args.no_batch)
+    saved = verdict.run_verdicts(conn, budget)
     print(f"verdict: {saved} verdict(s) stored")
 
 
@@ -67,7 +67,6 @@ def main(argv=None) -> int:
     p.add_argument("--db", default=str(db.LEDGER_PATH))
     p.add_argument("--max-usd", type=float, default=None)
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--no-batch", action="store_true")
     p.add_argument("--export-dir", default=str(_EXPORT_DIR))
     args = p.parse_args(argv)
 

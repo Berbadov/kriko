@@ -6,7 +6,7 @@ extractor_version) row in extraction_done means that chunk is settled for
 this extractor — re-runs cost zero tokens (pipeline_postmortem #3).
 
 Token accounting is estimated (len//4 input, flat 350 output per chunk):
-langextract does not surface Mistral usage numbers. Estimates are charged
+langextract does not surface DeepSeek usage numbers. Estimates are charged
 to the Budget so --max-usd still binds."""
 
 from knowledge.langextract_client import extract_grounded
@@ -18,7 +18,7 @@ from knowledge.stoplists import (
 )
 
 EXTRACTOR_VERSION = 2
-EXTRACTION_MODEL = "ministral-8b-latest"
+EXTRACTION_MODEL = "deepseek-v4-flash"
 _OUT_TOKENS_PER_CHUNK = 350
 
 

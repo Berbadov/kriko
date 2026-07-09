@@ -9,12 +9,13 @@ interval in the source text, so a fabricated/paraphrased quote is visible
 immediately (alignment_status != MATCH_EXACT, or no char_interval at all)
 instead of riding through as plain text.
 
-Still ministral-8b-latest via Mistral's OpenAI-compatible chat endpoint (per
-decision — this migration changes the extraction FRAMEWORK, not the model),
-routed through langextract's OpenAILanguageModel provider with an explicit
-factory.ModelConfig (ministral-8b-latest doesn't match langextract's built-in
-model_id routing patterns, which assume "mistral*" means a local Ollama
-model — see langextract.providers.patterns).
+deepseek-v4-flash via DeepSeek's OpenAI-compatible chat endpoint, routed
+through langextract's OpenAILanguageModel provider with an explicit
+factory.ModelConfig. The explicit provider= kwarg makes create_model() call
+router.resolve_provider() directly instead of router.resolve(model_id) — this
+matters because "deepseek-v4-flash" matches langextract's built-in Ollama
+routing pattern (r'^deepseek', see langextract.providers.patterns) and would
+be misrouted to a local Ollama server if provider= were ever omitted here.
 
 This module runs OFFLINE only — never on the /analyze request path.
 """
@@ -28,9 +29,9 @@ import yaml
 from langextract import factory
 from langextract.core import data
 
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
-_MODEL = "ministral-8b-latest"
-_MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+_MODEL = "deepseek-v4-flash"
+_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 GOLD_PATH = Path(__file__).parent / "gold" / "gold.yaml"
 
@@ -80,7 +81,7 @@ def _model_config() -> factory.ModelConfig:
     return factory.ModelConfig(
         model_id=_MODEL,
         provider="OpenAILanguageModel",
-        provider_kwargs={"api_key": MISTRAL_API_KEY, "base_url": _MISTRAL_BASE_URL},
+        provider_kwargs={"api_key": DEEPSEEK_API_KEY, "base_url": _DEEPSEEK_BASE_URL},
     )
 
 
@@ -142,8 +143,8 @@ def extract_grounded(text: str) -> list[dict]:
     instances — this function returns plain dicts so it has no dependency on
     that module's Pydantic model (avoids a circular import).
     """
-    if not MISTRAL_API_KEY:
-        raise RuntimeError("MISTRAL_API_KEY not set — cannot run extraction")
+    if not DEEPSEEK_API_KEY:
+        raise RuntimeError("DEEPSEEK_API_KEY not set — cannot run extraction")
 
     import langextract as lx
     from langextract.core.data import AlignmentStatus

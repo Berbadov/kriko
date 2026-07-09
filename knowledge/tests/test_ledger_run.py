@@ -30,10 +30,11 @@ def test_all_pipeline_offline(tmp_path, monkeypatch):
     import json
     from knowledge.tests.test_ledger_verdict import VALID, _FakeMsg
     class FakeClient:
-        class messages:
-            @staticmethod
-            def create(**kw):
-                return _FakeMsg(json.dumps(dict(VALID, severity="medium")))
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kw):
+                    return _FakeMsg(json.dumps(dict(VALID, severity="medium")))
     monkeypatch.setattr("knowledge.ledger.verdict._client", lambda: FakeClient())
     monkeypatch.setattr("knowledge.ledger.resolve.component_registry",
                         lambda: {"DQ381": "dq381"})
@@ -45,7 +46,7 @@ def test_all_pipeline_offline(tmp_path, monkeypatch):
     monkeypatch.setattr(run, "_CACHE_DIR", tmp_path / "empty_cache")
     monkeypatch.setattr(run, "_CLAIMS_DIR", tmp_path / "empty_claims")
 
-    rc = run.main(["all", "--db", str(dbp), "--no-batch",
+    rc = run.main(["all", "--db", str(dbp),
                    "--export-dir", str(tmp_path / "out")])
     assert rc == 0
     assert (tmp_path / "out" / "dq381.yaml").exists()

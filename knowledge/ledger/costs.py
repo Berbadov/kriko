@@ -3,11 +3,14 @@ cleanly (BudgetExceeded) with the ledger intact and resumable."""
 
 from datetime import datetime, timezone
 
-# USD per million tokens: (input, output). "#batch" = Batch API discount.
+# USD per million tokens: (input, output). Source: api-docs.deepseek.com/quick_start/pricing.
+# deepseek-v4-flash actually has two input prices — $0.0028 cache-hit vs $0.14
+# cache-miss — but Budget/estimate_cost only model one input price per model.
+# We charge every input token at the (higher) cache-miss rate: a deliberate
+# over-estimate so --max-usd stays a hard ceiling even when nothing caches,
+# never an under-count that could let a run slip past budget.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
-    "ministral-8b-latest": (0.10, 0.10),
-    "claude-haiku-4-5": (1.00, 5.00),
-    "claude-haiku-4-5#batch": (0.50, 2.50),
+    "deepseek-v4-flash": (0.14, 0.28),
 }
 
 

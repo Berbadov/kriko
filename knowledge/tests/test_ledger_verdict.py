@@ -48,37 +48,45 @@ def test_input_hash_stable_and_content_sensitive(conn):
     assert verdict.input_hash(p) != verdict.input_hash(p2)
 
 
+class _FakeUsage:
+    def __init__(self, prompt_tokens=1000, completion_tokens=200):
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+
+
 class _FakeMsg:
-    class _U:
-        input_tokens, output_tokens = 1000, 200
-    def __init__(self, text):
-        self.content = [type("B", (), {"text": text})()]
-        self.usage = self._U()
+    """Mirrors the OpenAI-SDK-shaped chat.completions.create() response that
+    both Mistral and DeepSeek's OpenAI-compatible endpoints return."""
+    def __init__(self, text, prompt_tokens=1000, completion_tokens=200):
+        message = type("M", (), {"content": text})()
+        self.choices = [type("C", (), {"message": message})()]
+        self.usage = _FakeUsage(prompt_tokens, completion_tokens)
 
 
 def test_run_verdicts_sync_stores_and_caches(conn, monkeypatch):
     calls = []
     class FakeClient:
-        class messages:
-            @staticmethod
-            def create(**kw):
-                calls.append(kw)
-                return _FakeMsg(json.dumps(VALID))
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kw):
+                    calls.append(kw)
+                    return _FakeMsg(json.dumps(VALID))
     monkeypatch.setattr(verdict, "_client", lambda: FakeClient())
     b = costs.Budget()
-    assert verdict.run_verdicts(conn, b, use_batch=False) == 1
+    assert verdict.run_verdicts(conn, b) == 1
     assert len(calls) == 1
     assert b.total_usd > 0
     # cache: same payload hash → zero calls on rerun
-    assert verdict.run_verdicts(conn, b, use_batch=False) == 0
+    assert verdict.run_verdicts(conn, b) == 0
     assert len(calls) == 1
 
 
-def test_batch_precheck_blocks_unaffordable_submit(conn, monkeypatch):
+def test_precheck_blocks_unaffordable_run(conn, monkeypatch):
     monkeypatch.setattr(verdict, "_client",
                         lambda: (_ for _ in ()).throw(AssertionError("must not connect")))
     with pytest.raises(costs.BudgetExceeded):
-        verdict.run_verdicts(conn, costs.Budget(max_usd=0.0000001), use_batch=False)
+        verdict.run_verdicts(conn, costs.Budget(max_usd=0.0000001))
 
 
 def test_unparseable_verdict_still_charges_budget(conn, monkeypatch):
@@ -86,12 +94,13 @@ def test_unparseable_verdict_still_charges_budget(conn, monkeypatch):
     # budget must reflect that spend so an unparseable reply can't slip a run
     # past --max-usd. No verdict row is stored, and the run reports 0 saved.
     class FakeClient:
-        class messages:
-            @staticmethod
-            def create(**kw):
-                return _FakeMsg("this is not json")
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kw):
+                    return _FakeMsg("this is not json")
     monkeypatch.setattr(verdict, "_client", lambda: FakeClient())
     b = costs.Budget()
-    assert verdict.run_verdicts(conn, b, use_batch=False) == 0
+    assert verdict.run_verdicts(conn, b) == 0
     assert b.total_usd > 0  # charged despite the parse failure
     assert conn.execute("SELECT COUNT(*) FROM verdicts").fetchone()[0] == 0

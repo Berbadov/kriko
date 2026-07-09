@@ -98,7 +98,12 @@ def export_all(conn, out_dir: Path) -> list[Path]:
             continue
         v = _json.loads(vr["verdict_json"])
         att_comp = (v.get("attribution") or {}).get("component_id") or ""
-        if att_comp not in ("", "foreign", "none") and att_comp != row["component_id"]:
+        # Compare case-insensitively: the model routinely echoes engine codes
+        # upper-cased ("K9K") while catalog component_ids are lower-case ("k9k").
+        # Genuine cross-code contamination (dq200 vs dq381) still differs after
+        # folding case — only same-code case mismatches stop being false drops.
+        if (att_comp not in ("", "foreign", "none")
+                and att_comp.lower() != row["component_id"].lower()):
             print(f"  contamination catch: cluster {row['id']} filed under"
                   f" {row['component_id']} but verdict says {att_comp} — not exported")
             continue
