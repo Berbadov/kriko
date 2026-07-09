@@ -15,7 +15,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from knowledge.ledger.costs import Budget, estimate_cost
-from knowledge.stoplists import sibling_codes_for
+from knowledge.stoplists import sibling_codes_for, title_has_dtc_code
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 _DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -124,6 +124,22 @@ def parse_verdict(text: str) -> dict:
     if missing:
         raise ValueError(f"verdict missing keys: {sorted(missing)}")
     return data
+
+
+def gate_product_value(evidence_titles, v: dict) -> str | None:
+    """Deterministic downgrade of the model's self-reported product_value.
+
+    The verdict model is unreliable on product value (the gold eval catches it):
+    handed a raw fault-code litany it launders the codes out of its rewritten
+    title_en and still returns product_value="high". A claim whose EVIDENCE leads
+    with DTC codes is the low-value "DTC litany" form CLAUDE.md drops — force it
+    off "high" regardless of what the model said. Same shape as promote.py's
+    deterministic pre-checks: downgrade-only, never raises the model's judgment.
+    """
+    pv = v.get("product_value")
+    if pv == "high" and any(title_has_dtc_code(t or "") for t in evidence_titles):
+        return "low"
+    return pv
 
 
 def pending_clusters(conn) -> list[tuple[int, dict, str]]:
