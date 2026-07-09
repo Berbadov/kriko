@@ -29,6 +29,30 @@ def test_flag_blocked_sources_marks_only_blocked_domains(tmp_path):
     assert ingest.flag_blocked_sources(conn) == 0
 
 
+def test_flag_foreign_language_marks_only_german(tmp_path):
+    conn = db.connect(tmp_path / "l.db")
+    doc = db.insert_document(conn, url="https://x.test/k9k", source_type="page",
+                             raw_text="t", target_hint="k9k")
+    en = db.insert_evidence(conn, doc_id=doc, claim={
+        "title": "K9K timing belt failure", "domain": "engine", "severity": "high",
+        "rationale": "The belt snaps and valves collide with pistons.",
+        "inspection_advice": "i", "quote": "q", "engine_or_variant_hint": "K9K",
+        "quote_grounded": True}, span_start=None, span_end=None, extractor_version=0)
+    de = db.insert_evidence(conn, doc_id=doc, claim={
+        "title": "Zahnriemen: Frühzeitiger Verschleiß und Rissgefahr",
+        "domain": "engine", "severity": "high",
+        "rationale": "Der Zahnriemen kann frühzeitig verschleißen und reißen, "
+                     "wodurch Ventile und Kolben kollidieren und der Motor zerstört wird.",
+        "inspection_advice": "i", "quote": "q", "engine_or_variant_hint": "K9K",
+        "quote_grounded": True}, span_start=None, span_end=None, extractor_version=0)
+
+    assert ingest.flag_foreign_language(conn) == 1
+    flags = dict(conn.execute("SELECT evidence_id, reason FROM evidence_flags").fetchall())
+    assert flags == {de: "foreign_language"}
+    assert en not in flags
+    assert ingest.flag_foreign_language(conn) == 0  # idempotent
+
+
 def test_ingest_document_stores_hint_not_attribution(tmp_path):
     conn = db.connect(tmp_path / "l.db")
     doc = Document(text="DQ200 accumulator fails", url="https://x.test/dsg",

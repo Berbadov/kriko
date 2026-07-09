@@ -14,7 +14,7 @@ import yaml
 
 from knowledge.ledger import db
 from knowledge.sources.base import Document
-from knowledge.stoplists import is_blocked_source_domain
+from knowledge.stoplists import is_blocked_source_domain, is_german_text
 
 
 def ingest_document(conn, doc: Document, source_type: str, target_hint: str) -> int:
@@ -120,5 +120,25 @@ def flag_blocked_sources(conn) -> int:
     for row in rows:
         if row["url"] and is_blocked_source_domain(row["url"]):
             db.flag_low_value(conn, row["id"], "blocked_source")
+            flagged += 1
+    return flagged
+
+
+def flag_foreign_language(conn) -> int:
+    """Flag un-flagged evidence whose English-intended title/rationale is
+    actually German — leaked untranslated from a German-language source. The
+    live fetch path drops German pages (knowledge.sources.curated), but
+    backfilled evidence predates that gate. Cross-language text also silently
+    breaks lexical clustering (a German claim and its English twin score ~0
+    Jaccard and never merge), so excluding it fixes dedup as well as quality.
+    Re-runnable / idempotent."""
+    flagged = 0
+    rows = conn.execute(
+        "SELECT e.id, e.title, e.rationale FROM evidence e"
+        " LEFT JOIN evidence_flags f ON f.evidence_id = e.id"
+        " WHERE f.evidence_id IS NULL").fetchall()
+    for row in rows:
+        if is_german_text(f"{row['title'] or ''} {row['rationale'] or ''}"):
+            db.flag_low_value(conn, row["id"], "foreign_language")
             flagged += 1
     return flagged
