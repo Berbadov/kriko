@@ -7,10 +7,24 @@ from unittest.mock import patch
 
 from knowledge.stoplists import (
     has_variant_anchor,
+    is_blocked_source_domain,
     title_has_dtc_code,
     title_is_verbose,
 )
 from knowledge.judge import gate_generic
+
+
+def test_is_blocked_source_domain():
+    # Unreliable-content site (states "timing chain" for the belt-driven K9K).
+    assert is_blocked_source_domain("https://www.enginecode.uk/renault/k9k-820-specs")
+    assert is_blocked_source_domain("enginecode.uk")
+    assert is_blocked_source_domain("m.enginecode.uk")        # subdomain
+    # Existing forum blocklist still matches through the same helper.
+    assert is_blocked_source_domain("https://vwvortex.com/thread/1")
+    # Legitimate sources are not blocked.
+    assert not is_blocked_source_domain("https://what-breaks.com/renault/talisman")
+    assert not is_blocked_source_domain("automotive24.center")
+    assert not is_blocked_source_domain("")
 
 
 def test_title_has_dtc_code_detects_standard_and_extended_codes():
