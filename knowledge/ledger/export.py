@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from knowledge.ledger.verdict import cluster_payload, input_hash
+from knowledge.ledger.verdict import cluster_payload, gate_product_value, input_hash
 from knowledge.stoplists import (
     is_likely_non_english, title_has_dtc_code, title_is_verbose,
 )
@@ -91,12 +91,17 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         "SELECT id, component_id, domain FROM clusters ORDER BY id").fetchall()
     import json as _json
     for row in rows:
+        payload = cluster_payload(conn, row["id"])
         vr = conn.execute(
             "SELECT verdict_json FROM verdicts WHERE input_hash=?",
-            (input_hash(cluster_payload(conn, row["id"])),)).fetchone()
+            (input_hash(payload),)).fetchone()
         if vr is None:
             continue
         v = _json.loads(vr["verdict_json"])
+        # Deterministic product-value gate: the model over-rates DTC-litany
+        # evidence as high value (see gold eval). Downgrade before disposition.
+        v["product_value"] = gate_product_value(
+            [e["title"] for e in payload["evidence"]], v)
         att_comp = (v.get("attribution") or {}).get("component_id") or ""
         # Compare case-insensitively: the model routinely echoes engine codes
         # upper-cased ("K9K") while catalog component_ids are lower-case ("k9k").

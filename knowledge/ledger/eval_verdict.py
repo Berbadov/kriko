@@ -42,7 +42,11 @@ def main() -> int:
                       m.usage.prompt_tokens, m.usage.completion_tokens)
         try:
             v = verdict.parse_verdict(m.choices[0].message.content)
-            kept = v["supported"] and v["product_value"] == "high"
+            # Gate the model's product_value on the deterministic pre-check the
+            # pipeline applies at export — measure what actually ships, not the
+            # raw (unreliable) LLM self-report.
+            pv = verdict.gate_product_value([e["title"]], v)
+            kept = v["supported"] and pv == "high"
         except ValueError:
             kept = False
         want_kept = e.get("verdict") == "correct"

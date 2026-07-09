@@ -32,6 +32,24 @@ VALID = {
 }
 
 
+def test_gate_product_value_downgrades_dtc_litany_evidence():
+    high = {"supported": True, "product_value": "high"}
+    # Clean, config-specific evidence title — the model's "high" stands.
+    assert verdict.gate_product_value(
+        ["Chronic injector fouling (K9K 1.5 dCi)"], high) == "high"
+    # Evidence that leads with raw fault codes is the low-value "DTC litany" form,
+    # even though the model launders the codes out of its rewritten title_en.
+    assert verdict.gate_product_value(
+        ["Mechatronics adaptation not completed (P1781/18189)"], high) == "low"
+    assert verdict.gate_product_value(
+        ["Frequent Recurring OBD-II Fault Codes (P0130, P0136) for O2 sensors"],
+        high) == "low"
+    # Downgrade-only: a model verdict below "high" is never raised.
+    assert verdict.gate_product_value(
+        ["Mechatronics adaptation not completed (P1781/18189)"],
+        {"product_value": "low"}) == "low"
+
+
 def test_parse_verdict_validates_keys():
     assert verdict.parse_verdict(json.dumps(VALID))["supported"] is True
     assert verdict.parse_verdict(f"```json\n{json.dumps(VALID)}\n```")  # fenced ok
