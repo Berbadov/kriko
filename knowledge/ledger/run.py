@@ -23,8 +23,9 @@ def _cmd_backfill(conn, args) -> None:
     d1, e1 = ingest.backfill_cache_dir(conn, _CACHE_DIR)
     d2, e2 = ingest.backfill_claims_dir(conn, _CLAIMS_DIR)
     blocked = ingest.flag_blocked_sources(conn)
+    foreign = ingest.flag_foreign_language(conn)
     print(f"backfill: +{d1 + d2} documents, +{e1 + e2} evidence rows"
-          f" ({blocked} flagged as blocked sources)")
+          f" ({blocked} blocked-source, {foreign} foreign-language flagged)")
 
 
 def _cmd_extract(conn, args, budget) -> None:
