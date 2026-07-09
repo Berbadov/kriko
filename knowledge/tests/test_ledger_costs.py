@@ -4,19 +4,19 @@ from knowledge.ledger import costs, db
 
 def test_charge_accumulates_and_reports():
     b = costs.Budget(max_usd=None)
-    usd = b.charge("ministral-8b-latest", 1_000_000, 0)
-    assert usd == pytest.approx(0.10)
-    b.charge("claude-haiku-4-5#batch", 1_000_000, 1_000_000)
-    assert b.total_usd == pytest.approx(0.10 + 0.50 + 2.50)
-    assert "ministral-8b-latest" in b.report()
+    usd = b.charge("deepseek-v4-flash", 1_000_000, 0)
+    assert usd == pytest.approx(0.14)
+    b.charge("deepseek-v4-flash", 1_000_000, 1_000_000)
+    assert b.total_usd == pytest.approx(0.14 + 0.14 + 0.28)
+    assert "deepseek-v4-flash" in b.report()
 
 
 def test_charge_raises_when_budget_exceeded():
-    b = costs.Budget(max_usd=0.05)
+    b = costs.Budget(max_usd=0.01)
     with pytest.raises(costs.BudgetExceeded):
-        b.charge("claude-haiku-4-5", 100_000, 0)  # $0.10 > $0.05
+        b.charge("deepseek-v4-flash", 100_000, 0)  # $0.014 > $0.01
     # the spend is still recorded so the report is honest
-    assert b.total_usd == pytest.approx(0.10)
+    assert b.total_usd == pytest.approx(0.014)
 
 
 def test_precheck_blocks_before_spending():
@@ -28,6 +28,6 @@ def test_precheck_blocks_before_spending():
 
 def test_log_stage_writes_runs_row(tmp_path):
     conn = db.connect(tmp_path / "l.db")
-    costs.log_stage(conn, "verdict", "claude-haiku-4-5", 3, 100, 50, 0.01)
+    costs.log_stage(conn, "verdict", "deepseek-v4-flash", 3, 100, 50, 0.01)
     row = conn.execute("SELECT * FROM runs").fetchone()
     assert row["stage"] == "verdict" and row["calls"] == 3
