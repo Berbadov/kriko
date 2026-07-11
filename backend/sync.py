@@ -488,6 +488,8 @@ def _upsert_claim_row(db: Session, row: dict) -> Claim:
     obj.min_mileage_km   = applies_when.get("min_mileage_km")
     obj.max_mileage_km   = applies_when.get("max_mileage_km")
     obj.min_age_years    = applies_when.get("min_age_years")
+    obj.applies_year_from = applies_when.get("applies_year_from")
+    obj.applies_year_to   = applies_when.get("applies_year_to")
     obj.maintenance_data = row.get("maintenance")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
     return obj

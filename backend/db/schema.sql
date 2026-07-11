@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS claims (
   min_mileage_km   INT,
   max_mileage_km   INT,
   min_age_years    INT,
+  applies_year_from INT,                   -- inclusive model-year window (build-year defect scope)
+  applies_year_to   INT,                   -- inclusive upper bound; NULL = open-ended
   -- Phase 2: maintenance-due claims
   maintenance_data JSONB,                  -- {interval_km, interval_years, evidence_keywords}
   -- Phase 4: listing-equipment gating
@@ -63,6 +65,8 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE variants ADD COLUMN IF NOT EXISTS drivetrain TEXT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS requires_equipment JSONB;
 -- ALTER TABLE claims DROP COLUMN IF EXISTS value_tier;  -- dead scaffolding, never populated by the pipeline
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_from INT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_to INT;
 CREATE INDEX IF NOT EXISTS idx_claims_serve ON claims(is_current, status);
 
 CREATE TABLE IF NOT EXISTS claim_variants (
