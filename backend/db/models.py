@@ -51,6 +51,8 @@ class Claim(Base):
     min_mileage_km    = Column(Integer, nullable=True)
     max_mileage_km    = Column(Integer, nullable=True)
     min_age_years     = Column(Integer, nullable=True)
+    applies_year_from = Column(Integer, nullable=True)  # inclusive model-year window (build-year defect scope)
+    applies_year_to   = Column(Integer, nullable=True)  # inclusive upper bound; None = open-ended
     maintenance_data  = Column(JSON, nullable=True)    # the maintenance: block from YAML
     requires_equipment = Column(JSON, nullable=True)   # tags auto-derived from title/rationale, e.g. ["sunroof"]
 

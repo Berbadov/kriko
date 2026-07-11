@@ -59,6 +59,7 @@ def run_analysis(
     ctx = ListingContext(
         mileage_km   = meta.get("mileage_km"),
         age_years    = (date.today().year - meta["year"]) if meta.get("year") else None,
+        model_year   = meta.get("year"),
         annual_km    = meta.get("annual_km"),
         fuel_type    = meta.get("fuel_type"),
         transmission = meta.get("transmission"),

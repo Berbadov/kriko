@@ -129,6 +129,15 @@ def _passes_applies_when(claim: Claim, ctx: ListingContext | None) -> bool:
     if claim.min_age_years is not None and ctx.age_years is not None:
         if ctx.age_years < claim.min_age_years:
             return False
+    # Model-year window: hide a build-year-scoped defect on cars outside its range
+    # (e.g. fixed from MY2023). Inclusive bounds; fail-open when the listing year
+    # is unknown — never hide a risk on missing data.
+    if claim.applies_year_from is not None and ctx.model_year is not None:
+        if ctx.model_year < claim.applies_year_from:
+            return False
+    if claim.applies_year_to is not None and ctx.model_year is not None:
+        if ctx.model_year > claim.applies_year_to:
+            return False
     return True
 
 
