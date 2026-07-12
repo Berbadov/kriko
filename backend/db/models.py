@@ -41,6 +41,7 @@ class Claim(Base):
     title             = Column(String, nullable=False)
     domain            = Column(String, nullable=False)
     severity          = Column(String, nullable=False)
+    consequence       = Column(String, nullable=True)   # deterministic failure-system tier (high|medium|low) for serving rank; see knowledge/consequence_tier.py
     confidence        = Column(Float, nullable=False)
     rationale         = Column(Text, nullable=False)
     inspection_advice = Column(Text, nullable=False)
