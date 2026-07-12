@@ -19,6 +19,7 @@ class SourceRef(BaseModel):
 class RiskItem(BaseModel):
     title: str
     severity: str                   # "high" | "medium" | "low"
+    consequence: str = "medium"     # deterministic failure-system tier; primary rank key after strength
     domain: str                     # "engine" | "transmission" | "electrical" | ...
     rationale: str
     inspection_advice: str

@@ -291,6 +291,7 @@ def annotate_coherence(results: list[ClaimResult]) -> list[ClaimResult]:
 
 _STRENGTH_RANK = {"confirmed": 0, "due": 1, "due_stated": 2, "reported": 3}
 _SEVERITY_RANK = {"high": 0, "medium": 1, "low": 2}
+_CONSEQUENCE_RANK = {"high": 0, "medium": 1, "low": 2}
 
 
 def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
@@ -325,6 +326,10 @@ def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
         (_STRENGTH_RANK.get(cr.strength, 4) for cr in cluster),
         default=4,
     )
+    best_consequence = min(
+        (_CONSEQUENCE_RANK.get(cr.claim.consequence, 1) for cr in cluster),
+        default=1,
+    )
     severity_labels = {0: "high", 1: "medium", 2: "low"}
     strength_labels = {0: "confirmed", 1: "due", 2: "due_stated", 3: "reported"}
 
@@ -356,6 +361,7 @@ def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
     # Use the best member's claim object but patch its fields
     merged_claim = best.claim
     merged_claim.severity = severity_labels.get(best_severity, "medium")
+    merged_claim.consequence = severity_labels.get(best_consequence, "medium")
     if merged_rationale_parts:
         merged_claim.rationale = " ".join(merged_rationale_parts)
     if merged_advice_parts:

@@ -316,6 +316,41 @@ def test_year_window_end_to_end_via_run_analysis(db, k9k_year_windowed_claim):
     assert "k9k_year_windowed_v1" in [r.claim.id for r in served_2020]
 
 
+# ── consequence-tier ranking (overhaul Phase A) ───────────────────────────────
+
+@pytest.fixture
+def two_claims_differing_consequence(db, megane4_variants):
+    """Two servable claims on the same variant, identical strength/severity, that
+    differ only in consequence tier — to prove the serving sort ranks by it."""
+    for cid, key, title, domain, cons in (
+        ("rank_low_v1", "rank_low", "Infotainment freeze", "electrical", "low"),
+        ("rank_high_v1", "rank_high", "Turbocharger failure", "engine", "high"),
+    ):
+        claim = Claim(
+            id=cid, claim_key=key, version=1, is_current=True,
+            title=title, domain=domain, severity="medium", confidence=0.8,
+            rationale=f"{title} details.", inspection_advice="Check.",
+            status="review", kind="known_issue", consequence=cons,
+        )
+        db.add(claim)
+        db.add(ClaimVariant(claim_id=cid, variant_id="megane4_k9k_90"))
+        db.add(ClaimSource(claim_id=cid, source_url="https://example.com", quote=title))
+    db.flush()
+
+
+def test_serving_sort_ranks_high_consequence_first(db, two_claims_differing_consequence):
+    """Same strength+severity → the high-consequence claim outranks the low one."""
+    from backend.api.main import run_analysis
+    meta = {
+        "make": "Renault", "model": "Megane", "fuel_type": "diesel",
+        "transmission": "manual", "engine_volume_cc": 1461, "power_hp": 90,
+        "mileage_km": 50000, "year": 2020,
+    }
+    _c, _m, _served, resp = run_analysis(meta, db)
+    titles = [r.title for r in resp.risks]
+    assert titles.index("Turbocharger failure") < titles.index("Infotainment freeze")
+
+
 # ── maintenance interval logic ────────────────────────────────────────────────
 
 def test_maintenance_due_no_evidence(db, k9k_belt_maintenance_claim):
