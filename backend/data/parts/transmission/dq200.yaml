@@ -35,6 +35,8 @@ claims:
       used frequently in urban traffic. Clutch replacement is typically needed between
       100,000 and 200,000 km depending on use."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: dq200_transmission_mechatronics_unit_fa
   title: Mechatronics unit failure due to oil contamination/solenoid wear
   kind: known_issue
@@ -995,6 +997,8 @@ claims:
     quote: '"DQ200 (7 İleri Kuru Kavrama): Kavrama aşınması, mekatronik arızası –
       En yaygın sorunlar. Tipik arıza yaşı: 80.000-120.000 km."'
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: dq200_transmission_dq500_yüksek_tork_aş
   title: High Torque Wear in DQ500 Transmission (Golf R, Audi S3, RS Models)
   kind: known_issue
@@ -1016,6 +1020,8 @@ claims:
     quote: '"DQ500 (7 İleri Performans): Yüksek tork nedeniyle aşınma – Yaygın sorunlar.
       Tipik arıza yaşı: 60.000-100.000 km (agresif kullanım)."'
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: dq200_transmission_dsg_mekatronik_kart_
   title: DSG Mekatronik Control Unit Failures (General DSG Transmissions)
   kind: known_issue
@@ -1321,6 +1327,8 @@ claims:
       gibi kullanamazsınız. Kavrama bittiğinde silkeleme yapar, servis mekatronik
       yağı ömürlük dese de iki yılda bir değişimi yapılması gerekir vs.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: dq200_transmission_dsg_transmission_fai
   title: DSG transmission failure due to improper usage (e.g., aggressive driving,
     high mileage)
@@ -1429,6 +1437,8 @@ claims:
     quote: '"puretech içinde yanlış yağ kullanımı veya zamanında yağ değişiminin yapılmaması
       trigerin kopmasına sebep veriyormuş... 20bin km de kopartanlar var diyorlardı"'
     independent: true
+  applies_when:
+    min_mileage_km: 20000
 - claim_key: dq200_transmission_valve_body_cracking_
   title: Valve body cracking in DQ200 0AM mechatronic unit
   kind: known_issue

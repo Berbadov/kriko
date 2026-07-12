@@ -722,6 +722,8 @@ claims:
       at idle, engine running on three cylinders, difficult cold start, fault codes
       for individual cylinders"'
     independent: true
+  applies_when:
+    min_mileage_km: 50000
 - claim_key: golf7_elec_engine_turbocharger_bearing
   title: Turbocharger Bearing Wear (Oil Coking & Thermal Stress)
   kind: known_issue
@@ -748,6 +750,8 @@ claims:
       or wailing noise on acceleration, noticeable power loss, engine enters limp
       mode (fault code P0299)"'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
 - claim_key: golf7_elec_engine_coolant_pump_seizure
   title: Coolant Pump Seizure (EA288 Pre-Week 36/2014)
   kind: known_issue
@@ -812,6 +816,8 @@ claims:
     quote: '"Haldex coupling needs oil change every 40,000 km, otherwise pump failure
       ($770–4,400)"'
     independent: true
+  applies_when:
+    min_mileage_km: 40000
 - claim_key: golf7_elec_electrical_front_assist_phantom
   title: Front Assist Phantom Braking (Safety-Related)
   kind: known_issue
@@ -1008,3 +1014,5 @@ claims:
       EA288 uses a wet timing belt instead of a chain. The 120,000–150,000 km interval
       is critical; neglecting it risks catastrophic engine failure."'
     independent: true
+  applies_when:
+    min_mileage_km: 120000
