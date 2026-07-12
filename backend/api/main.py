@@ -47,6 +47,35 @@ def health():
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
 
+# The per-listing "few" ceiling: a buyer sees at most this many risks. Tunable.
+MAX_RISKS_PER_LISTING = 8
+
+# Strengths that are evidence-backed and must never be dropped by the cap — only
+# the unverified "reported" tail is trimmed.
+_PROTECTED_STRENGTHS = frozenset({"confirmed", "due", "due_stated"})
+
+
+def _cap_risks(risks: list[RiskItem], n: int) -> list[RiskItem]:
+    """Cap a ranked risk list to `n`, never dropping evidence-backed items.
+
+    Keeps every protected (confirmed/due/due_stated) risk, then fills the
+    remaining slots with the top-ranked reported items. Input is assumed already
+    ranked best-first; output preserves that order. If protected items alone
+    exceed `n`, they are all kept (never hide a confirmed/due risk to meet a cap).
+    """
+    protected = [r for r in risks if r.strength in _PROTECTED_STRENGTHS]
+    slots_for_reported = max(0, n - len(protected))
+    kept: list[RiskItem] = []
+    reported_kept = 0
+    for r in risks:
+        if r.strength in _PROTECTED_STRENGTHS:
+            kept.append(r)
+        elif reported_kept < slots_for_reported:
+            kept.append(r)
+            reported_kept += 1
+    return kept
+
+
 def run_analysis(
     meta: dict, db: Session,
 ) -> tuple[ListingContext, MatchResult, list[ClaimResult], AnalyzeResponse]:
@@ -83,6 +112,7 @@ def run_analysis(
         _CONSEQ_RANK.get(r.consequence, 1),
         _SEV_RANK.get(r.severity, 3),
     ))
+    risks = _cap_risks(risks, MAX_RISKS_PER_LISTING)
 
     resp = AnalyzeResponse(
         coverage_state=state,
