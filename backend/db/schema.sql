@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS claims (
   title            TEXT NOT NULL,
   domain           TEXT NOT NULL,
   severity         TEXT NOT NULL,          -- "high" | "medium" | "low"
+  consequence      TEXT,                   -- deterministic failure-system tier for serving rank (knowledge/consequence_tier.py)
   confidence       REAL NOT NULL,          -- derived from tier + source_count
   rationale        TEXT NOT NULL,
   inspection_advice TEXT NOT NULL,
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE claims DROP COLUMN IF EXISTS value_tier;  -- dead scaffolding, never populated by the pipeline
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_from INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_to INT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS consequence TEXT;
 CREATE INDEX IF NOT EXISTS idx_claims_serve ON claims(is_current, status);
 
 CREATE TABLE IF NOT EXISTS claim_variants (

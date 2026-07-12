@@ -72,9 +72,17 @@ def run_analysis(
 
     state = _coverage_state(match, served)
     risks = [_claim_to_risk(cr, db) for cr in served]
+    # Priority key: strength first (evidence: confirmed > due > reported), then
+    # consequence tier (deterministic failure-system rank — the discriminator
+    # that severity lost to inflation), then severity as a final tiebreak.
     _SEV_RANK = {"high": 0, "medium": 1, "low": 2}
+    _CONSEQ_RANK = {"high": 0, "medium": 1, "low": 2}
     _STRENGTH_RANK = {"confirmed": 0, "due": 1, "due_stated": 2, "reported": 3}
-    risks.sort(key=lambda r: (_STRENGTH_RANK.get(r.strength, 4), _SEV_RANK.get(r.severity, 3)))
+    risks.sort(key=lambda r: (
+        _STRENGTH_RANK.get(r.strength, 4),
+        _CONSEQ_RANK.get(r.consequence, 1),
+        _SEV_RANK.get(r.severity, 3),
+    ))
 
     resp = AnalyzeResponse(
         coverage_state=state,
@@ -206,6 +214,7 @@ def _claim_to_risk(cr: ClaimResult, db: Session) -> RiskItem:
     return RiskItem(
         title=claim.title,
         severity=claim.severity,
+        consequence=claim.consequence or "medium",
         domain=claim.domain,
         rationale=claim.rationale,
         inspection_advice=claim.inspection_advice,
