@@ -1508,6 +1508,8 @@ claims:
       Verschlissene Pumpe nach 150.000–200.000 km: Vorförderdruckabfall. Messbar mit
       Druckmanometer am Filtegehäuse."'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
 - claim_key: ea288_fuel system_internal_leakage_in_
   title: Common Rail injector internal leaks
   kind: known_issue
@@ -1598,6 +1600,8 @@ claims:
     quote: '"Prävention: Kraftstofffilterwechsel alle 40.000 km statt der Hersteller-60.000
       km, besonders bei wechselnder Tankqualität – schützt die CP4.1 vor Verschleiß."'
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea288_fuel system_chronic_injector_iss
   title: Chronic injector issues in Euro 5 2.0 TDI engines
   kind: known_issue
@@ -1657,6 +1661,8 @@ claims:
     quote: '"Zahnriemen im Ölbad arbeitet und kann unbemerkt ausfransen, ab 150.000
       km Rissgefahr mit Motorschaden. Ölverunreinigungen mit Riemenfasern im Motor."'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
 - claim_key: ea288_engine_turbolader:_lagersch
   title: 'Turbocharger: Bearing Damage Caused by Secondary Failures from DPF/Oil Circulation
     System'

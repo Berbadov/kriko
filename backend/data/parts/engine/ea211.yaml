@@ -119,6 +119,8 @@ claims:
       2 and 3 after 100,000 km - a specific fault that doesn''t exist on the weaker
       variants without ACT."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: ea211_engine_timing_belt_design_f
   title: Timing belt design flaw requiring mandatory replacement
   kind: known_issue
@@ -141,6 +143,8 @@ claims:
     quote: Timing belt — mandatory replacement — Preventive only — interference engine.
       Belt design for efficiency. 60k km replacement mandatory. Key maintenance item.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea211_engine_cylinder_deactivatio
   title: Cylinder deactivation shudder (software-induced mechanical vibration)
   kind: known_issue
@@ -437,6 +441,8 @@ claims:
       local recommendation). Ignoring belt changes can lead to catastrophic engine
       failure."'
     independent: true
+  applies_when:
+    min_mileage_km: 90000
 - claim_key: ea211_fuel system_carbon_build-up_on_i
   title: Carbon build-up on intake valves (direct-injection variants)
   kind: known_issue
@@ -523,6 +529,8 @@ claims:
     quote: '"Ignition coil and spark plug failure are common in most turbocharged
       engines nowadays."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: ea211_engine_turbolader_failure_d
   title: Turbolader failure due to carbon buildup and thermal stress
   kind: known_issue
@@ -876,6 +884,8 @@ claims:
       motor kapatılan araçlarda daha erken görülür. 90.000 – 160.000 km arasında sıkça
       raporlanmaktadır."'
     independent: true
+  applies_when:
+    min_mileage_km: 90000
 - claim_key: ea211_emissions_egr_valve_clogging_a
   title: EGR valve clogging and failure
   kind: known_issue
@@ -899,6 +909,8 @@ claims:
       Bu durum rölantide titreşim, güç kaybı ve artan yakıt tüketimine yol açar. 60.000
       – 120.000 km arasında sıkça görülmektedir."'
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea211_engine_intake_manifold_and_
   title: Intake manifold and valve carbon deposits
   kind: known_issue
@@ -924,6 +936,8 @@ claims:
       sarsıntı, güç kaybı ve düzensiz ralantıdır. 80.000 km üzerindeki araçlarda yaygın
       olarak tespit edilmektedir."'
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: ea211_engine_cooling_system_water
   title: Cooling system water pump failure
   kind: known_issue
@@ -947,6 +961,8 @@ claims:
       ısınma riskini beraberinde getiren bu sorun, genellikle 80.000 – 140.000 km
       arasında kendini gösterir."'
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: ea211_electrical_chronic_48v_hybrid_s
   title: Chronic 48V Hybrid System Communication Failures (Golf 8 eTSI)
   kind: known_issue
@@ -1134,6 +1150,8 @@ claims:
     quote: this chain will stretch out somewhere after 60k miles – long before the
       engine lifespan ends.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea211_engine_1.4_tsi_misfire_reco
   title: 1.4 TSI misfire recovery requiring intake manifold cleaning
   kind: known_issue
