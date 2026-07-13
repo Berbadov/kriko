@@ -14,6 +14,7 @@ _FUEL_MAP: dict[str, str] = {
     "benzin": "petrol",
     "benzinli": "petrol",       # Sahibinden's adjective form ("petrol-fueled")
     "petrol": "petrol",
+    "gasoline": "petrol",       # Sahibinden's English locale
     "gasolina": "petrol",
     "dizel": "diesel",
     "diesel": "diesel",
