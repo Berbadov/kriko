@@ -135,3 +135,52 @@ def test_reclassified_claim_satisfies_validator_rule():
     to_maintenance(c)
     assert c["kind"] == "maintenance"
     assert c.get("maintenance")  # block present → passes the validator rule
+
+
+# ── Interval plausibility (live-probe finding) ──────────────────────────────
+#
+# The interval was derived from a mileage figure grounded in the claim text —
+# but that figure is usually a failure *onset* ("clutch squeal from 15.000 km"),
+# not a service interval. That let nonsense through: a class-action lawsuit
+# became a "30.000 km timing chain service", and a 20.000 km "cam belt" fired as
+# DUE on a nearly-new car. A derived interval must now fall inside the category's
+# plausible service window or the claim stays a known_issue.
+
+def test_implausibly_short_clutch_interval_is_rejected():
+    # A clutch is not *serviced* every 15.000 km — this is a failure onset.
+    claim = _claim(title="7DCT clutch squeal",
+                   rationale="Clutch squeal reported from 15.000 km onwards.")
+    assert to_maintenance(claim) is False
+    assert claim["kind"] == "known_issue"
+
+
+def test_implausibly_short_timing_belt_interval_is_rejected():
+    claim = _claim(title="1.2 PureTech timing belt",
+                   rationale="Wet timing belt degrades, reported at 20.000 km.")
+    assert to_maintenance(claim) is False
+    assert claim["kind"] == "known_issue"
+
+
+def test_timing_chain_is_never_maintenance():
+    # A chain is a lifetime component: it has no service interval. "Chain stretch"
+    # is a known failure, and must keep being served as one.
+    claim = _claim(title="Timing chain stretch",
+                   rationale="Chain stretches, typically by 90.000 km.")
+    assert to_maintenance(claim) is False
+    assert claim["kind"] == "known_issue"
+    assert detect_maintenance_kind("timing chain stretch") is None
+
+
+def test_plausible_timing_belt_interval_still_reclassifies():
+    claim = _claim(title="Timing belt replacement",
+                   rationale="Cam belt must be replaced every 120.000 km.")
+    assert to_maintenance(claim) is True
+    assert claim["kind"] == "maintenance"
+    assert claim["maintenance"]["interval_km"] == 120000
+
+
+def test_plausible_dsg_fluid_interval_still_reclassifies():
+    claim = _claim(title="DSG fluid service",
+                   rationale="DSG mechatronic fluid change due every 60.000 km.")
+    assert to_maintenance(claim) is True
+    assert claim["maintenance"]["interval_km"] == 60000
