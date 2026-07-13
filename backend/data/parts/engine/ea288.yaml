@@ -1640,7 +1640,7 @@ claims:
   sources: []
 - claim_key: ea288_engine_zahnriemen:_frühzeit
   title: 'Timing Belt: Premature Wear and Risk of Failure Despite Oil Bath Lubrication'
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: high
   confidence: 0.6
@@ -1661,8 +1661,20 @@ claims:
     quote: '"Zahnriemen im Ölbad arbeitet und kann unbemerkt ausfransen, ab 150.000
       km Rissgefahr mit Motorschaden. Ölverunreinigungen mit Riemenfasern im Motor."'
     independent: true
-  applies_when:
-    min_mileage_km: 150000
+  maintenance:
+    interval_km: 150000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done
 - claim_key: ea288_engine_turbolader:_lagersch
   title: 'Turbocharger: Bearing Damage Caused by Secondary Failures from DPF/Oil Circulation
     System'

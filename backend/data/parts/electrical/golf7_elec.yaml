@@ -994,7 +994,7 @@ claims:
     independent: true
 - claim_key: golf7_elec_engine_wet_timing_belt_(oil
   title: Wet Timing Belt (Oil Bath) Interval Neglect (EA288)
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: medium
   confidence: 0.6
@@ -1014,5 +1014,17 @@ claims:
       EA288 uses a wet timing belt instead of a chain. The 120,000–150,000 km interval
       is critical; neglecting it risks catastrophic engine failure."'
     independent: true
-  applies_when:
-    min_mileage_km: 120000
+  maintenance:
+    interval_km: 120000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done

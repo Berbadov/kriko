@@ -123,7 +123,7 @@ claims:
     min_mileage_km: 100000
 - claim_key: ea211_engine_timing_belt_design_f
   title: Timing belt design flaw requiring mandatory replacement
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: high
   confidence: 0.6
@@ -143,8 +143,20 @@ claims:
     quote: Timing belt — mandatory replacement — Preventive only — interference engine.
       Belt design for efficiency. 60k km replacement mandatory. Key maintenance item.
     independent: true
-  applies_when:
-    min_mileage_km: 60000
+  maintenance:
+    interval_km: 60000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done
 - claim_key: ea211_engine_cylinder_deactivatio
   title: Cylinder deactivation shudder (software-induced mechanical vibration)
   kind: known_issue
@@ -422,7 +434,7 @@ claims:
     independent: true
 - claim_key: ea211_engine_timing_belt_replacem
   title: Timing belt replacement interval critical
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: high
   confidence: 0.6
@@ -441,8 +453,20 @@ claims:
       local recommendation). Ignoring belt changes can lead to catastrophic engine
       failure."'
     independent: true
-  applies_when:
-    min_mileage_km: 90000
+  maintenance:
+    interval_km: 90000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done
 - claim_key: ea211_fuel system_carbon_build-up_on_i
   title: Carbon build-up on intake valves (direct-injection variants)
   kind: known_issue
