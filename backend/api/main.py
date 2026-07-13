@@ -21,6 +21,7 @@ from backend import config
 from backend.config import ALLOWED_ORIGINS, STANDARD_DISCLAIMER
 from backend.core.context import ListingContext
 from backend.core.matcher import MatchResult, match_variant
+from backend.core.recover import recover_listing_fields
 from backend.core.resolver import ClaimResult, resolve_claims
 from backend.db.models import AnalysisLog, ClaimSource
 from backend.db.session import db_reachable, get_db
@@ -85,6 +86,12 @@ def run_analysis(
     logged request through the *real* pipeline rather than a hand-copied
     reimplementation that could silently drift from it.
     """
+    # The extension's DOM scrape is one fragile source for every required field
+    # (Sahibinden redesigns the info-list markup, and the whole payload goes
+    # empty). Fill what it missed from the listing's URL slug and title before
+    # matching — never overwriting what it did read. See backend/core/recover.py.
+    meta = recover_listing_fields(meta)
+
     ctx = ListingContext(
         mileage_km   = meta.get("mileage_km"),
         age_years    = (date.today().year - meta["year"]) if meta.get("year") else None,
@@ -127,7 +134,11 @@ def run_analysis(
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
     started = time.monotonic()
-    meta    = payload.ad_metadata or {}
+    meta    = dict(payload.ad_metadata or {})
+    # The URL is a recovery source (its slug names the make/model), so make sure
+    # it is present even if the scrape produced no `url` field of its own.
+    if not meta.get("url") and payload.listing_url:
+        meta["url"] = payload.listing_url
 
     try:
         ctx, match, served, resp = run_analysis(meta, db)
