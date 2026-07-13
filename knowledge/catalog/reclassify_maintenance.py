@@ -69,13 +69,29 @@ class MaintenanceItem:
     `evidence` — listing-description keywords that mean the service was recently
                  done, fed to _resolve_maintenance_strength as evidence_keywords
                  (returns due_stated instead of due when the ad shows one).
+    `min_km` /
+    `max_km`   — the plausible SERVICE-INTERVAL window for this item. The
+                 interval is derived from a mileage figure grounded in the claim
+                 text, but such a figure is far more often a failure *onset*
+                 ("clutch squeal from 15.000 km") than a service interval. An
+                 interval outside this window is therefore not an interval at
+                 all, and the claim stays a known_issue. Engineering constants —
+                 they do not grow with car coverage (no-hardcoded-car-data rule).
     """
     name: str
     phrases: tuple[str, ...]
     evidence: tuple[str, ...]
+    min_km: int
+    max_km: int
 
 
 # CLOSED interval vocabulary. Order = match precedence (first hit wins).
+#
+# NOTE: there is deliberately no `timing_chain` entry. A chain is a lifetime
+# component with no service interval — "timing chain stretch" is a known FAILURE,
+# not a maintenance item, and must keep being served as a known_issue. (Treating
+# it as maintenance is what turned an EA888 class-action lawsuit into a bogus
+# "30.000 km timing chain service".)
 MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
     MaintenanceItem(
         name="timing_belt",
@@ -89,16 +105,7 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "timing belt changed", "timing belt replaced", "new timing belt",
             "cam belt changed", "cambelt done",
         ),
-    ),
-    MaintenanceItem(
-        name="timing_chain",
-        phrases=(
-            "timing chain", "cam chain", "triger zincir", "eksantrik zincir",
-        ),
-        evidence=(
-            "zincir değiş", "timing chain changed", "timing chain replaced",
-            "chain kit", "new timing chain",
-        ),
+        min_km=60_000, max_km=240_000,
     ),
     MaintenanceItem(
         name="dsg_fluid",
@@ -113,6 +120,7 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "dsg fluid changed", "transmission fluid changed",
             "gearbox oil changed", "mechatronic fluid changed",
         ),
+        min_km=30_000, max_km=100_000,
     ),
     MaintenanceItem(
         name="haldex_fluid",
@@ -124,6 +132,7 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "haldex değiş", "haldex service", "haldex fluid changed",
             "haldex yağ değiş",
         ),
+        min_km=30_000, max_km=90_000,
     ),
     MaintenanceItem(
         name="spark_plug",
@@ -132,6 +141,7 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "buji değiş", "buji yeni", "bujiler değiş",
             "spark plugs changed", "spark plugs replaced", "new spark plugs",
         ),
+        min_km=30_000, max_km=120_000,
     ),
     MaintenanceItem(
         name="clutch",
@@ -140,6 +150,9 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "debriyaj değiş", "debriyaj yeni", "kavrama değiş",
             "clutch replaced", "clutch changed", "new clutch", "clutch kit",
         ),
+        # A clutch is a wear item, not a scheduled service: below ~60k a figure in
+        # the text is a premature-failure report, not an interval.
+        min_km=60_000, max_km=250_000,
     ),
     MaintenanceItem(
         name="major_service",
@@ -151,6 +164,7 @@ MAINTENANCE_VOCAB: tuple[MaintenanceItem, ...] = (
             "major service done", "full service history", "büyük bakım yapıl",
             "periyodik bakım", "servis geçmiş", "tam bakım",
         ),
+        min_km=10_000, max_km=40_000,
     ),
 )
 
@@ -214,9 +228,17 @@ def build_maintenance_block(claim: dict) -> tuple[str, dict] | None:
     if category is None:
         return None
 
+    item = _item_for(category)
     interval_km = (claim.get("applies_when") or {}).get("min_mileage_km")
     if interval_km is None:
         interval_km = ground_mileage_threshold(text)
+
+    # Fail-safe: a figure outside the category's plausible service-interval window
+    # is a failure ONSET, not an interval ("clutch squeal from 15.000 km"). Drop it
+    # rather than emit a maintenance claim that would fire as DUE on every car.
+    if interval_km is not None and not (item.min_km <= interval_km <= item.max_km):
+        interval_km = None
+
     interval_years = _ground_interval_years(text)
 
     if interval_km is None and interval_years is None:
@@ -227,7 +249,7 @@ def build_maintenance_block(claim: dict) -> tuple[str, dict] | None:
         block["interval_km"] = interval_km
     if interval_years is not None:
         block["interval_years"] = interval_years
-    block["evidence_keywords"] = list(_item_for(category).evidence)
+    block["evidence_keywords"] = list(item.evidence)
     return category, block
 
 
