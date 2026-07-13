@@ -30,21 +30,6 @@ claims:
     highway runs (minimum 30+ minutes at 100+ km/h every 2-3 weeks). Inspect for soot
     buildup in the DPF during a thorough inspection.
   sources: []
-- claim_key: ea288_emissions_egr_fouling_leading_
-  title: EGR fouling leading to rough idle and smoke
-  kind: known_issue
-  domain: emissions
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: Exhaust Gas Recirculation (EGR) fouling is a recurring issue, though
-    less severe than in the EA189 engine. This can cause rough idle and slight smoke
-    emissions, requiring periodic cleaning or replacement of the EGR system.
-  inspection_advice: Listen for rough idle and check for any visible smoke from the
-    exhaust. Inspect the EGR cooler and passages for soot buildup or blockages. Verify
-    if the vehicle has undergone EGR cleaning or replacement in the past.
-  sources: []
 - claim_key: ea288_emissions_dpf-related_driving_
   title: DPF-related driving habit sensitivity
   kind: known_issue
@@ -809,74 +794,6 @@ claims:
   inspection_advice: Listen for a ticking noise from the engine and check for misfires.
     Verify timing belt and tensioner replacement history—this component should be
     inspected every **80,000 miles** as a preventive measure.
-  sources: []
-- claim_key: ea288_engine_cylinder_head_cracki
-  title: Cylinder head cracking
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 2.0 TDI (EA188) engine, particularly variants **BKD (140 hp)** and
-    **BMN (170 hp)**, is prone to cracks in the cylinder head, often leading to coolant
-    loss and potential catastrophic engine failure if undetected early. Older model
-    years are more frequently affected.
-  inspection_advice: Check for signs of coolant leaks (oil stains, sweet smell in
-    the cabin, or visible coolant residue under the engine bay). Inspect the cylinder
-    head for cracks using a dye penetrant test or ultrasonic inspection if available.
-    Verify service records for cylinder head replacements or repairs.
-  sources: []
-- claim_key: ea288_engine_premature_oil_pump_f
-  title: Premature oil pump failure due to hexagonal shaft wear
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The oil pump drive shaft in the 2.0 TDI (EA188) engines, particularly
-    older variants like **BMP**, features a hexagonal shaft that wears prematurely.
-    This can cause sudden oil pump failure, leading to complete loss of lubrication
-    and severe engine damage, including turbocharger destruction.
-  inspection_advice: Listen for unusual engine noises (grinding, whining) during startup
-    or under load, which may indicate oil pump failure. Check for oil pressure warnings
-    on the dashboard. Inspect the oil pump and shaft for wear or damage during a full
-    engine teardown. Verify service records for oil pump replacements.
-  sources: []
-- claim_key: ea288_emissions_defective_egr_valve_
-  title: Defective EGR valve causing power loss
-  kind: known_issue
-  domain: emissions
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 2.0 TDI (EA188) engine frequently experiences issues with the EGR
-    (Exhaust Gas Recirculation) valve, which can clog or malfunction, leading to power
-    loss. Improper cleaning of the EGR valve can cause permanent damage to the engine,
-    making this a critical maintenance point.
-  inspection_advice: Check for symptoms of power loss, rough idling, or black smoke
-    from the exhaust. Inspect the EGR valve for carbon buildup or physical damage.
-    Verify if the valve has been cleaned or replaced recently, as improper cleaning
-    can exacerbate the issue.
-  sources: []
-- claim_key: ea288_fuel system_carbon_buildup_in_in
-  title: Carbon buildup in injectors and EGR valve
-  kind: known_issue
-  domain: fuel system
-  severity: medium
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The 2.0 TDI (EA188) is prone to carbon buildup in fuel injectors and
-    the EGR valve, which can lead to costly repairs if not addressed. This issue is
-    common in diesel engines and can cause performance degradation, increased emissions,
-    and potential long-term engine damage.
-  inspection_advice: Look for symptoms like rough running, misfires, or reduced fuel
-    efficiency. Inspect the EGR valve and injectors for carbon deposits during maintenance.
-    Use fuel additives as a preventive measure, but be aware that they may not fully
-    resolve existing buildup.
   sources: []
 - claim_key: ea288_fuel system_early_siemens_piezo_
   title: Early Siemens Piezo Injector Failures (170hp models)
