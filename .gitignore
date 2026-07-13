@@ -18,3 +18,7 @@ logs/
 
 # Local no-Docker SQLite DB (scripts/run_local.sh)
 local.db
+
+# Node deps for the extension scraper tests (npm test)
+node_modules/
+package-lock.json
