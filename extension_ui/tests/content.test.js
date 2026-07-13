@@ -96,3 +96,45 @@ test("labels are still found when the info list uses an unknown container", () =
   assert.equal(m.transmission, "Otomatik");
   assert.equal(m.mileage_km, 190000);
 });
+
+// ── English locale (the live failure) ───────────────────────────────────────
+//
+// Sahibinden serves the listing in English for some users: the info-list labels
+// are "Make"/"Series"/"Year"/"Fuel Type"/"Gear"/"KM", not the Turkish ones the
+// scraper knew. Every label missed, the info list read as empty, and the backend
+// answered "Missing required fields: ['make', 'fuel']". Fixture is a real
+// captured page.
+
+test("english locale: every field the matcher requires is extracted", () => {
+  const s = loadContentScript(fixture("sahibinden_english.html"));
+  const m = s.buildMetadata();
+
+  assert.equal(m.make, "Volkswagen");
+  assert.equal(m.model, "Golf");        // "Series" holds the model name
+  assert.equal(m.trim, "1.2 TSI Comfortline");  // "Model" holds the trim
+  assert.equal(m.year, 2016);
+  assert.equal(m.fuel_type, "Gasoline");
+  // The technical panel's "Transmission / Drive Type" ("DSG / 7 Gear / Front
+  // Wheel Drive") wins over the info list's "Gear: Automatic" — deliberately:
+  // it names the actual gearbox family, and normalize_transmission maps DSG to
+  // automatic anyway. The drive type is the LAST segment, not the second.
+  assert.equal(m.transmission, "DSG");
+  assert.equal(m.drivetrain, "Front Wheel Drive");
+  assert.equal(m.mileage_km, 132000);           // label is "KM"
+  assert.equal(m.power_hp, 110);
+  assert.equal(m.engine_volume_cc, 1197);
+});
+
+test("english locale: 'Engine Capacity' reading '110 hp' is not taken as cc", () => {
+  // Sahibinden's own bug: the Overview table labels the POWER row
+  // "Engine Capacity" (110 hp), while the real capacity (1197 cc) is in the
+  // Engine and Performance table under the same label. Taking the first hit
+  // would send the matcher engine_volume_cc=110 and match nothing.
+  const s = loadContentScript(fixture("sahibinden_english.html"));
+  assert.equal(s.buildMetadata().engine_volume_cc, 1197);
+});
+
+test("english locale: 'Fuel Consumption' is not mistaken for the fuel type", () => {
+  const s = loadContentScript(fixture("sahibinden_english.html"));
+  assert.equal(s.buildMetadata().fuel_type, "Gasoline");
+});
