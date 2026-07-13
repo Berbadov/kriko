@@ -170,3 +170,43 @@
     to dq381 here)
   body_code: golf7_body
   drivetrain: awd
+- id: golf7_ea211_110
+  make: volkswagen
+  model: golf
+  generation: VII
+  engine_code: EA211
+  engine_family: ea211
+  fuel: petrol
+  displacement_cc: 1197
+  power_min_hp: 105
+  power_max_hp: 110
+  transmission: manual
+  transmission_code: manual
+  electrical_code: golf7_elec
+  year_from: 2013
+  year_to: 2017
+  market: TR
+  notes: 1.2 TSI (BMT) — 105 hp CJZA, 110 hp CYVB from 2015; volume petrol until the
+    facelift's 1.0 TSI replaced it
+  body_code: golf7_body
+  drivetrain: fwd
+- id: golf7_ea211_110_dsg
+  make: volkswagen
+  model: golf
+  generation: VII
+  engine_code: EA211
+  engine_family: ea211
+  fuel: petrol
+  displacement_cc: 1197
+  power_min_hp: 105
+  power_max_hp: 110
+  transmission: automatic
+  transmission_code: dq200
+  electrical_code: golf7_elec
+  year_from: 2013
+  year_to: 2017
+  market: TR
+  notes: 1.2 TSI DSG — 7-speed dry-clutch DQ200, same unit as the 1.4 TSI DSG (already
+    researched)
+  body_code: golf7_body
+  drivetrain: fwd
