@@ -16,6 +16,47 @@ function cleanText(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
+// The Turkish field labels Sahibinden puts on a vasıta detail page. A closed
+// vocabulary of FIELD names (not car data — it does not grow as models are
+// onboarded), used by the layout-agnostic fallback below.
+const KNOWN_INFO_LABELS = [
+  "İlan No", "İlan Tarihi", "Marka", "Seri", "Model", "Yıl", "Yakıt",
+  "Yakıt Tipi", "Vites", "Kilometre", "Kasa Tipi", "Motor Gücü", "Motor Hacmi",
+  "Çekiş", "Renk", "Garanti", "Durumu", "Durum", "Ağır Hasar Kayıtlı",
+  "Takasa Uygun", "Kimden",
+];
+
+// Last resort when no known container selector matches: find the LABEL text
+// itself anywhere in the document and read the value next to it. Sahibinden has
+// redesigned this markup repeatedly, and every redesign silently zeroed every
+// field — the extension kept "working" while the backend answered "Missing
+// required fields". Anchoring on the label instead of the container survives a
+// class rename.
+function extractInfoListByLabelScan() {
+  const details = {};
+  const wanted = new Map(
+    KNOWN_INFO_LABELS.map(l => [l.toLocaleLowerCase("tr"), l])
+  );
+
+  for (const node of document.querySelectorAll(
+    "span, div, dt, th, td, strong, b, p, label"
+  )) {
+    const text = cleanText(node.textContent);
+    if (!text || text.length > 24) continue;
+    const canonical = wanted.get(text.toLocaleLowerCase("tr"));
+    if (!canonical || details[canonical]) continue;
+
+    // The value sits next to the label — as a sibling, or as the parent's other
+    // half when both are wrapped (…<span>Yıl</span><span>2014</span>…).
+    const sibling = node.nextElementSibling;
+    const value = cleanText(sibling && sibling.textContent);
+    if (value && value !== text) {
+      details[canonical] = value;
+    }
+  }
+  return details;
+}
+
 function extractInfoList() {
   const details = {};
 
@@ -65,7 +106,22 @@ function extractInfoList() {
     }
   }
 
+  if (Object.keys(details).length === 0) {
+    return extractInfoListByLabelScan();
+  }
+
   return details;
+}
+
+// Sahibinden's info list labels the fuel column "Yakıt"; the technical-details
+// panel calls it "Yakıt Tipi". Both are the fuel TYPE. "Yakıt Tüketimi"
+// (consumption) and "Yakıt Deposu" (tank size) are not, and a bare "yakıt"
+// substring match would otherwise hand the matcher "4,5 lt" as a fuel.
+const FUEL_LABEL_RE = /yak[ıi]t/;
+const NOT_FUEL_TYPE_RE = /t[üu]ketim|depo/;
+
+function isFuelTypeLabel(key) {
+  return FUEL_LABEL_RE.test(key) && !NOT_FUEL_TYPE_RE.test(key);
 }
 
 function mapTurkishKeys(details) {
@@ -77,8 +133,6 @@ function mapTurkishKeys(details) {
     "uretim yili": "year",
     kilometre: "mileage_km",
     km: "mileage_km",
-    "yakıt tipi": "fuel_type",
-    "yakit tipi": "fuel_type",
     vites: "transmission",
     "motor hacmi": "engine_volume_cc",
     "motor gücü": "power_hp",
@@ -101,6 +155,10 @@ function mapTurkishKeys(details) {
   const mapped = {};
   for (const [rawLabel, rawValue] of Object.entries(details)) {
     const key = rawLabel.toLowerCase().trim();
+    if (isFuelTypeLabel(key)) {
+      mapped.fuel_type = rawValue;
+      continue;
+    }
     for (const [turkish, english] of Object.entries(mapping)) {
       if (key.includes(turkish)) {
         mapped[english] = rawValue;
@@ -109,6 +167,19 @@ function mapTurkishKeys(details) {
     }
   }
   return mapped;
+}
+
+// The listing title leads with the model year ("2014 Volkswagen Golf 1.6 TDI").
+// make/model already fall back to the title when the info list can't be read;
+// year did not, so a markup change left it null and the backend rejected the
+// listing outright. Bounded to plausible model years so a price or a mileage
+// figure can never be mistaken for one.
+function yearFromTitle(title) {
+  const match = (title || "").match(/\b(19\d{2}|20\d{2})\b/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const maxYear = new Date().getFullYear() + 1;
+  return year >= 1980 && year <= maxYear ? year : null;
 }
 
 function extractTechnicalDetails() {
@@ -454,7 +525,7 @@ function extractSahibindenMetadata() {
     if (!model) model = titleModel;
   }
 
-  const yearNum = numberFromText(mapped.year);
+  const yearNum = numberFromText(mapped.year) || yearFromTitle(title);
   const mileageNum = numberFromText(mapped.mileage_km);
   const annualKm = computeAnnualKm(yearNum, mileageNum);
 
