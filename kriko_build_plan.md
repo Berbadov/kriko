@@ -1,5 +1,9 @@
 # Kriko — Build Specification (for Claude Code)
 
+> **HISTORICAL — the original build specification.** The system has since diverged
+> (part-centric knowledge plane, context gating, ranking/cap). For current state see
+> `README.md`, `docs/INTERNALS.md`, and `backlog.md`.
+
 ## Overview
 
 **What Kriko is:** A browser extension that, on a Sahibinden car listing, shows the buyer the known reliability risks for that exact car variant — each with a severity, a plain-language rationale, inspection advice, and a real source they can click to verify. The product helps people not lose €10–20k on a bad used car.
