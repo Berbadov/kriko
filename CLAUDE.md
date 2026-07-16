@@ -4,6 +4,12 @@ Kriko is a Chrome extension + FastAPI backend that surfaces reliability risks fo
 on Sahibinden. See `docs/USAGE.md` (operation), `docs/INTERNALS.md` (architecture),
 `docs/pipeline_postmortem.md` (knowledge-pipeline history).
 
+## Task tracking
+
+Open work lives in `backlog.md` (prioritized, with goals G1–G4 and evidence); finished
+items move to `done.md` with date + commit. Check the backlog before starting work and
+keep both files current — they are the single source of truth for project status.
+
 ## Product principle — what Kriko surfaces (READ THIS BEFORE TOUCHING CLAIM SELECTION)
 
 Kriko's value is **the config- and mileage-specific known risks a buyer cannot cheaply get
