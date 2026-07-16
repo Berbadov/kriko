@@ -1,5 +1,9 @@
 # Kriko Project Handover Specification
 
+> **HISTORICAL — predates the part-centric "Lego" system.** Kept for context only;
+> the described pipeline (verify_agent/review_tool flow) is not how Kriko works today.
+> Current entry points: `README.md`, `docs/USAGE.md`, `backlog.md`.
+
 This document summarizes the exact state of Kriko, what works, what has been built, and how to resume development in the future.
 
 ---

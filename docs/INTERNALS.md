@@ -15,7 +15,7 @@ and the invariants the system relies on. Read this before touching the pipeline.
 │                                      │                           │
 │                   extract.py  ←──────┘                          │
 │                   dedup.py                                       │
-│                   judge.py  (4 LLM gates via OpenRouter)        │
+│                   judge.py  (LLM gates via Mistral)             │
 │                   promote.py                                     │
 │                       │                                          │
 │                       ▼                                          │
@@ -156,11 +156,12 @@ rationale, inspection_advice, verbatim quote, optional engine_or_variant_hint, a
 
 Called internally by `promote()`. Groups same-claim candidates from different sources:
 - Fast path: different `domain` → definitely different claim
-- LLM path: `same_claim(a, b)` via `qwen/qwen-2.5-7b-instruct`
+- Same-claim check: `same_claim(a, b)` — deterministic title-token Jaccard ≥ 0.4, no LLM
 - Independence check: Jaccard word overlap >85% → non-independent (repost)
 
 ### LLM Gates
-**`knowledge/judge.py`** — 4 gate functions, all using `qwen/qwen-2.5-7b-instruct`
+**`knowledge/judge.py`** — gate functions, all using `ministral-8b-latest` (Mistral API),
+with deterministic pre-checks ahead of each LLM call (see `knowledge/stoplists.py`)
 
 | Gate | Question | Passes if |
 |------|----------|-----------|
