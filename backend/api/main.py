@@ -47,6 +47,17 @@ def health():
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
 
+# Appended to the summary when the ad's stated transmission contradicts the
+# cataloged gearbox of the matched variant (MatchResult.tx_mismatch). Additive
+# only — the extension reads `summary`, so the caveat is buyer-visible without
+# any new response field.
+TX_MISMATCH_CAVEAT = (
+    "Heads up: this listing's stated transmission does not match the gearbox "
+    "cataloged for the matched variant, so gearbox-specific risks are not covered "
+    "here — confirm the transmission with the seller."
+)
+
+
 def run_analysis(
     meta: dict, db: Session,
 ) -> tuple[ListingContext, MatchResult, list[ClaimResult], AnalyzeResponse]:
@@ -75,9 +86,13 @@ def run_analysis(
     _STRENGTH_RANK = {"confirmed": 0, "due": 1, "due_stated": 2, "reported": 3}
     risks.sort(key=lambda r: (_STRENGTH_RANK.get(r.strength, 4), _SEV_RANK.get(r.severity, 3)))
 
+    summary = _build_summary(state, match, risks)
+    if match.tx_mismatch:
+        summary = f"{summary} {TX_MISMATCH_CAVEAT}"
+
     resp = AnalyzeResponse(
         coverage_state=state,
-        summary=_build_summary(state, match, risks),
+        summary=summary,
         risks=risks,
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=match.variant_ids,
