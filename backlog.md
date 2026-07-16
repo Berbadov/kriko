@@ -30,6 +30,12 @@ coverage report), never a quiet zero.
 (`model-year-claim-windows`, `evidence-ledger-stage1`). Consolidate so fixes stop
 living in three places.
 
+**Cross-cutting rule — patch the car, ship the mechanism** (see CLAUDE.md's
+generalization principle): a per-model fix is only half done until the guard that
+catches the same problem class on *every* car exists. The backlog pairs them
+explicitly: B2/B3 (patches) ↔ B6/B7 (mechanisms). Don't close a patch item and
+skip its mechanism.
+
 ---
 
 ## P0
@@ -55,6 +61,8 @@ correctly don't apply. Run the pipeline:
 - [ ] `python -m knowledge.auto --part dw6 --part-type transmission`
 - [ ] Verify with `backend.tools.replay` against the logged Megane EDC analyses.
 
+*Per-model patch — its recurrence mechanism is B7 (coverage report). Do both.*
+
 ### B3 — Catalog gaps: automatic rows that exist on the street but not in the YAML `[G3]`
 Logged EDC 1.5 dCi Meganes (2018/2019/2020) "exact"-matched `megane4_k9k_110` — a variant
 cataloged `transmission: manual`. The matcher's transmission narrowing is soft, so the ad
@@ -64,6 +72,8 @@ silently matched the manual row and *no gearbox part exists on that route at all
 - [ ] Audit the "manual only in TR" notes in `volkswagen_golf_7.yaml`
       (esp. 1.6 TDI — DSG 1.6 TDIs are common on Sahibinden) and Clio 5 diesel rows.
 - [ ] Re-check against `logs/analyses.jsonl` afterwards.
+
+*Per-model patch — its recurrence mechanism is B6 (contradiction surfacing). Do both.*
 
 ---
 
@@ -123,6 +133,17 @@ onboarding order follows actual usage, not guesswork.
 ### B11 — Implement the AdBlue/SCR variant-scoping spec `[G3]`
 Design spec written (`docs/superpowers/specs/2026-07-10-variant-emissions-scr-gate-design.md`,
 434f9ec), not implemented. Emissions-hardware claims need an SCR/no-SCR variant dimension.
+
+### B14 — Documentation audit: docs must match the code
+2026-07-16 pass fixed the worst drift (README rewritten; INTERNALS' qwen/OpenRouter →
+ministral/Mistral, LLM dedup → deterministic Jaccard; historical banners on
+handover/SCAFFOLD/build_plan; doc map in CLAUDE.md). Remaining:
+- [ ] Verify every INTERNALS.md mechanism section against current code (promotion
+      scoring, disposition rules, curated-source lifecycle) — it predates the
+      part-centric flow in places.
+- [ ] USAGE.md §5/§7 still document the model-centric legacy mode prominently;
+      restructure around the part-centric flow.
+- [ ] Decide whether `docs/handover.md` earns a rewrite or deletion once B12 lands.
 
 ### B13 — Remaining design-flaw work (`docs/design_flaws.md`)
 - Flaw 5: judge too weak → whack-a-mole patches (the ledger's verdict stage, B1,
