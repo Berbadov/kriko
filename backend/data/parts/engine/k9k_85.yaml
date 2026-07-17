@@ -491,6 +491,8 @@ claims:
       100,000 km under these conditions, while UK DVSA records show EGR-related faults
       remain a common cause of emissions test failures."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: k9k_85_emissions_egr_valve/carbon_bui
   title: EGR valve/carbon buildup failures
   kind: known_issue

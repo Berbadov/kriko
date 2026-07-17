@@ -105,6 +105,23 @@ def validate_part(path: Path) -> list[str]:
         if kind == "maintenance" and not claim.get("maintenance"):
             errors.append(f"{loc}: maintenance claim missing 'maintenance' block")
 
+        # Optional model-year window (applies_when.applies_year_from/to): when
+        # present, bounds must be integers and from <= to. This is the sync gate,
+        # so a malformed window fails here instead of silently mis-scoping a claim.
+        # (bool is an int subclass in Python — reject it explicitly.)
+        aw = claim.get("applies_when")
+        if isinstance(aw, dict):
+            yf = aw.get("applies_year_from")
+            yt = aw.get("applies_year_to")
+            for name, val in (("applies_year_from", yf), ("applies_year_to", yt)):
+                if val is not None and (isinstance(val, bool) or not isinstance(val, int)):
+                    errors.append(f"{loc}: applies_when.{name} must be an integer, got {val!r}")
+            if isinstance(yf, int) and not isinstance(yf, bool) \
+               and isinstance(yt, int) and not isinstance(yt, bool) and yf > yt:
+                errors.append(
+                    f"{loc}: applies_when.applies_year_from ({yf}) > applies_year_to ({yt})"
+                )
+
         if status in ("verified", "review") and kind != "maintenance":
             sources = claim.get("sources", [])
             if not sources:

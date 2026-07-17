@@ -529,22 +529,6 @@ claims:
   inspection_advice: Verify water pressure levels and inspect the water pressure sensor
     for proper functionality and wiring integrity.
   sources: []
-- claim_key: h5h_130_engine_timing_chain_tension
-  title: Timing chain tensioner failure (hydraulic dependency)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.0
-  status: held
-  promoted_by: pending_human
-  rationale: The hydraulic timing chain tensioner in EA111 TSI engines relies on oil
-    pressure to function. On cold starts, insufficient oil pressure causes the tensioner
-    to fail temporarily, leading to rattling noises. If this persists beyond 2-3 seconds,
-    it indicates stretched chain and imminent failure risk.
-  inspection_advice: Listen for rattling noises at cold start that persist longer
-    than 2-3 seconds. This is abnormal and suggests tensioner or chain wear. Confirm
-    if the tensioner was replaced during any timing chain service.
-  sources: []
 - claim_key: h5h_130_engine_sprocket_wear_and_pr
   title: Sprocket wear and premature failure (timing chain system)
   kind: known_issue

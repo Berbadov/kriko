@@ -615,6 +615,8 @@ claims:
       Çünkü bu dediğimiz gibi ıslak tip bir şanzıman kuru tiplerde dq200 gibi bu kadar
       erken kavrama değişimiyle karşılaşıyoruz da"'
     independent: true
+  applies_when:
+    min_mileage_km: 15000
 - claim_key: dc4_transmission_clutch_master_cylind
   title: Clutch Master Cylinder (CMC) Failure Leading to Transmission Engagement Issues
   kind: known_issue
@@ -774,6 +776,8 @@ claims:
     quote: '"In some specialist forums, it''s been noted that around 150 000km, there
       have been engine failures after oil consumption was noticed."'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
 - claim_key: dc4_engine_failing_ignition_coi
   title: Failing ignition coils and catastrophic engine failure due to neglected timing
     belt

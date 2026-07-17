@@ -16,6 +16,54 @@ function cleanText(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
+// The field labels Sahibinden puts on a vasıta detail page, in BOTH locales it
+// serves (Turkish and English). A closed vocabulary of FIELD names — not car
+// data, so it does not grow as models are onboarded. Used by the
+// layout-agnostic fallback below.
+const KNOWN_INFO_LABELS = [
+  // Turkish
+  "İlan No", "İlan Tarihi", "Marka", "Seri", "Model", "Yıl", "Yakıt",
+  "Yakıt Tipi", "Vites", "Kilometre", "Kasa Tipi", "Motor Gücü", "Motor Hacmi",
+  "Çekiş", "Renk", "Garanti", "Durumu", "Durum", "Ağır Hasar Kayıtlı",
+  "Takasa Uygun", "Kimden",
+  // English
+  "Listing No", "Listing Date", "Make", "Series", "Year", "Fuel Type", "Gear",
+  "Vehicle Status", "KM", "Body Type", "Engine Power", "Engine Capacity",
+  "Wheel Drive", "Color", "Warranty", "Salvage Record", "Plate", "From",
+  "Exchange",
+];
+
+// Last resort when no known container selector matches: find the LABEL text
+// itself anywhere in the document and read the value next to it. Sahibinden has
+// redesigned this markup repeatedly, and every redesign silently zeroed every
+// field — the extension kept "working" while the backend answered "Missing
+// required fields". Anchoring on the label instead of the container survives a
+// class rename.
+function extractInfoListByLabelScan() {
+  const details = {};
+  const wanted = new Map(
+    KNOWN_INFO_LABELS.map(l => [l.toLocaleLowerCase("tr"), l])
+  );
+
+  for (const node of document.querySelectorAll(
+    "span, div, dt, th, td, strong, b, p, label"
+  )) {
+    const text = cleanText(node.textContent);
+    if (!text || text.length > 24) continue;
+    const canonical = wanted.get(text.toLocaleLowerCase("tr"));
+    if (!canonical || details[canonical]) continue;
+
+    // The value sits next to the label — as a sibling, or as the parent's other
+    // half when both are wrapped (…<span>Yıl</span><span>2014</span>…).
+    const sibling = node.nextElementSibling;
+    const value = cleanText(sibling && sibling.textContent);
+    if (value && value !== text) {
+      details[canonical] = value;
+    }
+  }
+  return details;
+}
+
 function extractInfoList() {
   const details = {};
 
@@ -65,42 +113,77 @@ function extractInfoList() {
     }
   }
 
+  if (Object.keys(details).length === 0) {
+    return extractInfoListByLabelScan();
+  }
+
   return details;
 }
 
+// Sahibinden's info list labels the fuel column "Yakıt" (TR) or "Fuel Type"
+// (EN); the technical-details panel uses "Yakıt Tipi" / "Fuel". All are the fuel
+// TYPE. "Yakıt Tüketimi" / "Fuel Consumption" and "Yakıt Deposu" / "Fuel
+// Capacity" are not — without the exclusion a bare match hands the matcher
+// "4,9 l" as a fuel.
+const FUEL_LABEL_RE = /yak[ıi]t|fuel/;
+const NOT_FUEL_TYPE_RE = /t[üu]ketim|depo|consumption|capacity/;
+
+function isFuelTypeLabel(key) {
+  return FUEL_LABEL_RE.test(key) && !NOT_FUEL_TYPE_RE.test(key);
+}
+
 function mapTurkishKeys(details) {
+  // Sahibinden serves the same page in Turkish OR English depending on the
+  // user's locale, with entirely different labels ("Marka"/"Make",
+  // "Yıl"/"Year", "Vites"/"Gear", "Kilometre"/"KM"). The scraper knew only the
+  // Turkish set, so an English listing read as an empty info list and the
+  // backend rejected it with "Missing required fields". Both locales are
+  // matched here; the label set is a fixed vocabulary, not car data.
   const mapping = {
-    // Exact or partial label matches
+    // Exact or partial label matches — Turkish first, then the English locale.
     yıl: "year",
     yil: "year",
     "üretim yılı": "year",
     "uretim yili": "year",
+    year: "year",
     kilometre: "mileage_km",
     km: "mileage_km",
-    "yakıt tipi": "fuel_type",
-    "yakit tipi": "fuel_type",
     vites: "transmission",
+    gear: "transmission",
     "motor hacmi": "engine_volume_cc",
+    "engine capacity": "engine_volume_cc",
     "motor gücü": "power_hp",
     "motor gucu": "power_hp",
     "beygir gücü": "power_hp",
     "beygir gucu": "power_hp",
+    "engine power": "power_hp",
     "kasa tipi": "body_type",
+    "body type": "body_type",
     renk: "color",
+    color: "color",
     durum: "condition",
+    "vehicle status": "condition",
     garanti: "warranty",
+    warranty: "warranty",
     "çekiş": "drivetrain",
     "cekis": "drivetrain",
+    "wheel drive": "drivetrain",
     marka: "make",
+    make: "make",
+    // Sahibinden uses "Model"/"Model" for trim/variant (e.g. "1.5 dCi Joy");
+    // the model name itself lives in "Seri" / "Series" (e.g. "Clio").
+    // "series".includes("seri") is true, so one entry covers both locales.
     seri: "model",
-    // Sahibinden uses "Model" for trim/variant (e.g. "1.5 dCi Joy"); the
-    // model name itself lives in "Seri" (e.g. "Clio").
     model: "trim",
   };
 
   const mapped = {};
   for (const [rawLabel, rawValue] of Object.entries(details)) {
     const key = rawLabel.toLowerCase().trim();
+    if (isFuelTypeLabel(key)) {
+      mapped.fuel_type = rawValue;
+      continue;
+    }
     for (const [turkish, english] of Object.entries(mapping)) {
       if (key.includes(turkish)) {
         mapped[english] = rawValue;
@@ -109,6 +192,19 @@ function mapTurkishKeys(details) {
     }
   }
   return mapped;
+}
+
+// The listing title leads with the model year ("2014 Volkswagen Golf 1.6 TDI").
+// make/model already fall back to the title when the info list can't be read;
+// year did not, so a markup change left it null and the backend rejected the
+// listing outright. Bounded to plausible model years so a price or a mileage
+// figure can never be mistaken for one.
+function yearFromTitle(title) {
+  const match = (title || "").match(/\b(19\d{2}|20\d{2})\b/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const maxYear = new Date().getFullYear() + 1;
+  return year >= 1980 && year <= maxYear ? year : null;
 }
 
 function extractTechnicalDetails() {
@@ -134,42 +230,59 @@ function mapTechnicalDetails(details) {
     const value = cleanText(rawValue);
     if (!value) continue;
 
-    if (key.includes("şanzıman / çekiş") || key.includes("sanziman / cekis")) {
-      const [transmission, drivetrain] = value.split("/").map(v => cleanText(v));
-      if (transmission) mapped.transmission = transmission;
-      if (drivetrain) mapped.drivetrain = drivetrain;
+    if (key.includes("şanzıman / çekiş") || key.includes("sanziman / cekis")
+        || key.includes("transmission / drive type")) {
+      // TR: "Otomatik / Önden Çekiş". EN: "DSG / 7 Gear / Front Wheel Drive" —
+      // the drive type is the LAST segment, not the second.
+      const segments = value.split("/").map(v => cleanText(v)).filter(Boolean);
+      if (segments.length) {
+        mapped.transmission = segments[0];
+        if (segments.length > 1) mapped.drivetrain = segments[segments.length - 1];
+      }
       continue;
     }
-    if (key.includes("yakıt tipi") || key.includes("yakit tipi")) {
+    if (isFuelTypeLabel(key)) {
+      // EN "Fuel" reads "Gasoline / EURO 6"; TR "Yakıt Tipi" reads "Dizel".
       mapped.fuel_type = cleanText(value.split("/")[0]);
       continue;
     }
-    if (key.includes("motor hacmi")) {
-      mapped.engine_volume_cc = value;
+    if (key.includes("motor hacmi") || key.includes("engine capacity")) {
+      // Sahibinden's own bug: the English "Overview" table labels the POWER row
+      // "Engine Capacity" (110 hp), while the real capacity (1197 cc) sits under
+      // the same label in "Engine and Performance". Accept a capacity only when
+      // it is actually expressed in cc, so "110 hp" can never become 110 cc.
+      if (/\d\s*cc\b/i.test(value)) {
+        mapped.engine_volume_cc = value;
+      }
       continue;
     }
-    if (key.includes("motor gücü") || key.includes("motor gucu")) {
+    if (key.includes("motor gücü") || key.includes("motor gucu")
+        || key.includes("engine power")) {
       // Clean single value (e.g. "140 hp") — always wins over the composite
-      // "Maksimum Güç" field below, which also carries kW and rpm.
+      // "Maksimum Güç" / "Maximum Power" field below, which also carries kW/rpm.
       mapped.power_hp = value;
       continue;
     }
-    if (key.includes("maksimum güç") || key.includes("maksimum guc")) {
+    if (key.includes("maksimum güç") || key.includes("maksimum guc")
+        || key.includes("maximum power")) {
       if (!mapped.power_hp) {
-        // "Maksimum Güç" is composite (e.g. "140 hp (103 kw) / 5.000 rpm").
-        // Extracting the raw string here and letting numberFromText() strip
-        // all non-digits later concatenates hp+kW+rpm into garbage like
-        // "1401035000" — pull out just the hp figure instead.
+        // Composite (e.g. "110 hp (81 kw) / 4,600 rpm"). Extracting the raw
+        // string and letting numberFromText() strip all non-digits later
+        // concatenates hp+kW+rpm into garbage like "110814600" — pull out just
+        // the hp figure instead.
         const hpMatch = value.match(/(\d+)\s*hp/i);
         mapped.power_hp = hpMatch ? hpMatch[1] : value;
       }
       continue;
     }
-    if (key.includes("kasa tipi")) {
+    if (key.includes("kasa tipi") || key.includes("body type")) {
       mapped.body_type = cleanText(value.split("/")[0]);
       continue;
     }
-    if (key.includes("motor tipi") && !mapped.fuel_type) {
+    // TR "Motor Tipi" / EN "Engine Type" reads "Gasoline / 4 cylinders" — the
+    // fuel, but only as a fallback if the explicit fuel row was absent.
+    if ((key.includes("motor tipi") || key.includes("engine type"))
+        && !mapped.fuel_type) {
       mapped.fuel_type = cleanText(value.split("/")[0]);
     }
   }
@@ -454,7 +567,7 @@ function extractSahibindenMetadata() {
     if (!model) model = titleModel;
   }
 
-  const yearNum = numberFromText(mapped.year);
+  const yearNum = numberFromText(mapped.year) || yearFromTitle(title);
   const mileageNum = numberFromText(mapped.mileage_km);
   const annualKm = computeAnnualKm(yearNum, mileageNum);
 
@@ -509,6 +622,9 @@ function extractSahibindenMetadata() {
     engine_volume_cc: numberFromText(engineVolume),
     power_hp: numberFromText(powerHp),
     body_type: bodyType,
+    // Was computed but never sent — Variant carries a drivetrain column and
+    // sync.py gates claims on it (_drivetrain_compatible).
+    drivetrain: technicalMapped.drivetrain || mapped.drivetrain || null,
     condition: mapped.condition || null,
     // Structured replaced/painted/tramer info
     damage_info: damage,
