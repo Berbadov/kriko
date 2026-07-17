@@ -727,6 +727,8 @@ claims:
       miles. [...] The chain is too thin to go more than that and may stretch badly
       at higher mileage."'
     independent: true
+  applies_when:
+    min_mileage_km: 90000
 - claim_key: h5d_100_engine_1.2_tce_engine_not_r
   title: 1.2 TCe engine not recommended
   kind: known_issue

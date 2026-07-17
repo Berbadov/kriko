@@ -1,5 +1,9 @@
 # Scaffold & source-addition reference
 
+> **HISTORICAL — describes the legacy model-centric scaffold flow.** Onboarding now goes
+> through `knowledge.catalog.discover --write-variants/--write-fitment` + `knowledge.auto`
+> (see `docs/USAGE.md` §4). Kept for field-reference context only.
+
 ## A — Adding a new car model (end-to-end)
 
 ```bash

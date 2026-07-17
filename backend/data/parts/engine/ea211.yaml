@@ -119,9 +119,11 @@ claims:
       2 and 3 after 100,000 km - a specific fault that doesn''t exist on the weaker
       variants without ACT."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: ea211_engine_timing_belt_design_f
   title: Timing belt design flaw requiring mandatory replacement
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: high
   confidence: 0.6
@@ -141,6 +143,20 @@ claims:
     quote: Timing belt — mandatory replacement — Preventive only — interference engine.
       Belt design for efficiency. 60k km replacement mandatory. Key maintenance item.
     independent: true
+  maintenance:
+    interval_km: 60000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done
 - claim_key: ea211_engine_cylinder_deactivatio
   title: Cylinder deactivation shudder (software-induced mechanical vibration)
   kind: known_issue
@@ -418,7 +434,7 @@ claims:
     independent: true
 - claim_key: ea211_engine_timing_belt_replacem
   title: Timing belt replacement interval critical
-  kind: known_issue
+  kind: maintenance
   domain: engine
   severity: high
   confidence: 0.6
@@ -437,6 +453,20 @@ claims:
       local recommendation). Ignoring belt changes can lead to catastrophic engine
       failure."'
     independent: true
+  maintenance:
+    interval_km: 90000
+    evidence_keywords:
+    - triger değiş
+    - triger yeni
+    - triger atıl
+    - triger yapıl
+    - kayış değiş
+    - eksantrik kayış değiş
+    - timing belt changed
+    - timing belt replaced
+    - new timing belt
+    - cam belt changed
+    - cambelt done
 - claim_key: ea211_fuel system_carbon_build-up_on_i
   title: Carbon build-up on intake valves (direct-injection variants)
   kind: known_issue
@@ -481,27 +511,6 @@ claims:
     quote: '"Occasionally, the wastegate actuator may stick or the turbo may whistle.
       Usually caused by carbon buildup or lubrication issues; not a widespread flaw."'
     independent: true
-- claim_key: ea211_engine_timing_chain_tension
-  title: Timing Chain Tensioner Failure (EA111)
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The timing chain tensioners in early EA111 engines are prone to failure,
-    risking misalignment of engine components and severe piston damage if the timing
-    chain goes slack.
-  inspection_advice: Listen for rattling noises from the timing chain area, especially
-    under load. Check for oil leaks around the tensioner housing and verify chain
-    tension visually during inspection.
-  sources:
-  - source_url: https://vwtuning.co/vw-1-4-tsi-engine-problems/
-    source_domain: vwtuning.co
-    site_or_channel: vwtuning.co
-    quote: '"Tensioner failure is very common in Volkswagen’s as they were not built
-      very durable out of the factory. The tensioners in this engine are no exception."'
-    independent: true
 - claim_key: ea211_engine_ignition_coil_failur
   title: Ignition Coil Failure (Premature Wear)
   kind: known_issue
@@ -523,6 +532,8 @@ claims:
     quote: '"Ignition coil and spark plug failure are common in most turbocharged
       engines nowadays."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: ea211_engine_turbolader_failure_d
   title: Turbolader failure due to carbon buildup and thermal stress
   kind: known_issue
@@ -876,6 +887,8 @@ claims:
       motor kapatılan araçlarda daha erken görülür. 90.000 – 160.000 km arasında sıkça
       raporlanmaktadır."'
     independent: true
+  applies_when:
+    min_mileage_km: 90000
 - claim_key: ea211_emissions_egr_valve_clogging_a
   title: EGR valve clogging and failure
   kind: known_issue
@@ -899,6 +912,8 @@ claims:
       Bu durum rölantide titreşim, güç kaybı ve artan yakıt tüketimine yol açar. 60.000
       – 120.000 km arasında sıkça görülmektedir."'
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea211_engine_intake_manifold_and_
   title: Intake manifold and valve carbon deposits
   kind: known_issue
@@ -924,6 +939,8 @@ claims:
       sarsıntı, güç kaybı ve düzensiz ralantıdır. 80.000 km üzerindeki araçlarda yaygın
       olarak tespit edilmektedir."'
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: ea211_engine_cooling_system_water
   title: Cooling system water pump failure
   kind: known_issue
@@ -947,6 +964,8 @@ claims:
       ısınma riskini beraberinde getiren bu sorun, genellikle 80.000 – 140.000 km
       arasında kendini gösterir."'
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: ea211_electrical_chronic_48v_hybrid_s
   title: Chronic 48V Hybrid System Communication Failures (Golf 8 eTSI)
   kind: known_issue
@@ -1112,27 +1131,6 @@ claims:
     quote: '"If your car is taking a long time to warm up, most of the problems are
       actually just with the thermostat and the way it reports the water temperature
       to you."'
-    independent: true
-- claim_key: ea211_engine_premature_timing_cha
-  title: Premature timing chain stretch
-  kind: known_issue
-  domain: engine
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The timing chain in the 1.4 TSI EA111 is designed for the entire engine
-    life but stretches significantly before 60,000 miles, leading to potential catastrophic
-    failure if not addressed.
-  inspection_advice: Check for rattling noises from the timing chain area and inspect
-    for visible chain stretch or tensioner wear during maintenance. Verify if the
-    chain has been replaced before 60,000 miles.
-  sources:
-  - source_url: https://uscarsnew.com/vw-audi-1-4-tsi-tfsi-ea111-engine/
-    source_domain: uscarsnew.com
-    site_or_channel: uscarsnew.com
-    quote: this chain will stretch out somewhere after 60k miles – long before the
-      engine lifespan ends.
     independent: true
 - claim_key: ea211_engine_1.4_tsi_misfire_reco
   title: 1.4 TSI misfire recovery requiring intake manifold cleaning

@@ -21,6 +21,7 @@ from backend import config
 from backend.config import ALLOWED_ORIGINS, STANDARD_DISCLAIMER
 from backend.core.context import ListingContext
 from backend.core.matcher import MatchResult, match_variant
+from backend.core.recover import recover_listing_fields
 from backend.core.resolver import ClaimResult, resolve_claims
 from backend.db.models import AnalysisLog, ClaimSource
 from backend.db.session import db_reachable, get_db
@@ -47,6 +48,35 @@ def health():
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
 
+# The per-listing "few" ceiling: a buyer sees at most this many risks. Tunable.
+MAX_RISKS_PER_LISTING = 8
+
+# Strengths that are evidence-backed and must never be dropped by the cap — only
+# the unverified "reported" tail is trimmed.
+_PROTECTED_STRENGTHS = frozenset({"confirmed", "due", "due_stated"})
+
+
+def _cap_risks(risks: list[RiskItem], n: int) -> list[RiskItem]:
+    """Cap a ranked risk list to `n`, never dropping evidence-backed items.
+
+    Keeps every protected (confirmed/due/due_stated) risk, then fills the
+    remaining slots with the top-ranked reported items. Input is assumed already
+    ranked best-first; output preserves that order. If protected items alone
+    exceed `n`, they are all kept (never hide a confirmed/due risk to meet a cap).
+    """
+    protected = [r for r in risks if r.strength in _PROTECTED_STRENGTHS]
+    slots_for_reported = max(0, n - len(protected))
+    kept: list[RiskItem] = []
+    reported_kept = 0
+    for r in risks:
+        if r.strength in _PROTECTED_STRENGTHS:
+            kept.append(r)
+        elif reported_kept < slots_for_reported:
+            kept.append(r)
+            reported_kept += 1
+    return kept
+
+
 def run_analysis(
     meta: dict, db: Session,
 ) -> tuple[ListingContext, MatchResult, list[ClaimResult], AnalyzeResponse]:
@@ -56,9 +86,16 @@ def run_analysis(
     logged request through the *real* pipeline rather than a hand-copied
     reimplementation that could silently drift from it.
     """
+    # The extension's DOM scrape is one fragile source for every required field
+    # (Sahibinden redesigns the info-list markup, and the whole payload goes
+    # empty). Fill what it missed from the listing's URL slug and title before
+    # matching — never overwriting what it did read. See backend/core/recover.py.
+    meta = recover_listing_fields(meta)
+
     ctx = ListingContext(
         mileage_km   = meta.get("mileage_km"),
         age_years    = (date.today().year - meta["year"]) if meta.get("year") else None,
+        model_year   = meta.get("year"),
         annual_km    = meta.get("annual_km"),
         fuel_type    = meta.get("fuel_type"),
         transmission = meta.get("transmission"),
@@ -71,9 +108,18 @@ def run_analysis(
 
     state = _coverage_state(match, served)
     risks = [_claim_to_risk(cr, db) for cr in served]
+    # Priority key: strength first (evidence: confirmed > due > reported), then
+    # consequence tier (deterministic failure-system rank — the discriminator
+    # that severity lost to inflation), then severity as a final tiebreak.
     _SEV_RANK = {"high": 0, "medium": 1, "low": 2}
+    _CONSEQ_RANK = {"high": 0, "medium": 1, "low": 2}
     _STRENGTH_RANK = {"confirmed": 0, "due": 1, "due_stated": 2, "reported": 3}
-    risks.sort(key=lambda r: (_STRENGTH_RANK.get(r.strength, 4), _SEV_RANK.get(r.severity, 3)))
+    risks.sort(key=lambda r: (
+        _STRENGTH_RANK.get(r.strength, 4),
+        _CONSEQ_RANK.get(r.consequence, 1),
+        _SEV_RANK.get(r.severity, 3),
+    ))
+    risks = _cap_risks(risks, MAX_RISKS_PER_LISTING)
 
     resp = AnalyzeResponse(
         coverage_state=state,
@@ -88,7 +134,11 @@ def run_analysis(
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
     started = time.monotonic()
-    meta    = payload.ad_metadata or {}
+    meta    = dict(payload.ad_metadata or {})
+    # The URL is a recovery source (its slug names the make/model), so make sure
+    # it is present even if the scrape produced no `url` field of its own.
+    if not meta.get("url") and payload.listing_url:
+        meta["url"] = payload.listing_url
 
     try:
         ctx, match, served, resp = run_analysis(meta, db)
@@ -205,6 +255,7 @@ def _claim_to_risk(cr: ClaimResult, db: Session) -> RiskItem:
     return RiskItem(
         title=claim.title,
         severity=claim.severity,
+        consequence=claim.consequence or "medium",
         domain=claim.domain,
         rationale=claim.rationale,
         inspection_advice=claim.inspection_advice,

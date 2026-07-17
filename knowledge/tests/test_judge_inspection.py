@@ -85,3 +85,33 @@ def test_generic_oil_consumption_rejected_without_llm():
     )
     assert result.passed is False
     assert "generic" in result.reason.lower()
+
+
+# ── INSPECTION_COVERED fast-path — specificity escape valve ──────────────────
+#
+# The plain INSPECTION_COVERED stoplist ("clutch wear", ...) fast-rejected
+# unconditionally, killing config-specific keepers that merely share a word
+# with a routine-inspection item. Mirror the AMBIGUOUS_INSPECTION_TERMS branch:
+# a transmission code / mileage figure marks the claim config-specific and
+# earns an escape. Both branches resolve deterministically, no LLM call.
+
+def test_config_specific_inspection_covered_kept_without_llm():
+    """A gearbox code + mileage figure alongside 'clutch wear' → kept, no LLM call."""
+    result = gate_inspection_value(
+        "DQ200 Clutch Wear",
+        "The DQ200 dry dual-clutch pack is known to wear prematurely, often around "
+        "80,000 km on Golf, Polo and similar variants — a config-specific failure "
+        "pattern, not a routine test-drive observation.",
+    )
+    assert result.passed is True
+    assert "specific" in result.reason.lower()
+
+
+def test_generic_inspection_covered_still_rejected_without_llm():
+    """No engine/mileage signal alongside a stoplist term → still rejected, no LLM call."""
+    result = gate_inspection_value(
+        "Brake pads wear over time",
+        "Brake pads are a wear item and will need replacing eventually on any car.",
+    )
+    assert result.passed is False
+    assert "stoplist" in result.reason.lower()
