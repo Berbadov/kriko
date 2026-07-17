@@ -1,47 +1,42 @@
 # Kriko
 
-A Chrome extension + FastAPI backend that surfaces known reliability risks for specific used-car variants on Sahibinden.com — **before** the buyer books an expert inspection.
+A Chrome extension + FastAPI backend that surfaces known reliability risks for specific
+used-car variants on Sahibinden.com — **before** the buyer books an expert inspection.
 
-Kriko tells you what to worry about for *this exact engine and gearbox*, predictable from the listing data alone. It is not a generic checklist; it is part-revision-specific signal.
+Kriko tells you what to worry about for *this exact engine and gearbox*, predictable from
+the listing data alone. It is not a generic checklist; it is part-revision-specific signal.
+
+---
+
+## Design principles (read before contributing)
+
+The two rules that shape every decision live in `CLAUDE.md`; the short version:
+
+1. **Product principle — high-value claims only.** Surface config- and mileage-specific
+   known risks a buyer can't cheaply get from the standard pre-purchase inspection.
+   If the ekspertiz would catch it anyway (fluids, brake wear, warning lights), it's noise.
+2. **Scalability principle — no hardcoded car data, no orphan patches.** Anything that
+   grows with car coverage must be *derived from the catalog YAMLs*, never hand-enumerated
+   in Python. And every per-model fix must ship with the mechanism (validation, coverage
+   report, telemetry) that catches the same class of problem on every future car —
+   patching car #3 by hand doesn't scale to car #400.
+
+Task tracking: open work in [`backlog.md`](backlog.md) (goals + prioritized items),
+finished work in [`done.md`](done.md).
 
 ---
 
 ## What it shows
 
-- **Maintenance intervals due from mileage** — timing belt at 90k km on K9K, EDC clutch fluid at 60k
-- **Known-weak-point failures** — specific to this engine code and transmission hardware
-- **"Unless the ad proves otherwise"** flags — if a belt replacement isn't mentioned, treat it as overdue
+- **Maintenance intervals due from mileage** — timing belt at 90k km on K9K, DSG service
+  on high-mileage DQ250; flagged "due unless the ad proves otherwise"
+- **Known-weak-point failures** — specific to this engine code and gearbox revision,
+  gated by mileage/age/model-year windows where the evidence supports one
+- **Two clearly-separated strengths** — corroborated claims show as *Confirmed*;
+  single-source community reports show as *Reported*, never blurred together
 
-It does **not** show what a standard pre-purchase inspection already covers (fluid levels, brake wear, compression, warning lights). Those are noise for Kriko's audience.
-
----
-
-## Live example — Megane 4 1.5 dCi 90hp, 95,000 km
-
-```bash
-curl -s http://localhost:8000/analyze -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ad_metadata": {
-      "make": "renault", "model": "megane", "year": 2018,
-      "fuel_type": "diesel", "engine_volume_cc": 1461,
-      "power_hp": 90, "transmission": "manual", "mileage_km": 95000
-    }
-  }'
-```
-
-**Response summary:** `9 confirmed issues and 1 maintenance item due and 6 unverified reports for megane4_k9k_90`
-
-Top confirmed risks returned:
-| Title | Severity | Domain | Strength |
-|-------|----------|--------|----------|
-| DPF clogging and regeneration failure | high | emissions | confirmed |
-| Timing belt and hydraulic lifter failure | high | engine | confirmed |
-| Oil pump failure (90hp version) | high | engine | confirmed |
-| Crankshaft seizure — longlife oil interval | high | engine | confirmed |
-| Injector failure | medium | fuel system | confirmed |
-| EGR valve clogging | medium | emissions | confirmed |
-| K9K timing belt due at 90,000 km or 5 years | high | engine | **due** |
+It does **not** show what a standard pre-purchase inspection already covers, and a
+per-listing cap keeps the panel readable instead of encyclopedic.
 
 ---
 
@@ -50,52 +45,50 @@ Top confirmed risks returned:
 ```
 Chrome extension  →  POST /analyze
                          │
-                    match_variant()       ← variants YAML
+                    match_variant()       ← variants YAML (make/model/fuel/year/cc/hp/tx)
                     resolve_claims()      ← claims DB (assembled from parts × fitment)
+                    context gates         ← mileage, age, model-year, equipment, ad-stated tx
+                    rank + cap            ← consequence tier, max risks per listing
                          │
-                    JSON response (no LLM on request path)
+                    JSON response (no LLM on request path, <10ms)
 ```
 
-### Knowledge plane — the "Lego" system
+Two planes, never talking at runtime — YAML is the handoff:
 
-Research is done once per **part revision**, not per car model. A K9K claim in `backend/data/parts/engine/k9k_90.yaml` automatically applies to every variant that has `engine_family: k9k` in the fitment YAML — Megane 4, Clio 4, Duster, etc.
+- **Knowledge plane** (offline, LLM-powered): discovers sources, extracts candidate
+  claims, gates them, writes part YAMLs.
+- **Serving plane** (FastAPI + Postgres/SQLite): assembles part claims per variant at
+  sync time, answers `/analyze` with plain DB reads.
 
-The pipeline discovers sources from the web and YouTube, runs LLM extraction and quality gates, then promotes claims into part YAMLs:
+### The "Lego" system
 
-```
-knowledge/catalog/discover.py  --make vw --model golf_7 --write-fitment
-                                          # enumerates EA211/EA288/DQ200 from Wikipedia
-knowledge/auto.py  --all-parts            # discover + extract + gate all parts at once
-                   --part k9k …           # or target a single part
-backend/sync.py                           # assemble parts × fitment → Postgres
-```
-
-**Part types covered per model:** engine families, gearbox revisions, cooling system, electrical systems.
+Research is done once per **part revision**, not per car model. A claim in
+`backend/data/parts/engine/ea211.yaml` automatically applies to every variant of every
+model whose fitment row says `engine_family: ea211` — onboarding a new EA211-engined car
+inherits the research for free.
 
 ### File layout
 
 ```
 backend/
+  core/                                   # matcher, resolver, normalize, gates
+  api/main.py                             # /analyze endpoint, risk ranking + cap
+  sync.py                                 # YAML → DB assembly (with grounding guards)
   data/
-    variants/renault_megane_4.yaml        # trim configs: cc, hp, fuel, tx, years
-    variants/volkswagen_golf_7.yaml
-    fitment/renault_megane_4.yaml         # variant_id → engine_family + tx_code + ...
-    fitment/volkswagen_golf_7.yaml
+    variants/{make}_{model}.yaml          # trim configs: cc, hp, fuel, tx, years
+    fitment/{make}_{model}.yaml           # variant_id → engine_family/tx_code/... (derived from variants)
     parts/
-      engine/k9k_90.yaml                  # K9K 90hp claims
-      engine/ea211.yaml                   # VW EA211 TSI claims
-      engine/ea288.yaml                   # VW EA288 TDI claims
-      transmission/edc.yaml               # Renault EDC dual-clutch claims
-      transmission/dq200.yaml             # VW DQ200 7-speed DSG claims
-      transmission/dq250.yaml             # VW DQ250 6-speed DSG claims
-      cooling/golf7_cool.yaml             # Golf 7 model-wide cooling system
-      electrical/golf7_elec.yaml          # Golf 7 model-wide electrical systems
+      engine/       ea211 ea288 ea888 k9k_* h5h_* h5f_* h5d_* h4d_* r9m_*
+      transmission/ dq200 dq250 dq381 dc4 dw5 dw6
+      electrical/   golf7_elec megane4_elec clio5_elec
+      body/         golf7_body megane4_body clio5_body
 knowledge/
-  catalog/discover.py                     # Wikipedia wikitext parser — catalog bootstrap
-  auto.py                                 # orchestrator: all-parts mode + single-part
-  parts/search_templates.py              # part-centric Exa + YouTube queries
-  sources/curated/                        # discovered URLs per part
-  cache/                                  # candidate JSON (--skip-extraction reuses this)
+  catalog/                                # Wikipedia bootstrap, variants/fitment writers
+  auto.py                                 # orchestrator: discover → extract → gate → promote
+  process.py                              # re-run gates on cached candidates (no token cost)
+  ledger/                                 # evidence-ledger pipeline (Stage 1, on its own branch)
+extension_ui/                             # Chrome extension (content.js scraper + panel)
+logs/analyses.jsonl                       # every /analyze request+response (see backend.tools.analyses)
 ```
 
 ---
@@ -104,86 +97,83 @@ knowledge/
 
 ### Requirements
 
-- Docker Desktop with WSL2 integration
-- Python 3.11+ in WSL
-- `MISTRAL_API_KEY` (extraction + gates — `ministral-8b-latest`)
+- Python 3.11+ (WSL); Docker Desktop optional — see `scripts/run_local.sh` for a
+  no-Docker SQLite mode
+- `MISTRAL_API_KEY` (extraction + judge gates — `ministral-8b-latest`)
 - `EXA_API_KEY` (web source discovery)
-- `POSTGRES_PASSWORD` in `deploy/.env`
+- Keys live in the repo-root `.env` (pipeline) and `deploy/.env` (Docker stack)
 
-### Start the stack
+### Start the API
 
 ```bash
-cd ~/kriko
+# With Docker (Postgres):
 docker compose -f deploy/docker-compose.yml up -d
-curl http://localhost:8000/health   # → {"status":"ok","db":"reachable"}
-```
+curl http://localhost:8000/health
 
-### Install offline tools
-
-```bash
-pip install -r knowledge/requirements.txt
-pip install exa-py yt-dlp trafilatura mistralai
+# Without Docker (SQLite, port 8077):
+./scripts/run_local.sh
 ```
 
 ### Load the Chrome extension
 
 Chrome → `chrome://extensions` → Developer mode → Load unpacked → select `extension_ui/`
 
+### Tests
+
+```bash
+python -m pytest backend knowledge     # Python (serving + pipeline)
+npm test                               # extension scraper (jsdom fixtures)
+```
+
 ---
 
 ## Growing the knowledge base
 
-### Add a new model end-to-end
-
 ```bash
-# 1. Bootstrap: discovers engine families from Wikipedia, creates variants + fitment YAMLs
+# 1. Bootstrap a new model: variants scaffold + fitment derived from it
+python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-variants
+#    → human fills in per-market hp/years, removes `draft: true` (sync refuses drafts)
 python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-fitment
 
-# 2. Run the pipeline for every part type (engine, transmission, cooling, electrical)
-#    Auto-creates part stub YAMLs, discovers sources, extracts and gates claims.
-python3 -m knowledge.auto --make volkswagen --model golf_7 --all-parts
-
-# 3. Sync to DB
-docker exec deploy-api-1 python -m backend.sync
-```
-
-### Re-run a single part (e.g. after tuning gates)
-
-```bash
-# Re-run gates only — zero token cost, uses cached candidates
-python3 -m knowledge.process --part ea211 --part-type engine --skip-extraction
-
-# Full re-run with fresh sources
+# 2. Run the pipeline per part (or --all-parts)
 python3 -m knowledge.auto --part dq200 --part-type transmission
+
+# 3. Re-run gates only — zero token cost, uses cached candidates
+python3 -m knowledge.process --part dq200 --part-type transmission --skip-extraction
+
+# 4. Sync to DB
+python3 -m backend.sync          # (inside the api container when using Docker)
 ```
 
-### Promote a held claim to verified
-
-Edit the part YAML — change `status: held` → `status: verified`, then re-sync.
-
-### Check what's in the DB
-
-```bash
-docker exec deploy-db-1 psql -U postgres -d kriko \
-  -c "SELECT claim_key, severity, status FROM claims WHERE status='verified' ORDER BY severity;"
-```
+Full operational detail — including promoting/tombstoning claims, replaying logged
+requests, and the debug endpoints — is in `docs/USAGE.md`.
 
 ---
 
-## Supported cars
+## Supported cars (TR market)
 
 | Make | Model | Generation | Engines | Gearboxes |
 |------|-------|------------|---------|-----------|
-| Renault | Mégane | IV (2016–) | K9K 1.5 dCi · R9M 1.6 dCi · H5F 1.2 TCe · H5H 1.3 TCe | EDC dual-clutch |
-| Volkswagen | Golf | VII (2013–2020) | EA211 1.0/1.4 TSI · EA288 1.6/2.0 TDI | DQ200 7-speed DSG · DQ250 6-speed DSG |
+| Renault | Mégane | IV (2016–2023) | K9K 1.5 dCi · R9M 1.6 dCi · H5F 1.2 TCe · H5H 1.3 TCe | manual · DC4 EDC · DW5/DW6 EDC* |
+| Renault | Clio | V (2019–) | H4D 1.0 SCe · H5D 1.0 TCe · H5H 1.3 TCe · K9K 1.5 dCi | manual · DC4 EDC |
+| Volkswagen | Golf | VII (2013–2020) | EA211 1.0/1.2/1.4 TSI · EA288 1.6/2.0 TDI · EA888 2.0 TSI (GTI/R) | manual · DQ200 · DQ250 · DQ381 DSG |
 
-Adding a new model: run `knowledge.catalog.discover --write-fitment` to bootstrap, then `knowledge.auto --all-parts`. Part stubs are auto-generated — no hand-writing required.
+\* DW5/DW6 (7/6-speed wet EDC) part files exist but are **unresearched stubs** — automatic
+1.3 TCe / 1.6 dCi Méganes currently get no gearbox claims. Tracked as backlog B2/B3.
 
 ---
 
 ## Docs
 
-- `docs/USAGE.md` — full operational guide
-- `docs/INTERNALS.md` — architecture and design decisions
-- `docs/pipeline_postmortem.md` — what went wrong in early pipeline iterations and why
-- `CLAUDE.md` — product principles and working notes (what Kriko surfaces and why)
+| Doc | Contents |
+|-----|----------|
+| `backlog.md` / `done.md` | Task tracking — goals, open items, finished work |
+| `CLAUDE.md` | Product + scalability principles, doc map, working rules |
+| `docs/USAGE.md` | Full operational guide (stack, pipeline, claim lifecycle) |
+| `docs/INTERNALS.md` | Mechanism-level architecture reference |
+| `docs/design_flaws.md` | The 2026-07-04 audit — root causes behind claim mismatches |
+| `docs/overhaul_plan.md` / `docs/claim_relevance_plan.md` | Claim-quality roadmap |
+| `docs/pipeline_postmortem.md` | Early pipeline history (what failed and why) |
+
+`docs/handover.md`, `docs/SCAFFOLD.md`, and `kriko_build_plan.md` predate the
+part-centric system — historical context only, don't follow their instructions.

@@ -212,6 +212,8 @@ claims:
       massively increases heating energy consumption and can trigger charging problems.
       Repair requires a lengthy workshop stay."'
     independent: true
+  applies_when:
+    min_mileage_km: 70000
 - claim_key: megane4_elec_electrical_charging_aborts_and_
   title: Charging aborts and 'battery charging impossible' fault messages
   kind: known_issue
