@@ -1,12 +1,15 @@
-"""sync_parts() must warn about fitment references to missing or zero-claim
-part files — the sync-time half of the dw5/dw6 recurrence guard (backlog B7,
-CLAUDE.md generalization principle).
+"""sync_parts() must warn (not silently skip) when a fitment row references a
+part_id with no part YAML — the sync-time half of the dw5/dw6-class recurrence
+guard (backlog B7, CLAUDE.md generalization principle).
 
-Before this, sync_parts() silently `continue`d past a fitment row referencing a
-part_id with no file, and a zero-claim part (dw5/dw6) produced no links and no
-warning — so an automatic variant could serve zero gearbox claims with nothing
-flagging it. The pseudo-code `manual` deliberately has no file and must stay
-silent. Warnings only: what gets synced is unchanged.
+Before this, `sync_parts()` silently `continue`d past a fitment row's part_id
+that had no matching part file — a typo'd or removed code produced no links
+and no warning. The pseudo-code `manual` deliberately has no file (manual
+gearboxes have no gearbox-specific part) and must stay silent.
+
+Catalog-wide holes (zero-claim parts, orphan parts, etc.) are the job of
+`backend/tools/coverage.py`, not sync — this file only covers the one
+behavior change sync.py itself makes: the missing-part-file warning.
 """
 
 import logging
@@ -51,24 +54,6 @@ def _add_variant(db, vid):
     db.flush()
 
 
-def test_warns_on_zero_claim_part(tmp_path, monkeypatch, db, caplog):
-    _setup_catalog(
-        tmp_path, monkeypatch,
-        parts={
-            "engine/eng1.yaml": _part("eng1", "engine", [_claim()]),
-            "transmission/tc1.yaml": _part("tc1", "transmission", []),  # empty, like dw5
-        },
-        fitment=[{"variant_id": "tm1", "engine_family": "eng1", "transmission_code": "tc1"}],
-    )
-    _add_variant(db, "tm1")
-
-    with caplog.at_level(logging.WARNING, logger="backend.sync"):
-        sync_mod.sync_parts(db)
-
-    msgs = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert any("tc1" in m and "0 claim" in m.lower() for m in msgs), msgs
-
-
 def test_warns_on_missing_part_file(tmp_path, monkeypatch, db, caplog):
     _setup_catalog(
         tmp_path, monkeypatch,
@@ -81,7 +66,7 @@ def test_warns_on_missing_part_file(tmp_path, monkeypatch, db, caplog):
         sync_mod.sync_parts(db)
 
     msgs = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert any("ghost" in m for m in msgs), msgs
+    assert any("tm1" in m and "ghost" in m for m in msgs), msgs
 
 
 def test_pseudo_manual_does_not_warn(tmp_path, monkeypatch, db, caplog):
@@ -99,27 +84,19 @@ def test_pseudo_manual_does_not_warn(tmp_path, monkeypatch, db, caplog):
     assert not any("manual" in m for m in msgs), msgs
 
 
-def test_zero_claim_warning_deduped_across_variants(tmp_path, monkeypatch, db, caplog):
-    """Two variants pointing at the same empty part → one warning, not two."""
+def test_no_warning_when_all_parts_present(tmp_path, monkeypatch, db, caplog):
     _setup_catalog(
         tmp_path, monkeypatch,
         parts={
             "engine/eng1.yaml": _part("eng1", "engine", [_claim()]),
-            "transmission/tc1.yaml": _part("tc1", "transmission", []),
+            "transmission/tc1.yaml": _part("tc1", "transmission", [_claim()]),
         },
-        fitment=[
-            {"variant_id": "tm1", "engine_family": "eng1", "transmission_code": "tc1"},
-            {"variant_id": "tm2", "engine_family": "eng1", "transmission_code": "tc1"},
-        ],
+        fitment=[{"variant_id": "tm1", "engine_family": "eng1", "transmission_code": "tc1"}],
     )
     _add_variant(db, "tm1")
-    _add_variant(db, "tm2")
 
     with caplog.at_level(logging.WARNING, logger="backend.sync"):
         sync_mod.sync_parts(db)
 
-    tc1_warnings = [
-        r for r in caplog.records
-        if r.levelno >= logging.WARNING and "tc1" in r.getMessage() and "0 claim" in r.getMessage().lower()
-    ]
-    assert len(tc1_warnings) == 1, [r.getMessage() for r in tc1_warnings]
+    msgs = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert msgs == []

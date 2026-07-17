@@ -43,26 +43,9 @@ FITMENT_DIR = DATA_DIR / "fitment"
 # file — a manual gearbox has no gearbox-specific claim file of its own. This is
 # a small closed engineering vocabulary (CLAUDE.md scalability exception), not
 # car-coverage data, so it is safe as a constant. `resolver.py` special-cases
-# the same "manual" pseudo-code at serve time.
+# the same "manual" pseudo-code at serve time; `backend/tools/coverage.py`
+# mirrors this constant for its own catalog-only checks.
 PSEUDO_PART_CODES = frozenset({"manual"})
-
-
-def fitment_part_refs(fit: dict) -> dict[str, str]:
-    """Part-reference fields of a fitment row → their part_id value.
-
-    A fitment row is `variant_id` plus one code per part axis
-    (engine_family, transmission_code, electrical_code, body_code,
-    cooling_code, …). Rather than hard-enumerate those axes (which would need a
-    manual edit for every new axis — the exact scalability bug CLAUDE.md warns
-    against), we derive them from the `_family`/`_code` naming convention every
-    axis follows, so a new axis is covered the moment fitment starts carrying
-    it. Empty/absent values are dropped.
-    """
-    return {
-        k: v
-        for k, v in fit.items()
-        if (k.endswith("_code") or k.endswith("_family")) and isinstance(v, str) and v
-    }
 
 # ── Transmission-code grounding ────────────────────────────────────────────
 #
@@ -317,8 +300,6 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         rows = yaml.safe_load(path.read_text()) or []
         fitment_rows.extend(rows)
 
-    _warn_empty_part_references(parts, fitment_rows)
-
     # Clear existing part-fitment links to avoid stale mappings
     db.query(ClaimVariant).filter(ClaimVariant.grounding_note.like("Part fitment:%")).delete(synchronize_session=False)
 
@@ -345,7 +326,15 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         }
 
         for part_type_key, part_id in part_keys.items():
-            if not part_id or part_id not in parts:
+            if not part_id:
+                continue
+            if part_id not in parts:
+                if part_id not in PSEUDO_PART_CODES:
+                    log.warning(
+                        "variant %r references unknown %s part_id %r — no part YAML "
+                        "found under backend/data/parts/; claims skipped",
+                        variant_id, part_type_key, part_id,
+                    )
                 continue
 
             part_data = parts[part_id]
