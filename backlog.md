@@ -79,11 +79,13 @@ silently matched the manual row and *no gearbox part exists on that route at all
 
 ## P1
 
-### B4 — Make the per-listing risk cap actually bind `[G1]`
-`MAX_RISKS_PER_LISTING = 8` (`backend/api/main.py:52`) exempts confirmed/due strengths —
-a DSG Golf was served **39 risks on 2026-07-13** (86 pre-cap). Rank confirmed/due by
-consequence tier too and cap the total; consider a "top N + M more (collapsed)" response
-shape so nothing is hidden, just deprioritized.
+### B15 — Deploy-staleness guard: surface the running build `[G1]`
+B4's 39-risk DSG Golf turned out to be a stale deployed Docker image (predating the
+risk-cap commit 3672eaa by ~23h), not a code bug — the cap binds in code (regression net
+22c9117). Nothing tells an operator the deployed artifact is behind HEAD. Stamp the
+build/commit into `/analyze` (or a startup log + a `/health` field) and surface it in the
+extension, so a stale deploy is visible instead of silently serving pre-fix behaviour.
+This is the recurrence guard for the class of "the fix is in main but not in prod" bug.
 
 ### B5 — Per-part claim budget: keep the chronics, archive the tail `[G1]`
 896 claims across part files for 3 models (~300/model) is the volume problem at its
@@ -91,19 +93,6 @@ source. Rank claims within each part by consequence × independent-source count 
 specificity; keep the top ~15 servable, move the tail to a non-synced archive section.
 Corroboration count *is* the "general chronic" signal. Respect the product principle
 test in `CLAUDE.md` ("would the standard inspection catch this anyway?").
-
-### B6 — Surface ad-vs-catalog transmission contradictions `[G3]`
-`_narrow_by_transmission` (`backend/core/matcher.py:157`) falls back silently when the
-ad's transmission matches no candidate. The resolver gates *claim direction* already;
-what's missing is honesty: when ad tx ≠ every matched variant's tx and no same-engine
-alternative row exists, set a degraded coverage note ("gearbox coverage missing for this
-config") and log it as a catalog-gap signal (feeds B3).
-
-### B7 — Coverage report + sync-time guard against empty part references `[G3]`
-The dw5 hole (B2) shipped without any warning. Add `python -m backend.tools.coverage`:
-variant → fitment parts → claim counts per part, flagging any non-`manual`
-transmission_code (or engine_family) that resolves to a part file with 0 claims.
-`sync.py` should print the same warning. This is the "would it recur?" fix for B2.
 
 ### B12 — Branch consolidation `[G4]`
 - [ ] Merge `model-year-claim-windows` → `main` (serving overhaul A/B/C/E, scraper
@@ -124,11 +113,6 @@ sources are the ones most likely to describe chronics, not the first 25 Exa retu
 A 2024 Megane 1.3 TCe listing no_matched ("No renault megane petrol for 2024" —
 `year_to: 2023`). TR production/sales windows differ from EU. Decide: extend windows from
 TR-market data, or match with a "year outside known window" note instead of nothing.
-
-### B10 — Mine `no_match` logs as the onboarding priority queue `[G3]`
-The logs already show real demand: Audi Q2/A4 (S-Tronic), BMW 3 Series, VW CC 1.4 TSI DSG,
-Citroën Berlingo, Clio 4. Small tool that aggregates no_match rows by make/model/count so
-onboarding order follows actual usage, not guesswork.
 
 ### B11 — Implement the AdBlue/SCR variant-scoping spec `[G3]`
 Design spec written (`docs/superpowers/specs/2026-07-10-variant-emissions-scr-gate-design.md`,
