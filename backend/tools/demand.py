@@ -27,7 +27,7 @@ automatically. Read-only: this never writes the log.
 """
 
 import argparse
-import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -38,6 +38,7 @@ from backend.core.normalize import (
     normalize_make,
     normalize_model,
 )
+from backend.observability import load_records
 
 _UNSCRAPED = "(unscraped)"
 
@@ -60,11 +61,15 @@ class DemandGroup:
 class _Acc:
     """Mutable per-group accumulator (sets dedupe, converted to sorted lists)."""
 
-    make: str
-    model: str
     present: bool
     onboarded: bool
     count: int = 0
+    # Groups collapse by normalized slug ("vw" and "Volkswagen" merge), but the
+    # slug ("volkswagen") is a poor display label — so keep every raw display
+    # form seen and show the most frequent one, not whichever was logged first
+    # (a lone "vw" ahead of five "Volkswagen"s must not label the whole group).
+    make_displays: Counter = field(default_factory=Counter)
+    model_displays: Counter = field(default_factory=Counter)
     years: set = field(default_factory=set)
     fuels: set = field(default_factory=set)
     transmissions: set = field(default_factory=set)
@@ -78,6 +83,17 @@ def _display(raw) -> str | None:
         return None
     text = str(raw).strip()
     return text or None
+
+
+def _dominant_display(displays: Counter) -> str:
+    """The most frequent raw display form for a group's make (or model).
+
+    Ties resolve to the first-seen form (Counter.most_common is a stable sort).
+    Empty (every record in the group lacked this field) → the (unscraped) bucket.
+    """
+    if not displays:
+        return _UNSCRAPED
+    return displays.most_common(1)[0][0]
 
 
 def _is_onboarded(make_slug: str | None, model_slug: str | None) -> bool:
@@ -108,43 +124,14 @@ def _classify(acc: _Acc) -> str:
     return "missing_fields"
 
 
-def _read_records(path: Path) -> tuple[list[dict], int]:
-    """Parse a JSONL log, skipping (and counting) malformed lines. Never raises.
-
-    "Malformed" covers both JSON syntax errors and well-formed JSON that
-    parses to something other than an object (e.g. a bare `42`, `null`, a
-    quoted string, or a JSON array) — every record shape mine() understands
-    is a dict, so a non-dict parse is just as unusable as invalid JSON and
-    must not be handed to callers that assume `.get()` works.
-    """
-    records: list[dict] = []
-    skipped = 0
-    if not path.exists():
-        return records, skipped
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                parsed = json.loads(line)
-            except ValueError:
-                skipped += 1
-                continue
-            if not isinstance(parsed, dict):
-                skipped += 1
-                continue
-            records.append(parsed)
-    return records, skipped
-
-
 def mine(path: Path, limit: int | None = None) -> tuple[list[DemandGroup], int]:
     """Aggregate no-variant records in `path` into demand groups.
 
     Returns (groups sorted by count desc then make/model, skipped_line_count).
-    `limit` caps the returned rows to the top N.
+    `limit` caps the returned rows to the top N. Malformed/non-object lines are
+    tolerated and counted by the shared reader (backend/observability.load_records).
     """
-    records, skipped = _read_records(path)
+    records, skipped = load_records(path)
 
     accs: dict[tuple[str | None, str | None], _Acc] = {}
     for rec in records:
@@ -176,14 +163,16 @@ def mine(path: Path, limit: int | None = None) -> tuple[list[DemandGroup], int]:
         if acc is None:
             present = make_slug is not None and model_slug is not None
             acc = _Acc(
-                make=make_disp or _UNSCRAPED,
-                model=model_disp or _UNSCRAPED,
                 present=present,
                 onboarded=present and _is_onboarded(make_slug, model_slug),
             )
             accs[key] = acc
 
         acc.count += 1
+        if make_disp:
+            acc.make_displays[make_disp] += 1
+        if model_disp:
+            acc.model_displays[model_disp] += 1
         if meta.get("year") is not None:
             acc.years.add(meta["year"])
         if meta.get("fuel_type"):
@@ -207,8 +196,8 @@ def mine(path: Path, limit: int | None = None) -> tuple[list[DemandGroup], int]:
 
     groups = [
         DemandGroup(
-            make=acc.make,
-            model=acc.model,
+            make=_dominant_display(acc.make_displays),
+            model=_dominant_display(acc.model_displays),
             count=acc.count,
             reason=_classify(acc),
             years=sorted(acc.years, key=str),
@@ -235,11 +224,13 @@ def format_table(groups: list[DemandGroup], skipped: int) -> str:
     mk_w = max(len("MAKE"), *(len(g.make) for g in groups))
     md_w = max(len("MODEL"), *(len(g.model) for g in groups))
     rs_w = max(len("REASON"), *(len(g.reason) for g in groups))
+    yr_w = max(len("YEARS"), *(len(", ".join(str(y) for y in g.years)) for g in groups))
+    fu_w = max(len("FUELS"), *(len(", ".join(g.fuels)) for g in groups))
     tx_w = max(len("TRANSMISSIONS"), *(len(", ".join(g.transmissions)) for g in groups))
 
     def _row(make, model, count, reason, years, fuels, tx, url):
         return (f"{make:<{mk_w}}  {model:<{md_w}}  {count:>5}  {reason:<{rs_w}}  "
-                f"{years:<26}  {fuels:<20}  {tx:<{tx_w}}  {url}")
+                f"{years:<{yr_w}}  {fuels:<{fu_w}}  {tx:<{tx_w}}  {url}")
 
     lines = [_row("MAKE", "MODEL", "COUNT", "REASON", "YEARS", "FUELS",
                   "TRANSMISSIONS", "EXAMPLE_URL")]
