@@ -95,10 +95,14 @@ Corroboration count *is* the "general chronic" signal. Respect the product princ
 test in `CLAUDE.md` ("would the standard inspection catch this anyway?").
 
 ### B12 — Branch consolidation `[G4]`
-- [ ] Merge `model-year-claim-windows` → `main` (serving overhaul A/B/C/E, scraper
-      fixes, model-year windows, Golf 1.2 TSI).
-- [ ] Then rebase `evidence-ledger-stage1` onto main and land it (B1).
-- [ ] Delete stale worktree branches (`worktree-search-gate-fix`?) after checking.
+- [x] Merge `model-year-claim-windows` → `main` (2026-07-17, ff to 8acec0b; serving
+      overhaul A/B/C/E, scraper fixes, model-year windows, Golf 1.2 TSI, backlog wave 1).
+      `main` is local-only ahead of `origin/main` by 33 — not pushed.
+- [x] Delete stale worktree branches after checking (2026-07-17): removed the five
+      `.claude/worktrees/*` worktrees and deleted the merged branches
+      `worktree-agent-*` (×4), `worktree-search-gate-fix`, `observability-analyses-log`.
+      `model-year-claim-windows` kept (identical to main); `evidence-ledger-stage1` kept.
+- [ ] Then rebase `evidence-ledger-stage1` onto main and land it (B1 — blocked, see P0).
 
 ---
 
