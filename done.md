@@ -8,6 +8,30 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ## 2026-07 (branch `model-year-claim-windows`, pending merge — backlog B12)
 
+### Backlog wave 1 (2026-07-16/17, subagent-driven — merged into the branch)
+
+- **Ad-vs-catalog transmission contradiction surfaced (B6)** (8990d99) — when the ad's
+  gearbox matches no candidate variant's transmission and no same-engine alternative row
+  exists, the resolver emits a degraded coverage note and logs a catalog-gap signal
+  instead of falling back silently.
+- **Coverage report + loud sync guard (B7)** (c8201f4) — `python -m backend.tools.coverage`
+  maps variant → fitment parts → per-part claim counts and flags any non-`manual`
+  transmission/engine code that resolves to a zero-claim part; `sync.py` prints the same
+  warning. The "would it recur?" mechanism for the dw5 hole (B2).
+- **Per-listing risk-cap regression net (B4)** (22c9117) — investigation proved the cap
+  already binds in code; the 39-risk DSG Golf came from a stale deployed Docker image
+  predating the cap commit (3672eaa), not a code bypass. Added unit-boundary + e2e
+  `/analyze` regression tests pinning the cap. The remaining real fix (make a stale deploy
+  visible) is new backlog **B15**.
+- **`no_match` demand miner (B10)** (4a173cc → f2481c8 → 52aafa6, merged 19d62db) —
+  `python -m backend.tools.demand` aggregates `no_match` `/analyze` log rows into a
+  make/model onboarding-demand table, reason-classified (`not_onboarded` / `catalog_gap` /
+  `missing_fields`), catalog-derived via `normalize.py` (no hardcoded car names). Review
+  fix rounds: shared `observability.load_records` reader hardened against non-dict lines
+  (also hardens `read_recent`/`read_by_id`), `missing_fields` derived from `ad_metadata`
+  not matcher prose, fixture-catalog tests, majority-casing group labels, data-derived
+  table widths.
+
 - **Golf 7 1.2 TSI onboarded; fitment derived from variants** (a780f82) — no more
   hand-maintained fitment for new rows.
 - **Scraper robustness pass** (0ada2d6, d697ee3, 6f64eb8) — fuel/year scraped reliably,
