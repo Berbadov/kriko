@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 
 from backend import config
 from backend.api.main import run_analysis
-from backend.observability import log_analysis_jsonl, read_by_id, read_recent
+from backend.observability import (
+    load_records,
+    log_analysis_jsonl,
+    read_by_id,
+    read_recent,
+)
 from backend.tools.replay import _diff_and_print, compute_diff
 
 
@@ -55,6 +60,29 @@ def test_log_analysis_jsonl_never_raises_on_bad_path(tmp_path):
     blocker = tmp_path / "blocker"
     blocker.write_text("not a directory")  # forces mkdir(parents=True) to fail
     log_analysis_jsonl({"id": "x"}, path=blocker / "analyses.jsonl")  # must not raise
+
+
+def test_load_records_counts_malformed_and_non_object_lines(tmp_path):
+    # The shared reader distinguishes three line kinds: a well-formed object is
+    # kept; a blank line is skipped WITHOUT counting; both invalid JSON and
+    # valid-but-non-object JSON (42/null/"str"/[..]) are skipped AND counted.
+    path = tmp_path / "analyses.jsonl"
+    path.write_text('{"id": "a"}\n{bad json\n\n42\nnull\n[1,2,3]\n"s"\n{"id": "b"}\n')
+    records, skipped = load_records(path)
+    assert [r["id"] for r in records] == ["a", "b"]
+    assert skipped == 5  # {bad json, 42, null, [1,2,3], "s"  — blank not counted
+
+
+def test_read_recent_and_read_by_id_skip_non_dict_lines(tmp_path):
+    # Mechanism for the demand-miner non-dict crash (B10 review finding 1): a
+    # valid-JSON but non-object line must never reach a caller doing
+    # rec.get(...). Both public readers route through load_records, so a bare
+    # 42/null/array in the log is dropped rather than crashing them too.
+    path = tmp_path / "analyses.jsonl"
+    path.write_text('42\n{"id": "a1"}\nnull\n[1,2,3]\n"str"\n{"id": "a2"}\n')
+    assert [r["id"] for r in read_recent(limit=10, path=path)] == ["a2", "a1"]
+    assert read_by_id("a1", path=path)["id"] == "a1"
+    assert read_by_id("nope", path=path) is None
 
 
 # ── /debug/analyses endpoint ─────────────────────────────────────────────────

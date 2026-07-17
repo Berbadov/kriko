@@ -404,3 +404,40 @@ def test_main_prints_table(tmp_path, capsys):
     assert "Audi" in out
     assert "Q2" in out
     assert "not_onboarded" in out
+
+
+# ── review minors: display casing + table alignment ──────────────────────────
+
+def test_group_display_uses_most_common_raw_casing(tmp_path):
+    # Review minor: a group merges by normalized slug, so it can contain several
+    # raw spellings ("vw" and "Volkswagen"). It must display the MOST FREQUENT
+    # raw form, not whichever was logged first — a lone leading "vw" ahead of
+    # three "Volkswagen"s must still read "Volkswagen".
+    p = tmp_path / "a.jsonl"
+    _write_jsonl(p, [
+        _rec("vw", "Golf", 2015, "Gasoline", "DSG", "no_match", "gap"),
+        _rec("Volkswagen", "Golf", 2016, "Gasoline", "DSG", "no_match", "gap"),
+        _rec("Volkswagen", "Golf", 2017, "Gasoline", "DSG", "no_match", "gap"),
+        _rec("Volkswagen", "Golf", 2018, "Gasoline", "DSG", "no_match", "gap"),
+    ])
+    groups, _ = mine(p)
+    assert len(groups) == 1
+    assert groups[0].count == 4
+    assert groups[0].make == "Volkswagen"  # majority form, not first-seen "vw"
+
+
+def test_table_columns_stay_aligned_when_years_overflow_default_width(tmp_path, capsys):
+    # Review minor: YEARS/FUELS used hardcoded 26/20-char widths, so a long year
+    # list shoved every later column out of alignment. Widths are now derived
+    # from the data — the FUELS header must sit exactly above the FUELS cell even
+    # when the YEARS string is far longer than the old 26-char cap.
+    p = tmp_path / "a.jsonl"
+    _write_jsonl(p, [
+        _rec("Renault", "Megane", y, "ZZFUEL", "EDC", "no_match", "gap")
+        for y in range(2000, 2013)  # 13 years → YEARS string well over 26 chars
+    ])
+    main(["--log", str(p)])
+    out = capsys.readouterr().out
+    header, row = out.splitlines()[0], out.splitlines()[1]
+    assert len(", ".join(str(y) for y in range(2000, 2013))) > 26  # guards the premise
+    assert header.index("FUELS") == row.index("ZZFUEL")  # column aligned, not shoved
