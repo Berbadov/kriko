@@ -39,6 +39,14 @@ DATA_DIR = Path(__file__).parent / "data"
 PARTS_DIR  = DATA_DIR / "parts"
 FITMENT_DIR = DATA_DIR / "fitment"
 
+# Pseudo part-codes a fitment row may reference that deliberately have no part
+# file — a manual gearbox has no gearbox-specific claim file of its own. This is
+# a small closed engineering vocabulary (CLAUDE.md scalability exception), not
+# car-coverage data, so it is safe as a constant. `resolver.py` special-cases
+# the same "manual" pseudo-code at serve time; `backend/tools/coverage.py`
+# mirrors this constant for its own catalog-only checks.
+PSEUDO_PART_CODES = frozenset({"manual"})
+
 # ── Transmission-code grounding ────────────────────────────────────────────
 #
 # Universal parts (engine, cooling, electrical) attach to every variant of a
@@ -318,7 +326,15 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         }
 
         for part_type_key, part_id in part_keys.items():
-            if not part_id or part_id not in parts:
+            if not part_id:
+                continue
+            if part_id not in parts:
+                if part_id not in PSEUDO_PART_CODES:
+                    log.warning(
+                        "variant %r references unknown %s part_id %r — no part YAML "
+                        "found under backend/data/parts/; claims skipped",
+                        variant_id, part_type_key, part_id,
+                    )
                 continue
 
             part_data = parts[part_id]
