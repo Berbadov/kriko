@@ -30,13 +30,21 @@ def log_analysis_jsonl(record: dict, path: Path | None = None) -> None:
         log.warning("Failed to write analyses.jsonl", exc_info=True)
 
 
-def read_recent(limit: int = 20, model: str | None = None, path: Path | None = None) -> list[dict]:
-    """Most-recent-first records, optionally filtered by (case-insensitive substring) model."""
-    path = path or config.ANALYSES_LOG_PATH
-    if not path.exists():
-        return []
+def load_records(path: Path) -> tuple[list[dict], int]:
+    """Read a JSONL analyses log into ``(records, malformed_skipped)``.
 
-    matched: list[dict] = []
+    The single reader every log consumer (read_recent, read_by_id, the demand
+    miner) shares — so the log's line-level tolerances live in exactly one place.
+    "Malformed" is both a JSON syntax error and well-formed JSON that isn't an
+    object (a bare ``42``/``null``/``"str"``/``[...]``): every consumer assumes
+    dict records and would crash on ``rec.get(...)`` with ``AttributeError``, so
+    a non-object line is as unusable as invalid JSON and is skipped and counted
+    the same way. Blank lines are skipped but not counted. Never raises.
+    """
+    records: list[dict] = []
+    skipped = 0
+    if not path.exists():
+        return records, skipped
     with path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -45,28 +53,32 @@ def read_recent(limit: int = 20, model: str | None = None, path: Path | None = N
             try:
                 rec = json.loads(line)
             except ValueError:
+                skipped += 1
                 continue
-            if model and model.lower() not in str(rec.get("ad_metadata", {}).get("model", "")).lower():
+            if not isinstance(rec, dict):
+                skipped += 1
                 continue
-            matched.append(rec)
+            records.append(rec)
+    return records, skipped
 
+
+def read_recent(limit: int = 20, model: str | None = None, path: Path | None = None) -> list[dict]:
+    """Most-recent-first records, optionally filtered by (case-insensitive substring) model."""
+    path = path or config.ANALYSES_LOG_PATH
+    records, _ = load_records(path)
+    matched = [
+        rec for rec in records
+        if not model
+        or model.lower() in str(rec.get("ad_metadata", {}).get("model", "")).lower()
+    ]
     matched.reverse()
     return matched[:limit]
 
 
 def read_by_id(analysis_id: str, path: Path | None = None) -> dict | None:
     path = path or config.ANALYSES_LOG_PATH
-    if not path.exists():
-        return None
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except ValueError:
-                continue
-            if rec.get("id") == analysis_id:
-                return rec
+    records, _ = load_records(path)
+    for rec in records:
+        if rec.get("id") == analysis_id:
+            return rec
     return None
