@@ -34,12 +34,12 @@ from pathlib import Path
 from backend import config
 from backend.core.normalize import (
     _catalog_makes_models,
+    normalize_fuel,
     normalize_make,
     normalize_model,
 )
 
 _UNSCRAPED = "(unscraped)"
-_MISSING_FIELDS_PREFIX = "Missing required fields"
 
 
 @dataclass
@@ -109,7 +109,14 @@ def _classify(acc: _Acc) -> str:
 
 
 def _read_records(path: Path) -> tuple[list[dict], int]:
-    """Parse a JSONL log, skipping (and counting) malformed lines. Never raises."""
+    """Parse a JSONL log, skipping (and counting) malformed lines. Never raises.
+
+    "Malformed" covers both JSON syntax errors and well-formed JSON that
+    parses to something other than an object (e.g. a bare `42`, `null`, a
+    quoted string, or a JSON array) — every record shape mine() understands
+    is a dict, so a non-dict parse is just as unusable as invalid JSON and
+    must not be handed to callers that assume `.get()` works.
+    """
     records: list[dict] = []
     skipped = 0
     if not path.exists():
@@ -120,9 +127,14 @@ def _read_records(path: Path) -> tuple[list[dict], int]:
             if not line:
                 continue
             try:
-                records.append(json.loads(line))
+                parsed = json.loads(line)
             except ValueError:
                 skipped += 1
+                continue
+            if not isinstance(parsed, dict):
+                skipped += 1
+                continue
+            records.append(parsed)
     return records, skipped
 
 
@@ -178,7 +190,15 @@ def mine(path: Path, limit: int | None = None) -> tuple[list[DemandGroup], int]:
             acc.fuels.add(str(meta["fuel_type"]))
         if meta.get("transmission"):
             acc.transmissions.add(str(meta["transmission"]))
-        if not str(match.get("notes") or "").startswith(_MISSING_FIELDS_PREFIX):
+        # A "real attempt" means this record's own ad_metadata had every field
+        # matcher.py's hard filter requires before it even looks at the
+        # catalog (backend/core/matcher.py: `not make or not model or not fuel
+        # or not year`). Derived straight from the metadata — NOT by sniffing
+        # match.notes for matcher.py's "Missing required fields" wording — so
+        # this stays correct even if that free-text prose changes or a
+        # record's notes disagree with its own metadata.
+        fuel_slug = normalize_fuel(meta.get("fuel_type"))
+        if make_slug and model_slug and fuel_slug and meta.get("year"):
             acc.has_real_attempt = True
         if acc.example_url is None:
             url = rec.get("listing_url") or meta.get("url")

@@ -5,26 +5,58 @@ no_match ones are latent onboarding demand (cars Kriko doesn't cover, or covered
 cars falling through a catalog year/fuel hole). This aggregates them into a
 make/model table with a reason classification, so onboarding is data-driven.
 
-Catalog membership (catalog_gap vs not_onboarded) is derived from the real
+Catalog membership (catalog_gap vs not_onboarded) is derived from
 backend/data/variants/*.yaml via normalize.py's helpers — no hardcoded car names
-(CLAUDE.md scalability principle), so these assertions track the live catalog:
-renault/volkswagen makes and golf/clio/megane models are onboarded; audi/bmw/
-citroen and the q2/3series/berlingo/a4/"vw cc 1.4 tsi" models are not.
+(CLAUDE.md scalability principle). Tests here point that lookup at a small
+_fresh_catalog_cache fixture catalog (renault/megane, renault/clio,
+volkswagen/golf) instead of the real repo catalog, so onboarding a new make or
+model later cannot change these assertions (review finding 3).
 """
 
 import json
 
 import pytest
+import yaml
 
-from backend.core.normalize import _catalog_makes_models
+import backend.core.normalize as normalize_module
 from backend.tools.demand import main, mine
+
+# A small, self-contained catalog used only by tests — deliberately NOT the
+# real backend/data/variants/*.yaml, so these tests stay green regardless of
+# what gets onboarded to the live catalog. "testmake"/"testmodel" exists only
+# here (see test_catalog_membership_uses_fixture_not_real_repo_catalog) as
+# proof the fixture, not the real catalog, is what's being read.
+_FIXTURE_CATALOG = {
+    "renault.yaml": [
+        {"make": "renault", "model": "megane"},
+        {"make": "renault", "model": "clio"},
+    ],
+    "volkswagen.yaml": [
+        {"make": "volkswagen", "model": "golf"},
+    ],
+    "testmake.yaml": [
+        {"make": "testmake", "model": "testmodel"},
+    ],
+}
 
 
 @pytest.fixture(autouse=True)
-def _fresh_catalog_cache():
-    _catalog_makes_models.cache_clear()
+def _fresh_catalog_cache(tmp_path_factory, monkeypatch):
+    """Point normalize.py's catalog reader at a small fixture catalog.
+
+    Onboarding a real make/model must never be able to flip these tests
+    (review finding 3) — so instead of clearing the cache and re-reading the
+    real backend/data/variants/*.yaml, this monkeypatches the module-level
+    _VARIANTS_DIR normalize.py's _catalog_makes_models() globs, and points it
+    at a temp dir holding only the fixture rows above.
+    """
+    catalog_dir = tmp_path_factory.mktemp("fixture_variants_catalog")
+    for filename, rows in _FIXTURE_CATALOG.items():
+        (catalog_dir / filename).write_text(yaml.safe_dump(rows))
+    monkeypatch.setattr(normalize_module, "_VARIANTS_DIR", catalog_dir)
+    normalize_module._catalog_makes_models.cache_clear()
     yield
-    _catalog_makes_models.cache_clear()
+    normalize_module._catalog_makes_models.cache_clear()
 
 
 def _rec(make, model, year, fuel, tx, method, notes, variant_ids=None, listing_url=None):
@@ -101,6 +133,54 @@ def test_classifies_missing_fields(tmp_path):
     assert groups[0].reason == "missing_fields"
 
 
+def test_classification_derives_missing_fields_from_ad_metadata_not_notes_text(tmp_path):
+    # Review finding 2: matcher.py's free-text notes prefix must not be
+    # sniffed to decide missing_fields vs catalog_gap. This record's
+    # ad_metadata actually has make/model/year/fuel ALL present (matching
+    # matcher.py's own hard-filter requirement), even though the notes text
+    # happens to say "Missing required fields" (e.g. stale/incorrect logging,
+    # or matcher.py's wording changes independently). Since the metadata is
+    # complete for an onboarded model, this must classify as catalog_gap, not
+    # missing_fields.
+    p = tmp_path / "a.jsonl"
+    _write_jsonl(p, [
+        _rec("Renault", "Megane", 2024, "Benzinli", "EDC", "no_match",
+             "Missing required fields: ['fuel']"),
+    ])
+    groups, _ = mine(p)
+    assert groups[0].reason == "catalog_gap"
+
+
+def test_classification_flags_missing_fields_even_when_notes_text_says_otherwise(tmp_path):
+    # Review finding 2, converse case: ad_metadata genuinely lacks a required
+    # field (year is None) even though the notes text doesn't mention
+    # "Missing required fields" at all. Classification must catch this from
+    # the metadata itself — matcher.py's own hard filter needs make/model/
+    # fuel/year all present — not from notes wording.
+    p = tmp_path / "a.jsonl"
+    _write_jsonl(p, [
+        _rec("Volkswagen", "Golf", None, "Gasoline", "DSG", "no_match",
+             "No match found."),
+    ])
+    groups, _ = mine(p)
+    assert groups[0].reason == "missing_fields"
+
+
+def test_catalog_membership_uses_fixture_not_real_repo_catalog(tmp_path):
+    # Review finding 3: proves _fresh_catalog_cache's monkeypatch is actually
+    # wired in. "testmake"/"testmodel" exists only in the fixture catalog
+    # (never in the real backend/data/variants/*.yaml) — if this test were
+    # reading the real catalog it would see an unknown make and classify as
+    # not_onboarded instead of catalog_gap.
+    p = tmp_path / "a.jsonl"
+    _write_jsonl(p, [
+        _rec("TestMake", "TestModel", 2024, "Gasoline", "Automatic", "no_match",
+             "No testmake testmodel petrol for 2024."),
+    ])
+    groups, _ = mine(p)
+    assert groups[0].reason == "catalog_gap"
+
+
 # ── the (unscraped) bucket for missing make/model ────────────────────────────
 
 def test_missing_make_grouped_under_unscraped_bucket(tmp_path):
@@ -133,6 +213,18 @@ def test_missing_file_does_not_crash(tmp_path):
     groups, skipped = mine(tmp_path / "nope.jsonl")
     assert groups == []
     assert skipped == 0
+
+
+def test_skips_non_dict_json_lines_and_reports_count(tmp_path):
+    # Review finding 1: a line can be *valid JSON* but not an object — a bare
+    # number, null, string, or array. _read_records must treat these as
+    # malformed (skip + count) rather than pass them through to mine(), which
+    # otherwise crashes on rec.get("match") with AttributeError.
+    p = tmp_path / "a.jsonl"
+    p.write_text('42\nnull\n"just a string"\n[1,2,3]\n')
+    groups, skipped = mine(p)
+    assert groups == []
+    assert skipped == 4
 
 
 # ── selection, aggregation, sort, limit ──────────────────────────────────────
