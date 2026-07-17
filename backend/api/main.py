@@ -48,6 +48,16 @@ def health():
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
 
+# Appended to the summary when the ad's stated transmission contradicts the
+# cataloged gearbox of the matched variant (MatchResult.tx_mismatch). Additive
+# only — the extension reads `summary`, so the caveat is buyer-visible without
+# any new response field.
+TX_MISMATCH_CAVEAT = (
+    "Heads up: this listing's stated transmission does not match the gearbox "
+    "cataloged for the matched variant, so gearbox-specific risks are not covered "
+    "here — confirm the transmission with the seller."
+)
+
 # The per-listing "few" ceiling: a buyer sees at most this many risks. Tunable.
 MAX_RISKS_PER_LISTING = 8
 
@@ -121,9 +131,13 @@ def run_analysis(
     ))
     risks = _cap_risks(risks, MAX_RISKS_PER_LISTING)
 
+    summary = _build_summary(state, match, risks)
+    if match.tx_mismatch:
+        summary = f"{summary} {TX_MISMATCH_CAVEAT}"
+
     resp = AnalyzeResponse(
         coverage_state=state,
-        summary=_build_summary(state, match, risks),
+        summary=summary,
         risks=risks,
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=match.variant_ids,
