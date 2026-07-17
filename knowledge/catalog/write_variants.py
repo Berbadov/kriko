@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+FITMENT_DIR = REPO_ROOT / "backend" / "data" / "fitment"
 
 # TR-market trim data, keyed by "{make}_{model}". Each row matches the schema
 # already used by hand-curated files (renault_megane_4.yaml, volkswagen_golf_7.yaml):
@@ -83,6 +84,59 @@ TR_MARKET_TRIMS: dict[str, list[dict]] = {
         },
     ],
     "volkswagen_golf_7": [
+        # EA211 petrol. The 1.0/1.2/1.4 TSI are the SAME engine family (EA211),
+        # so they share one research key and inherit each other's part claims —
+        # only displacement/power/gearbox separate them as variants.
+        {
+            "id": "golf7_ea211_105", "generation": "VII", "engine_code": "EA211", "engine_family": "ea211",
+            "fuel": "petrol", "displacement_cc": 998, "power_min_hp": 105, "power_max_hp": 105,
+            "transmission": "manual", "transmission_code": "manual",
+            "year_from": 2017, "year_to": 2020, "notes": "1.0 TSI — 3-cyl, facelift base petrol, replaced the 1.2 TSI",
+        },
+        {
+            "id": "golf7_ea211_110", "generation": "VII", "engine_code": "EA211", "engine_family": "ea211",
+            "fuel": "petrol", "displacement_cc": 1197, "power_min_hp": 105, "power_max_hp": 110,
+            "transmission": "manual", "transmission_code": "manual",
+            "year_from": 2013, "year_to": 2017, "notes": "1.2 TSI (BMT) — 105 hp CJZA, 110 hp CYVB from 2015; volume petrol until the facelift's 1.0 TSI replaced it",
+        },
+        {
+            "id": "golf7_ea211_110_dsg", "generation": "VII", "engine_code": "EA211", "engine_family": "ea211",
+            "fuel": "petrol", "displacement_cc": 1197, "power_min_hp": 105, "power_max_hp": 110,
+            "transmission": "automatic", "transmission_code": "dq200",
+            "year_from": 2013, "year_to": 2017, "notes": "1.2 TSI DSG — 7-speed dry-clutch DQ200, same unit as the 1.4 TSI DSG (already researched)",
+        },
+        {
+            "id": "golf7_ea211_125", "generation": "VII", "engine_code": "EA211", "engine_family": "ea211",
+            "fuel": "petrol", "displacement_cc": 1395, "power_min_hp": 125, "power_max_hp": 125,
+            "transmission": "manual", "transmission_code": "manual",
+            "year_from": 2013, "year_to": 2020, "notes": "1.4 TSI — volume petrol, 6MT",
+        },
+        {
+            "id": "golf7_ea211_125_dsg", "generation": "VII", "engine_code": "EA211", "engine_family": "ea211",
+            "fuel": "petrol", "displacement_cc": 1395, "power_min_hp": 125, "power_max_hp": 125,
+            "transmission": "automatic", "transmission_code": "dq200",
+            "year_from": 2013, "year_to": 2020, "notes": "1.4 TSI DSG — 7-speed dry-clutch DQ200",
+        },
+        # EA288 diesel.
+        {
+            "id": "golf7_ea288_105", "generation": "VII", "engine_code": "EA288", "engine_family": "ea288",
+            "fuel": "diesel", "displacement_cc": 1598, "power_min_hp": 105, "power_max_hp": 105,
+            "transmission": "manual", "transmission_code": "manual",
+            "year_from": 2013, "year_to": 2020, "notes": "1.6 TDI — entry diesel, 5/6MT",
+        },
+        {
+            "id": "golf7_ea288_150", "generation": "VII", "engine_code": "EA288", "engine_family": "ea288",
+            "fuel": "diesel", "displacement_cc": 1968, "power_min_hp": 150, "power_max_hp": 150,
+            "transmission": "manual", "transmission_code": "manual",
+            "year_from": 2013, "year_to": 2020, "notes": "2.0 TDI — volume diesel, 6MT",
+        },
+        {
+            "id": "golf7_ea288_150_dsg", "generation": "VII", "engine_code": "EA288", "engine_family": "ea288",
+            "fuel": "diesel", "displacement_cc": 1968, "power_min_hp": 150, "power_max_hp": 150,
+            "transmission": "automatic", "transmission_code": "dq250",
+            "year_from": 2013, "year_to": 2020, "notes": "2.0 TDI DSG — 6-speed wet-clutch DQ250",
+        },
+        # EA888 petrol (GTI / R).
         {
             "id": "golf7_ea888_220", "generation": "VII", "engine_code": "EA888", "engine_family": "ea888",
             "fuel": "petrol", "displacement_cc": 1984, "power_min_hp": 220, "power_max_hp": 220,
@@ -160,6 +214,51 @@ def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str])
     return rows
 
 
+# The fitment axes — the part codes a variant is assembled from. Every one is
+# already a column on the variant row, so fitment is a pure PROJECTION of the
+# variants file, never independent data.
+_FITMENT_AXES = ("engine_family", "transmission_code", "electrical_code", "body_code")
+
+
+def build_fitment_rows(variant_rows: list[dict]) -> list[dict]:
+    """Project variant rows into fitment rows (variant_id -> its part codes).
+
+    sync_parts assembles claims through fitment, so a variant absent from the
+    fitment file matches a listing and then serves ZERO claims — which is exactly
+    what happened to the Golf 1.2 TSI when fitment was hand-maintained and got
+    left behind. Deriving it removes the manual step (CLAUDE.md scalability rule).
+    """
+    return [
+        {"variant_id": row["id"],
+         **{axis: row[axis] for axis in _FITMENT_AXES if axis in row}}
+        for row in variant_rows
+    ]
+
+
+def _write_fitment(key: str, variant_rows: list[dict], dry_run: bool) -> None:
+    """Add fitment rows for any variant that doesn't have one yet (additive)."""
+    path = FITMENT_DIR / f"{key}.yaml"
+    existing: list[dict] = []
+    if path.exists():
+        existing = yaml.safe_load(path.read_text()) or []
+    have = {r["variant_id"] for r in existing}
+
+    to_add = [r for r in build_fitment_rows(variant_rows) if r["variant_id"] not in have]
+    if not to_add:
+        return
+
+    print(f"{'Would add' if dry_run else 'Adding'} {len(to_add)} fitment row(s) to "
+          f"{path.relative_to(REPO_ROOT)}:")
+    for r in to_add:
+        print(f"  {r['variant_id']}: engine={r.get('engine_family')} "
+              f"tx={r.get('transmission_code')}")
+    if dry_run:
+        return
+
+    path.write_text(yaml.dump(existing + to_add, allow_unicode=True, sort_keys=False))
+    print(f"Wrote {path.relative_to(REPO_ROOT)}")
+
+
 def run(make: str, model: str, dry_run: bool = False) -> None:
     key = f"{make.lower()}_{model.lower()}"
     trims = TR_MARKET_TRIMS.get(key)
@@ -183,6 +282,11 @@ def run(make: str, model: str, dry_run: bool = False) -> None:
     existing_ids = {r["id"] for r in existing}
     to_add = [r for r in new_rows if r["id"] not in existing_ids]
     skipped = [r["id"] for r in new_rows if r["id"] in existing_ids]
+
+    # Fitment is a projection of the variants, and is emitted even when no new
+    # variant rows are added — a variant already in the catalog can still be
+    # MISSING its fitment row (it then matches a listing and serves no claims).
+    _write_fitment(key, new_rows, dry_run)
 
     if not to_add:
         print(f"No new rows — all {len(new_rows)} variant(s) already present in {path}")

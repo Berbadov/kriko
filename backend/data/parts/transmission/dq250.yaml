@@ -546,7 +546,7 @@ claims:
     independent: true
 - claim_key: dq250_transmission_neglected_dsg_fluid_
   title: Neglected DSG fluid degradation causing judder/hesitation
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: medium
   confidence: 0.6
@@ -568,6 +568,17 @@ claims:
       40-60k km for longevity. Many Greek VW owners skip this. €150-300 at any VAG
       workshop. Do it every 50k km."'
     independent: true
+  maintenance:
+    interval_km: 40000
+    evidence_keywords:
+    - dsg yağ değiş
+    - şanzıman yağ değiş
+    - dsg servis
+    - dsg service done
+    - dsg fluid changed
+    - transmission fluid changed
+    - gearbox oil changed
+    - mechatronic fluid changed
 - claim_key: dq250_transmission_premature_mechatroni
   title: Premature Mechatronic/Clutch Failure Due to Neglected Fluid & Filter Service
   kind: known_issue
@@ -702,7 +713,7 @@ claims:
     independent: true
 - claim_key: dq250_transmission_dq250/380/381_hidrol
   title: DQ250/380/381 clutch shift harshness or failure
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: high
   confidence: 0.6
@@ -723,28 +734,16 @@ claims:
     quote: '"DQ250/380/381 (6 İleri Yaş Kavrama): Hidrolik sistem, valf gövdesi –
       Yaygın sorunlar. Tipik arıza yaşı: 150.000-200.000 km."'
     independent: true
-- claim_key: dq250_transmission_dq500_yüksek_tork_aş
-  title: High Torque Wear in the DQ500 Transmission (Golf R, Audi S3, RS Models)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DSG DQ500 transmission in high-torque performance models (Golf R,
-    Audi S3, RS) experiences accelerated wear due to aggressive driving, typically
-    between **60,000–100,000 km**. This leads to premature failure of the clutch system
-    and hydraulic components.
-  inspection_advice: If you own a high-performance vehicle, regularly check the transmission
-    fluid. Look for **DSG DQ500-specific faults** such as delayed gear shifts, vibrations,
-    or failed gear engagement.
-  sources:
-  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
-    source_domain: oztepeotomatiksanziman.com
-    site_or_channel: oztepeotomatiksanziman.com
-    quote: '"DQ500 (7 İleri Performans): Yüksek tork nedeniyle aşınma – Yaygın sorunlar.
-      Tipik arıza yaşı: 60.000-100.000 km (agresif kullanım)."'
-    independent: true
+  maintenance:
+    interval_km: 150000
+    evidence_keywords:
+    - debriyaj değiş
+    - debriyaj yeni
+    - kavrama değiş
+    - clutch replaced
+    - clutch changed
+    - new clutch
+    - clutch kit
 - claim_key: dq250_transmission_dsg_1,_3,_5,_7_vites
   title: DSG 1, 3, 5, 7 Gears Not Engaging (Single Clutch System Failure)
   kind: known_issue
@@ -891,7 +890,7 @@ claims:
     independent: true
 - claim_key: dq250_transmission_dq250_(6-speed_wet-c
   title: DQ250 (6-speed wet-clutch DSG) heat-related failures despite improved durability
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: medium
   confidence: 0.6
@@ -912,6 +911,16 @@ claims:
       sorun başlangıcı: 120.000 km üzeri. Çift kavrama yapısı gereği sürtünme yüksek
       → ısı artar. Isı = Basınç kaybı + yağ bozulması + elektronik stres."'
     independent: true
+  maintenance:
+    interval_km: 120000
+    evidence_keywords:
+    - debriyaj değiş
+    - debriyaj yeni
+    - kavrama değiş
+    - clutch replaced
+    - clutch changed
+    - new clutch
+    - clutch kit
 - claim_key: dq250_transmission_dsg_09g_cooling_modu
   title: DSG 09G cooling module retrofit required for overheating issues
   kind: known_issue
@@ -1019,6 +1028,8 @@ claims:
     quote: '"Bacanakta Super b var 2016 model otomatik DSG araç şu anda 150.000 km
       civarında daha bu sene mekatronik arızası verdi sadece"'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
 - claim_key: dq250_engine_puretech_1.2l_timing
   title: Timing Chain/Belt Failure in 1.2L PureTech Engines
   kind: known_issue
@@ -1042,6 +1053,8 @@ claims:
     quote: '"puretech içinde yanlış yağ kullanımı veya zamanında yağ değişiminin yapılmaması
       trigerin kopmasına sebep veriyormuş... 20bin km de kopartanlar var diyorlardı"'
     independent: true
+  applies_when:
+    min_mileage_km: 20000
 - claim_key: dq250_transmission_dsg_micro-switch_fai
   title: DSG Micro-Switch Failure
   kind: known_issue

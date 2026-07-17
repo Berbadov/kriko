@@ -346,6 +346,8 @@ claims:
     quote: After 100 thousand km, oil consumption occurs due to the occurrence of
       oil scraper rings;
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: h4d_75_engine_non-hydraulic_valve_
   title: Non-hydraulic valve lifters requiring manual adjustment
   kind: known_issue
@@ -367,6 +369,8 @@ claims:
     quote: There are no hydraulic lifters and every 100,000 km you have to adjust
       the valve clearance.
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: h4d_75_electrical_htrac_4x4_sensör_has
   title: HTRAC 4x4 System Sensor Sensitivity and False Data Detection
   kind: known_issue

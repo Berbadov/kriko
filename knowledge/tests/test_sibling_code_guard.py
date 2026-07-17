@@ -168,3 +168,52 @@ def test_validate_part_flags_sibling_contaminated_claim():
         path.write_text(yaml.dump(data))
         errors = validate_part(path)
     assert any("sibling" in e.lower() for e in errors)
+
+
+# ── Uncatalogued family codes (live-probe finding) ──────────────────────────
+#
+# The guard is catalog-derived, so it can only reason about codes the catalog
+# carries. A claim citing DQ500 — a gearbox Kriko has NEVER onboarded — was
+# therefore invisible to it, and got served on a DQ250 car ("High Torque Wear in
+# the DQ500 Transmission (Golf R, Audi S3, RS Models)"). A code that looks like
+# one of our families but names a component we do not carry is, by definition,
+# not about the part it is filed under. Same own-code-absent escape hatch as the
+# sibling rule: co-mentioning our own code is legitimate contrast.
+# definition, not about the part it is filed under. Same own-code-absent escape
+# hatch as the sibling rule: co-mentioning our own code is legitimate contrast.
+
+def test_uncatalogued_family_code_is_contamination():
+    # DQ500 shares the DQ family shape but is not in the catalog.
+    assert mentions_sibling_code(
+        "High Torque Wear in the DQ500 Transmission (Golf R, Audi S3)", "dq250") is True
+
+
+def test_uncatalogued_family_code_with_own_code_is_legitimate_contrast():
+    # Names DQ500 but also its own DQ381 — a genuine cross-generation comparison.
+    assert mentions_sibling_code(
+        "DQ381/DQ500 mechatronic valve and sticky sensor issues", "dq381") is False
+
+
+def test_uncatalogued_engine_family_code_is_contamination():
+    # EA189 (dieselgate 2.0 TDI) is not the EA288 it is filed under.
+    assert mentions_sibling_code(
+        "EGR fouling leading to rough idle and smoke on the EA189", "ea288") is True
+
+
+def test_foreign_family_code_in_unrelated_part_is_contamination():
+    # A Renault engine file citing VW's EA111.
+    assert mentions_sibling_code(
+        "Timing chain tensioner failure (EA111)", "h5h_130") is True
+
+
+def test_catalogued_code_is_not_flagged_as_uncatalogued():
+    # DQ250 IS in the catalog: this must stay a plain sibling decision, and a
+    # claim naming only its own code is clean.
+    assert mentions_sibling_code("DQ250 mechatronic unit failure", "dq250") is False
+
+
+def test_non_family_code_token_is_not_contamination():
+    # Sensor/DTC codes (G28, N75, P0401) share no catalog family prefix and must
+    # never be mistaken for a foreign component code.
+    assert mentions_sibling_code(
+        "Fault code P0401 with G28 sensor and N75 valve on the DQ250", "dq250") is False

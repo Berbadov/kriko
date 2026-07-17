@@ -66,6 +66,54 @@ def k9k_age_gated_claim(db, megane4_variants):
 
 
 @pytest.fixture
+def k9k_year_windowed_claim(db, megane4_variants):
+    """A known_issue claim scoped to model years 2019–2022 (a build-year defect
+    fixed from MY2023 on an otherwise-identical part)."""
+    claim = Claim(
+        id="k9k_year_windowed_v1", claim_key="k9k_year_windowed", version=1, is_current=True,
+        title="K9K model-year-windowed test claim",
+        domain="emissions", severity="medium", confidence=0.80,
+        rationale="Present on 2019–2022 builds, fixed from 2023.",
+        inspection_advice="Relevant for 2019–2022 cars.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+        applies_year_from=2019, applies_year_to=2022,
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id,
+        source_url="https://example.com", quote="2019-2022 builds affected, corrected from 2023.",
+    ))
+    db.flush()
+    return claim
+
+
+@pytest.fixture
+def k9k_year_open_ended_claim(db, megane4_variants):
+    """A known_issue claim scoped to model year 2023 onward (a facelift/ADAS
+    fault introduced from MY2023, no upper bound)."""
+    claim = Claim(
+        id="k9k_year_open_v1", claim_key="k9k_year_open", version=1, is_current=True,
+        title="K9K from-MY2023 test claim",
+        domain="emissions", severity="medium", confidence=0.80,
+        rationale="New fault from the 2023 refresh onward.",
+        inspection_advice="Relevant for 2023-onward cars.",
+        status="verified", promoted_by="human",
+        kind="known_issue",
+        applies_year_from=2023, applies_year_to=None,
+    )
+    db.add(claim)
+    db.add(ClaimVariant(claim_id=claim.id, variant_id="megane4_k9k_90"))
+    db.add(ClaimSource(
+        claim_id=claim.id,
+        source_url="https://example.com", quote="Introduced with the 2023 facelift.",
+    ))
+    db.flush()
+    return claim
+
+
+@pytest.fixture
 def k9k_belt_maintenance_claim(db, megane4_variants):
     """A maintenance claim for K9K belt with NO ClaimSource rows."""
     claim = Claim(
@@ -174,6 +222,133 @@ def test_age_gate_failopen_unknown_age(db, k9k_age_gated_claim):
     results = resolve_claims(match, db, ctx)
     ids = [r.claim.id for r in results]
     assert "k9k_age_gated_v1" in ids
+
+
+# ── applies_when model-year window gating ─────────────────────────────────────
+
+def test_year_window_shown_in_window(db, k9k_year_windowed_claim):
+    """Claim is shown when the listing's model year falls inside the window."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=2020)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_windowed_v1" in ids
+
+
+def test_year_window_hidden_above(db, k9k_year_windowed_claim):
+    """Claim is hidden when the model year is above the window (defect fixed)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=2023)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_windowed_v1" not in ids
+
+
+def test_year_window_hidden_below(db, k9k_year_windowed_claim):
+    """Claim is hidden when the model year is below the window (not yet affected)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=2017)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_windowed_v1" not in ids
+
+
+def test_year_window_failopen_unknown_year(db, k9k_year_windowed_claim):
+    """Claim is shown when the model year is unknown (fail-open — never hide on missing data)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=None)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_windowed_v1" in ids
+
+
+def test_year_window_failopen_no_ctx(db, k9k_year_windowed_claim):
+    """Claim is shown when no ListingContext is provided at all (fail-open)."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    results = resolve_claims(match, db, ctx=None)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_windowed_v1" in ids
+
+
+def test_year_window_open_ended_shown(db, k9k_year_open_ended_claim):
+    """An open-ended (from=2023, to=None) claim is shown at/after the lower bound."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=2024)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_open_v1" in ids
+
+
+def test_year_window_open_ended_hidden_below(db, k9k_year_open_ended_claim):
+    """An open-ended (from=2023, to=None) claim is hidden below the lower bound."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(model_year=2022)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_year_open_v1" not in ids
+
+
+def test_year_window_does_not_affect_untagged_claims(db, k9k_mileage_gated_claim):
+    """A claim with no model-year window is unaffected by the listing's model year."""
+    match = MatchResult(["megane4_k9k_90"], "exact", "")
+    ctx = ListingContext(mileage_km=190000, model_year=2015)
+    results = resolve_claims(match, db, ctx)
+    ids = [r.claim.id for r in results]
+    assert "k9k_gated_v1" in ids
+
+
+def test_year_window_end_to_end_via_run_analysis(db, k9k_year_windowed_claim):
+    """End-to-end: the /analyze path carries the raw listing year (meta['year'])
+    into the window gate. A MY2019-2022 claim is hidden for a 2023 listing and
+    shown for a 2020 listing — both years match the same K9K variant (2016-2023),
+    so only the window differs."""
+    from backend.api.main import run_analysis
+
+    base = {
+        "make": "Renault", "model": "Megane",
+        "fuel_type": "diesel", "transmission": "manual",
+        "engine_volume_cc": 1461, "power_hp": 90, "mileage_km": 50000,
+    }
+    _c, _m, served_2023, _r = run_analysis({**base, "year": 2023}, db)
+    assert "k9k_year_windowed_v1" not in [r.claim.id for r in served_2023]
+
+    _c, _m, served_2020, _r = run_analysis({**base, "year": 2020}, db)
+    assert "k9k_year_windowed_v1" in [r.claim.id for r in served_2020]
+
+
+# ── consequence-tier ranking (overhaul Phase A) ───────────────────────────────
+
+@pytest.fixture
+def two_claims_differing_consequence(db, megane4_variants):
+    """Two servable claims on the same variant, identical strength/severity, that
+    differ only in consequence tier — to prove the serving sort ranks by it."""
+    for cid, key, title, domain, cons in (
+        ("rank_low_v1", "rank_low", "Infotainment freeze", "electrical", "low"),
+        ("rank_high_v1", "rank_high", "Turbocharger failure", "engine", "high"),
+    ):
+        claim = Claim(
+            id=cid, claim_key=key, version=1, is_current=True,
+            title=title, domain=domain, severity="medium", confidence=0.8,
+            rationale=f"{title} details.", inspection_advice="Check.",
+            status="review", kind="known_issue", consequence=cons,
+        )
+        db.add(claim)
+        db.add(ClaimVariant(claim_id=cid, variant_id="megane4_k9k_90"))
+        db.add(ClaimSource(claim_id=cid, source_url="https://example.com", quote=title))
+    db.flush()
+
+
+def test_serving_sort_ranks_high_consequence_first(db, two_claims_differing_consequence):
+    """Same strength+severity → the high-consequence claim outranks the low one."""
+    from backend.api.main import run_analysis
+    meta = {
+        "make": "Renault", "model": "Megane", "fuel_type": "diesel",
+        "transmission": "manual", "engine_volume_cc": 1461, "power_hp": 90,
+        "mileage_km": 50000, "year": 2020,
+    }
+    _c, _m, _served, resp = run_analysis(meta, db)
+    titles = [r.title for r in resp.risks]
+    assert titles.index("Turbocharger failure") < titles.index("Infotainment freeze")
 
 
 # ── maintenance interval logic ────────────────────────────────────────────────

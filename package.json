@@ -1,0 +1,11 @@
+{
+  "name": "kriko-extension",
+  "private": true,
+  "description": "Tests for the Sahibinden listing scraper (extension_ui/content.js).",
+  "scripts": {
+    "test": "node --test 'extension_ui/tests/**/*.test.js'"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}
