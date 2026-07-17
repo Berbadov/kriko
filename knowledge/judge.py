@@ -202,7 +202,15 @@ def gate_inspection_value(claim_title: str, claim_rationale: str) -> GateResult:
     text = (claim_title + " " + claim_rationale).lower()
 
     # Fast stoplist pass — runs before the API key guard, truly zero cost.
-    if any(kw in text for kw in INSPECTION_COVERED):
+    # Same specificity escape valve as the AMBIGUOUS_INSPECTION_TERMS branch
+    # below: a stoplist term shares a word ("clutch wear") with config-specific
+    # keepers (a DQ200 dual-clutch pattern at a known mileage). An engine/
+    # transmission code, displacement+fuel-tech label, or mileage figure marks
+    # the claim config-specific — keep it; only fast-reject when no such signal.
+    inspection_hit = next((kw for kw in INSPECTION_COVERED if kw in text), None)
+    if inspection_hit is not None:
+        if has_specificity_signal(text):
+            return GateResult(passed=True, reason=f"'{inspection_hit}' inspection-covered term but config/mileage-specific — kept")
         return GateResult(passed=False, reason="matches inspection-covered stoplist")
 
     # Ambiguous terms ("oil consumption", ...) cover both a routine inspection

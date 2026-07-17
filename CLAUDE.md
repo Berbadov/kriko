@@ -4,6 +4,12 @@ Kriko is a Chrome extension + FastAPI backend that surfaces reliability risks fo
 on Sahibinden. See `docs/USAGE.md` (operation), `docs/INTERNALS.md` (architecture),
 `docs/pipeline_postmortem.md` (knowledge-pipeline history).
 
+## Task tracking
+
+Open work lives in `backlog.md` (prioritized, with goals G1–G4 and evidence); finished
+items move to `done.md` with date + commit. Check the backlog before starting work and
+keep both files current — they are the single source of truth for project status.
+
 ## Product principle — what Kriko surfaces (READ THIS BEFORE TOUCHING CLAIM SELECTION)
 
 Kriko's value is **the config- and mileage-specific known risks a buyer cannot cheaply get
@@ -61,3 +67,41 @@ rule is about data that grows with car *coverage*, not fixed engineering categor
 Onboarding a new car model must never require a manual Python dict/list edit in
 `normalize.py` or `stoplists.py` — only new YAML data, ideally pipeline-generated rather
 than hand-authored (see `docs/USAGE.md`'s onboarding steps).
+
+## Generalization principle — patch the car, ship the mechanism
+
+Fixing a problem for one specific model is fine — but a per-model patch on its own is
+half a fix. Every model-specific correction must be paired with the *mechanism* that
+catches the same class of problem for every current and future car, because the catalog
+must scale to thousands of models and nobody will re-run today's manual diagnosis for
+car #40.
+
+Concretely, when fixing something found on one car, always ask **"how would we have
+caught this automatically, and how will we catch its sibling on the next car?"** and
+ship that too. Examples of the pairing:
+
+- Researching an empty gearbox part (backlog B2, dw5) is the patch; a sync-time
+  coverage warning for *any* variant pointing at a zero-claim part (backlog B7) is the
+  mechanism.
+- Adding a missing automatic variant row (backlog B3) is the patch; surfacing
+  ad-vs-catalog transmission contradictions and logging them as catalog-gap signals
+  (backlog B6) is the mechanism.
+
+The mechanism should be catalog-derived or log-derived (validation, coverage report,
+telemetry), never another hand-enumerated list — see the scalability principle above.
+A PR/commit that patches one car without the recurrence guard should say explicitly
+why the guard isn't needed or where it's tracked in `backlog.md`.
+
+## Documentation map
+
+| Doc | What it's for | Status |
+|-----|---------------|--------|
+| `README.md` | Project overview, quickstart, supported cars | current |
+| `CLAUDE.md` | Principles + working rules for Claude sessions | current |
+| `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
+| `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
+| `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
+| `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
+| `docs/overhaul_plan.md`, `docs/claim_relevance_plan.md` | Claim-quality roadmap/specs | reference |
+| `docs/pipeline_postmortem.md` | Early pipeline history | historical |
+| `docs/handover.md`, `docs/SCAFFOLD.md`, `kriko_build_plan.md` | Pre-part-centric era | historical — do not follow |

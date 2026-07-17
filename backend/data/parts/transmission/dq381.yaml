@@ -521,6 +521,8 @@ claims:
       the failure of the pressure sensors. They fail after 100,000-150,000 km, leading
       to the failure of some gears, either even or odd."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: dq381_transmission_premature_clutch/fly
   title: Premature clutch/flywheel wear (DSG 7/DQ381)
   kind: known_issue
@@ -552,6 +554,8 @@ claims:
       km, but dedicated owners can drive up to 200,000 and even 300,000 km without
       repairs."'
     independent: true
+  applies_when:
+    min_mileage_km: 50000
 - claim_key: dq381_transmission_delayed_throttle_res
   title: Delayed throttle response (2-3s delay)
   kind: known_issue
@@ -661,6 +665,8 @@ claims:
     quote: From the experience with the DSG DQ381 it seems that the first serious
       problems occur after 60-80 thousand kilometers.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: dq381_transmission_reduced_durability_c
   title: Reduced durability compared to DQ250
   kind: known_issue
