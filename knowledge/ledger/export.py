@@ -1,10 +1,13 @@
 """Export: claims as a deterministic view over verdicts.
 
 Writes the existing claims-YAML schema (docs/INTERNALS.md §Data Formats) to a
-build directory. The purge_* scripts' invariants live here as hard assertions:
-bad copy fails the export instead of shipping and being mopped up later.
+build directory. The purge_* scripts' invariants live here as per-cluster
+checks: a cluster whose verdict copy fails validation is skipped and reported,
+never shipped — but it does NOT abort the whole export (backlog B1 blocker 1:
+one DTC-titled cluster used to nuke every other valid cluster's export).
 Nothing here deletes ledger data — an unexported cluster is retained, just
-not servable."""
+not servable, and the skip report says exactly which clusters were held back
+and why."""
 
 import re
 from pathlib import Path
@@ -23,7 +26,10 @@ _SEVERITIES = {"high", "medium", "low"}
 
 
 class ExportError(RuntimeError):
-    pass
+    """Reserved for catastrophic export failure (e.g. unwritable output dir).
+
+    Per-cluster validation problems are NOT this — they skip the offending
+    cluster and appear in the skip report (see export_all)."""
 
 
 def slug(title: str) -> str:
@@ -82,7 +88,7 @@ def _validate(verdict: dict, errors: list[str], cluster_id: int) -> None:
 def export_all(conn, out_dir: Path) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     by_component: dict[str, list[dict]] = {}
-    errors: list[str] = []
+    skipped: list[str] = []
 
     # Verdicts are content-addressed by input_hash (not cluster_id), so recover
     # each cluster's verdict by recomputing its hash — the same value run_verdicts
@@ -116,7 +122,11 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         status = disposition(v, n_ind, _has_structured(conn, row["id"]))
         if status is None:
             continue
-        _validate(v, errors, row["id"])
+        cluster_errors: list[str] = []
+        _validate(v, cluster_errors, row["id"])
+        if cluster_errors:
+            skipped.extend(cluster_errors)
+            continue
 
         sources = [
             {"source_url": s["url"],
@@ -146,8 +156,11 @@ def export_all(conn, out_dir: Path) -> list[Path]:
             "sources": sources,
         })
 
-    if errors:
-        raise ExportError("export failed validation:\n" + "\n".join(errors))
+    if skipped:
+        print(f"  export skipped {len(skipped)} invalid cluster(s)"
+              " (retained in ledger, not servable):")
+        for reason in skipped:
+            print(f"    - {reason}")
 
     paths = []
     for comp, claims in sorted(by_component.items()):
