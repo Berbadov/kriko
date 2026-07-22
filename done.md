@@ -6,6 +6,35 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-07-22 — DB rebuild + evidence-ledger landing (B1/B12, G2/G4)
+
+- **Serving DB rebuilt from YAML after accidental volume deletion** — no data loss
+  by design (YAML is the source of truth; `logs/analyses.jsonl` and
+  `knowledge/ledger.db` both survived). Rebuild surfaced a real deploy bug:
+- **fix(deploy): add knowledge/consequence_tier.py to the image slice** (`56cb8af`) —
+  fresh Docker builds crashed at startup (`sync.py` imports the consequence-tier
+  module, but the Dockerfile's knowledge/ slice predated the serving overhaul).
+  The recreate-from-scratch path had been silently broken since the overhaul
+  landed (B15 class). Serving baseline fixture captured for future serving diffs
+  (`backend/tests/fixtures/serving_baseline_2026-07-22.json`, 43 logged listings).
+- **B1: evidence-ledger Stage 1 landed to main** (`80edf94`, G4: one trunk). Main
+  merged into the branch (`bea0f5a`, one `.gitignore` conflict), then the two
+  blockers fixed on-branch:
+  - **Export skip-and-report** (`767dc82`) — one invalid cluster (DTC-in-title)
+    no longer aborts the whole export; offenders are skipped, reported, retained.
+  - **Parity stable identity** (`767dc82`) — match on shared source URLs + domain
+    agreement instead of verdict-rewritten titles (`matched: 0` → 327 matched,
+    95 sibling-reroute moves); cross-domain false matches from multi-claim pages
+    guarded by the domain check.
+  - **`parity --explain` acceptance report** (`84c2462`) — categorizes all 474
+    only-in-existing claims (126 shipped under rewritten titles, ~230 gate drops
+    working as designed, ~120 never ingested/extracted → tracked as B16's
+    pre-swap review). Artifact: `thoughts/ledger_acceptance_parity_2026-07-22.txt`.
+  - Servable catalog deliberately NOT swapped: legacy part YAMLs still serve until
+    the export carries serving-gate fields and fitment is remapped (B16).
+- **B12 completed** — `evidence-ledger-stage1` and `model-year-claim-windows`
+  merged and deleted; `main` is the only trunk.
+
 ## 2026-07 (branch `model-year-claim-windows`, pending merge — backlog B12)
 
 ### Backlog wave 1 (2026-07-16/17, subagent-driven — merged into the branch)
