@@ -20,7 +20,7 @@ Today a DSG Golf gets 39–86 cards; nobody reads 39 cards.
 
 **G2 — Cut pipeline cost per car by ~10×.** Classification spend must be budgeted,
 cached, and reported. The evidence-ledger Stage 1 branch already implements most of this;
-it needs its two blockers fixed and merging.
+it needs its two blockers fixed and merging. **(Landed 2026-07-22 — B1 closed.)**
 
 **G3 — No silent coverage holes.** If a car is automatic, its gearbox chronics must show.
 Ad-vs-catalog contradictions and empty part files must be *visible* (coverage_state,
@@ -28,7 +28,8 @@ coverage report), never a quiet zero.
 
 **G4 — One trunk.** `main` is behind two long-lived branches
 (`model-year-claim-windows`, `evidence-ledger-stage1`). Consolidate so fixes stop
-living in three places.
+living in three places. **(Done 2026-07-22 — both branches merged, worktrees pruned,
+merged branches deleted.)**
 
 **Cross-cutting rule — patch the car, ship the mechanism** (see CLAUDE.md's
 generalization principle): a per-model fix is only half done until the guard that
@@ -40,16 +41,39 @@ skip its mechanism.
 
 ## P0
 
-### B1 — Land evidence-ledger Stage 1 (branch `evidence-ledger-stage1`) `[G2][G1]`
-24 commits, unmerged. Already carries: budget-enforced chunked extraction with caching,
-one batched verdict per cluster (DeepSeek), cost report, deterministic product-value gate
-(11/11 gold), unreliable-domain blocklist. This is the single biggest lever on
-classification cost. Two known blockers:
-- [ ] Export aborts all-or-nothing on cluster 547 (DTC-title claim) — make export
-      skip-and-report instead of abort, or fix the offending cluster.
-- [ ] Parity run reports `matched: 0` — matcher compares rewritten titles; needs a
-      stable cluster/evidence identity to diff against the legacy claims.
-- [ ] Acceptance run, then merge (after B12 so it lands on an up-to-date main).
+### B1 — ~~Land evidence-ledger Stage 1~~ **DONE 2026-07-22** `[G2][G1]`
+Landed to `main` (merge up to `80edf94`). Both blockers fixed on the branch:
+export skip-and-report (`767dc82`), parity stable identity via shared source
+URLs + domain agreement (`767dc82`), plus `parity --explain` acceptance report
+(`84c2462`, artifact `thoughts/ledger_acceptance_parity_2026-07-22.txt`).
+Acceptance numbers: 568 exported claims; 327 matched / 95 sibling-rerouted /
+126 shipped-under-rewritten-titles; ~230 gate drops working as designed.
+**Not done here (tracked below):** the servable catalog is still the legacy
+part YAMLs — swapping in the export needs the export schema to carry the
+gating fields (mileage/year windows/maintenance) and the fitment remap to
+merged part identities. That is the Phase-3 catalog swap, paired with B5.
+Legacy machinery retirement (judge gates, promote stack, purge_*.py) happens
+with that swap, not before.
+
+### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
+The ledger export (`knowledge/ledger_export/`, 568 claims) is acceptance-ready
+per the parity report, but three gaps block replacing `backend/data/parts/`:
+- [ ] Export emits bare claim lists; sync expects part-dict YAML
+      (part_id/part_type/claims) — and, critically, exported claims lack the
+      serving-gate fields (applies_year_from/to, maintenance, min_mileage_km,
+      requires_equipment) that main's resolver now uses. Extend the verdict
+      schema or ground them at export (deterministic grounders exist:
+      `ground_year_window.py`, `ground_mileage_threshold.py`).
+- [ ] Fitment remap to merged identities: export files are `k9k.yaml`,
+      `h5h.yaml`, … but fitment rows point at `k9k_110`, `h5h_140`, …
+      (the Flaw-2 merge — pairs with B5's per-part budget work).
+- [ ] Thin merged files vs legacy: h5d 1 claim vs 69, h4d 1 vs 35, ea288 23 vs
+      91 — mostly verdict-stage drops; needs a human spot-review pass before
+      swap (start: `parity --explain` categories "unsupported" and
+      "never extracted").
+- [ ] Then: swap `backend/data/parts/` for the export, replay the serving
+      baseline fixture (`backend/tests/fixtures/serving_baseline_2026-07-22.json`),
+      retire judge.py gates / promote.py / purge_*.py / translate_claims.py.
 
 ### B2 — Research the empty gearbox parts: `dw5` (EDC7), `dw6` `[G3]`
 `backend/data/parts/transmission/dw5.yaml` and `dw6.yaml` have `claims: []`, but every
@@ -102,7 +126,9 @@ test in `CLAUDE.md` ("would the standard inspection catch this anyway?").
       `.claude/worktrees/*` worktrees and deleted the merged branches
       `worktree-agent-*` (×4), `worktree-search-gate-fix`, `observability-analyses-log`.
       `model-year-claim-windows` kept (identical to main); `evidence-ledger-stage1` kept.
-- [ ] Then rebase `evidence-ledger-stage1` onto main and land it (B1 — blocked, see P0).
+- [x] Land `evidence-ledger-stage1` (2026-07-22 — merged to main at `80edf94`
+      instead of rebasing: main merged into the branch first, two blockers fixed
+      there, then ff-merged back; merged local branches deleted).
 
 ---
 
@@ -134,7 +160,9 @@ handover/SCAFFOLD/build_plan; doc map in CLAUDE.md). Remaining:
 - [ ] Decide whether `docs/handover.md` earns a rewrite or deletion once B12 lands.
 
 ### B13 — Remaining design-flaw work (`docs/design_flaws.md`)
-- Flaw 5: judge too weak → whack-a-mole patches (the ledger's verdict stage, B1,
-  is the structural answer; confirm and close after merge).
-- Flaw 6: pipeline keeps what sources mention, not what Kriko exists to show
-  (product-value gate on the ledger branch + B5 close most of this).
+- Flaw 5: judge too weak → whack-a-mole patches. The ledger's verdict stage is
+  now on `main` (B1, 2026-07-22) — closes for the pipeline; the *served* catalog
+  inherits the fix at the B16 catalog swap.
+- Flaw 6: pipeline keeps what sources mention, not what Kriko exists to show.
+  The deterministic product-value gate is on `main` and dropping ~230 claims in
+  the export (see the B1 acceptance report); closes at B16 + B5.
