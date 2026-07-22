@@ -10,6 +10,13 @@ groups the no_match requests by make/model into a demand table.
 
     python -m backend.tools.demand
     python -m backend.tools.demand --log /path/to/analyses.jsonl --limit 10
+    python -m backend.tools.demand --json   # machine-readable onboarding queue
+
+--json is the demand-driven acquisition handoff (evidence-ledger spec §2.6
+stage 3): the queue feeds model onboarding — for the top not_onboarded group,
+`python -m knowledge.catalog.discover --make X --model Y --write-variants`,
+then research its parts through the ledger (`knowledge.ledger.run acquire /
+extract / verdict / export`). Demand decides what gets researched next.
 
 Each group is classified so the table separates the two actionable signals from
 noise:
@@ -264,9 +271,22 @@ def main(argv: list[str] | None = None) -> None:
         "--limit", type=int, default=None,
         help="Show only the top N demand groups (default: all).",
     )
+    parser.add_argument(
+        "--json", action="store_true",
+        help="Emit the queue as JSON (the stage-3 acquisition handoff) instead"
+             " of a table.",
+    )
     args = parser.parse_args(argv)
 
     groups, skipped = mine(args.log, limit=args.limit)
+    if args.json:
+        import dataclasses
+        import json as _json
+        print(_json.dumps(
+            {"groups": [dataclasses.asdict(g) for g in groups],
+             "skipped_malformed": skipped},
+            ensure_ascii=False, indent=1))
+        return
     print(format_table(groups, skipped))
 
 
