@@ -157,22 +157,63 @@ def sibling_codes_for(part_id: str) -> frozenset[str]:
     return frozenset(siblings) - own
 
 
-def mentions_sibling_code(text: str, part_id: str) -> bool:
-    """True if `text` names a sibling component's code (same family, a
-    DIFFERENT physical part than `part_id`) without also naming part_id's own
-    code — e.g. a DQ200-dry-clutch claim's text filed under dq381.yaml.
+# Leading alpha run of a component code — "DQ" of DQ200, "EA" of EA288. Two
+# chars minimum: single-letter prefixes (H5F, K9K, R9M) are too ambiguous to key
+# a family off, and would collide with sensor/DTC tokens (G28, N75, P0401).
+_FAMILY_PREFIX_RE = re.compile(r"^[A-Z]{2,}")
 
-    Own-code co-mention is treated as legitimate (a claim that names both
-    codes, e.g. explicitly contrasting the two components, isn't the
-    silent-mislabeling failure mode this guards against).
+
+def catalog_family_prefixes() -> frozenset[str]:
+    """Family prefixes present in the catalog — {"DQ", "EA", "DC", "DW", ...}.
+
+    Derived from the part YAMLs (catalog_code_manufacturers), so a newly
+    onboarded family is recognised the moment its stub exists — no separate list
+    to remember (CLAUDE.md's no-hardcoded-car-data rule).
     """
-    siblings = sibling_codes_for(part_id)
-    if not siblings:
-        return False
+    return frozenset(
+        m.group(0)
+        for code in catalog_code_manufacturers()
+        if (m := _FAMILY_PREFIX_RE.match(code.upper()))
+    )
+
+
+def uncatalogued_family_codes(text: str) -> frozenset[str]:
+    """Codes in `text` that look like one of our families but name a component
+    the catalog has never onboarded — DQ500 when we carry only DQ200/DQ250/DQ381.
+
+    Such a code cannot be evidence about any part we serve: we have no fitment
+    for it, so a claim citing it and nothing of ours is filed under the wrong
+    part. Tokens with no catalog family prefix (DTC codes, sensor designations
+    like G28/N75/P0401) are ignored — they are normal inside a claim about our
+    own part.
+    """
+    catalogued = {c.upper() for c in catalog_code_manufacturers()}
+    prefixes = catalog_family_prefixes()
+    return frozenset(
+        tok for tok in code_tokens(text)
+        if tok not in catalogued
+        and (m := _FAMILY_PREFIX_RE.match(tok))
+        and m.group(0) in prefixes
+    )
+
+
+def mentions_sibling_code(text: str, part_id: str) -> bool:
+    """True if `text` names a component code that is NOT `part_id`'s own — either
+    a registered sibling (same family, different physical part: a DQ200
+    dry-clutch claim filed under dq381.yaml) or an *uncatalogued* family code
+    (DQ500, EA189 — a component we have never onboarded, so no claim citing only
+    it can be about a part we serve).
+
+    Own-code co-mention is treated as legitimate (a claim that names both codes,
+    e.g. explicitly contrasting the two components, isn't the silent-mislabeling
+    failure mode this guards against).
+    """
     text_tokens = code_tokens(text)
     if text_tokens & _part_base_code(part_id):
         return False
-    return bool(text_tokens & siblings)
+    if text_tokens & sibling_codes_for(part_id):
+        return True
+    return bool(uncatalogued_family_codes(text))
 
 
 # Manufacturer groups that legitimately co-mention each other's codes: badge-

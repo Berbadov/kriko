@@ -16,6 +16,10 @@ class MatchResult:
     variant_ids: list[str]
     method: str      # "exact" | "ambiguous" | "no_match" | "inconsistent_listing"
     notes: str
+    # True when the ad states a transmission that no matched variant is cataloged
+    # with (the soft transmission filter fell back). The match still stands, but
+    # gearbox-specific coverage is unknown for this config — see match_variant().
+    tx_mismatch: bool = False
 
 
 def match_variant(meta: dict, db: Session) -> MatchResult:
@@ -51,19 +55,51 @@ def match_variant(meta: dict, db: Session) -> MatchResult:
     # data (engine_family / transmission_code) for the surviving candidates.
     fitment_note = _validate_fitment_consistency(candidates, meta)
 
+    # Ad-vs-catalog transmission contradiction: _narrow_by_transmission is a soft
+    # filter that falls back to the unnarrowed set when no candidate is cataloged
+    # with the ad's transmission — so the match can succeed on a variant whose
+    # gearbox differs from what the ad claims. Record that honestly (the match
+    # still stands; engine claims are valid) so the buyer isn't left thinking the
+    # absent gearbox risks were checked. The stable `tx_coverage_gap:` note prefix
+    # doubles as a catalog-gap mining signal in the analysis logs.
+    tx_mismatch = bool(tx) and not any(c.transmission == tx for c in candidates)
+    gap_note = _transmission_gap_note(tx, candidates) if tx_mismatch else ""
+
+    extras = ". ".join(n for n in (fitment_note, gap_note) if n)
+
     if len(candidates) == 1:
         notes = f"Matched {candidates[0].id}"
-        if fitment_note:
-            notes = f"{notes}. {fitment_note}"
-        return MatchResult([candidates[0].id], "exact", notes)
+        if extras:
+            notes = f"{notes}. {extras}"
+        return MatchResult([candidates[0].id], "exact", notes, tx_mismatch=tx_mismatch)
     if len(candidates) > 1:
         ids = [c.id for c in candidates]
         notes = f"Ambiguous among {ids}"
-        if fitment_note:
-            notes = f"{notes}. {fitment_note}"
-        return MatchResult(ids, "ambiguous", notes)
+        if extras:
+            notes = f"{notes}. {extras}"
+        return MatchResult(ids, "ambiguous", notes, tx_mismatch=tx_mismatch)
     # Should not reach here (narrow functions preserve at least one candidate)
     return MatchResult([], "no_match", "Narrowing eliminated all candidates unexpectedly.")
+
+
+def _transmission_gap_note(tx: str, candidates: list[Variant]) -> str:
+    """Human-readable note recording an ad-vs-catalog transmission contradiction.
+
+    `tx` is the ad's normalized transmission; `candidates` are the surviving
+    matches, none of which is cataloged with it. The `tx_coverage_gap:` prefix is
+    stable on purpose — it is both the source of the buyer-facing caveat and a
+    greppable catalog-gap signal in logs/analyses.jsonl (CLAUDE.md's
+    generalization principle: the note IS the telemetry).
+    """
+    cataloged = sorted({c.transmission for c in candidates if c.transmission})
+    if cataloged:
+        catalog_desc = "are cataloged " + " / ".join(repr(t) for t in cataloged)
+    else:
+        catalog_desc = "have no transmission cataloged"
+    return (
+        f"tx_coverage_gap: ad reports {tx!r} but matched variant(s) {catalog_desc}"
+        " — gearbox-specific risks unknown for this config"
+    )
 
 
 # ── Fitment consistency validation ───────────────────────────────────────────

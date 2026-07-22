@@ -87,6 +87,8 @@ claims:
       reduced power, and poor fuel economy. This typically becomes noticeable around
       60,000-80,000 miles."'
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: golf7_body_general_rear_light_seal_fail
   title: Rear light seal failure allowing water ingress
   kind: known_issue
@@ -642,6 +644,8 @@ claims:
       bir sorundur. Aracı düzgün kullansanız bile volan dişlisinin her 100 bin km
       de değiştirilmesi gerekir."'
     independent: true
+  applies_when:
+    min_mileage_km: 100000
 - claim_key: golf7_body_engine_volant_vidalarının_g
   title: Flywheel Bolt Loosening in the Volkswagen Golf 7
   kind: known_issue

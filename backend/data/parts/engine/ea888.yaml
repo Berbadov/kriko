@@ -376,6 +376,8 @@ claims:
     quote: The plastic PCV valve diaphragm cracks and creates a permanent vacuum leak.
       Usually shows as P0171 (lean) and a loping idle. Common at 60K-100K.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: ea888_cooling_composite_water_pump
   title: Composite water pump housing cracking (EA888 2.0T TSI)
   kind: known_issue
@@ -653,6 +655,8 @@ claims:
       egzantrik çatladığında yeni turbo almak gerekiyor ve Audi Doğuş Otodan 2 turbo
       için 29 bin lira ücret ödeniyor.
     independent: true
+  applies_when:
+    min_mileage_km: 29000
 - claim_key: ea888_engine_chronic_oil_consumpt
   title: Chronic oil consumption from defective piston rings (EA888 1.8/2.0 TFS)
   kind: known_issue
@@ -679,6 +683,8 @@ claims:
       mm çaplı piston yerine 83 mm çaplı piston kullanmak gerekiyor. Motoru açtığınızda
       40-50 bin lira masrafı oluşuyor ve J piston veya Forget piston öneriliyor.
     independent: true
+  applies_when:
+    min_mileage_km: 20000
 - claim_key: ea888_engine_dv_pressure_valve_(b
   title: DV Pressure Valve (Boost Control Valve) failure (EA888 1.8/2.0 TFS)
   kind: known_issue
@@ -704,6 +710,8 @@ claims:
       çıkarmaya yarar. Yüksek kilometreli araçlarda (80-100 bin km üstü) bu parça
       arıza yapmaya başlar ve fazla basıncı atamaz veya boost basıncı kaybı yaşatır.
     independent: true
+  applies_when:
+    min_mileage_km: 80000
 - claim_key: ea888_engine_chain_drive_eccentri
   title: Chain Drive Eccentric Wear/Metal Shavings (EA888 1.8/2.0 TFS)
   kind: known_issue
@@ -943,6 +951,8 @@ claims:
       metal parçacıklar oluşur. Bu kirleticiler mile monte edilen salmastra contalarını
       aşındırarak sızıntıyı hızlandırır."'
     independent: true
+  applies_when:
+    min_mileage_km: 40000
 - claim_key: ea888_engine_excessive_crankshaft
   title: Excessive crankshaft axial play damaging main bearings and oil pump (EA888)
   kind: known_issue
@@ -1095,6 +1105,8 @@ claims:
       several teeth causing engine failure—called Audi and they said lawsuit was only
       for 2013 and older—what can I do to get any help?*'
     independent: true
+  applies_when:
+    min_mileage_km: 30000
 - claim_key: ea888_engine_plastic_timing_chain
   title: Plastic timing chain guide rail wear (EA888 2.0T)
   kind: known_issue
