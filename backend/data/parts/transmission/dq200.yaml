@@ -13,7 +13,7 @@ production_years: 2008-present
 claims:
 - claim_key: dq200_transmission_premature_clutch_pac
   title: Premature clutch pack wear in urban driving
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: high
   confidence: 0.6
@@ -35,6 +35,16 @@ claims:
       used frequently in urban traffic. Clutch replacement is typically needed between
       100,000 and 200,000 km depending on use."'
     independent: true
+  maintenance:
+    interval_km: 100000
+    evidence_keywords:
+    - debriyaj değiş
+    - debriyaj yeni
+    - kavrama değiş
+    - clutch replaced
+    - clutch changed
+    - new clutch
+    - clutch kit
 - claim_key: dq200_transmission_mechatronics_unit_fa
   title: Mechatronics unit failure due to oil contamination/solenoid wear
   kind: known_issue
@@ -976,7 +986,7 @@ claims:
     independent: true
 - claim_key: dq200_transmission_dq200_kavrama_aşınma
   title: DQ200 Clutch Wear (Golf, Polo, Audi A1/A3, Škoda Octavia)
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: high
   confidence: 0.6
@@ -995,27 +1005,16 @@ claims:
     quote: '"DQ200 (7 İleri Kuru Kavrama): Kavrama aşınması, mekatronik arızası –
       En yaygın sorunlar. Tipik arıza yaşı: 80.000-120.000 km."'
     independent: true
-- claim_key: dq200_transmission_dq500_yüksek_tork_aş
-  title: High Torque Wear in DQ500 Transmission (Golf R, Audi S3, RS Models)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ500 transmission experiences premature wear in high-torque performance
-    models (Golf R, Audi S3, RS). Under aggressive use, clutch and hydraulic system
-    failures are frequently observed between **60,000–100,000 km**.
-  inspection_advice: If there is **delay in gear shifts**, **vibration**, or **unusually
-    high transmission temperature**, the DQ500 may be suffering from wear issues.
-    **Particular caution is advised for performance models**.
-  sources:
-  - source_url: https://oztepeotomatiksanziman.com/dsg-sanziman-sorunlari/
-    source_domain: oztepeotomatiksanziman.com
-    site_or_channel: oztepeotomatiksanziman.com
-    quote: '"DQ500 (7 İleri Performans): Yüksek tork nedeniyle aşınma – Yaygın sorunlar.
-      Tipik arıza yaşı: 60.000-100.000 km (agresif kullanım)."'
-    independent: true
+  maintenance:
+    interval_km: 80000
+    evidence_keywords:
+    - debriyaj değiş
+    - debriyaj yeni
+    - kavrama değiş
+    - clutch replaced
+    - clutch changed
+    - new clutch
+    - clutch kit
 - claim_key: dq200_transmission_dsg_mekatronik_kart_
   title: DSG Mekatronik Control Unit Failures (General DSG Transmissions)
   kind: known_issue
@@ -1300,7 +1299,7 @@ claims:
     independent: true
 - claim_key: dq200_transmission_dsg_mechatronic_flui
   title: DSG mechatronic fluid degradation and improper servicing
-  kind: known_issue
+  kind: maintenance
   domain: transmission
   severity: high
   confidence: 0.6
@@ -1321,6 +1320,18 @@ claims:
       gibi kullanamazsınız. Kavrama bittiğinde silkeleme yapar, servis mekatronik
       yağı ömürlük dese de iki yılda bir değişimi yapılması gerekir vs.
     independent: true
+  maintenance:
+    interval_km: 60000
+    interval_years: 2
+    evidence_keywords:
+    - dsg yağ değiş
+    - şanzıman yağ değiş
+    - dsg servis
+    - dsg service done
+    - dsg fluid changed
+    - transmission fluid changed
+    - gearbox oil changed
+    - mechatronic fluid changed
 - claim_key: dq200_transmission_dsg_transmission_fai
   title: DSG transmission failure due to improper usage (e.g., aggressive driving,
     high mileage)
@@ -1429,6 +1440,8 @@ claims:
     quote: '"puretech içinde yanlış yağ kullanımı veya zamanında yağ değişiminin yapılmaması
       trigerin kopmasına sebep veriyormuş... 20bin km de kopartanlar var diyorlardı"'
     independent: true
+  applies_when:
+    min_mileage_km: 20000
 - claim_key: dq200_transmission_valve_body_cracking_
   title: Valve body cracking in DQ200 0AM mechatronic unit
   kind: known_issue

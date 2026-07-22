@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.equipment import derive_equipment_tags
 from backend.core.title_sim import title_similar
+from knowledge.consequence_tier import consequence_tier
 from backend.core.transmission_signal import (
     AUTO_ONLY_RE, MANUAL_ONLY_RE, mentioned_transmission_codes,
 )
@@ -37,6 +38,14 @@ from backend.db.session import engine
 DATA_DIR = Path(__file__).parent / "data"
 PARTS_DIR  = DATA_DIR / "parts"
 FITMENT_DIR = DATA_DIR / "fitment"
+
+# Pseudo part-codes a fitment row may reference that deliberately have no part
+# file — a manual gearbox has no gearbox-specific claim file of its own. This is
+# a small closed engineering vocabulary (CLAUDE.md scalability exception), not
+# car-coverage data, so it is safe as a constant. `resolver.py` special-cases
+# the same "manual" pseudo-code at serve time; `backend/tools/coverage.py`
+# mirrors this constant for its own catalog-only checks.
+PSEUDO_PART_CODES = frozenset({"manual"})
 
 # ── Transmission-code grounding ────────────────────────────────────────────
 #
@@ -317,7 +326,15 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
         }
 
         for part_type_key, part_id in part_keys.items():
-            if not part_id or part_id not in parts:
+            if not part_id:
+                continue
+            if part_id not in parts:
+                if part_id not in PSEUDO_PART_CODES:
+                    log.warning(
+                        "variant %r references unknown %s part_id %r — no part YAML "
+                        "found under backend/data/parts/; claims skipped",
+                        variant_id, part_type_key, part_id,
+                    )
                 continue
 
             part_data = parts[part_id]
@@ -488,8 +505,11 @@ def _upsert_claim_row(db: Session, row: dict) -> Claim:
     obj.min_mileage_km   = applies_when.get("min_mileage_km")
     obj.max_mileage_km   = applies_when.get("max_mileage_km")
     obj.min_age_years    = applies_when.get("min_age_years")
+    obj.applies_year_from = applies_when.get("applies_year_from")
+    obj.applies_year_to   = applies_when.get("applies_year_to")
     obj.maintenance_data = row.get("maintenance")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
+    obj.consequence      = consequence_tier(obj.title, obj.rationale)
     return obj
 
 
@@ -516,8 +536,11 @@ def _upsert_part_claim(db: Session, claim_id: str, claim_data: dict) -> Claim:
     obj.min_mileage_km   = applies_when.get("min_mileage_km")
     obj.max_mileage_km   = applies_when.get("max_mileage_km")
     obj.min_age_years    = applies_when.get("min_age_years")
+    obj.applies_year_from = applies_when.get("applies_year_from")
+    obj.applies_year_to   = applies_when.get("applies_year_to")
     obj.maintenance_data = claim_data.get("maintenance")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
+    obj.consequence      = consequence_tier(obj.title, obj.rationale)
     return obj
 
 

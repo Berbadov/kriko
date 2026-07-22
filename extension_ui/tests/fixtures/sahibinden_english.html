@@ -1,0 +1,107 @@
+<!-- REAL Sahibinden listing DOM, captured from a live failing page (2026-07-13).
+     Sahibinden serves an ENGLISH locale: the info-list labels are "Make",
+     "Series", "Model", "Year", "Fuel Type", "Gear", "KM" — not "Marka", "Seri",
+     "Yıl", "Yakıt", "Vites". The scraper only knew the Turkish labels, so the
+     whole info list read as empty and the backend answered
+     "Missing required fields: ['make', 'fuel']".
+
+     Values are English too ("Gasoline", "Automatic"), which normalize_fuel must
+     understand.
+
+     Note the trap in the technical-details table: under "Overview", the label
+     "Engine Capacity" carries "110 hp" (Sahibinden's own bug), while under
+     "Engine and Performance" the same label carries the real "1197 cc". -->
+<html lang="en">
+  <body>
+    <h1 class="classifiedTitle">Volkswagen Golf 1.2 TSI BMT Comfortline DSG</h1>
+
+    <div class="classifiedTechDetails">
+      <div class="tech">
+        <div class="tech-main-title">
+          <span>Golf 1.2 TSI BMT Comfortline DSG</span>
+        </div>
+      </div>
+      <h3><span>Overview</span></h3>
+      <table>
+        <tbody>
+          <tr>
+            <td class="title">Model Manufacture Dates<span> (First / Last) </span></td>
+            <td class="value">2015 / 2017 </td>
+          </tr>
+          <tr>
+            <td class="title">Body Type<span></span></td>
+            <td class="value">Hatchback / 5 Door </td>
+          </tr>
+          <tr>
+            <td class="title">Engine Type<span></span></td>
+            <td class="value">Gasoline / 4 cylinders </td>
+          </tr>
+          <tr>
+            <td class="title">Fuel Consumption<span> (Urban / Extra Urban) </span></td>
+            <td class="value">5,9 lt / 4,3 lt </td>
+          </tr>
+          <tr>
+            <td class="title">Engine Capacity<span></span></td>
+            <td class="value">110 hp</td>
+          </tr>
+          <tr>
+            <td class="title">Transmission / Drive Type<span></span></td>
+            <td class="value">DSG / 7 Gear / Front Wheel Drive </td>
+          </tr>
+        </tbody>
+      </table>
+      <h3><span>Engine and Performance</span></h3>
+      <table>
+        <tbody>
+          <tr>
+            <td class="title">Engine Type<span></span></td>
+            <td class="value">Gasoline / 4 cylinders </td>
+          </tr>
+          <tr>
+            <td class="title">Engine Capacity<span></span></td>
+            <td class="value">1197 cc</td>
+          </tr>
+          <tr>
+            <td class="title">Maximum Power<span></span></td>
+            <td class="value">110 hp (81 kw) / 4,600 rpm </td>
+          </tr>
+        </tbody>
+      </table>
+      <h3><span>Fuel Consumption</span></h3>
+      <table>
+        <tbody>
+          <tr>
+            <td class="title">Fuel<span></span></td>
+            <td class="value">Gasoline / EURO 6 </td>
+          </tr>
+          <tr>
+            <td class="title">Fuel Capacity<span></span></td>
+            <td class="value">50 l</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="classifiedInfo">
+      <h3><span class="classified-price-wrapper"> 1.285.000 TL</span></h3>
+      <ul class="classifiedInfoList">
+        <li><strong>Listing No</strong>&nbsp;<span class="classifiedId">1326798939</span></li>
+        <li><strong>Listing Date</strong>&nbsp;<span>13 July 2026</span></li>
+        <li><strong>Make</strong>&nbsp;<span>Volkswagen&nbsp;</span></li>
+        <li><strong>Series</strong>&nbsp;<span>Golf&nbsp;</span></li>
+        <li><strong>Model</strong>&nbsp;<span>1.2 TSI Comfortline&nbsp;</span></li>
+        <li><strong>Year</strong>&nbsp;<span>2016</span></li>
+        <li><strong>Fuel Type</strong>&nbsp;<span>Gasoline</span></li>
+        <li><strong>Gear</strong>&nbsp;<span>Automatic</span></li>
+        <li><strong>Vehicle Status</strong>&nbsp;<span>Second Hand</span></li>
+        <li><strong>KM</strong>&nbsp;<span>132.000</span></li>
+        <li><strong>Body Type</strong>&nbsp;<span>Hatchback 5-door</span></li>
+        <li><strong>Engine Power</strong>&nbsp;<span>110 hp</span></li>
+        <li><strong>Engine Capacity</strong>&nbsp;<span>1197 cc</span></li>
+        <li><strong>Wheel Drive</strong>&nbsp;<span>Front-Wheel Drive</span></li>
+        <li><strong>Color</strong>&nbsp;<span>Blue</span></li>
+        <li><strong>Warranty</strong>&nbsp;<span>No</span></li>
+      </ul>
+    </div>
+  </body>
+</html>

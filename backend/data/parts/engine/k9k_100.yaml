@@ -59,6 +59,8 @@ claims:
       save a lot by trying to restore their functionality. In the case of piezoelectric
       injectors, the only solution is replacement.
     independent: true
+  applies_when:
+    min_mileage_km: 10000
 - claim_key: k9k_100_engine_boost_pressure_senso
   title: Boost pressure sensor failure
   kind: known_issue
@@ -123,6 +125,8 @@ claims:
     site_or_channel: lom-s.ru
     quote: The turbocharger on some copies can cause trouble after 60 thousand km.
     independent: true
+  applies_when:
+    min_mileage_km: 60000
 - claim_key: k9k_100_engine_liner_cranking_and_p
   title: Liner cranking and piston burnout
   kind: known_issue
@@ -597,3 +601,5 @@ claims:
       oil, to the late replacement of oil, as a result of which, when run 150000-200000
       km, the connecting rods occurs."'
     independent: true
+  applies_when:
+    min_mileage_km: 150000
