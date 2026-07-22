@@ -50,6 +50,27 @@ def test_gate_product_value_downgrades_dtc_litany_evidence():
         {"product_value": "low"}) == "low"
 
 
+def test_build_prompt_adds_recall_guidance_only_for_structured():
+    base = {"component_id": "golf7_body", "domain": "body",
+            "sibling_codes": []}
+    testimony = dict(base, evidence=[{
+        "title": "t", "rationale": "r", "inspection_advice": "i",
+        "severity": "high", "quote": "q", "component_hint": "",
+        "url": "https://x.test", "site_or_channel": "s",
+        "source_type": "page", "target_hint": "golf7_body"}])
+    structured = dict(base, evidence=[dict(testimony["evidence"][0],
+                                           source_type="structured")])
+    assert "RECALL RECORDS" not in verdict.build_prompt(testimony)
+    p = verdict.build_prompt(structured)
+    assert "RECALL RECORDS" in p
+    assert "OFFICIAL safety recall" in p
+    # mixed clusters (testimony + recall corroboration) also get the guidance
+    mixed = dict(base, evidence=[testimony["evidence"][0],
+                                 dict(testimony["evidence"][0],
+                                      source_type="structured")])
+    assert "RECALL RECORDS" in verdict.build_prompt(mixed)
+
+
 def test_parse_verdict_validates_keys():
     assert verdict.parse_verdict(json.dumps(VALID))["supported"] is True
     assert verdict.parse_verdict(f"```json\n{json.dumps(VALID)}\n```")  # fenced ok

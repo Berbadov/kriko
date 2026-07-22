@@ -1,5 +1,6 @@
 """Ledger pipeline CLI.
 
+    python -m knowledge.ledger.run acquire --part dw5 --part-type transmission
     python -m knowledge.ledger.run all --max-usd 2.0
     python -m knowledge.ledger.run extract --dry-run
     python -m knowledge.ledger.run report
@@ -11,7 +12,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from knowledge.ledger import cluster, db, export, extraction, ingest, resolve, verdict
+from knowledge.ledger import (
+    acquire, cluster, db, export, extraction, ingest, resolve, verdict,
+)
 from knowledge.ledger.costs import Budget, BudgetExceeded, log_stage
 
 _CACHE_DIR = Path(__file__).parent.parent / "cache"
@@ -65,17 +68,68 @@ def _cmd_report(conn) -> None:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="knowledge.ledger.run")
     p.add_argument("command", choices=[
-        "backfill", "extract", "resolve", "cluster", "verdict", "export",
-        "report", "all"])
+        "acquire", "feeds", "backfill", "extract", "resolve", "cluster",
+        "verdict", "export", "report", "all"])
     p.add_argument("--db", default=str(db.LEDGER_PATH))
     p.add_argument("--max-usd", type=float, default=None)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--export-dir", default=str(_EXPORT_DIR))
+    # acquire-stage flags (no LLM — discovery/fetch only)
+    p.add_argument("--part", help="part id to acquire sources for (e.g. dw5)")
+    p.add_argument("--part-type", help="part type (engine|transmission|…)")
+    p.add_argument("--fuel", default="", choices=["", "diesel", "petrol"])
+    p.add_argument("--max-sources", type=int, default=15)
+    p.add_argument("--max-per-query", type=int, default=5)
+    p.add_argument("--no-youtube", action="store_true")
+    # feeds-stage flags (structured sources, no LLM)
+    p.add_argument("--feed", default="nhtsa", choices=["nhtsa"])
+    p.add_argument("--make", default="", help="feeds: limit to one make")
+    p.add_argument("--model", default="", help="feeds: limit to one catalog model key")
     args = p.parse_args(argv)
 
     conn = db.connect(args.db)
     budget = Budget(max_usd=args.max_usd)
+
+    def _cmd_acquire() -> None:
+        if not args.part:
+            raise SystemExit("acquire requires --part (and usually --part-type)")
+        part_type = args.part_type
+        if not part_type:
+            import yaml as _yaml
+            from pathlib import Path as _Path
+            for f in (_Path(__file__).parent.parent.parent
+                      / "backend" / "data" / "parts").rglob(f"{args.part}.yaml"):
+                part_type = (_yaml.safe_load(f.read_text()) or {}).get("part_type")
+                break
+        if not part_type:
+            raise SystemExit(f"--part-type not given and no part YAML found for {args.part!r}")
+        s = acquire.acquire_part(
+            conn, args.part, part_type, fuel=args.fuel,
+            max_sources=args.max_sources, max_per_query=args.max_per_query,
+            youtube=not args.no_youtube)
+        print(f"acquire[{args.part}]: {s['ingested']} ingested of "
+              f"{s['discovered']} discovered "
+              f"({s['skipped_duplicate']} dup, {s['skipped_fetch']} unfetchable, "
+              f"{s['skipped_german']} german, {s['skipped_foreign']} foreign)")
+
+    def _cmd_feeds() -> None:
+        from knowledge.ledger.feeds import nhtsa
+        only = None
+        if args.make or args.model:
+            if not (args.make and args.model):
+                raise SystemExit("feeds: --make and --model must be given together")
+            only = (args.make, args.model)
+        if args.feed != "nhtsa":
+            raise SystemExit(f"unknown feed: {args.feed}")
+        per_model = nhtsa.run(conn, only=only)
+        for name, s in per_model.items():
+            print(f"feeds[nhtsa] {name}: {s['ingested']} recall(s) ingested "
+                  f"({s['campaigns']} campaigns, {s['duplicates']} dup, "
+                  f"{s['errors']} errors)")
+
     steps = {
+        "acquire": _cmd_acquire,
+        "feeds": _cmd_feeds,
         "backfill": lambda: _cmd_backfill(conn, args),
         "extract": lambda: _cmd_extract(conn, args, budget),
         "resolve": lambda: print(f"resolve: {resolve.resolve_all(conn)}"),

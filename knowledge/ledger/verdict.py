@@ -74,6 +74,19 @@ def input_hash(payload: dict) -> str:
     return hashlib.sha256(f"v{PROMPT_VERSION}:{canonical}".encode()).hexdigest()
 
 
+_STRUCTURED_GUIDANCE = """\
+RECALL RECORDS — at least one evidence item here has source_type "structured":
+it is an OFFICIAL safety recall record (e.g. NHTSA), not owner testimony.
+- The record itself IS the claim: supported=true unless another item refutes it.
+- An official safety recall affecting this model is exactly the config-specific,
+  high-consequence signal Kriko exists to surface — product_value "high" unless
+  the recall is pure paperwork trivia (VIN label misprints, compliance docs).
+- Attribution: a recall covers the whole vehicle, so attribute it to the part
+  the failed system belongs to — airbags/seatbelts/structure/locks/suspension
+  to the model's body part, ignition/infotainment/wiring to its electrical part.
+  'foreign' is ONLY for recalls of vehicles outside this catalog."""
+
+
 def build_prompt(payload: dict) -> str:
     ev_lines = []
     for i, e in enumerate(payload["evidence"], 1):
@@ -84,6 +97,15 @@ def build_prompt(payload: dict) -> str:
             f"    found-while-researching: {e['target_hint']}"
         )
     siblings = ", ".join(payload["sibling_codes"]) or "none registered"
+    # Structured-only guidance: including this only when recall records are
+    # present keeps every testimony-only prompt byte-identical (verdict cache
+    # stays valid — input_hash covers the payload, and unchanged payloads
+    # never re-spend).
+    structured_block = (
+        "\n" + _STRUCTURED_GUIDANCE + "\n"
+        if any(e.get("source_type") == "structured" for e in payload["evidence"])
+        else ""
+    )
     return f"""You are auditing a candidate used-car reliability claim for component
 "{payload['component_id']}" (domain: {payload['domain']}).
 
@@ -91,7 +113,7 @@ CRITICAL — sibling components that are DIFFERENT physical parts and must NOT b
 conflated with {payload['component_id']}: {siblings}. If the evidence describes a
 sibling's failure mode, attribute it to the sibling, not to {payload['component_id']}.
 The "found-while-researching" field is search context, NOT evidence of attribution.
-
+{structured_block}
 Product principle:
 {_PRODUCT_PRINCIPLE}
 
