@@ -20,3 +20,49 @@ def test_compare_reports_matched_and_missing(tmp_path):
     report = parity.compare([old], new)
     assert "matched: 1" in report
     assert "DQ200 hydraulic pressure failure" in report  # only-in-existing, listed
+
+
+def test_shared_source_url_matches_rewritten_titles(tmp_path):
+    """Backlog B1 blocker 2: the verdict stage rewrites titles, so title
+    Jaccard matched nothing. A shared source URL is the stable identity."""
+    old = tmp_path / "old"; old.mkdir()
+    new = tmp_path / "new"; new.mkdir()
+    (old / "dq200.yaml").write_text(yaml.dump({"claims": [
+        {"title": "Premature clutch pack wear in urban driving",
+         "domain": "transmission",
+         "sources": [{"source_url": "https://aboutthecars.com/vw/dq200/",
+                      "quote": "clutch wear"}]},
+    ]}))
+    (new / "dq200.yaml").write_text(yaml.dump([
+        {"title": "Dry clutch packs wear out early in stop-and-go traffic",
+         "domain": "transmission",
+         "sources": [{"source_url": "https://aboutthecars.com/vw/dq200",
+                      "quote": "clutch wear"}]},
+    ]))
+    report = parity.compare([old], new)
+    assert "matched: 1" in report
+    assert "only in existing YAML (0)" in report
+
+
+def test_moved_claim_reported_as_move_not_loss(tmp_path):
+    """A DQ200 claim misfiled under dq381.yaml and rerouted to dq200.yaml is an
+    explainable improvement — reported as a move, not an only-old loss."""
+    old = tmp_path / "old"; old.mkdir()
+    new = tmp_path / "new"; new.mkdir()
+    (old / "dq381.yaml").write_text(yaml.dump({"claims": [
+        {"title": "DQ200 hydraulic pressure failure",
+         "domain": "transmission",
+         "sources": [{"source_url": "https://x.test/dsg-comparison",
+                      "quote": "dq200 pressure"}]},
+    ]}))
+    (new / "dq200.yaml").write_text(yaml.dump([
+        {"title": "Hydraulic pressure circuit failure",
+         "domain": "transmission",
+         "sources": [{"source_url": "https://x.test/dsg-comparison",
+                      "quote": "dq200 pressure"}]},
+    ]))
+    report = parity.compare([old], new)
+    assert "matched: 0" in report
+    assert "[dq381 -> dq200] DQ200 hydraulic pressure failure" in report
+    assert "only in existing YAML (0)" in report
+    assert "only in ledger export (0)" in report

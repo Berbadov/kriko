@@ -81,7 +81,58 @@ def test_attribution_mismatch_not_exported(populated, tmp_path):
     assert paths == []  # contamination caught, nothing written
 
 
-def test_export_error_on_bad_copy(populated, tmp_path):
+def _add_cluster(conn, cluster_id, component, urls, verdict):
+    """Add a second (third, …) cluster with its own docs/evidence/verdict so
+    mixed valid+invalid exports can be tested."""
+    from knowledge.ledger.verdict import cluster_payload, input_hash
+    ev_ids = []
+    for i, url in enumerate(urls):
+        doc_id = db.insert_document(conn, url=url, source_type="page",
+                                    raw_text=f"text c{cluster_id}-{i}",
+                                    target_hint=component)
+        ev_id = db.insert_evidence(conn, doc_id=doc_id, claim={
+            "title": verdict["title_en"], "domain": "transmission",
+            "severity": "medium", "rationale": "r", "inspection_advice": "i",
+            "quote": f"quote c{cluster_id}-{i}", "engine_or_variant_hint": component,
+            "quote_grounded": True}, span_start=None, span_end=None,
+            extractor_version=2)
+        ev_ids.append(ev_id)
+        conn.execute("INSERT INTO resolutions VALUES (?,?,?,?)",
+                     (ev_id, component, "alias", 1))
+    conn.execute("INSERT INTO clusters (component_id, domain, cluster_version)"
+                 " VALUES (?,?,1)", (component, "transmission"))
+    cid = conn.execute("SELECT max(id) FROM clusters").fetchone()[0]
+    for ev_id in ev_ids:
+        conn.execute("INSERT INTO cluster_members VALUES (?,?)", (cid, ev_id))
+    conn.commit()
+    h = input_hash(cluster_payload(conn, cid))
+    conn.execute("INSERT INTO verdicts VALUES (?,'m',?,10,10,0.0,'now')",
+                 (h, json.dumps(verdict)))
+    conn.commit()
+    return cid
+
+
+def test_invalid_cluster_is_skipped_not_fatal(populated, tmp_path, capsys):
+    """Backlog B1 blocker 1: one DTC-titled cluster must not abort the export —
+    it is skipped and reported; every other valid cluster still ships."""
     _add_verdict(populated, _verdict(title_en="P17BF P189C fault code litany"))
-    with pytest.raises(export.ExportError):
-        export.export_all(populated, tmp_path / "out")
+    _add_cluster(populated, 2, "dq200",
+                 ["https://c.test/1", "https://d.test/2"],
+                 _verdict(attribution={"component_id": "dq200", "confidence": "high",
+                                       "reason": "r"},
+                          title_en="DQ200 mechatronic unit failure"))
+    paths = export.export_all(populated, tmp_path / "out")
+    out = capsys.readouterr().out
+    assert "skipped 1 invalid cluster(s)" in out
+    assert "DTC code in title" in out
+    # the valid dq200 cluster still exported despite the invalid dq381 one
+    assert len(paths) == 1
+    claims = yaml.safe_load(paths[0].read_text())
+    assert [c["title"] for c in claims] == ["DQ200 mechatronic unit failure"]
+
+
+def test_all_invalid_clusters_export_nothing(populated, tmp_path, capsys):
+    _add_verdict(populated, _verdict(title_en="P17BF P189C fault code litany"))
+    paths = export.export_all(populated, tmp_path / "out")
+    assert paths == []
+    assert "skipped 1 invalid cluster(s)" in capsys.readouterr().out
