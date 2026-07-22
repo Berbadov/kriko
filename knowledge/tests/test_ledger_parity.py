@@ -44,6 +44,30 @@ def test_shared_source_url_matches_rewritten_titles(tmp_path):
     assert "only in existing YAML (0)" in report
 
 
+def test_url_match_requires_domain_agreement(tmp_path):
+    """One 'Golf 7 problems' page seeds many distinct claims. A legacy ENGINE
+    claim and an exported TRANSMISSION claim from the same URL are NOT the
+    same claim — the URL identity only holds within the same domain."""
+    old = tmp_path / "old"; old.mkdir()
+    new = tmp_path / "new"; new.mkdir()
+    (old / "golf7_body.yaml").write_text(yaml.dump({"claims": [
+        {"title": "Timing Chain Tensioner Failures (EA888 Gen 3)",
+         "domain": "engine",
+         "sources": [{"source_url": "https://x.test/golf7-problems",
+                      "quote": "chain stretch"}]},
+    ]}))
+    (new / "dq200.yaml").write_text(yaml.dump([
+        {"title": "Mechatronic unit failure",
+         "domain": "transmission",
+         "sources": [{"source_url": "https://x.test/golf7-problems",
+                      "quote": "mechatronic"}]},
+    ]))
+    report = parity.compare([old], new)
+    assert "matched: 0" in report
+    assert "only in existing YAML (1)" in report
+    assert "only in ledger export (1)" in report
+
+
 def test_moved_claim_reported_as_move_not_loss(tmp_path):
     """A DQ200 claim misfiled under dq381.yaml and rerouted to dq200.yaml is an
     explainable improvement — reported as a move, not an only-old loss."""
