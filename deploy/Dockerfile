@@ -15,6 +15,7 @@ COPY backend/ ./backend/
 # knowledge/requirements.txt) — these files only need stdlib + pyyaml, already
 # installed above.
 COPY knowledge/__init__.py ./knowledge/__init__.py
+COPY knowledge/consequence_tier.py ./knowledge/consequence_tier.py
 COPY knowledge/domains.py ./knowledge/domains.py
 COPY knowledge/stoplists.py ./knowledge/stoplists.py
 COPY knowledge/parts/__init__.py ./knowledge/parts/__init__.py
