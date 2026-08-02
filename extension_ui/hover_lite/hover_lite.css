@@ -220,6 +220,21 @@
 .lite-body::-webkit-scrollbar-thumb:hover { background: #3a414c; }
 
 /* ─────────────────────────────────────────────
+   Footer (deploy stamp — B15)
+   ───────────────────────────────────────────── */
+.lite-footer {
+  flex: 0 0 auto;
+  padding: 6px 18px;
+  border-top: 1px solid var(--border-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: var(--fg-faint);
+  text-align: right;
+}
+.lite-footer[hidden] { display: none; }
+
+/* ─────────────────────────────────────────────
    Severity chips (counts strip)
    ───────────────────────────────────────────── */
 .lite-counts {

@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from backend.api.schemas import (
-    AnalyzeRequest, AnalyzeResponse, CoverageState, RiskItem, SourceRef,
+    AnalyzeRequest, AnalyzeResponse, BuildStamp, CoverageState, RiskItem, SourceRef,
 )
 from backend import config
 from backend.config import ALLOWED_ORIGINS, STANDARD_DISCLAIMER
@@ -43,7 +43,15 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "db": "reachable" if db_reachable() else "unreachable"}
+    # commit/build_time: deploy-staleness stamp (B15) — an operator can diff the
+    # served commit against HEAD instead of discovering a stale image from
+    # pre-fix behaviour in production.
+    return {
+        "status": "ok",
+        "db": "reachable" if db_reachable() else "unreachable",
+        "commit": config.GIT_COMMIT,
+        "build_time": config.GIT_BUILD_TIME,
+    }
 
 
 # ── Analyze ──────────────────────────────────────────────────────────────────
@@ -85,6 +93,14 @@ def _cap_risks(risks: list[RiskItem], n: int) -> list[RiskItem]:
             kept.append(r)
             reported_kept += 1
     return kept
+
+
+def _build_stamp() -> BuildStamp:
+    """The deploy-staleness stamp (B15), attached to every /analyze response:
+    the extension footer renders it for the buyer, and the analyses.jsonl record
+    keeps it so replay debugging knows which build produced a logged response.
+    """
+    return BuildStamp(commit=config.GIT_COMMIT, build_time=config.GIT_BUILD_TIME)
 
 
 def run_analysis(
@@ -141,6 +157,7 @@ def run_analysis(
         risks=risks,
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=match.variant_ids,
+        build=_build_stamp(),
     )
     return ctx, match, served, resp
 
@@ -256,6 +273,9 @@ def _unavailable_response() -> AnalyzeResponse:
         risks=[],
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=[],
+        # The error path is where the stamp matters most — a buyer seeing
+        # "unavailable" on a stale deploy is exactly the B15 incident shape.
+        build=_build_stamp(),
     )
 
 
