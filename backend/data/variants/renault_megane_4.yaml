@@ -93,6 +93,8 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
+  emissions: euro6b
+  aftertreatment: lnt
 - id: megane4_k9k_110
   make: renault
   model: megane
@@ -112,6 +114,8 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
+  emissions: euro6b
+  aftertreatment: lnt
 - id: megane4_r9m_130
   make: renault
   model: megane
@@ -131,3 +135,26 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
+  emissions: euro6b
+  aftertreatment: lnt
+- id: megane4_k9k_110_edc
+  make: renault
+  model: megane
+  generation: IV
+  engine_code: K9K
+  engine_family: k9k_110
+  fuel: diesel
+  displacement_cc: 1461
+  power_min_hp: 110
+  power_max_hp: 110
+  transmission: automatic
+  transmission_code: dc4
+  year_from: 2016
+  year_to: 2020
+  market: EU
+  notes: 1.5 dCi 110 EDC — sold in EU, not TR; EDC/DC4 gearbox
+  body_code: megane4_body
+  drivetrain: fwd
+  electrical_code: megane4_elec
+  emissions: euro6d_temp
+  aftertreatment: scr
