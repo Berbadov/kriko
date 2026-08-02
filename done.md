@@ -6,6 +6,35 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-02 — Serving-resolution fix + B15/B16/B17/B8 + B11 mechanism (wave 2)
+
+- **Resolver fixed** — EDC Megane analyses stopped resolving transmission claims:
+  `_resolve_part_claims` returned IDs instead of claim objects, and the missing
+  `_fuel_compatible` import broke the fuel filter. Introduced `_servable_invariants`
+  (source-requirement + high-severity-unreviewed gates) shared by both serving paths.
+  Full suite 560 passed.
+- **B3 (patch) + B6 (mechanism)**: added `megane4_k9k_110_edc` variant + fitment via the
+  catalog pipeline; matcher/transmission-gap tests now pin EDC ads → EDC variant with
+  `tx_mismatch false`. B6's coverage-gap test stays green via generic fixture variants.
+- **B15 (done)**: deploy-staleness guard — `GIT_COMMIT`/`GIT_BUILD_TIME` stamped at image
+  build (Dockerfile ARG/ENV, docker-compose, `scripts/run_local.sh`), surfaced via
+  `/health`, `/analyze` (`build` field), and the extension footer. Recurrence guard for
+  the B4 stale-image class. Tests: `test_build_stamp.py`, `hover_lite.test.js`.
+- **B11 (mechanism landed; data at sign-off checkpoint, HUMAN DECISION #7)**: emissions/
+  aftertreatment columns + `_scr_compatible`/`_default_aftertreatment` grounding gate in
+  `backend/sync.py`; generator support in `write_variants.py`; `test_scr_gate.py`.
+  Megane 4 values hand-typed pending spot-check (EDC row 110 ≠ Blue dCi 115 SCR years).
+- **B17 (EU half done; TR blocked, HUMAN DECISION #6)**: Safety Gate feed rewritten to
+  the official weekly-report XML after the reverse-engineered JSON API died (404);
+  validated live — 50 Renault alerts ingested into `ledger.db`, idempotent.
+  TR SGM blocked by an anti-bot JS challenge (TSPD); ingester kept, never fatal.
+- **B16 (step 1 done)**: export rewritten to the part-dict schema with serving-gate
+  fields grounded at export (year windows, mileage thresholds, maintenance);
+  skip-and-report retained. Verified live to `/tmp/opencode/ledger_export` (19 parts).
+- **B8 (done)**: `_select_capped` now ranks sources by domain reliability + title
+  specificity; DeepSeek `json_object` extraction mode fixed.
+- **B15/B17 feed run** left resumable in the background (text-hash dedup).
+
 ## 2026-07-22 — DB rebuild + evidence-ledger landing (B1/B12, G2/G4)
 
 - **Serving DB rebuilt from YAML after accidental volume deletion** — no data loss
