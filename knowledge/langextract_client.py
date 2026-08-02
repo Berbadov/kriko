@@ -81,7 +81,17 @@ def _model_config() -> factory.ModelConfig:
     return factory.ModelConfig(
         model_id=_MODEL,
         provider="OpenAILanguageModel",
-        provider_kwargs={"api_key": DEEPSEEK_API_KEY, "base_url": _DEEPSEEK_BASE_URL},
+        provider_kwargs={
+            "api_key": DEEPSEEK_API_KEY,
+            "base_url": _DEEPSEEK_BASE_URL,
+            # DeepSeek's OpenAI-compatible endpoint only supports json_object;
+            # langextract's example-derived schema makes it send json_schema
+            # instead and the API 400s ("This response_format type is
+            # unavailable now"). Constructor kwargs land in the provider's
+            # _extra_kwargs and override the schema's response_format at
+            # infer time.
+            "response_format": {"type": "json_object"},
+        },
     )
 
 
