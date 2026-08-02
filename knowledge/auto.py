@@ -177,9 +177,32 @@ def _select_capped(
     videos: list[dict],
     cap: int,
 ) -> tuple[list[dict], list[dict]]:
-    """Keep at most `cap` sources. Pages first (in discovery order), then YouTube.
-    Search is cheap; LLM extraction is not, so we cap what we extract.
+    """Keep at most `cap` sources, ranked by chronic-signal score.
+
+    Backported from knowledge/ledger/acquire.py's rank_sources (backlog B8):
+    score by part-code specificity in the title + failure-signal vocabulary,
+    pages first, then YouTube filling remaining budget. This replaces the old
+    discovery-order selection so the ≤cap extracted sources are the ones most
+    likely to describe chronics, not the first N Exa returned.
     """
+    _TITLE_FAILURE_STEMS = (
+        "problem", "arıza", "ariza", "sorun", "kronik", "fail", "fault", "recall",
+        "issue", "broken", "repair", "worn", "wear", "leak", "defect", "chronic",
+    )
+
+    def _score(item: dict) -> int:
+        title = (item.get("title") or item.get("notes") or "").lower()
+        score = sum(1 for stem in _TITLE_FAILURE_STEMS if stem in title)
+        # Penalize forum domains (still allowed, but ranked below editorial)
+        from knowledge.stoplists import FORUM_DOMAINS
+        site = (item.get("site_or_channel") or "").lower()
+        if any(fd in site for fd in FORUM_DOMAINS):
+            score -= 1
+        return score
+
+    pages.sort(key=_score, reverse=True)
+    videos.sort(key=_score, reverse=True)
+
     kept_pages = pages[:cap]
     remaining = cap - len(kept_pages)
     kept_videos = videos[:remaining] if remaining > 0 else []
