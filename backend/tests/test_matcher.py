@@ -92,9 +92,11 @@ def test_fuel_type_uppercase_dizel(db, megane4_variants):
         "make": "Renault", "model": "Megane", "year": 2020,
         "fuel_type": "DIZEL", "engine_volume_cc": 1461, "power_hp": 110,
     }
-    # normalize_fuel lowercases, so DIZEL → diesel
+    # normalize_fuel lowercases, so DIZEL → diesel. No transmission stated, so
+    # both the manual k9k_110 and the automatic k9k_110_edc survive (B3).
     r = match_variant(meta, db)
-    assert r.variant_ids == ["megane4_k9k_110"]
+    assert r.method == "ambiguous"
+    assert set(r.variant_ids) == {"megane4_k9k_110", "megane4_k9k_110_edc"}
 
 
 def test_fuel_type_lpg_matches_as_petrol(db, megane4_variants):
@@ -128,14 +130,16 @@ def test_turkish_accent_megane_model(db, megane4_variants):
         "fuel_type": "Dizel", "engine_volume_cc": 1461, "power_hp": 110,
     }
     r = match_variant(meta, db)
-    assert r.variant_ids == ["megane4_k9k_110"]
+    assert r.method == "ambiguous"
+    assert set(r.variant_ids) == {"megane4_k9k_110", "megane4_k9k_110_edc"}
 
 
 # ── Ambiguous listings — missing or unresolvable power data ──────────────────
 
 def test_k9k_ambiguous_no_power(db, megane4_variants):
-    # Both K9K variants (90hp and 110hp) are diesel manual 1461cc.
-    # Without power data, both survive — should be ambiguous.
+    # K9K diesel manual variants are 90hp and 110hp (1461cc); the automatic
+    # EDC row (B3) is also 110hp 1461cc. Without power data all three survive —
+    # should be ambiguous.
     meta = {
         "make": "Renault", "model": "Megane", "year": 2019,
         "fuel_type": "Dizel", "engine_volume_cc": 1461,
@@ -143,7 +147,7 @@ def test_k9k_ambiguous_no_power(db, megane4_variants):
     }
     r = match_variant(meta, db)
     assert r.method == "ambiguous"
-    assert set(r.variant_ids) == {"megane4_k9k_90", "megane4_k9k_110"}
+    assert set(r.variant_ids) == {"megane4_k9k_90", "megane4_k9k_110", "megane4_k9k_110_edc"}
 
 
 def test_h5h_ambiguous_no_power(db, megane4_variants):
@@ -301,18 +305,19 @@ def test_h5f_not_present_2019(db, megane4_variants):
 
 # ── Transmission soft-filter ──────────────────────────────────────────────────
 
-def test_wrong_transmission_preserved_as_ambiguous(db, megane4_variants):
-    # K9K is manual-only. If a listing says automatic, narrow_by_transmission
-    # would return empty — so it falls back to pre-filter list (both K9K variants).
+def test_wrong_transmission_caught_by_edc_row(db, megane4_variants):
+    # B3: the automatic 1.5 dCi EDC Megane used to silently "exact"-match the
+    # manual k9k_110 row (soft tx filter fallback) with no gearbox risks at all.
+    # The k9k_110_edc row now catches the automatic ad instead.
     meta = {
         "make": "Renault", "model": "Megane", "year": 2020,
         "fuel_type": "Dizel", "engine_volume_cc": 1461, "power_hp": 110,
         "transmission": "Otomatik",
     }
     r = match_variant(meta, db)
-    # power narrows to k9k_110, tx filter fails softly → still returns k9k_110
     assert r.method == "exact"
-    assert r.variant_ids == ["megane4_k9k_110"]
+    assert r.variant_ids == ["megane4_k9k_110_edc"]
+    assert r.tx_mismatch is False
 
 
 def test_missing_transmission_does_not_block(db, megane4_variants):
@@ -321,5 +326,5 @@ def test_missing_transmission_does_not_block(db, megane4_variants):
         "fuel_type": "Dizel", "engine_volume_cc": 1461, "power_hp": 110,
     }
     r = match_variant(meta, db)
-    assert r.method == "exact"
-    assert r.variant_ids == ["megane4_k9k_110"]
+    assert r.method == "ambiguous"
+    assert set(r.variant_ids) == {"megane4_k9k_110", "megane4_k9k_110_edc"}

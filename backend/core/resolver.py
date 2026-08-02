@@ -40,7 +40,8 @@ from backend.core.title_sim import title_similar
 from backend.core.transmission_signal import (
     claim_signals_automatic_only, claim_signals_manual_only,
 )
-from backend.db.models import Claim, ClaimSource, ClaimVariant
+from backend.db.models import Claim, ClaimSource, ClaimVariant, Variant
+from backend.sync import _fuel_compatible
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,32 @@ def resolve_claims(
     db: Session,
     ctx: ListingContext | None = None,
 ) -> list[ClaimResult]:
+    """Resolve claims from both variant matching and direct part matching.
+
+    Two paths:
+    1. Variant-matched claims (existing logic) - model-specific (body, electrical)
+    2. Direct part claims (NEW) - system-wide engine/gearbox defects
+
+    This fixes the "horrible matching" where DQ200 claims only show for exact
+    variant matches instead of all DQ200-equipped cars.
+    """
+    # Path 1: Variant-matched claims (existing)
+    variant_results = _resolve_variant_claims(match, db, ctx) if match.variant_ids else []
+
+    # Path 2: Direct part claims for engine/gearbox (system-wide)
+    part_results = _resolve_part_claims(match, db, ctx)
+
+    # Merge, dedup, and return
+    all_results = _merge_and_dedup(variant_results, part_results)
+    return all_results
+
+
+def _resolve_variant_claims(
+    match: MatchResult,
+    db: Session,
+    ctx: ListingContext | None = None,
+) -> list[ClaimResult]:
+    """Original logic: resolve claims from matched variants."""
     if not match.variant_ids:
         return []
     if len(match.variant_ids) == 1:
@@ -86,6 +113,133 @@ def resolve_claims(
         return []
     results = _apply_context(list(all_claims.values()), ctx, auto_only_ids)
     return _deduplicate_results(results)
+
+
+def _servable_invariants(db: Session) -> list:
+    """Shared serve-time invariants: ≥1 source (maintenance exempt) and the
+    high-severity unreviewed gate. Used by both the variant path and the
+    part path, so the two can never drift on what is servable."""
+    has_source = (
+        db.query(ClaimSource)
+        .filter(ClaimSource.claim_id == Claim.id)
+        .exists()
+    )
+    return [
+        or_(
+            Claim.kind == "maintenance",
+            has_source,
+        ),
+        or_(
+            Claim.kind == "maintenance",
+            not_(and_(Claim.severity == "high", Claim.status.in_(_UNREVIEWED_STATUSES))),
+        ),
+    ]
+
+
+def _resolve_part_claims(
+    match: MatchResult,
+    db: Session,
+    ctx: ListingContext | None = None,
+) -> list[ClaimResult]:
+    """Direct part matching for engine/gearbox claims (system-wide defects).
+
+    After variant matching, extract the engine_family and transmission_code from
+    the matched variant(s), then show ALL claims for that part regardless of
+    which car model uses it.
+
+    Example: If ad matches golf7_ea211_150, also show EA211 claims from Passat,
+    Tiguan, etc. System-wide defects apply to all cars with that part.
+    """
+    if not match.variant_ids:
+        return []
+
+    results = []
+
+    # Get engine/gearbox codes from matched variants
+    matched_variants = db.query(Variant).filter(Variant.id.in_(match.variant_ids)).all()
+    if not matched_variants:
+        return []
+
+    # Collect all engine_families and transmission_codes from matched variants
+    engine_families = {v.engine_family for v in matched_variants if v.engine_family}
+    transmission_codes = {v.transmission_code for v in matched_variants if v.transmission_code and v.transmission_code != "manual"}
+
+    # Engine claims: find ALL variants with these engine_families, get their claims
+    for engine_family in engine_families:
+        engine_lower = engine_family.lower()
+        # Find all variant IDs with this engine_family
+        variant_ids = db.query(Variant.id).filter(
+            Variant.engine_family == engine_lower
+        ).all()
+        variant_ids = [v[0] for v in variant_ids]
+        
+        # Query claims linked to ANY of these variants
+        claims = db.query(Claim).join(
+            ClaimVariant, Claim.id == ClaimVariant.claim_id
+        ).filter(
+            and_(
+                Claim.is_current == True,
+                Claim.status.in_(SERVABLE_STATUSES),
+                Claim.domain.in_(["engine", "emissions"]),  # Engine-related only
+                ClaimVariant.variant_id.in_(variant_ids),
+                *_servable_invariants(db),
+            )
+        ).distinct().all()
+
+        # Serve-time fuel filter: the part path pulls claims from every variant
+        # sharing the engine family, including other models/fuels — mutually
+        # exclusive fuel signals in the claim text rule out a mismatched fuel
+        # (same vocabulary as sync.py's catalog-side grounding).
+        fuel = ctx.fuel_type if ctx else None
+        for claim in claims:
+            if _fuel_compatible({"title": claim.title, "rationale": claim.rationale}, fuel):
+                results.append(claim)
+
+    # Transmission claims: find ALL variants with these transmission_codes
+    for trans_code in transmission_codes:
+        trans_lower = trans_code.lower()
+        # Find all variant IDs with this transmission_code
+        variant_ids = db.query(Variant.id).filter(
+            Variant.transmission_code == trans_lower
+        ).all()
+        variant_ids = [v[0] for v in variant_ids]
+        
+        claims = db.query(Claim).join(
+            ClaimVariant, Claim.id == ClaimVariant.claim_id
+        ).filter(
+            and_(
+                Claim.is_current == True,
+                Claim.status.in_(SERVABLE_STATUSES),
+                Claim.domain == "transmission",
+                ClaimVariant.variant_id.in_(variant_ids),
+                *_servable_invariants(db),
+            )
+        ).distinct().all()
+
+        results.extend(claims)
+
+    # Apply context gates (fuel already filtered above; mileage, equipment, etc.)
+    return _apply_context(results, ctx)
+
+
+def _merge_and_dedup(
+    variant_results: list[ClaimResult],
+    part_results: list[ClaimResult],
+) -> list[ClaimResult]:
+    """Merge two result lists, dedup by claim ID, prefer variant-matched."""
+    seen: dict[str, ClaimResult] = {}
+
+    # Add variant results first (they take precedence)
+    for r in variant_results:
+        if r.claim.id not in seen:
+            seen[r.claim.id] = r
+
+    # Add part results (skip if already present)
+    for r in part_results:
+        if r.claim.id not in seen:
+            seen[r.claim.id] = r
+
+    return list(seen.values())
 
 
 def _apply_context(
@@ -429,11 +583,6 @@ def _servable_claims_for(variant_id: str, db: Session) -> list[Claim]:
     "pending_human sign-off never happens" problem the severity gate exists
     for (see module docstring) doesn't apply to them the same way.
     """
-    has_source = (
-        db.query(ClaimSource)
-        .filter(ClaimSource.claim_id == Claim.id)
-        .exists()
-    )
     return (
         db.query(Claim)
         .join(ClaimVariant, Claim.id == ClaimVariant.claim_id)
@@ -441,14 +590,7 @@ def _servable_claims_for(variant_id: str, db: Session) -> list[Claim]:
             ClaimVariant.variant_id == variant_id,
             Claim.status.in_(SERVABLE_STATUSES),
             Claim.is_current == True,
-            or_(
-                Claim.kind == "maintenance",
-                has_source,
-            ),
-            or_(
-                Claim.kind == "maintenance",
-                not_(and_(Claim.severity == "high", Claim.status.in_(_UNREVIEWED_STATUSES))),
-            ),
+            *_servable_invariants(db),
         )
         .all()
     )

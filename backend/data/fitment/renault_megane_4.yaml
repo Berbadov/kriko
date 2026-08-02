@@ -33,3 +33,8 @@
   transmission_code: dw6
   electrical_code: megane4_elec
   body_code: megane4_body
+- variant_id: megane4_k9k_110_edc
+  engine_family: k9k_110
+  transmission_code: dc4
+  electrical_code: megane4_elec
+  body_code: megane4_body
