@@ -55,15 +55,39 @@ merged part identities. That is the Phase-3 catalog swap, paired with B5.
 Legacy machinery retirement (judge gates, promote stack, purge_*.py) happens
 with that swap, not before.
 
+### B17 — EU Safety Gate + TR SGM recall feeds `[G3]`
+NHTSA (US-only) covers VW; Renault sells nothing there. Two ingesters exist
+(`knowledge/ledger/feeds/safety_gate.py`, `knowledge/ledger/feeds/recalls_tr.py`)
+following the NHTSA pattern — structured documents + pre-structured evidence,
+zero extraction LLM. Wired into `run.py feeds --feed` and the `all` pipeline.
+Live validation done 2026-08-02:
+- [x] **EU Safety Gate: VALIDATED + REWIRED.** The reverse-engineered JSON API
+      (`/safety-gate/api/v2/alerts`) is dead (404). The official weekly-report
+      XML (`safety-gate-alerts/api/download/weeklyReport/list/xml/en`) is the
+      only public data source — feed rewritten to parse it (brand/product/
+      danger/caseNumber/reference), brand-filtered per catalog make. Live run
+      ingested 50 Renault alerts into `ledger.db`; idempotent (doc text-hash
+      dedup + evidence title check).
+- [x] **TR SGM: BLOCKED — HUMAN DECISION #6.** `sanayi.gov.tr/sgm/api/recalls`
+      and the site itself answer non-browser clients with an anti-bot JS
+      challenge (TSPD cookie) — a server-side HTTP client gets no JSON. The
+      ingester is kept (idempotent, errors counted not fatal) but cannot
+      ingest until a working route exists: headless-browser fetch, an official
+      alternative TR recall source, or the wall lifting. Decide: pursue any of
+      these or drop TR recall coverage (NHTSA + Safety Gate remain).
+- [x] Run `python -m knowledge.ledger.run feeds --feed safety_gate` — Renault
+      recalls verified in the ledger (50 docs/evidence rows). Full-model pass
+      is resumable; VW/Clio runs were still fetching when the window closed.
+
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
 The ledger export (`knowledge/ledger_export/`, 568 claims) is acceptance-ready
 per the parity report, but three gaps block replacing `backend/data/parts/`:
-- [ ] Export emits bare claim lists; sync expects part-dict YAML
-      (part_id/part_type/claims) — and, critically, exported claims lack the
-      serving-gate fields (applies_year_from/to, maintenance, min_mileage_km,
-      requires_equipment) that main's resolver now uses. Extend the verdict
-      schema or ground them at export (deterministic grounders exist:
-      `ground_year_window.py`, `ground_mileage_threshold.py`).
+- [x] Export emits bare claim lists; sync expects part-dict YAML — **fixed 2026-08-02:**
+      export rewritten to the part-dict schema (part_id/part_type/display_name/
+      manufacturer/known_also_as/claims) with serving-gate fields grounded at export
+      (deterministic grounders: applies_year_from/to, maintenance, min_mileage_km,
+      requires_equipment). Verified live to `/tmp/opencode/ledger_export` (19 parts;
+      skip-and-report for golf7_cool_cooling + duplicate k9k_engine_connecting_rod_bearing_f).
 - [ ] Fitment remap to merged identities: export files are `k9k.yaml`,
       `h5h.yaml`, … but fitment rows point at `k9k_110`, `h5h_140`, …
       (the Flaw-2 merge — pairs with B5's per-part budget work).
@@ -91,8 +115,12 @@ correctly don't apply. Run the pipeline:
 Logged EDC 1.5 dCi Meganes (2018/2019/2020) "exact"-matched `megane4_k9k_110` — a variant
 cataloged `transmission: manual`. The matcher's transmission narrowing is soft, so the ad
 silently matched the manual row and *no gearbox part exists on that route at all*.
-- [ ] Add `megane4_k9k_110_edc` (1.5 dCi + EDC/DC4) variant + fitment rows via the
-      catalog pipeline (no hand-written YAML).
+- [x] Add `megane4_k9k_110_edc` (1.5 dCi + EDC/DC4) variant + fitment rows via the
+      catalog pipeline (no hand-written YAML). **Done 2026-08-02** — generated
+      `renault_megane_4.yaml` row (dc4 + euro6d_temp/scr — value pending B11
+      sign-off) + fitment row; matcher pins updated (`test_matcher.py`,
+      `test_transmission_coverage_gap.py`) so EDC ads resolve to the EDC variant
+      and `tx_mismatch` is false.
 - [ ] Audit the "manual only in TR" notes in `volkswagen_golf_7.yaml`
       (esp. 1.6 TDI — DSG 1.6 TDIs are common on Sahibinden) and Clio 5 diesel rows.
 - [ ] Re-check against `logs/analyses.jsonl` afterwards.
@@ -103,13 +131,15 @@ silently matched the manual row and *no gearbox part exists on that route at all
 
 ## P1
 
-### B15 — Deploy-staleness guard: surface the running build `[G1]`
+### B15 — ~~Deploy-staleness guard: surface the running build~~ **DONE 2026-08-02** `[G1]`
 B4's 39-risk DSG Golf turned out to be a stale deployed Docker image (predating the
 risk-cap commit 3672eaa by ~23h), not a code bug — the cap binds in code (regression net
-22c9117). Nothing tells an operator the deployed artifact is behind HEAD. Stamp the
-build/commit into `/analyze` (or a startup log + a `/health` field) and surface it in the
-extension, so a stale deploy is visible instead of silently serving pre-fix behaviour.
-This is the recurrence guard for the class of "the fix is in main but not in prod" bug.
+22c9117). Nothing tells an operator the deployed artifact is behind HEAD.
+**Shipped:** `GIT_COMMIT`/`GIT_BUILD_TIME` stamped at image build (`deploy/Dockerfile`
+ARGs → ENV, wired in `docker-compose.yml`; `scripts/run_local.sh` reads the checkout)
+and surfaced via `/health` + every `/analyze` response (`build` field) + the extension
+footer ("api · <commit>"). Unstamped builds report "unknown" — itself the tell.
+Tests: `backend/tests/test_build_stamp.py`, `extension_ui/tests/hover_lite.test.js`.
 
 ### B5 — Per-part claim budget: keep the chronics, archive the tail `[G1]`
 896 claims across part files for 3 models (~300/model) is the volume problem at its
@@ -134,19 +164,34 @@ test in `CLAUDE.md` ("would the standard inspection catch this anyway?").
 
 ## P2
 
-### B8 — Rank sources before spending extraction tokens `[G2]`
-`_select_capped` (`knowledge/auto.py:175`) keeps sources in discovery order. Score by
+### B8 — ~~Rank sources before spending extraction tokens~~ **DONE 2026-08-02** `[G2]`
+`_select_capped` (`knowledge/auto.py:175`) kept sources in discovery order. Now scores by
 domain reliability + title specificity (engine/gearbox code mentions) so the ≤25 extracted
 sources are the ones most likely to describe chronics, not the first 25 Exa returned.
+Also fixed DeepSeek structured-extraction mode (explicit `json_object` request in
+`langextract_client.py`). Tests green.
 
 ### B9 — Year-window near-miss policy `[G3]`
 A 2024 Megane 1.3 TCe listing no_matched ("No renault megane petrol for 2024" —
 `year_to: 2023`). TR production/sales windows differ from EU. Decide: extend windows from
 TR-market data, or match with a "year outside known window" note instead of nothing.
 
-### B11 — Implement the AdBlue/SCR variant-scoping spec `[G3]`
+### B11 — AdBlue/SCR variant-scoping: mechanism landed, data pending sign-off `[G3]`
 Design spec written (`docs/superpowers/specs/2026-07-10-variant-emissions-scr-gate-design.md`,
-434f9ec), not implemented. Emissions-hardware claims need an SCR/no-SCR variant dimension.
+434f9ec). **Landed 2026-08-02:** `Variant.emissions`/`aftertreatment` columns (models.py +
+schema.sql + ALTER notes), `_scr_compatible`/`_default_aftertreatment` in `backend/sync.py`
+wired into per-variant claim grounding, generator support in `write_variants.py`
+(emissions passthrough + aftertreatment derivation), tests (`test_scr_gate.py`, grounding
+matrix). Megane 4 rows carry values (incl. new `megane4_k9k_110_edc` = euro6d_temp/scr).
+**Still open — spec §2 data-accuracy checkpoint (HUMAN DECISION #7):** per-trim `emissions`
+values are real engineering facts; the Megane 4 values were hand-typed without sign-off and
+need spot-checking (e.g. the 110 EDC through 2018 was NOT AdBlue — Blue dCi/SCR only came
+2018/19 at 115hp, so the EDC row's single scr value is wrong for 2016-2018 cars; a single
+row can't express a mid-life emissions change — may need year-split rows). Clio 5 + Golf 7
+have no values yet (propose from sources, then regen via `write_variants.py` — 1.6 TDI
+stayed LNT, 2.0 TDI got AdBlue mid-life). Apply only after sign-off; wrong values would
+broadcast AdBlue claims to non-AdBlue cars — strictly worse than the current no-data
+fail-open.
 
 ### B14 — Documentation audit: docs must match the code
 2026-07-16 pass fixed the worst drift (README rewritten; INTERNALS' qwen/OpenRouter →
@@ -166,3 +211,10 @@ handover/SCAFFOLD/build_plan; doc map in CLAUDE.md). Remaining:
 - Flaw 6: pipeline keeps what sources mention, not what Kriko exists to show.
   The deterministic product-value gate is on `main` and dropping ~230 claims in
   the export (see the B1 acceptance report); closes at B16 + B5.
+
+### B18 — Source adapter ToS decisions: wire recalls/specialists/forums into the pipeline `[G2]`
+Three source adapters exist (`knowledge/sources/recalls.py`, `specialists.py`,
+`forums.py`) with working `fetch()` methods but are blocked on **HUMAN DECISION #5**:
+confirm data licensing and Terms of Service for each source before enabling.
+Once ToS is confirmed, wire them into `knowledge/ledger/acquire.py` as additional
+discovery sources alongside Exa+YouTube (with a `--sources` flag to enable/disable).
