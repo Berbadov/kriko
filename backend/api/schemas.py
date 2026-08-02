@@ -30,6 +30,13 @@ class RiskItem(BaseModel):
     #   Tells the card whether to assert the issue or label it an unverified report.
 
 
+class BuildStamp(BaseModel):
+    """Deploy-staleness stamp (backlog B15) — which commit the serving artifact
+    was built from, and when. "unknown" when the deploy was never stamped."""
+    commit: str = "unknown"
+    build_time: str = "unknown"
+
+
 class AnalyzeRequest(BaseModel):
     listing_url: str | None = None
     ad_metadata: dict = {}
@@ -42,6 +49,7 @@ class AnalyzeResponse(BaseModel):
     risks: list[RiskItem] = []
     disclaimer: str                 # always present
     matched_variant_ids: list[str] = []
+    build: BuildStamp = BuildStamp()  # serving build — extension footer + replay log
     # HUMAN DECISION #1: The current UI (hover_lite.js) only reads `risks` and
     # `summary`. coverage_state, disclaimer, matched_variant_ids are returned
     # here for future UI use, but MATCHED_NO_DATA and UNAVAILABLE currently

@@ -22,6 +22,12 @@ DB_PATH="${DB_PATH:-$PWD/local.db}"
 export DATABASE_URL="sqlite:///$DB_PATH"
 export PYTHONPATH="$PWD"
 
+# Deploy-staleness stamp (B15): the API reports these in /health and /analyze,
+# same as the Docker build args. Pre-set env vars win; otherwise read the
+# checkout; "unknown" outside one — a missing stamp must never break the run.
+export GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
+export GIT_BUILD_TIME="${GIT_BUILD_TIME:-$(git log -1 --format=%cI 2>/dev/null || echo unknown)}"
+
 echo "Seeding $DB_PATH from backend/data/ …"
 python3 - <<'PY'
 from sqlalchemy.orm import Session

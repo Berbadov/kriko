@@ -16,6 +16,14 @@ ANALYSES_LOG_PATH = Path(os.environ.get(
     str(REPO_ROOT / "logs" / "analyses.jsonl"),
 ))
 
+# Deploy-staleness stamp (backlog B15): which commit this artifact was built
+# from, and when. Set at image-build time (deploy/Dockerfile ARGs → ENV, wired
+# in deploy/docker-compose.yml) or exported by scripts/run_local.sh. Falls back
+# to "unknown" when absent — never crash on a missing stamp; "unknown" is
+# itself the tell that the deploy was never stamped.
+GIT_COMMIT = os.environ.get("GIT_COMMIT") or "unknown"
+GIT_BUILD_TIME = os.environ.get("GIT_BUILD_TIME") or "unknown"
+
 # GET /debug/analyses is off (404) unless explicitly enabled — it reads back
 # full request/response payloads, so it must not be exposed by default on an
 # internet-facing deployment. The CLI (backend/tools/analyses.py) reads the
