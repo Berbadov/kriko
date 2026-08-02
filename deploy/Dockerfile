@@ -21,5 +21,15 @@ COPY knowledge/stoplists.py ./knowledge/stoplists.py
 COPY knowledge/parts/__init__.py ./knowledge/parts/__init__.py
 COPY knowledge/parts/validate_part_yaml.py ./knowledge/parts/validate_part_yaml.py
 
+# Deploy-staleness stamp (backlog B15): the app reports these via /health and
+# every /analyze response, so a stale image is visible instead of silently
+# serving pre-fix behaviour. Values come from build args (wired in
+# deploy/docker-compose.yml); a build that passes neither stamps "unknown" —
+# which is itself the tell that the image was never stamped.
+ARG GIT_COMMIT=unknown
+ARG GIT_BUILD_TIME=unknown
+ENV GIT_COMMIT=$GIT_COMMIT \
+    GIT_BUILD_TIME=$GIT_BUILD_TIME
+
 # Sync YAML catalog to DB on each start (idempotent), then launch the API.
 CMD ["sh", "-c", "python -m backend.sync && uvicorn backend.api.main:app --host 0.0.0.0 --port 8000"]

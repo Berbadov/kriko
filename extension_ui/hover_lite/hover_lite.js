@@ -52,6 +52,7 @@
   let risksListEl = null;
   let densityBtn = null;
   let closeBtn = null;
+  let footerEl = null;
 
   let closeTimer = null;
 
@@ -341,6 +342,7 @@
     risksListEl = panel.querySelector(".lite-risks");
     densityBtn  = panel.querySelector(".lite-btn-density");
     closeBtn    = panel.querySelector(".lite-btn-close");
+    footerEl    = panel.querySelector(".lite-footer");
 
     // Wire panel-level handlers
     panel.addEventListener("pointerdown", onPointerDown);
@@ -372,6 +374,7 @@
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
     risksHeadEl = risksListEl = densityBtn = closeBtn = null;
+    footerEl = null;
   }
 
   function openPanel() {
@@ -545,6 +548,8 @@
         <div class="lite-summary-slot"></div>
         <div class="lite-details-slot"></div>
       </div>
+
+      <footer class="lite-footer" hidden></footer>
     `;
   }
 
@@ -1005,6 +1010,22 @@
     }
   }
 
+  // Deploy-staleness guard (B15): the footer names the backend build that
+  // answered, so a stale deploy is visible to anyone looking at the panel.
+  // Pre-B15 backends omit `build` and unstamped builds report "unknown" — both
+  // render as "api · unknown", which is itself the tell.
+  function renderFooter() {
+    if (!footerEl) return;
+    if (state.pipeline !== "result" || !state.result) {
+      footerEl.hidden = true;
+      footerEl.textContent = "";
+      return;
+    }
+    const commit = state.result.build && state.result.build.commit;
+    footerEl.textContent = `api · ${commit || "unknown"}`;
+    footerEl.hidden = false;
+  }
+
   function renderBody() {
     if (!bodyEl) return;
     renderListingHeader();
@@ -1015,6 +1036,7 @@
     renderRisksList();
     renderSummary();
     renderListingDetails();
+    renderFooter();
   }
 
   // ─── Interactions ─────────────────────────────────────────────────────
