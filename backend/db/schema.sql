@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS variants (
   year_from        INT NOT NULL,
   year_to          INT,
   market           TEXT DEFAULT 'TR',
-  notes            TEXT
+  notes            TEXT,
+  emissions        TEXT,                   -- euro standard: euro5|euro6b|euro6c|euro6d|euro6d_temp
+  aftertreatment   TEXT                    -- scr|lnt|none — what the SCR gate reads
 );
 CREATE INDEX IF NOT EXISTS idx_variants_lookup ON variants(make, model, fuel);
 
@@ -69,6 +71,9 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_from INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_to INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS consequence TEXT;
+-- B11: emissions/aftertreatment for SCR variant scoping
+-- ALTER TABLE variants ADD COLUMN IF NOT EXISTS emissions TEXT;
+-- ALTER TABLE variants ADD COLUMN IF NOT EXISTS aftertreatment TEXT;
 CREATE INDEX IF NOT EXISTS idx_claims_serve ON claims(is_current, status);
 
 CREATE TABLE IF NOT EXISTS claim_variants (

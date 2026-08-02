@@ -29,6 +29,8 @@ class Variant(Base):
     year_to           = Column(Integer)
     market            = Column(String, default="TR")
     notes             = Column(String)
+    emissions         = Column(String, nullable=True)   # euro standard: euro5|euro6b|euro6c|euro6d|euro6d_temp
+    aftertreatment    = Column(String, nullable=True)   # scr|lnt|none — what the SCR gate reads
 
 
 class Claim(Base):
