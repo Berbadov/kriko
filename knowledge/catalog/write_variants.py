@@ -210,8 +210,36 @@ def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str])
             "body_code": shared.get("body_code", ""),
             "drivetrain": t.get("drivetrain", "fwd"),
         }
+        # B11: emissions/aftertreatment — see the SCR-gate spec §2. `emissions`
+        # is per-trim data (grows with coverage); `aftertreatment` is derived
+        # from fuel+emissions by the closed engineering rule, unless the trim
+        # carries an explicit override.
+        if "emissions" in t:
+            row["emissions"] = t["emissions"]
+        if "aftertreatment" in t:
+            row["aftertreatment"] = t["aftertreatment"]
+        elif "emissions" in t:
+            row["aftertreatment"] = _default_aftertreatment(t["fuel"], t["emissions"])
         rows.append(row)
     return rows
+
+
+def _default_aftertreatment(fuel: str | None, emissions: str | None) -> str | None:
+    """Derive aftertreatment from fuel + euro standard.
+
+    Closed engineering vocabulary (allowed constant per CLAUDE.md), not per-model
+    car data — mirrors backend/sync.py's same-named function so the generator
+    writes the same value sync-time grounding would derive.
+    """
+    f = (fuel or "").lower()
+    e = (emissions or "").lower()
+    if f != "diesel":
+        return "none" if f == "petrol" else None
+    if e.startswith("euro6d"):
+        return "scr"
+    if e.startswith("euro6b") or e.startswith("euro6c"):
+        return "lnt"
+    return None
 
 
 # The fitment axes — the part codes a variant is assembled from. Every one is

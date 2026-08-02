@@ -197,6 +197,48 @@ def _drivetrain_compatible(claim_data: dict, variant_drivetrain: str | None) -> 
     return True
 
 
+# ── SCR/AdBlue aftertreatment grounding (B11) ───────────────────────────────
+#
+# AdBlue/SCR after-treatment only exists on Euro-6d (SCR-equipped) diesel
+# variants — not the earlier Euro-6b (LNT) diesels. A claim explicitly about
+# AdBlue/SCR/urea should not ground to non-SCR diesel variants. Fail-open
+# on either side missing a signal — same philosophy as sibling gates.
+_SCR_RE = re.compile(r"\b(adblue|ad\s?blue|scr|urea|def)\b", re.I)
+
+
+def _scr_compatible(claim_data: dict, variant_aftertreatment: str | None) -> bool:
+    """Does this claim's own text rule out a non-SCR variant?
+
+    No SCR signal in the claim → broad (fail-open).
+    Variant aftertreatment unknown (None) → broad (fail-open).
+    Claim has SCR signal AND variant is non-SCR → exclude.
+    """
+    text = f"{claim_data.get('title', '')} {claim_data.get('rationale', '')}"
+    if not _SCR_RE.search(text):
+        return True
+    if not variant_aftertreatment:
+        return True
+    return variant_aftertreatment == "scr"
+
+
+def _default_aftertreatment(fuel: str | None, emissions: str | None) -> str | None:
+    """Derive aftertreatment from fuel + euro standard.
+
+    This is a closed engineering vocabulary (allowed constant per CLAUDE.md),
+    not per-model car data — it does not grow with car coverage.
+    """
+    f = (fuel or "").lower()
+    e = (emissions or "").lower()
+    if f != "diesel":
+        return "none" if f == "petrol" else None
+    # Diesel variants:
+    if e.startswith("euro6d"):
+        return "scr"
+    if e in ("euro6b", "euro6c"):
+        return "lnt"
+    return "none"
+
+
 def sync_variants(db: Session) -> int:
     count = 0
     skipped_drafts = 0
@@ -366,6 +408,8 @@ def sync_parts(db: Session) -> tuple[int, set[str]]:
                 if not _drivetrain_compatible(claim_data, variant.drivetrain):
                     continue
                 if not _powertrain_compatible(claim_data, variant.fuel):
+                    continue
+                if not _scr_compatible(claim_data, variant.aftertreatment):
                     continue
 
                 # Create variant link if it doesn't exist
