@@ -82,7 +82,7 @@ def main(argv=None) -> int:
     p.add_argument("--max-per-query", type=int, default=5)
     p.add_argument("--no-youtube", action="store_true")
     # feeds-stage flags (structured sources, no LLM)
-    p.add_argument("--feed", default="nhtsa", choices=["nhtsa"])
+    p.add_argument("--feed", default="nhtsa", choices=["nhtsa", "safety_gate", "recalls_tr"])
     p.add_argument("--make", default="", help="feeds: limit to one make")
     p.add_argument("--model", default="", help="feeds: limit to one catalog model key")
     args = p.parse_args(argv)
@@ -113,18 +113,26 @@ def main(argv=None) -> int:
               f"{s['skipped_german']} german, {s['skipped_foreign']} foreign)")
 
     def _cmd_feeds() -> None:
-        from knowledge.ledger.feeds import nhtsa
+        from knowledge.ledger.feeds import nhtsa, safety_gate, recalls_tr
         only = None
         if args.make or args.model:
             if not (args.make and args.model):
                 raise SystemExit("feeds: --make and --model must be given together")
             only = (args.make, args.model)
-        if args.feed != "nhtsa":
+        feed_map = {
+            "nhtsa": (nhtsa, "nhtsa"),
+            "safety_gate": (safety_gate, "safety_gate"),
+            "recalls_tr": (recalls_tr, "recalls_tr"),
+        }
+        if args.feed not in feed_map:
             raise SystemExit(f"unknown feed: {args.feed}")
-        per_model = nhtsa.run(conn, only=only)
-        for name, s in per_model.items():
-            print(f"feeds[nhtsa] {name}: {s['ingested']} recall(s) ingested "
-                  f"({s['campaigns']} campaigns, {s['duplicates']} dup, "
+        module, name = feed_map[args.feed]
+        per_model = module.run(conn, only=only)
+        for model_name, s in per_model.items():
+            ingested_key = "ingested"
+            campaign_key = "campaigns" if "campaigns" in s else "alerts" if "alerts" in s else "recalls"
+            print(f"feeds[{name}] {model_name}: {s[ingested_key]} recall(s) ingested "
+                  f"({s.get(campaign_key, 0)} campaigns, {s['duplicates']} dup, "
                   f"{s['errors']} errors)")
 
     steps = {
@@ -138,7 +146,7 @@ def main(argv=None) -> int:
         "export": lambda: _cmd_export(conn, args),
         "report": lambda: _cmd_report(conn),
     }
-    order = (["backfill", "extract", "resolve", "cluster", "verdict", "export"]
+    order = (["backfill", "feeds", "extract", "resolve", "cluster", "verdict", "export"]
              if args.command == "all" else [args.command])
     try:
         for name in order:
