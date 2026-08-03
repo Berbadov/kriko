@@ -143,3 +143,85 @@ def test_unparseable_verdict_still_charges_budget(conn, monkeypatch):
     assert verdict.run_verdicts(conn, b) == 0
     assert b.total_usd > 0  # charged despite the parse failure
     assert conn.execute("SELECT COUNT(*) FROM verdicts").fetchone()[0] == 0
+
+
+# ── Deterministic import verdicts (zero-LLM path) ────────────────────────────
+
+
+@pytest.fixture
+def import_conn(tmp_path):
+    """A second cluster whose evidence is entirely imported (extractor_version=0)."""
+    c = db.connect(tmp_path / "import.db")
+    doc_id = db.insert_document(c, url="https://y.test/a", source_type="page",
+                                raw_text="text", target_hint="k9k")
+    ev_id = db.insert_evidence(c, doc_id=doc_id, claim={
+        "title": "Injector seal failure on K9K", "domain": "engine",
+        "severity": "medium", "rationale": "seals harden",
+        "inspection_advice": "inspect", "quote": "q",
+        "engine_or_variant_hint": None, "quote_grounded": False,
+    }, span_start=None, span_end=None, extractor_version=0)
+    c.execute("INSERT INTO resolutions VALUES (?,?,?,?)", (ev_id, "k9k", "alias", 1))
+    c.execute("INSERT INTO clusters (component_id, domain, cluster_version)"
+              " VALUES ('k9k','engine',1)")
+    c.execute("INSERT INTO cluster_members VALUES (1, ?)", (ev_id,))
+    c.commit()
+    return c
+
+
+def test_imported_verdict_synthesizes_without_llm(import_conn, monkeypatch):
+    """A cluster whose evidence is entirely imported (extractor_version=0) gets
+    a synthesized verdict: no LLM call, zero budget, same verdict schema."""
+    monkeypatch.setattr(verdict, "_client",
+                        lambda: (_ for _ in ()).throw(AssertionError("LLM must not be called")))
+    b = costs.Budget()
+    assert verdict.run_verdicts(import_conn, b) == 1
+    assert b.total_usd == 0
+    row = import_conn.execute("SELECT model, verdict_json FROM verdicts").fetchone()
+    assert row["model"] == "import"
+    v = json.loads(row["verdict_json"])
+    assert v["supported"] is True
+    assert v["attribution"]["component_id"] == "k9k"
+    assert v["severity"] == "medium"
+    assert v["title_en"] == "Injector seal failure on K9K"
+
+
+def test_imported_verdict_first_title_and_most_severe():
+    payload = {"component_id": "k9k", "domain": "engine", "evidence": [
+        {"title": "Injector failure", "severity": "medium", "rationale": "r1",
+         "quote": "", "inspection_advice": ""},
+        {"title": "Rod bearing", "severity": "high", "rationale": "r2",
+         "quote": "", "inspection_advice": ""},
+    ]}
+    v = verdict.imported_verdict(payload)
+    assert v["title_en"] == "Injector failure"   # first row is canonical
+    assert v["severity"] == "high"               # most severe evidence wins
+    assert v["title_tr"] == v["title_en"]        # no Turkish variant on import
+
+
+def test_mixed_evidence_cluster_still_uses_llm(import_conn, monkeypatch):
+    """extractor_version {0,2} in one cluster = genuinely new research mixed
+    with import — the model's judgment stays in charge."""
+    doc_id2 = db.insert_document(import_conn, url="https://y.test/b", source_type="page",
+                                 raw_text="t", target_hint="k9k")
+    db.insert_evidence(import_conn, doc_id=doc_id2, claim={
+        "title": "K9K rod bearing wear", "domain": "engine",
+        "severity": "high", "rationale": "r", "inspection_advice": "a",
+        "quote": "q", "engine_or_variant_hint": None, "quote_grounded": False,
+    }, span_start=None, span_end=None, extractor_version=2)
+    import_conn.execute(
+        "INSERT INTO cluster_members VALUES (1, ?)",
+        (import_conn.execute("SELECT id FROM evidence ORDER BY id DESC").fetchone()["id"],))
+    import_conn.commit()
+    calls = []
+    class FakeClient:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kw):
+                    calls.append(kw)
+                    return _FakeMsg(json.dumps(VALID))
+    monkeypatch.setattr(verdict, "_client", lambda: FakeClient())
+    assert verdict.run_verdicts(import_conn, costs.Budget()) == 1
+    assert len(calls) == 1
+    row = import_conn.execute("SELECT model FROM verdicts").fetchone()
+    assert row["model"] == verdict.VERDICT_MODEL

@@ -93,7 +93,8 @@ def test_lost_source_urls_collects_only_claims_with_urls(tmp_path, monkeypatch):
 
     conn = db.connect(tmp_path / "l.db")
     lost = remediate.lost_source_urls(conn, export_dir, tmp_path)
-    assert lost == [("example.com/a", "eng1"), ("example.com/b", "eng1")]
+    assert [(u, h) for u, h, _c in lost] == [("example.com/a", "eng1"),
+                                              ("example.com/b", "eng1")]
     conn.close()
 
 
