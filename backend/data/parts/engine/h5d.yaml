@@ -1,0 +1,279 @@
+part_id: h5d
+part_type: engine
+display_name: Renault H5D Engine
+manufacturer: renault
+code_family: renault_nissan_small_engines
+known_also_as:
+- 1.0 TSI
+- H5DT
+claims:
+- id: h5d_engine_aluminum_engine_overheat_v1
+  claim_key: h5d_engine_aluminum_engine_overheat
+  version: 1
+  is_current: true
+  title: Aluminum engine overheating risk (H5Dt)
+  title_tr: Alüminyum motor aşırı ısınma riski (H5Dt)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: This engine has an aluminum block that can warp or crack if it overheats.
+    A cooling system failure or poor maintenance can lead to catastrophic engine damage.
+    Buyers should verify the cooling system is in good condition and check maintenance
+    history.
+  rationale_tr: Bu motor, aşırı ısınma durumunda eğilebilen veya çatlayabilen alüminyum
+    bir blok kullanır. Soğutma sistemi arızası veya bakım eksikliği, motorun tamamen
+    hasar görmesine yol açabilir. Alıcılar soğutma sisteminin iyi durumda olduğunu
+    doğrulamalı ve bakım geçmişini kontrol etmelidir.
+  inspection_advice: Check coolant level and condition, look for leaks or oil/coolant
+    mixing, verify cooling fan operation, and review service records for coolant replacement
+    and any overheating-related repairs.
+  inspection_advice_tr: Soğutma sıvısı seviyesini ve durumunu kontrol edin, sızıntı
+    veya yağ/soğutma sıvısı karışımı olup olmadığını inceleyin, fan çalışmasını doğrulayın
+    ve bakım kayıtlarında soğutma sıvısı değişimi ile aşırı ısınma onarımlarını araştırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/h5dt/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"It is also important to monitor the cooling system, aluminum engines
+      do not tolerate overheating."'
+    independent: true
+- id: h5d_engine_chronic_oil_consumption__v1
+  claim_key: h5d_engine_chronic_oil_consumption_
+  version: 1
+  is_current: true
+  title: Chronic oil consumption in select 1.0 TSI production years
+  title_tr: Chronic oil consumption in select 1.0 TSI production years
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Some 1.0 TSI engines, particularly in certain production years, suffer
+    from chronic oil consumption issues. This tends to manifest after 50,000 km, in
+    heavy urban driving conditions, or when maintenance intervals are extended. If
+    left unchecked, this can lead to accelerated internal engine wear.
+  rationale_tr: Some 1.0 TSI engines, particularly in certain production years, suffer
+    from chronic oil consumption issues. This tends to manifest after 50,000 km, in
+    heavy urban driving conditions, or when maintenance intervals are extended. If
+    left unchecked, this can lead to accelerated internal engine wear.
+  inspection_advice: Check the oil level regularly and monitor for excessive oil consumption.
+    Look for blueish smoke from the exhaust, which can indicate oil burning. Verify
+    the engine’s oil consumption history and ensure timely oil top-ups.
+  inspection_advice_tr: Check the oil level regularly and monitor for excessive oil
+    consumption. Look for blueish smoke from the exhaust, which can indicate oil burning.
+    Verify the engine’s oil consumption history and ensure timely oil top-ups.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.arabalar.com.tr/test/volkswagen-polo-1-0-tsi-sikayetleri-ve-kronik-sorunlari
+    source_domain: arabalar.com.tr
+    site_or_channel: arabalar.com.tr
+    quote: '"Yağ Eksiltme Sorunu
+
+      ... bazı kullanıcılar, 1.0 TSI motorun belirli üretim yıllarında yağ eksiltme
+      sorunu yaşadığını bildiriyor. Bu genellikle:
+
+      - Araç 50.000 km’yi geçtiğinde
+
+      - Yoğun şehir içi kullanımda
+
+      - Bakım aralıkları uzun tutulduğunda ortaya çıkıyor"'
+    independent: true
+  applies_when:
+    min_mileage_km: 50000
+- id: h5d_engine_excessive_vibration_due__v1
+  claim_key: h5d_engine_excessive_vibration_due_
+  version: 1
+  is_current: true
+  title: Excessive vibration due to 3-cylinder engine design
+  title_tr: Excessive vibration due to 3-cylinder engine design
+  kind: known_issue
+  domain: engine
+  severity: low
+  confidence: 0.6
+  rationale: The 1.0 TSI engine’s 3-cylinder configuration inherently produces more
+    vibration, which can become problematic if excessive—potentially indicating engine
+    mounting or balance issues.
+  rationale_tr: The 1.0 TSI engine’s 3-cylinder configuration inherently produces
+    more vibration, which can become problematic if excessive—potentially indicating
+    engine mounting or balance issues.
+  inspection_advice: Assess vibration levels during idle and acceleration. Excessive
+    shaking may indicate motor mounts or engine balance issues.
+  inspection_advice_tr: Assess vibration levels during idle and acceleration. Excessive
+    shaking may indicate motor mounts or engine balance issues.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.tgrthaber.com/otomobil/volkswagen-10-motor-kullananlar-dikkat-bu-sorunlar-uykunuzu-kacirabilir-3220710
+    source_domain: tgrthaber.com
+    site_or_channel: tgrthaber.com
+    quote: '"3 silindirli motor yapısı gereği daha fazla titreşim üretir. Genelde
+      rahatsız edici olmasa da, fazla titreşim motor takozu sorununa işaret olabilir."'
+    independent: true
+- id: h5d_engine_h5d_1_0_tsi_dry_timing_b_v1
+  claim_key: h5d_engine_h5d_1_0_tsi_dry_timing_b
+  version: 1
+  is_current: true
+  title: h5d 1.0 TSI dry timing belt premature wear or tensioner failure
+  title_tr: h5d 1.0 TSI kuru triger kayışı erken aşınma veya gergi arızası
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The dry timing belt in the 1.0 TSI engine can wear out or its tensioner
+    can fail earlier than expected. If it breaks, it can destroy the engine. This
+    is a specific, expensive risk that a buyer cannot see in a routine inspection.
+  rationale_tr: 1.0 TSI motorundaki kuru triger kayışı beklenenden erken aşınabilir
+    veya gergi sistemi arızalanabilir. Kopması durumunda motoru harap edebilir. Bu,
+    rutin bir muayenede görülemeyecek spesifik ve pahalı bir risktir.
+  inspection_advice: Check service records for timing belt replacement per manufacturer
+    intervals. Listen for rattling or whining noises from the engine, especially at
+    idle. Look for any stored fault codes related to camshaft or crankshaft correlation
+    (e.g., P0016).
+  inspection_advice_tr: Servis kayıtlarında triger kayışının üretici aralıklarına
+    göre değiştirilip değiştirilmediğini kontrol edin. Özellikle rölantide motordan
+    gelen tıkırtı veya vınlama seslerini dinleyin. Eksantrik veya krank mili senkronizasyonu
+    ile ilgili hata kodları (örn. P0016) olup olmadığına bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.tgrthaber.com/otomobil/volkswagen-10-motor-kullananlar-dikkat-bu-sorunlar-uykunuzu-kacirabilir-3220710
+    source_domain: tgrthaber.com
+    site_or_channel: tgrthaber.com
+    quote: '"Kuru tip triger kayışı sessiz ve ekonomik ama zamanında değişmezse motorun
+      içini darmadağın edebilir. Bazı serilerde kayışın erken aşındığı ya da gergi
+      sisteminde sorun çıktığı da raporlandı."'
+    independent: true
+- id: h5d_engine_ratchet_wear_binding_in__v1
+  claim_key: h5d_engine_ratchet_wear_binding_in_
+  version: 1
+  is_current: true
+  title: Ratchet wear/binding in mechanical timing chain tensioners
+  title_tr: Ratchet wear/binding in mechanical timing chain tensioners
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Dirt or poor lubrication can cause ratchet mechanisms in mechanical tensioners
+    to skip or jam, especially in high-mileage engines, leading to inconsistent chain
+    tension.
+  rationale_tr: Dirt or poor lubrication can cause ratchet mechanisms in mechanical
+    tensioners to skip or jam, especially in high-mileage engines, leading to inconsistent
+    chain tension.
+  inspection_advice: Listen for irregular rattling or noise; inspect ratchet mechanism
+    for wear or debris if removed.
+  inspection_advice_tr: Listen for irregular rattling or noise; inspect ratchet mechanism
+    for wear or debris if removed.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodiagly.com/engine/causes-of-timing-chain-tensioner-failure/
+    source_domain: autodiagly.com
+    site_or_channel: autodiagly.com
+    quote: '"Ratchet wear or binding: Dirt or poor lubrication can cause the ratchet
+      to skip or jam, especially in high-mileage engines."'
+    independent: true
+- id: h5d_engine_timing_chain_guide_and_r_v1
+  claim_key: h5d_engine_timing_chain_guide_and_r
+  version: 1
+  is_current: true
+  title: Timing chain guide and rail wear/delamination
+  title_tr: Timing chain guide and rail wear/delamination
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Worn or broken nylon guides allow chain slap, increasing dynamic load
+    on the tensioner. Guides can delaminate after 120,000 miles, especially in engines
+    prone to oil sludge, leading to rapid tensioner failure.
+  rationale_tr: Worn or broken nylon guides allow chain slap, increasing dynamic load
+    on the tensioner. Guides can delaminate after 120,000 miles, especially in engines
+    prone to oil sludge, leading to rapid tensioner failure.
+  inspection_advice: Inspect chain guides for delamination, grooving deeper than 1/16
+    inch, or cracks; replace if damaged.
+  inspection_advice_tr: Inspect chain guides for delamination, grooving deeper than
+    1/16 inch, or cracks; replace if damaged.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodiagly.com/engine/causes-of-timing-chain-tensioner-failure/
+    source_domain: autodiagly.com
+    site_or_channel: autodiagly.com
+    quote: '"I’ve seen guides delaminate after 120,000 miles, especially in engines
+      prone to oil sludge. ... If it’s grooved deeper than 1/16 inch, replace it.
+      A cracked or delaminated guide will destroy a new tensioner in months."'
+    independent: true
+  applies_when:
+    min_mileage_km: 120000
+- id: h5d_engine_turbo_failure_in_1_0_tsi_v1
+  claim_key: h5d_engine_turbo_failure_in_1_0_tsi
+  version: 1
+  is_current: true
+  title: Turbo failure in 1.0 TSI 115 hp engine
+  title_tr: 1.0 TSI 115 hp motorda turbo arızası
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.0 TSI engine in its 115 hp version can suffer premature turbocharger
+    wear, especially if oil changes are delayed or the car is driven hard before warming
+    up. Symptoms include whistling noises, power loss, and black smoke. You can't
+    easily spot this in a standard inspection until it's bad, and replacing the turbo
+    is costly.
+  rationale_tr: 1.0 TSI motorun 115 beygir versiyonunda turbo, özellikle yağ değişimi
+    gecikirse veya araç soğukken sert kullanılırsa erken aşınabilir. Belirtiler ıslık
+    sesi, güç kaybı ve siyah dumandır. Standart ekspertizde bu sorunu iyice belirginleşmeden
+    görmek zordur ve turbo değişimi pahalıdır.
+  inspection_advice: Listen for unusual turbo whistling during test drive, check for
+    power loss and black smoke from exhaust. Review service records for regular oil
+    changes with the correct spec. If possible, ask for a turbo boost/vacuum check
+    and scan for DTCs related to turbocharger underboost/overboost.
+  inspection_advice_tr: Test sürüşünde anormal turbo ıslığına dikkat edin, güç kaybı
+    ve egzozdan siyah duman kontrol edin. Servis kayıtlarında doğru spesifikasyonda
+    düzenli yağ değişimi olup olmadığını inceleyin. Mümkünse turbo basıncı/vakum kontrolü
+    yaptırın ve turbocharger underboost/overboost ile ilgili DTC'lere baktırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.tgrthaber.com/otomobil/volkswagen-10-motor-kullananlar-dikkat-bu-sorunlar-uykunuzu-kacirabilir-3220710
+    source_domain: tgrthaber.com
+    site_or_channel: tgrthaber.com
+    quote: '"Turbo, özellikle 115 beygirlik versiyonlarda zorlandığında aşınabiliyor.
+      Motor yağı geç değişirse ya da araç soğukken sert kullanılırsa turbo erken yaşlanıyor.
+      Anormal ıslık sesleri, güç kaybı ve egzozdan siyah duman tehlike işareti."'
+    independent: true
+- id: h5d_transmission_dsg_mechatronic_failures_v1
+  claim_key: h5d_transmission_dsg_mechatronic_failures
+  version: 1
+  is_current: true
+  title: DSG mechatronic failures in automatic transmissions
+  title_tr: DSG mechatronic failures in automatic transmissions
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: Automatic transmissions with DSG (Dual Clutch) systems in 1.0 TSI models
+    may experience mechatronic failures over time, particularly if not maintained
+    properly.
+  rationale_tr: Automatic transmissions with DSG (Dual Clutch) systems in 1.0 TSI
+    models may experience mechatronic failures over time, particularly if not maintained
+    properly.
+  inspection_advice: Check for warning lights related to the transmission, unusual
+    noises, or delayed gear shifts, which may indicate mechatronic or clutch set issues
+    in DSG-equipped vehicles.
+  inspection_advice_tr: Check for warning lights related to the transmission, unusual
+    noises, or delayed gear shifts, which may indicate mechatronic or clutch set issues
+    in DSG-equipped vehicles.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.boschcarservice.com/tr/tr/blog/surucu-rehberi/1-0-tsi-motor-arac-alinir-mi/
+    source_domain: boschcarservice.com
+    site_or_channel: boschcarservice.com
+    quote: Otomatik şanzımanlı araçlarda zamanla debriyaj seti ve mekatronik arızaları
+      görülebilir.
+    independent: true
+legacy_part_ids:
+- h5d_100

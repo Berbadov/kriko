@@ -7,4 +7,586 @@ known_also_as:
 - DW5
 - EDC7
 - 7-speed EDC
-claims: []
+claims:
+- id: dw5_brakes_dw5_rear_brake_caliper_h_v1
+  claim_key: dw5_brakes_dw5_rear_brake_caliper_h
+  version: 1
+  is_current: true
+  title: dw5 rear brake caliper handbrake mechanism seizure
+  title_tr: dw5 arka fren kaliperi el freni mekanizması sıkışması
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.6
+  rationale: On the Mégane II, the rear brake caliper handbrake lever and internal
+    mechanism corrode and seize due to galvanic corrosion and water ingress. This
+    can cause the handbrake to stick, leading to brake drag, uneven wear, and reduced
+    braking performance. It is a well-known defect that can be expensive to repair
+    and poses a safety risk.
+  rationale_tr: Mégane II'de arka fren kaliperi el freni kolu ve iç mekanizması, galvanik
+    korozyon ve su girişi nedeniyle korozyona uğrar ve sıkışır. Bu, el freninin yapışmasına,
+    fren sürtünmesine, düzensiz aşınmaya ve fren performansının düşmesine neden olabilir.
+    Pahalı onarım gerektirebilen ve güvenlik riski oluşturan bilinen bir arızadır.
+  inspection_advice: At the viewing, apply and release the handbrake several times
+    to check for smooth operation and full release. After a short test drive, carefully
+    feel the rear wheels for excessive heat, which indicates brake drag. Have the
+    rear calipers inspected, particularly the handbrake lever and cables, for corrosion
+    or seizure.
+  inspection_advice_tr: Araç incelerken el frenini birkaç kez çekip bırakarak düzgün
+    çalıştığını ve tam serbest kaldığını kontrol edin. Kısa bir test sürüşünden sonra
+    arka tekerlekleri elle yoklayarak aşırı ısınıp ısınmadığını kontrol edin; bu fren
+    sürtünmesini gösterir. Arka kaliperleri, özellikle el freni kolunu ve kablolarını
+    korozyon veya sıkışma açısından inceletin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: On the Mégane II the handbrake actuating lever and mechanism inside the
+      rear brake calipers corrodes and seizes — owners and forum mechanics blame the
+      galvanic coating on the lever and water ingress into the cables and piston gaiters.
+    independent: true
+- id: dw5_engine_dw5_1_2_tce_oil_consumpt_v1
+  claim_key: dw5_engine_dw5_1_2_tce_oil_consumpt
+  version: 1
+  is_current: true
+  title: dw5 1.2 TCe oil consumption and timing chain stretch
+  title_tr: dw5 1.2 TCe yağ tüketimi ve triger zinciri gevşemesi
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.2 TCe petrol engine used before 2018 can suffer from excessive
+    oil consumption and premature timing chain stretch. If not checked, these issues
+    can lead to serious engine damage and expensive repairs.
+  rationale_tr: 2018 öncesi kullanılan 1.2 TCe benzinli motor aşırı yağ tüketimi ve
+    erken triger zinciri gevşemesi yaşayabilir. Kontrol edilmezse ciddi motor hasarı
+    ve pahalı onarımlara yol açabilir.
+  inspection_advice: Check the oil level and condition, look for blue smoke from the
+    exhaust, and listen for a rattling noise from the timing chain area during a cold
+    start. Verify service history for regular oil changes.
+  inspection_advice_tr: Yağ seviyesini ve durumunu kontrol edin, egzozdan mavi duman
+    gelip gelmediğine bakın ve soğuk çalıştırmada triger zinciri bölgesinden takırtı
+    sesi dinleyin. Düzenli yağ değişimi için servis geçmişini doğrulayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: The 1.2 TCe (H5Ft) gasoline engine used until 2018 can suffer from higher
+      oil consumption or premature timing chain stretch in some cases.
+    independent: true
+  applies_when:
+    applies_year_from: 2018
+    applies_year_to: 2018
+- id: dw5_engine_high_oil_consumption_in__v1
+  claim_key: dw5_engine_high_oil_consumption_in_
+  version: 1
+  is_current: true
+  title: High oil consumption in 1.2 TCe (H5Ft)
+  title_tr: 1.2 TCe (H5Ft) motorunda yüksek yağ tüketimi
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.2 TCe (H5Ft) engine is known for higher-than-expected oil consumption,
+    which can lead to engine damage if oil levels are not maintained. It also has
+    a reported issue with premature timing chain stretch, causing noise and potential
+    failure. These are chronic issues specific to this engine.
+  rationale_tr: 1.2 TCe (H5Ft) motorunun normalden yüksek yağ tüketimi yaptığı bilinir;
+    bu, yağ seviyesi kontrol edilmezse motor hasarına yol açabilir. Ayrıca erken zincir
+    gerilmesi sorunu da motor gürültüsüne ve arızaya neden olabilir. Bu sorunlar bu
+    motora özgü kronik problemlerdir.
+  inspection_advice: At viewing, check the oil level (dipstick) and look for oil top-up
+    receipts or service history indicating frequent oil additions. Listen for a rattling
+    noise from the engine on cold start, which may indicate timing chain stretch.
+    Also inspect for oil leaks around the engine.
+  inspection_advice_tr: Görüşmede yağ seviyesini (çubukla) kontrol edin ve sık yağ
+    ekleme kayıtlarını veya servis geçmişini inceleyin. Soğuk çalıştırmada motor bölgesinden
+    gelen zırıltı sesini dinleyin; bu, zincir gerilmesini gösterebilir. Ayrıca motor
+    çevresinde yağ kaçağı olup olmadığını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"The 1.2 TCe (H5Ft) gasoline engine used until 2018 can suffer from **higher
+      oil consumption** or premature timing chain stretch in some cases."'
+    independent: true
+  applies_when:
+    applies_year_from: 2018
+    applies_year_to: 2018
+- id: dw5_engine_timing_chain_stretch_on__v1
+  claim_key: dw5_engine_timing_chain_stretch_on_
+  version: 1
+  is_current: true
+  title: Timing chain stretch on 1.2 TCe H5Ft engine
+  title_tr: 1.2 TCe H5Ft motorunda zincir uzaması
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.2 TCe (H5Ft) petrol engine used until 2018 is known to suffer from
+    premature timing chain stretch. This can cause engine misfires or even complete
+    engine failure if not repaired. Replacing the timing chain is an expensive job,
+    so buyers should be cautious.
+  rationale_tr: 2018'e kadar kullanılan 1.2 TCe (H5Ft) benzinli motor, erken zincir
+    uzaması sorunuyla bilinir. Bu, motor teklemesine ve hatta tamamen arızaya yol
+    açabilir. Zincir değişimi pahalı bir işlemdir, bu yüzden alıcılar dikkatli olmalıdır.
+  inspection_advice: At the viewing, start the engine from cold and listen for a rattling
+    noise from the front of the engine, especially in the first few seconds. Check
+    for any engine warning lights, and look for service records showing a timing chain
+    replacement.
+  inspection_advice_tr: Aracı soğuktan çalıştırın ve motorun ön kısmından, özellikle
+    ilk birkaç saniyede zil sesi gibi bir ses gelip gelmediğini dinleyin. Motor uyarı
+    ışıklarını kontrol edin ve zincir değişimi yapıldığına dair servis kayıtlarını
+    arayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"The 1.2 TCe (H5Ft) gasoline engine used until 2018 can suffer from higher
+      oil consumption or **premature timing chain stretch in some cases**."'
+    independent: true
+  applies_when:
+    applies_year_from: 2018
+    applies_year_to: 2018
+- id: dw5_engine_turbocharger_and_brake_s_v1
+  claim_key: dw5_engine_turbocharger_and_brake_s
+  version: 1
+  is_current: true
+  title: Turbocharger and brake/suspension wear in performance versions (RS, GT)
+  title_tr: Turbocharger and brake/suspension wear in performance versions (RS, GT)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Performance versions (RS, GT) of the Megane IV place additional stress
+    on the turbocharger, brakes, and suspension components, leading to accelerated
+    wear and potential failure.
+  rationale_tr: Performance versions (RS, GT) of the Megane IV place additional stress
+    on the turbocharger, brakes, and suspension components, leading to accelerated
+    wear and potential failure.
+  inspection_advice: Inspect the turbocharger for leaks, unusual noises, or excessive
+    oil consumption. Check brake pads, rotors, and calipers for wear. Test the suspension
+    for uneven handling, clunks, or excessive play in bushings.
+  inspection_advice_tr: Inspect the turbocharger for leaks, unusual noises, or excessive
+    oil consumption. Check brake pads, rotors, and calipers for wear. Test the suspension
+    for uneven handling, clunks, or excessive play in bushings.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"Performance versions (RS, GT) demand extra attention to the **turbocharger,
+      brakes, and suspension condition**."'
+    independent: true
+- id: dw5_fuel_system_edc7_c32_injector_short__v1
+  claim_key: dw5_fuel_system_edc7_c32_injector_short_
+  version: 1
+  is_current: true
+  title: EDC7 C32 injector short disables entire bank
+  title_tr: EDC7 C32 enjektör kısa devresi tüm grubu devre dışı bırakıyor
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: In this diesel injection system, a short circuit in one injector wire
+    can cut power to all injectors on that cylinder block, so the engine suddenly
+    runs on half its cylinders. This is a known design flaw, not something a routine
+    inspection would find, and it can lead to expensive repairs.
+  rationale_tr: Bu dizel enjeksiyon sisteminde, bir enjektör kablosundaki kısa devre,
+    o silindir bloğundaki tüm enjektörlerin gücünü kesebilir ve motor aniden silindirlerin
+    yarısıyla çalışır. Bu bilinen bir tasarım hatasıdır, rutin bir muayenede bulunmaz
+    ve pahalı onarımlara yol açabilir.
+  inspection_advice: Perform an OBD scan for injector circuit codes (e.g., P0261,
+    P0262), check injector wiring harness for chafing or damage, and test-drive to
+    feel for misfires under load.
+  inspection_advice_tr: Enjektör devresi hataları için OBD taraması yapın (örn. P0261,
+    P0262), enjektör kablo demetini sürtünme veya hasar açısından kontrol edin ve
+    yük altında teklemeleri hissetmek için test sürüşü yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://procarmanuals.com/man-edc7-fault-codes-81-to-3736/
+    source_domain: procarmanuals.com
+    site_or_channel: procarmanuals.com
+    quote: Short circuit current circuit in one injector disables all injectors affected
+      block, IE. stops all injection cylinders block 2.
+    independent: true
+- id: dw5_transmission_chronic_oil_misting_arou_v1
+  claim_key: dw5_transmission_chronic_oil_misting_arou
+  version: 1
+  is_current: true
+  title: Chronic oil misting around DW5/EDC7 transmission plastic pan
+  title_tr: DW5/EDC7 şanzıman plastik karterinde kronik yağ buharı sızıntısı
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DW5 dual-clutch transmission has a known issue where oil vapor seeps
+    around its plastic sump pan, causing chronic misting. This is a specific weakness
+    of this gearbox, not a generic problem. Over time it can lead to oil loss and
+    potential transmission damage if ignored.
+  rationale_tr: DW5 çift kavramalı şanzımanda, plastik karter çevresinde yağ buharının
+    sızmasına neden olan bilinen bir sorun vardır. Bu, bu şanzımana özgü bir zayıflıktır,
+    genel bir sorun değildir. Zamanla yağ kaybına ve göz ardı edilirse potansiyel
+    şanzıman hasarına yol açabilir.
+  inspection_advice: At the viewing, park on a clean surface and after a short drive
+    check under the car for oil drips or mist around the gearbox. Examine the plastic
+    pan and surrounding seals for oily residue. If possible, raise the car on a lift
+    and inspect the transmission pan area for fresh oil.
+  inspection_advice_tr: Araç görüşmesinde, düz bir zemine park edin ve kısa bir sürüşten
+    sonra aracın altında şanzıman çevresinde yağ damlası veya buharı olup olmadığını
+    kontrol edin. Plastik karteri ve çevresindeki contaları yağlı kalıntı açısından
+    inceleyin. Mümkünse aracı kaldırıp şanzıman karter alanını taze yağ sızıntısı
+    için kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://avtotachki.com/en/preselektivnyy-robot-renault-dw5/
+    source_domain: avtotachki.com
+    site_or_channel: avtotachki.com
+    quote: Особенностью такой ркпп служат частые запотевания вокруг пластикового поддона
+    independent: true
+- id: dw5_transmission_delayed_engagement_from__v1
+  claim_key: dw5_transmission_delayed_engagement_from_
+  version: 1
+  is_current: true
+  title: Delayed engagement from standstill in dw5 7-speed DCT
+  title_tr: dw5 7-ileri DCT'de dururken gecikmeli kalkış
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The Renault 7-speed DCT (dw5) can hesitate before moving when you press
+    the accelerator from a stop. This is caused by the dry clutch and transmission
+    control module settings, and can make junctions awkward. It may worsen over time
+    and lead to expensive clutch or gearbox repairs.
+  rationale_tr: Renault 7-ileri DCT (dw5), durduğunuzda gaza bastığınızda hareket
+    etmeden önce tereddüt edebilir. Buna kuru debriyaj ve şanzıman kontrol modülü
+    ayarları neden olur ve kavşaklarda zorluk çıkarabilir. Zamanla kötüleşebilir ve
+    pahalı debriyaj veya şanzıman onarımlarına yol açabilir.
+  inspection_advice: During the test drive, repeatedly stop and then accelerate gently
+    from a standstill. Listen for any delay or jerkiness in engagement. Check for
+    a transmission fluid service history, and consider a diagnostic scan for fault
+    codes related to clutch or gearbox actuators.
+  inspection_advice_tr: Test sürüşü sırasında tekrar tekrar durun ve ardından dururken
+    nazikçe hızlanın. Kavramada herhangi bir gecikme veya sarsıntı olup olmadığını
+    dinleyin. Şanzıman yağı servis geçmişini kontrol edin ve debriyaj veya şanzıman
+    aktüatörleriyle ilgili hata kodları için teşhis taraması yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/7-speed-dct-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: 'Slow Launch from Standstill
+
+      Pressing the accelerator may yield a brief delay before the car fully engages
+      forward motion, noticeable in busy junctions.'
+    independent: true
+- id: dw5_transmission_dw5_7_speed_edc_losing_1_v1
+  claim_key: dw5_transmission_dw5_7_speed_edc_losing_1
+  version: 1
+  is_current: true
+  title: dw5 7-speed EDC losing 1st gear
+  title_tr: dw5 7 ileri EDC 1. vites kaybı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The dual-clutch gearbox on the Megane 4 may fail to engage 1st gear,
+    forcing the car to start in 2nd. This indicates a chronic mechatronic or clutch
+    fault that can be expensive to repair, and is specific to this gearbox type.
+  rationale_tr: Megane 4'teki çift kavramalı şanzıman 1. vitese geçmeyebilir ve araç
+    2. viteste kalkar. Bu, kronik bir mekatronik veya kavrama arızasına işaret eder
+    ve bu şanzıman tipine özgüdür.
+  inspection_advice: Test drive from a standstill to confirm 1st gear engages. Look
+    for shuddering, delayed engagement, or warning lights. Consider a diagnostic scan
+    for mechatronic error codes.
+  inspection_advice_tr: Duruştan kalkışta 1. vitesin devreye girdiğini kontrol edin.
+    Sarsıntı, gecikmiş kavrama veya uyarı ışıklarına bakın. Mekatronik hata kodları
+    için bir tanılama taraması yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.youtube.com/watch?v=60_dyQrCdAk
+    source_domain: youtube.com
+    site_or_channel: ENVER USTA
+    quote: Megane 4 7 ileri bu araç büyük ihtimalle araç 2 ile kalkıyor gördüğünüz
+      gibi birinci vitesten yok görüyorsunuz
+    independent: true
+- id: dw5_transmission_dw5_edc_dual_clutch_jerk_v1
+  claim_key: dw5_transmission_dw5_edc_dual_clutch_jerk
+  version: 1
+  is_current: true
+  title: dw5 EDC dual-clutch jerky 1st-to-2nd shifts
+  title_tr: dw5 EDC çift kavramalı şanzımanda 1.-2. vites geçişlerinde sarsıntı
+  kind: known_issue
+  domain: transmission
+  severity: low
+  confidence: 0.6
+  rationale: Early versions of the dw5 EDC dual-clutch transmission can feel jerky
+    when shifting from 1st to 2nd gear. This is a known drivability issue that later
+    software updates mostly fix. A test drive is the best way to check if a specific
+    car is affected.
+  rationale_tr: dw5 EDC çift kavramalı şanzımanın ilk sürümleri 1. vitesten 2. vitese
+    geçerken sarsıntılı olabilir. Bu, sonraki yazılım güncellemeleriyle çoğunlukla
+    düzeltilen bilinen bir sürüş sorunudur. Belirli bir aracın etkilenip etkilenmediğini
+    kontrol etmenin en iyi yolu test sürüşüdür.
+  inspection_advice: Take the car on a city test drive and pay attention to the 1st-to-2nd
+    gear change. Ask the seller about the transmission software update history. If
+    possible, compare with another car of the same model with updated software.
+  inspection_advice_tr: Arabayı şehir içinde test edin ve 1. vites ile 2. vites arasındaki
+    geçişe dikkat edin. Satıcıya şanzıman yazılımı güncelleme geçmişini sorun. Mümkünse,
+    güncel yazılıma sahip aynı model başka bir araçla karşılaştırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: Early EDC dual-clutch transmissions may exhibit jerkiness when shifting
+      from 1st to 2nd gear
+    independent: true
+- id: dw5_transmission_dw5_edc_jerky_1st_2nd_sh_v1
+  claim_key: dw5_transmission_dw5_edc_jerky_1st_2nd_sh
+  version: 1
+  is_current: true
+  title: dw5 EDC jerky 1st-2nd shift
+  title_tr: dw5 EDC 1-2 vites geçişinde sarsıntı
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: Early EDC dual-clutch transmissions (pre-2020) in this model are known
+    to jerk when shifting from 1st to 2nd gear. This is a calibration issue that was
+    improved in later software. Buyers should test this specifically during a test
+    drive.
+  rationale_tr: Bu modeldeki erken EDC çift kavramalı şanzımanlar (2020 öncesi), 1.
+    vitesten 2. vitese geçişte sarsıntı yapmasıyla bilinir. Bu, sonraki yazılımla
+    iyileştirilen bir kalibrasyon sorunudur. Alıcılar test sürüşünde bunu özellikle
+    denemelidir.
+  inspection_advice: During the test drive, do several slow starts from a complete
+    stop, gently accelerating. If a noticeable jerk occurs on the 1-2 upshift, it
+    may indicate the early software or clutch wear. Ask if the transmission software
+    has been updated; a scan tool may show clutch adaptation values or stored codes.
+  inspection_advice_tr: Test sürüşü sırasında tam duruştan birkaç kez yavaş kalkış
+    yapın ve nazikçe hızlanın. 1-2 vites yükseltmede belirgin bir sarsıntı hissedilirse,
+    eski yazılım veya debriyaj aşınması olabilir. Şanzıman yazılımının güncellenip
+    güncellenmediğini sorun; bir tarama aleti debriyaj adaptasyon değerlerini veya
+    kayıtlı hata kodlarını gösterebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"Early EDC dual-clutch transmissions may exhibit **jerkiness when shifting
+      from 1st to 2nd gear**; post-2020 facelift models received improved software
+      that significantly reduced this complaint."'
+    independent: true
+  applies_when:
+    applies_year_from: 2020
+    applies_year_to: 2020
+- id: dw5_transmission_dw5_plastic_oil_pan_seep_v1
+  claim_key: dw5_transmission_dw5_plastic_oil_pan_seep
+  version: 1
+  is_current: true
+  title: DW5 plastic oil pan seepage causing gradual oil loss
+  title_tr: DW5 plastik yağ karteri terlemesi ve yavaş yağ kaybı
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DW5 transmission's plastic oil pan often develops seepage, letting
+    oil escape slowly without leaving puddles. Over time this can drop oil level and
+    risk gearbox damage. You may not see a leak on the ground, so it's easy to miss.
+  rationale_tr: DW5 şanzımanın plastik yağ karterinde zamanla sızıntı oluşabilir;
+    bu, yerde su birikintisi bırakmadan yavaşça yağ kaybına neden olur. Yağ seviyesi
+    düşerek şanzıman hasarı riski oluşturabilir. Yerde sızıntı görünmediği için gözden
+    kaçması kolaydır.
+  inspection_advice: Check underneath for oil residue or weeping around the transmission
+    oil pan. Look for signs of oil smell or low ATF level on the dipstick. If there
+    is any seepage, budget for replacing the pan gasket or the pan.
+  inspection_advice_tr: Şanzıman yağ karteri çevresinde yağ kalıntısı veya terleme
+    olup olmadığını kontrol edin. Yağ seviye çubuğunda düşük ATF seviyesi veya yağ
+    kokusu arayın. Herhangi bir sızıntı varsa, karter contasını veya karteri değiştirmeyi
+    bütçeleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://akppcenter.com/renault/dw5
+    source_domain: akppcenter.com
+    site_or_channel: akppcenter.com
+    quote: Характерны запотевания и подтеки вокруг пластикового поддона — масло уходит
+      незаметно.
+    independent: true
+- id: dw5_transmission_edc_automatic_gearbox_dw_v1
+  claim_key: dw5_transmission_edc_automatic_gearbox_dw
+  version: 1
+  is_current: true
+  title: EDC automatic gearbox (dw5) reliability issues
+  title_tr: EDC otomatik şanzıman (dw5) güvenilirlik sorunları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Owners have reported problems with the EDC automatic gearbox on this
+    model, indicating a chronic transmission issue that could lead to expensive repairs.
+    Buyers should be aware and test drive carefully.
+  rationale_tr: Sahipler bu modelde EDC otomatik şanzımanla ilgili sorunlar bildirdi,
+    bu kronik bir şanzıman sorununa ve pahalı onarımlara yol açabilir. Alıcıların
+    dikkatli olması ve test sürüşü yapması gerekir.
+  inspection_advice: During test drive, check for jerky or hesitant gear changes,
+    unusual noises, clutch judder, and warning lights. Also verify if the gearbox
+    fluid has been changed per schedule if applicable.
+  inspection_advice_tr: Test sürüşü sırasında vites geçişlerinde sarsıntı veya tepkisizlik,
+    olağandışı sesler, debriyaj titremesi ve uyarı lambalarını kontrol edin. Ayrıca
+    şanzıman yağının periyodik değişip değişmediğini doğrulayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.autocar.co.uk/car-review/renault/megane-2016-2022/reliability
+    source_domain: autocar.co.uk
+    site_or_channel: autocar.co.uk
+    quote: Owners have reported problems with the EDC automatic
+    independent: true
+- id: dw5_transmission_edc_dual_clutch_judder_a_v1
+  claim_key: dw5_transmission_edc_dual_clutch_judder_a
+  version: 1
+  is_current: true
+  title: EDC dual-clutch judder and mechatronic failure (Mégane III/IV)
+  title_tr: EDC çift kavramalı titreme ve mekatronik arıza (Mégane III/IV)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The dual-clutch automatic gearbox on this Mégane is known for clutch
+    pack wear causing judder, and mechatronic unit failures that disrupt gear selection.
+    These are expensive to repair and may not be caught by a standard inspection.
+  rationale_tr: Bu Mégane'daki çift kavramalı otomatik şanzıman, debriyaj paketi aşınması
+    nedeniyle titreme ve vites seçimini bozan mekatronik ünite arızalarıyla bilinir.
+    Bunlar pahalı onarımlar gerektirir ve standart bir ekspertizde fark edilmeyebilir.
+  inspection_advice: During a test drive, feel for shudder or jerky shifts when pulling
+    away slowly, and listen for clunks in reverse. Ask if the mechatronic unit or
+    clutch pack has been replaced; check transmission fault codes with a scanner.
+  inspection_advice_tr: Test sürüşü sırasında yavaş kalkışta titreme veya sert vites
+    geçişlerine dikkat edin, geri viteste seslere kulak verin. Mekatronik ünite veya
+    debriyaj paketinin değişip değişmediğini sorun; şanzıman arıza kodlarını tarama
+    cihazıyla kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: EDC Dual-Clutch Gearbox Judder, Clutch Pack Wear and Mechatronic/TCU Failure
+      (Mégane III/IV)
+    independent: true
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: The Getrag-built EDC six- and seven-speed dual-clutch automatics fitted
+      to the Mégane III and IV develop low-speed judder when pulling away, jerky shifts,
+      overheating warnings in stop-start traffic and delayed or clunky reverse engagement.
+    independent: true
+- id: dw5_transmission_edc_dw5_dw6_input_shaft__v1
+  claim_key: dw5_transmission_edc_dw5_dw6_input_shaft_
+  version: 1
+  is_current: true
+  title: EDC DW5/DW6 Input Shaft Seal Failure
+  title_tr: EDC DW5/DW6 Giriş Mili Contası Arızası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The EDC gearbox's input shaft seal is a known weak point; oil leaks can
+    damage the clutch. Replacement includes an updated seal, indicating the original
+    is prone to failure.
+  rationale_tr: EDC şanzımanın giriş mili contası bilinen bir zayıf noktadır; yağ
+    sızıntısı debriyaja zarar verebilir. Değişim, güncellenmiş bir conta içerir, bu
+    da orijinalin arızalanmaya yatkın olduğunu gösterir.
+  inspection_advice: Check under the car for gearbox oil leaks, especially around
+    the bell housing. Ask if the clutch or input shaft seal has been replaced; a replacement
+    with updated seal is a plus.
+  inspection_advice_tr: Aracın altında vites kutusu yağ kaçağı olup olmadığını kontrol
+    edin, özellikle debriyaj muhafazası çevresinde. Debriyaj veya giriş mili contasının
+    değiştirilip değiştirilmediğini sorun; güncellenmiş conta ile değişim bir artıdır.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ecotorqueltd.wixsite.com/ecotorqueltd/renault-edc-dct
+    source_domain: ecotorqueltd.wixsite.com
+    site_or_channel: ecotorqueltd.wixsite.com
+    quote: Clutch Replacement £1295 +VAT *Includes Updated Input Shaft Seal
+    independent: true
+- id: dw5_transmission_expensive_edc_gearbox_re_v1
+  claim_key: dw5_transmission_expensive_edc_gearbox_re
+  version: 1
+  is_current: true
+  title: Expensive EDC gearbox repairs (clutch pack/mechatronics unit)
+  title_tr: Expensive EDC gearbox repairs (clutch pack/mechatronics unit)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Repairs to the EDC gearbox, particularly the clutch pack or mechatronics
+    unit, are costly due to specialized components and labor requirements.
+  rationale_tr: Repairs to the EDC gearbox, particularly the clutch pack or mechatronics
+    unit, are costly due to specialized components and labor requirements.
+  inspection_advice: Check for any history of transmission issues or error codes related
+    to the EDC gearbox. Listen for unusual noises during gear shifts and verify if
+    the vehicle has undergone any transmission repairs.
+  inspection_advice_tr: Check for any history of transmission issues or error codes
+    related to the EDC gearbox. Listen for unusual noises during gear shifts and verify
+    if the vehicle has undergone any transmission repairs.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"Repairs to the EDC gearbox (**clutch pack or mechatronics unit**) can
+      be expensive; diesel-specific components (DPF, AdBlue system) also carry higher
+      replacement costs."'
+    independent: true
+- id: dw5_transmission_shudder_on_1_2_shift_in__v1
+  claim_key: dw5_transmission_shudder_on_1_2_shift_in_
+  version: 1
+  is_current: true
+  title: Shudder on 1-2 shift in dw5 7-speed DCT
+  title_tr: dw5 7 ileri DCT'de 1-2 vites geçişinde sarsıntı
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The 7-speed dual-clutch transmission in Renault models can develop a
+    shudder during the first-to-second gear change, often due to clutch wear or calibration
+    issues. This can lead to expensive transmission repairs if not addressed. Buyers
+    should be aware of this specific failure mode.
+  rationale_tr: Renault modellerindeki 7 ileri çift kavramalı şanzıman, birinci vitesden
+    ikinci vitese geçişte sarsıntı geliştirebilir; bu genellikle debriyaj aşınması
+    veya kalibrasyon sorunlarından kaynaklanır. Bu durum zamanla pahalı şanzıman onarımlarına
+    yol açabilir. Alıcıların bu spesifik arıza modunu bilmesi önemlidir.
+  inspection_advice: During a test drive, repeatedly accelerate from a stop and feel
+    for any shudder or vibration during the 1-2 upshift. Check service history for
+    transmission oil changes and any clutch adaptation procedures.
+  inspection_advice_tr: Test sürüşü sırasında durdukça hızlanın ve 1-2 vites geçişindeki
+    sarsıntıyı veya titreşimi hissedin. Servis geçmişini şanzıman yağı değişimleri
+    ve debriyaj adaptasyon işlemleri açısından kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.asrgearboxrepairs.co.uk/7-speed-dct-renault/
+    source_domain: asrgearboxrepairs.co.uk
+    site_or_channel: asrgearboxrepairs.co.uk
+    quote: Shudder or Shake in 1st–2nd Transition
+    independent: true

@@ -90,6 +90,12 @@ def main(argv=None) -> int:
     p.add_argument("--model", default="", help="feeds: limit to one catalog model key")
     args = p.parse_args(argv)
 
+    # $0 steady-state default (2026-08-03): remediate is import-only unless an
+    # explicit LLM budget is given — coverage gaps get acquired + deterministic
+    # import verdicts; paid research is an explicit opt-in for new parts.
+    if args.command == "remediate" and args.max_usd is None:
+        args.max_usd = 0.0
+
     conn = db.connect(args.db)
     budget = Budget(max_usd=args.max_usd)
 

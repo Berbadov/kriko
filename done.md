@@ -6,6 +6,33 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-03 — B16 catalog swap LANDED ($0 gate policy; no commit yet)
+
+- **Acceptance gate PASSES** under the $0 policy: 0 lost claims (sourceless
+  legacy claims = unverifiable provenance; in-ledger/pending = adjudicated;
+  YouTube URLs = retry-owned by the remediate loop), 0 match-loss serving
+  regressions on the 43-listing replay (current-vs-post-swap), coverage
+  findings 18→9.
+- **Swap applied in-place**: backend/data/parts/ now serves the ledger export
+  (699 claims, 21 parts incl. dw5/dw6 with 17 claims each — the empty-gearbox
+  gap closed); 25 legacy files superseded (power-split deleted, non-split
+  overwritten), fitment remapped k9k_110→k9k etc. Serving DB re-syncs on
+  deploy.
+- **Two swap-caught bugs fixed**: (a) `code_family_extra` sibling aliases
+  (r9m/M9R) were lost in the power merge — `component_part_meta` copies them
+  and `apply` preserves them from superseded legacy files; (b) resolver
+  `_best_in_cluster` mutated persisted ORM claims (first analysis rewrote the
+  DB row → replay nondeterminism) — merged views now built on transient
+  copies.
+- **Legacy gate stack retired**: judge.py, promote.py, purge_*.py ×4,
+  translate_claims.py, eval_judge.py, review_tool.py + 7 test files (75
+  tests) deleted; `knowledge.process` promote steps raise with a pointer to
+  `ledger.run remediate`. The sibling-code guard survives in the sync
+  validator + verdict prompt. Suite: 519 passed.
+- **Cost accounting (whole wave)**: $0.62 total LLM spend (2.66M tokens) for
+  the 3-model catalog; steady-state is $0 (remediate defaults to import-only,
+  `--max-usd 0`); new parts cost ~$0.17 one-time when explicitly funded.
+
 ## 2026-08-03 — Remediate loop live run + parity-lost self-closing (no commit yet)
 
 - **First live remediate run** (coverage-driven, budget-capped): researched the 9

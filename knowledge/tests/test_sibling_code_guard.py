@@ -8,20 +8,14 @@ reached `review` status in backend/data/parts/transmission/dq381.yaml (a
 wet-clutch gearbox that does not have those failure modes) because the
 code-token bypass checks the FULL source text, and a DSG comparison article
 mentions "DQ381" somewhere too. See docs/design_flaws.md Flaw 1.
+
+The guard lives on: sync's part-YAML validator (validate_part_yaml) and the
+ledger verdict prompt both consume it — the promote-pipeline flow tests were
+removed with the judge/promote stack at the B16 swap (2026-08-03).
 """
 
-from unittest.mock import patch
-
-from knowledge.extract import CandidateClaim
-from knowledge.judge import GateResult
 from knowledge.parts.validate_part_yaml import validate_part
-from knowledge.promote import Disposition, promote
-from knowledge.sources.base import Document
 from knowledge.stoplists import mentions_sibling_code, sibling_codes_for
-
-DQ381_VARIANTS = [
-    ("golf7_dq381_r", "Volkswagen Golf 7 DQ381 petrol 1984cc 300hp automatic (dq381) (2017-present)"),
-]
 
 
 def test_sibling_codes_for_dq381_excludes_own_code():
@@ -41,13 +35,15 @@ def test_sibling_codes_for_h5h_includes_h5f():
     # Regression: H5F was missing from the Renault small-engine family, so a
     # claim about the H5F engine could sit undetected in h5h_130.yaml and
     # reach a Clio 5 H5H buyer (found live in production data this session).
-    assert "H5F" in sibling_codes_for("h5h_130")
+    assert "H5F" in sibling_codes_for("h5h")
 
 
 def test_sibling_codes_for_r9m_and_m9r_are_registered_siblings():
     # Regression: R9M/M9R (Renault-Nissan-Mercedes 1.6/2.0 dCi) had no family
     # at all, so R9M/M9R claims mislabeled under h5h_130.yaml went undetected.
-    assert {"M9R", "H5H"} <= sibling_codes_for("r9m_130")
+    # The M9R alias lives in code_family_extra on the merged r9m part — the
+    # B16 swap must preserve it (it was lost once, caught by this test).
+    assert {"M9R", "H5H"} <= sibling_codes_for("r9m")
     assert {"R9M", "H5H"} <= sibling_codes_for("m9r")
 
 
@@ -63,79 +59,6 @@ def test_mentions_sibling_code_ignores_own_code_comention():
 
 def test_mentions_sibling_code_ignores_unrelated_text():
     assert not mentions_sibling_code("Mechatronic unit water ingress corrosion", "dq381")
-
-
-@patch("knowledge.promote.gate_generic", return_value=GateResult(True, "not generic"))
-@patch("knowledge.promote.gate_inspection_value", return_value=GateResult(True, "high value"))
-@patch("knowledge.promote.gate_variant", return_value=GateResult(False, "different transmission"))
-def test_dq200_claim_does_not_bypass_llm_gate_when_filed_as_dq381(_gv, _gi, _gg):
-    # Source page is a DSG comparison article that mentions "DQ381" elsewhere,
-    # but the specific claim is explicitly about the DQ200's dry-clutch design.
-    claim = CandidateClaim(
-        title="DQ200 dry-clutch pressure circuit failure (accumulator/pump)",
-        domain="transmission",
-        severity="high",
-        rationale="The DQ200 dry-clutch DSG suffers from chronic hydraulic pressure "
-                   "issues due to a weak accumulator and pump.",
-        inspection_advice="Check for hesitation or 'neutral-then-thump' take-offs.",
-        quote="The DQ200 is a dry-clutch unit; its weak point is hydraulic pressure.",
-    )
-    doc = Document(
-        text="Comparing VW DSG generations: DQ200, DQ250, and DQ381 all discussed.",
-        url="https://x/dsg-comparison",
-        site_or_channel="site",
-    )
-    results = promote([(claim, doc)], DQ381_VARIANTS, own_part_id="dq381")
-    r = results[0]
-    # gate_variant (mocked to reject) was actually consulted, not bypassed —
-    # confirmed by the HELD disposition despite "DQ381" appearing in doc.text.
-    assert r.disposition == Disposition.HELD
-    assert r.reason == "gate_variant: no variant grounded"
-
-
-@patch("knowledge.promote.gate_generic", return_value=GateResult(True, "not generic"))
-@patch("knowledge.promote.gate_inspection_value", return_value=GateResult(True, "high value"))
-def test_uncontaminated_dq381_claim_still_bypasses_llm(_gi, _gg):
-    # Sanity check: a genuine DQ381 claim with no sibling-code mention still
-    # gets the deterministic bypass (no gate_variant mock needed — if this
-    # fell through to the real LLM call without an API key, it would raise).
-    claim = CandidateClaim(
-        title="DQ381 wet-clutch pack wear",
-        domain="transmission",
-        severity="medium",
-        rationale="DQ381 wet dual-clutch pack wears prematurely under heavy load.",
-        inspection_advice="Check for shudder on takeoff.",
-        quote="DQ381 clutch pack wear reported",
-    )
-    doc = Document(text="DQ381 transmission clutch pack issue", url="https://x/dq381", site_or_channel="site")
-    results = promote([(claim, doc)], DQ381_VARIANTS, own_part_id="dq381")
-    assert results[0].grounded_variant_ids == ["golf7_dq381_r"]
-
-
-@patch("knowledge.promote.gate_generic", return_value=GateResult(True, "not generic"))
-@patch("knowledge.promote.gate_inspection_value", return_value=GateResult(True, "high value"))
-def test_sibling_guard_not_applied_without_own_part_id(_gi, _gg):
-    # The per-model claims pipeline doesn't pass own_part_id (no single part
-    # identity for a whole-model claims file) — guard must no-op, not raise.
-    # Same contaminated-source-page setup as the DQ381 regression test above,
-    # but omitting own_part_id: the deterministic bypass is untouched by the
-    # sibling guard (old behavior), so it grounds without a gate_variant call
-    # (which would raise here — no API key — if it were reached).
-    claim = CandidateClaim(
-        title="DQ200 dry-clutch pressure circuit failure (accumulator/pump)",
-        domain="transmission",
-        severity="medium",
-        rationale="The DQ200 dry-clutch DSG suffers from chronic hydraulic pressure issues.",
-        inspection_advice="Check for hesitation or 'neutral-then-thump' take-offs.",
-        quote="The DQ200 is a dry-clutch unit; its weak point is hydraulic pressure.",
-    )
-    doc = Document(
-        text="Comparing VW DSG generations: DQ200, DQ250, and DQ381 all discussed.",
-        url="https://x/dsg-comparison",
-        site_or_channel="site",
-    )
-    results = promote([(claim, doc)], DQ381_VARIANTS)
-    assert results[0].grounded_variant_ids == ["golf7_dq381_r"]
 
 
 def test_validate_part_flags_sibling_contaminated_claim():

@@ -6,342 +6,442 @@ code_family: vw_dsg_dct
 known_also_as:
 - DQ381
 claims:
-- claim_key: dq381_transmission_dq381_wet-clutch_mec
-  title: DQ381 wet-clutch mechatronic sensor/clutch position faults
+- id: dq381_transmission_clutch_debris_contaminat_v1
+  claim_key: dq381_transmission_clutch_debris_contaminat
+  version: 1
+  is_current: true
+  title: Clutch debris contaminates mechatronics (DQ381)
+  title_tr: Debri debri mekatroniği kirletiyor (DQ381)
   kind: known_issue
   domain: transmission
   severity: high
-  confidence: 0.9
+  confidence: 0.6
+  rationale: The DQ381 transmission uses a single oil circuit, so clutch wear debris
+    can circulate into the mechatronics (control unit). This debris accelerates valve
+    wear, leading to expensive repairs. Frequent oil changes are required to delay
+    or prevent this damage.
+  rationale_tr: DQ381 şanzıman tek bir yağ devresi kullanır, bu nedenle debriyaj aşınma
+    parçacıkları mekatroniğe (kontrol ünitesi) karışabilir. Bu parçacıklar valf aşınmasını
+    hızlandırır ve pahalı onarımlara yol açar. Bu hasarı geciktirmek veya önlemek
+    için sık yağ değişimi gerekir.
+  inspection_advice: Ask for proof of transmission oil changes at recommended intervals;
+    test drive for jerky or delayed shifts; scan for mechatronics fault codes (e.g.,
+    P17xx).
+  inspection_advice_tr: Önerilen aralıklarla şanzıman yağı değişimi yapıldığına dair
+    kanıt isteyin; sarsıntılı veya gecikmeli vites geçişleri için test sürüşü yapın;
+    mekatronik hata kodlarını (örn. P17xx) tarayın.
   status: review
-  promoted_by: pending_human
-  rationale: The DQ381 wet-clutch DSG suffers from clutch position sensor and mechatronic
-    hydraulic control issues, causing subtle hesitation, especially when hot. This
-    can escalate to gear availability restrictions (e.g., 1-3-5-7 only) and requires
-    sensor repair or mechatronic servicing.
-  inspection_advice: Test for subtle hesitation or 'Gearbox malfunction' symptoms,
-    particularly when the vehicle is hot. Check for codes P1735/P1736 and verify clutch
-    position sensor functionality. Road-test the vehicle hot and log clutch position
-    values.
+  promoted_by: ledger
   sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"P1735 / P1736 — Clutch position / hydraulic control faults... Root causes
-      are commonly clutch position sensor or mechatronic hydraulic control issues."'
+  - source_url: https://gearboxlist.com/volkswagen/dq381/
+    source_domain: gearboxlist.com
+    site_or_channel: gearboxlist.com
+    quote: '"Since this transmission has a single oil circuit, clutch wear debris
+      easily enters the mechatronics, leading to very rapid wear of its valves. Change
+      the lubricant as often as possible, as repairs will be expensive."'
     independent: true
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '"P1735 / P1736 — Clutch position / hydraulic control faults... Root causes
-      are commonly clutch position sensor or mechatronic hydraulic control issues."'
-    independent: true
+- id: dq381_transmission_clutch_position_sensor_e_v1
+  claim_key: dq381_transmission_clutch_position_sensor_e
+  version: 1
+  is_current: true
+  title: Clutch position sensor electrical faults in DQ381 gearbox
+  title_tr: DQ381 şanzıman debriyaj konum sensörü elektrik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 automatic gearbox can develop electrical faults in sensors
+    that monitor clutch position. This can cause gear shifting problems and warning
+    lights. It is a known weakness that can lead to costly repairs.
+  rationale_tr: DQ381 otomatik şanzımanda debriyaj konumunu izleyen sensörlerde elektrik
+    arızaları görülebilir. Bu, vites geçiş sorunlarına ve uyarı ışıklarına yol açabilir.
+    Bilinen bir zayıflıktır ve pahalı onarımlara neden olabilir.
+  inspection_advice: At viewing, ask for a diagnostic scan (OBD) to check for DTC
+    codes P0805, P1735, P1736. Also test gear shifts, especially from standstill.
+  inspection_advice_tr: Araç incelenirken OBD taraması yapılmasını isteyin ve P0805,
+    P1735, P1736 kodlarını kontrol edin. Ayrıca vites geçişlerini, özellikle durma
+    anından kalkışı test edin.
+  status: review
+  promoted_by: ledger
+  sources:
   - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
     source_domain: absstuurapparaten.nl
     site_or_channel: absstuurapparaten.nl
-    quote: '"P1735 / P1736 — Clutch position / hydraulic control faults... Root causes
-      are commonly clutch position sensor or mechatronic hydraulic control issues."'
+    quote: 'P0805 Clutch position sensor function incorrect
+
+      - P1735 (10666) Clutch Position Sensor 1, Electrical Fault
+
+      - P1736 (10668) Clutch position sensor 2, electrical fault'
     independent: true
   - source_url: https://www.actronics.co.uk/news/dq380-dsg-gearbox-faults-repair
     source_domain: actronics.co.uk
     site_or_channel: actronics.co.uk
+    quote: 'P1735 00 - Position sensor for clutch 1 electrical malfunction
+
+      P1736 00 - Position sensor for clutch 2 electrical malfunction
+
+      P0805 - Clutch position sensor circuit'
+    independent: true
+- id: dq381_transmission_defective_tcu_in_dq381_d_v1
+  claim_key: dq381_transmission_defective_tcu_in_dq381_d
+  version: 1
+  is_current: true
+  title: Defective TCU in DQ381 DSG causes shifting problems
+  title_tr: DQ381 DSG'de arızalı TCU vites geçiş sorunlarına neden olur
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox has a known issue with its Transmission Control Unit
+    (TCU). This can cause incorrect gear changes, poor performance, and expensive
+    repairs. Unlike generic warnings, this is specific to this gearbox model.
+  rationale_tr: DQ381 şanzımanında Şanzıman Kontrol Ünitesi (TCU) ile ilgili bilinen
+    bir sorun vardır. Bu, hatalı vites geçişlerine, düşük performansa ve pahalı onarımlara
+    neden olabilir. Genel uyarılardan farklı olarak, bu sorun bu şanzıman modeline
+    özgüdür.
+  inspection_advice: Test drive and watch for harsh or delayed shifts. Have a diagnostic
+    scan for TCU fault codes; look for any transmission control unit replacement in
+    service history.
+  inspection_advice_tr: Test sürüşü yapın ve sert veya gecikmiş vites geçişlerine
+    dikkat edin. TCU hata kodları için diagnostik tarama yapın; servis geçmişinde
+    şanzıman kontrol ünitesi değişimi olup olmadığına bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: The failure rate of the DSG DQ381 is often due to a defective TCU (Transmission
+      Control Unit). The design of this gearbox proved to be less successful than
+      that of the previous DSG DQ250 model.
+    independent: true
+- id: dq381_transmission_differential_knocking_no_v1
+  claim_key: dq381_transmission_differential_knocking_no
+  version: 1
+  is_current: true
+  title: Differential knocking noise in DQ381
+  title_tr: DQ381'de diferansiyel vuruntu sesi
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: A chronic defect in the DQ381 transmission's differential causes knocking
+    noises when pulling away or at low speed. This is a specific mechanical issue
+    that may indicate premature wear and costly repairs.
+  rationale_tr: DQ381 şanzımanının diferansiyelindeki kronik bir arıza, kalkışta veya
+    düşük hızda vuruntu sesine neden olur. Bu, erken aşınma ve pahalı onarımlara işaret
+    edebilecek spesifik bir mekanik sorundur.
+  inspection_advice: During a test drive, listen for knocking noises when pulling
+    away from a stop and during low-speed maneuvers, especially under load.
+  inspection_advice_tr: Test sürüşünde, dururken kalkışta ve düşük hızda manevralarda,
+    özellikle yük altında vuruntu sesi dinleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: Knocking noise from differential - especially when driving off
+    independent: true
+- id: dq381_transmission_dq381_clutch_and_mechatr_v1
+  claim_key: dq381_transmission_dq381_clutch_and_mechatr
+  version: 1
+  is_current: true
+  title: DQ381 clutch and mechatronic faults
+  title_tr: DQ381 debriyaj ve mekatronik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 dual-clutch transmission can suffer from clutch control faults
+    and mechatronic unit problems, leading to unpredictable driving behavior or breakdowns.
+    Repairs are costly and may not be caught by a routine pre-purchase inspection.
+  rationale_tr: DQ381 çift kavramalı şanzıman, debriyaj kontrol arızaları ve mekatronik
+    ünite sorunları yaşayabilir; bu da öngörülemeyen sürüş davranışına veya arızalara
+    yol açabilir. Onarımlar pahalıdır ve rutin satış öncesi muayenede tespit edilemeyebilir.
+  inspection_advice: Check fault codes for mechatronic unit (e.g., P17xx), inspect
+    clutch adaptation values, and test drive for jerky shifts, hesitation, or limp
+    mode.
+  inspection_advice_tr: Mekatronik ünite için hata kodlarını kontrol edin (örn. P17xx),
+    debriyaj adaptasyon değerlerini inceleyin ve test sürüşünde sarsıntılı vites geçişleri,
+    tepkisizlik veya acil mod olup olmadığını gözlemleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
+    source_domain: colvoss.com.au
+    site_or_channel: colvoss.com.au
+    quote: '"Some faults are related to the start stop pump some are related to the
+      mechatronic unit."'
+    independent: true
+- id: dq381_transmission_dq381_clutch_k1_overheat_v1
+  claim_key: dq381_transmission_dq381_clutch_k1_overheat
+  version: 1
+  is_current: true
+  title: DQ381 clutch K1 overheating degrades transmission fluid
+  title_tr: DQ381 kavrama K1 aşırı ısınması şanzıman yağını bozar
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381's clutch K1 can overheat, causing the transmission fluid to
+    degrade and produce a burnt smell. This can lead to gearbox failure, a costly
+    repair that a buyer cannot detect from a standard inspection unless the fluid
+    is tested or fault codes are scanned.
+  rationale_tr: DQ381'in K1 kavraması aşırı ısınarak şanzıman yağının bozulmasına
+    ve yanık koku oluşmasına neden olabilir. Bu, standart bir muayenede sıvı test
+    edilmedikçe veya hata kodları taranmadıkça tespit edilemeyen ve maliyetli bir
+    onarım gerektiren şanzıman arızasına yol açabilir.
+  inspection_advice: Ask for transmission service history, check for a burnt smell
+    from the gearbox, and have a diagnostic scan for clutch temperature fault codes.
+    During a test drive, include stop-and-go traffic to see if the gearbox shudders
+    or slips.
+  inspection_advice_tr: Şanzıman servis geçmişini sorun, şanzımandan yanık kokusu
+    gelip gelmediğini kontrol edin ve debriyaj sıcaklık hata kodları için diagnostik
+    tarama yaptırın. Test sürüşünde dur-kalk trafiğe girin; şanzımanda titreme veya
+    kayma olup olmadığına bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '- **High maximum temperature recorded for Clutch K1 – fluid discolouration,
+      burnt smell**'
+    independent: true
+- id: dq381_transmission_dq381_clutch_position_se_v1
+  claim_key: dq381_transmission_dq381_clutch_position_se
+  version: 1
+  is_current: true
+  title: DQ381 clutch position sensor mechatronic failures
+  title_tr: DQ381 debriyaj konum sensörü mekatronik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox has sensors that monitor clutch positions. These sensors
+    can fail, causing rough shifting, gear selection errors, and eventually transmission
+    failure. Replacing the mechatronic unit is expensive.
+  rationale_tr: DQ381 şanzımanında debriyaj konumlarını izleyen sensörler bulunur.
+    Bu sensörler arızalanabilir; bu da sarsıntılı vites geçişlerine, vites seçim hatalarına
+    ve sonunda şanzıman arızasına yol açar. Mekatronik ünitenin değiştirilmesi pahalıdır.
+  inspection_advice: During a test drive, check for jerky shifts or hesitation. Have
+    a diagnostic scan performed to look for fault codes 10666 and 10668 related to
+    clutch position sensors.
+  inspection_advice_tr: Test sürüşü sırasında sarsıntılı vites geçişleri veya tepkisizlik
+    kontrol edin. Debriyaj konum sensörleriyle ilgili 10666 ve 10668 hata kodlarını
+    görmek için diagnostik tarama yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '- **Position sender for clutch 1, electric fault (DFCC 10666)**
+
+      - **Position sender for clutch 2, electric fault (DFCC 10668)**'
+    independent: true
+- id: dq381_transmission_dq381_clutch_sensor_and__v1
+  claim_key: dq381_transmission_dq381_clutch_sensor_and_
+  version: 1
+  is_current: true
+  title: DQ381 clutch sensor and mechatronic faults
+  title_tr: DQ381 debriyaj sensörü ve mekatronik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DQ381 wet-clutch DSG can develop clutch position sensor or mechatronic
+    hydraulic control faults. This causes subtle hesitation, especially when hot,
+    and may restrict gears to 1-3-5-7 only. Repair requires sensor replacement or
+    mechatronic servicing.
+  rationale_tr: DQ381 ıslak debriyajlı DSG'de debriyaj konum sensörü veya mekatronik
+    hidrolik kontrol arızaları gelişebilir. Bu, özellikle sıcakken hafif tereddüt
+    ve yalnızca 1-3-5-7 viteslere sınırlanma gibi sorunlara yol açar. Onarım sensör
+    değişimi veya mekatronik servisi gerektirir.
+  inspection_advice: During a test drive, note any hesitation or jerking when the
+    transmission is hot. Ask the seller for a diagnostic scan; DTCs P1735 or P1736
+    indicate clutch position or hydraulic control faults. If possible, have a transmission
+    specialist check mechatronic function.
+  inspection_advice_tr: Test sürüşünde, şanzıman sıcakken tereddüt veya sarsıntı olup
+    olmadığını gözlemleyin. Satıcıdan diagnostik tarama isteyin; P1735 veya P1736
+    hata kodları debriyaj konumu veya hidrolik kontrol arızasını gösterir. Mümkünse,
+    şanzıman uzmanına mekatronik fonksiyonu kontrol ettirin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
     quote: '"P1735 / P1736 — Clutch position / hydraulic control faults... Root causes
       are commonly clutch position sensor or mechatronic hydraulic control issues."'
     independent: true
-- claim_key: dq381_transmission_dq381/dq500_mechatro
-  title: DQ381/DQ500 mechatronic valve/sticky sensor issues
+- id: dq381_transmission_dq381_clutch_slip_under__v1
+  claim_key: dq381_transmission_dq381_clutch_slip_under_
+  version: 1
+  is_current: true
+  title: DQ381 clutch slip under high torque from overheating
+  title_tr: DQ381 yüksek torkta aşırı ısınmadan debriyaj kayması
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Under hard driving, the DQ381's wet clutches can overheat, causing them
+    to lose grip. This makes the engine revs flare instead of accelerating smoothly,
+    and eventually the transmission may need costly repair. The issue is tied to the
+    specific gearbox code and normal use, so a pre-purchase test drive can help detect
+    it.
+  rationale_tr: Sert sürüş sırasında DQ381'in ıslak debriyajları aşırı ısınabilir
+    ve kavramayı kaybedebilir. Bu, motor devrinin yükselmesine ancak aracın düzgün
+    hızlanmamasına neden olur; sonunda şanzıman pahalı bir onarım gerektirebilir.
+    Sorun belirli şanzıman koduna bağlıdır ve normal kullanımda ortaya çıkabilir,
+    bu yüzden satın alma öncesi test sürüşüyle tespit edilebilir.
+  inspection_advice: Test drive the car and accelerate hard in a higher gear; watch
+    for rev flare without corresponding acceleration. Check the DSG service history
+    for oil and filter changes. Look for fault codes such as P17D8 or other clutch-slip-related
+    codes.
+  inspection_advice_tr: Aracı test sürüşüne çıkarın ve yüksek viteste sert hızlanma
+    yapın; devir yükselmesi ama hızlanmanın olmamasına dikkat edin. DSG bakım geçmişinde
+    yağ ve filtre değişimlerini kontrol edin. P17D8 veya debriyaj kaymasıyla ilgili
+    diğer arıza kodlarını arayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"The most common issue Golf R owners report is overheating under hard
+      driving... clutch slip under high torque loads. The revs flare when accelerating
+      hard, especially in higher gears, even though the car feels like it should be
+      pulling."'
+    independent: true
+- id: dq381_transmission_dq381_clutch_wear_leads__v1
+  claim_key: dq381_transmission_dq381_clutch_wear_leads_
+  version: 1
+  is_current: true
+  title: DQ381 clutch wear leads to costly replacement
+  title_tr: DQ381 kavrama aşınması pahalı değişim gerektirir
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 is a dual-clutch automatic transmission. Its clutch discs wear
+    with mileage, causing juddering and slipping. Replacing them is a major, expensive
+    repair that a standard pre-purchase inspection cannot detect.
+  rationale_tr: DQ381, çift kavramalı otomatik şanzımandır. Debriyaj diskleri kilometreyle
+    aşınır ve titreme ile kaymaya neden olur. Değiştirilmeleri büyük ve pahalı bir
+    onarımdır; standart ekspertiz bunu tespit edemez.
+  inspection_advice: 'Do a test drive: accelerate gently from standstill and watch
+    for shuddering/juddering. If possible, read clutch wear/adaptation values with
+    a diagnostic tool, and check service records for DSG oil changes.'
+  inspection_advice_tr: 'Test sürüşü yapın: dururken yumuşakça hızlanın ve titreme/sarsıntı
+    olup olmadığına bakın. Mümkünse teşhis cihazı ile kavrama aşınma/adaptasyon değerlerini
+    okuyun ve DSG yağı değişim kayıtlarını kontrol edin.'
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: ❌ 💰 Yüksek Onarım Maliyeti → DSG şanzımanların kavrama değişimi pahalı
+      olabilir.
+    independent: true
+- id: dq381_transmission_dq381_delayed_throttle_a_v1
+  claim_key: dq381_transmission_dq381_delayed_throttle_a
+  version: 1
+  is_current: true
+  title: DQ381 delayed throttle and jerky shifts in city traffic
+  title_tr: DQ381 şehir içi gecikmeli gaz tepkisi ve sert vites geçişleri
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
+  rationale: The DQ381 DSG gearbox can delay accelerator response by 2-3 seconds and
+    shift jerkily, especially in city traffic. These symptoms are chronic for this
+    transmission and aren't detectable in a static inspection. They affect driving
+    comfort and could raise safety concerns in traffic.
+  rationale_tr: DQ381 DSG şanzıman, özellikle şehir içi trafikte gaz tepkisini 2-3
+    saniye geciktirebilir ve sert vites geçişleri yapabilir. Bu belirtiler bu şanzıman
+    için kroniktir ve statik bir ekspertizde tespit edilemez. Sürüş konforunu etkiler
+    ve trafikte güvenlik endişesi yaratabilir.
+  inspection_advice: Take a test drive in stop-and-go traffic; monitor throttle response
+    and shift smoothness. Check for any pending fault codes related to mechatronics
+    or clutch adaption.
+  inspection_advice_tr: Durdur-kalk trafikte test sürüşü yapın; gaz tepkisini ve vites
+    geçiş yumuşaklığını gözlemleyin. Mekatronik veya debriyaj adaptasyonu ile ilgili
+    bekleyen hata kodlarını kontrol edin.
   status: review
-  promoted_by: pending_human
-  rationale: Sticky or leaking mechatronic valves and drifting clutch position sensors
-    in DQ381 and DQ500 transmissions cause delayed engagement, leading to driver-perceived
-    indecision, especially in hot traffic. Sensor-level repairs are often viable.
-  inspection_advice: Inspect for delayed engagement or hesitation in hot conditions.
-    Check for codes related to clutch position or hydraulic control. Verify if mechatronic
-    valves or sensors have been serviced or replaced.
+  promoted_by: ledger
   sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"Sticky or leaking valves and drifting clutch position sensors create
-      delayed engagement; the driver feels indecision in hot traffic."'
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: Delayed throttle response - up to 2-3 seconds delay
     independent: true
-- claim_key: dq381_transmission_dq200/dq381_calibrat
-  title: DQ200/DQ381 calibration/software hesitation
-  kind: known_issue
-  domain: transmission
-  severity: low
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Some minor hesitation issues in DSG transmissions can be addressed by
-    software updates, but only if no stored faults are present. Updates refine low-speed
-    clutch control and do not mask failing hardware.
-  inspection_advice: Check for minor hesitation symptoms without stored fault codes.
-    Confirm if software updates have been applied. Ensure no underlying hardware issues
-    exist before attributing hesitation to calibration.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"Some ''slight hesitation'' concerns are addressed by official software
-      updates—but only after a clean scan with no stored faults."'
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: The DSG DQ381 suffers from a number of common faults that affect driving
+      comfort. Problems with the DSG DQ381 DSG usually manifest themselves in jerks
+      when shifting and a delayed response to the accelerator. The complaints occur
+      more often in city traffic.
     independent: true
-- claim_key: dq381_transmission_control_module_malfu
-  title: Control Module Malfunctions (TCU Hardware/Software Failures)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 mechatronic unit suffers from inherent control module malfunctions,
-    affecting the transmission control unit (TCU) both in hardware and software, leading
-    to widespread transmission failures.
-  inspection_advice: Check for persistent fault codes (e.g., P0607) that do not clear
-    after software resets. Look for signs of limp mode activation and verify if the
-    vehicle enters restricted gear availability mode.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: 'Although designed as a refinement of the older DQ250, the DQ381 mechatronic
-      unit has inherited many of the same weak points, including: **Control module
-      malfunctions (hardware/software failures inside the TCU)**.'
-    independent: true
-- claim_key: dq381_transmission_selector_regulation_
-  title: Selector Regulation Errors (Gears 1–4 Unregulated)
+- id: dq381_transmission_dq381_dsg_overheating_tr_v1
+  claim_key: dq381_transmission_dq381_dsg_overheating_tr
+  version: 1
+  is_current: true
+  title: DQ381 DSG overheating triggers emergency mode in cold weather
+  title_tr: Soğuk havalarda DQ381 DSG aşırı ısınması acil modu tetikliyor
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: The DQ381 DSG transmission can enter emergency mode when it overheats,
+    especially in cold weather. This can lead to reduced functionality and potential
+    damage if ignored. It's a known weakness of this specific gearbox.
+  rationale_tr: DQ381 DSG şanzıman, özellikle soğuk havalarda aşırı ısındığında acil
+    moda geçebilir. Bu, işlevselliğin azalmasına ve ihmal edilirse potansiyel hasara
+    yol açabilir. Bu belirli şanzımanın bilinen bir zayıflığıdır.
+  inspection_advice: Check transmission DTCs for overheating or emergency-mode codes.
+    Test drive and monitor gearbox behavior, especially during warm-up. Ensure transmission
+    fluid is at proper level and condition.
+  inspection_advice_tr: Şanzıman DTC'lerini aşırı ısınma veya acil mod kodları açısından
+    kontrol edin. Özellikle ısınma sırasında test sürüşü yapın ve şanzıman davranışını
+    izleyin. Şanzıman yağının seviyesinin ve durumunun uygun olduğundan emin olun.
   status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission struggles with regulating gears 1–4, leading to
-    erratic gear selection and potential loss of drive.
-  inspection_advice: Check for fault codes P176A–D (gear selector 1–4 cannot be regulated).
-    Look for symptoms like random limp mode activation or inability to engage lower
-    gears.
+  promoted_by: ledger
   sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **Gear selector 1–4 cannot be regulated (DFCC 10912–10915, 10725–10728)**'
+  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
+    source_domain: volkkarihuolto.fi
+    site_or_channel: volkkarihuolto.fi
+    quote: '"in cold weather the transmission ''goes into emergency'' when heating
+      up."'
     independent: true
-- claim_key: dq381_transmission_speed_sensor_electri
-  title: Speed Sensor Electrical Faults (Input Shaft Sensors 1 & 2)
+- id: dq381_transmission_dq381_electronic_sensor__v1
+  claim_key: dq381_transmission_dq381_electronic_sensor_
+  version: 1
+  is_current: true
+  title: DQ381 electronic sensor degradation causes shifting faults
+  title_tr: DQ381 elektronik sensör bozulması vites geçiş arızalarına neden oluyor
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: The DQ381 transmission uses electronics and sensors that can degrade
+    over time, leading to intermittent faults, hot-running issues, and inconsistent
+    shifting. This is a specific weakness of this gearbox, not a generic problem,
+    and it can lead to costly repairs.
+  rationale_tr: DQ381 şanzıman, zamanla bozulabilen elektronik ve sensörler kullanır;
+    bu da aralıklı arızalara, sıcakken sorunlara ve düzensiz vites geçişlerine yol
+    açar. Bu, bu şanzımanın spesifik bir zayıflığıdır ve pahalı onarımlara neden olabilir.
+  inspection_advice: During a viewing, have the transmission scanned for fault codes.
+    Test drive until hot and check for intermittent shifting issues or faults. Look
+    for any service history related to mechatronics or sensors.
+  inspection_advice_tr: Araç incelerken şanzıman arıza kodlarını okutun. Isınıncaya
+    kadar test sürüşü yapın ve aralıklı vites geçiş sorunlarını veya arızaları kontrol
+    edin. Mekatronik veya sensörlerle ilgili servis geçmişine bakın.
   status: review
-  promoted_by: pending_human
-  rationale: Faulty input shaft speed sensors disrupt transmission control, causing
-    erratic behavior and potential loss of drive.
-  inspection_advice: Scan for fault codes P0715 (speed sensor 1) and P2765 (speed
-    sensor 2). Observe if the vehicle exhibits delayed or erratic gear engagement.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **Transmission input speed sensor 1, electrical fault (DFCC 10753)**
-
-      - **Transmission input speed sensor 2, electrical fault (DFCC 10754)**'
-    independent: true
-- claim_key: dq381_transmission_hydraulic_valve_malf
-  title: Hydraulic Valve Malfunctions
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Electrical malfunctions in transmission valves disrupt hydraulic control,
-    leading to erratic gear shifts and transmission failure.
-  inspection_advice: Scan for fault codes related to valve malfunctions (e.g., P179C,
-    P2716, P174A, P174E, P173E, etc.). Look for symptoms like jerky shifts, delayed
-    engagement, or limp mode activation.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **Main pressure valve, electric fault (DFCC 10907)**
-
-      - **Pressure control valve 4, electric fault (DFCC 10908)**
-
-      - **Valve 3 electrical malfunction in partial transmission 1 (DFCC 10739)**
-
-      - **Valve 3 electrical malfunction in partial transmission 2 (DFCC 10740)**
-
-      - **Valve 1 electrical malfunction in partial transmission 1 (DFCC 10741)**
-
-      - **Valve 1 electrical malfunction in partial transmission 2 (DFCC 10742)**
-
-      - **Valve 2 electrical malfunction in partial transmission 1 (DFCC 10743)**
-
-      - **Valve 2 electrical malfunction in partial transmission 2 (DFCC 10744)**'
-    independent: true
-- claim_key: dq381_transmission_clutch_pack_k1_overh
-  title: Clutch Pack K1 Overheating and Fluid Degradation
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.9
-  status: review
-  promoted_by: pending_human
-  rationale: Overheating of clutch pack K1 causes fluid degradation, leading to burnt
-    smells and potential transmission failure.
-  inspection_advice: Check for burnt smells under the hood, especially after driving.
-    Look for discolored transmission fluid and confirm with a scan for high temperature
-    codes related to clutch K1.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **High maximum temperature recorded for Clutch K1 – fluid discolouration,
-      burnt smell**'
-    independent: true
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '- **High maximum temperature recorded for Clutch K1 – fluid discolouration,
-      burnt smell**'
-    independent: true
-- claim_key: dq381_transmission_clutch_malfunction_(
-  title: Clutch Malfunction (Unintentional Opening/Closing)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Clutch 1 and clutch 2 may open or close unintentionally, causing erratic
-    gear engagement and loss of drive.
-  inspection_advice: Scan for fault codes P175D, P176E (clutch opens unintentionally)
-    and P175E, P176F (clutch closes unintentionally). Observe if the vehicle exhibits
-    random gear shifts or loss of drive.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **Clutch 1 opens unintentionally (DFCC 10693)**
-
-      - **Clutch 2 opens unintentionally (DFCC 10694)**
-
-      - **Clutch 1 closes unintentionally (DFCC 10747)**
-
-      - **Clutch 2 closes unintentionally (DFCC 10748)**'
-    independent: true
-- claim_key: dq381_transmission_control_module_impla
-  title: Control Module Implausible Errors
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The transmission control module may report implausible errors, leading
-    to unreliable operation and limp mode activation.
-  inspection_advice: Scan for persistent P0607 codes related to control module implausible
-    errors. Look for limp mode activation and restricted gear availability.
-  sources:
-  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
-    source_domain: eco-torque.co.uk
-    site_or_channel: eco-torque.co.uk
-    quote: '- **Control module implausible (DFCC 10658, 10660, 10662, 10664)**'
-    independent: true
-- claim_key: dq381_transmission_inadequate_factory_t
-  title: Inadequate factory transmission cooler for DQ381 in hot climates
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission in the Golf R Mk7.5 lacks sufficient cooling capacity
-    for Australian conditions, leading to overheating even in stock form. This is
-    exacerbated by sustained hard driving and high ambient temperatures.
-  inspection_advice: Check for signs of overheating (e.g., limp mode, warning lights)
-    during spirited driving. Inspect the transmission cooler for adequate sizing and
-    condition, and verify if any aftermarket upgrades have been installed.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"The factory transmission cooler is barely adequate for Australian summers,
-      let alone tuned cars."'
-    independent: true
-- claim_key: dq381_transmission_mechatronic_unit_fai
-  title: Mechatronic unit failure due to heat stress
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.9
-  status: review
-  promoted_by: pending_human
-  rationale: The mechatronic unit’s solenoids and pressure regulators degrade under
-    repeated overheating, leading to harsh or delayed shifts and unreliable pressure
-    regulation. This is exacerbated by fluid breakdown from excessive heat.
-  inspection_advice: Monitor for harsh or delayed shifts, limp mode activation, and
-    check for fault codes (e.g., P1735/P1736) related to hydraulic control. Inspect
-    the mechatronic unit for signs of wear or failure.
-  sources:
-  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
-    source_domain: brisbanetuning.com.au
-    site_or_channel: brisbanetuning.com.au
-    quote: '"Harsh or delayed shifts... This is usually linked to the mechatronic
-      unit struggling with pressure regulation under heat stress."'
-    independent: true
-  - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"Harsh or delayed shifts... This is usually linked to the mechatronic
-      unit struggling with pressure regulation under heat stress."'
-    independent: true
-- claim_key: dq381_transmission_dq381_limp_mode_trig
-  title: DQ381 Limp Mode Triggered by Electronic/Pressure Faults
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission frequently enters limp mode due to electronic
-    or hydraulic pressure faults, severely restricting drivability and power delivery.
-  inspection_advice: Test if the vehicle is stuck in a single gear, exhibits reduced
-    power, or has limited/no manual shifting capability. Look for warning lights on
-    the dashboard.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: 'Another frequent issue is the gearbox entering **limp mode**, often triggered
-      by electronic or pressure-related faults.
-
-      Signs include:
-
-      - Stuck in one gear
-
-      - Reduced power
-
-      - Limited or no manual shifting'
-    independent: true
-- claim_key: dq381_transmission_dq381_electronic_and
-  title: DQ381 Electronic and Sensor Degradation
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 relies on advanced electronics and sensors that degrade over
-    time, causing intermittent faults, inconsistent shifting behavior, and issues
-    appearing when the vehicle is hot.
-  inspection_advice: Monitor for intermittent gearbox faults, erratic shifting behavior,
-    and issues that worsen when the vehicle is hot. Check for error codes related
-    to the transmission control unit (TCU).
+  promoted_by: ledger
   sources:
   - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
     source_domain: thevehiclecheck.co.uk
@@ -357,19 +457,905 @@ claims:
 
       - Inconsistent shifting behaviour'
     independent: true
-- claim_key: dq381_transmission_dq381_wet_clutch_eng
-  title: DQ381 Wet Clutch Engagement Issues
+- id: dq381_transmission_dq381_gear_selection_fai_v1
+  claim_key: dq381_transmission_dq381_gear_selection_fai
+  version: 1
+  is_current: true
+  title: DQ381 gear selection failures in 2017+ models
+  title_tr: 2017+ modellerde DQ381 vites seçim arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 dual-clutch transmission can fail to select gears due to mechatronic
+    unit or start-stop pump issues. This is a known, costly problem not detectable
+    by a standard inspection, making it a high-risk used-car concern.
+  rationale_tr: DQ381 çift kavramalı şanzıman, mekatronik ünite veya start-stop pompası
+    kaynaklı vites seçememe sorunları yaşayabilir. Bu, standart bir ekspertizde tespit
+    edilemeyen, bilinen ve pahalı bir sorundur ve kullanılmış araç için yüksek risk
+    oluşturur.
+  inspection_advice: During test drive, check for hesitation or failure to engage
+    1st, 2nd, or 3rd gear. Scan for DTCs related to mechatronic or start-stop pump
+    faults (e.g., P17xx, P07BF).
+  inspection_advice_tr: Test sürüşünde 1., 2. veya 3. vitese geçişte gecikme veya
+    arıza olup olmadığını kontrol edin. Mekatronik veya start-stop pompası hatalarıyla
+    ilgili DTC'leri (örn. P17xx, P07BF) tarayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
+    source_domain: colvoss.com.au
+    site_or_channel: colvoss.com.au
+    quote: '"Some faults are related to the start stop pump some are related to the
+      mechatronic unit."'
+    independent: true
+- id: dq381_transmission_dq381_gearbox_control_un_v1
+  claim_key: dq381_transmission_dq381_gearbox_control_un
+  version: 1
+  is_current: true
+  title: DQ381 gearbox control unit sensor failures
+  title_tr: DQ381 şanzıman kontrol ünitesi sensör arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The gearbox control unit in DQ381 transmissions has chronic sensor failures
+    causing warning lights and transmission malfunctions. Technical service bulletins
+    and recalls address this, and it can lead to expensive repairs. This is a specific
+    known issue for this gearbox code.
+  rationale_tr: DQ381 şanzımanlarında şanzıman kontrol ünitesi sensörleri kronik arızalar
+    vererek uyarı ışıklarına ve şanzıman arızalarına neden olur. Teknik servis bültenleri
+    ve geri çağırmalar bu sorunu ele alır ve pahalı onarımlara yol açabilir. Bu, bu
+    şanzıman kodu için bilinen spesifik bir sorundur.
+  inspection_advice: Check for error codes in the gearbox control unit (e.g., P17BF,
+    P17C1) and verify if the vehicle has had any TSB/recall work completed. Look for
+    signs of previous mechatronics replacement.
+  inspection_advice_tr: Şanzıman kontrol ünitesindeki hata kodlarını kontrol edin
+    (örn. P17BF, P17C1) ve aracın herhangi bir TSB/geri çağırma işlemi yapılıp yapılmadığını
+    doğrulayın. Önceki mekatronik değişimi belirtilerine bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
+    source_domain: forums.hardwarezone.com.sg
+    site_or_channel: forums.hardwarezone.com.sg
+    quote: '"Two Technical Service Bulletins (TSBs), 2058102/28 and 2072085/5 were
+      created to address these issues. The latest update, published on August 26,
+      2024, categorizes the problem as a component-related deviation in the gearbox
+      control unit."'
+    independent: true
+- id: dq381_transmission_dq381_harsh_cold_start_s_v1
+  claim_key: dq381_transmission_dq381_harsh_cold_start_s
+  version: 1
+  is_current: true
+  title: DQ381 harsh cold-start shifting, mechatronics failure
+  title_tr: DQ381 soğuk çalıştırmada sert vites geçişi, mekatronik arızası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox can shift harshly or with delay until warmed up. Even
+    after software updates, the mechatronics (hydraulic control unit) may need replacement
+    under warranty, which is costly. This is a known weakness specific to this gearbox,
+    not a generic issue.
+  rationale_tr: DQ381 şanzıman, ısınana kadar sert veya gecikmeli vites değiştirebilir.
+    Yazılım güncellemeleri sonrası bile mekatronik (hidrolik kontrol ünitesi) garanti
+    kapsamında değiştirilebilir ve bu pahalıdır. Bu, şanzımana özgü bilinen bir zayıflıktır,
+    genel bir sorun değildir.
+  inspection_advice: During a cold start test drive, check for harsh or delayed gear
+    changes. If possible, scan transmission control module for DTCs like P17xx or
+    mechatronics-related faults. Also check service history for mechatronics replacement
+    or firmware updates.
+  inspection_advice_tr: Soğuk çalıştırma ile test sürüşünde sert veya gecikmeli vites
+    geçişlerini kontrol edin. Mümkünse şanzıman kontrol modülünü P17xx veya mekatronik
+    ile ilgili hata kodları için tarayın. Ayrıca mekatronik değişimi veya yazılım
+    güncellemesi servis geçmişini kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://gearboxlist.com/volkswagen/dq381/
+    source_domain: gearboxlist.com
+    site_or_channel: gearboxlist.com
+    quote: '"In the early years, there were complaints about harsh gear shifting until
+      the transmission warmed up. Often, firmware updates didn’t help, and the owner
+      had to replace the mechatronics under warranty. The shaking also appeared after
+      an oil change, and this was also resolved by replacing the hydraulics."'
+    independent: true
+- id: dq381_transmission_dq381_jerky_low_speed_sh_v1
+  claim_key: dq381_transmission_dq381_jerky_low_speed_sh
+  version: 1
+  is_current: true
+  title: DQ381 jerky low-speed shifts in stop-and-go traffic
+  title_tr: DQ381 düşük hızda ve dur-kalk trafikte sarsıntılı vites geçişleri
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
+  rationale: The DQ381 dual-clutch transmission can develop jerky gear changes at
+    low speeds or in stop-and-go traffic. This is often linked to clutch wear or hydraulic
+    issues within the gearbox, which may worsen over time and lead to costly repairs.
+    Buyers should be aware that this is a known issue for this specific transmission
+    code.
+  rationale_tr: DQ381 çift kavramalı şanzımanda düşük hızlarda veya dur-kalk trafikte
+    sarsıntılı vites geçişleri gelişebilir. Bu genellikle kavrama aşınması veya şanzıman
+    içindeki hidrolik sorunlarla bağlantılıdır ve zamanla kötüleşerek pahalı onarımlara
+    yol açabilir. Alıcılar, bu durumun bu belirli şanzıman kodu için bilinen bir sorun
+    olduğunu bilmelidir.
+  inspection_advice: Take the car on a test drive that includes stop-and-go traffic
+    and low-speed maneuvers. Feel for any jerking or shuddering during gear changes.
+    If possible, scan the transmission control unit for fault codes related to clutch
+    or mechatronics (e.g., P17xx codes). Check service records for regular DSG oil
+    changes.
+  inspection_advice_tr: Aracı dur-kalk trafik ve düşük hız manevraları içeren bir
+    test sürüşüne çıkarın. Vites geçişleri sırasında herhangi bir sarsıntı veya titreme
+    hissedin. Mümkünse, şanzıman kontrol ünitesini kavrama veya mekatronik ile ilgili
+    hata kodlarına (örn. P17xx) karşı tarayın. Düzenli DSG yağı değişimi için servis
+    kayıtlarını kontrol edin.
   status: review
-  promoted_by: pending_human
-  rationale: Despite being a wet-clutch DSG, some DQ381 transmissions exhibit clutch
-    engagement problems, including shuddering, slipping, and hesitation at low speeds.
-  inspection_advice: Test for shuddering when accelerating, slipping between gears,
-    or hesitation at low speeds. Pay attention to unusual noises or vibrations during
-    gear engagement.
+  promoted_by: ledger
+  sources:
+  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: ❌ 🏁 Düşük Hızlarda Sarsıntılı Geçişler → Dur-kalk trafikte zaman zaman
+      hissedilebilir.
+    independent: true
+- id: dq381_transmission_dq381_limp_mode_from_ele_v1
+  claim_key: dq381_transmission_dq381_limp_mode_from_ele
+  version: 1
+  is_current: true
+  title: DQ381 Limp Mode from Electronic or Pressure Faults
+  title_tr: DQ381 Elektronik veya Basınç Arızalarından Limp Modu
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox can suddenly enter limp mode due to electronic or hydraulic
+    pressure faults. This limits the car to one gear, reduces power, and prevents
+    manual shifting. It is a known issue that can occur with age and mileage, leaving
+    the car barely drivable.
+  rationale_tr: DQ381 şanzıman, elektronik veya hidrolik basınç arızaları nedeniyle
+    aniden limp moduna girebilir. Bu, arabayı tek bir vitese kilitler, gücü azaltır
+    ve manuel vites değiştirmeyi engeller. Yaş ve kilometreyle ortaya çıkabilen bilinen
+    bir sorundur ve aracı neredeyse kullanılamaz hale getirir.
+  inspection_advice: During a test drive, check for warning lights and ensure the
+    gearbox shifts smoothly through all gears. Look for any hesitation or jerking.
+    Have an OBD scan done to check for transmission-related fault codes, especially
+    pressure or electronic errors.
+  inspection_advice_tr: Test sürüşü sırasında uyarı ışıklarını kontrol edin ve şanzımanın
+    tüm viteslerde düzgün geçtiğinden emin olun. Tereddüt veya sarsıntı olup olmadığına
+    bakın. Şanzımanla ilgili hata kodlarını, özellikle basınç veya elektronik hataları
+    kontrol etmek için OBD taraması yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: 'Another frequent issue is the gearbox entering **limp mode**, often triggered
+      by electronic or pressure-related faults.
+
+      Signs include:
+
+      - Stuck in one gear
+
+      - Reduced power
+
+      - Limited or no manual shifting'
+    independent: true
+- id: dq381_transmission_dq381_main_pressure_regu_v1
+  claim_key: dq381_transmission_dq381_main_pressure_regu
+  version: 1
+  is_current: true
+  title: DQ381 main pressure regulation failures
+  title_tr: DQ381 ana basınç regülasyon arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 dual-clutch transmission can develop faults in its hydraulic
+    system, especially with the mechatronic unit and start-stop pump. This leads to
+    abnormal pressure readings and can cause rough shifting or even transmission failure.
+    It's a known issue that a buyer can't detect without a diagnostic scan.
+  rationale_tr: DQ381 çift kavramalı şanzımanda, özellikle mekatronik ünite ve start-stop
+    pompası ile ilgili hidrolik sistem arızaları gelişebilir. Bu durum anormal basınç
+    değerlerine ve vites geçişlerinde sertlik veya şanzıman arızasına yol açabilir.
+    Alıcının teşhis taraması olmadan fark edemeyeceği bilinen bir sorundur.
+  inspection_advice: During a viewing, perform a diagnostic scan for DTCs related
+    to main pressure adaptation (e.g., P174E, P174F) and check the mechatronic unit
+    for leaks or faults. A test drive should include paying attention to jerky shifts,
+    especially from standstill.
+  inspection_advice_tr: Araç muayenesinde, ana basınç adaptasyonu ile ilgili DTC'leri
+    (örneğin P174E, P174F) taratın ve mekatronik ünitede sızıntı veya arıza olup olmadığını
+    kontrol edin. Test sürüşünde özellikle duruştan kalkışta sert vites geçişlerine
+    dikkat edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
+    source_domain: colvoss.com.au
+    site_or_channel: colvoss.com.au
+    quote: '"Some faults are related to the start stop pump some are related to the
+      mechatronic unit."'
+    independent: true
+- id: dq381_transmission_dq381_mechanical_failure_v1
+  claim_key: dq381_transmission_dq381_mechanical_failure
+  version: 1
+  is_current: true
+  title: DQ381 mechanical failures at 60-80k km
+  title_tr: DQ381 mekanik arızalar 60-80 bin km'de
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 DSG transmission can suffer serious mechanical failures between
+    60,000 and 80,000 km. This is a known durability problem meaning the gearbox may
+    need expensive repairs at relatively low mileage.
+  rationale_tr: DQ381 DSG şanzıman, 60.000-80.000 km arasında ciddi mekanik arızalarla
+    karşılaşabilir. Bu, düşük kilometrede pahalı onarımlar gerektirebilecek bilinen
+    bir dayanıklılık sorunudur.
+  inspection_advice: Ask for the transmission service history; check for unusual noises,
+    jerking, or hesitation during a test drive. If possible, have a transmission specialist
+    inspect for DQ381-specific fault codes.
+  inspection_advice_tr: Şanzıman bakım geçmişini sorun; test sürüşünde olağandışı
+    sesler, sarsıntı veya tepkisizlik olup olmadığını kontrol edin. Mümkünse, DQ381'e
+    özel arıza kodları için şanzıman uzmanına inceletin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: From the experience with the DSG DQ381 it seems that the first serious
+      problems occur after 60-80 thousand kilometers.
+    independent: true
+  applies_when:
+    min_mileage_km: 60000
+- id: dq381_transmission_dq381_mechatronic_adapta_v1
+  claim_key: dq381_transmission_dq381_mechatronic_adapta
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic adaptation failures cause erratic shifting
+  title_tr: DQ381 mekatronik adaptasyon arızaları düzensiz vites geçişlerine neden
+    olur
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 is a wet-clutch DSG whose mechatronic control unit can fail
+    to adapt clutch engagement, leading to jerky or unpredictable gear changes. This
+    is a known, costly issue specific to this transmission and is not detectable by
+    a regular inspection.
+  rationale_tr: DQ381, ıslak debriyajlı bir DSG'dir ve mekatronik kontrol ünitesi
+    debriyaj kavramasını adapte edemeyerek sarsıntılı veya öngörülemez vites değişimlerine
+    yol açabilir. Bu, bu şanzımana özgü bilinen ve maliyetli bir sorundur ve normal
+    bir muayene ile tespit edilemez.
+  inspection_advice: Test drive to feel for harsh or delayed shifts. Have a diagnostic
+    scan for mechatronic adaptation error codes (e.g., P17BF) and check transmission
+    service history.
+  inspection_advice_tr: Sert veya gecikmeli vites geçişlerini hissetmek için test
+    sürüşü yapın. Mekatronik adaptasyon hata kodları (örn. P17BF) için teşhis taraması
+    yaptırın ve şanzıman bakım geçmişini kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
+    source_domain: dsgservisi.com
+    site_or_channel: dsgservisi.com
+    quote: 'P17BF: Mekatronik adaptasyon hatası'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_clutch_v1
+  claim_key: dq381_transmission_dq381_mechatronic_clutch
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic clutch position sensor circuit fault
+  title_tr: DQ381 mekatronik debriyaj konum sensörü devre arızası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox has a known problem with the clutch position sensor
+    inside its mechatronic unit. This can cause jerky or unreliable gear changes and
+    may require expensive mechatronic repair.
+  rationale_tr: DQ381 şanzımanında mekatronik ünite içindeki debriyaj konum sensörü
+    bilinen bir sorundur. Bu, sarsıntılı veya güvenilmez vites değişimlerine neden
+    olabilir ve pahalı mekatronik onarımı gerektirebilir.
+  inspection_advice: At viewing, test all gears including reverse, listen for hesitation
+    or jerky shifts. A diagnostic scan can check for codes P1735/P1736 related to
+    the clutch position sensor.
+  inspection_advice_tr: Araç incelenirken tüm vitesleri ve geri vitesi test edin,
+    tereddüt veya sarsıntılı geçişleri dinleyin. Diagnostik tarama, debriyaj konum
+    sensörü ile ilgili P1735/P1736 kodlarını kontrol edebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: '"Clutch position sensor circuit fault — commonly stored on DQ381 mechatronic
+      failure alongside P1735 and P1736."'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_contro_v1
+  claim_key: dq381_transmission_dq381_mechatronic_contro
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic control module failures
+  title_tr: DQ381 mekatronik kontrol ünitesi arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox's mechatronic unit, which controls gear shifts, can
+    fail due to internal hardware or software faults. This leads to transmission malfunctions,
+    warning lights, and potentially expensive repairs. Standard inspection will not
+    catch internal electronic faults, so a diagnostic scan is the only way to check.
+  rationale_tr: DQ381 şanzımanın vites değişimlerini kontrol eden mekatronik ünitesi,
+    dahili donanım veya yazılım arızaları nedeniyle bozulabilir. Bu, şanzıman arızalarına,
+    uyarı lambalarına ve potansiyel olarak pahalı onarımlara yol açar. Standart muayene
+    dahili elektronik arızaları yakalayamaz, bu yüzden tek kontrol yolu teşhis taramasıdır.
+  inspection_advice: At viewing, perform a diagnostic scan for fault codes (e.g.,
+    P17xx series related to mechatronic). Test drive and observe for harsh shifts,
+    delayed engagement, or limp mode. Check for any gearbox warning lights. If possible,
+    have a specialist inspect the mechatronic unit.
+  inspection_advice_tr: Görüşmede, arıza kodları için teşhis taraması yapın (örn.
+    mekatronikle ilgili P17xx serisi). Test sürüşü yapın ve sert vites geçişleri,
+    gecikmiş kavrama veya güvenli mod belirtilerini gözlemleyin. Şanzıman uyarı lambalarını
+    kontrol edin. Mümkünse, bir uzmana mekatronik üniteyi inceletin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: 'Although designed as a refinement of the older DQ250, the DQ381 mechatronic
+      unit has inherited many of the same weak points, including: **Control module
+      malfunctions (hardware/software failures inside the TCU)**.'
+    independent: true
+  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: '"Transmission control module — internal hardware fault. Indicates mechatronic
+      circuit board failure."'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_gear_s_v1
+  claim_key: dq381_transmission_dq381_mechatronic_gear_s
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic gear selector regulation failure
+  title_tr: DQ381 mekatronik vites seçici regülasyon arızası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 automatic gearbox's mechatronic unit can fail to regulate gears
+    1–4, leading to erratic shifting or loss of drive. This is a known issue specific
+    to this gearbox, not a generic car problem.
+  rationale_tr: DQ381 otomatik şanzımanın mekatronik ünitesi 1-4 vitesleri düzenleyemeyebilir;
+    bu, düzensiz vites geçişlerine veya sürüş kaybına yol açabilir. Bu, bu şanzımana
+    özgü bilinen bir sorundur.
+  inspection_advice: Test drive in stop-and-go traffic and check for jerky shifts
+    in lower gears. Ask for a transmission diagnostic scan to check for mechatronic
+    fault codes.
+  inspection_advice_tr: Duraklı trafikte test sürüşü yapın ve düşük viteslerde sert
+    geçiş olup olmadığını kontrol edin. Mekatronik hata kodları için şanzıman diagnostik
+    taraması isteyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '- **Gear selector 1–4 cannot be regulated (DFCC 10912–10915, 10725–10728)**'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_loses__v1
+  claim_key: dq381_transmission_dq381_mechatronic_loses_
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic loses drive after battery disconnect
+  title_tr: DQ381 mekatronik akü bağlantısı kesilince sürüş kaybı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox's mechatronic unit can fail to restore drive after
+    the battery is disconnected or replaced. This can leave the car unable to move
+    until repaired, an expensive job.
+  rationale_tr: DQ381 şanzımanının mekatronik ünitesi, akü bağlantısı kesildiğinde
+    veya değiştirildiğinde sürüşü geri kazanamayabilir. Bu, araç tamir edilene kadar
+    hareket edemez hale gelebilir, pahalı bir işlemdir.
+  inspection_advice: Check the car's service history for mechatronic repairs. If possible,
+    ask about battery changes and whether drive was restored properly. A diagnostic
+    scan may show mechatronic error codes.
+  inspection_advice_tr: Aracın servis geçmişinde mekatronik onarımı olup olmadığını
+    kontrol edin. Mümkünse akü değişimlerini ve sürüşün düzgün geri gelip gelmediğini
+    sorun. Diagnostik tarama, mekatronik hata kodları gösterebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: '"Loss of drive after battery replacement or disconnect"'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_unit_f_v1
+  claim_key: dq381_transmission_dq381_mechatronic_unit_f
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic unit failure causing shift problems
+  title_tr: DQ381 mekatronik ünitesi arızası vites sorunlarına yol açıyor
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The mechatronic unit in the DQ381 transmission manages gear shifts and
+    clutch control. When it fails, you may experience harsh or delayed gear changes,
+    loss of gears, or warning lights. This is a costly repair that would not show
+    up in a basic pre-purchase inspection.
+  rationale_tr: DQ381 şanzımandaki mekatronik ünite vites geçişlerini ve debriyaj
+    kontrolünü yönetir. Arızalandığında sert veya gecikmeli vites değişimleri, vites
+    kaybı veya uyarı ışıkları yaşayabilirsiniz. Bu, pahalı bir onarım olup temel satın
+    alma öncesi kontrolde ortaya çıkmaz.
+  inspection_advice: Have the transmission control unit scanned for fault codes (e.g.,
+    P17xx series). Test drive and check for harsh or delayed shifts, hesitation when
+    selecting D or R, and any warning messages.
+  inspection_advice_tr: Şanzıman kontrol ünitesini arıza kodlarına (örn. P17xx serisi)
+    taratın. Test sürüşü yapıp sert veya gecikmeli vites geçişlerini, D veya R seçiminde
+    tereddütü ve uyarı mesajlarını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: 'One of the most common issues reported is **DQ381 mechatronic failure**.
+      The mechatronic unit controls gear changes, clutch operation, and pressure regulation.
+
+      Typical symptoms:
+
+      - Harsh or delayed gear changes
+
+      - Delay when selecting Drive or Reverse
+
+      - Gearbox warning messages
+
+      - Loss of certain gears'
+    independent: true
+- id: dq381_transmission_dq381_mechatronic_unit_i_v1
+  claim_key: dq381_transmission_dq381_mechatronic_unit_i
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic unit internal failures
+  title_tr: DQ381 mekatronik ünitesi iç arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 transmission's mechatronic unit can develop internal faults
+    like solenoid failure and circuit board degradation. This leads to limp mode and
+    expensive repairs, and is known to occur with age and mileage.
+  rationale_tr: DQ381 şanzımanın mekatronik ünitesi, solenoid arızası ve devre kartı
+    bozulması gibi iç sorunlar geliştirebilir. Bu durum acil moda geçişe ve pahalı
+    onarımlara yol açar ve yaş ve kilometreyle ortaya çıkabilir.
+  inspection_advice: Check for fault codes P1735, P1736, P0805 with a diagnostic tool.
+    Test gearbox behavior, especially gear changes and any limp mode activation. Review
+    service history for mechatronic unit maintenance.
+  inspection_advice_tr: Bir teşhis cihazıyla P1735, P1736, P0805 arıza kodlarını kontrol
+    edin. Vites geçişlerini ve acil mod aktivasyonunu test edin. Mekatronik ünite
+    bakımı için servis geçmişini inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: '"The DQ381 is a 7-speed wet dual-clutch automatic gearbox introduced by
+      Volkswagen in 2017... When the mechatronic develops an internal fault the gearbox
+      enters limp mode and stores specific fault codes. The DQ381 mechatronic shares
+      similar failure patterns to the DQ250 and DQ200 — internal solenoid failure,
+      circuit board component degradation and hydraulic contamination over time."'
+    independent: true
+  applies_when:
+    applies_year_from: 2017
+- id: dq381_transmission_dq381_mechatronic_valve__v1
+  claim_key: dq381_transmission_dq381_mechatronic_valve_
+  version: 1
+  is_current: true
+  title: DQ381 mechatronic valve body failures cause shifting issues
+  title_tr: DQ381 mekatronik valf gövdesi arızaları vites sorunlarına yol açar
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 transmission's mechatronic unit (valve body) can fail over
+    time. Symptoms include delayed or jerky gear shifts, and sometimes the transmission
+    enters a failsafe mode. Replacing this part is costly, so it's a key risk to check.
+  rationale_tr: DQ381 şanzımanının mekatronik ünitesi (valf gövdesi) zamanla arızalanabilir.
+    Belirtiler arasında gecikmeli veya sarsıntılı vites değişimleri ve bazen şanzımanın
+    failsafe moduna geçmesi yer alır. Bu parçanın değişimi pahalıdır, bu yüzden kontrol
+    edilmesi önemli bir risktir.
+  inspection_advice: At the viewing, test drive with both cold and warm transmission,
+    noting any hesitation or jerking. Check for transmission control unit error codes
+    (e.g., mechatronic faults). If possible, have a specialist evaluate the gearbox.
+  inspection_advice_tr: Görüşme sırasında hem soğuk hem sıcak şanzımanla test sürüşü
+    yapın, gecikme veya sarsıntı olup olmadığına dikkat edin. Şanzıman kontrol ünitesindeki
+    hata kodlarını kontrol edin (örn. mekatronik arızaları). Mümkünse bir uzmanın
+    şanzımanı değerlendirmesini sağlayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
+    source_domain: teknikotomatiksanziman.com
+    site_or_channel: teknikotomatiksanziman.com
+    quote: ❌ 🔧 Mekatronik ve Kavrama Arızaları → Mekatronik valf gövdesinde zamanla
+      arızalar görülebilir.
+    independent: true
+- id: dq381_transmission_dq381_overheating_from_i_v1
+  claim_key: dq381_transmission_dq381_overheating_from_i
+  version: 1
+  is_current: true
+  title: DQ381 overheating from inadequate factory cooler
+  title_tr: DQ381 fabrika soğutucusu yetersiz, aşırı ısınma
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: In hot climates like Australia, the DQ381 gearbox in the Golf R Mk7.5
+    can overheat even in stock form due to a barely adequate factory cooler. Sustained
+    hard driving makes it worse, risking transmission damage. A buyer should know
+    this is a known weakness.
+  rationale_tr: Avustralya gibi sıcak iklimlerde, Golf R Mk7.5'teki DQ381 şanzıman,
+    yetersiz fabrika soğutucusu nedeniyle stok durumda bile aşırı ısınabilir. Sürekli
+    sert sürüş bunu kötüleştirir ve şanzıman hasarı riski oluşturur. Alıcı bunun bilinen
+    bir zayıflık olduğunu bilmelidir.
+  inspection_advice: Ask if an upgraded transmission cooler has been installed; check
+    the transmission fluid for burnt smell or dark color; scan for transmission temperature-related
+    fault codes.
+  inspection_advice_tr: Yükseltilmiş bir şanzıman soğutucusu takılıp takılmadığını
+    sorun; şanzıman yağının yanık kokusu veya koyu rengi olup olmadığını kontrol edin;
+    şanzıman sıcaklığıyla ilgili hata kodlarını tarayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"The factory transmission cooler is barely adequate for Australian summers,
+      let alone tuned cars."'
+    independent: true
+- id: dq381_transmission_dq381_overheating_under__v1
+  claim_key: dq381_transmission_dq381_overheating_under_
+  version: 1
+  is_current: true
+  title: DQ381 overheating under sustained hard driving
+  title_tr: DQ381 sürekli sert sürüşte aşırı ısınıyor
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox can overheat even when the car is completely stock,
+    especially during sustained hard driving or towing. This can cause the car to
+    go into limp mode or the clutch to slip, leading to expensive repairs. It is a
+    specific weakness of this gearbox code, not something a standard inspection would
+    easily catch.
+  rationale_tr: DQ381 şanzıman, araç tamamen stok bile olsa, özellikle sürekli sert
+    sürüş veya çekme sırasında aşırı ısınabilir. Bu durum aracın emniyet moduna geçmesine
+    veya debriyajın kaymasına neden olarak pahalı onarımlara yol açabilir. Bu, standart
+    bir ekspertizde kolayca fark edilmeyecek, bu şanzıman koduna özgü bir zayıflıktır.
+  inspection_advice: Test drive under heavy acceleration or uphill if possible; check
+    for limp mode or clutch slip. Inspect gearbox oil condition and look for any overheating-related
+    DTCs (e.g., P17xx temperature codes).
+  inspection_advice_tr: Mümkünse ağır hızlanma veya yokuşta test sürüşü yapın; emniyet
+    modu veya debriyaj kayması olup olmadığını kontrol edin. Şanzıman yağı durumunu
+    inceleyin ve aşırı ısınmayla ilgili DTC kodlarına (ör. P17xx sıcaklık kodları)
+    bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"Even on completely stock cars, sustained hard driving in Australian conditions
+      can cause the gearbox to run too hot."'
+    independent: true
+- id: dq381_transmission_dq381_pump_inherits_dq20_v1
+  claim_key: dq381_transmission_dq381_pump_inherits_dq20
+  version: 1
+  is_current: true
+  title: DQ381 pump inherits DQ200 failure risk
+  title_tr: DQ381 pompası DQ200 arıza riskini miras alıyor
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 uses an electric-mechatronic pump similar to the unreliable
+    DQ200 unit for start-stop. This design raises a specific risk of pump failure
+    that can disable the transmission. Regular inspection of pump pressure and operation
+    is advisable.
+  rationale_tr: DQ381, start-stop için güvenilmez DQ200 ünitesine benzer bir elektrikli-mekatronik
+    pompa kullanır. Bu tasarım, şanzımanı devre dışı bırakabilecek pompa arızası riskini
+    artırır. Pompa basıncının ve çalışmasının düzenli olarak kontrol edilmesi önerilir.
+  inspection_advice: At viewing, start engine and listen for abnormal pump whine;
+    check for fault codes related to transmission pump pressure (e.g., P06DA or similar).
+    A diagnostic scan before purchase is recommended.
+  inspection_advice_tr: Araç muayenesinde motoru çalıştırın ve anormal pompa uğultusu
+    dinleyin; şanzıman pompa basıncıyla ilgili hata kodlarını kontrol edin (örn. P06DA
+    veya benzeri). Satın almadan önce teşhis taraması önerilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
+    source_domain: colvoss.com.au
+    site_or_channel: colvoss.com.au
+    quote: '"The pump is made up of a hydraulic gear system powered by an electric
+      motor the design is very similar to the DQ200 mechatronic pump. Yes that is
+      right the unreliable 0AM unit has left its mark."'
+    independent: true
+- id: dq381_transmission_dq381_shift_fork_positio_v1
+  claim_key: dq381_transmission_dq381_shift_fork_positio
+  version: 1
+  is_current: true
+  title: DQ381 shift fork position sensor failures
+  title_tr: DQ381 vites çatalı konum sensörü arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox's mechatronic unit has a known issue with shift fork
+    position sensors, causing incorrect gear reporting. This can lead to transmission
+    faults and expensive repairs.
+  rationale_tr: DQ381 şanzımanının mekatronik ünitesinde vites çatalı konum sensörleriyle
+    ilgili bilinen bir sorun vardır ve bu, yanlış vites bildirimine neden olur. Bu
+    durum şanzıman arızalarına ve pahalı onarımlara yol açabilir.
+  inspection_advice: During test drive, check for delayed or jerky gear changes and
+    warning lights. Have a diagnostic scan for mechatronic fault codes, e.g., shift
+    fork position sensor range/performance faults.
+  inspection_advice_tr: Test sürüşü sırasında gecikmiş veya sarsıntılı vites geçişlerini
+    ve uyarı ışıklarını kontrol edin. Mekatronik arıza kodları için teşhis taraması
+    yaptırın, örn. vites çatalı konum sensörü menzil/performans arızaları.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
+    source_domain: thevehiclecheck.co.uk
+    site_or_channel: thevehiclecheck.co.uk
+    quote: '"Shift fork position sensor fault — gear selection position reporting
+      incorrectly due to mechatronic failure. Shift fork position sensor range fault
+      — sensor values outside of expected range indicating mechatronic internal fault."'
+    independent: true
+- id: dq381_transmission_dq381_shock_on_downshift_v1
+  claim_key: dq381_transmission_dq381_shock_on_downshift
+  version: 1
+  is_current: true
+  title: DQ381 shock on downshift in 2nd/3rd gear
+  title_tr: DQ381 2. ve 3. vitese düşerken sarsıntı
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DQ381 DSG can develop a harsh shock when downshifting to 2nd or 3rd
+    gear. This is a known issue that affects ride comfort and may indicate wear on
+    internal components. It is specific to this gearbox and not a general symptom
+    of all cars.
+  rationale_tr: DQ381 DSG, 2. veya 3. vitese düşerken sert bir sarsıntı geliştirebilir.
+    Bu, sürüş konforunu etkileyen ve iç parçalarda aşınmaya işaret edebilen bilinen
+    bir sorundur. Bu sorun yalnızca bu şanzımana özgüdür ve tüm arabalarda görülen
+    genel bir belirti değildir.
+  inspection_advice: During a test drive, pay attention to downshifts from 3rd to
+    2nd and 2nd to 1st, especially when decelerating. A noticeable jerk or clunk indicates
+    the problem. Also check for any unusual transmission error codes.
+  inspection_advice_tr: Test sürüşü sırasında, özellikle yavaşlarken 3. vitesten 2.
+    vitese ve 2. vitesten 1. vitese geçişlere dikkat edin. Belirgin bir sarsıntı veya
+    tık sesi sorunu gösterir. Ayrıca olağandışı şanzıman hata kodlarını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: Shock when downshifting - occurs mainly in 2nd and 3rd gear
+    independent: true
+- id: dq381_transmission_dq381_shows_reduced_dura_v1
+  claim_key: dq381_transmission_dq381_shows_reduced_dura
+  version: 1
+  is_current: true
+  title: DQ381 shows reduced durability vs DQ250
+  title_tr: DQ381, DQ250'ye göre daha düşük dayanıklılık gösteriyor
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DQ381 automatic gearbox is reported to be less durable than its older
+    sibling, the DQ250. This means it may need expensive repairs sooner, especially
+    as the car gets older. A standard inspection won't predict this.
+  rationale_tr: DQ381 otomatik şanzımanın, eski kardeşi DQ250'den daha az dayanıklı
+    olduğu bildiriliyor. Bu, özellikle araç yaşlandıkça pahalı onarımların daha erken
+    gerekebileceği anlamına gelir. Standart bir muayene bunu öngöremez.
+  inspection_advice: Check service history for DSG oil changes; ask about any mechatronic
+    or clutch repairs. During test drive, feel for jerky shifts or delays.
+  inspection_advice_tr: DSG yağı değişimleri için servis geçmişini kontrol edin; mekatronik
+    veya debriyaj onarımlarını sorun. Test sürüşünde, sert veya gecikmeli vites geçişlerini
+    hissedin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: 'The DSG DQ381 is often compared to its predecessor, the DQ250. The older
+      design is smoother to use and more durable. In daily use, the DQ250 offers more
+      predictable behavior.
+
+
+      The reliability of the DSG DQ381 is rated significantly worse than that of the
+      DQ250.'
+    independent: true
+- id: dq381_transmission_dq381_start_stop_pump_fa_v1
+  claim_key: dq381_transmission_dq381_start_stop_pump_fa
+  version: 1
+  is_current: true
+  title: DQ381 start-stop pump failures
+  title_tr: DQ381 start-stop pompa arızaları
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DQ381 gearbox uses a small pump to maintain pressure during start-stop
+    operation. Failures are appearing on 2017+ cars after warranty, suggesting a design
+    flaw. A failed pump can cause warning lights and expensive transmission repair.
+  rationale_tr: DQ381 şanzıman, start-stop sırasında basıncı korumak için küçük bir
+    pompa kullanır. 2017+ araçlarda garanti sonrası arızalar görülmektedir, bu da
+    bir tasarım hatasına işaret eder. Arızalı pompa uyarı ışıklarına ve pahalı şanzıman
+    onarımına yol açabilir.
+  inspection_advice: At viewing, scan the transmission control unit for pressure-related
+    fault codes, test the start-stop feature, and listen for abnormal noises during
+    engine restart.
+  inspection_advice_tr: Araç incelemesinde şanzıman kontrol ünitesinde basınçla ilgili
+    hata kodlarını taratın, start-stop işlevini test edin ve motor yeniden çalışırken
+    anormal sesleri dinleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
+    source_domain: colvoss.com.au
+    site_or_channel: colvoss.com.au
+    quote: '"We are only just starting to see vehicles with DQ380 failures at the
+      time of writing this post which is due to 2017 build vehicle coming out of manufacturer
+      warranty. Some faults are related to the start stop pump..."'
+    independent: true
+- id: dq381_transmission_dq381_transmission_death_v1
+  claim_key: dq381_transmission_dq381_transmission_death
+  version: 1
+  is_current: true
+  title: DQ381 transmission death flash and shutdown risk
+  title_tr: DQ381 şanzıman ölüm flaşı ve kapanma riski
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox can suffer a 'death flash' where warning lights rapidly
+    flash and the transmission may shut down, due to sensor failures in the control
+    unit. This affects many cars built before 2020 and is a serious reliability risk.
+  rationale_tr: DQ381 şanzımanında, kontrol ünitesindeki sensör arızaları nedeniyle
+    'ölüm flaşı' olarak bilinen durum yaşanabilir; gösterge lambaları hızla yanıp
+    söner ve şanzıman kapanabilir. Bu sorun 2020 öncesi üretilen birçok aracı etkiler
+    ve ciddi bir güvenilirlik riski oluşturur.
+  inspection_advice: During a test drive, watch for rapid flashing warning lights
+    or transmission failure messages. Have a diagnostic scan performed to check for
+    fault codes in the transmission control unit (e.g., sensor failures) and ask for
+    service history showing mechatronic unit replacement.
+  inspection_advice_tr: Test sürüşünde hızlı yanıp sönen uyarı lambalarına veya şanzıman
+    arıza mesajlarına dikkat edin. Şanzıman kontrol ünitesinde hata kodları (ör. sensör
+    arızaları) için bir teşhis taraması yaptırın ve mekatronik ünitenin değiştirildiğini
+    gösteren servis geçmişini sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
+    source_domain: forums.hardwarezone.com.sg
+    site_or_channel: forums.hardwarezone.com.sg
+    quote: '"大众变速箱故障，死亡闪烁，仪表报警" (Translation: ''Volkswagen transmission failure, death
+      flashes, dashboard alerts'')'
+    independent: true
+- id: dq381_transmission_dq381_transmission_fluid_v1
+  claim_key: dq381_transmission_dq381_transmission_fluid
+  version: 1
+  is_current: true
+  title: DQ381 transmission fluid overheating causes mechatronic issues
+  title_tr: DQ381 şanzıman yağı aşırı ısınması mekatronik sorunlara yol açar
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 gearbox can overheat its transmission fluid, especially under
+    high torque or hot driving. Overheated fluid loses viscosity and pressure, which
+    can cause clutch slip, solenoid failures in the mechatronic unit, and eventually
+    limp mode. This is a chronic risk that may not be visible during a standard inspection.
+  rationale_tr: DQ381 şanzımanında, özellikle yüksek tork veya sıcak kullanım koşullarında
+    şanzıman yağı aşırı ısınabilir. Aşırı ısınan yağ viskozitesini ve basınç dengesini
+    kaybeder; bu da kavrama kaymasına, mekatronik ünitede solenoid arızalarına ve
+    nihayetinde emniyet moduna geçilmesine yol açabilir. Bu kronik bir risktir ve
+    standart bir ekspertizde görünmeyebilir.
+  inspection_advice: Ask for service records showing transmission fluid changes; consider
+    testing the mechatronic unit for error codes (e.g., pressure or temperature related
+    codes). During a test drive, feel for clutch slipping or delayed engagement after
+    hard acceleration.
+  inspection_advice_tr: Şanzıman yağı değişimi servis kayıtlarını sorun; mekatronik
+    ünitede hata kodları kontrol edilmesini düşünün (özellikle basınç veya sıcaklık
+    ile ilgili kodlar). Test sürüşünde sert hızlanma sonrası kavrama kayması veya
+    gecikmiş kavrama hissedin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"When fluid overheats, it loses viscosity and pressure stability. This
+      leads to clutch slip, solenoid performance issues in the mechatronic unit, and
+      eventually limp mode."'
+    independent: true
+- id: dq381_transmission_dq381_transmission_senso_v1
+  claim_key: dq381_transmission_dq381_transmission_senso
+  version: 1
+  is_current: true
+  title: DQ381 transmission sensor failure risk
+  title_tr: DQ381 şanzıman sensör arızası riski
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: A large number of DQ381 transmission part numbers are affected by sensor
+    defects, potentially affecting over a million vehicles. This can cause transmission
+    failures that are expensive to repair and not detectable by a routine pre-purchase
+    inspection.
+  rationale_tr: Çok sayıda DQ381 şanzıman parça numarası sensör kusurlarından etkilenmiş
+    olup, potansiyel olarak bir milyondan fazla aracı etkileyebilir. Bu durum, onarımı
+    pahalı olan ve rutin satış öncesi muayenede tespit edilemeyen şanzıman arızalarına
+    yol açabilir.
+  inspection_advice: Check for any transmission warning lights or shifting issues
+    during a test drive. Additionally, look up the vehicle's VIN against the affected
+    DQ381 part number list to see if it is at risk.
+  inspection_advice_tr: Test sürüşü sırasında herhangi bir şanzıman uyarı ışığı veya
+    vites geçiş sorunu olup olmadığını kontrol edin. Ayrıca, aracın VIN numarasını
+    etkilenen DQ381 parça numaraları listesiyle karşılaştırarak risk altında olup
+    olmadığını araştırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
+    source_domain: forums.hardwarezone.com.sg
+    site_or_channel: forums.hardwarezone.com.sg
+    quote: '"16 pages of affected DQ500 part numbers, 18 pages of affected DQ381 part
+      numbers... totalling over 1,200 affected part numbers. If 500 units were manufactured
+      per part number, that would mean at least 600,000 affected transmissions—and
+      likely over a million, considering unknown production volumes."'
+    independent: true
+- id: dq381_transmission_dq381_wet_clutch_shudder_v1
+  claim_key: dq381_transmission_dq381_wet_clutch_shudder
+  version: 1
+  is_current: true
+  title: DQ381 wet clutch shudder and slip at low speeds
+  title_tr: DQ381 ıslak kavrama sarsıntısı ve düşük hızda kayma
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Some DQ381 transmissions develop clutch engagement problems causing shuddering,
+    slipping, and hesitation when pulling away or at low speeds. This is a known issue
+    specific to this gearbox, potentially leading to costly repairs. A test drive
+    may reveal the symptoms, but without awareness a buyer might dismiss them.
+  rationale_tr: Bazı DQ381 şanzımanlarda kavrama angajman sorunları gelişebilir; kalkışta
+    veya düşük hızda sarsıntı, kayma ve tereddüt yaratır. Bu, bu şanzımana özgü bilinen
+    bir sorundur ve pahalı onarımlara yol açabilir. Test sürüşü belirtileri ortaya
+    çıkarabilir, ancak alıcı farkında olmazsa bunları görmezden gelebilir.
+  inspection_advice: During a test drive, perform repeated low-speed starts and stop-and-go
+    maneuvers to feel for shuddering, slipping, or hesitation. Check the service history
+    for DSG oil and filter changes at the recommended intervals.
+  inspection_advice_tr: Test sürüşünde, düşük hızda kalkışlar ve dur-kalk manevraları
+    yaparak sarsıntı, kayma veya tereddüt hissedip hissetmediğinize bakın. Servis
+    geçmişinde DSG yağı ve filtre değişimlerinin önerilen aralıklarda yapılıp yapılmadığını
+    kontrol edin.
+  status: review
+  promoted_by: ledger
   sources:
   - source_url: https://thevehiclecheck.co.uk/blogs/blogs-articles/why-dq381-faults-should-be-checked-early
     source_domain: thevehiclecheck.co.uk
@@ -385,134 +1371,308 @@ claims:
 
       - Hesitation at low speeds'
     independent: true
-- claim_key: dq381_transmission_dq200_(0am)_clutch_p
-  title: DQ200 (0AM) clutch pump reliability issues inherited in DQ381 (0GC)
+- id: dq381_transmission_dq381_wet_dsg_clutch_sli_v1
+  claim_key: dq381_transmission_dq381_wet_dsg_clutch_sli
+  version: 1
+  is_current: true
+  title: DQ381 wet DSG clutch slipping can cause overheating failure
+  title_tr: DQ381 ıslak DSG debriyaj kayması aşırı ısınmaya yol açabilir
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: The DQ381 is a wet dual-clutch gearbox. Dirty oil and design factors
+    can make the clutch slip, which generates heat and eventually triggers emergency
+    mode or failure. This is not something a standard inspection would catch.
+  rationale_tr: DQ381 ıslak çift kavramalı bir şanzımandır. Kirli yağ ve tasarım faktörleri
+    debriyajın kaymasına neden olabilir, bu da ısı üretir ve sonunda acil durum moduna
+    veya arızaya yol açar. Bu, standart bir muayenenin tespit edemeyeceği bir durumdur.
+  inspection_advice: Check for burnt smell from under the hood, especially after driving.
+    During a test drive, feel for hesitation or slipping during gear changes. Verify
+    that the DSG oil has been changed at the recommended intervals; absence of service
+    proof is a risk.
+  inspection_advice_tr: Kaputun altından yanık kokusu gelip gelmediğini kontrol edin,
+    özellikle sürüşten sonra. Test sürüşünde vites geçişleri sırasında tereddüt veya
+    kayma hissedin. DSG yağının önerilen aralıklarda değiştirildiğini doğrulayın;
+    servis kanıtının olmaması risk oluşturur.
   status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission, a redesign of the reliable DQ500, incorporates
-    a compact electric-mechatronic pump (similar to the DQ200's unreliable pump) to
-    support start-stop functionality. This design choice risks propagating the chronic
-    pump failures seen in the DQ200, which was the least reliable of VW's DSG units.
-  inspection_advice: Check for signs of fluid leaks around the transmission pump area,
-    unusual noises during start-stop operation, or error codes related to clutch/pump
-    malfunctions. Verify if the vehicle has undergone start-stop system activation
-    and inspect for overheating or fluid degradation in the transmission fluid.
+  promoted_by: ledger
   sources:
-  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
-    source_domain: colvoss.com.au
-    site_or_channel: colvoss.com.au
-    quote: '"The pump is made up of a hydraulic gear system powered by an electric
-      motor the design is very similar to the DQ200 mechatronic pump. Yes that is
-      right the unreliable 0AM unit has left its mark."'
+  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
+    source_domain: volkkarihuolto.fi
+    site_or_channel: volkkarihuolto.fi
+    quote: '"prolonged clutch slipping and dirty oil ... especially relevant for DQ381.
+      In advanced cases, a burnt smell is noticeable from under the hood, and in cold
+      weather the transmission ''goes into emergency'' when heating up."'
     independent: true
-- claim_key: dq381_transmission_dq381_(0gc)_start-st
-  title: DQ381 (0GC) start-stop pump failures (2017+ models)
+- id: dq381_transmission_dsg_mechatronics_failure_v1
+  claim_key: dq381_transmission_dsg_mechatronics_failure
+  version: 1
+  is_current: true
+  title: DSG mechatronics failure due to oil degradation and infrequent changes
+  title_tr: DSG mechatronics failure due to oil degradation and infrequent changes
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: Old or degraded oil fails to remove heat and clean mechanisms effectively,
+    accelerating wear and failure of the mechatronics and clutches in DSG transmissions.
+  rationale_tr: Old or degraded oil fails to remove heat and clean mechanisms effectively,
+    accelerating wear and failure of the mechatronics and clutches in DSG transmissions.
+  inspection_advice: Verify oil change history and oil quality. Check for error codes
+    related to oil pressure and transmission performance. Look for signs of oil degradation,
+    such as burnt smells or dark, gritty oil.
+  inspection_advice_tr: Verify oil change history and oil quality. Check for error
+    codes related to oil pressure and transmission performance. Look for signs of
+    oil degradation, such as burnt smells or dark, gritty oil.
   status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission's compact start-stop pump, introduced to maintain
-    pressure during start-stop operation, is already exhibiting failures in 2017+
-    models (post-warranty). This suggests a chronic design flaw in the pump assembly,
-    leading to widespread issues.
-  inspection_advice: Look for error codes related to the auxiliary transmission fluid
-    pump (e.g., **P0C29**), unusual transmission fluid temperatures, or leaks near
-    the pump. Test the transmission under start-stop conditions to monitor for pressure
-    drops or erratic clutch engagement.
+  promoted_by: ledger
   sources:
-  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
-    source_domain: colvoss.com.au
-    site_or_channel: colvoss.com.au
-    quote: '"We are only just starting to see vehicles with DQ380 failures at the
-      time of writing this post which is due to 2017 build vehicle coming out of manufacturer
-      warranty. Some faults are related to the start stop pump..."'
+  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
+    source_domain: volkkarihuolto.fi
+    site_or_channel: volkkarihuolto.fi
+    quote: '"old oil removes heat and cleans mechanisms worse ... metal particles
+      are removed from clutches and valves ... practice shows: untimely replacement
+      significantly reduces the service life of clutches and hydraulic block."'
     independent: true
-- claim_key: dq381_transmission_dq381_(0gc)_clutch_m
-  title: DQ381 (0GC) clutch malfunctions (unintentional opening, restriction)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission exhibits chronic clutch control issues, including
-    unintentional clutch opening and functional restrictions, likely due to design
-    flaws in the mechatronic control system or hydraulic pressure regulation inherited
-    from the DQ200.
-  inspection_advice: Check for error codes (**P175D**, **P176E**, **P1898**, **P0810**)
-    related to clutch malfunctions. Test clutch engagement under load and inspect
-    for fluid leaks or contamination in the clutch actuation system.
-  sources:
-  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
-    source_domain: colvoss.com.au
-    site_or_channel: colvoss.com.au
-    quote: '"Some faults are related to the start stop pump some are related to the
-      mechatronic unit."'
-    independent: true
-- claim_key: dq381_transmission_dq381_(0gc)_main_pre
-  title: DQ381 (0GC) main pressure adaptation failures
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission struggles with main pressure regulation, leading
-    to offset limits being exceeded. This suggests a flaw in the hydraulic control
-    system or pump design, causing inconsistent clutch engagement and shifting issues.
-  inspection_advice: 'Monitor for error code **P148A** and check transmission fluid
-    pressure under load. Inspect the pressure control solenoid (error code: **P2716**)
-    and pump assembly for wear or leaks.'
-  sources:
-  - source_url: https://www.colvoss.com.au/blog/2023/10/29/volkswagen-audi-dq381-dual-clutch-transmission-diagnosis-and-repair
-    source_domain: colvoss.com.au
-    site_or_channel: colvoss.com.au
-    quote: '"Some faults are related to the start stop pump some are related to the
-      mechatronic unit."'
-    independent: true
-- claim_key: dq381_transmission_harsh_cold-start_gea
-  title: Harsh cold-start gear shifting (DQ381)
+- id: dq381_transmission_factory_software_calibra_v1
+  claim_key: dq381_transmission_factory_software_calibra
+  version: 1
+  is_current: true
+  title: Factory software calibration exacerbates overheating in tuned cars
+  title_tr: Factory software calibration exacerbates overheating in tuned cars
   kind: known_issue
   domain: transmission
   severity: medium
   confidence: 0.6
+  rationale: The stock DSG software allows controlled clutch slip for smoother shifts,
+    but this generates excess heat in tuned cars. Without upgraded software, the transmission
+    runs hotter than intended, accelerating wear and failure.
+  rationale_tr: The stock DSG software allows controlled clutch slip for smoother
+    shifts, but this generates excess heat in tuned cars. Without upgraded software,
+    the transmission runs hotter than intended, accelerating wear and failure.
+  inspection_advice: Check if the car has been tuned and whether the DSG software
+    has been recalibrated. Look for signs of overheating (e.g., limp mode, warning
+    lights) during spirited driving.
+  inspection_advice_tr: Check if the car has been tuned and whether the DSG software
+    has been recalibrated. Look for signs of overheating (e.g., limp mode, warning
+    lights) during spirited driving.
   status: review
-  promoted_by: pending_human
-  rationale: The transmission exhibits rough, delayed gear engagement until it reaches
-    operating temperature, often requiring mechatronics replacement under warranty
-    even after firmware updates.
-  inspection_advice: Test drive in cold conditions to observe gear shifts. Check for
-    delayed engagement or harsh transitions until the transmission warms up. Verify
-    if the issue persists after a recent oil change.
+  promoted_by: ledger
   sources:
-  - source_url: https://gearboxlist.com/volkswagen/dq381/
-    source_domain: gearboxlist.com
-    site_or_channel: gearboxlist.com
-    quote: '"In the early years, there were complaints about harsh gear shifting until
-      the transmission warmed up. Often, firmware updates didn’t help, and the owner
-      had to replace the mechatronics under warranty. The shaking also appeared after
-      an oil change, and this was also resolved by replacing the hydraulics."'
+  - source_url: https://www.brisbanetuning.com.au/news/dsg-dq381-problems
+    source_domain: brisbanetuning.com.au
+    site_or_channel: brisbanetuning.com.au
+    quote: '"Software calibration also plays a role... Without upgraded software to
+      clamp the clutches more firmly, the transmission runs hotter than necessary."'
     independent: true
-- claim_key: dq381_transmission_pressure_sensor_fail
-  title: Pressure sensor failure (DQ381)
+- id: dq381_transmission_gear_position_sensor_fai_v1
+  claim_key: dq381_transmission_gear_position_sensor_fai
+  version: 1
+  is_current: true
+  title: Gear position sensor failures in DQ381 transmission
+  title_tr: DQ381 şanzımanda vites konum sensörü arızaları
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: The gear position sensor tells the gearbox which gear is engaged. If
+    it fails, the car may shift erratically, display a key warning on the PRND indicator,
+    or refuse to move. This is a known weak point in the DQ381 transmission and repairs
+    can be expensive.
+  rationale_tr: Vites konum sensörü, şanzımana hangi vitesin takılı olduğunu söyler.
+    Arızalanırsa, araç düzensiz vites değiştirebilir, PRND göstergesinde anahtar uyarısı
+    gösterebilir veya hareket etmeyi reddedebilir. Bu, DQ381 şanzımanda bilinen bir
+    zayıf noktadır ve onarımlar pahalı olabilir.
+  inspection_advice: During test drive, watch for flashing PRND or a key/lock symbol.
+    Have a diagnostic scan performed to check for gear position sensor fault codes
+    (e.g., P0706, P0705) and inspect transmission fluid condition.
+  inspection_advice_tr: Test sürüşü sırasında yanıp sönen PRND veya anahtar/kilit
+    sembolüne dikkat edin. Vites konum sensörü arıza kodlarını (örn. P0706, P0705)
+    kontrol etmek için diagnostik tarama yaptırın ve şanzıman yağı durumunu inceletin.
   status: review
-  promoted_by: pending_human
+  promoted_by: ledger
+  sources:
+  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
+    source_domain: dsgservisi.com
+    site_or_channel: dsgservisi.com
+    quote: 'Vites Göstergesinde Anahtar İşareti: PRND göstergesinde anahtar/kilit
+      sembolü, yanıp sönen veya sabit işaret'
+    independent: true
+- id: dq381_transmission_input_shaft_speed_sensor_v1
+  claim_key: dq381_transmission_input_shaft_speed_sensor
+  version: 1
+  is_current: true
+  title: Input shaft speed sensor faults in DQ381 mechatronic
+  title_tr: DQ381 mekatronik giriş mili hız sensörü arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381's mechatronic unit can develop electrical faults in its input
+    shaft speed sensors. These sensors are crucial for gear selection; when they fail,
+    the transmission may behave erratically or lose drive entirely. Repairs typically
+    require mechatronic replacement or rebuild, which is expensive.
+  rationale_tr: DQ381 mekatronik ünitesinde giriş mili hız sensörlerinde elektriksel
+    arızalar oluşabilir. Bu sensörler vites seçimi için kritiktir; arızalandıklarında
+    şanzıman düzensiz davranabilir veya tamamen sürüş kaybı yaşanabilir. Onarım genellikle
+    mekatronik değişimi veya yeniden inşasını gerektirir ve pahalıdır.
+  inspection_advice: During a viewing, ask for a transmission fault code scan; look
+    specifically for DFCC 10753 and DFCC 10754. Test drive to feel for harsh shifts,
+    delayed engagement, or warning lights. If any codes are present, assume mechatronic
+    repair is needed.
+  inspection_advice_tr: Araç incelerken şanzıman arıza kodu taraması isteyin; özellikle
+    DFCC 10753 ve DFCC 10754 kodlarına bakın. Sert vites geçişleri, gecikmeli kavrama
+    veya uyarı ışıkları için test sürüşü yapın. Bu kodlardan herhangi biri varsa,
+    mekatronik onarımı gerektiğini varsayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://eco-torque.co.uk/blogs/news/vw-audi-0gc-dq381-dsg-mechatronic-failures-symptoms-fault-codes-fixes
+    source_domain: eco-torque.co.uk
+    site_or_channel: eco-torque.co.uk
+    quote: '- **Transmission input speed sensor 1, electrical fault (DFCC 10753)**
+
+      - **Transmission input speed sensor 2, electrical fault (DFCC 10754)**'
+    independent: true
+- id: dq381_transmission_mekatronik_kart_ecu_fail_v1
+  claim_key: dq381_transmission_mekatronik_kart_ecu_fail
+  version: 1
+  is_current: true
+  title: Mekatronik Kart (ECU) Failure Leading to Safety Mode Activation
+  title_tr: Mekatronik Kart (ECU) Failure Leading to Safety Mode Activation
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Critical failures in the mekatronik kart (electronic control unit) can
+    cause the transmission to enter safety mode, locking the vehicle in a single gear
+    and preventing further gear shifts. This is often due to hardware or software
+    failures in the ECU.
+  rationale_tr: Critical failures in the mekatronik kart (electronic control unit)
+    can cause the transmission to enter safety mode, locking the vehicle in a single
+    gear and preventing further gear shifts. This is often due to hardware or software
+    failures in the ECU.
+  inspection_advice: Check for sudden locking of the transmission in a single gear,
+    inability to shift gears, and error codes such as **P1701 (mekatronik kontrol
+    ünitesi hatası)**. Verify if the vehicle remains stuck in a single gear without
+    warning.
+  inspection_advice_tr: Check for sudden locking of the transmission in a single gear,
+    inability to shift gears, and error codes such as **P1701 (mekatronik kontrol
+    ünitesi hatası)**. Verify if the vehicle remains stuck in a single gear without
+    warning.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
+    source_domain: dsgservisi.com
+    site_or_channel: dsgservisi.com
+    quote: 'Emniyet Moduna Geçme: Şanzıman kendini koruma moduna alır, araç tek viteste
+      kalır, vites değiştirilemez'
+    independent: true
+- id: dq381_transmission_premature_clutch_flywhee_v1
+  claim_key: dq381_transmission_premature_clutch_flywhee
+  version: 1
+  is_current: true
+  title: Premature clutch/flywheel wear in DQ381 DSG
+  title_tr: DQ381 DSG erken debriyaj ve volan aşınması
+  kind: maintenance
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 DSG7 transmission can suffer premature wear of its clutch assembly
+    and dual-mass flywheel, especially with aggressive driving. Replacing these parts
+    is expensive and may be needed before 100,000 km, though gentle use can extend
+    life to 200,000 km or more.
+  rationale_tr: DQ381 DSG7 şanzıman, özellikle agresif kullanımda debriyaj tertibatı
+    ve çift kütleli volanda erken aşınma sorunu yaşayabilir. Bu parçaların değişimi
+    pahalıdır ve 100.000 km'den önce gerekebilir; ancak nazik kullanım ömrü 200.000
+    km veya üzerine uzatabilir.
+  inspection_advice: During test drive, feel for clutch shudder, slipping, or jerky
+    engagement. Ask for a gearbox diagnostic readout to check clutch wear adaptation
+    values (e.g., VAG 181) if possible.
+  inspection_advice_tr: Test sürüşünde debriyaj titremesi, kayma veya sarsıntılı kavramayı
+    hissedin. Mümkünse şanzıman diyagnostik okumasıyla debriyaj aşınma adaptasyon
+    değerlerini (örn. VAG 181) kontrol ettirin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://gearboxlist.com/volkswagen/dq381/
+    source_domain: gearboxlist.com
+    site_or_channel: gearboxlist.com
+    quote: '"Like all DSGs, the clutch assembly and dual-mass flywheel have a limited
+      lifespan: with aggressive use, replacement may be necessary after up to 100,000
+      km, but dedicated owners can drive up to 200,000 and even 300,000 km without
+      repairs."'
+    independent: true
+  maintenance:
+    interval_km: 100000
+    evidence_keywords:
+    - debriyaj değiş
+    - debriyaj yeni
+    - kavrama değiş
+    - clutch replaced
+    - clutch changed
+    - new clutch
+    - clutch kit
+- id: dq381_transmission_premature_clutch_wear_in_v1
+  claim_key: dq381_transmission_premature_clutch_wear_in
+  version: 1
+  is_current: true
+  title: Premature clutch wear in DQ381 DSG
+  title_tr: DQ381 DSG'de erken debriyaj aşınması
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DQ381 transmission is known to have clutches that wear out earlier
+    than the previous DQ250 unit. This leads to costly clutch replacement, often before
+    expected mileage. A buyer cannot see this from a standard inspection without a
+    test drive or diagnostic scan.
+  rationale_tr: DQ381 şanzımanın debriyajları, önceki DQ250'ye göre daha erken aşınır.
+    Bu durum, beklenen kilometreden önce pahalı debriyaj değişimi gerektirir. Alıcı
+    bunu standart bir muayenede veya test sürüşü/diagnostik tarama olmadan göremez.
+  inspection_advice: 'Test drive: check for clutch judder, slipping, or harsh engagement.
+    Use a diagnostic tool to read clutch wear adaptation values and look for related
+    DTCs (e.g., P17E1, P17E2, P17E3). Ask for service history showing regular DSG
+    oil changes.'
+  inspection_advice_tr: 'Test sürüşü: debriyaj titremesi, kayma veya sert kavrama
+    olup olmadığını kontrol edin. Diagnostik cihazla debriyaj aşınma adaptasyon değerlerini
+    okuyun ve ilgili DTC''leri (ör. P17E1, P17E2, P17E3) kontrol edin. Düzenli DSG
+    yağı değişimini gösteren servis geçmişini isteyin.'
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
+    source_domain: absstuurapparaten.nl
+    site_or_channel: absstuurapparaten.nl
+    quote: The clutches show signs of wear much earlier than the previous model, the
+      DQ250.
+    independent: true
+- id: dq381_transmission_pressure_sensor_failure__v1
+  claim_key: dq381_transmission_pressure_sensor_failure_
+  version: 1
+  is_current: true
+  title: Pressure sensor failure (DQ381)
+  title_tr: Pressure sensor failure (DQ381)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
   rationale: Pressure sensors in the DQ381 fail prematurely (100,000–150,000 km),
+    causing erratic gear engagement (e.g., odd or even gears failing). Replacement
+    is costly and frequent.
+  rationale_tr: Pressure sensors in the DQ381 fail prematurely (100,000–150,000 km),
     causing erratic gear engagement (e.g., odd or even gears failing). Replacement
     is costly and frequent.
   inspection_advice: Check for erratic gear shifts (e.g., skipping gears) or diagnostic
     trouble codes (DTCs) related to transmission pressure. Verify sensor functionality
     via a scan tool or by observing inconsistent shifting patterns.
+  inspection_advice_tr: Check for erratic gear shifts (e.g., skipping gears) or diagnostic
+    trouble codes (DTCs) related to transmission pressure. Verify sensor functionality
+    via a scan tool or by observing inconsistent shifting patterns.
+  status: review
+  promoted_by: ledger
   sources:
   - source_url: https://gearboxlist.com/volkswagen/dq381/
     source_domain: gearboxlist.com
@@ -523,435 +1683,34 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
-- claim_key: dq381_transmission_premature_clutch/fly
-  title: Premature clutch/flywheel wear (DSG 7/DQ381)
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.9
-  status: verified
-  promoted_by: auto
-  rationale: Clutch assemblies and dual-mass flywheels in DSG 7 transmissions wear
-    out faster than expected (50,000–100,000 km under aggressive use), though dedicated
-    owners may extend lifespan to 200,000–300,000 km.
-  inspection_advice: Check for slipping, grinding noises, or delayed engagement during
-    acceleration. Inspect the flywheel for uneven wear or damage if the transmission
-    is disassembled. Monitor for vibration or harsh shifts indicative of clutch degradation.
-  sources:
-  - source_url: https://gearboxlist.com/volkswagen/dq381/
-    source_domain: gearboxlist.com
-    site_or_channel: gearboxlist.com
-    quote: '"Like all DSGs, the clutch assembly and dual-mass flywheel have a limited
-      lifespan: with aggressive use, replacement may be necessary after up to 100,000
-      km, but dedicated owners can drive up to 200,000 and even 300,000 km without
-      repairs."'
-    independent: true
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: '"Like all DSGs, the clutch assembly and dual-mass flywheel have a limited
-      lifespan: with aggressive use, replacement may be necessary after up to 100,000
-      km, but dedicated owners can drive up to 200,000 and even 300,000 km without
-      repairs."'
-    independent: true
-  applies_when:
-    min_mileage_km: 50000
-- claim_key: dq381_transmission_delayed_throttle_res
-  title: Delayed throttle response (2-3s delay)
+- id: dq381_transmission_wet_dsg_dq381_overheatin_v1
+  claim_key: dq381_transmission_wet_dsg_dq381_overheatin
+  version: 1
+  is_current: true
+  title: Wet DSG (DQ381) overheating from cooling system faults
+  title_tr: Islak DSG (DQ381) soğutma sistemi arızaları nedeniyle aşırı ısınma
   kind: known_issue
   domain: transmission
   severity: high
   confidence: 0.6
+  rationale: The DQ381 is a wet DSG that relies on a transmission oil cooler. If the
+    cooler or hoses become blocked or leak, the clutch and mechatronics can overheat
+    and fail. This is a specific risk for this gearbox, especially in hot conditions
+    or when towing.
+  rationale_tr: DQ381, şanzıman yağ soğutucusuna bağımlı ıslak bir DSG'dir. Soğutucu
+    veya hortumlar tıkanır veya sızarsa, debriyaj ve mekatronik aşırı ısınıp arızalanabilir.
+    Bu, özellikle sıcak koşullarda veya çekme sırasında bu şanzıman için belirli bir
+    risktir.
+  inspection_advice: Ask for service records showing transmission cooling system inspection
+    or maintenance. At viewing, check for oil leaks around the transmission cooler,
+    and consider having the cooler flow tested. Also listen for unusual transmission
+    behavior during a test drive.
+  inspection_advice_tr: Şanzıman soğutma sistemi muayenesi veya bakımını gösteren
+    servis kayıtlarını isteyin. İnceleme sırasında şanzıman soğutucusu çevresinde
+    yağ sızıntısı olup olmadığını kontrol edin ve soğutucu akışının test edilmesini
+    düşünün. Ayrıca test sürüşü sırasında olağandışı şanzıman davranışını dinleyin.
   status: review
-  promoted_by: pending_human
-  rationale: Chronic issue where the DQ381 DSG transmission exhibits a significant
-    delay in responding to accelerator input, particularly in city driving conditions,
-    leading to poor driving experience and potential safety concerns.
-  inspection_advice: Test drive the vehicle and observe if there is a noticeable delay
-    (up to 2-3 seconds) in throttle response, especially during low-speed maneuvers
-    or in stop-and-go traffic.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: Delayed throttle response - up to 2-3 seconds delay
-    independent: true
-- claim_key: dq381_transmission_knocking_noise_from_
-  title: Knocking noise from differential
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: A chronic mechanical defect where the differential mechanism in the DQ381
-    DSG transmission produces knocking noises, particularly noticeable when driving
-    off or during low-speed maneuvers.
-  inspection_advice: Listen for unusual knocking noises emanating from the transmission,
-    especially when starting from a standstill or during low-speed driving.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: Knocking noise from differential - especially when driving off
-    independent: true
-- claim_key: dq381_transmission_shock_when_downshift
-  title: Shock when downshifting (2nd and 3rd gears)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: A chronic issue where the DQ381 DSG transmission experiences abrupt shocks
-    during downshifts, particularly in 2nd and 3rd gears, leading to poor ride comfort
-    and potential stress on drivetrain components.
-  inspection_advice: Test drive the vehicle and pay attention to any jolts or shocks
-    when shifting down from higher gears, especially in 2nd and 3rd gears.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: Shock when downshifting - occurs mainly in 2nd and 3rd gear
-    independent: true
-- claim_key: dq381_transmission_defective_tcu_(trans
-  title: Defective TCU (Transmission Control Unit) failures
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.9
-  status: review
-  promoted_by: pending_human
-  rationale: Chronic failure of the Transmission Control Unit (TCU) in the DQ381 DSG
-    transmission, leading to incorrect gear changes and overall poor performance.
-    This is a known design flaw contributing to higher failure rates compared to the
-    DQ250 model.
-  inspection_advice: Check for error codes (e.g., P0805, P1735, P1736) related to
-    the TCU or clutch position sensors using an OBD-II scanner. Look for erratic or
-    delayed gear shifts during a test drive.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: The failure rate of the DSG DQ381 is often due to a defective TCU (Transmission
-      Control Unit). The design of this gearbox proved to be less successful than
-      that of the previous DSG DQ250 model.
-    independent: true
-  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
-    source_domain: forums.hardwarezone.com.sg
-    site_or_channel: forums.hardwarezone.com.sg
-    quote: The failure rate of the DSG DQ381 is often due to a defective TCU (Transmission
-      Control Unit). The design of this gearbox proved to be less successful than
-      that of the previous DSG DQ250 model.
-    independent: true
-- claim_key: dq381_transmission_mechanical_component
-  title: Mechanical component failure at 60-80k km
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 DSG transmission experiences significant mechanical failures
-    at lower mileage (60-80k km) compared to the DQ250, indicating a chronic design
-    durability issue.
-  inspection_advice: Review the vehicle's service history for signs of early mechanical
-    failures, such as gearbox fluid leaks, unusual noises, or gear engagement issues
-    before 80,000 km.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: From the experience with the DSG DQ381 it seems that the first serious
-      problems occur after 60-80 thousand kilometers.
-    independent: true
-  applies_when:
-    min_mileage_km: 60000
-- claim_key: dq381_transmission_reduced_durability_c
-  title: Reduced durability compared to DQ250
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 DSG transmission is consistently rated as less durable than
-    its predecessor, the DQ250, with significantly shorter lifespans for mechanical
-    components and higher failure rates.
-  inspection_advice: Compare the vehicle’s service history and maintenance records
-    with known reliability data for the DQ250 model to assess if the DQ381 transmission
-    has experienced premature failures.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: 'The DSG DQ381 is often compared to its predecessor, the DQ250. The older
-      design is smoother to use and more durable. In daily use, the DQ250 offers more
-      predictable behavior.
-
-
-      The reliability of the DSG DQ381 is rated significantly worse than that of the
-      DQ250.'
-    independent: true
-- claim_key: dq381_transmission_odometer_message_for
-  title: Odometer message for gearbox failure
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 DSG transmission triggers an odometer message indicating gearbox
-    failure, often due to underlying chronic issues with the transmission control
-    or mechanical components.
-  inspection_advice: Check the vehicle’s dashboard for any odometer-related messages
-    or warning lights indicating gearbox failure. Use an OBD-II scanner to diagnose
-    the root cause of the issue.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: Odometer message - Gearbox failure
-    independent: true
-- claim_key: dq381_transmission_delayed_and_jerky_ge
-  title: Delayed and jerky gear shifts in city traffic
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Chronic issue where the DQ381 DSG transmission exhibits jerky and delayed
-    gear shifts, particularly in city traffic, leading to poor driving comfort and
-    potential stress on the transmission components.
-  inspection_advice: Test drive the vehicle in stop-and-go traffic to observe if the
-    transmission shifts jerkily or with noticeable delays.
-  sources:
-  - source_url: https://absstuurapparaten.nl/en/pages/the-most-common-problems-with-the-dq381-dsg-7-gearbox
-    source_domain: absstuurapparaten.nl
-    site_or_channel: absstuurapparaten.nl
-    quote: The DSG DQ381 suffers from a number of common faults that affect driving
-      comfort. Problems with the DSG DQ381 DSG usually manifest themselves in jerks
-      when shifting and a delayed response to the accelerator. The complaints occur
-      more often in city traffic.
-    independent: true
-- claim_key: dq381_transmission_mekatronik_valf_gövd
-  title: Mekatronic valve body failures
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: In the DQ381 transmission, the mekatronic valve body can fail over time,
-    causing delays, jerks, or even forcing the transmission into failsafe mode during
-    gear shifts. This is a chronic issue and repairs are expensive.
-  inspection_advice: If there are delays or jerks during gear shifts, the mekatronic
-    unit should be inspected and the hydraulic fluid level checked. Additionally,
-    service fault codes should be read.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: ❌ 🔧 Mekatronik ve Kavrama Arızaları → Mekatronik valf gövdesinde zamanla
-      arızalar görülebilir.
-    independent: true
-- claim_key: dq381_transmission_düşük_hızlarda_sarsı
-  title: Rough or jerky gear shifts at low speeds
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission frequently experiences jerky or rough shifts during
-    stop-and-go traffic or at low speeds. This is commonly associated with wear in
-    the dual-clutch mechanism or hydraulic issues within the transmission.
-  inspection_advice: If jerky or rough shifts are felt during stop-and-go traffic
-    or at low speeds, check the transmission fluid level and test the mechatronic
-    system.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: ❌ 🏁 Düşük Hızlarda Sarsıntılı Geçişler → Dur-kalk trafikte zaman zaman
-      hissedilebilir.
-    independent: true
-- claim_key: dq381_transmission_aşırı_ısınma_ve_kavr
-  title: Overheating and Clutch Slippage
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The **DQ381 transmission** may experience **excessive overheating** during
-    prolonged high-speed driving or under excessive load. This can lead to **clutch
-    slippage** and **transmission damage**. The issue is particularly noticeable during
-    summer months or when driving at full throttle.
-  inspection_advice: When the transmission **overheats**, inspect the **clutch components**
-    and **cooling system**, and check the **transmission fluid level**. Additionally,
-    avoid prolonged high-speed driving.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: ❌ 🛞 Aşırı Isınma Sorunu → Uzun süre yüksek hızda kullanımda ısınma problemi
-      yaşanabilir.
-    independent: true
-- claim_key: dq381_transmission_hidrolik_pompa_veya_
-  title: Hydraulic pump or sensor failures (failsafe mode activation)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: In the DQ381 transmission, hydraulic pump or sensor failures can cause
-    the transmission to enter failsafe mode, completely halting gear shifting. This
-    can render the transmission non-functional.
-  inspection_advice: When gear shifting stops or failsafe mode is activated, fault
-    codes must be read and the hydraulic pump and sensors must be inspected.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: 📌 Failsafe Moduna Geçme (Vites Değişmemesi) → Hidrolik pompa veya sensör
-      arızası.
-    independent: true
-- claim_key: dq381_transmission_kavrama_değişimi_ger
-  title: Wear requiring clutch replacement
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission’s clutch components can wear over time and may
-    require replacement. This repair is costly and negatively impacts transmission
-    performance.
-  inspection_advice: If there is hesitation or shuddering during gear shifts or if
-    the transmission overheats, the clutch components should be inspected and replaced
-    as needed.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/dq381-sanziman-nedir/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: ❌ 💰 Yüksek Onarım Maliyeti → DSG şanzımanların kavrama değişimi pahalı
-      olabilir.
-    independent: true
-- claim_key: dq381_transmission_can-bus_iletişim_kes
-  title: CAN-Bus communication failures (DSG DQ200–DQ250–DQ381 transmissions)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: DSG transmissions frequently experience communication errors between
-    the mechatronic control unit (TCM) and the engine ECU over the CAN-Bus network.
-    These errors can cause the transmission to remain in passive mode, fail to shift
-    gears, or completely disengage. If left unaddressed for an extended period, replacement
-    of the TCM may be required.
-  inspection_advice: When inspecting the vehicle, check for CAN-Bus communication
-    faults, verify TCM power supply circuits (fuses/relays), and physically inspect
-    the TCM unit in DSG transmission models. Additionally, look for symptoms such
-    as gearshift failures or activation of the transmission control warning light.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: '🔩 DSG Şanzımanlar (DQ200 – DQ250 – DQ381)
-
-      ⚙️ Şanzıman kontrolü tamamen mechatronic üzerinden sağlanır
-
-      🧠 İletişim kesildiğinde şanzıman pasif moda geçer
-
-      📊 01315 sıklıkla P0700, 01087 ve CAN-BUS hatalarıyla birlikte görülür
-
-      📌 Uzun süre ihmal edilirse mechatronic değişimi gerekebilir'
-    independent: true
-- claim_key: dq381_transmission_tcm_(mechatronic)_ar
-  title: TCM (Mechatronic Transmission Control Module) Failures (DSG Transmissions)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The mechatronic transmission control module (TCM) in DSG transmissions
-    can fail due to excessive heat, water ingress, or software errors. In such cases,
-    the transmission may completely shut down or experience shifting issues.
-  inspection_advice: Inspect the TCM unit for physical damage (fluid leaks, burn marks)
-    and check power supply connections. Additionally, look for symptoms such as the
-    transmission control light illuminating or shifting problems.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: '🔌 Şanzıman kontrol ünitesinin (TCM / mechatronic) arızalanması
-
-      🔥 Aşırı ısı veya su girişi nedeniyle TCM hasarı'
-    independent: true
-- claim_key: dq381_transmission_can-bus_hatları_ve_i
-  title: CAN-BUS Wiring and Communication Faults (Torque Converter Automatic Transmissions)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: In torque converter automatic transmissions, a separate Transmission
-    Control Module (TCM) is used, making CAN-BUS communication errors a more critical
-    issue. These errors can cause complete failure of gear shifts or render the vehicle
-    undrivable.
-  inspection_advice: Check CAN-BUS wiring for resistance and continuity. Also, inspect
-    the TCM unit’s power connections and physical condition. Look for symptoms such
-    as gear shift malfunctions or activation of the transmission control warning light.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: '🛢️ Ayrı TCM ünitesi iletişim kaybına daha hassastır
-
-      ⚙️ Vites geçişleri tamamen devre dışı kalabilir
-
-      📉 Araç sürülemez hale gelebilir'
-    independent: true
-- claim_key: dq381_transmission_tcm_yazılımsal_kilit
-  title: Transmission Control Module (TCM) software lockups and adaptation issues
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Software lockups or adaptation errors in the TCM unit can cause disruptions
-    in CAN-BUS communication. These issues are typically resolved through re-coding
-    and adaptation procedures, but if permanent damage occurs, the TCM may need to
-    be replaced.
-  inspection_advice: Check the TCM unit’s software and adaptations. Inspect CAN-BUS
-    wiring and power supply lines. Look for symptoms such as the transmission control
-    lamp illuminating or shifting issues.
-  sources:
-  - source_url: https://teknikotomatiksanziman.com/volkswagen-01315-ariza-kodu/
-    source_domain: teknikotomatiksanziman.com
-    site_or_channel: teknikotomatiksanziman.com
-    quote: 💻 Kontrol üniteleri arasında yazılımsal kilitlenme
-    independent: true
-- claim_key: dq381_transmission_overheating_and_cool
-  title: Overheating and cooling system failure in wet DSGs (DQ250, DQ381)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Wet DSG transmissions are susceptible to overheating due to inadequate
-    cooling system performance, leading to clutch and mechatronics damage.
-  inspection_advice: Inspect the transmission cooler and hoses for blockages or leaks.
-    Check for overheating indicators on the dashboard and monitor oil temperature,
-    especially during heavy loads or towing.
+  promoted_by: ledger
   sources:
   - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
     source_domain: volkkarihuolto.fi
@@ -960,266 +1719,4 @@ claims:
       transmission cooler (oil radiator) and hoses work properly, especially in heat
       or when towing. Accumulation of deposits in the radiator or insufficient oil
       flow leads to clutch overheating."'
-    independent: true
-- claim_key: dq381_transmission_dsg_mechatronics_fai
-  title: DSG mechatronics failure due to oil degradation and infrequent changes
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Old or degraded oil fails to remove heat and clean mechanisms effectively,
-    accelerating wear and failure of the mechatronics and clutches in DSG transmissions.
-  inspection_advice: Verify oil change history and oil quality. Check for error codes
-    related to oil pressure and transmission performance. Look for signs of oil degradation,
-    such as burnt smells or dark, gritty oil.
-  sources:
-  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
-    source_domain: volkkarihuolto.fi
-    site_or_channel: volkkarihuolto.fi
-    quote: '"old oil removes heat and cleans mechanisms worse ... metal particles
-      are removed from clutches and valves ... practice shows: untimely replacement
-      significantly reduces the service life of clutches and hydraulic block."'
-    independent: true
-- claim_key: dq381_transmission_dsg_emergency_mode_a
-  title: DSG emergency mode activation due to overheating (DQ381)
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 transmission is prone to entering emergency mode due to overheating,
-    particularly in cold weather, which can lead to further damage if not addressed
-    promptly.
-  inspection_advice: Monitor the dashboard for transmission temperature warnings or
-    emergency mode indicators. Check for burnt oil smells and verify cooling system
-    functionality.
-  sources:
-  - source_url: https://volkkarihuolto.fi/en/blog/dsg-korjaus-vag-autot
-    source_domain: volkkarihuolto.fi
-    site_or_channel: volkkarihuolto.fi
-    quote: '"in cold weather the transmission ''goes into emergency'' when heating
-      up."'
-    independent: true
-- claim_key: dq381_transmission_dq380/dq381/dq500_tr
-  title: DQ380/DQ381/DQ500 Transmission 'Death Flash' and Dashboard Alerts
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Widespread occurrence of 'death flashes' (rapid error code flashes) and
-    dashboard alerts due to sensor failures in the transmission control unit, causing
-    unreliable operation and potential shutdowns.
-  inspection_advice: Test-drive the vehicle to check for rapid error code flashes
-    on the dashboard or unexplained transmission malfunctions. Confirm if the vehicle
-    falls under the affected DQ380/DQ381/DQ500 models and check for TSB compliance.
-  sources:
-  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
-    source_domain: forums.hardwarezone.com.sg
-    site_or_channel: forums.hardwarezone.com.sg
-    quote: '"大众变速箱故障，死亡闪烁，仪表报警" (Translation: ''Volkswagen transmission failure, death
-      flashes, dashboard alerts'')'
-    independent: true
-- claim_key: dq381_transmission_massive_scale_of_aff
-  title: Massive Scale of Affected Transmission Parts
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Over 1,200+ part numbers across DQ381 and DQ500 transmissions are affected
-    by sensor failures, with potential impact on over a million vehicles. This indicates
-    a systemic design or manufacturing defect in the transmission control units.
-  inspection_advice: Verify the transmission model and part numbers against the TSB
-    lists (16 pages for DQ500, 18 pages for DQ381). Check for any prior service records
-    related to transmission sensor replacements or recalls.
-  sources:
-  - source_url: https://forums.hardwarezone.com.sg/threads/saga-vw-dsg-gearbox-issue-again-affecting-dq380-dq381-and-dq500-manufactured-before-2020.7102180/
-    source_domain: forums.hardwarezone.com.sg
-    site_or_channel: forums.hardwarezone.com.sg
-    quote: '"16 pages of affected DQ500 part numbers, 18 pages of affected DQ381 part
-      numbers... totalling over 1,200 affected part numbers. If 500 units were manufactured
-      per part number, that would mean at least 600,000 affected transmissions—and
-      likely over a million, considering unknown production volumes."'
-    independent: true
-- claim_key: dq381_transmission_dq380/dq381_wet-clut
-  title: DQ380/DQ381 Wet-Clutch DSG Adaptation Failures
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ380 and DQ381 wet-clutch transmissions (used in Passat B8, Audi
-    A4 B9, and Skoda Superb) rely on advanced electronic control for clutch engagement
-    and adaptation to driving style. Adaptation failures can cause erratic shifting,
-    delayed responses, and transmission malfunctions.
-  inspection_advice: Check for delayed gear shifts, erratic behavior during acceleration,
-    and error codes such as **P17BF (mekatronik adaptasyon hatası)**. Monitor transmission
-    response under varying loads.
-  sources:
-  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
-    source_domain: dsgservisi.com
-    site_or_channel: dsgservisi.com
-    quote: 'P17BF: Mekatronik adaptasyon hatası'
-    independent: true
-- claim_key: dq381_transmission_mekatronik_kart_(ecu
-  title: Mekatronik Kart (ECU) Failure Leading to Safety Mode Activation
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: Critical failures in the mekatronik kart (electronic control unit) can
-    cause the transmission to enter safety mode, locking the vehicle in a single gear
-    and preventing further gear shifts. This is often due to hardware or software
-    failures in the ECU.
-  inspection_advice: Check for sudden locking of the transmission in a single gear,
-    inability to shift gears, and error codes such as **P1701 (mekatronik kontrol
-    ünitesi hatası)**. Verify if the vehicle remains stuck in a single gear without
-    warning.
-  sources:
-  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
-    source_domain: dsgservisi.com
-    site_or_channel: dsgservisi.com
-    quote: 'Emniyet Moduna Geçme: Şanzıman kendini koruma moduna alır, araç tek viteste
-      kalır, vites değiştirilemez'
-    independent: true
-- claim_key: dq381_transmission_vites_konum_sensörü_
-  title: Gear Position Sensor Failures
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: When the gear position sensor fails, it can result in incorrect gear
-    readings, causing unpredictable shifting behavior, wrong gear position displays
-    (such as showing 'PRND' with the wrong symbol), and possible transmission malfunctions.
-  inspection_advice: Look for incorrect or flashing symbols on the gear position display
-    (for example, an incorrect 'PRND' indicator). Also, check for delayed or improper
-    gear engagement while driving.
-  sources:
-  - source_url: https://dsgservisi.com/7-ileri-dsg-mekatronik-karti-fiyati/
-    source_domain: dsgservisi.com
-    site_or_channel: dsgservisi.com
-    quote: 'Vites Göstergesinde Anahtar İşareti: PRND göstergesinde anahtar/kilit
-      sembolü, yanıp sönen veya sabit işaret'
-    independent: true
-- claim_key: dq381_transmission_dq381_mechatronic_un
-  title: DQ381 Mechatronic Unit Internal Fault Pattern
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 mechatronic unit exhibits chronic internal failures, including
-    solenoid failure, circuit board degradation, and hydraulic contamination, leading
-    to limp mode activation and specific fault codes (P1735, P1736, P0805). This is
-    a well-documented failure pattern shared with earlier DQ250 and DQ200 models.
-  inspection_advice: Check for stored fault codes (P1735, P1736, P0805) and limp mode
-    activation. Look for signs of harsh/jerky gear shifts, delayed shifts under load,
-    or gear slipping. Verify if the issue persists after battery replacement or disconnect,
-    as this is a common symptom of mechatronic failure.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"The DQ381 is a 7-speed wet dual-clutch automatic gearbox introduced by
-      Volkswagen in 2017... When the mechatronic develops an internal fault the gearbox
-      enters limp mode and stores specific fault codes. The DQ381 mechatronic shares
-      similar failure patterns to the DQ250 and DQ200 — internal solenoid failure,
-      circuit board component degradation and hydraulic contamination over time."'
-    independent: true
-- claim_key: dq381_transmission_shift_fork_position_
-  title: Shift Fork Position Sensor Faults
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 mechatronic unit suffers from shift fork position sensor failures,
-    causing incorrect gear selection reporting or sensor values outside expected ranges.
-    This directly impacts gear engagement and transmission reliability.
-  inspection_advice: Scan for fault codes related to shift fork position sensor (e.g.,
-    shift fork position sensor fault, shift fork position sensor range fault). Test
-    gear engagement and verify if the vehicle exhibits incorrect gear selection or
-    limp mode behavior.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"Shift fork position sensor fault — gear selection position reporting
-      incorrectly due to mechatronic failure. Shift fork position sensor range fault
-      — sensor values outside of expected range indicating mechatronic internal fault."'
-    independent: true
-- claim_key: dq381_transmission_clutch_position_sens
-  title: Clutch Position Sensor Circuit Fault
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The clutch position sensor circuit frequently fails in the DQ381 mechatronic
-    unit, often alongside fault codes P1735 and P1736, leading to unreliable clutch
-    engagement and gear shifts.
-  inspection_advice: Check for stored clutch position sensor circuit fault codes.
-    Observe if the vehicle exhibits delayed or refused gear engagement, especially
-    under load or during acceleration.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"Clutch position sensor circuit fault — commonly stored on DQ381 mechatronic
-      failure alongside P1735 and P1736."'
-    independent: true
-- claim_key: dq381_transmission_transmission_control
-  title: Transmission Control Module Hardware Failure
-  kind: known_issue
-  domain: transmission
-  severity: high
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 mechatronic unit's transmission control module (TCM) suffers
-    from internal hardware faults, indicating circuit board failure and leading to
-    transmission malfunctions.
-  inspection_advice: Scan for transmission control system malfunction codes and verify
-    if the vehicle exhibits limp mode, delayed gear shifts, or complete gear engagement
-    failure. Look for signs of repeated mechatronic failures after repairs.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"Transmission control module — internal hardware fault. Indicates mechatronic
-      circuit board failure."'
-    independent: true
-- claim_key: dq381_transmission_loss_of_drive_after_
-  title: Loss of Drive After Battery Disconnect
-  kind: known_issue
-  domain: transmission
-  severity: medium
-  confidence: 0.6
-  status: review
-  promoted_by: pending_human
-  rationale: The DQ381 mechatronic unit is prone to losing drive functionality after
-    battery replacement or disconnect, indicating reliance on stored mechatronic data
-    that may not reset properly.
-  inspection_advice: Test the vehicle after a battery replacement or disconnect to
-    see if it loses drive or enters limp mode. Check for persistent fault codes that
-    do not clear after battery service.
-  sources:
-  - source_url: https://thevehiclecheck.co.uk/pages/vw-dq381-mechatronic-fault
-    source_domain: thevehiclecheck.co.uk
-    site_or_channel: thevehiclecheck.co.uk
-    quote: '"Loss of drive after battery replacement or disconnect"'
     independent: true

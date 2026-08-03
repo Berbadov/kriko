@@ -1,0 +1,3334 @@
+part_id: k9k
+part_type: engine
+display_name: Renault K9K Engine
+manufacturer: renault
+code_family: renault_nissan_small_engines
+known_also_as:
+- 1.5 TDI
+- 1.5 dCi
+- K9K
+- K9K 1.5
+production_years: 2001-present
+claims:
+- id: k9k_electrical_air_fuel_ratio_sensor_ld_v1
+  claim_key: k9k_electrical_air_fuel_ratio_sensor_ld
+  version: 1
+  is_current: true
+  title: Air-Fuel Ratio Sensor (LDA) Failure
+  title_tr: Air-Fuel Ratio Sensor (LDA) Failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic issue with the air-fuel ratio sensor failing, leading to incorrect
+    fuel mixture and poor engine performance.
+  rationale_tr: Chronic issue with the air-fuel ratio sensor failing, leading to incorrect
+    fuel mixture and poor engine performance.
+  inspection_advice: Check for error codes related to the air-fuel ratio sensor and
+    verify sensor readings with a diagnostic tool.
+  inspection_advice_tr: Check for error codes related to the air-fuel ratio sensor
+    and verify sensor readings with a diagnostic tool.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Hava Yakıt Oran Valfi (LDA) Arızalı"'
+    independent: true
+- id: k9k_electrical_crankshaft_position_sens_v1
+  claim_key: k9k_electrical_crankshaft_position_sens
+  version: 1
+  is_current: true
+  title: Crankshaft Position Sensor (CKP) Failure (K9K)
+  title_tr: Crankshaft Position Sensor (CKP) Failure (K9K)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: The presence of DTC P0335 indicates a chronic issue with the crankshaft
+    position sensor, which is critical for engine timing and operation. Sensor failure
+    can lead to severe engine malfunctions or failure to start.
+  rationale_tr: The presence of DTC P0335 indicates a chronic issue with the crankshaft
+    position sensor, which is critical for engine timing and operation. Sensor failure
+    can lead to severe engine malfunctions or failure to start.
+  inspection_advice: Check for DTC P0335. Inspect the CKP sensor and its wiring for
+    damage or corrosion. Verify the sensor’s signal output and replace if faulty.
+  inspection_advice_tr: Check for DTC P0335. Inspect the CKP sensor and its wiring
+    for damage or corrosion. Verify the sensor’s signal output and replace if faulty.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0335 CKP sensor (POS)
+    independent: true
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0340 CMP sensor
+    independent: true
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC C001 CAN communication line
+    independent: true
+- id: k9k_electrical_ecm_engine_control_modul_v1
+  claim_key: k9k_electrical_ecm_engine_control_modul
+  version: 1
+  is_current: true
+  title: ECM (Engine Control Module) Issues (K9K)
+  title_tr: ECM (Engine Control Module) Issues (K9K)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: Multiple DTCs (P0604, P0606, P0608, P0609, P0685) related to the ECM
+    indicate chronic electrical or software problems, which can cause erratic engine
+    behavior, poor performance, or failure to start.
+  rationale_tr: Multiple DTCs (P0604, P0606, P0608, P0609, P0685) related to the ECM
+    indicate chronic electrical or software problems, which can cause erratic engine
+    behavior, poor performance, or failure to start.
+  inspection_advice: Check for ECM-related DTCs (P0604, P0606, P0608, P0609, P0685).
+    Inspect the ECM wiring and connections for damage or corrosion. Consider ECM reprogramming
+    or replacement if issues persist.
+  inspection_advice_tr: Check for ECM-related DTCs (P0604, P0606, P0608, P0609, P0685).
+    Inspect the ECM wiring and connections for damage or corrosion. Consider ECM reprogramming
+    or replacement if issues persist.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0604 ECM memory
+
+      DTC P0606 ECM
+
+      DTC P0608 Sensor supply voltage
+
+      DTC P0609 Supply voltage APP sensor 2
+
+      DTC P0685 ECM relay control'
+    independent: true
+- id: k9k_electrical_frequent_crankshaft_sens_v1
+  claim_key: k9k_electrical_frequent_crankshaft_sens
+  version: 1
+  is_current: true
+  title: Frequent crankshaft sensor failure on 1.5 dCi (K9K)
+  title_tr: 1.5 dCi (K9K) krank mili sensörü arızası sık görülür
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: On high-mileage 1.5 dCi engines, the crankshaft position sensor is reported
+    to fail often, causing symptoms like unstable idle, jerking, detonation, and even
+    no-start. This is a known weak point that is not easily detected by a routine
+    inspection and can leave you stranded.
+  rationale_tr: Yüksek kilometreli 1.5 dCi motorlarda krank mili sensörünün sık sık
+    arızalandığı, düzensiz rölanti, sarsıntı, vuruntu ve hatta çalışmama gibi sorunlara
+    yol açtığı bildirilmektedir. Bu, rutin muayenede kolayca tespit edilemeyen ve
+    yolda kalmanıza neden olabilecek bilinen bir zayıf noktadır.
+  inspection_advice: Check for diagnostic trouble codes (e.g., P0335/P0336) and verify
+    the engine starts readily and idles smoothly. Ask the owner if the crankshaft
+    position sensor has ever been replaced.
+  inspection_advice_tr: Teşhis hata kodlarını (ör. P0335/P0336) kontrol edin ve motorun
+    kolayca çalıştığını ve düzgün rölanti verdiğini doğrulayın. Sahibine krank mili
+    sensörünün daha önce değiştirilip değiştirilmediğini sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The crankshaft position sensor - according to reviews, quite often fails
+      on cars with high mileage.
+    independent: true
+- id: k9k_electrical_recurrent_alternator_fai_v1
+  claim_key: k9k_electrical_recurrent_alternator_fai
+  version: 1
+  is_current: true
+  title: Recurrent alternator failure
+  title_tr: Recurrent alternator failure
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: The alternator was replaced once, which, while not uncommon, could indicate
+    a chronic issue with electrical components in this variant if it occurs frequently.
+  rationale_tr: The alternator was replaced once, which, while not uncommon, could
+    indicate a chronic issue with electrical components in this variant if it occurs
+    frequently.
+  inspection_advice: Check for dimming headlights, electrical gremlins (e.g., power
+    windows, radio), or a warning light on the dashboard related to the charging system.
+  inspection_advice_tr: Check for dimming headlights, electrical gremlins (e.g., power
+    windows, radio), or a warning light on the dashboard related to the charging system.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Alternator changed once
+    independent: true
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: AC compressor changed once
+    independent: true
+- id: k9k_emissions_diesel_particulate_filte_v1
+  claim_key: k9k_emissions_diesel_particulate_filte
+  version: 1
+  is_current: true
+  title: Diesel Particulate Filter (DPF) Regeneration Sensitivity
+  title_tr: Diesel Particulate Filter (DPF) Regeneration Sensitivity
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The K9K engine relies on proper DPF regeneration to avoid clogging, which
+    can lead to restricted exhaust flow and potential engine damage if neglected.
+    Improper regeneration can cause long-term DPF failure, requiring costly replacement.
+  rationale_tr: The K9K engine relies on proper DPF regeneration to avoid clogging,
+    which can lead to restricted exhaust flow and potential engine damage if neglected.
+    Improper regeneration can cause long-term DPF failure, requiring costly replacement.
+  inspection_advice: Check for DPF warning lights on the dashboard and verify if the
+    vehicle has been driven at highway speeds regularly to ensure DPF regeneration
+    occurs. Inspect exhaust backpressure if performance issues are suspected.
+  inspection_advice_tr: Check for DPF warning lights on the dashboard and verify if
+    the vehicle has been driven at highway speeds regularly to ensure DPF regeneration
+    occurs. Inspect exhaust backpressure if performance issues are suspected.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.avtomobile.cc/engine-performance/renault-k9k-engine-complete-guide-specs-performance-maintenance/
+    source_domain: avtomobile.cc
+    site_or_channel: avtomobile.cc
+    quote: Proper DPF regeneration is essential for longevity.
+    independent: true
+- id: k9k_emissions_dpf_and_adblue_system_re_v1
+  claim_key: k9k_emissions_dpf_and_adblue_system_re
+  version: 1
+  is_current: true
+  title: DPF and AdBlue system reliability issues (1.5 dCi/K9K diesels)
+  title_tr: DPF and AdBlue system reliability issues (1.5 dCi/K9K diesels)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: Diesel-specific components like the DPF (Diesel Particulate Filter) and
+    AdBlue system in 1.5 dCi (K9K) engines can be prone to failure, leading to costly
+    repairs and potential emissions-related issues.
+  rationale_tr: Diesel-specific components like the DPF (Diesel Particulate Filter)
+    and AdBlue system in 1.5 dCi (K9K) engines can be prone to failure, leading to
+    costly repairs and potential emissions-related issues.
+  inspection_advice: Check for warning lights related to the DPF or AdBlue system.
+    Verify if the vehicle has a history of DPF cleaning or AdBlue refills. Inspect
+    for excessive soot or black smoke from the exhaust, which may indicate DPF issues.
+  inspection_advice_tr: Check for warning lights related to the DPF or AdBlue system.
+    Verify if the vehicle has a history of DPF cleaning or AdBlue refills. Inspect
+    for excessive soot or black smoke from the exhaust, which may indicate DPF issues.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://automotive24.center/article/renault-megane-iv-mk4-bfbbfk-2016-2023-common-problems-weak-points-what-to-look-for-when-buying-used
+    source_domain: automotive24.center
+    site_or_channel: automotive24.center
+    quote: '"diesel-specific components (**DPF, AdBlue system**) also carry higher
+      replacement costs,"'
+    independent: true
+- id: k9k_emissions_dpf_and_egr_system_inter_v1
+  claim_key: k9k_emissions_dpf_and_egr_system_inter
+  version: 1
+  is_current: true
+  title: DPF and EGR system interdependency leading to cascading failures
+  title_tr: DPF and EGR system interdependency leading to cascading failures
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The DPF and EGR systems are interconnected; failure in one accelerates
+    failure in the other. EGR issues create excess soot, clogging the DPF faster,
+    while DPF restrictions increase backpressure, stressing the EGR system further.
+  rationale_tr: The DPF and EGR systems are interconnected; failure in one accelerates
+    failure in the other. EGR issues create excess soot, clogging the DPF faster,
+    while DPF restrictions increase backpressure, stressing the EGR system further.
+  inspection_advice: Check for both DPF and EGR warning lights, reduced power, and
+    limp mode. Verify if the car has a history of short trips, poor oil quality, or
+    coolant leaks. Scan for related codes (e.g., P2002, P242F, P0401, P0402).
+  inspection_advice_tr: Check for both DPF and EGR warning lights, reduced power,
+    and limp mode. Verify if the car has a history of short trips, poor oil quality,
+    or coolant leaks. Scan for related codes (e.g., P2002, P242F, P0401, P0402).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"EGR problems present differently... but the underlying causes are different.
+      Knowing the typical symptoms helps you narrow it down before you even plug in
+      a scan tool... EGR issues lead to more soot, which then clogs the DPF faster.
+      See? They’re always connected."'
+    independent: true
+- id: k9k_emissions_dpf_clogging_due_to_oil__v1
+  claim_key: k9k_emissions_dpf_clogging_due_to_oil_
+  version: 1
+  is_current: true
+  title: DPF clogging due to oil ash buildup
+  title_tr: DPF clogging due to oil ash buildup
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 and 1.6 dCi engines suffer from DPF failure caused by non-combustible
+    oil ash residue, which accumulates when non-Renault RN0720 low-ash oil is used.
+    Once ash reaches ~60 grams per liter, the DPF becomes irreparable, leading to
+    costly replacements.
+  rationale_tr: The 1.5 and 1.6 dCi engines suffer from DPF failure caused by non-combustible
+    oil ash residue, which accumulates when non-Renault RN0720 low-ash oil is used.
+    Once ash reaches ~60 grams per liter, the DPF becomes irreparable, leading to
+    costly replacements.
+  inspection_advice: Check for DPF warning lights (P2002, P242F, P2463) and verify
+    oil type history. Look for reduced power, hesitation, or limp mode—signs of DPF
+    restriction. Inspect for thermal damage (melted/cracked ceramic substrate) if
+    the car has a history of short trips.
+  inspection_advice_tr: Check for DPF warning lights (P2002, P242F, P2463) and verify
+    oil type history. Look for reduced power, hesitation, or limp mode—signs of DPF
+    restriction. Inspect for thermal damage (melted/cracked ceramic substrate) if
+    the car has a history of short trips.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"DPF almost always boils down to two things: oil ash and failed regeneration
+      cycles... If you’re not running the specific Renault RN0720 low-ash (low-SAPS)
+      oil, you’re leaving behind non-combustible residue every time the engine burns
+      even a tiny bit of oil. Over time, that ash builds up in the DPF... Once it
+      hits about 60 grams per liter, that filter is pretty much done for."'
+    independent: true
+- id: k9k_emissions_dpf_regeneration_alarm_i_v1
+  claim_key: k9k_emissions_dpf_regeneration_alarm_i
+  version: 1
+  is_current: true
+  title: DPF regeneration alarm issues on K9K 1.5 dCi engines (2014-2020)
+  title_tr: DPF regeneration alarm issues on K9K 1.5 dCi engines (2014-2020)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The DPF regeneration process on these engines frequently triggers false
+    or persistent alarms, indicating a potential design or software flaw in the regeneration
+    monitoring system.
+  rationale_tr: The DPF regeneration process on these engines frequently triggers
+    false or persistent alarms, indicating a potential design or software flaw in
+    the regeneration monitoring system.
+  inspection_advice: Check for recurring DPF regeneration alarms in the vehicle's
+    diagnostic history or via the app. Look for signs of incomplete or failed regenerations,
+    such as black smoke from the exhaust or reduced engine performance during regeneration
+    events.
+  inspection_advice_tr: Check for recurring DPF regeneration alarms in the vehicle's
+    diagnostic history or via the app. Look for signs of incomplete or failed regenerations,
+    such as black smoke from the exhaust or reduced engine performance during regeneration
+    events.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://play.google.com/store/apps/details?hl=en_GB&id=com.elm327
+    source_domain: play.google.com
+    site_or_channel: play.google.com
+    quote: '"An alarm is triggered while regenerating."'
+    independent: true
+- id: k9k_emissions_dpf_thermal_damage_from__v1
+  claim_key: k9k_emissions_dpf_thermal_damage_from_
+  version: 1
+  is_current: true
+  title: DPF thermal damage from failed regeneration cycles
+  title_tr: DPF thermal damage from failed regeneration cycles
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: Short city trips prevent DPF passive regeneration, forcing the ECU to
+    trigger active regenerations. If these cycles are interrupted or incomplete, soot
+    builds up, causing temperature spikes that melt or crack the ceramic substrate,
+    rendering the DPF unusable.
+  rationale_tr: Short city trips prevent DPF passive regeneration, forcing the ECU
+    to trigger active regenerations. If these cycles are interrupted or incomplete,
+    soot builds up, causing temperature spikes that melt or crack the ceramic substrate,
+    rendering the DPF unusable.
+  inspection_advice: Check for DPF warning lights and limp mode. Look for signs of
+    thermal damage (melted/cracked DPF) and verify driving habits (frequent short
+    trips). Scan for regeneration-related codes (e.g., P242F).
+  inspection_advice_tr: Check for DPF warning lights and limp mode. Look for signs
+    of thermal damage (melted/cracked DPF) and verify driving habits (frequent short
+    trips). Scan for regeneration-related codes (e.g., P242F).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"Short city trips are a DPF killer. The engine never gets hot enough,
+      long enough, for passive regeneration to happen... So the ECU tries active regenerations
+      more often. But if those cycles are constantly interrupted or never completed,
+      soot builds up, temperatures spike, and you end up with a melted or cracked
+      ceramic substrate."'
+    independent: true
+- id: k9k_emissions_egr_cooler_corrosion_and_v1
+  claim_key: k9k_emissions_egr_cooler_corrosion_and
+  version: 1
+  is_current: true
+  title: EGR cooler corrosion and failure
+  title_tr: EGR cooler corrosion and failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The EGR cooler condenses exhaust gases, creating a corrosive sludge that
+    clogs passages and damages the cooler. Cracked EGR coolers leak coolant into the
+    exhaust, damaging the DPF and turbocharger, creating a feedback loop of failure.
+  rationale_tr: The EGR cooler condenses exhaust gases, creating a corrosive sludge
+    that clogs passages and damages the cooler. Cracked EGR coolers leak coolant into
+    the exhaust, damaging the DPF and turbocharger, creating a feedback loop of failure.
+  inspection_advice: Check for coolant leaks in the exhaust system, rough idle, or
+    dark exhaust smoke. Look for EGR-related codes (e.g., P0401, P0402) and inspect
+    the EGR cooler for cracks or sludge buildup. Verify if the car has a history of
+    short trips or poor-quality diesel.
+  inspection_advice_tr: Check for coolant leaks in the exhaust system, rough idle,
+    or dark exhaust smoke. Look for EGR-related codes (e.g., P0401, P0402) and inspect
+    the EGR cooler for cracks or sludge buildup. Verify if the car has a history of
+    short trips or poor-quality diesel.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"The EGR cooler takes hot exhaust gas and chills it before sending it
+      back into the intake. That cooling creates condensation, which then mixes with
+      soot. What do you get? A thick, corrosive sludge that clogs up the cooler’s
+      tiny passages and gums up the EGR valve itself... If the internal core cracks,
+      it leaks coolant directly into the exhaust stream."'
+    independent: true
+- id: k9k_emissions_egr_fouling_and_dpf_bloc_v1
+  claim_key: k9k_emissions_egr_fouling_and_dpf_bloc
+  version: 1
+  is_current: true
+  title: EGR fouling and DPF blockage on K9K 1.5 dCi
+  title_tr: K9K 1.5 dCi'de EGR kirlenmesi ve DPF tıkanması
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The K9K 1.5 dCi engine commonly suffers from EGR valve fouling and diesel
+    particulate filter (DPF) blockage, especially in city driving. This can lead to
+    power loss, higher fuel consumption, and expensive repairs over time. The issue
+    is predictable and can be checked before purchase.
+  rationale_tr: K9K 1.5 dCi motoru, özellikle şehir içi kullanımda sıkça EGR valfi
+    kirlenmesi ve dizel partikül filtresi (DPF) tıkanması sorunları yaşar. Bu durum
+    güç kaybına, yakıt tüketiminde artışa ve zamanla pahalı onarımlara yol açabilir.
+    Bu sorun tahmin edilebilir ve satın alma öncesi kontrol edilebilir.
+  inspection_advice: Check for EGR-related fault codes (e.g., P0401, P0402) and DPF
+    blockage codes (e.g., P2002). Inspect the EGR valve for carbon buildup, and ask
+    about DPF regeneration history. A test drive may reveal reduced power or limp
+    mode.
+  inspection_advice_tr: EGR ile ilgili hata kodlarını (ör. P0401, P0402) ve DPF tıkanıklık
+    kodlarını (ör. P2002) kontrol edin. EGR valfini karbon birikintisi için inceleyin
+    ve DPF rejenerasyon geçmişini sorun. Test sürüşünde güç kaybı veya koruma modu
+    görülebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://enginescope.gr/engine/renault-k9k-post10/
+    source_domain: enginescope.gr
+    site_or_channel: enginescope.gr
+    quote: '- EGR fouling + DPF (city use) — moderate, repair cost €400–€1,000, 80,000
+      km–150,000 km'
+    independent: true
+- id: k9k_emissions_egr_passages_clogging_le_v1
+  claim_key: k9k_emissions_egr_passages_clogging_le
+  version: 1
+  is_current: true
+  title: EGR passages clogging leading to restricted flow
+  title_tr: EGR passages clogging leading to restricted flow
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The EGR passages in the 1.5 K9K engine are prone to partial or complete
+    clogging, which restricts exhaust gas flow and can degrade engine performance
+    and emissions compliance.
+  rationale_tr: The EGR passages in the 1.5 K9K engine are prone to partial or complete
+    clogging, which restricts exhaust gas flow and can degrade engine performance
+    and emissions compliance.
+  inspection_advice: Inspect EGR passages for blockages during diagnostics. A slight
+    change in idle quality may indicate partially clogged passages, while no change
+    may suggest a completely restricted system.
+  inspection_advice_tr: Inspect EGR passages for blockages during diagnostics. A slight
+    change in idle quality may indicate partially clogged passages, while no change
+    may suggest a completely restricted system.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"If there is no change in idle quality, then either the EGR valve is inoperative
+      or the EGR passages are completely restricted. A slight change in idle quality
+      is indicative of partially clogged passages."'
+    independent: true
+- id: k9k_emissions_egr_system_control_circu_v1
+  claim_key: k9k_emissions_egr_system_control_circu
+  version: 1
+  is_current: true
+  title: EGR System Control Circuit Failures (K9K)
+  title_tr: EGR System Control Circuit Failures (K9K)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The presence of multiple DTCs related to the EGR system (P0400, P0403,
+    P0409) suggests chronic issues with the EGR volume control solenoid valve circuit
+    and sensor, which can lead to poor emissions control and potential engine performance
+    issues.
+  rationale_tr: The presence of multiple DTCs related to the EGR system (P0400, P0403,
+    P0409) suggests chronic issues with the EGR volume control solenoid valve circuit
+    and sensor, which can lead to poor emissions control and potential engine performance
+    issues.
+  inspection_advice: Check for EGR-related DTCs (P0400, P0403, P0409). Inspect the
+    EGR valve, solenoid, and related wiring for damage or malfunction. Clean or replace
+    the EGR valve if carbon buildup is present.
+  inspection_advice_tr: Check for EGR-related DTCs (P0400, P0403, P0409). Inspect
+    the EGR valve, solenoid, and related wiring for damage or malfunction. Clean or
+    replace the EGR valve if carbon buildup is present.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0400 EGR volume control solenoid valve circuit
+
+      DTC P0403 EGR control circuit
+
+      DTC P0409 EGR position sensor'
+    independent: true
+- id: k9k_emissions_egr_valve_deactivation_d_v1
+  claim_key: k9k_emissions_egr_valve_deactivation_d
+  version: 1
+  is_current: true
+  title: EGR valve deactivation due to low atmospheric pressure
+  title_tr: EGR valve deactivation due to low atmospheric pressure
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The 1.5 K9K diesel engine has a documented issue where the EGR (Exhaust
+    Gas Recirculation) valve is deactivated when atmospheric pressure is too low,
+    which can lead to improper emissions control and potential engine performance
+    issues.
+  rationale_tr: The 1.5 K9K diesel engine has a documented issue where the EGR (Exhaust
+    Gas Recirculation) valve is deactivated when atmospheric pressure is too low,
+    which can lead to improper emissions control and potential engine performance
+    issues.
+  inspection_advice: Check for any fault codes related to the EGR system and verify
+    atmospheric pressure conditions during diagnostics. Monitor EGR valve operation
+    under varying atmospheric pressures to confirm functionality.
+  inspection_advice_tr: Check for any fault codes related to the EGR system and verify
+    atmospheric pressure conditions during diagnostics. Monitor EGR valve operation
+    under varying atmospheric pressures to confirm functionality.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"Atmospheric pressure too low, the EGR valve is deactivated"'
+    independent: true
+- id: k9k_emissions_egr_valve_malfunction_v1
+  claim_key: k9k_emissions_egr_valve_malfunction
+  version: 1
+  is_current: true
+  title: EGR valve malfunction
+  title_tr: EGR valve malfunction
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The EGR (Exhaust Gas Recirculation) valve on the K9K engine is prone
+    to malfunction, a common issue in diesel engines that can lead to poor performance,
+    increased emissions, and potential engine damage if left unaddressed.
+  rationale_tr: The EGR (Exhaust Gas Recirculation) valve on the K9K engine is prone
+    to malfunction, a common issue in diesel engines that can lead to poor performance,
+    increased emissions, and potential engine damage if left unaddressed.
+  inspection_advice: Check for symptoms like rough idle, loss of power, or increased
+    exhaust emissions. Inspect the EGR valve for carbon buildup, physical damage,
+    or improper operation. Use diagnostic tools to check for related error codes.
+  inspection_advice_tr: Check for symptoms like rough idle, loss of power, or increased
+    exhaust emissions. Inspect the EGR valve for carbon buildup, physical damage,
+    or improper operation. Use diagnostic tools to check for related error codes.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: malfunctions of the EGR exhaust gas recirculation valve, which are common
+      for diesel engines.
+    independent: true
+- id: k9k_emissions_egr_valve_wear_and_stick_v1
+  claim_key: k9k_emissions_egr_valve_wear_and_stick
+  version: 1
+  is_current: true
+  title: EGR valve wear and sticking
+  title_tr: EGR valve wear and sticking
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The EGR valve is exposed to extreme heat and carbon buildup, leading
+    to wear, sticking, and failure. A stuck-open EGR valve dilutes the air-fuel mix,
+    causing poor engine performance and accelerating DPF clogging.
+  rationale_tr: The EGR valve is exposed to extreme heat and carbon buildup, leading
+    to wear, sticking, and failure. A stuck-open EGR valve dilutes the air-fuel mix,
+    causing poor engine performance and accelerating DPF clogging.
+  inspection_advice: Check for rough idle, shuddering, or dark exhaust smoke. Scan
+    for EGR-related codes (e.g., P0401, P0402). Inspect the EGR valve for carbon buildup
+    or mechanical failure. Verify if the car has a history of short trips or poor
+    maintenance.
+  inspection_advice_tr: Check for rough idle, shuddering, or dark exhaust smoke. Scan
+    for EGR-related codes (e.g., P0401, P0402). Inspect the EGR valve for carbon buildup
+    or mechanical failure. Verify if the car has a history of short trips or poor
+    maintenance.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autodataplug.com/vehicle-specific-issues/why-dpf-and-egr-clog-so-quickly-on-renault-dci-15l16l-engines/
+    source_domain: autodataplug.com
+    site_or_channel: autodataplug.com
+    quote: '"The valve is constantly opening and closing, exposed to extreme heat
+      and carbon, so wear and sticking are inevitable... A common scenario is a stuck-open
+      EGR valve, which dumps too much exhaust gas into the intake at idle, diluting
+      the air-fuel mix and causing poor running."'
+    independent: true
+- id: k9k_emissions_intermittent_egr_related_v1
+  claim_key: k9k_emissions_intermittent_egr_related
+  version: 1
+  is_current: true
+  title: Intermittent EGR-related concerns in electro-mechanical valves
+  title_tr: Intermittent EGR-related concerns in electro-mechanical valves
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The 1.5 K9K engine's electro-mechanical EGR valves may exhibit intermittent
+    malfunctions that are not always captured by fault codes, leading to unreliable
+    emissions control and potential engine performance fluctuations.
+  rationale_tr: The 1.5 K9K engine's electro-mechanical EGR valves may exhibit intermittent
+    malfunctions that are not always captured by fault codes, leading to unreliable
+    emissions control and potential engine performance fluctuations.
+  inspection_advice: Use diagnostic equipment to check for stored fault codes and
+    perform repeated tests to identify intermittent EGR valve issues. Monitor idle
+    quality and engine performance under varying conditions.
+  inspection_advice_tr: Use diagnostic equipment to check for stored fault codes and
+    perform repeated tests to identify intermittent EGR valve issues. Monitor idle
+    quality and engine performance under varying conditions.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.delphiautoparts.com/en-gb/mom/how-to/article/our-how-to-for-checking-the-egr-on-k9k-engines
+    source_domain: delphiautoparts.com
+    site_or_channel: delphiautoparts.com
+    quote: '"For electro-mechanical valves, a normal result indicates that the EGR-related
+      concern is intermittent, check for stored fault codes with diagnostic equipment."'
+    independent: true
+- id: k9k_emissions_k9k_diesel_egr_and_dpf_c_v1
+  claim_key: k9k_emissions_k9k_diesel_egr_and_dpf_c
+  version: 1
+  is_current: true
+  title: K9K diesel EGR and DPF chronic clogging
+  title_tr: K9K dizel EGR ve DPF kronik tıkanması
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The K9K diesel engine commonly suffers from EGR valve and diesel particulate
+    filter (DPF) clogging over time. This leads to power loss, increased emissions,
+    and warning lights, and many owners disable or remove these components instead
+    of fixing them properly, which can cause further issues.
+  rationale_tr: K9K dizel motorunda EGR valfi ve dizel partikül filtresi (DPF) zamanla
+    sık sık tıkanır. Bu durum güç kaybına, artan emisyona ve uyarı lambalarının yanmasına
+    neden olur; birçok sürücü bu parçaları düzgün şekilde tamir etmek yerine devre
+    dışı bırakır veya söker, bu da ilave sorunlara yol açabilir.
+  inspection_advice: Check for DTC codes P0401 (EGR insufficient flow) and P2002 (DPF
+    efficiency below threshold), look for visual signs of EGR blanking plates or DPF
+    gutting, and verify the service history for EGR cleaning or DPF regeneration records.
+  inspection_advice_tr: P0401 (EGR yetersiz akış) ve P2002 (DPF verimliliği eşiğin
+    altında) gibi DTC kodlarını kontrol edin, EGR blokaj plakası veya DPF içinin boşaltılmış
+    olması gibi görsel işaretlere bakın ve servis geçmişinde EGR temizliği veya DPF
+    rejenerasyonu kayıtlarını doğrulayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The EGR valve and particulate filter cause quite a few problems. Most car
+      enthusiasts turn off the valve and cut out the filter.
+    independent: true
+- id: k9k_emissions_k9k_dpf_clogging_risk_v1
+  claim_key: k9k_emissions_k9k_dpf_clogging_risk
+  version: 1
+  is_current: true
+  title: K9K DPF clogging risk
+  title_tr: K9K DPF tıkanıklığı riski
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The K9K diesel engine is known for its Diesel Particulate Filter (DPF)
+    clogging over time, especially in city driving or with short trips. This can reduce
+    performance and increase fuel consumption, and replacing a DPF is costly. It's
+    a particular risk for this engine code that a buyer cannot see in a quick visual
+    check.
+  rationale_tr: K9K dizel motoru, özellikle şehir içi kullanımda veya kısa mesafelerde
+    zamanla Dizel Partikül Filtresinin (DPF) tıkanmasıyla bilinir. Bu durum performansı
+    düşürebilir ve yakıt tüketimini artırabilir; DPF değişimi maliyetlidir. Bu motor
+    koduna özel bir risk olup, hızlı görsel muayenede anlaşılamaz.
+  inspection_advice: At viewing, check for DPF warning light or fault codes (P2002
+    etc.). Ask if the DPF has been cleaned or replaced and for proof of long highway
+    runs. Look for excessive soot at tailpipe. Check ECU with OBD scanner for pending
+    DPF-related codes.
+  inspection_advice_tr: Araç muayenesinde DPF uyarı ışığını veya hata kodlarını (P2002
+    vb.) kontrol edin. DPF'in temizlenip temizlenmediğini veya değiştirilip değiştirilmediğini
+    sorun ve uzun otoyol sürüşleri kanıtı isteyin. Egzoz çıkışında aşırı is olup olmadığına
+    bakın. OBD tarayıcı ile ECU'da bekleyen DPF ile ilgili kodları kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://sandikmotor.com.tr/k9k-euro-6-adblue-motorlarinin-kronik-sorunlari-ve-dikkat-edilmesi-gereken-hususlar/
+    source_domain: sandikmotor.com.tr
+    site_or_channel: sandikmotor.com.tr
+    quote: 'DPF (Dizel Partikül Filtresi) Tıkanıklığı: K9K motorlarında yaygın olarak
+      görülen bir diğer sorun, dizel partikül filtresinin (DPF) tıkanmasıdır. Bu durum,
+      aracın performansını düşürebilir ve yakıt tüketimini artırabilir.'
+    independent: true
+- id: k9k_emissions_k9k_euro_6_adblue_inject_v1
+  claim_key: k9k_emissions_k9k_euro_6_adblue_inject
+  version: 1
+  is_current: true
+  title: K9K Euro 6 AdBlue injector clogging
+  title_tr: K9K Euro 6 AdBlue enjektör tıkanması
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The AdBlue injectors in K9K Euro 6 engines tend to clog or fail over
+    time, increasing emissions and reducing engine performance. This is a known chronic
+    issue specific to this engine, likely to cause expensive repairs if neglected.
+  rationale_tr: K9K Euro 6 motorlardaki AdBlue enjektörleri zamanla tıkanma veya arıza
+    yapma eğilimindedir; bu durum emisyonları artırır ve motor performansını düşürür.
+    Bu motor için bilinen kronik bir sorundur ve ihmal edilirse pahalı onarımlara
+    yol açabilir.
+  inspection_advice: Check for AdBlue-related fault codes (e.g., P20EE) and ask for
+    service history regarding AdBlue injector replacement. Also look for any warning
+    lights related to the AdBlue system.
+  inspection_advice_tr: AdBlue ile ilgili arıza kodlarını (örn. P20EE) kontrol edin
+    ve AdBlue enjektör değişimine dair servis geçmişini sorun. Ayrıca AdBlue sistemiyle
+    ilgili uyarı ışıklarını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://sandikmotor.com.tr/k9k-euro-6-adblue-motorlarinin-kronik-sorunlari-ve-dikkat-edilmesi-gereken-hususlar/
+    source_domain: sandikmotor.com.tr
+    site_or_channel: sandikmotor.com.tr
+    quote: 'AdBlue enjektör sorunları: AdBlue sisteminde yer alan enjektörler, zamanla
+      tıkanma veya arıza yapma eğilimindedir. Bu durum, aracın emisyon seviyelerini
+      artırabilir ve motor performansını olumsuz etkileyebilir.'
+    independent: true
+- id: k9k_emissions_particulate_filter_and_e_v1
+  claim_key: k9k_emissions_particulate_filter_and_e
+  version: 1
+  is_current: true
+  title: Particulate filter and EGR clogging
+  title_tr: Particulate filter and EGR clogging
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: European-market K9K engines equipped with particulate filters (DPF) and
+    Exhaust Gas Recirculation (EGR) valves are prone to clogging, leading to reduced
+    performance, increased emissions, and potential engine damage if not serviced.
+  rationale_tr: European-market K9K engines equipped with particulate filters (DPF)
+    and Exhaust Gas Recirculation (EGR) valves are prone to clogging, leading to reduced
+    performance, increased emissions, and potential engine damage if not serviced.
+  inspection_advice: Check for warning lights related to emissions systems (e.g.,
+    DPF or EGR faults). Listen for unusual exhaust noises (e.g., backpressure) and
+    inspect for soot buildup around the exhaust manifold or DPF. Verify EGR valve
+    operation and cleanliness.
+  inspection_advice_tr: Check for warning lights related to emissions systems (e.g.,
+    DPF or EGR faults). Listen for unusual exhaust noises (e.g., backpressure) and
+    inspect for soot buildup around the exhaust manifold or DPF. Verify EGR valve
+    operation and cleanliness.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"Most diesel cars from Europe are equipped with a particulate filter and
+      an EGR valve, which tend to clog."'
+    independent: true
+- id: k9k_emissions_particulate_filter_failu_v1
+  claim_key: k9k_emissions_particulate_filter_failu
+  version: 1
+  is_current: true
+  title: Particulate filter failure
+  title_tr: Particulate filter failure
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The particulate filter on the K9K engine is prone to failure, which can
+    lead to expensive repairs and potential engine damage if the filter clogs or fails.
+    This is a chronic issue in modern diesel engines.
+  rationale_tr: The particulate filter on the K9K engine is prone to failure, which
+    can lead to expensive repairs and potential engine damage if the filter clogs
+    or fails. This is a chronic issue in modern diesel engines.
+  inspection_advice: Monitor for reduced engine performance, increased exhaust backpressure,
+    or diagnostic trouble codes related to the particulate filter. Inspect the filter
+    for clogging or physical damage and check for proper regeneration cycles.
+  inspection_advice_tr: Monitor for reduced engine performance, increased exhaust
+    backpressure, or diagnostic trouble codes related to the particulate filter. Inspect
+    the filter for clogging or physical damage and check for proper regeneration cycles.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Another common problem with modern diesel engines is the particulate filter,
+      which can be expensive.
+    independent: true
+- id: k9k_engine_1_5_dci_k9k_injector_fai_v1
+  claim_key: k9k_engine_1_5_dci_k9k_injector_fai
+  version: 1
+  is_current: true
+  title: 1.5 dCi (K9K) injector failure risk
+  title_tr: 1.5 dCi (K9K) enjektör arızası riski
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 dCi (K9K) diesel engine is known for injector failure. If left
+    untreated, it can lead to expensive repairs or permanent engine damage. This is
+    a specific reliability concern for this engine code.
+  rationale_tr: 1.5 dCi (K9K) dizel motoru enjektör arızasına yatkındır. Tedavi edilmezse
+    pahalı onarımlara veya kalıcı motor hasarına yol açabilir. Bu, bu motor kodu için
+    belirli bir güvenilirlik endişesidir.
+  inspection_advice: During viewing, run an OBD diagnostic scan for injector fault
+    codes (e.g., P0263-P0272). Perform an injector leak-off test and listen for rough
+    idle or misfire. Check service records for injector replacements.
+  inspection_advice_tr: Araç incelerken, enjektör arıza kodları için OBD teşhis taraması
+    yapın (örn. P0263-P0272). Enjektör dönüş testi yapın ve rölantide düzensizlik
+    veya teklemeyi dinleyin. Enjektör değişimleri için servis kayıtlarını kontrol
+    edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: 1.5 dCi enjektör arızası
+    independent: true
+- id: k9k_engine_1_5_dci_k9k_injectors_we_v1
+  claim_key: k9k_engine_1_5_dci_k9k_injectors_we
+  version: 1
+  is_current: true
+  title: 1.5 dCi (K9K) injectors wear faster in taxi/fleet use
+  title_tr: 1.5 dCi (K9K) enjektörleri taksi/filo kullanımında daha çabuk aşınır
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Injectors on this engine can fail early if the car has had hard use,
+    missed service intervals, or poor fuel. Replacement is expensive, so a used taxi
+    or fleet vehicle is a higher risk unless the ad proves full maintenance.
+  rationale_tr: Bu motorun enjektörleri, yoğun kullanım, aksatılmış bakım veya düşük
+    kaliteli yakıt nedeniyle erken arızalanabilir. Değişim maliyetli olduğundan, bakımı
+    tam yapıldığı kanıtlanmadıkça taksi veya filo çıkışlı araç daha risklidir.
+  inspection_advice: Ask about service history; look for running issues (rough idle,
+    hesitation), check for fault codes related to injectors (e.g., P0261-P0272), and
+    consider a fuel pressure/injector leak-off test.
+  inspection_advice_tr: Servis geçmişini sorun; rölanti dalgalanması, tepkisizlik
+    gibi çalışma sorunlarına bakın, enjektör arıza kodlarını (ör. P0261-P0272) kontrol
+    ettirin ve yakıt basıncı/enjektör geri kaçak testi yaptırmayı düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Özellikle taksi ve filo kullanımında bakım periyotlarının aksatılması,
+      düşük kaliteli yakıt kullanımı gibi dış etkenlere bağlı olarak enjektör ömürleri
+      genelde standart kullanıcıya göre daha kısa olmaktadır.
+    independent: true
+- id: k9k_engine_air_intake_filter_contam_v1
+  claim_key: k9k_engine_air_intake_filter_contam
+  version: 1
+  is_current: true
+  title: Air Intake Filter Contamination
+  title_tr: Air Intake Filter Contamination
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic issue where air filters become excessively clogged, restricting
+    airflow and reducing engine performance.
+  rationale_tr: Chronic issue where air filters become excessively clogged, restricting
+    airflow and reducing engine performance.
+  inspection_advice: Inspect air filter for excessive dirt buildup and check for reduced
+    airflow through the filter housing.
+  inspection_advice_tr: Inspect air filter for excessive dirt buildup and check for
+    reduced airflow through the filter housing.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Hava Filtresi Kirli", "Hava Filtresi Yağ Seviyesi Yüksek"'
+    independent: true
+- id: k9k_engine_boost_pressure_sensor_fa_v1
+  claim_key: k9k_engine_boost_pressure_sensor_fa
+  version: 1
+  is_current: true
+  title: Boost pressure sensor failure
+  title_tr: Boost pressure sensor failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The boost pressure sensor on the K9K engine can fail, leading to loss
+    of traction and requiring replacement. This is a chronic issue affecting turbocharged
+    diesel engines.
+  rationale_tr: The boost pressure sensor on the K9K engine can fail, leading to loss
+    of traction and requiring replacement. This is a chronic issue affecting turbocharged
+    diesel engines.
+  inspection_advice: Monitor for sudden loss of power or traction, erratic turbocharger
+    behavior, and check sensor readings with diagnostic tools. Listen for unusual
+    whining or hissing noises from the turbo area.
+  inspection_advice_tr: Monitor for sudden loss of power or traction, erratic turbocharger
+    behavior, and check sensor readings with diagnostic tools. Listen for unusual
+    whining or hissing noises from the turbo area.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Boost pressure sensor - its failure is not common, but it does happen.
+      If it fails, traction disappears.
+    independent: true
+- id: k9k_engine_carbon_buildup_in_turboc_v1
+  claim_key: k9k_engine_carbon_buildup_in_turboc
+  version: 1
+  is_current: true
+  title: Carbon buildup in turbocharger and intake system (1.5 dCi)
+  title_tr: Carbon buildup in turbocharger and intake system (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The text explicitly mentions carbon deposits (karbon birikimi) as a recurring
+    issue, particularly when low-quality fuel is used, clogging turbo components and
+    reducing efficiency.
+  rationale_tr: The text explicitly mentions carbon deposits (karbon birikimi) as
+    a recurring issue, particularly when low-quality fuel is used, clogging turbo
+    components and reducing efficiency.
+  inspection_advice: Inspect the turbo inlet and vanes for black carbon deposits.
+    A visual inspection of the intake manifold and turbo housing may reveal soot buildup,
+    especially if the vehicle has high mileage or a history of poor fuel quality.
+  inspection_advice_tr: Inspect the turbo inlet and vanes for black carbon deposits.
+    A visual inspection of the intake manifold and turbo housing may reveal soot buildup,
+    especially if the vehicle has high mileage or a history of poor fuel quality.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Karbon Birikimi: Özellikle düşük kaliteli yakıt kullanımı karbon birikimine
+      neden olabilir.'
+    independent: true
+- id: k9k_engine_chronic_injector_wear_in_v1
+  claim_key: k9k_engine_chronic_injector_wear_in
+  version: 1
+  is_current: true
+  title: Chronic injector wear in K9K 1.5 dCi engine
+  title_tr: K9K 1.5 dCi motorda kronik enjektör aşınması
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The K9K diesel engine's fuel injectors can wear out at high mileage,
+    making the car hard to start and causing exhaust smoke. This is a known, expensive
+    issue specific to this engine code, so a used example may need injector replacement.
+  rationale_tr: K9K dizel motorun yakıt enjektörleri yüksek kilometrede aşınabilir.
+    Bu, motorun zor çalışmasına ve egzozdan duman çıkmasına neden olabilir. Bu motor
+    tipine özgü bilinen ve pahalı bir sorundur; bu yüzden kullanılmış bir araçta enjektör
+    değişimi gerekebilir.
+  inspection_advice: Check for hard cold starting, excessive smoke, and uneven idle.
+    Listen for ticking from injectors. A diagnostic scan can show injector correction
+    values or fault codes like P0263-P0272. Ask for service history of injector replacement.
+  inspection_advice_tr: Soğuk çalıştırmada zorlanma, aşırı duman ve düzensiz rölanti
+    kontrol edin. Enjektörlerden tıkırtı sesi dinleyin. Diagnostik tarama, enjektör
+    düzeltme değerlerini veya P0263-P0272 gibi arıza kodlarını gösterebilir. Enjektör
+    değişimi bakım geçmişini sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autoscore.pro/engine/1.5-dci-k9k
+    source_domain: autoscore.pro
+    site_or_channel: autoscore.pro
+    quote: High-mileage K9K engines can develop injector wear, leading to hard starts
+      and smoke.
+    independent: true
+- id: k9k_engine_chronic_turbocharger_bea_v1
+  claim_key: k9k_engine_chronic_turbocharger_bea
+  version: 1
+  is_current: true
+  title: Chronic turbocharger bearing wear on 1.5 dCi engines
+  title_tr: Chronic turbocharger bearing wear on 1.5 dCi engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The text repeatedly highlights turbocharger bearing (yatak) failure as
+    a common issue requiring replacement, often due to poor lubrication or contamination,
+    leading to performance loss and potential catastrophic failure if ignored.
+  rationale_tr: The text repeatedly highlights turbocharger bearing (yatak) failure
+    as a common issue requiring replacement, often due to poor lubrication or contamination,
+    leading to performance loss and potential catastrophic failure if ignored.
+  inspection_advice: Check for unusual turbo noise (high-pitched whine or grinding),
+    excessive oil consumption, or blue smoke from the exhaust—signs of turbo bearing
+    wear. Inspect for oil leaks around the turbo housing during a test drive or under-hood
+    inspection.
+  inspection_advice_tr: Check for unusual turbo noise (high-pitched whine or grinding),
+    excessive oil consumption, or blue smoke from the exhaust—signs of turbo bearing
+    wear. Inspect for oil leaks around the turbo housing during a test drive or under-hood
+    inspection.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Yataklar: Aşınmışsa değiştirilmeli.'
+    independent: true
+- id: k9k_engine_connecting_rod_bearing_c_v1
+  claim_key: k9k_engine_connecting_rod_bearing_c
+  version: 1
+  is_current: true
+  title: Connecting rod bearing cranking failure
+  title_tr: Connecting rod bearing cranking failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine is prone to catastrophic failure of connecting rod bearings,
+    particularly in European models where oil changes are less frequent (every 30,000
+    km). This can lead to severe engine damage if not addressed promptly.
+  rationale_tr: The K9K engine is prone to catastrophic failure of connecting rod
+    bearings, particularly in European models where oil changes are less frequent
+    (every 30,000 km). This can lead to severe engine damage if not addressed promptly.
+  inspection_advice: Check for unusual engine noise (e.g., knocking or rattling) during
+    startup or acceleration. Inspect for oil leaks around the crankshaft area and
+    verify oil change history—ensure oil changes are done at recommended intervals
+    (typically 10,000–15,000 km for diesel engines).
+  inspection_advice_tr: Check for unusual engine noise (e.g., knocking or rattling)
+    during startup or acceleration. Inspect for oil leaks around the crankshaft area
+    and verify oil change history—ensure oil changes are done at recommended intervals
+    (typically 10,000–15,000 km for diesel engines).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"The most famous problem with such engines is cranking of the connecting
+      rod bearings. This happens especially often with engines from Europe, where
+      they change the oil every 30,000 km."'
+    independent: true
+  applies_when:
+    min_mileage_km: 10000
+- id: k9k_engine_connecting_rod_bearing_w_v1
+  claim_key: k9k_engine_connecting_rod_bearing_w
+  version: 1
+  is_current: true
+  title: Connecting Rod Bearing Wear (K9K 1.5 dCi)
+  title_tr: Connecting Rod Bearing Wear (K9K 1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Design-sensitive bearing shells can spin from around 100,000–150,000
+    km, causing catastrophic engine failure if oil changes are delayed or incorrect
+    oil is used.
+  rationale_tr: Design-sensitive bearing shells can spin from around 100,000–150,000
+    km, causing catastrophic engine failure if oil changes are delayed or incorrect
+    oil is used.
+  inspection_advice: Check for knocking noises, oil pressure warning lights, or sudden
+    engine stalls. Verify full service history for oil change intervals.
+  inspection_advice_tr: Check for knocking noises, oil pressure warning lights, or
+    sudden engine stalls. Verify full service history for oil change intervals.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://what-breaks.com/renault/talisman-1
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"The K9K connecting rod bearings are design-sensitive. With overly long
+      oil change intervals or incorrect oil the bearing shells spin from around 100,000–150,000
+      km, resulting in total engine failure. Symptoms: Knocking engine noise, oil
+      pressure warning light, sudden engine stop"'
+    independent: true
+  applies_when:
+    min_mileage_km: 100000
+- id: k9k_engine_connecting_rod_failure_d_v1
+  claim_key: k9k_engine_connecting_rod_failure_d
+  version: 1
+  is_current: true
+  title: Connecting rod failure due to delayed oil changes
+  title_tr: Connecting rod failure due to delayed oil changes
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K 1.5 DCI engine is prone to catastrophic connecting rod failure
+    when oil changes are delayed beyond recommended intervals, typically occurring
+    between 150,000–200,000 km.
+  rationale_tr: The K9K 1.5 DCI engine is prone to catastrophic connecting rod failure
+    when oil changes are delayed beyond recommended intervals, typically occurring
+    between 150,000–200,000 km.
+  inspection_advice: Check for signs of oil leaks, unusual engine noises (e.g., knocking
+    or rattling), or visible damage to the connecting rods during inspection. Verify
+    oil change history and confirm the use of high-quality oil (e.g., RN0720 or equivalent).
+  inspection_advice_tr: Check for signs of oil leaks, unusual engine noises (e.g.,
+    knocking or rattling), or visible damage to the connecting rods during inspection.
+    Verify oil change history and confirm the use of high-quality oil (e.g., RN0720
+    or equivalent).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://oborudow.ru/en/engine/dvigatel-k9k-1-5-dci-tip-ustanovlennyh-forsunok-slabye-mesta-i/
+    source_domain: oborudow.ru
+    site_or_channel: oborudow.ru
+    quote: '"The main disadvantage of K9K is the increased sensitivity to poor-quality
+      oil, to the late replacement of oil, as a result of which, when run 150000-200000
+      km, the connecting rods occurs."'
+    independent: true
+  applies_when:
+    min_mileage_km: 150000
+- id: k9k_engine_cooling_system_issues_ra_v1
+  claim_key: k9k_engine_cooling_system_issues_ra
+  version: 1
+  is_current: true
+  title: Cooling System Issues (Radiator or Pump Failure)
+  title_tr: Cooling System Issues (Radiator or Pump Failure)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic problem with radiator blockages, faulty radiator caps, or failing
+    water pumps, leading to engine overheating and potential damage.
+  rationale_tr: Chronic problem with radiator blockages, faulty radiator caps, or
+    failing water pumps, leading to engine overheating and potential damage.
+  inspection_advice: Check coolant levels, inspect radiator for blockages, and test
+    water pump functionality for proper coolant circulation.
+  inspection_advice_tr: Check coolant levels, inspect radiator for blockages, and
+    test water pump functionality for proper coolant circulation.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Radyatör Su Seviyesi Düşük", "Radyatör Kapağı Arızalı", "Radyatör Tıkalı",
+      "Su Pompası Arızalı"'
+    independent: true
+- id: k9k_engine_cylinder_head_gasket_fai_v1
+  claim_key: k9k_engine_cylinder_head_gasket_fai
+  version: 1
+  is_current: true
+  title: Cylinder Head Gasket Failure (Indicated by Water in Cylinders)
+  title_tr: Cylinder Head Gasket Failure (Indicated by Water in Cylinders)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic issue where cylinder head gaskets fail, allowing coolant to enter
+    cylinders, leading to white smoke, overheating, and potential engine damage.
+  rationale_tr: Chronic issue where cylinder head gaskets fail, allowing coolant to
+    enter cylinders, leading to white smoke, overheating, and potential engine damage.
+  inspection_advice: Check for coolant in the oil, white smoke from the exhaust, or
+    overheating symptoms; perform a compression test to confirm coolant presence in
+    cylinders.
+  inspection_advice_tr: Check for coolant in the oil, white smoke from the exhaust,
+    or overheating symptoms; perform a compression test to confirm coolant presence
+    in cylinders.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Silindirler Su Alıyor (Kapak, Çatlak, Conta Arızalı)"'
+    independent: true
+- id: k9k_engine_cylinder_misfires_k9k_v1
+  claim_key: k9k_engine_cylinder_misfires_k9k
+  version: 1
+  is_current: true
+  title: Cylinder Misfires (K9K)
+  title_tr: Cylinder Misfires (K9K)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The presence of multiple misfire DTCs (P0301, P0302, P0303, P0304) indicates
+    chronic misfire issues in the K9K engine, which can be caused by faulty injectors,
+    sensors, or other engine components.
+  rationale_tr: The presence of multiple misfire DTCs (P0301, P0302, P0303, P0304)
+    indicates chronic misfire issues in the K9K engine, which can be caused by faulty
+    injectors, sensors, or other engine components.
+  inspection_advice: Check for misfire DTCs (P0301-P0304). Perform a compression test
+    and inspect spark plugs, injectors, and sensors for faults. Look for signs of
+    carbon buildup or mechanical issues in the cylinders.
+  inspection_advice_tr: Check for misfire DTCs (P0301-P0304). Perform a compression
+    test and inspect spark plugs, injectors, and sensors for faults. Look for signs
+    of carbon buildup or mechanical issues in the cylinders.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0301 Cylinder 1 misfire
+
+      DTC P0302 Cylinder 2 misfire
+
+      DTC P0303 Cylinder 3 misfire
+
+      DTC P0304 Cylinder 4 misfire'
+    independent: true
+- id: k9k_engine_engine_back_compression__v1
+  claim_key: k9k_engine_engine_back_compression_
+  version: 1
+  is_current: true
+  title: Engine back compression post-software update
+  title_tr: Engine back compression post-software update
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The engine developed back compression after a software update related
+    to the 'diesel gate scam,' indicating a software-induced mechanical failure or
+    design flaw in the 1.5 TDI variant.
+  rationale_tr: The engine developed back compression after a software update related
+    to the 'diesel gate scam,' indicating a software-induced mechanical failure or
+    design flaw in the 1.5 TDI variant.
+  inspection_advice: Listen for unusual knocking or rattling noises from the engine,
+    especially under load. Check for reduced power, increased fuel consumption, or
+    unusual exhaust smoke. Verify if the car was updated with the controversial software.
+  inspection_advice_tr: Listen for unusual knocking or rattling noises from the engine,
+    especially under load. Check for reduced power, increased fuel consumption, or
+    unusual exhaust smoke. Verify if the car was updated with the controversial software.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Engine has developed back compression post diesel gate scam software update
+    independent: true
+- id: k9k_engine_engine_oil_consumption_d_v1
+  claim_key: k9k_engine_engine_oil_consumption_d
+  version: 1
+  is_current: true
+  title: Engine Oil Consumption Due to Internal Leaks
+  title_tr: Engine Oil Consumption Due to Internal Leaks
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic issue where excessive oil consumption occurs due to internal
+    leaks (e.g., piston rings, valve seals), leading to low oil levels and potential
+    engine damage.
+  rationale_tr: Chronic issue where excessive oil consumption occurs due to internal
+    leaks (e.g., piston rings, valve seals), leading to low oil levels and potential
+    engine damage.
+  inspection_advice: Monitor oil levels frequently; check for blue smoke from the
+    exhaust (indicative of burning oil) and inspect for oil leaks around the engine.
+  inspection_advice_tr: Monitor oil levels frequently; check for blue smoke from the
+    exhaust (indicative of burning oil) and inspect for oil leaks around the engine.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Motor Yağ Yakıyor", "Aşırı Yağ Sarfiyatı"'
+    independent: true
+- id: k9k_engine_engine_rod_or_piston_noi_v1
+  claim_key: k9k_engine_engine_rod_or_piston_noi
+  version: 1
+  is_current: true
+  title: Engine Rod or Piston Noise
+  title_tr: Engine Rod or Piston Noise
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic internal engine noise indicating severe wear or damage to rods,
+    pistons, or connecting rods, leading to catastrophic engine failure if ignored.
+  rationale_tr: Chronic internal engine noise indicating severe wear or damage to
+    rods, pistons, or connecting rods, leading to catastrophic engine failure if ignored.
+  inspection_advice: Listen for distinct knocking, rattling, or metallic noises from
+    the engine block, especially under load; perform a compression test and oil analysis
+    if suspected.
+  inspection_advice_tr: Listen for distinct knocking, rattling, or metallic noises
+    from the engine block, especially under load; perform a compression test and oil
+    analysis if suspected.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Piston Pim Sesi", "Segman Sesi", "Piston Sesi", "Kol Yatak Sesi", "Ana
+      Yatak Sesi", "Piston Kolu Sesi", "Krank Mili Sesi", "Subap Sesi"'
+    independent: true
+- id: k9k_engine_intercooler_blockage_or__v1
+  claim_key: k9k_engine_intercooler_blockage_or_
+  version: 1
+  is_current: true
+  title: Intercooler Blockage or Leakage
+  title_tr: Intercooler Blockage or Leakage
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic issue where intercoolers become clogged or develop leaks, affecting
+    engine efficiency and performance.
+  rationale_tr: Chronic issue where intercoolers become clogged or develop leaks,
+    affecting engine efficiency and performance.
+  inspection_advice: Inspect intercooler for blockages (e.g., debris, insect nests)
+    and check for leaks or unusual pressure drops in the intake system.
+  inspection_advice_tr: Inspect intercooler for blockages (e.g., debris, insect nests)
+    and check for leaks or unusual pressure drops in the intake system.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Intercooler Tıkalı veya Kaçak Var"'
+    independent: true
+- id: k9k_engine_k9k_1_5_dci_105_bearing__v1
+  claim_key: k9k_engine_k9k_1_5_dci_105_bearing_
+  version: 1
+  is_current: true
+  title: k9k 1.5 dCi 105 bearing seizure risk from long oil changes
+  title_tr: k9k 1.5 dCi 105 uzun yağ değişimi nedeniyle yatak sarma riski
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The pre-2011 1.5 dCi 105 engine (code k9k) had a factory oil change interval
+    of 20,000 km, which is too long. This can cause oil degradation and bearing wear,
+    potentially leading to engine seizure. Buyers should verify that the vehicle had
+    more frequent oil changes, ideally every 10,000 km or less.
+  rationale_tr: 2011 öncesi 1.5 dCi 105 motor (k9k kodlu) fabrika yağ değişim aralığı
+    20.000 km olarak belirlenmişti; bu çok uzundur. Yağın bozulmasına ve yatak aşınmasına
+    yol açarak motorun sarmasına neden olabilir. Alıcılar, aracın daha sık, ideal
+    olarak 10.000 km veya daha kısa aralıklarla yağ değişimi yapıldığını doğrulamalıdır.
+  inspection_advice: Check the service book for oil change stamps, especially before
+    2011 vehicles. Listen for knocking or rattling noises from the engine on cold
+    start. If possible, have an oil pressure test performed by a mechanic.
+  inspection_advice_tr: Servis defterinde yağ değişim damgalarını kontrol edin, özellikle
+    2011 öncesi araçlarda. Soğuk çalıştırmada motordan vuruntu veya tıkırtı sesi dinleyin.
+    Mümkünse bir ustanın yağ basıncı testi yapmasını sağlayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.youtube.com/watch?v=OQFrxGbPJ5w
+    source_domain: youtube.com
+    site_or_channel: Alınır Mı?
+    quote: Yatak sarm riski. Özellikle 2011 öncesi 105'lik DCI'larda yağ deşimi aralığı
+      20.000 km olarak belirlenmiş. Bu çok uzun bir bakım.
+    independent: true
+  applies_when:
+    min_mileage_km: 20000
+- id: k9k_engine_k9k_1_5_dci_bottom_end_b_v1
+  claim_key: k9k_engine_k9k_1_5_dci_bottom_end_b
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi bottom-end bearing wear
+  title_tr: K9K 1.5 dCi alt yatak aşınması
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K 1.5 dCi engine can suffer premature piston, big-end and crankshaft
+    bearing wear, especially if oil changes are delayed or poor quality oil is used.
+    This typically appears after 100,000–150,000 km and can lead to expensive engine
+    failure.
+  rationale_tr: K9K 1.5 dCi motoru, özellikle yağ değişimleri geciktirilirse veya
+    düşük kaliteli yağ kullanılırsa, piston, biyel ve krank mili yataklarında erken
+    aşınmaya maruz kalabilir. Bu genellikle 100.000–150.000 km sonra ortaya çıkar
+    ve pahalı motor arızasına yol açabilir.
+  inspection_advice: Check service history for regular oil changes with the correct
+    specification. Listen for knocking or low oil pressure warnings at idle and under
+    load; consider an oil analysis or compression test if possible.
+  inspection_advice_tr: Görüşmede, yağ değişimlerinin düzenli ve doğru spesifikasyonda
+    yapıldığını kontrol edin. Rölantide ve yükte vuruntu veya düşük yağ basıncı uyarılarına
+    dikkat edin; mümkünse yağ analizi veya kompresyon testi yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://otomobiloji.com/renault-1-5-dci-motor-sorunlari-ve-cozumu/
+    source_domain: otomobiloji.com
+    site_or_channel: otomobiloji.com
+    quote: Piston / biyel kolu yatakları ayrıca krank mili yatakları sorun olmaktadır.
+      Kalitesiz motor yağı ve uzun değişim km leri bu sorunu 100-150.000 km sonra
+      ortaya çıkarabilir.
+    independent: true
+  applies_when:
+    min_mileage_km: 100000
+- id: k9k_engine_k9k_1_5_dci_cylinder_lin_v1
+  claim_key: k9k_engine_k9k_1_5_dci_cylinder_lin
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi cylinder liner rotation causing engine rattle
+  title_tr: K9K 1.5 dCi silindir gömleği dönmesi motor vuruntusu
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K 1.5 dCi engine is prone to a serious defect where the cylinder
+    liners rotate, producing a distinct rattling noise. This often requires complete
+    engine replacement, which is very expensive. A standard pre-purchase inspection
+    may not detect this issue until it has already caused damage.
+  rationale_tr: K9K 1.5 dCi motorunda, silindir gömleklerinin dönmesi gibi ciddi bir
+    arıza görülebilir ve bu durum belirgin bir vuruntu sesi çıkarır. Çoğu zaman komple
+    motor değişimi gerektirir ve bu çok pahalıdır. Standart bir ekspertiz bu sorunu
+    hasar oluşana kadar tespit edemeyebilir.
+  inspection_advice: Listen for a rattling or knocking noise from the engine, especially
+    when cold or under load. Ask for a compression test and, if possible, a borescope
+    inspection of the cylinders to check for liner movement. Any metallic rattle should
+    be investigated thoroughly.
+  inspection_advice_tr: Motor soğukken veya yük altında vuruntu veya takırtı sesini
+    dinleyin. Kompresyon testi ve mümkünse silindirlerin boreskop ile incelenmesini
+    isteyin. Herhangi bir metalik vuruntu detaylı olarak araştırılmalıdır.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: An engine that rattles due to rotation of the liners is often replaced
+      with a contract one - it’s cheaper and faster.
+    independent: true
+- id: k9k_engine_k9k_1_5_dci_injector_fai_v1
+  claim_key: k9k_engine_k9k_1_5_dci_injector_fai
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi injector failure due to common rail tolerance loss
+  title_tr: 'K9K 1.5 dCi enjektör arızası: common rail tolerans kaybı'
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: This engine's common rail injection system is sensitive to maintenance
+    and fuel quality. When tolerances are lost, injectors fail, causing cold-start
+    problems and rough running. This is a known weakness to check before purchase.
+  rationale_tr: Bu motorun common rail enjeksiyon sistemi bakım ve yakıt kalitesine
+    duyarlıdır. Toleranslar kaybolduğunda enjektörler bozulur, soğuk başlatma sorunlarına
+    ve düzensiz çalışmaya neden olur. Satın almadan önce kontrol edilmesi gereken
+    bilinen bir zayıflıktır.
+  inspection_advice: Check service history for regular fuel filter changes and quality
+    fuel usage. During a viewing, listen for rough idle and test cold start. Borrow
+    an OBD scanner to check for injector fault codes (e.g., P0263–P0272).
+  inspection_advice_tr: Bakım geçmişinde düzenli yakıt filtresi değişimi ve kaliteli
+    yakıt kullanımını kontrol edin. Görüşmede rölanti düzensizliğini dinleyin ve soğuk
+    çalıştırmayı test edin. OBD tarayıcı ile enjektör hata kodlarını (örn. P0263–P0272)
+    kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Ancak bu hassas Common Rail sistemi, zamanında yapılmayan bakımlar veya
+      standart dışı yakıt kullanımı sebebiyle toleranslarını yitirdiğinde, doğrudan
+      enjektörlerin bozulmasına sebep olur.
+    independent: true
+- id: k9k_engine_k9k_1_5_dci_oil_drain_ba_v1
+  claim_key: k9k_engine_k9k_1_5_dci_oil_drain_ba
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi oil drain-back causes dry-start wear
+  title_tr: K9K 1.5 dCi yağ geri akışı kuru çalıştırma aşınmasına neden olur
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: When the engine is switched off, oil drains back into the sump, so on
+    startup the moving parts are briefly unlubricated. This metal-to-metal contact
+    accelerates engine wear over time.
+  rationale_tr: Motor kapatıldığında yağ kartere geri akar, bu nedenle çalıştırma
+    sırasında hareketli parçalar kısa süre yağsız kalır. Bu metal-metal temas, zamanla
+    motor aşınmasını hızlandırır.
+  inspection_advice: At viewing, start the engine cold and listen for a brief rattle
+    or knocking. Check oil change history; using the correct viscosity oil may reduce
+    the effect.
+  inspection_advice_tr: Araç muayenesinde motoru soğukken çalıştırın ve kısa bir takırtı
+    veya vuruntu dinleyin. Yağ değişim geçmişini kontrol edin; doğru viskozitede yağ
+    kullanmak etkiyi azaltabilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: '5 dCi K9K engine: because of them, when the engine is not running, the
+      oil is not retained by the rubbing parts and drains into the sump. Consequently,
+      when starting, the engine literally runs dry for several seconds.'
+    independent: true
+- id: k9k_engine_k9k_1_5_dci_timing_belt__v1
+  claim_key: k9k_engine_k9k_1_5_dci_timing_belt_
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi timing belt failure from misaligned fuel pump pulley
+  title_tr: 'K9K 1.5 dCi triger kayışı arızası: yanlış hizalı yakıt pompası kasnağı'
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K 1.5 dCi diesel engine can suffer timing belt failure because
+    the high-pressure fuel pump pulley may be misaligned. This rubs the belt and can
+    shred it, leading to severe engine damage in this interference engine. It's a
+    known chronic issue that a normal pre-purchase check may not catch.
+  rationale_tr: K9K 1.5 dCi dizel motorda, yüksek basınçlı yakıt pompası kasnağının
+    yanlış hizalanması triger kayışının aşınmasına ve kopmasına yol açabilir. Bu,
+    motorun iç parçalarında ciddi hasara neden olabilir. Bu bilinen kronik bir sorundur
+    ve normal bir ekspertiz sırasında fark edilmeyebilir.
+  inspection_advice: Check the service history for timing belt replacement according
+    to the manufacturer interval. Ask a mechanic to visually inspect the timing belt
+    and fuel pump pulley alignment, and listen for unusual belt noise.
+  inspection_advice_tr: Servis geçmişinde triger kayışının üretici aralığına göre
+    değiştirilip değiştirilmediğini kontrol edin. Bir uzmandan triger kayışını ve
+    yakıt pompası kasnağı hizasını görsel olarak incelemesini ve anormal kayış sesini
+    dinlemesini isteyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: K9K 1.5 dCi Timing Belt Failure from Misaligned Fuel Pump Pulley
+    independent: true
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: Renault's K9K 1.5 dCi diesel engine is prone to premature timing belt failure
+      caused by a misaligned high-pressure fuel pump pulley. The pulley's offset rubs
+      the back of the belt, shredding it; when it breaks, the interference engine
+      destroys valves and pistons.
+    independent: true
+- id: k9k_engine_k9k_1_5_dci_turbo_failur_v1
+  claim_key: k9k_engine_k9k_1_5_dci_turbo_failur
+  version: 1
+  is_current: true
+  title: K9K 1.5 dCi turbo failure from oil starvation
+  title_tr: K9K 1.5 dCi yağ açlığına bağlı turbo arızası
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: This engine can suffer turbocharger failure if oil changes are delayed,
+    because sludge blocks the tiny oil feed pipe and sump strainer, starving the turbo
+    bearings. It is a common chronic issue on Mégane II and III. The risk is predictable
+    from service history alone, so you cannot rely on a pre-purchase inspection to
+    catch it unless you verify oil changes.
+  rationale_tr: Bu motorda yağ değişimi geciktirilirse, çamur küçük yağ besleme borusunu
+    ve yağ filtresini tıkayarak turbo yataklarının yağsız kalmasına ve turbo arızasına
+    yol açabilir. Mégane II ve III'te bilinen kronik bir sorundur. Risk yalnızca bakım
+    geçmişinden tahmin edilebilir; bu nedenle ön alım muayenesi yağ değişimlerini
+    doğrulamadıkça sorunu yakalayamaz.
+  inspection_advice: Review the service book for evidence of oil changes at the required
+    intervals (typically every 10,000–15,000 km or per manufacturer). At the viewing,
+    check the engine idle sound for a whistling turbo, and look for blue smoke on
+    start-up or acceleration. Ask the seller directly for oil change receipts.
+  inspection_advice_tr: Servis geçmişinde yağ değişimlerinin önerilen aralıklarda
+    (genellikle 10.000–15.000 km veya üretici talimatına göre) yapıldığını kontrol
+    edin. Görüşme sırasında motor rölantide ıslık sesi dinleyin ve kalkışta veya hızlanmada
+    mavi duman olup olmadığına bakın. Satıcıdan doğrudan yağ değişim fişlerini isteyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: 'The K9K 1.5 dCi diesel in the Mégane II and III suffers well-documented
+      turbocharger failures caused by oil starvation: extended oil-change intervals
+      let carbon sludge block the narrow turbo oil feed pipe and sump pickup strainer,
+      starving the turbo bearings.'
+    independent: true
+  applies_when:
+    min_mileage_km: 10000
+- id: k9k_engine_k9k_bearing_wear_debris__v1
+  claim_key: k9k_engine_k9k_bearing_wear_debris_
+  version: 1
+  is_current: true
+  title: K9K bearing wear debris destroys turbocharger
+  title_tr: K9K yatak aşınması turboşarjı bozuyor
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine can suffer excessive connecting rod bearing wear, which
+    creates metallic chips in the oil. These chips are carried through the lubrication
+    system and can cause the turbocharger to fail. This is a serious and expensive
+    issue that may not be obvious from a standard inspection.
+  rationale_tr: K9K motorunda aşırı kol yatağı aşınması yaşanabilir; bu, yağda metal
+    parçacıkları oluşturur. Bu parçacıklar yağlama sistemi boyunca taşınır ve turboşarjın
+    arızalanmasına neden olabilir. Bu ciddi ve pahalı bir sorundur ve standart bir
+    incelemede açıkça fark edilmeyebilir.
+  inspection_advice: During viewing, ask for oil change history; if possible, check
+    the oil dipstick for metallic particles. Listen for knocking or rattling noises
+    from the engine. Consider an oil analysis or borescope inspection, especially
+    for high-mileage examples.
+  inspection_advice_tr: İnceleme sırasında yağ değişim geçmişini sorun; mümkünse yağ
+    çubuğunda metal parçacık olup olmadığını kontrol edin. Motordan vuruntu veya tıkırtı
+    seslerini dinleyin. Özellikle yüksek kilometreli araçlarda yağ analizi veya boreskop
+    incelemesi düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: because of these same liners, the entire engine suffers. After all, friction
+      produces chips, which the oil carries throughout the engine. So, in particular,
+      the turbocharger of the 1.5 dCi K9K engine 'dies' just because of these chips.
+    independent: true
+- id: k9k_engine_k9k_connecting_rod_beari_v1
+  claim_key: k9k_engine_k9k_connecting_rod_beari
+  version: 1
+  is_current: true
+  title: K9K connecting rod bearing wear and rotation
+  title_tr: K9K piston kolu yatağı aşınması ve dönmesi
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine's connecting rod bearings are known to wear out prematurely,
+    leading to oil pressure loss and eventual bearing seizure. This can cause catastrophic
+    engine failure requiring a full engine replacement, and it is not easily spotted
+    in a standard inspection.
+  rationale_tr: K9K motorunun piston kolu yatakları erken aşınarak yağ basıncının
+    düşmesine ve sonunda yatağın dönmesine neden olur. Bu durum motorun tamamen arızalanmasına
+    yol açabilir ve motor değişimi gerektirebilir. Bu, standart bir muayenede kolayca
+    fark edilmeyen motora özgü bir sorundur.
+  inspection_advice: Check engine oil level and condition for metal particles; listen
+    for a knocking sound from the lower engine at idle and under load; review service
+    records for oil change intervals; if possible, check oil pressure reading and
+    consider an oil analysis for wear metals.
+  inspection_advice_tr: Motor yağı seviyesini ve metal parçacıklar için yağ durumunu
+    kontrol edin; rölantide ve yük altında motorun alt kısmından vuruntu sesi dinleyin;
+    bakım kayıtlarında yağ değişim aralıklarını inceleyin; mümkünse yağ basıncı değerini
+    kontrol edin ve aşınma metalleri için yağ analizi yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: However, the most common cause of total breakdown of the K9K engine is
+      rotation of the connecting rod bearings. The fact is that the connecting rod
+      bearings themselves are short-lived and experience heavy loads. As natural wear
+      occurs, the gap between the shaft journal and the liner increases, through which
+      the oil, not meeting sufficient resistance, simply drains into the pan without
+      lubricating the loaded rubbing parts. As a result, the wear of the liners accelerates,
+      which soon leads to their rotation.
+    independent: true
+- id: k9k_engine_k9k_delphi_injectors_vul_v1
+  claim_key: k9k_engine_k9k_delphi_injectors_vul
+  version: 1
+  is_current: true
+  title: K9K Delphi injectors vulnerable to poor fuel quality
+  title_tr: K9K Delphi enjektörleri kötü yakıt kalitesine karşı hassas
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The K9K engine uses Delphi injectors that can clog or fail if the car
+    has been run on low-quality fuel. This causes rough idle, loss of power, and expensive
+    injector replacement. It's a specific weakness of this engine, not a generic issue
+    for all cars.
+  rationale_tr: K9K motoru, düşük kaliteli yakıtla çalıştırıldığında tıkanabilen veya
+    arızalanabilen Delphi enjektörler kullanır. Bu, rölantide titreme, güç kaybı ve
+    pahalı enjektör değişimine neden olur. Bu, tüm arabalar için geçerli olmayan,
+    bu motora özgü bir zayıflıktır.
+  inspection_advice: During viewing, start the engine and check for rough idle or
+    misfires. Ask the seller about fuel quality history. If possible, read engine
+    fault codes for injector-related DTCs (e.g., P0261-P0272).
+  inspection_advice_tr: Araç muayenesinde motoru çalıştırın ve rölantide titreme veya
+    teklemeleri kontrol edin. Satıcıya yakıt kalitesi geçmişini sorun. Mümkünse, enjektörle
+    ilgili arıza kodlarını (örn. P0261-P0272) okutun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.motorreviewer.com/engine.php?engine_id=21
+    source_domain: motorreviewer.com
+    site_or_channel: motorreviewer.com
+    quote: Injectors Delphi is very sensitive to fuel quality.
+    independent: true
+- id: k9k_engine_k9k_injector_failures_li_v1
+  claim_key: k9k_engine_k9k_injector_failures_li
+  version: 1
+  is_current: true
+  title: K9K injector failures linked to fuel quality and maintenance
+  title_tr: K9K enjektör arızaları yakıt kalitesi ve bakıma bağlı
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine has a known tendency for injector failures, especially
+    in regions with poor fuel quality or when maintenance is neglected. Injector problems
+    can cause rough idle, loss of power, increased fuel consumption, and lead to expensive
+    repairs. This is a model-specific risk not easily found in a standard inspection.
+  rationale_tr: K9K motoru, özellikle yakıt kalitesinin düşük olduğu veya bakımın
+    ihmal edildiği bölgelerde enjektör arızalarına yatkındır. Enjektör sorunları rölanti
+    dalgalanması, güç kaybı, yakıt tüketiminde artış ve pahalı onarımlara yol açabilir.
+    Bu, standart bir ekspertizde kolayca tespit edilemeyen modele özgü bir risktir.
+  inspection_advice: Start the engine cold and listen for uneven idle or knocking.
+    Check for black smoke on acceleration. Ask for service records showing fuel filter
+    and injector maintenance. Read OBD codes for injector circuit faults (e.g., P0200-P0204,
+    P0261-P0274).
+  inspection_advice_tr: Soğuk motorda çalıştırıp düzensiz rölanti veya vuruntu dinleyin.
+    Hızlanmada siyah duman olup olmadığını kontrol edin. Yakıt filtresi ve enjektör
+    bakımını gösteren servis kayıtlarını isteyin. OBD hata kodlarında enjektör devre
+    arızalarını (örn. P0200-P0204, P0261-P0274) okuyun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Türkiye'deki değişken yakıt kalitesi, periyodik bakım ihmalleri ve yoğun
+      şehir içi kullanım koşulları birleştiğinde, bu araçlarda enjektör sorunları
+      kaçınılmaz hale gelebiliyor.
+    independent: true
+- id: k9k_engine_k9k_injector_fatigue_cau_v1
+  claim_key: k9k_engine_k9k_injector_fatigue_cau
+  version: 1
+  is_current: true
+  title: K9K injector fatigue causes power loss under load in Kangoo
+  title_tr: Kangoo'da K9K enjektör yorgunluğu yük altında güç kaybına neden oluyor
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: In Renault Kangoo with the 1.5 dCi (K9K) engine, heavy commercial use
+    and constant full-throttle operation accelerate wear inside the fuel injectors.
+    This leads to reduced pulling power, especially when the vehicle is loaded. A
+    standard inspection may not detect this internal wear, so buyers should be aware
+    of the risk.
+  rationale_tr: Renault Kangoo'da 1.5 dCi (K9K) motor, ticari kullanım ve sürekli
+    tam gaz çalışma nedeniyle enjektör iç parçalarının aşınmasını hızlandırır. Bu
+    durum, özellikle araç yüklüyken çekiş gücünde düşüşe yol açar. Standart muayene
+    bu iç aşınmayı tespit edemeyebilir, bu yüzden alıcıların riskin farkında olması
+    gerekir.
+  inspection_advice: During a test drive, accelerate hard from low RPM with the vehicle
+    loaded or on an incline; any hesitation or lack of power could indicate injector
+    wear. If possible, ask for evidence of injector maintenance and consider an injector
+    leak-off test or professional injector inspection.
+  inspection_advice_tr: Test sürüşü sırasında, araç yüklüyken veya yokuşta düşük devirden
+    sert ivmelenme yapın; tereddüt veya güç eksikliği enjektör aşınmasına işaret edebilir.
+    Mümkünse enjektör bakım kayıtlarını isteyin ve enjektör dönüş (leak-off) testi
+    veya profesyonel enjektör muayenesi yaptırmayı düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Ticari amaçlı ve sürekli yük altında kullanılan Kangoo'larda, gaza yüklenme
+      oranı fazla olduğundan enjektörlerin iç aksamı çok daha hızlı yorulur ve çekiş
+      düşüklüğü şikayeti ön plandadır.
+    independent: true
+- id: k9k_engine_k9k_injector_pump_sensit_v1
+  claim_key: k9k_engine_k9k_injector_pump_sensit
+  version: 1
+  is_current: true
+  title: k9k injector/pump sensitivity risks piston perforation
+  title_tr: k9k enjektör/pompa hassasiyeti piston delinmesi riski
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: This engine's injectors and fuel pump are sensitive to poor fuel quality.
+    If they fail, bits can damage the piston, causing a hole and complete engine failure.
+    This is a costly repair that may not be spotted in a quick inspection.
+  rationale_tr: Bu motorun enjektörleri ve yakıt pompası düşük kaliteli yakıta karşı
+    hassastır. Arızalanırlarsa parçalar pistona zarar verip delinmeye ve tam motor
+    arızasına yol açabilir. Bu, hızlı bir kontrolde fark edilemeyecek pahalı bir onarımdır.
+  inspection_advice: Check service records for regular fuel filter changes. At viewing,
+    listen for rough idle or injector knock; consider an injector leak-off test and
+    check engine oil for a strong fuel smell.
+  inspection_advice_tr: Servis kayıtlarında düzenli yakıt filtresi değişimini kontrol
+    edin. İncelemede rölanti düzensizliği veya enjektör vuruntusunu dinleyin; enjektör
+    geri dönüş testi yapılmasını ve motor yağında güçlü yakıt kokusu olup olmadığını
+    kontrol ettirin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://otomobiloji.com/renault-1-5-dci-motor-sorunlari-ve-cozumu/
+    source_domain: otomobiloji.com
+    site_or_channel: otomobiloji.com
+    quote: Oldukça hassas olan enjektörlerin bozulmasına ve yakıt pompası nozüllerine
+      ( yakıt çıkış uçları) de zarar verebilirsiniz. Ayrıca bu aşağıdaki hasara da
+      sebep olabilir. Piston delinmesi
+    independent: true
+- id: k9k_engine_k9k_injector_valve_wear__v1
+  claim_key: k9k_engine_k9k_injector_valve_wear_
+  version: 1
+  is_current: true
+  title: K9K injector valve wear causes fuel leaks and rough running
+  title_tr: K9K enjektör valfi aşınması yakıt kaçağı ve düzensiz çalışmaya neden olur
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 dCi (K9K) engine commonly experiences injector valve wear due
+    to high fuel pressure, leading to fuel return leaks and rough running. This is
+    a costly repair and a known weakness of this engine, so buyers should check for
+    symptoms.
+  rationale_tr: 1.5 dCi (K9K) motor, yüksek yakıt basıncı nedeniyle sık sık enjektör
+    valfi aşınması yaşar; bu da yakıt dönüş kaçağına ve düzensiz çalışmaya yol açar.
+    Bu, pahalı bir onarım olup bu motorun bilinen bir zayıflığıdır; bu nedenle alıcılar
+    belirtileri kontrol etmelidir.
+  inspection_advice: At the viewing, start the car from cold and listen for rough
+    idle. Check for fuel smell or wetness around the injectors. A fuel return line
+    measurement can reveal excessive leakage. If possible, run a diagnostic scan for
+    injector-related fault codes.
+  inspection_advice_tr: Aracı soğukken çalıştırın ve rölantide düzensizliği dinleyin.
+    Enjektör çevresinde yakıt kokusu veya ıslaklık olup olmadığını kontrol edin. Yakıt
+    dönüş hattı ölçümü aşırı kaçağı ortaya çıkarabilir. Mümkünse, enjektörle ilgili
+    hata kodları için diagnostik tarama yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Megane'larda genellikle yüksek basınca bağlı enjektör valfi aşınması (geri
+      dönüş kaçağı) daha sık görülür.
+    independent: true
+- id: k9k_engine_k9k_injector_wear_can_bu_v1
+  claim_key: k9k_engine_k9k_injector_wear_can_bu
+  version: 1
+  is_current: true
+  title: K9K injector wear can burn pistons
+  title_tr: K9K enjektör aşınması pistonları yakabilir
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K diesel engine can suffer injector wear, especially with poor
+    fuel or filters. Worn injectors spray too much fuel, creating excess heat that
+    can burn holes in the piston heads. This is a costly engine failure that may not
+    be obvious from a standard inspection.
+  rationale_tr: K9K dizel motor, özellikle kalitesiz yakıt veya filtrelerle enjektör
+    aşınması yaşayabilir. Aşınmış enjektörler fazla yakıt püskürtür, aşırı ısı oluşturarak
+    piston kafalarını deler. Bu, standart bir ekspertizde kolayca görülemeyen pahalı
+    bir motor arızasıdır.
+  inspection_advice: Check for any injector-related fault codes, misfire or overheating
+    signs. Ask for service history regarding injector maintenance or replacement.
+    Consider a compression test or borescope inspection if the car has high mileage
+    or poor fuel history.
+  inspection_advice_tr: Enjektörle ilgili arıza kodlarını, teklemeyi veya aşırı ısınma
+    belirtilerini kontrol edin. Enjektör bakımı veya değişimi için servis geçmişini
+    sorun. Yüksek kilometre veya kötü yakıt geçmişi varsa kompresyon testi veya endoskopik
+    muayene düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://otomobiloji.com/renault-1-5-dci-motor-sorunlari-ve-cozumu/
+    source_domain: otomobiloji.com
+    site_or_channel: otomobiloji.com
+    quote: Kalitesiz yakıt ve filtreler yardımıyla 🙂 bozulan / aşınan enjektörler
+      olması gerekenden daha fazla yakıt püskürterek hesaplanandan daha fazla ısı
+      oluştururlar. Bu oluşan ısıdan en çok etkilenen piston kafalarıdır. Çünkü yanma
+      tam da bu alanda olur. Bu da pistonların delinmesi ile sonuçlanır.
+    independent: true
+- id: k9k_engine_k9k_liner_wear_debris_de_v1
+  claim_key: k9k_engine_k9k_liner_wear_debris_de
+  version: 1
+  is_current: true
+  title: K9K liner wear debris destroys turbocharger
+  title_tr: K9K segman aşınması turboyu bozuyor
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine's cylinder liners can wear and shed metal chips into the
+    oil. These chips circulate and damage the turbocharger, potentially causing expensive
+    failure. This is a known issue for this specific engine.
+  rationale_tr: K9K motorunun silindir gömlekleri aşınarak yağa metal parçacıklar
+    karıştırabilir. Bu parçacıklar dolaşarak turboşarjı hasara uğratır ve pahalı bir
+    arızaya yol açabilir. Bu, bu motora özgü bilinen bir sorundur.
+  inspection_advice: Check engine oil for metallic particles, listen for turbo whine
+    or whistle, and review maintenance history for regular oil changes. Consider a
+    borescope inspection of cylinders if feasible.
+  inspection_advice_tr: Motor yağında metal partikül olup olmadığını kontrol edin,
+    turbo vınlaması veya ıslık sesini dinleyin ve düzenli yağ değişimi geçmişini inceleyin.
+    Mümkünse silindirler için boroskopik inceleme yaptırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: because of these same liners, the entire engine suffers. After all, friction
+      produces chips, which the oil carries throughout the engine. So, in particular,
+      the turbocharger of the 1.5 dCi K9K engine “dies” just because of these chips.
+    independent: true
+- id: k9k_engine_k9k_low_oil_pressure_fro_v1
+  claim_key: k9k_engine_k9k_low_oil_pressure_fro
+  version: 1
+  is_current: true
+  title: K9K low oil pressure from oil pump valve spring wear
+  title_tr: K9K yağ pompası valf yayı aşınması nedeniyle düşük yağ basıncı
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: A small spring in the oil pump can weaken over time, causing oil pressure
+    to drop and potentially damaging engine bearings. This failure is tied to the
+    specific K9K engine and becomes more likely with age and mileage, yet a standard
+    pre-purchase inspection won't easily detect the worn spring.
+  rationale_tr: Yağ pompasındaki küçük bir yay zamanla zayıflayabilir, yağ basıncının
+    düşmesine ve motor yataklarına zarar vermesine neden olabilir. Bu arıza belirli
+    K9K motoruyla ilişkilidir ve yaş ve kilometre ile daha olası hale gelir, ancak
+    standart bir satın alma öncesi muayene aşınmış yayı kolayca tespit edemez.
+  inspection_advice: During test drive, watch for oil pressure warning light and listen
+    for low-oil-pressure knock. Ask for a mechanical inspection that measures actual
+    oil pressure at idle and under load; if pressure is low, the oil pump valve spring
+    is a likely culprit.
+  inspection_advice_tr: Test sürüşü sırasında yağ basıncı uyarı ışığını izleyin ve
+    düşük yağ basıncı vuruntusunu dinleyin. Rölantide ve yük altında gerçek yağ basıncını
+    ölçen bir mekanik muayene isteyin; basınç düşükse, yağ pompası valf yayı muhtemel
+    nedenidir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: low oil pressure in this power unit may be due to a weakened oil pump pressure
+      reducing valve spring.
+    independent: true
+- id: k9k_engine_k9k_turbo_oil_starvation_v1
+  claim_key: k9k_engine_k9k_turbo_oil_starvation
+  version: 1
+  is_current: true
+  title: K9K turbo oil starvation bearing seizure
+  title_tr: K9K turbo yağlama yetersizliği rulman sıkışması
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 dCi K9K engine can suffer turbocharger failure when the turbo
+    does not receive enough oil, often due to blocked oil feed lines or a faulty oil
+    control valve. This can destroy the turbo bearings and lead to an expensive replacement.
+  rationale_tr: 1.5 dCi K9K motorunda, turbo yeterli yağ alamadığında turboşarj arızası
+    oluşabilir; genellikle tıkalı yağ besleme hatları veya arızalı bir yağ kontrol
+    vanası nedeniyle. Bu, turbo rulmanlarını tahrip edebilir ve pahalı bir değişim
+    gerektirebilir.
+  inspection_advice: Check service history for regular oil changes; during a test
+    drive listen for a whining or screeching noise from the turbo. Have a mechanic
+    inspect the turbo oil feed line and oil control valve for blockages or faults
+    if possible.
+  inspection_advice_tr: Yağ değişimlerinin düzenli yapıldığını görmek için servis
+    geçmişini kontrol edin; test sürüşü sırasında turbodan gelen vınlama veya cızırtı
+    sesini dinleyin. Mümkünse bir uzmana turbo yağ besleme hattını ve yağ kontrol
+    vanasını tıkanıklık veya arıza açısından incelet.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://au7o.io/known-issues/renault-megane
+    source_domain: au7o.io
+    site_or_channel: au7o.io
+    quote: 1.5 dCi (K9K) Turbocharger Failure from Oil Starvation
+    independent: true
+- id: k9k_engine_liner_cranking_and_pisto_v1
+  claim_key: k9k_engine_liner_cranking_and_pisto
+  version: 1
+  is_current: true
+  title: Liner cranking and piston burnout
+  title_tr: Liner cranking and piston burnout
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine is prone to liner cranking and piston burnout due to poorly
+    functioning injectors, leading to catastrophic internal engine damage. This is
+    a chronic failure mode tied to fuel system reliability.
+  rationale_tr: The K9K engine is prone to liner cranking and piston burnout due to
+    poorly functioning injectors, leading to catastrophic internal engine damage.
+    This is a chronic failure mode tied to fuel system reliability.
+  inspection_advice: Monitor for unusual engine noises (e.g., scraping or grinding),
+    excessive oil consumption, or blue smoke from the exhaust. Check for metal particles
+    in the oil and inspect the cylinder liners and pistons for signs of wear or damage
+    if the engine is disassembled.
+  inspection_advice_tr: Monitor for unusual engine noises (e.g., scraping or grinding),
+    excessive oil consumption, or blue smoke from the exhaust. Check for metal particles
+    in the oil and inspect the cylinder liners and pistons for signs of wear or damage
+    if the engine is disassembled.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Sometimes there are cases of cranking of liners and burnout of pistons
+      - due to poorly functioning injectors.
+    independent: true
+- id: k9k_engine_low_compression_in_diese_v1
+  claim_key: k9k_engine_low_compression_in_diese
+  version: 1
+  is_current: true
+  title: Low Compression in Diesel Engines
+  title_tr: Low Compression in Diesel Engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic issue where compression levels are consistently low due to worn
+    piston rings, valves, or cylinder head gasket failures, leading to poor power
+    delivery and potential engine damage.
+  rationale_tr: Chronic issue where compression levels are consistently low due to
+    worn piston rings, valves, or cylinder head gasket failures, leading to poor power
+    delivery and potential engine damage.
+  inspection_advice: Perform a compression test to verify if cylinders are below manufacturer
+    specifications, indicating internal wear or damage.
+  inspection_advice_tr: Perform a compression test to verify if cylinders are below
+    manufacturer specifications, indicating internal wear or damage.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Kompresyon Düşük", "Düşük Kompresyon"'
+    independent: true
+- id: k9k_engine_motor_valve_adjustment_i_v1
+  claim_key: k9k_engine_motor_valve_adjustment_i
+  version: 1
+  is_current: true
+  title: Motor Valve Adjustment Issues
+  title_tr: Motor Valve Adjustment Issues
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Chronic problem with incorrect valve clearance or misalignment, leading
+    to poor engine performance, increased wear, and potential valve failure.
+  rationale_tr: Chronic problem with incorrect valve clearance or misalignment, leading
+    to poor engine performance, increased wear, and potential valve failure.
+  inspection_advice: Listen for unusual tapping noises from the valve train and check
+    for excessive play or misalignment in valve components during inspection.
+  inspection_advice_tr: Listen for unusual tapping noises from the valve train and
+    check for excessive play or misalignment in valve components during inspection.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Subap Ayarları Bozuk", "Subap Ayarları Hatalı (Boşluk Fazla)"'
+    independent: true
+- id: k9k_engine_oil_filter_clogging_caus_v1
+  claim_key: k9k_engine_oil_filter_clogging_caus
+  version: 1
+  is_current: true
+  title: Oil filter clogging causing turbocharger damage (1.5 dCi)
+  title_tr: Oil filter clogging causing turbocharger damage (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The text explicitly states that clogged oil filters restrict oil flow,
+    leading to inadequate lubrication of turbo bearings and accelerated wear.
+  rationale_tr: The text explicitly states that clogged oil filters restrict oil flow,
+    leading to inadequate lubrication of turbo bearings and accelerated wear.
+  inspection_advice: Check the oil filter for clogging during routine maintenance.
+    Monitor oil pressure—low oil pressure could indicate restricted flow due to a
+    clogged filter, which may contribute to turbo bearing failure.
+  inspection_advice_tr: Check the oil filter for clogging during routine maintenance.
+    Monitor oil pressure—low oil pressure could indicate restricted flow due to a
+    clogged filter, which may contribute to turbo bearing failure.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Yağ Filtre Tıkanıklığı: Yağın serbest akışını engelleyen tıkanıklıklar
+      turbo yataklarına zarar verebilir.'
+    independent: true
+- id: k9k_engine_oil_pressure_drop_due_to_v1
+  claim_key: k9k_engine_oil_pressure_drop_due_to
+  version: 1
+  is_current: true
+  title: Oil pressure drop due to valve/spring failure
+  title_tr: Oil pressure drop due to valve/spring failure
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The K9K engine may experience a drop in lubricant pressure due to failure
+    of the oil filter valve or the pressure-reducing valve spring, leading to inadequate
+    oil flow and potential engine damage.
+  rationale_tr: The K9K engine may experience a drop in lubricant pressure due to
+    failure of the oil filter valve or the pressure-reducing valve spring, leading
+    to inadequate oil flow and potential engine damage.
+  inspection_advice: Monitor oil pressure gauges for erratic readings or low pressure
+    during operation. Check for unusual engine noise (e.g., ticking or knocking) that
+    may indicate insufficient lubrication. Inspect the oil filter and pressure-reducing
+    valve for wear or failure.
+  inspection_advice_tr: Monitor oil pressure gauges for erratic readings or low pressure
+    during operation. Check for unusual engine noise (e.g., ticking or knocking) that
+    may indicate insufficient lubrication. Inspect the oil filter and pressure-reducing
+    valve for wear or failure.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"Much less often, such motors fail due to a drop in lubricant pressure
+      in the system. This is due to the oil filter valve and the oil pump pressure
+      reducing valve spring."'
+    independent: true
+- id: k9k_engine_recurrent_turbocharger_f_v1
+  claim_key: k9k_engine_recurrent_turbocharger_f
+  version: 1
+  is_current: true
+  title: Recurrent turbocharger failure
+  title_tr: Recurrent turbocharger failure
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The turbocharger failed at 88,000 km, shortly after the extended warranty
+    expired, indicating a potential chronic turbocharger reliability issue in the
+    1.5 TDI variant.
+  rationale_tr: The turbocharger failed at 88,000 km, shortly after the extended warranty
+    expired, indicating a potential chronic turbocharger reliability issue in the
+    1.5 TDI variant.
+  inspection_advice: Listen for unusual whining or rattling noises from the engine,
+    especially under acceleration. Check for excessive smoke (blue or black) from
+    the exhaust, which may indicate turbo failure or related issues.
+  inspection_advice_tr: Listen for unusual whining or rattling noises from the engine,
+    especially under acceleration. Check for excessive smoke (blue or black) from
+    the exhaust, which may indicate turbo failure or related issues.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Turbo changed at 88000 km, just when extended warranty expired
+    independent: true
+  applies_when:
+    min_mileage_km: 88000
+- id: k9k_engine_recurrent_water_pump_fai_v1
+  claim_key: k9k_engine_recurrent_water_pump_fai
+  version: 1
+  is_current: true
+  title: Recurrent water pump failures
+  title_tr: Recurrent water pump failures
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The water pump failed twice, which is highly unusual for a component
+    typically expected to last much longer. This suggests a chronic defect in the
+    water pump design or cooling system of the 1.5 TDI variant.
+  rationale_tr: The water pump failed twice, which is highly unusual for a component
+    typically expected to last much longer. This suggests a chronic defect in the
+    water pump design or cooling system of the 1.5 TDI variant.
+  inspection_advice: Check for coolant leaks under the engine, unusual engine overheating,
+    or a squealing noise from the water pump. Inspect the water pump belt for wear
+    or damage.
+  inspection_advice_tr: Check for coolant leaks under the engine, unusual engine overheating,
+    or a squealing noise from the water pump. Inspect the water pump belt for wear
+    or damage.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Water pump failed twice
+    independent: true
+- id: k9k_engine_timing_belt_failure_inte_v1
+  claim_key: k9k_engine_timing_belt_failure_inte
+  version: 1
+  is_current: true
+  title: Timing Belt Failure (Interference Engine Risk, K9K 1.5 dCi)
+  title_tr: Timing Belt Failure (Interference Engine Risk, K9K 1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Interference belt engine with documented early failures before scheduled
+    intervals, risking valve-piston collision and total engine destruction.
+  rationale_tr: Interference belt engine with documented early failures before scheduled
+    intervals, risking valve-piston collision and total engine destruction.
+  inspection_advice: Verify timing belt replacement history. Listen for metallic noises
+    before failure; sudden engine stall without warning is a critical sign.
+  inspection_advice_tr: Verify timing belt replacement history. Listen for metallic
+    noises before failure; sudden engine stall without warning is a critical sign.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://what-breaks.com/renault/talisman-1
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"The 1.5 dCi is an interference belt engine. With an overdue change interval
+      or faulty fitting the belt snaps, valves and pistons collide — total loss. Early
+      failures well before the scheduled interval are documented. Symptoms: Sudden
+      engine stall without warning, refusal to start, metallic noises shortly before
+      failure"'
+    independent: true
+- id: k9k_engine_turbocharger_failure_bor_v1
+  claim_key: k9k_engine_turbocharger_failure_bor
+  version: 1
+  is_current: true
+  title: Turbocharger failure (BorgWarner KP35)
+  title_tr: Turbocharger failure (BorgWarner KP35)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Turbochargers on the K9K engine, particularly the BorgWarner KP35, can
+    fail prematurely after around 60,000 km, leading to loss of power and efficiency.
+    This is a chronic issue tied to the turbocharger design and usage conditions.
+  rationale_tr: Turbochargers on the K9K engine, particularly the BorgWarner KP35,
+    can fail prematurely after around 60,000 km, leading to loss of power and efficiency.
+    This is a chronic issue tied to the turbocharger design and usage conditions.
+  inspection_advice: Listen for unusual whining or rattling noises from the turbo
+    area, check for excessive exhaust smoke, and monitor for loss of power or reduced
+    acceleration. Inspect the turbocharger for physical damage or oil leaks.
+  inspection_advice_tr: Listen for unusual whining or rattling noises from the turbo
+    area, check for excessive exhaust smoke, and monitor for loss of power or reduced
+    acceleration. Inspect the turbocharger for physical damage or oil leaks.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The turbocharger on some copies can cause trouble after 60 thousand km.
+    independent: true
+  applies_when:
+    min_mileage_km: 60000
+- id: k9k_engine_turbocharger_failure_uns_v1
+  claim_key: k9k_engine_turbocharger_failure_uns
+  version: 1
+  is_current: true
+  title: Turbocharger failure (unspecified cause)
+  title_tr: Turbocharger failure (unspecified cause)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The text mentions turbocharger failure as a recurring issue, though the
+    specific cause is not detailed. This suggests a chronic weakness in the turbocharger
+    design or build quality for the K9K 1.5 DCI.
+  rationale_tr: The text mentions turbocharger failure as a recurring issue, though
+    the specific cause is not detailed. This suggests a chronic weakness in the turbocharger
+    design or build quality for the K9K 1.5 DCI.
+  inspection_advice: Listen for excessive whining or rattling from the turbocharger
+    during operation. Check for oil leaks around the turbocharger housing and inspect
+    for unusual wear or damage.
+  inspection_advice_tr: Listen for excessive whining or rattling from the turbocharger
+    during operation. Check for oil leaks around the turbocharger housing and inspect
+    for unusual wear or damage.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://oborudow.ru/en/engine/dvigatel-k9k-1-5-dci-tip-ustanovlennyh-forsunok-slabye-mesta-i/
+    source_domain: oborudow.ru
+    site_or_channel: oborudow.ru
+    quote: '"The failure of the turbocharger mainly occurs"'
+    independent: true
+- id: k9k_engine_turbocharger_imbalance_d_v1
+  claim_key: k9k_engine_turbocharger_imbalance_d
+  version: 1
+  is_current: true
+  title: Turbocharger imbalance/damage from improper usage (1.5 dCi)
+  title_tr: Turbocharger imbalance/damage from improper usage (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The text warns that improper usage—such as revving the engine excessively
+    before it warms up or shutting it down immediately after turbo use—accelerates
+    turbo wear, leading to chronic imbalance or catastrophic failure.
+  rationale_tr: The text warns that improper usage—such as revving the engine excessively
+    before it warms up or shutting it down immediately after turbo use—accelerates
+    turbo wear, leading to chronic imbalance or catastrophic failure.
+  inspection_advice: Listen for unusual turbo noise (loud whining, rattling, or grinding)
+    during acceleration or deceleration. Check for inconsistent boost pressure or
+    turbo spool issues, which may indicate imbalance or damage.
+  inspection_advice_tr: Listen for unusual turbo noise (loud whining, rattling, or
+    grinding) during acceleration or deceleration. Check for inconsistent boost pressure
+    or turbo spool issues, which may indicate imbalance or damage.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Hatalı Kullanım: Motorun yeterince ısınmadan yüksek devirlerde kullanılması
+      veya turbo motorun hemen stop edilmesi, turbo aşınmasını hızlandırabilir.'
+    independent: true
+- id: k9k_engine_turbocharger_leakage_in__v1
+  claim_key: k9k_engine_turbocharger_leakage_in_
+  version: 1
+  is_current: true
+  title: Turbocharger Leakage in Diesel Engines
+  title_tr: Turbocharger Leakage in Diesel Engines
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic issue where turbocharger intercooler hoses exhibit leaks, leading
+    to performance loss and potential turbo failure.
+  rationale_tr: Chronic issue where turbocharger intercooler hoses exhibit leaks,
+    leading to performance loss and potential turbo failure.
+  inspection_advice: Check for visible leaks or cracks in turbocharger connection
+    hoses and inspect for excessive heat or unusual noises from the turbo area.
+  inspection_advice_tr: Check for visible leaks or cracks in turbocharger connection
+    hoses and inspect for excessive heat or unusual noises from the turbo area.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Turboşarjer Bağlantı Hortumlarına Kaçak"'
+    independent: true
+- id: k9k_engine_turbocharger_pressure_is_v1
+  claim_key: k9k_engine_turbocharger_pressure_is
+  version: 1
+  is_current: true
+  title: Turbocharger Pressure Issues
+  title_tr: Turbocharger Pressure Issues
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic problem with turbochargers failing to maintain proper boost pressure,
+    leading to reduced engine performance and potential turbo failure.
+  rationale_tr: Chronic problem with turbochargers failing to maintain proper boost
+    pressure, leading to reduced engine performance and potential turbo failure.
+  inspection_advice: Check boost pressure using a gauge; listen for unusual turbo
+    noises and inspect for leaks in the turbo system.
+  inspection_advice_tr: Check boost pressure using a gauge; listen for unusual turbo
+    noises and inspect for leaks in the turbo system.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Turboşarjer Basıncı Düşük"'
+    independent: true
+- id: k9k_engine_turbocharger_seal_leakag_v1
+  claim_key: k9k_engine_turbocharger_seal_leakag
+  version: 1
+  is_current: true
+  title: Turbocharger seal/leakage failures (1.5 dCi)
+  title_tr: Turbocharger seal/leakage failures (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The text notes that turbo seals (conta ve keçeler) frequently fail, leading
+    to oil leaks and loss of boost pressure, which directly impacts performance and
+    can cause further damage if unaddressed.
+  rationale_tr: The text notes that turbo seals (conta ve keçeler) frequently fail,
+    leading to oil leaks and loss of boost pressure, which directly impacts performance
+    and can cause further damage if unaddressed.
+  inspection_advice: Look for oil leaks around the turbo housing or oil streaks on
+    the turbocharger itself. Check for a loss of boost pressure (weak acceleration,
+    poor throttle response) or excessive oil consumption.
+  inspection_advice_tr: Look for oil leaks around the turbo housing or oil streaks
+    on the turbocharger itself. Check for a loss of boost pressure (weak acceleration,
+    poor throttle response) or excessive oil consumption.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: 'Conta ve keçeler: Sızdırmazlığı sağlamak için yenilenir.'
+    independent: true
+- id: k9k_engine_turbocharger_wheel_imbal_v1
+  claim_key: k9k_engine_turbocharger_wheel_imbal
+  version: 1
+  is_current: true
+  title: Turbocharger wheel imbalance requiring professional rebalancing (1.5 dCi)
+  title_tr: Turbocharger wheel imbalance requiring professional rebalancing (1.5 dCi)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The text mentions that turbo wheels (pervaneler) often require rebalancing
+    to prevent vibration and premature wear, indicating a chronic issue with turbo
+    assembly quality or wear.
+  rationale_tr: The text mentions that turbo wheels (pervaneler) often require rebalancing
+    to prevent vibration and premature wear, indicating a chronic issue with turbo
+    assembly quality or wear.
+  inspection_advice: Listen for unusual vibrations or rattling from the turbo during
+    operation. If the turbo has been previously repaired or replaced, check for signs
+    of imbalance (e.g., uneven wear on turbo components or unusual noise).
+  inspection_advice_tr: Listen for unusual vibrations or rattling from the turbo during
+    operation. If the turbo has been previously repaired or replaced, check for signs
+    of imbalance (e.g., uneven wear on turbo components or unusual noise).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://ankaturbo.com.tr/urun/dacia-logan-1-5-dci-turbo-tamiri
+    source_domain: ankaturbo.com.tr
+    site_or_channel: ankaturbo.com.tr
+    quote: Turbo pervaneleri, dengesiz çalışmayı önlemek için dengeleme makinesinde
+      ayarlanır.
+    independent: true
+- id: k9k_engine_turbocharger_whining_noi_v1
+  claim_key: k9k_engine_turbocharger_whining_noi
+  version: 1
+  is_current: true
+  title: Turbocharger whining noise and hesitation during acceleration
+  title_tr: Turbocharger whining noise and hesitation during acceleration
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Some users report a high-pitched whining noise from the turbocharger,
+    particularly in poorly maintained Clio 1.5 dCi models, leading to hesitation during
+    acceleration. This suggests potential turbo failure or contamination.
+  rationale_tr: Some users report a high-pitched whining noise from the turbocharger,
+    particularly in poorly maintained Clio 1.5 dCi models, leading to hesitation during
+    acceleration. This suggests potential turbo failure or contamination.
+  inspection_advice: During a test drive, listen closely for unusual whining or hissing
+    noises from the turbo area, especially under acceleration. Check for power loss
+    or sluggish response when pressing the gas pedal.
+  inspection_advice_tr: During a test drive, listen closely for unusual whining or
+    hissing noises from the turbo area, especially under acceleration. Check for power
+    loss or sluggish response when pressing the gas pedal.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.araclo.com/blog/renault-clio-1.5-dci-incelemesi-kronik-sorunlar-yakit-tuketimi-ve-yorumlar
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"Bazı kullanıcılar, özellikle bakımı aksatılan araçlarda turbodan tiz
+      bir ıslık sesi geldiğini ve hızlanmalarda isteksizlik yaşadıklarını aktarmıştır."'
+    independent: true
+- id: k9k_fuel_system_common_injector_failures_v1
+  claim_key: k9k_fuel_system_common_injector_failures
+  version: 1
+  is_current: true
+  title: Common injector failures leading to misfiring, power loss, and increased
+    fuel consumption
+  title_tr: Common injector failures leading to misfiring, power loss, and increased
+    fuel consumption
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  rationale: High-mileage Renault Clio 1.5 dCi (K9K engine) users report frequent
+    injector failures, causing misfires, power loss, and higher fuel consumption.
+    This is exacerbated by poor maintenance and low-quality fuel.
+  rationale_tr: High-mileage Renault Clio 1.5 dCi (K9K engine) users report frequent
+    injector failures, causing misfires, power loss, and higher fuel consumption.
+    This is exacerbated by poor maintenance and low-quality fuel.
+  inspection_advice: Check for misfires, unusual engine noises, and excessive fuel
+    consumption. Verify if injectors have been recently serviced or replaced. Listen
+    for irregular firing during test drives.
+  inspection_advice_tr: Check for misfires, unusual engine noises, and excessive fuel
+    consumption. Verify if injectors have been recently serviced or replaced. Listen
+    for irregular firing during test drives.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.araclo.com/blog/renault-clio-1.5-dci-incelemesi-kronik-sorunlar-yakit-tuketimi-ve-yorumlar
+    source_domain: araclo.com
+    site_or_channel: araclo.com
+    quote: '"K9K 1.5 dCi, genel olarak ekonomik ve dayanıklı kabul edilen bir motordur;
+      bazı teknik kaynaklar bu üniteyi ''hafızalara kazınan kronik bir arızası olmayan''
+      bir motor olarak değerlendirir. Yine de yüksek kilometrelerde ve bakım ihmal
+      edildiğinde bazı başlıklar öne çıkmaktadır. Kullanıcı bildirimlerine göre yüksek
+      kilometreli araçlarda en sık konuşulan başlık enjektör arızalarıdır. Yakıtın
+      doğru püskürtülememesi nedeniyle teklemenin, güç kaybının ve yakıt tüketiminde
+      artışın raporlandığı belirtilmektedir."'
+    independent: true
+- id: k9k_fuel_system_common_rail_delphi_fuel__v1
+  claim_key: k9k_fuel_system_common_rail_delphi_fuel_
+  version: 1
+  is_current: true
+  title: Common Rail Delphi fuel system fragility
+  title_tr: Common Rail Delphi fuel system fragility
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The Delphi Common Rail fuel system (pre-2009) is highly sensitive to
+    air in the system, clogged fuel filters, and poor-quality diesel fuel. These issues
+    cause metal debris to form, clogging injectors and accelerating wear on the turbocharger
+    and oil pump.
+  rationale_tr: The Delphi Common Rail fuel system (pre-2009) is highly sensitive
+    to air in the system, clogged fuel filters, and poor-quality diesel fuel. These
+    issues cause metal debris to form, clogging injectors and accelerating wear on
+    the turbocharger and oil pump.
+  inspection_advice: Inspect the fuel filter for clogging or contamination. Check
+    for air in the fuel system (e.g., spongy throttle response, hesitation). Look
+    for signs of injector failure (e.g., misfires, black smoke, or poor idle stability).
+    Verify fuel quality and ensure the system is bled properly after maintenance.
+  inspection_advice_tr: Inspect the fuel filter for clogging or contamination. Check
+    for air in the fuel system (e.g., spongy throttle response, hesitation). Look
+    for signs of injector failure (e.g., misfires, black smoke, or poor idle stability).
+    Verify fuel quality and ensure the system is bled properly after maintenance.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://mymotorlist.com/engines/renault/k9k/
+    source_domain: mymotorlist.com
+    site_or_channel: mymotorlist.com
+    quote: '"The bulk of diesel engines until 2009 were equipped with the Common Rail
+      Delphi system, which does not tolerate airing, a clogged fuel filter and bad
+      diesel fuel. For any of these reasons, it begins to drive chips and primarily
+      clogs the nozzles. Also, this metal pollen significantly reduces the life of
+      the turbine and oil pump."'
+    independent: true
+  applies_when:
+    applies_year_to: 2009
+- id: k9k_fuel_system_common_rail_fuel_pressur_v1
+  claim_key: k9k_fuel_system_common_rail_fuel_pressur
+  version: 1
+  is_current: true
+  title: Common Rail Fuel Pressure Regulation Failure (K9K)
+  title_tr: Common Rail Fuel Pressure Regulation Failure (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine's common rail fuel pressure regulation system is prone
+    to malfunction, as indicated by the presence of a dedicated diagnostic trouble
+    code (DTC P0089). This suggests a chronic issue with the system's ability to maintain
+    proper fuel pressure, which can lead to poor engine performance or failure.
+  rationale_tr: The K9K engine's common rail fuel pressure regulation system is prone
+    to malfunction, as indicated by the presence of a dedicated diagnostic trouble
+    code (DTC P0089). This suggests a chronic issue with the system's ability to maintain
+    proper fuel pressure, which can lead to poor engine performance or failure.
+  inspection_advice: Check for DTC P0089 in the engine control system. Inspect the
+    common rail fuel pressure sensor and related wiring for damage or corrosion. Verify
+    the functionality of the high-pressure pump and fuel injectors.
+  inspection_advice_tr: Check for DTC P0089 in the engine control system. Inspect
+    the common rail fuel pressure sensor and related wiring for damage or corrosion.
+    Verify the functionality of the high-pressure pump and fuel injectors.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0089 Common rail fuel pressure regulation function
+    independent: true
+- id: k9k_fuel_system_common_rail_fuel_system__v1
+  claim_key: k9k_fuel_system_common_rail_fuel_system_
+  version: 1
+  is_current: true
+  title: Common Rail fuel system failures (Delphi) due to poor fuel quality
+  title_tr: Common Rail fuel system failures (Delphi) due to poor fuel quality
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The Delphi Common Rail system in the K9K 1.5 DCI is highly sensitive
+    to low-quality fuel, leading to plunger pair failures in the high-pressure pump
+    and subsequent nozzle clogging or flaring, causing engine misfires and rough idling.
+  rationale_tr: The Delphi Common Rail system in the K9K 1.5 DCI is highly sensitive
+    to low-quality fuel, leading to plunger pair failures in the high-pressure pump
+    and subsequent nozzle clogging or flaring, causing engine misfires and rough idling.
+  inspection_advice: Inspect for fuel leaks, unusual engine noises (e.g., ticking
+    or knocking), or check for error codes related to fuel injection. Verify fuel
+    quality and confirm frequent filter replacements (every 8,000–10,000 km).
+  inspection_advice_tr: Inspect for fuel leaks, unusual engine noises (e.g., ticking
+    or knocking), or check for error codes related to fuel injection. Verify fuel
+    quality and confirm frequent filter replacements (every 8,000–10,000 km).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://oborudow.ru/en/engine/dvigatel-k9k-1-5-dci-tip-ustanovlennyh-forsunok-slabye-mesta-i/
+    source_domain: oborudow.ru
+    site_or_channel: oborudow.ru
+    quote: '"Many complaints about motorists'' reviews on the COMMON Rail system of
+      Delphi. Does not tolerate in economy, in addition, in the high-pressure fuel
+      pump, problems are beginning with plunger pairs due to metal particles due to
+      production, and then the nozzles begin to flure, the engine troit."'
+    independent: true
+  applies_when:
+    min_mileage_km: 10000
+- id: k9k_fuel_system_delphi_fuel_pump_failure_v1
+  claim_key: k9k_fuel_system_delphi_fuel_pump_failure
+  version: 1
+  is_current: true
+  title: Delphi fuel pump failure risk on 1.5 dCi K9K
+  title_tr: 1.5 dCi K9K Delfi yakıt pompası arıza riski
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: On 2009-2011 Euro 4 1.5 dCi engines, the Delphi fuel pump is identified
+    as the biggest reliability risk. It is highly sensitive to diesel quality and
+    can fail prematurely, leading to expensive repairs and breakdowns.
+  rationale_tr: 2009-2011 Euro 4 1.5 dCi motorlarda Delfi yakıt pompası en büyük güvenilirlik
+    riski olarak tanımlanmaktadır. Dizel kalitesine karşı çok hassastır ve erken arızalanabilir,
+    bu da pahalı onarımlara ve arızalara yol açabilir.
+  inspection_advice: Check service history for fuel pump replacement or fuel filter
+    changes. Inquire about diesel quality and listen for unusual whining from the
+    fuel pump during startup. If possible, perform a fuel pressure test to ensure
+    the pump is within spec.
+  inspection_advice_tr: Servis geçmişinde yakıt pompası değişimi veya yakıt filtresi
+    değişimi olup olmadığını kontrol edin. Dizel kalitesi hakkında soru sorun ve çalıştırma
+    sırasında yakıt pompasından gelen anormal vınlama sesini dinleyin. Mümkünse, pompanın
+    spesifikasyon dahilinde olduğunu doğrulamak için yakıt basınç testi yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.youtube.com/watch?v=OQFrxGbPJ5w
+    source_domain: youtube.com
+    site_or_channel: Alınır Mı?
+    quote: Bu yıllardaki en büyük risk Delfi yakıt pompasıdır.
+    independent: true
+- id: k9k_fuel_system_delphi_injection_pump_an_v1
+  claim_key: k9k_fuel_system_delphi_injection_pump_an
+  version: 1
+  is_current: true
+  title: Delphi injection pump and injector failure
+  title_tr: Delphi injection pump and injector failure
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: Delphi injectors on the K9K engine are particularly susceptible to failure
+    when exposed to low-quality diesel fuel, often failing within 10,000 km in poor
+    conditions. This is a chronic issue tied to the fuel system design and compatibility
+    with certain fuel standards.
+  rationale_tr: Delphi injectors on the K9K engine are particularly susceptible to
+    failure when exposed to low-quality diesel fuel, often failing within 10,000 km
+    in poor conditions. This is a chronic issue tied to the fuel system design and
+    compatibility with certain fuel standards.
+  inspection_advice: Check for erratic engine performance, misfires, or black smoke
+    from the exhaust. Use diagnostic tools to check for injector faults and inspect
+    injectors for physical damage or excessive wear.
+  inspection_advice_tr: Check for erratic engine performance, misfires, or black smoke
+    from the exhaust. Use diagnostic tools to check for injector faults and inspect
+    injectors for physical damage or excessive wear.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Injection pump, injectors - power systems from Delphi die very early on
+      substandard Russian diesel fuel. The cost of one nozzle is about 8-12 thousand
+      rubles. In modifications with a simple system and 'normal' nozzles, you can
+      save a lot by trying to restore their functionality. In the case of piezoelectric
+      injectors, the only solution is replacement.
+    independent: true
+  applies_when:
+    min_mileage_km: 10000
+- id: k9k_fuel_system_delphi_injector_and_pump_v1
+  claim_key: k9k_fuel_system_delphi_injector_and_pump
+  version: 1
+  is_current: true
+  title: Delphi injector and pump early failure on K9K 1.5 dCi
+  title_tr: Delphi enjektör ve pompa erken arızası K9K 1.5 dCi'de
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The K9K 1.5 dCi engine uses Delphi fuel injection components that can
+    fail early, especially if the car was run on poor-quality diesel. This can lead
+    to expensive repairs for the injection pump and injectors, which is a known weak
+    point of this engine.
+  rationale_tr: K9K 1.5 dCi motoru, özellikle düşük kaliteli dizel yakıt kullanıldığında
+    erken arızalanabilen Delphi yakıt enjeksiyon bileşenlerini kullanır. Bu, enjeksiyon
+    pompası ve enjektörlerde pahalı onarımlara yol açabilir ve bu motorun bilinen
+    bir zayıf noktasıdır.
+  inspection_advice: At viewing, check the fuel system for leaks and unusual noise
+    from the pump; ask about fuel filter replacement history; run a diagnostic scan
+    for fuel pressure or injector-related codes.
+  inspection_advice_tr: Araç muayenesinde yakıt sisteminde sızıntı ve pompadan anormal
+    ses olup olmadığını kontrol edin; yakıt filtresi değişim geçmişini sorun; yakıt
+    basıncı veya enjektörle ilgili kodlar için diagnostik tarama yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Injection pump, injectors - power systems from Delphi die very early on
+      substandard Russian diesel fuel.
+    independent: true
+- id: k9k_fuel_system_delphi_injector_check_va_v1
+  claim_key: k9k_fuel_system_delphi_injector_check_va
+  version: 1
+  is_current: true
+  title: Delphi injector check valve leak in k9k
+  title_tr: k9k'da Delphi enjektör geri dönüş valfi sızıntısı
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  rationale: The Delphi injectors on this engine can develop check valve leakage,
+    sending fuel into the return line and causing low rail pressure. This makes the
+    engine run poorly and may require injector replacement. It is a known issue that
+    often appears with age and mileage.
+  rationale_tr: Bu motordaki Delphi enjektörlerde geri dönüş valfi sızıntısı gelişebilir,
+    yakıtı geri dönüş hattına göndererek ray basıncının düşmesine neden olur. Bu,
+    motorun kötü çalışmasına neden olur ve enjektör değişimi gerektirebilir. Yaş ve
+    kilometre ile sıklıkla ortaya çıkan bilinen bir sorundur.
+  inspection_advice: Check for fault codes related to low fuel rail pressure (e.g.,
+    P0087). Test drive for rough idle or loss of power. Note that leaking check valves
+    may not show obvious symptoms during a short test; a fuel pressure measurement
+    may be required.
+  inspection_advice_tr: Düşük yakıt rayı basıncıyla ilgili hata kodlarını kontrol
+    edin (ör. P0087). Rölanti düzensizliği veya güç kaybı için test sürüşü yapın.
+    Kısa test sırasında sızan geri dönüş valfleri belirgin belirtiler göstermeyebilir;
+    yakıt basıncı ölçümü gerekebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Also, the weak point of the Dekphi injection is the injector check valves,
+      which excessively pour fuel into the return line.
+    independent: true
+- id: k9k_fuel_system_delphi_injectors_fail_qu_v1
+  claim_key: k9k_fuel_system_delphi_injectors_fail_qu
+  version: 1
+  is_current: true
+  title: Delphi injectors fail quickly on poor fuel in 1.5 dCi (k9k)
+  title_tr: 1.5 dCi (k9k) Delphi enjektörleri kötü yakıtta hızla arızalanır
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The k9k engine uses Delphi injectors that are very sensitive to poor-quality
+    diesel. Bad fuel can cause injector failure within 10,000 km, leading to power
+    loss and costly replacement.
+  rationale_tr: k9k motoru, düşük kaliteli dizel yakıta çok duyarlı Delphi enjektörleri
+    kullanır. Kötü yakıt, enjektörlerin 10.000 km içinde arızalanmasına neden olarak
+    güç kaybına ve pahalı değişime yol açabilir.
+  inspection_advice: Ask for fuel filter replacement history and check for injector-related
+    fault codes (e.g. P0087, P0263-P0272). Consider an injector leak-off/balance test
+    if the car has high mileage or unknown fuel history.
+  inspection_advice_tr: Yakıt filtresi değişim geçmişini sorun ve enjektör arıza kodlarını
+    kontrol edin (örn. P0087, P0263-P0272). Yüksek kilometre veya bilinmeyen yakıt
+    geçmişi varsa enjektör denge/geri kaçak testi yaptırmayı düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: engines with Delphi injectors, which may not withstand even 10,000 km on
+      poor diesel fuel.
+    independent: true
+  applies_when:
+    min_mileage_km: 10000
+- id: k9k_fuel_system_fuel_flow_capacity_issue_v1
+  claim_key: k9k_fuel_system_fuel_flow_capacity_issue
+  version: 1
+  is_current: true
+  title: Fuel Flow Capacity Issues (K9K)
+  title_tr: Fuel Flow Capacity Issues (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The presence of DTC P0087 indicates a chronic problem with the fuel flow
+    capacity function, which can result in inadequate fuel delivery to the engine,
+    leading to misfires or poor performance.
+  rationale_tr: The presence of DTC P0087 indicates a chronic problem with the fuel
+    flow capacity function, which can result in inadequate fuel delivery to the engine,
+    leading to misfires or poor performance.
+  inspection_advice: Look for DTC P0087 in the engine control system. Inspect the
+    fuel pump, fuel lines, and injectors for blockages or malfunctions. Ensure the
+    fuel filter is clean and functioning properly.
+  inspection_advice_tr: Look for DTC P0087 in the engine control system. Inspect the
+    fuel pump, fuel lines, and injectors for blockages or malfunctions. Ensure the
+    fuel filter is clean and functioning properly.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: DTC P0087 Fuel flow capacity function
+    independent: true
+- id: k9k_fuel_system_fuel_injector_malfunctio_v1
+  claim_key: k9k_fuel_system_fuel_injector_malfunctio
+  version: 1
+  is_current: true
+  title: Fuel Injector Malfunctions
+  title_tr: Fuel Injector Malfunctions
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: Chronic problem with fuel injectors failing or misfiring, leading to
+    poor fuel delivery, increased emissions, and potential engine damage.
+  rationale_tr: Chronic problem with fuel injectors failing or misfiring, leading
+    to poor fuel delivery, increased emissions, and potential engine damage.
+  inspection_advice: Check for uneven fuel spray patterns, misfires, or black smoke
+    from the exhaust, and verify injector resistance with a multimeter.
+  inspection_advice_tr: Check for uneven fuel spray patterns, misfires, or black smoke
+    from the exhaust, and verify injector resistance with a multimeter.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Enjektörler Arızalı", "Enjektörler Ayarsız", "Enjektör Ayarları Hatalı
+      Veya Arızalı"'
+    independent: true
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Yakıt Püskürtme Zaman Ayarı Yanlış"'
+    independent: true
+- id: k9k_fuel_system_fuel_pump_malfunction_v1
+  claim_key: k9k_fuel_system_fuel_pump_malfunction
+  version: 1
+  is_current: true
+  title: Fuel Pump Malfunction
+  title_tr: Fuel Pump Malfunction
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: Chronic issue with fuel pumps failing or misadjusting, leading to inconsistent
+    fuel delivery and potential engine stalling or poor performance.
+  rationale_tr: Chronic issue with fuel pumps failing or misadjusting, leading to
+    inconsistent fuel delivery and potential engine stalling or poor performance.
+  inspection_advice: Listen for unusual noises from the fuel pump, check fuel pressure,
+    and verify fuel delivery consistency.
+  inspection_advice_tr: Listen for unusual noises from the fuel pump, check fuel pressure,
+    and verify fuel delivery consistency.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Yakıt Pompası Ayarları Hatalı"'
+    independent: true
+- id: k9k_fuel_system_high_pressure_fuel_pump__v1
+  claim_key: k9k_fuel_system_high_pressure_fuel_pump_
+  version: 1
+  is_current: true
+  title: High-Pressure Fuel Pump Failure (Delphi, K9K 1.5 dCi)
+  title_tr: High-Pressure Fuel Pump Failure (Delphi, K9K 1.5 dCi)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: Delphi high-pressure pumps fail prematurely (~80,000 km), contaminating
+    the fuel circuit and damaging injectors and common rail, leading to engine stalls
+    and injection faults.
+  rationale_tr: Delphi high-pressure pumps fail prematurely (~80,000 km), contaminating
+    the fuel circuit and damaging injectors and common rail, leading to engine stalls
+    and injection faults.
+  inspection_advice: Listen for starting difficulties or sudden stalls. Check for
+    'injection fault' messages on the dashboard.
+  inspection_advice_tr: Listen for starting difficulties or sudden stalls. Check for
+    'injection fault' messages on the dashboard.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://what-breaks.com/renault/talisman-1
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"The Delphi high-pressure pump shows weaknesses from around 80,000 km.
+      Metal wear from the pump contaminates the fuel circuit and damages the injectors
+      and common rail — with consequential damage included. Symptoms: Starting difficulties,
+      sudden engine stall, ''injection fault'' message"'
+    independent: true
+  applies_when:
+    min_mileage_km: 80000
+- id: k9k_fuel_system_injector_circuit_failure_v1
+  claim_key: k9k_fuel_system_injector_circuit_failure
+  version: 1
+  is_current: true
+  title: Injector Circuit Failures (K9K)
+  title_tr: Injector Circuit Failures (K9K)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: Multiple DTCs (P0200, P0201, P0202, P0203, P0204) related to injector
+    circuits suggest a chronic issue with injector reliability or wiring in the K9K
+    engine, which can cause misfires and engine performance issues.
+  rationale_tr: Multiple DTCs (P0200, P0201, P0202, P0203, P0204) related to injector
+    circuits suggest a chronic issue with injector reliability or wiring in the K9K
+    engine, which can cause misfires and engine performance issues.
+  inspection_advice: Check for any of the injector-related DTCs (P0200-P0204). Inspect
+    the wiring harness for the injectors, ensuring there are no signs of corrosion,
+    damage, or poor connections. Test individual injectors for proper operation.
+  inspection_advice_tr: Check for any of the injector-related DTCs (P0200-P0204).
+    Inspect the wiring harness for the injectors, ensuring there are no signs of corrosion,
+    damage, or poor connections. Test individual injectors for proper operation.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://pdfcoffee.com/renault-k9k-engine-control-system-pdf-free.html
+    source_domain: pdfcoffee.com
+    site_or_channel: pdfcoffee.com
+    quote: 'DTC P0200 Injector control circuit
+
+      DTC P0201 Injector circuit cylinder 1
+
+      DTC P0202 Injector circuit cylinder 2
+
+      DTC P0203 Injector circuit cylinder 3
+
+      DTC P0204 Injector circuit cylinder 4'
+    independent: true
+- id: k9k_fuel_system_k9k_delphi_fuel_pump_sen_v1
+  claim_key: k9k_fuel_system_k9k_delphi_fuel_pump_sen
+  version: 1
+  is_current: true
+  title: K9K Delphi fuel pump sensitive to poor diesel
+  title_tr: K9K Delphi yakıt pompası düşük kaliteli motora duyarlıdır
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The K9K engine uses a Delphi fuel pump that can be damaged by poor-quality
+    diesel. This is a known weak point specific to this engine, so a car that may
+    have been run on bad fuel is at risk of an expensive fuel pump replacement.
+  rationale_tr: K9K motoru, düşük kaliteli motorinden zarar görebilen bir Delphi yakıt
+    pompası kullanır. Bu, bu motora özgü bilinen bir zayıf noktadır; bu nedenle kötü
+    yakıtla çalıştırılmış olabilecek bir araç, pahalı bir yakıt pompası değişimi riski
+    taşır.
+  inspection_advice: Ask about fuel quality history and check for fuel pressure fault
+    codes (e.g., P0087, P0088). Listen for fuel pump whine during startup.
+  inspection_advice_tr: Yakıt kalitesi geçmişini sorun ve yakıt basıncı arıza kodlarını
+    (örn. P0087, P0088) kontrol edin. Çalıştırma sırasında yakıt pompası vınlaması
+    olup olmadığını dinleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://otomobiloji.com/renault-1-5-dci-motor-sorunlari-ve-cozumu/
+    source_domain: otomobiloji.com
+    site_or_channel: otomobiloji.com
+    quote: Delphi yakıt pompası, düşük kaliteli motorin/mazot/yakıttan hiç hoşlanmaz.
+    independent: true
+- id: k9k_fuel_system_k9k_delphi_injection_pum_v1
+  claim_key: k9k_fuel_system_k9k_delphi_injection_pum
+  version: 1
+  is_current: true
+  title: k9k Delphi injection pump metal chips fail injectors
+  title_tr: k9k Delphi pompası metal talaş üretip enjektörleri bozabilir
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The Delphi common-rail injection pump used in the k9k fuel system can
+    generate metal chips if the fuel is contaminated or contains water. These chips
+    can spread through the fuel system and cause both the pump and injectors to fail,
+    which is an expensive repair.
+  rationale_tr: k9k yakıt sisteminde kullanılan Delphi common-rail enjeksiyon pompası,
+    yakıt kirliyse veya su içeriyorsa metal talaşlar üretebilir. Bu talaşlar yakıt
+    sistemine yayılarak hem pompanın hem de enjektörlerin arızalanmasına neden olabilir;
+    bu da pahalı bir onarımdır.
+  inspection_advice: Check service history for regular fuel filter changes. At viewing,
+    listen for abnormal pump noise and check fuel pressure via OBD (e.g., DTCs P0087,
+    P0089). Remove and inspect the fuel filter for metal particles if possible.
+  inspection_advice_tr: Servis geçmişinde düzenli yakıt filtresi değişimi kontrol
+    edin. Görüşmede anormal pompa sesini dinleyin ve OBD ile yakıt basıncını kontrol
+    edin (ör. DTC P0087, P0089). Mümkünse yakıt filtresini çıkarıp metal parçacıklar
+    açısından inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: Due to low-quality or “dry” diesel fuel (and all rubbing components of
+      the CommonRail are lubricated with fuel), and even more so due to the water
+      content in the fuel or short-term airing of the fuel system, the Delphi injection
+      pump may begin to “drive chips” due to which subsequently spreads the entire
+      fuel system. Chips are formed in the pair “injection pump rotor – shaft rollers”.
+      As a result, the injectors and the pump itself may fail.
+    independent: true
+- id: k9k_fuel_system_k9k_fuel_pump_failure_ca_v1
+  claim_key: k9k_fuel_system_k9k_fuel_pump_failure_ca
+  version: 1
+  is_current: true
+  title: k9k fuel pump failure can destroy injector line (Euro 5)
+  title_tr: k9k yakıt pompası arızası enjektör hattını bozabilir (Euro 5)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The high-pressure fuel pump on this engine is sensitive to diesel quality.
+    If it fails, metal debris can spread through the injector system, requiring very
+    expensive replacement of the entire fuel line. This is a known problem on Euro
+    5 90/110 hp versions.
+  rationale_tr: Bu motordaki yüksek basınçlı yakıt pompası mazot kalitesine karşı
+    hassastır. Arızalandığında metal parçacıklar enjektör sistemine yayılabilir ve
+    tüm yakıt hattının çok pahalı şekilde değiştirilmesi gerekebilir. Bu, Euro 5 90/110
+    hp versiyonlarında bilinen bir sorundur.
+  inspection_advice: Check for fuel pressure fault codes (P0087/P0088), signs of fuel
+    contamination, and service history for fuel pump or injector replacement.
+  inspection_advice_tr: Yakıt basıncı hata kodlarını (P0087/P0088), yakıt kirliliği
+    belirtilerini ve yakıt pompası veya enjektör değişimi servis geçmişini kontrol
+    edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.youtube.com/watch?v=OQFrxGbPJ5w
+    source_domain: youtube.com
+    site_or_channel: Alınır Mı?
+    quote: Mazot kalitesine karşı çok hassas olan bu pompa tadaş üretirse tüm enjektör
+      hattını bozar. 2012 ve sonrası yani Euro 5 nesli motorlar güncellendi. 90 ve
+      110 beygir olarak karşımıza çıktılar.
+    independent: true
+  applies_when:
+    applies_year_from: 2012
+- id: k9k_fuel_system_k9k_injector_dripping_ca_v1
+  claim_key: k9k_fuel_system_k9k_injector_dripping_ca
+  version: 1
+  is_current: true
+  title: K9K injector dripping causes cold-start white smoke
+  title_tr: K9K enjektör damlatması soğuk startta beyaz duman yapar
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 dCi (K9K) engine can develop leaking injector nozzles. When the
+    car is cold-started, excess fuel drips into the cylinder, producing dense white/gray
+    smoke and a strong raw diesel smell. This is a known wear issue that becomes more
+    likely with mileage and can lead to expensive injector replacement if ignored.
+  rationale_tr: 1.5 dCi (K9K) motorunda enjektör memeleri sızdırabilir. Soğuk çalıştırmada
+    silindire fazla yakıt damlar ve yoğun beyaz/gri duman ile keskin çiğ mazot kokusu
+    oluşur. Bu, kilometreyle daha olası hale gelen bilinen bir aşınma sorunudur ve
+    ihmal edilirse pahalı enjektör değişimi gerektirebilir.
+  inspection_advice: If possible, inspect the car when the engine is fully cold. On
+    the first start, look for dense white/gray smoke and a strong diesel odor. Also
+    check for rough idle and consider a DTC scan for injector trim codes or leakage
+    faults.
+  inspection_advice_tr: Mümkünse aracı motor tamamen soğukken inceleyin. İlk çalıştırmada
+    yoğun beyaz/gri duman ve keskin mazot kokusu olup olmadığına bakın. Ayrıca rölantide
+    titreme kontrol edin ve enjektör trim kodları veya kaçak arızaları için DTC taraması
+    düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: ilk çalıştırmada yoğun beyaz veya gri duman ve genzi yakan çiğ mazot kokusu
+      da doğrudan enjektör işemesi probleminin göstergesidir.
+    independent: true
+- id: k9k_fuel_system_k9k_injector_fatigue_und_v1
+  claim_key: k9k_fuel_system_k9k_injector_fatigue_und
+  version: 1
+  is_current: true
+  title: k9k injector fatigue under commercial load
+  title_tr: k9k enjektör yorgunluğu ticari yük altında
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: In Renault Kangoo vans used for commercial duty, constant heavy load
+    accelerates wear of the k9k fuel injectors. This can cause loss of power and requires
+    expensive injector replacement. The risk is higher for high-mileage vans that
+    have been heavily loaded.
+  rationale_tr: Ticari amaçla kullanılan Renault Kangoo minivanlarda, sürekli ağır
+    yük k9k yakıt enjektörlerinin aşınmasını hızlandırır. Bu, güç kaybına neden olabilir
+    ve pahalı enjektör değişimi gerektirir. Yüksek kilometreli ve ağır yüklenmiş araçlarda
+    risk daha yüksektir.
+  inspection_advice: Check service history for injector replacement. Ask about commercial
+    use and typical load. At viewing, test drive for power loss; consider a diagnostic
+    scan for injector-related fault codes (e.g., P0261-P0272) or an injector bench
+    test.
+  inspection_advice_tr: Enjektör değişimi için servis geçmişini kontrol edin. Ticari
+    kullanım ve tipik yük hakkında sorun. Test sürüşünde güç kaybı olup olmadığını
+    değerlendirin; enjektörle ilgili arıza kodları (ör. P0261-P0272) için diagnostik
+    tarama veya enjektör bench testi düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: 'Renault Kangoo: Ticari amaçlı ve sürekli yük altında kullanılan Kangoo''larda,
+      gaza yüklenme oranı fazla olduğundan enjektörlerin iç aksamı çok daha hızlı
+      yorulur ve çekiş düşüklüğü şikayeti ön plandadır.'
+    independent: true
+- id: k9k_fuel_system_k9k_injector_nozzle_clog_v1
+  claim_key: k9k_fuel_system_k9k_injector_nozzle_clog
+  version: 1
+  is_current: true
+  title: K9K injector nozzle clogging in stop-and-go city driving
+  title_tr: K9K enjektör ucu kurumlanması şehir içi dur-kalk kullanımda
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  rationale: K9K diesel engines can suffer from clogged injector nozzles if the car
+    is used mostly for short city trips where the engine never fully warms up. This
+    causes soot buildup, leading to rough running and loss of power, and repair costs
+    can be high.
+  rationale_tr: K9K dizel motorlar, çoğunlukla motorun tam ısınamadığı kısa şehir
+    içi kullanımlarda enjektör uçlarında kurumlanma sorunu yaşayabilir. Bu durum düzensiz
+    çalışma ve güç kaybına yol açar; onarım maliyetleri yüksek olabilir.
+  inspection_advice: Ask if the car was used mainly in city traffic. Check injector-related
+    fault codes (e.g., injector deviation values) and test drive for rough idle or
+    hesitation.
+  inspection_advice_tr: Aracın çoğunlukla şehir içinde kullanılıp kullanılmadığını
+    sorun. Enjektör arıza kodlarını (ör. enjektör sapma değerleri) kontrol edin ve
+    deneme sürüşünde düzensiz rölanti veya teklemeyi test edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Genellikle yoğun şehir içi trafiğinde ve kısa mesafelerde kullanıldığı
+      için motor tam ısınamadan stop edilir. Bu durum Clio'larda enjektör ucu kurumlanması
+      şikayetlerini artırır.
+    independent: true
+- id: k9k_fuel_system_k9k_injector_seizing_fro_v1
+  claim_key: k9k_fuel_system_k9k_injector_seizing_fro
+  version: 1
+  is_current: true
+  title: K9K injector seizing from fuel contamination
+  title_tr: K9K enjektörlerin yakıt kirliliğinden kilitlenmesi
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: In dusty or off-road use, if the fuel filter is not replaced on time,
+    particles enter the fuel system and can seize the injectors on this 1.5 dCi engine.
+    Injector replacement is expensive, so verifying fuel filter maintenance history
+    is crucial.
+  rationale_tr: Tozlu veya arazi kullanımında yakıt filtresi zamanında değiştirilmezse
+    partiküller yakıt sistemine girip bu 1.5 dCi motorda enjektörlerin kilitlenmesine
+    neden olabilir. Enjektör değişimi pahalıdır, bu yüzden yakıt filtresi bakım geçmişinin
+    doğrulanması önemlidir.
+  inspection_advice: Ask for proof of fuel filter changes per service schedule; listen
+    for rough idle or misfires; check for injector fault codes (e.g., P0263-P0272).
+  inspection_advice_tr: Yakıt filtresi değişimlerinin servis planına göre yapıldığına
+    dair kanıt isteyin; rölanti titremesi veya teklemeleri dinleyin; enjektör arıza
+    kodlarını kontrol edin (örn. P0263-P0272).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.dizelmarketim.com.tr/renault-clio-15-dci-enjektor-arizasi-belirtileri-ve-cozumleri
+    source_domain: dizelmarketim.com.tr
+    site_or_channel: dizelmarketim.com.tr
+    quote: Arazi ve tozlu yol koşullarında kullanılan Duster modellerinde, zamanında
+      değişmeyen filtreler sebebiyle yakıt sistemine partikül kaçması ve enjektör
+      kitlenmesi yaygındır.
+    independent: true
+- id: k9k_fuel_system_k9k_siemens_injection_pu_v1
+  claim_key: k9k_fuel_system_k9k_siemens_injection_pu
+  version: 1
+  is_current: true
+  title: k9k Siemens injection pump booster pump wear
+  title_tr: k9k Siemens enjeksiyon pompası besleme pompası aşınması
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The booster pump inside the injection pump on 1.5 dCi engines can wear
+    out prematurely, causing fuel starvation and abnormal engine running. This is
+    a known chronic issue specific to the Siemens fuel system on this engine.
+  rationale_tr: 1.5 dCi motorlarda enjeksiyon pompasının içindeki besleme pompası
+    erken aşınabilir, yakıt yetersizliğine ve motorun düzensiz çalışmasına neden olabilir.
+    Bu, bu motordaki Siemens yakıt sistemine özgü bilinen kronik bir sorundur.
+  inspection_advice: Check for low fuel pressure codes, fuel starvation symptoms,
+    and ask if the injection pump booster pump has been replaced. A specialist fuel
+    system test may be needed.
+  inspection_advice_tr: Düşük yakıt basıncı kodlarını, yakıt yetersizliği belirtilerini
+    kontrol edin ve enjeksiyon pompası besleme pompasının değiştirilip değiştirilmediğini
+    sorun. Uzman bir yakıt sistemi testi gerekebilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: The most common problem with the Siemens fuel system is related to a malfunction
+      of the booster pump built directly into the injection pump. Low is caused by
+      excessive wear. As a result, the fuel injection pump does not receive enough
+      fuel and operates abnormally, which immediately affects engine performance.
+    independent: true
+- id: k9k_fuel_system_recurrent_vacuum_pump_fa_v1
+  claim_key: k9k_fuel_system_recurrent_vacuum_pump_fa
+  version: 1
+  is_current: true
+  title: Recurrent vacuum pump failure
+  title_tr: Recurrent vacuum pump failure
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  rationale: The vacuum pump was replaced once, which, while not as severe as other
+    failures, still indicates a potential chronic issue with this component in the
+    1.5 TDI variant.
+  rationale_tr: The vacuum pump was replaced once, which, while not as severe as other
+    failures, still indicates a potential chronic issue with this component in the
+    1.5 TDI variant.
+  inspection_advice: Listen for unusual hissing noises from the engine bay, check
+    for vacuum leaks (e.g., around hoses and connections), and monitor for reduced
+    engine performance or rough idling.
+  inspection_advice_tr: Listen for unusual hissing noises from the engine bay, check
+    for vacuum leaks (e.g., around hoses and connections), and monitor for reduced
+    engine performance or rough idling.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Vacuum pump changed once
+    independent: true
+- id: k9k_suspension_recurrent_front_suspensi_v1
+  claim_key: k9k_suspension_recurrent_front_suspensi
+  version: 1
+  is_current: true
+  title: Recurrent front suspension failures
+  title_tr: Recurrent front suspension failures
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.6
+  rationale: The front suspension was replaced three times within 120,000 km, indicating
+    a chronic design or manufacturing defect in the suspension components of the 1.5
+    TDI variant.
+  rationale_tr: The front suspension was replaced three times within 120,000 km, indicating
+    a chronic design or manufacturing defect in the suspension components of the 1.5
+    TDI variant.
+  inspection_advice: Check for uneven tire wear, excessive play in the steering, or
+    unusual noises (clunks, rattles) when driving over bumps. Inspect for bent or
+    damaged suspension arms, worn bushings, or loose components.
+  inspection_advice_tr: Check for uneven tire wear, excessive play in the steering,
+    or unusual noises (clunks, rattles) when driving over bumps. Inspect for bent
+    or damaged suspension arms, worn bushings, or loose components.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Front suspension changed 3 times in 1.2 lakh km
+    independent: true
+  - source_url: https://volklub.com/volkswagen-polo-15-tdi-diesel-165000-km-ownership-review/
+    source_domain: volklub.com
+    site_or_channel: volklub.com
+    quote: Rear suspension changed twice
+    independent: true
+  applies_when:
+    min_mileage_km: 120000
+- id: k9k_transmission_clutch_slippage_v1
+  claim_key: k9k_transmission_clutch_slippage
+  version: 1
+  is_current: true
+  title: Clutch Slippage
+  title_tr: Clutch Slippage
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: Chronic issue where the clutch fails to engage properly, leading to slipping
+    and loss of power during acceleration.
+  rationale_tr: Chronic issue where the clutch fails to engage properly, leading to
+    slipping and loss of power during acceleration.
+  inspection_advice: Test clutch engagement for slippage by attempting to accelerate
+    under load; listen for unusual grinding noises during engagement.
+  inspection_advice_tr: Test clutch engagement for slippage by attempting to accelerate
+    under load; listen for unusual grinding noises during engagement.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.guneroto.com/hizmetler/1-5-dci-motor-ariza/
+    source_domain: guneroto.com
+    site_or_channel: guneroto.com
+    quote: '"Debriyaj Kaçırıyor"'
+    independent: true
+- id: k9k_transmission_dual_mass_flywheel_failu_v1
+  claim_key: k9k_transmission_dual_mass_flywheel_failu
+  version: 1
+  is_current: true
+  title: Dual-mass flywheel failure (higher power versions)
+  title_tr: Dual-mass flywheel failure (higher power versions)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The dual-mass flywheel on higher-power versions of the K9K engine is
+    prone to failure, leading to vibration, clutch issues, and potential transmission
+    damage. This is a chronic failure tied to the design of the drivetrain components.
+  rationale_tr: The dual-mass flywheel on higher-power versions of the K9K engine
+    is prone to failure, leading to vibration, clutch issues, and potential transmission
+    damage. This is a chronic failure tied to the design of the drivetrain components.
+  inspection_advice: Listen for unusual vibrations or rattling from the engine bay,
+    especially when the engine is idling or accelerating. Check for excessive play
+    or damage to the flywheel if the engine is disassembled.
+  inspection_advice_tr: Listen for unusual vibrations or rattling from the engine
+    bay, especially when the engine is idling or accelerating. Check for excessive
+    play or damage to the flywheel if the engine is disassembled.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lom-s.ru/en/obuchenie/dvigatel-dci.html
+    source_domain: lom-s.ru
+    site_or_channel: lom-s.ru
+    quote: problems occur with the dual-mass flywheel.
+    independent: true
+legacy_part_ids:
+- k9k_100
+- k9k_110
+- k9k_85
+- k9k_90

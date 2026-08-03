@@ -512,8 +512,17 @@ def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
         seen_advice.add(norm)
         merged_advice_parts.append(cr.claim.inspection_advice)
 
-    # Use the best member's claim object but patch its fields
-    merged_claim = best.claim
+    # Build the merged view on a TRANSIENT Claim copy — patching the best
+    # member's ORM object in place would mutate the persisted row (the next
+    # autoflush writes the merged rationale/advice back into the DB, so a
+    # second identical analysis returns different text — nondeterminism the
+    # replay test caught the moment the export catalog shipped near-duplicate
+    # titles). The copy carries the best member's id, so the serializer's
+    # source re-query and the dedup-by-id logic keep working unchanged.
+    merged_claim = Claim()
+    for _attr in ("id", "claim_key", "version", "is_current", "title", "domain",
+                  "status", "kind"):
+        setattr(merged_claim, _attr, getattr(best.claim, _attr))
     merged_claim.severity = severity_labels.get(best_severity, "medium")
     merged_claim.consequence = severity_labels.get(best_consequence, "medium")
     if merged_rationale_parts:

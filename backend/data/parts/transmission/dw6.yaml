@@ -6,4 +6,561 @@ code_family: renault_edc_dct
 known_also_as:
 - DW6
 - EDC6
-claims: []
+claims:
+- id: dw6_transmission_dw6_009_automatic_gearbo_v1
+  claim_key: dw6_transmission_dw6_009_automatic_gearbo
+  version: 1
+  is_current: true
+  title: DW6 009 automatic gearbox difficult reverse engagement
+  title_tr: DW6 009 otomatik şanzıman geri vitese zor geçme
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: This transmission has a known common issue where reverse gear is hard
+    to engage, possibly due to clutch or hydraulic problems. It can lead to costly
+    repairs if not addressed, so buyers should test reverse engagement carefully.
+  rationale_tr: Bu şanzımanda geri vitese geçişin zor olması yaygın bilinen bir sorundur;
+    debriyaj veya hidrolik problemlerden kaynaklanabilir. Ele alınmazsa pahalı onarımlara
+    yol açabilir, bu yüzden alıcılar geri vitesi dikkatlice test etmelidir.
+  inspection_advice: At viewing, shift from P to R and N to R, check that reverse
+    engages promptly without delay, lurch, or abnormal noise. On a slight incline,
+    verify the car holds position in reverse. You may also scan for transmission fault
+    codes related to clutch pressure or shift solenoids.
+  inspection_advice_tr: Araç incelenirken P'den R'ye ve N'den R'ye geçiş yapın, geri
+    vitesin gecikmesiz, sarsıntısız ve anormal ses olmadan devreye girdiğini kontrol
+    edin. Hafif bir eğimde aracın geri viteste durduğunu doğrulayın. Ayrıca debriyaj
+    basıncı veya vites solenoidleriyle ilgili şanzıman hata kodlarını taratabilirsiniz.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: difficulté à passer en marche arrière
+    independent: true
+- id: dw6_transmission_dw6_009_delayed_engageme_v1
+  claim_key: dw6_transmission_dw6_009_delayed_engageme
+  version: 1
+  is_current: true
+  title: DW6 009 delayed engagement from low hydraulic pressure
+  title_tr: DW6 009 düşük hidrolik basınç nedeniyle geç kavrama
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: This transmission can hesitate before engaging drive or reverse because
+    internal hydraulic pressure is too low. It is a known weakness of the DW6 009
+    and may indicate wear or a failing pump/seal. Repairing it often involves expensive
+    transmission work.
+  rationale_tr: Bu şanzıman, iç hidrolik basıncın düşük olması nedeniyle D veya R
+    konumuna geçerken gecikebilir. DW6 009'un bilinen bir zayıflığıdır ve aşınma veya
+    arızalı pompa/contaya işaret olabilir. Onarımı genellikle pahalı şanzıman işçiliği
+    gerektirir.
+  inspection_advice: During the test drive, shift from Park to Drive and Reverse,
+    noting any delay before engagement. Check transmission fluid level and condition
+    (smell, color). Use a diagnostic tool to scan for transmission pressure or solenoid
+    fault codes.
+  inspection_advice_tr: Test sürüşünde Park konumundan D ve R'ye geçişlerde kavrama
+    gecikmesi olup olmadığını not edin. Şanzıman yağı seviyesini ve durumunu (koku,
+    renk) kontrol edin. Diagnostik cihazla şanzıman basıncı veya solenoid hata kodlarını
+    taratın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: retard à l’enclenchement après D ou R (pression hydraulique insuffisante)
+    independent: true
+- id: dw6_transmission_dw6_009_mechatronics_fai_v1
+  claim_key: dw6_transmission_dw6_009_mechatronics_fai
+  version: 1
+  is_current: true
+  title: 'DW6 009 mechatronics failure: leaks, solenoids, electronics'
+  title_tr: 'DW6 009 mekatronik arızası: kaçaklar, solenoidler, elektronik'
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The automatic transmission's mechatronics unit controls shifting. It
+    can develop internal leaks, electronic faults, or stuck solenoids, causing erratic
+    shifting or total failure. This is a known issue specific to the DW6 009 and is
+    expensive to repair.
+  rationale_tr: Otomatik şanzımanın mekatronik ünitesi vites geçişlerini kontrol eder.
+    İç kaçaklar, elektronik arızalar veya sıkışmış solenoidler geliştirerek düzensiz
+    vites değişimine veya tamamen arızaya neden olabilir. Bu, DW6 009'a özgü bilinen
+    bir sorundur ve tamiri pahalıdır.
+  inspection_advice: Check transmission oil condition and level; scan for mechatronics-related
+    fault codes; test drive for harsh or delayed shifts.
+  inspection_advice_tr: Şanzıman yağının durumunu ve seviyesini kontrol edin; mekatronik
+    ile ilgili hata kodlarını tarayın; sert veya gecikmeli vites geçişleri için test
+    sürüşü yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: le module hydraulique (mécatronique) qui peut développer des fuites internes,
+      des défauts de pilotage électronique ou des solénoïdes grippés.
+    independent: true
+- id: dw6_transmission_dw6_009_transmission_bea_v1
+  claim_key: dw6_transmission_dw6_009_transmission_bea
+  version: 1
+  is_current: true
+  title: DW6 009 transmission bearing wear noise
+  title_tr: DW6 009 şanzıman rulman aşınması sesi
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 009 automatic transmission can develop internal bearing wear
+    that produces abnormal noises. This indicates worn components that may lead to
+    transmission failure and costly repairs.
+  rationale_tr: DW6 009 otomatik şanzımanında iç rulman aşınması anormal seslere neden
+    olabilir. Bu, yıpranmış bileşenleri gösterir ve şanzıman arızasına ve maliyetli
+    onarımlara yol açabilir.
+  inspection_advice: During a test drive, listen for abnormal whining, rumbling, or
+    grinding from the transmission, especially when accelerating. Check transmission
+    fluid level and condition if accessible; look for a service history of transmission
+    maintenance.
+  inspection_advice_tr: Test sürüşü sırasında, özellikle hızlanırken şanzımandan anormal
+    vınlama, uğultu veya öğütme seslerini dinleyin. Mümkünse şanzıman yağı seviyesini
+    ve durumunu kontrol edin; şanzıman bakım geçmişini araştırın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: bruits anormaux (roulements internes en fin de vie)
+    independent: true
+- id: dw6_transmission_dw6_009_transmission_cas_v1
+  claim_key: dw6_transmission_dw6_009_transmission_cas
+  version: 1
+  is_current: true
+  title: DW6 009 transmission case seal oil leaks
+  title_tr: DW6 009 şanzıman karter contası yağ kaçağı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 009 gearbox can develop oil leaks from its case seals, which
+    may drop fluid level and eventually damage the transmission if ignored. This is
+    a specific failure mode of this transmission code, not a general car issue.
+  rationale_tr: DW6 009 şanzımanında karter contalarından yağ kaçağı gelişebilir;
+    bu, sıvı seviyesini düşürüp ihmal edilirse şanzımana zarar verebilir. Bu, bu şanzıman
+    koduna özgü bir arıza olup genel bir araba sorunu değildir.
+  inspection_advice: Inspect the underside for oil leaks around the gearbox casing,
+    check transmission fluid level and condition, and look for fresh oil drips after
+    a test drive.
+  inspection_advice_tr: Aracın altını şanzıman gövdesi çevresinde yağ kaçağı için
+    inceleyin, şanzıman yağı seviyesini ve durumunu kontrol edin, test sürüşü sonrası
+    taze yağ damlalarına bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: fuites d’huile sous le véhicule (joints carter défaillants)
+    independent: true
+- id: dw6_transmission_dw6_clutch_pack_wear_fro_v1
+  claim_key: dw6_transmission_dw6_clutch_pack_wear_fro
+  version: 1
+  is_current: true
+  title: DW6 clutch pack wear from oil seal leaks
+  title_tr: DW6 debriyaj paketi yağ keçesi sızıntısıyla aşınır
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: Oil leaks through the seal allow clutch slip and accelerate wear of the
+    clutch pack. This is a known issue for the DW6 gearbox, leading to costly transmission
+    repairs. A buyer should check for oil leaks and clutch behavior during a test
+    drive.
+  rationale_tr: Yağ keçesinden sızan yağ, debriyaj kaymasına ve debriyaj paketinin
+    hızla aşınmasına neden olur. DW6 şanzıman için bilinen bir sorundur ve pahalı
+    şanzıman onarımlarına yol açar. Alıcı, test sürüşünde yağ sızıntısı ve debriyaj
+    davranışını kontrol etmelidir.
+  inspection_advice: Inspect for oil leaks around the gearbox, especially near the
+    clutch area. Test drive for clutch slip (revs rising without speed). Check transmission
+    fault codes and service history for clutch replacements.
+  inspection_advice_tr: Şanzıman çevresinde, özellikle debriyaj bölgesinde yağ sızıntısını
+    kontrol edin. Test sürüşünde debriyaj kaymasına (hız artmadan devir yükselmesi)
+    bakın. Şanzıman arıza kodlarını ve debriyaj değişimlerine dair servis geçmişini
+    kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://1xmatch.com/avtotachki/preselektivnyy-robot-renault-dw6/
+    source_domain: 1xmatch.com
+    site_or_channel: 1xmatch.com
+    quote: Особенно быстро пакет сцеплений изнашивается при утечках смазки через сальник
+    independent: true
+- id: dw6_transmission_dw6_clutch_wear_causes_h_v1
+  claim_key: dw6_transmission_dw6_clutch_wear_causes_h
+  version: 1
+  is_current: true
+  title: DW6 clutch wear causes harsh shifting
+  title_tr: DW6 debriyaj aşınması sert vites geçişlerine yol açar
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 automatic transmission has a known issue where internal clutches
+    wear out over time. This wear causes jerky, harsh gear changes. Repairing or replacing
+    the transmission is expensive.
+  rationale_tr: DW6 otomatik şanzımanında zamanla iç debriyajların aşınması bilinen
+    bir sorundur. Bu aşınma, vites geçişlerinde sarsıntılı ve sert davranışlara neden
+    olur. Onarım veya şanzıman değişimi pahalıdır.
+  inspection_advice: During a test drive, accelerate and decelerate through all gears,
+    noting any harsh or jerky shifts. Check for transmission-related fault codes and
+    review service history for gearbox oil changes.
+  inspection_advice_tr: Test sürüşünde tüm viteslerde hızlanıp yavaşlayın, sert veya
+    sarsıntılı geçişleri not edin. Şanzımanla ilgili hata kodlarını kontrol edin ve
+    şanzıman yağı değişimlerine dair servis geçmişini inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: passage haché avec à-coups au changement de rapport (usure embrayages)
+    independent: true
+- id: dw6_transmission_dw6_dual_clutch_failure__v1
+  claim_key: dw6_transmission_dw6_dual_clutch_failure_
+  version: 1
+  is_current: true
+  title: DW6 dual-clutch failure loses even gears
+  title_tr: DW6 çift kavrama arızası çift vitesleri kaybettirir
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 automatic gearbox uses two clutches to engage odd and even gears.
+    If one clutch fails, the car will refuse to engage even gears (2nd, 4th, 6th)
+    and may enter limp mode. This is a known, expensive repair, so buyers should test
+    all gears during a test drive.
+  rationale_tr: DW6 otomatik şanzıman, tek ve çift vitesleri kavramak için iki kavrama
+    kullanır. Bir kavrama arızalanırsa, araç çift viteslere (2., 4., 6.) geçmeyi reddeder
+    ve yokuş moduna girebilir. Bu, bilinen ve pahalı bir onarımdır, bu yüzden alıcılar
+    test sürüşünde tüm vitesleri denemelidir.
+  inspection_advice: During test drive, accelerate through all gears, especially check
+    2nd, 4th, and 6th gear engagement. Look for jerking, hesitation, or warning lights.
+    Ask for gearbox service history and check for any common DTCs like P284A or P284B
+    related to clutch failure.
+  inspection_advice_tr: Test sürüşü sırasında tüm vitesleri deneyin, özellikle 2.,
+    4. ve 6. vites geçişlerini kontrol edin. Sarsıntı, tereddüt veya uyarı ışıklarına
+    bakın. Şanzıman bakım geçmişini isteyin ve kavrama arızasıyla ilgili P284A veya
+    P284B gibi yaygın DTC kodlarını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: refus de passer les vitesses paires (défaillance d’un des deux embrayages)
+    independent: true
+- id: dw6_transmission_dw6_dual_mass_flywheel_p_v1
+  claim_key: dw6_transmission_dw6_dual_mass_flywheel_p
+  version: 1
+  is_current: true
+  title: DW6 dual-mass flywheel premature wear
+  title_tr: DW6 çift kütleli volan erken aşınması
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: 'The DW6 gearbox has a known weakness: its dual-mass flywheel often needs
+    replacement by 150,000 km. This is a costly repair, so buyers should be aware
+    of this mileage-related risk.'
+  rationale_tr: 'DW6 şanzımanın bilinen bir zayıf noktası vardır: çift kütleli volanı
+    genellikle 150.000 km''ye kadar değiştirilmesi gerekir. Bu pahalı bir onarımdır,
+    bu nedenle alıcılar bu kilometre ile ilgili riskin farkında olmalıdır.'
+  inspection_advice: Listen for rattling or vibration from the gearbox area while
+    idling; check maintenance records for flywheel replacement.
+  inspection_advice_tr: Rölantide şanzıman bölgesinden gelen takırtı veya titreşimi
+    dinleyin; bakım kayıtlarında volan değişimi olup olmadığını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://1xmatch.com/avtotachki/preselektivnyy-robot-renault-dw6/
+    source_domain: 1xmatch.com
+    site_or_channel: 1xmatch.com
+    quote: Не отличается ресурсом и двухмассовый маховик, его нередко меняют к 150
+      000 км
+    independent: true
+  applies_when:
+    min_mileage_km: 150000
+- id: dw6_transmission_dw6_edc_gearbox_loses_ev_v1
+  claim_key: dw6_transmission_dw6_edc_gearbox_loses_ev
+  version: 1
+  is_current: true
+  title: DW6 EDC gearbox loses even gears due to dual clutch failure
+  title_tr: DW6 EDC şanzımanda çift kavrama arızası nedeniyle çift viteslerin kaybı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 dual-clutch gearbox can develop a specific fault where even gears
+    (2,4,6) stop engaging while odd gears still work. This points to wear or damage
+    in the dual clutch assembly, which is expensive to repair. A buyer should test
+    all gear changes or check for transmission error codes.
+  rationale_tr: DW6 çift kavramalı şanzımanda, çift viteslerin (2,4,6) çalışmayı bırakıp
+    tek viteslerin çalıştığı spesifik bir arıza gelişebilir. Bu, çift kavrama düzeneğinde
+    aşınma veya hasara işaret eder ve onarımı pahalıdır. Alıcı tüm vites geçişlerini
+    test etmeli veya şanzıman hata kodlarını kontrol etmelidir.
+  inspection_advice: During test drive, accelerate through all gears and ensure even
+    gears engage. Check for transmission DTCs such as clutch or gear position errors.
+    Also listen for abnormal noises or jerking.
+  inspection_advice_tr: Test sürüşü sırasında tüm viteslere geçerek çift viteslerin
+    (2,4,6) kavrandığından emin olun. Şanzıman hata kodlarını (kavrama veya vites
+    konumu hataları) kontrol edin. Ayrıca anormal ses veya sarsıntı olup olmadığını
+    dinleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: La boîte EDC peut également ne plus engager les vitesses paires (1-3-5
+      fonctionnent mais 2-4-6 sont absentes), signe d’une défaillance spécifique sur
+      le double embrayage.
+    independent: true
+- id: dw6_transmission_dw6_edc_transmission_los_v1
+  claim_key: dw6_transmission_dw6_edc_transmission_los
+  version: 1
+  is_current: true
+  title: DW6 EDC transmission loses even gears after clutch failure
+  title_tr: DW6 EDC şanzıman debriyaj arızası sonrası çift vites kaybı
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 automatic gearbox uses a dual-clutch system. A specific failure
+    can cause one clutch to stop working, which results in the car only engaging odd
+    gears (1-3-5) while even gears (2-4-6) are lost. This is a serious transmission
+    problem that is expensive to repair and not detectable from a standard inspection
+    without driving.
+  rationale_tr: DW6 otomatik şanzımanı çift debriyaj sistemi kullanır. Belirli bir
+    arıza, bir debriyajın çalışmamasına neden olabilir ve bu da aracın yalnızca tek
+    viteslere (1-3-5) geçmesine, çift viteslerin (2-4-6) kaybolmasına yol açar. Bu,
+    standart bir kontrolde sürüş olmadan tespit edilemeyecek, onarımı pahalı ciddi
+    bir şanzıman sorunudur.
+  inspection_advice: During the test drive, accelerate through all gears and confirm
+    smooth engagement of 2nd, 4th and 6th. If you notice missing gears, slipping,
+    or jerky shifts, suspect a dual-clutch failure. Have a transmission specialist
+    read fault codes and inspect clutch operation.
+  inspection_advice_tr: Test sürüşünde tüm viteslere geçerek 2., 4. ve 6. viteslerin
+    düzgün kavrandığını doğrulayın. Vites eksikliği, kayma veya ani geçişler fark
+    ederseniz çift debriyaj arızası olabilir. Bir uzmanın arıza kodlarını okumasını
+    ve debriyaj çalışmasını incelemesini sağlayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: La boîte EDC peut également ne plus engager les vitesses paires (1-3-5
+      fonctionnent mais 2-4-6 sont absentes), signe d’une défaillance spécifique sur
+      le double embrayage.
+    independent: true
+- id: dw6_transmission_dw6_even_gear_hub_spline_v1
+  claim_key: dw6_transmission_dw6_even_gear_hub_spline
+  version: 1
+  is_current: true
+  title: DW6 even-gear hub spline strips under hard acceleration
+  title_tr: DW6 çift kavramalı şanzımanda çift numara göbek spline'ı sıyrılır
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 wet dual-clutch gearbox has a known weak splined joint on the
+    even-gear hub. Hard acceleration can strip these splines, putting the transmission
+    into fail-safe mode. This is a costly repair and not detectable in a standard
+    pre-purchase inspection.
+  rationale_tr: DW6 ıslak çift kavramalı şanzımanda çift numara göbek bağlantısının
+    spline'ları zayıftır. Sert hızlanma bu spline'ları sıyırabilir ve şanzımanı emniyet
+    moduna alır. Bu pahalı bir onarımdır ve standart ekspertizde tespit edilemez.
+  inspection_advice: Test drive with brisk acceleration; watch for transmission warning
+    and fail-safe mode. Ask about previous aggressive driving. If possible, scan for
+    DTCs related to clutch/gearbox.
+  inspection_advice_tr: Sert hızlanma ile test sürüşü yapın; şanzıman uyarısı ve emniyet
+    moduna geçiş olup olmadığını gözleyin. Önceki sürüş tarzını sorun. Mümkünse şanzımanla
+    ilgili DTC'leri taratın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://1xmatch.com/avtotachki/preselektivnyy-robot-renault-dw6/
+    source_domain: 1xmatch.com
+    site_or_channel: 1xmatch.com
+    quote: Слабым местом такого робота является шлицевое соединение хаба четных передач
+      Его может сорвать при чрезмерно активной езде и кпп перейдет в аварийный режим
+    independent: true
+- id: dw6_transmission_dw6_gearbox_fork_corrosi_v1
+  claim_key: dw6_transmission_dw6_gearbox_fork_corrosi
+  version: 1
+  is_current: true
+  title: DW6 gearbox fork corrosion and clutch adaptation faults
+  title_tr: DW6 şanzıman çatal korozyonu ve debriyaj adaptasyon arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 automatic gearbox has documented problems with clutch fork cable
+    corrosion and failing clutch adaptations. These faults cause gear shifting issues
+    and can lead to expensive transmission repairs.
+  rationale_tr: DW6 otomatik şanzımanında debriyaj çatal kablosu korozyonu ve debriyaj
+    adaptasyonu hataları belgelenmiştir. Bu arızalar vites geçiş sorunlarına neden
+    olur ve pahalı şanzıman onarımlarına yol açabilir.
+  inspection_advice: During viewing, test all gear changes, check for clutch judder
+    or delayed engagement. Use an OBD scanner to check for transmission fault codes
+    such as P073A, P0810, P0741, P17F0, P17F1.
+  inspection_advice_tr: Araç muayenesinde tüm vites geçişlerini test edin, kavrama
+    titremesi veya gecikmeli kavrama kontrol edin. OBD tarayıcı ile P073A, P0810,
+    P0741, P17F0, P17F1 gibi şanzıman arıza kodlarını kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: La valise Renault Clip ou un OBD professionnel de niveau équivalent permet
+      de lire les codes défauts spécifiques à la transmission, comme P073A (corrosion
+      câble fourchette), P0810 (positionnement embrayage), P0741 (convertisseur de
+      couple), P17F0 et P17F1 (adaptations embrayage défaillantes).
+    independent: true
+- id: dw6_transmission_dw6_gearbox_internal_bea_v1
+  claim_key: dw6_transmission_dw6_gearbox_internal_bea
+  version: 1
+  is_current: true
+  title: DW6 gearbox internal bearing wear and noise
+  title_tr: DW6 şanzıman iç rulman aşınması ve gürültü
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The internal bearings in this specific DW6 gearbox can wear out prematurely,
+    causing abnormal noise. If ignored, this can lead to complete gearbox failure,
+    an expensive repair. This issue is specific to this gearbox type and is not something
+    a standard inspection would necessarily catch during a short test drive.
+  rationale_tr: Bu belirli DW6 şanzımanında iç rulmanlar erken aşınabilir ve anormal
+    gürültüye neden olabilir. İhmal edilirse, bu durum pahalı bir onarım olan tam
+    şanzıman arızasına yol açabilir. Bu sorun bu şanzıman tipine özgüdür ve standart
+    bir muayene kısa bir test sürüşü sırasında bunu mutlaka fark etmeyebilir.
+  inspection_advice: During test drive, listen for whining, rumbling, or grinding
+    noises from the transmission, especially in different gears. Have a mechanic inspect
+    for bearing wear if any unusual noise is present. Check service history for gearbox
+    oil changes.
+  inspection_advice_tr: Test sürüşü sırasında, özellikle farklı viteslerde şanzımandan
+    gelen vızıltı, uğultu veya taşlama seslerini dinleyin. Herhangi bir olağandışı
+    ses varsa, bir mekanikçiye rulman aşınması kontrolü yaptırın. Şanzıman yağı değişimleri
+    için servis geçmişini kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: les bruits anormaux dus à des roulements internes en fin de vie
+    independent: true
+- id: dw6_transmission_dw6_mechatronic_fragilit_v1
+  claim_key: dw6_transmission_dw6_mechatronic_fragilit
+  version: 1
+  is_current: true
+  title: DW6 mechatronic fragility between 100k-150k km
+  title_tr: DW6 mekatronik arıza riski 100k-150k km arası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DW6 automatic gearbox in certain vans has reported mechatronic unit
+    failures occurring between 100,000 and 150,000 km. These failures can cause expensive
+    transmission repairs. While not universal, it is a known risk for this specific
+    gearbox code.
+  rationale_tr: DW6 otomatik şanzıman bazı modellerde 100.000-150.000 km arasında
+    mekatronik ünite arızaları yaşayabilir. Bu arızalar pahalı şanzıman onarımlarına
+    yol açabilir. Her araçta görülmese de bu spesifik şanzıman kodu için bilinen bir
+    risktir.
+  inspection_advice: During the test drive, verify smooth gear changes and check for
+    any warning lights. Use an OBD scanner to look for transmission/mechatronic fault
+    codes. Ask about the vehicle's transmission service history, especially oil changes.
+  inspection_advice_tr: Test sürüşünde vites geçişlerinin yumuşak olduğundan emin
+    olun ve uyarı ışıklarını kontrol edin. OBD tarayıcı ile şanzıman/mekatronik hata
+    kodlarını kontrol edin. Aracın şanzıman bakım geçmişini, özellikle yağ değişimlerini
+    sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: fragilité signalée sur certains lots avec pannes survenant entre 100 000
+      et 150 000 km, coût élevé des réparations (mécatronique notamment)
+    independent: true
+  applies_when:
+    min_mileage_km: 100000
+- id: dw6_transmission_dw6_solenoid_contaminati_v1
+  claim_key: dw6_transmission_dw6_solenoid_contaminati
+  version: 1
+  is_current: true
+  title: DW6 solenoid contamination from clutch wear debris
+  title_tr: DW6 solenoid kirlenmesi debriyaj aşınma artıklarından
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: In this automatic gearbox, normal clutch wear produces fine particles
+    that can contaminate the solenoid valves. Over time this causes shifting problems,
+    which can be costly to repair. It is a known failure pattern specific to this
+    gearbox model.
+  rationale_tr: Bu otomatik şanzımanda normal debriyaj aşınması, solenoid valflerini
+    kirletebilecek ince parçacıklar üretir. Zamanla bu, vites geçiş sorunlarına yol
+    açar ve onarımı pahalı olabilir. Bu şanzıman modeline özgü bilinen bir arıza desenidir.
+  inspection_advice: During a test drive, pay attention to hesitant or jerky shifting,
+    especially when cold. If possible, scan the transmission control unit for fault
+    codes related to solenoid or shift pressure.
+  inspection_advice_tr: Test sürüşü sırasında, özellikle soğukken tereddütlü veya
+    sarsıntılı vites geçişlerine dikkat edin. Mümkünse, şanzıman kontrol ünitesini
+    solenoid veya vites basıncı ile ilgili hata kodları için taratın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://1xmatch.com/avtotachki/preselektivnyy-robot-renault-dw6/
+    source_domain: 1xmatch.com
+    site_or_channel: 1xmatch.com
+    quote: Иные проблемы связаны с загрязнением соленоидов продуктами износа сцепления
+    independent: true
+- id: dw6_transmission_trafic_iii_dw6_009_inter_v1
+  claim_key: dw6_transmission_trafic_iii_dw6_009_inter
+  version: 1
+  is_current: true
+  title: Trafic III DW6 009 internal clutch failure
+  title_tr: Trafic III DW6 009 dahili debriyaj arızası
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: This automatic transmission has a known chronic internal clutch failure,
+    often linked to poor maintenance or infrequent fluid changes. Repairs are expensive
+    and can leave you stranded.
+  rationale_tr: Bu otomatik şanzıman, genellikle yetersiz bakım veya seyrek sıvı değişimi
+    nedeniyle bilinen kronik bir iç debriyaj arızasına sahiptir. Onarımlar pahalıdır
+    ve sizi yolda bırakabilir.
+  inspection_advice: Check service records for regular ATF changes. Test drive for
+    harsh shifting, slipping, or delayed engagement. Look for transmission warning
+    lights.
+  inspection_advice_tr: Servis kayıtlarında düzenli ATF değişimlerini kontrol edin.
+    Sert vites geçişleri, kayma veya gecikmeli kavrama için test sürüşü yapın. Şanzıman
+    uyarı ışıklarını arayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.francemoteursutilitaires.com/2026/05/15/boite-automatique-dw6-009-du-trafic-3-entretien-et-pannes/
+    source_domain: francemoteursutilitaires.com
+    site_or_channel: francemoteursutilitaires.com
+    quote: la défaillance des embrayages internes, souvent liée à une usure prématurée
+      ou un manque de vidange régulière.
+    independent: true

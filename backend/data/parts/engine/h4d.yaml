@@ -1,0 +1,106 @@
+part_id: h4d
+part_type: engine
+display_name: Renault H4D Engine
+manufacturer: renault
+code_family: renault_nissan_small_engines
+known_also_as:
+- 1.0 TSI
+- H4D
+claims:
+- id: h4d_electrical_electronic_defects_infot_v1
+  claim_key: h4d_electrical_electronic_defects_infot
+  version: 1
+  is_current: true
+  title: Electronic defects (infotainment freezing, sensor warnings, Start&Stop failure)
+  title_tr: Electronic defects (infotainment freezing, sensor warnings, Start&Stop
+    failure)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: The 1.0 TSI Polo has a higher incidence of electronic issues, including
+    infotainment freezing, random sensor warning lights (ABS, airbag, TPMS), and Start&Stop
+    system failures, often linked to battery issues.
+  rationale_tr: The 1.0 TSI Polo has a higher incidence of electronic issues, including
+    infotainment freezing, random sensor warning lights (ABS, airbag, TPMS), and Start&Stop
+    system failures, often linked to battery issues.
+  inspection_advice: Test the 12V battery and check for infotainment freezing or sensor
+    warning lights during a demonstration. Ensure the Start&Stop system functions
+    properly.
+  inspection_advice_tr: Test the 12V battery and check for infotainment freezing or
+    sensor warning lights during a demonstration. Ensure the Start&Stop system functions
+    properly.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/vw-polo-10-tsi-2018-2025-problemi-difetti-affidabilita
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: '"The Polo 1.0 TSI has more electronic problems than mechanical ones. Common
+      defects: infotainment freezing or restarting; random sensor warning lights (ABS,
+      airbag, TPMS); start&stop that stops working (often due to the battery); air
+      conditioner with fluctuating output."'
+    independent: true
+- id: h4d_electrical_recurrent_dashboard_rese_v1
+  claim_key: h4d_electrical_recurrent_dashboard_rese
+  version: 1
+  is_current: true
+  title: Recurrent dashboard reset causing temporary blank screen
+  title_tr: Recurrent dashboard reset causing temporary blank screen
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: The dashboard display resets intermittently while the vehicle is in operation,
+    resulting in a blank screen that disrupts critical driver information. This is
+    a chronic software defect affecting all Tucson variants.
+  rationale_tr: The dashboard display resets intermittently while the vehicle is in
+    operation, resulting in a blank screen that disrupts critical driver information.
+    This is a chronic software defect affecting all Tucson variants.
+  inspection_advice: Test the dashboard display by monitoring for unexpected resets
+    or blank screens while the vehicle is running. Confirm if the display flickers
+    or restarts unexpectedly during driving.
+  inspection_advice_tr: Test the dashboard display by monitoring for unexpected resets
+    or blank screens while the vehicle is running. Confirm if the display flickers
+    or restarts unexpectedly during driving.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.ensonhaber.com/hyundai-yaklasik-100-bin-aracini-geri-cagiriyor-iste-nedeni-h1546666
+    source_domain: ensonhaber.com
+    site_or_channel: ensonhaber.com
+    quote: '"gösterge paneli, ekranı araç çalışırken aralıklı olarak yeniden başlayarak
+      geçici bir boş ekran görüntüsüne yol açıyor."'
+    independent: true
+- id: h4d_transmission_h4d_dsg_low_speed_jerks__v1
+  claim_key: h4d_transmission_h4d_dsg_low_speed_jerks_
+  version: 1
+  is_current: true
+  title: h4d DSG low-speed jerks, clutch and mechatronics failures
+  title_tr: h4d DSG düşük hızda sarsıntı, debriyaj ve mekatronik arızaları
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The 7-speed DSG in this Polo can jerk at low speeds and suffer from clutch
+    or mechatronics failures, leading to expensive repairs. It is a known weakness
+    of this gearbox.
+  rationale_tr: Bu Polo'daki 7 ileri DSG şanzıman düşük hızda sarsıntı yapabilir ve
+    debriyaj veya mekatronik sorunları yaşayabilir, bu da pahalı onarımlara yol açabilir.
+    Bu şanzımanın bilinen bir zayıflığıdır.
+  inspection_advice: During test drive, check for jerky low-speed shifts; inspect
+    service history for DSG oil changes or previous mechatronics replacement.
+  inspection_advice_tr: Test sürüşünde düşük hızda vites geçişlerinde sarsıntı olup
+    olmadığını kontrol edin; servis geçmişinde DSG yağı değişimi veya daha önce mekatronik
+    değişimi yapılmış mı bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://autoricambitritella.it/en/blogs/problematiche-e-guasti-delle-vetture/vw-polo-10-tsi-2018-2025-problemi-difetti-affidabilita
+    source_domain: autoricambitritella.it
+    site_or_channel: autoricambitritella.it
+    quote: '"7-speed DSG: quick and pleasant, but more delicate; possible low speed
+      jerks; potential interventions on clutches and mechatronics."'
+    independent: true
+legacy_part_ids:
+- h4d_75

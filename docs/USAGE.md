@@ -118,6 +118,11 @@ python -m knowledge.auto --part edc --part-type transmission
 python -m knowledge.process --part k9k --part-type engine --skip-extraction
 ```
 
+> **Retired 2026-08-03 (B16 swap):** the judge/promote gate stack no longer
+> exists — `knowledge.process`'s promote steps raise with a pointer to the
+> ledger path. Claims reach serving only through the ledger's deterministic
+> verdict stage. For new-part research, use Step 4b instead.
+
 **Step 4b — Auto-remediation loop (backlog B19) — no human research runs**
 
 Per-part research no longer waits for a person. The coverage report is the
