@@ -57,46 +57,84 @@ def remediation_plan(report: Report) -> list[tuple[str, str]]:
     return plan
 
 
-def lost_source_urls(conn, export_dir: Path, data_dir: Path) -> list[tuple[str, str]]:
-    """[(url, target_hint)] — sources cited by legacy claims the export can't
-    reproduce, that aren't in the ledger yet.
+def lost_source_urls(conn, export_dir: Path, data_dir: Path) -> list[tuple[str, str, dict]]:
+    """[(url, target_hint, claim)] — sources cited by legacy claims the export
+    can't reproduce, that aren't in the ledger yet.
 
     The acceptance gate (swap.check) counts those as LOST claims ("source never
     ingested"/"no matching evidence"); this turns that class of loss into a
-    self-closing loop: ingest the exact pages the legacy claims cited, then the
-    regular extract/cluster/verdict pass decides them on their merits.
+    self-closing loop: ingest the exact pages the legacy claims cited (plus the
+    claim itself as imported evidence), then the deterministic import verdict
+    path adjudicates them on their merits — zero LLM.
     """
     from knowledge.ledger import parity
     legacy_dirs = [data_dir / "parts", data_dir / "claims"]
     _, _, only_old, _ = parity._match(legacy_dirs, export_dir)
     seen: set[tuple[str, str]] = set()
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, dict]] = []
     for stem, claim in only_old:
         for u in sorted(parity._source_urls(claim)):
             key = (u, stem)
             if key in seen:
                 continue
             seen.add(key)
-            out.append(key)
+            out.append((u, stem, claim))
     return out
 
 
 def ingest_lost_sources(conn, export_dir: Path, data_dir: Path) -> int:
-    """Fetch + ingest the lost claims' cited pages (fault-tolerant per page).
-    Returns how many pages were newly ingested."""
-    from knowledge.ledger.acquire import _fetch_page_text
+    """Fetch + ingest the lost claims' cited pages (fault-tolerant per page),
+    and import each claim itself as evidence (extractor_version=0 — the
+    deterministic import-verdict path, no LLM). Returns how many claims were
+    newly ingested.
+
+    Idempotent: a (doc, title) pair is imported once. When the page is
+    unfetchable but a previously ingested copy exists (the page's text_hash
+    dedup), the claim is imported against that copy — the claim is the
+    knowledge, the fetch is only provenance."""
     from knowledge.ledger import ingest
+    from knowledge.ledger.acquire import _fetch_page_text
+    from knowledge.ledger.db import insert_evidence
     from knowledge.sources.base import Document
 
+    def _existing_doc(url: str):
+        return conn.execute(
+            "SELECT id FROM documents WHERE lower(url)=?", (url.lower(),)).fetchone()
+
     n = 0
-    for url, hint in lost_source_urls(conn, export_dir, data_dir):
+    for url, hint, claim in lost_source_urls(conn, export_dir, data_dir):
         # parity normalizes URLs (strips scheme/www) — re-prefix for fetching.
         fetch_url = url if url.startswith(("http://", "https://")) else f"https://{url}"
         text = _fetch_page_text(fetch_url)
-        if not text:
+        doc_id = None
+        if text:
+            doc = Document(text=text, url=fetch_url, site_or_channel="")
+            doc_id = ingest.ingest_document(conn, doc, "page", hint)
+        if not doc_id:
+            row = _existing_doc(fetch_url)
+            doc_id = row["id"] if row else None
+        if not doc_id:
             continue
-        doc = Document(text=text, url=fetch_url, site_or_channel="")
-        n += ingest.ingest_document(conn, doc, "page", hint)
+        title = claim.get("title", "")
+        if not title:
+            continue
+        if conn.execute(
+            "SELECT 1 FROM evidence WHERE doc_id=? AND title=?",
+            (doc_id, title)).fetchone():
+            continue  # already imported
+        quote = (text or "")[:400].strip()
+        insert_evidence(
+            conn, doc_id=doc_id,
+            claim={"title": title,
+                   "domain": claim.get("domain", "general"),
+                   "severity": claim.get("severity", "medium"),
+                   "rationale": claim.get("rationale", ""),
+                   "inspection_advice": claim.get("inspection_advice", ""),
+                   "quote": quote,
+                   "engine_or_variant_hint": None, "quote_grounded": False},
+            span_start=None, span_end=None, extractor_version=0,
+        )
+        n += 1
     return n
 
 
