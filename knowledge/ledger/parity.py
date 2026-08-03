@@ -177,12 +177,15 @@ def explain_only_old(conn, existing_dirs: list[Path], export_dir: Path) -> str:
             # ~2/3 of legacy claims carry no sources (mostly body/elec files).
             # Fall back to a title search over ALL evidence — the extractor's
             # titles are close to the legacy ones even when verdicts rewrote
-            # the exported claim.
+            # the exported claim. Only when NOTHING similar exists is the
+            # claim unverifiable: no URL, no evidence anywhere — the ledger
+            # bar (>=1 grounded source) would never serve it, so this is an
+            # attributable legacy-quality drop, not a reproducible loss.
             all_ev = conn.execute("SELECT id, title FROM evidence").fetchall()
             similar = [e for e in all_ev
                        if jaccard(e["title"] or "", claim["title"]) >= 0.3]
             if not similar:
-                return "never extracted by the ledger"
+                return "no source URLs in legacy claim (unverifiable provenance)"
             return _verdict_path_reason(similar)
         docs = []
         for u in urls:

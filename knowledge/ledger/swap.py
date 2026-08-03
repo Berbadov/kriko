@@ -166,7 +166,6 @@ def apply(export_dir: Path, data_dir: Path, plan: Plan) -> None:
 # ── Automated acceptance gate ────────────────────────────────────────────────
 
 _LOST_REASONS = {
-    "never extracted by the ledger",
     "source never ingested into ledger",
     "no matching evidence extracted from source",
 }

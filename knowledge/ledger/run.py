@@ -155,7 +155,8 @@ def main(argv=None) -> int:
             max_sources=args.max_sources)
         n = len(stats["parts"])
         print(f"remediate: {n} part(s) re-researched "
-              f"(+{stats['ingested']} docs, +{stats['extracted']} evidence, "
+              f"(+{stats['ingested']} docs, +{stats['lost_ingested']} lost-source"
+              f" pages, +{stats['extracted']} evidence, "
               f"+{stats['verdicts']} verdicts, {stats['exported']} export file(s), "
               f"${stats['usd']:.4f})" if n else
               f"remediate: no actionable findings ({stats['findings']} total — "
