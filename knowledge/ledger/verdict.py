@@ -164,6 +164,54 @@ def gate_product_value(evidence_titles, v: dict) -> str | None:
     return pv
 
 
+# ── Deterministic import verdicts (zero-LLM path) ────────────────────────────
+#
+# Evidence backfilled from the pre-ledger catalog (extractor_version=0) is
+# ALREADY-gated knowledge: the legacy pipeline researched, judged, and stored
+# it (title/domain/severity/rationale from the claim itself). Re-verdicting it
+# with an LLM re-spends tokens to re-derive what the fields already say —
+# ~1.9M tokens / $0.45 in the 2026-08-03 live run. A cluster whose evidence is
+# ENTIRELY imported gets a synthesized verdict (model='import', $0); the
+# deterministic product-value gate and export validation still apply exactly
+# as for LLM verdicts. LLM verdicts remain for clusters with extractor-
+# extracted evidence (genuinely new research).
+
+_SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2}
+
+
+def imported_verdict(payload: dict) -> dict:
+    """Synthesized verdict for a cluster built only from imported evidence."""
+    ev = payload["evidence"]
+    first = ev[0]
+    severity = max(
+        (e.get("severity") for e in ev if e.get("severity") in _SEVERITY_RANK),
+        default="medium", key=lambda s: _SEVERITY_RANK[s],
+    )
+    text = first.get("rationale") or first.get("quote") or first.get("title") or ""
+    advice = first.get("inspection_advice") or ""
+    title = first.get("title") or payload["component_id"]
+    return {
+        "attribution": {"component_id": payload["component_id"],
+                        "confidence": "high",
+                        "reason": "imported legacy research — deterministic verdict, no LLM"},
+        "supported": True,
+        "refuted_by": [],
+        "product_value": "high",   # the deterministic gate may still downgrade
+        "severity": severity,
+        "title_en": title, "title_tr": title,
+        "rationale_en": text, "rationale_tr": text,
+        "inspection_advice_en": advice, "inspection_advice_tr": advice,
+    }
+
+
+def _evidence_versions(conn, cluster_id: int) -> set[int]:
+    """Distinct extractor_version across the cluster's evidence rows."""
+    return {r[0] for r in conn.execute(
+        "SELECT DISTINCT e.extractor_version FROM cluster_members m"
+        " JOIN evidence e ON e.id = m.evidence_id WHERE m.cluster_id=?",
+        (cluster_id,))}
+
+
 def pending_clusters(conn) -> list[tuple[int, dict, str]]:
     out = []
     for row in conn.execute("SELECT id FROM clusters ORDER BY id"):
@@ -217,11 +265,32 @@ def _call(client, payload: dict) -> tuple[str, int, int]:
 
 def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
     todo = pending_clusters(conn)
-    if not todo:
-        return 0
-    budget.precheck(_est_usd(todo))
-    client = _client()
+    # Imported-only clusters never touch the LLM: synthesize deterministically
+    # ($0), keep the model's judgment for genuinely new extraction.
+    import_todo: list[tuple[int, dict, str]] = []
+    llm_todo: list[tuple[int, dict, str]] = []
+    for cid, payload, h in todo:
+        versions = _evidence_versions(conn, cid)
+        (import_todo if versions == {0} else llm_todo).append((cid, payload, h))
     saved = 0
+    for cid, payload, h in import_todo:
+        try:
+            v = imported_verdict(payload)
+        except Exception as exc:  # noqa: BLE001 — one bad cluster must not sink the pass
+            print(f"  cluster {cid}: import verdict failed ({exc})")
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO verdicts (input_hash, model,"
+            " verdict_json, tokens_in, tokens_out, usd, created_at)"
+            " VALUES (?, 'import', ?, 0, 0, 0, datetime('now'))",
+            (h, json.dumps(v, ensure_ascii=False)))
+        conn.commit()
+        saved += 1
+    if not llm_todo:
+        return saved
+    budget.precheck(_est_usd(llm_todo))
+    client = _client()
+    llm_saved = 0
     # Only the LLM round-trips run concurrently; every DB write and budget
     # charge is marshalled back to this thread via _store (sqlite3 connections
     # and Budget are single-threaded). A failed call leaves its cluster pending
@@ -229,7 +298,7 @@ def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
     # per-row, so nothing is lost.
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_call, client, payload): (cid, h)
-                   for cid, payload, h in todo}
+                   for cid, payload, h in llm_todo}
         for fut in as_completed(futures):
             cid, h = futures[fut]
             try:
@@ -237,5 +306,5 @@ def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
             except Exception as exc:  # noqa: BLE001 — one bad call must not sink the batch
                 print(f"  cluster {cid}: verdict call failed, resume will retry ({exc})")
                 continue
-            saved += _store(conn, budget, cid, h, text, tin, tout)
-    return saved
+            llm_saved += _store(conn, budget, cid, h, text, tin, tout)
+    return saved + llm_saved
