@@ -6,6 +6,30 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-03 — B16 swap mechanism + automated acceptance gate (no commit yet)
+
+- **Export regenerated from the ledger** — the checked-in `ledger_export/` had gone
+  stale (15 files, missing dq200/dq250/dq381/ea211/ea888/k9k, one bare-list
+  artifact). Fresh run: 19 parts, 536 claims; `golf7_cool_cooling` correctly
+  skip-and-reported (no catalog identity). Each part file now carries
+  `legacy_part_ids` (which legacy power-split files it supersedes) —
+  pipeline-derived via the power-collapse rule, no hand list.
+- **`knowledge/ledger/swap.py`** — `plan` derives the legacy→merged fitment remap
+  from the export, classifies every legacy file (superseded/retained), counts
+  fitment edits; `apply` writes export files into `parts/<type>/`, deletes
+  superseded power-split files, overwrites non-split ids in place (fixes a
+  delete-pass bug that rglob'd away the fresh export files), rewrites fitment
+  axes, defaults to a temp copy unless `--in-place`; `check` = the automated
+  acceptance gate: parity loss (every absent legacy claim attributable to a
+  named gate), serving monotonicity (baseline replayed against current AND
+  post-swap catalogs on fresh DBs — 0 match-loss regressions allowed), coverage
+  must not add findings. Tests: `test_ledger_swap.py`; suite 589.
+- **Live gate state: FAIL, data-gated** — 119 lost claims (75 never extracted,
+  23 never ingested, 21 no matching evidence) → B19 remediate loop targets;
+  serving: 21/43 listings differ vs current serving, 0 regressions; coverage
+  18→11. Swap lands when parity-lost hits 0.
+- USAGE.md §4 Step 6 documents plan/check/apply.
+
 ## 2026-08-03 — B11 data safe + B19 auto-remediation loop landed (no commit yet)
 
 - **B11 (data, fail-open)**: hand-typed `emissions`/`aftertreatment` removed from
