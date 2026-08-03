@@ -26,3 +26,4 @@ local.db
 # Node deps for the extension scraper tests (npm test)
 node_modules/
 package-lock.json
+knowledge/ledger/ledger.db
