@@ -72,8 +72,10 @@ export EXA_API_KEY=...
 
 Kriko researches each **part revision** once (K9K engine, EDC gearbox) and assembles
 claims per variant at sync time. Adding a new model is five steps — the pipeline
-scaffolds Steps 1 and 3 for you; a human reviews and fills in the figures Wikipedia
-doesn't reliably give (per-market horsepower, exact trim years) before they're used.
+scaffolds Steps 1 and 3 for you; the per-market figures Wikipedia doesn't reliably
+give (horsepower, exact trim years) are derived automatically or the row fails open
+(no synced variant, no_match demand signal, coverage-report finding) — never
+hand-filled by a human (automation principle).
 
 **Step 1 — Catalog discovery + variants scaffold** — what configs exist
 
@@ -86,10 +88,11 @@ This reads the Wikipedia article for the model, extracts engine/transmission cod
 from the infobox, and writes a **draft** `backend/data/variants/{make}_{model}.yaml`
 (one row per engine × transmission combination, marked `draft: true`). Wikipedia
 doesn't reliably give per-market power figures or exact trim years, so those fields
-are left unset rather than guessed — fill them in from a manufacturer spec sheet or
-TecDoc, then remove `draft: true`. `backend/sync.py` refuses to sync draft rows.
+are left unset rather than guessed — they are derived automatically or the row fails
+open (not synced; surfaced by the coverage report's `draft_variant` finding and the
+demand miner's no_match rows). `backend/sync.py` refuses to sync draft rows.
 If `backend/data/variants/{make}_{model}.yaml` already exists, this step is skipped
-(never overwrites hand-filled data). Use `--dry-run` to preview without writing.
+(never overwrites). Use `--dry-run` to preview without writing.
 
 **Step 2 — (included above)** catalog discovery also prints the research targets
 (part codes) needed for Step 4.
@@ -114,6 +117,28 @@ python -m knowledge.auto --part edc --part-type transmission
 # Re-run gates/promotion only — zero fetches, zero extraction tokens
 python -m knowledge.process --part k9k --part-type engine --skip-extraction
 ```
+
+**Step 4b — Auto-remediation loop (backlog B19) — no human research runs**
+
+Per-part research no longer waits for a person. The coverage report is the
+trigger; the ledger pipeline fills the gap unattended:
+
+```bash
+# What would the loop fix right now?
+python -m knowledge.ledger.run remediate --dry-run
+
+# One budget-capped, resumable pass: acquire → extract → resolve → cluster →
+# verdict → export for every zero-claim/missing part the coverage report flags
+python -m knowledge.ledger.run remediate --max-usd 2.0
+
+# Any findings that aren't part-driven (e.g. diesel variants without an
+# emissions value) are reported and logged, never silently fixed
+tail -f logs/remediation.jsonl
+```
+
+Run it on a schedule (cron/systemd timer). Every pass appends one line to
+`logs/remediation.jsonl` (findings seen, parts re-researched, rows gained,
+spend) so the loop's behavior is observable without any human in the path.
 
 **Step 5 — Sync to DB**
 
@@ -215,21 +240,14 @@ OBD-code dumps) never reaches a buyer. The `/analyze` summary counts "confirmed 
 > the cards signal the general picture, while the `Confirmed` badge stays trustworthy.
 > Verification still needs ≥2 independent sources — we do **not** lower that bar.
 
-### Promoting & rejecting claims (human step)
+### Promoting & rejecting claims — retired (automation principle, 2026-08-03)
 
-Edit `backend/data/claims/{make}_{model}.yaml` by hand — it's a **one-line change** per claim:
-
-- **Promote:** set `status: review` (or `held`) → `status: verified`, and optionally
-  `promoted_by: human`. It then shows as **Confirmed**.
-- **Reject junk:** set `status: rejected`. This **tombstones** it — a later pipeline re-run
-  will *not* re-add the claim. Prefer this over deleting the lines.
-- **Delete:** removing a claim from the YAML now also removes it from the DB on next sync
-  (`sync.py` prunes rows no longer present), so a mis-grounded claim stops serving. Tombstoning
-  is still safer than deleting if you want the junk to stay suppressed across re-extraction.
-
-Re-running the pipeline never overwrites an existing claim_key, so your edits are safe.
-Re-sync after editing: `python -m knowledge.process … --skip-extraction` (or restart the api
-container) to push the new statuses into the DB.
+Statuses are pipeline-owned: the evidence ledger's deterministic verdict stage
+(`knowledge/ledger/verdict.py` + the product-value gate) decides them —
+**hand-editing `status`/`promoted_by` in the claim YAMLs is a banned human step**
+(no human verification anywhere in the data path; CLAUDE.md automation
+principle). The status vocabulary above still describes what the pipeline
+writes; the legacy judge/promote stack retires with the B16 catalog swap.
 
 > Fuel grounding: a fuel-specific claim (K9K/dCi → diesel, TCe/H5x → petrol, AdBlue → diesel)
 > is grounded only to same-fuel variants, so a diesel issue never shows on a petrol listing.

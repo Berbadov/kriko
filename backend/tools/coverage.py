@@ -15,7 +15,7 @@ Reads:
                                     body_code — see backend/sync.py's part_keys)
     backend/data/parts/<type>/*.yaml — part rows (part_id, part_type, claims: [...])
 
-Reports four finding kinds, all catalog-derived (no hardcoded make/model/code
+Reports five finding kinds, all catalog-derived (no hardcoded make/model/code
 list — see CLAUDE.md's scalability principle):
     missing_part            — a fitment row's part_id has no part YAML anywhere
                                under backend/data/parts/
@@ -28,6 +28,14 @@ list — see CLAUDE.md's scalability principle):
                                automatic/automated technology but whose
                                transmission_code references no transmission-
                                type part
+    variant_no_emissions    — a diesel variant with no emissions value (B11):
+                               SCR claims can't ground deterministically, so
+                               the gap must be visible — never a quiet wrong
+                               value. Fail-open is fine; silence is not.
+    draft_variant           — a variant row still carrying `draft: true`: not
+                               synced to serving, so listings for it no_match.
+                               Its power/year figures must come from automatic
+                               derivation, never a human hand-fill (G5).
 
 The pseudo-code "manual" is skipped everywhere it appears as a fitment row's
 transmission placeholder — manual gearboxes deliberately have no part file
@@ -68,9 +76,16 @@ PSEUDO_PART_CODES = frozenset({"manual"})
 
 @dataclass(frozen=True)
 class Finding:
-    kind: str      # missing_part | zero_claim_part | orphan_part | auto_variant_no_tx_part
+    kind: str      # missing_part | zero_claim_part | orphan_part |
+                   # auto_variant_no_tx_part | variant_no_emissions
     subject: str   # part_id or variant_id, whichever this finding is keyed on
     message: str
+    # part_id/axis are what the B19 auto-remediation loop consumes: which part
+    # to re-research, and which axis (== part type vocabulary:
+    # engine|transmission|electrical|body|cooling — see backend/sync.py's
+    # part_keys) it belongs to. None when the finding isn't part-driven.
+    part_id: str | None = None
+    axis: str | None = None
 
 
 @dataclass
@@ -162,25 +177,34 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
                     "missing_part", part_id,
                     f"variant {vid!r} references {axis} part_id {part_id!r} — "
                     f"no part YAML found under backend/data/parts/",
+                    part_id=part_id, axis=axis,
                 ))
 
     # (b) zero_claim_part — empty claims list, or claims but none servable.
     for part_id, data in sorted(parts.items()):
+        part_type = data.get("part_type")
         claims = data.get("claims") or []
         if not claims:
-            findings.append(Finding("zero_claim_part", part_id, "part YAML has 0 claims"))
+            findings.append(Finding(
+                "zero_claim_part", part_id, "part YAML has 0 claims",
+                part_id=part_id, axis=part_type,
+            ))
             continue
         servable = [c for c in claims if c.get("status") in SERVABLE_STATUSES]
         if not servable:
             findings.append(Finding(
                 "zero_claim_part", part_id,
                 f"{len(claims)} claim(s), none in a servable status {tuple(SERVABLE_STATUSES)}",
+                part_id=part_id, axis=part_type,
             ))
 
     # (c) orphan_part — a part file no fitment row references.
     for part_id in sorted(parts):
         if part_id not in referenced_part_ids:
-            findings.append(Finding("orphan_part", part_id, "no fitment row references this part"))
+            findings.append(Finding(
+                "orphan_part", part_id, "no fitment row references this part",
+                part_id=part_id, axis=parts[part_id].get("part_type"),
+            ))
 
     # (d) auto_variant_no_tx_part — automatic-tech variant, no real tx part.
     # The catalog's "transmission" field is a closed two-value vocabulary
@@ -205,6 +229,39 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
                 "auto_variant_no_tx_part", vid,
                 f"transmission={tx!r} but transmission_code={tx_code!r} "
                 f"references no transmission-type part",
+                part_id=(tx_code or None) if tx_code not in PSEUDO_PART_CODES else None,
+                axis="transmission",
+            ))
+
+    # (e) variant_no_emissions — diesel variant without an emissions value
+    # (B11). Fail-open (no SCR grounding) is safe; a *quiet* gap is not — an
+    # AdBlue claim would then ground to this variant through the SCR gate's
+    # unknown-side pass. Visibility is the point; remediation (evidence-derived
+    # values) is the B19 loop's job, not a human sign-off.
+    for row in variant_rows:
+        vid = row.get("id", "?")
+        if (row.get("fuel") or "").lower() != "diesel":
+            continue
+        if not row.get("emissions"):
+            findings.append(Finding(
+                "variant_no_emissions", vid,
+                "diesel variant has no emissions value — fail-open, no SCR "
+                "grounding; the gap must stay visible until evidence-derived "
+                "values exist (B11)",
+            ))
+
+    # (f) draft_variant — scaffolded row not synced to serving. Discovery
+    # scaffolds these with engine/transmission/fuel only; the power/year
+    # figures it can't reliably get from Wikipedia were historically left for
+    # a human to hand-fill — a step G5 bans. The row stays visible here (and
+    # no_match listings for it surface in the demand miner) until automatic
+    # derivation exists; silence would be a quiet coverage hole.
+    for row in variant_rows:
+        if row.get("draft"):
+            findings.append(Finding(
+                "draft_variant", row.get("id", "?"),
+                "draft row — not synced; power/year figures must be derived "
+                "automatically, never hand-filled (G5)",
             ))
 
     return Report(findings)
