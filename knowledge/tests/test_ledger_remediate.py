@@ -59,6 +59,73 @@ def test_plan_dedupes_multiple_findings_for_same_part():
     assert remediate.remediation_plan(report) == [("dw5", "transmission")]
 
 
+# ── lost-source ingestion (parity-lost claims' cited pages) ──────────────────
+
+
+def test_lost_source_urls_collects_only_claims_with_urls(tmp_path, monkeypatch):
+    import yaml as _yaml
+    from knowledge.ledger.parity import _source_urls
+
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    (export_dir / "eng1.yaml").write_text(_yaml.dump({
+        "part_id": "eng1", "part_type": "engine",
+        "claims": [{"claim_key": "new_c", "title": "fresh title", "domain": "engine",
+                    "severity": "medium", "status": "review", "rationale": "r",
+                    "inspection_advice": "a", "sources": []}],
+    }, sort_keys=False))
+    legacy_parts = tmp_path / "parts"
+    (legacy_parts / "engine").mkdir(parents=True)
+    (legacy_parts / "engine" / "eng1.yaml").write_text(_yaml.dump({
+        "part_id": "eng1", "part_type": "engine",
+        "claims": [
+            {"claim_key": "old_sourced", "title": "old sourced claim", "domain": "engine",
+             "severity": "medium", "status": "review", "rationale": "r",
+             "inspection_advice": "a",
+             "sources": [{"source_url": "https://example.com/a"},
+                         {"source_url": "https://example.com/b"}]},
+            {"claim_key": "old_unsourced", "title": "old unsourced claim", "domain": "engine",
+             "severity": "medium", "status": "review", "rationale": "r",
+             "inspection_advice": "a", "sources": []},
+        ],
+    }, sort_keys=False))
+    (tmp_path / "claims").mkdir()
+
+    conn = db.connect(tmp_path / "l.db")
+    lost = remediate.lost_source_urls(conn, export_dir, tmp_path)
+    assert lost == [("example.com/a", "eng1"), ("example.com/b", "eng1")]
+    conn.close()
+
+
+def test_ingest_lost_sources_fetches_and_ingests(tmp_path, monkeypatch):
+    import yaml as _yaml
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    (export_dir / "eng1.yaml").write_text(_yaml.dump({
+        "part_id": "eng1", "part_type": "engine", "claims": [],
+    }, sort_keys=False))
+    legacy_parts = tmp_path / "parts"
+    (legacy_parts / "engine").mkdir(parents=True)
+    (legacy_parts / "engine" / "eng1.yaml").write_text(_yaml.dump({
+        "part_id": "eng1", "part_type": "engine",
+        "claims": [{"claim_key": "old", "title": "old claim", "domain": "engine",
+                    "severity": "medium", "status": "review", "rationale": "r",
+                    "inspection_advice": "a",
+                    "sources": [{"source_url": "https://example.com/x"}]}],
+    }, sort_keys=False))
+    (tmp_path / "claims").mkdir()
+
+    monkeypatch.setattr("knowledge.ledger.acquire._fetch_page_text",
+                        lambda url: "page text about failure")
+    conn = db.connect(tmp_path / "l.db")
+    n = remediate.ingest_lost_sources(conn, export_dir, tmp_path)
+    assert n == 1
+    row = conn.execute("SELECT url, target_hint FROM documents").fetchone()
+    assert row["url"] == "https://example.com/x"
+    assert row["target_hint"] == "eng1"
+    conn.close()
+
+
 # ── run(): full pass, offline ────────────────────────────────────────────────
 
 

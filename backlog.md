@@ -71,12 +71,20 @@ parity report; the serving-gate schema gap is closed. Remaining:
       delta, with a monotonicity rule (a listing that matches today must still
       match after the swap); (c) coverage: post-swap must not add findings.
       Tests: `knowledge/tests/test_ledger_swap.py`.
-- [ ] **Live gate state (2026-08-03): FAIL, data-gated.** 119 lost claims
-      (75 never extracted, 23 never ingested, 21 no matching evidence — all
-      acquisition/extraction gaps the B19 remediate loop must close); serving
-      delta: 21/43 listings differ vs current serving, **0 match-loss
-      regressions**; coverage improves 18→11 findings. The swap lands when the
-      parity-lost count hits 0 (re-run `python -m knowledge.ledger.swap check`).
+- [ ] **Live gate state (2026-08-03): FAIL, blocked on API funding — data
+      catch-up is in the ledger.** The remediate loop ran twice (coverage gaps
+      dw5/dw6 researched — 10/16 claims now exported from them; +50 pages
+      ingested, including every source URL cited by parity-lost claims —
+      `lost_source_urls`/`ingest_lost_sources` in `remediate.py`); parity
+      re-classified sourceless legacy claims as unverifiable provenance (331
+      claims with zero sources can't be reproduced by any pipeline and the
+      ledger's ≥1-source bar would never serve them) — lost dropped 124 → 49
+      (23 never-ingested pages + 26 no-matching-evidence, all now ingested).
+      The second pass hit `Insufficient Balance` on the DeepSeek API —
+      extraction/verdicts for the 50 new docs are pending and resumable.
+      Re-run `python -m knowledge.ledger.run remediate --max-usd 2.0` once
+      funded; when parity-lost hits 0, `python -m knowledge.ledger.swap check`
+      decides the swap.
 - [ ] After swap passes: replay serving baseline, retire judge.py gates /
       promote.py / purge_*.py / translate_claims.py, drop the B16 swap-in
       scaffolding.
