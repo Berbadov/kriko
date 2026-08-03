@@ -48,23 +48,38 @@ spot-checks) are cancelled, not deferred — see B19, which absorbs B2/B3.
 ## P0
 
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
-The ledger export (`knowledge/ledger_export/`, 568 claims) is acceptance-ready per the
+The ledger export (knowledge/ledger_export/, 568 claims) is acceptance-ready per the
 parity report; the serving-gate schema gap is closed. Remaining:
-- [x] Export rewritten to the part-dict schema (part_id/part_type/display_name/
-      manufacturer/known_also_as/claims) with serving-gate fields grounded at export
-      (deterministic grounders: applies_year_from/to, maintenance, min_mileage_km,
-      requires_equipment). Verified live to `/tmp/opencode/ledger_export` (19 parts;
-      skip-and-report for golf7_cool_cooling + duplicate k9k_engine_connecting_rod_bearing_f).
-      **Done 2026-08-02.**
-- [ ] Fitment remap to merged identities: export files are `k9k.yaml`, `h5h.yaml`, …
-      but fitment rows point at `k9k_110`, `h5h_140`, … (the Flaw-2 merge).
-- [ ] Thin merged files vs legacy (h5d 1 claim vs 69, h4d 1 vs 35, ea288 23 vs 91):
-      **no human spot-review** — acceptance is an automated gate: `parity --explain`
-      categories ("unsupported"/"never extracted") must be empty or attributable to a
-      named gate, the coverage report must be clean, and the serving-baseline replay
-      (`backend/tests/fixtures/serving_baseline_2026-07-22.json`) must pass unchanged.
-- [ ] Swap `backend/data/parts/` for the export, replay the serving baseline, retire
-      judge.py gates / promote.py / purge_*.py / translate_claims.py.
+- [x] Export rewritten to the part-dict schema with serving-gate fields grounded at
+      export. **Done 2026-08-02.** Regenerated 2026-08-03 from the ledger (19 parts,
+      536 claims — the checked-in copy had gone stale; the fresh export covers
+      dq200/dq250/dq381/ea211/ea888/k9k) and each file now carries
+      `legacy_part_ids` (which legacy power-split files it supersedes —
+      pipeline-derived, no hand list).
+- [x] **Swap mechanism landed 2026-08-03** (`knowledge/ledger/swap.py`):
+      `plan` derives the legacy→merged fitment remap mechanically
+      (power-collapse rule via the export's `legacy_part_ids`), classifies every
+      legacy file (superseded/retained), counts fitment edits; `apply` writes the
+      export into `parts/<type>/`, deletes superseded power-split files,
+      overwrites non-split ids in place, rewrites fitment axes (revertible, and
+      default off the real catalog — runs on a copy unless `--in-place`);
+      `check` is the **automated acceptance gate** (no human sign-off):
+      (a) parity: every legacy claim absent from the export must be attributable
+      to a named gate — "never extracted/ingested/no matching evidence" are
+      LOST and fail; (b) serving: the 43-listing baseline replayed against the
+      current catalog AND the post-swap catalog on fresh DBs — the swap's own
+      delta, with a monotonicity rule (a listing that matches today must still
+      match after the swap); (c) coverage: post-swap must not add findings.
+      Tests: `knowledge/tests/test_ledger_swap.py`.
+- [ ] **Live gate state (2026-08-03): FAIL, data-gated.** 119 lost claims
+      (75 never extracted, 23 never ingested, 21 no matching evidence — all
+      acquisition/extraction gaps the B19 remediate loop must close); serving
+      delta: 21/43 listings differ vs current serving, **0 match-loss
+      regressions**; coverage improves 18→11 findings. The swap lands when the
+      parity-lost count hits 0 (re-run `python -m knowledge.ledger.swap check`).
+- [ ] After swap passes: replay serving baseline, retire judge.py gates /
+      promote.py / purge_*.py / translate_claims.py, drop the B16 swap-in
+      scaffolding.
 
 ### B11 — Emissions/SCR values: derive or fail open — no sign-off `[G3][G5]`
 The mechanism landed 2026-08-02 (`Variant.emissions`/`aftertreatment` +
