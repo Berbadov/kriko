@@ -6,6 +6,60 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-03 — B11 data safe + B19 auto-remediation loop landed (no commit yet)
+
+- **B11 (data, fail-open)**: hand-typed `emissions`/`aftertreatment` removed from
+  all 8 Megane 4 variant rows — the unverified `scr` value on
+  `megane4_k9k_110_edc` (wrong for 2016–18) no longer serves. All variants fail
+  open (no SCR grounding) until evidence-derived values exist.
+- **B11 (mechanism)**: year-split `emissions` segments in `write_variants.py` —
+  list of `{year_from, year_to, emissions}` per trim emits one variant row per
+  era (`{id}__{emissions}` suffix), per-segment aftertreatment derivation,
+  window validation. Tests: `test_write_variants_emissions.py`.
+- **B11 (visibility)**: new `variant_no_emissions` coverage finding for diesel
+  variants without an emissions value — the gap is reported, never a quiet
+  wrong value. Tests added to `test_coverage_tool.py`.
+- **B19 (driver)**: `python -m knowledge.ledger.run remediate`
+  (`knowledge/ledger/remediate.py`) — coverage findings (zero_claim_part /
+  missing_part / auto_variant_no_tx_part, now carrying `part_id`+`axis`
+  metadata) drive an unattended acquire → extract → resolve → cluster → verdict
+  → export pass. Budget-capped (`--max-usd`), resumable, `--dry-run` prints the
+  plan, empty plan spends nothing. Every pass appends `logs/remediation.jsonl`.
+  USAGE.md §4b documents scheduling. Tests: `test_ledger_remediate.py`.
+- **G5 cleanup**: the draft-row onboarding step ("a human fills in real
+  numbers") is retired — `draft_variant` coverage finding makes scaffolded
+  rows fail open visibly; USAGE.md's "Promoting & rejecting claims (human
+  step)" section replaced with a retired banner (statuses are verdict-stage
+  owned). Docs updated to remove human-step language from onboarding.
+- Full suite: 583 passed.
+
+## 2026-08-03 — Priority reorganization: full automation + systemic-only (no commit — doc-only)
+
+Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
+
+- **Automation principle (new)** — nothing in the data path waits for human
+  verification, spot-checks, or sign-off; extraction and scraping run unattended.
+  Where a value can't be derived automatically, fail open + log the gap. One-time
+  policy decisions only (ToS, market coverage, source retirement).
+- **Generalization principle (strengthened)** — per-model fixes do not exist:
+  no per-model research runs, YAML audits, or spot-checks. Every fix is a mechanism
+  that runs for all cars, or the feature is cancelled.
+- **B17 dropped** — all official recall feeds retired (TR SGM, EU Safety Gate, NHTSA).
+  HUMAN DECISION #6 resolved (drop). Ingested rows stay in `ledger.db` as history;
+  feed ingesters + `run.py feeds` wiring to be removed/dormant.
+- **B11 sign-off cancelled** — HUMAN DECISION #7 resolved: emissions values derive
+  from evidence or fail open (no AdBlue claims when unknown); year-split rows where
+  mid-life changes exist; hand-typed Megane 4 values must not serve as-is.
+- **B19 created** — auto-remediation loop (coverage-report findings + B6
+  contradiction signals auto-enqueue ledger acquire/extract + catalog regen).
+  Absorbs former B2 (dw5/dw6) and B3 (EDC-auto gap, "manual only in TR" audits),
+  whose manual steps are cancelled.
+- **B16** — human spot-review sub-step replaced by an automated acceptance gate
+  (parity --explain categories + coverage report + serving-baseline replay).
+- **B9** — near-miss policy adopted: out-of-window listing still matches, with a
+  "year outside known window" note + demand signal. No further decision.
+- Remaining human decision: #5 only (B18 source ToS — one-time legal gate).
+
 ## 2026-08-02 — Serving-resolution fix + B15/B16/B17/B8 + B11 mechanism (wave 2)
 
 - **Resolver fixed** — EDC Megane analyses stopped resolving transmission claims:

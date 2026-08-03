@@ -6,7 +6,7 @@ on Sahibinden. See `docs/USAGE.md` (operation), `docs/INTERNALS.md` (architectur
 
 ## Task tracking
 
-Open work lives in `backlog.md` (prioritized, with goals G1–G4 and evidence); finished
+Open work lives in `backlog.md` (prioritized, with goals G1–G5 and evidence); finished
 items move to `done.md` with date + commit. Check the backlog before starting work and
 keep both files current — they are the single source of truth for project status.
 
@@ -68,29 +68,37 @@ Onboarding a new car model must never require a manual Python dict/list edit in
 `normalize.py` or `stoplists.py` — only new YAML data, ideally pipeline-generated rather
 than hand-authored (see `docs/USAGE.md`'s onboarding steps).
 
-## Generalization principle — patch the car, ship the mechanism
+## Generalization principle — systemic fixes only, no per-model patches
 
-Fixing a problem for one specific model is fine — but a per-model patch on its own is
-half a fix. Every model-specific correction must be paired with the *mechanism* that
-catches the same class of problem for every current and future car, because the catalog
-must scale to thousands of models and nobody will re-run today's manual diagnosis for
-car #40.
-
-Concretely, when fixing something found on one car, always ask **"how would we have
-caught this automatically, and how will we catch its sibling on the next car?"** and
-ship that too. Examples of the pairing:
-
-- Researching an empty gearbox part (backlog B2, dw5) is the patch; a sync-time
-  coverage warning for *any* variant pointing at a zero-claim part (backlog B7) is the
-  mechanism.
-- Adding a missing automatic variant row (backlog B3) is the patch; surfacing
-  ad-vs-catalog transmission contradictions and logging them as catalog-gap signals
-  (backlog B6) is the mechanism.
+The catalog must scale to thousands of models, so **per-model fixes do not exist**:
+no per-model research runs, no per-model YAML audits, no per-model spot-checks, no
+one-off patches that only touch one car's row. Every fix ships as the *mechanism*
+that catches the same class of problem for every current and future car. When a
+problem shows up on one car, ask **"how would we catch this automatically for every
+car, and how will it be fixed without a person?"** — and ship that, or cancel the
+feature (see the automation principle).
 
 The mechanism should be catalog-derived or log-derived (validation, coverage report,
-telemetry), never another hand-enumerated list — see the scalability principle above.
-A PR/commit that patches one car without the recurrence guard should say explicitly
-why the guard isn't needed or where it's tracked in `backlog.md`.
+telemetry, auto-remediation), never another hand-enumerated list and never a manual
+step — see the scalability and automation principles below. When a per-model problem
+is found, it is a *test case* for the mechanism, not a fix target. Tracked as backlog
+B19 (auto-remediation loop); B2/B3's manual steps were cancelled there 2026-08-03.
+
+## Automation principle — no human in the data path (READ THIS BEFORE ADDING A REVIEW/SIGN-OFF STEP)
+
+Kriko runs unattended. Extraction and scraping never wait for human verification,
+spot-checks, or sign-off — neither per datum nor per model. Where a value cannot be
+derived automatically (from the ledger, the catalog pipeline, or a deterministic
+rule), the system **fails open**: emit no claim, surface the gap in the coverage
+report, and log a signal that feeds an automated pass. A manual step that "someone
+should review" is a bug, not a process — the backlog's HUMAN DECISION #6/#7 were
+retired this way 2026-08-03 (B17 dropped, B11 derives-or-fails-open).
+
+One-time *policy* decisions are the only allowed human decisions — source
+licensing/ToS (backlog B18, HUMAN DECISION #5), market coverage, source retirement —
+never per-car or per-datum review. When a per-model problem appears, fix it with a
+mechanism that runs for all models (generalization principle) or cancel the feature;
+never add a human verification step to the pipeline.
 
 ## Documentation map
 

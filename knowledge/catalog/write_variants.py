@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 from pathlib import Path
 
 import yaml
@@ -185,42 +186,108 @@ def _cross_check(make: str, model: str, trims: list[dict]) -> None:
             )
 
 
+def _emissions_segments(trim: dict) -> list[dict]:
+    """Expand a trim's emissions into one row-segment per emission era (B11).
+
+    `emissions` may be a single string (one era — the trim stays one row) or a
+    list of year-bounded segments for mid-life aftertreatment changes that a
+    single row cannot express (e.g. 1.5 dCi: LNT until 2018, then SCR):
+
+        emissions:
+          - year_from: 2016
+            year_to: 2018
+            emissions: euro6b
+          - year_from: 2018
+            year_to: 2020
+            emissions: euro6d_temp
+
+    A segment emits its own variant row (id suffixed with the sanitized
+    emissions value, year window narrowed to the segment), so the SCR gate can
+    ground per-era instead of guessing. Segments must fall inside the trim's
+    own year window — the trim is the outer bound.
+    """
+    em = trim.get("emissions")
+    if em is None:
+        return [{"year_from": trim.get("year_from"), "year_to": trim.get("year_to"),
+                 "emissions": None, "aftertreatment": trim.get("aftertreatment")}]
+    if isinstance(em, str):
+        return [{"year_from": trim.get("year_from"), "year_to": trim.get("year_to"),
+                 "emissions": em, "aftertreatment": trim.get("aftertreatment")}]
+    t_from, t_to = trim.get("year_from"), trim.get("year_to")
+    segments = []
+    for seg in em:
+        sf, st = seg.get("year_from"), seg.get("year_to")
+        if sf is None or st is None:
+            raise ValueError(
+                f"trim {trim['id']!r}: emissions segments need year_from and year_to")
+        if not seg.get("emissions"):
+            raise ValueError(
+                f"trim {trim['id']!r}: emissions segment {sf}-{st} has no emissions value")
+        if sf < t_from or (t_to is not None and st > t_to):
+            raise ValueError(
+                f"trim {trim['id']!r}: emissions segment {sf}-{st} falls outside "
+                f"the trim's own window {t_from}-{t_to}")
+        segments.append({
+            "year_from": sf, "year_to": st,
+            "emissions": seg["emissions"],
+            "aftertreatment": seg.get("aftertreatment"),
+        })
+    if not segments:
+        raise ValueError(f"trim {trim['id']!r}: empty emissions segment list")
+    return segments
+
+
+def _segment_id(trim_id: str, emissions: str | None) -> str:
+    """Suffixed variant id for a year-split segment: {id}__{sanitized emissions}.
+
+    Deterministic and collision-free within a trim (each era has a distinct
+    emissions value; the fitment projection follows automatically because
+    fitment is a pure projection of the variant row).
+    """
+    if not emissions:
+        return trim_id
+    return f"{trim_id}__{re.sub(r'[^a-z0-9]', '', emissions.lower())}"
+
+
 def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str]) -> list[dict]:
     make_key, model_key = make.lower(), model.lower().split("_")[0]
     rows = []
     for t in trims:
-        row = {
-            "id": t["id"],
-            "make": make_key,
-            "model": model_key,
-            "generation": t["generation"],
-            "engine_code": t["engine_code"],
-            "engine_family": t["engine_family"],
-            "fuel": t["fuel"],
-            "displacement_cc": t["displacement_cc"],
-            "power_min_hp": t["power_min_hp"],
-            "power_max_hp": t["power_max_hp"],
-            "transmission": t["transmission"],
-            "transmission_code": t["transmission_code"],
-            "electrical_code": shared.get("electrical_code", ""),
-            "year_from": t["year_from"],
-            "year_to": t.get("year_to"),
-            "market": "TR",
-            "notes": t["notes"],
-            "body_code": shared.get("body_code", ""),
-            "drivetrain": t.get("drivetrain", "fwd"),
-        }
-        # B11: emissions/aftertreatment — see the SCR-gate spec §2. `emissions`
-        # is per-trim data (grows with coverage); `aftertreatment` is derived
-        # from fuel+emissions by the closed engineering rule, unless the trim
-        # carries an explicit override.
-        if "emissions" in t:
-            row["emissions"] = t["emissions"]
-        if "aftertreatment" in t:
-            row["aftertreatment"] = t["aftertreatment"]
-        elif "emissions" in t:
-            row["aftertreatment"] = _default_aftertreatment(t["fuel"], t["emissions"])
-        rows.append(row)
+        segments = _emissions_segments(t)
+        split = isinstance(t.get("emissions"), list)
+        for seg in segments:
+            row = {
+                "id": _segment_id(t["id"], seg["emissions"]) if split else t["id"],
+                "make": make_key,
+                "model": model_key,
+                "generation": t["generation"],
+                "engine_code": t["engine_code"],
+                "engine_family": t["engine_family"],
+                "fuel": t["fuel"],
+                "displacement_cc": t["displacement_cc"],
+                "power_min_hp": t["power_min_hp"],
+                "power_max_hp": t["power_max_hp"],
+                "transmission": t["transmission"],
+                "transmission_code": t["transmission_code"],
+                "electrical_code": shared.get("electrical_code", ""),
+                "year_from": seg["year_from"],
+                "year_to": seg["year_to"],
+                "market": "TR",
+                "notes": t["notes"],
+                "body_code": shared.get("body_code", ""),
+                "drivetrain": t.get("drivetrain", "fwd"),
+            }
+            # B11: emissions/aftertreatment — see the SCR-gate spec §2. `emissions`
+            # is per-trim data (grows with coverage); `aftertreatment` is derived
+            # from fuel+emissions by the closed engineering rule, unless the
+            # segment/trim carries an explicit override.
+            if seg["emissions"]:
+                row["emissions"] = seg["emissions"]
+                row["aftertreatment"] = (
+                    seg["aftertreatment"]
+                    or _default_aftertreatment(t["fuel"], seg["emissions"])
+                )
+            rows.append(row)
     return rows
 
 
