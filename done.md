@@ -6,6 +6,28 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-03 — Remediate loop live run + parity-lost self-closing (no commit yet)
+
+- **First live remediate run** (coverage-driven, budget-capped): researched the 9
+  zero-claim parts (dw5/dw6 now have 10/16 exported claims), 389 LLM calls for
+  $0.17; backfilled the legacy cache (+234 docs, +1138 evidence rows); export
+  regenerated (19 parts, dw5/dw6 covered).
+- **Parity re-classification**: legacy claims with zero source URLs (~331 —
+  mostly body/elec era claims) were counted as "never extracted"; they are
+  unverifiable provenance — no URL means no evidence path, and the ledger's
+  ≥1-grounded-source bar would never serve them. New category "no source URLs
+  in legacy claim (unverifiable provenance)" in `parity.explain_only_old` —
+  attributable, not lost. Gate lost count: 124 → 49.
+- **Lost-source self-closing loop** (`remediate.lost_source_urls` /
+  `ingest_lost_sources`): every parity-lost claim's cited URLs are fetched +
+  ingested into the ledger (target_hint = claim's part stem) before the
+  extract/cluster/verdict pass — the 49 remaining losses are now ingestible
+  pages, not orphans. Tests added; suite 591.
+- **Second live run**: ingested the 49 lost pages (+50 docs total), then hit
+  **`Insufficient Balance` on the DeepSeek API** — extraction/verdicts pending,
+  fully resumable. Once funded: `python -m knowledge.ledger.run remediate
+  --max-usd 2.0` → `python -m knowledge.ledger.swap check`.
+
 ## 2026-08-03 — B16 swap mechanism + automated acceptance gate (no commit yet)
 
 - **Export regenerated from the ledger** — the checked-in `ledger_export/` had gone
