@@ -149,6 +149,24 @@ docker exec deploy-api-1 python -m backend.sync
 Part claims (from `backend/data/parts/`) are assembled into variant links using the
 fitment YAML. The serving plane (`/analyze`) is unchanged.
 
+**Step 6 — Catalog swap to the ledger export (backlog B16)**
+
+The ledger export is the future serving catalog; swapping is mechanical and gated,
+never a manual edit:
+
+```bash
+# What would change? (remap, superseded/retained files, fitment edits)
+python -m knowledge.ledger.swap plan
+
+# The automated acceptance gate — parity loss, serving monotonicity, coverage.
+# Exits 1 while the export is thinner than the legacy catalog (the remediate
+# loop is the fix); 0 = swap is safe to land.
+python -m knowledge.ledger.swap check
+
+# Land it (runs on a temp copy unless --in-place; revert: git checkout -- backend/data)
+python -m knowledge.ledger.swap apply --in-place
+```
+
 ---
 
 ## 5. Discover YouTube sources (model-centric legacy mode)

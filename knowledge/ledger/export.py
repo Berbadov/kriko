@@ -67,6 +67,17 @@ _MIN_MODEL_YEAR, _MAX_MODEL_YEAR = 1990, 2030
 _YEAR_TOKEN_RE = re.compile(r"\b(19\d{2}|20\d{2})\b")
 
 
+def merged_part_id(part_id: str) -> str:
+    """Power-collapsed identity: k9k_110 -> k9k.
+
+    The trailing "_<hp>" is bookkeeping, not engineering identity (same reading
+    as component_part_meta and ledger/resolve.py). Public so the catalog-swap
+    mechanism (knowledge/ledger/swap.py) derives the legacy -> merged fitment
+    remap without a hand-enumerated list — the scalability rule.
+    """
+    return _POWER_SUFFIX_RE.sub("", part_id)
+
+
 class ExportError(RuntimeError):
     """Reserved for catastrophic export failure (e.g. unwritable output dir).
 
@@ -396,6 +407,17 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         claims = _dedup_claim_keys(claims, skipped)
         for c in claims:
             del c["cluster_id"]
+        # B16: which legacy part files does this merged part supersede? Derived
+        # from the legacy catalog by the power-collapse rule (k9k_110 ->
+        # k9k) — no hand list — so the swap mechanism can remap fitment
+        # mechanically. Only when non-empty; post-swap re-exports simply lack
+        # the field.
+        legacy_ids = sorted(
+            pid for pid in _catalog_part_headers()
+            if merged_part_id(pid) == comp and pid != comp)
+        file_data = {**meta, "claims": sorted(claims, key=lambda c: c["claim_key"])}
+        if legacy_ids:
+            file_data["legacy_part_ids"] = legacy_ids
         # Per-claim hard gate: run the exact validator sync.py runs, hold back
         # only the claims it rejects (its per-claim checks are independent —
         # contamination, malformed gates), rewrite, re-check. A root-level or
@@ -403,8 +425,8 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         kept = sorted(claims, key=lambda c: c["claim_key"])
         for _attempt in range(2):
             path = out_dir / f"{comp}.yaml"
-            path.write_text(yaml.dump({**meta, "claims": kept},
-                                      allow_unicode=True, sort_keys=False))
+            path.write_text(yaml.dump(
+                {**file_data, "claims": kept}, allow_unicode=True, sort_keys=False))
             errors = validate_part(path)
             if not errors:
                 break
