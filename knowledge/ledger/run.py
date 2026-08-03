@@ -1,6 +1,7 @@
 """Ledger pipeline CLI.
 
     python -m knowledge.ledger.run acquire --part dw5 --part-type transmission
+    python -m knowledge.ledger.run remediate --max-usd 2.0
     python -m knowledge.ledger.run all --max-usd 2.0
     python -m knowledge.ledger.run extract --dry-run
     python -m knowledge.ledger.run report
@@ -69,11 +70,13 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="knowledge.ledger.run")
     p.add_argument("command", choices=[
         "acquire", "feeds", "backfill", "extract", "resolve", "cluster",
-        "verdict", "export", "report", "all"])
+        "verdict", "export", "report", "remediate", "all"])
     p.add_argument("--db", default=str(db.LEDGER_PATH))
     p.add_argument("--max-usd", type=float, default=None)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--export-dir", default=str(_EXPORT_DIR))
+    p.add_argument("--data-dir", default=str(Path(__file__).parent.parent.parent / "backend" / "data"),
+                   help="catalog root with variants/, fitment/, parts/ (remediate)")
     # acquire-stage flags (no LLM — discovery/fetch only)
     p.add_argument("--part", help="part id to acquire sources for (e.g. dw5)")
     p.add_argument("--part-type", help="part type (engine|transmission|…)")
@@ -135,6 +138,29 @@ def main(argv=None) -> int:
                   f"({s.get(campaign_key, 0)} campaigns, {s['duplicates']} dup, "
                   f"{s['errors']} errors)")
 
+    def _cmd_remediate(conn, args, budget) -> None:
+        from knowledge.ledger import remediate
+        if args.dry_run:
+            report = remediate.build_report(
+                Path(args.data_dir) / "variants",
+                Path(args.data_dir) / "fitment",
+                Path(args.data_dir) / "parts")
+            plan = remediate.remediation_plan(report)
+            print(f"remediate --dry-run: {len(report.findings)} finding(s), "
+                  f"{len(plan)} part(s) would be re-researched: "
+                  f"{[p for p, _ in plan] or 'none'}")
+            return
+        stats = remediate.run(
+            conn, Path(args.data_dir), Path(args.export_dir), budget,
+            max_sources=args.max_sources)
+        n = len(stats["parts"])
+        print(f"remediate: {n} part(s) re-researched "
+              f"(+{stats['ingested']} docs, +{stats['extracted']} evidence, "
+              f"+{stats['verdicts']} verdicts, {stats['exported']} export file(s), "
+              f"${stats['usd']:.4f})" if n else
+              f"remediate: no actionable findings ({stats['findings']} total — "
+              f"remaining kinds are not part-driven); logged to {remediate.LOG_PATH}")
+
     steps = {
         "acquire": _cmd_acquire,
         "feeds": _cmd_feeds,
@@ -145,6 +171,7 @@ def main(argv=None) -> int:
         "verdict": lambda: _cmd_verdict(conn, args, budget),
         "export": lambda: _cmd_export(conn, args),
         "report": lambda: _cmd_report(conn),
+        "remediate": lambda: _cmd_remediate(conn, args, budget),
     }
     order = (["backfill", "feeds", "extract", "resolve", "cluster", "verdict", "export"]
              if args.command == "all" else [args.command])

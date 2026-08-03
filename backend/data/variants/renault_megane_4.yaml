@@ -93,8 +93,6 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
-  emissions: euro6b
-  aftertreatment: lnt
 - id: megane4_k9k_110
   make: renault
   model: megane
@@ -114,8 +112,6 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
-  emissions: euro6b
-  aftertreatment: lnt
 - id: megane4_r9m_130
   make: renault
   model: megane
@@ -135,8 +131,6 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
-  emissions: euro6b
-  aftertreatment: lnt
 - id: megane4_k9k_110_edc
   make: renault
   model: megane
@@ -156,5 +150,3 @@
   body_code: megane4_body
   drivetrain: fwd
   electrical_code: megane4_elec
-  emissions: euro6d_temp
-  aftertreatment: scr

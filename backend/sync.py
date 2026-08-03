@@ -251,9 +251,12 @@ def sync_variants(db: Session) -> int:
             # figures, since Wikipedia's infobox doesn't reliably give a
             # precise per-market power breakdown and inventing one would be
             # exactly the kind of fabricated car data this project exists to
-            # reduce). A human fills in real numbers and removes `draft` before
-            # it's servable — refuse to sync it in the meantime rather than
-            # silently ignoring the unmapped column.
+            # reduce). Figures must come from automatic derivation; a human
+            # never hand-fills them (CLAUDE.md automation principle) — until
+            # derivation exists, the row fails open: not synced, flagged by the
+            # coverage report's draft_variant finding, and its no_match
+            # listings surface in the demand miner. Refuse to sync it in the
+            # meantime rather than silently ignoring the unmapped column.
             if row.get("draft"):
                 skipped_drafts += 1
                 continue

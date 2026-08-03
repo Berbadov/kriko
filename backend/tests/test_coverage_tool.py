@@ -11,6 +11,7 @@ Finding kinds (verbatim from the brief):
   zero_claim_part         — part YAML has 0 claims, or claims but none servable
   orphan_part             — part YAML that no fitment row references
   auto_variant_no_tx_part — automatic-tech variant referencing no tx part
+  variant_no_emissions    — diesel variant with no emissions value (B11)
 
 The pseudo-code "manual" is never flagged as missing/orphan — manual gearboxes
 deliberately have no part file.
@@ -250,3 +251,80 @@ def test_report_prints_grouped_by_kind(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "zero_claim_part" in out
     assert "tc1" in out
+
+
+# ── variant_no_emissions (B11) ───────────────────────────────────────────────
+
+
+def test_diesel_without_emissions_flagged(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    _write(v / "testmake_testmodel.yaml", [
+        _variant("tm_eng1", transmission="manual", transmission_code="manual",
+                 fuel="diesel"),
+    ])
+    report = coverage.build_report(v, f, p)
+    kinds = {(fl.kind, fl.subject) for fl in report.findings}
+    assert ("variant_no_emissions", "tm_eng1") in kinds
+
+
+def test_diesel_with_emissions_not_flagged(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    _write(v / "testmake_testmodel.yaml", [
+        _variant("tm_eng1", transmission="manual", transmission_code="manual",
+                 fuel="diesel", emissions="euro6d_temp"),
+    ])
+    report = coverage.build_report(v, f, p)
+    kinds = {(fl.kind, fl.subject) for fl in report.findings}
+    assert ("variant_no_emissions", "tm_eng1") not in kinds
+
+
+def test_petrol_variant_never_flagged_for_emissions(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    report = coverage.build_report(v, f, p)
+    kinds = {fl.kind for fl in report.findings}
+    assert "variant_no_emissions" not in kinds
+
+
+# ── draft_variant (G5) ───────────────────────────────────────────────────────
+
+
+def test_draft_variant_flagged(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    _write(v / "testmake_testmodel.yaml", [
+        _variant("tm_eng1", transmission="manual", transmission_code="manual"),
+        _variant("tm_scaffold", transmission="automatic", transmission_code="tc1",
+                 draft=True),
+    ])
+    report = coverage.build_report(v, f, p)
+    kinds = {(fl.kind, fl.subject) for fl in report.findings}
+    assert ("draft_variant", "tm_scaffold") in kinds
+
+
+def test_non_draft_variant_never_flagged(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    report = coverage.build_report(v, f, p)
+    subjects = {fl.subject for fl in report.findings if fl.kind == "draft_variant"}
+    assert subjects == set()
+
+
+# ── finding part_id/axis metadata (B19 remediation input) ────────────────────
+
+
+def test_zero_claim_finding_carries_part_id_and_axis(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    _write(p / "transmission" / "tc1.yaml", _part("tc1", "transmission", []))
+    report = coverage.build_report(v, f, p)
+    zero = [fl for fl in report.findings if fl.kind == "zero_claim_part"]
+    assert zero and zero[0].part_id == "tc1" and zero[0].axis == "transmission"
+
+
+def test_missing_part_finding_carries_part_id_and_axis(tmp_path):
+    v, f, p = _clean_catalog(tmp_path)
+    _write(f / "testmake_testmodel.yaml", [
+        {"variant_id": "tm_eng1", "engine_family": "eng1",
+         "transmission_code": "ghost", "electrical_code": "elec1", "body_code": "body1"},
+    ])
+    report = coverage.build_report(v, f, p)
+    missing = [fl for fl in report.findings if fl.kind == "missing_part"]
+    assert missing
+    assert missing[0].part_id == "ghost" and missing[0].axis == "transmission"
