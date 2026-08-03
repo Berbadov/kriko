@@ -145,7 +145,7 @@ def _catalog_part_headers() -> dict[str, dict]:
         headers[str(part_id)] = {
             k: data[k]
             for k in ("part_type", "display_name", "manufacturer", "code_family",
-                      "known_also_as", "production_years")
+                      "code_family_extra", "known_also_as", "production_years")
             if data.get(k) is not None
         }
     return headers
@@ -173,7 +173,7 @@ def component_part_meta(component_id: str) -> dict | None:
     part_types = {m.get("part_type") for m in matches}
     if len(part_types) != 1 or not next(iter(part_types)):
         return None  # ambiguous identity — never guess
-    meta: dict = {"part_id": component_id, "part_type": next(iter(part_types))}
+        meta: dict = {"part_id": component_id, "part_type": next(iter(part_types))}
     names = [m["display_name"] for m in matches if m.get("display_name")]
     if names:
         # "Renault H5F (1.2 TCe) 130hp" reads wrong on a tune-merged file.
@@ -183,6 +183,13 @@ def component_part_meta(component_id: str) -> dict | None:
         vals = {m[field] for m in matches if m.get(field) is not None}
         if len(vals) == 1:
             meta[field] = next(iter(vals))
+    # code_family_extra carries sibling aliases (e.g. R9M's M9R) the sibling
+    # guard reads off the catalog — the power merge must preserve the union,
+    # or the guard silently loses a sibling family (regression the swap caught
+    # live on r9m/M9R).
+    extra = sorted({x for m in matches for x in (m.get("code_family_extra") or [])})
+    if extra:
+        meta["code_family_extra"] = extra
     aliases = sorted({a for m in matches for a in (m.get("known_also_as") or [])})
     if aliases:
         meta["known_also_as"] = aliases

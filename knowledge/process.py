@@ -156,8 +156,12 @@ def run(
     skip_extraction: bool = False,
 ) -> None:
     from knowledge.extract import extract_claims
-    from knowledge.promote import promote, write_promoted_claims
     from knowledge.sources.curated import CuratedSource
+    raise RuntimeError(
+        "the judge/promote pipeline was retired at the B16 catalog swap "
+        "(2026-08-03) — run `python -m knowledge.ledger.run remediate` "
+        "instead; claims now reach serving through the ledger's deterministic "
+        "verdict stage, never through a promoted YAML edit")
 
     # ── Resolve file paths ────────────────────────────────────────────────────
     variants_path = _find_data_file("variants", make, model, gen)
@@ -358,8 +362,12 @@ def run_part(
     """
     from knowledge.extract import extract_claims
     from knowledge.parts.search_templates import _find_make_model_for_part, ensure_part_stub
-    from knowledge.promote import promote, write_promoted_part_claims
     from knowledge.sources.curated import CuratedSource
+    raise RuntimeError(
+        "the judge/promote pipeline was retired at the B16 catalog swap "
+        "(2026-08-03) — run `python -m knowledge.ledger.run remediate` "
+        "instead; claims now reach serving through the ledger's deterministic "
+        "verdict stage, never through a promoted YAML edit")
 
     # part_id doubles as "model" slug in curated YAML naming
     slug_make  = "part"
