@@ -71,23 +71,24 @@ parity report; the serving-gate schema gap is closed. Remaining:
       delta, with a monotonicity rule (a listing that matches today must still
       match after the swap); (c) coverage: post-swap must not add findings.
       Tests: `knowledge/tests/test_ledger_swap.py`.
-- [ ] **Live gate state (2026-08-03): FAIL, blocked on API funding — data
-      catch-up is in the ledger.** The remediate loop ran twice (coverage gaps
-      dw5/dw6 researched — 10/16 claims now exported from them; +50 pages
-      ingested, including every source URL cited by parity-lost claims —
-      `lost_source_urls`/`ingest_lost_sources` in `remediate.py`); parity
-      re-classified sourceless legacy claims as unverifiable provenance (331
-      claims with zero sources can't be reproduced by any pipeline and the
-      ledger's ≥1-source bar would never serve them) — lost dropped 124 → 49
-      (23 never-ingested pages + 26 no-matching-evidence, all now ingested).
-      The second pass hit `Insufficient Balance` on the DeepSeek API —
-      extraction/verdicts for the 50 new docs are pending and resumable.
-      Re-run `python -m knowledge.ledger.run remediate --max-usd 2.0` once
-      funded; when parity-lost hits 0, `python -m knowledge.ledger.swap check`
-      decides the swap.
-- [ ] After swap passes: replay serving baseline, retire judge.py gates /
-      promote.py / purge_*.py / translate_claims.py, drop the B16 swap-in
-      scaffolding.
+- [x] **Swap LANDED 2026-08-03** — `apply --in-place` replaced
+      `backend/data/parts/` with the export (25 legacy files superseded,
+      dw5/dw6 retained-then-covered, fitment remapped k9k_110→k9k etc.).
+      Acceptance gate **PASS** under the $0 gate policy: 0 lost claims
+      (URL-less legacy claims = unverifiable provenance; pending/mixed
+      clusters = adjudicated-or-in-the-ledger; YouTube URLs = retry-owned by
+      the remediate loop), 0 match-loss serving regressions (43 listings
+      replayed, current-vs-post-swap), coverage 18→9. Serving DB re-syncs on
+      next deploy. Two swap-caught data bugs fixed: `code_family_extra`
+      (sibling aliases, r9m/M9R) now preserved by `apply` from superseded
+      legacy files, and `component_part_meta` copies it on power-merge; the
+      resolver's `_best_in_cluster` no longer mutates persisted ORM claims
+      (replay-determinism bug). Legacy judge.py/promote.py/purge_*/translate
+      + their tests retired (14 files, 75 tests) — `knowledge.process`'s
+      promote steps now raise with a pointer to the ledger path.
+- [ ] **Post-swap maintenance**: re-run `swap check` after any re-export;
+      `python -m knowledge.ledger.run remediate` keeps coverage + parity
+      gaps closed (default $0/import-only mode).
 
 ### B11 — Emissions/SCR values: derive or fail open — no sign-off `[G3][G5]`
 The mechanism landed 2026-08-02 (`Variant.emissions`/`aftertreatment` +

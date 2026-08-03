@@ -1,30 +1,30 @@
 - variant_id: clio5_h4d_75
-  engine_family: h4d_75
+  engine_family: h4d
   transmission_code: manual
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_h5d_100
-  engine_family: h5d_100
+  engine_family: h5d
   transmission_code: manual
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_h5d_100_edc
-  engine_family: h5d_100
+  engine_family: h5d
   transmission_code: dc4
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_h5h_130
-  engine_family: h5h_130
+  engine_family: h5h
   transmission_code: dc4
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_k9k_85
-  engine_family: k9k_85
+  engine_family: k9k
   transmission_code: manual
   electrical_code: clio5_elec
   body_code: clio5_body
 - variant_id: clio5_k9k_100
-  engine_family: k9k_100
+  engine_family: k9k
   transmission_code: manual
   electrical_code: clio5_elec
   body_code: clio5_body
