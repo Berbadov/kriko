@@ -1,20 +1,24 @@
-"""kriko-hub — DearPyGui desktop dashboard for the ledger pipeline (B20).
+"""kriko-hub — DearPyGui dashboard for the ledger pipeline (B20).
 
     .venv/bin/python -m knowledge.hub.app
 
-Six clickable windows over the live ledger DB, polled ~1s with fresh
-read-only connections, so anything the kriko_research agent (or a cron
-remediate pass) writes shows up in real time:
+Single window, tab pages, fixed layout — deliberately no floating windows
+and no docking (floating/docked windows broke on WSLg scaling: shapes
+resized oddly, windows stacked over each other, clicks went nowhere).
+One window fills the viewport; each page owns its fixed area; the tab bar
+switches pages. Polled ~1s with fresh read-only ledger connections, so
+anything the kriko_research agent (or a cron remediate pass) writes shows
+up in real time.
 
-  Overview     spend plot, cost-to-finish, live log tails
-  Model & Make parts -> claims/variants/findings drill-down
-  Sources      documents with badges -> raw text viewer
-  Extraction   pending work + run buttons (spawns `knowledge.ledger.run`)
-  Ledger       generic read-only SQLite browser
-  Scaffold     coverage findings + the $0 command set
+  Overview   ledger counts, spend plot, cost-to-finish, recent runs
+  Parts      part -> claims/variants drill-down
+  Sources    documents -> raw text viewer
+  Run        pending work + buttons (spawns `knowledge.ledger.run`)
+  Ledger     generic read-only SQLite browser
+  Coverage   coverage findings
 
-Buttons run the CLI subprocesses (single source of truth for pipeline logic)
-and stream their output into the log window. Cost caps are enforced by the
+Buttons run the CLI subprocesses (single source of truth for pipeline
+logic) and stream their output into the log. Cost caps are enforced by the
 same --max-usd machinery the CLI uses.
 """
 
@@ -37,8 +41,18 @@ LEDGER_PATH = db.LEDGER_PATH
 DATA_DIR = REPO_ROOT / "backend" / "data"
 EXPORT_DIR = REPO_ROOT / "knowledge" / "ledger_export"
 REMEDIATION_LOG = REPO_ROOT / "logs" / "remediation.jsonl"
-ANALYSES_LOG = REPO_ROOT / "logs" / "analyses.jsonl"
 MAX_LOG_CHARS = 30000
+INIT_FILE = Path.home() / ".kriko-hub-layout.ini"  # kept unused; layout is fixed
+
+# Colors — consistent dark palette with one accent.
+_BG = (22, 23, 28, 255)
+_BG_CHILD = (28, 30, 36, 255)
+_BG_FRAME = (36, 39, 47, 255)
+_BG_TABLE = (26, 28, 34, 255)
+_TEXT = (226, 228, 234, 255)
+_TEXT_DIM = (140, 145, 158, 255)
+_ACCENT = (255, 138, 61, 255)
+_BORDER = (48, 51, 60, 255)
 
 
 def _load_env() -> dict:
@@ -53,6 +67,80 @@ def _load_env() -> dict:
     return env
 
 
+def _apply_theme() -> None:
+    with dpg.theme(tag="kriko_theme"):
+        with dpg.theme_component(dpg.mvAll):
+            for col, val in (
+                (dpg.mvThemeCol_WindowBg, _BG),
+                (dpg.mvThemeCol_ChildBg, _BG_CHILD),
+                (dpg.mvThemeCol_PopupBg, _BG_CHILD),
+                (dpg.mvThemeCol_FrameBg, _BG_FRAME),
+                (dpg.mvThemeCol_FrameBgHovered, (44, 48, 58, 255)),
+                (dpg.mvThemeCol_FrameBgActive, (52, 57, 69, 255)),
+                (dpg.mvThemeCol_Text, _TEXT),
+                (dpg.mvThemeCol_TextDisabled, _TEXT_DIM),
+                (dpg.mvThemeCol_TextSelectedBg, (255, 138, 61, 70)),
+                (dpg.mvThemeCol_Button, (46, 50, 60, 255)),
+                (dpg.mvThemeCol_ButtonHovered, (62, 67, 80, 255)),
+                (dpg.mvThemeCol_ButtonActive, (86, 92, 108, 255)),
+                (dpg.mvThemeCol_Header, (48, 52, 63, 255)),
+                (dpg.mvThemeCol_HeaderHovered, (62, 67, 80, 255)),
+                (dpg.mvThemeCol_HeaderActive, (86, 92, 108, 255)),
+                (dpg.mvThemeCol_CheckMark, _ACCENT),
+                (dpg.mvThemeCol_SliderGrab, _ACCENT),
+                (dpg.mvThemeCol_SliderGrabActive, (255, 160, 100, 255)),
+                (dpg.mvThemeCol_Tab, _BG_FRAME),
+                (dpg.mvThemeCol_TabHovered, (52, 57, 69, 255)),
+                (dpg.mvThemeCol_TabActive, (46, 50, 60, 255)),
+                (dpg.mvThemeCol_TableHeaderBg, _BG_TABLE),
+                (dpg.mvThemeCol_TableRowBg, _BG_TABLE),
+                (dpg.mvThemeCol_TableRowBgAlt, (31, 33, 40, 255)),
+                (dpg.mvThemeCol_Border, _BORDER),
+                (dpg.mvThemeCol_BorderShadow, (0, 0, 0, 0)),
+                (dpg.mvThemeCol_ScrollbarBg, _BG),
+                (dpg.mvThemeCol_ScrollbarGrab, (58, 63, 75, 255)),
+            ):
+                dpg.add_theme_color(col, val)
+            for col, val in (
+                (dpg.mvPlotCol_AxisBg, _BG_CHILD),
+                (dpg.mvPlotCol_AxisBgHovered, _BG_CHILD),
+                (dpg.mvPlotCol_AxisBgActive, _BG_CHILD),
+                (dpg.mvPlotCol_AxisGrid, _BORDER),
+                (dpg.mvPlotCol_AxisText, _TEXT_DIM),
+                (dpg.mvPlotCol_AxisTick, _TEXT_DIM),
+                (dpg.mvPlotCol_FrameBg, _BG_CHILD),
+                (dpg.mvPlotCol_LegendBg, _BG_CHILD),
+            ):
+                dpg.add_theme_color(col, val, category=dpg.mvThemeCat_Plots)
+            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 4)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, 0)
+            dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 7, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 8, 6)
+    dpg.bind_theme("kriko_theme")
+
+
+def _font_scale(screen_h: int) -> float:
+    """HiDPI: WSLg exposes a huge virtual X screen; without a scale the UI
+    renders unreadably small. Override with KRIKO_HUB_FONT_SCALE."""
+    env = os.environ.get("KRIKO_HUB_FONT_SCALE")
+    if env:
+        return float(env)
+    return max(1.0, min(round(screen_h / 800, 1), 2.2))
+
+
+def _screen_size() -> tuple[int, int]:
+    """Logical screen size via tkinter (X/GLFW have no monitor API here)."""
+    try:
+        import tkinter
+        root = tkinter.Tk()
+        w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+        root.destroy()
+        return int(w), int(h)
+    except Exception:
+        return 1700, 990
+
+
 class Hub:
     def __init__(self) -> None:
         self.runs: list[dict] = []          # {proc, buf} for running subprocesses
@@ -61,10 +149,9 @@ class Hub:
         self.part_ids: list[str] = []
         self.ledger_tables = ["documents", "evidence", "clusters", "verdicts",
                               "resolutions", "evidence_flags", "runs"]
-        self._grid: dict[str, tuple] = {}
         self._spend_stages: list[str] | None = None
 
-    # ── subprocess runner (buttons) ──────────────────────────────────────────
+    # ── subprocess runner (Run page buttons) ─────────────────────────────────
     def spawn(self, argv: list[str]) -> None:
         env = _load_env()
         cmd = [sys.executable, "-m", "knowledge.ledger.run", *argv]
@@ -112,7 +199,7 @@ class Hub:
     def refresh(self) -> None:
         try:
             conn = db.connect(LEDGER_PATH)
-        except Exception:  # ledger temporarily locked/absent — skip this tick
+        except Exception:  # ledger locked/absent — skip this tick
             return
         try:
             self._refresh_counts(conn)
@@ -147,7 +234,7 @@ class Hub:
                 x = list(range(len(stages)))
                 plot = dpg.add_plot(label="Spend by stage (USD)",
                                     tag="plot_spend", height=220, width=-1,
-                                    parent="grp_overview")
+                                    parent="page_overview")
                 xaxis = dpg.add_plot_axis(dpg.mvXAxis, label="stage", parent=plot)
                 yaxis = dpg.add_plot_axis(dpg.mvYAxis, label="USD", parent=plot)
                 dpg.add_bar_series(x, usd, label="usd", weight=1, parent=yaxis)
@@ -161,18 +248,17 @@ class Hub:
                       f"{p['verdict_pending']} cluster(s) "
                       f"({p['import_ready']} import-ready $0, {p['llm']} LLM) "
                       f"≈ ${p['verdict_usd']:.4f}")
-        finish = p["extract_usd"] + p["verdict_usd"]
-        dpg.set_value("t_pend_total", f"COST TO FINISH ≈ ${finish:.4f}")
+        dpg.set_value("t_pend_total", f"COST TO FINISH ≈ ${p['extract_usd'] + p['verdict_usd']:.4f}")
 
     def _refresh_parts(self, conn) -> None:
         plist = metrics.parts(DATA_DIR)
         self.part_ids = [p["part_id"] for p in plist]
         dpg.configure_item("combo_part", items=self.part_ids)
-        if not self.part_ids:
-            return
         if self.part_ids and not dpg.get_value("combo_part"):
             dpg.set_value("combo_part", self.part_ids[0])
-        self._show_part(dpg.get_value("combo_part"))
+        cur = dpg.get_value("combo_part")
+        if cur:
+            self._show_part(cur)
 
     def _show_part(self, part_id: str) -> None:
         detail = metrics.part_detail(DATA_DIR, part_id) or {}
@@ -193,12 +279,9 @@ class Hub:
         dpg.configure_item("list_docs", items=self.doc_items)
 
     def _doc_picked(self, sender, app_data, user_data) -> None:
-        idx = app_data
-        if idx is None or idx >= len(self.doc_items):
+        if app_data is None or app_data >= len(self.doc_items):
             return
-        item = self.doc_items[idx]
-        doc_id = int(item.split(" ", 1)[0][1:])
-        self.doc_selected = doc_id
+        self.doc_selected = int(self.doc_items[app_data].split(" ", 1)[0][1:])
 
     def _refresh_findings(self, conn) -> None:
         flist = metrics.findings(DATA_DIR)
@@ -212,7 +295,6 @@ class Hub:
                 dpg.add_text(f["message"])
 
     def _refresh_runs(self, conn) -> None:
-        s = metrics.spend(conn)
         rows = metrics.recent_runs(conn, 6)
         dpg.delete_item("t_runs", children_only=True)
         for r in rows:
@@ -229,7 +311,7 @@ class Hub:
                           f"+{last.get('ingested', 0)} docs, +{last.get('verdicts', 0)} "
                           f"verdicts, ${last.get('usd', 0.0):.4f}")
 
-    # ── buttons ──────────────────────────────────────────────────────────────
+    # ── Run page buttons ─────────────────────────────────────────────────────
     def _btn_extract(self) -> None:
         cap = max(float(dpg.get_value("inp_cap") or 0.0), 0.0)
         self.spawn(["extract", "--max-usd", f"{cap:.2f}"])
@@ -261,32 +343,27 @@ class Hub:
     def _btn_export(self) -> None:
         self.spawn(["export", "--export-dir", str(EXPORT_DIR)])
 
-    # ── window builders ──────────────────────────────────────────────────────
+    # ── UI construction: one window, tab pages, fixed areas ──────────────────
     def build(self, vw: int, vh: int) -> None:
-        """Lay all six windows out in a 3x2 grid that always fits the viewport
-        (no hardcoded 1700x990 layout — that stranded windows off small/WSLg
-        screens). Docking is enabled, so every header stays reachable and the
-        user can reorganize; the layout persists via the init file."""
-        col_w = vw // 3
-        top_h = vh - 260
-        bot_h = vh - top_h
-        self._grid = {
-            "win_overview": (0, 0, col_w, top_h),
-            "win_parts": (0, top_h, col_w, bot_h),
-            "win_sources": (col_w, 0, col_w, top_h),
-            "win_extract": (2 * col_w, 0, vw - 2 * col_w, top_h),
-            "win_ledger": (col_w, top_h, col_w, bot_h),
-            "win_scaffold": (2 * col_w, top_h, vw - 2 * col_w, bot_h),
-        }
-        with dpg.window(tag="win_overview", label="Overview", pos=(0, 0),
-                        width=col_w, height=top_h):
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="maximize",
-                               callback=lambda: dpg.maximize_viewport())
-            with dpg.group(tag="grp_overview"):
-                dpg.add_text("Ledger", bullet=True)
+        tab_h = 26                          # tab bar strip
+        page_h = vh - tab_h - 12            # usable page height (scrollable)
+        with dpg.window(tag="main_win", label="kriko-hub", pos=(0, 0),
+                        width=vw, height=vh, no_resize=True, no_move=True):
+            with dpg.tab_bar(tag="tabs"):
+                self._page_overview(tab_h, page_h)
+                self._page_parts(tab_h, page_h)
+                self._page_sources(tab_h, page_h)
+                self._page_run(tab_h, page_h)
+                self._page_ledger(tab_h, page_h)
+                self._page_coverage(tab_h, page_h)
+
+    def _page_overview(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Overview"):
+            with dpg.child_window(tag="page_overview", height=page_h,
+                                  autosize_x=True, border=False):
                 with dpg.table(header_row=True, row_background=True,
-                               borders_innerH=True, borders_innerV=True):
+                               borders_innerH=True, borders_innerV=True,
+                               resizable=True):
                     for col in ("documents", "evidence", "clusters", "verdicts"):
                         dpg.add_table_column(label=col)
                     with dpg.table_row():
@@ -295,7 +372,6 @@ class Hub:
                 dpg.add_text("Spend", bullet=True)
                 dpg.add_text(tag="t_total")
                 dpg.add_text(tag="t_split")
-                dpg.add_spacer(height=4)
                 dpg.add_text("Pending", bullet=True)
                 dpg.add_text(tag="t_pend_extract")
                 dpg.add_text(tag="t_pend_verdict")
@@ -303,80 +379,87 @@ class Hub:
                 dpg.add_text("Recent runs", bullet=True)
                 with dpg.table(tag="t_runs", header_row=True,
                                row_background=True, borders_innerH=True,
-                               borders_innerV=True):
+                               borders_innerV=True, scrollY=True):
                     for col in ("at", "stage", "model", "calls", "usd"):
                         dpg.add_table_column(label=col)
                 dpg.add_text(tag="t_last_rem")
 
-        with dpg.window(tag="win_parts", label="Model & Make", pos=(0, top_h),
-                        width=col_w, height=bot_h):
-            dpg.add_combo(tag="combo_part", label="part",
-                          callback=lambda s, a, u: self._show_part(a),
-                          width=-1)
-            dpg.add_text(tag="t_part_title")
-            with dpg.group(horizontal=True):
-                dpg.add_text("Variants: ")
-                dpg.add_text(tag="t_part_variants", wrap=0)
-            dpg.add_text("Claims", bullet=True)
-            with dpg.table(tag="t_part_claims", header_row=True,
-                           row_background=True, borders_innerH=True,
-                           borders_innerV=True):
-                for col in ("title", "severity", "domain"):
-                    dpg.add_table_column(label=col)
+    def _page_parts(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Parts"):
+            with dpg.child_window(height=page_h, autosize_x=True, border=False):
+                dpg.add_combo(tag="combo_part", label="part",
+                              callback=lambda s, a, u: self._show_part(a),
+                              width=-1)
+                dpg.add_text(tag="t_part_title")
+                with dpg.group(horizontal=True):
+                    dpg.add_text("Variants: ")
+                    dpg.add_text(tag="t_part_variants", wrap=0)
+                dpg.add_text("Claims", bullet=True)
+                with dpg.table(tag="t_part_claims", header_row=True,
+                               row_background=True, borders_innerH=True,
+                               borders_innerV=True, resizable=True,
+                               scrollY=True):
+                    for col in ("title", "severity", "domain"):
+                        dpg.add_table_column(label=col)
 
-        with dpg.window(tag="win_sources", label="Sources", pos=(col_w, 0),
-                        width=col_w, height=top_h):
-            dpg.add_listbox(tag="list_docs", num_items=16,
-                            callback=self._doc_picked, width=-1)
-            dpg.add_text("Selected document", bullet=True)
-            dpg.add_text(tag="t_doc_meta", wrap=0)
-            with dpg.child_window(tag="doc_view", height=300, autosize_x=True,
-                                  border=True):
-                dpg.add_text(tag="t_doc_text", wrap=100)
+    def _page_sources(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Sources"):
+            with dpg.child_window(height=page_h, autosize_x=True, border=False):
+                dpg.add_listbox(tag="list_docs", num_items=12,
+                                callback=self._doc_picked, width=-1)
+                dpg.add_text("Selected document", bullet=True)
+                dpg.add_text(tag="t_doc_meta", wrap=0)
+                with dpg.child_window(height=300, autosize_x=True, border=True):
+                    dpg.add_text(tag="t_doc_text", wrap=100)
 
-        with dpg.window(tag="win_extract", label="Extraction / Runs",
-                        pos=(2 * col_w, 0), width=vw - 2 * col_w, height=top_h):
-            dpg.add_text("Pending work", bullet=True)
-            dpg.add_text(tag="t_pend_extract2")
-            dpg.add_text(tag="t_pend_verdict2")
-            dpg.add_text("Run controls (costs enforced by --max-usd)",
-                         bullet=True)
-            dpg.add_input_float(tag="inp_cap", label="extract max-usd",
-                                default_value=0.05, step=0.01, width=-1)
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="extract (capped)",
-                               callback=lambda: self._btn_extract())
-                dpg.add_button(label="import verdicts ($0)",
-                               callback=lambda: self._btn_import())
-                dpg.add_button(label="full $0 pass",
-                               callback=lambda: self._btn_pass())
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="remediate ($0)",
-                               callback=lambda: self._btn_remediate())
-                dpg.add_button(label="export",
-                               callback=lambda: self._btn_export())
-            dpg.add_text("Output", bullet=True)
-            with dpg.child_window(tag="log_win", height=340, autosize_x=True,
-                                  border=True):
-                dpg.add_text(tag="log_text", wrap=0)
+    def _page_run(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Run"):
+            with dpg.child_window(height=page_h, autosize_x=True, border=False):
+                dpg.add_text("Pending work", bullet=True)
+                dpg.add_text(tag="t_pend_extract2")
+                dpg.add_text(tag="t_pend_verdict2")
+                dpg.add_text("Run controls (costs enforced by --max-usd)",
+                             bullet=True)
+                dpg.add_input_float(tag="inp_cap", label="extract max-usd",
+                                    default_value=0.05, step=0.01, width=-1)
+                with dpg.group(horizontal=True):
+                    dpg.add_button(label="extract (capped)",
+                                   callback=lambda: self._btn_extract())
+                    dpg.add_button(label="import verdicts ($0)",
+                                   callback=lambda: self._btn_import())
+                    dpg.add_button(label="full $0 pass",
+                                   callback=lambda: self._btn_pass())
+                with dpg.group(horizontal=True):
+                    dpg.add_button(label="remediate ($0)",
+                                   callback=lambda: self._btn_remediate())
+                    dpg.add_button(label="export",
+                                   callback=lambda: self._btn_export())
+                dpg.add_text("Output", bullet=True)
+                with dpg.child_window(tag="log_win", height=page_h - 260,
+                                      autosize_x=True, border=True):
+                    dpg.add_text(tag="log_text", wrap=0)
 
-        with dpg.window(tag="win_ledger", label="Ledger browser",
-                        pos=(col_w, top_h), width=col_w, height=bot_h):
-            dpg.add_combo(tag="combo_table", label="table",
-                          items=self.ledger_tables, width=-1)
-            dpg.add_text(tag="t_ledger_preview", wrap=0)
+    def _page_ledger(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Ledger"):
+            with dpg.child_window(height=page_h, autosize_x=True, border=False):
+                dpg.add_combo(tag="combo_table", label="table",
+                              items=self.ledger_tables, width=-1)
+                with dpg.child_window(height=page_h - 80, autosize_x=True,
+                                      border=True):
+                    dpg.add_text(tag="t_ledger_preview", wrap=0)
 
-        with dpg.window(tag="win_scaffold", label="Scaffold / Coverage",
-                        pos=(2 * col_w, top_h), width=vw - 2 * col_w,
-                        height=bot_h):
-            dpg.add_text(tag="t_findings_count")
-            with dpg.table(tag="t_findings", header_row=True,
-                           row_background=True, borders_innerH=True,
-                           borders_innerV=True, resizable=True,
-                           scrollY=True):
-                for col in ("kind", "subject", "part", "message"):
-                    dpg.add_table_column(label=col)
+    def _page_coverage(self, tab_h: int, page_h: int) -> None:
+        with dpg.tab(label="Coverage"):
+            with dpg.child_window(height=page_h, autosize_x=True, border=False):
+                dpg.add_text(tag="t_findings_count")
+                with dpg.table(tag="t_findings", header_row=True,
+                               row_background=True, borders_innerH=True,
+                               borders_innerV=True, resizable=True,
+                               scrollY=True):
+                    for col in ("kind", "subject", "part", "message"):
+                        dpg.add_table_column(label=col)
 
+    # ── per-frame updates ────────────────────────────────────────────────────
     def tick(self) -> None:
         self.poll()
         if self.doc_selected is not None:
@@ -390,8 +473,7 @@ class Hub:
                 dpg.set_value("t_doc_meta",
                               f"{doc['url']}  [{doc['source_type']}, "
                               f"{doc['lang'] or '?'}] target={doc['target_hint']}")
-                dpg.set_value("t_doc_text",
-                              (doc["raw_text"] or "")[:20000])
+                dpg.set_value("t_doc_text", (doc["raw_text"] or "")[:20000])
         table = dpg.get_value("combo_table")
         if table:
             try:
@@ -408,125 +490,11 @@ class Hub:
                 dpg.set_value("t_ledger_preview", head + "\n" + body)
 
 
-INIT_FILE = Path.home() / ".kriko-hub-layout.ini"
-
-# Colors — a small consistent dark palette (DPG's default theme is the raw
-# ImGui look; this is the same look with sane contrast and one accent).
-_BG = (22, 23, 28, 255)
-_BG_CHILD = (28, 30, 36, 255)
-_BG_FRAME = (36, 39, 47, 255)
-_BG_TABLE = (26, 28, 34, 255)
-_TEXT = (226, 228, 234, 255)
-_TEXT_DIM = (140, 145, 158, 255)
-_ACCENT = (255, 138, 61, 255)
-_BORDER = (48, 51, 60, 255)
-
-WINDOW_TAGS = ("win_overview", "win_parts", "win_sources", "win_extract",
-               "win_ledger", "win_scaffold")
-
-
-def _apply_theme() -> None:
-    with dpg.theme(tag="kriko_theme"):
-        with dpg.theme_component(dpg.mvAll):
-            for col, val in (
-                (dpg.mvThemeCol_WindowBg, _BG),
-                (dpg.mvThemeCol_ChildBg, _BG_CHILD),
-                (dpg.mvThemeCol_PopupBg, _BG_CHILD),
-                (dpg.mvThemeCol_FrameBg, _BG_FRAME),
-                (dpg.mvThemeCol_FrameBgHovered, (44, 48, 58, 255)),
-                (dpg.mvThemeCol_FrameBgActive, (52, 57, 69, 255)),
-                (dpg.mvThemeCol_Text, _TEXT),
-                (dpg.mvThemeCol_TextDisabled, _TEXT_DIM),
-                (dpg.mvThemeCol_TextSelectedBg, (255, 138, 61, 70)),
-                (dpg.mvThemeCol_Button, (46, 50, 60, 255)),
-                (dpg.mvThemeCol_ButtonHovered, (62, 67, 80, 255)),
-                (dpg.mvThemeCol_ButtonActive, (86, 92, 108, 255)),
-                (dpg.mvThemeCol_Header, (48, 52, 63, 255)),
-                (dpg.mvThemeCol_HeaderHovered, (62, 67, 80, 255)),
-                (dpg.mvThemeCol_HeaderActive, (86, 92, 108, 255)),
-                (dpg.mvThemeCol_CheckMark, _ACCENT),
-                (dpg.mvThemeCol_SliderGrab, _ACCENT),
-                (dpg.mvThemeCol_SliderGrabActive, (255, 160, 100, 255)),
-                (dpg.mvThemeCol_Tab, _BG_FRAME),
-                (dpg.mvThemeCol_TabHovered, (52, 57, 69, 255)),
-                (dpg.mvThemeCol_TabActive, (46, 50, 60, 255)),
-                (dpg.mvThemeCol_TitleBg, _BG),
-                (dpg.mvThemeCol_TitleBgActive, _BG_CHILD),
-                (dpg.mvThemeCol_TableHeaderBg, _BG_TABLE),
-                (dpg.mvThemeCol_TableRowBg, _BG_TABLE),
-                (dpg.mvThemeCol_TableRowBgAlt, (31, 33, 40, 255)),
-                (dpg.mvThemeCol_Border, _BORDER),
-                (dpg.mvThemeCol_BorderShadow, (0, 0, 0, 0)),
-                (dpg.mvThemeCol_ScrollbarBg, _BG),
-                (dpg.mvThemeCol_ScrollbarGrab, (58, 63, 75, 255)),
-            ):
-                dpg.add_theme_color(col, val)
-            for col, val in (
-                (dpg.mvPlotCol_AxisBg, _BG_CHILD),
-                (dpg.mvPlotCol_AxisBgHovered, _BG_CHILD),
-                (dpg.mvPlotCol_AxisBgActive, _BG_CHILD),
-                (dpg.mvPlotCol_AxisGrid, _BORDER),
-                (dpg.mvPlotCol_AxisText, _TEXT_DIM),
-                (dpg.mvPlotCol_AxisTick, _TEXT_DIM),
-                (dpg.mvPlotCol_FrameBg, _BG_CHILD),
-                (dpg.mvPlotCol_LegendBg, _BG_CHILD),
-            ):
-                dpg.add_theme_color(col, val, category=dpg.mvThemeCat_Plots)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 8)
-            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
-            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 5)
-            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 4)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, 0)
-            dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 7, 5)
-            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 8, 6)
-    dpg.bind_theme("kriko_theme")
-
-
-def _font_scale(screen_h: int) -> float:
-    """HiDPI: WSLg exposes a large virtual X screen (e.g. 4480x1440); without
-    a scale the UI renders unreadably small. Default scales with screen
-    height; override with KRIKO_HUB_FONT_SCALE."""
-    env = os.environ.get("KRIKO_HUB_FONT_SCALE")
-    if env:
-        return float(env)
-    return max(1.0, min(round(screen_h / 800, 1), 2.2))
-
-
-def _screen_size() -> tuple[int, int]:
-    """Logical screen size via tkinter (X/GLFW have no monitor API here)."""
-    try:
-        import tkinter
-        root = tkinter.Tk()
-        w, h = root.winfo_screenwidth(), root.winfo_screenheight()
-        root.destroy()
-        return int(w), int(h)
-    except Exception:
-        return 1700, 990
-
-
-def _clamp_layout(hub: "Hub", vw: int, vh: int) -> None:
-    """A saved init file can restore windows off a resized/smaller viewport
-    (the old 1700x990 layout on a small WSLg screen). If any window would
-    land outside the viewport, reset all six to the grid."""
-    for tag in WINDOW_TAGS:
-        if not dpg.does_item_exist(tag):
-            continue
-        x, y = dpg.get_item_pos(tag)
-        if x < -20 or y < -20 or x > vw - 40 or y > vh - 40:
-            for t, (px, py, pw, ph) in hub._grid.items():
-                if dpg.does_item_exist(t):
-                    dpg.configure_item(t, pos=(px, py), width=pw, height=ph)
-            return
-
-
 def main() -> None:
     dpg.create_context()
-    dpg.configure_app(docking=True, docking_space=True,
-                      init_file=str(INIT_FILE), auto_save_init_file=True)
     sw, sh = _screen_size()
-    # Cap the viewport to the screen (WSLg reports the whole virtual desktop;
-    # a hardcoded 1700x990 stranded windows on smaller logical screens) and
-    # center it so every window header is reachable.
+    # Cap the viewport to the screen and center it — everything inside is one
+    # fixed window, so no floating-window state can ever go off-screen.
     vw = min(1700, max(sw - 60, 1000))
     vh = min(990, max(sh - 60, 700))
     hub = Hub()
@@ -538,9 +506,6 @@ def main() -> None:
     dpg.set_global_font_scale(_font_scale(sh))
     dpg.show_viewport()
     dpg.set_viewport_pos((max((sw - vw) // 2, 0), max((sh - vh) // 2, 0)))
-    if INIT_FILE.exists():
-        dpg.load_init_file(str(INIT_FILE))
-        _clamp_layout(hub, vw, vh)
     hub.refresh()
     last = 0.0
     while dpg.is_dearpygui_running():
