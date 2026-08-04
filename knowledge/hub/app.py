@@ -401,7 +401,7 @@ def main() -> None:
             hub.refresh()
             hub.tick()
             last = now
-        dpg.render_frame()
+        dpg.render_dearpygui_frame()
     dpg.destroy_context()
 
 
