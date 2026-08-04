@@ -122,11 +122,12 @@ def _apply_theme() -> None:
 
 def _font_scale(screen_h: int) -> float:
     """HiDPI: WSLg exposes a huge virtual X screen; without a scale the UI
-    renders unreadably small. Override with KRIKO_HUB_FONT_SCALE."""
+    renders unreadably small. Override with KRIKO_HUB_FONT_SCALE (1.0
+    disables scaling entirely if anything misbehaves)."""
     env = os.environ.get("KRIKO_HUB_FONT_SCALE")
     if env:
         return float(env)
-    return max(1.0, min(round(screen_h / 800, 1), 2.2))
+    return max(1.0, min(round(screen_h / 800, 1), 2.0))
 
 
 def _screen_size() -> tuple[int, int]:
@@ -149,7 +150,7 @@ class Hub:
         self.part_ids: list[str] = []
         self.ledger_tables = ["documents", "evidence", "clusters", "verdicts",
                               "resolutions", "evidence_flags", "runs"]
-        self._spend_stages: list[str] | None = None
+        self._sigs: dict[str, object] = {}
 
     # ── subprocess runner (Run page buttons) ─────────────────────────────────
     def spawn(self, argv: list[str]) -> None:
@@ -196,6 +197,15 @@ class Hub:
         dpg.set_value("log_text", (cur + "\n" + line)[-MAX_LOG_CHARS:])
 
     # ── refresh ──────────────────────────────────────────────────────────────
+    # Every refresh is diff-guarded: widgets are rebuilt only when their data
+    # actually changed. Rebuilding tables every second froze the UI on WSLg's
+    # software renderer (and swallowed clicks during the stall) — an unchanged
+    # ledger must cost a few cheap SELECTs, not a re-layout.
+    def _changed(self, key: str, sig) -> bool:
+        prev = self._sigs.get(key)
+        self._sigs[key] = sig
+        return sig != prev
+
     def refresh(self) -> None:
         try:
             conn = db.connect(LEDGER_PATH)
@@ -214,20 +224,24 @@ class Hub:
 
     def _refresh_counts(self, conn) -> None:
         c = metrics.ledger_counts(conn)
-        dpg.set_value("t_docs", f"{c['documents']:,}")
-        dpg.set_value("t_ev", f"{c['evidence']:,}")
-        dpg.set_value("t_cl", f"{c['clusters']:,}")
-        dpg.set_value("t_vr", f"{c['verdicts']:,}")
+        if self._changed("counts", (c["documents"], c["evidence"],
+                                    c["clusters"], c["verdicts"])):
+            dpg.set_value("t_docs", f"{c['documents']:,}")
+            dpg.set_value("t_ev", f"{c['evidence']:,}")
+            dpg.set_value("t_cl", f"{c['clusters']:,}")
+            dpg.set_value("t_vr", f"{c['verdicts']:,}")
 
     def _refresh_spend(self, conn) -> None:
         s = metrics.spend(conn)
-        dpg.set_value("t_total", f"${s['total_usd']:.4f}")
-        dpg.set_value("t_split",
-                      f"{s['verdicts_import']} import ($0) + {s['verdicts_llm']} LLM")
+        if self._changed("total", (s["total_usd"], s["verdicts_import"],
+                                   s["verdicts_llm"])):
+            dpg.set_value("t_total", f"${s['total_usd']:.4f}")
+            dpg.set_value("t_split",
+                          f"{s['verdicts_import']} import ($0) "
+                          f"{s['verdicts_llm']} LLM")
         stages = [r["stage"] for r in s["rows"]]
         usd = [r["usd"] for r in s["rows"]]
-        if stages != self._spend_stages:  # rebuild only on change — no flicker
-            self._spend_stages = stages
+        if self._changed("spend_stages", stages):  # rebuild plot on change
             if dpg.does_item_exist("plot_spend"):
                 dpg.delete_item("plot_spend")
             if stages:
@@ -242,22 +256,28 @@ class Hub:
 
     def _refresh_pending(self, conn) -> None:
         p = metrics.pending(conn)
-        dpg.set_value("t_pend_extract",
-                      f"{p['extract_chunks']} chunk call(s) ≈ ${p['extract_usd']:.4f}")
-        dpg.set_value("t_pend_verdict",
-                      f"{p['verdict_pending']} cluster(s) "
-                      f"({p['import_ready']} import-ready $0, {p['llm']} LLM) "
-                      f"≈ ${p['verdict_usd']:.4f}")
-        dpg.set_value("t_pend_total", f"COST TO FINISH ≈ ${p['extract_usd'] + p['verdict_usd']:.4f}")
+        if self._changed("pending", (p["extract_chunks"], p["extract_usd"],
+                                     p["verdict_pending"], p["import_ready"])):
+            dpg.set_value("t_pend_extract",
+                          f"{p['extract_chunks']} chunk call(s) "
+                          f"≈ ${p['extract_usd']:.4f}")
+            dpg.set_value("t_pend_verdict",
+                          f"{p['verdict_pending']} cluster(s) "
+                          f"({p['import_ready']} import-ready $0, {p['llm']} LLM) "
+                          f"≈ ${p['verdict_usd']:.4f}")
+            dpg.set_value("t_pend_total",
+                          f"COST TO FINISH ≈ ${p['extract_usd'] + p['verdict_usd']:.4f}")
 
     def _refresh_parts(self, conn) -> None:
         plist = metrics.parts(DATA_DIR)
-        self.part_ids = [p["part_id"] for p in plist]
-        dpg.configure_item("combo_part", items=self.part_ids)
-        if self.part_ids and not dpg.get_value("combo_part"):
-            dpg.set_value("combo_part", self.part_ids[0])
+        sig = [(p["part_id"], p["claims"]) for p in plist]
+        if self._changed("parts", sig):
+            self.part_ids = [p["part_id"] for p in plist]
+            dpg.configure_item("combo_part", items=self.part_ids)
+            if self.part_ids and not dpg.get_value("combo_part"):
+                dpg.set_value("combo_part", self.part_ids[0])
         cur = dpg.get_value("combo_part")
-        if cur:
+        if cur and self._changed("part_sel", cur):
             self._show_part(cur)
 
     def _show_part(self, part_id: str) -> None:
@@ -274,9 +294,14 @@ class Hub:
 
     def _refresh_documents(self, conn) -> None:
         rows = metrics.documents(conn, 200)
-        self.doc_items = [f"#{r['id']} {r['source_type']:<8} {r['url'][:70]}"
-                          for r in rows]
-        dpg.configure_item("list_docs", items=self.doc_items)
+        if rows:
+            sig = (len(rows), rows[0]["id"], rows[0]["fetched_at"])
+        else:
+            sig = (0, None, None)  # documents is append-only; max id is enough
+        if self._changed("docs", sig):
+            self.doc_items = [f"#{r['id']} {r['source_type']:<8} {r['url'][:70]}"
+                              for r in rows]
+            dpg.configure_item("list_docs", items=self.doc_items)
 
     def _doc_picked(self, sender, app_data, user_data) -> None:
         if app_data is None or app_data >= len(self.doc_items):
@@ -285,27 +310,34 @@ class Hub:
 
     def _refresh_findings(self, conn) -> None:
         flist = metrics.findings(DATA_DIR)
-        dpg.set_value("t_findings_count", f"{len(flist)} finding(s)")
-        dpg.delete_item("t_findings", children_only=True)
-        for f in flist[:100]:
-            with dpg.table_row(parent="t_findings"):
-                dpg.add_text(f["kind"])
-                dpg.add_text(f["subject"])
-                dpg.add_text(f["part_id"] or "")
-                dpg.add_text(f["message"])
+        sig = (len(flist), tuple((f["kind"], f["subject"], f["part_id"])
+                                 for f in flist[:20]))
+        if self._changed("findings", sig):
+            dpg.set_value("t_findings_count", f"{len(flist)} finding(s)")
+            dpg.delete_item("t_findings", children_only=True)
+            for f in flist[:100]:
+                with dpg.table_row(parent="t_findings"):
+                    dpg.add_text(f["kind"])
+                    dpg.add_text(f["subject"])
+                    dpg.add_text(f["part_id"] or "")
+                    dpg.add_text(f["message"])
 
     def _refresh_runs(self, conn) -> None:
         rows = metrics.recent_runs(conn, 6)
-        dpg.delete_item("t_runs", children_only=True)
-        for r in rows:
-            with dpg.table_row(parent="t_runs"):
-                dpg.add_text(r["started_at"][:19])
-                dpg.add_text(r["stage"])
-                dpg.add_text(r["model"] or "")
-                dpg.add_text(f"{r['calls']}")
-                dpg.add_text(f"${r['usd']:.4f}")
+        sig = tuple((r["started_at"], r["usd"]) for r in rows)
+        if self._changed("runs", sig):
+            dpg.delete_item("t_runs", children_only=True)
+            for r in rows:
+                with dpg.table_row(parent="t_runs"):
+                    dpg.add_text(r["started_at"][:19])
+                    dpg.add_text(r["stage"])
+                    dpg.add_text(r["model"] or "")
+                    dpg.add_text(f"{r['calls']}")
+                    dpg.add_text(f"${r['usd']:.4f}")
         last = metrics.last_remediation(REMEDIATION_LOG)
-        if last:
+        if last and self._changed("last_rem", (last.get("ts"),
+                                               last.get("ingested", 0),
+                                               last.get("verdicts", 0))):
             dpg.set_value("t_last_rem",
                           f"last remediation: {len(last.get('parts') or [])} part(s), "
                           f"+{last.get('ingested', 0)} docs, +{last.get('verdicts', 0)} "
@@ -503,7 +535,7 @@ def main() -> None:
     dpg.create_viewport(title="kriko-hub", width=vw, height=vh,
                         min_width=1000, min_height=700)
     dpg.setup_dearpygui()
-    dpg.set_global_font_scale(_font_scale(sh))
+    dpg.set_global_font_scale(_font_scale(sh))  # before the viewport exists
     dpg.show_viewport()
     dpg.set_viewport_pos((max((sw - vw) // 2, 0), max((sh - vh) // 2, 0)))
     hub.refresh()
