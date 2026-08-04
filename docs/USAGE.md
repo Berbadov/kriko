@@ -145,6 +145,20 @@ Run it on a schedule (cron/systemd timer). Every pass appends one line to
 `logs/remediation.jsonl` (findings seen, parts re-researched, rows gained,
 spend) so the loop's behavior is observable without any human in the path.
 
+**Step 4c — Pipeline + cost panel (student-budget discipline)**
+
+One read-only screen answers "what is the pipeline doing" and "what would it
+cost to finish it" — the dry-run estimates, live:
+
+```bash
+python -m knowledge.ledger.panel
+```
+
+Shows total spend by stage/model, pending extraction/verdict cost-to-finish
+(the same numbers `--max-usd` caps enforce), catalog + coverage state, recent
+runs, and the zero-cost command set. Check it before any paid run; a new
+model should land under ~$0.10 with the source cap + budget cap discipline.
+
 **Step 5 — Sync to DB**
 
 ```bash
