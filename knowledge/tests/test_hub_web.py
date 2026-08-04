@@ -27,6 +27,30 @@ def test_index_serves_page(client):
     r = client.get("/")
     assert r.status_code == 200
     assert "kriko-hub" in r.text
+    assert "/static/hub.js" in r.text and "/static/style.css" in r.text
+
+
+def test_static_assets_served(client):
+    assert client.get("/static/hub.js").status_code == 200
+    assert client.get("/static/style.css").status_code == 200
+
+
+def test_served_js_parses_when_node_available(client):
+    """Regression guard: the page's JS must stay syntactically valid. The
+    2026-08-04 bug: a \\n escape inside the page string became a literal
+    newline in the served script, killing every click handler. Skipped when
+    node is not installed."""
+    node = __import__("shutil").which("node")
+    if not node:
+        pytest.skip("node not installed")
+    js = client.get("/static/hub.js").text
+    import subprocess
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
+        f.write(js)
+        path = f.name
+    r = subprocess.run([node, "--check", path], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
 
 
 def test_state_snapshot_shape(client):
