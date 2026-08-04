@@ -67,6 +67,23 @@ def parts(data_dir: Path) -> list[dict]:
     return out
 
 
+def catalog_counts(data_dir: Path) -> dict:
+    """Cheap catalog size snapshot for the overview KPIs (no report build)."""
+    import yaml
+    part_paths = list((data_dir / "parts").rglob("*.yaml"))
+    claims = 0
+    for p in part_paths:
+        try:
+            claims += len((yaml.safe_load(p.read_text()) or {}).get("claims")
+                          or [])
+        except yaml.YAMLError:
+            pass
+    return {"parts": len(part_paths),
+            "variants": len(list((data_dir / "variants").rglob("*.yaml"))),
+            "fitment": len(list((data_dir / "fitment").rglob("*.yaml"))),
+            "claims": claims}
+
+
 def part_detail(data_dir: Path, part_id: str) -> dict | None:
     import yaml
     path = next(((data_dir / "parts").rglob(f"{part_id}.yaml")), None)
