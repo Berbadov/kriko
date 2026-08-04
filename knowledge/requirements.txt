@@ -13,4 +13,6 @@ exa-py>=2.14.0           # web search for auto.py (neural search, no scraping)
 pytest>=8.0.0            # for eval_judge.py
 anthropic
 mcp>=1.0,<2.0            # stdio MCP server for kriko (knowledge/mcp/server.py)
-dearpygui>=2.0           # desktop hub UI (knowledge/hub/ — desktop only)
+fastapi>=0.110           # kriko-hub web dashboard (knowledge/hub/web.py)
+uvicorn>=0.29            # kriko-hub web server
+dearpygui>=2.0           # deprecated desktop hub (knowledge/hub/app.py)
