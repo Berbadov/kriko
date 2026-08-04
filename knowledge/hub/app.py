@@ -258,9 +258,19 @@ class Hub:
         self.spawn(["export", "--export-dir", str(EXPORT_DIR)])
 
     # ── window builders ──────────────────────────────────────────────────────
-    def build(self) -> None:
+    def build(self, vw: int, vh: int) -> None:
+        """Lay all six windows out in a 3x2 grid that always fits the viewport
+        (no hardcoded 1700x990 layout — that stranded windows off small/WSLg
+        screens). Docking is enabled, so every header stays reachable and the
+        user can reorganize; the layout persists via the init file."""
+        col = vw // 3
+        top_h = vh - 260
+        bot_h = vh - top_h
         with dpg.window(tag="win_overview", label="Overview", pos=(0, 0),
-                        width=560, height=400):
+                        width=col, height=top_h, resizable=True):
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="maximize",
+                               callback=lambda: dpg.maximize_viewport())
             with dpg.group(tag="grp_overview"):
                 dpg.add_text("Ledger", bullet=True)
                 with dpg.table(header_row=True, row_background=True,
@@ -286,8 +296,8 @@ class Hub:
                         dpg.add_table_column(label=col)
                 dpg.add_text(tag="t_last_rem")
 
-        with dpg.window(tag="win_parts", label="Model & Make", pos=(0, 400),
-                        width=560, height=360):
+        with dpg.window(tag="win_parts", label="Model & Make", pos=(0, top_h),
+                        width=col, height=bot_h, resizable=True):
             dpg.add_combo(tag="combo_part", label="part",
                           callback=lambda s, a, u: self._show_part(a),
                           width=-1)
@@ -302,8 +312,8 @@ class Hub:
                 for col in ("title", "severity", "domain"):
                     dpg.add_table_column(label=col)
 
-        with dpg.window(tag="win_sources", label="Sources", pos=(560, 0),
-                        width=560, height=760):
+        with dpg.window(tag="win_sources", label="Sources", pos=(col, 0),
+                        width=col, height=top_h, resizable=True):
             dpg.add_listbox(tag="list_docs", num_items=16,
                             callback=self._doc_picked, width=-1)
             dpg.add_text("Selected document", bullet=True)
@@ -313,7 +323,8 @@ class Hub:
                 dpg.add_text(tag="t_doc_text", wrap=100)
 
         with dpg.window(tag="win_extract", label="Extraction / Runs",
-                        pos=(1120, 0), width=560, height=760):
+                        pos=(2 * col, 0), width=vw - 2 * col, height=top_h,
+                        resizable=True):
             dpg.add_text("Pending work", bullet=True)
             dpg.add_text(tag="t_pend_extract2")
             dpg.add_text(tag="t_pend_verdict2")
@@ -339,13 +350,15 @@ class Hub:
                 dpg.add_text(tag="log_text", wrap=0)
 
         with dpg.window(tag="win_ledger", label="Ledger browser",
-                        pos=(0, 760), width=1120, height=200):
+                        pos=(col, top_h), width=col, height=bot_h,
+                        resizable=True):
             dpg.add_combo(tag="combo_table", label="table",
                           items=self.ledger_tables, width=-1)
             dpg.add_text(tag="t_ledger_preview", wrap=0)
 
         with dpg.window(tag="win_scaffold", label="Scaffold / Coverage",
-                        pos=(560, 760), width=1120, height=200):
+                        pos=(2 * col, top_h), width=vw - 2 * col,
+                        height=bot_h, resizable=True):
             dpg.add_text(tag="t_findings_count")
             with dpg.table(tag="t_findings", header_row=True,
                            row_background=True, borders_innerH=True,
@@ -385,14 +398,40 @@ class Hub:
                 dpg.set_value("t_ledger_preview", head + "\n" + body)
 
 
+INIT_FILE = Path.home() / ".kriko-hub-layout.ini"
+
+
+def _screen_size() -> tuple[int, int]:
+    """Logical screen size via tkinter (X/GLFW have no monitor API here)."""
+    try:
+        import tkinter
+        root = tkinter.Tk()
+        w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+        root.destroy()
+        return int(w), int(h)
+    except Exception:
+        return 1700, 990
+
+
 def main() -> None:
     dpg.create_context()
+    dpg.configure_app(docking=True, docking_space=True,
+                      init_file=str(INIT_FILE), auto_save_init_file=True)
+    sw, sh = _screen_size()
+    # Cap the viewport to the screen (WSLg reports the whole virtual desktop;
+    # a hardcoded 1700x990 stranded windows on smaller logical screens) and
+    # center it so every window header is reachable.
+    vw = min(1700, max(sw - 60, 1000))
+    vh = min(990, max(sh - 60, 700))
     hub = Hub()
-    hub.build()
-    dpg.create_viewport(title="kriko-hub", width=1700, height=990,
-                        resizable=True, min_width=1200, min_height=800)
+    hub.build(vw, vh)
+    dpg.create_viewport(title="kriko-hub", width=vw, height=vh,
+                        min_width=1000, min_height=700)
     dpg.setup_dearpygui()
     dpg.show_viewport()
+    dpg.set_viewport_pos((max((sw - vw) // 2, 0), max((sh - vh) // 2, 0)))
+    if INIT_FILE.exists():
+        dpg.load_init_file(str(INIT_FILE))
     hub.refresh()
     last = 0.0
     while dpg.is_dearpygui_running():
