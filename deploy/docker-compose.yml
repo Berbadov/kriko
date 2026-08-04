@@ -6,6 +6,10 @@ services:
       POSTGRES_DB: kriko
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Expose the DB to the host so DBeaver/psql can connect. 5433 is used
+      # because another project (shopify-restaurant) already owns host 5432.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
