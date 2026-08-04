@@ -263,11 +263,11 @@ class Hub:
         (no hardcoded 1700x990 layout — that stranded windows off small/WSLg
         screens). Docking is enabled, so every header stays reachable and the
         user can reorganize; the layout persists via the init file."""
-        col = vw // 3
+        col_w = vw // 3
         top_h = vh - 260
         bot_h = vh - top_h
         with dpg.window(tag="win_overview", label="Overview", pos=(0, 0),
-                        width=col, height=top_h, resizable=True):
+                        width=col_w, height=top_h):
             with dpg.group(horizontal=True):
                 dpg.add_button(label="maximize",
                                callback=lambda: dpg.maximize_viewport())
@@ -297,7 +297,7 @@ class Hub:
                 dpg.add_text(tag="t_last_rem")
 
         with dpg.window(tag="win_parts", label="Model & Make", pos=(0, top_h),
-                        width=col, height=bot_h, resizable=True):
+                        width=col_w, height=bot_h):
             dpg.add_combo(tag="combo_part", label="part",
                           callback=lambda s, a, u: self._show_part(a),
                           width=-1)
@@ -308,12 +308,12 @@ class Hub:
             dpg.add_text("Claims", bullet=True)
             with dpg.table(tag="t_part_claims", header_row=True,
                            row_background=True, borders_innerH=True,
-                           borders_innerV=True, resizable=True):
+                           borders_innerV=True):
                 for col in ("title", "severity", "domain"):
                     dpg.add_table_column(label=col)
 
-        with dpg.window(tag="win_sources", label="Sources", pos=(col, 0),
-                        width=col, height=top_h, resizable=True):
+        with dpg.window(tag="win_sources", label="Sources", pos=(col_w, 0),
+                        width=col_w, height=top_h):
             dpg.add_listbox(tag="list_docs", num_items=16,
                             callback=self._doc_picked, width=-1)
             dpg.add_text("Selected document", bullet=True)
@@ -323,8 +323,7 @@ class Hub:
                 dpg.add_text(tag="t_doc_text", wrap=100)
 
         with dpg.window(tag="win_extract", label="Extraction / Runs",
-                        pos=(2 * col, 0), width=vw - 2 * col, height=top_h,
-                        resizable=True):
+                        pos=(2 * col_w, 0), width=vw - 2 * col_w, height=top_h):
             dpg.add_text("Pending work", bullet=True)
             dpg.add_text(tag="t_pend_extract2")
             dpg.add_text(tag="t_pend_verdict2")
@@ -350,15 +349,14 @@ class Hub:
                 dpg.add_text(tag="log_text", wrap=0)
 
         with dpg.window(tag="win_ledger", label="Ledger browser",
-                        pos=(col, top_h), width=col, height=bot_h,
-                        resizable=True):
+                        pos=(col_w, top_h), width=col_w, height=bot_h):
             dpg.add_combo(tag="combo_table", label="table",
                           items=self.ledger_tables, width=-1)
             dpg.add_text(tag="t_ledger_preview", wrap=0)
 
         with dpg.window(tag="win_scaffold", label="Scaffold / Coverage",
-                        pos=(2 * col, top_h), width=vw - 2 * col,
-                        height=bot_h, resizable=True):
+                        pos=(2 * col_w, top_h), width=vw - 2 * col_w,
+                        height=bot_h):
             dpg.add_text(tag="t_findings_count")
             with dpg.table(tag="t_findings", header_row=True,
                            row_background=True, borders_innerH=True,
