@@ -540,6 +540,7 @@ def main() -> None:
     dpg.set_viewport_pos((max((sw - vw) // 2, 0), max((sh - vh) // 2, 0)))
     hub.refresh()
     last = 0.0
+    last_frame = 0.0
     while dpg.is_dearpygui_running():
         now = time.monotonic()
         if now - last >= 1.0:
@@ -547,6 +548,11 @@ def main() -> None:
             hub.tick()
             last = now
         dpg.render_dearpygui_frame()
+        # Frame cap: a dashboard doesn't need 300fps, and on WSLg's software
+        # GL an uncapped loop pins a CPU core for no visible gain.
+        elapsed = time.monotonic() - now
+        if elapsed < 1 / 30:
+            time.sleep(1 / 30 - elapsed)
     dpg.destroy_context()
 
 
