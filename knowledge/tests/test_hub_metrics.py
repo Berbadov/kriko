@@ -79,6 +79,12 @@ def test_last_remediation_reads_log(tmp_path):
     assert metrics.last_remediation(tmp_path / "missing.jsonl") is None
 
 
+def test_catalog_counts_read_stub_catalog(tmp_path):
+    data = _seed(tmp_path)
+    c = metrics.catalog_counts(data)
+    assert c == {"parts": 1, "variants": 0, "fitment": 0, "claims": 1}
+
+
 def test_findings_reads_stub_catalog(tmp_path):
     data = _seed(tmp_path)
     f = metrics.findings(data)

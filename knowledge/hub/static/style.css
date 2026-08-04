@@ -32,5 +32,8 @@ border-radius:6px;padding:7px 10px;max-width:100%;margin-bottom:8px}
 pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;
 padding:12px;overflow:auto;max-height:46vh;font:12px/1.5 ui-monospace,monospace}
 .tag{display:inline-block;border-radius:4px;padding:1px 7px;font-size:11px;background:var(--panel2)}
+.sev-high{background:#5a1f24;color:#ff9a9a}
+.sev-medium{background:#5a3d1a;color:#ffce8a}
+.sev-low{background:#1f4a2c;color:#8affa8}
 .muted{color:var(--dim)}
 .err{color:#ff8080}

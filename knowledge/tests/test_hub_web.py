@@ -35,6 +35,29 @@ def test_static_assets_served(client):
     assert client.get("/static/style.css").status_code == 200
 
 
+def test_state_has_catalog_kpis(client):
+    d = client.get("/api/state").json()
+    cat = d["catalog"]
+    assert set(cat) == {"parts", "variants", "fitment", "claims"}
+    assert all(isinstance(v, int) and v >= 0 for v in cat.values())
+    assert "findings" not in d  # heavy report stays out of the poll path
+
+
+def test_coverage_endpoint_on_demand_and_cached(client):
+    d = client.get("/api/coverage").json()
+    assert isinstance(d["findings"], list)
+    assert "ts" in d
+    again = client.get("/api/coverage").json()
+    assert again["ts"] == d["ts"]  # cached within TTL
+
+
+def test_table_endpoint_reports_row_count(client):
+    d = client.get("/api/table/documents").json()
+    assert isinstance(d["count"], int)
+    assert "head" in d and "body" in d
+    assert client.get("/api/table/nope").status_code == 404
+
+
 def test_served_js_parses_when_node_available(client):
     """Regression guard: the page's JS must stay syntactically valid. The
     2026-08-04 bug: a \\n escape inside the page string became a literal
@@ -56,7 +79,7 @@ def test_served_js_parses_when_node_available(client):
 def test_state_snapshot_shape(client):
     s = client.get("/api/state").json()
     for k in ("counts", "spend", "pending", "parts", "documents",
-              "findings", "runs"):
+              "catalog", "runs"):
         assert k in s
     assert s["counts"]["documents"] > 0
 

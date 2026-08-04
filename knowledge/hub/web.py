@@ -8,12 +8,16 @@ always hardware-accelerated and native on the host. This is the same data
 plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
 
   GET  /                the dashboard page (inline HTML/JS, no build step)
-  GET  /api/state       one snapshot: counts, spend, pending, parts,
-                        documents, findings, recent runs
+  GET  /api/state       snapshot: counts, spend, pending, catalog, parts,
+                        documents, recent runs (no heavy report build)
+  GET  /api/coverage    catalog coverage findings — cached 60s, built on
+                        demand only (the report is ~1.5s; ?refresh=1 to force)
   GET  /api/part/{id}   part detail (claims, variants)
   GET  /api/doc/{id}    full document text
   POST /api/run         spawn `knowledge.ledger.run <argv>` (validated)
   GET  /api/log         streaming output buffer of the current run
+  GET  /api/table/{t}   ledger table preview (50 rows + row count)
+  POST /api/stop        kill the active run
 
 Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
 the CLI; the browser polls state every second.
@@ -111,16 +115,33 @@ def state() -> dict:
         p = metrics.pending(conn)
         parts = metrics.parts(DATA_DIR)
         docs = metrics.documents(conn, 50)
-        findings = metrics.findings(DATA_DIR)
         runs = metrics.recent_runs(conn, 6)
         last = metrics.last_remediation(REMEDIATION_LOG)
     finally:
         conn.close()
     return {
         "counts": c, "spend": s, "pending": p, "parts": parts,
-        "documents": docs, "findings": findings, "runs": runs,
-        "last_remediation": last,
+        "documents": docs, "runs": runs, "last_remediation": last,
+        "catalog": metrics.catalog_counts(DATA_DIR),
     }
+
+
+# Coverage report build takes ~1.5s (full catalog parse); it is NOT part of the
+# per-second state poll — fetched on demand by the Coverage tab and cached.
+_COV_LOCK = threading.Lock()
+_COV_TTL_S = 60.0
+_COV = {"ts": 0.0, "findings": None}
+
+
+@app.get("/api/coverage")
+def coverage(refresh: int = 0) -> dict:
+    import time
+    now = time.time()
+    with _COV_LOCK:
+        if refresh or _COV["findings"] is None or now - _COV["ts"] > _COV_TTL_S:
+            _COV["findings"] = metrics.findings(DATA_DIR)
+            _COV["ts"] = now
+        return {"findings": _COV["findings"], "ts": _COV["ts"]}
 
 
 @app.get("/api/part/{part_id}")
@@ -220,8 +241,10 @@ _PAGE = """<!doctype html>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
     <button class="run" id="b-extract">extract (capped)</button>
     <input type="number" id="cap" value="0.05" min="0" step="0.01">
+    <button class="run" id="b-verdict">verdict (capped)</button>
+    <button class="run" id="b-resolve">resolve ($0)</button>
+    <button class="run" id="b-cluster">cluster ($0)</button>
     <button class="run" id="b-import">import verdicts ($0)</button>
-    <button class="run" id="b-pass">full $0 pass</button>
     <button class="run" id="b-remediate">remediate ($0)</button>
     <button class="run" id="b-export">export</button>
     <button class="run" id="b-stop">stop</button>
@@ -230,7 +253,7 @@ _PAGE = """<!doctype html>
   <pre id="log"></pre>
 </div>
 <div class="page" id="p-ledger">
-  <h2>Ledger browser (read-only)</h2>
+  <h2>Ledger browser (read-only) <span class="muted" id="table-meta"></span></h2>
   <select id="table-sel">
     <option>documents</option><option>evidence</option><option>clusters</option>
     <option>verdicts</option><option>resolutions</option>
@@ -239,7 +262,9 @@ _PAGE = """<!doctype html>
   <pre id="table-preview"></pre>
 </div>
 <div class="page" id="p-coverage">
-  <h2>Coverage findings</h2><table id="t-findings"></table>
+  <h2>Coverage findings <button class="run" id="b-cov">refresh</button>
+    <span class="muted" id="cov-meta"></span></h2>
+  <table id="t-findings"></table>
 </div>
 </main>
 <script src="/static/hub.js"></script>
@@ -260,7 +285,8 @@ def table(table: str) -> dict:
         raise HTTPException(404, f"no table {table}")
     conn = _conn()
     try:
-        rows = conn.execute(f"SELECT * FROM {table} LIMIT 8").fetchall()
+        count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        rows = conn.execute(f"SELECT * FROM {table} LIMIT 50").fetchall()
         if rows:
             cols = rows[0].keys()
             head = " | ".join(cols)
@@ -270,7 +296,7 @@ def table(table: str) -> dict:
             head, body = "", "(empty)"
     finally:
         conn.close()
-    return {"head": head, "body": body}
+    return {"head": head, "body": body, "count": count}
 
 
 @app.post("/api/stop")
@@ -284,15 +310,36 @@ def stop() -> dict:
     return {"ok": True, "stopped": False}
 
 
+def _open_browser(url: str) -> None:
+    """Open the dashboard in the Windows host browser when running under WSL.
+    A WSLg browser window is the fallback — that GUI stack is software-
+    rendered (llvmpipe), i.e. exactly the slow path the web edition exists
+    to avoid."""
+    if os.environ.get("WSL_DISTRO_NAME"):
+        try:
+            subprocess.Popen(["wslview", url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except FileNotFoundError:
+            try:
+                subprocess.Popen(["/mnt/c/Windows/System32/cmd.exe",
+                                  "/c", "start", "", url],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
+            except FileNotFoundError:
+                pass
+    import webbrowser
+    webbrowser.open(url)
+
+
 def main() -> None:
     import time
-    import webbrowser
     import uvicorn
     url = "http://127.0.0.1:8787"
     print(f"kriko-hub web: {url}  (Ctrl+C to stop)")
-    # Give uvicorn a beat to bind, then open the host browser (WSLg/browser
-    # forwarding handles the rest); harmless if no browser opens.
-    webbrowser.open(url)
+    # Give uvicorn a beat to bind, then open the host browser; harmless if
+    # no browser opens.
+    _open_browser(url)
     time.sleep(0.5)
     uvicorn.run(app, host="127.0.0.1", port=8787, log_level="warning")
 
