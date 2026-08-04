@@ -174,7 +174,10 @@ claims/variants/findings), Sources (documents → raw text), Extraction
 remediate, export — output streams into the log window), Ledger browser
 (generic read-only SQLite explorer), Scaffold (coverage findings). Requires
 a desktop session (dearpygui needs GLX/OpenGL); install with the rest of
-`knowledge/requirements.txt`.
+`knowledge/requirements.txt`. On WSL (WSLg), install Mesa first or GLFW dies
+with "GLX: Failed to load GLX": `sudo apt install -y libgl1-mesa-dri
+libglx-mesa0 libgl1 mesa-utils` (verify with `glxinfo -B`; force software GL
+with `LIBGL_ALWAYS_SOFTWARE=1`).
 
 **Step 4e — LLM-driven control: the kriko MCP server + kriko_research agent**
 
