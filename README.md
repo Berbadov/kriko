@@ -114,6 +114,26 @@ curl http://localhost:8000/health
 ./scripts/run_local.sh
 ```
 
+### Connect with DBeaver (Postgres)
+
+The Kriko Postgres is exposed on host port **5433** (not 5432 — another project on this
+machine owns 5432). Create a new PostgreSQL connection in DBeaver with:
+
+| Setting | Value |
+|---------|-------|
+| Host | `localhost` (or `127.0.0.1`) |
+| Port | `5433` |
+| Database | `kriko` |
+| Username | `postgres` |
+| Password | `kriko_dev` |
+| JDBC URL | `jdbc:postgresql://localhost:5433/kriko` |
+
+Tables: `variants`, `claims`, `claim_sources`, `claim_variants`, `analysis_log`.
+
+The password comes from `POSTGRES_PASSWORD` in `deploy/.env`; the port mapping lives in
+`deploy/docker-compose.yml` (`db` service → `5433:5432`). If you change either, update
+this table too.
+
 ### Load the Chrome extension
 
 Chrome → `chrome://extensions` → Developer mode → Load unpacked → select `extension_ui/`
