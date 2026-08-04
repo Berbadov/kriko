@@ -61,6 +61,8 @@ class Hub:
         self.part_ids: list[str] = []
         self.ledger_tables = ["documents", "evidence", "clusters", "verdicts",
                               "resolutions", "evidence_flags", "runs"]
+        self._grid: dict[str, tuple] = {}
+        self._spend_stages: list[str] | None = None
 
     # ── subprocess runner (buttons) ──────────────────────────────────────────
     def spawn(self, argv: list[str]) -> None:
@@ -135,19 +137,21 @@ class Hub:
         dpg.set_value("t_total", f"${s['total_usd']:.4f}")
         dpg.set_value("t_split",
                       f"{s['verdicts_import']} import ($0) + {s['verdicts_llm']} LLM")
-        if dpg.does_item_exist("plot_spend"):
-            dpg.delete_item("plot_spend", children_only=True)
-            dpg.delete_item("plot_spend")
         stages = [r["stage"] for r in s["rows"]]
         usd = [r["usd"] for r in s["rows"]]
-        if stages:
-            x = list(range(len(stages)))
-            plot = dpg.add_plot(label="Spend by stage (USD)", tag="plot_spend",
-                                height=220, width=-1, parent="grp_overview")
-            xaxis = dpg.add_plot_axis(dpg.mvXAxis, label="stage", parent=plot)
-            yaxis = dpg.add_plot_axis(dpg.mvYAxis, label="USD", parent=plot)
-            dpg.add_bar_series(x, usd, label="usd", weight=1, parent=yaxis)
-            dpg.set_axis_ticks(xaxis, [[s, i] for i, s in enumerate(stages)])
+        if stages != self._spend_stages:  # rebuild only on change — no flicker
+            self._spend_stages = stages
+            if dpg.does_item_exist("plot_spend"):
+                dpg.delete_item("plot_spend")
+            if stages:
+                x = list(range(len(stages)))
+                plot = dpg.add_plot(label="Spend by stage (USD)",
+                                    tag="plot_spend", height=220, width=-1,
+                                    parent="grp_overview")
+                xaxis = dpg.add_plot_axis(dpg.mvXAxis, label="stage", parent=plot)
+                yaxis = dpg.add_plot_axis(dpg.mvYAxis, label="USD", parent=plot)
+                dpg.add_bar_series(x, usd, label="usd", weight=1, parent=yaxis)
+                dpg.set_axis_ticks(xaxis, [[s, i] for i, s in enumerate(stages)])
 
     def _refresh_pending(self, conn) -> None:
         p = metrics.pending(conn)
@@ -266,6 +270,14 @@ class Hub:
         col_w = vw // 3
         top_h = vh - 260
         bot_h = vh - top_h
+        self._grid = {
+            "win_overview": (0, 0, col_w, top_h),
+            "win_parts": (0, top_h, col_w, bot_h),
+            "win_sources": (col_w, 0, col_w, top_h),
+            "win_extract": (2 * col_w, 0, vw - 2 * col_w, top_h),
+            "win_ledger": (col_w, top_h, col_w, bot_h),
+            "win_scaffold": (2 * col_w, top_h, vw - 2 * col_w, bot_h),
+        }
         with dpg.window(tag="win_overview", label="Overview", pos=(0, 0),
                         width=col_w, height=top_h):
             with dpg.group(horizontal=True):
@@ -398,6 +410,87 @@ class Hub:
 
 INIT_FILE = Path.home() / ".kriko-hub-layout.ini"
 
+# Colors — a small consistent dark palette (DPG's default theme is the raw
+# ImGui look; this is the same look with sane contrast and one accent).
+_BG = (22, 23, 28, 255)
+_BG_CHILD = (28, 30, 36, 255)
+_BG_FRAME = (36, 39, 47, 255)
+_BG_TABLE = (26, 28, 34, 255)
+_TEXT = (226, 228, 234, 255)
+_TEXT_DIM = (140, 145, 158, 255)
+_ACCENT = (255, 138, 61, 255)
+_BORDER = (48, 51, 60, 255)
+
+WINDOW_TAGS = ("win_overview", "win_parts", "win_sources", "win_extract",
+               "win_ledger", "win_scaffold")
+
+
+def _apply_theme() -> None:
+    with dpg.theme(tag="kriko_theme"):
+        with dpg.theme_component(dpg.mvAll):
+            for col, val in (
+                (dpg.mvThemeCol_WindowBg, _BG),
+                (dpg.mvThemeCol_ChildBg, _BG_CHILD),
+                (dpg.mvThemeCol_PopupBg, _BG_CHILD),
+                (dpg.mvThemeCol_FrameBg, _BG_FRAME),
+                (dpg.mvThemeCol_FrameBgHovered, (44, 48, 58, 255)),
+                (dpg.mvThemeCol_FrameBgActive, (52, 57, 69, 255)),
+                (dpg.mvThemeCol_Text, _TEXT),
+                (dpg.mvThemeCol_TextDisabled, _TEXT_DIM),
+                (dpg.mvThemeCol_TextSelectedBg, (255, 138, 61, 70)),
+                (dpg.mvThemeCol_Button, (46, 50, 60, 255)),
+                (dpg.mvThemeCol_ButtonHovered, (62, 67, 80, 255)),
+                (dpg.mvThemeCol_ButtonActive, (86, 92, 108, 255)),
+                (dpg.mvThemeCol_Header, (48, 52, 63, 255)),
+                (dpg.mvThemeCol_HeaderHovered, (62, 67, 80, 255)),
+                (dpg.mvThemeCol_HeaderActive, (86, 92, 108, 255)),
+                (dpg.mvThemeCol_CheckMark, _ACCENT),
+                (dpg.mvThemeCol_SliderGrab, _ACCENT),
+                (dpg.mvThemeCol_SliderGrabActive, (255, 160, 100, 255)),
+                (dpg.mvThemeCol_Tab, _BG_FRAME),
+                (dpg.mvThemeCol_TabHovered, (52, 57, 69, 255)),
+                (dpg.mvThemeCol_TabActive, (46, 50, 60, 255)),
+                (dpg.mvThemeCol_TitleBg, _BG),
+                (dpg.mvThemeCol_TitleBgActive, _BG_CHILD),
+                (dpg.mvThemeCol_TableHeaderBg, _BG_TABLE),
+                (dpg.mvThemeCol_TableRowBg, _BG_TABLE),
+                (dpg.mvThemeCol_TableRowBgAlt, (31, 33, 40, 255)),
+                (dpg.mvThemeCol_Border, _BORDER),
+                (dpg.mvThemeCol_BorderShadow, (0, 0, 0, 0)),
+                (dpg.mvThemeCol_ScrollbarBg, _BG),
+                (dpg.mvThemeCol_ScrollbarGrab, (58, 63, 75, 255)),
+            ):
+                dpg.add_theme_color(col, val)
+            for col, val in (
+                (dpg.mvPlotCol_AxisBg, _BG_CHILD),
+                (dpg.mvPlotCol_AxisBgHovered, _BG_CHILD),
+                (dpg.mvPlotCol_AxisBgActive, _BG_CHILD),
+                (dpg.mvPlotCol_AxisGrid, _BORDER),
+                (dpg.mvPlotCol_AxisText, _TEXT_DIM),
+                (dpg.mvPlotCol_AxisTick, _TEXT_DIM),
+                (dpg.mvPlotCol_FrameBg, _BG_CHILD),
+                (dpg.mvPlotCol_LegendBg, _BG_CHILD),
+            ):
+                dpg.add_theme_color(col, val, category=dpg.mvThemeCat_Plots)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 8)
+            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 4)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowBorderSize, 0)
+            dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 7, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing, 8, 6)
+    dpg.bind_theme("kriko_theme")
+
+
+def _font_scale(screen_h: int) -> float:
+    """HiDPI: WSLg exposes a large virtual X screen (e.g. 4480x1440); without
+    a scale the UI renders unreadably small. Default scales with screen
+    height; override with KRIKO_HUB_FONT_SCALE."""
+    env = os.environ.get("KRIKO_HUB_FONT_SCALE")
+    if env:
+        return float(env)
+    return max(1.0, min(round(screen_h / 800, 1), 2.2))
+
 
 def _screen_size() -> tuple[int, int]:
     """Logical screen size via tkinter (X/GLFW have no monitor API here)."""
@@ -409,6 +502,21 @@ def _screen_size() -> tuple[int, int]:
         return int(w), int(h)
     except Exception:
         return 1700, 990
+
+
+def _clamp_layout(hub: "Hub", vw: int, vh: int) -> None:
+    """A saved init file can restore windows off a resized/smaller viewport
+    (the old 1700x990 layout on a small WSLg screen). If any window would
+    land outside the viewport, reset all six to the grid."""
+    for tag in WINDOW_TAGS:
+        if not dpg.does_item_exist(tag):
+            continue
+        x, y = dpg.get_item_pos(tag)
+        if x < -20 or y < -20 or x > vw - 40 or y > vh - 40:
+            for t, (px, py, pw, ph) in hub._grid.items():
+                if dpg.does_item_exist(t):
+                    dpg.configure_item(t, pos=(px, py), width=pw, height=ph)
+            return
 
 
 def main() -> None:
@@ -423,13 +531,16 @@ def main() -> None:
     vh = min(990, max(sh - 60, 700))
     hub = Hub()
     hub.build(vw, vh)
+    _apply_theme()
     dpg.create_viewport(title="kriko-hub", width=vw, height=vh,
                         min_width=1000, min_height=700)
     dpg.setup_dearpygui()
+    dpg.set_global_font_scale(_font_scale(sh))
     dpg.show_viewport()
     dpg.set_viewport_pos((max((sw - vw) // 2, 0), max((sh - vh) // 2, 0)))
     if INIT_FILE.exists():
         dpg.load_init_file(str(INIT_FILE))
+        _clamp_layout(hub, vw, vh)
     hub.refresh()
     last = 0.0
     while dpg.is_dearpygui_running():
