@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "kriko": {
+      "type": "local",
+      "command": ["/home/beraat/kriko/.venv/bin/python", "-m", "knowledge.mcp.server"],
+      "cwd": "/home/beraat/kriko",
+      "environment": {
+        "PYTHONPATH": "/home/beraat/kriko"
+      },
+      "enabled": true,
+      "timeout": 15000
+    }
+  },
+  "tools": {
+    "kriko_*": true
+  }
+}

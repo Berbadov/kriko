@@ -166,17 +166,30 @@ def gate_product_value(evidence_titles, v: dict) -> str | None:
 
 # ── Deterministic import verdicts (zero-LLM path) ────────────────────────────
 #
-# Evidence backfilled from the pre-ledger catalog (extractor_version=0) is
-# ALREADY-gated knowledge: the legacy pipeline researched, judged, and stored
-# it (title/domain/severity/rationale from the claim itself). Re-verdicting it
-# with an LLM re-spends tokens to re-derive what the fields already say —
-# ~1.9M tokens / $0.45 in the 2026-08-03 live run. A cluster whose evidence is
-# ENTIRELY imported gets a synthesized verdict (model='import', $0); the
+# Evidence whose provenance is deterministic ($0) is ALREADY-gated knowledge:
+# imported legacy research (extractor_version=0) and agent-written evidence
+# (extractor_version=1, via the MCP server) carry title/domain/severity/
+# rationale from the researcher itself. Re-verdicting it with an LLM re-spends
+# tokens to re-derive what the fields already say — ~1.9M tokens / $0.45 in the
+# 2026-08-03 live run. A cluster whose evidence is entirely deterministic
+# (versions ⊆ {0, 1}) gets a synthesized verdict (model='import', $0); the
 # deterministic product-value gate and export validation still apply exactly
 # as for LLM verdicts. LLM verdicts remain for clusters with extractor-
-# extracted evidence (genuinely new research).
+# extracted evidence (extractor_version=2, genuinely new research).
 
 _SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2}
+
+# Extractor provenance versions: 0 = imported/backfilled legacy research,
+# 1 = agent-written (kriko_research via the MCP server — deterministic, $0),
+# 2 = LLM extractor. A cluster whose evidence is entirely within the
+# deterministic set {0, 1} gets a synthesized verdict without ever paying the
+# LLM (imported_verdict); any evidence from the paid extractor (2) keeps LLM
+# verdicts. Treating agent evidence like import evidence is the $0-onboarding
+# contract: the agent writes provenance'd rows, and no version bumps a claim
+# into the paid queue by accident.
+AGENT_EXTRACTOR_VERSION = 1
+LLM_EXTRACTOR_VERSION = 2
+DETERMINISTIC_VERSIONS = frozenset({0, AGENT_EXTRACTOR_VERSION})
 
 
 def imported_verdict(payload: dict) -> dict:
@@ -263,29 +276,41 @@ def _call(client, payload: dict) -> tuple[str, int, int]:
             m.usage.prompt_tokens, m.usage.completion_tokens)
 
 
-def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
-    todo = pending_clusters(conn)
-    # Imported-only clusters never touch the LLM: synthesize deterministically
-    # ($0), keep the model's judgment for genuinely new extraction.
-    import_todo: list[tuple[int, dict, str]] = []
-    llm_todo: list[tuple[int, dict, str]] = []
-    for cid, payload, h in todo:
-        versions = _evidence_versions(conn, cid)
-        (import_todo if versions == {0} else llm_todo).append((cid, payload, h))
+def _store_import(conn, h: str, v: dict) -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO verdicts (input_hash, model,"
+        " verdict_json, tokens_in, tokens_out, usd, created_at)"
+        " VALUES (?, 'import', ?, 0, 0, 0, datetime('now'))",
+        (h, json.dumps(v, ensure_ascii=False)))
+    conn.commit()
+
+
+def import_verdicts(conn) -> int:
+    """Deterministic $0 verdict pass — the MCP server's engine and the first
+    half of run_verdicts. Verdicts every pending cluster whose evidence is
+    entirely within DETERMINISTIC_VERSIONS (imported + agent-written); never
+    constructs a Budget and never touches the LLM, so it cannot spend.
+    LLM-eligible clusters are left pending for run_verdicts."""
     saved = 0
-    for cid, payload, h in import_todo:
+    for cid, payload, h in pending_clusters(conn):
+        if not _evidence_versions(conn, cid) <= DETERMINISTIC_VERSIONS:
+            continue
         try:
             v = imported_verdict(payload)
         except Exception as exc:  # noqa: BLE001 — one bad cluster must not sink the pass
             print(f"  cluster {cid}: import verdict failed ({exc})")
             continue
-        conn.execute(
-            "INSERT OR REPLACE INTO verdicts (input_hash, model,"
-            " verdict_json, tokens_in, tokens_out, usd, created_at)"
-            " VALUES (?, 'import', ?, 0, 0, 0, datetime('now'))",
-            (h, json.dumps(v, ensure_ascii=False)))
-        conn.commit()
+        _store_import(conn, h, v)
         saved += 1
+    return saved
+
+
+def run_verdicts(conn, budget: Budget, max_workers: int = _MAX_WORKERS) -> int:
+    saved = import_verdicts(conn)
+    # Whatever is still pending after the deterministic pass carries
+    # extractor-version-2 evidence (genuinely new research) — that is what
+    # pays the LLM. The budget precheck fires before the first token moves.
+    llm_todo = pending_clusters(conn)
     if not llm_todo:
         return saved
     budget.precheck(_est_usd(llm_todo))
