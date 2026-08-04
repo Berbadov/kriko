@@ -159,6 +159,50 @@ Shows total spend by stage/model, pending extraction/verdict cost-to-finish
 runs, and the zero-cost command set. Check it before any paid run; a new
 model should land under ~$0.10 with the source cap + budget cap discipline.
 
+**Step 4d — kriko-hub: the clickable dashboard (desktop app)**
+
+Same numbers, six clickable windows, live-updating every ~1s off the ledger
+DB — watch the agent work in real time:
+
+```bash
+.venv/bin/python -m knowledge.hub.app
+```
+
+Overview (spend plot, cost-to-finish, log tails), Model & Make (part list →
+claims/variants/findings), Sources (documents → raw text), Extraction
+(run buttons: extract with a `--max-usd` cap, import verdicts, full $0 pass,
+remediate, export — output streams into the log window), Ledger browser
+(generic read-only SQLite explorer), Scaffold (coverage findings). Requires
+a desktop session (dearpygui needs GLX/OpenGL); install with the rest of
+`knowledge/requirements.txt`.
+
+**Step 4e — LLM-driven control: the kriko MCP server + kriko_research agent**
+
+The pipeline as tools for a subscription LLM — new-model research at $0 flat
+rate instead of API tokens:
+
+```bash
+# opencode (already wired via opencode.json -> mcp.kriko)
+opencode            # then: use the kriko_research agent (agent prompt
+                    #       includes the full research loop)
+# or Claude Code:
+claude mcp add kriko -- python -m knowledge.mcp.server --project
+```
+
+The server registers 13 tools: read (`ledger_status`, `spend_summary`,
+`pending_extract`, `pending_verdicts`, `list_parts`, `get_part`,
+`list_documents`, `get_document`, `coverage_report`) and $0 write
+(`add_document`, `add_evidence`, `run_pipeline_pass`,
+`run_remediate_import_only`). Write tools are deterministic or import-only —
+nothing in agent-land can spend API tokens; the pass is logged at
+`model=agent, usd=0` so the panel stays honest. Agent evidence
+(extractor_version=1) flows through the same deterministic verdict path as
+imported legacy research (`⊆ {0,1}`), so onboarding a new part is ~$0.00.
+The `kriko_research` agent (`.opencode/agents/kriko_research.md`) runs the
+loop: coverage → next uncovered part → research with its own web tools →
+`add_document`/`add_evidence` (max 5 sources/part, product-principle gated)
+→ `run_pipeline_pass` → verify.
+
 **Step 5 — Sync to DB**
 
 ```bash
