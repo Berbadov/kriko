@@ -162,15 +162,16 @@ still matches the variant, carries a "year outside known window" note in the
 response, and logs a demand signal for the catalog. Windows may later be extended
 from TR-market data — also automatically, via the demand miner (B10).
 
-### B20 — kriko-hub: DearPyGui desktop panel (clickable pipeline) `[G2][G5]`
-**Landed 2026-08-04** (`knowledge/hub/`, USAGE §4d): Overview (spend plot,
-cost-to-finish, log tails), Model & Make (parts → claims/variants/findings),
-Sources (documents → raw text), Extraction (run buttons spawning
-`knowledge.ledger.run` with `--max-usd` caps + streaming output), Ledger
-browser (generic read-only SQLite explorer), Scaffold (coverage findings).
-~1s read-only DB poll; metrics module is GUI-free and test-pinned; `run.py`
-gained `verdict --import-only` for the $0 button. Remaining: a visual smoke
-run on the user's desktop (this shell has no GLX).
+### B20 — kriko-hub: clickable pipeline dashboard `[G2][G5]`
+**Landed 2026-08-04** (`knowledge/hub/`, USAGE §4d). **Web edition is the
+live one**: `knowledge/hub/web.py` (fastapi+uvicorn, 127.0.0.1:8787) — six
+browser tabs (Overview/Parts/Sources/Run/Ledger/Coverage) over the
+test-pinned `metrics.py`, run buttons spawning `knowledge.ledger.run`
+(`--max-usd` caps, streamed output, stop), 1s polling. The DearPyGui app
+(`app.py`) is deprecated — GL rendering on WSLg was unusable (GLX missing,
+scaling breakage, per-second rebuild stalls swallowing clicks); the web
+version renders in the host browser instead. `run.py` gained
+`verdict --import-only` for the $0 button.
 
 ### B21 — MCP server + kriko_research agent: subscription-LLM engine, $0 research `[G2][G5]`
 **Landed 2026-08-04** (`knowledge/mcp/server.py`, USAGE §4e, opencode.json →
