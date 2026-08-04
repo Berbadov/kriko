@@ -159,25 +159,24 @@ Shows total spend by stage/model, pending extraction/verdict cost-to-finish
 runs, and the zero-cost command set. Check it before any paid run; a new
 model should land under ~$0.10 with the source cap + budget cap discipline.
 
-**Step 4d — kriko-hub: the clickable dashboard (desktop app)**
+**Step 4d — kriko-hub: the clickable dashboard (web edition)**
 
-Same numbers, six clickable windows, live-updating every ~1s off the ledger
-DB — watch the agent work in real time:
+Same numbers, six tab pages, rendered by your browser (hardware-accelerated,
+native on the host — the DearPyGui desktop app is deprecated; GL rendering
+on WSLg was slow and broken):
 
 ```bash
-.venv/bin/python -m knowledge.hub.app
+.venv/bin/python -m knowledge.hub.web     # then open http://127.0.0.1:8787
 ```
 
-Overview (spend plot, cost-to-finish, log tails), Model & Make (part list →
-claims/variants/findings), Sources (documents → raw text), Extraction
-(run buttons: extract with a `--max-usd` cap, import verdicts, full $0 pass,
-remediate, export — output streams into the log window), Ledger browser
-(generic read-only SQLite explorer), Scaffold (coverage findings). Requires
-a desktop session (dearpygui needs GLX/OpenGL); install with the rest of
-`knowledge/requirements.txt`. On WSL (WSLg), install Mesa first or GLFW dies
-with "GLX: Failed to load GLX": `sudo apt install -y libgl1-mesa-dri
-libglx-mesa0 libgl1 mesa-utils` (verify with `glxinfo -B`; force software GL
-with `LIBGL_ALWAYS_SOFTWARE=1`).
+Tabs: Overview (ledger counts, spend plot, cost-to-finish, recent runs),
+Parts (part → claims/variants), Sources (documents → raw text), Run
+(buttons: extract with a `--max-usd` cap, import verdicts, full $0 pass,
+remediate, export, stop — output streams live), Ledger (generic read-only
+SQLite browser), Coverage (findings). The browser polls state every second,
+so agent-driven work appears live. The API is `127.0.0.1`-only, no auth.
+Run `GET /api/state` for a JSON snapshot if you ever want the data without
+the page.
 
 **Step 4e — LLM-driven control: the kriko MCP server + kriko_research agent**
 
