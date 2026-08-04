@@ -6,6 +6,30 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-04 — B20 + B21: kriko-hub desktop dashboard + MCP control layer
+
+- **B20 — `knowledge/hub/`** (DearPyGui, deps: `dearpygui`): six clickable
+  windows — Overview (spend bar-plot, cost-to-finish, log tails), Model &
+  Make (parts → claims/variants/findings), Sources (documents → raw text),
+  Extraction (run buttons spawning `knowledge.ledger.run` with `--max-usd`
+  caps, streaming output), Ledger browser (generic read-only SQLite
+  explorer), Scaffold (coverage findings). ~1s read-only DB poll; GUI-free
+  `metrics.py` pinned by tests; `run.py` gained `verdict --import-only`.
+- **B21 — `knowledge/mcp/server.py`** (stdio MCP, `mcp>=1.0,<2.0` — 2.0
+  dropped FastMCP): 13 tools, read + $0 write. `add_document`
+  (hash-idempotent) → `add_evidence` (extractor_version=1, (doc_id,title)
+  deduped) → `run_pipeline_pass` (resolve/cluster/import-verdicts/export,
+  logged `model=agent, usd=0`). Import-verdict predicate generalized
+  `{0}` → `⊆ {0,1}` so agent evidence never queues a paid verdict
+  (extractor-version-2 evidence still does). Wired in `opencode.json`
+  (`mcp.kriko`, type local, `.venv/bin/python`), agent loop in
+  `.opencode/agents/kriko_research.md` (coverage → part → research with
+  native web tools → write ≤5 docs → pipeline pass → verify).
+- **Effect**: new-model onboarding drops from ~$0.17–0.20 to **$0.00** via
+  the agent; DeepSeek API demoted to optional accelerator. Suite 536 tests.
+
+---
+
 ## 2026-08-03 — B16 catalog swap LANDED ($0 gate policy; no commit yet)
 
 - **Acceptance gate PASSES** under the $0 policy: 0 lost claims (sourceless

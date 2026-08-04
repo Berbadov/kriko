@@ -46,6 +46,10 @@ def _cmd_verdict(conn, args, budget) -> None:
         n, usd = verdict.pending_verdict_estimate(conn)
         print(f"verdict --dry-run: {n} cluster call(s) planned, estimated ${usd:.4f}")
         return
+    if args.import_only:
+        saved = verdict.import_verdicts(conn)
+        print(f"verdict --import-only: {saved} deterministic verdict(s) stored ($0)")
+        return
     saved = verdict.run_verdicts(conn, budget)
     print(f"verdict: {saved} verdict(s) stored")
 
@@ -74,6 +78,8 @@ def main(argv=None) -> int:
     p.add_argument("--db", default=str(db.LEDGER_PATH))
     p.add_argument("--max-usd", type=float, default=None)
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--import-only", action="store_true",
+                   help="verdict: deterministic import verdicts only ($0, no LLM)")
     p.add_argument("--export-dir", default=str(_EXPORT_DIR))
     p.add_argument("--data-dir", default=str(Path(__file__).parent.parent.parent / "backend" / "data"),
                    help="catalog root with variants/, fitment/, parts/ (remediate)")

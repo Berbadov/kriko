@@ -77,7 +77,9 @@ def pending_section(conn) -> list[str]:
     from knowledge.ledger.extraction import pending_extraction_estimate
     n_chunks, usd_extract = pending_extraction_estimate(conn)
 
-    from knowledge.ledger.verdict import _evidence_versions, cluster_payload, input_hash, pending_verdict_estimate
+    from knowledge.ledger.verdict import (DETERMINISTIC_VERSIONS,
+                                          _evidence_versions, cluster_payload,
+                                          input_hash, pending_verdict_estimate)
     n_pending, usd_verdict = pending_verdict_estimate(conn)
     import_ready = mixed = 0
     for row in conn.execute("SELECT id FROM clusters ORDER BY id"):
@@ -85,7 +87,7 @@ def pending_section(conn) -> list[str]:
         if conn.execute("SELECT 1 FROM verdicts WHERE input_hash=?",
                         (input_hash(payload),)).fetchone():
             continue
-        if _evidence_versions(conn, row["id"]) == {0}:
+        if _evidence_versions(conn, row["id"]) <= DETERMINISTIC_VERSIONS:
             import_ready += 1
         else:
             mixed += 1
