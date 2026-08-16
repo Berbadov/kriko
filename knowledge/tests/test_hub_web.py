@@ -326,3 +326,120 @@ def test_onboard_without_a_generation_still_works(client, spawned):
                                           "harness": "opencode"})
     assert r.status_code == 200
     assert r.json()["model_key"] == "renault_megane_4"
+
+
+# ── Harness + model selection, command preview (B23) ─────────────────────────
+
+
+def test_harnesses_endpoint_lists_installed_harnesses(client):
+    d = client.get("/api/harnesses").json()
+    names = {h["name"] for h in d["harnesses"]}
+    assert {"opencode", "claude"} <= names
+    for h in d["harnesses"]:
+        assert isinstance(h["available"], bool)
+        assert isinstance(h["models"], list)
+
+
+def test_harness_models_are_discovered_not_hardcoded(client):
+    """opencode enumerates its own models; we never ship a list of them."""
+    d = client.get("/api/harnesses").json()
+    oc = next(h for h in d["harnesses"] if h["name"] == "opencode")
+    if oc["available"]:
+        assert oc["models"], "opencode reported no models"
+
+
+def test_agent_preview_returns_the_exact_argv_without_spawning(client, spawned):
+    r = client.post("/api/agent-preview",
+                    json={"task": "generations", "make": "audi", "model": "q2",
+                          "harness": "opencode"})
+    assert r.status_code == 200
+    d = r.json()
+    assert any("find generations for audi q2" in a for a in d["argv"])
+    assert isinstance(d["display"], str) and d["display"]
+    assert spawned == []  # preview must never launch anything
+
+
+def test_agent_preview_includes_the_chosen_model(client, spawned):
+    d = client.post("/api/agent-preview",
+                    json={"task": "onboard", "make": "audi", "model": "q2",
+                          "generation": 1, "harness": "opencode",
+                          "llm_model": "opencode-go/gpt-5.6-luna"}).json()
+    assert "-m" in d["argv"]
+    assert "opencode-go/gpt-5.6-luna" in d["argv"]
+    assert any("onboard audi q2_1" in a for a in d["argv"])
+
+
+def test_agent_preview_rejects_an_unknown_task(client):
+    assert client.post("/api/agent-preview",
+                       json={"task": "rm -rf /", "make": "audi", "model": "q2",
+                             "harness": "opencode"}).status_code == 400
+
+
+def test_agent_preview_applies_the_same_input_gates(client):
+    assert client.post("/api/agent-preview",
+                       json={"task": "onboard", "make": "audi; rm -rf /",
+                             "model": "q2", "harness": "opencode"}
+                       ).status_code == 400
+
+
+def test_a_bogus_model_string_is_refused(client, spawned):
+    """llm_model reaches argv — it gets the same treatment as make/model."""
+    assert client.post("/api/onboard",
+                       json={"make": "audi", "model": "q2", "harness": "opencode",
+                             "llm_model": "x; rm -rf /"}).status_code == 400
+    assert spawned == []
+
+
+def test_onboard_passes_the_model_through_to_the_agent(client, spawned):
+    r = client.post("/api/onboard",
+                    json={"make": "audi", "model": "q2", "harness": "opencode",
+                          "llm_model": "opencode-go/kimi-k3"})
+    assert r.status_code == 200
+    assert "opencode-go/kimi-k3" in spawned[0]
+
+
+def test_preview_and_run_produce_the_same_argv(client, spawned):
+    """The preview must be the command, not a second implementation of it."""
+    body = {"task": "onboard", "make": "renault", "model": "clio_5",
+            "generation": 5, "harness": "opencode",
+            "llm_model": "opencode-go/glm-5.3"}
+    preview = client.post("/api/agent-preview", json=body).json()["argv"]
+    client.post("/api/onboard", json={k: v for k, v in body.items()
+                                      if k != "task"})
+    assert spawned[0] == preview
+
+
+# ── Paid-model guard (B23) ───────────────────────────────────────────────────
+#
+# .env carries provider API keys, and the hub passes .env to the harness — so
+# `opencode models` reports every pay-per-token provider those keys unlock
+# (406 models, vs 26 on the subscription plan alone). Offering those unlabelled
+# would let one dropdown pick silently spend API credits, defeating the whole
+# $0 premise of the agent path.
+
+
+def test_paid_providers_are_derived_from_env_api_keys(tmp_path):
+    env = {"DEEPSEEK_API_KEY": "x", "OPENROUTER_API_KEY": "y",
+           "MISTRAL_AGENT_API_KEY": "z", "PATH": "/usr/bin"}
+    paid = web._paid_providers(env)
+    assert {"deepseek", "openrouter", "mistral"} <= paid
+    assert "path" not in paid
+
+
+def test_a_model_from_an_api_key_provider_is_marked_paid():
+    paid = {"deepseek", "openrouter"}
+    assert web._is_paid("deepseek/deepseek-v4-flash", paid)
+    assert web._is_paid("openrouter/anything", paid)
+    assert not web._is_paid("opencode-go/gpt-5.6-luna", paid)
+    assert not web._is_paid("opencode/big-pickle", paid)
+
+
+def test_harnesses_endpoint_splits_free_from_paid(client):
+    d = client.get("/api/harnesses").json()
+    oc = next(h for h in d["harnesses"] if h["name"] == "opencode")
+    if not oc["available"]:
+        pytest.skip("opencode not installed")
+    assert "models" in oc and "paid_models" in oc
+    # the subscription plane must never contain an API-key provider
+    paid = web._paid_providers(web._load_env())
+    assert not any(web._is_paid(m, paid) for m in oc["models"])
