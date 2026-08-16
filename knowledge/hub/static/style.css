@@ -73,3 +73,19 @@ border:1px solid var(--line);border-radius:8px;padding:8px}
 .act-ev{color:#8affa8}
 .ok{color:var(--ok)}
 .warn{color:#ffce8a}
+
+/* Top-down picker: make → model → generation */
+.onboard{display:block}
+.step{padding:8px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:none}
+.step label{display:block;font-size:11px;color:var(--dim);
+text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.choices{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;text-align:left;
+display:flex;flex-direction:column;gap:1px;line-height:1.25}
+.chip:hover{border-color:var(--accent)}
+.chip.on{border-color:var(--accent);background:#33261a}
+.chip.want{box-shadow:inset 3px 0 0 var(--accent)}
+.chip-sub{font-size:10px;color:var(--dim)}
+button.run.go{border-color:var(--accent);color:var(--accent)}

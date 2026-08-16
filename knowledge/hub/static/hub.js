@@ -20,7 +20,7 @@ function showTab(p) {
       .classList.toggle('on', t === p);
   });
   if (p === 'coverage' && !covLoaded) loadCoverage(false);
-  if (p === 'models') { loadModels(); loadActivity(); }
+  if (p === 'models') { loadModels(); loadActivity(); loadDemand(); }
 }
 document.querySelectorAll('#nav button')
   .forEach(b => b.onclick = () => showTab(b.dataset.p));
@@ -238,26 +238,128 @@ async function loadActivity() {
   $('#act-meta').textContent = d.events.length + ' recent';
 }
 
-async function doOnboard() {
-  const body = {
-    make: $('#ob-make').value.trim().toLowerCase(),
-    model: $('#ob-model').value.trim().toLowerCase(),
-    harness: $('#ob-harness').value,
-  };
+// ── Top-down picker: make → model → generation ───────────────────────────────
+//
+// Options come from the demand queue (cars real buyers hit that we don't
+// cover), never a hand-maintained list. Generations can't come from traffic —
+// listings give a year, not a generation number — so an agent researches the
+// lineup first, and that same step resolves scraped names like
+// "VW CC 1.4 TSI" to a real model slug.
+
+let demand = { makes: [] };
+let pickMake = null, pickModel = null, pickGen = null;
+
+function chip(label, sub, on, cls) {
+  return '<button class="chip' + (on ? ' on' : '') + (cls ? ' ' + cls : '')
+    + '">' + esc(label)
+    + (sub ? '<span class="chip-sub">' + esc(sub) + '</span>' : '') + '</button>';
+}
+
+async function loadDemand() {
+  demand = await fetch('/api/demand').then(r => r.json());
+  renderMakes();
+}
+
+function renderMakes() {
+  const el = $('#pick-make');
+  if (!demand.makes.length) {
+    el.innerHTML = '<span class="muted">No demand data yet — run some '
+      + 'analyses, or use a catalogued model below.</span>';
+    return;
+  }
+  el.innerHTML = demand.makes.map(m =>
+    chip(m.make, m.hits + ' hits', m.slug === pickMake)).join('');
+  [...el.children].forEach((b, i) => {
+    b.onclick = () => selectMake(demand.makes[i]);
+  });
+}
+
+function selectMake(m) {
+  pickMake = m.slug;
+  pickModel = pickGen = null;
+  renderMakes();
+  $('#step-model').hidden = false;
+  $('#step-gen').hidden = true;
+  $('#step-go').hidden = true;
+  const el = $('#pick-model');
+  el.innerHTML = m.models.map(x =>
+    chip(x.model, x.hits + ' hits · ' + x.reason.replace('_', ' '),
+      x.slug === pickModel,
+      x.reason === 'not_onboarded' ? 'want' : '')).join('');
+  [...el.children].forEach((b, i) => {
+    b.onclick = () => selectModel(m.models[i]);
+  });
+}
+
+async function selectModel(x) {
+  pickModel = x.slug;
+  pickGen = null;
+  $('#step-gen').hidden = false;
+  $('#step-go').hidden = true;
+  [...$('#pick-model').children].forEach(b =>
+    b.classList.toggle('on', b.textContent.startsWith(x.model)));
+  await renderGenerations();
+}
+
+async function renderGenerations() {
+  const el = $('#pick-gen');
+  el.innerHTML = '<span class="muted">checking…</span>';
+  const d = await fetch('/api/generations/' + encodeURIComponent(pickMake)
+    + '/' + encodeURIComponent(pickModel)).then(r => r.json());
+
+  if (!d.researched) {
+    el.innerHTML = '<span class="muted">Not researched yet — an agent has to '
+      + 'find this car’s generations first.</span>'
+      + '<button class="run" id="b-find-gens">Find generations →</button>';
+    $('#b-find-gens').onclick = doResearchGenerations;
+    return;
+  }
+  // The lineup may be filed under a canonical slug the scrape got wrong.
+  pickModel = d.model;
+  el.innerHTML = d.generations.map(g =>
+    chip(g.name, g.year_from + '–' + (g.year_to || ''),
+      g.generation === pickGen)).join('');
+  [...el.children].forEach((b, i) => {
+    b.onclick = () => selectGen(d.generations[i]);
+  });
+}
+
+function selectGen(g) {
+  pickGen = g.generation;
+  [...$('#pick-gen').children].forEach((b, i) =>
+    b.classList.toggle('on', i === g.generation - 1));
+  $('#step-go').hidden = false;
+  $('#b-onboard').textContent = 'Onboard ' + pickMake + ' ' + g.model_key + ' →';
+}
+
+async function postAgent(url, body, label) {
   $('#onboard-state').textContent = 'starting…';
-  const r = await fetch('/api/onboard', {
+  const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, harness: $('#ob-harness').value }),
   });
   const d = await r.json();
   if (!r.ok) {
     $('#onboard-state').innerHTML = '<span class="err">' + esc(d.detail)
       + '</span>';
-    return;
+    return null;
   }
-  $('#onboard-state').textContent = 'running ' + body.harness + '…';
-  loadModel(d.model_key);
+  $('#onboard-state').textContent = label;
+  return d;
+}
+
+async function doResearchGenerations() {
+  await postAgent('/api/research-generations',
+    { make: pickMake, model: pickModel },
+    'researching generations for ' + pickMake + ' ' + pickModel + '…');
+}
+
+async function doOnboard() {
+  const d = await postAgent('/api/onboard',
+    { make: pickMake, model: pickModel, generation: pickGen },
+    'onboarding…');
+  if (d) loadModel(d.model_key);
 }
 
 async function poll() {
@@ -302,8 +404,13 @@ async function poll() {
     if (prevRunning && !running) {  // a run just finished: refresh tables
       loadTable(selTable);
       if (covLoaded) loadCoverage(false);
-      if (curTab === 'models') $('#onboard-state').textContent =
-        l.exit ? 'agent exited ' + l.exit : 'agent finished';
+      if (curTab === 'models') {
+        $('#onboard-state').textContent =
+          l.exit ? 'agent exited ' + l.exit : 'agent finished';
+        loadDemand();
+        // a generations run just landed a lineup: show the buttons
+        if (pickMake && pickModel) renderGenerations();
+      }
     }
     prevRunning = running;
   } catch (e) {
@@ -351,8 +458,7 @@ $('#b-onboard').onclick = doOnboard;
 $('#b-onboard-stop').onclick = async () => {
   await fetch('/api/stop', { method: 'POST' });
 };
-$('#ob-model').addEventListener('keydown',
-  e => { if (e.key === 'Enter') doOnboard(); });
+
 $('#b-stop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }); };
 $('#table-sel').addEventListener('change', e => loadTable(e.target.value));
 

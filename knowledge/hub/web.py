@@ -20,7 +20,10 @@ plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
   POST /api/stop        kill the active run
   GET  /api/models      every catalogued car + its onboarding rollup
   GET  /api/model/{k}   one car's work list (same payload the agent gets)
-  POST /api/onboard     launch a research agent against one model (B23)
+  GET  /api/demand      onboarding queue from real traffic — the picker's makes
+  GET  /api/generations/{make}/{model}   researched generation lineup
+  POST /api/research-generations   phase 1: agent researches the lineup (B23)
+  POST /api/onboard     phase 2: agent onboards {model}_{generation} (B23)
   GET  /api/activity    recent ledger writes — what the agent is doing now
 
 Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
@@ -39,7 +42,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from knowledge.catalog import model_state
+from knowledge.catalog import generations as gencat, model_state
 from knowledge.hub import metrics
 from knowledge.ledger import db
 from knowledge.ledger.verdict import AGENT_EXTRACTOR_VERSION
@@ -47,6 +50,7 @@ from knowledge.ledger.verdict import AGENT_EXTRACTOR_VERSION
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LEDGER_PATH = db.LEDGER_PATH
 DATA_DIR = REPO_ROOT / "backend" / "data"
+GENERATIONS_DIR = gencat.GENERATIONS_DIR
 EXPORT_DIR = REPO_ROOT / "knowledge" / "ledger_export"
 REMEDIATION_LOG = REPO_ROOT / "logs" / "remediation.jsonl"
 MAX_LOG_CHARS = 50000
@@ -63,6 +67,10 @@ _SAFE_NAME = re.compile(r"[a-z0-9_]{1,40}")
 
 AGENT_NAME = "kriko_research"
 ONBOARD_PROMPT = "onboard {make} {model}"
+GENERATIONS_PROMPT = "find generations for {make} {model}"
+
+# No car has more generations than this; the bound keeps a typo out of argv.
+MAX_GENERATION = 20
 
 # Fixed argv templates. The request picks a harness by name; it never supplies
 # a command. Adding a harness is a code change, deliberately.
@@ -253,37 +261,118 @@ def model_detail(key: str) -> dict:
     return model_state.model_state(make, model, DATA_DIR)
 
 
-@app.post("/api/onboard")
-def onboard(payload: dict = Body(...)) -> dict:
-    """Launch a research agent against one model, streaming into the run log.
+@app.get("/api/demand")
+def demand(limit: int = 60) -> dict:
+    """The onboarding queue: cars real buyers hit, grouped by make.
 
-    This is the only place the hub executes something other than
-    `knowledge.ledger.run`, so both inputs are locked down: make/model must be
-    catalog-shaped identifiers (never interpolated into a shell — argv only),
-    and the harness selects a fixed argv template rather than supplying one.
+    Derived from logs/analyses.jsonl via backend.tools.demand — traffic-driven,
+    never a hand-maintained list of makes (CLAUDE.md scalability rule). The
+    picker offers what people actually search for, `not_onboarded` first.
     """
-    make = str(payload.get("make", "")).strip().lower()
-    model = str(payload.get("model", "")).strip().lower()
-    harness = str(payload.get("harness", "opencode")).strip()
+    from backend import config
+    from backend.tools.demand import mine
 
+    try:
+        groups, _ = mine(Path(config.ANALYSES_LOG_PATH), limit=None)
+    except Exception as exc:  # a missing/unreadable log must not kill the tab
+        return {"makes": [], "error": str(exc)}
+
+    order = {"not_onboarded": 0, "catalog_gap": 1, "missing_fields": 2}
+    by_make: dict[str, list[dict]] = {}
+    for grp in groups[:limit]:
+        if grp.reason == "missing_fields":
+            continue  # a scrape-quality signal, not a car anyone can onboard
+        by_make.setdefault(grp.make, []).append({
+            "model": grp.model, "slug": gencat.slugify(grp.model),
+            "hits": grp.count, "reason": grp.reason,
+            "years": sorted(grp.years)[:8],
+        })
+
+    makes = [{"make": mk, "slug": gencat.slugify(mk),
+              "hits": sum(m["hits"] for m in models),
+              "models": sorted(models, key=lambda m: (order.get(m["reason"], 9),
+                                                      -m["hits"]))}
+             for mk, models in by_make.items()]
+    makes.sort(key=lambda m: -m["hits"])
+    return {"makes": makes}
+
+
+@app.get("/api/generations/{make}/{model}")
+def generations_for(make: str, model: str) -> dict:
+    """Researched generation lineup for one car, or researched:false."""
+    if not _SAFE_NAME.fullmatch(make.lower()):
+        raise HTTPException(400, f"malformed make: {make!r}")
+    found = gencat.read_generations(make, model, GENERATIONS_DIR)
+    if not found:
+        return {"make": gencat.slugify(make), "model": gencat.slugify(model),
+                "researched": False, "generations": []}
+    return {**found, "researched": True}
+
+
+def _agent_run(make: str, model: str, harness: str, prompt: str) -> str:
+    """Shared gate + spawn for both agent phases.
+
+    The only place the hub executes something other than `knowledge.ledger.run`,
+    so both inputs are locked: make/model are catalog-shaped identifiers passed
+    as argv (never interpolated into a shell), and the harness selects a fixed
+    argv template rather than supplying a command.
+    """
     if not _SAFE_NAME.fullmatch(make) or not _SAFE_NAME.fullmatch(model):
-        raise HTTPException(
-            400, "make/model must match [a-z0-9_] (1-40 chars)")
+        raise HTTPException(400, "make/model must match [a-z0-9_] (1-40 chars)")
     if harness not in HARNESSES:
         raise HTTPException(
             400, f"unknown harness: {harness!r} — one of {sorted(HARNESSES)}")
-
     binary = shutil.which(harness)
     if not binary:
         raise HTTPException(400, f"{harness} is not installed on this machine")
 
-    cmd = HARNESSES[harness](binary, ONBOARD_PROMPT.format(make=make, model=model))
+    cmd = HARNESSES[harness](binary, prompt)
     with _run_lock:
         old = RUN["proc"]
     if old and old.poll() is None:
         old.kill()
         old.wait()
-    return {"ok": True, "cmd": _spawn(cmd), "model_key": f"{make}_{model}"}
+    return _spawn(cmd)
+
+
+@app.post("/api/research-generations")
+def research_generations(payload: dict = Body(...)) -> dict:
+    """Phase 1: launch the agent to research which generations this car has.
+
+    Also the step that resolves a scraped display name ("VW CC 1.4 TSI") to a
+    real model slug — which is why it must run before anything can be picked.
+    """
+    make = str(payload.get("make", "")).strip().lower()
+    model = gencat.slugify(payload.get("model", ""))
+    harness = str(payload.get("harness", "opencode")).strip()
+    cmd = _agent_run(make, model, harness,
+                     GENERATIONS_PROMPT.format(make=make, model=model))
+    return {"ok": True, "cmd": cmd, "make": make, "model": model}
+
+
+@app.post("/api/onboard")
+def onboard(payload: dict = Body(...)) -> dict:
+    """Phase 2: launch the research agent against one model generation."""
+    make = str(payload.get("make", "")).strip().lower()
+    model = str(payload.get("model", "")).strip().lower()
+    harness = str(payload.get("harness", "opencode")).strip()
+
+    gen = payload.get("generation")
+    if gen not in (None, ""):
+        if isinstance(gen, bool) or not isinstance(gen, (int, str)):
+            raise HTTPException(400, "generation must be a positive integer")
+        try:
+            gen_n = int(gen)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "generation must be a positive integer")
+        if not 1 <= gen_n <= MAX_GENERATION:
+            raise HTTPException(
+                400, f"generation must be between 1 and {MAX_GENERATION}")
+        model = f"{model}_{gen_n}"
+
+    cmd = _agent_run(make, model, harness,
+                     ONBOARD_PROMPT.format(make=make, model=model))
+    return {"ok": True, "cmd": cmd, "model_key": f"{make}_{model}"}
 
 
 @app.get("/api/activity")
@@ -341,14 +430,29 @@ _PAGE = """<!doctype html>
   <h2>Onboard a model
     <span class="muted" id="onboard-state"></span></h2>
   <div class="onboard">
-    <input id="ob-make" placeholder="make (e.g. renault)" autocomplete="off">
-    <input id="ob-model" placeholder="model (e.g. captur_2)" autocomplete="off">
-    <select id="ob-harness">
-      <option value="opencode">opencode</option>
-      <option value="claude">claude code</option>
-    </select>
-    <button class="run" id="b-onboard">Onboard →</button>
-    <button class="run" id="b-onboard-stop">stop</button>
+    <div class="step">
+      <label>1 · Make <span class="muted">demand-ranked</span></label>
+      <div class="choices" id="pick-make"></div>
+    </div>
+    <div class="step" id="step-model" hidden>
+      <label>2 · Model</label>
+      <div class="choices" id="pick-model"></div>
+    </div>
+    <div class="step" id="step-gen" hidden>
+      <label>3 · Generation</label>
+      <div class="choices" id="pick-gen"></div>
+    </div>
+    <div class="step" id="step-go" hidden>
+      <label>4 · Run</label>
+      <div class="choices">
+        <select id="ob-harness">
+          <option value="opencode">opencode</option>
+          <option value="claude">claude code</option>
+        </select>
+        <button class="run go" id="b-onboard">Onboard →</button>
+        <button class="run" id="b-onboard-stop">stop</button>
+      </div>
+    </div>
   </div>
 
   <div class="split">
