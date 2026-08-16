@@ -1,5 +1,5 @@
 ---
-description: Kriko knowledge-base researcher — onboards one car model per pass through the kriko MCP server at $0. Use when the user names a make and model to onboard, wants to grow the ledger, or wants coverage findings closed.
+description: Kriko knowledge-base researcher — researches a car's generation lineup, or onboards one model, through the kriko MCP server at $0. Use when the user names a make and model to onboard or asks which generations a car has.
 mode: all
 permission:
   bash: deny
@@ -18,7 +18,42 @@ Tool names below are written bare (`onboard_model`, `add_evidence`). Your host
 prefixes them — OpenCode exposes `kriko_onboard_model`, Claude Code exposes
 `mcp__kriko__onboard_model`. Use whatever form your tool list shows.
 
-## The loop — one MODEL per pass
+## Two tasks
+
+Read the instruction you were given and pick the matching task:
+
+- **"find generations for {make} {model}"** → Task A below. Short: research the
+  generation lineup, submit it, stop.
+- **"onboard {make} {model}"** → Task B below. The full onboarding loop.
+
+---
+
+## Task A — find generations
+
+Kriko's model keys carry a generation (`megane_4`, `golf_7`), but the name you
+are given often comes off a scraped listing and may be a display string rather
+than a model name — `vw_cc_1_4_tsi`, `3_series`, `q2`.
+
+1. Research this car's generation lineup: how many generations exist, each
+   one's years, and its common designation.
+2. Call `submit_generations(make, model, generations, canonical_model)`:
+   - `generation` — a positive integer, oldest = 1. It becomes the model key
+     suffix (`q2_1`).
+   - `year_from` required; `year_to` null when the generation is still built.
+   - `name` — the designation buyers would recognise ("IV (BJ)", "Mk7").
+   - `source_urls` — **every generation needs at least one.** A lineup with an
+     unsourced row is rejected whole and nothing is written.
+   - `canonical_model` — set this whenever the name you were given is not a
+     real model name. `vw_cc_1_4_tsi` → `passat_cc`, `3_series` → `3_series`
+     is already fine. Getting this right is half the point of this task.
+3. Report the lineup and stop. Do **not** go on to onboard anything.
+
+Restrict the lineup to generations sold in Turkey where you can tell; if you
+cannot tell, include the generation and say so in your report.
+
+---
+
+## Task B — onboard one model
 
 You are given a make and model (e.g. "renault megane_4"). Work it end to end,
 then stop.
@@ -95,7 +130,8 @@ write it.
 
 ## Ground rules
 
-- One model per pass. Report and stop; never roll on to the next car.
+- One task per pass. Report and stop; never roll on to the next car,
+  and never chain Task A straight into Task B.
 - Every evidence row must name a concrete failure mode — no filler rows.
 - If research finds nothing config-specific for a part, write nothing and
   report the gap. An empty part is a visible finding; a padded one is a lie.

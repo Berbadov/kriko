@@ -24,7 +24,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from knowledge.catalog import model_state
+from knowledge.catalog import generations as gencat, model_state
 from knowledge.ledger import (
     cluster, db, export, remediate, resolve, verdict,
 )
@@ -34,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LEDGER_PATH = db.LEDGER_PATH
 EXPORT_DIR = REPO_ROOT / "knowledge" / "ledger_export"
 DATA_DIR = REPO_ROOT / "backend" / "data"
+GENERATIONS_DIR = gencat.GENERATIONS_DIR
 MAX_AGENT_SOURCES_PER_PART = 5  # per-part research budget for the agent loop
 
 mcp = FastMCP("kriko", instructions=(
@@ -300,6 +301,44 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
 
 def _model_key(make: str, model: str) -> str:
     return model_state.model_key(make, model)
+
+
+@mcp.tool()
+def list_generations(make: str, model: str) -> dict:
+    """Which generations of this car have been researched, and the model key to
+    onboard for each (`q2_1`, `q2_2`).
+
+    Resolves scraped display names through aliases, so "VW CC 1.4 TSI" finds
+    the lineup filed under its canonical slug. `researched: false` means nobody
+    has run generation research for this car yet — do that first."""
+    found = gencat.read_generations(make, model, GENERATIONS_DIR)
+    if not found:
+        return {"make": gencat.slugify(make),
+                "model": gencat.slugify(model),
+                "researched": False, "generations": []}
+    return {**found, "researched": True}
+
+
+@mcp.tool()
+def submit_generations(make: str, model: str, generations: list[dict],
+                       canonical_model: str = "") -> dict:
+    """Record the researched generation lineup for one car — phase 1 of
+    onboarding, before any trim or part work.
+
+    Each generation needs: `generation` (positive int — it becomes the model
+    key suffix), `year_from`, and at least one `source_urls` entry. Optional:
+    `name` (display label like "IV (BJ)") and `year_to` (null = still built).
+
+    Cite every generation. A lineup with an unsourced row is rejected whole and
+    nothing is written — the same rule as trims and evidence.
+
+    Pass `canonical_model` when the name you were given came off a scrape and
+    is not a real model name: the demand queue says "VW CC 1.4 TSI" and
+    "3 Series". Resolve those to `passat_cc`, `3_series` and pass it — the
+    queried name is kept as an alias so later lookups still resolve."""
+    return gencat.write_generations(make, model, generations,
+                                    GENERATIONS_DIR,
+                                    canonical_model=canonical_model)
 
 
 @mcp.tool()

@@ -252,3 +252,77 @@ def test_opencode_agent_is_launchable_as_primary():
             if l.startswith("mode:")]
     assert mode and mode[0] in ("primary", "all"), (
         f"mode={mode} — 'subagent' cannot be launched by `opencode run --agent`")
+
+
+# ── Top-down picker: demand → model → generation (B23) ───────────────────────
+
+
+def test_demand_endpoint_groups_by_make(client):
+    d = client.get("/api/demand").json()
+    assert isinstance(d["makes"], list)
+    for m in d["makes"]:
+        assert "make" in m and isinstance(m["models"], list)
+        for mod in m["models"]:
+            assert {"model", "slug", "hits", "reason"} <= set(mod)
+
+
+def test_demand_surfaces_not_onboarded_cars_first(client):
+    """The picker exists to onboard cars buyers hit that we don't cover."""
+    d = client.get("/api/demand").json()
+    reasons = [mod["reason"] for m in d["makes"] for mod in m["models"]]
+    assert "not_onboarded" in reasons
+
+
+def test_generations_endpoint_reports_unresearched(client):
+    d = client.get("/api/generations/audi/definitely_not_a_car").json()
+    assert d["researched"] is False
+    assert d["generations"] == []
+
+
+def test_generations_endpoint_rejects_a_malformed_make(client):
+    assert client.get("/api/generations/..%2Fetc/q2").status_code in (400, 404)
+
+
+def test_research_generations_spawns_the_agent(client, spawned):
+    r = client.post("/api/research-generations",
+                    json={"make": "audi", "model": "q2", "harness": "opencode"})
+    assert r.status_code == 200
+    assert len(spawned) == 1
+    assert any("generations" in a and "audi q2" in a for a in spawned[0])
+
+
+def test_research_generations_applies_the_same_gates(client, spawned):
+    assert client.post("/api/research-generations",
+                       json={"make": "audi; rm -rf /", "model": "q2",
+                             "harness": "opencode"}).status_code == 400
+    assert client.post("/api/research-generations",
+                       json={"make": "audi", "model": "q2",
+                             "harness": "bash"}).status_code == 400
+    assert spawned == []
+
+
+def test_onboard_appends_the_generation_to_the_model_key(client, spawned):
+    r = client.post("/api/onboard", json={"make": "audi", "model": "q2",
+                                          "generation": 1,
+                                          "harness": "opencode"})
+    assert r.status_code == 200
+    assert r.json()["model_key"] == "audi_q2_1"
+    assert any("audi q2_1" in a for a in spawned[0])
+
+
+def test_onboard_rejects_a_nonsense_generation(client, spawned):
+    for bad in (0, -1, "IV", 99):
+        assert client.post("/api/onboard",
+                           json={"make": "audi", "model": "q2",
+                                 "generation": bad,
+                                 "harness": "opencode"}).status_code == 400
+    assert spawned == []
+
+
+def test_onboard_without_a_generation_still_works(client, spawned):
+    """Already-keyed models (megane_4) carry their generation in the slug."""
+    r = client.post("/api/onboard", json={"make": "renault",
+                                          "model": "megane_4",
+                                          "harness": "opencode"})
+    assert r.status_code == 200
+    assert r.json()["model_key"] == "renault_megane_4"

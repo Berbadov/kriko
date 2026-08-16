@@ -209,9 +209,33 @@ the page.
 
 **The Models tab — drive and watch the agent from the browser**
 
-The onboarding control room. Type a make and model, pick a harness, hit
-**Onboard →**: the hub spawns the research agent and streams its output into
-the page. You never leave the browser.
+The onboarding control room — a top-down picker, no typing:
+
+**1 · Make → 2 · Model → 3 · Generation → 4 · Run.** Each step reveals the next.
+
+Makes and models are **not a maintained list** — they come from
+`GET /api/demand`, which mines `logs/analyses.jsonl` through
+`backend.tools.demand`. The buttons are the cars real buyers hit, ranked by
+hits, with `not_onboarded` first. You onboard what people actually search for.
+
+Generation can't come from traffic (listings carry a year, not a generation
+number), so it is **researched first**:
+
+1. Pick make + model → the Generation step says *not researched yet*.
+2. Hit **Find generations →**. The agent researches the lineup and calls
+   `submit_generations`; every generation must cite a source or the lineup is
+   rejected whole.
+3. Generation buttons appear — `I (GA) 2016–2024`, `II 2024–`. Pick one.
+4. **Onboard audi q2_1 →** runs the full onboarding loop against that key.
+
+That phase-1 step also **resolves scraped display names**. The demand queue
+says `vw_cc_1_4_tsi` and `3 Series`, which are not model names; the agent
+submits `canonical_model: passat_cc` and the queried name is kept as an alias,
+so the picker's dirty slug still resolves afterwards. Guessing that mapping in
+code would have been another hand-maintained car list.
+
+Lineups are written to `knowledge/catalog/generations/{make}_{model}.yaml` —
+machine-written from a validated payload, never hand-edited.
 
 - **Catalog** lists every car with its rollup — `5 researched / 0 empty / 7
   missing` — plus a `draft` count for rows with unsourced figures. Click one to

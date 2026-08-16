@@ -207,6 +207,14 @@ the scalability rule forbids. Now the researcher agent supplies the lineup:
   validation, so hosts are interchangeable and none can bypass the gates.
 - Agent loop is now **one model per pass** (was one part).
 
+- **Top-down picker** (2026-08-16): make → model → generation → run, no typing.
+  Makes/models come from the demand queue (`backend.tools.demand` over
+  `logs/analyses.jsonl`), `not_onboarded` first — traffic-derived, never a
+  maintained list. Generation is researched in a phase-1 agent pass
+  (`submit_generations` / `list_generations`, lineups in
+  `knowledge/catalog/generations/`), which also resolves scraped display names
+  (`vw_cc_1_4_tsi` → `passat_cc`) via `canonical_model` + aliases.
+
 - Hub **Models tab** (2026-08-16): onboarding control room — catalog rollup,
   per-model work list, draft rows with their missing figures, `POST /api/onboard`
   spawning opencode/Claude Code, and a live activity feed read off the *ledger*
