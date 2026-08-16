@@ -181,8 +181,77 @@ agent loop tested end-to-end: `add_document` (hash-idempotent) →
 (resolve/cluster/import-verdicts/export, logged `model=agent, usd=0`).
 Import-verdict predicate generalized `{0}` → `⊆ {0,1}`; LLM-eligible clusters
 still queue paid verdicts only for extractor-version-2 evidence.
-`pip install mcp>=1.0,<2.0` (2.0 dropped FastMCP). Remaining: wire
-`claude mcp add` when Claude Code is wanted.
+`pip install mcp>=1.0,<2.0` (2.0 dropped FastMCP). **Closed by B23** (harness
+wiring + model entry point); see `done.md`.
+
+### B23 — Agent-driven model onboarding: no hand-edited trim table `[G2][G3][G5]`
+**Landed 2026-08-16.** B21's agent could only start from a coverage finding that
+already named a `part_id`, so a car with **no scaffold** was unreachable, and
+scaffolding one meant a human editing `TR_MARKET_TRIMS` in
+`knowledge/catalog/write_variants.py` — the exact hand-enumerated per-model list
+the scalability rule forbids. Now the researcher agent supplies the lineup:
+
+- `write_variants.run(trims=...)` injection; `TR_MARKET_TRIMS` demoted to the CLI
+  fallback (row content verified byte-identical for every onboarded car).
+- `validate_trims()` — deterministic structural checks only. An unsourced figure
+  is **not** an error: the row is written `draft: true`, sync skips it, coverage
+  raises `draft_variant`. Fail open, never guess.
+- MCP `onboard_model()` (work list: scaffold state, draft rows, part codes tagged
+  missing/zero_claim/has_claims) and `submit_trims()` (validate → write variants +
+  fitment → record lineup sources as `spec` documents). 15 tools total.
+- `add_evidence()` verifies the quote is actually present in the submitted
+  document (casefold + whitespace-normalized) and **rejects** fabricated
+  citations. Previously `quote_grounded` was `bool(quote)` — any string passed.
+- Harnesses wired: `.mcp.json` (Claude Code) + `.claude/agents/kriko_research.md`
+  alongside opencode's; Codex/Cline snippets in USAGE §4e. The server owns
+  validation, so hosts are interchangeable and none can bypass the gates.
+- Agent loop is now **one model per pass** (was one part).
+
+- [ ] First live run: onboard a model with no scaffold end-to-end through a
+      subscription harness; confirm `SUM(usd) WHERE model='agent'` stays 0.
+- [ ] Re-onboard already-catalogued cars through the agent path, then delete their
+      `TR_MARKET_TRIMS` entries (the fallback keeps them working until then).
+
+### B22 — MCP-driven extraction: budget-capped paid tools on the MCP server `[G2][G5]` *(deprioritized 2026-08-16)*
+**Deprioritized by B23:** the point of the agent path is the $0 plane — a
+subscription harness doing the research is what makes onboarding cheap, so adding
+paid tools to the MCP surface works against it. Revisit only if subscription
+throughput (rate limits, session ceilings) proves insufficient in practice. The
+analysis below stands if that happens.
+
+`knowledge/mcp/server.py` (B21) is the **$0 plane by construction**: every write tool is
+deterministic or import-only, `add_evidence` writes `extractor_version=1` rows that skip
+the paid extractor, and `run_pipeline_pass` / `run_remediate_import_only` never spend
+tokens. The paid engine (chunked DeepSeek extraction, batched verdicts) is reachable only
+from the CLI (`python -m knowledge.ledger.run extract|verdict|remediate --max-usd`) and
+the hub Run buttons. There is **no plan for an MCP path to the paid stages** — this item
+is that decision + mechanism. Two options:
+
+- **Option A — one wrapper tool (recommended first step).** `kriko_remediate(max_usd,
+  dry_run=False)` calls the B19 loop unchanged (coverage findings → acquire → extract →
+  resolve → cluster → verdict → export; budget-capped, resumable, appends
+  `logs/remediation.jsonl`). Thin surface, reuses the tested driver; an agent closes
+  coverage gaps end-to-end at a capped cost. Limitation: coverage-driven — the agent
+  cannot say "extract *these* documents".
+- **Option B — stage tools.** `kriko_extract(max_usd)` + paid `kriko_verdict(max_usd)`
+  (verdicts only needed for the `extractor_version=2` evidence the extractor creates —
+  `extractor_version=1` rows already flow through deterministic import verdicts). Makes
+  extraction doc-driven: the agent commissions the real grounded extractor on documents
+  it found, instead of hand-writing evidence rows. Literal "MCP-driven extraction"; more
+  surface and per-stage budget bookkeeping. Natural follow-up on A — both stages already
+  exist as `run.py` commands.
+
+Mechanism constraints (G5 automation + generalization): budget is a **mandatory** tool
+parameter enforced server-side by the same `costs` charging the CLI uses (no unbudgeted
+spend, ever); paid agent runs log to `runs` (`model=agent`) so the hub cost panel stays
+honest; MCP tools call the same `run.py` entrypoints as the CLI — one code path, no
+second pipeline. Applies to all parts; no per-model logic.
+
+- [ ] Decide A vs B (recommendation: A first; B only if doc-driven extraction proves valuable).
+- [ ] Wire the tool(s) to the existing `run.py` entrypoints with `--max-usd` enforced server-side.
+- [ ] `kriko_research.md` contract: "never invoke paid stages" → "never exceed the passed budget".
+- [ ] Hub cost panel shows agent-paid spend (runs already carry `model=agent`; verify `usd > 0` renders).
+- [ ] Tests in `test_mcp_server.py`: budget-capped paid tool with a mocked LLM stage — cap honored, spend logged, dry-run free.
 
 ---
 
