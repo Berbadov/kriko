@@ -8,15 +8,19 @@ let state = null, logState = null;
 let selPart = '', selDoc = '', selTable = 'documents';
 let running = false, prevRunning = false, polling = false;
 let covLoaded = false;
-const TABS = ['overview', 'parts', 'sources', 'run', 'ledger', 'coverage'];
+const TABS = ['models', 'overview', 'parts', 'sources', 'run', 'ledger',
+  'coverage'];
+let curTab = 'models';
 
 function showTab(p) {
+  curTab = p;
   TABS.forEach(t => {
     $('#p-' + t).classList.toggle('on', t === p);
     document.querySelector('#nav button[data-p="' + t + '"]')
       .classList.toggle('on', t === p);
   });
   if (p === 'coverage' && !covLoaded) loadCoverage(false);
+  if (p === 'models') { loadModels(); loadActivity(); }
 }
 document.querySelectorAll('#nav button')
   .forEach(b => b.onclick = () => showTab(b.dataset.p));
@@ -133,6 +137,129 @@ async function loadCoverage(force) {
   }
 }
 
+// ── Models tab ───────────────────────────────────────────────────────────────
+//
+// The agent writes through MCP, so the ledger — not the harness's stdout — is
+// the authoritative record of what it is doing. The activity feed reads that,
+// which is why it works the same whichever harness is driving.
+
+let selModel = null;
+
+const STATE_LABEL = {
+  missing: 'missing', zero_claim: 'empty', has_claims: 'researched',
+};
+
+function pill(st, n) {
+  if (!n) return '';
+  return '<span class="pill p-' + st + '">' + n + ' ' + STATE_LABEL[st]
+    + '</span>';
+}
+
+async function loadModels() {
+  const d = await fetch('/api/models').then(r => r.json());
+  const html = d.models.map(m => {
+    const r = m.rollup;
+    const draft = m.variants_draft
+      ? '<span class="pill p-draft">' + m.variants_draft + ' draft</span>' : '';
+    return '<tr class="clickable" data-key="' + esc(m.model_key) + '">'
+      + '<td><b>' + esc(m.make) + '</b> ' + esc(m.model) + '</td>'
+      + '<td>' + m.variants + ' variants ' + draft + '</td>'
+      + '<td>' + pill('has_claims', r.has_claims) + pill('zero_claim', r.zero_claim)
+      + pill('missing', r.missing) + '</td></tr>';
+  }).join('');
+  $('#t-models').innerHTML = '<tbody>' + html + '</tbody>';
+  $('#t-models').querySelectorAll('tr[data-key]').forEach(tr => {
+    tr.onclick = () => loadModel(tr.dataset.key);
+  });
+  if (selModel) highlightModel();
+}
+
+function highlightModel() {
+  $('#t-models').querySelectorAll('tr[data-key]').forEach(tr => {
+    tr.classList.toggle('sel', tr.dataset.key === selModel);
+  });
+}
+
+async function loadModel(key) {
+  selModel = key;
+  highlightModel();
+  const r = await fetch('/api/model/' + encodeURIComponent(key));
+  if (!r.ok) {
+    $('#model-detail').innerHTML = '<div class="err">no such model</div>';
+    return;
+  }
+  const d = await r.json();
+  $('#md-title').textContent = 'Model detail — ' + d.model_key;
+
+  const scaffold = d.has_variants
+    ? '<span class="pill p-has_claims">scaffold ok</span>'
+    : '<span class="pill p-missing">no scaffold — agent must research the '
+      + 'trim lineup first</span>';
+
+  const parts = d.parts.length ? rows(['part', 'type', 'state', 'claims'],
+    d.parts.map(p => [p.part_id, p.part_type || '—',
+      '<span class="pill p-' + p.state + '">' + STATE_LABEL[p.state] + '</span>',
+      p.claims])) : '<p class="muted">No parts referenced yet.</p>';
+
+  const drafts = d.drafts.length ? rows(['draft variant', 'missing figures'],
+    d.drafts.map(x => [x.id, x.missing.join(', ') || '—']))
+    : '<p class="muted">No draft rows — every figure is sourced.</p>';
+
+  $('#model-detail').innerHTML = '<p>' + scaffold + ' · ' + d.variants
+    + ' variants, ' + d.variants_draft + ' draft</p>'
+    + '<h3>Parts</h3>' + parts
+    + '<h3>Draft rows <span class="muted">(unsourced figures — never guessed)'
+    + '</span></h3>' + drafts;
+}
+
+function actIcon(e) {
+  if (e.kind === 'document') return '<span class="act-doc">doc</span>';
+  const g = e.grounded ? '<span class="ok" title="quote verified against the '
+    + 'source">✓ grounded</span>'
+    : '<span class="warn" title="no verified quote">no quote</span>';
+  return '<span class="act-ev">evidence</span> ' + g;
+}
+
+async function loadActivity() {
+  const d = await fetch('/api/activity?limit=40').then(r => r.json());
+  if (!d.events.length) {
+    $('#activity').innerHTML = '<p class="muted">Nothing written yet.</p>';
+    return;
+  }
+  $('#activity').innerHTML = d.events.map(e =>
+    '<div class="act' + (e.by_agent ? ' by-agent' : '') + '">'
+    + '<div class="act-h">' + actIcon(e)
+    + (e.by_agent ? '<span class="pill p-agent">agent</span>' : '')
+    + '<span class="act-t">' + esc((e.at || '').replace('T', ' ').slice(0, 19))
+    + '</span></div>'
+    + '<div class="act-l">' + esc(e.label) + '</div>'
+    + '<div class="muted">' + esc(e.detail || '')
+    + (e.target ? ' → ' + esc(e.target) : '') + '</div></div>').join('');
+  $('#act-meta').textContent = d.events.length + ' recent';
+}
+
+async function doOnboard() {
+  const body = {
+    make: $('#ob-make').value.trim().toLowerCase(),
+    model: $('#ob-model').value.trim().toLowerCase(),
+    harness: $('#ob-harness').value,
+  };
+  $('#onboard-state').textContent = 'starting…';
+  const r = await fetch('/api/onboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok) {
+    $('#onboard-state').innerHTML = '<span class="err">' + esc(d.detail)
+      + '</span>';
+    return;
+  }
+  $('#onboard-state').textContent = 'running ' + body.harness + '…';
+  loadModel(d.model_key);
+}
+
 async function poll() {
   polling = true;
   try {
@@ -156,9 +283,27 @@ async function poll() {
     document.title = running ? '● kriko-hub — running' : 'kriko-hub';
     setRunButtons(!running);
 
+    // The agent's own output pane mirrors the shared run log — one run slot.
+    const obLog = $('#ob-log');
+    const obBottom = obLog.scrollTop + obLog.clientHeight
+      >= obLog.scrollHeight - 40;
+    obLog.textContent = l.buf;
+    if (obBottom) obLog.scrollTop = obLog.scrollHeight;
+    $('#ob-run-state').textContent = running ? 'running…'
+      : (l.cmd ? 'exit ' + (l.exit ?? '-') + ' · ' + l.cmd : '');
+
+    // Real-time view of what the agent is writing. Cheap queries, so they
+    // ride the poll while the Models tab is showing.
+    if (curTab === 'models') {
+      await Promise.all([loadActivity(), loadModels()]);
+      if (selModel) loadModel(selModel);
+    }
+
     if (prevRunning && !running) {  // a run just finished: refresh tables
       loadTable(selTable);
       if (covLoaded) loadCoverage(false);
+      if (curTab === 'models') $('#onboard-state').textContent =
+        l.exit ? 'agent exited ' + l.exit : 'agent finished';
     }
     prevRunning = running;
   } catch (e) {
@@ -202,6 +347,12 @@ $('#b-import').onclick = () => doRun(['verdict', '--import-only']);
 $('#b-remediate').onclick = () => doRun(['remediate']);
 $('#b-export').onclick = () => doRun(['export']);
 $('#b-cov').onclick = () => loadCoverage(true);
+$('#b-onboard').onclick = doOnboard;
+$('#b-onboard-stop').onclick = async () => {
+  await fetch('/api/stop', { method: 'POST' });
+};
+$('#ob-model').addEventListener('keydown',
+  e => { if (e.key === 'Enter') doOnboard(); });
 $('#b-stop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }); };
 $('#table-sel').addEventListener('change', e => loadTable(e.target.value));
 

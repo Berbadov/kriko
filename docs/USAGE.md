@@ -197,7 +197,8 @@ on WSLg was slow and broken):
 .venv/bin/python -m knowledge.hub.web     # then open http://127.0.0.1:8787
 ```
 
-Tabs: Overview (ledger counts, spend plot, cost-to-finish, recent runs),
+Tabs: **Models** (default — onboarding control room, below), Overview (ledger
+counts, spend plot, cost-to-finish, recent runs),
 Parts (part → claims/variants), Sources (documents → raw text), Run
 (buttons: extract with a `--max-usd` cap, import verdicts, full $0 pass,
 remediate, export, stop — output streams live), Ledger (generic read-only
@@ -205,6 +206,34 @@ SQLite browser), Coverage (findings). The browser polls state every second,
 so agent-driven work appears live. The API is `127.0.0.1`-only, no auth.
 Run `GET /api/state` for a JSON snapshot if you ever want the data without
 the page.
+
+**The Models tab — drive and watch the agent from the browser**
+
+The onboarding control room. Type a make and model, pick a harness, hit
+**Onboard →**: the hub spawns the research agent and streams its output into
+the page. You never leave the browser.
+
+- **Catalog** lists every car with its rollup — `5 researched / 0 empty / 7
+  missing` — plus a `draft` count for rows with unsourced figures. Click one to
+  load its work list.
+- **Live activity** is the real-time view of what the agent is doing. It reads
+  the **ledger**, not the harness's stdout: every agent action goes through an
+  MCP write tool, so this works identically whichever harness is driving, and
+  each evidence row shows `✓ grounded` only when its quote was verified against
+  the stored source.
+- **Model detail** shows the part work list (researched/empty/missing with claim
+  counts) and every draft row with the exact figures that are missing.
+
+Two safety notes on the Onboard button, since it is the only place the hub runs
+something other than `knowledge.ledger.run`: make/model must match
+`[a-z0-9_]{1,40}` (argv only, never a shell), and the harness selects a fixed
+argv template rather than supplying a command. The hub still has one run slot,
+so starting an onboarding stops any active pipeline run.
+
+> The opencode agent declares `mode: all` deliberately. With `mode: subagent`,
+> `opencode run --agent kriko_research` silently falls back to the default
+> `build` agent — which has bash and edit permissions the researcher is denied.
+> `test_opencode_agent_is_launchable_as_primary` guards against that regression.
 
 **Step 4e — LLM-driven control: the kriko MCP server + kriko_research agent**
 

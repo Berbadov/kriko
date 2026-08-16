@@ -127,3 +127,128 @@ def test_stop_idempotent(client):
     r = client.post("/api/stop")
     assert r.status_code == 200
     assert "stopped" in r.json()
+
+
+# ── Models tab: onboarding state + agent driver (B23) ────────────────────────
+
+
+def test_models_endpoint_lists_catalogued_cars(client):
+    d = client.get("/api/models").json()
+    assert isinstance(d["models"], list) and d["models"]
+    m = d["models"][0]
+    for k in ("model_key", "make", "model", "variants", "variants_draft",
+              "rollup"):
+        assert k in m
+    assert set(m["rollup"]) == {"missing", "zero_claim", "has_claims"}
+
+
+def test_model_detail_returns_the_work_list(client):
+    key = client.get("/api/models").json()["models"][0]["model_key"]
+    d = client.get(f"/api/model/{key}").json()
+    assert d["model_key"] == key
+    assert d["has_variants"] is True
+    assert isinstance(d["parts"], list)
+    assert all(p["state"] in ("missing", "zero_claim", "has_claims")
+               for p in d["parts"])
+
+
+def test_model_detail_rejects_a_malformed_key(client):
+    assert client.get("/api/model/nope").status_code == 400
+    assert client.get("/api/model/..%2F..%2Fetc").status_code in (400, 404)
+
+
+# The onboard endpoint turns a text box into a subprocess. These are the gates.
+
+
+@pytest.fixture
+def spawned(monkeypatch):
+    calls = []
+    monkeypatch.setattr(web, "_spawn", lambda cmd: calls.append(cmd) or " ".join(cmd))
+    return calls
+
+
+def test_onboard_spawns_the_agent_for_a_valid_model(client, spawned):
+    r = client.post("/api/onboard", json={"make": "renault",
+                                          "model": "megane_4",
+                                          "harness": "opencode"})
+    assert r.status_code == 200
+    assert len(spawned) == 1
+    argv = spawned[0]
+    assert Path(argv[0]).name == "opencode"  # resolved to an absolute binary
+    assert "kriko_research" in argv
+    assert any("renault megane_4" in a for a in argv)
+
+
+def test_onboard_supports_claude_code(client, spawned):
+    r = client.post("/api/onboard", json={"make": "renault", "model": "clio_5",
+                                          "harness": "claude"})
+    assert r.status_code == 200
+    assert Path(spawned[0][0]).name == "claude"
+
+
+def test_onboard_rejects_shell_metacharacters(client, spawned):
+    r = client.post("/api/onboard", json={"make": "renault; rm -rf /",
+                                          "model": "clio_5",
+                                          "harness": "opencode"})
+    assert r.status_code == 400
+    assert spawned == []
+
+
+def test_onboard_rejects_path_traversal(client, spawned):
+    r = client.post("/api/onboard", json={"make": "../../etc",
+                                          "model": "passwd",
+                                          "harness": "opencode"})
+    assert r.status_code == 400
+    assert spawned == []
+
+
+def test_onboard_rejects_an_unknown_harness(client, spawned):
+    r = client.post("/api/onboard", json={"make": "renault", "model": "clio_5",
+                                          "harness": "bash"})
+    assert r.status_code == 400
+    assert spawned == []
+
+
+def test_onboard_rejects_empty_fields(client, spawned):
+    assert client.post("/api/onboard", json={"make": "", "model": "clio_5",
+                                             "harness": "opencode"}
+                       ).status_code == 400
+    assert spawned == []
+
+
+# Real-time visibility: the agent writes through MCP, so every action it takes
+# leaves a ledger row. The feed reads those, not the harness's stdout.
+
+
+def test_activity_feed_returns_recent_ledger_writes(client):
+    d = client.get("/api/activity").json()
+    assert isinstance(d["events"], list)
+    for e in d["events"]:
+        assert e["kind"] in ("document", "evidence")
+        assert "at" in e and "label" in e
+
+
+def test_activity_feed_marks_agent_authored_evidence(client):
+    d = client.get("/api/activity?limit=200").json()
+    ev = [e for e in d["events"] if e["kind"] == "evidence"]
+    if ev:
+        assert all("by_agent" in e for e in ev)
+
+
+def test_activity_feed_limit_is_bounded(client):
+    d = client.get("/api/activity?limit=100000").json()
+    assert len(d["events"]) <= web.MAX_ACTIVITY
+
+
+def test_opencode_agent_is_launchable_as_primary():
+    """Regression guard, 2026-08-16: `opencode run --agent kriko_research`
+    silently FELL BACK to the default `build` agent when the file declared
+    `mode: subagent` — so the hub's Onboard button launched an unrestricted
+    agent (bash+edit allowed) instead of the sandboxed researcher. Only
+    `primary` or `all` is directly launchable."""
+    fm = (Path(__file__).resolve().parents[2] / ".opencode" / "agents"
+          / "kriko_research.md").read_text().split("---")[1]
+    mode = [l.split(":", 1)[1].strip() for l in fm.splitlines()
+            if l.startswith("mode:")]
+    assert mode and mode[0] in ("primary", "all"), (
+        f"mode={mode} — 'subagent' cannot be launched by `opencode run --agent`")
