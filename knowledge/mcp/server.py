@@ -225,6 +225,24 @@ def add_document(url: str, source_type: str, raw_text: str,
         conn.close()
 
 
+def _normalize(text: str) -> str:
+    """Casefold + collapse whitespace, so a quote copied across a line wrap or
+    with a different case still matches the source it came from."""
+    return " ".join(text.split()).casefold()
+
+
+def _quote_grounded(quote: str, raw_text: str) -> bool:
+    """Is this quote actually present in the document it claims to come from?
+
+    The whole trust model of agent-supplied research rests here: without it,
+    `quote_grounded` was just `bool(quote)` and a fabricated citation was
+    indistinguishable from a real one downstream.
+    """
+    if not quote.strip():
+        return False
+    return _normalize(quote) in _normalize(raw_text)
+
+
 @mcp.tool()
 def add_evidence(doc_id: int, title: str, severity: str = "medium",
                  domain: str = "general", rationale: str = "",
@@ -232,7 +250,12 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
                  component_hint: str | None = None) -> dict:
     """Write one agent-authored evidence row (extractor_version=1). Idempotent
     per (doc_id, title): a repeated write returns the existing evidence id.
-    severity is one of low|medium|high."""
+    severity is one of low|medium|high.
+
+    `quote` must be copied VERBATIM from the document's raw_text (whitespace
+    and case may differ, nothing else). A quote that is not in the document is
+    rejected and nothing is written — you cannot cite what you did not read.
+    An omitted quote is allowed; the row is simply stored ungrounded."""
     if severity not in ("low", "medium", "high"):
         return {"error": "severity must be low|medium|high"}
     conn = _conn()
@@ -242,21 +265,154 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
             (doc_id, title)).fetchone()
         if existing:
             return {"evidence_id": existing["id"], "created": False}
-        if not conn.execute("SELECT 1 FROM documents WHERE id=?",
-                            (doc_id,)).fetchone():
+        doc = conn.execute("SELECT raw_text FROM documents WHERE id=?",
+                           (doc_id,)).fetchone()
+        if not doc:
             return {"error": "no such document"}
+
+        grounded = _quote_grounded(quote, doc["raw_text"] or "")
+        if quote.strip() and not grounded:
+            return {"error": "quote not found in document text — copy it "
+                             "verbatim from the raw_text you submitted, or "
+                             "omit it", "doc_id": doc_id, "quote": quote}
+
         ev_id = db.insert_evidence(
             conn, doc_id=doc_id,
             claim={"title": title, "domain": domain, "severity": severity,
                    "rationale": rationale,
                    "inspection_advice": inspection_advice, "quote": quote,
                    "engine_or_variant_hint": component_hint,
-                   "quote_grounded": bool(quote)},
+                   "quote_grounded": grounded},
             span_start=None, span_end=None,
             extractor_version=verdict.AGENT_EXTRACTOR_VERSION)
-        return {"evidence_id": ev_id, "created": True}
+        return {"evidence_id": ev_id, "created": True, "quote_grounded": grounded}
     finally:
         conn.close()
+
+
+# ── Model onboarding (B23) ────────────────────────────────────────────────────
+#
+# The agent's entry point. Before this, research could only start from a
+# coverage finding that already named a part_id — so a car with no scaffold at
+# all was unreachable, and scaffolding it meant a human hand-editing
+# TR_MARKET_TRIMS. Now the agent researches the lineup and submits it.
+
+# The variant columns that name a part to research. Same axes the fitment file
+# projects, so the work list is derived from the catalog, never enumerated.
+_PART_AXES = ("engine_family", "transmission_code", "electrical_code", "body_code")
+
+# Placeholder codes that are engineering vocabulary, not a researchable part.
+_PSEUDO_PART_CODES = {"manual", ""}
+
+
+def _model_key(make: str, model: str) -> str:
+    return f"{make.lower()}_{model.lower()}"
+
+
+def _part_work_list(variant_rows: list[dict]) -> list[dict]:
+    """Every part code the variants reference, tagged with what it still needs."""
+    known = {p["part_id"]: p for p in _parts(DATA_DIR)}
+    codes: dict[str, set[str]] = {}
+    for row in variant_rows:
+        for axis in _PART_AXES:
+            code = (row.get(axis) or "").strip()
+            if code and code not in _PSEUDO_PART_CODES:
+                codes.setdefault(code, set()).add(axis)
+
+    out = []
+    for code in sorted(codes):
+        part = known.get(code)
+        if part is None:
+            state, claims, part_type = "missing", 0, ""
+        elif part["claims"] == 0:
+            state, claims, part_type = "zero_claim", 0, part["part_type"]
+        else:
+            state, claims, part_type = "has_claims", part["claims"], part["part_type"]
+        out.append({"part_id": code, "part_type": part_type, "state": state,
+                    "claims": claims, "axes": sorted(codes[code])})
+    return out
+
+
+@mcp.tool()
+def onboard_model(make: str, model: str) -> dict:
+    """The work list for one car. Reports whether the variants/fitment scaffold
+    exists, which variant rows are still draft (a figure nobody could source),
+    and every part code those rows reference tagged `missing` (no YAML at all),
+    `zero_claim` (stub with no claims — research it) or `has_claims`.
+
+    Call this first. If `has_variants` is false, research the TR-market trim
+    lineup and call submit_trims before researching any part."""
+    import yaml
+    key = _model_key(make, model)
+    v_path = DATA_DIR / "variants" / f"{key}.yaml"
+    f_path = DATA_DIR / "fitment" / f"{key}.yaml"
+
+    rows: list[dict] = []
+    if v_path.exists():
+        rows = yaml.safe_load(v_path.read_text()) or []
+
+    findings = [f for f in coverage_report()
+                if key in (f.get("subject") or "")
+                or (f.get("part_id") or "") in {r.get("engine_family") for r in rows}]
+
+    return {
+        "model_key": key,
+        "has_variants": v_path.exists(),
+        "has_fitment": f_path.exists(),
+        "variants": len(rows),
+        "variants_draft": sum(1 for r in rows if r.get("draft")),
+        "draft_ids": [r["id"] for r in rows if r.get("draft")],
+        "parts": _part_work_list(rows),
+        "coverage_findings": findings,
+    }
+
+
+@mcp.tool()
+def submit_trims(make: str, model: str, trims: list[dict],
+                 source_urls: list[str] | None = None) -> dict:
+    """Write the variants + fitment scaffold for a model from a researched
+    TR-market trim lineup. Replaces the hand-edited TR_MARKET_TRIMS table.
+
+    Each trim needs: id, engine_code, engine_family, fuel, transmission,
+    transmission_code, year_from. Optional: generation, displacement_cc,
+    power_min_hp, power_max_hp, year_to, notes, drivetrain, emissions.
+
+    OMIT any figure you could not source — do not estimate. A row missing
+    displacement or power is written `draft: true`, kept out of serving, and
+    surfaced in the coverage report until someone can source it. Rows that
+    fail structural validation are rejected and NOTHING is written.
+
+    Pass the pages you took the lineup from as `source_urls` so the scaffold
+    stays traceable."""
+    from knowledge.catalog import write_variants as wv
+
+    if not trims:
+        return {"errors": ["no trims supplied"]}
+    errors = wv.validate_trims(trims)
+    if errors:
+        return {"errors": errors, "rows_written": 0}
+
+    summary = wv.run(make, model, trims=trims,
+                     variants_dir=DATA_DIR / "variants",
+                     fitment_dir=DATA_DIR / "fitment")
+
+    key = _model_key(make, model)
+    recorded = 0
+    conn = _conn()
+    try:
+        for url in source_urls or []:
+            if not url.strip():
+                continue
+            db.insert_document(conn, url=url, source_type="spec",
+                               raw_text=f"Trim lineup source for {key}: {url}",
+                               site_or_channel="", lang="", target_hint=key)
+            recorded += 1
+    finally:
+        conn.close()
+
+    return {**summary, "errors": [], "sources_recorded": recorded,
+            "parts": _part_work_list(wv.build_rows(
+                make, model, trims, wv._SHARED_CODES.get(key, {})))}
 
 
 def _pipeline_pass(conn) -> dict:

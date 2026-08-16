@@ -226,14 +226,40 @@ def _evidence_versions(conn, cluster_id: int) -> set[int]:
 
 
 def pending_clusters(conn) -> list[tuple[int, dict, str]]:
+    """Clusters without a stored verdict, as (cluster_id, payload, hash).
+
+    Batched (3 queries total, not 3 per cluster): the per-cluster path cost
+    ~3k queries on a 1.1k-cluster ledger (~1.8s) and ran once per pipeline
+    pass plus once per hub poll. Payloads are byte-identical to
+    cluster_payload() — the verdict content-hash cache depends on that.
+    """
+    clusters = conn.execute(
+        "SELECT id, component_id, domain FROM clusters ORDER BY id").fetchall()
+    if not clusters:
+        return []
+    members: dict[int, list[dict]] = {}
+    for r in conn.execute(
+            "SELECT m.cluster_id, e.title, e.rationale, e.inspection_advice,"
+            " e.severity, e.quote, e.component_hint, d.url, d.site_or_channel,"
+            " d.source_type, d.target_hint"
+            " FROM cluster_members m JOIN evidence e ON e.id = m.evidence_id"
+            " JOIN documents d ON d.id = e.doc_id"
+            " ORDER BY m.cluster_id, e.id"):
+        row = dict(r)
+        members.setdefault(row.pop("cluster_id"), []).append(row)
+    done = {r["input_hash"] for r in
+            conn.execute("SELECT input_hash FROM verdicts")}
     out = []
-    for row in conn.execute("SELECT id FROM clusters ORDER BY id"):
-        payload = cluster_payload(conn, row["id"])
+    for cl in clusters:
+        payload = {
+            "component_id": cl["component_id"],
+            "domain": cl["domain"],
+            "sibling_codes": sorted(sibling_codes_for(cl["component_id"])),
+            "evidence": members.get(cl["id"], []),
+        }
         h = input_hash(payload)
-        hit = conn.execute(
-            "SELECT 1 FROM verdicts WHERE input_hash=?", (h,)).fetchone()
-        if not hit:
-            out.append((row["id"], payload, h))
+        if h not in done:
+            out.append((cl["id"], payload, h))
     return out
 
 
@@ -242,8 +268,15 @@ def _est_usd(todo) -> float:
                for _, p, _ in todo)
 
 
-def pending_verdict_estimate(conn) -> tuple[int, float]:
-    todo = pending_clusters(conn)
+def pending_verdict_estimate(conn, todo: list | None = None
+                             ) -> tuple[int, float]:
+    """(pending cluster count, estimated USD) for the remaining verdicts.
+
+    `todo` may be a precomputed pending_clusters() list — callers that need
+    both the list and the estimate (hub metrics, MCP server) pass it in so
+    the expensive payload hashing runs once, not twice."""
+    if todo is None:
+        todo = pending_clusters(conn)
     return len(todo), _est_usd(todo)
 
 

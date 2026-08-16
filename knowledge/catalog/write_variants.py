@@ -168,6 +168,95 @@ _SHARED_CODES: dict[str, dict[str, str]] = {
 }
 
 
+# ── Trim validation (B23: agent-supplied trims) ──────────────────────────────
+#
+# Closed engineering vocabularies, not car-coverage data — allowed as constants
+# under CLAUDE.md's scalability-rule exception. They do not grow when a new
+# model is onboarded; only TR_MARKET_TRIMS did, which is exactly why an agent
+# now supplies those rows instead of a human editing this file.
+_VALID_FUELS = {"petrol", "diesel", "hybrid", "lpg", "electric"}
+_VALID_TRANSMISSIONS = {"manual", "automatic"}
+_VALID_EMISSIONS = {"euro4", "euro5", "euro6b", "euro6c", "euro6d", "euro6d_temp"}
+
+# Identity: without these a row cannot be resolved to a part or matched to a
+# listing, so a missing one is a hard error rather than a fail-open gap.
+_REQUIRED_TRIM_KEYS = ("id", "engine_code", "engine_family", "fuel",
+                       "transmission", "transmission_code", "year_from")
+
+# Figures that fail open. The agent omits what it cannot source; the row is
+# written `draft: true`, backend/sync.py skips it, and the coverage report
+# raises `draft_variant`. Never guessed (CLAUDE.md automation principle).
+_SOURCED_FIGURES = ("displacement_cc", "power_min_hp", "power_max_hp")
+
+
+def validate_trims(trims: list[dict]) -> list[str]:
+    """Deterministic structural check on agent-supplied trim rows.
+
+    Returns a list of human-readable errors; empty means the rows are safe to
+    build. Only catches what a rule can decide — whether a K9K really made
+    110hp in Turkey is not knowable here, so an unsourced figure is a draft
+    row, not an error.
+    """
+    errors: list[str] = []
+    seen: set[str] = set()
+    for i, t in enumerate(trims):
+        where = t.get("id") or f"trim[{i}]"
+
+        for key in _REQUIRED_TRIM_KEYS:
+            if t.get(key) in (None, ""):
+                errors.append(f"{where}: missing required key {key!r}")
+
+        if (tid := t.get("id")) in seen:
+            errors.append(f"{where}: duplicate trim id")
+        elif tid:
+            seen.add(tid)
+
+        if (fuel := t.get("fuel")) and fuel not in _VALID_FUELS:
+            errors.append(
+                f"{where}: fuel {fuel!r} not one of {sorted(_VALID_FUELS)}")
+
+        if (tx := t.get("transmission")) and tx not in _VALID_TRANSMISSIONS:
+            errors.append(
+                f"{where}: transmission {tx!r} not one of "
+                f"{sorted(_VALID_TRANSMISSIONS)}")
+
+        y_from, y_to = t.get("year_from"), t.get("year_to")
+        if y_from is not None and y_to is not None and y_to < y_from:
+            errors.append(f"{where}: year_to {y_to} precedes year_from {y_from}")
+
+        lo, hi = t.get("power_min_hp"), t.get("power_max_hp")
+        if lo is not None and hi is not None and hi < lo:
+            errors.append(f"{where}: power_max_hp {hi} below power_min_hp {lo}")
+
+        errors.extend(_emissions_errors(where, t.get("emissions")))
+    return errors
+
+
+def _emissions_errors(where: str, em) -> list[str]:
+    """Validate `emissions` in either shape: a plain era or year-split segments."""
+    if em is None:
+        return []
+    if isinstance(em, str):
+        return ([] if em in _VALID_EMISSIONS else
+                [f"{where}: emissions {em!r} not one of {sorted(_VALID_EMISSIONS)}"])
+    if not isinstance(em, list):
+        return [f"{where}: emissions must be a string or a list of segments"]
+
+    errors = []
+    for seg in em:
+        if not isinstance(seg, dict):
+            errors.append(f"{where}: emissions segment must be a mapping")
+            continue
+        value = seg.get("emissions")
+        if value not in _VALID_EMISSIONS:
+            errors.append(
+                f"{where}: segment emissions {value!r} not one of "
+                f"{sorted(_VALID_EMISSIONS)}")
+        if seg.get("year_from") is None:
+            errors.append(f"{where}: emissions segment missing year_from")
+    return errors
+
+
 def _cross_check(make: str, model: str, trims: list[dict]) -> None:
     """Warn (don't block) if a trim's engine code isn't in Wikipedia's discovered list."""
     try:
@@ -260,23 +349,29 @@ def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str])
                 "id": _segment_id(t["id"], seg["emissions"]) if split else t["id"],
                 "make": make_key,
                 "model": model_key,
-                "generation": t["generation"],
+                "generation": t.get("generation"),
                 "engine_code": t["engine_code"],
                 "engine_family": t["engine_family"],
                 "fuel": t["fuel"],
-                "displacement_cc": t["displacement_cc"],
-                "power_min_hp": t["power_min_hp"],
-                "power_max_hp": t["power_max_hp"],
+                "displacement_cc": t.get("displacement_cc"),
+                "power_min_hp": t.get("power_min_hp"),
+                "power_max_hp": t.get("power_max_hp"),
                 "transmission": t["transmission"],
                 "transmission_code": t["transmission_code"],
                 "electrical_code": shared.get("electrical_code", ""),
                 "year_from": seg["year_from"],
                 "year_to": seg["year_to"],
                 "market": "TR",
-                "notes": t["notes"],
+                "notes": t.get("notes", ""),
                 "body_code": shared.get("body_code", ""),
                 "drivetrain": t.get("drivetrain", "fwd"),
             }
+            # Fail open on figures the researcher could not source: mark the row
+            # draft rather than guess. sync skips it, coverage reports it. Rows
+            # that carry every figure are untouched — no `draft` key at all —
+            # so the hardcoded TR_MARKET_TRIMS path emits identical YAML.
+            if any(t.get(f) is None for f in _SOURCED_FIGURES):
+                row["draft"] = True
             # B11: emissions/aftertreatment — see the SCR-gate spec §2. `emissions`
             # is per-trim data (grows with coverage); `aftertreatment` is derived
             # from fuel+emissions by the closed engineering rule, unless the
@@ -330,9 +425,10 @@ def build_fitment_rows(variant_rows: list[dict]) -> list[dict]:
     ]
 
 
-def _write_fitment(key: str, variant_rows: list[dict], dry_run: bool) -> None:
+def _write_fitment(key: str, variant_rows: list[dict], dry_run: bool,
+                   fitment_dir: Path | None = None) -> None:
     """Add fitment rows for any variant that doesn't have one yet (additive)."""
-    path = FITMENT_DIR / f"{key}.yaml"
+    path = (fitment_dir or FITMENT_DIR) / f"{key}.yaml"
     existing: list[dict] = []
     if path.exists():
         existing = yaml.safe_load(path.read_text()) or []
@@ -343,7 +439,7 @@ def _write_fitment(key: str, variant_rows: list[dict], dry_run: bool) -> None:
         return
 
     print(f"{'Would add' if dry_run else 'Adding'} {len(to_add)} fitment row(s) to "
-          f"{path.relative_to(REPO_ROOT)}:")
+          f"{_display(path)}:")
     for r in to_add:
         print(f"  {r['variant_id']}: engine={r.get('engine_family')} "
               f"tx={r.get('transmission_code')}")
@@ -351,25 +447,44 @@ def _write_fitment(key: str, variant_rows: list[dict], dry_run: bool) -> None:
         return
 
     path.write_text(yaml.dump(existing + to_add, allow_unicode=True, sort_keys=False))
-    print(f"Wrote {path.relative_to(REPO_ROOT)}")
+    print(f"Wrote {_display(path)}")
 
 
-def run(make: str, model: str, dry_run: bool = False) -> None:
+def _display(path: Path) -> str:
+    """Repo-relative path when it is under the repo, absolute otherwise."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def run(make: str, model: str, trims: list[dict] | None = None,
+        dry_run: bool = False, variants_dir: Path | None = None,
+        fitment_dir: Path | None = None) -> dict:
+    """Write the variants + fitment YAML for a model.
+
+    `trims` is the TR-market trim lineup. When omitted it falls back to the
+    hardcoded TR_MARKET_TRIMS table (the CLI path, unchanged). A researcher
+    agent supplies it instead via the MCP `submit_trims` tool, which is how a
+    model gets onboarded without anyone hand-editing this file.
+
+    Returns a summary so callers can report what landed and what stayed draft.
+    """
     key = f"{make.lower()}_{model.lower()}"
-    trims = TR_MARKET_TRIMS.get(key)
+    if trims is None:
+        trims = TR_MARKET_TRIMS.get(key)
     if not trims:
         raise SystemExit(
-            f"No TR-market trim data for {key!r}. Add an entry to TR_MARKET_TRIMS "
-            f"in {__file__} first — this is deliberately hand-authored domain "
-            f"knowledge (Wikipedia doesn't know which trims TR got), not something "
-            f"this script can infer."
+            f"No TR-market trim data for {key!r}. Either pass trims= (the agent "
+            f"path — see knowledge/mcp/server.py submit_trims) or add an entry "
+            f"to TR_MARKET_TRIMS in {__file__}."
         )
 
     _cross_check(make, model, trims)
     shared = _SHARED_CODES.get(key, {})
     new_rows = build_rows(make, model, trims, shared)
 
-    path = VARIANTS_DIR / f"{key}.yaml"
+    path = (variants_dir or VARIANTS_DIR) / f"{key}.yaml"
     existing: list[dict] = []
     if path.exists():
         existing = yaml.safe_load(path.read_text()) or []
@@ -377,26 +492,29 @@ def run(make: str, model: str, dry_run: bool = False) -> None:
     existing_ids = {r["id"] for r in existing}
     to_add = [r for r in new_rows if r["id"] not in existing_ids]
     skipped = [r["id"] for r in new_rows if r["id"] in existing_ids]
+    summary = {"rows_written": len(to_add), "rows_skipped": len(skipped),
+               "rows_draft": sum(1 for r in new_rows if r.get("draft")),
+               "path": _display(path)}
 
     # Fitment is a projection of the variants, and is emitted even when no new
     # variant rows are added — a variant already in the catalog can still be
     # MISSING its fitment row (it then matches a listing and serves no claims).
-    _write_fitment(key, new_rows, dry_run)
+    _write_fitment(key, new_rows, dry_run, fitment_dir)
 
     if not to_add:
         print(f"No new rows — all {len(new_rows)} variant(s) already present in {path}")
-        return
+        return summary
 
     if skipped:
         print(f"Skipping {len(skipped)} already-present id(s): {', '.join(skipped)}")
 
-    print(f"{'Would add' if dry_run else 'Adding'} {len(to_add)} variant(s) to {path.relative_to(REPO_ROOT)}:")
+    print(f"{'Would add' if dry_run else 'Adding'} {len(to_add)} variant(s) to {_display(path)}:")
     for r in to_add:
         print(f"  {r['id']}: {r['engine_code']} {r['fuel']} {r['displacement_cc']}cc "
               f"{r['power_min_hp']}-{r['power_max_hp']}hp {r['transmission']} ({r['transmission_code']})")
 
     if dry_run:
-        return
+        return summary
 
     combined = existing + to_add
     header = ""
@@ -414,7 +532,8 @@ def run(make: str, model: str, dry_run: bool = False) -> None:
         )
     path.write_text(header + yaml.dump(combined, allow_unicode=True, sort_keys=False))
 
-    print(f"Wrote {path.relative_to(REPO_ROOT)}")
+    print(f"Wrote {_display(path)}")
+    return summary
 
 
 def main() -> None:
