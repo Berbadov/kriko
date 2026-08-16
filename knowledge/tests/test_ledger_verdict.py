@@ -87,6 +87,17 @@ def test_input_hash_stable_and_content_sensitive(conn):
     assert verdict.input_hash(p) != verdict.input_hash(p2)
 
 
+def test_pending_clusters_batched_matches_cluster_payload(conn):
+    """Batched pending_clusters (2026-08-04, 3 queries instead of 3/cluster)
+    must emit payloads byte-identical to cluster_payload — the verdict
+    content-hash cache depends on the equivalence."""
+    todo = {cid: p for cid, p, _ in verdict.pending_clusters(conn)}
+    assert todo  # the fixture cluster is pending (no verdict stored)
+    for cid, p in todo.items():
+        assert verdict.input_hash(p) == verdict.input_hash(
+            verdict.cluster_payload(conn, cid))
+
+
 class _FakeUsage:
     def __init__(self, prompt_tokens=1000, completion_tokens=200):
         self.prompt_tokens = prompt_tokens

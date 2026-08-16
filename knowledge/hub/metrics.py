@@ -7,14 +7,10 @@ hub is the number the budget caps enforce.
 """
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
-from knowledge.ledger import db, verdict
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+from knowledge.ledger import verdict
+from knowledge.yamlutil import load_yaml
 
 
 def ledger_counts(conn) -> dict:
@@ -39,9 +35,10 @@ def spend(conn) -> dict:
 def pending(conn) -> dict:
     from knowledge.ledger.extraction import pending_extraction_estimate
     chunks, usd_extract = pending_extraction_estimate(conn)
-    n, usd_verdict = verdict.pending_verdict_estimate(conn)
+    todo = verdict.pending_clusters(conn)
+    n, usd_verdict = verdict.pending_verdict_estimate(conn, todo)
     import_ready = llm = 0
-    for cid, payload, h in verdict.pending_clusters(conn):
+    for cid, _payload, _h in todo:
         if verdict._evidence_versions(conn, cid) <= verdict.DETERMINISTIC_VERSIONS:
             import_ready += 1
         else:
@@ -52,14 +49,10 @@ def pending(conn) -> dict:
 
 
 def parts(data_dir: Path) -> list[dict]:
-    import yaml
     out = []
     for path in sorted((data_dir / "parts").rglob("*.yaml")):
-        try:
-            data = yaml.safe_load(path.read_text()) or {}
-        except yaml.YAMLError:
-            continue
-        if not isinstance(data, dict) or not data.get("part_id"):
+        data = load_yaml(path)
+        if not data.get("part_id"):
             continue
         out.append({"part_id": data["part_id"],
                     "part_type": path.parent.name,
@@ -67,29 +60,23 @@ def parts(data_dir: Path) -> list[dict]:
     return out
 
 
-def catalog_counts(data_dir: Path) -> dict:
-    """Cheap catalog size snapshot for the overview KPIs (no report build)."""
-    import yaml
-    part_paths = list((data_dir / "parts").rglob("*.yaml"))
-    claims = 0
-    for p in part_paths:
-        try:
-            claims += len((yaml.safe_load(p.read_text()) or {}).get("claims")
-                          or [])
-        except yaml.YAMLError:
-            pass
-    return {"parts": len(part_paths),
+def catalog_counts(data_dir: Path, part_list: list[dict] | None = None) -> dict:
+    """Cheap catalog size snapshot for the overview KPIs (no report build).
+
+    `part_list` may be a precomputed parts() list — the state endpoint passes
+    it so the catalog YAMLs are parsed once per poll, not twice."""
+    part_list = part_list if part_list is not None else parts(data_dir)
+    return {"parts": len(part_list),
             "variants": len(list((data_dir / "variants").rglob("*.yaml"))),
             "fitment": len(list((data_dir / "fitment").rglob("*.yaml"))),
-            "claims": claims}
+            "claims": sum(p["claims"] for p in part_list)}
 
 
 def part_detail(data_dir: Path, part_id: str) -> dict | None:
-    import yaml
     path = next(((data_dir / "parts").rglob(f"{part_id}.yaml")), None)
     if not path:
         return None
-    data = yaml.safe_load(path.read_text()) or {}
+    data = load_yaml(path)
     claims = [{"title": c.get("title"), "severity": c.get("severity"),
                "domain": c.get("domain")}
               for c in data.get("claims") or []]
