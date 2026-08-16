@@ -30,6 +30,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "LEDGER_PATH", tmp_path / "ledger.db")
     monkeypatch.setattr(server, "EXPORT_DIR", tmp_path / "export")
     monkeypatch.setattr(server, "DATA_DIR", data)
+    monkeypatch.setattr(server, "GENERATIONS_DIR", tmp_path / "generations")
     return data
 
 
@@ -270,3 +271,41 @@ def test_onboard_model_flags_a_part_with_no_yaml_as_missing(env):
     out = server.onboard_model("renault", "megane_4")
     parts = {p["part_id"]: p["state"] for p in out["parts"]}
     assert parts["nonexistent_engine"] == "missing"
+
+
+# ── Generation research: phase 1 of onboarding (B23) ─────────────────────────
+
+
+def _g(**over):
+    d = {"generation": 1, "name": "I (GA)", "year_from": 2016, "year_to": 2023,
+         "source_urls": ["https://example.invalid/q2"]}
+    d.update(over)
+    return d
+
+
+def test_list_generations_is_empty_before_research(env):
+    assert server.list_generations("audi", "q2")["generations"] == []
+    assert server.list_generations("audi", "q2")["researched"] is False
+
+
+def test_submit_generations_writes_a_lineup(env):
+    out = server.submit_generations("audi", "q2", [_g(), _g(generation=2,
+                                    year_from=2024, year_to=None)])
+    assert out["errors"] == []
+    assert out["keys"] == ["q2_1", "q2_2"]
+    got = server.list_generations("audi", "q2")
+    assert got["researched"] is True
+    assert [x["generation"] for x in got["generations"]] == [1, 2]
+
+
+def test_submit_generations_rejects_an_unsourced_lineup(env):
+    out = server.submit_generations("audi", "q2", [_g(source_urls=[])])
+    assert out["errors"]
+    assert server.list_generations("audi", "q2")["researched"] is False
+
+
+def test_submit_generations_resolves_a_scraped_display_name(env):
+    out = server.submit_generations(
+        "volkswagen", "VW CC 1.4 TSI", [_g()], canonical_model="passat_cc")
+    assert out["model"] == "passat_cc"
+    assert server.list_generations("volkswagen", "VW CC 1.4 TSI")["researched"]
