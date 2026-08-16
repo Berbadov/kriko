@@ -6,6 +6,37 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-16 — B23: agent-driven model onboarding (closes B21, deprioritizes B22)
+
+Onboarding a car no longer requires a human to hand-type a Python dict. B21's
+agent could only start from a coverage finding that already named a `part_id`,
+so a car with no scaffold was unreachable — and building that scaffold meant
+editing `TR_MARKET_TRIMS` in `knowledge/catalog/write_variants.py`, the exact
+hand-enumerated per-model list the scalability rule forbids. The researcher
+agent now supplies the trim lineup from the web instead.
+
+- **`write_variants.run(trims=...)`** — injection point; `TR_MARKET_TRIMS`
+  demoted to CLI fallback. Row content verified identical for every already
+  onboarded car (only pre-existing `notes` drift on `volkswagen_golf_7`).
+- **`validate_trims()`** — deterministic structural checks (fuel/transmission/
+  emissions vocabularies, year and power ordering, identity keys, duplicate ids).
+  An **unsourced figure is not an error**: the row is written `draft: true`,
+  `backend/sync.py` skips it, the coverage report raises `draft_variant`. Fail
+  open rather than guess — a guessed figure is a silent wrong answer to a buyer.
+- **MCP `onboard_model()` + `submit_trims()`** — the model entry point and
+  scaffold write (variants + fitment, with the lineup's source pages recorded as
+  `spec` documents). 13 → 15 tools.
+- **Grounded quotes** — `add_evidence()` rejects any quote not literally present
+  in the submitted document (casefold + whitespace-normalized). Previously
+  `quote_grounded` was `bool(quote)`, so a fabricated citation was
+  indistinguishable from a real one downstream.
+- **Harness-agnostic wiring** — `.mcp.json` + `.claude/agents/kriko_research.md`
+  (Claude Code) beside the opencode pair; Codex/Cline snippets in USAGE §4e.
+  Validation lives in the server, so hosts are interchangeable and none can
+  bypass the gates.
+- **Agent loop** — one *model* per pass (was one part).
+- 580 tests pass; 33 new (`test_write_variants_agent_trims.py`, MCP tool tests).
+
 ## 2026-08-04 — B20 + B21: kriko-hub desktop dashboard + MCP control layer
 
 - **B20 — `knowledge/hub/`** (DearPyGui, deps: `dearpygui`): six clickable

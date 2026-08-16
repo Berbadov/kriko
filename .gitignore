@@ -13,8 +13,11 @@ knowledge/cache/
 # Full-payload /analyze log (backend/observability.py) — local/deploy-host only
 logs/
 
-# Claude Code local tool state (worktrees, local settings)
+# Claude Code local tool state (worktrees, local settings) — but the shared
+# agent definitions are project config and belong in the repo.
 .claude/
+!.claude/agents/
+!.claude/agents/**
 
 # Evidence ledger (append-only database and exports)
 knowledge/ledger.db

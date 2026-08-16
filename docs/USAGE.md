@@ -71,11 +71,39 @@ export EXA_API_KEY=...
 ## 4. Add a new car model (part-centric "Lego" pipeline)
 
 Kriko researches each **part revision** once (K9K engine, EDC gearbox) and assembles
-claims per variant at sync time. Adding a new model is five steps — the pipeline
-scaffolds Steps 1 and 3 for you; the per-market figures Wikipedia doesn't reliably
+claims per variant at sync time. The per-market figures Wikipedia doesn't reliably
 give (horsepower, exact trim years) are derived automatically or the row fails open
 (no synced variant, no_match demand signal, coverage-report finding) — never
 hand-filled by a human (automation principle).
+
+### 4.0 The default path — hand a model to the research agent ($0)
+
+Onboarding is one instruction to a subscription-billed agent. Start your harness
+(§4e wires opencode, Claude Code, Codex and Cline) and tell the `kriko_research`
+agent the make and model:
+
+```
+use the kriko_research agent to onboard renault megane_4
+```
+
+It calls `onboard_model` for the work list, researches the TR trim lineup and
+submits it with `submit_trims` (which writes both variants and fitment YAML), then
+researches each part into the ledger and runs one `run_pipeline_pass`. Cost: $0 —
+every MCP write tool is deterministic or import-only. Then run Step 5 to sync.
+
+Two guarantees make this safe to run unattended:
+
+- **No guessed figures.** A trim whose power or displacement the agent could not
+  source is written `draft: true`; `backend/sync.py` skips it and the coverage
+  report raises `draft_variant`. A visible gap, never a plausible invention.
+- **No fabricated citations.** `add_evidence` rejects any quote that is not
+  literally present in the document the agent submitted (whitespace- and
+  case-insensitive). An agent cannot cite a source it did not read.
+
+The CLI steps below remain the manual fallback and are what the agent path
+ultimately drives.
+
+### 4.1 Manual/CLI path
 
 **Step 1 — Catalog discovery + variants scaffold** — what configs exist
 
@@ -183,27 +211,57 @@ the page.
 The pipeline as tools for a subscription LLM — new-model research at $0 flat
 rate instead of API tokens:
 
-```bash
-# opencode (already wired via opencode.json -> mcp.kriko)
-opencode            # then: use the kriko_research agent (agent prompt
-                    #       includes the full research loop)
-# or Claude Code:
-claude mcp add kriko -- python -m knowledge.mcp.server --project
-```
-
-The server registers 13 tools: read (`ledger_status`, `spend_summary`,
+The server registers 15 tools: read (`ledger_status`, `spend_summary`,
 `pending_extract`, `pending_verdicts`, `list_parts`, `get_part`,
-`list_documents`, `get_document`, `coverage_report`) and $0 write
-(`add_document`, `add_evidence`, `run_pipeline_pass`,
+`list_documents`, `get_document`, `coverage_report`, `onboard_model`) and $0
+write (`submit_trims`, `add_document`, `add_evidence`, `run_pipeline_pass`,
 `run_remediate_import_only`). Write tools are deterministic or import-only —
 nothing in agent-land can spend API tokens; the pass is logged at
 `model=agent, usd=0` so the panel stays honest. Agent evidence
 (extractor_version=1) flows through the same deterministic verdict path as
 imported legacy research (`⊆ {0,1}`), so onboarding a new part is ~$0.00.
-The `kriko_research` agent (`.opencode/agents/kriko_research.md`) runs the
-loop: coverage → next uncovered part → research with its own web tools →
-`add_document`/`add_evidence` (max 5 sources/part, product-principle gated)
-→ `run_pipeline_pass` → verify.
+
+The server is **harness-agnostic** — validation lives in the server, so any
+client is interchangeable and none of them can bypass the gates. Wiring, by
+harness:
+
+```bash
+# opencode — committed: opencode.json -> mcp.kriko
+opencode            # then: use the kriko_research agent
+
+# Claude Code — committed: .mcp.json (approve it on first run)
+claude              # then: use the kriko_research agent
+```
+
+Codex and Cline configs live outside the repo. Codex — add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.kriko]
+command = "/home/beraat/kriko/.venv/bin/python"
+args = ["-m", "knowledge.mcp.server"]
+env = { PYTHONPATH = "/home/beraat/kriko" }
+```
+
+Cline — add to `cline_mcp_settings.json` (VS Code → Cline → MCP Servers →
+Configure):
+
+```json
+{
+  "mcpServers": {
+    "kriko": {
+      "command": "/home/beraat/kriko/.venv/bin/python",
+      "args": ["-m", "knowledge.mcp.server"],
+      "env": { "PYTHONPATH": "/home/beraat/kriko" }
+    }
+  }
+}
+```
+
+The agent prompt is one canonical file, `.opencode/agents/kriko_research.md`;
+`.claude/agents/kriko_research.md` is the same body with Claude Code
+frontmatter. For Codex/Cline, paste that file's body as the system prompt.
+Tool names are prefixed per host (`kriko_onboard_model` in opencode,
+`mcp__kriko__onboard_model` in Claude Code) — the prompt says so.
 
 **Step 5 — Sync to DB**
 
