@@ -215,6 +215,18 @@ the scalability rule forbids. Now the researcher agent supplies the lineup:
   `knowledge/catalog/generations/`), which also resolves scraped display names
   (`vw_cc_1_4_tsi` → `passat_cc`) via `canonical_model` + aliases.
 
+- **Task/harness/model picker + command preview** (2026-08-16): both agent task
+  forms as buttons, harness and LLM model as dropdowns, and the exact argv shown
+  before it runs (`POST /api/agent-preview` shares the run endpoints' argv
+  builder, so preview and execution cannot drift). Model lists come from
+  `opencode models`, never shipped here.
+  **Found doing this:** the hub passes `.env` to the harness, so opencode
+  reported 406 models — 380 of them pay-per-token providers unlocked by
+  `DEEPSEEK_API_KEY`/`MISTRAL_API_KEY`/`OPENROUTER_API_KEY`. One dropdown pick
+  would have silently spent API credits and broken the $0 premise. Now split
+  into flat-rate vs `⚠ pay-per-token` optgroups with a preview warning; the
+  split derives from the `*_API_KEY` names in `.env`.
+
 - Hub **Models tab** (2026-08-16): onboarding control room — catalog rollup,
   per-model work list, draft rows with their missing figures, `POST /api/onboard`
   spawning opencode/Claude Code, and a live activity feed read off the *ledger*

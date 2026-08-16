@@ -89,3 +89,8 @@ display:flex;flex-direction:column;gap:1px;line-height:1.25}
 .chip.want{box-shadow:inset 3px 0 0 var(--accent)}
 .chip-sub{font-size:10px;color:var(--dim)}
 button.run.go{border-color:var(--accent);color:var(--accent)}
+.cmd{margin-top:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);
+border-radius:6px;font:12px/1.5 ui-monospace,monospace;color:var(--dim);
+overflow-x:auto;white-space:pre;min-height:1.5em}
+.cmd.paid{border-color:#7a5a1a}
+optgroup{color:var(--dim);font-style:normal}
