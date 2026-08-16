@@ -23,7 +23,6 @@ Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
 the CLI; the browser polls state every second.
 """
 
-import json
 import os
 import subprocess
 import sys
@@ -122,7 +121,7 @@ def state() -> dict:
     return {
         "counts": c, "spend": s, "pending": p, "parts": parts,
         "documents": docs, "runs": runs, "last_remediation": last,
-        "catalog": metrics.catalog_counts(DATA_DIR),
+        "catalog": metrics.catalog_counts(DATA_DIR, parts),
     }
 
 

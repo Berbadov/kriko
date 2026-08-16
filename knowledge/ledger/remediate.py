@@ -24,8 +24,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.tools.coverage import Finding, Report, build_report
-from knowledge.ledger import acquire, cluster, db, export, extraction, resolve, verdict
+from backend.tools.coverage import Report, build_report
+from knowledge.ledger import acquire, cluster, export, extraction, resolve, verdict
 from knowledge.ledger.costs import Budget
 
 # Finding kinds the loop can act on. orphan_part is deliberately excluded:

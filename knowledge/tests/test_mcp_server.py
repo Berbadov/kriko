@@ -144,3 +144,129 @@ def test_spend_summary_reports_agent_rows(env):
     stages = {r["stage"] for r in s["rows"]}
     assert "agent_pass" in stages
     assert s["total_usd"] == 0
+
+
+# ── Quote grounding (B23) ─────────────────────────────────────────────────────
+#
+# add_evidence used to set quote_grounded=bool(quote): any string counted as
+# grounded, so a fabricated citation was indistinguishable from a real one. The
+# quote must actually appear in the document the agent submitted.
+
+
+def test_quote_grounded_ignores_case_and_whitespace():
+    raw = "The DQ200 hydraulic\naccumulator   fails early."
+    assert server._quote_grounded("hydraulic accumulator FAILS early", raw)
+
+
+def test_quote_grounded_rejects_text_not_in_the_document():
+    raw = "The DQ200 hydraulic accumulator fails early."
+    assert not server._quote_grounded("mechatronic unit fails at 60k km", raw)
+
+
+def test_add_evidence_rejects_a_fabricated_quote_and_writes_nothing(env):
+    d = server.add_document("https://a", "page",
+                            "The DQ200 hydraulic accumulator fails early.",
+                            target_hint="k9k")
+    out = server.add_evidence(d["doc_id"], "Invented failure", severity="high",
+                              domain="transmission",
+                              quote="mechatronic unit fails at 60k km")
+    assert "error" in out
+    conn = db.connect(server.LEDGER_PATH)
+    n = conn.execute("SELECT COUNT(*) c FROM evidence").fetchone()["c"]
+    conn.close()
+    assert n == 0
+
+
+def test_add_evidence_accepts_a_quote_present_in_the_document(env):
+    d = server.add_document("https://a", "page",
+                            "The DQ200 hydraulic accumulator fails early.",
+                            target_hint="k9k")
+    out = server.add_evidence(d["doc_id"], "DQ200 accumulator failure",
+                              severity="high", domain="transmission",
+                              quote="hydraulic accumulator fails early")
+    assert out.get("created") is True
+
+
+def test_add_evidence_still_allows_an_empty_quote(env):
+    """An absent quote is a gap, not a fabrication — it stays ungrounded."""
+    d = server.add_document("https://a", "page", "some text", target_hint="k9k")
+    out = server.add_evidence(d["doc_id"], "No quote", severity="low",
+                              domain="engine")
+    assert out.get("created") is True
+    conn = db.connect(server.LEDGER_PATH)
+    row = conn.execute("SELECT quote_grounded FROM evidence WHERE id=?",
+                       (out["evidence_id"],)).fetchone()
+    conn.close()
+    assert not row["quote_grounded"]
+
+
+# ── onboard_model / submit_trims (B23) ────────────────────────────────────────
+
+
+def _trim(**over):
+    t = {"id": "meg4_k9k_110", "generation": "IV", "engine_code": "K9K",
+         "engine_family": "k9k", "fuel": "diesel", "displacement_cc": 1461,
+         "power_min_hp": 110, "power_max_hp": 110, "transmission": "manual",
+         "transmission_code": "manual", "year_from": 2016, "year_to": 2020,
+         "notes": "1.5 dCi 110"}
+    t.update(over)
+    return t
+
+
+def test_onboard_model_reports_a_missing_scaffold(env):
+    out = server.onboard_model("renault", "megane_4")
+    assert out["has_variants"] is False
+    assert out["has_fitment"] is False
+    assert out["parts"] == []
+
+
+def test_submit_trims_writes_variants_and_fitment(env):
+    out = server.submit_trims("renault", "megane_4", [_trim()],
+                              source_urls=["https://specs.example/megane"])
+    assert out.get("errors") in (None, [])
+    assert (env / "variants" / "renault_megane_4.yaml").exists()
+    assert (env / "fitment" / "renault_megane_4.yaml").exists()
+    assert out["rows_written"] == 1
+
+
+def test_submit_trims_rejects_invalid_rows_without_writing(env):
+    out = server.submit_trims("renault", "megane_4", [_trim(fuel="steam")],
+                              source_urls=[])
+    assert out["errors"]
+    assert not (env / "variants" / "renault_megane_4.yaml").exists()
+
+
+def test_submit_trims_records_spec_sources_in_the_ledger(env):
+    server.submit_trims("renault", "megane_4", [_trim()],
+                        source_urls=["https://specs.example/megane"])
+    conn = db.connect(server.LEDGER_PATH)
+    rows = conn.execute(
+        "SELECT url, source_type, target_hint FROM documents").fetchall()
+    conn.close()
+    assert any(r["source_type"] == "spec"
+               and r["target_hint"] == "renault_megane_4" for r in rows)
+
+
+def test_submit_trims_reports_rows_left_draft(env):
+    t = _trim(id="meg4_unsourced")
+    del t["power_min_hp"], t["power_max_hp"]
+    out = server.submit_trims("renault", "megane_4", [t], source_urls=[])
+    assert out["rows_draft"] == 1
+
+
+def test_onboard_model_lists_part_work_after_scaffolding(env):
+    server.submit_trims("renault", "megane_4",
+                        [_trim(engine_family="k9k")], source_urls=[])
+    out = server.onboard_model("renault", "megane_4")
+    assert out["has_variants"] is True
+    parts = {p["part_id"]: p["state"] for p in out["parts"]}
+    assert parts["k9k"] == "zero_claim"  # stub exists in the fixture, no claims
+
+
+def test_onboard_model_flags_a_part_with_no_yaml_as_missing(env):
+    server.submit_trims("renault", "megane_4",
+                        [_trim(engine_family="nonexistent_engine")],
+                        source_urls=[])
+    out = server.onboard_model("renault", "megane_4")
+    parts = {p["part_id"]: p["state"] for p in out["parts"]}
+    assert parts["nonexistent_engine"] == "missing"

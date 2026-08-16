@@ -27,7 +27,7 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlparse
 
-import yaml
+from knowledge.yamlutil import load_yaml
 
 # Items a standard pre-purchase mechanic inspection (ekspertiz) covers as routine.
 # A claim matching any of these keywords is low value by the CLAUDE.md principle.
@@ -251,10 +251,7 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
     """
     owners: dict[str, set[str]] = {}
     for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
-        try:
-            data = yaml.safe_load(path.read_text()) or {}
-        except yaml.YAMLError:
-            continue
+        data = load_yaml(path)
         part_id = data.get("part_id")
         manufacturer = data.get("manufacturer")
         if not part_id or not manufacturer:
@@ -282,10 +279,7 @@ def catalog_sibling_families() -> dict[str, frozenset[str]]:
     """
     groups: dict[str, set[str]] = {}
     for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
-        try:
-            data = yaml.safe_load(path.read_text()) or {}
-        except yaml.YAMLError:
-            continue
+        data = load_yaml(path)
         part_id = data.get("part_id")
         family = data.get("code_family")
         if not part_id or not family:
