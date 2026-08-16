@@ -20,7 +20,9 @@ function showTab(p) {
       .classList.toggle('on', t === p);
   });
   if (p === 'coverage' && !covLoaded) loadCoverage(false);
-  if (p === 'models') { loadModels(); loadActivity(); loadDemand(); }
+  if (p === 'models') {
+    loadModels(); loadActivity(); loadDemand(); loadHarnesses();
+  }
 }
 document.querySelectorAll('#nav button')
   .forEach(b => b.onclick = () => showTab(b.dataset.p));
@@ -295,7 +297,9 @@ async function selectModel(x) {
   pickModel = x.slug;
   pickGen = null;
   $('#step-gen').hidden = false;
-  $('#step-go').hidden = true;
+  $('#step-go').hidden = false;   // task step: 'find generations' is valid now
+  renderTasks();
+  refreshPreview();
   [...$('#pick-model').children].forEach(b =>
     b.classList.toggle('on', b.textContent.startsWith(x.model)));
   await renderGenerations();
@@ -311,7 +315,11 @@ async function renderGenerations() {
     el.innerHTML = '<span class="muted">Not researched yet — an agent has to '
       + 'find this car’s generations first.</span>'
       + '<button class="run" id="b-find-gens">Find generations →</button>';
-    $('#b-find-gens').onclick = doResearchGenerations;
+    $('#b-find-gens').onclick = () => {
+      pickTask = 'generations';
+      renderTasks();
+      refreshPreview().then(runAgent);
+    };
     return;
   }
   // The lineup may be filed under a canonical slug the scrape got wrong.
@@ -328,38 +336,122 @@ function selectGen(g) {
   pickGen = g.generation;
   [...$('#pick-gen').children].forEach((b, i) =>
     b.classList.toggle('on', i === g.generation - 1));
-  $('#step-go').hidden = false;
-  $('#b-onboard').textContent = 'Onboard ' + pickMake + ' ' + g.model_key + ' →';
+  pickTask = 'onboard';
+  renderTasks();
+  refreshPreview();
 }
 
-async function postAgent(url, body, label) {
+// ── Task, harness, model, and the command preview ────────────────────────────
+//
+// The preview is fetched from /api/agent-preview, which builds argv with the
+// same function the run endpoints use — so what's shown here is literally the
+// command that will execute, not a JS reconstruction of it.
+
+const TASKS = [
+  { id: 'generations', label: 'Find generations',
+    sub: 'research the lineup, submit it, stop' },
+  { id: 'onboard', label: 'Onboard',
+    sub: 'scaffold + research every part' },
+];
+let pickTask = 'onboard';
+let harnesses = [];
+
+function renderTasks() {
+  const el = $('#pick-task');
+  el.innerHTML = TASKS.map(t =>
+    chip(t.label, t.sub, t.id === pickTask)).join('');
+  [...el.children].forEach((b, i) => {
+    b.onclick = () => { pickTask = TASKS[i].id; renderTasks(); refreshPreview(); };
+  });
+  $('#step-run').hidden = false;
+}
+
+async function loadHarnesses() {
+  const d = await fetch('/api/harnesses').then(r => r.json());
+  harnesses = d.harnesses;
+  const sel = $('#ob-harness');
+  sel.innerHTML = harnesses.map(h =>
+    '<option value="' + esc(h.name) + '"' + (h.available ? '' : ' disabled')
+    + '>' + esc(h.name) + (h.available ? '' : ' (not installed)')
+    + '</option>').join('');
+  const first = harnesses.find(h => h.available);
+  if (first && !sel.value) sel.value = first.name;
+  renderLlmModels();
+}
+
+function renderLlmModels() {
+  const h = harnesses.find(x => x.name === $('#ob-harness').value);
+  const free = (h && h.models) || [];
+  const paid = (h && h.paid_models) || [];
+  const opts = m => '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+
+  // Paid models are grouped and labelled, never mixed into the flat-rate list:
+  // they bill per token, which is the one thing this whole path avoids.
+  $('#ob-llm').innerHTML = '<option value="">default model</option>'
+    + (free.length
+      ? '<optgroup label="flat rate (subscription)">'
+        + free.map(opts).join('') + '</optgroup>' : '')
+    + (paid.length
+      ? '<optgroup label="⚠ pay-per-token (API key — costs money)">'
+        + paid.map(opts).join('') + '</optgroup>' : '');
+}
+
+function selectedModelIsPaid() {
+  const h = harnesses.find(x => x.name === $('#ob-harness').value);
+  return !!(h && (h.paid_models || []).includes($('#ob-llm').value));
+}
+
+function agentBody() {
+  return {
+    task: pickTask,
+    make: pickMake,
+    model: pickModel,
+    generation: pickTask === 'onboard' ? pickGen : null,
+    harness: $('#ob-harness').value,
+    llm_model: $('#ob-llm').value,
+  };
+}
+
+async function refreshPreview() {
+  const el = $('#cmd-preview');
+  if (!pickMake || !pickModel) { el.textContent = ''; return; }
+  const r = await fetch('/api/agent-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(agentBody()),
+  });
+  const d = await r.json();
+  if (!r.ok) {
+    el.innerHTML = '<span class="err">' + esc(d.detail) + '</span>';
+    return;
+  }
+  const paid = selectedModelIsPaid();
+  el.innerHTML = '$ ' + esc(d.display)
+    + (paid ? '\n<span class="warn">⚠ this model bills per token — the agent '
+      + 'path is $0 only on the flat-rate plane</span>' : '');
+  el.classList.toggle('paid', paid);
+  $('#b-agent-run').textContent =
+    (pickTask === 'generations' ? 'Find generations' : 'Onboard') + ' →';
+}
+
+async function runAgent() {
+  const body = agentBody();
+  const url = body.task === 'generations'
+    ? '/api/research-generations' : '/api/onboard';
   $('#onboard-state').textContent = 'starting…';
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...body, harness: $('#ob-harness').value }),
+    body: JSON.stringify(body),
   });
   const d = await r.json();
   if (!r.ok) {
     $('#onboard-state').innerHTML = '<span class="err">' + esc(d.detail)
       + '</span>';
-    return null;
+    return;
   }
-  $('#onboard-state').textContent = label;
-  return d;
-}
-
-async function doResearchGenerations() {
-  await postAgent('/api/research-generations',
-    { make: pickMake, model: pickModel },
-    'researching generations for ' + pickMake + ' ' + pickModel + '…');
-}
-
-async function doOnboard() {
-  const d = await postAgent('/api/onboard',
-    { make: pickMake, model: pickModel, generation: pickGen },
-    'onboarding…');
-  if (d) loadModel(d.model_key);
+  $('#onboard-state').textContent = 'running ' + body.harness + '…';
+  if (d.model_key) loadModel(d.model_key);
 }
 
 async function poll() {
@@ -454,7 +546,11 @@ $('#b-import').onclick = () => doRun(['verdict', '--import-only']);
 $('#b-remediate').onclick = () => doRun(['remediate']);
 $('#b-export').onclick = () => doRun(['export']);
 $('#b-cov').onclick = () => loadCoverage(true);
-$('#b-onboard').onclick = doOnboard;
+$('#b-agent-run').onclick = runAgent;
+$('#ob-harness').addEventListener('change', () => {
+  renderLlmModels(); refreshPreview();
+});
+$('#ob-llm').addEventListener('change', refreshPreview);
 $('#b-onboard-stop').onclick = async () => {
   await fetch('/api/stop', { method: 'POST' });
 };

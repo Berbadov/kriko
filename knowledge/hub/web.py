@@ -22,6 +22,8 @@ plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
   GET  /api/model/{k}   one car's work list (same payload the agent gets)
   GET  /api/demand      onboarding queue from real traffic — the picker's makes
   GET  /api/generations/{make}/{model}   researched generation lineup
+  GET  /api/harnesses   installed harnesses + the models each offers
+  POST /api/agent-preview   the exact argv a run would execute (no spawn)
   POST /api/research-generations   phase 1: agent researches the lineup (B23)
   POST /api/onboard     phase 2: agent onboards {model}_{generation} (B23)
   GET  /api/activity    recent ledger writes — what the agent is doing now
@@ -36,6 +38,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException
@@ -66,20 +69,39 @@ MAX_ACTIVITY = 200
 _SAFE_NAME = re.compile(r"[a-z0-9_]{1,40}")
 
 AGENT_NAME = "kriko_research"
-ONBOARD_PROMPT = "onboard {make} {model}"
-GENERATIONS_PROMPT = "find generations for {make} {model}"
+
+# The agent's task forms. The request names a task; it never supplies prose.
+TASKS = {
+    "generations": "find generations for {make} {model}",
+    "onboard": "onboard {make} {model}",
+}
 
 # No car has more generations than this; the bound keeps a typo out of argv.
 MAX_GENERATION = 20
 
+# An LLM model id also reaches argv, so it gets the same treatment as make and
+# model — a slightly wider charset because provider ids carry `/`, `.` and `-`.
+_SAFE_MODEL = re.compile(r"[A-Za-z0-9_./:-]{1,80}")
+
 # Fixed argv templates. The request picks a harness by name; it never supplies
 # a command. Adding a harness is a code change, deliberately.
 HARNESSES = {
-    "opencode": lambda b, prompt: [b, "run", "--agent", AGENT_NAME, prompt],
-    "claude": lambda b, prompt: [
-        b, "-p", f"Use the {AGENT_NAME} agent to {prompt}",
-        "--permission-mode", "acceptEdits"],
+    "opencode": lambda b, prompt, m: (
+        [b, "run", "--agent", AGENT_NAME] + (["-m", m] if m else []) + [prompt]),
+    "claude": lambda b, prompt, m: (
+        [b, "-p", f"Use the {AGENT_NAME} agent to {prompt}"]
+        + (["--model", m] if m else []) + ["--permission-mode", "acceptEdits"]),
 }
+
+# How to ask each harness which models it offers. opencode enumerates its own,
+# so the picker never ships a model list that someone has to maintain. Claude
+# Code has no equivalent command; its `--model` aliases are a small closed
+# vocabulary (the field also accepts any full model id you type).
+HARNESS_MODEL_CMD = {"opencode": ["models"]}
+CLAUDE_MODEL_ALIASES = ["opus", "sonnet", "haiku", "fable"]
+
+_MODELS_TTL_S = 600.0
+_MODELS_CACHE: dict[str, tuple[float, list[str]]] = {}
 
 
 def _split_key(key: str) -> tuple[str, str]:
@@ -309,30 +331,155 @@ def generations_for(make: str, model: str) -> dict:
     return {**found, "researched": True}
 
 
-def _agent_run(make: str, model: str, harness: str, prompt: str) -> str:
-    """Shared gate + spawn for both agent phases.
+def _paid_providers(env: dict) -> set[str]:
+    """Providers that bill per token, derived from the API keys in the env.
 
-    The only place the hub executes something other than `knowledge.ledger.run`,
-    so both inputs are locked: make/model are catalog-shaped identifiers passed
-    as argv (never interpolated into a shell), and the harness selects a fixed
-    argv template rather than supplying a command.
+    The hub passes `.env` to the harness, so `opencode models` reports every
+    provider those keys unlock — 400+ pay-per-token models alongside the ~26
+    on the flat-rate plan. Picking one silently spends API credits, which is
+    exactly what the agent path exists to avoid, so they are split out rather
+    than listed together.
+
+    Derived from the key names (`DEEPSEEK_API_KEY` -> `deepseek`), never a
+    hardcoded provider list: a new key in `.env` is classified the moment it
+    appears.
     """
-    if not _SAFE_NAME.fullmatch(make) or not _SAFE_NAME.fullmatch(model):
-        raise HTTPException(400, "make/model must match [a-z0-9_] (1-40 chars)")
+    paid: set[str] = set()
+    for key in env:
+        if not key.endswith("_API_KEY"):
+            continue
+        stem = key[: -len("_API_KEY")].lower()
+        paid.add(stem)                  # mistral_agent
+        paid.add(stem.split("_")[0])    # mistral
+    return paid
+
+
+def _is_paid(model: str, paid: set[str]) -> bool:
+    """Does this model id belong to a pay-per-token provider?"""
+    return model.split("/", 1)[0].lower() in paid
+
+
+def _harness_models(harness: str) -> list[str]:
+    """Which models this harness offers, asked of the harness itself.
+
+    Cached, because shelling out per poll would be absurd. A harness that
+    cannot enumerate its models returns whatever closed vocabulary it
+    documents — never a list this repo has to keep in sync with a vendor.
+    """
+    now = time.time()
+    hit = _MODELS_CACHE.get(harness)
+    if hit and now - hit[0] < _MODELS_TTL_S:
+        return hit[1]
+
+    models: list[str] = []
+    binary = shutil.which(harness)
+    if binary and harness in HARNESS_MODEL_CMD:
+        try:
+            out = subprocess.run([binary, *HARNESS_MODEL_CMD[harness]],
+                                 capture_output=True, text=True, timeout=45,
+                                 cwd=REPO_ROOT, env=_load_env())
+            models = [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+        except (OSError, subprocess.SubprocessError):
+            models = []
+    elif binary and harness == "claude":
+        models = list(CLAUDE_MODEL_ALIASES)
+
+    _MODELS_CACHE[harness] = (now, models)
+    return models
+
+
+def _agent_command(task: str, make: str, model: str, harness: str,
+                   generation=None, llm_model: str = "") -> list[str]:
+    """Build the exact argv for one agent run — the single source of truth.
+
+    Both the preview endpoint and the run endpoints call this, so what the UI
+    shows is literally the command that executes; there is no second
+    implementation to drift.
+
+    This is the only place the hub builds a command other than
+    `knowledge.ledger.run`, so every input that reaches argv is gated here:
+    task names a fixed prompt template, make/model/llm_model must match their
+    charsets, and the harness selects a fixed argv template rather than
+    supplying a command. Nothing is interpolated into a shell.
+    """
+    if task not in TASKS:
+        raise HTTPException(400, f"unknown task: {task!r} — one of {sorted(TASKS)}")
     if harness not in HARNESSES:
         raise HTTPException(
             400, f"unknown harness: {harness!r} — one of {sorted(HARNESSES)}")
+    if llm_model and not _SAFE_MODEL.fullmatch(llm_model):
+        raise HTTPException(400, f"malformed model id: {llm_model!r}")
+
+    model = _with_generation(model, generation)
+    if not _SAFE_NAME.fullmatch(make) or not _SAFE_NAME.fullmatch(model):
+        raise HTTPException(400, "make/model must match [a-z0-9_] (1-40 chars)")
+
     binary = shutil.which(harness)
     if not binary:
         raise HTTPException(400, f"{harness} is not installed on this machine")
+    return HARNESSES[harness](binary, TASKS[task].format(make=make, model=model),
+                              llm_model)
 
-    cmd = HARNESSES[harness](binary, prompt)
+
+def _with_generation(model: str, generation) -> str:
+    """Append a validated generation as the model-key suffix (q2 + 1 -> q2_1)."""
+    if generation in (None, ""):
+        return model
+    if isinstance(generation, bool) or not isinstance(generation, (int, str)):
+        raise HTTPException(400, "generation must be a positive integer")
+    try:
+        n = int(generation)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "generation must be a positive integer")
+    if not 1 <= n <= MAX_GENERATION:
+        raise HTTPException(
+            400, f"generation must be between 1 and {MAX_GENERATION}")
+    return f"{model}_{n}"
+
+
+def _agent_spawn(cmd: list[str]) -> str:
+    """One run slot: stop whatever is running, then launch."""
     with _run_lock:
         old = RUN["proc"]
     if old and old.poll() is None:
         old.kill()
         old.wait()
     return _spawn(cmd)
+
+
+@app.get("/api/harnesses")
+def harnesses() -> dict:
+    """Installed harnesses and the models each offers, split by how they bill.
+
+    `models` is the flat-rate plane — safe to run the agent on. `paid_models`
+    are pay-per-token providers unlocked by API keys in `.env`; they are kept
+    separate so a dropdown pick can't silently spend credits.
+    """
+    paid = _paid_providers(_load_env())
+    out = []
+    for name in sorted(HARNESSES):
+        all_models = _harness_models(name)
+        out.append({
+            "name": name,
+            "available": shutil.which(name) is not None,
+            "models": [m for m in all_models if not _is_paid(m, paid)],
+            "paid_models": [m for m in all_models if _is_paid(m, paid)],
+        })
+    return {"harnesses": out}
+
+
+@app.post("/api/agent-preview")
+def agent_preview(payload: dict = Body(...)) -> dict:
+    """The exact command a run would execute — built, gated, but not spawned."""
+    argv = _agent_command(
+        str(payload.get("task", "")).strip(),
+        str(payload.get("make", "")).strip().lower(),
+        str(payload.get("model", "")).strip().lower(),
+        str(payload.get("harness", "opencode")).strip(),
+        payload.get("generation"),
+        str(payload.get("llm_model", "")).strip(),
+    )
+    return {"argv": argv, "display": " ".join(argv)}
 
 
 @app.post("/api/research-generations")
@@ -344,10 +491,10 @@ def research_generations(payload: dict = Body(...)) -> dict:
     """
     make = str(payload.get("make", "")).strip().lower()
     model = gencat.slugify(payload.get("model", ""))
-    harness = str(payload.get("harness", "opencode")).strip()
-    cmd = _agent_run(make, model, harness,
-                     GENERATIONS_PROMPT.format(make=make, model=model))
-    return {"ok": True, "cmd": cmd, "make": make, "model": model}
+    argv = _agent_command("generations", make, model,
+                          str(payload.get("harness", "opencode")).strip(),
+                          llm_model=str(payload.get("llm_model", "")).strip())
+    return {"ok": True, "cmd": _agent_spawn(argv), "make": make, "model": model}
 
 
 @app.post("/api/onboard")
@@ -355,24 +502,12 @@ def onboard(payload: dict = Body(...)) -> dict:
     """Phase 2: launch the research agent against one model generation."""
     make = str(payload.get("make", "")).strip().lower()
     model = str(payload.get("model", "")).strip().lower()
-    harness = str(payload.get("harness", "opencode")).strip()
-
     gen = payload.get("generation")
-    if gen not in (None, ""):
-        if isinstance(gen, bool) or not isinstance(gen, (int, str)):
-            raise HTTPException(400, "generation must be a positive integer")
-        try:
-            gen_n = int(gen)
-        except (TypeError, ValueError):
-            raise HTTPException(400, "generation must be a positive integer")
-        if not 1 <= gen_n <= MAX_GENERATION:
-            raise HTTPException(
-                400, f"generation must be between 1 and {MAX_GENERATION}")
-        model = f"{model}_{gen_n}"
-
-    cmd = _agent_run(make, model, harness,
-                     ONBOARD_PROMPT.format(make=make, model=model))
-    return {"ok": True, "cmd": cmd, "model_key": f"{make}_{model}"}
+    argv = _agent_command("onboard", make, model,
+                          str(payload.get("harness", "opencode")).strip(),
+                          gen, str(payload.get("llm_model", "")).strip())
+    return {"ok": True, "cmd": _agent_spawn(argv),
+            "model_key": f"{make}_{_with_generation(model, gen)}"}
 
 
 @app.get("/api/activity")
@@ -443,15 +578,18 @@ _PAGE = """<!doctype html>
       <div class="choices" id="pick-gen"></div>
     </div>
     <div class="step" id="step-go" hidden>
-      <label>4 · Run</label>
+      <label>4 · Task <span class="muted">what the agent is told to do</span></label>
+      <div class="choices" id="pick-task"></div>
+    </div>
+    <div class="step" id="step-run" hidden>
+      <label>5 · Harness &amp; model</label>
       <div class="choices">
-        <select id="ob-harness">
-          <option value="opencode">opencode</option>
-          <option value="claude">claude code</option>
-        </select>
-        <button class="run go" id="b-onboard">Onboard →</button>
+        <select id="ob-harness"></select>
+        <select id="ob-llm"></select>
+        <button class="run go" id="b-agent-run">Run →</button>
         <button class="run" id="b-onboard-stop">stop</button>
       </div>
+      <div class="cmd" id="cmd-preview"></div>
     </div>
   </div>
 

@@ -248,11 +248,36 @@ machine-written from a validated payload, never hand-edited.
 - **Model detail** shows the part work list (researched/empty/missing with claim
   counts) and every draft row with the exact figures that are missing.
 
-Two safety notes on the Onboard button, since it is the only place the hub runs
-something other than `knowledge.ledger.run`: make/model must match
-`[a-z0-9_]{1,40}` (argv only, never a shell), and the harness selects a fixed
-argv template rather than supplying a command. The hub still has one run slot,
-so starting an onboarding stops any active pipeline run.
+**Steps 4–5 pick the task, the harness, and the model**, and show the exact
+command before you run it:
+
+```
+$ /home/beraat/.nvm/.../opencode run --agent kriko_research \
+    -m opencode-go/kimi-k3 onboard audi q2_1
+```
+
+That preview comes from `POST /api/agent-preview`, which builds the argv with
+the **same function the run endpoints call** — so it is literally the command
+that executes, not a reconstruction that can drift.
+
+Model lists are asked of the harness (`opencode models`), never shipped in this
+repo. They are split by how they bill:
+
+- **flat rate (subscription)** — 26 models on opencode's own plan. This is the
+  $0 plane the agent path exists for.
+- **⚠ pay-per-token** — ~380 more, unlocked by the `DEEPSEEK_API_KEY`,
+  `MISTRAL_API_KEY` and `OPENROUTER_API_KEY` entries in `.env`, which the hub
+  passes through to the harness. Picking one **spends API credits**. They are
+  kept in a separate, labelled optgroup and the command preview warns, so it
+  can't happen by an accidental dropdown pick. The split is derived from the
+  `*_API_KEY` names in `.env` — a new key is classified the moment it appears.
+
+Three safety notes on the run buttons, since this is the only place the hub
+executes something other than `knowledge.ledger.run`: make/model must match
+`[a-z0-9_]{1,40}` and the model id `[A-Za-z0-9_./:-]{1,80}` (argv only, never a
+shell); the task selects a fixed prompt template and the harness a fixed argv
+template, so neither the prompt nor the command comes from the request. The hub
+still has one run slot, so starting an agent stops any active pipeline run.
 
 > The opencode agent declares `mode: all` deliberately. With `mode: subagent`,
 > `opencode run --agent kriko_research` silently falls back to the default
