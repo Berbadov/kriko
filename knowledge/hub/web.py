@@ -18,12 +18,18 @@ plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
   GET  /api/log         streaming output buffer of the current run
   GET  /api/table/{t}   ledger table preview (50 rows + row count)
   POST /api/stop        kill the active run
+  GET  /api/models      every catalogued car + its onboarding rollup
+  GET  /api/model/{k}   one car's work list (same payload the agent gets)
+  POST /api/onboard     launch a research agent against one model (B23)
+  GET  /api/activity    recent ledger writes — what the agent is doing now
 
 Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
 the CLI; the browser polls state every second.
 """
 
 import os
+import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -33,8 +39,10 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from knowledge.catalog import model_state
 from knowledge.hub import metrics
 from knowledge.ledger import db
+from knowledge.ledger.verdict import AGENT_EXTRACTOR_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LEDGER_PATH = db.LEDGER_PATH
@@ -45,6 +53,33 @@ MAX_LOG_CHARS = 50000
 
 ALLOWED_COMMANDS = {"acquire", "backfill", "extract", "resolve", "cluster",
                     "verdict", "export", "report", "remediate"}
+
+MAX_ACTIVITY = 200
+
+# Catalog-shaped identifiers only. make/model reach a subprocess argv, so
+# anything with a path separator, a space, or a shell metacharacter is refused
+# outright rather than escaped — there is no legitimate model key that needs one.
+_SAFE_NAME = re.compile(r"[a-z0-9_]{1,40}")
+
+AGENT_NAME = "kriko_research"
+ONBOARD_PROMPT = "onboard {make} {model}"
+
+# Fixed argv templates. The request picks a harness by name; it never supplies
+# a command. Adding a harness is a code change, deliberately.
+HARNESSES = {
+    "opencode": lambda b, prompt: [b, "run", "--agent", AGENT_NAME, prompt],
+    "claude": lambda b, prompt: [
+        b, "-p", f"Use the {AGENT_NAME} agent to {prompt}",
+        "--permission-mode", "acceptEdits"],
+}
+
+
+def _split_key(key: str) -> tuple[str, str]:
+    """'renault_megane_4' -> ('renault', 'megane_4'), validated."""
+    make, _, model = key.partition("_")
+    if not _SAFE_NAME.fullmatch(make) or not _SAFE_NAME.fullmatch(model or ""):
+        raise HTTPException(400, f"malformed model key: {key!r}")
+    return make, model
 
 app = FastAPI(title="kriko-hub", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"),
@@ -201,6 +236,89 @@ def log() -> dict:
     return {"cmd": cmd, "buf": buf, "running": running, "exit": exit_code}
 
 
+# ── Models: onboarding state + the agent driver (B23) ─────────────────────────
+
+
+@app.get("/api/models")
+def models() -> dict:
+    """Every catalogued car with its onboarding rollup."""
+    return {"models": model_state.list_models(DATA_DIR)}
+
+
+@app.get("/api/model/{key}")
+def model_detail(key: str) -> dict:
+    """One car's full work list — the same payload the agent's onboard_model
+    tool returns, so the browser and the agent never disagree."""
+    make, model = _split_key(key)
+    return model_state.model_state(make, model, DATA_DIR)
+
+
+@app.post("/api/onboard")
+def onboard(payload: dict = Body(...)) -> dict:
+    """Launch a research agent against one model, streaming into the run log.
+
+    This is the only place the hub executes something other than
+    `knowledge.ledger.run`, so both inputs are locked down: make/model must be
+    catalog-shaped identifiers (never interpolated into a shell — argv only),
+    and the harness selects a fixed argv template rather than supplying one.
+    """
+    make = str(payload.get("make", "")).strip().lower()
+    model = str(payload.get("model", "")).strip().lower()
+    harness = str(payload.get("harness", "opencode")).strip()
+
+    if not _SAFE_NAME.fullmatch(make) or not _SAFE_NAME.fullmatch(model):
+        raise HTTPException(
+            400, "make/model must match [a-z0-9_] (1-40 chars)")
+    if harness not in HARNESSES:
+        raise HTTPException(
+            400, f"unknown harness: {harness!r} — one of {sorted(HARNESSES)}")
+
+    binary = shutil.which(harness)
+    if not binary:
+        raise HTTPException(400, f"{harness} is not installed on this machine")
+
+    cmd = HARNESSES[harness](binary, ONBOARD_PROMPT.format(make=make, model=model))
+    with _run_lock:
+        old = RUN["proc"]
+    if old and old.poll() is None:
+        old.kill()
+        old.wait()
+    return {"ok": True, "cmd": _spawn(cmd), "model_key": f"{make}_{model}"}
+
+
+@app.get("/api/activity")
+def activity(limit: int = 40) -> dict:
+    """Recent ledger writes, newest first — what the agent is actually doing.
+
+    Read off the ledger rather than the harness's stdout: every agent action
+    goes through an MCP write tool, so the ledger is the authoritative record
+    and this works identically whichever harness is driving.
+    """
+    n = max(1, min(int(limit), MAX_ACTIVITY))
+    conn = _conn()
+    try:
+        docs = [{"kind": "document", "id": r["id"], "at": r["fetched_at"],
+                 "label": r["url"], "detail": r["source_type"],
+                 "target": r["target_hint"] or ""}
+                for r in conn.execute(
+                    "SELECT id, url, source_type, target_hint, fetched_at"
+                    " FROM documents ORDER BY id DESC LIMIT ?", (n,))]
+        evs = [{"kind": "evidence", "id": r["id"], "at": r["extracted_at"],
+                "label": r["title"], "detail": r["domain"],
+                "target": r["component_hint"] or "",
+                "severity": r["severity"],
+                "by_agent": r["extractor_version"] == AGENT_EXTRACTOR_VERSION,
+                "grounded": bool(r["quote_grounded"])}
+               for r in conn.execute(
+                   "SELECT id, title, domain, severity, component_hint,"
+                   " quote_grounded, extractor_version, extracted_at"
+                   " FROM evidence ORDER BY id DESC LIMIT ?", (n,))]
+    finally:
+        conn.close()
+    events = sorted(docs + evs, key=lambda e: e["at"] or "", reverse=True)
+    return {"events": events[:n]}
+
+
 # ── page ──────────────────────────────────────────────────────────────────────
 
 _PAGE = """<!doctype html>
@@ -210,7 +328,8 @@ _PAGE = """<!doctype html>
 </head><body>
 <header><h1>kriko-hub</h1><span class="meta" id="meta"></span></header>
 <nav id="nav">
-<button data-p="overview" class="on">Overview</button>
+<button data-p="models" class="on">Models</button>
+<button data-p="overview">Overview</button>
 <button data-p="parts">Parts</button>
 <button data-p="sources">Sources</button>
 <button data-p="run">Run</button>
@@ -218,7 +337,38 @@ _PAGE = """<!doctype html>
 <button data-p="coverage">Coverage</button>
 </nav>
 <main>
-<div class="page on" id="p-overview">
+<div class="page on" id="p-models">
+  <h2>Onboard a model
+    <span class="muted" id="onboard-state"></span></h2>
+  <div class="onboard">
+    <input id="ob-make" placeholder="make (e.g. renault)" autocomplete="off">
+    <input id="ob-model" placeholder="model (e.g. captur_2)" autocomplete="off">
+    <select id="ob-harness">
+      <option value="opencode">opencode</option>
+      <option value="claude">claude code</option>
+    </select>
+    <button class="run" id="b-onboard">Onboard →</button>
+    <button class="run" id="b-onboard-stop">stop</button>
+  </div>
+
+  <div class="split">
+    <div>
+      <h2>Catalog</h2>
+      <table id="t-models"></table>
+    </div>
+    <div>
+      <h2>Live activity <span class="muted" id="act-meta"></span></h2>
+      <div id="activity"></div>
+    </div>
+  </div>
+
+  <h2 id="md-title">Model detail</h2>
+  <div id="model-detail"><p class="muted">Pick a model to see its work list.</p></div>
+
+  <h2>Agent output <span class="muted" id="ob-run-state"></span></h2>
+  <pre id="ob-log"></pre>
+</div>
+<div class="page" id="p-overview">
   <h2>Ledger</h2>
   <div class="kpis" id="kpis"></div>
   <h2>Spend</h2><table id="t-spend"></table>

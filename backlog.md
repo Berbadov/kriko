@@ -207,6 +207,12 @@ the scalability rule forbids. Now the researcher agent supplies the lineup:
   validation, so hosts are interchangeable and none can bypass the gates.
 - Agent loop is now **one model per pass** (was one part).
 
+- Hub **Models tab** (2026-08-16): onboarding control room — catalog rollup,
+  per-model work list, draft rows with their missing figures, `POST /api/onboard`
+  spawning opencode/Claude Code, and a live activity feed read off the *ledger*
+  (harness-independent, shows per-row quote grounding). Shared `model_state`
+  module backs both the MCP tool and the UI so they cannot drift.
+
 - [ ] First live run: onboard a model with no scaffold end-to-end through a
       subscription harness; confirm `SUM(usd) WHERE model='agent'` stays 0.
 - [ ] Re-onboard already-catalogued cars through the agent path, then delete their

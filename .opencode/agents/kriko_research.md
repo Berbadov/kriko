@@ -1,6 +1,6 @@
 ---
 description: Kriko knowledge-base researcher — onboards one car model per pass through the kriko MCP server at $0. Use when the user names a make and model to onboard, wants to grow the ledger, or wants coverage findings closed.
-mode: subagent
+mode: all
 permission:
   bash: deny
   edit: deny

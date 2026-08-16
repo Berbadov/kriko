@@ -37,3 +37,39 @@ padding:12px;overflow:auto;max-height:46vh;font:12px/1.5 ui-monospace,monospace}
 .sev-low{background:#1f4a2c;color:#8affa8}
 .muted{color:var(--dim)}
 .err{color:#ff8080}
+
+/* ── Models tab (B23) ─────────────────────────────────────────────────────── */
+h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+margin:12px 0 6px;font-weight:600}
+input[type=text],input:not([type]){background:var(--panel2);color:var(--text);
+border:1px solid var(--line);border-radius:6px;padding:7px 10px;font:inherit}
+input::placeholder{color:var(--dim)}
+.onboard{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+.onboard select{margin-bottom:0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.split{grid-template-columns:1fr}}
+
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11px;
+margin-right:5px;background:var(--panel2);color:var(--dim);white-space:nowrap}
+.p-has_claims{background:#1f4a2c;color:#8affa8}
+.p-zero_claim{background:#5a3d1a;color:#ffce8a}
+.p-missing{background:#5a1f24;color:#ff9a9a}
+.p-draft{background:#243a5a;color:#9ac4ff}
+.p-agent{background:#4a2f14;color:var(--accent)}
+
+tr.clickable{cursor:pointer}
+tr.sel td{background:#2f323c;box-shadow:inset 3px 0 0 var(--accent)}
+
+#activity{max-height:52vh;overflow:auto;background:var(--panel);
+border:1px solid var(--line);border-radius:8px;padding:8px}
+.act{padding:7px 9px;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:none}
+.act.by-agent{box-shadow:inset 3px 0 0 var(--accent)}
+.act-h{display:flex;gap:8px;align-items:center;font-size:11px;margin-bottom:2px}
+.act-t{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums}
+.act-l{word-break:break-word;font-size:13px}
+.act-doc{color:#9ac4ff}
+.act-ev{color:#8affa8}
+.ok{color:var(--ok)}
+.warn{color:#ffce8a}

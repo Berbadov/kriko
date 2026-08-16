@@ -24,6 +24,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from knowledge.catalog import model_state
 from knowledge.ledger import (
     cluster, db, export, remediate, resolve, verdict,
 )
@@ -297,40 +298,8 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
 # all was unreachable, and scaffolding it meant a human hand-editing
 # TR_MARKET_TRIMS. Now the agent researches the lineup and submits it.
 
-# The variant columns that name a part to research. Same axes the fitment file
-# projects, so the work list is derived from the catalog, never enumerated.
-_PART_AXES = ("engine_family", "transmission_code", "electrical_code", "body_code")
-
-# Placeholder codes that are engineering vocabulary, not a researchable part.
-_PSEUDO_PART_CODES = {"manual", ""}
-
-
 def _model_key(make: str, model: str) -> str:
-    return f"{make.lower()}_{model.lower()}"
-
-
-def _part_work_list(variant_rows: list[dict]) -> list[dict]:
-    """Every part code the variants reference, tagged with what it still needs."""
-    known = {p["part_id"]: p for p in _parts(DATA_DIR)}
-    codes: dict[str, set[str]] = {}
-    for row in variant_rows:
-        for axis in _PART_AXES:
-            code = (row.get(axis) or "").strip()
-            if code and code not in _PSEUDO_PART_CODES:
-                codes.setdefault(code, set()).add(axis)
-
-    out = []
-    for code in sorted(codes):
-        part = known.get(code)
-        if part is None:
-            state, claims, part_type = "missing", 0, ""
-        elif part["claims"] == 0:
-            state, claims, part_type = "zero_claim", 0, part["part_type"]
-        else:
-            state, claims, part_type = "has_claims", part["claims"], part["part_type"]
-        out.append({"part_id": code, "part_type": part_type, "state": state,
-                    "claims": claims, "axes": sorted(codes[code])})
-    return out
+    return model_state.model_key(make, model)
 
 
 @mcp.tool()
@@ -342,29 +311,15 @@ def onboard_model(make: str, model: str) -> dict:
 
     Call this first. If `has_variants` is false, research the TR-market trim
     lineup and call submit_trims before researching any part."""
-    import yaml
-    key = _model_key(make, model)
-    v_path = DATA_DIR / "variants" / f"{key}.yaml"
-    f_path = DATA_DIR / "fitment" / f"{key}.yaml"
-
-    rows: list[dict] = []
-    if v_path.exists():
-        rows = yaml.safe_load(v_path.read_text()) or []
-
-    findings = [f for f in coverage_report()
-                if key in (f.get("subject") or "")
-                or (f.get("part_id") or "") in {r.get("engine_family") for r in rows}]
-
-    return {
-        "model_key": key,
-        "has_variants": v_path.exists(),
-        "has_fitment": f_path.exists(),
-        "variants": len(rows),
-        "variants_draft": sum(1 for r in rows if r.get("draft")),
-        "draft_ids": [r["id"] for r in rows if r.get("draft")],
-        "parts": _part_work_list(rows),
-        "coverage_findings": findings,
-    }
+    st = model_state.model_state(make, model, DATA_DIR)
+    key = st["model_key"]
+    part_ids = {p["part_id"] for p in st["parts"]}
+    st["draft_ids"] = [d["id"] for d in st["drafts"]]
+    st["coverage_findings"] = [
+        f for f in coverage_report()
+        if key in (f.get("subject") or "") or (f.get("part_id") or "") in part_ids
+    ]
+    return st
 
 
 @mcp.tool()
@@ -411,8 +366,9 @@ def submit_trims(make: str, model: str, trims: list[dict],
         conn.close()
 
     return {**summary, "errors": [], "sources_recorded": recorded,
-            "parts": _part_work_list(wv.build_rows(
-                make, model, trims, wv._SHARED_CODES.get(key, {})))}
+            "parts": model_state.part_work_list(
+                wv.build_rows(make, model, trims,
+                              wv._SHARED_CODES.get(key, {})), DATA_DIR)}
 
 
 def _pipeline_pass(conn) -> dict:
