@@ -91,7 +91,10 @@ submits it with `submit_trims` (which writes both variants and fitment YAML), th
 researches each part into the ledger and runs one `run_pipeline_pass`. Cost: $0 —
 every MCP write tool is deterministic or import-only. Then run Step 5 to sync.
 
-Two guarantees make this safe to run unattended:
+**The server is the referee.** Every rule the agent prompt states is also
+enforced in code at the write path, because a rule that lives only in a prompt
+is a rule a cheap model can break and be told "OK" — that is exactly how a
+trim-shaped VW Golf 8 lineup got written and reported as a success:
 
 - **No guessed figures.** A trim whose power or displacement the agent could not
   source is written `draft: true`; `backend/sync.py` skips it and the coverage
@@ -99,6 +102,34 @@ Two guarantees make this safe to run unattended:
 - **No fabricated citations.** `add_evidence` rejects any quote that is not
   literally present in the document the agent submitted (whitespace- and
   case-insensitive). An agent cannot cite a source it did not read.
+- **No trim-shaped lineups.** A row is a *powertrain*: two rows a listing could
+  never tell apart are merged or refused, and an id must name the engine, not
+  the showroom (`knowledge/catalog/identity.py`).
+- **No description codes.** `transmission_code: "7-speed DSG"` is refused —
+  "DSG" names three different gearboxes, so a claim attributed to it would
+  contaminate its siblings. Find the unit code (`dq381`) or leave the row out.
+- **No low-value rows.** Warning lights, ekspertiz-routine items (fluids, pads,
+  compression), DTC litanies, filler rationales and rephrasings of a chronic
+  already on file are refused with the reason
+  (`knowledge/agent/gates.py`) — the CLAUDE.md product principle, enforced
+  rather than requested.
+- **No budget overrun.** More than 5 documents on one part is refused; forums,
+  complaint boards and spec content farms are refused as sources.
+
+A rejection is an instruction: it names what would fix the row. The contract
+tells the agent never to retry a rejection with a reworded version of the same
+row — fix the substance or report the gap.
+
+**Repairing what is already on disk** (the other half of the same rule):
+
+```bash
+python -m knowledge.catalog.doctor          # report identity damage, all cars
+python -m knowledge.catalog.doctor --fix    # $0 deterministic repair
+```
+
+It canonicalizes codes, renames trim-shaped ids, merges duplicate powertrains,
+prunes orphan fitment rows, and fails open (`draft: true`) on a code nobody
+could resolve. Idempotent, and CI fails if anything fixable is left unfixed.
 
 The CLI steps below remain the manual fallback and are what the agent path
 ultimately drives.
@@ -197,12 +228,17 @@ on WSLg was slow and broken):
 .venv/bin/python -m knowledge.hub.web     # then open http://127.0.0.1:8787
 ```
 
-Tabs: **Models** (default — onboarding control room, below), Overview (ledger
+Tabs: **Models** (default — onboarding control room, below), **Claims** (the
+claim inspector: every claim with the deterministic gate's verdict and its
+reasons — agree/disagree records gate feedback in
+`knowledge/hub/claim_signals.jsonl` and never edits the catalog, because a
+human decision inside the data path is what G5 forbids), Overview (ledger
 counts, spend plot, cost-to-finish, recent runs),
-Parts (part → claims/variants), Sources (documents → raw text), Run
+Parts (part → claims/variants), Sources (documents → raw text, tiered), Run
 (buttons: extract with a `--max-usd` cap, import verdicts, full $0 pass,
 remediate, export, stop — output streams live), Ledger (generic read-only
-SQLite browser), Coverage (findings). The browser polls state every second,
+SQLite browser), Coverage (the catalog doctor's identity findings with a $0
+repair button, plus coverage findings). The browser polls state every second,
 so agent-driven work appears live. The API is `127.0.0.1`-only, no auth.
 Run `GET /api/state` for a JSON snapshot if you ever want the data without
 the page.
@@ -289,11 +325,26 @@ still has one run slot, so starting an agent stops any active pipeline run.
 The pipeline as tools for a subscription LLM — new-model research at $0 flat
 rate instead of API tokens:
 
-The server registers 15 tools: read (`ledger_status`, `spend_summary`,
+The server registers 19 tools: read (`ledger_status`, `spend_summary`,
 `pending_extract`, `pending_verdicts`, `list_parts`, `get_part`,
-`list_documents`, `get_document`, `coverage_report`, `onboard_model`) and $0
-write (`submit_trims`, `add_document`, `add_evidence`, `run_pipeline_pass`,
-`run_remediate_import_only`). Write tools are deterministic or import-only —
+`list_documents`, `get_document`, `coverage_report`, `onboard_model`,
+`list_generations`, `research_brief`) and $0 write (`submit_trims`,
+`submit_generations`, `add_document`, `add_evidence`, `run_pipeline_pass`,
+`finish_model`, `run_remediate_import_only`).
+
+Two of those shape the agent's *method* rather than its output:
+
+- **`research_brief(part_id)`** — called before any web search. It returns what
+  this subsystem can fail at (from `knowledge/catalog/components.yaml`), which
+  chronics are already on file, how much of the 5-document budget is left, and
+  which source tiers count (`knowledge/catalog/source_tiers.yaml`). "Do web
+  research" left a cheap model to invent its own checklist per part, so
+  coverage depended on what it happened to think of; the brief is derived from
+  the catalog, so it is current without a prompt edit.
+- **`finish_model(make, model, notes)`** — closes a pass: the $0 pipeline pass
+  plus a recorded outcome in `logs/agent_runs.jsonl` (what closed, what is
+  still zero-claim, which rows stayed draft and which figure each is missing).
+  The result outlives the session; the hub's **Agent results** table reads it. Write tools are deterministic or import-only —
 nothing in agent-land can spend API tokens; the pass is logged at
 `model=agent, usd=0` so the panel stays honest. Agent evidence
 (extractor_version=1) flows through the same deterministic verdict path as
@@ -335,9 +386,19 @@ Configure):
 }
 ```
 
-The agent prompt is one canonical file, `.opencode/agents/kriko_research.md`;
-`.claude/agents/kriko_research.md` is the same body with Claude Code
-frontmatter. For Codex/Cline, paste that file's body as the system prompt.
+The agent prompt has exactly one source: `knowledge/agent/kriko_research.md`.
+The harness files (`.opencode/agents/`, `.claude/agents/`) are **generated**:
+
+```bash
+python -m knowledge.agent.render          # rewrite the harness files
+python -m knowledge.agent.render --check  # CI: are they current?
+```
+
+Two hand-maintained copies meant the harness a run happened to use decided
+which rules the agent had been told about; `test_agent_contract.py` now fails
+if a checked-in file is stale, or if the contract grants a tool the server does
+not expose. For Codex/Cline, paste the canonical file's body as the system
+prompt.
 Tool names are prefixed per host (`kriko_onboard_model` in opencode,
 `mcp__kriko__onboard_model` in Claude Code) — the prompt says so.
 

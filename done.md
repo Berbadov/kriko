@@ -6,6 +6,79 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-19 — B24: agent methodology overhaul — rules move to the write path
+
+The first live agent onboarding (VW Golf 8) wrote four **marketing trims**
+(Impression/Life/Style/R-Line) describing two powertrains, with `7-speed DSG`
+as a part code and `generation: null`. `submit_trims` returned success; the
+breakage surfaced hours later in `backend/tests/test_catalog.py` — a test the
+agent never runs. Root cause, generalized: **every rule that lives only in a
+test or a prompt is a rule the agent can break and be told "OK".**
+
+- **`knowledge/catalog/identity.py`** — one definition of what makes two cars
+  different: `find_overlaps` (imported by `backend/tests/test_catalog.py`, so
+  CI and the write gate cannot disagree), `collapse_duplicates`, the code
+  vocabulary (`code_errors` refuses descriptions like `7_speed_dsg` and
+  sibling-shared families like `dsg`), and `canonical_variant_id`.
+- **`knowledge/catalog/doctor.py`** — the same rules applied to the catalog
+  already on disk, for every car, unattended: normalize codes, rename
+  trim-shaped ids, merge duplicate powertrains, prune orphan fitment rows, fail
+  open (`draft: true`) on an unresolvable code. **Preserves the B16 fitment
+  remap** rather than re-projecting fitment from variant fields (which would
+  have silently pointed `megane4_h5f_100` back at a part file the swap merged
+  away — caught by a test). Idempotent; CI gate on the live catalog.
+- **`knowledge/agent/gates.py`** — the CLAUDE.md product principle enforced at
+  `add_evidence`/`add_document` instead of requested in a prompt: warning-light
+  items, ekspertiz-routine items, DTC litanies, filler rationales, blocked
+  forum/spec-farm sources, the 5-document per-part budget, and rephrasings of a
+  chronic already on file (dq200 carries ~30 rows of the same two failures —
+  the B5 volume problem at its source). Reuses `stoplists.py`, with its
+  specificity escape valve, so the agent path and the LLM path judge value
+  alike. Calibrated against the live catalog: 10 of 699 claims rejected, each
+  one a row the product principle says should not exist — pinned as a test.
+- **`research_brief(part_id)`** — the agent's plan, derived from
+  `components.yaml` + `source_tiers.yaml` + what is already on file + remaining
+  budget. "Do web research" was the weakest instruction in the contract.
+- **`finish_model(make, model, notes)`** — pipeline pass plus a recorded
+  outcome in `logs/agent_runs.jsonl`, so a run's result outlives its session.
+- **One contract, generated harness files** — `knowledge/agent/kriko_research.md`
+  is the body; `knowledge.agent.render` writes `.claude/` and `.opencode/`
+  copies; `test_agent_contract.py` fails on drift and on a granted tool the
+  server does not expose.
+- **Golf 8 fixed by the mechanism, not by hand**: `doctor --fix` merged it to
+  two powertrain rows, renamed the ids, and left one honest finding —
+  `7_speed_dsg` needs research.
+
+Commit `e5c00de`. 754 tests (was 698 + 1 failing).
+
+## 2026-08-19 — B25: kriko-hub — claim inspector, catalog doctor, real HTML page
+
+- **The review queue is gone.** Approve rewrote `status: review` →
+  `verified` inside a part YAML: a human decision in the data path, which G5
+  rules out, and unusable at scale anyway — the live queue holds **696**
+  claims, which nobody was ever going to hand-approve. It becomes a **claim
+  inspector**: each claim carries the deterministic gate's verdict *with its
+  reasons* (the same `knowledge/agent/gates.py` the MCP write path runs), and
+  agree/disagree records a labelled example in `claim_signals.jsonl`. A rule
+  that collects disagreement is a rule to fix in `gates.py` — where the fix
+  applies to every car.
+- **Catalog doctor over HTTP** — `/api/doctor` (findings split auto-fixable vs
+  needs-research) and `/api/doctor/repair` ($0 deterministic pass), surfaced on
+  the Coverage tab. `/api/agent-runs` shows what agent passes achieved.
+- **The page is a real `static/index.html`**, not a Python string that once
+  took the whole dashboard out via a stray escape (49aa90c). Two consistency
+  tests: every element `hub.js` reaches for exists, and every tab it switches
+  between has both a nav button and a page div — the second found a live
+  drift on the first run.
+- **Repo hygiene**: nine `imgui.ini` files committed under garbage names
+  (`Constant with a value of 2`, `\240b\235\017`) by the deprecated
+  DearPyGui hub, plus `knowledge/hub/app.py` itself and its `dearpygui`
+  requirement, retired. The web hub has been the live one since 2026-08-04.
+
+Commit `89ba247`. 759 tests.
+
+---
+
 ## 2026-08-16 — B23: agent-driven model onboarding (closes B21, deprioritizes B22)
 
 Onboarding a car no longer requires a human to hand-type a Python dict. B21's
