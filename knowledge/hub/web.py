@@ -629,12 +629,45 @@ def research_generations(payload: dict = Body(...)) -> dict:
             "make": make, "model": model}
 
 
+def _onboard_block_reason(make: str, model: str, gen) -> str:
+    """Why this onboarding target cannot be researched, if it cannot.
+
+    Kriko's model keys carry a generation (`clio_5`), and the demand queue
+    hands the picker scraped display slugs ("VW CC 1.4 TSI" ->
+    `vw_cc_1_4_tsi`). Onboarding one of those with no generation produces the
+    key `volkswagen_vw_cc_1_4_tsi`, which is not a car: the agent researches a
+    model that does not exist, and the run looks broken for reasons nothing
+    states. That exact case is refused here.
+
+    Deliberately narrow. A generation-qualified target is a coherent key and
+    stays allowed even before its lineup file exists (the CLI and the tests
+    drive it that way), and a car already in the catalog is obviously fine —
+    over-constraining the API would break working paths to fix a UI bug. The
+    picker enforces the same rule client-side; this is the half no client can
+    skip.
+    """
+    if gen not in (None, "", 0):
+        return ""                                  # generation-qualified key
+    if (DATA_DIR / "variants" / f"{make}_{model}.yaml").exists():
+        return ""                                  # already a catalogued car
+    lineup = gencat.read_generations(make, model, GENERATIONS_DIR)
+    if lineup:
+        known = ", ".join(str(g.get("generation")) for g in lineup["generations"])
+        return f"pick a generation to onboard — researched: {known}"
+    return (f"no generation given and no researched lineup for {make} {model} — "
+            f"run 'find generations' first (model keys carry a generation, and "
+            f"{model!r} may be a scraped display name, not a model)")
+
+
 @app.post("/api/onboard")
 def onboard(payload: dict = Body(...)) -> dict:
     """Phase 2: launch the research agent against one model generation."""
     make = str(payload.get("make", "")).strip().lower()
     model = str(payload.get("model", "")).strip().lower()
     gen = payload.get("generation")
+    blocked = _onboard_block_reason(make, model, gen)
+    if blocked:
+        raise HTTPException(400, blocked)
     argv = _agent_command("onboard", make, model,
                           str(payload.get("harness", "opencode")).strip(),
                           gen, str(payload.get("llm_model", "")).strip())

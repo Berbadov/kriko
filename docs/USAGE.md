@@ -264,6 +264,15 @@ number), so it is **researched first**:
 3. Generation buttons appear — `I (GA) 2016–2024`, `II 2024–`. Pick one.
 4. **Onboard audi q2_1 →** runs the full onboarding loop against that key.
 
+**Onboarding is armed only when the target is a real model key.** Until a
+lineup is researched, the Onboard task is disabled and generation research is
+selected for you; with a lineup but no generation picked, the Run button is
+disabled and says which choice is missing. `POST /api/onboard` enforces the
+same rule (400 with the reason), so no client can start the run either. The
+case this prevents: the demand queue's display slug `vw_cc_1_4_tsi` onboarded
+with no generation, producing the key `volkswagen_vw_cc_1_4_tsi` — not a car,
+so the agent researches nothing and the run only *looks* like a broken hub.
+
 That phase-1 step also **resolves scraped display names**. The demand queue
 says `vw_cc_1_4_tsi` and `3 Series`, which are not model names; the agent
 submits `canonical_model: passat_cc` and the queried name is kept as an alias,

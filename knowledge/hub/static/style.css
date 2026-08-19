@@ -409,6 +409,10 @@ optgroup { color: var(--faint); font-style: normal; font-family: var(--sans) }
   font: 600 14px/1.2 var(--mono); text-shadow: 0 1px 0 #00000070;
 }
 .chip:hover { background: linear-gradient(#2f3540, #22262e) }
+/* A task you cannot run yet reads as unavailable hardware, not as a live
+   button that ignores you. */
+.chip:disabled { opacity: .38; cursor: not-allowed }
+.chip:disabled:hover { background: linear-gradient(var(--plate-2), #1b1e24) }
 .chip.on {
   color: #fff; background: linear-gradient(#402a10, #2a1c0b);
   border-color: var(--lo) #7a5c28 #7a5c28 var(--lo);   /* latched: pressed in */

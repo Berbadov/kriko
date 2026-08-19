@@ -529,10 +529,17 @@ async function loadActivity() {
 
 let demand = { makes: [] };
 let pickMake = null, pickModel = null, pickGen = null;
+// Whether this car's generation lineup has been researched yet:
+// 'unknown' before we ask, 'none' when nobody has run generation research,
+// 'ready' when a lineup exists. Onboarding is only meaningful once it is
+// 'ready' AND a generation is picked — Kriko's model keys carry the
+// generation (`clio_5`), and the demand queue hands us scraped display slugs
+// ("VW CC 1.4 TSI"), so onboarding `volkswagen_vw_cc_1_4_tsi` is not a car.
+let genState = 'unknown';
 
-function chip(label, sub, on, cls) {
+function chip(label, sub, on, cls, disabled) {
   return '<button class="chip' + (on ? ' on' : '') + (cls ? ' ' + cls : '')
-    + '">' + esc(label)
+    + '"' + (disabled ? ' disabled' : '') + '>' + esc(label)
     + (sub ? '<span class="chip-sub">' + esc(sub) + '</span>' : '') + '</button>';
 }
 
@@ -558,6 +565,7 @@ function renderMakes() {
 function selectMake(m) {
   pickMake = m.slug;
   pickModel = pickGen = null;
+  genState = 'unknown';
   renderMakes();
   $('#step-model').hidden = false;
   $('#step-gen').hidden = true;
@@ -575,6 +583,7 @@ function selectMake(m) {
 async function selectModel(x) {
   pickModel = x.slug;
   pickGen = null;
+  genState = 'unknown';
   $('#step-gen').hidden = false;
   $('#step-go').hidden = false;   // task step: 'find generations' is valid now
   renderTasks();
@@ -591,6 +600,7 @@ async function renderGenerations() {
     + '/' + encodeURIComponent(pickModel)).then(r => r.json());
 
   if (!d.researched) {
+    genState = 'none';
     el.innerHTML = '<span class="muted">Not researched yet — an agent has to '
       + 'find this car’s generations first.</span>'
       + '<button class="run" id="b-find-gens">Find generations →</button>';
@@ -599,8 +609,11 @@ async function renderGenerations() {
       renderTasks();
       refreshPreview().then(runAgent);
     };
+    renderTasks();
+    refreshPreview();
     return;
   }
+  genState = 'ready';
   // The lineup may be filed under a canonical slug the scrape got wrong.
   pickModel = d.model;
   el.innerHTML = d.generations.map(g =>
@@ -609,6 +622,8 @@ async function renderGenerations() {
   [...el.children].forEach((b, i) => {
     b.onclick = () => selectGen(d.generations[i]);
   });
+  renderTasks();
+  refreshPreview();
 }
 
 function selectGen(g) {
@@ -636,13 +651,37 @@ let pickTask = 'onboard';
 let harnesses = [];
 
 function renderTasks() {
+  // Onboarding needs a generation-qualified model key, so the task is not a
+  // free choice. With no lineup researched, generation research is the ONLY
+  // possible task and is selected for you. With a lineup, onboarding stays
+  // selectable — the Run button then asks for the missing generation rather
+  // than quietly running the research again, which would redo settled work.
+  if (genState === 'none') pickTask = 'generations';
+
   const el = $('#pick-task');
   el.innerHTML = TASKS.map(t =>
-    chip(t.label, t.sub, t.id === pickTask)).join('');
+    chip(t.label, t.sub, t.id === pickTask, '',
+      t.id === 'onboard' && genState !== 'ready')).join('');
   [...el.children].forEach((b, i) => {
+    if (b.disabled) return;
     b.onclick = () => { pickTask = TASKS[i].id; renderTasks(); refreshPreview(); };
   });
   $('#step-run').hidden = false;
+  updateRunArmed();
+}
+
+/** Arm or disarm the Run button — and always say why, never just sit dead. */
+function updateRunArmed() {
+  const btn = $('#b-agent-run');
+  let why = '';
+  if (!pickMake || !pickModel) why = 'pick a make and model';
+  else if (pickTask === 'onboard' && pickGen == null)
+    why = genState === 'ready' ? 'pick a generation to onboard'
+                               : 'this car’s generations are not researched yet';
+  btn.disabled = !!why;
+  btn.title = why;
+  // Never clobber live run status; the reason only matters while idle.
+  if (!running) $('#onboard-state').textContent = why;
 }
 
 async function loadHarnesses() {
@@ -711,9 +750,11 @@ async function refreshPreview() {
   el.classList.toggle('paid', paid);
   $('#b-agent-run').textContent =
     (pickTask === 'generations' ? 'Find generations' : 'Onboard') + ' →';
+  updateRunArmed();
 }
 
 async function runAgent() {
+  if ($('#b-agent-run').disabled) return;
   const body = agentBody();
   const url = body.task === 'generations'
     ? '/api/research-generations' : '/api/onboard';
