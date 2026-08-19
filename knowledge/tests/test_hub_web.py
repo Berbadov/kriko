@@ -5,11 +5,15 @@ Requires fastapi (+ httpx for TestClient), i.e. run under the .venv
 python suite skips these via importorskip.
 """
 
+import json
+import re
+import sys
 import tempfile
 import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 fastapi = pytest.importorskip("fastapi")
 
@@ -163,7 +167,8 @@ def test_model_detail_rejects_a_malformed_key(client):
 @pytest.fixture
 def spawned(monkeypatch):
     calls = []
-    monkeypatch.setattr(web, "_spawn", lambda cmd: calls.append(cmd) or " ".join(cmd))
+    monkeypatch.setattr(web, "_spawn",
+                        lambda cmd, meta=None: calls.append(cmd) or " ".join(cmd))
     return calls
 
 
@@ -443,3 +448,271 @@ def test_harnesses_endpoint_splits_free_from_paid(client):
     # the subscription plane must never contain an API-key provider
     paid = web._paid_providers(web._load_env())
     assert not any(web._is_paid(m, paid) for m in oc["models"])
+
+
+# ── Claim inspector, coverage heatmap, sources, run history ──────────────────
+#
+# The claim POST records gate feedback and the spawn path appends to
+# runs.jsonl — both must hit throwaway paths in tests, never the real repo.
+
+_TEST_PART = """\
+part_id: testpart
+part_type: engine
+display_name: Test Part
+manufacturer: testco
+claims:
+- id: testpart_engine_oil_leak_v1
+  title: Oil leak from the valve cover
+  title_tr: Supap kapağından yağ kaçağı
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.7
+  status: review
+  sources:
+  - source_url: https://dsgservisi.com/oil-leak
+    source_domain: dsgservisi.com
+    quote: '"Oil leaks are common on this engine."'
+- id: testpart_brakes_pad_wear_v1
+  title: Fast brake pad wear
+  title_tr: Hızlı balata aşınması
+  kind: known_issue
+  domain: brakes
+  severity: low
+  confidence: 0.5
+  status: review
+  sources: []
+"""
+
+
+@pytest.fixture(autouse=True)
+def _isolated_run_log(tmp_path, monkeypatch):
+    """Every test's spawns land in a throwaway runs.jsonl."""
+    monkeypatch.setattr(web, "RUNS_LOG", tmp_path / "runs.jsonl")
+
+
+@pytest.fixture
+def tmp_catalog(tmp_path, monkeypatch):
+    """A one-part catalog under tmp; DATA_DIR and the audit log point at it."""
+    parts = tmp_path / "parts" / "engine"
+    parts.mkdir(parents=True)
+    (parts / "testpart.yaml").write_text(_TEST_PART, encoding="utf-8")
+    monkeypatch.setattr(web, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(web, "CLAIM_SIGNAL_LOG", tmp_path / "claim_signals.jsonl")
+    return tmp_path
+
+
+def test_review_queue_lists_pending_claims(client, tmp_catalog):
+    d = client.get("/api/review").json()
+    assert d["total"] == 2
+    c = next(x for x in d["claims"] if x["claim_id"] == "testpart_engine_oil_leak_v1")
+    for k in ("claim_id", "title", "title_tr", "severity", "domain", "part_id",
+              "group", "status", "sources"):
+        assert k in c
+    assert c["group"] == "engine"
+    assert c["sources"][0]["domain"] == "dsgservisi.com"
+    assert c["sources"][0]["quote"]
+    # high severity sorts ahead of low — worst risk reviewed first
+    assert d["claims"][0]["severity"] == "high"
+
+
+def test_review_queue_filters_by_group(client, tmp_catalog):
+    d = client.get("/api/review", params={"group": "brakes"}).json()
+    assert [c["claim_id"] for c in d["claims"]] == ["testpart_brakes_pad_wear_v1"]
+
+
+def test_review_queue_against_the_real_catalog(client):
+    """Hundreds of review-status claims existed at Phase 4 time."""
+    d = client.get("/api/review", params={"limit": 5}).json()
+    assert d["total"] > 0
+    assert len(d["claims"]) == 5
+
+
+def test_a_claim_signal_never_touches_the_catalog(client, tmp_catalog):
+    """G5: no human decision inside the data path. The endpoint records, only."""
+    before = (tmp_catalog / "parts" / "engine" / "testpart.yaml").read_text()
+    r = client.post("/api/review/testpart_engine_oil_leak_v1",
+                    json={"action": "agree", "note": "correct call"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["recorded"] is True and body["applied_to_catalog"] is False
+    assert (tmp_catalog / "parts" / "engine" / "testpart.yaml").read_text() == before
+
+    recorded = json.loads((tmp_catalog / "claim_signals.jsonl").read_text()
+                          .splitlines()[-1])
+    assert recorded["claim_id"] == "testpart_engine_oil_leak_v1"
+    assert recorded["action"] == "agree" and recorded["note"] == "correct call"
+    assert "gate_ok" in recorded
+
+    # the claim is still in the queue: nothing about it changed
+    d = client.get("/api/review").json()
+    assert d["total"] == 2
+    assert d["recent"][0]["claim_id"] == "testpart_engine_oil_leak_v1"
+
+
+def test_claims_carry_the_deterministic_gate_verdict(client, tmp_catalog):
+    d = client.get("/api/review").json()
+    pads = next(c for c in d["claims"]
+                if c["claim_id"] == "testpart_brakes_pad_wear_v1")
+    assert pads["gate"]["ok"] is False          # brake-pad wear: ekspertiz ground
+    assert pads["gate"]["rejections"]
+    assert d["would_drop"] >= 1
+
+
+def test_signal_gates(client, tmp_catalog):
+    assert client.post("/api/review/testpart_engine_oil_leak_v1",
+                       json={"action": "approve"}).status_code == 400
+    assert client.post("/api/review/nope_v1",
+                       json={"action": "agree"}).status_code == 404
+    # a claim id is a path segment — traversal/shell shapes are refused
+    for bad in ("..%2F..%2Fetc", "a b", "x;rm"):
+        assert client.post(f"/api/review/{bad}",
+                           json={"action": "agree"}).status_code in (400, 404)
+
+
+# ── Catalog doctor over HTTP ─────────────────────────────────────────────────
+
+
+def test_doctor_reports_identity_damage_and_repairs_it(client, tmp_path,
+                                                       monkeypatch):
+    data = tmp_path / "data"
+    (data / "variants").mkdir(parents=True)
+    (data / "fitment").mkdir()
+    (data / "parts").mkdir()
+    (data / "variants" / "volkswagen_golf_8.yaml").write_text(
+        "- id: impression_1_5_tsi\n  make: volkswagen\n  model: golf\n"
+        "  engine_family: EA211_evo2\n  fuel: petrol\n  displacement_cc: 1498\n"
+        "  power_min_hp: 150\n  power_max_hp: 150\n  transmission: manual\n"
+        "  transmission_code: 6MT\n  year_from: 2024\n  year_to: null\n"
+        "- id: life_1_5_tsi\n  make: volkswagen\n  model: golf\n"
+        "  engine_family: EA211_evo2\n  fuel: petrol\n  displacement_cc: 1498\n"
+        "  power_min_hp: 150\n  power_max_hp: 150\n  transmission: manual\n"
+        "  transmission_code: 6MT\n  year_from: 2024\n  year_to: null\n",
+        encoding="utf-8")
+    monkeypatch.setattr(web, "DATA_DIR", data)
+
+    d = client.get("/api/doctor").json()
+    assert d["fixable"] > 0
+    assert {f["kind"] for f in d["findings"]} >= {"trim_shaped_id",
+                                                  "powertrain_duplicate"}
+
+    fixed = client.post("/api/doctor/repair").json()
+    assert fixed["rewritten"] == ["volkswagen_golf_8"]
+    rows = yaml.safe_load(
+        (data / "variants" / "volkswagen_golf_8.yaml").read_text())
+    assert len(rows) == 1 and rows[0]["id"] == "golf8_ea211evo2_150"
+    assert client.get("/api/doctor").json()["fixable"] == 0
+
+
+def test_agent_runs_endpoint_reads_the_finish_model_log(client, tmp_path,
+                                                        monkeypatch):
+    log = tmp_path / "agent_runs.jsonl"
+    log.write_text(json.dumps({"ts": "2026-08-19T10:00:00Z",
+                               "model_key": "volkswagen_golf_8",
+                               "variants": 2, "variants_draft": 1,
+                               "rollup": {"has_claims": 1},
+                               "open_parts": ["ea211_evo2"]}) + "\n",
+                   encoding="utf-8")
+    monkeypatch.setattr(web, "AGENT_RUN_LOG", log)
+    runs = client.get("/api/agent-runs").json()["runs"]
+    assert runs[0]["model_key"] == "volkswagen_golf_8"
+    assert runs[0]["open_parts"] == ["ea211_evo2"]
+
+
+def test_agent_runs_endpoint_is_empty_before_any_pass(client, tmp_path,
+                                                      monkeypatch):
+    monkeypatch.setattr(web, "AGENT_RUN_LOG", tmp_path / "nope.jsonl")
+    assert client.get("/api/agent-runs").json()["runs"] == []
+
+
+def test_coverage_matrix_joins_models_to_groups(client, tmp_catalog):
+    # one car whose fitment axis references the test part
+    (tmp_catalog / "variants").mkdir()
+    (tmp_catalog / "variants" / "testcar_1.yaml").write_text(
+        "- id: tc1\n  make: testcar\n  model: '1'\n  engine_family: testpart\n"
+        "  transmission_code: manual\n", encoding="utf-8")
+    d = client.get("/api/coverage-matrix").json()
+    m = next(m for m in d["models"] if m["model_key"] == "testcar_1")
+    assert m["cells"]["engine"] == 1
+    assert m["cells"]["brakes"] == 1
+    assert m["total"] == 2
+    # rejected claims are not coverage (the pipeline sets that status; the hub
+    # never does)
+    path = tmp_catalog / "parts" / "engine" / "testpart.yaml"
+    path.write_text(path.read_text().replace(
+        "  status: review\n  sources: []", "  status: rejected\n  sources: []"),
+        encoding="utf-8")
+    d = client.get("/api/coverage-matrix").json()
+    m = next(m for m in d["models"] if m["model_key"] == "testcar_1")
+    assert m["cells"]["brakes"] == 0 and m["total"] == 1
+
+
+def test_coverage_matrix_on_the_real_catalog(client):
+    d = client.get("/api/coverage-matrix").json()
+    assert len(d["groups"]) == 7  # components.yaml's 20 subsystems, collapsed
+    assert d["models"] and all(set(m["cells"]) == set(d["groups"])
+                               for m in d["models"])
+
+
+def test_sources_endpoint_tiers_and_counts(client, tmp_catalog):
+    d = client.get("/api/sources").json()
+    assert len(d["sources"]) == 1
+    s = d["sources"][0]
+    assert s["domain"] == "dsgservisi.com"
+    assert s["tier"] == "specialist"      # via knowledge/sources/tiers.py
+    assert s["trust"] == 0.75
+    assert s["contribution_count"] == 1
+
+
+def test_spawn_records_run_history(client, tmp_path, monkeypatch):
+    log = tmp_path / "runs.jsonl"
+    monkeypatch.setattr(web, "RUNS_LOG", log)
+    web._spawn([sys.executable, "-c", "pass"],
+               {"task": "onboard", "make": "audi", "model": "q2_1"})
+    for _ in range(100):  # the pump thread writes the record at process EOF
+        if log.exists() and log.read_text().strip():
+            break
+        time.sleep(0.05)
+    rec = json.loads(log.read_text().strip().splitlines()[-1])
+    assert rec["task"] == "onboard" and rec["make"] == "audi"
+    assert rec["exit_code"] == 0
+    assert rec["duration_s"] is not None
+    assert isinstance(rec["argv"], list) and rec["argv"][0] == sys.executable
+
+    runs = client.get("/api/runs").json()["runs"]
+    assert runs and runs[0]["task"] == "onboard" and runs[0]["exit_code"] == 0
+
+
+def test_runs_endpoint_empty_when_no_log(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "RUNS_LOG", tmp_path / "nothing.jsonl")
+    assert client.get("/api/runs").json()["runs"] == []
+
+
+# ── Page/script consistency ──────────────────────────────────────────────────
+#
+# The page was a Python string until this pass, and a stray escape once took
+# the whole dashboard out (commit 49aa90c). Now it is a real .html file, and
+# the failure mode that remains is drift: hub.js reaching for an element the
+# page does not have, which fails silently in a browser and loudly nowhere.
+
+def test_every_element_the_script_reaches_for_exists_on_the_page():
+    page = web.PAGE_PATH.read_text(encoding="utf-8")
+    script = (web.PAGE_PATH.parent / "hub.js").read_text(encoding="utf-8")
+    ids = set(re.findall(r"""\$\('#([A-Za-z0-9_-]+)'\)""", script))
+    ids |= set(re.findall(r"""getElementById\('([A-Za-z0-9_-]+)'\)""", script))
+    # Ids the script itself injects (rendered tables, conditional buttons) are
+    # legitimate — they just live in hub.js instead of the markup.
+    injected = set(re.findall(r"""id=["']([A-Za-z0-9_-]+)["']""", script))
+    missing = sorted(i for i in ids - injected
+                     if f'id="{i}"' not in page and f"id='{i}'" not in page)
+    assert missing == [], f"hub.js reaches for absent element(s): {missing}"
+
+
+def test_the_page_declares_every_tab_the_script_switches_between():
+    page = web.PAGE_PATH.read_text(encoding="utf-8")
+    script = (web.PAGE_PATH.parent / "hub.js").read_text(encoding="utf-8")
+    tabs = re.search(r"const TABS = \[(.*?)\];", script, re.S)
+    assert tabs
+    for tab in re.findall(r"'([a-z]+)'", tabs.group(1)):
+        assert f'id="p-{tab}"' in page, f"no page div for tab {tab}"
+        assert f'data-p="{tab}"' in page, f"no nav button for tab {tab}"

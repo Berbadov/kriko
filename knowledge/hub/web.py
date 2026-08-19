@@ -28,10 +28,19 @@ plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
   POST /api/onboard     phase 2: agent onboards {model}_{generation} (B23)
   GET  /api/activity    recent ledger writes — what the agent is doing now
 
+  Phase 4:
+
+  GET  /api/review          claims awaiting human review (status='review')
+  POST /api/review/{id}     {action: approve|reject} → status verified/rejected
+  GET  /api/coverage-matrix models × subsystem-group claim counts (heatmap)
+  GET  /api/sources         every source_domain, tiered + counted
+  GET  /api/runs            persisted run history (knowledge/hub/runs.jsonl)
+
 Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
 the CLI; the browser polls state every second.
 """
 
+import json
 import os
 import re
 import shutil
@@ -41,14 +50,18 @@ import threading
 import time
 from pathlib import Path
 
+import yaml
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from knowledge.catalog import generations as gencat, model_state
+from knowledge.agent import gates as agent_gates
+from knowledge.catalog import doctor as catalog_doctor, generations as gencat, model_state
 from knowledge.hub import metrics
 from knowledge.ledger import db
 from knowledge.ledger.verdict import AGENT_EXTRACTOR_VERSION
+from knowledge.sources.tiers import resolve_tier
+from knowledge.yamlutil import load_yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LEDGER_PATH = db.LEDGER_PATH
@@ -62,6 +75,17 @@ ALLOWED_COMMANDS = {"acquire", "backfill", "extract", "resolve", "cluster",
                     "verdict", "export", "report", "remediate"}
 
 MAX_ACTIVITY = 200
+
+# Phase 4 stores. Both live next to this file; JSONL is append-only, which is
+# the whole reason it was picked over sqlite — one open("a"), no schema.
+RUNS_LOG = Path(__file__).resolve().parent / "runs.jsonl"
+# Gate feedback, NOT a promotion queue. CLAUDE.md's automation principle bars a
+# human from the data path: nothing written here reaches serving. It is a
+# labelled-example log for tuning the deterministic gates.
+CLAIM_SIGNAL_LOG = Path(__file__).resolve().parent / "claim_signals.jsonl"
+AGENT_RUN_LOG = REPO_ROOT / "logs" / "agent_runs.jsonl"
+_SIGNAL_LOCK = threading.Lock()  # serialises claim_signals.jsonl appends
+_RUNS_LOCK = threading.Lock()     # serialises runs.jsonl appends
 
 # Catalog-shaped identifiers only. make/model reach a subprocess argv, so
 # anything with a path separator, a space, or a shell metacharacter is refused
@@ -86,8 +110,12 @@ _SAFE_MODEL = re.compile(r"[A-Za-z0-9_./:-]{1,80}")
 # Fixed argv templates. The request picks a harness by name; it never supplies
 # a command. Adding a harness is a code change, deliberately.
 HARNESSES = {
+    # --format json: raw event stream (one JSON object per line) instead of the
+    # ANSI-styled default, which only prints step headers and hides all the
+    # tool activity while the agent works. _pump renders each event live.
     "opencode": lambda b, prompt, m: (
-        [b, "run", "--agent", AGENT_NAME] + (["-m", m] if m else []) + [prompt]),
+        [b, "run", "--agent", AGENT_NAME, "--format", "json"]
+        + (["-m", m] if m else []) + [prompt]),
     "claude": lambda b, prompt, m: (
         [b, "-p", f"Use the {AGENT_NAME} agent to {prompt}"]
         + (["--model", m] if m else []) + ["--permission-mode", "acceptEdits"]),
@@ -116,7 +144,70 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"),
           name="static")
 
 _run_lock = threading.Lock()
-RUN = {"proc": None, "cmd": "", "buf": "", "exit": None}
+RUN = {"proc": None, "cmd": "", "buf": "", "exit": None, "started": None}
+
+# opencode/claude style their stdout with ANSI escapes (colour, cursor moves).
+# In the browser pane those render as garbage or invisible blank lines, which
+# reads as "no output". Strip them once, server-side.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07")
+
+
+def _brief(obj, limit: int = 100) -> str:
+    """Compact one-line hint of a tool's input/output, for the progress view."""
+    try:
+        s = json.dumps(obj, ensure_ascii=False) if obj is not None else ""
+    except (TypeError, ValueError):
+        s = str(obj)
+    s = " ".join(s.split())
+    return s[:limit] + ("…" if len(s) > limit else "")
+
+
+def _fmt_opencode_event(line: str) -> str | None:
+    """Render one `opencode run --format json` event as a readable progress
+    line, so the browser shows each tool call and answer the moment it
+    happens instead of a silent pane. Returns None for events with nothing
+    worth showing (non-JSON lines are never fed here)."""
+    try:
+        ev = json.loads(line)
+    except ValueError:
+        return None
+    etype, part = ev.get("type", ""), ev.get("part") or {}
+
+    if etype == "text":
+        return part.get("text") or None
+    if etype == "step_start":
+        return "· model working…"
+    if etype == "step_finish":
+        tok = (part.get("tokens") or {}).get("total")
+        cost = part.get("cost")
+        bits = [f"{tok} tok" for tok in (tok,) if tok is not None]
+        try:
+            bits.append(f"${float(cost):.4f}")
+        except (TypeError, ValueError):
+            pass
+        return "✓ step done" + (" · " + " · ".join(bits) if bits else "")
+    if etype in ("tool_use", "tool_use_permission"):
+        tool = part.get("tool") or part.get("name") or "tool"
+        state = part.get("state") or {}
+        status = state.get("status") or etype.rsplit("_", 1)[-1]
+        if status in ("error", "rejected"):
+            return f"✗ {tool} failed — {_brief(state.get('error'), 140)}"
+        if status == "running":
+            return f"→ {tool} {_brief(state.get('input'))}".rstrip()
+        out = state.get("output")
+        # completed: hint at the result — parsed JSON gets compacted, text
+        # output shows its first meaningful line
+        hint = ""
+        try:
+            parsed = json.loads(out) if isinstance(out, str) else None
+        except ValueError:
+            parsed = None
+        if isinstance(parsed, dict):
+            hint = _brief(parsed, 80)
+        elif out:
+            hint = next((l.strip() for l in str(out).splitlines() if l.strip()), "")
+        return f"✓ {tool}" + (f" — {hint[:80]}" if hint else "")
+    return None
 
 
 def _load_env() -> dict:
@@ -131,30 +222,66 @@ def _load_env() -> dict:
     return env
 
 
-def _pump(proc: subprocess.Popen) -> None:
+def _pump(proc: subprocess.Popen, json_events: bool = False) -> None:
     """Background reader: stdout -> RUN['buf']. Daemon thread, dies with the
-    process; a completed process still drains to EOF."""
+    process; a completed process still drains to EOF.
+
+    json_events: the stream is `opencode run --format json` output — render
+    each event line through _fmt_opencode_event so the pane shows live tool
+    activity instead of raw JSON."""
     try:
         for line in proc.stdout:  # type: ignore[union-attr]
+            if json_events:
+                rendered = _fmt_opencode_event(line)
+                if rendered is None:
+                    continue
+                clean = rendered + "\n"
+            else:
+                clean = _ANSI_RE.sub("", line)
             with _run_lock:
-                RUN["buf"] = (RUN["buf"] + line)[-MAX_LOG_CHARS:]
+                RUN["buf"] = (RUN["buf"] + clean)[-MAX_LOG_CHARS:]
     except Exception:
         pass
     with _run_lock:
         RUN["exit"] = proc.returncode if proc.poll() is not None else None
+        rec = RUN.pop("record", None)
+    if rec:
+        # The run is only history once it has an exit code — the record is
+        # held in RUN from spawn to EOF and lands in runs.jsonl here.
+        t0 = rec.pop("_t0", None)
+        rec["exit_code"] = proc.returncode
+        rec["duration_s"] = round(time.time() - t0, 1) if t0 else None
+        try:
+            with _RUNS_LOCK:
+                with open(RUNS_LOG, "a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
 
 
-def _spawn(cmd: list[str]) -> str:
+def _spawn(cmd: list[str], meta: dict | None = None) -> str:
     env = _load_env()
     proc = subprocess.Popen(cmd, cwd=REPO_ROOT, env=env,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, bufsize=1)
+    json_events = ("--format" in cmd
+                   and cmd[cmd.index("--format") + 1:cmd.index("--format") + 2] == ["json"])
+    meta = meta or {}
     with _run_lock:
         RUN["cmd"] = " ".join(str(c) for c in cmd)
         RUN["buf"] = ""
         RUN["exit"] = None
+        RUN["started"] = time.time()
         RUN["proc"] = proc
-    threading.Thread(target=_pump, args=(proc,), daemon=True).start()
+        RUN["record"] = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "argv": [str(c) for c in cmd],
+            "task": meta.get("task"),
+            "make": meta.get("make"),
+            "model": meta.get("model"),
+            "_t0": RUN["started"],
+        }
+    threading.Thread(target=_pump, args=(proc, json_events), daemon=True).start()
     return RUN["cmd"]
 
 
@@ -167,7 +294,7 @@ def _conn():
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    return _PAGE
+    return PAGE_PATH.read_text(encoding="utf-8")
 
 
 @app.get("/api/state")
@@ -255,15 +382,18 @@ def run(payload: dict = Body(...)) -> dict:
     if old and old.poll() is None:
         old.kill()
         old.wait()
-    return {"ok": True, "cmd": _spawn(cmd)}
+    return {"ok": True, "cmd": _spawn(cmd, {"task": argv[0]})}
 
 
 @app.get("/api/log")
 def log() -> dict:
     with _run_lock:
         proc, buf, cmd, exit_code = RUN["proc"], RUN["buf"], RUN["cmd"], RUN["exit"]
+        started = RUN["started"]
     running = proc is not None and proc.poll() is None
-    return {"cmd": cmd, "buf": buf, "running": running, "exit": exit_code}
+    elapsed = round(time.time() - started, 1) if (running and started) else None
+    return {"cmd": cmd, "buf": buf, "running": running, "exit": exit_code,
+            "elapsed": elapsed}
 
 
 # ── Models: onboarding state + the agent driver (B23) ─────────────────────────
@@ -437,14 +567,14 @@ def _with_generation(model: str, generation) -> str:
     return f"{model}_{n}"
 
 
-def _agent_spawn(cmd: list[str]) -> str:
+def _agent_spawn(cmd: list[str], meta: dict | None = None) -> str:
     """One run slot: stop whatever is running, then launch."""
     with _run_lock:
         old = RUN["proc"]
     if old and old.poll() is None:
         old.kill()
         old.wait()
-    return _spawn(cmd)
+    return _spawn(cmd, meta)
 
 
 @app.get("/api/harnesses")
@@ -494,7 +624,9 @@ def research_generations(payload: dict = Body(...)) -> dict:
     argv = _agent_command("generations", make, model,
                           str(payload.get("harness", "opencode")).strip(),
                           llm_model=str(payload.get("llm_model", "")).strip())
-    return {"ok": True, "cmd": _agent_spawn(argv), "make": make, "model": model}
+    return {"ok": True, "cmd": _agent_spawn(argv, {"task": "generations",
+                                                   "make": make, "model": model}),
+            "make": make, "model": model}
 
 
 @app.post("/api/onboard")
@@ -506,7 +638,8 @@ def onboard(payload: dict = Body(...)) -> dict:
     argv = _agent_command("onboard", make, model,
                           str(payload.get("harness", "opencode")).strip(),
                           gen, str(payload.get("llm_model", "")).strip())
-    return {"ok": True, "cmd": _agent_spawn(argv),
+    return {"ok": True, "cmd": _agent_spawn(argv, {"task": "onboard",
+                                                   "make": make, "model": model}),
             "model_key": f"{make}_{_with_generation(model, gen)}"}
 
 
@@ -543,124 +676,370 @@ def activity(limit: int = 40) -> dict:
     return {"events": events[:n]}
 
 
+# ── Phase 4: review queue, coverage heatmap, sources, run history ─────────────
+
+# The seven display groups the ~20 subsystems in components.yaml collapse
+# into (engine/timing -> engine). Kept as the fallback ordering; the live set
+# is derived from components.yaml so a new subsystem appears automatically.
+_DISPLAY_GROUPS = ("engine", "transmission", "emissions", "brakes",
+                   "suspension", "electrical", "body")
+_COMPONENTS_YAML = REPO_ROOT / "knowledge" / "catalog" / "components.yaml"
+
+# Loose claim domains fold into their parent group; 'general' has no group of
+# its own and falls through to the part file's directory.
+_DOMAIN_GROUPS = {
+    "engine": "engine", "cooling": "engine", "fuel system": "engine",
+    "transmission": "transmission", "emissions": "emissions",
+    "brakes": "brakes", "suspension": "suspension",
+    "electrical": "electrical", "body": "body",
+}
+
+_COMPONENTS_CACHE: dict = {}
+
+
+def _component_registry() -> tuple[list[str], dict[str, str]]:
+    """(display groups, component_id -> group) from components.yaml.
+
+    The registry is the contract: a subsystem's first path segment is its
+    display group, so the heatmap follows components.yaml instead of a list
+    someone has to keep in sync here.
+    """
+    if "reg" not in _COMPONENTS_CACHE:
+        groups: list[str] = []
+        by_id: dict[str, str] = {}
+        try:
+            with open(_COMPONENTS_YAML, encoding="utf-8") as fh:
+                comps = (yaml.safe_load(fh) or {}).get("components") or []
+            for c in comps:
+                group = str(c.get("subsystem") or "").split("/", 1)[0]
+                if group and group not in groups:
+                    groups.append(group)
+                if c.get("id"):
+                    by_id[c["id"]] = group
+        except (OSError, yaml.YAMLError):
+            groups = []
+        ordered = [g for g in _DISPLAY_GROUPS if g in groups] + \
+                  [g for g in groups if g not in _DISPLAY_GROUPS]
+        _COMPONENTS_CACHE["reg"] = (ordered or list(_DISPLAY_GROUPS), by_id)
+    return _COMPONENTS_CACHE["reg"]
+
+
+def _claim_group(claim: dict, part_type: str) -> str | None:
+    """Which display group a claim counts under, or None if unplaceable.
+
+    component_id (components.yaml ref) wins when present; today's catalog
+    YAMLs carry only `domain`, so that is the operative path.
+    """
+    _, by_id = _component_registry()
+    cid = claim.get("component_id")
+    if cid in by_id:
+        return by_id[cid]
+    g = _DOMAIN_GROUPS.get(str(claim.get("domain") or "").strip().lower())
+    if g:
+        return g
+    return part_type if part_type in _DISPLAY_GROUPS else None
+
+
+def _catalog_claims(data_dir: Path | None = None) -> list[dict]:
+    """Flat read-only view of every claim in backend/data/parts/**."""
+    data_dir = data_dir or DATA_DIR
+    out: list[dict] = []
+    for path in sorted((data_dir / "parts").rglob("*.yaml")):
+        data = load_yaml(path)
+        pid = data.get("part_id")
+        if not pid:
+            continue
+        part_type = path.parent.name
+        for c in data.get("claims") or []:
+            if not isinstance(c, dict) or not c.get("id"):
+                continue
+            out.append({
+                "claim_id": c["id"],
+                "title": c.get("title") or "",
+                "title_tr": c.get("title_tr") or "",
+                "severity": c.get("severity"),
+                "domain": c.get("domain"),
+                "rationale": c.get("rationale") or "",
+                "inspection_advice": c.get("inspection_advice") or "",
+                "group": _claim_group(c, part_type),
+                "part_id": pid,
+                "part_type": part_type,
+                "status": c.get("status"),
+                "confidence": c.get("confidence"),
+                "sources": [
+                    {"domain": s.get("source_domain") or "",
+                     "url": s.get("source_url") or "",
+                     "quote": s.get("quote") or ""}
+                    for s in (c.get("sources") or [])
+                    if isinstance(s, dict)],
+            })
+    return out
+
+
+def _now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _model_part_ids(model_key: str, data_dir: Path) -> set[str]:
+    """Part ids one car references, via its fitment (variants as fallback)."""
+    rows: list[dict] = []
+    for sub in ("fitment", "variants"):
+        path = data_dir / sub / f"{model_key}.yaml"
+        if path.exists():
+            try:
+                loaded = yaml.safe_load(path.read_text()) or []
+            except yaml.YAMLError:
+                loaded = []
+            if isinstance(loaded, list):
+                rows = [r for r in loaded if isinstance(r, dict)]
+            if rows:
+                break
+    return {p["part_id"] for p in model_state.part_work_list(rows, data_dir)}
+
+
+@app.get("/api/review")
+def review_queue(status: str = "review", severity: str | None = None,
+                 group: str | None = None, part_id: str | None = None,
+                 model_key: str | None = None, limit: int = 250) -> dict:
+    """Claims the pipeline has not settled, each with the DETERMINISTIC gate's
+    verdict on it — what the machine thinks and exactly why.
+
+    This is an inspector, not a promotion queue. CLAUDE.md's automation
+    principle bars a human from the data path (`G5`: "a manual step that
+    'someone should review' is a bug, not a process"), so nothing here writes
+    to the catalog. The value of a browser over this data is seeing *which
+    rule* fires on a claim and whether that rule is right — feedback that
+    tunes the gate, which then runs unattended on every car.
+
+    Filters compose: ?group=engine&model_key=renault_clio_5 is exactly what a
+    heatmap cell click asks for.
+    """
+    n = max(1, min(int(limit), MAX_ACTIVITY))
+    wanted = None if status == "all" else status
+    part_ids = _model_part_ids(model_key, DATA_DIR) if model_key else None
+
+    claims = [c for c in _catalog_claims()
+              if (wanted is None or c["status"] == wanted)
+              and (not severity or c["severity"] == severity)
+              and (not group or c["group"] == group)
+              and (not part_id or c["part_id"] == part_id)
+              and (part_ids is None or c["part_id"] in part_ids)]
+    sev_rank = {"high": 0, "medium": 1, "low": 2}
+    claims.sort(key=lambda c: (sev_rank.get(str(c["severity"]), 3), c["claim_id"]))
+    shown = [dict(c, gate=_gate_verdict(c)) for c in claims[:n]]
+    return {"claims": shown, "total": len(claims),
+            "would_drop": sum(1 for c in shown if not c["gate"]["ok"]),
+            "recent": _recent_signals(10)}
+
+
+def _gate_verdict(claim: dict) -> dict:
+    """What the agent write gate would say about this claim today.
+
+    Same function the MCP server runs before writing evidence, so the browser
+    and the write path cannot disagree about what counts as low value.
+    """
+    src = (claim.get("sources") or [{}])[0]
+    res = agent_gates.check_evidence(
+        claim.get("title") or "", claim.get("rationale") or "",
+        claim.get("inspection_advice") or "", claim.get("part_id"),
+        src.get("url") or "")
+    return {"ok": res.ok, **res.as_dict()}
+
+
+def _recent_signals(n: int) -> list[dict]:
+    """Tail of the gate-feedback log, newest first."""
+    try:
+        lines = CLAIM_SIGNAL_LOG.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    out = []
+    for ln in reversed(lines):
+        try:
+            out.append(json.loads(ln))
+        except ValueError:
+            continue
+        if len(out) >= n:
+            break
+    return out
+
+
+# Claim ids are catalog-shaped identifiers; anything with a path separator or
+# shell metacharacter is refused outright rather than escaped.
+_SAFE_CLAIM_ID = re.compile(r"[A-Za-z0-9_.-]{1,120}")
+
+
+@app.post("/api/review/{claim_id}")
+def review_signal(claim_id: str, payload: dict = Body(...)) -> dict:
+    """Record agreement or disagreement with the gate's verdict on one claim.
+
+    Deliberately inert on the catalog. The previous version of this endpoint
+    rewrote `status: review` to `verified` in the part YAML — a human decision
+    inside the data path, which is the one thing G5 forbids, and which does not
+    scale past the first thousand claims anyway. What survives is the useful
+    half: a labelled example. Signals accumulate in claim_signals.jsonl, and a
+    rule that keeps collecting disagreement is a rule to fix — in
+    `knowledge/agent/gates.py`, where the fix then applies to every car.
+    """
+    action = str(payload.get("action") or "")
+    if action not in ("agree", "disagree"):
+        raise HTTPException(400, "action must be 'agree' or 'disagree'")
+    if not _SAFE_CLAIM_ID.fullmatch(claim_id):
+        raise HTTPException(400, f"malformed claim id: {claim_id!r}")
+
+    claim = next((c for c in _catalog_claims() if c["claim_id"] == claim_id), None)
+    if claim is None:
+        raise HTTPException(404, f"no claim {claim_id}")
+
+    verdict = _gate_verdict(claim)
+    record = {"ts": _now_iso(), "claim_id": claim_id, "action": action,
+              "part_id": claim["part_id"], "title": claim["title"],
+              "gate_ok": verdict["ok"], "rejections": verdict["rejections"],
+              "note": str(payload.get("note") or "")[:500]}
+    try:
+        with _SIGNAL_LOCK:
+            with open(CLAIM_SIGNAL_LOG, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        raise HTTPException(500, f"could not record signal: {exc}") from exc
+
+    return {"ok": True, "recorded": True, "applied_to_catalog": False,
+            "claim_id": claim_id, "action": action, "gate": verdict,
+            "message": "recorded as gate feedback — the catalog is only ever "
+                       "written by the pipeline"}
+
+
+# ── Catalog doctor: identity damage, visible and fixable from the browser ────
+
+
+@app.get("/api/doctor")
+def doctor_report() -> dict:
+    """Identity damage across every car: bad codes, trim-shaped ids, duplicate
+    powertrains, orphan fitment rows. `fixable` findings are what a $0
+    deterministic repair pass would resolve; the rest need research."""
+    findings = catalog_doctor.diagnose(DATA_DIR)
+    return {"findings": [{"kind": f.kind, "model_key": f.model_key,
+                          "subject": f.subject, "message": f.message,
+                          "fixable": f.fixable} for f in findings],
+            "fixable": sum(1 for f in findings if f.fixable),
+            "needs_research": sum(1 for f in findings if not f.fixable)}
+
+
+@app.post("/api/doctor/repair")
+def doctor_repair() -> dict:
+    """Run the deterministic repair ($0, no LLM): merge duplicate powertrains,
+    canonicalize codes, rename trim-shaped ids, prune orphan fitment rows."""
+    res = catalog_doctor.repair(DATA_DIR)
+    remaining = [f for f in catalog_doctor.diagnose(DATA_DIR) if not f.fixable]
+    return {"ok": True, "rewritten": res.rewritten, "renames": res.renames,
+            "actions": [f.message for f in res.findings],
+            "needs_research": [f.message for f in remaining]}
+
+
+@app.get("/api/agent-runs")
+def agent_runs(limit: int = 25) -> dict:
+    """What agent onboarding passes actually achieved (logs/agent_runs.jsonl,
+    written by the MCP `finish_model` tool) — harness-independent, and it
+    outlives the session the run happened in, unlike the output pane."""
+    n = max(1, min(int(limit), 200))
+    try:
+        lines = AGENT_RUN_LOG.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+    out = []
+    for ln in reversed(lines):
+        try:
+            out.append(json.loads(ln))
+        except ValueError:
+            continue
+        if len(out) >= n:
+            break
+    return {"runs": out}
+
+
+@app.get("/api/coverage-matrix")
+def coverage_matrix() -> dict:
+    """Models × subsystem display groups: how many claims cover each cell.
+
+    Model -> part ids follows the catalog's own join (fitment codes ->
+    part files, the same axes model_state.part_work_list reads), and each
+    claim lands in a group via components.yaml / its domain. Rejected claims
+    don't count — they're not coverage.
+    """
+    groups, _ = _component_registry()
+    by_part: dict[str, list[dict]] = {}
+    for c in _catalog_claims():
+        by_part.setdefault(c["part_id"], []).append(c)
+
+    models = []
+    for vpath in sorted((DATA_DIR / "variants").glob("*.yaml")):
+        part_ids = _model_part_ids(vpath.stem, DATA_DIR)
+        cells = {g: 0 for g in groups}
+        total = 0
+        for pid in part_ids:
+            for c in by_part.get(pid, ()):
+                if c["status"] == "rejected" or not c["group"]:
+                    continue
+                if c["group"] in cells:
+                    cells[c["group"]] += 1
+                    total += 1
+        models.append({"model_key": vpath.stem, "cells": cells, "total": total})
+
+    return {"groups": groups, "models": models,
+            "max": max((m["total"] for m in models), default=0)}
+
+
+@app.get("/api/sources")
+def sources() -> dict:
+    """Every source_domain in the catalog with its tier, trust and weight.
+
+    Tier resolution is knowledge/sources/tiers.py — the same single
+    enforcement point verdicts use, so the browser never disagrees with the
+    confidence math.
+    """
+    counts: dict[str, int] = {}
+    for c in _catalog_claims():
+        for s in c["sources"]:
+            domain = (s["domain"] or "").strip().lower()
+            if domain:
+                counts[domain] = counts.get(domain, 0) + 1
+    out = []
+    for domain, n in counts.items():
+        tier, trust = resolve_tier(domain)
+        out.append({"domain": domain, "tier": tier, "trust": trust,
+                    "contribution_count": n})
+    out.sort(key=lambda s: (-s["contribution_count"], s["domain"]))
+    return {"sources": out}
+
+
+@app.get("/api/runs")
+def run_history(limit: int = 50) -> dict:
+    """Last N persisted runs (newest first) from knowledge/hub/runs.jsonl."""
+    n = max(1, min(int(limit), 200))
+    try:
+        lines = RUNS_LOG.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+    out = []
+    for ln in reversed(lines):
+        try:
+            rec = json.loads(ln)
+        except ValueError:
+            continue
+        rec.pop("_t0", None)
+        out.append(rec)
+        if len(out) >= n:
+            break
+    return {"runs": out}
+
+
 # ── page ──────────────────────────────────────────────────────────────────────
 
-_PAGE = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<title>kriko-hub</title>
-<link rel="stylesheet" href="/static/style.css">
-</head><body>
-<header><h1>kriko-hub</h1><span class="meta" id="meta"></span></header>
-<nav id="nav">
-<button data-p="models" class="on">Models</button>
-<button data-p="overview">Overview</button>
-<button data-p="parts">Parts</button>
-<button data-p="sources">Sources</button>
-<button data-p="run">Run</button>
-<button data-p="ledger">Ledger</button>
-<button data-p="coverage">Coverage</button>
-</nav>
-<main>
-<div class="page on" id="p-models">
-  <h2>Onboard a model
-    <span class="muted" id="onboard-state"></span></h2>
-  <div class="onboard">
-    <div class="step">
-      <label>1 · Make <span class="muted">demand-ranked</span></label>
-      <div class="choices" id="pick-make"></div>
-    </div>
-    <div class="step" id="step-model" hidden>
-      <label>2 · Model</label>
-      <div class="choices" id="pick-model"></div>
-    </div>
-    <div class="step" id="step-gen" hidden>
-      <label>3 · Generation</label>
-      <div class="choices" id="pick-gen"></div>
-    </div>
-    <div class="step" id="step-go" hidden>
-      <label>4 · Task <span class="muted">what the agent is told to do</span></label>
-      <div class="choices" id="pick-task"></div>
-    </div>
-    <div class="step" id="step-run" hidden>
-      <label>5 · Harness &amp; model</label>
-      <div class="choices">
-        <select id="ob-harness"></select>
-        <select id="ob-llm"></select>
-        <button class="run go" id="b-agent-run">Run →</button>
-        <button class="run" id="b-onboard-stop">stop</button>
-      </div>
-      <div class="cmd" id="cmd-preview"></div>
-    </div>
-  </div>
-
-  <div class="split">
-    <div>
-      <h2>Catalog</h2>
-      <table id="t-models"></table>
-    </div>
-    <div>
-      <h2>Live activity <span class="muted" id="act-meta"></span></h2>
-      <div id="activity"></div>
-    </div>
-  </div>
-
-  <h2 id="md-title">Model detail</h2>
-  <div id="model-detail"><p class="muted">Pick a model to see its work list.</p></div>
-
-  <h2>Agent output <span class="muted" id="ob-run-state"></span></h2>
-  <pre id="ob-log"></pre>
-</div>
-<div class="page" id="p-overview">
-  <h2>Ledger</h2>
-  <div class="kpis" id="kpis"></div>
-  <h2>Spend</h2><table id="t-spend"></table>
-  <h2>Pending — cost to finish</h2><table id="t-pending"></table>
-  <h2>Recent runs</h2><table id="t-runs"></table>
-</div>
-<div class="page" id="p-parts">
-  <h2>Model &amp; Make</h2>
-  <select id="part-sel"></select>
-  <div id="part-detail"></div>
-</div>
-<div class="page" id="p-sources">
-  <h2>Documents</h2>
-  <select id="doc-sel"></select>
-  <div id="doc-detail"></div>
-</div>
-<div class="page" id="p-run">
-  <h2>Run controls — costs enforced by --max-usd</h2>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-    <button class="run" id="b-extract">extract (capped)</button>
-    <input type="number" id="cap" value="0.05" min="0" step="0.01">
-    <button class="run" id="b-verdict">verdict (capped)</button>
-    <button class="run" id="b-resolve">resolve ($0)</button>
-    <button class="run" id="b-cluster">cluster ($0)</button>
-    <button class="run" id="b-import">import verdicts ($0)</button>
-    <button class="run" id="b-remediate">remediate ($0)</button>
-    <button class="run" id="b-export">export</button>
-    <button class="run" id="b-stop">stop</button>
-  </div>
-  <h2>Output <span class="muted" id="run-state"></span></h2>
-  <pre id="log"></pre>
-</div>
-<div class="page" id="p-ledger">
-  <h2>Ledger browser (read-only) <span class="muted" id="table-meta"></span></h2>
-  <select id="table-sel">
-    <option>documents</option><option>evidence</option><option>clusters</option>
-    <option>verdicts</option><option>resolutions</option>
-    <option>evidence_flags</option><option>runs</option>
-  </select>
-  <pre id="table-preview"></pre>
-</div>
-<div class="page" id="p-coverage">
-  <h2>Coverage findings <button class="run" id="b-cov">refresh</button>
-    <span class="muted" id="cov-meta"></span></h2>
-  <table id="t-findings"></table>
-</div>
-</main>
-<script src="/static/hub.js"></script>
-</body></html>
-"""
+# The page is a real .html file (knowledge/hub/static/index.html), not a Python
+# string. It used to be one, and a stray escape silently broke the whole
+# dashboard once already (commit 49aa90c, "dead page — JS breakage from string
+# escaping"). Read per request: the hub is a local dev tool, and an edit should
+# show up on refresh without a restart.
+PAGE_PATH = Path(__file__).resolve().parent / "static" / "index.html"
 
 
 # ── ledger preview (generic read-only table browser) ─────────────────────────
