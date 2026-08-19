@@ -147,6 +147,30 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
+### B26 — Settle the 696 `status: review` claims deterministically `[G1][G5]` *(new 2026-08-19)*
+The claim inspector (done.md B25) made the size of this visible: **696 of ~699
+catalog claims sit at `status: review`**, i.e. the pipeline never settles a
+claim and the serving tier is doing that judgement implicitly. The mechanism
+now exists — `knowledge/agent/gates.py` gives a deterministic keep/drop verdict
+with reasons, and the hub records where a human disagrees with it
+(`knowledge/hub/claim_signals.jsonl`). Remaining:
+- [ ] Run the gate over the catalog as a pipeline step that writes a settled
+      status/`value_tier`, not a hub button (no human in the data path).
+- [ ] Feed `claim_signals.jsonl` disagreements into the gate's calibration test
+      (the 10/699 rejection rate is pinned; a signal that contradicts it is a
+      failing case to add).
+- [ ] Fold into B5's ranking: settle first, then budget the survivors.
+
+### B27 — Golf 8's gearbox code is unresearched `[G3]` *(new 2026-08-19; test case, not a fix target)*
+`golf8_ea211evo2_150_auto` carries `transmission_code: 7_speed_dsg`, which
+names three different gearboxes. The doctor fails it open (`draft: true`, kept
+out of serving) and reports it as `invalid_code` needing research. Per the
+generalization principle this is a **test case for the remediation loop**
+(B19), not a car to hand-fix: the loop must be able to take an `invalid_code`
+finding and drive a research pass that resolves it.
+- [ ] Teach `knowledge/ledger/remediate.py` to consume doctor findings
+      (`invalid_code`, `draft_variant`) alongside coverage findings.
+
 ### B5 — Per-part claim budget: keep the chronics, archive the tail `[G1]`
 896 claims across part files for 3 models (~300/model) is the volume problem at its
 source. Rank claims within each part by consequence × independent-source count ×
@@ -233,8 +257,12 @@ the scalability rule forbids. Now the researcher agent supplies the lineup:
   (harness-independent, shows per-row quote grounding). Shared `model_state`
   module backs both the MCP tool and the UI so they cannot drift.
 
-- [ ] First live run: onboard a model with no scaffold end-to-end through a
-      subscription harness; confirm `SUM(usd) WHERE model='agent'` stays 0.
+- [x] First live run happened (VW Golf 8) and **failed quality**: the lineup
+      came back as marketing trims, with a description in place of a gearbox
+      code. Fixed as a mechanism, not a patch — see done.md B24 (identity
+      module, catalog doctor, server-side product-principle gates, derived
+      research brief). Re-run it through the gated path to confirm
+      `SUM(usd) WHERE model='agent'` stays 0.
 - [ ] Re-onboard already-catalogued cars through the agent path, then delete their
       `TR_MARKET_TRIMS` entries (the fallback keeps them working until then).
 
