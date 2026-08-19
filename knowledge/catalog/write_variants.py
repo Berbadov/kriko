@@ -25,6 +25,7 @@ from pathlib import Path
 
 import yaml
 
+from knowledge.catalog import identity
 from knowledge.catalog.discover import discover
 
 log = logging.getLogger(__name__)
@@ -189,13 +190,71 @@ _REQUIRED_TRIM_KEYS = ("id", "engine_code", "engine_family", "fuel",
 _SOURCED_FIGURES = ("displacement_cc", "power_min_hp", "power_max_hp")
 
 
-def validate_trims(trims: list[dict]) -> list[str]:
+def normalize_trims(trims: list[dict]) -> list[dict]:
+    """Put agent-supplied rows into catalog form before anything validates them.
+
+    Researchers type codes the way the source printed them ("EA211_evo2",
+    "7-speed DSG", "6MT"); the catalog stores them as lowercase `_`-separated
+    codes, and files manual boxes under the `manual` pseudo-code because a
+    manual gearbox has no part file. Normalizing first means the validator
+    reports *real* problems ("DSG names three gearboxes") instead of casing.
+    """
+    out = []
+    for t in trims:
+        row = dict(t)
+        for field in ("engine_family", "transmission_code",
+                      "electrical_code", "body_code"):
+            if row.get(field) is not None:
+                row[field] = identity.canonical_code(row[field])
+        if row.get("transmission") == "manual" and \
+                identity.is_manualish(row.get("transmission_code") or ""):
+            row["transmission_code"] = identity.MANUAL_CODE
+        if row.get("fuel"):
+            row["fuel"] = str(row["fuel"]).strip().lower()
+        if row.get("transmission"):
+            row["transmission"] = str(row["transmission"]).strip().lower()
+        out.append(row)
+    return out
+
+
+def _id_errors(where: str, trim: dict, model_key: str) -> list[str]:
+    """Is this id naming the powertrain, or the showroom?
+
+    Catalog ids carry the engine code (`clio5_h4d_75`, `golf7_ea211_125_dsg`)
+    because the row *is* a powertrain: one row covers every trim level sold
+    with that engine and gearbox. An id like `impression_1_5_tsi_150_manual`
+    silently asserts the opposite — that trim is an identity axis — and a
+    listing almost never states its trim, so the row can never be matched as
+    intended. Deterministic check: the id must contain the engine family's
+    code token.
+    """
+    tid = str(trim.get("id") or "")
+    family = identity.canonical_code(trim.get("engine_family"))
+    token = re.split(r"[_\d]", family, maxsplit=1)[0] if family else ""
+    if not tid or not token or token in tid.lower().replace("-", "_"):
+        return []
+    suggestion = identity.canonical_variant_id(model_key or "x_y", trim)
+    return [f"{where}: variant id does not name the powertrain (engine family "
+            f"{family!r}) — a row covers every trim sold with this engine, and "
+            f"a listing does not state its trim. Use something like "
+            f"{suggestion!r}"]
+
+
+def validate_trims(trims: list[dict], make: str = "", model: str = "") -> list[str]:
     """Deterministic structural check on agent-supplied trim rows.
 
     Returns a list of human-readable errors; empty means the rows are safe to
     build. Only catches what a rule can decide — whether a K9K really made
     110hp in Turkey is not knowable here, so an unsourced figure is a draft
     row, not an error.
+
+    Two classes of error are hard rejections because they poison identity
+    downstream (see `knowledge/catalog/identity.py`):
+      * a part code that is a marketing description or a shared technology
+        family rather than a unit code — it names the file claims attach to;
+      * two rows a listing could never tell apart — an ambiguity the matcher
+        can never resolve. `run()` collapses genuine duplicates first, so what
+        survives to here is a real contradiction, not a trim-shaped lineup.
     """
     errors: list[str] = []
     seen: set[str] = set()
@@ -205,6 +264,16 @@ def validate_trims(trims: list[dict]) -> list[str]:
         for key in _REQUIRED_TRIM_KEYS:
             if t.get(key) in (None, ""):
                 errors.append(f"{where}: missing required key {key!r}")
+
+        for field in ("engine_family", "transmission_code"):
+            if t.get(field):
+                errors.extend(
+                    f"{where}: {e}" for e in identity.code_errors(
+                        field, identity.canonical_code(t[field]),
+                        t.get("transmission")))
+
+        errors.extend(_id_errors(where, t, f"{make.lower()}_{model.lower()}"
+                                 if make and model else ""))
 
         if (tid := t.get("id")) in seen:
             errors.append(f"{where}: duplicate trim id")
@@ -230,6 +299,17 @@ def validate_trims(trims: list[dict]) -> list[str]:
 
         errors.extend(_emissions_errors(where, t.get("emissions")))
     return errors
+
+
+def identity_errors(make: str, model: str, rows: list[dict],
+                    existing: list[dict] | None = None) -> list[str]:
+    """Rows a listing could not tell apart — within the lineup and against the
+    catalog already on disk.
+
+    Checked on built rows (not raw trims) because emissions year-splits and the
+    fitment projection both happen there, and it is the *written* file CI reads.
+    """
+    return identity.find_overlaps(list(existing or []) + list(rows))
 
 
 def _emissions_errors(where: str, em) -> list[str]:
@@ -338,6 +418,20 @@ def _segment_id(trim_id: str, emissions: str | None) -> str:
     return f"{trim_id}__{re.sub(r'[^a-z0-9]', '', emissions.lower())}"
 
 
+def _generation_of(trim: dict, model: str) -> str | None:
+    """The trim's generation, or the one the model key already states.
+
+    Model keys carry the generation (`golf_8`, `megane_4`), so a lineup that
+    omits it is not missing data — it is repeating what the key says. Filling
+    it here keeps `generation: null` out of agent-written rows without asking
+    the researcher for a figure the caller already knows.
+    """
+    if trim.get("generation") not in (None, ""):
+        return trim["generation"]
+    suffix = model.lower().rsplit("_", 1)[-1]
+    return suffix if suffix.isdigit() else None
+
+
 def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str]) -> list[dict]:
     make_key, model_key = make.lower(), model.lower().split("_")[0]
     rows = []
@@ -349,7 +443,7 @@ def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str])
                 "id": _segment_id(t["id"], seg["emissions"]) if split else t["id"],
                 "make": make_key,
                 "model": model_key,
-                "generation": t.get("generation"),
+                "generation": _generation_of(t, model),
                 "engine_code": t["engine_code"],
                 "engine_family": t["engine_family"],
                 "fuel": t["fuel"],
@@ -484,6 +578,11 @@ def run(make: str, model: str, trims: list[dict] | None = None,
     shared = _SHARED_CODES.get(key, {})
     new_rows = build_rows(make, model, trims, shared)
 
+    # Same powertrain described twice (a trim-shaped lineup) is fused before
+    # anything is written — an ambiguity the matcher could never resolve must
+    # not be creatable, not merely detectable. Reported, never silent.
+    new_rows, merge_notes = identity.collapse_duplicates(new_rows)
+
     path = (variants_dir or VARIANTS_DIR) / f"{key}.yaml"
     existing: list[dict] = []
     if path.exists():
@@ -494,7 +593,19 @@ def run(make: str, model: str, trims: list[dict] | None = None,
     skipped = [r["id"] for r in new_rows if r["id"] in existing_ids]
     summary = {"rows_written": len(to_add), "rows_skipped": len(skipped),
                "rows_draft": sum(1 for r in new_rows if r.get("draft")),
+               "merged": merge_notes,
                "path": _display(path)}
+
+    # What survives the merge and still collides is a real contradiction (two
+    # different gearboxes claiming the same cc+power+years), not a duplicate.
+    # Refuse rather than write a catalog CI would reject.
+    conflicts = identity_errors(make, model, to_add, existing)
+    if conflicts:
+        summary["errors"] = conflicts
+        summary["rows_written"] = 0
+        for line in conflicts:
+            log.error("%s", line)
+        return summary
 
     # Fitment is a projection of the variants, and is emitted even when no new
     # variant rows are added — a variant already in the catalog can still be

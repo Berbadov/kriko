@@ -123,7 +123,17 @@ def test_missing_optional_prose_fields_do_not_crash():
     rows = wv.build_rows("renault", "megane_4",
                          [_trim(notes=_OMIT, generation=_OMIT)], _SHARED)
     assert rows[0]["notes"] == ""
-    assert rows[0]["generation"] is None
+
+
+def test_generation_defaults_to_the_one_the_model_key_states():
+    """`megane_4` already says the generation — an omitted field is not a gap."""
+    rows = wv.build_rows("renault", "megane_4", [_trim(generation=_OMIT)], _SHARED)
+    assert rows[0]["generation"] == "4"
+
+
+def test_supplied_generation_wins_over_the_model_key():
+    rows = wv.build_rows("renault", "megane_4", [_trim(generation="IV")], _SHARED)
+    assert rows[0]["generation"] == "IV"
 
 
 # ── run(trims=...) injection ──────────────────────────────────────────────────
