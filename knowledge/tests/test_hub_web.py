@@ -397,10 +397,36 @@ def test_a_bogus_model_string_is_refused(client, spawned):
 
 def test_onboard_passes_the_model_through_to_the_agent(client, spawned):
     r = client.post("/api/onboard",
-                    json={"make": "audi", "model": "q2", "harness": "opencode",
+                    json={"make": "audi", "model": "q2", "generation": 1,
+                          "harness": "opencode",
                           "llm_model": "opencode-go/kimi-k3"})
     assert r.status_code == 200
     assert "opencode-go/kimi-k3" in spawned[0]
+
+
+def test_onboard_without_a_generation_is_refused_for_an_unknown_car(client,
+                                                                    spawned):
+    """The doomed run: the demand queue's scraped display slug, no generation.
+
+    `volkswagen_vw_cc_1_4_tsi` is not a car — the agent would research a model
+    that does not exist, and the failure would look like the hub being broken.
+    """
+    r = client.post("/api/onboard",
+                    json={"make": "volkswagen", "model": "vw_cc_1_4_tsi",
+                          "harness": "opencode"})
+    assert r.status_code == 400
+    assert "find generations" in r.json()["detail"]
+    assert spawned == []
+
+
+def test_onboard_without_a_generation_is_allowed_for_a_catalogued_car(client,
+                                                                     spawned):
+    """A car already in the catalog carries its generation in the key."""
+    r = client.post("/api/onboard",
+                    json={"make": "renault", "model": "megane_4",
+                          "harness": "opencode"})
+    assert r.status_code == 200
+    assert spawned
 
 
 def test_preview_and_run_produce_the_same_argv(client, spawned):
