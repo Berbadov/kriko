@@ -24,11 +24,13 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from knowledge.agent import gates
 from knowledge.catalog import generations as gencat, model_state
 from knowledge.ledger import (
     cluster, db, export, remediate, resolve, verdict,
 )
 from knowledge.ledger.costs import log_stage
+from knowledge.sources.tiers import resolve_tier
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 LEDGER_PATH = db.LEDGER_PATH
@@ -212,19 +214,56 @@ def add_document(url: str, source_type: str, raw_text: str,
                  lang: str = "") -> dict:
     """Insert a source document (hash-idempotent: same text returns the
     existing id). The agent's research output channel."""
-    if not url or not raw_text.strip():
+    if not url.strip() or not raw_text.strip():
         return {"error": "url and raw_text are required"}
     conn = _conn()
     try:
         h = db.text_hash(raw_text)
         exists = conn.execute(
             "SELECT id FROM documents WHERE text_hash=?", (h,)).fetchone()
+        if exists:
+            # Re-submitting a document already in the ledger is idempotent, not
+            # a new source: it must not consume research budget, and re-gating
+            # it would reject what is already stored.
+            return {"doc_id": exists["id"], "created": False,
+                    "tier": resolve_tier(url)[0]}
+
+        used = conn.execute(
+            "SELECT COUNT(*) FROM documents WHERE target_hint=?",
+            (target_hint,)).fetchone()[0] if target_hint else 0
+        check = gates.check_document(url, raw_text, target_hint, used,
+                                     MAX_AGENT_SOURCES_PER_PART)
+        if not check.ok:
+            return {"error": "; ".join(check.rejections), **check.as_dict()}
+
         doc_id = db.insert_document(
             conn, url=url, source_type=source_type, raw_text=raw_text,
             site_or_channel=site_or_channel, lang=lang, target_hint=target_hint)
-        return {"doc_id": doc_id, "created": exists is None}
+        tier, trust = resolve_tier(url)
+        return {"doc_id": doc_id, "created": True, "tier": tier,
+                "source_trust": trust,
+                "documents_for_target": used + 1,
+                "budget_remaining": max(0, MAX_AGENT_SOURCES_PER_PART - used - 1),
+                "warnings": check.warnings}
     finally:
         conn.close()
+
+
+def _known_titles(conn, part_id: str) -> list[str]:
+    """Claim titles already attached to this part — catalog plus this session's
+    ledger rows, so a duplicate is caught before *and* after the export."""
+    import yaml
+    titles: list[str] = []
+    path = next(((DATA_DIR / "parts").rglob(f"{part_id}.yaml")), None)
+    if path:
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+            titles += [c.get("title", "") for c in (data.get("claims") or [])]
+        except yaml.YAMLError:
+            pass
+    titles += [r[0] for r in conn.execute(
+        "SELECT title FROM evidence WHERE component_hint=?", (part_id,))]
+    return [t for t in titles if t]
 
 
 def _normalize(text: str) -> str:
@@ -267,7 +306,7 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
             (doc_id, title)).fetchone()
         if existing:
             return {"evidence_id": existing["id"], "created": False}
-        doc = conn.execute("SELECT raw_text FROM documents WHERE id=?",
+        doc = conn.execute("SELECT raw_text, url FROM documents WHERE id=?",
                            (doc_id,)).fetchone()
         if not doc:
             return {"error": "no such document"}
@@ -278,6 +317,27 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
                              "verbatim from the raw_text you submitted, or "
                              "omit it", "doc_id": doc_id, "quote": quote}
 
+        # The product principle, enforced rather than requested. A prompt asks;
+        # this refuses. Rejections name what is wrong and what would fix it, so
+        # the agent can rewrite the row instead of guessing at the rule.
+        check = gates.check_evidence(title, rationale, inspection_advice,
+                                     component_hint, doc["url"] or "")
+        if not check.ok:
+            return {"error": "; ".join(check.rejections), "written": False,
+                    **check.as_dict()}
+
+        # Rephrasing a chronic that is already recorded is not new coverage;
+        # it is the volume problem (a buyer reads ~8 cards, dq200 carries 30
+        # rows of the same two failures). Checked against the part's own
+        # claims and against what this pass already wrote.
+        if component_hint:
+            dup = gates.duplicate_of(title, _known_titles(conn, component_hint))
+            if dup:
+                return {"error": f"this is already recorded as {dup!r} — add a "
+                                 f"row only for a DIFFERENT failure mode, or "
+                                 f"leave the existing one alone",
+                        "written": False, "duplicate_of": dup}
+
         ev_id = db.insert_evidence(
             conn, doc_id=doc_id,
             claim={"title": title, "domain": domain, "severity": severity,
@@ -287,7 +347,10 @@ def add_evidence(doc_id: int, title: str, severity: str = "medium",
                    "quote_grounded": grounded},
             span_start=None, span_end=None,
             extractor_version=verdict.AGENT_EXTRACTOR_VERSION)
-        return {"evidence_id": ev_id, "created": True, "quote_grounded": grounded}
+        tier, trust = resolve_tier(doc["url"] or "")
+        return {"evidence_id": ev_id, "created": True, "quote_grounded": grounded,
+                "source_tier": tier, "source_trust": trust,
+                "warnings": check.warnings}
     finally:
         conn.close()
 
@@ -382,13 +445,23 @@ def submit_trims(make: str, model: str, trims: list[dict],
 
     if not trims:
         return {"errors": ["no trims supplied"]}
-    errors = wv.validate_trims(trims)
+    # Codes arrive as the source printed them ("EA211_evo2", "6MT"); the catalog
+    # stores canonical codes. Normalizing first means validation reports real
+    # problems, not casing.
+    trims = wv.normalize_trims(trims)
+    errors = wv.validate_trims(trims, make, model)
     if errors:
         return {"errors": errors, "rows_written": 0}
 
     summary = wv.run(make, model, trims=trims,
                      variants_dir=DATA_DIR / "variants",
                      fitment_dir=DATA_DIR / "fitment")
+
+    if summary.get("errors"):
+        # run() refuses to write a catalog CI would reject (two rows a listing
+        # could never tell apart, on different gearboxes). Research, not a rule,
+        # is the fix — so it comes back as an error the agent must resolve.
+        return {**summary, "sources_recorded": 0, "parts": []}
 
     key = _model_key(make, model)
     recorded = 0
@@ -404,10 +477,161 @@ def submit_trims(make: str, model: str, trims: list[dict],
     finally:
         conn.close()
 
+    # The work list is read back off what was actually WRITTEN, not off the
+    # submitted trims: run() merges powertrain duplicates and may leave a row
+    # draft, so building it from the input would report parts for rows that no
+    # longer exist.
+    state = model_state.model_state(make, model, DATA_DIR)
     return {**summary, "errors": [], "sources_recorded": recorded,
-            "parts": model_state.part_work_list(
-                wv.build_rows(make, model, trims,
-                              wv._SHARED_CODES.get(key, {})), DATA_DIR)}
+            "parts": state["parts"], "drafts": state["drafts"],
+            "variants": state["variants"]}
+
+
+# ── Research methodology (the agent's plan, not its improvisation) ───────────
+#
+# "Do web research" is the weakest instruction in the whole contract: it leaves
+# a cheap subscription model to invent its own checklist per part, so coverage
+# depends on which failure modes it happened to think of. research_brief turns
+# that into a derived plan — what this subsystem can fail at (components.yaml),
+# what is already known (so it does not re-add it), what budget is left, and
+# which sources actually count (source_tiers.yaml). All catalog-derived: a new
+# component or a newly tiered domain shows up in the brief with no prompt edit.
+
+COMPONENTS_YAML = REPO_ROOT / "knowledge" / "catalog" / "components.yaml"
+SOURCE_TIERS_YAML = REPO_ROOT / "knowledge" / "catalog" / "source_tiers.yaml"
+AGENT_RUN_LOG = REPO_ROOT / "logs" / "agent_runs.jsonl"
+
+
+def _components_for(part_type: str) -> list[dict]:
+    """Registry components whose subsystem belongs to this part type."""
+    import yaml
+    try:
+        comps = (yaml.safe_load(COMPONENTS_YAML.read_text()) or {}).get("components") or []
+    except (OSError, yaml.YAMLError):
+        return []
+    out = []
+    for c in comps:
+        group = str(c.get("subsystem") or "").split("/", 1)[0]
+        if part_type and group != part_type:
+            continue
+        out.append({"component_id": c.get("id"),
+                    "subsystem": c.get("subsystem"),
+                    "display": (c.get("display") or {}).get("en", ""),
+                    "detection": c.get("detection")})
+    return out
+
+
+def _distinct_titles(titles: list[str], limit: int = 40) -> list[str]:
+    """Collapse rephrasings so the brief shows failure modes, not a wall."""
+    kept: list[str] = []
+    for title in titles:
+        if not gates.duplicate_of(title, kept):
+            kept.append(title)
+    return kept[:limit]
+
+
+def _example_sources(limit: int = 12) -> dict:
+    """Domains the tier registry already trusts — what "a good source" means."""
+    import yaml
+    try:
+        reg = yaml.safe_load(SOURCE_TIERS_YAML.read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    out: dict[str, list[str]] = {}
+    for domain, meta in (reg.get("domains") or {}).items():
+        tier = meta.get("tier")
+        if tier in ("authoritative", "specialist"):
+            out.setdefault(tier, []).append(domain)
+    return {k: sorted(v)[:limit] for k, v in out.items()}
+
+
+@mcp.tool()
+def research_brief(part_id: str) -> dict:
+    """The research plan for one part — call this BEFORE searching the web.
+
+    Reports what this subsystem can actually fail at (the component registry),
+    which chronics are already recorded (do not re-add them), how much of the
+    per-part source budget is left, which source tiers count, and the rules
+    your evidence must pass. Every field is derived from the catalog, so it is
+    current by construction."""
+    import yaml
+    path = next(((DATA_DIR / "parts").rglob(f"{part_id}.yaml")), None)
+    part_type = path.parent.name if path else ""
+    known: list[str] = []
+    if path:
+        data = yaml.safe_load(path.read_text()) or {}
+        known = [c.get("title", "") for c in (data.get("claims") or [])]
+
+    conn = _conn()
+    try:
+        docs = [dict(r) for r in conn.execute(
+            "SELECT id, url, source_type FROM documents WHERE target_hint=?"
+            " ORDER BY id", (part_id,))]
+    finally:
+        conn.close()
+
+    return {
+        "part_id": part_id,
+        "part_type": part_type,
+        "scaffolded": bool(path),
+        "known_claims": _distinct_titles(known),
+        "look_for": _components_for(part_type),
+        "documents_used": len(docs),
+        "budget_remaining": max(0, MAX_AGENT_SOURCES_PER_PART - len(docs)),
+        "documents": docs,
+        "preferred_sources": _example_sources(),
+        "write_rules": [
+            "config-specific: name the engine/gearbox code or the mileage",
+            "high-consequence: timing, dual-clutch/mechatronics, turbo, "
+            "emissions hardware, structural",
+            "maintenance-interval items count — 'due unless the ad proves "
+            "otherwise' is a real claim",
+            "never: warning lights, fluids, pads, compression, injector "
+            "benches — the ekspertiz already catches those",
+            "quote must be copied verbatim from the document you submitted",
+        ],
+    }
+
+
+@mcp.tool()
+def finish_model(make: str, model: str, notes: str = "") -> dict:
+    """Close out a model: run the $0 pipeline pass, then report what landed.
+
+    Call this once, at the end of an onboarding pass, instead of
+    run_pipeline_pass — it does the same deterministic work and additionally
+    writes the pass into logs/agent_runs.jsonl (what closed, what is still
+    zero-claim, which rows stayed draft and which figure each is missing), so
+    the outcome of an agent run is recorded state rather than a chat message
+    that disappears with the session."""
+    import json
+    import time
+
+    conn = _conn()
+    try:
+        stats = _pipeline_pass(conn)
+    finally:
+        conn.close()
+
+    st = model_state.model_state(make, model, DATA_DIR)
+    report = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "model_key": st["model_key"],
+        "variants": st["variants"],
+        "variants_draft": st["variants_draft"],
+        "drafts": st["drafts"],
+        "rollup": st["rollup"],
+        "open_parts": [p["part_id"] for p in st["parts"]
+                       if p["state"] != "has_claims"],
+        "pipeline": stats,
+        "notes": notes,
+    }
+    try:
+        AGENT_RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(AGENT_RUN_LOG, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(report, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+    return report
 
 
 def _pipeline_pass(conn) -> dict:
