@@ -3,7 +3,19 @@
 <title>kriko-hub</title>
 <link rel="stylesheet" href="/static/style.css">
 </head><body>
-<header><h1>kriko-hub</h1><span class="meta" id="meta"></span></header>
+<header>
+  <h1>kriko</h1>
+  <span class="sub">knowledge pipeline console</span>
+  <span class="meta" id="meta"></span>
+  <div class="rail">
+    <div class="readout"><b id="hdr-docs">·</b><span>documents</span></div>
+    <div class="readout"><b id="hdr-ev">·</b><span>evidence</span></div>
+    <div class="readout"><b id="hdr-claims">·</b><span>claims</span></div>
+    <div class="readout free"><b id="hdr-import">·</b><span>$0 verdicts</span></div>
+    <div class="readout money"><b id="hdr-spend">·</b><span>spent</span></div>
+    <div class="lamp" id="hdr-lamp">idle</div>
+  </div>
+</header>
 <nav id="nav">
 <button data-p="models" class="on">Models</button>
 <button data-p="review">Claims</button>
@@ -41,7 +53,7 @@
         <select id="ob-harness"></select>
         <select id="ob-llm"></select>
         <button class="run go" id="b-agent-run">Run →</button>
-        <button class="run" id="b-onboard-stop">stop</button>
+        <button class="run danger" id="b-onboard-stop">stop</button>
       </div>
       <div class="cmd" id="cmd-preview"></div>
     </div>
@@ -101,17 +113,26 @@
   <div id="doc-detail"></div>
 </div>
 <div class="page" id="p-run">
-  <h2>Run controls — costs enforced by --max-usd</h2>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-    <button class="run" id="b-extract">extract (capped)</button>
-    <input type="number" id="cap" value="0.05" min="0" step="0.01">
-    <button class="run" id="b-verdict">verdict (capped)</button>
-    <button class="run" id="b-resolve">resolve ($0)</button>
-    <button class="run" id="b-cluster">cluster ($0)</button>
-    <button class="run" id="b-import">import verdicts ($0)</button>
-    <button class="run" id="b-remediate">remediate ($0)</button>
-    <button class="run" id="b-export">export</button>
-    <button class="run" id="b-stop">stop</button>
+  <h2>Run controls</h2>
+  <p class="muted">The amber bank spends API credit: its cap is passed as
+    <code>--max-usd</code> and enforced by the same accounting the CLI uses.
+    Everything in the free bank is deterministic and costs nothing.</p>
+  <div class="rack">
+    <div class="bank spends">
+      <span class="bank-l">spends · max $</span>
+      <input type="number" id="cap" value="0.05" min="0" step="0.01">
+      <button class="run paid" id="b-extract">extract</button>
+      <button class="run paid" id="b-verdict">verdict</button>
+    </div>
+    <div class="bank">
+      <span class="bank-l">free</span>
+      <button class="run" id="b-resolve">resolve</button>
+      <button class="run" id="b-cluster">cluster</button>
+      <button class="run" id="b-import">import verdicts</button>
+      <button class="run" id="b-remediate">remediate</button>
+      <button class="run" id="b-export">export</button>
+    </div>
+    <button class="run danger" id="b-stop">stop</button>
   </div>
   <h2>Output <span class="muted" id="run-state"></span></h2>
   <pre id="log"></pre>

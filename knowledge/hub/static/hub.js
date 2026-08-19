@@ -36,7 +36,15 @@ function showTab(p) {
   }
 }
 document.querySelectorAll('#nav button')
-  .forEach(b => b.onclick = () => showTab(b.dataset.p));
+  .forEach(b => b.onclick = () => { location.hash = b.dataset.p; });
+
+// The tab lives in the URL: a refresh (or a link you paste to yourself) comes
+// back to the pane you were watching instead of resetting to Models.
+function tabFromHash() {
+  const want = location.hash.replace(/^#/, '');
+  showTab(TABS.includes(want) ? want : 'models');
+}
+addEventListener('hashchange', tabFromHash);
 
 function kpi(label, val, accent) {
   return '<div class="kpi"><b style="color:' + (accent || '') + '">'
@@ -55,8 +63,11 @@ function renderState() {
   $('#kpis').innerHTML =
     kpi('documents', c.documents) + kpi('evidence', c.evidence) +
     kpi('clusters', c.clusters) + kpi('verdicts', c.verdicts) +
-    kpi('parts', cat.parts) + kpi('variants', cat.variants) +
-    kpi('fitment', cat.fitment) + kpi('claims', cat.claims) +
+    // These two are file counts, not row counts — say so. A dashboard that
+    // reads "4 variants" for a catalog holding 27 variant rows is lying in
+    // the one place a person looks for scale.
+    kpi('parts', cat.parts) + kpi('variant files', cat.variants) +
+    kpi('fitment files', cat.fitment) + kpi('claims', cat.claims) +
     kpi('total spend', fmt(s.total_usd), '#ff8a3d') +
     kpi('import verdicts', s.verdicts_import + ' ($0)', '#6fce8e') +
     kpi('LLM verdicts', s.verdicts_llm) +
@@ -98,8 +109,28 @@ function renderState() {
   if (dcur && dcur !== selDoc) { selDoc = dcur; loadDoc(dcur); }
 
   if (state.last_remediation)
-    $('#meta').textContent = 'last remediation: ' + state.last_remediation.ts
+    $('#meta').textContent = 'last remediation ' + state.last_remediation.ts
       + ' · ' + fmt(state.last_remediation.usd);
+
+  renderRail();
+}
+
+// The header rail is the instrument cluster: the five numbers worth a glance
+// from across the desk, plus a lamp that says whether anything is alive. It
+// reads the same /api/state poll everything else does — no extra request.
+function renderRail() {
+  const c = state.counts, s = state.spend, cat = state.catalog;
+  $('#hdr-docs').textContent = c.documents;
+  $('#hdr-ev').textContent = c.evidence;
+  $('#hdr-claims').textContent = cat.claims;
+  $('#hdr-import').textContent = s.verdicts_import;
+  $('#hdr-spend').textContent = fmt(s.total_usd);
+}
+
+function setLamp(isRunning, label) {
+  const el = $('#hdr-lamp');
+  el.classList.toggle('on', !!isRunning);
+  el.textContent = isRunning ? (label || 'running') : 'idle';
 }
 
 async function loadPart(id) {
@@ -164,7 +195,9 @@ let revFilter = { group: null, model_key: null };
 function gateBox(g) {
   if (!g) return '';
   if (g.ok) {
-    return '<div class="gate gate-ok">gate: keep'
+    const warned = (g.warnings || []).length ? ' has-warn' : '';
+    return '<div class="gate gate-ok' + warned + '">gate: keep'
+      + (warned ? ', with a caveat' : '')
       + (g.warnings || []).map(w => '<div class="gwarn">⚠ ' + esc(w)
         + '</div>').join('') + '</div>';
   }
@@ -182,7 +215,7 @@ function reviewCard(c) {
     + '<div class="rclaim-h">' + sev(c.severity)
     + '<span class="pill">' + esc(c.part_id) + '</span>'
     + (c.domain ? '<span class="pill">' + esc(c.domain) + '</span>' : '')
-    + '<span class="muted">conf ' + esc(c.confidence ?? '-') + '</span>'
+    + '<span class="pill">conf ' + esc(c.confidence ?? '-') + '</span>'
     + '<span class="act-t">'
     + '<button class="run go" data-act="agree" data-id="'
     + esc(c.claim_id) + '">agree</button> '
@@ -220,8 +253,8 @@ async function loadReview() {
   try {
     const d = await fetch('/api/review?' + q).then(r => r.json());
     renderReviewFilters(d.total);
-    $('#review-meta').textContent = d.total + ' unsettled · '
-      + d.would_drop + ' the gate would drop'
+    $('#review-meta').textContent = d.total + ' unsettled · the gate would drop '
+      + d.would_drop
       + (d.total > d.claims.length ? ' (showing ' + d.claims.length + ')' : '');
     $('#review-list').innerHTML = d.claims.length
       ? d.claims.map(reviewCard).join('')
@@ -314,7 +347,10 @@ async function loadMatrix() {
     const body = d.models.map(m => '<tr><td>' + esc(m.model_key) + '</td>'
       + d.groups.map(g => {
         const n = m.cells[g] || 0;
-        const a = Math.sqrt(n / max).toFixed(2);
+        // sqrt so sparse cells stay visible next to dense ones; floored so a
+        // single claim is not indistinguishable from none, capped so the
+        // figure never disappears into its own shading.
+        const a = n ? Math.min(0.55, 0.10 + Math.sqrt(n / max) * 0.5).toFixed(2) : 0;
         return '<td class="hm" data-m="' + esc(m.model_key)
           + '" data-g="' + esc(g) + '" style="background:rgba(255,138,61,'
           + a + ')">' + (n || '') + '</td>';
@@ -718,6 +754,14 @@ async function poll() {
       : 'exit ' + (l.exit ?? '-') + ' · ' + (l.cmd || '');
     $('#run-state').classList.toggle('err', !running && l.exit);
     document.title = running ? '● kriko-hub — running' : 'kriko-hub';
+    // The lamp names WHAT is alive, not just that something is: an agent run
+    // and a pipeline stage look identical in a spinner and nothing alike in
+    // consequence (one is $0 research, the other can be spending).
+    setLamp(running, running
+      ? (l.cmd || '').includes('knowledge.ledger.run')
+        ? 'pipeline ' + fmtElapsed(l.elapsed)
+        : 'agent ' + fmtElapsed(l.elapsed)
+      : '');
     setRunButtons(!running);
 
     // The agent's own output pane mirrors the shared run log — one run slot.
@@ -757,6 +801,7 @@ async function poll() {
   } catch (e) {
     state = null;
     setRunButtons(false);
+    setLamp(false, '');
     $('#meta').textContent = 'ledger unavailable — is the hub server running?';
   } finally {
     polling = false;
@@ -808,7 +853,7 @@ $('#b-stop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }
 $('#table-sel').addEventListener('change', e => loadTable(e.target.value));
 
 poll();
-// First paint opens on the Models tab, but showTab only fires on a nav click —
-// without this the step-1 make picker stays empty until the user re-clicks
-// the tab they are already on.
-loadDemand(); loadHarnesses();
+// First paint honours the URL's tab (and loads that pane's data): showTab only
+// fired on a nav click before, so the make picker stayed empty until the user
+// re-clicked the tab they were already on.
+tabFromHash();
