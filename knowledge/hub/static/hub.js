@@ -3,12 +3,19 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const fmt = $ => '$' + Number($).toFixed(4);
+// "1m 42s" style elapsed for the run status line — ticks on every 1s poll,
+// which is itself the liveness signal: a frozen counter means a frozen hub.
+const fmtElapsed = s => {
+  if (s == null) return '…';
+  const m = Math.floor(s / 60);
+  return m ? m + 'm ' + Math.floor(s % 60) + 's' : Math.floor(s) + 's';
+};
 
 let state = null, logState = null;
 let selPart = '', selDoc = '', selTable = 'documents';
 let running = false, prevRunning = false, polling = false;
 let covLoaded = false;
-const TABS = ['models', 'overview', 'parts', 'sources', 'run', 'ledger',
+const TABS = ['models', 'review', 'overview', 'parts', 'sources', 'run', 'ledger',
   'coverage'];
 let curTab = 'models';
 
@@ -20,8 +27,12 @@ function showTab(p) {
       .classList.toggle('on', t === p);
   });
   if (p === 'coverage' && !covLoaded) loadCoverage(false);
+  if (p === 'coverage') { loadMatrix(); loadDoctor(); }
+  if (p === 'review') loadReview();
+  if (p === 'sources') loadSourceDomains();
   if (p === 'models') {
     loadModels(); loadActivity(); loadDemand(); loadHarnesses();
+    loadRuns(); loadAgentRuns();
   }
 }
 document.querySelectorAll('#nav button')
@@ -137,6 +148,238 @@ async function loadCoverage(force) {
     $('#t-findings').innerHTML = '<div class="err">coverage report failed: '
       + esc(String(e)) + '</div>';
   }
+}
+
+// ── Phase 4: review queue, coverage heatmap, sources, run history ───────────
+
+// Claim inspector — what the deterministic gate says about each claim.
+//
+// This used to be a promotion queue whose approve button rewrote `status` in
+// the part YAML. That is a human inside the data path, which CLAUDE.md's
+// automation principle rules out (G5), and it does not scale past the first
+// thousand claims. What is left is the half that scales: the gate's verdict
+// with its reasons, and an agree/disagree signal that tunes the RULE.
+let revFilter = { group: null, model_key: null };
+
+function gateBox(g) {
+  if (!g) return '';
+  if (g.ok) {
+    return '<div class="gate gate-ok">gate: keep'
+      + (g.warnings || []).map(w => '<div class="gwarn">⚠ ' + esc(w)
+        + '</div>').join('') + '</div>';
+  }
+  return '<div class="gate gate-drop">gate: would drop'
+    + (g.rejections || []).map(r => '<div class="gdrop">✕ ' + esc(r)
+      + '</div>').join('') + '</div>';
+}
+
+function reviewCard(c) {
+  const srcs = (c.sources || []).map(s =>
+    '<div class="rsrc"><a href="' + esc(s.url) + '" target="_blank"'
+    + ' rel="noreferrer">' + esc(s.domain) + '</a> — '
+    + esc((s.quote || '').slice(0, 240)) + '</div>').join('');
+  return '<div class="rclaim">'
+    + '<div class="rclaim-h">' + sev(c.severity)
+    + '<span class="pill">' + esc(c.part_id) + '</span>'
+    + (c.domain ? '<span class="pill">' + esc(c.domain) + '</span>' : '')
+    + '<span class="muted">conf ' + esc(c.confidence ?? '-') + '</span>'
+    + '<span class="act-t">'
+    + '<button class="run go" data-act="agree" data-id="'
+    + esc(c.claim_id) + '">agree</button> '
+    + '<button class="run" data-act="disagree" data-id="'
+    + esc(c.claim_id) + '">disagree</button>'
+    + '</span></div>'
+    + '<div class="act-l"><b>' + esc(c.title) + '</b></div>'
+    + (c.title_tr && c.title_tr !== c.title
+      ? '<div class="muted">' + esc(c.title_tr) + '</div>' : '')
+    + gateBox(c.gate)
+    + (srcs ? '<div class="rsrcs">' + srcs + '</div>'
+      : '<div class="muted">no quoted sources</div>')
+    + '</div>';
+}
+
+function renderReviewFilters(total) {
+  const f = revFilter;
+  const bits = [];
+  if (f.group || f.model_key) {
+    bits.push(chip('clear filter ✕', (f.group || '')
+      + (f.model_key ? (f.group ? ' · ' : '') + f.model_key : ''), false));
+  } else {
+    bits.push(chip('all claims', total + ' claims', true));
+  }
+  $('#review-filters').innerHTML = bits.join('');
+  [...$('#review-filters').children].forEach(b => {
+    b.onclick = () => { revFilter = { group: null, model_key: null }; loadReview(); };
+  });
+}
+
+async function loadReview() {
+  const q = new URLSearchParams();
+  if (revFilter.group) q.set('group', revFilter.group);
+  if (revFilter.model_key) q.set('model_key', revFilter.model_key);
+  try {
+    const d = await fetch('/api/review?' + q).then(r => r.json());
+    renderReviewFilters(d.total);
+    $('#review-meta').textContent = d.total + ' unsettled · '
+      + d.would_drop + ' the gate would drop'
+      + (d.total > d.claims.length ? ' (showing ' + d.claims.length + ')' : '');
+    $('#review-list').innerHTML = d.claims.length
+      ? d.claims.map(reviewCard).join('')
+      : '<p class="muted">Nothing unsettled here.</p>';
+  } catch (e) {
+    $('#review-list').innerHTML = '<div class="err">claim inspector failed: '
+      + esc(String(e)) + '</div>';
+  }
+}
+
+$('#review-list').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const card = b.closest('.rclaim');
+  [...card.querySelectorAll('button[data-act]')].forEach(x => x.disabled = true);
+  const r = await fetch('/api/review/' + encodeURIComponent(b.dataset.id), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: b.dataset.act })
+  });
+  const t = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    [...card.querySelectorAll('button[data-act]')].forEach(x => x.disabled = false);
+    $('#review-meta').innerHTML = '<span class="err">'
+      + esc(t.detail || 'signal failed') + '</span>';
+    return;
+  }
+  // The card stays: nothing changed in the catalog, and pretending otherwise
+  // by removing it would be the old promotion-queue illusion.
+  card.classList.add('signalled');
+  card.querySelector('.act-t').innerHTML =
+    '<span class="muted">recorded: ' + esc(b.dataset.act) + '</span>';
+});
+$('#b-review-refresh').onclick = () => loadReview();
+
+// Catalog doctor — identity damage across every car, and the $0 repair.
+async function loadDoctor() {
+  try {
+    const d = await fetch('/api/doctor').then(r => r.json());
+    $('#doc-meta').textContent = d.fixable + ' fixable · '
+      + d.needs_research + ' need research';
+    $('#t-doctor').innerHTML = d.findings.length
+      ? rows(['kind', 'model', 'fix', 'what'],
+          d.findings.map(f => [esc(f.kind), esc(f.model_key),
+            f.fixable ? 'auto' : '<b>research</b>', esc(f.message)]))
+      : '<tr><td class="muted">catalog identity is clean</td></tr>';
+  } catch (e) {
+    $('#t-doctor').innerHTML = '<tr><td class="err">doctor failed: '
+      + esc(String(e)) + '</td></tr>';
+  }
+}
+$('#b-doctor').onclick = () => loadDoctor();
+$('#b-doctor-fix').onclick = async () => {
+  $('#doc-meta').textContent = 'repairing…';
+  await fetch('/api/doctor/repair', { method: 'POST' });
+  loadDoctor();
+};
+
+// Agent results — what onboarding passes achieved (logs/agent_runs.jsonl,
+// written by the MCP finish_model tool). Survives the session; the output
+// pane does not.
+async function loadAgentRuns() {
+  try {
+    const d = await fetch('/api/agent-runs').then(r => r.json());
+    $('#t-agentruns').innerHTML = d.runs.length
+      ? rows(['when', 'model', 'variants', 'draft', 'researched', 'open parts'],
+          d.runs.map(r => [
+            (r.ts || '').replace('T', ' ').slice(0, 19),
+            esc(r.model_key || '-'),
+            r.variants ?? '-',
+            r.variants_draft ?? '-',
+            (r.rollup || {}).has_claims ?? '-',
+            esc((r.open_parts || []).join(', ') || '—')]))
+      : '';
+    $('#agentruns-meta').textContent = d.runs.length
+      ? d.runs.length + ' recorded' : 'no agent pass has reported yet';
+  } catch (e) { /* optional chrome */ }
+}
+
+// Coverage heatmap — row per model, column per subsystem display group.
+// Density shading is sqrt-scaled so sparse cells stay visible next to dense
+// ones; a click drills the review queue to exactly those claims.
+async function loadMatrix() {
+  try {
+    const d = await fetch('/api/coverage-matrix').then(r => r.json());
+    const max = d.max || 1;
+    const head = '<tr><th>model</th>'
+      + d.groups.map(g => '<th>' + esc(g) + '</th>').join('')
+      + '<th>total</th></tr>';
+    const body = d.models.map(m => '<tr><td>' + esc(m.model_key) + '</td>'
+      + d.groups.map(g => {
+        const n = m.cells[g] || 0;
+        const a = Math.sqrt(n / max).toFixed(2);
+        return '<td class="hm" data-m="' + esc(m.model_key)
+          + '" data-g="' + esc(g) + '" style="background:rgba(255,138,61,'
+          + a + ')">' + (n || '') + '</td>';
+      }).join('')
+      + '<td class="hm">' + m.total + '</td></tr>').join('');
+    $('#t-matrix').innerHTML = head + body;
+    $('#matrix-meta').textContent = d.models.length + ' models · '
+      + d.groups.length + ' groups';
+  } catch (e) {
+    $('#t-matrix').innerHTML = '<tr><td class="err">matrix failed: '
+      + esc(String(e)) + '</td></tr>';
+  }
+}
+
+$('#t-matrix').addEventListener('click', e => {
+  const td = e.target.closest('td.hm');
+  if (!td || !td.dataset.g) return;
+  revFilter = { group: td.dataset.g, model_key: td.dataset.m };
+  showTab('review');
+});
+
+// Source browser — every source_domain in the catalog, tiered via
+// knowledge/sources/tiers.py (the same resolution verdicts use).
+let srcSortDir = -1;
+function tierBadge(t) {
+  return '<span class="tier tier-' + esc(t) + '">' + esc(t) + '</span>';
+}
+
+async function loadSourceDomains() {
+  try {
+    const d = await fetch('/api/sources').then(r => r.json());
+    const list = d.sources.slice().sort((a, b) =>
+      srcSortDir * (a.contribution_count - b.contribution_count));
+    $('#t-sources').innerHTML = '<tr><th>domain</th><th>tier</th>'
+      + '<th>trust</th><th class="sortable" id="th-src-count">claims ↕</th></tr>'
+      + list.map(s => '<tr><td>' + esc(s.domain) + '</td><td>'
+        + tierBadge(s.tier) + '</td><td>' + s.trust.toFixed(2) + '</td>'
+        + '<td>' + s.contribution_count + '</td></tr>').join('');
+    $('#src-meta').textContent = list.length + ' domains';
+    $('#th-src-count').onclick = () => {
+      srcSortDir = -srcSortDir; loadSourceDomains();
+    };
+  } catch (e) {
+    $('#t-sources').innerHTML = '<tr><td class="err">sources failed: '
+      + esc(String(e)) + '</td></tr>';
+  }
+}
+
+// Run history — persisted agent/CLI runs (knowledge/hub/runs.jsonl).
+async function loadRuns() {
+  try {
+    const d = await fetch('/api/runs').then(r => r.json());
+    $('#t-runhist').innerHTML = d.runs.length
+      ? rows(['when', 'task', 'model', 'exit', 'dur', 'command'],
+          d.runs.map(r => [
+            (r.ts || '').replace('T', ' ').slice(0, 19),
+            r.task || '-',
+            r.make && r.model ? r.make + ' ' + r.model : '-',
+            r.exit_code ?? '-',
+            r.duration_s != null ? r.duration_s + 's' : '-',
+            (r.argv || []).join(' ').slice(0, 90)]))
+      : '';
+    $('#runhist-meta').textContent = d.runs.length
+      ? d.runs.length + ' recent' : 'no runs recorded yet';
+  } catch (e) { /* history is optional chrome — never break the tab */ }
 }
 
 // ── Models tab ───────────────────────────────────────────────────────────────
@@ -471,7 +714,7 @@ async function poll() {
       >= logEl.scrollHeight - 40;
     logEl.textContent = l.buf;
     if (nearBottom) logEl.scrollTop = logEl.scrollHeight;
-    $('#run-state').textContent = running ? 'running…'
+    $('#run-state').textContent = running ? 'running · ' + fmtElapsed(l.elapsed)
       : 'exit ' + (l.exit ?? '-') + ' · ' + (l.cmd || '');
     $('#run-state').classList.toggle('err', !running && l.exit);
     document.title = running ? '● kriko-hub — running' : 'kriko-hub';
@@ -481,10 +724,16 @@ async function poll() {
     const obLog = $('#ob-log');
     const obBottom = obLog.scrollTop + obLog.clientHeight
       >= obLog.scrollHeight - 40;
-    obLog.textContent = l.buf;
+    // A running agent can legitimately produce nothing for the first minute
+    // (LLM thinking, MCP calls). Say so instead of showing a dead blank pane.
+    obLog.textContent = running && !l.buf.trim()
+      ? '· agent working — waiting for first output…'
+      : l.buf;
     if (obBottom) obLog.scrollTop = obLog.scrollHeight;
-    $('#ob-run-state').textContent = running ? 'running…'
+    $('#ob-run-state').textContent = running
+      ? '● running · ' + fmtElapsed(l.elapsed)
       : (l.cmd ? 'exit ' + (l.exit ?? '-') + ' · ' + l.cmd : '');
+    $('#ob-run-state').classList.toggle('live', running);
 
     // Real-time view of what the agent is writing. Cheap queries, so they
     // ride the poll while the Models tab is showing.
@@ -517,7 +766,7 @@ async function poll() {
 
 function setRunButtons(en) {
   ['b-extract', 'b-verdict', 'b-resolve', 'b-cluster', 'b-import',
-    'b-remediate', 'b-export'].forEach(id => $(id).disabled = !en);
+    'b-remediate', 'b-export'].forEach(id => $('#' + id).disabled = !en);
 }
 async function doRun(argv) {
   const r = await fetch('/api/run', {
@@ -559,3 +808,7 @@ $('#b-stop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }
 $('#table-sel').addEventListener('change', e => loadTable(e.target.value));
 
 poll();
+// First paint opens on the Models tab, but showTab only fires on a nav click —
+// without this the step-1 make picker stays empty until the user re-clicks
+// the tab they are already on.
+loadDemand(); loadHarnesses();

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>kriko-hub</title>
+<link rel="stylesheet" href="/static/style.css">
+</head><body>
+<header><h1>kriko-hub</h1><span class="meta" id="meta"></span></header>
+<nav id="nav">
+<button data-p="models" class="on">Models</button>
+<button data-p="review">Claims</button>
+<button data-p="overview">Overview</button>
+<button data-p="parts">Parts</button>
+<button data-p="sources">Sources</button>
+<button data-p="run">Run</button>
+<button data-p="ledger">Ledger</button>
+<button data-p="coverage">Coverage</button>
+</nav>
+<main>
+<div class="page on" id="p-models">
+  <h2>Onboard a model
+    <span class="muted" id="onboard-state"></span></h2>
+  <div class="onboard">
+    <div class="step">
+      <label>1 · Make <span class="muted">demand-ranked</span></label>
+      <div class="choices" id="pick-make"></div>
+    </div>
+    <div class="step" id="step-model" hidden>
+      <label>2 · Model</label>
+      <div class="choices" id="pick-model"></div>
+    </div>
+    <div class="step" id="step-gen" hidden>
+      <label>3 · Generation</label>
+      <div class="choices" id="pick-gen"></div>
+    </div>
+    <div class="step" id="step-go" hidden>
+      <label>4 · Task <span class="muted">what the agent is told to do</span></label>
+      <div class="choices" id="pick-task"></div>
+    </div>
+    <div class="step" id="step-run" hidden>
+      <label>5 · Harness &amp; model</label>
+      <div class="choices">
+        <select id="ob-harness"></select>
+        <select id="ob-llm"></select>
+        <button class="run go" id="b-agent-run">Run →</button>
+        <button class="run" id="b-onboard-stop">stop</button>
+      </div>
+      <div class="cmd" id="cmd-preview"></div>
+    </div>
+  </div>
+
+  <div class="split">
+    <div>
+      <h2>Catalog</h2>
+      <table id="t-models"></table>
+    </div>
+    <div>
+      <h2>Live activity <span class="muted" id="act-meta"></span></h2>
+      <div id="activity"></div>
+    </div>
+  </div>
+
+  <h2 id="md-title">Model detail</h2>
+  <div id="model-detail"><p class="muted">Pick a model to see its work list.</p></div>
+
+  <h2>Agent output <span class="muted" id="ob-run-state"></span></h2>
+  <pre id="ob-log"></pre>
+
+  <h2>Agent results <span class="muted" id="agentruns-meta"></span></h2>
+  <table id="t-agentruns"></table>
+
+  <h2>Run history <span class="muted" id="runhist-meta"></span></h2>
+  <table id="t-runhist"></table>
+</div>
+<div class="page" id="p-review">
+  <h2>Claim inspector <span class="muted" id="review-meta"></span>
+    <button class="run" id="b-review-refresh">refresh</button></h2>
+  <p class="muted">What the deterministic gate says about each claim, and why.
+    Agree / disagree records gate feedback in
+    <code>knowledge/hub/claim_signals.jsonl</code> — it never edits the
+    catalog. A rule that collects disagreement is a rule to fix in
+    <code>knowledge/agent/gates.py</code>, where the fix applies to every car.</p>
+  <div class="choices" id="review-filters" style="margin-bottom:10px"></div>
+  <div id="review-list"></div>
+</div>
+<div class="page" id="p-overview">
+  <h2>Ledger</h2>
+  <div class="kpis" id="kpis"></div>
+  <h2>Spend</h2><table id="t-spend"></table>
+  <h2>Pending — cost to finish</h2><table id="t-pending"></table>
+  <h2>Recent runs</h2><table id="t-runs"></table>
+</div>
+<div class="page" id="p-parts">
+  <h2>Model &amp; Make</h2>
+  <select id="part-sel"></select>
+  <div id="part-detail"></div>
+</div>
+<div class="page" id="p-sources">
+  <h2>Source domains <span class="muted" id="src-meta"></span></h2>
+  <table id="t-sources"></table>
+  <h2>Documents</h2>
+  <select id="doc-sel"></select>
+  <div id="doc-detail"></div>
+</div>
+<div class="page" id="p-run">
+  <h2>Run controls — costs enforced by --max-usd</h2>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <button class="run" id="b-extract">extract (capped)</button>
+    <input type="number" id="cap" value="0.05" min="0" step="0.01">
+    <button class="run" id="b-verdict">verdict (capped)</button>
+    <button class="run" id="b-resolve">resolve ($0)</button>
+    <button class="run" id="b-cluster">cluster ($0)</button>
+    <button class="run" id="b-import">import verdicts ($0)</button>
+    <button class="run" id="b-remediate">remediate ($0)</button>
+    <button class="run" id="b-export">export</button>
+    <button class="run" id="b-stop">stop</button>
+  </div>
+  <h2>Output <span class="muted" id="run-state"></span></h2>
+  <pre id="log"></pre>
+</div>
+<div class="page" id="p-ledger">
+  <h2>Ledger browser (read-only) <span class="muted" id="table-meta"></span></h2>
+  <select id="table-sel">
+    <option>documents</option><option>evidence</option><option>clusters</option>
+    <option>verdicts</option><option>resolutions</option>
+    <option>evidence_flags</option><option>runs</option>
+  </select>
+  <pre id="table-preview"></pre>
+</div>
+<div class="page" id="p-coverage">
+  <h2>Coverage heatmap <span class="muted" id="matrix-meta"></span> —
+    claims per subsystem group, click a cell to review those claims</h2>
+  <table id="t-matrix"></table>
+  <h2>Catalog doctor <span class="muted" id="doc-meta"></span>
+    <button class="run" id="b-doctor">check</button>
+    <button class="run go" id="b-doctor-fix">repair ($0)</button></h2>
+  <p class="muted">Variant identity damage — marketing-trim ids, description
+    codes, duplicate powertrains, orphan fitment rows. Repair is deterministic
+    and runs for every car.</p>
+  <table id="t-doctor"></table>
+
+  <h2>Coverage findings <button class="run" id="b-cov">refresh</button>
+    <span class="muted" id="cov-meta"></span></h2>
+  <table id="t-findings"></table>
+</div>
+</main>
+<script src="/static/hub.js"></script>
+</body></html>

@@ -94,3 +94,36 @@ border-radius:6px;font:12px/1.5 ui-monospace,monospace;color:var(--dim);
 overflow-x:auto;white-space:pre;min-height:1.5em}
 .cmd.paid{border-color:#7a5a1a}
 optgroup{color:var(--dim);font-style:normal}
+/* Liveness: a breathing status while a run is alive — a frozen counter
+(frozen hub) is instantly distinguishable from a pulsing one. */
+@keyframes hubpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.live{color:var(--accent);animation:hubpulse 1.6s ease-in-out infinite}
+
+/* ── Phase 4: review queue, heatmap, source tiers, run history ─────────────── */
+.rclaim{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:10px 12px;margin-bottom:8px}
+.rclaim-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rclaim-h .act-t{margin-left:auto;display:flex;gap:6px}
+.rsrcs{margin-top:6px}
+.rsrc{font-size:12px;color:var(--dim);padding:3px 0 3px 10px;
+  border-left:2px solid var(--line);margin-top:4px;word-break:break-word}
+.rsrc a{color:#9ac4ff}
+.hm{text-align:center;font-variant-numeric:tabular-nums;cursor:pointer;min-width:56px}
+.hm:hover{outline:1px solid var(--accent)}
+th.sortable{cursor:pointer}
+th.sortable:hover{color:var(--accent)}
+.tier{display:inline-block;border-radius:4px;padding:1px 7px;font-size:11px;
+  white-space:nowrap}
+.tier-authoritative{background:#1f4a2c;color:#8affa8}
+.tier-specialist{background:#243a5a;color:#9ac4ff}
+.tier-enthusiast{background:var(--panel2);color:var(--dim)}
+.tier-forum_ugc{background:#5a3d1a;color:#ffce8a}
+.tier-seo_blog{background:#5a1f24;color:#ff9a9a}
+
+/* Gate verdict inside a claim card — the machine's reasoning, shown as text
+   the reader can argue with, not a score. */
+.gate { margin: 6px 0; padding: 6px 8px; border-radius: 4px; font-size: 12px; }
+.gate-ok { background: #16301f; color: #9be0b0; }
+.gate-drop { background: #3a1d1d; color: #ffb3ae; }
+.gate .gdrop, .gate .gwarn { margin-top: 3px; opacity: .9; }
+.rclaim.signalled { opacity: .6; }
