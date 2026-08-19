@@ -1,0 +1,10 @@
+- variant_id: golf8_ea211evo2_150
+  engine_family: ea211_evo2
+  transmission_code: manual
+  electrical_code: ''
+  body_code: ''
+- variant_id: golf8_ea211evo2_150_auto
+  engine_family: ea211_evo2
+  transmission_code: 7_speed_dsg
+  electrical_code: ''
+  body_code: ''

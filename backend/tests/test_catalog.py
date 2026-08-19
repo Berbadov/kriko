@@ -1,71 +1,24 @@
 """Catalog linter — hard CI gate.
 
 Within one (make, model, fuel, year), no two variants may overlap on
-displacement_cc range AND power range AND transmission. Overlapping on
-all three would make the matcher produce an unresolvable ambiguity that
-can never be narrowed to a single variant — matcher.py's
-_narrow_by_transmission can disambiguate two variants that only collide
-on cc+power if they carry distinct `transmission` values (manual vs
-automatic ad text narrows them), so that case is not a true overlap.
+displacement_cc range AND power range AND transmission. Overlapping on all
+three would make the matcher produce an unresolvable ambiguity that can never
+be narrowed to a single variant.
 
-This test reads all variant YAML files and fails the build if any overlap
-is detected.
+The rule itself lives in `knowledge/catalog/identity.py` and is imported here:
+the agent write path (`write_variants.validate_trims`) enforces the same
+function, so a lineup CI would reject is rejected at submit time instead of
+hours later. Keeping a second copy here is what let the Golf 8 trim-shaped
+lineup through in the first place.
 """
 
-from itertools import combinations
 from pathlib import Path
 
 import yaml
-import pytest
 
+from knowledge.catalog.identity import ACCEPTED_OVERLAPS, find_overlaps  # noqa: F401
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "variants"
-
-
-def _years(v) -> range:
-    return range(v["year_from"], (v["year_to"] or 2099) + 1)
-
-
-def _cc_overlaps(a, b, tol: int = 100) -> bool:
-    """True if the two variants' cc ranges are within matching tolerance."""
-    if not a.get("displacement_cc") or not b.get("displacement_cc"):
-        return True   # unknown cc → conservatively flag
-    return abs(a["displacement_cc"] - b["displacement_cc"]) <= tol
-
-
-def _power_overlaps(a, b, tol: int = 5) -> bool:
-    """True if the two variants' power ranges overlap within matching tolerance."""
-    a_min = (a.get("power_min_hp") or 0) - tol
-    a_max = (a.get("power_max_hp") or 999) + tol
-    b_min = (b.get("power_min_hp") or 0) - tol
-    b_max = (b.get("power_max_hp") or 999) + tol
-    return a_min <= b_max and b_min <= a_max
-
-
-# Pairs where cc+power+transmission genuinely collide within tolerance, but no
-# catalog fix exists — these are real, closely-spaced trims of the same engine
-# code (not a scaffolding mistake), so the matcher's designed-for-this
-# ambiguous-match fallback (return the union of both candidates' claims —
-# see matcher.py's module docstring and resolver.py's resolve_claims) is the
-# correct behaviour, not a defect. Each entry needs a one-line reason; add
-# here only after confirming no available field (transmission, engine_code,
-# etc.) can narrow it — that's a real catalog fix, not an allowlist entry.
-ACCEPTED_OVERLAPS: frozenset[frozenset[str]] = frozenset({
-    frozenset({"clio5_k9k_85", "clio5_k9k_100"}),  # Blue dCi 85 vs 100 — same
-    # engine code, manual-only both, no field distinguishes an ad reporting
-    # hp in the 85-95 range; matcher.py tol=10 genuinely can't tell them apart.
-})
-
-
-def _transmission_disambiguates(a, b) -> bool:
-    """True if both variants carry a distinct, populated `transmission` value.
-
-    Mirrors matcher.py's _narrow_by_transmission: when the ad states manual
-    vs automatic, the matcher can pick a single winner even if cc+power
-    collide, so that's not a true unresolvable overlap.
-    """
-    ta, tb = a.get("transmission"), b.get("transmission")
-    return bool(ta) and bool(tb) and ta != tb
 
 
 def load_all_variants() -> list[dict]:
@@ -74,35 +27,6 @@ def load_all_variants() -> list[dict]:
         rows = yaml.safe_load(path.read_text())
         variants.extend(rows)
     return variants
-
-
-def find_overlaps(variants: list[dict]) -> list[str]:
-    """Return human-readable descriptions of every overlapping pair."""
-    errors = []
-    for a, b in combinations(variants, 2):
-        if a["make"] != b["make"] or a["model"] != b["model"] or a["fuel"] != b["fuel"]:
-            continue
-        # Check if their active year ranges overlap
-        years_a = set(_years(a))
-        years_b = set(_years(b))
-        if not years_a & years_b:
-            continue
-        # They share make/model/fuel/year — now check cc + power overlap
-        if _transmission_disambiguates(a, b):
-            continue
-        if frozenset({a["id"], b["id"]}) in ACCEPTED_OVERLAPS:
-            continue
-        if _cc_overlaps(a, b) and _power_overlaps(a, b):
-            errors.append(
-                f"OVERLAP: {a['id']} and {b['id']} share "
-                f"({a['make']}, {a['model']}, {a['fuel']}, "
-                f"years {sorted(years_a & years_b)[:3]}…) "
-                f"and both have overlapping cc ({a.get('displacement_cc')} vs "
-                f"{b.get('displacement_cc')}) AND power "
-                f"({a.get('power_min_hp')}–{a.get('power_max_hp')} vs "
-                f"{b.get('power_min_hp')}–{b.get('power_max_hp')})."
-            )
-    return errors
 
 
 def test_catalog_no_ambiguous_overlaps():
