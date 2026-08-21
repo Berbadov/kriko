@@ -14,7 +14,7 @@ plane — `ops/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
                         demand only (the report is ~1.5s; ?refresh=1 to force)
   GET  /api/part/{id}   part detail (claims, variants)
   GET  /api/doc/{id}    full document text
-  POST /api/run         spawn `knowledge.ledger.run <argv>` (validated)
+  POST /api/run         spawn `ops.ledger_run <argv>` (validated)
   GET  /api/log         streaming output buffer of the current run
   GET  /api/table/{t}   ledger table preview (50 rows + row count)
   POST /api/stop        kill the active run
@@ -366,17 +366,17 @@ def run(payload: dict = Body(...)) -> dict:
     if argv[0] == "pass":
         # The full $0 pass is a chained CLI sequence (no single stage exists).
         py = sys.executable
-        chain = (f"{py} -m knowledge.ledger.run resolve && "
-                 f"{py} -m knowledge.ledger.run cluster && "
-                 f"{py} -m knowledge.ledger.run verdict --import-only && "
-                 f"{py} -m knowledge.ledger.run export")
+        chain = (f"{py} -m ops.ledger_run resolve && "
+                 f"{py} -m ops.ledger_run cluster && "
+                 f"{py} -m ops.ledger_run verdict --import-only && "
+                 f"{py} -m ops.ledger_run export")
         cmd = ["bash", "-c", chain]
     else:
         if argv[0] not in ALLOWED_COMMANDS:
             raise HTTPException(400, f"command not allowed: {argv[0]}")
         if argv[0] == "export" and "--export-dir" not in argv:
             argv = argv + ["--export-dir", str(EXPORT_DIR)]
-        cmd = [sys.executable, "-m", "knowledge.ledger.run", *argv]
+        cmd = [sys.executable, "-m", "ops.ledger_run", *argv]
     with _run_lock:
         old = RUN["proc"]
     if old and old.poll() is None:
@@ -527,7 +527,7 @@ def _agent_command(task: str, make: str, model: str, harness: str,
     implementation to drift.
 
     This is the only place the hub builds a command other than
-    `knowledge.ledger.run`, so every input that reaches argv is gated here:
+    `ops.ledger_run`, so every input that reaches argv is gated here:
     task names a fixed prompt template, make/model/llm_model must match their
     charsets, and the harness selects a fixed argv template rather than
     supplying a command. Nothing is interpolated into a shell.

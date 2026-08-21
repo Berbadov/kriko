@@ -32,7 +32,7 @@ python3 -m knowledge.catalog.discover --make "$MAKE" --model "$MODEL" --write-fi
 
 echo ""
 echo "[2/3] Running knowledge pipeline for all parts..."
-python3 -m knowledge.auto --make "$MAKE" --model "$MODEL" --all-parts
+python3 -m ops.auto --make "$MAKE" --model "$MODEL" --all-parts
 
 echo ""
 echo "[3/3] Syncing claims to database..."

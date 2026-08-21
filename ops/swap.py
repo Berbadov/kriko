@@ -32,9 +32,9 @@ loop, and the swap lands when the export catches up. Data-gated, not
 human-gated.
 
 Usage:
-    python -m knowledge.ledger.swap plan
-    python -m knowledge.ledger.swap check
-    python -m knowledge.ledger.swap apply --in-place   # after check passes
+    python -m ops.swap plan
+    python -m ops.swap check
+    python -m ops.swap apply --in-place   # after check passes
 """
 
 from __future__ import annotations

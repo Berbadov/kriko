@@ -115,7 +115,7 @@ agent now supplies the trim lineup from the web instead.
 - **B20 — `ops/hub/`** (DearPyGui, deps: `dearpygui`): six clickable
   windows — Overview (spend bar-plot, cost-to-finish, log tails), Model &
   Make (parts → claims/variants/findings), Sources (documents → raw text),
-  Extraction (run buttons spawning `knowledge.ledger.run` with `--max-usd`
+  Extraction (run buttons spawning `ops.ledger_run` with `--max-usd`
   caps, streaming output), Ledger browser (generic read-only SQLite
   explorer), Scaffold (coverage findings). ~1s read-only DB poll; GUI-free
   `metrics.py` pinned by tests; `run.py` gained `verdict --import-only`.
@@ -154,7 +154,7 @@ agent now supplies the trim lineup from the web instead.
   copies.
 - **Legacy gate stack retired**: judge.py, promote.py, purge_*.py ×4,
   translate_claims.py, eval_judge.py, review_tool.py + 7 test files (75
-  tests) deleted; `knowledge.process` promote steps raise with a pointer to
+  tests) deleted; `ops.process` promote steps raise with a pointer to
   `ledger.run remediate`. The sibling-code guard survives in the sync
   validator + verdict prompt. Suite: 519 passed.
 - **Cost accounting (whole wave)**: $0.62 total LLM spend (2.66M tokens) for
@@ -180,8 +180,8 @@ agent now supplies the trim lineup from the web instead.
   pages, not orphans. Tests added; suite 591.
 - **Second live run**: ingested the 49 lost pages (+50 docs total), then hit
   **`Insufficient Balance` on the DeepSeek API** — extraction/verdicts pending,
-  fully resumable. Once funded: `python -m knowledge.ledger.run remediate
-  --max-usd 2.0` → `python -m knowledge.ledger.swap check`.
+  fully resumable. Once funded: `python -m ops.ledger_run remediate
+  --max-usd 2.0` → `python -m ops.swap check`.
 
 ## 2026-08-03 — B16 swap mechanism + automated acceptance gate (no commit yet)
 
@@ -191,7 +191,7 @@ agent now supplies the trim lineup from the web instead.
   skip-and-reported (no catalog identity). Each part file now carries
   `legacy_part_ids` (which legacy power-split files it supersedes) —
   pipeline-derived via the power-collapse rule, no hand list.
-- **`knowledge/ledger/swap.py`** — `plan` derives the legacy→merged fitment remap
+- **`ops/swap.py`** — `plan` derives the legacy→merged fitment remap
   from the export, classifies every legacy file (superseded/retained), counts
   fitment edits; `apply` writes export files into `parts/<type>/`, deletes
   superseded power-split files, overwrites non-split ids in place (fixes a
@@ -220,8 +220,8 @@ agent now supplies the trim lineup from the web instead.
 - **B11 (visibility)**: new `variant_no_emissions` coverage finding for diesel
   variants without an emissions value — the gap is reported, never a quiet
   wrong value. Tests added to `test_coverage_tool.py`.
-- **B19 (driver)**: `python -m knowledge.ledger.run remediate`
-  (`knowledge/ledger/remediate.py`) — coverage findings (zero_claim_part /
+- **B19 (driver)**: `python -m ops.ledger_run remediate`
+  (`ops/remediate.py`) — coverage findings (zero_claim_part /
   missing_part / auto_variant_no_tx_part, now carrying `part_id`+`axis`
   metadata) drive an unattended acquire → extract → resolve → cluster → verdict
   → export pass. Budget-capped (`--max-usd`), resumable, `--dry-run` prints the

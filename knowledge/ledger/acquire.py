@@ -13,7 +13,7 @@ flow (spec §2.2). Differences from the legacy path, all deliberate:
 - **Lands in `documents`** with the part as `target_hint` (a HINT, never
   attribution — entity resolution decides that from the evidence's own text).
 
-CLI (via run.py):  python -m knowledge.ledger.run acquire --part dw5 \
+CLI (via run.py):  python -m ops.ledger_run acquire --part dw5 \
                        --part-type transmission --max-sources 15
 """
 

@@ -1,6 +1,6 @@
 """_select_capped — pages fill the budget first, then YouTube."""
 
-from knowledge.auto import _select_capped
+from ops.auto import _select_capped
 
 
 def _page(n):

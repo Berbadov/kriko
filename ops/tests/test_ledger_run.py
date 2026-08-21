@@ -1,4 +1,5 @@
-from knowledge.ledger import db, run
+from knowledge.ledger import db
+from ops import ledger_run as run
 
 
 def test_dry_run_spends_nothing(tmp_path, capsys, monkeypatch):

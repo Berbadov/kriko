@@ -4,7 +4,7 @@ INSPECTION_COVERED / WARNING_LIGHT_PATTERNS are used by gate_inspection_value
 in judge.py to quickly reject claims that a standard pre-purchase mechanic
 inspection already covers, or generic dashboard warning lights.
 
-FORUM_DOMAINS is used by knowledge.auto (to exclude forums from future Exa
+FORUM_DOMAINS is used by ops.auto (to exclude forums from future Exa
 discovery) and by the one-off forum-source purge (knowledge/purge_forums.py).
 Forums surface a lot of genuine one-time/anecdotal issues that read like
 chronic patterns once extracted — see pipeline_postmortem. Owner-club and
@@ -242,7 +242,7 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
     design_flaws.md remediation, 2026-07-05, and separately let
     SIBLING_CODE_FAMILIES go stale — see catalog_sibling_families() below,
     which replaced it the same way). Reading it off the catalog itself means
-    a new part's code is covered the moment its stub exists (knowledge/auto.py's
+    a new part's code is covered the moment its stub exists (ops/auto.py's
     _ensure_part_stub / generate_part_scaffold already writes part_id +
     manufacturer before any research runs), with no separate registration
     step to forget. Cached — rebuild by calling
@@ -331,7 +331,7 @@ def document_is_foreign_to_part(text: str, make: str, model: str) -> bool:
     `make`/`model` are passed straight through from
     knowledge.sources.curated.CuratedSource._fetch_entry's own parameters:
     for the part-centric pipeline, `model` IS the part_id
-    (knowledge.process.run_part's "part_id doubles as model slug"
+    (ops.process.run_part's "part_id doubles as model slug"
     convention) — resolved here via catalog_code_manufacturers(); for the
     model-centric pipeline, `model` won't resolve to a registered code, so
     `make` (already the real manufacturer name) is used directly. No signal

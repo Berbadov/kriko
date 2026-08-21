@@ -2,7 +2,7 @@
 
 Every function is read-only and GUI-free, so tests can pin the numbers the
 dashboard shows. The figures come from the same tables and the same estimate
-functions the CLI panel uses (knowledge/ledger/panel.py) — a number in the
+functions the CLI panel uses (ops/panel.py) — a number in the
 hub is the number the budget caps enforce.
 """
 

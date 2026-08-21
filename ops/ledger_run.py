@@ -1,10 +1,10 @@
 """Ledger pipeline CLI.
 
-    python -m knowledge.ledger.run acquire --part dw5 --part-type transmission
-    python -m knowledge.ledger.run remediate --max-usd 2.0
-    python -m knowledge.ledger.run all --max-usd 2.0
-    python -m knowledge.ledger.run extract --dry-run
-    python -m knowledge.ledger.run report
+    python -m ops.ledger_run acquire --part dw5 --part-type transmission
+    python -m ops.ledger_run remediate --max-usd 2.0
+    python -m ops.ledger_run all --max-usd 2.0
+    python -m ops.ledger_run extract --dry-run
+    python -m ops.ledger_run report
 
 Every stage is resumable: extraction and verdicts are content-hash cached, so
 rerunning after a BudgetExceeded abort (exit 2) continues where it stopped."""
@@ -71,7 +71,7 @@ def _cmd_report(conn) -> None:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="knowledge.ledger.run")
+    p = argparse.ArgumentParser(prog="ops.ledger_run")
     p.add_argument("command", choices=[
         "acquire", "feeds", "backfill", "extract", "resolve", "cluster",
         "verdict", "export", "report", "remediate", "all"])
@@ -151,7 +151,7 @@ def main(argv=None) -> int:
                   f"{s['errors']} errors)")
 
     def _cmd_remediate(conn, args, budget) -> None:
-        from knowledge.ledger import remediate
+        from ops import remediate
         if args.dry_run:
             report = remediate.build_report(
                 Path(args.data_dir) / "variants",
