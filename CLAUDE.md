@@ -100,6 +100,39 @@ never per-car or per-datum review. When a per-model problem appears, fix it with
 mechanism that runs for all models (generalization principle) or cancel the feature;
 never add a human verification step to the pipeline.
 
+## Layering principle — dependencies flow one way (READ THIS BEFORE ADDING AN IMPORT ACROSS PACKAGES)
+
+Kriko is three layers. Each may import from the layers below it, never from the
+layers above:
+
+```
+ops/        operator layer — hub, mcp, reports, auto, process, ledger_run,
+            swap, remediate, panel. Drives and inspects everything below.
+backend/    serving layer — sync ETL, api, resolver, db, matcher.
+knowledge/  catalog layer — extraction, catalog, parts, sources, ledger.
+            Imports nothing above it.
+```
+
+**A deferred import (one written inside a function body) that points *upward* is
+the smell.** It means someone hit `ImportError: partially initialized module` and
+pushed the import down to runtime rather than fixing the layering. Before
+2026-08-21 there were 11 of them, all pointing from `knowledge/` into `backend/`,
+because `backend/tools/` held operator tooling the pipeline needed. A deferred
+import pointing *downward* is fine — that is a startup-cost decision.
+
+Two greps must return nothing (tests excluded — an end-to-end test may span layers):
+
+```bash
+grep -rnE "^[[:space:]]*(from|import) (backend|ops)" --include='*.py' knowledge/ | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) ops"            --include='*.py' backend/   | grep -v /tests/
+```
+
+If a module needs something from the layer above, it is in the wrong layer — move
+the module, don't add the import. New CLI drivers and anything that spans layers
+belong in `ops/`. See `docs/INTERNALS.md` for the diagram and
+`docs/superpowers/specs/2026-08-21-codebase-organisation-design.md` for the
+reasoning.
+
 ## Documentation map
 
 | Doc | What it's for | Status |

@@ -5,35 +5,58 @@ and the invariants the system relies on. Read this before touching the pipeline.
 
 ---
 
-## Architecture: Two Planes
+## Architecture: Three Layers
+
+Dependencies flow one way. Each layer may import from the layers below it and
+never from the layers above.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  KNOWLEDGE PLANE  (offline, runs on your machine, uses LLM)     │
+│  ops/          OPERATOR LAYER — drives and inspects the rest     │
 │                                                                  │
-│  discover.py  →  curated YAML  →  process.py                    │
-│                                      │                           │
-│                   extract.py  ←──────┘                          │
-│                   dedup.py                                       │
-│                   judge.py  (LLM gates via Mistral)             │
-│                   promote.py                                     │
-│                       │                                          │
-│                       ▼                                          │
-│           backend/data/claims/*.yaml   (source of truth)        │
+│  hub/          browser dashboard (FastAPI, 127.0.0.1:8787)      │
+│  mcp/          stdio MCP server — the $0 agent control plane     │
+│  reports/      coverage · demand · replay · analyses             │
+│  auto · process · ledger_run · swap · remediate · panel          │
 └──────────────────────────┬──────────────────────────────────────┘
-                           │  sync.py (on container start)
+                           │  imports freely from both layers below
 ┌──────────────────────────▼──────────────────────────────────────┐
-│  SERVING PLANE  (Docker, no LLM, <10ms per request)             │
+│  backend/      SERVING LAYER  (Docker, no LLM, <10ms/request)   │
 │                                                                  │
-│  PostgreSQL ← sync.py                                           │
+│  sync.py  →  PostgreSQL                                          │
 │       │                                                          │
 │  FastAPI /analyze  →  matcher  →  resolver  →  JSON response    │
 │       ▲                                                          │
 │  Chrome extension (content.js → background.js → hover_lite.js)  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  imports knowledge/ for validation,
+                           │  the component registry and source tiers
+┌──────────────────────────▼──────────────────────────────────────┐
+│  knowledge/    CATALOG LAYER (offline, uses LLM)                │
+│                                                                  │
+│  discover · extract · dedup · stoplists · domains                │
+│  catalog/ · parts/ · sources/ · ledger/                          │
+│       │                                                          │
+│       ▼                                                          │
+│  backend/data/parts/*.yaml   (source of truth)                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The two planes never communicate at runtime. YAML is the handoff point.
+`knowledge/` imports nothing from `backend/` or `ops/`; `backend/` imports nothing
+from `ops/`. Enforceable as a grep:
+
+```bash
+grep -rnE "^[[:space:]]*(from|import) (backend|ops)" --include='*.py' knowledge/ | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) ops"            --include='*.py' backend/   | grep -v /tests/
+```
+
+Both must return nothing. Until 2026-08-21 they did not: `backend/tools/` held
+operator tooling that `knowledge/` had to reach up for, and 11 of those imports
+were written inside function bodies to dodge the resulting import cycle.
+
+The catalog and serving layers still never communicate at runtime — YAML remains
+the handoff, `sync.py` the one-way gate. `ops/` is where anything that spans the
+two now lives.
 
 ---
 
