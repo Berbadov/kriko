@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch cancels the older run — this suite is ~3
+# minutes and there is no value in finishing a superseded one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: pytest (serving + catalog + ops)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt -r knowledge/requirements.txt
+
+      # No arguments: pytest.ini pins testpaths. Naming directories by hand is
+      # how the suite silently shrank to 576 of 761 tests once ops/ existed.
+      # ops/tests/test_repo_invariants.py enforces the layering rules and the
+      # testpaths coverage, so the architecture is checked here too.
+      #
+      # Deliberately no secrets: the suite must pass with no API keys. If a new
+      # test needs one, it is reaching the network and belongs behind a marker.
+      - name: Test
+        run: python -m pytest
+
+  extension:
+    name: node (scraper + hub console)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # `npm install`, not `npm ci`: package-lock.json is gitignored, so there
+      # is no lockfile to install from. Commit the lockfile and switch this to
+      # `npm ci` if reproducible installs matter more than a tidy tree.
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+  image:
+    name: serving image builds and imports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # deploy/Dockerfile copies a deliberate stdlib-only slice of knowledge/
+      # rather than the whole package, to keep the LLM dependencies off the
+      # serving image. That means moving a module the serving path imports can
+      # produce an image that builds clean and fails at request time — a class
+      # of breakage the test suite structurally cannot see, because tests run
+      # against the full source tree. So build the image and import the app.
+      - name: Build
+        run: docker build -f deploy/Dockerfile -t kriko-ci .
+
+      - name: Import the serving app inside the image
+        run: |
+          docker run --rm kriko-ci python -c "
+          import backend.api.main, backend.core.resolver, backend.sync
+          print('serving app imports inside the image')
+          "

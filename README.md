@@ -53,12 +53,19 @@ Chrome extension  →  POST /analyze
                     JSON response (no LLM on request path, <10ms)
 ```
 
-Two planes, never talking at runtime — YAML is the handoff:
+Three layers. Dependencies flow one way — each imports from the layers below it,
+never from the layers above:
 
-- **Knowledge plane** (offline, LLM-powered): discovers sources, extracts candidate
-  claims, gates them, writes part YAMLs.
-- **Serving plane** (FastAPI + Postgres/SQLite): assembles part claims per variant at
+- **`knowledge/`** (offline, LLM-powered): discovers sources, extracts candidate
+  claims, gates them, writes part YAMLs. Imports nothing above it.
+- **`backend/`** (FastAPI + Postgres/SQLite): assembles part claims per variant at
   sync time, answers `/analyze` with plain DB reads.
+- **`ops/`** (operator tooling): the hub dashboard, the MCP server, coverage and
+  demand reports, and every CLI that drives the two layers below.
+
+The catalog and serving layers never talk at runtime — YAML is the handoff, `sync.py`
+the one-way gate. Anything that spans them lives in `ops/`. See the layering principle
+in `CLAUDE.md` for the rule and the greps that enforce it.
 
 ### The "Lego" system
 
@@ -83,10 +90,19 @@ backend/
       electrical/   golf7_elec megane4_elec clio5_elec
       body/         golf7_body megane4_body clio5_body
 knowledge/
-  catalog/                                # Wikipedia bootstrap, variants/fitment writers
+  catalog/                                # Wikipedia bootstrap, variants/fitment writers, registry
+  parts/                                  # part YAML validation + migrations
+  sources/                                # source fetchers + the source-tier registry
+  ledger/                                 # evidence-ledger pipeline (acquire → cluster → verdict → export)
+  extract.py dedup.py stoplists.py        # extraction and the inspection-value gate
+ops/
+  hub/                                    # browser dashboard (FastAPI, 127.0.0.1:8787)
+  mcp/server.py                           # stdio MCP server — the $0 agent control plane
+  reports/                                # coverage, demand, replay, analyses
   auto.py                                 # orchestrator: discover → extract → gate → promote
   process.py                              # re-run gates on cached candidates (no token cost)
-  ledger/                                 # evidence-ledger pipeline (Stage 1, on its own branch)
+  ledger_run.py                           # ledger pipeline CLI (resumable, budget-capped)
+  swap.py remediate.py panel.py           # catalog swap, auto-remediation, cost dashboard
 extension_ui/                             # Chrome extension (content.js scraper + panel)
 logs/analyses.jsonl                       # every /analyze request+response (see ops.reports.analyses)
 ```
@@ -141,9 +157,13 @@ Chrome → `chrome://extensions` → Developer mode → Load unpacked → select
 ### Tests
 
 ```bash
-python -m pytest backend knowledge     # Python (serving + pipeline)
-npm test                               # extension scraper (jsdom fixtures)
+python -m pytest                       # all 761 — testpaths in pytest.ini
+npm test                               # extension scraper + hub console (jsdom)
 ```
+
+Run `pytest` with no arguments. Naming directories by hand is how the suite quietly
+shrank once already: `pytest backend knowledge` collected 576 of 761 tests after
+`ops/` was added, skipping every test in `ops/tests` without failing.
 
 ---
 
@@ -189,6 +209,7 @@ requests, and the debug endpoints — is in `docs/USAGE.md`.
 |-----|----------|
 | `backlog.md` / `done.md` | Task tracking — goals, open items, finished work |
 | `CLAUDE.md` | Product + scalability principles, doc map, working rules |
+| `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks |
 | `docs/USAGE.md` | Full operational guide (stack, pipeline, claim lifecycle) |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference |
 | `docs/design_flaws.md` | The 2026-07-04 audit — root causes behind claim mismatches |
