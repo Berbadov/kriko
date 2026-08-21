@@ -157,7 +157,7 @@ def run_analysis(
 ) -> tuple[ListingContext, MatchResult, list[ClaimResult], AnalyzeResponse]:
     """The actual serve path: ad_metadata -> (context, match, served claims, response).
 
-    Pulled out of the /analyze route so backend/tools/replay.py can re-run a
+    Pulled out of the /analyze route so ops/reports/replay.py can re-run a
     logged request through the *real* pipeline rather than a hand-copied
     reimplementation that could silently drift from it.
     """
@@ -258,7 +258,7 @@ def analyze(payload: AnalyzeRequest, db: Session = Depends(get_db)):
 def debug_analyses(limit: int = 20, model: str | None = None):
     """Recent full /analyze payloads, off by default — see ENABLE_DEBUG_ENDPOINT.
 
-    Primary read path is the CLI (`python -m backend.tools.analyses`), which reads
+    Primary read path is the CLI (`python -m ops.reports.analyses`), which reads
     the same JSONL file with no auth story needed. This endpoint exists for when
     only HTTP access (not shell access) to the deploy host is available, and must
     be explicitly turned on to use it.
@@ -515,7 +515,7 @@ def _log_analysis_jsonl(
 ) -> None:
     """Full-payload log — request + gating context + full response, one line per
     analysis. Answers "what did the buyer see and why" after the fact, and is the
-    input backend/tools/replay.py needs to re-run a logged request through a fix.
+    input ops/reports/replay.py needs to re-run a logged request through a fix.
 
     Entire body is best-effort, same as _log_analysis: logging must never break
     the serve path, including record construction, not just the file write.

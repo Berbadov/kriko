@@ -24,7 +24,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.tools.coverage import Report, build_report
+from ops.reports.coverage import Report, build_report
 from knowledge.ledger import acquire, cluster, export, extraction, resolve, verdict
 from knowledge.ledger.costs import Budget
 

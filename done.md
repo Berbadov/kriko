@@ -327,7 +327,7 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
   gearbox matches no candidate variant's transmission and no same-engine alternative row
   exists, the resolver emits a degraded coverage note and logs a catalog-gap signal
   instead of falling back silently.
-- **Coverage report + loud sync guard (B7)** (c8201f4) — `python -m backend.tools.coverage`
+- **Coverage report + loud sync guard (B7)** (c8201f4) — `python -m ops.reports.coverage`
   maps variant → fitment parts → per-part claim counts and flags any non-`manual`
   transmission/engine code that resolves to a zero-claim part; `sync.py` prints the same
   warning. The "would it recur?" mechanism for the dw5 hole (B2).
@@ -337,7 +337,7 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
   `/analyze` regression tests pinning the cap. The remaining real fix (make a stale deploy
   visible) is new backlog **B15**.
 - **`no_match` demand miner (B10)** (4a173cc → f2481c8 → 52aafa6, merged 19d62db) —
-  `python -m backend.tools.demand` aggregates `no_match` `/analyze` log rows into a
+  `python -m ops.reports.demand` aggregates `no_match` `/analyze` log rows into a
   make/model onboarding-demand table, reason-classified (`not_onboarded` / `catalog_gap` /
   `missing_fields`), catalog-derived via `normalize.py` (no hardcoded car names). Review
   fix rounds: shared `observability.load_records` reader hardened against non-dict lines
@@ -386,7 +386,7 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
 - **Serve-time gates** — equipment gate, ad-stated-transmission gate (manual ad never
   sees DSG-mechanism claims), high-severity human-review gate, title-similarity dedup
   with strongest-signal merge (`backend/core/resolver.py`).
-- **Observability** — `logs/analyses.jsonl` + `backend.tools.analyses` / `replay`
+- **Observability** — `logs/analyses.jsonl` + `ops.reports.analyses` / `replay`
   (branch `observability-analyses-log`, merged content on current branch).
 - **Docs** — `docs/INTERNALS.md`, `docs/USAGE.md`, `docs/design_flaws.md` (Flaws 1–4
   addressed; 5–6 tracked as backlog B13), `docs/pipeline_postmortem.md`.

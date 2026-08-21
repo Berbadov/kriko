@@ -4,9 +4,9 @@ docs/design_flaws.md "Observability gap": the only way to see what /analyze
 served used to be opening the DB by hand and joining claim IDs back to titles.
 This reads the full-payload JSONL log (backend/observability.py) directly.
 
-    python -m backend.tools.analyses --last 20
-    python -m backend.tools.analyses --last 20 --model golf
-    python -m backend.tools.analyses --last 5 --json      # full records
+    python -m ops.reports.analyses --last 20
+    python -m ops.reports.analyses --last 20 --model golf
+    python -m ops.reports.analyses --last 5 --json      # full records
 """
 
 import argparse

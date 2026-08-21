@@ -11,7 +11,7 @@ import json
 
 import yaml
 
-from backend.tools.coverage import Finding, Report, build_report
+from ops.reports.coverage import Finding, Report, build_report
 from knowledge.ledger import db, remediate
 
 
