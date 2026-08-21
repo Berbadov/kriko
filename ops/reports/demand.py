@@ -5,12 +5,12 @@ Many are match.method == "no_match" — real buyers on cars Kriko doesn't cover
 (Audi Q2, BMW 3 Series, VW CC…) or covered cars falling through a catalog hole
 (a 2024 Megane no_matched because the petrol year window ends earlier). Nobody
 aggregates these today, so onboarding priorities are guesswork. This reads the
-log directly (same no-DB, no-browser read path as backend/tools/analyses.py) and
+log directly (same no-DB, no-browser read path as ops/reports/analyses.py) and
 groups the no_match requests by make/model into a demand table.
 
-    python -m backend.tools.demand
-    python -m backend.tools.demand --log /path/to/analyses.jsonl --limit 10
-    python -m backend.tools.demand --json   # machine-readable onboarding queue
+    python -m ops.reports.demand
+    python -m ops.reports.demand --log /path/to/analyses.jsonl --limit 10
+    python -m ops.reports.demand --json   # machine-readable onboarding queue
 
 --json is the demand-driven acquisition handoff (evidence-ledger spec §2.6
 stage 3): the queue feeds model onboarding — for the top not_onboarded group,

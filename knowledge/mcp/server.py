@@ -198,7 +198,7 @@ def get_document(doc_id: int) -> dict:
 @mcp.tool()
 def coverage_report() -> list[dict]:
     """Coverage findings (missing/zero-claim parts, variant_no_emissions, ...)."""
-    from backend.tools.coverage import build_report
+    from ops.reports.coverage import build_report
     report = build_report(DATA_DIR / "variants", DATA_DIR / "fitment",
                           DATA_DIR / "parts")
     return [{"kind": f.kind, "subject": f.subject, "message": f.message,

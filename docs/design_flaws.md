@@ -134,7 +134,7 @@ is investigation-hostile:
    column on `AnalysisLog` or an append-only JSONL file (`logs/analyses.jsonl`).
 2. Add a read path that doesn't need a browser or DB client:
    `GET /debug/analyses?limit=20` (last N analyses, full payloads) and/or a small CLI
-   (`python -m backend.tools.analyses --last 20 --model golf`).
+   (`python -m ops.reports.analyses --last 20 --model golf`).
 3. Add a **replay** tool: feed a logged request back through `match_variant` +
    `resolve_claims` after a fix and diff the output.
 4. Once payloads are logged, **agents can audit them directly**: scan recent analyses

@@ -13,7 +13,7 @@ from backend.observability import (
     read_by_id,
     read_recent,
 )
-from backend.tools.replay import _diff_and_print, compute_diff
+from ops.reports.replay import _diff_and_print, compute_diff
 
 
 # ── JSONL writer/reader ──────────────────────────────────────────────────────

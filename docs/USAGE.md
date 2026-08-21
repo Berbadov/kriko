@@ -251,7 +251,7 @@ The onboarding control room — a top-down picker, no typing:
 
 Makes and models are **not a maintained list** — they come from
 `GET /api/demand`, which mines `logs/analyses.jsonl` through
-`backend.tools.demand`. The buttons are the cars real buyers hit, ranked by
+`ops.reports.demand`. The buttons are the cars real buyers hit, ranked by
 hits, with `not_onboarded` first. You onboard what people actually search for.
 
 Generation can't come from traffic (listings carry a year, not a generation
@@ -569,16 +569,16 @@ gating), read `logs/analyses.jsonl` instead — no `docker exec`/psql needed:
 
 ```bash
 # Last 20 analyses, one-line summaries
-python -m backend.tools.analyses --last 20
+python -m ops.reports.analyses --last 20
 
 # Filter by model, full JSON per record
-python -m backend.tools.analyses --last 20 --model golf --json
+python -m ops.reports.analyses --last 20 --model golf --json
 
 # Re-run a logged request through the CURRENT pipeline and diff the result —
 # use this to confirm a promote.py/gate/fitment fix actually changed the served
 # claims for a request that was previously wrong.
-python -m backend.tools.replay <analysis-id>
-python -m backend.tools.replay --last 5
+python -m ops.reports.replay <analysis-id>
+python -m ops.reports.replay --last 5
 ```
 
 `GET /debug/analyses?limit=20&model=golf` exposes the same JSONL over HTTP, but is

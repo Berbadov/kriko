@@ -1,4 +1,4 @@
-"""backend.tools.coverage — catalog coverage report over YAML only (no DB, no
+"""ops.reports.coverage — catalog coverage report over YAML only (no DB, no
 network). This is the recurrence guard for the dw5/dw6 class of bug (backlog
 B7, CLAUDE.md generalization principle): a fitment row can point at a part_id
 with no file, a part file can carry zero (or zero *servable*) claims, a part
@@ -24,7 +24,7 @@ by backend/sync.py, so a new axis or a new car needs no code change here.
 import yaml
 
 from backend.core.resolver import SERVABLE_STATUSES
-from backend.tools import coverage
+from ops.reports import coverage
 
 
 # ── fixture helpers ──────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 """Researched generation lineups — phase 1 of model onboarding (B23).
 
 Kriko's model keys carry a generation (`megane_4`, `golf_7`), but the demand
-queue (`backend/tools/demand.py`) only knows make/model/year off scraped
+queue (`ops/reports/demand.py`) only knows make/model/year off scraped
 listings. So onboarding a new car is two phases:
 
   1. an agent researches which generations exist  → this module
