@@ -66,3 +66,81 @@ def test_pytest_testpaths_covers_every_test_directory():
         f"package(s) with tests missing from pytest.ini testpaths: {missing}. "
         "Their tests are not running."
     )
+
+
+# ── Serving image completeness ───────────────────────────────────────────────
+#
+# deploy/Dockerfile copies a hand-listed slice of knowledge/ rather than the
+# whole package, deliberately: it keeps mistralai/langextract/exa-py off the
+# serving image. The cost of that choice is that moving or adding a module the
+# serving path imports produces an image which builds clean and dies at request
+# time — the test suite cannot see it, because tests run against the full source
+# tree where every module is present.
+#
+# This computes what the image actually needs (the transitive closure of
+# knowledge/ imports reachable from backend/) and checks the Dockerfile copies
+# it. Static, so it costs milliseconds instead of a container build.
+
+_KNOWLEDGE_IMPORT = re.compile(r"^\s*(?:from|import)\s+(knowledge(?:\.[A-Za-z_][A-Za-z0-9_]*)*)")
+
+
+def _knowledge_imports(path: Path) -> set[str]:
+    return {
+        m.group(1)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (m := _KNOWLEDGE_IMPORT.match(line))
+    }
+
+
+def _resolve(dotted: str) -> set[Path]:
+    """Dotted module -> its .py file plus every package __init__.py above it."""
+    parts = dotted.split(".")
+    files = set()
+    for i in range(1, len(parts) + 1):
+        base = REPO.joinpath(*parts[:i])
+        if base.is_dir():
+            files.add(base / "__init__.py")
+        elif base.with_suffix(".py").exists():
+            files.add(base.with_suffix(".py"))
+    return {f for f in files if f.exists()}
+
+
+def test_dockerfile_copies_every_knowledge_module_the_serving_path_imports():
+    seed: set[str] = set()
+    for path in REPO.glob("backend/**/*.py"):
+        if "/tests/" in path.as_posix():
+            continue
+        seed |= _knowledge_imports(path)
+
+    required: set[Path] = set()
+    queue = list(seed)
+    while queue:
+        for found in _resolve(queue.pop()):
+            if found in required:
+                continue
+            required.add(found)
+            queue.extend(_knowledge_imports(found))
+
+    dockerfile = (REPO / "deploy" / "Dockerfile").read_text(encoding="utf-8")
+    copied = {
+        m.group(1)
+        for m in re.finditer(r"^COPY\s+(\S+)", dockerfile, re.M)
+    }
+
+    def is_copied(rel: str) -> bool:
+        # Either the file itself, or a directory COPY that contains it.
+        return rel in copied or any(
+            c.endswith("/") and rel.startswith(c) for c in copied
+        )
+
+    missing = sorted(
+        rel for f in required
+        if not is_copied(rel := f.relative_to(REPO).as_posix())
+    )
+    assert missing == [], (
+        "deploy/Dockerfile does not COPY module(s) the serving path imports:\n  "
+        + "\n  ".join(missing)
+        + "\n\nThe image will build successfully and fail at request time. Add a "
+          "COPY line for each, keeping the stdlib-only rule in mind — if the "
+          "module pulls in an LLM dependency it does not belong on this image."
+    )

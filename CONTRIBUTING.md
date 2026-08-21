@@ -97,9 +97,18 @@ rather than waiting to be noticed in review.
 
 | Job | What it catches |
 |---|---|
-| `python` | the full suite, plus the layering and testpaths invariants |
+| `python` | the full suite, plus the layering, testpaths and Dockerfile invariants |
 | `extension` | scraper and hub-console tests under jsdom |
-| `image` | a serving image that builds but cannot import the app |
+
+There is no docker-build job. The repo is private, so Actions minutes are billed,
+and an image build was 3-5 of the ~10 minutes per push. What it guarded is checked
+statically instead: `test_dockerfile_copies_every_knowledge_module_the_serving_path_imports`
+computes the transitive closure of `knowledge/` imports reachable from `backend/`
+and asserts `deploy/Dockerfile` copies each one. That runs in milliseconds as part
+of the normal suite.
+
+It cannot catch everything a real build would — a broken `pip install`, a bad base
+image, a missing data file — so still build locally when you change the Dockerfile.
 
 CI runs with no secrets. `npm install` rather than `npm ci`, because
 `package-lock.json` is gitignored — commit the lockfile if you want reproducible
