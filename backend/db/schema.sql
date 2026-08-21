@@ -52,7 +52,19 @@ CREATE TABLE IF NOT EXISTS claims (
   -- Phase 2: maintenance-due claims
   maintenance_data JSONB,                  -- {interval_km, interval_years, evidence_keywords}
   -- Phase 4: listing-equipment gating
-  requires_equipment JSONB                 -- tags auto-derived from title/rationale, e.g. ["sunroof"]
+  requires_equipment JSONB,                -- tags auto-derived from title/rationale, e.g. ["sunroof"]
+  -- Phase 3 (serving payload v2): component registry passthrough — sync.py
+  -- fills these from knowledge/catalog/components.yaml via the claim's
+  -- component_id; NULL component_id (YAMLs not yet migrated) is tolerated and
+  -- treated as detection-neutral by the serving plane.
+  component_id     TEXT,                   -- registry component id, e.g. "engine_oil_consumption"
+  detection        TEXT,                   -- visual|test_drive|diagnostic|history_check — visual ranks down (0.35)
+  subsystem        TEXT,                   -- registry subsystem, e.g. "engine/timing" — response grouping key
+  -- Phase 1 (source quality): best tier across the claim's sources, resolved
+  -- by knowledge/sources/tiers.py against knowledge/catalog/source_tiers.yaml.
+  -- NULL = no sources (maintenance claims) → trust-neutral in serving.
+  source_tier      TEXT,                   -- authoritative|specialist|forum_ugc|seo_blog|manufacturer
+  source_trust     REAL                    -- trust weight of that tier (0..1); relevance multiplier
 );
 
 -- Migration: if the table already exists, add the new columns.
@@ -66,11 +78,21 @@ CREATE TABLE IF NOT EXISTS claims (
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS maintenance_data JSONB;
 -- ALTER TABLE claim_sources DROP COLUMN IF EXISTS tier;
 -- ALTER TABLE variants ADD COLUMN IF NOT EXISTS drivetrain TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS component_id TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS detection TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS subsystem TEXT;
+-- Phase 1 (source quality):
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS source_tier TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS source_trust REAL;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS requires_equipment JSONB;
 -- ALTER TABLE claims DROP COLUMN IF EXISTS value_tier;  -- dead scaffolding, never populated by the pipeline
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_from INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS applies_year_to INT;
 -- ALTER TABLE claims ADD COLUMN IF NOT EXISTS consequence TEXT;
+-- Phase 3 (serving payload v2): component registry passthrough
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS component_id TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS detection TEXT;
+-- ALTER TABLE claims ADD COLUMN IF NOT EXISTS subsystem TEXT;
 -- B11: emissions/aftertreatment for SCR variant scoping
 -- ALTER TABLE variants ADD COLUMN IF NOT EXISTS emissions TEXT;
 -- ALTER TABLE variants ADD COLUMN IF NOT EXISTS aftertreatment TEXT;

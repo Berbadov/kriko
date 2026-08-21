@@ -23,6 +23,14 @@ effective quality bar "survived a ministral-8b gate", for exactly the claims
 most likely to weigh on a buyer's decision. A high-severity claim is now
 withheld until a human actually promotes it to `verified`; medium/low
 review/held claims still serve as "reported" — same as before.
+
+Visual-detection suppression (serving payload v2): claims whose registry
+component is detection "visual" — things any standard inspection catches
+anyway (oil consumption, paint, rust) — are ranked down by
+VISUAL_DETECTION_FACTOR instead of dropped (fail-open), and only when the
+claim carries a component_id and a listing context exists. See
+_detection_factor / ClaimResult.detection_factor; the API layer multiplies
+the factor into relevance_score.
 """
 
 from dataclasses import dataclass
@@ -54,12 +62,41 @@ SERVABLE_STATUSES = ("verified", "review", "held")
 # module docstring's "High-severity human-review gate".
 _UNREVIEWED_STATUSES = ("review", "held")
 
+# Visual-detection suppression (serving payload v2 / product principle): a claim
+# whose component the registry marks detection: "visual" (oil consumption,
+# paint/panel gaps, rust, …) is caught by any standard pre-purchase inspection,
+# so it is low *marginal* value to a Kriko buyer. It is ranked down by this
+# factor — NEVER dropped (fail-open: no data/no context means no suppression).
+# Applied only when the claim carries a component_id and a listing context
+# exists; a missing/unknown component is detection-neutral (factor 1.0).
+VISUAL_DETECTION_FACTOR = 0.35
+
 
 @dataclass
 class ClaimResult:
     """A claim resolved for a specific listing, with its runtime strength."""
     claim: Claim
     strength: str  # "confirmed" | "reported" | "due" | "due_stated"
+    # Component-detection suppression factor (see VISUAL_DETECTION_FACTOR):
+    # 0.35 when this claim's registry component is detection "visual" AND a
+    # listing context exists, else 1.0. The API layer multiplies it into
+    # relevance_score; the claim itself is always served.
+    detection_factor: float = 1.0
+
+
+def _detection_factor(claim: Claim, ctx: ListingContext | None) -> float:
+    """Suppression factor for the claim's component detection level.
+
+    Only a *known* visual component with listing context present ranks down.
+    Everything else — no component_id, unknown component, no registry entry,
+    diagnostic/test_drive/history_check detection, or no listing context —
+    stays at 1.0 (detection-neutral, fail-open).
+    """
+    if ctx is None or not claim.component_id:
+        return 1.0
+    if (claim.detection or "").lower() == "visual":
+        return VISUAL_DETECTION_FACTOR
+    return 1.0
 
 
 def resolve_claims(
@@ -258,12 +295,18 @@ def _apply_context(
             strength = _resolve_maintenance_strength(claim, ctx)
             if strength is None:
                 continue  # not due → hide
-            results.append(ClaimResult(claim=claim, strength=strength))
+            results.append(ClaimResult(
+                claim=claim, strength=strength,
+                detection_factor=_detection_factor(claim, ctx),
+            ))
         else:
             if not _passes_applies_when(claim, ctx):
                 continue
             strength = "confirmed" if claim.status == "verified" else "reported"
-            results.append(ClaimResult(claim=claim, strength=strength))
+            results.append(ClaimResult(
+                claim=claim, strength=strength,
+                detection_factor=_detection_factor(claim, ctx),
+            ))
     return results
 
 
@@ -422,10 +465,6 @@ def _resolve_maintenance_strength(
     return "due_stated" if has_evidence else "due"
 
 
-def _claims_share_domain(a: Claim, b: Claim) -> bool:
-    return bool(a.domain and b.domain and a.domain == b.domain)
-
-
 def annotate_coherence(results: list[ClaimResult]) -> list[ClaimResult]:
     """Ensure coherence within each domain's maintenance claims.
 
@@ -512,16 +551,16 @@ def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
         seen_advice.add(norm)
         merged_advice_parts.append(cr.claim.inspection_advice)
 
-    # Build the merged view on a TRANSIENT Claim copy — patching the best
-    # member's ORM object in place would mutate the persisted row (the next
-    # autoflush writes the merged rationale/advice back into the DB, so a
-    # second identical analysis returns different text — nondeterminism the
-    # replay test caught the moment the export catalog shipped near-duplicate
+    # Build the merged view on a TRANSIENT Claim copy — patching a persisted
+    # member's ORM object in place would mutate the row (the next autoflush
+    # writes the merged rationale/advice back into the DB, so a second
+    # identical analysis returns different text — nondeterminism the replay
+    # test caught the moment the export catalog shipped near-duplicate
     # titles). The copy carries the best member's id, so the serializer's
     # source re-query and the dedup-by-id logic keep working unchanged.
     merged_claim = Claim()
     for _attr in ("id", "claim_key", "version", "is_current", "title", "domain",
-                  "status", "kind"):
+                  "status", "kind", "component_id", "detection", "subsystem"):
         setattr(merged_claim, _attr, getattr(best.claim, _attr))
     merged_claim.severity = severity_labels.get(best_severity, "medium")
     merged_claim.consequence = severity_labels.get(best_consequence, "medium")
@@ -534,7 +573,13 @@ def _best_in_cluster(cluster: list[ClaimResult]) -> ClaimResult:
         default=0.0,
     )
 
-    return ClaimResult(claim=merged_claim, strength=strength_labels.get(best_strength, "reported"))
+    return ClaimResult(
+        claim=merged_claim,
+        strength=strength_labels.get(best_strength, "reported"),
+        # Keep the best member's detection suppression — the merged card
+        # represents the same component as the member it takes its id from.
+        detection_factor=best.detection_factor,
+    )
 
 
 def _deduplicate_results(results: list[ClaimResult]) -> list[ClaimResult]:
