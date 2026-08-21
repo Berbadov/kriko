@@ -1,1 +1,0 @@
-{"ts": "2026-08-18T16:34:21Z", "argv": ["/home/beraat/kriko/.venv/bin/python", "-m", "knowledge.ledger.run", "report", "--db", "/tmp/kriko-probe.db"], "task": "report", "make": null, "model": null, "exit_code": 0, "duration_s": 0.9}
