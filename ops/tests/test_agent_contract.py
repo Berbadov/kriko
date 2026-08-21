@@ -11,7 +11,7 @@ tools the server actually exposes.
 import re
 
 from knowledge.agent import render
-from knowledge.mcp import server
+from ops.mcp import server
 
 
 def test_checked_in_harness_files_match_the_contract():

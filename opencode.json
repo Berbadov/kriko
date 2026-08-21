@@ -3,7 +3,7 @@
   "mcp": {
     "kriko": {
       "type": "local",
-      "command": ["/home/beraat/kriko/.venv/bin/python", "-m", "knowledge.mcp.server"],
+      "command": ["/home/beraat/kriko/.venv/bin/python", "-m", "ops.mcp.server"],
       "cwd": "/home/beraat/kriko",
       "environment": {
         "PYTHONPATH": "/home/beraat/kriko"

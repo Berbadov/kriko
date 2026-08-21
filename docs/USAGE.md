@@ -225,13 +225,13 @@ native on the host — the DearPyGui desktop app is deprecated; GL rendering
 on WSLg was slow and broken):
 
 ```bash
-.venv/bin/python -m knowledge.hub.web     # then open http://127.0.0.1:8787
+.venv/bin/python -m ops.hub.web     # then open http://127.0.0.1:8787
 ```
 
 Tabs: **Models** (default — onboarding control room, below), **Claims** (the
 claim inspector: every claim with the deterministic gate's verdict and its
 reasons — agree/disagree records gate feedback in
-`knowledge/hub/claim_signals.jsonl` and never edits the catalog, because a
+`ops/hub/claim_signals.jsonl` and never edits the catalog, because a
 human decision inside the data path is what G5 forbids), Overview (ledger
 counts, spend plot, cost-to-finish, recent runs),
 Parts (part → claims/variants), Sources (documents → raw text, tiered), Run
@@ -376,7 +376,7 @@ Codex and Cline configs live outside the repo. Codex — add to `~/.codex/config
 ```toml
 [mcp_servers.kriko]
 command = "/home/beraat/kriko/.venv/bin/python"
-args = ["-m", "knowledge.mcp.server"]
+args = ["-m", "ops.mcp.server"]
 env = { PYTHONPATH = "/home/beraat/kriko" }
 ```
 
@@ -388,7 +388,7 @@ Configure):
   "mcpServers": {
     "kriko": {
       "command": "/home/beraat/kriko/.venv/bin/python",
-      "args": ["-m", "knowledge.mcp.server"],
+      "args": ["-m", "ops.mcp.server"],
       "env": { "PYTHONPATH": "/home/beraat/kriko" }
     }
   }

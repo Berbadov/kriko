@@ -13,7 +13,7 @@ as claims at zero marginal cost; the agent pass is still logged in `runs`
 (model='agent', usd=0) so the cost panel stays honest.
 
 Run directly to smoke-test:
-    python -m knowledge.mcp.server
+    python -m ops.mcp.server
 
 The handler functions are plain Python (FastMCP registers but does not wrap
 them), so tests exercise the exact same code the agent calls.
