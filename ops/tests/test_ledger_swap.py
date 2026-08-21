@@ -10,7 +10,7 @@ monotonicity) decides whether the swap may land — no human sign-off (G5).
 import yaml
 
 from knowledge.ledger.export import merged_part_id
-from knowledge.ledger.swap import apply, build_plan
+from ops.swap import apply, build_plan
 
 
 def _write(path, obj):

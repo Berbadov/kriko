@@ -56,7 +56,7 @@ parity report; the serving-gate schema gap is closed. Remaining:
       dq200/dq250/dq381/ea211/ea888/k9k) and each file now carries
       `legacy_part_ids` (which legacy power-split files it supersedes —
       pipeline-derived, no hand list).
-- [x] **Swap mechanism landed 2026-08-03** (`knowledge/ledger/swap.py`):
+- [x] **Swap mechanism landed 2026-08-03** (`ops/swap.py`):
       `plan` derives the legacy→merged fitment remap mechanically
       (power-collapse rule via the export's `legacy_part_ids`), classifies every
       legacy file (superseded/retained), counts fitment edits; `apply` writes the
@@ -84,10 +84,10 @@ parity report; the serving-gate schema gap is closed. Remaining:
       legacy files, and `component_part_meta` copies it on power-merge; the
       resolver's `_best_in_cluster` no longer mutates persisted ORM claims
       (replay-determinism bug). Legacy judge.py/promote.py/purge_*/translate
-      + their tests retired (14 files, 75 tests) — `knowledge.process`'s
+      + their tests retired (14 files, 75 tests) — `ops.process`'s
       promote steps now raise with a pointer to the ledger path.
 - [ ] **Post-swap maintenance**: re-run `swap check` after any re-export;
-      `python -m knowledge.ledger.run remediate` keeps coverage + parity
+      `python -m ops.ledger_run remediate` keeps coverage + parity
       gaps closed (default $0/import-only mode).
 
 ### B11 — Emissions/SCR values: derive or fail open — no sign-off `[G3][G5]`
@@ -116,8 +116,8 @@ The detection mechanisms exist: B7's coverage report (`zero_claim_part`,
 `auto_variant_no_tx_part`, `ops/reports/coverage.py`) and B6's ad-vs-catalog
 contradiction surfacing. The former B2/B3 manual steps are cancelled; this loop
 replaces them:
-- [x] **Driver landed 2026-08-03** — `python -m knowledge.ledger.run remediate`
-      (`knowledge/ledger/remediate.py`): turns every part-level finding
+- [x] **Driver landed 2026-08-03** — `python -m ops.ledger_run remediate`
+      (`ops/remediate.py`): turns every part-level finding
       (zero_claim/missing part, auto-variant-without-tx-part) into an unattended
       acquire → extract → resolve → cluster → verdict → export pass. Budget-capped
       (`--max-usd`), resumable (existing stage guarantees), `--dry-run` prints the
@@ -168,7 +168,7 @@ out of serving) and reports it as `invalid_code` needing research. Per the
 generalization principle this is a **test case for the remediation loop**
 (B19), not a car to hand-fix: the loop must be able to take an `invalid_code`
 finding and drive a research pass that resolves it.
-- [ ] Teach `knowledge/ledger/remediate.py` to consume doctor findings
+- [ ] Teach `ops/remediate.py` to consume doctor findings
       (`invalid_code`, `draft_variant`) alongside coverage findings.
 
 ### B5 — Per-part claim budget: keep the chronics, archive the tail `[G1]`
@@ -190,7 +190,7 @@ from TR-market data — also automatically, via the demand miner (B10).
 **Landed 2026-08-04** (`ops/hub/`, USAGE §4d). **Web edition is the
 live one**: `ops/hub/web.py` (fastapi+uvicorn, 127.0.0.1:8787) — six
 browser tabs (Overview/Parts/Sources/Run/Ledger/Coverage) over the
-test-pinned `metrics.py`, run buttons spawning `knowledge.ledger.run`
+test-pinned `metrics.py`, run buttons spawning `ops.ledger_run`
 (`--max-usd` caps, streamed output, stop), 1s polling. The DearPyGui app
 (`app.py`) is deprecated — GL rendering on WSLg was unusable (GLX missing,
 scaling breakage, per-second rebuild stalls swallowing clicks); the web
@@ -277,7 +277,7 @@ analysis below stands if that happens.
 deterministic or import-only, `add_evidence` writes `extractor_version=1` rows that skip
 the paid extractor, and `run_pipeline_pass` / `run_remediate_import_only` never spend
 tokens. The paid engine (chunked DeepSeek extraction, batched verdicts) is reachable only
-from the CLI (`python -m knowledge.ledger.run extract|verdict|remediate --max-usd`) and
+from the CLI (`python -m ops.ledger_run extract|verdict|remediate --max-usd`) and
 the hub Run buttons. There is **no plan for an MCP path to the paid stages** — this item
 is that decision + mechanism. Two options:
 

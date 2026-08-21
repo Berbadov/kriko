@@ -138,8 +138,8 @@ def ensure_part_stub(
 ) -> None:
     """Create a minimal part stub YAML if one doesn't exist yet.
 
-    Shared by every run_part() entry point (knowledge.auto and
-    knowledge.process) — write_promoted_part_claims only *preserves*
+    Shared by every run_part() entry point (ops.auto and
+    ops.process) — write_promoted_part_claims only *preserves*
     existing scaffold metadata, it never creates it, so any pipeline path
     that skips this on a genuinely new part_id writes a file containing only
     {"claims": [...]}, missing part_id/part_type/display_name/manufacturer

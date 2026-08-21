@@ -4,8 +4,8 @@ One screen answering the two questions that matter for a student budget:
 "what is the pipeline doing" and "what would it cost to finish it". Reads the
 ledger DB and the telemetry logs; touches nothing.
 
-    python -m knowledge.ledger.panel
-    python -m knowledge.ledger.panel --db path/to/ledger.db
+    python -m ops.panel
+    python -m ops.panel --db path/to/ledger.db
 
 Sections:
   1. Spend       — total $, by stage, by model, verdict import-vs-LLM split
@@ -140,12 +140,12 @@ def activity_section(conn, lines_out: int = 5) -> list[str]:
 
 def guardrails_section() -> list[str]:
     lines = ["\n5. GUARDRAILS (nothing here spends more than cents)"]
-    lines.append("  estimate before spending:  python -m knowledge.ledger.panel")
-    lines.append("  remediate (import-only, $0):  python -m knowledge.ledger.run remediate")
-    lines.append("  paid research (explicit):    python -m knowledge.ledger.run remediate --max-usd 0.10")
-    lines.append("  dry-runs:                    python -m knowledge.ledger.run extract --dry-run")
-    lines.append("                               python -m knowledge.ledger.run verdict --dry-run")
-    lines.append("  swap acceptance gate:        python -m knowledge.ledger.swap check")
+    lines.append("  estimate before spending:  python -m ops.panel")
+    lines.append("  remediate (import-only, $0):  python -m ops.ledger_run remediate")
+    lines.append("  paid research (explicit):    python -m ops.ledger_run remediate --max-usd 0.10")
+    lines.append("  dry-runs:                    python -m ops.ledger_run extract --dry-run")
+    lines.append("                               python -m ops.ledger_run verdict --dry-run")
+    lines.append("  swap acceptance gate:        python -m ops.swap check")
     lines.append("  coverage:                    python -m ops.reports.coverage")
     return lines
 
