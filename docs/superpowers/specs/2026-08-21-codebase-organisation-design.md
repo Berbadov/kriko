@@ -110,13 +110,24 @@ Full suite runs after deletion to confirm 760 still pass.
 
 ## Phase 4 — docs and stale artifacts
 
-1. `docs/historical/` gets the three self-declared-historical docs: `SCAFFOLD.md`,
-   `handover.md`, `pipeline_postmortem.md`.
+1. `docs/historical/` gets the two "do not follow" docs: `SCAFFOLD.md`, `handover.md`.
+
+   **Revised during execution:** `pipeline_postmortem.md` stays in `docs/`. It is
+   marked "historical" but not "do not follow", and three live files cite it as a
+   standing convention — `knowledge/parts/search_templates.py:54`,
+   `knowledge/tests/test_langextract_client.py:3`, `docs/design_flaws.md:155`. A
+   postmortem people still reason from is reference material, not an artefact.
 2. `CLAUDE.md`'s documentation-map table lists a fourth, `kriko_build_plan.md`, which
    does not exist anywhere in the tree — a dangling reference. Drop that row and
    update the other three to their new `docs/historical/` paths.
-3. Retire `thoughts/` (6 files, all 2026-07-05/22, superseded by `docs/superpowers/`).
-   Removed from git, kept on disk and gitignored.
+3. `thoughts/` moves to `docs/historical/thoughts/` (6 files, all 2026-07-05/22,
+   superseded by `docs/superpowers/`).
+
+   **Revised during execution:** the spec originally said untrack and gitignore.
+   `done.md:316` cites `thoughts/ledger_acceptance_parity_2026-07-22.txt` as the
+   evidence artefact for a completed item, so untracking it would leave a dangling
+   citation in the project record for anyone cloning the repo. Moved and re-pointed
+   instead.
 4. Record the outcome in `done.md` per the project's tracking convention.
 
 ## Verification

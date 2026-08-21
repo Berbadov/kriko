@@ -195,5 +195,6 @@ requests, and the debug endpoints — is in `docs/USAGE.md`.
 | `docs/overhaul_plan.md` / `docs/claim_relevance_plan.md` | Claim-quality roadmap |
 | `docs/pipeline_postmortem.md` | Early pipeline history (what failed and why) |
 
-`docs/handover.md`, `docs/SCAFFOLD.md`, and `kriko_build_plan.md` predate the
-part-centric system — historical context only, don't follow their instructions.
+Everything under `docs/historical/` predates the part-centric system — `handover.md`
+and `SCAFFOLD.md` describe the old model-centric flow, and `thoughts/` holds superseded
+2026-07 designs and plans. Historical context only; don't follow their instructions.
