@@ -33,7 +33,17 @@ No `.github/` existed: nothing verified a branch before merge.
   `knowledge/requirements.txt` still cited `judge.py` (deleted) and the old
   `knowledge/hub`, `knowledge/mcp` paths.
 
-764 pytest (761 + 3 invariants), 23 node.
+765 pytest (761 + 4 invariants), 23 node.
+
+**CI is two jobs, ~3 min/push.** The docker-build job was dropped after the fact:
+the repo is private so Actions minutes are billed, and the build was 3-5 of ~10
+minutes per push. Its value is preserved statically —
+`test_dockerfile_copies_every_knowledge_module_the_serving_path_imports` computes
+the transitive closure of `knowledge/` imports reachable from `backend/` (12 files
+today) and asserts `deploy/Dockerfile` copies each. Verified by deleting the
+`title_sim.py` COPY, which is the near-miss that happened for real during the
+refactor. It does not replace a build — a broken `pip install` or bad base image
+still needs one.
 
 **Open, not fixed here:** `package-lock.json` is gitignored, so CI uses
 `npm install` rather than `npm ci` — no reproducible install. And `README.md`'s
