@@ -1,0 +1,509 @@
+# Component registry — the spine of the v3 overhaul.
+#
+# The atomic unit of Kriko knowledge is a COMPONENT (a real, nameable part of a
+# car), not a part file (a search context). Claims attach to components; the
+# registry gives every component a stable id, bilingual display names, aliases,
+# and how a buyer typically detects its failure — which drives serving-rank
+# suppression (the product principle: what the ekspertiz catches anyway is low
+# value, enforced here mechanically, not in prompts).
+#
+# Alias tiers (design_flaws.md Flaw 3 fix):
+#   attribution_safe — safe to use for attribution: unique to this component.
+#   search_only      — use for searching only; NEVER for attribution (an alias
+#                      shared by siblings, e.g. "7-speed DSG" for DQ200 & DQ381).
+#
+# Sibling code families live in code_families below: a claim whose text names a
+# sibling code must not be attributed to this family's parts (promote.py veto).
+#
+# Schema: see docs/overhaul_plan.md Phase 0. Validated by
+# knowledge/parts/validate_part_yaml.py (component refs must resolve here).
+
+components:
+  # ── engine / timing ────────────────────────────────────────────────
+  - id: engine_timing_chain
+    subsystem: engine/timing
+    display: {en: Timing chain, tr: Triger zinciri}
+    aliases:
+      attribution_safe: [timing chain, timing chain kit]
+      search_only: [cam chain]
+    detection: diagnostic
+  - id: engine_timing_belt
+    subsystem: engine/timing
+    display: {en: Timing belt, tr: Triger kayışı}
+    aliases: {attribution_safe: [timing belt, cam belt], search_only: []}
+    detection: history_check
+  - id: engine_timing_tensioner
+    subsystem: engine/timing
+    display: {en: Timing chain tensioner, tr: Zincir gerdirici}
+    aliases:
+      attribution_safe: [chain tensioner, timing chain tensioner]
+      search_only: [tensioner]
+    detection: diagnostic
+  - id: engine_timing_variable_valve
+    subsystem: engine/timing
+    display: {en: Variable valve timing (phaser/cam adjuster), tr: Değişken supap zamanlaması}
+    aliases:
+      attribution_safe: [camshaft adjuster, VVT phaser, cam phaser]
+      search_only: [VVT]
+    detection: diagnostic
+
+  # ── engine / lubrication ───────────────────────────────────────────
+  - id: engine_oil_consumption
+    subsystem: engine/lubrication
+    display: {en: Oil consumption (piston rings/valve seals), tr: Yağ yakımı}
+    aliases:
+      attribution_safe: [oil consumption, piston rings, valve stem seals]
+      search_only: [burning oil]
+    detection: visual
+  - id: engine_oil_pump
+    subsystem: engine/lubrication
+    display: {en: Oil pump, tr: Yağ pompası}
+    aliases: {attribution_safe: [oil pump], search_only: []}
+    detection: diagnostic
+
+  # ── engine / turbo & induction ─────────────────────────────────────
+  - id: engine_turbocharger
+    subsystem: engine/turbo
+    display: {en: Turbocharger, tr: Turbo}
+    aliases: {attribution_safe: [turbocharger, turbo charger], search_only: [turbo]}
+    detection: diagnostic
+  - id: engine_turbo_actuator
+    subsystem: engine/turbo
+    display: {en: Turbo variable-geometry actuator, tr: Turbo geometri motoru}
+    aliases:
+      attribution_safe: [VGT actuator, variable geometry turbo actuator, turbo actuator]
+      search_only: []
+    detection: diagnostic
+  - id: engine_intercooler
+    subsystem: engine/turbo
+    display: {en: Intercooler, tr: Intercooler}
+    aliases: {attribution_safe: [intercooler], search_only: []}
+    detection: visual
+  - id: engine_intake_carbon
+    subsystem: engine/turbo
+    display: {en: Intake valve carbon buildup (DI engines), tr: Emme supabı kurum bağlaması}
+    aliases:
+      attribution_safe: [intake valve carbon, carbon buildup on intake valves]
+      search_only: [carbon buildup]
+    detection: history_check
+
+  # ── engine / injection & fuel ──────────────────────────────────────
+  - id: engine_injectors
+    subsystem: engine/injection
+    display: {en: Fuel injectors, tr: Enjektör}
+    aliases: {attribution_safe: [fuel injector, injectors, injector], search_only: []}
+    detection: diagnostic
+  - id: engine_high_pressure_pump
+    subsystem: engine/injection
+    display: {en: High-pressure fuel pump, tr: Yüksek basınç pompası}
+    aliases: {attribution_safe: [high pressure fuel pump, HPFP], search_only: [fuel pump]}
+    detection: diagnostic
+  - id: engine_throttle_body
+    subsystem: engine/injection
+    display: {en: Throttle body, tr: Gaz kelebeği}
+    aliases: {attribution_safe: [throttle body], search_only: []}
+    detection: diagnostic
+  - id: engine_o2_sensor
+    subsystem: engine/management
+    display: {en: Oxygen / lambda sensors & air-fuel ratio (LDA), tr: Oksijen sensörü}
+    aliases: {attribution_safe: [oxygen sensor, lambda sensor, air-fuel ratio sensor, LDA], search_only: [O2]}
+    detection: diagnostic
+  - id: engine_boost_sensor
+    subsystem: engine/management
+    display: {en: Boost pressure / MAP sensor, tr: Basınç sensörü}
+    aliases: {attribution_safe: [boost pressure sensor, MAP sensor], search_only: []}
+    detection: diagnostic
+  - id: engine_ecu
+    subsystem: engine/management
+    display: {en: Engine control module (ECM/ECU), tr: Motor beyni}
+    aliases: {attribution_safe: [Engine Control Module, engine ECU, ECM], search_only: [ECU]}
+    detection: diagnostic
+  - id: engine_bottom_end
+    subsystem: engine/mechanical
+    display: {en: Bottom end (rod/crank bearings), tr: Motor alt blok}
+    aliases: {attribution_safe: [connecting rod bearing, big-end bearing, crankshaft bearing], search_only: [rod bearing]}
+    detection: diagnostic
+  - id: engine_cam_crank_sensors
+    subsystem: engine/management
+    display: {en: Camshaft/crankshaft position sensors, tr: Kam/mil sensörleri}
+    aliases: {attribution_safe: [crankshaft sensor, camshaft sensor, crank sensor, cam sensor, crankshaft position sensor, camshaft position sensor, CKP], search_only: []}
+    detection: diagnostic
+  - id: engine_spark_ignition
+    subsystem: engine/ignition
+    display: {en: Spark plugs & ignition coils, tr: Buji & ateşleme bobini}
+    aliases: {attribution_safe: [spark plug, ignition coil, coil pack], search_only: [misfire]}
+    detection: diagnostic
+  - id: engine_fuel_pump
+    subsystem: engine/injection
+    display: {en: In-tank fuel pump, tr: Yakıt pompası}
+    aliases: {attribution_safe: [fuel pump failure, in-tank fuel pump, fuel pump relay], search_only: [fuel pump]}
+    detection: diagnostic
+
+  # ── engine / cooling & head gasket ─────────────────────────────────
+  - id: engine_head_gasket
+    subsystem: engine/cooling
+    display: {en: Head gasket, tr: Motor contası}
+    aliases: {attribution_safe: [head gasket], search_only: []}
+    detection: diagnostic
+  - id: engine_water_pump
+    subsystem: engine/cooling
+    display: {en: Water pump, tr: Su pompası}
+    aliases: {attribution_safe: [water pump, coolant pump], search_only: []}
+    detection: visual
+  - id: engine_thermostat
+    subsystem: engine/cooling
+    display: {en: Thermostat, tr: Termostat}
+    aliases: {attribution_safe: [thermostat], search_only: []}
+    detection: diagnostic
+  - id: engine_radiator
+    subsystem: engine/cooling
+    display: {en: Radiator, tr: Radyatör}
+    aliases: {attribution_safe: [radiator], search_only: []}
+    detection: visual
+  - id: engine_electric_coolant_pump
+    subsystem: engine/cooling
+    display: {en: Auxiliary electric coolant pump, tr: Elektrikli su pompası}
+    aliases: {attribution_safe: [electric coolant pump, auxiliary water pump], search_only: []}
+    detection: diagnostic
+
+  # ── engine / bottom end & misc ─────────────────────────────────────
+  - id: engine_dmf_crankshaft_pulley
+    subsystem: engine/bottom_end
+    display: {en: Crankshaft pulley / harmonic damper, tr: Krank mili kasnağı}
+    aliases:
+      attribution_safe: [crankshaft pulley, harmonic balancer, damper pulley]
+      search_only: []
+    detection: test_drive
+
+  # ── transmission / dual-clutch (DSG/EDC) ───────────────────────────
+  - id: transmission_dct_clutch_pack
+    subsystem: transmission/clutch_pack
+    display: {en: Dual-clutch clutch pack, tr: Çift kavrama seti}
+    aliases: {attribution_safe: [clutch pack, dual clutch pack, DCT clutch, dry clutch, clutch shudder, clutch judder, clutch overheating], search_only: [clutch]}
+    detection: test_drive
+  - id: transmission_dct_mechatronics
+    subsystem: transmission/mechatronics
+    display: {en: Mechatronics unit (TCU + hydraulic block), tr: Mechatronic ünitesi}
+    aliases: {attribution_safe: [mechatronics, mechatronic unit, TCU, gearbox control unit, clutch position sensor], search_only: []}
+    detection: diagnostic
+  - id: transmission_dct_gearbox_oil_pump
+    subsystem: transmission/mechatronics
+    display: {en: Gearbox oil pump / accumulator, tr: Şanzıman yağ pompası}
+    aliases: {attribution_safe: [gearbox oil pump, hydraulic accumulator], search_only: [oil pump]}
+    detection: diagnostic
+  - id: transmission_dct_pressure_sensor
+    subsystem: transmission/mechatronics
+    display: {en: Transmission pressure sensor, tr: Şanzıman basınç sensörü}
+    aliases: {attribution_safe: [transmission pressure sensor, gear position sensor], search_only: [pressure sensor]}
+    detection: diagnostic
+  - id: transmission_dct_fork_synchronizer
+    subsystem: transmission/gear_internals
+    display: {en: Shift forks / synchronizers, tr: Vites çatalı ve senkronçiler}
+    aliases: {attribution_safe: [shift fork, synchronizer ring], search_only: []}
+    detection: test_drive
+  - id: transmission_dct_differential_bearings
+    subsystem: transmission/gear_internals
+    display: {en: Differential / gearbox bearings, tr: Diferansiyel rulmanları}
+    aliases: {attribution_safe: [differential bearing, gearbox bearing, differential], search_only: [bearing noise]}
+    detection: test_drive
+
+  # ── transmission / classic clutch & manual ────────────────────────
+  - id: transmission_clutch_disc
+    subsystem: transmission/clutch_pack
+    display: {en: Clutch disc & pressure plate, tr: Debriyaj seti}
+    aliases: {attribution_safe: [clutch disc, pressure plate, clutch kit], search_only: [clutch]}
+    detection: test_drive
+  - id: transmission_dual_mass_flywheel
+    subsystem: transmission/clutch_pack
+    display: {en: Dual-mass flywheel, tr: Çift kütleli volan}
+    aliases: {attribution_safe: [dual mass flywheel, DMF], search_only: [flywheel]}
+    detection: test_drive
+  - id: transmission_clutch_master_slave
+    subsystem: transmission/clutch_pack
+    display: {en: Clutch master/slave cylinder, tr: Debriyaj merkez silindiri}
+    aliases: {attribution_safe: [clutch master cylinder, clutch slave cylinder], search_only: []}
+    detection: visual
+  - id: transmission_manual_gearbox_syncro
+    subsystem: transmission/gear_internals
+    display: {en: Manual gearbox synchronizers, tr: Manuel şanzıman senkronları}
+    aliases: {attribution_safe: [synchro ring, gearbox synchro], search_only: []}
+    detection: test_drive
+
+  # ── transmission / torque converter automatic ─────────────────────
+  - id: transmission_torque_converter
+    subsystem: transmission/clutch_pack
+    display: {en: Torque converter, tr: Tork konvertörü}
+    aliases: {attribution_safe: [torque converter], search_only: []}
+    detection: test_drive
+  - id: transmission_at_valve_body
+    subsystem: transmission/mechatronics
+    display: {en: Valve body, tr: Valf gövdesi}
+    aliases: {attribution_safe: [valve body], search_only: []}
+    detection: diagnostic
+
+  # ── emissions / diesel aftertreatment ──────────────────────────────
+  - id: emissions_dpf
+    subsystem: emissions/dpf
+    display: {en: Diesel particulate filter (DPF), tr: DPF (partikül filtresi)}
+    aliases: {attribution_safe: [DPF, diesel particulate filter, particulate filter], search_only: []}
+    detection: diagnostic
+  - id: emissions_egr
+    subsystem: emissions/egr
+    display: {en: EGR valve & cooler, tr: EGR valfi}
+    aliases: {attribution_safe: [EGR valve, EGR cooler, EGR], search_only: []}
+    detection: diagnostic
+  - id: emissions_scr_adblue
+    subsystem: emissions/scr_adblue
+    display: {en: SCR / AdBlue system (NOx), tr: AdBlue / SCR sistemi}
+    aliases: {attribution_safe: [AdBlue, SCR catalyst, NOx sensor, DEF system], search_only: [urea]}
+    detection: diagnostic
+  - id: emissions_nox_sensor
+    subsystem: emissions/scr_adblue
+    display: {en: NOx sensors, tr: NOx sensörleri}
+    aliases: {attribution_safe: [NOx sensor], search_only: []}
+    detection: diagnostic
+  - id: emissions_catalytic_converter
+    subsystem: emissions/dpf
+    display: {en: Catalytic converter, tr: Katalitik konvertör}
+    aliases: {attribution_safe: [catalytic converter, CAT converter], search_only: [catalyst]}
+    detection: diagnostic
+  - id: emissions_swirl_flaps
+    subsystem: emissions/egr
+    display: {en: Intake swirl flaps, tr: Emme manifoldu kelebekleri}
+    aliases: {attribution_safe: [swirl flap, intake manifold flaps], search_only: []}
+    detection: diagnostic
+
+  # ── brakes ─────────────────────────────────────────────────────────
+  - id: brakes_electronic_parking_brake
+    subsystem: brakes/electronic
+    display: {en: Electronic parking brake module/motor, tr: Elektronik el freni}
+    aliases: {attribution_safe: [electronic parking brake, EPB module, parking brake sensor], search_only: [parking brake]}
+    detection: diagnostic
+  - id: brakes_caliper_handbrake_mech
+    subsystem: brakes/electronic
+    display: {en: Rear caliper handbrake mechanism, tr: Arka kaliper el freni mekanizması}
+    aliases: {attribution_safe: [handbrake caliper mechanism, handbrake lever corrosion], search_only: [handbrake]}
+    detection: test_drive
+  - id: brakes_abs_module
+    subsystem: brakes/electronic
+    display: {en: ABS/ESP hydraulic module, tr: ABS/ESP modülü}
+    aliases: {attribution_safe: [ABS module, ESP module, ABS pump, wheel speed sensor, ABS sensor], search_only: []}
+    detection: diagnostic
+  - id: brakes_vacuum_servo
+    subsystem: brakes/hydraulic
+    display: {en: Brake servo / booster, tr: Fren servo motoru}
+    aliases: {attribution_safe: [brake servo, brake booster], search_only: [servo]}
+    detection: test_drive
+  - id: brakes_pipes_hoses
+    subsystem: brakes/hydraulic
+    display: {en: Brake pipes & hoses, tr: Fren hortumları}
+    aliases: {attribution_safe: [brake pipe, brake hose, brake line], search_only: []}
+    detection: visual
+  - id: brakes_discs
+    subsystem: brakes/hydraulic
+    display: {en: Brake discs (fracture/cracking), tr: Fren diskleri}
+    aliases: {attribution_safe: [brake disc, brake rotor], search_only: [disc]}
+    detection: visual
+
+  # ── suspension & steering ──────────────────────────────────────────
+  - id: suspension_strut_mounts
+    subsystem: suspension/suspension
+    display: {en: Strut mounts & bearings, tr: Amortisör takozları}
+    aliases: {attribution_safe: [strut mount, strut bearing], search_only: []}
+    detection: test_drive
+  - id: suspension_control_arm_bushings
+    subsystem: suspension/suspension
+    display: {en: Control arm bushings & ball joints, tr: Salıncak burçları}
+    aliases: {attribution_safe: [control arm bushing, ball joint, wishbone bushing], search_only: [bushing]}
+    detection: visual
+  - id: suspension_shock_absorbers
+    subsystem: suspension/suspension
+    display: {en: Shock absorbers / struts, tr: Amortisörler}
+    aliases: {attribution_safe: [shock absorber, strut body], search_only: [shocks]}
+    detection: test_drive
+  - id: suspension_rear_beam_bushings
+    subsystem: suspension/suspension
+    display: {en: Rear torsion beam bushings, tr: Arka izlenebilir burçlar}
+    aliases: {attribution_safe: [torsion beam bushing, rear axle bushing], search_only: []}
+    detection: visual
+  - id: suspension_coil_springs
+    subsystem: suspension/suspension
+    display: {en: Coil springs, tr: Yaylar}
+    aliases: {attribution_safe: [coil spring, suspension spring], search_only: [spring]}
+    detection: visual
+  - id: suspension_wheel_bearings
+    subsystem: suspension/suspension
+    display: {en: Wheel bearings & hubs, tr: Rulmanlar}
+    aliases: {attribution_safe: [wheel bearing, wheel hub bearing], search_only: [bearing]}
+    detection: test_drive
+  - id: suspension_stabilizer_links
+    subsystem: suspension/suspension
+    display: {en: Stabilizer / anti-roll bar links, tr: Takoz bağlantıları}
+    aliases: {attribution_safe: [stabilizer link, anti-roll bar link, sway bar link], search_only: [drop link]}
+    detection: test_drive
+  - id: steering_electric_power_steering
+    subsystem: suspension/steering
+    display: {en: Electric power steering (EPS) rack/column, tr: Elektrikli direksiyon}
+    aliases: {attribution_safe: [electric power steering, EPS rack, steering column motor], search_only: [power steering]}
+    detection: diagnostic
+  - id: steering_hydraulic_pump
+    subsystem: suspension/steering
+    display: {en: Hydraulic power steering pump & rack, tr: Hidrolik direksiyon pompası}
+    aliases: {attribution_safe: [power steering pump, steering rack], search_only: []}
+    detection: visual
+  - id: steering_adaptive_damping
+    subsystem: suspension/steering
+    display: {en: Adaptive dampers (DCC), tr: Adaptif amortisörler (DCC)}
+    aliases: {attribution_safe: [adaptive damper, DCC damper, magnetic ride], search_only: []}
+    detection: diagnostic
+
+  # ── electrical ─────────────────────────────────────────────────────
+  - id: electrical_battery_charging
+    subsystem: electrical/power
+    display: {en: Battery & charging (alternator), tr: Akü & şarj sistemi}
+    aliases: {attribution_safe: [alternator, battery drain], search_only: [battery]}
+    detection: diagnostic
+  - id: electrical_starter_motor
+    subsystem: electrical/power
+    display: {en: Starter motor, tr: Marş motoru}
+    aliases: {attribution_safe: [starter motor, starter], search_only: []}
+    detection: diagnostic
+  - id: electrical_body_control_module
+    subsystem: electrical/modules
+    display: {en: Body control module / wiring harness, tr: Gövde kontrol modülü}
+    aliases: {attribution_safe: [body control module, BCM, wiring harness chafing, ground connection], search_only: [wiring]}
+    detection: diagnostic
+  - id: electrical_wiring_loom
+    subsystem: electrical/modules
+    display: {en: Wiring loom / CAN-bus, tr: Elektrik tesisatı}
+    aliases: {attribution_safe: [wiring loom, CAN-bus, CAN bus, loom chafing, ECU wiring], search_only: [cable]}
+    detection: diagnostic
+  - id: electrical_adas_sensors
+    subsystem: electrical/adas
+    display: {en: ADAS sensors & cameras (AEB, Front/Lane Assist), tr: ADAS sensörleri}
+    aliases: {attribution_safe: [ADAS, Front Assist, Lane Assist, AEB, adaptive cruise radar, driver assistance camera], search_only: [sensor]}
+    detection: diagnostic
+  - id: electrical_parking_sensors
+    subsystem: electrical/adas
+    display: {en: Parking sensors / park distance control, tr: Park sensörleri}
+    aliases: {attribution_safe: [parking sensor, park distance control, PDC sensor], search_only: []}
+    detection: visual
+  - id: electrical_keyless
+    subsystem: electrical/modules
+    display: {en: Keyless / card key system, tr: Kart anahtar}
+    aliases: {attribution_safe: [card key, keyless entry, key synchronization], search_only: [key fob]}
+    detection: diagnostic
+  - id: ev_charging
+    subsystem: electrical/ev
+    display: {en: EV charging system (AC/DC), tr: Şarj sistemi}
+    aliases: {attribution_safe: [AC charger, DC charging, charging abort, charging impossible, charging system, on-board charger], search_only: [charging]}
+    detection: diagnostic
+  - id: ev_heat_pump
+    subsystem: electrical/ev
+    display: {en: EV heat pump (climate), tr: Isı pompası}
+    aliases: {attribution_safe: [heat pump], search_only: []}
+    detection: test_drive
+  - id: electrical_infotainment
+    subsystem: electrical/modules
+    display: {en: Infotainment unit / display, tr: Multimedya ekranı}
+    aliases: {attribution_safe: [infotainment unit, head unit, touchscreen delamination, R-Link, multimedia system], search_only: [radio]}
+    detection: visual
+  - id: electrical_instrument_cluster
+    subsystem: electrical/modules
+    display: {en: Instrument cluster / dashboard, tr: Gösterge paneli}
+    aliases: {attribution_safe: [instrument cluster, dashboard cluster], search_only: []}
+    detection: visual
+
+  # ── body & comfort ─────────────────────────────────────────────────
+  - id: body_window_regulator
+    subsystem: body/comfort
+    display: {en: Window regulators & door locks, tr: Cam mekanizması & kapı kilitleri}
+    aliases: {attribution_safe: [window regulator, door lock actuator], search_only: []}
+    detection: visual
+  - id: body_sunroof_drain
+    subsystem: body/comfort
+    display: {en: Sunroof drains & water ingress, tr: Tavan camı drenajı}
+    aliases: {attribution_safe: [sunroof drain, water ingress, wet carpets], search_only: [leak]}
+    detection: visual
+  - id: body_water_ingress
+    subsystem: body/structure
+    display: {en: Water ingress (door/boot seals, badge drains), tr: Su sızıntısı}
+    aliases: {attribution_safe: [water leak, drain tube, badge drain, door seal leak, boot seal, boot water, water into the boot], search_only: []}
+    detection: visual
+  - id: body_hvac_blower
+    subsystem: body/comfort
+    display: {en: HVAC blower & flap motors, tr: Klima fanı & kapak motorları}
+    aliases: {attribution_safe: [blower motor, HVAC flap motor, air recirculation flap], search_only: []}
+    detection: visual
+  - id: body_ac_compressor
+    subsystem: body/comfort
+    display: {en: A/C compressor & condenser, tr: Klima kompresörü}
+    aliases: {attribution_safe: [A/C compressor, air conditioning compressor], search_only: [compressor]}
+    detection: diagnostic
+  - id: body_seat_heating
+    subsystem: body/comfort
+    display: {en: Seat heating elements, tr: Koltuk ısıtma}
+    aliases: {attribution_safe: [seat heating element, heated seat], search_only: []}
+    detection: visual
+  - id: body_rust_corrosion
+    subsystem: body/structure
+    display: {en: Rust & corrosion (structural), tr: Korozyon}
+    aliases: {attribution_safe: [structural rust, corrosion perforation], search_only: [rust]}
+    detection: visual
+  - id: body_paint_panel_gaps
+    subsystem: body/structure
+    display: {en: Paint & panel gaps (accident history), tr: Boya & paneller}
+    aliases: {attribution_safe: [repainted panels, panel gap misalignment], search_only: [paint]}
+    detection: visual
+
+# ── code families ──────────────────────────────────────────────────────
+# Sibling engineering codes that the old power-tune splits confused. A claim's
+# text naming a sibling code (other than the target) is a veto/reroute signal
+# in promote.py (design_flaws.md Flaw 1 fix). Keys are the part_ids used in
+# backend/data/parts/**; engineering identity, NOT power tune.
+code_families:
+  - family: vw_ea211
+    parts: [ea211]                     # 1.0/1.2/1.4 TSI MPI — belt-driven
+    siblings: [ea288, ea888]
+  - family: vw_ea288
+    parts: [ea288]                     # 1.6/2.0 TDI common-rail, EA288 gen
+    siblings: [ea211, ea888]
+  - family: vw_ea888
+    parts: [ea888]                     # 1.8/2.0 TSI/TFSI — chain-driven
+    siblings: [ea211, ea288]
+  - family: renault_k9k
+    parts: [k9k]                       # 1.5 dCi
+    siblings: [r9m, h4d, h5d, h5f, h5h]
+  - family: renault_r9m
+    parts: [r9m]                       # 1.6 dCi
+    siblings: [k9k, h4d, h5d, h5f, h5h]
+  - family: renault_h4d
+    parts: [h4d]                       # 0.9 TCe
+    siblings: [k9k, r9m, h5d, h5f, h5h]
+  - family: renault_h5d
+    parts: [h5d]                       # 1.2 TCe
+    siblings: [k9k, r9m, h4d, h5f, h5h]
+  - family: renault_h5f
+    parts: [h5f]                       # 1.6 TCe
+    siblings: [k9k, r9m, h4d, h5d, h5h]
+  - family: renault_h5h
+    parts: [h5h]                       # 1.3 TCe (with Mercedes)
+    siblings: [k9k, r9m, h4d, h5d, h5f]
+  - family: vw_dq200
+    parts: [dq200]                     # 7-speed dry DSG
+    siblings: [dq250, dq381, dc4, dw5, dw6]
+  - family: vw_dq250
+    parts: [dq250]                     # 6-speed wet DSG
+    siblings: [dq200, dq381, dc4, dw5, dw6]
+  - family: vw_dq381
+    parts: [dq381]                     # 7-speed wet DSG
+    siblings: [dq200, dq250, dc4, dw5, dw6]
+  - family: renault_dc4
+    parts: [dc4]                       # Renault 6-speed wet DCT
+    siblings: [dq200, dq250, dq381, dw5, dw6]
+  - family: renault_dw5
+    parts: [dw5]                       # Renault 7-speed wet EDC
+    siblings: [dq200, dq250, dq381, dc4, dw6]
+  - family: renault_dw6
+    parts: [dw6]                       # Renault 6-speed dry EDC
+    siblings: [dq200, dq250, dq381, dc4, dw5]
