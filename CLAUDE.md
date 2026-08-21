@@ -139,6 +139,7 @@ reasoning.
 |-----|---------------|--------|
 | `README.md` | Project overview, quickstart, supported cars | current |
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
+| `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks | current |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
