@@ -23,7 +23,7 @@ import yaml
 from sqlalchemy.orm import Session
 
 from backend.core.equipment import derive_equipment_tags
-from backend.core.title_sim import title_similar
+from knowledge.title_sim import title_similar
 from knowledge.consequence_tier import consequence_tier
 from backend.core.transmission_signal import (
     AUTO_ONLY_RE, MANUAL_ONLY_RE, mentioned_transmission_codes,

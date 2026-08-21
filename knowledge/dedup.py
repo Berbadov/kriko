@@ -8,7 +8,7 @@ This module runs OFFLINE only — never on the /analyze request path.
 
 import logging
 
-from backend.core.title_sim import title_tokens
+from knowledge.title_sim import title_tokens
 from knowledge.extract import CandidateClaim
 from knowledge.sources.base import Document
 
