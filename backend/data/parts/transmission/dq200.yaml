@@ -81,6 +81,8 @@ claims:
     site_or_channel: fdyotomotiv.com
     quote: '"Sorun: Hidrolik Pompa Arızası"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_bearing_gear_wear__v1
   claim_key: dq200_transmission_dq200_bearing_gear_wear_
   version: 1
@@ -114,6 +116,8 @@ claims:
       from the gearbox area, especially at idle or during shifts, are red flags. These
       can indicate issues with bearings, gears, or internal components."'
     independent: true
+  component_id: transmission_dct_differential_bearings
+  detection: test_drive
 - id: dq200_transmission_dq200_clutch_pack_and_fl_v1
   claim_key: dq200_transmission_dq200_clutch_pack_and_fl
   version: 1
@@ -149,6 +153,8 @@ claims:
     quote: Prolonged city driving, towing, or frequent stop-start conditions accelerate
       the wear of clutch packs and the dual-mass flywheel.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_clutch_shudder_and_v1
   claim_key: dq200_transmission_dq200_clutch_shudder_and
   version: 1
@@ -192,6 +198,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_clutch_shudder_at__v1
   claim_key: dq200_transmission_dq200_clutch_shudder_at_
   version: 1
@@ -226,6 +234,8 @@ claims:
       manoeuvres, when pulling away from a standstill, or during shifts between lower
       gears (e.g., 1st to 2nd, or 2nd to 3rd)."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_clutch_wear_and_me_v1
   claim_key: dq200_transmission_dq200_clutch_wear_and_me
   version: 1
@@ -273,6 +283,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_delayed_engagement_v1
   claim_key: dq200_transmission_dq200_delayed_engagement
   version: 1
@@ -311,6 +323,8 @@ claims:
       pressed the accelerator. This can be particularly noticeable when moving from
       a standstill or reversing."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_delayed_reverse_en_v1
   claim_key: dq200_transmission_dq200_delayed_reverse_en
   version: 1
@@ -344,6 +358,8 @@ claims:
       eder ya da hafif bir vuruntu ile girer. Soğuk havada daha belirgindir. Kuru
       kavrama (DQ200) arızasında sıkça görülür."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dq250_dry_clutch_s_v1
   claim_key: dq200_transmission_dq200_dq250_dry_clutch_s
   version: 1
@@ -373,6 +389,8 @@ claims:
     quote: '"repeated starts from a stop will yield some not-so-smooth launches, which
       is typical for any dry clutch unit."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_damage__v1
   claim_key: dq200_transmission_dq200_dry_clutch_damage_
   version: 1
@@ -407,6 +425,8 @@ claims:
     quote: '"General wear and tear is inevitable, but the rate of deterioration is
       directly linked to how well the gearbox has been maintained."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_dsg_chr_v1
   claim_key: dq200_transmission_dq200_dry_clutch_dsg_chr
   version: 1
@@ -444,6 +464,8 @@ claims:
       \ = Basınç kaybı + yağ bozulması + elektronik stres. Isı yükselince: Sensörler\
       \ aşırı yük alır, Kavrama plakaları kayar, Mekatronik valfleri hataya düşer.\""
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dry_clutch_dsg_hes_v1
   claim_key: dq200_transmission_dq200_dry_clutch_dsg_hes
   version: 1
@@ -480,6 +502,8 @@ claims:
       Owners complained of pauses at lights, unpredictable engagement, and even sudden
       loss of drive."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dry_clutch_dsg_pro_v1
   claim_key: dq200_transmission_dq200_dry_clutch_dsg_pro
   version: 1
@@ -518,6 +542,8 @@ claims:
       The wet clutch type, on the other hand, is more reliable, stronger and smoother
       but it requires regular oil changes."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_hydraul_v1
   claim_key: dq200_transmission_dq200_dry_clutch_hydraul
   version: 1
@@ -552,6 +578,8 @@ claims:
       its weak point is hydraulic pressure generation and storage (pump/accumulator),
       which shows up as hesitation and ''neutral-then-thump'' take-offs."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dry_clutch_overhea_v1
   claim_key: dq200_transmission_dq200_dry_clutch_overhea
   version: 1
@@ -588,6 +616,8 @@ claims:
 
       🔍 Sebep: Kuru kavrama sisteminin aşırı yüklenmesi veya yanlış kullanım.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_prematu_v1
   claim_key: dq200_transmission_dq200_dry_clutch_prematu
   version: 1
@@ -628,6 +658,8 @@ claims:
 
       Cause: Initial design unsuitable for urban/stop-and-go use."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_shudder_v1
   claim_key: dq200_transmission_dq200_dry_clutch_shudder
   version: 1
@@ -664,6 +696,8 @@ claims:
     site_or_channel: carreliabilityreport.com
     quote: '"beware of the dry-clutch DSG7 DQ200 gearbox"'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_slips_o_v1
   claim_key: dq200_transmission_dq200_dry_clutch_slips_o
   version: 1
@@ -696,6 +730,8 @@ claims:
 
       🔍 Sebep: Kuru kavrama nedeniyle yetersiz tork iletimi.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_sudden__v1
   claim_key: dq200_transmission_dq200_dry_clutch_sudden_
   version: 1
@@ -730,6 +766,8 @@ claims:
     quote: '"Aracı geri geri (R) yokuş yukarı park etmek zorunda kalırsanız çok yavaş
       ve yarım debriyaj yapmadan (gazı ayarlayarak) tek hamlede çıkmaya çalışın."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_wear_ca_v1
   claim_key: dq200_transmission_dq200_dry_clutch_wear_ca
   version: 1
@@ -767,6 +805,8 @@ claims:
       power transfer. Overheating can also be an issue, especially in heavy traffic,
       as the dry clutches rely on air cooling."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_wear_fl_v1
   claim_key: dq200_transmission_dq200_dry_clutch_wear_fl
   version: 1
@@ -799,6 +839,8 @@ claims:
     site_or_channel: erenservis.net
     quote: '"DQ200''de (kuru kavrama) sıvı değişiminin kavrama sorununa etkisi yoktur."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_wear_fr_v1
   claim_key: dq200_transmission_dq200_dry_clutch_wear_fr
   version: 1
@@ -835,6 +877,8 @@ claims:
       engage and disengage different gears. When you use launch control, you put a
       lot of stress on these plates, which can wear them out faster."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_clutch_wear_me_v1
   claim_key: dq200_transmission_dq200_dry_clutch_wear_me
   version: 1
@@ -869,6 +913,8 @@ claims:
     quote: '"Kavrama plaketleri aşınan metal tozları mekatronik karta ulaşır — fatura
       iki katına çıkar."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dry_dsg_overheats__v1
   claim_key: dq200_transmission_dq200_dry_dsg_overheats_
   version: 1
@@ -900,6 +946,8 @@ claims:
     quote: '"DSG şanzımanlar, özellikle kuru tip 7 ileri versiyonlar (DQ200) şehir
       içi dur-kalk kullanımında ısınma ve parça aşınmasına karşı hassastır."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_dsg_hesitation_in__v1
   claim_key: dq200_transmission_dq200_dsg_hesitation_in_
   version: 1
@@ -934,6 +982,8 @@ claims:
       cars. It is one of the most common real-world symptoms across Volkswagen’s DSG
       family... Even DQ250 and DQ381 owners reported delays and pauses in traffic."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dsg_shift_vibratio_v1
   claim_key: dq200_transmission_dq200_dsg_shift_vibratio
   version: 1
@@ -967,6 +1017,8 @@ claims:
     quote: Vibrations, especially when shifting from first to second gear or vice
       versa, are frequently reported in models equipped with the DQ200 gearbox.
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dsg_shudder_jerkin_v1
   claim_key: dq200_transmission_dq200_dsg_shudder_jerkin
   version: 1
@@ -1004,6 +1056,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 20000
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_dsg_solenoid_valve_v1
   claim_key: dq200_transmission_dq200_dsg_solenoid_valve
   version: 1
@@ -1039,6 +1093,8 @@ claims:
     quote: '"Bu hafta gitSolenoid valfin takılı kalması sonucu aracın geri vitese
       geçişi tamamen engellenebilir. Soğukta daha belirgin, ısındıkça kısmen düzelir."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_erratic_gear_shift_v1
   claim_key: dq200_transmission_dq200_erratic_gear_shift
   version: 1
@@ -1075,6 +1131,8 @@ claims:
       gears for too long, shifting up or down unexpectedly, or even skipping gears
       entirely."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_gear_play_and_cali_v1
   claim_key: dq200_transmission_dq200_gear_play_and_cali
   version: 1
@@ -1118,6 +1176,8 @@ claims:
 
       Often linked to poor calibration or play in the gears."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_gear_selector_sens_v1
   claim_key: dq200_transmission_dq200_gear_selector_sens
   version: 1
@@ -1184,6 +1244,8 @@ claims:
     quote: A common issue where gears fail to engage properly, leaving the vehicle
       stuck in neutral or unable to shift from one gear to another.
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_hydraulic_pressure_v1
   claim_key: dq200_transmission_dq200_hydraulic_pressure
   version: 1
@@ -1219,6 +1281,8 @@ claims:
       neden olur. Uzun süre bu şekilde kullanım, mekatronik ve kavrama arızalarına
       yol açabilir."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_low_speed_hesitati_v1
   claim_key: dq200_transmission_dq200_low_speed_hesitati
   version: 1
@@ -1251,6 +1315,8 @@ claims:
     quote: '"Hesitation and jerky take-off: Particularly noticeable below 20 km/h;
       caused by delayed clutch engagement logic and software calibration issues."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_mechatronic_contro_v1
   claim_key: dq200_transmission_dq200_mechatronic_contro
   version: 1
@@ -1285,6 +1351,8 @@ claims:
       düşebilir ve gösterge panelinde şanzıman uyarı ışığı yanar. Ayrıca araç bazen
       hiç vitese geçmeyebilir."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_failur_v1
   claim_key: dq200_transmission_dq200_mechatronic_failur
   version: 1
@@ -1328,6 +1396,8 @@ claims:
       The mechatronic unit (computer that manages the gearbox) is a known point of
       weakness."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_intern_v1
   claim_key: dq200_transmission_dq200_mechatronic_intern
   version: 1
@@ -1358,6 +1428,8 @@ claims:
     quote: '"Internal high-pressure hydraulic leaks - Very common - Requires rebuild
       or complete replacement mechatronic unit."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_pressu_v1
   claim_key: dq200_transmission_dq200_mechatronic_pressu
   version: 1
@@ -1390,6 +1462,8 @@ claims:
     quote: '"Yağ banyosu içinde çalışmadığı için İstanbul gibi yoğun dur-kalk trafiğinde
       baskı balata aşırı ısınır ve mekatronik tüpünü patlatabilir."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_mechatronic_requir_v1
   claim_key: dq200_transmission_dq200_mechatronic_requir
   version: 1
@@ -1429,6 +1503,8 @@ claims:
       a proper clutch adaptation, read DSG-specific fault codes, or verify that fluid
       fill levels meet factory specifications."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_seal_f_v1
   claim_key: dq200_transmission_dq200_mechatronic_seal_f
   version: 1
@@ -1463,6 +1539,8 @@ claims:
     quote: '"Worn gaskets allow hydraulic fluid to leak internally, reducing the pressure
       the unit needs to operate correctly."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_soleno_v1
   claim_key: dq200_transmission_dq200_mechatronic_soleno
   version: 1
@@ -1497,6 +1575,8 @@ claims:
       Mechatronic units. Failures can be caused by contamination in the oil from component
       breakdown, as well as internal electrical faults."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronic_unit_f_v1
   claim_key: dq200_transmission_dq200_mechatronic_unit_f
   version: 1
@@ -1532,6 +1612,8 @@ claims:
     quote: '"Mechatronic unit failure, clutch pack overheating in traffic. Expensive
       repair. Fine on highway. Terrible in city stop-and-go."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_failu_v1
   claim_key: dq200_transmission_dq200_mechatronics_failu
   version: 1
@@ -1565,6 +1647,8 @@ claims:
       at low speeds or when accelerating. This often indicates a malfunction in the
       mechatronics unit.
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_hydra_v1
   claim_key: dq200_transmission_dq200_mechatronics_hydra
   version: 1
@@ -1600,6 +1684,8 @@ claims:
       failure causing unexpected gear disengagement — affected 2012–2015 production
       units."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_overh_v1
   claim_key: dq200_transmission_dq200_mechatronics_overh
   version: 1
@@ -1638,6 +1724,8 @@ claims:
 
       🔍 Sebep: Mekatronik ünitenin aşırı ısınması veya arızalanması.'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_plate_v1
   claim_key: dq200_transmission_dq200_mechatronics_plate
   version: 1
@@ -1671,6 +1759,8 @@ claims:
     quote: '"the aluminum mechatronics plate is structurally vulnerable; ... characteristic
       ''jumping'' and jerking at start and gear changes."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_softw_v1
   claim_key: dq200_transmission_dq200_mechatronics_softw
   version: 1
@@ -1708,6 +1798,8 @@ claims:
       are sound, but the gearbox''s behaviour is erratic due to outdated software
       or incorrect calibration."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_mechatronics_unit__v1
   claim_key: dq200_transmission_dq200_mechatronics_unit_
   version: 1
@@ -1750,6 +1842,8 @@ claims:
       faults within the ECU part of the unit can also cause communication errors or
       incorrect commands to the gearbox."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_requires_periodic__v1
   claim_key: dq200_transmission_dq200_requires_periodic_
   version: 1
@@ -1786,6 +1880,8 @@ claims:
       the DQ200 can be resolved or significantly reduced with a clutch adaptation
       reset performed using factory diagnostic software."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_dq200_reverse_delay_nois_v1
   claim_key: dq200_transmission_dq200_reverse_delay_nois
   version: 1
@@ -1822,6 +1918,8 @@ claims:
 
       🔍 Sebep: Mekatronik veya kavrama kaynaklı aşınma.'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_solenoid_failure_f_v1
   claim_key: dq200_transmission_dq200_solenoid_failure_f
   version: 1
@@ -1867,6 +1965,8 @@ claims:
     - transmission fluid changed
     - gearbox oil changed
     - mechatronic fluid changed
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_suddenly_shifts_to_v1
   claim_key: dq200_transmission_dq200_suddenly_shifts_to
   version: 1
@@ -1901,6 +2001,8 @@ claims:
       hızlanmayı kesmesi (boşa düşmesi) durumudur. Pompa motoru ya aşırı ısınmış ya
       da şanzıman elektronik kartı (TCU) iletişimi kesmiştir."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_dq200_tcm_failures_locke_v1
   claim_key: dq200_transmission_dq200_tcm_failures_locke
   version: 1
@@ -1972,6 +2074,8 @@ claims:
     quote: '"The most common failure in the DQ200 unit is the casting failure at the
       accumulator... With time, the housing cracks and begins to leak."'
     independent: true
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq200_transmission_dq200_valve_body_wall_cr_v1
   claim_key: dq200_transmission_dq200_valve_body_wall_cr
   version: 1
@@ -2014,6 +2118,8 @@ claims:
       drive, or it may exhibit very rough gear changes, jerking motions, and fault
       warnings on the dashboard."'
     independent: true
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq200_transmission_dq200_vibration_and_jerk_v1
   claim_key: dq200_transmission_dq200_vibration_and_jerk
   version: 1
@@ -2056,6 +2162,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_early_clutch_wear_in_dq2_v1
   claim_key: dq200_transmission_early_clutch_wear_in_dq2
   version: 1
@@ -2098,6 +2206,8 @@ claims:
 
       🔍 Sebep: Mekatronik veya kavrama kaynaklı aşınma.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_early_dq200_synthetic_oi_v1
   claim_key: dq200_transmission_early_dq200_synthetic_oi
   version: 1
@@ -2168,6 +2278,8 @@ claims:
     quote: '"K1 ve K2 debriyaj boşlukları tam yapılmazsa, yeni takılan balata bile
       2.000 km sonra tekrar titremeye başlar."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_insufficient_pressure_in_v1
   claim_key: dq200_transmission_insufficient_pressure_in
   version: 1
@@ -2201,6 +2313,8 @@ claims:
     site_or_channel: fdyotomotiv.com
     quote: '"Sorun: Yetersiz Basınç Artışı (Performans Kısıtlaması)"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_mechatronic_pressure_tub_v1
   claim_key: dq200_transmission_mechatronic_pressure_tub
   version: 1
@@ -2240,6 +2354,8 @@ claims:
       basınç döngüsü metal yorgunluğuna neden olur. Tüpün yapısında oluşan mikroskobik
       çatlaklar, hidrolik sıvının basıncını tutamamasına yol açar."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_premature_dry_clutch_pac_v1
   claim_key: dq200_transmission_premature_dry_clutch_pac
   version: 1
@@ -2282,6 +2398,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq200_transmission_reverse_selector_fork_fa_v1
   claim_key: dq200_transmission_reverse_selector_fork_fa
   version: 1
@@ -2315,6 +2433,8 @@ claims:
       of ''when'' not ''if'' for DSG 7 speed vehicles older than 2018. A fault with
       the reverse selector is often mis-diagnosed as a mechatronic issue."'
     independent: true
+  component_id: transmission_dct_fork_synchronizer
+  detection: test_drive
 - id: dq200_transmission_tcu_failure_in_dq200_mec_v1
   claim_key: dq200_transmission_tcu_failure_in_dq200_mec
   version: 1
@@ -2348,6 +2468,8 @@ claims:
     quote: '"TCU failure - Common - Requires replacement TCU or complete mechatronic
       unit."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq200_transmission_unusual_noises_scratchin_v1
   claim_key: dq200_transmission_unusual_noises_scratchin
   version: 1
@@ -2377,3 +2499,5 @@ claims:
     quote: Scratching, rattling, or grinding sounds during gear changes often point
       to mechanical wear in the transmission components.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive

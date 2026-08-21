@@ -40,6 +40,8 @@ claims:
     quote: '"Check parking sensor" error... C15900 – No Proximity Sensor Multiplex
       Transmission'
     independent: true
+  component_id: electrical_parking_sensors
+  detection: visual
 - id: megane4_body_electrical_r_link_multimedia_system_v1
   claim_key: megane4_body_electrical_r_link_multimedia_system
   version: 1
@@ -75,6 +77,8 @@ claims:
     quote: '"Software bugs in the R-Link system and voltage fluctuations in the electrical
       system."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_body_electrical_xenon_bulb_multiplex_tra_v1
   claim_key: megane4_body_electrical_xenon_bulb_multiplex_tra
   version: 1
@@ -144,6 +148,8 @@ claims:
     site_or_channel: diagnosticgarage.com
     quote: '"AdBlue crystallization and NOx sensor failures."'
     independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: megane4_body_emissions_egr_valve_clogging_in_1__v1
   claim_key: megane4_body_emissions_egr_valve_clogging_in_1_
   version: 1
@@ -175,6 +181,8 @@ claims:
     quote: '"Frequent short trips and continuous low-RPM driving cause carbon buildup
       in the EGR valve."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: megane4_body_engine_turbocharger_failure_due_v1
   claim_key: megane4_body_engine_turbocharger_failure_due
   version: 1
@@ -208,6 +216,8 @@ claims:
     quote: '"The main reasons are delayed oil changes and the use of low-quality engine
       oil."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: megane4_body_fuel_system_chronic_injector_wear_in_v1
   claim_key: megane4_body_fuel_system_chronic_injector_wear_in
   version: 1
@@ -241,6 +251,8 @@ claims:
     quote: '"In 1.5 dCi engines, injectors are prone to wear over time. Poor fuel
       quality and irregular maintenance significantly accelerate this process."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: megane4_body_general_motorhauben_befestigung__v1
   claim_key: megane4_body_general_motorhauben_befestigung_
   version: 1
@@ -302,6 +314,8 @@ claims:
     site_or_channel: diagnosticgarage.com
     quote: '"Early wear of stabilizer links, control arm bushings, and shock absorbers."'
     independent: true
+  component_id: suspension_shock_absorbers
+  detection: test_drive
 - id: megane4_body_transmission_edc_dual_clutch_transmis_v1
   claim_key: megane4_body_transmission_edc_dual_clutch_transmis
   version: 1

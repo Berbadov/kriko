@@ -53,6 +53,8 @@ claims:
       teknolojisi... özellikle ilk üretim yıllarındaki modellerde (2020-2022) elektriksel
       kararsızlıklara ve yazılımsal çakışmalara oldukça duyarlıdır."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: ea211_electrical_recurring_48v_hybrid_com_v1
   claim_key: ea211_electrical_recurring_48v_hybrid_com
   version: 1
@@ -93,6 +95,8 @@ claims:
       hiçbir hasar olmasa bile, sadece bu anlık iletişim kopukluğu arıza kaydının
       hafızada kalıcı hale gelmesine neden olur."'
     independent: true
+  component_id: electrical_battery_charging
+  detection: diagnostic
 - id: ea211_emissions_egr_valve_clogging_in_ea_v1
   claim_key: ea211_emissions_egr_valve_clogging_in_ea
   version: 1
@@ -130,6 +134,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: emissions_egr
+  detection: diagnostic
 - id: ea211_emissions_opf_clogging_on_short_tr_v1
   claim_key: ea211_emissions_opf_clogging_on_short_tr
   version: 1
@@ -164,6 +170,8 @@ claims:
     site_or_channel: motorenlager.de
     quote: '"OPF-Verstopfung bei Kurzstrecken"'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: ea211_engine_1_5_tsi_act_low_rpm_surg_v1
   claim_key: ea211_engine_1_5_tsi_act_low_rpm_surg
   version: 1
@@ -236,6 +244,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 50000
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: ea211_engine_camshaft_phaser_failures_v1
   claim_key: ea211_engine_camshaft_phaser_failures
   version: 1
@@ -266,6 +276,8 @@ claims:
     site_or_channel: motorenlager.de
     quote: '"Seltene Nockenwellenversteller-Ausfälle (Rückrufe bei frühen Modellen)"'
     independent: true
+  component_id: engine_timing_variable_valve
+  detection: diagnostic
 - id: ea211_engine_carbon_buildup_on_intake_v1
   claim_key: ea211_engine_carbon_buildup_on_intake
   version: 1
@@ -314,6 +326,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea211_engine_cylinder_head_gasket_fai_v1
   claim_key: ea211_engine_cylinder_head_gasket_fai
   version: 1
@@ -349,6 +363,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_head_gasket
+  detection: diagnostic
 - id: ea211_engine_ea211_1_4_tfsi_piston_ri_v1
   claim_key: ea211_engine_ea211_1_4_tfsi_piston_ri
   version: 1
@@ -389,6 +405,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 30000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_ea211_1_4_tfsi_thermosta_v1
   claim_key: ea211_engine_ea211_1_4_tfsi_thermosta
   version: 1
@@ -432,6 +450,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea211_engine_ea211_1_4_tfsi_turbo_oil_v1
   claim_key: ea211_engine_ea211_1_4_tfsi_turbo_oil
   version: 1
@@ -473,6 +493,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 90000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea211_engine_ea211_1_4_tsi_premature__v1
   claim_key: ea211_engine_ea211_1_4_tsi_premature_
   version: 1
@@ -515,6 +537,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_ea211_1_5_tsi_act_cylind_v1
   claim_key: ea211_engine_ea211_1_5_tsi_act_cylind
   version: 1
@@ -615,6 +639,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Insistent failure of coils"'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea211_engine_ea211_evo_cold_start_and_v1
   claim_key: ea211_engine_ea211_evo_cold_start_and
   version: 1
@@ -684,6 +710,8 @@ claims:
       als ''normal'' ein, doch oft liegen Kolbenringe oder Kurbelgehäuseentlüftung
       dahinter. Verkokung durch Direkteinspritzung verstärkt das."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_ea211_gdi_carbon_build_u_v1
   claim_key: ea211_engine_ea211_gdi_carbon_build_u
   version: 1
@@ -717,6 +745,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Carbon build misfires"'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea211_engine_ea211_pcv_cover_failure__v1
   claim_key: ea211_engine_ea211_pcv_cover_failure_
   version: 1
@@ -750,6 +780,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Excessive oil consumption tied to PCV value"'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_ea211_pcv_valve_failure__v1
   claim_key: ea211_engine_ea211_pcv_valve_failure_
   version: 1
@@ -785,6 +817,8 @@ claims:
       yağ buharı doğrudan emme manifolduna gider. Mavi duman atmaz ama yağ çubuğu
       her hafta kısalır."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_ea211_plastic_water_pump_v1
   claim_key: ea211_engine_ea211_plastic_water_pump
   version: 1
@@ -820,6 +854,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_water_pump
+  detection: visual
 - id: ea211_engine_ea211_thermostat_heater__v1
   claim_key: ea211_engine_ea211_thermostat_heater_
   version: 1
@@ -854,6 +890,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Thermostat heaters fail intermittently while throwing obvious codes"'
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea211_engine_ea211_throttle_body_carb_v1
   claim_key: ea211_engine_ea211_throttle_body_carb
   version: 1
@@ -890,6 +928,8 @@ claims:
       detaylı bir temizlik işlemi yapılması gerektiğini ve kurum birikmesinin bu tür
       dalgalanmalara sebep olabileceğini söylediler."'
     independent: true
+  component_id: engine_throttle_body
+  detection: diagnostic
 - id: ea211_engine_ea211_timing_belt_mandat_v1
   claim_key: ea211_engine_ea211_timing_belt_mandat
   version: 1
@@ -938,6 +978,8 @@ claims:
     - new timing belt
     - cam belt changed
     - cambelt done
+  component_id: engine_timing_belt
+  detection: history_check
 - id: ea211_engine_ea211_timing_belt_must_b_v1
   claim_key: ea211_engine_ea211_timing_belt_must_b
   version: 1
@@ -984,6 +1026,8 @@ claims:
     - new timing belt
     - cam belt changed
     - cambelt done
+  component_id: engine_timing_belt
+  detection: history_check
 - id: ea211_engine_ea211_timing_belt_premat_v1
   claim_key: ea211_engine_ea211_timing_belt_premat
   version: 1
@@ -1030,6 +1074,8 @@ claims:
     - new timing belt
     - cam belt changed
     - cambelt done
+  component_id: engine_timing_belt
+  detection: history_check
 - id: ea211_engine_ea211_timing_chain_and_t_v1
   claim_key: ea211_engine_ea211_timing_chain_and_t
   version: 1
@@ -1069,6 +1115,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea211_engine_ea211_turbo_failures_fro_v1
   claim_key: ea211_engine_ea211_turbo_failures_fro
   version: 1
@@ -1101,6 +1149,8 @@ claims:
     quote: '"Probleme mit dem Turbolader Kohleablagerungen oder Hitzebelastung führen
       zu Lagerausfall oder Wastegate-Problemen. VTG-Lader sind anfälliger."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea211_engine_ea211_turbo_wastegate_ra_v1
   claim_key: ea211_engine_ea211_turbo_wastegate_ra
   version: 1
@@ -1134,6 +1184,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Turbo wastegate rattle"'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea211_engine_ea211_water_pump_housing_v1
   claim_key: ea211_engine_ea211_water_pump_housing
   version: 1
@@ -1165,6 +1217,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Water pump housing leaks"'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea211_engine_excessive_oil_consumptio_v1
   claim_key: ea211_engine_excessive_oil_consumptio
   version: 1
@@ -1200,6 +1254,8 @@ claims:
       kurum bağlayıp piston kanalına yapışıyor. Yapışan segman yağı sıyıramıyor ve
       yağ yanma odasında yanıp gidiyor."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_high_oil_consumption_in__v1
   claim_key: ea211_engine_high_oil_consumption_in_
   version: 1
@@ -1235,6 +1291,8 @@ claims:
     quote: '"Mostly affects early 1.4 TSI units; related to piston ring wear or PCV
       valve issues."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_intake_valve_carbon_buil_v1
   claim_key: ea211_engine_intake_valve_carbon_buil
   version: 1
@@ -1277,6 +1335,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea211_engine_intermittent_4th_coil_fa_v1
   claim_key: ea211_engine_intermittent_4th_coil_fa
   version: 1
@@ -1314,6 +1374,8 @@ claims:
       Ancak, dün aynı sorunu tekrar yaşadığımda ve yeniden bilgisayara bağlattığımda,
       bu kez herhangi bir hata kodu veya arıza kaydı çıkmadı."'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea211_engine_pcv_valve_failure_on_ea2_v1
   claim_key: ea211_engine_pcv_valve_failure_on_ea2
   version: 1
@@ -1350,6 +1412,8 @@ claims:
       egzozdan duman çıkmasına ve hava filtresi kirlenmesine yol açmaktadır. (50.000
       – 100.000 km arası)"'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea211_engine_turbo_bearing_wear_and_o_v1
   claim_key: ea211_engine_turbo_bearing_wear_and_o
   version: 1
@@ -1384,6 +1448,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea211_engine_turbo_oil_leakage_in_1_4_v1
   claim_key: ea211_engine_turbo_oil_leakage_in_1_4
   version: 1
@@ -1421,6 +1487,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea211_engine_valve_cover_gasket_oil_l_v1
   claim_key: ea211_engine_valve_cover_gasket_oil_l
   version: 1
@@ -1489,6 +1557,8 @@ claims:
     site_or_channel: accio.com
     quote: '"Injectors or HPFP complaints"'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea211_fuel_system_ea211_tsi_intake_valve_c_v1
   claim_key: ea211_fuel_system_ea211_tsi_intake_valve_c
   version: 1
@@ -1532,6 +1602,8 @@ claims:
     quote: '"On direct-injection variants (TSI), carbon deposits can form on intake
       valves."'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea211_fuel_system_high_pressure_fuel_pump__v1
   claim_key: ea211_fuel_system_high_pressure_fuel_pump_
   version: 1
@@ -1572,3 +1644,5 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 70000
+  component_id: engine_fuel_pump
+  detection: diagnostic

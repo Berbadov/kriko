@@ -33,6 +33,8 @@ claims:
     site_or_channel: carcostcheck.co.uk
     quote: Brake pipe corroded
     independent: true
+  component_id: brakes_pipes_hoses
+  detection: visual
 - id: clio5_body_emissions_catalyst_and_dpf_failure_v1
   claim_key: clio5_body_emissions_catalyst_and_dpf_failure
   version: 1
@@ -64,6 +66,8 @@ claims:
     quote: Exhaust emissions exceed limits, catalytic converter efficiency low, DPF
       warning
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: clio5_body_emissions_chronic_catalytic_conver_v1
   claim_key: clio5_body_emissions_chronic_catalytic_conver
   version: 1
@@ -105,6 +109,8 @@ claims:
     quote: '"Katalitik konvertör tıkalı olabilir. Eğer motor gaz yemiyorsa, egzoz
       gazları düzgün atılamıyordur."'
     independent: true
+  component_id: emissions_catalytic_converter
+  detection: diagnostic
 - id: clio5_body_engine_crankshaft_camshaft_sens_v1
   claim_key: clio5_body_engine_crankshaft_camshaft_sens
   version: 1
@@ -142,6 +148,8 @@ claims:
     quote: '"Krank sensörü veya eksantrik mili sensörleri düzgün çalışıyor mu? (Bozulursa
       düzensiz yanmaya ve marşta gecikmeye neden olabilir.)"'
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: clio5_body_fuel_system_fuel_injector_leaks_caus_v1
   claim_key: clio5_body_fuel_system_fuel_injector_leaks_caus
   version: 1
@@ -179,6 +187,8 @@ claims:
       olabilir ve bu da zengin veya fakir karışımla çalışma sorunları yaratır. Aracın
       geç çalışması ve marşın uzun sürmesi enjektör sızıntısının işareti olabilir."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: clio5_body_general_clio5_body_structural_co_v1
   claim_key: clio5_body_general_clio5_body_structural_co
   version: 1
@@ -211,6 +221,8 @@ claims:
     site_or_channel: carcostcheck.co.uk
     quote: Structural corrosion, body mounting corroded through, chassis weakness
     independent: true
+  component_id: body_rust_corrosion
+  detection: visual
 - id: clio5_body_general_clio_5_aeb_system_failur_v1
   claim_key: clio5_body_general_clio_5_aeb_system_failur
   version: 1
@@ -249,6 +261,8 @@ claims:
     site_or_channel: aracustasi.com
     quote: '"Otonom acil frenleme arızası"'
     independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
 - id: clio5_body_suspension_ball_joint_excessive_pla_v1
   claim_key: clio5_body_suspension_ball_joint_excessive_pla
   version: 1
@@ -277,6 +291,8 @@ claims:
     site_or_channel: carcostcheck.co.uk
     quote: Ball joint excessive play
     independent: true
+  component_id: suspension_control_arm_bushings
+  detection: visual
 - id: clio5_body_suspension_coil_spring_breakage_v1
   claim_key: clio5_body_suspension_coil_spring_breakage
   version: 1
@@ -303,3 +319,5 @@ claims:
     site_or_channel: carcostcheck.co.uk
     quote: Coil spring broken
     independent: true
+  component_id: suspension_coil_springs
+  detection: visual

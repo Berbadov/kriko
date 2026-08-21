@@ -41,6 +41,8 @@ claims:
       airbag, TPMS); start&stop that stops working (often due to the battery); air
       conditioner with fluctuating output."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: h4d_electrical_recurrent_dashboard_rese_v1
   claim_key: h4d_electrical_recurrent_dashboard_rese
   version: 1
@@ -102,5 +104,7 @@ claims:
     quote: '"7-speed DSG: quick and pleasant, but more delicate; possible low speed
       jerks; potential interventions on clutches and mechatronics."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 legacy_part_ids:
 - h4d_75

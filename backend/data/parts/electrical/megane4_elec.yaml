@@ -41,6 +41,8 @@ claims:
       de stationnement mal positionné pouvant empêcher le verrouillage en position
       P."'
     independent: true
+  component_id: brakes_electronic_parking_brake
+  detection: diagnostic
 - id: megane4_elec_brakes_parking_brake_sensor_mis_v1
   claim_key: megane4_elec_brakes_parking_brake_sensor_mis
   version: 1
@@ -73,6 +75,8 @@ claims:
       parking brake actuator stops the brake engaging properly on parking — the vehicle
       can roll away. Free repair."'
     independent: true
+  component_id: brakes_electronic_parking_brake
+  detection: diagnostic
 - id: megane4_elec_electrical_air_conditioning_compres_v1
   claim_key: megane4_elec_electrical_air_conditioning_compres
   version: 1
@@ -104,6 +108,8 @@ claims:
     quote: The air conditioning compressor and the ventilation fan switch on for more
       than 30 minutes when the ignition is switched off. Consult an approved Dealer.
     independent: true
+  component_id: body_ac_compressor
+  detection: diagnostic
 - id: megane4_elec_electrical_card_key_synchronization_v1
   claim_key: megane4_elec_electrical_card_key_synchronization
   version: 1
@@ -136,6 +142,8 @@ claims:
       panel. The card battery is flat or the card is out of synch. Check the card
       battery status or place the card in the dedicated placement area.
     independent: true
+  component_id: electrical_keyless
+  detection: diagnostic
 - id: megane4_elec_electrical_charging_aborts_and_batt_v1
   claim_key: megane4_elec_electrical_charging_aborts_and_batt
   version: 1
@@ -168,6 +176,8 @@ claims:
       ''battery charging impossible'', often after OTA updates. Heat pump defects
       have been identified as a frequent cause."'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_charging_impossible_erro_v1
   claim_key: megane4_elec_electrical_charging_impossible_erro
   version: 1
@@ -206,6 +216,8 @@ claims:
       direncini (Ohm) sürekli ölçer. Eğer direnç yüksekse veya dalgalanma varsa, araç
       kendini korumaya alır ve şarjı reddeder."'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_chronic_throttle_body_va_v1
   claim_key: megane4_elec_electrical_chronic_throttle_body_va
   version: 1
@@ -247,6 +259,8 @@ claims:
       arızalı bir gaz kelebeği valfi ve gaz pedalı modülündeki arızalı elektronik
       parçalar olduğu doğrulandı"'
     independent: true
+  component_id: engine_throttle_body
+  detection: diagnostic
 - id: megane4_elec_electrical_climate_control_malfunct_v1
   claim_key: megane4_elec_electrical_climate_control_malfunct
   version: 1
@@ -275,6 +289,8 @@ claims:
     site_or_channel: au7o.io
     quote: '"**Climate control malfunction**"'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_confusion_between_fully__v1
   claim_key: megane4_elec_electrical_confusion_between_fully_
   version: 1
@@ -307,6 +323,8 @@ claims:
       bulunması, bir karışıklığa yol açabilir; hibrit E-tech modelleri içten yanmalı
       motora ve dolayısıyla katalitik konvertöre sahip olacaktır."'
     independent: true
+  component_id: emissions_catalytic_converter
+  detection: diagnostic
 - id: megane4_elec_electrical_corroded_gas_pedal_conne_v1
   claim_key: megane4_elec_electrical_corroded_gas_pedal_conne
   version: 1
@@ -341,6 +359,8 @@ claims:
       kontak temizleyici ile temizledim ve düzgün bir şekilde yerine oturttum ve sorun
       tamamen ortadan kalktı"'
     independent: true
+  component_id: electrical_instrument_cluster
+  detection: visual
 - id: megane4_elec_electrical_dc_charging_power_collap_v1
   claim_key: megane4_elec_electrical_dc_charging_power_collap
   version: 1
@@ -369,6 +389,8 @@ claims:
     site_or_channel: what-breaks.com
     quote: '"DC charging power that collapses in winter without preconditioning."'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_defective_multimedia_sys_v1
   claim_key: megane4_elec_electrical_defective_multimedia_sys
   version: 1
@@ -400,6 +422,8 @@ claims:
     quote: '"Bugs du système multimédia et du combiné : écran figé, redémarrage, pertes
       de Bluetooth ou de caméra de recul."'
     independent: true
+  component_id: electrical_instrument_cluster
+  detection: visual
 - id: megane4_elec_electrical_electric_power_steering__v1
   claim_key: megane4_elec_electrical_electric_power_steering_
   version: 1
@@ -433,6 +457,8 @@ claims:
       steering module operation. Unlike hydraulic systems, electric steering relies
       entirely on stable electrical supply."'
     independent: true
+  component_id: steering_electric_power_steering
+  detection: diagnostic
 - id: megane4_elec_electrical_faulty_ac_charging_syste_v1
   claim_key: megane4_elec_electrical_faulty_ac_charging_syste
   version: 1
@@ -462,6 +488,8 @@ claims:
     quote: '"Problèmes de charge AC sur le chargeur 22 kW. La charge refuse parfois
       de démarrer ou s''arrête avec un message d''erreur."'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_heat_pump_climate_contro_v1
   claim_key: megane4_elec_electrical_heat_pump_climate_contro
   version: 1
@@ -495,6 +523,8 @@ claims:
     quote: '"Teşhis: Soğuk havalarda (-5°C ve altı) klima açıldığında, ön taraftan
       traktör benzeri bir uğultu ve titreşim gelmesi."'
     independent: true
+  component_id: ev_heat_pump
+  detection: test_drive
 - id: megane4_elec_electrical_heat_pump_insulation_fau_v1
   claim_key: megane4_elec_electrical_heat_pump_insulation_fau
   version: 1
@@ -528,6 +558,8 @@ claims:
     quote: '"a heat-pump insulation fault that prevents charging entirely — acknowledged
       by Renault as a known weakness, mostly under warranty/goodwill."'
     independent: true
+  component_id: ev_heat_pump
+  detection: test_drive
 - id: megane4_elec_electrical_heater_blower_resistor_f_v1
   claim_key: megane4_elec_electrical_heater_blower_resistor_f
   version: 1
@@ -560,6 +592,8 @@ claims:
       blower resistor. [...] Thermal fatigue and electrical resistance buildup cause
       the resistor to fail, limiting current flow at higher fan speeds."'
     independent: true
+  component_id: body_hvac_blower
+  detection: visual
 - id: megane4_elec_electrical_inaccurate_range_estimat_v1
   claim_key: megane4_elec_electrical_inaccurate_range_estimat
   version: 1
@@ -590,6 +624,8 @@ claims:
     site_or_channel: au7o.io
     quote: '"**Inaccurate range display**"'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_infotainment_system_inst_v1
   claim_key: megane4_elec_electrical_infotainment_system_inst
   version: 1
@@ -620,6 +656,8 @@ claims:
     site_or_channel: github.com
     quote: '- Notice Megane E-TECH (FR)'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_malfunctioning_charging__v1
   claim_key: megane4_elec_electrical_malfunctioning_charging_
   version: 1
@@ -649,6 +687,8 @@ claims:
     quote: '"Trappe de recharge capricieuse qui se bloque ou se ferme mal après certaines
       charges."'
     independent: true
+  component_id: ev_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_multimedia_screen_freezi_v1
   claim_key: megane4_elec_electrical_multimedia_screen_freezi
   version: 1
@@ -677,6 +717,8 @@ claims:
     site_or_channel: Oto Tayfa
     quote: '"multimedya ekranında donmalar ve dokunmatik hassasiyet sorunları"'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_openr_link_connectivity__v1
   claim_key: megane4_elec_electrical_openr_link_connectivity_
   version: 1
@@ -707,6 +749,8 @@ claims:
     site_or_channel: github.com
     quote: '- Notice OpenR Link (FR)'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_openr_link_infotainment__v1
   claim_key: megane4_elec_electrical_openr_link_infotainment_
   version: 1
@@ -739,6 +783,8 @@ claims:
     site_or_channel: elektrikliturkiye.com
     quote: '"Teşhis: Sürüş sırasında ekranın kararması veya Apple CarPlay’in donması."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_openr_link_software_cras_v1
   claim_key: megane4_elec_electrical_openr_link_software_cras
   version: 1
@@ -768,6 +814,8 @@ claims:
     quote: '"OpenR-Link software with crashes and black screens, which only newer
       updates (from version 3.5) calm down."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_over_the_air_ota_update__v1
   claim_key: megane4_elec_electrical_over_the_air_ota_update_
   version: 1
@@ -799,6 +847,8 @@ claims:
     quote: '"Over-the-air updates sometimes introduce new bugs or fail to install
       correctly."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_phantom_warning_notifica_v1
   claim_key: megane4_elec_electrical_phantom_warning_notifica
   version: 1
@@ -828,6 +878,8 @@ claims:
     quote: '"On the 2022-2026 Renault Megane E-Tech, the Megane E-Tech experiences
       various software-related issues including **phantom notifications**"'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_electrical_potential_misdiagnosis_d_v1
   claim_key: megane4_elec_electrical_potential_misdiagnosis_d
   version: 1
@@ -890,6 +942,8 @@ claims:
       and rear doors. [...] Worn cable-driven window regulators degrade over time
       due to tension loss or motor strain."'
     independent: true
+  component_id: body_window_regulator
+  detection: visual
 - id: megane4_elec_electrical_premature_motor_failures_v1
   claim_key: megane4_elec_electrical_premature_motor_failures
   version: 1
@@ -952,6 +1006,8 @@ claims:
     quote: The programmable air conditioning fails to work. Electrical fault. Consult
       an approved Dealer.
     independent: true
+  component_id: body_ac_compressor
+  detection: diagnostic
 - id: megane4_elec_electrical_steering_assistance_moto_v1
   claim_key: megane4_elec_electrical_steering_assistance_moto
   version: 1
@@ -985,6 +1041,8 @@ claims:
       wheels. Fault with the electric assistance motor. Fault in the assistance system.
       Consult an approved Dealer.
     independent: true
+  component_id: steering_electric_power_steering
+  detection: diagnostic
 - id: megane4_elec_electrical_system_wide_electrical_i_v1
   claim_key: megane4_elec_electrical_system_wide_electrical_i
   version: 1
@@ -1017,6 +1075,8 @@ claims:
       output. [...] Affected Systems: power steering, windows and mirrors, start-stop
       systems, dashboard warning lights."'
     independent: true
+  component_id: electrical_battery_charging
+  detection: diagnostic
 - id: megane4_elec_electrical_unresolved_ota_over_the__v1
   claim_key: megane4_elec_electrical_unresolved_ota_over_the_
   version: 1
@@ -1049,6 +1109,8 @@ claims:
       Any bugs you find, please add an issue. When the bug is fixed in software, please
       close it.
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: megane4_elec_emissions_dpf_clogging_in_1_5_dci__v1
   claim_key: megane4_elec_emissions_dpf_clogging_in_1_5_dci_
   version: 1
@@ -1083,6 +1145,8 @@ claims:
       during short trips. This leads to soot accumulation, restricted exhaust flow,
       and degraded combustion efficiency."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: megane4_elec_engine_ignition_coil_pack_failu_v1
   claim_key: megane4_elec_engine_ignition_coil_pack_failu
   version: 1
@@ -1114,6 +1178,8 @@ claims:
       issues in the Renault Megane. [...] Each cylinder relies on a dedicated coil.
       Failure in a single unit disrupts combustion balance, reducing engine efficiency."'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: megane4_elec_engine_oil_pressure_solenoid_va_v1
   claim_key: megane4_elec_engine_oil_pressure_solenoid_va
   version: 1
@@ -1146,6 +1212,8 @@ claims:
       flow, causing dangerous pressure spikes that threaten seals, gaskets, and internal
       engine components."'
     independent: true
+  component_id: engine_oil_pump
+  detection: diagnostic
 - id: megane4_elec_general_fragile_2022_series_clim_v1
   claim_key: megane4_elec_general_fragile_2022_series_clim
   version: 1
@@ -1175,6 +1243,8 @@ claims:
     quote: '"Compresseur de climatisation fragile sur des séries de 2022, parfois
       après de longues charges rapides."'
     independent: true
+  component_id: body_ac_compressor
+  detection: diagnostic
 - id: megane4_elec_general_heat_pump_failure_leadin_v1
   claim_key: megane4_elec_general_heat_pump_failure_leadin
   version: 1
@@ -1210,6 +1280,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 70000
+  component_id: ev_heat_pump
+  detection: test_drive
 - id: megane4_elec_general_poign_es_de_porte_door_h_v1
   claim_key: megane4_elec_general_poign_es_de_porte_door_h
   version: 1
@@ -1266,6 +1338,8 @@ claims:
     quote: '"Les amortisseurs peuvent se mettre à grincer au passage des irrégularités.
       Le phénomène persiste parfois même après un remplacement."'
     independent: true
+  component_id: suspension_shock_absorbers
+  detection: test_drive
 - id: megane4_elec_suspension_premature_cardan_and_whe_v1
   claim_key: megane4_elec_suspension_premature_cardan_and_whe
   version: 1
@@ -1299,3 +1373,5 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: suspension_wheel_bearings
+  detection: test_drive

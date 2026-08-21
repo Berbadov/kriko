@@ -50,6 +50,8 @@ claims:
       gibi uzun düzlüklerde yüksek hızlarda sürüş yaptığınızda ve performansı zorladığınızda
       motor ciddi ısı döngülerine maruz kalır.
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5h_cooling_m282_thermostat_housing__v1
   claim_key: h5h_cooling_m282_thermostat_housing_
   version: 1
@@ -84,6 +86,8 @@ claims:
     quote: Thermostat housing leaks follow a pattern seen across multiple Mercedes
       engine families.
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5h_cooling_plastic_thermostat_housi_v1
   claim_key: h5h_cooling_plastic_thermostat_housi
   version: 1
@@ -121,6 +125,8 @@ claims:
       When the housing fails — whether at the gasket, the element or the bypass valve
       — the entire assembly requires replacement.
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5h_cooling_thermostat_housing_crack_v1
   claim_key: h5h_cooling_thermostat_housing_crack
   version: 1
@@ -159,6 +165,8 @@ claims:
     quote: The thermostat housing is made of plastic, which undergoes extreme heat
       cycles, especially during spirited highway driving.
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5h_electrical_h5h_1_3_tce_fuel_pressur_v1
   claim_key: h5h_electrical_h5h_1_3_tce_fuel_pressur
   version: 1
@@ -199,6 +207,8 @@ claims:
       yol açabilir. Bu durum, ECU'ya giden voltaj sinyalinde dalgalanmalar yaratarak
       yalancı bir P0087 arızası tetikler.
     independent: true
+  component_id: electrical_wiring_loom
+  detection: diagnostic
 - id: h5h_electrical_overheating_due_to_fault_v1
   claim_key: h5h_electrical_overheating_due_to_fault
   version: 1
@@ -228,6 +238,8 @@ claims:
       koruma altına alır. Maksimum sıcaklık sorunlarında cihaz uzun süre susuz çalışmış
       ve bu sebeple kuru yanma meydana gelmiş olabilir."'
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5h_electrical_r_link_2_infotainment_we_v1
   claim_key: h5h_electrical_r_link_2_infotainment_we
   version: 1
@@ -254,6 +266,8 @@ claims:
     site_or_channel: what-breaks.com
     quote: '"Third the R-Link 2 infotainment and a weak 12V battery."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: h5h_electrical_rapid_wear_of_spark_plug_v1
   claim_key: h5h_electrical_rapid_wear_of_spark_plug
   version: 1
@@ -285,6 +299,8 @@ claims:
     quote: '"on the network you can find complaints about ... the rapid wear of spark
       plugs and ignition coils"'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: h5h_electrical_water_pressure_sensor_fa_v1
   claim_key: h5h_electrical_water_pressure_sensor_fa
   version: 1
@@ -401,6 +417,8 @@ claims:
       Siyah duman kötü egzoz kokusu ve turbo enjektör dpf gibi sistemlerin çalışmasına
       engel olur."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: h5h_emissions_h5h_1_3_tce_oxygen_senso_v1
   claim_key: h5h_emissions_h5h_1_3_tce_oxygen_senso
   version: 1
@@ -436,6 +454,8 @@ claims:
       nedeniyle bu sensörün zamanla değiştirilmesi gerekir. Oksijen sensörü, ECU’ya
       hayati öneme sahip hava-yakıt karışımı bilgilerini sağlar."'
     independent: true
+  component_id: engine_o2_sensor
+  detection: diagnostic
 - id: h5h_emissions_h5h_1_3_tce_premature_ca_v1
   claim_key: h5h_emissions_h5h_1_3_tce_premature_ca
   version: 1
@@ -472,6 +492,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 150000
+  component_id: emissions_catalytic_converter
+  detection: diagnostic
 - id: h5h_engine_1_3_tce_h5h_excessive_oi_v1
   claim_key: h5h_engine_1_3_tce_h5h_excessive_oi
   version: 1
@@ -505,6 +527,8 @@ claims:
       da, 1.3 TCe motorlar sürekli olarak ideal çalışma sıcaklığına ulaşmadan zorlanırsa
       veya karbon nedeniyle segmanlar sıkışırsa yağ yakabilir.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_1_3_tce_h5ht_aluminum_bl_v1
   claim_key: h5h_engine_1_3_tce_h5ht_aluminum_bl
   version: 1
@@ -551,6 +575,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_aluminum_block_susceptib_v1
   claim_key: h5h_engine_aluminum_block_susceptib
   version: 1
@@ -587,6 +613,8 @@ claims:
       oil levels? Say goodbye to the block. Decided to tow something? Say goodbye
       to the block and head."'
     independent: true
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: h5h_engine_carbon_build_up_in_1_3_t_v1
   claim_key: h5h_engine_carbon_build_up_in_1_3_t
   version: 1
@@ -617,6 +645,8 @@ claims:
     site_or_channel: motorreviewer.com
     quote: Carbon build-up
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: h5h_engine_carbon_buildup_on_intake_v1
   claim_key: h5h_engine_carbon_buildup_on_intake
   version: 1
@@ -659,6 +689,8 @@ claims:
       performance ramifications since it restricts the air flow so that the engine
       does not get enough oxygen to burn fuel effectively."'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: h5h_engine_excessive_oil_consumptio_v1
   claim_key: h5h_engine_excessive_oil_consumptio
   version: 1
@@ -697,6 +729,8 @@ claims:
       do not fulfill specifications. Some engines likewise experience high oil intake
       as they age."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_fuel_pump_seal_failure_c_v1
   claim_key: h5h_engine_fuel_pump_seal_failure_c
   version: 1
@@ -732,6 +766,8 @@ claims:
     quote: Ayrıca pompanın iç sızdırmazlık elemanlarının bozulması, yüksek basınçlı
       yakıtın motor yağına karışmasına (yağ sulanması) da yol açabilir.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: h5h_engine_h5h_1_3_tce_intake_valve_v1
   claim_key: h5h_engine_h5h_1_3_tce_intake_valve
   version: 1
@@ -771,6 +807,8 @@ claims:
     site_or_channel: motoranimal.com
     quote: the engine uses direct injection (yes, it has problems with carbon buildup);
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: h5h_engine_h5h_1_3_tce_premature_sp_v1
   claim_key: h5h_engine_h5h_1_3_tce_premature_sp
   version: 1
@@ -808,6 +846,8 @@ claims:
       than you may expect and they cost pretty much which takes up the costs of owning
       the engine.
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: h5h_engine_h5h_engine_block_and_hea_v1
   claim_key: h5h_engine_h5h_engine_block_and_hea
   version: 1
@@ -875,6 +915,8 @@ claims:
     quote: Aşınmış eski kadehin yeni pompaya takılması, yeni parçanın da kısa sürede
       bozulmasına neden olur.
     independent: true
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: h5h_engine_h5h_engine_oil_consumpti_v1
   claim_key: h5h_engine_h5h_engine_oil_consumpti
   version: 1
@@ -908,6 +950,8 @@ claims:
       here is an aluminum block with an open cooling jacket, which leads with mileage
       and the piston gap grows."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_h5h_piston_ring_sticking_v1
   claim_key: h5h_engine_h5h_piston_ring_sticking
   version: 1
@@ -944,6 +988,8 @@ claims:
       olarak ideal çalışma sıcaklığına ulaşmadan zorlanırsa veya karbon nedeniyle
       segmanlar sıkışırsa
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_h5h_timing_chain_stretch_v1
   claim_key: h5h_engine_h5h_timing_chain_stretch
   version: 1
@@ -979,6 +1025,8 @@ claims:
     quote: P0340 with P0016 (cam/crank correlation, typically on no-start cases from
       cam sensor or timing chain wear)
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_h5h_turbo_pipe_failure_l_v1
   claim_key: h5h_engine_h5h_turbo_pipe_failure_l
   version: 1
@@ -1010,6 +1058,8 @@ claims:
     quote: '"on the network you can find complaints about the loss of traction due
       to the fault of a flown turbine pipe"'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5h_engine_h5h_turbo_pipes_detach_d_v1
   claim_key: h5h_engine_h5h_turbo_pipes_detach_d
   version: 1
@@ -1047,6 +1097,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2017
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5h_engine_h5ht_oil_injectors_fail__v1
   claim_key: h5h_engine_h5ht_oil_injectors_fail_
   version: 1
@@ -1085,6 +1137,8 @@ claims:
       play with oil viscosity, those injectors will fail and the engine will most
       likely overheat."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: h5h_engine_high_oil_consumption_in__v1
   claim_key: h5h_engine_high_oil_consumption_in_
   version: 1
@@ -1115,6 +1169,8 @@ claims:
     quote: Motor 2018 ve 2019 yılları arasında ilk piyasaya sürüldüğünde, bazı kullanıcılar
       ortalamanın üzerinde yağ tüketimi bildirdi.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_intake_carbon_buildup_ri_v1
   claim_key: h5h_engine_intake_carbon_buildup_ri
   version: 1
@@ -1145,6 +1201,8 @@ claims:
     site_or_channel: araclo.com
     quote: şehir içi ağırlıklı kullanılan örneklerde emme tarafı karbon birikimidir.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5h_engine_intake_valve_carbon_buil_v1
   claim_key: h5h_engine_intake_valve_carbon_buil
   version: 1
@@ -1181,6 +1239,8 @@ claims:
       If the problem is neglected for some time, the head will need to be taken off
       to clean the intake valves."'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: h5h_engine_oil_burning_in_early_h5h_v1
   claim_key: h5h_engine_oil_burning_in_early_h5h
   version: 1
@@ -1219,6 +1279,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2018
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_piston_failure_due_to_de_v1
   claim_key: h5h_engine_piston_failure_due_to_de
   version: 1
@@ -1261,6 +1323,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2010
+  component_id: engine_injectors
+  detection: diagnostic
 - id: h5h_engine_post_warranty_timing_cha_v1
   claim_key: h5h_engine_post_warranty_timing_cha
   version: 1
@@ -1296,6 +1360,8 @@ claims:
     quote: '"Then the warranty runs out and soon after the customers'' engines break
       down. **Can be expensive without warranty.**"'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_premature_spark_plug_and_v1
   claim_key: h5h_engine_premature_spark_plug_and
   version: 1
@@ -1331,6 +1397,8 @@ claims:
       than you may expect and they cost pretty much which takes up the costs of owning
       the engine."'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: h5h_engine_progressive_oil_consumpt_v1
   claim_key: h5h_engine_progressive_oil_consumpt
   version: 1
@@ -1372,6 +1440,8 @@ claims:
       that do not meet specs. Some engines also experience high oil consumption as
       they age.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5h_engine_sprocket_wear_and_premat_v1
   claim_key: h5h_engine_sprocket_wear_and_premat
   version: 1
@@ -1407,6 +1477,8 @@ claims:
     quote: '"The point here is that if you don''t change **the sprockets the chain
       runs in**, there is a risk that the new chain will wear out faster."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_timing_chain_failure_ris_v1
   claim_key: h5h_engine_timing_chain_failure_ris
   version: 1
@@ -1450,6 +1522,8 @@ claims:
       in gear). Then when you start the car up the timing is out, the valves smash
       into the pistons and your engine is ruined.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_timing_chain_stretch_in__v1
   claim_key: h5h_engine_timing_chain_stretch_in_
   version: 1
@@ -1485,6 +1559,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 140000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_timing_chain_tensioner_d_v1
   claim_key: h5h_engine_timing_chain_tensioner_d
   version: 1
@@ -1521,6 +1597,8 @@ claims:
       was supposed to increase reliability, would fall to bits and result in catastrophic
       failure)
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_engine_turbo_pipe_detachment_in_v1
   claim_key: h5h_engine_turbo_pipe_detachment_in
   version: 1
@@ -1555,6 +1633,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2017
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5h_engine_variable_oil_pump_failur_v1
   claim_key: h5h_engine_variable_oil_pump_failur
   version: 1
@@ -1591,6 +1671,8 @@ claims:
       not see the oil pressure warning light. Sometimes, the light will go on the
       dash when it’s already too late.
     independent: true
+  component_id: engine_oil_pump
+  detection: diagnostic
 - id: h5h_engine_wastegate_rattle_on_1_3__v1
   claim_key: h5h_engine_wastegate_rattle_on_1_3_
   version: 1
@@ -1627,6 +1709,8 @@ claims:
       turbocharger wastegate. Over time, the linkage rod connecting the actuator to
       the wastegate flap can develop slight play.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5h_fuel_system_faulty_fuel_injectors_ca_v1
   claim_key: h5h_fuel_system_faulty_fuel_injectors_ca
   version: 1
@@ -1666,6 +1750,8 @@ claims:
       tertibatında kurumlanmalara sebep olur. DPF sistemini hızlı bir şekilde doldurur.
       Bozuk enjektörlü araçlarda mavi beyaz karışımı kokulu egzoz gazı çıkışı gözlemlenir."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: h5h_fuel_system_fuel_pump_seal_failure_o_v1
   claim_key: h5h_fuel_system_fuel_pump_seal_failure_o
   version: 1
@@ -1700,6 +1786,8 @@ claims:
     quote: Ayrıca pompanın iç sızdırmazlık elemanlarının bozulması, yüksek basınçlı
       yakıtın motor yağına karışmasına (yağ sulanması) da yol açabilir.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: h5h_fuel_system_fuel_return_valve_leak_c_v1
   claim_key: h5h_fuel_system_fuel_return_valve_leak_c
   version: 1
@@ -1793,6 +1881,8 @@ claims:
       ölçen sensörün iç direnç değerlerinin bozulması hatalı sinyal üretimine neden
       olur.
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: h5h_fuel_system_h5h_high_pressure_fuel_p_v1
   claim_key: h5h_fuel_system_h5h_high_pressure_fuel_p
   version: 1
@@ -1831,6 +1921,8 @@ claims:
       veya RN17 standartlarına uygun olmayan kalitesiz yağ kullanımı bu aşınmayı hızlandırır.
       Aşınan pompa, yeterli strok yapamadığı için yakıtı hedef değerlere sıkıştıramaz.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: h5h_fuel_system_h5h_hpfp_seal_leak_dilut_v1
   claim_key: h5h_fuel_system_h5h_hpfp_seal_leak_dilut
   version: 1
@@ -1865,6 +1957,8 @@ claims:
     quote: ağa karışması, HPFP'nin iç keçelerinin kaçırdığının ve pompanın ömrünü
       tamamladığının en net kanıtıdır.
     independent: true
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: h5h_fuel_system_hp_pump_wear_causes_fuel_v1
   claim_key: h5h_fuel_system_hp_pump_wear_causes_fuel
   version: 1
@@ -1904,6 +1998,8 @@ claims:
       mekanik aşınmasından, yakıt rayı basınç sensörünün hatalı ölçümlerinden veya
       tıkanmış yakıt filtrelerinden kaynaklanır.
     independent: true
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: h5h_general_dealer_network_cover_up__v1
   claim_key: h5h_general_dealer_network_cover_up_
   version: 1
@@ -1945,6 +2041,8 @@ claims:
       It therefore appears that the engine problems have been resolved through the
       dealer network."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5h_transmission_dual_clutch_transmission_v1
   claim_key: h5h_transmission_dual_clutch_transmission
   version: 1
@@ -2014,6 +2112,8 @@ claims:
       bozulur. Belirtisi; kalkışta titreme ve tereddüt, düşük hızda geçiş darbeleri,
       geri vites ile ileri arasında gecikme ve gösterge panelinde şanzıman uyarısıdır.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 legacy_part_ids:
 - h5h_115
 - h5h_130

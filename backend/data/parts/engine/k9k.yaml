@@ -36,6 +36,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Hava Yakıt Oran Valfi (LDA) Arızalı"'
     independent: true
+  component_id: engine_o2_sensor
+  detection: diagnostic
 - id: k9k_electrical_crankshaft_position_sens_v1
   claim_key: k9k_electrical_crankshaft_position_sens
   version: 1
@@ -74,6 +76,8 @@ claims:
     site_or_channel: pdfcoffee.com
     quote: DTC C001 CAN communication line
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: k9k_electrical_ecm_engine_control_modul_v1
   claim_key: k9k_electrical_ecm_engine_control_modul
   version: 1
@@ -112,6 +116,8 @@ claims:
 
       DTC P0685 ECM relay control'
     independent: true
+  component_id: engine_ecu
+  detection: diagnostic
 - id: k9k_electrical_frequent_crankshaft_sens_v1
   claim_key: k9k_electrical_frequent_crankshaft_sens
   version: 1
@@ -145,6 +151,8 @@ claims:
     quote: The crankshaft position sensor - according to reviews, quite often fails
       on cars with high mileage.
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: k9k_electrical_recurrent_alternator_fai_v1
   claim_key: k9k_electrical_recurrent_alternator_fai
   version: 1
@@ -177,6 +185,8 @@ claims:
     site_or_channel: volklub.com
     quote: AC compressor changed once
     independent: true
+  component_id: electrical_battery_charging
+  detection: diagnostic
 - id: k9k_emissions_diesel_particulate_filte_v1
   claim_key: k9k_emissions_diesel_particulate_filte
   version: 1
@@ -207,6 +217,8 @@ claims:
     site_or_channel: avtomobile.cc
     quote: Proper DPF regeneration is essential for longevity.
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_dpf_and_adblue_system_re_v1
   claim_key: k9k_emissions_dpf_and_adblue_system_re
   version: 1
@@ -238,6 +250,8 @@ claims:
     quote: '"diesel-specific components (**DPF, AdBlue system**) also carry higher
       replacement costs,"'
     independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: k9k_emissions_dpf_and_egr_system_inter_v1
   claim_key: k9k_emissions_dpf_and_egr_system_inter
   version: 1
@@ -271,6 +285,8 @@ claims:
       a scan tool... EGR issues lead to more soot, which then clogs the DPF faster.
       See? They’re always connected."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_dpf_clogging_due_to_oil__v1
   claim_key: k9k_emissions_dpf_clogging_due_to_oil_
   version: 1
@@ -309,6 +325,8 @@ claims:
       even a tiny bit of oil. Over time, that ash builds up in the DPF... Once it
       hits about 60 grams per liter, that filter is pretty much done for."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_dpf_regeneration_alarm_i_v1
   claim_key: k9k_emissions_dpf_regeneration_alarm_i
   version: 1
@@ -341,6 +359,8 @@ claims:
     site_or_channel: play.google.com
     quote: '"An alarm is triggered while regenerating."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_dpf_thermal_damage_from__v1
   claim_key: k9k_emissions_dpf_thermal_damage_from_
   version: 1
@@ -377,6 +397,8 @@ claims:
       soot builds up, temperatures spike, and you end up with a melted or cracked
       ceramic substrate."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_egr_cooler_corrosion_and_v1
   claim_key: k9k_emissions_egr_cooler_corrosion_and
   version: 1
@@ -413,6 +435,8 @@ claims:
       tiny passages and gums up the EGR valve itself... If the internal core cracks,
       it leaks coolant directly into the exhaust stream."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_egr_fouling_and_dpf_bloc_v1
   claim_key: k9k_emissions_egr_fouling_and_dpf_bloc
   version: 1
@@ -448,6 +472,8 @@ claims:
     quote: '- EGR fouling + DPF (city use) — moderate, repair cost €400–€1,000, 80,000
       km–150,000 km'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_egr_passages_clogging_le_v1
   claim_key: k9k_emissions_egr_passages_clogging_le
   version: 1
@@ -480,6 +506,8 @@ claims:
       or the EGR passages are completely restricted. A slight change in idle quality
       is indicative of partially clogged passages."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_egr_system_control_circu_v1
   claim_key: k9k_emissions_egr_system_control_circu
   version: 1
@@ -516,6 +544,8 @@ claims:
 
       DTC P0409 EGR position sensor'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_egr_valve_deactivation_d_v1
   claim_key: k9k_emissions_egr_valve_deactivation_d
   version: 1
@@ -548,6 +578,8 @@ claims:
     site_or_channel: delphiautoparts.com
     quote: '"Atmospheric pressure too low, the EGR valve is deactivated"'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_egr_valve_malfunction_v1
   claim_key: k9k_emissions_egr_valve_malfunction
   version: 1
@@ -579,6 +611,8 @@ claims:
     quote: malfunctions of the EGR exhaust gas recirculation valve, which are common
       for diesel engines.
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_egr_valve_wear_and_stick_v1
   claim_key: k9k_emissions_egr_valve_wear_and_stick
   version: 1
@@ -614,6 +648,8 @@ claims:
       EGR valve, which dumps too much exhaust gas into the intake at idle, diluting
       the air-fuel mix and causing poor running."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_intermittent_egr_related_v1
   claim_key: k9k_emissions_intermittent_egr_related
   version: 1
@@ -645,6 +681,8 @@ claims:
     quote: '"For electro-mechanical valves, a normal result indicates that the EGR-related
       concern is intermittent, check for stored fault codes with diagnostic equipment."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_emissions_k9k_diesel_egr_and_dpf_c_v1
   claim_key: k9k_emissions_k9k_diesel_egr_and_dpf_c
   version: 1
@@ -679,6 +717,8 @@ claims:
     quote: The EGR valve and particulate filter cause quite a few problems. Most car
       enthusiasts turn off the valve and cut out the filter.
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_k9k_dpf_clogging_risk_v1
   claim_key: k9k_emissions_k9k_dpf_clogging_risk
   version: 1
@@ -716,6 +756,8 @@ claims:
       görülen bir diğer sorun, dizel partikül filtresinin (DPF) tıkanmasıdır. Bu durum,
       aracın performansını düşürebilir ve yakıt tüketimini artırabilir.'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_k9k_euro_6_adblue_inject_v1
   claim_key: k9k_emissions_k9k_euro_6_adblue_inject
   version: 1
@@ -749,6 +791,8 @@ claims:
       tıkanma veya arıza yapma eğilimindedir. Bu durum, aracın emisyon seviyelerini
       artırabilir ve motor performansını olumsuz etkileyebilir.'
     independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: k9k_emissions_particulate_filter_and_e_v1
   claim_key: k9k_emissions_particulate_filter_and_e
   version: 1
@@ -782,6 +826,8 @@ claims:
     quote: '"Most diesel cars from Europe are equipped with a particulate filter and
       an EGR valve, which tend to clog."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_emissions_particulate_filter_failu_v1
   claim_key: k9k_emissions_particulate_filter_failu
   version: 1
@@ -813,6 +859,8 @@ claims:
     quote: Another common problem with modern diesel engines is the particulate filter,
       which can be expensive.
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: k9k_engine_1_5_dci_k9k_injector_fai_v1
   claim_key: k9k_engine_1_5_dci_k9k_injector_fai
   version: 1
@@ -844,6 +892,8 @@ claims:
     site_or_channel: dizelmarketim.com.tr
     quote: 1.5 dCi enjektör arızası
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_1_5_dci_k9k_injectors_we_v1
   claim_key: k9k_engine_1_5_dci_k9k_injectors_we
   version: 1
@@ -876,6 +926,8 @@ claims:
       düşük kaliteli yakıt kullanımı gibi dış etkenlere bağlı olarak enjektör ömürleri
       genelde standart kullanıcıya göre daha kısa olmaktadır.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_air_intake_filter_contam_v1
   claim_key: k9k_engine_air_intake_filter_contam
   version: 1
@@ -933,6 +985,8 @@ claims:
     quote: Boost pressure sensor - its failure is not common, but it does happen.
       If it fails, traction disappears.
     independent: true
+  component_id: engine_boost_sensor
+  detection: diagnostic
 - id: k9k_engine_carbon_buildup_in_turboc_v1
   claim_key: k9k_engine_carbon_buildup_in_turboc
   version: 1
@@ -964,6 +1018,8 @@ claims:
     quote: 'Karbon Birikimi: Özellikle düşük kaliteli yakıt kullanımı karbon birikimine
       neden olabilir.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_chronic_injector_wear_in_v1
   claim_key: k9k_engine_chronic_injector_wear_in
   version: 1
@@ -997,6 +1053,8 @@ claims:
     quote: High-mileage K9K engines can develop injector wear, leading to hard starts
       and smoke.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_chronic_turbocharger_bea_v1
   claim_key: k9k_engine_chronic_turbocharger_bea
   version: 1
@@ -1029,6 +1087,8 @@ claims:
     site_or_channel: ankaturbo.com.tr
     quote: 'Yataklar: Aşınmışsa değiştirilmeli.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_connecting_rod_bearing_c_v1
   claim_key: k9k_engine_connecting_rod_bearing_c
   version: 1
@@ -1065,6 +1125,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 10000
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_connecting_rod_bearing_w_v1
   claim_key: k9k_engine_connecting_rod_bearing_w
   version: 1
@@ -1098,6 +1160,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_connecting_rod_failure_d_v1
   claim_key: k9k_engine_connecting_rod_failure_d
   version: 1
@@ -1160,6 +1224,8 @@ claims:
     quote: '"Radyatör Su Seviyesi Düşük", "Radyatör Kapağı Arızalı", "Radyatör Tıkalı",
       "Su Pompası Arızalı"'
     independent: true
+  component_id: engine_radiator
+  detection: visual
 - id: k9k_engine_cylinder_head_gasket_fai_v1
   claim_key: k9k_engine_cylinder_head_gasket_fai
   version: 1
@@ -1188,6 +1254,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Silindirler Su Alıyor (Kapak, Çatlak, Conta Arızalı)"'
     independent: true
+  component_id: engine_head_gasket
+  detection: diagnostic
 - id: k9k_engine_cylinder_misfires_k9k_v1
   claim_key: k9k_engine_cylinder_misfires_k9k
   version: 1
@@ -1224,6 +1292,8 @@ claims:
 
       DTC P0304 Cylinder 4 misfire'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_engine_back_compression__v1
   claim_key: k9k_engine_engine_back_compression_
   version: 1
@@ -1282,6 +1352,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Motor Yağ Yakıyor", "Aşırı Yağ Sarfiyatı"'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: k9k_engine_engine_rod_or_piston_noi_v1
   claim_key: k9k_engine_engine_rod_or_piston_noi
   version: 1
@@ -1337,6 +1409,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Intercooler Tıkalı veya Kaçak Var"'
     independent: true
+  component_id: engine_intercooler
+  detection: visual
 - id: k9k_engine_k9k_1_5_dci_105_bearing__v1
   claim_key: k9k_engine_k9k_1_5_dci_105_bearing_
   version: 1
@@ -1372,6 +1446,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 20000
+  component_id: emissions_egr
+  detection: diagnostic
 - id: k9k_engine_k9k_1_5_dci_bottom_end_b_v1
   claim_key: k9k_engine_k9k_1_5_dci_bottom_end_b
   version: 1
@@ -1408,6 +1484,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_k9k_1_5_dci_cylinder_lin_v1
   claim_key: k9k_engine_k9k_1_5_dci_cylinder_lin
   version: 1
@@ -1442,6 +1520,8 @@ claims:
     quote: An engine that rattles due to rotation of the liners is often replaced
       with a contract one - it’s cheaper and faster.
     independent: true
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_k9k_1_5_dci_injector_fai_v1
   claim_key: k9k_engine_k9k_1_5_dci_injector_fai
   version: 1
@@ -1476,6 +1556,8 @@ claims:
       standart dışı yakıt kullanımı sebebiyle toleranslarını yitirdiğinde, doğrudan
       enjektörlerin bozulmasına sebep olur.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_1_5_dci_oil_drain_ba_v1
   claim_key: k9k_engine_k9k_1_5_dci_oil_drain_ba
   version: 1
@@ -1549,6 +1631,8 @@ claims:
       the back of the belt, shredding it; when it breaks, the interference engine
       destroys valves and pistons.
     independent: true
+  component_id: engine_timing_belt
+  detection: history_check
 - id: k9k_engine_k9k_1_5_dci_turbo_failur_v1
   claim_key: k9k_engine_k9k_1_5_dci_turbo_failur
   version: 1
@@ -1590,6 +1674,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 10000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_k9k_bearing_wear_debris__v1
   claim_key: k9k_engine_k9k_bearing_wear_debris_
   version: 1
@@ -1626,6 +1712,8 @@ claims:
       produces chips, which the oil carries throughout the engine. So, in particular,
       the turbocharger of the 1.5 dCi K9K engine 'dies' just because of these chips.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_k9k_connecting_rod_beari_v1
   claim_key: k9k_engine_k9k_connecting_rod_beari
   version: 1
@@ -1666,6 +1754,8 @@ claims:
       lubricating the loaded rubbing parts. As a result, the wear of the liners accelerates,
       which soon leads to their rotation.
     independent: true
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_k9k_delphi_injectors_vul_v1
   claim_key: k9k_engine_k9k_delphi_injectors_vul
   version: 1
@@ -1698,6 +1788,8 @@ claims:
     site_or_channel: motorreviewer.com
     quote: Injectors Delphi is very sensitive to fuel quality.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_injector_failures_li_v1
   claim_key: k9k_engine_k9k_injector_failures_li
   version: 1
@@ -1734,6 +1826,8 @@ claims:
       şehir içi kullanım koşulları birleştiğinde, bu araçlarda enjektör sorunları
       kaçınılmaz hale gelebiliyor.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_injector_fatigue_cau_v1
   claim_key: k9k_engine_k9k_injector_fatigue_cau
   version: 1
@@ -1772,6 +1866,8 @@ claims:
       oranı fazla olduğundan enjektörlerin iç aksamı çok daha hızlı yorulur ve çekiş
       düşüklüğü şikayeti ön plandadır.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_injector_pump_sensit_v1
   claim_key: k9k_engine_k9k_injector_pump_sensit
   version: 1
@@ -1805,6 +1901,8 @@ claims:
       ( yakıt çıkış uçları) de zarar verebilirsiniz. Ayrıca bu aşağıdaki hasara da
       sebep olabilir. Piston delinmesi
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_injector_valve_wear__v1
   claim_key: k9k_engine_k9k_injector_valve_wear_
   version: 1
@@ -1840,6 +1938,8 @@ claims:
     quote: Megane'larda genellikle yüksek basınca bağlı enjektör valfi aşınması (geri
       dönüş kaçağı) daha sık görülür.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_injector_wear_can_bu_v1
   claim_key: k9k_engine_k9k_injector_wear_can_bu
   version: 1
@@ -1877,6 +1977,8 @@ claims:
       oluştururlar. Bu oluşan ısıdan en çok etkilenen piston kafalarıdır. Çünkü yanma
       tam da bu alanda olur. Bu da pistonların delinmesi ile sonuçlanır.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_k9k_liner_wear_debris_de_v1
   claim_key: k9k_engine_k9k_liner_wear_debris_de
   version: 1
@@ -1909,6 +2011,8 @@ claims:
       produces chips, which the oil carries throughout the engine. So, in particular,
       the turbocharger of the 1.5 dCi K9K engine “dies” just because of these chips.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_k9k_low_oil_pressure_fro_v1
   claim_key: k9k_engine_k9k_low_oil_pressure_fro
   version: 1
@@ -1944,6 +2048,8 @@ claims:
     quote: low oil pressure in this power unit may be due to a weakened oil pump pressure
       reducing valve spring.
     independent: true
+  component_id: engine_oil_pump
+  detection: diagnostic
 - id: k9k_engine_k9k_turbo_oil_starvation_v1
   claim_key: k9k_engine_k9k_turbo_oil_starvation
   version: 1
@@ -1977,6 +2083,8 @@ claims:
     site_or_channel: au7o.io
     quote: 1.5 dCi (K9K) Turbocharger Failure from Oil Starvation
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_liner_cranking_and_pisto_v1
   claim_key: k9k_engine_liner_cranking_and_pisto
   version: 1
@@ -2010,6 +2118,8 @@ claims:
     quote: Sometimes there are cases of cranking of liners and burnout of pistons
       - due to poorly functioning injectors.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_engine_low_compression_in_diese_v1
   claim_key: k9k_engine_low_compression_in_diese
   version: 1
@@ -2038,6 +2148,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Kompresyon Düşük", "Düşük Kompresyon"'
     independent: true
+  component_id: engine_bottom_end
+  detection: diagnostic
 - id: k9k_engine_motor_valve_adjustment_i_v1
   claim_key: k9k_engine_motor_valve_adjustment_i
   version: 1
@@ -2093,6 +2205,8 @@ claims:
     quote: 'Yağ Filtre Tıkanıklığı: Yağın serbest akışını engelleyen tıkanıklıklar
       turbo yataklarına zarar verebilir.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_oil_pressure_drop_due_to_v1
   claim_key: k9k_engine_oil_pressure_drop_due_to
   version: 1
@@ -2127,6 +2241,8 @@ claims:
       in the system. This is due to the oil filter valve and the oil pump pressure
       reducing valve spring."'
     independent: true
+  component_id: engine_oil_pump
+  detection: diagnostic
 - id: k9k_engine_recurrent_turbocharger_f_v1
   claim_key: k9k_engine_recurrent_turbocharger_f
   version: 1
@@ -2159,6 +2275,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 88000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_recurrent_water_pump_fai_v1
   claim_key: k9k_engine_recurrent_water_pump_fai
   version: 1
@@ -2189,6 +2307,8 @@ claims:
     site_or_channel: volklub.com
     quote: Water pump failed twice
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: k9k_engine_timing_belt_failure_inte_v1
   claim_key: k9k_engine_timing_belt_failure_inte
   version: 1
@@ -2219,6 +2339,8 @@ claims:
       engine stall without warning, refusal to start, metallic noises shortly before
       failure"'
     independent: true
+  component_id: engine_timing_belt
+  detection: history_check
 - id: k9k_engine_turbocharger_failure_bor_v1
   claim_key: k9k_engine_turbocharger_failure_bor
   version: 1
@@ -2251,6 +2373,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_failure_uns_v1
   claim_key: k9k_engine_turbocharger_failure_uns
   version: 1
@@ -2281,6 +2405,8 @@ claims:
     site_or_channel: oborudow.ru
     quote: '"The failure of the turbocharger mainly occurs"'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_imbalance_d_v1
   claim_key: k9k_engine_turbocharger_imbalance_d
   version: 1
@@ -2312,6 +2438,8 @@ claims:
     quote: 'Hatalı Kullanım: Motorun yeterince ısınmadan yüksek devirlerde kullanılması
       veya turbo motorun hemen stop edilmesi, turbo aşınmasını hızlandırabilir.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_leakage_in__v1
   claim_key: k9k_engine_turbocharger_leakage_in_
   version: 1
@@ -2338,6 +2466,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Turboşarjer Bağlantı Hortumlarına Kaçak"'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_pressure_is_v1
   claim_key: k9k_engine_turbocharger_pressure_is
   version: 1
@@ -2364,6 +2494,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Turboşarjer Basıncı Düşük"'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_seal_leakag_v1
   claim_key: k9k_engine_turbocharger_seal_leakag
   version: 1
@@ -2394,6 +2526,8 @@ claims:
     site_or_channel: ankaturbo.com.tr
     quote: 'Conta ve keçeler: Sızdırmazlığı sağlamak için yenilenir.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_wheel_imbal_v1
   claim_key: k9k_engine_turbocharger_wheel_imbal
   version: 1
@@ -2425,6 +2559,8 @@ claims:
     quote: Turbo pervaneleri, dengesiz çalışmayı önlemek için dengeleme makinesinde
       ayarlanır.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_engine_turbocharger_whining_noi_v1
   claim_key: k9k_engine_turbocharger_whining_noi
   version: 1
@@ -2456,6 +2592,8 @@ claims:
     quote: '"Bazı kullanıcılar, özellikle bakımı aksatılan araçlarda turbodan tiz
       bir ıslık sesi geldiğini ve hızlanmalarda isteksizlik yaşadıklarını aktarmıştır."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: k9k_fuel_system_common_injector_failures_v1
   claim_key: k9k_fuel_system_common_injector_failures
   version: 1
@@ -2494,6 +2632,8 @@ claims:
       doğru püskürtülememesi nedeniyle teklemenin, güç kaybının ve yakıt tüketiminde
       artışın raporlandığı belirtilmektedir."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_common_rail_delphi_fuel__v1
   claim_key: k9k_fuel_system_common_rail_delphi_fuel_
   version: 1
@@ -2534,6 +2674,8 @@ claims:
     independent: true
   applies_when:
     applies_year_to: 2009
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_common_rail_fuel_pressur_v1
   claim_key: k9k_fuel_system_common_rail_fuel_pressur
   version: 1
@@ -2601,6 +2743,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 10000
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_delphi_fuel_pump_failure_v1
   claim_key: k9k_fuel_system_delphi_fuel_pump_failure
   version: 1
@@ -2633,6 +2777,8 @@ claims:
     site_or_channel: Alınır Mı?
     quote: Bu yıllardaki en büyük risk Delfi yakıt pompasıdır.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_delphi_injection_pump_an_v1
   claim_key: k9k_fuel_system_delphi_injection_pump_an
   version: 1
@@ -2671,6 +2817,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 10000
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_delphi_injector_and_pump_v1
   claim_key: k9k_fuel_system_delphi_injector_and_pump
   version: 1
@@ -2704,6 +2852,8 @@ claims:
     quote: Injection pump, injectors - power systems from Delphi die very early on
       substandard Russian diesel fuel.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_delphi_injector_check_va_v1
   claim_key: k9k_fuel_system_delphi_injector_check_va
   version: 1
@@ -2739,6 +2889,8 @@ claims:
     quote: Also, the weak point of the Dekphi injection is the injector check valves,
       which excessively pour fuel into the return line.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_delphi_injectors_fail_qu_v1
   claim_key: k9k_fuel_system_delphi_injectors_fail_qu
   version: 1
@@ -2772,6 +2924,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 10000
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_fuel_flow_capacity_issue_v1
   claim_key: k9k_fuel_system_fuel_flow_capacity_issue
   version: 1
@@ -2802,6 +2956,8 @@ claims:
     site_or_channel: pdfcoffee.com
     quote: DTC P0087 Fuel flow capacity function
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: k9k_fuel_system_fuel_injector_malfunctio_v1
   claim_key: k9k_fuel_system_fuel_injector_malfunctio
   version: 1
@@ -2834,6 +2990,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Yakıt Püskürtme Zaman Ayarı Yanlış"'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_fuel_pump_malfunction_v1
   claim_key: k9k_fuel_system_fuel_pump_malfunction
   version: 1
@@ -2860,6 +3018,8 @@ claims:
     site_or_channel: guneroto.com
     quote: '"Yakıt Pompası Ayarları Hatalı"'
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_high_pressure_fuel_pump__v1
   claim_key: k9k_fuel_system_high_pressure_fuel_pump_
   version: 1
@@ -2893,6 +3053,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_injector_circuit_failure_v1
   claim_key: k9k_fuel_system_injector_circuit_failure
   version: 1
@@ -2931,6 +3093,8 @@ claims:
 
       DTC P0204 Injector circuit cylinder 4'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_delphi_fuel_pump_sen_v1
   claim_key: k9k_fuel_system_k9k_delphi_fuel_pump_sen
   version: 1
@@ -2961,6 +3125,8 @@ claims:
     site_or_channel: otomobiloji.com
     quote: Delphi yakıt pompası, düşük kaliteli motorin/mazot/yakıttan hiç hoşlanmaz.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_delphi_injection_pum_v1
   claim_key: k9k_fuel_system_k9k_delphi_injection_pum
   version: 1
@@ -2999,6 +3165,8 @@ claims:
       fuel system. Chips are formed in the pair “injection pump rotor – shaft rollers”.
       As a result, the injectors and the pump itself may fail.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_fuel_pump_failure_ca_v1
   claim_key: k9k_fuel_system_k9k_fuel_pump_failure_ca
   version: 1
@@ -3034,6 +3202,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2012
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_injector_dripping_ca_v1
   claim_key: k9k_fuel_system_k9k_injector_dripping_ca
   version: 1
@@ -3069,6 +3239,8 @@ claims:
     quote: ilk çalıştırmada yoğun beyaz veya gri duman ve genzi yakan çiğ mazot kokusu
       da doğrudan enjektör işemesi probleminin göstergesidir.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_injector_fatigue_und_v1
   claim_key: k9k_fuel_system_k9k_injector_fatigue_und
   version: 1
@@ -3105,6 +3277,8 @@ claims:
       gaza yüklenme oranı fazla olduğundan enjektörlerin iç aksamı çok daha hızlı
       yorulur ve çekiş düşüklüğü şikayeti ön plandadır.'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_injector_nozzle_clog_v1
   claim_key: k9k_fuel_system_k9k_injector_nozzle_clog
   version: 1
@@ -3138,6 +3312,8 @@ claims:
       için motor tam ısınamadan stop edilir. Bu durum Clio'larda enjektör ucu kurumlanması
       şikayetlerini artırır.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_injector_seizing_fro_v1
   claim_key: k9k_fuel_system_k9k_injector_seizing_fro
   version: 1
@@ -3171,6 +3347,8 @@ claims:
       değişmeyen filtreler sebebiyle yakıt sistemine partikül kaçması ve enjektör
       kitlenmesi yaygındır.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: k9k_fuel_system_k9k_siemens_injection_pu_v1
   claim_key: k9k_fuel_system_k9k_siemens_injection_pu
   version: 1
@@ -3204,6 +3382,8 @@ claims:
       excessive wear. As a result, the fuel injection pump does not receive enough
       fuel and operates abnormally, which immediately affects engine performance.
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: k9k_fuel_system_recurrent_vacuum_pump_fa_v1
   claim_key: k9k_fuel_system_recurrent_vacuum_pump_fa
   version: 1
