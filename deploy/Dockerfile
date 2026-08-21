@@ -16,6 +16,9 @@ COPY backend/ ./backend/
 # installed above.
 COPY knowledge/__init__.py ./knowledge/__init__.py
 COPY knowledge/yamlutil.py ./knowledge/yamlutil.py
+# Title similarity — backend/core/resolver.py and backend/sync.py both import
+# it, and knowledge/dedup.py shares it. Pure stdlib.
+COPY knowledge/title_sim.py ./knowledge/title_sim.py
 COPY knowledge/consequence_tier.py ./knowledge/consequence_tier.py
 COPY knowledge/domains.py ./knowledge/domains.py
 COPY knowledge/stoplists.py ./knowledge/stoplists.py

@@ -44,7 +44,7 @@ from backend.core.context import ListingContext
 from backend.core.equipment import listing_has_equipment
 from backend.core.matcher import MatchResult
 from backend.core.normalize import normalize_transmission
-from backend.core.title_sim import title_similar
+from knowledge.title_sim import title_similar
 from backend.core.transmission_signal import (
     claim_signals_automatic_only, claim_signals_manual_only,
 )
