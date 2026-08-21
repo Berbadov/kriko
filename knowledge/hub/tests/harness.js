@@ -61,9 +61,15 @@ function jsonResponse(body) {
   });
 }
 
-/** Load the hub with a stubbed API. `opts.generations` overrides lineups. */
+/** Load the hub with a stubbed API.
+ *
+ * `opts.generations` overrides lineups; `opts.stripSelectors` removes elements
+ * from the page before hub.js runs, which is how a stale server process is
+ * reproduced: it serves an OLD page while /static/hub.js is read fresh off
+ * disk.
+ */
 function loadHub(opts = {}) {
-  const html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8")
+  let html = fs.readFileSync(path.join(STATIC, "index.html"), "utf8")
     .replace('<script src="/static/hub.js"></script>', "");
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -76,6 +82,9 @@ function loadHub(opts = {}) {
     virtualConsole,
   });
   const { window } = dom;
+  for (const sel of opts.stripSelectors || []) {
+    for (const node of window.document.querySelectorAll(sel)) node.remove();
+  }
   const calls = [];
   const generations = { ...GENERATIONS, ...(opts.generations || {}) };
 
