@@ -505,3 +505,15 @@ th.sortable:hover { color: var(--amber) }
   border: 1px solid; border-color: var(--hi) var(--lo) var(--lo) var(--hi);
 }
 ::-webkit-scrollbar-thumb:hover { background: linear-gradient(#3d4450, #2b3038) }
+
+/* Stale-page banner: the page comes from the server process, the script comes
+   from disk, so a server left running across an update serves an old page to
+   a new script. That used to kill the dashboard silently at the first missing
+   element; now it says so, in the one place you cannot miss. */
+.stale {
+  background: repeating-linear-gradient(-45deg,
+    #40290f 0 12px, #33210c 12px 24px);
+  color: #ffcf94; border-bottom: 2px solid var(--amber);
+  padding: 12px 18px; font: 700 13px/1.5 var(--mono);
+  position: sticky; top: 0; z-index: 40;
+}
