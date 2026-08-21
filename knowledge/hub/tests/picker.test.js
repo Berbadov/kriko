@@ -97,3 +97,41 @@ test("the page loads without a script error", async () => {
   assert.deepEqual(hub.errors, []);
   hub.close();
 });
+
+
+// ── Page/script skew ─────────────────────────────────────────────────────────
+//
+// The hub serves its page from the running process and its script from disk,
+// so a server left running across an update pairs an OLD page with a NEW
+// hub.js. That combination used to throw at load — the first top-level
+// `$('#missing').onclick = …` — which killed every panel on the page,
+// including this one, with no message anywhere a person would look. Reported
+// as "onboard a model shows nothing".
+
+test("a page missing newer elements still renders the picker", async () => {
+  const hub = await boot({
+    stripSelectors: ["#b-doctor", "#b-doctor-fix", "#t-doctor", "#doc-meta",
+                     "#t-agentruns", "#agentruns-meta", "#hdr-lamp",
+                     "#hdr-docs", "#hdr-spend"],
+  });
+  assert.equal(hub.chips("#pick-make").length, 2,
+    "the picker must survive elements the page does not have");
+  await hub.clickChip("#pick-make", 0);
+  assert.equal(hub.$("#step-model").hidden, false);
+  hub.close();
+});
+
+test("a stale page says so instead of failing silently", async () => {
+  const hub = await boot({ stripSelectors: ["#b-doctor", "#hdr-lamp"] });
+  const banner = hub.$("#stale-banner");
+  assert.ok(banner, "a page/script mismatch must be visible");
+  assert.match(banner.textContent, /older kriko-hub process/);
+  assert.match(banner.textContent, /knowledge\.hub\.web/, "…and say how to fix it");
+  hub.close();
+});
+
+test("a current page shows no staleness banner", async () => {
+  const hub = await boot();
+  assert.equal(hub.$("#stale-banner"), null);
+  hub.close();
+});

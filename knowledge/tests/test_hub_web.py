@@ -721,9 +721,27 @@ def test_runs_endpoint_empty_when_no_log(client, tmp_path, monkeypatch):
 # the failure mode that remains is drift: hub.js reaching for an element the
 # page does not have, which fails silently in a browser and loudly nowhere.
 
+def _strip_js_comments(src: str) -> str:
+    """Drop // line and /* */ block comments.
+
+    The scan below is a regex over source text, so it cannot tell code from
+    prose. A comment that *documents* a selector bug — hub.js:7 explains a past
+    breakage using `$('#missing')` — otherwise reads as a live lookup and fails
+    the guard, which would punish the codebase for explaining itself.
+
+    Deliberately naive: a `//` inside a string literal (a URL, say) would be
+    treated as a comment. That direction is safe — it can only hide selectors
+    from the scan in a file that has none in string literals today, never
+    invent one — and a real JS parser is not worth the dependency here.
+    """
+    src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    return re.sub(r"//[^\n]*", "", src)
+
+
 def test_every_element_the_script_reaches_for_exists_on_the_page():
     page = web.PAGE_PATH.read_text(encoding="utf-8")
-    script = (web.PAGE_PATH.parent / "hub.js").read_text(encoding="utf-8")
+    script = _strip_js_comments(
+        (web.PAGE_PATH.parent / "hub.js").read_text(encoding="utf-8"))
     ids = set(re.findall(r"""\$\('#([A-Za-z0-9_-]+)'\)""", script))
     ids |= set(re.findall(r"""getElementById\('([A-Za-z0-9_-]+)'\)""", script))
     # Ids the script itself injects (rendered tables, conditional buttons) are

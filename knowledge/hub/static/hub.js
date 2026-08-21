@@ -1,5 +1,36 @@
 "use strict";
 const $ = s => document.querySelector(s);
+
+// Elements this script expected and the page did not have. The hub serves its
+// page from one process and its script from disk, so a server left running
+// across an update serves an OLD page with a NEW hub.js. Before this, the
+// first top-level `$('#missing').onclick = …` threw at load and took the
+// WHOLE dashboard with it — every panel blank, no error anywhere a person
+// would look. Now a mismatch degrades to the parts that still exist, and says
+// what happened.
+const missingEls = [];
+function bind(sel, ev, fn) {
+  const node = document.querySelector(sel);
+  if (!node) { missingEls.push(sel); return null; }
+  node.addEventListener(ev, fn);
+  return node;
+}
+function set(sel, prop, value) {
+  const node = document.querySelector(sel);
+  if (!node) { missingEls.push(sel); return null; }
+  node[prop] = value;
+  return node;
+}
+function warnIfStalePage() {
+  if (!missingEls.length) return;
+  const bar = document.createElement('div');
+  bar.className = 'stale';
+  bar.id = 'stale-banner';
+  bar.textContent = 'This page came from an older kriko-hub process than '
+    + '/static/hub.js (missing: ' + [...new Set(missingEls)].join(', ')
+    + '). Restart the server: python -m knowledge.hub.web';
+  document.body.prepend(bar);
+}
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const fmt = $ => '$' + Number($).toFixed(4);
@@ -120,15 +151,16 @@ function renderState() {
 // reads the same /api/state poll everything else does — no extra request.
 function renderRail() {
   const c = state.counts, s = state.spend, cat = state.catalog;
-  $('#hdr-docs').textContent = c.documents;
-  $('#hdr-ev').textContent = c.evidence;
-  $('#hdr-claims').textContent = cat.claims;
-  $('#hdr-import').textContent = s.verdicts_import;
-  $('#hdr-spend').textContent = fmt(s.total_usd);
+  set('#hdr-docs', 'textContent', c.documents);
+  set('#hdr-ev', 'textContent', c.evidence);
+  set('#hdr-claims', 'textContent', cat.claims);
+  set('#hdr-import', 'textContent', s.verdicts_import);
+  set('#hdr-spend', 'textContent', fmt(s.total_usd));
 }
 
 function setLamp(isRunning, label) {
   const el = $('#hdr-lamp');
+  if (!el) { missingEls.push('#hdr-lamp'); return; }
   el.classList.toggle('on', !!isRunning);
   el.textContent = isRunning ? (label || 'running') : 'idle';
 }
@@ -265,7 +297,7 @@ async function loadReview() {
   }
 }
 
-$('#review-list').addEventListener('click', async e => {
+bind('#review-list', 'click', async e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
   const card = b.closest('.rclaim');
@@ -288,7 +320,7 @@ $('#review-list').addEventListener('click', async e => {
   card.querySelector('.act-t').innerHTML =
     '<span class="muted">recorded: ' + esc(b.dataset.act) + '</span>';
 });
-$('#b-review-refresh').onclick = () => loadReview();
+bind('#b-review-refresh', 'click', () => loadReview());
 
 // Catalog doctor — identity damage across every car, and the $0 repair.
 async function loadDoctor() {
@@ -306,12 +338,12 @@ async function loadDoctor() {
       + esc(String(e)) + '</td></tr>';
   }
 }
-$('#b-doctor').onclick = () => loadDoctor();
-$('#b-doctor-fix').onclick = async () => {
+bind('#b-doctor', 'click', () => loadDoctor());
+bind('#b-doctor-fix', 'click', async () => {
   $('#doc-meta').textContent = 'repairing…';
   await fetch('/api/doctor/repair', { method: 'POST' });
   loadDoctor();
-};
+});
 
 // Agent results — what onboarding passes achieved (logs/agent_runs.jsonl,
 // written by the MCP finish_model tool). Survives the session; the output
@@ -365,7 +397,7 @@ async function loadMatrix() {
   }
 }
 
-$('#t-matrix').addEventListener('click', e => {
+bind('#t-matrix', 'click', e => {
   const td = e.target.closest('td.hm');
   if (!td || !td.dataset.g) return;
   revFilter = { group: td.dataset.g, model_key: td.dataset.m };
@@ -784,7 +816,9 @@ async function poll() {
     state = s;
     logState = l;
     running = l.running;
-    renderState();
+    // One unrenderable panel must not stop the poll: the log pane, the lamp
+    // and the picker below all depend on this loop continuing.
+    try { renderState(); } catch (e) { console.warn('renderState failed', e); }
 
     const logEl = $('#log');
     const nearBottom = logEl.scrollTop + logEl.clientHeight
@@ -871,30 +905,31 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && !polling) poll();
 });
 
-$('#b-extract').onclick = () => doRun(['extract', '--max-usd',
-  (Number($('#cap').value) || 0).toFixed(2)]);
-$('#b-verdict').onclick = () => doRun(['verdict', '--max-usd',
-  (Number($('#cap').value) || 0).toFixed(2)]);
-$('#b-resolve').onclick = () => doRun(['resolve']);
-$('#b-cluster').onclick = () => doRun(['cluster']);
-$('#b-import').onclick = () => doRun(['verdict', '--import-only']);
-$('#b-remediate').onclick = () => doRun(['remediate']);
-$('#b-export').onclick = () => doRun(['export']);
-$('#b-cov').onclick = () => loadCoverage(true);
-$('#b-agent-run').onclick = runAgent;
-$('#ob-harness').addEventListener('change', () => {
+bind('#b-extract', 'click', () => doRun(['extract', '--max-usd',
+  (Number($('#cap').value) || 0).toFixed(2)]));
+bind('#b-verdict', 'click', () => doRun(['verdict', '--max-usd',
+  (Number($('#cap').value) || 0).toFixed(2)]));
+bind('#b-resolve', 'click', () => doRun(['resolve']));
+bind('#b-cluster', 'click', () => doRun(['cluster']));
+bind('#b-import', 'click', () => doRun(['verdict', '--import-only']));
+bind('#b-remediate', 'click', () => doRun(['remediate']));
+bind('#b-export', 'click', () => doRun(['export']));
+bind('#b-cov', 'click', () => loadCoverage(true));
+bind('#b-agent-run', 'click', runAgent);
+bind('#ob-harness', 'change', () => {
   renderLlmModels(); refreshPreview();
 });
-$('#ob-llm').addEventListener('change', refreshPreview);
-$('#b-onboard-stop').onclick = async () => {
+bind('#ob-llm', 'change', refreshPreview);
+bind('#b-onboard-stop', 'click', async () => {
   await fetch('/api/stop', { method: 'POST' });
-};
+});
 
-$('#b-stop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }); };
-$('#table-sel').addEventListener('change', e => loadTable(e.target.value));
+bind('#b-stop', 'click', async () => { await fetch('/api/stop', { method: 'POST' }); });
+bind('#table-sel', 'change', e => loadTable(e.target.value));
 
 poll();
 // First paint honours the URL's tab (and loads that pane's data): showTab only
 // fired on a nav click before, so the make picker stayed empty until the user
 // re-clicked the tab they were already on.
 tabFromHash();
+warnIfStalePage();
