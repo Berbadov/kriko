@@ -6,7 +6,7 @@ from backend.core.resolver import (
     _deduplicate_results,
     _best_in_cluster,
 )
-from backend.core.title_sim import title_similar, title_tokens
+from knowledge.title_sim import title_similar, title_tokens
 from backend.db.models import Claim
 
 
