@@ -326,7 +326,7 @@ under G5):
       the part-centric flow in places.
 - [ ] USAGE.md §5/§7 still document the model-centric legacy mode prominently;
       restructure around the part-centric flow.
-- [ ] Decide whether `docs/handover.md` earns a rewrite or deletion (B12 landed).
+- [ ] Decide whether `docs/historical/handover.md` earns a rewrite or deletion (B12 landed).
 
 ### B18 — Source adapter ToS decisions: wire recalls/specialists/forums into the pipeline `[G2]`
 Three source adapters exist (`knowledge/sources/recalls.py`, `specialists.py`,
