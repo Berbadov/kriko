@@ -38,7 +38,8 @@ an unticked box is fine if you say why.
 - [ ] `python -m pytest` — no arguments, so `pytest.ini` picks up every testpath
 - [ ] `npm test`
 - [ ] Touched `deploy/Dockerfile` or a module the serving path imports?
-      `docker build -f deploy/Dockerfile .` — the suite cannot catch a missing `COPY`.
+      `docker build -f deploy/Dockerfile .` — the suite checks that every needed
+      `knowledge/` module is copied, but not that the image actually builds.
 
 ```
 paste test output here

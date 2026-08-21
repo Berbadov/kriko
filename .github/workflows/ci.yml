@@ -54,24 +54,10 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
 
-  image:
-    name: serving image builds and imports
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # deploy/Dockerfile copies a deliberate stdlib-only slice of knowledge/
-      # rather than the whole package, to keep the LLM dependencies off the
-      # serving image. That means moving a module the serving path imports can
-      # produce an image that builds clean and fails at request time — a class
-      # of breakage the test suite structurally cannot see, because tests run
-      # against the full source tree. So build the image and import the app.
-      - name: Build
-        run: docker build -f deploy/Dockerfile -t kriko-ci .
-
-      - name: Import the serving app inside the image
-        run: |
-          docker run --rm kriko-ci python -c "
-          import backend.api.main, backend.core.resolver, backend.sync
-          print('serving app imports inside the image')
-          "
+# No docker-build job on purpose. This repo is private, so Actions minutes are
+# billed, and a full image build was 3-5 of the ~10 minutes per push. The
+# breakage it guarded — deploy/Dockerfile not copying a knowledge/ module the
+# serving path imports — is covered statically instead, in milliseconds, by
+# ops/tests/test_repo_invariants.py::test_dockerfile_copies_every_knowledge_module_the_serving_path_imports
+# which the python job already runs. Build the image locally when you touch
+# the Dockerfile; CONTRIBUTING.md has the command.
