@@ -15,11 +15,21 @@ COPY backend/ ./backend/
 # knowledge/requirements.txt) — these files only need stdlib + pyyaml, already
 # installed above.
 COPY knowledge/__init__.py ./knowledge/__init__.py
+COPY knowledge/yamlutil.py ./knowledge/yamlutil.py
 COPY knowledge/consequence_tier.py ./knowledge/consequence_tier.py
 COPY knowledge/domains.py ./knowledge/domains.py
 COPY knowledge/stoplists.py ./knowledge/stoplists.py
 COPY knowledge/parts/__init__.py ./knowledge/parts/__init__.py
 COPY knowledge/parts/validate_part_yaml.py ./knowledge/parts/validate_part_yaml.py
+# Serving payload v2 / source quality: sync.py resolves each claim's
+# component (registry lookup + subsystem/detection) and best source tier
+# against these registries. Still stdlib + pyyaml only.
+COPY knowledge/sources/__init__.py ./knowledge/sources/__init__.py
+COPY knowledge/sources/tiers.py ./knowledge/sources/tiers.py
+COPY knowledge/catalog/__init__.py ./knowledge/catalog/__init__.py
+COPY knowledge/catalog/registry.py ./knowledge/catalog/registry.py
+COPY knowledge/catalog/components.yaml ./knowledge/catalog/components.yaml
+COPY knowledge/catalog/source_tiers.yaml ./knowledge/catalog/source_tiers.yaml
 
 # Deploy-staleness stamp (backlog B15): the app reports these via /health and
 # every /analyze response, so a stale image is visible instead of silently

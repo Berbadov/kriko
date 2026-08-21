@@ -58,6 +58,11 @@ class Claim(Base):
     applies_year_to   = Column(Integer, nullable=True)  # inclusive upper bound; None = open-ended
     maintenance_data  = Column(JSON, nullable=True)    # the maintenance: block from YAML
     requires_equipment = Column(JSON, nullable=True)   # tags auto-derived from title/rationale, e.g. ["sunroof"]
+    component_id      = Column(String, nullable=True)  # registry component id (knowledge/catalog/components.yaml)
+    detection         = Column(String, nullable=True)  # visual|test_drive|diagnostic|history_check — visual ranks down (0.35), never dropped
+    subsystem         = Column(String, nullable=True)  # registry subsystem (e.g. "engine/timing") — response grouping key
+    source_tier       = Column(String, nullable=True)  # best tier across sources (knowledge/catalog/source_tiers.yaml)
+    source_trust      = Column(Float, nullable=True)   # that tier's trust weight; relevance multiplier, NULL = neutral
 
     sources  = relationship("ClaimSource", back_populates="claim", cascade="all, delete-orphan")
     variants = relationship("ClaimVariant", back_populates="claim", cascade="all, delete-orphan")

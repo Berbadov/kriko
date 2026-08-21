@@ -15,7 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from backend.api.schemas import (
-    AnalyzeRequest, AnalyzeResponse, BuildStamp, CoverageState, RiskItem, SourceRef,
+    AnalyzeRequest, AnalyzeResponse, BuildStamp, CoverageState, RiskItem,
+    SourceRef, SubsystemGroup,
 )
 from backend import config
 from backend.config import ALLOWED_ORIGINS, STANDARD_DISCLAIMER
@@ -23,7 +24,7 @@ from backend.core.context import ListingContext
 from backend.core.matcher import MatchResult, match_variant
 from backend.core.recover import recover_listing_fields
 from backend.core.resolver import ClaimResult, resolve_claims
-from backend.db.models import AnalysisLog, ClaimSource
+from backend.db.models import AnalysisLog, Claim, ClaimSource, Variant
 from backend.db.session import db_reachable, get_db
 from backend.observability import log_analysis_jsonl, read_recent
 
@@ -68,6 +69,54 @@ TX_MISMATCH_CAVEAT = (
 
 # The per-listing "few" ceiling: a buyer sees at most this many risks. Tunable.
 MAX_RISKS_PER_LISTING = 8
+
+# ── Serving payload v2: relevance score + why_shown ──────────────────────────
+#
+# relevance_score = severity weight × mileage-gate match × detection factor.
+# It is the primary rank key: what an expert inspection catches anyway
+# (visual detection) and what only *might* apply (mileage gate unverifiable)
+# sink below claims that demonstrably apply to this specific car — without
+# ever being dropped (fail-open).
+
+_SEVERITY_WEIGHT = {"high": 1.0, "medium": 0.6, "low": 0.3}
+# A mileage gate the listing can't confirm (mileage unknown) still serves the
+# claim (fail-open) but ranks it below claims whose applicability is confirmed.
+_MILEAGE_UNKNOWN_FACTOR = 0.7
+
+# why_shown fragment for a suppressed visual-detection claim. Mirrors
+# resolver.VISUAL_DETECTION_FACTOR — the factor lives in the resolver (where
+# suppression is decided), the buyer-facing wording lives here.
+_VISUAL_WHY = "standard inspection usually catches this — low priority"
+
+# Phase 1 (source quality): the claim's best source tier multiplies relevance.
+# Authoritative recall data outranks a specialist writeup, which outranks an
+# SEO blog. NULL trust (no sources — maintenance claims) is neutral (1.0),
+# never a penalty: the maintenance trust model is the service interval, not
+# the source list.
+_TRUST_WHY = {
+    "authoritative": "confirmed by official recall/TSB data",
+    "manufacturer": "confirmed by manufacturer data",
+    "specialist": "corroborated by a specialist source",
+}
+
+# Registry subsystem top-level group (the part before "/") → Turkish label for
+# the subsystems[] group header. Closed vocabulary — mirrors the groups defined
+# in knowledge/catalog/components.yaml, not per-model data.
+_SUBSYSTEM_TR = {
+    "engine": "Motor",
+    "transmission": "Şanzıman",
+    "emissions": "Egzoz & Emisyon",
+    "electrical": "Elektrik",
+    "body": "Gövde",
+    "brakes": "Frenler",
+    "suspension": "Süspansiyon",
+    "steering": "Direksiyon",
+    "cooling": "Soğutma",
+    "fuel": "Yakıt Sistemi",
+    "exhaust": "Egzoz",
+    "interior": "İç Mekan",
+}
+_OTHER_SUBSYSTEM_TR = "Diğer"
 
 # Strengths that are evidence-backed and must never be dropped by the cap — only
 # the unverified "reported" tail is trimmed.
@@ -133,19 +182,33 @@ def run_analysis(
     served = resolve_claims(match, db, ctx)
 
     state = _coverage_state(match, served)
-    risks = [_claim_to_risk(cr, db) for cr in served]
-    # Priority key: strength first (evidence: confirmed > due > reported), then
-    # consequence tier (deterministic failure-system rank — the discriminator
-    # that severity lost to inflation), then severity as a final tiebreak.
+    # v2 why_shown: the config-match reason is listing-level (same string on
+    # every card); per-claim reasons are computed in _claim_to_risk.
+    variant_rows = (
+        db.query(Variant).filter(Variant.id.in_(match.variant_ids)).all()
+        if match.variant_ids else []
+    )
+    config_why = (
+        "Config match: " + ", ".join(_variant_label(v) for v in variant_rows)
+        if variant_rows else None
+    )
+    risks = [_claim_to_risk(cr, db, ctx, config_why) for cr in served]
+    # Priority key (serving payload v2): relevance_score first — severity
+    # weight × mileage-gate match × detection factor — so risks that
+    # demonstrably apply to THIS car outrank inspection-catchable or
+    # only-maybe-applicable ones. The old key (strength → consequence →
+    # severity) stays as the tiebreak for equal scores.
     _SEV_RANK = {"high": 0, "medium": 1, "low": 2}
     _CONSEQ_RANK = {"high": 0, "medium": 1, "low": 2}
     _STRENGTH_RANK = {"confirmed": 0, "due": 1, "due_stated": 2, "reported": 3}
     risks.sort(key=lambda r: (
+        -(r.relevance_score or 0.0),
         _STRENGTH_RANK.get(r.strength, 4),
         _CONSEQ_RANK.get(r.consequence, 1),
         _SEV_RANK.get(r.severity, 3),
     ))
     risks = _cap_risks(risks, MAX_RISKS_PER_LISTING)
+    subsystems = _group_subsystems(risks)
 
     summary = _build_summary(state, match, risks)
     if match.tx_mismatch:
@@ -155,6 +218,7 @@ def run_analysis(
         coverage_state=state,
         summary=summary,
         risks=risks,
+        subsystems=subsystems,
         disclaimer=STANDARD_DISCLAIMER,
         matched_variant_ids=match.variant_ids,
         build=_build_stamp(),
@@ -279,13 +343,35 @@ def _unavailable_response() -> AnalyzeResponse:
     )
 
 
-def _claim_to_risk(cr: ClaimResult, db: Session) -> RiskItem:
+def _claim_to_risk(
+    cr: ClaimResult, db: Session,
+    ctx: ListingContext | None = None,
+    config_why: str | None = None,
+) -> RiskItem:
     claim = cr.claim
     sources_rows = (
         db.query(ClaimSource)
         .filter(ClaimSource.claim_id == claim.id)
         .all()
     )
+
+    # ── v2 relevance score + why_shown ───────────────────────────────────
+    mileage_factor, mileage_why = _mileage_gate(claim, ctx)
+    severity_w = _SEVERITY_WEIGHT.get((claim.severity or "").lower(), 0.6)
+    trust = claim.source_trust if claim.source_trust is not None else 1.0
+    relevance = round(severity_w * mileage_factor * cr.detection_factor * trust, 4)
+
+    why_shown: list[str] = []
+    if config_why:
+        why_shown.append(config_why)
+    if mileage_why:
+        why_shown.append(mileage_why)
+    if cr.detection_factor < 1.0:
+        why_shown.append(_VISUAL_WHY)
+    trust_why = _TRUST_WHY.get(claim.source_tier or "")
+    if trust_why:
+        why_shown.append(trust_why)
+
     return RiskItem(
         title=claim.title,
         severity=claim.severity,
@@ -295,6 +381,12 @@ def _claim_to_risk(cr: ClaimResult, db: Session) -> RiskItem:
         inspection_advice=claim.inspection_advice,
         confidence=claim.confidence,
         strength=cr.strength,
+        claim_key=claim.claim_key,
+        component_id=claim.component_id,
+        subsystem=claim.subsystem,
+        source_tier=claim.source_tier,
+        relevance_score=relevance,
+        why_shown=why_shown,
         sources=[
             SourceRef(
                 url=s.source_url,
@@ -306,6 +398,75 @@ def _claim_to_risk(cr: ClaimResult, db: Session) -> RiskItem:
         ],
         source_count=len(sources_rows),
     )
+
+
+def _fmt_km(n: int) -> str:
+    """Turkish-style thousand separator: 187000 → '187.000' (matches the
+    Sahibinden listing format buyers see)."""
+    return f"{n:,}".replace(",", ".")
+
+
+def _variant_label(v: Variant) -> str:
+    """Human-readable label for a matched variant — the 'config match' reason
+    in why_shown. Built from the catalog row (no display name column exists),
+    with the stable variant id appended so the label stays unambiguous for
+    ambiguous multi-variant matches."""
+    parts = [v.make.title(), v.model.title()]
+    if v.generation:
+        parts.append(str(v.generation))
+    if v.power_min_hp:
+        if v.power_max_hp and v.power_max_hp != v.power_min_hp:
+            parts.append(f"{v.power_min_hp}-{v.power_max_hp} hp")
+        else:
+            parts.append(f"{v.power_min_hp} hp")
+    return f"{' '.join(p for p in parts if p)} ({v.id})"
+
+
+def _mileage_gate(claim: Claim, ctx: ListingContext | None) -> tuple[float, str | None]:
+    """(factor, why_shown) for the claim's applies_when mileage gates.
+
+    Gate satisfied by the listing's mileage → 1.0 plus a human-readable
+    threshold string ("187.000 km > 120.000 km threshold"). Gate present but
+    mileage unknown → _MILEAGE_UNKNOWN_FACTOR and the fail-open wording — the
+    claim still serves, ranked below confirmed-applicable ones. No mileage
+    gate → 1.0, no string (nothing to explain). Age/year-only gates don't
+    factor in: the buyer-facing string is about mileage.
+    """
+    has_min = claim.min_mileage_km is not None
+    has_max = claim.max_mileage_km is not None
+    if not (has_min or has_max):
+        return 1.0, None
+    m = ctx.mileage_km if ctx is not None else None
+    if m is None:
+        return _MILEAGE_UNKNOWN_FACTOR, "mileage unknown — shown by default"
+    if has_min and m >= claim.min_mileage_km:
+        op = "≥" if m == claim.min_mileage_km else ">"
+        return 1.0, f"{_fmt_km(m)} km {op} {_fmt_km(claim.min_mileage_km)} km threshold"
+    if has_max and m <= claim.max_mileage_km:
+        op = "≤" if m == claim.max_mileage_km else "<"
+        return 1.0, f"{_fmt_km(m)} km {op} {_fmt_km(claim.max_mileage_km)} km ceiling"
+    return 1.0, None
+
+
+def _group_subsystems(risks: list[RiskItem]) -> list[SubsystemGroup]:
+    """Group ranked risks by registry subsystem for the v2 payload.
+
+    Claims without a subsystem (no component_id — YAMLs not yet migrated)
+    land in the "other" bucket. Input order is the ranked order, so groups
+    appear best-risk-first and each group's cards keep the global ranking.
+    """
+    groups: dict[str, list[RiskItem]] = {}
+    for r in risks:
+        groups.setdefault(r.subsystem or "other", []).append(r)
+    out: list[SubsystemGroup] = []
+    for name, items in groups.items():
+        if name == "other":
+            display_tr = _OTHER_SUBSYSTEM_TR
+        else:
+            top = name.split("/", 1)[0]
+            display_tr = _SUBSYSTEM_TR.get(top, top)
+        out.append(SubsystemGroup(name=name, display_tr=display_tr, risks=items))
+    return out
 
 
 def _log_analysis(
