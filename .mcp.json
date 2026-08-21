@@ -3,7 +3,7 @@
     "kriko": {
       "type": "stdio",
       "command": "/home/beraat/kriko/.venv/bin/python",
-      "args": ["-m", "knowledge.mcp.server"],
+      "args": ["-m", "ops.mcp.server"],
       "env": {
         "PYTHONPATH": "/home/beraat/kriko"
       }

@@ -570,7 +570,7 @@ def run(make: str, model: str, trims: list[dict] | None = None,
     if not trims:
         raise SystemExit(
             f"No TR-market trim data for {key!r}. Either pass trims= (the agent "
-            f"path — see knowledge/mcp/server.py submit_trims) or add an entry "
+            f"path — see ops/mcp/server.py submit_trims) or add an entry "
             f"to TR_MARKET_TRIMS in {__file__}."
         )
 

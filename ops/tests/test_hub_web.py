@@ -19,7 +19,7 @@ fastapi = pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from knowledge.hub import web  # noqa: E402
+from ops.hub import web  # noqa: E402
 
 
 @pytest.fixture

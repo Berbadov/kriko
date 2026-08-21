@@ -1,11 +1,11 @@
 """kriko-hub web — browser dashboard over the ledger (B20, web edition).
 
-    .venv/bin/python -m knowledge.hub.web          # http://127.0.0.1:8787
+    .venv/bin/python -m ops.hub.web          # http://127.0.0.1:8787
 
 The DearPyGui app is deprecated: GL rendering on WSLg was slow and broken
 (GLX missing, scaling issues, stalls that swallowed clicks). A browser is
 always hardware-accelerated and native on the host. This is the same data
-plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
+plane — `ops/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
 
   GET  /                the dashboard page (inline HTML/JS, no build step)
   GET  /api/state       snapshot: counts, spend, pending, catalog, parts,
@@ -34,7 +34,7 @@ plane — `knowledge/hub/metrics.py` (test-pinned) — over a tiny FastAPI:
   POST /api/review/{id}     {action: approve|reject} → status verified/rejected
   GET  /api/coverage-matrix models × subsystem-group claim counts (heatmap)
   GET  /api/sources         every source_domain, tiered + counted
-  GET  /api/runs            persisted run history (knowledge/hub/runs.jsonl)
+  GET  /api/runs            persisted run history (ops/hub/runs.jsonl)
 
 Binds 127.0.0.1 only. Run buttons enforce the same --max-usd machinery as
 the CLI; the browser polls state every second.
@@ -57,7 +57,7 @@ from fastapi.staticfiles import StaticFiles
 
 from knowledge.agent import gates as agent_gates
 from knowledge.catalog import doctor as catalog_doctor, generations as gencat, model_state
-from knowledge.hub import metrics
+from ops.hub import metrics
 from knowledge.ledger import db
 from knowledge.ledger.verdict import AGENT_EXTRACTOR_VERSION
 from knowledge.sources.tiers import resolve_tier
@@ -1046,7 +1046,7 @@ def sources() -> dict:
 
 @app.get("/api/runs")
 def run_history(limit: int = 50) -> dict:
-    """Last N persisted runs (newest first) from knowledge/hub/runs.jsonl."""
+    """Last N persisted runs (newest first) from ops/hub/runs.jsonl."""
     n = max(1, min(int(limit), 200))
     try:
         lines = RUNS_LOG.read_text(encoding="utf-8").splitlines()
@@ -1067,7 +1067,7 @@ def run_history(limit: int = 50) -> dict:
 
 # ── page ──────────────────────────────────────────────────────────────────────
 
-# The page is a real .html file (knowledge/hub/static/index.html), not a Python
+# The page is a real .html file (ops/hub/static/index.html), not a Python
 # string. It used to be one, and a stray escape silently broke the whole
 # dashboard once already (commit 49aa90c, "dead page — JS breakage from string
 # escaping"). Read per request: the hub is a local dev tool, and an edit should
