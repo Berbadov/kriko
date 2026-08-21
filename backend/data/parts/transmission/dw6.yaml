@@ -39,6 +39,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: difficulté à passer en marche arrière
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_009_delayed_engageme_v1
   claim_key: dw6_transmission_dw6_009_delayed_engageme
   version: 1
@@ -73,6 +75,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: retard à l’enclenchement après D ou R (pression hydraulique insuffisante)
     independent: true
+  component_id: transmission_dct_gearbox_oil_pump
+  detection: diagnostic
 - id: dw6_transmission_dw6_009_mechatronics_fai_v1
   claim_key: dw6_transmission_dw6_009_mechatronics_fai
   version: 1
@@ -105,6 +109,8 @@ claims:
     quote: le module hydraulique (mécatronique) qui peut développer des fuites internes,
       des défauts de pilotage électronique ou des solénoïdes grippés.
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dw6_transmission_dw6_009_transmission_bea_v1
   claim_key: dw6_transmission_dw6_009_transmission_bea
   version: 1
@@ -136,6 +142,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: bruits anormaux (roulements internes en fin de vie)
     independent: true
+  component_id: transmission_dct_differential_bearings
+  detection: test_drive
 - id: dw6_transmission_dw6_009_transmission_cas_v1
   claim_key: dw6_transmission_dw6_009_transmission_cas
   version: 1
@@ -199,6 +207,8 @@ claims:
     site_or_channel: 1xmatch.com
     quote: Особенно быстро пакет сцеплений изнашивается при утечках смазки через сальник
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_clutch_wear_causes_h_v1
   claim_key: dw6_transmission_dw6_clutch_wear_causes_h
   version: 1
@@ -229,6 +239,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: passage haché avec à-coups au changement de rapport (usure embrayages)
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_dual_clutch_failure__v1
   claim_key: dw6_transmission_dw6_dual_clutch_failure_
   version: 1
@@ -263,6 +275,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: refus de passer les vitesses paires (défaillance d’un des deux embrayages)
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_dual_mass_flywheel_p_v1
   claim_key: dw6_transmission_dw6_dual_mass_flywheel_p
   version: 1
@@ -294,6 +308,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 150000
+  component_id: transmission_dual_mass_flywheel
+  detection: test_drive
 - id: dw6_transmission_dw6_edc_gearbox_loses_ev_v1
   claim_key: dw6_transmission_dw6_edc_gearbox_loses_ev
   version: 1
@@ -329,6 +345,8 @@ claims:
       fonctionnent mais 2-4-6 sont absentes), signe d’une défaillance spécifique sur
       le double embrayage.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_edc_transmission_los_v1
   claim_key: dw6_transmission_dw6_edc_transmission_los
   version: 1
@@ -367,6 +385,8 @@ claims:
       fonctionnent mais 2-4-6 sont absentes), signe d’une défaillance spécifique sur
       le double embrayage.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_even_gear_hub_spline_v1
   claim_key: dw6_transmission_dw6_even_gear_hub_spline
   version: 1
@@ -399,6 +419,8 @@ claims:
     quote: Слабым местом такого робота является шлицевое соединение хаба четных передач
       Его может сорвать при чрезмерно активной езде и кпп перейдет в аварийный режим
     independent: true
+  component_id: transmission_dct_fork_synchronizer
+  detection: test_drive
 - id: dw6_transmission_dw6_gearbox_fork_corrosi_v1
   claim_key: dw6_transmission_dw6_gearbox_fork_corrosi
   version: 1
@@ -432,6 +454,8 @@ claims:
       câble fourchette), P0810 (positionnement embrayage), P0741 (convertisseur de
       couple), P17F0 et P17F1 (adaptations embrayage défaillantes).
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_dw6_gearbox_internal_bea_v1
   claim_key: dw6_transmission_dw6_gearbox_internal_bea
   version: 1
@@ -466,6 +490,8 @@ claims:
     site_or_channel: francemoteursutilitaires.com
     quote: les bruits anormaux dus à des roulements internes en fin de vie
     independent: true
+  component_id: transmission_dct_differential_bearings
+  detection: test_drive
 - id: dw6_transmission_dw6_mechatronic_fragilit_v1
   claim_key: dw6_transmission_dw6_mechatronic_fragilit
   version: 1
@@ -502,6 +528,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dw6_transmission_dw6_solenoid_contaminati_v1
   claim_key: dw6_transmission_dw6_solenoid_contaminati
   version: 1
@@ -533,6 +561,8 @@ claims:
     site_or_channel: 1xmatch.com
     quote: Иные проблемы связаны с загрязнением соленоидов продуктами износа сцепления
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw6_transmission_trafic_iii_dw6_009_inter_v1
   claim_key: dw6_transmission_trafic_iii_dw6_009_inter
   version: 1
@@ -564,3 +594,5 @@ claims:
     quote: la défaillance des embrayages internes, souvent liée à une usure prématurée
       ou un manque de vidange régulière.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive

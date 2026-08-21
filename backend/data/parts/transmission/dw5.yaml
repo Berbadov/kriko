@@ -47,6 +47,8 @@ claims:
       rear brake calipers corrodes and seizes — owners and forum mechanics blame the
       galvanic coating on the lever and water ingress into the cables and piston gaiters.
     independent: true
+  component_id: brakes_caliper_handbrake_mech
+  detection: test_drive
 - id: dw5_engine_dw5_1_2_tce_oil_consumpt_v1
   claim_key: dw5_engine_dw5_1_2_tce_oil_consumpt
   version: 1
@@ -119,6 +121,8 @@ claims:
   applies_when:
     applies_year_from: 2018
     applies_year_to: 2018
+  component_id: engine_oil_consumption
+  detection: visual
 - id: dw5_engine_timing_chain_stretch_on__v1
   claim_key: dw5_engine_timing_chain_stretch_on_
   version: 1
@@ -156,6 +160,8 @@ claims:
   applies_when:
     applies_year_from: 2018
     applies_year_to: 2018
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: dw5_engine_turbocharger_and_brake_s_v1
   claim_key: dw5_engine_turbocharger_and_brake_s
   version: 1
@@ -187,6 +193,8 @@ claims:
     quote: '"Performance versions (RS, GT) demand extra attention to the **turbocharger,
       brakes, and suspension condition**."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: dw5_fuel_system_edc7_c32_injector_short__v1
   claim_key: dw5_fuel_system_edc7_c32_injector_short_
   version: 1
@@ -220,6 +228,8 @@ claims:
     quote: Short circuit current circuit in one injector disables all injectors affected
       block, IE. stops all injection cylinders block 2.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: dw5_transmission_chronic_oil_misting_arou_v1
   claim_key: dw5_transmission_chronic_oil_misting_arou
   version: 1
@@ -255,6 +265,8 @@ claims:
     site_or_channel: avtotachki.com
     quote: Особенностью такой ркпп служат частые запотевания вокруг пластикового поддона
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_delayed_engagement_from__v1
   claim_key: dw5_transmission_delayed_engagement_from_
   version: 1
@@ -292,6 +304,8 @@ claims:
       Pressing the accelerator may yield a brief delay before the car fully engages
       forward motion, noticeable in busy junctions.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_dw5_7_speed_edc_losing_1_v1
   claim_key: dw5_transmission_dw5_7_speed_edc_losing_1
   version: 1
@@ -323,6 +337,8 @@ claims:
     quote: Megane 4 7 ileri bu araç büyük ihtimalle araç 2 ile kalkıyor gördüğünüz
       gibi birinci vitesten yok görüyorsunuz
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dw5_transmission_dw5_edc_dual_clutch_jerk_v1
   claim_key: dw5_transmission_dw5_edc_dual_clutch_jerk
   version: 1
@@ -356,6 +372,8 @@ claims:
     quote: Early EDC dual-clutch transmissions may exhibit jerkiness when shifting
       from 1st to 2nd gear
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_dw5_edc_jerky_1st_2nd_sh_v1
   claim_key: dw5_transmission_dw5_edc_jerky_1st_2nd_sh
   version: 1
@@ -396,6 +414,8 @@ claims:
   applies_when:
     applies_year_from: 2020
     applies_year_to: 2020
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_dw5_plastic_oil_pan_seep_v1
   claim_key: dw5_transmission_dw5_plastic_oil_pan_seep
   version: 1
@@ -498,6 +518,8 @@ claims:
       to the Mégane III and IV develop low-speed judder when pulling away, jerky shifts,
       overheating warnings in stop-start traffic and delayed or clunky reverse engagement.
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_edc_dw5_dw6_input_shaft__v1
   claim_key: dw5_transmission_edc_dw5_dw6_input_shaft_
   version: 1
@@ -528,6 +550,8 @@ claims:
     site_or_channel: ecotorqueltd.wixsite.com
     quote: Clutch Replacement £1295 +VAT *Includes Updated Input Shaft Seal
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dw5_transmission_expensive_edc_gearbox_re_v1
   claim_key: dw5_transmission_expensive_edc_gearbox_re
   version: 1
@@ -558,6 +582,8 @@ claims:
       be expensive; diesel-specific components (DPF, AdBlue system) also carry higher
       replacement costs."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dw5_transmission_shudder_on_1_2_shift_in__v1
   claim_key: dw5_transmission_shudder_on_1_2_shift_in_
   version: 1
@@ -590,3 +616,5 @@ claims:
     site_or_channel: asrgearboxrepairs.co.uk
     quote: Shudder or Shake in 1st–2nd Transition
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive

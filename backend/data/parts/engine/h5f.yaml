@@ -80,6 +80,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: h5f_electrical_camshaft_sensor_failure__v1
   claim_key: h5f_electrical_camshaft_sensor_failure_
   version: 1
@@ -110,6 +112,8 @@ claims:
     site_or_channel: autozilla.co.uk
     quote: camshaft sensor failure
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: h5f_electrical_recurring_electrical_wir_v1
   claim_key: h5f_electrical_recurring_electrical_wir
   version: 1
@@ -145,6 +149,8 @@ claims:
     quote: Özellikle elektrik tesisatında yaşanan arızalar veya yakıt sistemi sorunları,
       sürücüler için büyük rahatsızlıklar doğurabilir.
     independent: true
+  component_id: electrical_wiring_loom
+  detection: diagnostic
 - id: h5f_engine_1_2_tce_h5f_camshaft_sen_v1
   claim_key: h5f_engine_1_2_tce_h5f_camshaft_sen
   version: 1
@@ -182,6 +188,8 @@ claims:
       to a failure of the sensor. Plus exposure to high temperatures and moisture,
       which can cause damage to the sensor and its electrical components over time.
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: h5f_engine_1_2_tce_h5f_excessive_oi_v1
   claim_key: h5f_engine_1_2_tce_h5f_excessive_oi
   version: 1
@@ -214,6 +222,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 85000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_camshaft_sensor_failure__v1
   claim_key: h5f_engine_camshaft_sensor_failure_
   version: 1
@@ -248,6 +258,8 @@ claims:
     site_or_channel: autozilla.co.uk
     quote: camshaft sensor failure
     independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
 - id: h5f_engine_chronic_oil_burning_on_r_v1
   claim_key: h5f_engine_chronic_oil_burning_on_r
   version: 1
@@ -281,6 +293,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: Yağ yakma sorunu kronik bir problem olduğu için, bu durum sana dert olur.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_chronic_oil_consumption__v1
   claim_key: h5f_engine_chronic_oil_consumption_
   version: 1
@@ -314,6 +328,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: motor yağ yakmaya başladı, 1000 km'de yarım litre yağ ekliyorum
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_excessive_oil_consumptio_v1
   claim_key: h5f_engine_excessive_oil_consumptio
   version: 1
@@ -347,6 +363,8 @@ claims:
     quote: With a variety of applications featuring the engine, excessive oil consumption
       may be something that some Renault and Nissan drivers will have to suffer with.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_h5f_1_2_tce_engine_oil_b_v1
   claim_key: h5f_engine_h5f_1_2_tce_engine_oil_b
   version: 1
@@ -420,6 +438,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_h5f_1_2_tce_timing_chain_v1
   claim_key: h5f_engine_h5f_1_2_tce_timing_chain
   version: 1
@@ -453,6 +473,8 @@ claims:
     site_or_channel: autozilla.co.uk
     quote: the timing chain problem
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5f_engine_h5f_1_2_tce_wastegate_cl_v1
   claim_key: h5f_engine_h5f_1_2_tce_wastegate_cl
   version: 1
@@ -486,6 +508,8 @@ claims:
       of exhaust gases that flow through the turbocharger. If it becomes clogged,
       it can cause the turbocharger to overspeed and fail.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_h5f_408_engine_oil_consu_v1
   claim_key: h5f_engine_h5f_408_engine_oil_consu
   version: 1
@@ -523,6 +547,8 @@ claims:
       have been reported in this direct-injection engine. Other oil-leak locations
       include the crankshaft oil seal and the crankcase ventilation pipe."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5f_engine_h5f_engine_excessive_oil_v1
   claim_key: h5f_engine_h5f_engine_excessive_oil
   version: 1
@@ -563,6 +589,8 @@ claims:
     independent: true
   applies_when:
     applies_year_to: 2022
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_h5f_timing_chain_stretch_v1
   claim_key: h5f_engine_h5f_timing_chain_stretch
   version: 1
@@ -597,6 +625,8 @@ claims:
       and potentially causing internal engine damage. This can happen prematurely
       as a result of manufacturing defects or with high mileage examples.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5f_engine_h5f_turbo_oil_leak_cause_v1
   claim_key: h5f_engine_h5f_turbo_oil_leak_cause
   version: 1
@@ -628,6 +658,8 @@ claims:
     quote: Bu motorun en bilinen sorunu turbo çevresindeki yağ sızıntısıdır. Zamanla
       motor yağı eksilir, performans düşer.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_h5f_turbocharger_whistle_v1
   claim_key: h5f_engine_h5f_turbocharger_whistle
   version: 1
@@ -658,6 +690,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: turbo ıslık sesi çıkarıyor
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_premature_turbo_failure__v1
   claim_key: h5f_engine_premature_turbo_failure_
   version: 1
@@ -693,6 +727,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_recurrent_turbocharger_f_v1
   claim_key: h5f_engine_recurrent_turbocharger_f
   version: 1
@@ -732,6 +768,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: sürekli turbo arızası veriyor
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_renault_1_2_tce_h5f_timi_v1
   claim_key: h5f_engine_renault_1_2_tce_h5f_timi
   version: 1
@@ -769,6 +807,8 @@ claims:
       has acknowledged these problems and has extended the warranty for the timing
       chain on affected vehicles.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5f_engine_renault_h5f_excessive_oi_v1
   claim_key: h5f_engine_renault_h5f_excessive_oi
   version: 1
@@ -803,6 +843,8 @@ claims:
       the valve lifters, ultimately leading to full engine failure. Additionally,
       the excessive use of oil can cause the engine to misfire.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5f_engine_timing_chain_stretch_in__v1
   claim_key: h5f_engine_timing_chain_stretch_in_
   version: 1
@@ -845,6 +887,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5f_engine_turbo_weak_point_on_1_2__v1
   claim_key: h5f_engine_turbo_weak_point_on_1_2_
   version: 1
@@ -876,6 +920,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: 1.2 TCe motorlarda turbo da hassas bir nokta.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_turbocharger_failure_in__v1
   claim_key: h5f_engine_turbocharger_failure_in_
   version: 1
@@ -907,6 +953,8 @@ claims:
     site_or_channel: autozilla.co.uk
     quote: turbocharger problems
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_engine_turbocharger_failure_on__v1
   claim_key: h5f_engine_turbocharger_failure_on_
   version: 1
@@ -938,6 +986,8 @@ claims:
     site_or_channel: kronikyorum.com
     quote: Şimdi de turbo arızası verdi.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5f_transmission_h5f_edc_gearbox_jerky_sh_v1
   claim_key: h5f_transmission_h5f_edc_gearbox_jerky_sh
   version: 1

@@ -41,6 +41,8 @@ claims:
     quote: R9M motorunda termostat ve su pompası görece erken arıza verebilen bileşenler
       arasındadır.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: r9m_emissions_adblue_and_nox_sensor_fa_v1
   claim_key: r9m_emissions_adblue_and_nox_sensor_fa
   version: 1
@@ -74,6 +76,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: r9m_emissions_egr_cooler_crack_coolant_v1
   claim_key: r9m_emissions_egr_cooler_crack_coolant
   version: 1
@@ -103,6 +107,8 @@ claims:
       damage from water ingestion. Symptoms: Coolant loss without visible cause, white
       smoke, exhaust smell in the cabin"'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: r9m_emissions_egr_valve_clogging_and_f_v1
   claim_key: r9m_emissions_egr_valve_clogging_and_f
   version: 1
@@ -143,6 +149,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: emissions_egr
+  detection: diagnostic
 - id: r9m_emissions_egr_ventilverschmutzung__v1
   claim_key: r9m_emissions_egr_ventilverschmutzung_
   version: 1
@@ -169,6 +177,8 @@ claims:
     site_or_channel: what-breaks.com
     quote: '"EGR-Ventil schon ab 11.000 km verschmutzt."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: r9m_engine_intercooler_condensation_v1
   claim_key: r9m_engine_intercooler_condensation
   version: 1
@@ -198,6 +208,8 @@ claims:
       and frequent short trips increase the risk. Symptoms: Loud knock from the engine,
       sudden engine stop, oil pressure loss"'
     independent: true
+  component_id: engine_intercooler
+  detection: visual
 - id: r9m_engine_r9m_egr_carbon_buildup_r_v1
   claim_key: r9m_engine_r9m_egr_carbon_buildup_r
   version: 1
@@ -233,6 +245,8 @@ claims:
     quote: 'Emme Manifoldu Karbon Tıkanması: EGR''den gelen is ve yağ buharı zamanla
       emme manifoldunda ve supap arkalarında ciddi karbon birikimi oluşturur.'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: r9m_engine_r9m_engine_cracks_near_o_v1
   claim_key: r9m_engine_r9m_engine_cracks_near_o
   version: 1
@@ -309,6 +323,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_injectors
+  detection: diagnostic
 - id: r9m_engine_r9m_timing_belt_tensione_v1
   claim_key: r9m_engine_r9m_timing_belt_tensione
   version: 1
@@ -358,6 +374,8 @@ claims:
     - new timing belt
     - cam belt changed
     - cambelt done
+  component_id: engine_timing_belt
+  detection: history_check
 - id: r9m_engine_timing_chain_stretch_r9m_v1
   claim_key: r9m_engine_timing_chain_stretch_r9m
   version: 1
@@ -389,6 +407,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 140000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: r9m_engine_timing_cover_leakage_rec_v1
   claim_key: r9m_engine_timing_cover_leakage_rec
   version: 1
@@ -455,6 +475,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: r9m_fuel_system_high_pressure_fuel_pump__v1
   claim_key: r9m_fuel_system_high_pressure_fuel_pump_
   version: 1
@@ -490,6 +512,8 @@ claims:
     quote: 'Yüksek Basınçlı Yakıt Pompası (HPFP) Arızası: 1.6 dCi motorunda yüksek
       basınçlı yakıt pompası zaman zaman erken arıza verebilmektedir.'
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: r9m_fuel_system_kraftstoffleitungsbrandg_v1
   claim_key: r9m_fuel_system_kraftstoffleitungsbrandg
   version: 1

@@ -40,6 +40,8 @@ claims:
     site_or_channel: eco-torque.co.uk
     quote: '"P1740 (18148) – Clutch temperature monitoring (G509)"'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq200_dq250_dsg_solenoid_v1
   claim_key: dq250_transmission_dq200_dq250_dsg_solenoid
   version: 1
@@ -69,6 +71,8 @@ claims:
     quote: '"Mekatronik kart üzerindeki sıvı teması veya oksitlenme, solenoidlerin
       sinyal almasını engeller."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_5th_6th_gear_shift_v1
   claim_key: dq250_transmission_dq250_5th_6th_gear_shift
   version: 1
@@ -100,6 +104,8 @@ claims:
     site_or_channel: tvsengineering.com
     quote: Bump during shifting from 5th to 6th gear
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_clutch_wear_causes_v1
   claim_key: dq250_transmission_dq250_clutch_wear_causes
   version: 1
@@ -147,6 +153,8 @@ claims:
     - transmission fluid changed
     - gearbox oil changed
     - mechatronic fluid changed
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_dsg_engine_stallin_v1
   claim_key: dq250_transmission_dq250_dsg_engine_stallin
   version: 1
@@ -180,6 +188,8 @@ claims:
     site_or_channel: tvsengineering.com
     quote: Engine stalling during braking
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_dsg_fluid_degradat_v1
   claim_key: dq250_transmission_dq250_dsg_fluid_degradat
   version: 1
@@ -228,6 +238,8 @@ claims:
     - transmission fluid changed
     - gearbox oil changed
     - mechatronic fluid changed
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_dsg_mechatronic_hy_v1
   claim_key: dq250_transmission_dq250_dsg_mechatronic_hy
   version: 1
@@ -264,6 +276,8 @@ claims:
     site_or_channel: eco-torque.co.uk
     quote: '"Hydraulic pressure regulation issues — leading to limp mode"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_dsg_needs_60k_km_o_v1
   claim_key: dq250_transmission_dq250_dsg_needs_60k_km_o
   version: 1
@@ -346,6 +360,8 @@ claims:
     site_or_channel: tvsengineering.com
     quote: ''
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_dsg_solenoid_valve_v1
   claim_key: dq250_transmission_dq250_dsg_solenoid_valve
   version: 1
@@ -379,6 +395,8 @@ claims:
     quote: '"Şanzıman içindeki mekanik aşınmadan kopan mikroskobik parçalar valf gözeneklerini
       tıkar."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_dsg_speed_sensor_f_v1
   claim_key: dq250_transmission_dq250_dsg_speed_sensor_f
   version: 1
@@ -413,6 +431,8 @@ claims:
     site_or_channel: eco-torque.co.uk
     quote: '"Sensor failures — especially input and output speed sensors"'
     independent: true
+  component_id: transmission_dct_pressure_sensor
+  detection: diagnostic
 - id: dq250_transmission_dq250_electronic_degrada_v1
   claim_key: dq250_transmission_dq250_electronic_degrada
   version: 1
@@ -481,6 +501,8 @@ claims:
     site_or_channel: dmaperformance.co.uk
     quote: Gear shifts at too low rpm
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_heat_related_failu_v1
   claim_key: dq250_transmission_dq250_heat_related_failu
   version: 1
@@ -526,6 +548,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_hydraulic_and_valv_v1
   claim_key: dq250_transmission_dq250_hydraulic_and_valv
   version: 1
@@ -557,6 +581,8 @@ claims:
     quote: '"Audi A3 DSG Sorunları: 8P Kasa (2003-2012): DQ250 hidrolik problemi –
       valf gövdesi yaygın arıza, Quattro sistem entegrasyonu – AWD özel sorunları."'
     independent: true
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_and_cl_v1
   claim_key: dq250_transmission_dq250_mechatronic_and_cl
   version: 1
@@ -596,6 +622,8 @@ claims:
       🔹 **Kavrama kayması veya vites geçişlerinde sertlik hissederseniz hemen kontrol
       ettirin** → Çift kavrama sistemi ve mekatronik kontrol edilmelidir.'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_ecu_co_v1
   claim_key: dq250_transmission_dq250_mechatronic_ecu_co
   version: 1
@@ -628,6 +656,8 @@ claims:
     site_or_channel: eco-torque.co.uk
     quote: '"ECU communication errors — resulting in ''no comms'' or CAN bus faults"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_failur_v1
   claim_key: dq250_transmission_dq250_mechatronic_failur
   version: 1
@@ -674,6 +704,8 @@ claims:
 
       🔍 Sebep: TCU veya mekatronik valf gövdesi arızası.'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_soleno_v1
   claim_key: dq250_transmission_dq250_mechatronic_soleno
   version: 1
@@ -707,6 +739,8 @@ claims:
     site_or_channel: eco-torque.co.uk
     quote: '"Solenoid valve faults — causing poor or delayed gear selection"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_temper_v1
   claim_key: dq250_transmission_dq250_mechatronic_temper
   version: 1
@@ -741,6 +775,8 @@ claims:
       problems... On the DQ250 an internal temperature-sensor failure is a frequent,
       well-documented trigger."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_unit_f_v1
   claim_key: dq250_transmission_dq250_mechatronic_unit_f
   version: 1
@@ -773,6 +809,8 @@ claims:
       gear changes, delay when selecting Drive or Reverse, gearbox warning lights,
       loss of certain gears.'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_mechatronic_valve__v1
   claim_key: dq250_transmission_dq250_mechatronic_valve_
   version: 1
@@ -804,6 +842,8 @@ claims:
     quote: 'Mechatronic unit failure: Internal valve body solenoid failure — requires
       mechatronic replacement or remanufacture'
     independent: true
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq250_transmission_dq250_oil_seal_leaks_at__v1
   claim_key: dq250_transmission_dq250_oil_seal_leaks_at_
   version: 1
@@ -839,6 +879,8 @@ claims:
     quote: 'Oil seal leaks: At output shaft seals and mechatronic unit gasket — identifiable
       by oil on bell housing'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_overheating_and_cl_v1
   claim_key: dq250_transmission_dq250_overheating_and_cl
   version: 1
@@ -874,6 +916,8 @@ claims:
 
       🔍 Sebep: Uzun süre agresif kullanım veya yetersiz soğutma.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_solenoid_failures__v1
   claim_key: dq250_transmission_dq250_solenoid_failures_
   version: 1
@@ -907,6 +951,8 @@ claims:
     quote: '"Some owners report jerking, shuddering, or shifting delays, often linked
       to ... faulty solenoids ..."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_solenoid_valve_oil_v1
   claim_key: dq250_transmission_dq250_solenoid_valve_oil
   version: 1
@@ -944,6 +990,8 @@ claims:
       gevşemesi kronik sorundur. DQ250 ıslak tiptir ve solenoidleri sürekli yağ banyosunda
       çalışır — yağ bakımı kritik önem taşır."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_solenoid_valve_wea_v1
   claim_key: dq250_transmission_dq250_solenoid_valve_wea
   version: 1
@@ -979,6 +1027,8 @@ claims:
     quote: '"Milyonlarca kez açılıp kapanan valf pistonları zamanla aşınarak basınç
       kaçırmaya başlar."'
     independent: true
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq250_transmission_dq250_valve_body_wear_ca_v1
   claim_key: dq250_transmission_dq250_valve_body_wear_ca
   version: 1
@@ -1017,6 +1067,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 150000
+  component_id: transmission_at_valve_body
+  detection: diagnostic
 - id: dq250_transmission_dq250_wet_clutch_engagem_v1
   claim_key: dq250_transmission_dq250_wet_clutch_engagem
   version: 1
@@ -1049,6 +1101,8 @@ claims:
       Drivers may notice: shuddering when pulling away, slipping between gears, poor
       low-speed response.'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_wet_clutch_fluid_d_v1
   claim_key: dq250_transmission_dq250_wet_clutch_fluid_d
   version: 1
@@ -1084,6 +1138,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_wet_clutch_mechatr_v1
   claim_key: dq250_transmission_dq250_wet_clutch_mechatr
   version: 1
@@ -1127,6 +1183,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_dq250_wet_clutch_plate_w_v1
   claim_key: dq250_transmission_dq250_wet_clutch_plate_w
   version: 1
@@ -1157,6 +1215,8 @@ claims:
     site_or_channel: erenservis.net
     quote: '"DQ250''de (ıslak kavrama) erken dönemde sıvı değişimi yardımcı olabilir."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dq250_wet_clutch_wear_an_v1
   claim_key: dq250_transmission_dq250_wet_clutch_wear_an
   version: 1
@@ -1188,6 +1248,8 @@ claims:
     quote: '"Yanık koku. Kavrama plaketlerinin aşırı ısındığını gösterir. Bu noktada
       hasar çok hızlı ilerler."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dsg_gear_slippage_fluid__v1
   claim_key: dq250_transmission_dsg_gear_slippage_fluid_
   version: 1
@@ -1221,6 +1283,8 @@ claims:
       of gear slippage are: **low or contaminated DSG fluid level, faulty solenoid
       valve, worn or damaged clutches**."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_dsg_grinding_noises_clut_v1
   claim_key: dq250_transmission_dsg_grinding_noises_clut
   version: 1
@@ -1254,6 +1318,8 @@ claims:
       especially at low speed or under load. Some possible causes of grinding noises
       are: **worn or damaged clutches, faulty mechatronic unit, misaligned gear sets**."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_fluctuating_rpm_needle_d_v1
   claim_key: dq250_transmission_fluctuating_rpm_needle_d
   version: 1
@@ -1319,6 +1385,8 @@ claims:
     quote: '"Heat damage — the mechatronic is sensitive to high fluid temperatures
       over time"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_mechatronic_unit_failure_v1
   claim_key: dq250_transmission_mechatronic_unit_failure
   version: 1
@@ -1366,6 +1434,8 @@ claims:
     - clutch changed
     - new clutch
     - clutch kit
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dq250_transmission_selector_fork_wear_in_dq_v1
   claim_key: dq250_transmission_selector_fork_wear_in_dq
   version: 1
@@ -1399,6 +1469,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 180000
+  component_id: transmission_dct_fork_synchronizer
+  detection: test_drive
 - id: dq250_transmission_software_adaptation_faul_v1
   claim_key: dq250_transmission_software_adaptation_faul
   version: 1
@@ -1435,6 +1507,8 @@ claims:
       control-unit software, these adaptations can be lost or corrupted — producing
       rough engagement, hesitation, or a flare on shifts."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dq250_transmission_unsmooth_or_delayed_gear_v1
   claim_key: dq250_transmission_unsmooth_or_delayed_gear
   version: 1
@@ -1509,3 +1583,5 @@ claims:
     - transmission fluid changed
     - gearbox oil changed
     - mechatronic fluid changed
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
