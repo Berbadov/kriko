@@ -6,6 +6,42 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-21 — CI, contributor protocol, structural invariants
+
+No `.github/` existed: nothing verified a branch before merge.
+
+- **The documented test command was wrong.** `python -m pytest backend knowledge`
+  in the README collected **576 of 761** tests once `ops/` existed — every
+  `ops/tests` file skipped, silently, without failing. Root cause: no pytest
+  config at all, so collection depended on which directories you named.
+  `pytest.ini` now pins `testpaths`; the README says to run `pytest` bare.
+- **The layering rule became a test, not a CI script.** Duplicating the greps
+  into CI would let them drift from `CLAUDE.md`.
+  `ops/tests/test_repo_invariants.py` fails if `knowledge/` imports from
+  `backend/` or `ops/`, if `backend/` imports from `ops/`, or if a package with
+  tests is missing from `testpaths`. Each was verified to **fail on an injected
+  violation** — a guard that cannot fail is not a guard.
+- **CI** (`.github/workflows/ci.yml`): the suite with no secrets (verified: all
+  761 pass in a stripped environment), the node tests, and a `docker build` that
+  imports the serving app inside the image — covering the breakage class the
+  suite structurally cannot see.
+- **Templates**: PR template checks the CLAUDE.md principles; the claim-quality
+  issue template asks which value bar the claim failed.
+- **`CONTRIBUTING.md`**: branches, the commit convention already in the history,
+  the test gates, the layering rule.
+- Stale references refreshed: README architecture + file layout predated `ops/`;
+  `knowledge/requirements.txt` still cited `judge.py` (deleted) and the old
+  `knowledge/hub`, `knowledge/mcp` paths.
+
+764 pytest (761 + 3 invariants), 23 node.
+
+**Open, not fixed here:** `package-lock.json` is gitignored, so CI uses
+`npm install` rather than `npm ci` — no reproducible install. And `README.md`'s
+onboarding step still says "human fills in per-market hp/years", which contradicts
+the automation principle in `CLAUDE.md`.
+
+---
+
 ## 2026-08-21 — Codebase organisation: five phases, backend/knowledge cycle broken
 
 Spec: `docs/superpowers/specs/2026-08-21-codebase-organisation-design.md`.
