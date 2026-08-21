@@ -6,6 +6,54 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-21 — Codebase organisation: five phases, backend/knowledge cycle broken
+
+Spec: `docs/superpowers/specs/2026-08-21-codebase-organisation-design.md`.
+Baseline before: 760 passed / 1 failed, 52 dirty files, 463 tracked files.
+After: 761 passed / 0 failed, clean tree, 310 tracked files.
+
+- **Phase 1 — dirty tree committed** in six coherent commits: source tiers,
+  component registry, part YAML v3, serving payload v2, hover_lite v2 rendering,
+  hub picker. The pre-existing test failure was a harness bug, not a product
+  bug: `test_hub_web.py` regex-scans `hub.js` for `$('#id')` selectors without
+  stripping comments, so a comment *documenting* a past selector bug read as a
+  live lookup. Now strips `//` and `/* */` first.
+- **Phase 2 — git hygiene.** `knowledge/ledger.db` was gitignored *and* tracked;
+  gitignore never untracks, so the 6.9 MB binary re-diffed on every commit and
+  rode along in three. Untracked with the hub run log and `sahibinden_example/`
+  (152 files, 7.8 MB, referenced by nothing). Tracked files 463 → 309.
+- **Phase 3 — seven dead modules deleted** (`knowledge/` 21 → 13). All leaves:
+  zero importers, every apparent reference a self-reference in its own docstring.
+  Five were already on the 2026-07-07 ledger plan's delete list, which was only
+  half executed. Two were per-model patches the generalization principle
+  forbids — `fix_sibling_contamination.py` imports the very
+  `stoplists.mentions_sibling_code` that now prevents what it was written to mop.
+- **Phase 4 — `docs/historical/`** for the two "do not follow" docs plus
+  `thoughts/`. `pipeline_postmortem.md` deliberately stayed: three live files
+  cite it as a standing convention. `CLAUDE.md` and `README.md` both listed
+  `kriko_build_plan.md`, which exists nowhere — dangling reference dropped.
+- **Phase 5 — the dependency cycle.** `backend/` and `knowledge/` imported each
+  other; 12 of 18 cross-boundary imports sat inside function bodies as
+  `ImportError` workarounds. Root cause: `backend/tools/` held operator analysis
+  tooling — nothing in `backend/api`, `core`, `db` or `sync.py` imports it, while
+  the hub, ledger, MCP server and pipeline imported `backend.tools.coverage` from
+  six places. New `ops/` layer (layer 3) now holds `reports/`, `hub/`, `mcp/`,
+  `auto`, `process`, `ledger_run`, `swap`, `remediate`, `panel`; `title_sim`
+  moved down into `knowledge/`. **`knowledge/` now imports nothing above it and
+  `backend/` nothing from `ops/`** — enforced by two greps in `CLAUDE.md`'s new
+  layering principle and documented in `INTERNALS.md` ("Two Planes" → "Three
+  Layers"; it also still named `judge.py`/`promote.py`, long gone).
+
+CLI paths changed with the module moves — `python -m backend.tools.coverage` →
+`ops.reports.coverage`, `knowledge.auto` → `ops.auto`, `knowledge.ledger.run` →
+`ops.ledger_run` — along with `.mcp.json`, `opencode.json`, `package.json`'s test
+glob, and the command strings `ops/hub/web.py` spawns and validates.
+
+Verified at every step: 761 pytest + 23 node tests, `docker build`, and
+`import backend.core.resolver, backend.sync, backend.api.main` inside the built
+image — the last catching a `COPY` the test suite structurally cannot see.
+
+
 ## 2026-08-19 — B24: agent methodology overhaul — rules move to the write path
 
 The first live agent onboarding (VW Golf 8) wrote four **marketing trims**

@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-21
 **Branch:** `feat/agent-model-onboarding`
-**Status:** approved, pending execution
+**Status:** executed 2026-08-21 — all five phases landed; see done.md
 **Revised:** 2026-08-21 — Phase 5 (dependency-cycle refactor) added
 
 ## Problem
