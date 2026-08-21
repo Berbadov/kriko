@@ -3,6 +3,7 @@
 **Date:** 2026-08-21
 **Branch:** `feat/agent-model-onboarding`
 **Status:** approved, pending execution
+**Revised:** 2026-08-21 — Phase 5 (dependency-cycle refactor) added
 
 ## Problem
 
@@ -35,8 +36,13 @@ Every phase below must hold **760 passed** and drive the failure count to zero.
 
 - No history rewrite. `git rm --cached` stops future churn; historical blobs stay in
   `.git`. Shrinking the pack is a separate, deliberate decision.
-- No module relocation. Live modules stay at `knowledge/` root, so no import path
-  changes anywhere.
+- No *renaming*. `discover.py` existing twice with unrelated meanings, and the vague
+  `auto.py` / `process.py`, are real readability problems but are left alone — Phase 5
+  moves files without also changing what they are called, so every move stays
+  greppable. Renames are follow-up work.
+- Phase 5 relocates modules to break the dependency cycle (added 2026-08-21 after the
+  original "no relocation" scope proved unable to address the intuitiveness problem).
+  Phases 1-4 still change no import paths; all churn is isolated to Phase 5.
 - No splitting of the large files (`hub/web.py` 1151 lines, `hover_lite.js` 1084,
   `hub/static/hub.js` 935). Its own project, after this lands.
 - `.opencode/` and `opencode.json` untouched — another harness's config.
@@ -120,3 +126,105 @@ Full suite runs after deletion to confirm 760 still pass.
 - `python -c "import knowledge.process, knowledge.auto, knowledge.extract"` after
   Phase 3 as a fast import-graph smoke check.
 - `git ls-files | wc -l` before/after, to quantify the tracked-file reduction.
+
+## Phase 5 — break the backend/knowledge dependency cycle
+
+### The problem
+
+`backend/` and `knowledge/` import each other. 12 of the 18 cross-boundary imports are
+written inside function bodies rather than at module top — the standard workaround for
+`ImportError: partially initialized module`. Each deferred import is a patch over the
+same structural break, applied one call site at a time. There is no layering, so there
+is no mental model of what sits on top of what.
+
+The root cause is one misfiled directory. `backend/tools/{coverage,demand,replay,analyses}.py`
+are operator analysis tools, not serving code — verified: nothing in `backend/api`,
+`backend/core`, `backend/db` or `backend/sync.py` imports them, while the pipeline, hub,
+ledger and MCP server import `backend.tools.coverage` from six separate call sites.
+They were filed under `backend/` because they read the serving database, but reading a
+database does not make a module part of the server.
+
+### Target layering
+
+Dependencies flow one way only:
+
+```
+  ops/       hub, mcp, reports (coverage/demand/replay/analyses),
+  layer 3    swap, remediate — operates and inspects the layers below
+     |
+     v
+  backend/   sync ETL, api, resolver, db, matcher
+  layer 2    ingests the catalog, serves risk to the extension
+     |
+     v
+  knowledge/ catalog, extraction, ledger, parts, sources
+  layer 1    produces the YAML catalog — imports nothing above it
+```
+
+`backend/` importing `knowledge/` stays legal and unchanged (layer 2 -> layer 1); it is
+`knowledge/` reaching up into `backend/` that must stop.
+
+### Moves
+
+| From | To | Why |
+|---|---|---|
+| `backend/tools/{coverage,demand,replay,analyses}.py` | `ops/reports/` | operator tooling; unused by the serving path; source of 6 of the 11 deferred imports |
+| `knowledge/hub/` | `ops/hub/` | operator web dashboard — layer 3 behaviour |
+| `knowledge/mcp/` | `ops/mcp/` | operator control surface — layer 3 behaviour |
+| `knowledge/ledger/{swap,remediate}.py` | `ops/` | acceptance-parity harness; needs `backend.api.main`, which only layer 3 may import |
+| `knowledge/ledger/panel.py` | `ops/` | read-only pipeline + cost dashboard; imports `backend.tools.coverage`, so leaving it in layer 1 would make it import *upward into `ops/`* after the move — a worse violation than today's |
+| `knowledge/process.py` | `ops/` | orchestrates `backend.sync` — layer 3 behaviour |
+| `backend/core/title_sim.py` | `knowledge/title_sim.py` | pure string utility; `knowledge/dedup.py` needs `title_tokens`, and layer 1 may not import layer 2 |
+| `backend/tests/test_{coverage_tool,demand,observability}.py` | `ops/tests/` | follow the code they cover |
+| `knowledge/tests/test_ledger_{panel,swap,remediate}.py` | `ops/tests/` | follow the code they cover |
+
+### Non-Python references that break (verified, all must be updated in the same commit)
+
+These are invisible to import-graph analysis and each fails only at runtime:
+
+1. **`.mcp.json:6`** — `"args": ["-m", "knowledge.mcp.server"]` becomes `ops.mcp.server`.
+   This is how the kriko MCP server is wired into Claude Code; the server must be
+   restarted after the change or its tools break mid-session.
+2. **`opencode.json:6`** — hardcodes the same module path. Same edit.
+3. **`package.json:6`** — the `npm test` glob `'knowledge/hub/tests/**/*.test.js'`
+   becomes `'ops/hub/tests/**/*.test.js'`. Missing this silently stops running the hub
+   tests rather than failing.
+4. **`deploy/Dockerfile`** — copies a deliberate stdlib-only slice of `knowledge/`.
+   `title_sim.py` moving into `knowledge/` requires a new
+   `COPY knowledge/title_sim.py ./knowledge/title_sim.py` line, because
+   `backend/core/resolver.py` and `backend/sync.py` both import it and both ship in the
+   image. Without it the container builds clean and fails at request time.
+   `backend/tools/` leaving `backend/` needs no Dockerfile change (line 10 copies
+   `backend/` wholesale; the image simply gets smaller).
+5. **Prose references** in `backend/api/main.py:160`, `backend/observability.py:9`,
+   `backend/config.py:29`, `backend/sync.py:46` cite `backend/tools/...` paths in
+   comments. Stale comments, not breakage, but updated with the move.
+
+### Execution order
+
+1. Create `ops/` with `__init__.py`; move `backend/tools/` -> `ops/reports/` via
+   `git mv`, update the ~11 importers. Run suite.
+2. Move `hub/` and `mcp/`; update `.mcp.json`, `opencode.json`, `package.json`. Run
+   suite **and** `npm test`.
+3. Move `swap.py`, `remediate.py`, `panel.py`, `process.py`; update importers including
+   `knowledge/auto.py:273,358`. Run suite.
+4. Move `title_sim.py`; update `backend/sync.py:26`, `backend/core/resolver.py:47`,
+   `backend/tests/test_resolver_dedup.py:9`, `knowledge/dedup.py:11`; add the Dockerfile
+   COPY line. Run suite.
+5. Update the architecture section of `docs/INTERNALS.md` and the documentation map in
+   `CLAUDE.md` to describe the three layers.
+
+Each step is its own commit, gated on the full suite. `git mv` preserves history.
+
+### Definition of done
+
+- `grep -rnE "^[[:space:]]*(from|import) backend" --include='*.py' knowledge/` returns
+  nothing. Both forms must be checked: `knowledge/ledger/swap.py:284` uses
+  `import backend.sync as sync_mod`, which a `from backend`-only grep misses.
+- Baseline for that grep today: **14 hits in `knowledge/` (11 of them deferred inside
+  function bodies), plus 4 in `backend/` (1 deferred)** — 18 cross-boundary imports, 12
+  of them cycle workarounds. Target: 14 -> 0 upward, 4 downward retained and hoisted to
+  module top.
+- 760 tests pass; `npm test` passes.
+- `docker build -f deploy/Dockerfile .` succeeds and the built image can import
+  `backend.core.resolver`.
