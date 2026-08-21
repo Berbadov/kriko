@@ -45,6 +45,10 @@
         </div>
         <div class="lite-rc-titlebox">
           <div class="lite-rc-title">${escapeHtml(risk.title)}</div>
+          ${risk.why_shown && risk.why_shown.length ? `
+            <div class="lite-rc-why">
+              ${risk.why_shown.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
+            </div>` : ""}
           <div class="lite-rc-meta">
             <span class="lite-rc-strength" data-strength="${escapeHtml(strengthAttr)}">${escapeHtml(strengthLabel)}</span>
             <span class="sep"> · </span><span>${escapeHtml(risk.domain || "")}</span>

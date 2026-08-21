@@ -514,6 +514,30 @@
 }
 .lite-rc[data-open="1"] .lite-rc-title { white-space: normal; }
 
+/* why_shown chips (serving payload v2) — small muted reasons under the card
+   title: config match, mileage gate, detection suppression. */
+.lite-rc-why {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.lite-rc-why-chip {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: 0.2px;
+  color: var(--fg-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-item);
+  border-radius: 999px;
+  padding: 0 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 .lite-rc-meta {
   display: flex;
   align-items: center;
