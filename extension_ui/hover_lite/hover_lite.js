@@ -940,14 +940,11 @@
       return;
     }
 
-    // Group by domain, preserving global indices for toggleOne/setAllOpen
-    const groups = {};
-    state.result.risks.forEach((risk, i) => {
-      const d = (risk.domain || "other").toLowerCase().trim();
-      if (!groups[d]) groups[d] = [];
-      groups[d].push({ risk, idx: i });
-    });
-
+    // Group for display. Serving payload v2: when the backend sends
+    // `subsystems` (registry component groups — engine/timing, body/comfort, …),
+    // render those sections with the Turkish label; otherwise fall back to the
+    // legacy domain grouping. Global risk indices into state.result.risks are
+    // preserved either way so toggleOne/setAllOpen keep working.
     const domainLabels = {
       engine: "Engine", transmission: "Transmission", emissions: "Emissions",
       electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
@@ -955,9 +952,33 @@
       interior: "Interior", "body/structure": "Body", steering: "Steering",
     };
 
+    let groups;
+    if (state.result.subsystems && state.result.subsystems.length) {
+      groups = state.result.subsystems
+        .map((g) => ({
+          iconDomain: (g.name || "other").split("/")[0],
+          label: g.display_tr || g.name || "Other",
+          items: (g.risks || [])
+            .map((risk) => ({ risk, idx: state.result.risks.indexOf(risk) }))
+            .filter((it) => it.idx >= 0),
+        }))
+        .filter((g) => g.items.length);
+    } else {
+      const byDomain = {};
+      state.result.risks.forEach((risk, i) => {
+        const d = (risk.domain || "other").toLowerCase().trim();
+        if (!byDomain[d]) byDomain[d] = [];
+        byDomain[d].push({ risk, idx: i });
+      });
+      groups = Object.entries(byDomain).map(([domain, items]) => ({
+        iconDomain: domain,
+        label: domainLabels[domain] || domain.charAt(0).toUpperCase() + domain.slice(1),
+        items,
+      }));
+    }
+
     let delayCounter = 0;
-    for (const [domain, items] of Object.entries(groups)) {
-      const label = domainLabels[domain] || domain.charAt(0).toUpperCase() + domain.slice(1);
+    for (const { iconDomain, label, items } of groups) {
       const high = items.filter(i => i.risk.severity === "high").length;
       const med  = items.filter(i => i.risk.severity === "medium").length;
       const low  = items.filter(i => i.risk.severity === "low").length;
@@ -973,8 +994,8 @@
       groupEl.dataset.open = "1";
       groupEl.innerHTML = `
         <button type="button" class="lite-domain-head" aria-expanded="true">
-          <span class="lite-domain-icon">${domainIconSvg(domain, { size: 15 })}</span>
-          <span class="lite-domain-name">${label}</span>
+          <span class="lite-domain-icon">${domainIconSvg(iconDomain, { size: 15 })}</span>
+          <span class="lite-domain-name">${escapeHtml(label)}</span>
           <span class="lite-domain-count">${items.length}</span>
           <span class="lite-domain-sev">${sevHtml.join('')}</span>
           <span class="lite-domain-toggle">&minus;</span>
