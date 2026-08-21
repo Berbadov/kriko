@@ -106,12 +106,39 @@ if not make or not model or not fuel or not year:
 Queries `claim_variants` join table for all matched variant IDs, returns only
 `status='verified'` and `is_current=True` claims.
 
+Visual-detection suppression (payload v2): a claim whose registry component
+(`claims.component_id`, filled by sync from `knowledge/catalog/components.yaml`)
+has `detection: visual` gets `ClaimResult.detection_factor = 0.35` — but ONLY
+when the claim has a component_id and a listing context exists. The claim is
+never dropped (fail-open); the API layer multiplies the factor into
+`relevance_score`.
+
+### 5b. Ranking & payload v2
+**`backend/api/main.py`** — `run_analysis` + `_claim_to_risk`
+
+`relevance_score = severity weight (low 0.3 / medium 0.6 / high 1.0)
+× mileage-gate match (satisfied 1.0 / unknown 0.7, fail-open)
+× detection factor (visual 0.35 / else 1.0)
+× source-trust weight (best tier across sources, NULL = neutral)`
+
+Risks sort by `-relevance_score` (strength → consequence → severity as
+tiebreak), then are capped to `MAX_RISKS_PER_LISTING`. Each risk carries
+`why_shown`: human-readable reasons the card is shown — config match (variant
+label), mileage gate ("187.000 km > 120.000 km threshold" or "mileage unknown
+— shown by default"), visual-detection suppression, source trust. The
+response also carries `subsystems: [{name, display_tr, risks}]` — the same
+risks grouped by registry subsystem (`claims.subsystem`) for the v2 UI; the
+flat `risks` array stays for the current extension.
+
 ### 6. Response rendering
 **`extension_ui/hover_lite/hover_lite.js`**
 
 Reads `coverage_state`, `risks[]`, `summary`, `disclaimer` from the API response.
 Renders the panel overlay with severity-colored risk cards.
 Risk cards are in `hover_lite/risk_card.js`. Icons in `hover_lite/icons.js`.
+When the response carries `subsystems[]`, groups render per subsystem with the
+Turkish label (`display_tr`) instead of per domain; `why_shown` renders as
+small muted chips under each card title.
 
 ---
 

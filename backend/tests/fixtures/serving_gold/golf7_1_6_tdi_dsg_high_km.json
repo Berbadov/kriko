@@ -1,0 +1,37 @@
+{
+  "name": "golf7_1_6_tdi_dsg_high_km",
+  "description": "golf7 1 6 tdi dsg high km",
+  "ad_metadata": {
+    "make": "Volkswagen",
+    "model": "Golf",
+    "year": 2018,
+    "fuel_type": "Dizel",
+    "transmission": "Otomatik",
+    "engine_volume_cc": 1598,
+    "power_hp": 105,
+    "mileage_km": 287000,
+    "url": "https://www.sahibinden.com/ilan/vasita-araba/volkswagen-golf-1.6-tdi-dsg"
+  },
+  "expected_matched_variant_ids": [
+    "golf7_ea288_105"
+  ],
+  "expected_claim_keys": [
+    "ea288_emissions_1_6_tdi_egr_valve_carbon",
+    "ea288_emissions_carbon_clogged_egr_valve",
+    "ea288_emissions_chronic_egr_cooler_block",
+    "ea288_engine_carbon_buildup_in_combus",
+    "ea288_engine_ea288_wet_timing_belt_in",
+    "ea288_engine_egr_valve_gear_breakage_",
+    "ea288_engine_glow_plug_failure_cold_s",
+    "golf7_body_electrical_adas_sensor_faults_front",
+    "golf7_body_general_boot_and_door_seal_water",
+    "golf7_body_general_clogged_vw_badge_drain_c",
+    "golf7_body_general_faulty_door_child_locks_",
+    "golf7_body_general_golf_7_body_rear_seals_l",
+    "golf7_body_general_golf_7_boot_badge_drain_",
+    "golf7_body_general_golf_7_sunroof_drains_cl",
+    "golf7_elec_electrical_infotainment_and_sos_fai",
+    "golf7_elec_engine_golf7_elec_ignition_coil",
+    "golf7_elec_fuel_system_adblue_system_issues_in_"
+  ]
+}

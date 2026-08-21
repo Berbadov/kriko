@@ -38,12 +38,15 @@ code_family: dq381
 claims:
 - claim_key: dq381_good
   title: DQ381 wet-clutch pack wear
+  title_tr: DQ381 ıslak kavrama aşınması
   kind: known_issue
   domain: transmission
   severity: high
   status: review
   rationale: DQ381 wet dual-clutch pack wears prematurely under heavy load.
+  rationale_tr: DQ381 ıslak çift kavramalı paket ağır yük altında erken aşınır.
   inspection_advice: Check for shudder on takeoff.
+  inspection_advice_tr: Kalkışta sarsıntı olup olmadığını kontrol edin.
   sources:
   - source_url: https://x
     quote: q

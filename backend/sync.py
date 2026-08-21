@@ -15,10 +15,8 @@ Usage:
     python -m backend.sync
 """
 
-import glob
 import logging
 import re
-import sys
 from pathlib import Path
 
 import yaml
@@ -34,6 +32,8 @@ from backend.core.transmission_signal import (
 log = logging.getLogger(__name__)
 from backend.db.models import Base, Claim, ClaimSource, ClaimVariant, Variant
 from backend.db.session import engine
+from knowledge.catalog.registry import detection_of, subsystem_of
+from knowledge.sources.tiers import domain_from_url, resolve_tier
 
 DATA_DIR = Path(__file__).parent / "data"
 PARTS_DIR  = DATA_DIR / "parts"
@@ -530,6 +530,57 @@ def _part_claim_id(part_id: str, claim_data: dict) -> str:
     return f"{key}_v{version}"
 
 
+def _apply_source_tier(obj: Claim, sources: list[dict] | None) -> None:
+    """Fill source_tier/source_trust on a claim row from the tier registry.
+
+    Phase 1 (source quality): the claim's *best* source decides — the tier
+    with the highest trust weight across all its sources, resolved by
+    knowledge/sources/tiers.py against knowledge/catalog/source_tiers.yaml.
+    A claim corroborated by a specialist writeup and a forum thread is
+    specialist-grade, not an average. No sources (maintenance claims) → both
+    NULL → trust-neutral in serving. Never raises: an unresolvable source
+    just contributes the registry default tier.
+    """
+    best_tier: str | None = None
+    best_trust: float | None = None
+    for s in sources or []:
+        if not isinstance(s, dict):
+            continue
+        domain = s.get("source_domain") or domain_from_url(s.get("source_url"))
+        try:
+            tier, trust = resolve_tier(domain)
+        except Exception:  # registry read failure must never break sync
+            continue
+        if best_trust is None or trust > best_trust:
+            best_tier, best_trust = tier, trust
+    obj.source_tier = best_tier
+    obj.source_trust = best_trust
+
+
+def _apply_component_registry(obj: Claim, yaml_detection: str | None = None) -> None:
+    """Fill detection/subsystem on a claim row from the component registry.
+
+    Phase 3 (serving payload v2): the claim YAML's component_id (written by the
+    v3 knowledge-plane migration) resolves against
+    knowledge/catalog/components.yaml; the serving plane then uses detection to
+    rank visual-detection claims down (0.35) and subsystem to group the
+    response. The registry is the authority for detection — the YAML's own
+    `detection:` key is only a fallback for a component the registry doesn't
+    know yet. component_id's absence is tolerated — the v3 migration runs in
+    parallel — leaving detection NULL, which the resolver treats as
+    detection-neutral. An unknown component_id with no YAML detection is also
+    neutral, never an error: sync must not break on a registry that lags the
+    YAMLs.
+    """
+    cid = obj.component_id
+    if not cid:
+        obj.detection = None
+        obj.subsystem = None
+        return
+    obj.detection = detection_of(cid) or (yaml_detection or None)
+    obj.subsystem = subsystem_of(cid)
+
+
 def _upsert_claim_row(db: Session, row: dict) -> Claim:
     obj = db.get(Claim, row["id"])
     if obj is None:
@@ -557,6 +608,9 @@ def _upsert_claim_row(db: Session, row: dict) -> Claim:
     obj.maintenance_data = row.get("maintenance")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
     obj.consequence      = consequence_tier(obj.title, obj.rationale)
+    obj.component_id     = row.get("component_id")
+    _apply_component_registry(obj, row.get("detection"))
+    _apply_source_tier(obj, row.get("sources"))
     return obj
 
 
@@ -588,6 +642,9 @@ def _upsert_part_claim(db: Session, claim_id: str, claim_data: dict) -> Claim:
     obj.maintenance_data = claim_data.get("maintenance")
     obj.requires_equipment = derive_equipment_tags(f"{obj.title} {obj.rationale}") or None
     obj.consequence      = consequence_tier(obj.title, obj.rationale)
+    obj.component_id     = claim_data.get("component_id")
+    _apply_component_registry(obj, claim_data.get("detection"))
+    _apply_source_tier(obj, claim_data.get("sources"))
     return obj
 
 

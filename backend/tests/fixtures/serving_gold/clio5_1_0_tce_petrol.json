@@ -1,0 +1,39 @@
+{
+  "name": "clio5_1_0_tce_petrol",
+  "description": "clio5 1 0 tce petrol",
+  "ad_metadata": {
+    "make": "Renault",
+    "model": "Clio",
+    "year": 2020,
+    "fuel_type": "Benzinli",
+    "transmission": "Manuel",
+    "engine_volume_cc": 999,
+    "power_hp": 100,
+    "mileage_km": 84000,
+    "url": "https://www.sahibinden.com/ilan/vasita-araba/renault-clio-1.0-tce"
+  },
+  "expected_matched_variant_ids": [
+    "clio5_h5d_100"
+  ],
+  "expected_claim_keys": [
+    "clio5_body_brakes_brake_pipe_corrosion",
+    "clio5_body_emissions_chronic_catalytic_conver",
+    "clio5_body_engine_crankshaft_camshaft_sens",
+    "clio5_body_suspension_ball_joint_excessive_pla",
+    "clio5_elec_brakes_brake_hose_protector_mis",
+    "clio5_elec_brakes_brake_pedal_switch_cause",
+    "clio5_elec_brakes_recurring_abs_wheel_spee",
+    "clio5_elec_electrical_1_0_tce_clio_v_2022_inst",
+    "clio5_elec_electrical_can_bus_wiring_corrosion",
+    "clio5_elec_electrical_clio_5_multimedia_screen",
+    "clio5_elec_electrical_loose_ground_connections",
+    "clio5_elec_emissions_clio_5_lambda_sensor_fai",
+    "clio5_elec_engine_clio_5_ignition_coil_fai",
+    "clio5_elec_engine_vacuum_leaks_in_intake_s",
+    "clio5_elec_general_worn_window_regulator_me",
+    "clio5_elec_transmission_clutch_related_issues_ma",
+    "clio5_elec_transmission_clutch_squeaking_noise_m",
+    "h5d_engine_excessive_vibration_due_",
+    "h5d_engine_ratchet_wear_binding_in_"
+  ]
+}
