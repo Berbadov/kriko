@@ -47,7 +47,7 @@ from pathlib import Path
 
 import yaml
 
-from backend.tools.coverage import build_report
+from ops.reports.coverage import build_report
 from knowledge.ledger import db as ledger_db
 from knowledge.ledger.export import merged_part_id
 
@@ -58,7 +58,7 @@ DEFAULT_BASELINE = REPO_ROOT / "backend" / "tests" / "fixtures" / "serving_basel
 
 _AXIS_SUFFIXES = ("_family", "_code")
 # Pseudo part-code fitment rows may use for a transmission with deliberately no
-# part file (mirrors backend/sync.py + backend/tools/coverage.py).
+# part file (mirrors backend/sync.py + ops/reports/coverage.py).
 PSEUDO_PART_CODES = frozenset({"manual"})
 
 
@@ -275,7 +275,7 @@ def _serving_check(data_dir: Path, post_dir: Path, baseline_path: Path) -> dict:
 
     from backend.api.main import run_analysis
     from backend.db.models import Claim, ClaimSource, ClaimVariant, Variant
-    from backend.tools.replay import compute_diff
+    from ops.reports.replay import compute_diff
 
     records = json.loads(baseline_path.read_text())
     ids = [r.get("id", str(i)) for i, r in enumerate(records)]

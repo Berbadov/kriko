@@ -100,7 +100,7 @@ def pending_section(conn) -> list[str]:
 
 def catalog_section(data_dir: Path) -> list[str]:
     lines = ["\n3. CATALOG"]
-    from backend.tools.coverage import build_report
+    from ops.reports.coverage import build_report
     report = build_report(data_dir / "variants", data_dir / "fitment", data_dir / "parts")
     n_parts = n_claims = 0
     for p in sorted((data_dir / "parts").rglob("*.yaml")):
@@ -146,7 +146,7 @@ def guardrails_section() -> list[str]:
     lines.append("  dry-runs:                    python -m knowledge.ledger.run extract --dry-run")
     lines.append("                               python -m knowledge.ledger.run verdict --dry-run")
     lines.append("  swap acceptance gate:        python -m knowledge.ledger.swap check")
-    lines.append("  coverage:                    python -m backend.tools.coverage")
+    lines.append("  coverage:                    python -m ops.reports.coverage")
     return lines
 
 

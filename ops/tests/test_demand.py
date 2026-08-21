@@ -1,4 +1,4 @@
-"""backend.tools.demand — mine no_match analyses into an onboarding demand queue.
+"""ops.reports.demand — mine no_match analyses into an onboarding demand queue.
 
 Task 3 / backlog B10: logs/analyses.jsonl records every /analyze request; the
 no_match ones are latent onboarding demand (cars Kriko doesn't cover, or covered
@@ -19,7 +19,7 @@ import pytest
 import yaml
 
 import backend.core.normalize as normalize_module
-from backend.tools.demand import main, mine
+from ops.reports.demand import main, mine
 
 # A small, self-contained catalog used only by tests — deliberately NOT the
 # real backend/data/variants/*.yaml, so these tests stay green regardless of

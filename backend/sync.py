@@ -43,7 +43,7 @@ FITMENT_DIR = DATA_DIR / "fitment"
 # file — a manual gearbox has no gearbox-specific claim file of its own. This is
 # a small closed engineering vocabulary (CLAUDE.md scalability exception), not
 # car-coverage data, so it is safe as a constant. `resolver.py` special-cases
-# the same "manual" pseudo-code at serve time; `backend/tools/coverage.py`
+# the same "manual" pseudo-code at serve time; `ops/reports/coverage.py`
 # mirrors this constant for its own catalog-only checks.
 PSEUDO_PART_CODES = frozenset({"manual"})
 

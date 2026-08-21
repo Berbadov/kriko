@@ -88,7 +88,7 @@ knowledge/
   process.py                              # re-run gates on cached candidates (no token cost)
   ledger/                                 # evidence-ledger pipeline (Stage 1, on its own branch)
 extension_ui/                             # Chrome extension (content.js scraper + panel)
-logs/analyses.jsonl                       # every /analyze request+response (see backend.tools.analyses)
+logs/analyses.jsonl                       # every /analyze request+response (see ops.reports.analyses)
 ```
 
 ---

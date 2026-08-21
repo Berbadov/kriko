@@ -26,7 +26,7 @@ GIT_BUILD_TIME = os.environ.get("GIT_BUILD_TIME") or "unknown"
 
 # GET /debug/analyses is off (404) unless explicitly enabled — it reads back
 # full request/response payloads, so it must not be exposed by default on an
-# internet-facing deployment. The CLI (backend/tools/analyses.py) reads the
+# internet-facing deployment. The CLI (ops/reports/analyses.py) reads the
 # same file directly and needs no such gate.
 ENABLE_DEBUG_ENDPOINT = os.environ.get("ENABLE_DEBUG_ENDPOINT", "").lower() in ("1", "true", "yes")
 

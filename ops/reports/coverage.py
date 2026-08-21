@@ -47,9 +47,9 @@ body_code, ...) — a new axis is covered the moment a fitment row carries it,
 no code change needed here.
 
 Usage:
-    python -m backend.tools.coverage
-    python -m backend.tools.coverage --strict     # exit 1 if any finding (CI)
-    python -m backend.tools.coverage --data-dir /path/to/catalog-root
+    python -m ops.reports.coverage
+    python -m ops.reports.coverage --strict     # exit 1 if any finding (CI)
+    python -m ops.reports.coverage --data-dir /path/to/catalog-root
 """
 
 from __future__ import annotations

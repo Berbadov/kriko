@@ -6,7 +6,7 @@ actually shown — reconstructing "what did the buyer see and why" needs manual 
 and isn't possible at all for a bad match (nothing to replay). This module logs the
 full request + derived context + full response for each analysis, one JSON object per
 line, so both a human and an agent can read recent analyses without a DB client, and a
-fix can be verified by replaying a logged request (see backend/tools/replay.py).
+fix can be verified by replaying a logged request (see ops/reports/replay.py).
 
 Writing here must never break the serve path — every call is best-effort.
 """

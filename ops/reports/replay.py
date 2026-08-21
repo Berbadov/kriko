@@ -8,8 +8,8 @@ ambiguous match) back through the real serve path and see whether it's actually 
 Calls backend.api.main.run_analysis() directly — the same function the /analyze route
 calls — so this never drifts into testing a reimplementation of the pipeline.
 
-    python -m backend.tools.replay <analysis-id>
-    python -m backend.tools.replay --last 5      # replay the N most recent
+    python -m ops.reports.replay <analysis-id>
+    python -m ops.reports.replay --last 5      # replay the N most recent
 """
 
 import argparse

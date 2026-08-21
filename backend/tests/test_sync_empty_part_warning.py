@@ -8,7 +8,7 @@ and no warning. The pseudo-code `manual` deliberately has no file (manual
 gearboxes have no gearbox-specific part) and must stay silent.
 
 Catalog-wide holes (zero-claim parts, orphan parts, etc.) are the job of
-`backend/tools/coverage.py`, not sync — this file only covers the one
+`ops/reports/coverage.py`, not sync — this file only covers the one
 behavior change sync.py itself makes: the missing-part-file warning.
 """
 

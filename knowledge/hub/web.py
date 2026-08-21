@@ -417,12 +417,12 @@ def model_detail(key: str) -> dict:
 def demand(limit: int = 60) -> dict:
     """The onboarding queue: cars real buyers hit, grouped by make.
 
-    Derived from logs/analyses.jsonl via backend.tools.demand — traffic-driven,
+    Derived from logs/analyses.jsonl via ops.reports.demand — traffic-driven,
     never a hand-maintained list of makes (CLAUDE.md scalability rule). The
     picker offers what people actually search for, `not_onboarded` first.
     """
     from backend import config
-    from backend.tools.demand import mine
+    from ops.reports.demand import mine
 
     try:
         groups, _ = mine(Path(config.ANALYSES_LOG_PATH), limit=None)

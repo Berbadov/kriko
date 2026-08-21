@@ -112,7 +112,7 @@ def last_remediation(log_path: Path) -> dict | None:
 
 
 def findings(data_dir: Path) -> list[dict]:
-    from backend.tools.coverage import build_report
+    from ops.reports.coverage import build_report
     report = build_report(data_dir / "variants", data_dir / "fitment",
                           data_dir / "parts")
     return [{"kind": f.kind, "subject": f.subject, "message": f.message,

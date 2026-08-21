@@ -9,7 +9,7 @@ date and commit hash.
 - **P2** — real, but can wait
 
 Evidence for many items comes from production logs: `logs/analyses.jsonl`
-(`python -m backend.tools.analyses --last 20`).
+(`python -m ops.reports.analyses --last 20`).
 
 ---
 
@@ -104,7 +104,7 @@ support, `test_scr_gate.py`). The old HUMAN DECISION #7 sign-off is cancelled un
       `knowledge/tests/test_write_variants_emissions.py`.
 - [x] Coverage report lists diesel variants with no emissions value
       (2026-08-03) — new `variant_no_emissions` finding kind
-      (`backend/tools/coverage.py`); the gap is visible, never a quiet wrong
+      (`ops/reports/coverage.py`); the gap is visible, never a quiet wrong
       value.
 - [ ] Derive emissions values from sources via the ledger for Clio 5 + Golf 7 +
       Megane 4 (evidence path, then `write_variants.py` regen). Until then,
@@ -113,7 +113,7 @@ support, `test_scr_gate.py`). The old HUMAN DECISION #7 sign-off is cancelled un
 
 ### B19 — Auto-remediation loop: coverage gaps fix themselves `[G3][G5]` *(absorbs B2/B3)*
 The detection mechanisms exist: B7's coverage report (`zero_claim_part`,
-`auto_variant_no_tx_part`, `backend/tools/coverage.py`) and B6's ad-vs-catalog
+`auto_variant_no_tx_part`, `ops/reports/coverage.py`) and B6's ad-vs-catalog
 contradiction surfacing. The former B2/B3 manual steps are cancelled; this loop
 replaces them:
 - [x] **Driver landed 2026-08-03** — `python -m knowledge.ledger.run remediate`
@@ -232,7 +232,7 @@ the scalability rule forbids. Now the researcher agent supplies the lineup:
 - Agent loop is now **one model per pass** (was one part).
 
 - **Top-down picker** (2026-08-16): make → model → generation → run, no typing.
-  Makes/models come from the demand queue (`backend.tools.demand` over
+  Makes/models come from the demand queue (`ops.reports.demand` over
   `logs/analyses.jsonl`), `not_onboarded` first — traffic-derived, never a
   maintained list. Generation is researched in a phase-1 agent pass
   (`submit_generations` / `list_generations`, lineups in
