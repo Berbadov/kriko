@@ -1,6 +1,6 @@
 """Candidate cache round-trip — write then read reproduces (claim, doc) pairs."""
 
-import knowledge.process as process
+import ops.process as process
 from knowledge.extract import CandidateClaim
 from knowledge.sources.base import Document
 

@@ -1,6 +1,6 @@
 """repair_missing_stub_scaffold.py — one-time repair for parts written before
-run_part() called _ensure_part_stub (knowledge.auto's --part path, and
-knowledge.process's --part path before it got the same fix).
+run_part() called _ensure_part_stub (ops.auto's --part path, and
+ops.process's --part path before it got the same fix).
 
 Reconstructs part_id/part_type/display_name/manufacturer/known_also_as using
 knowledge.parts.search_templates.generate_part_scaffold — the exact same

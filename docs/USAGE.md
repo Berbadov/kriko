@@ -170,15 +170,15 @@ extra keys on existing rows are preserved. Use `--dry-run` to preview.
 
 ```bash
 # Full run: Exa/YouTube discovery → fetch → LLM extract → gate → promote → sync
-python -m knowledge.auto --part k9k --part-type engine --fuel diesel
-python -m knowledge.auto --part edc --part-type transmission
+python -m ops.auto --part k9k --part-type engine --fuel diesel
+python -m ops.auto --part edc --part-type transmission
 
 # Re-run gates/promotion only — zero fetches, zero extraction tokens
-python -m knowledge.process --part k9k --part-type engine --skip-extraction
+python -m ops.process --part k9k --part-type engine --skip-extraction
 ```
 
 > **Retired 2026-08-03 (B16 swap):** the judge/promote gate stack no longer
-> exists — `knowledge.process`'s promote steps raise with a pointer to the
+> exists — `ops.process`'s promote steps raise with a pointer to the
 > ledger path. Claims reach serving only through the ledger's deterministic
 > verdict stage. For new-part research, use Step 4b instead.
 
@@ -189,11 +189,11 @@ trigger; the ledger pipeline fills the gap unattended:
 
 ```bash
 # What would the loop fix right now?
-python -m knowledge.ledger.run remediate --dry-run
+python -m ops.ledger_run remediate --dry-run
 
 # One budget-capped, resumable pass: acquire → extract → resolve → cluster →
 # verdict → export for every zero-claim/missing part the coverage report flags
-python -m knowledge.ledger.run remediate --max-usd 2.0
+python -m ops.ledger_run remediate --max-usd 2.0
 
 # Any findings that aren't part-driven (e.g. diesel variants without an
 # emissions value) are reported and logged, never silently fixed
@@ -210,7 +210,7 @@ One read-only screen answers "what is the pipeline doing" and "what would it
 cost to finish it" — the dry-run estimates, live:
 
 ```bash
-python -m knowledge.ledger.panel
+python -m ops.panel
 ```
 
 Shows total spend by stage/model, pending extraction/verdict cost-to-finish
@@ -318,7 +318,7 @@ repo. They are split by how they bill:
   `*_API_KEY` names in `.env` — a new key is classified the moment it appears.
 
 Three safety notes on the run buttons, since this is the only place the hub
-executes something other than `knowledge.ledger.run`: make/model must match
+executes something other than `ops.ledger_run`: make/model must match
 `[a-z0-9_]{1,40}` and the model id `[A-Za-z0-9_./:-]{1,80}` (argv only, never a
 shell); the task selects a fixed prompt template and the harness a fixed argv
 template, so neither the prompt nor the command comes from the request. The hub
@@ -427,15 +427,15 @@ never a manual edit:
 
 ```bash
 # What would change? (remap, superseded/retained files, fitment edits)
-python -m knowledge.ledger.swap plan
+python -m ops.swap plan
 
 # The automated acceptance gate — parity loss, serving monotonicity, coverage.
 # Exits 1 while the export is thinner than the legacy catalog (the remediate
 # loop is the fix); 0 = swap is safe to land.
-python -m knowledge.ledger.swap check
+python -m ops.swap check
 
 # Land it (runs on a temp copy unless --in-place; revert: git checkout -- backend/data)
-python -m knowledge.ledger.swap apply --in-place
+python -m ops.swap apply --in-place
 ```
 
 ---
@@ -487,13 +487,13 @@ A claim needs **≥ 2 independent sources** that pass all gates to auto-verify. 
 
 ```bash
 # Preview (no writes)
-python -m knowledge.process renault megane 4 --dry-run
+python -m ops.process renault megane 4 --dry-run
 
 # Full run
-python -m knowledge.process renault megane 4
+python -m ops.process renault megane 4
 
 # Re-run gates/promotion on cached candidates — zero fetches, zero extraction LLM calls
-python -m knowledge.process renault megane 4 --skip-extraction
+python -m ops.process renault megane 4 --skip-extraction
 ```
 
 This runs: fetch → LLM extract → dedup → gate → score → write claims YAML → sync DB.

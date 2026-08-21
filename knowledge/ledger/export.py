@@ -72,7 +72,7 @@ def merged_part_id(part_id: str) -> str:
 
     The trailing "_<hp>" is bookkeeping, not engineering identity (same reading
     as component_part_meta and ledger/resolve.py). Public so the catalog-swap
-    mechanism (knowledge/ledger/swap.py) derives the legacy -> merged fitment
+    mechanism (ops/swap.py) derives the legacy -> merged fitment
     remap without a hand-enumerated list — the scalability rule.
     """
     return _POWER_SUFFIX_RE.sub("", part_id)

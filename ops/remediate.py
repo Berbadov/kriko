@@ -15,7 +15,7 @@ appends one line to `logs/remediation.jsonl` so scheduling decisions (and a
 future B16 wiring of the export into serving) can be driven from the log.
 
 Usage:
-    python -m knowledge.ledger.run remediate --max-usd 2.0
+    python -m ops.ledger_run remediate --max-usd 2.0
 """
 
 from __future__ import annotations

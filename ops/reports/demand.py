@@ -15,7 +15,7 @@ groups the no_match requests by make/model into a demand table.
 --json is the demand-driven acquisition handoff (evidence-ledger spec §2.6
 stage 3): the queue feeds model onboarding — for the top not_onboarded group,
 `python -m knowledge.catalog.discover --make X --model Y --write-variants`,
-then research its parts through the ledger (`knowledge.ledger.run acquire /
+then research its parts through the ledger (`ops.ledger_run acquire /
 extract / verdict / export`). Demand decides what gets researched next.
 
 Each group is classified so the table separates the two actionable signals from

@@ -2,7 +2,7 @@
 
 Search YouTube for mechanic videos, preview transcripts in-terminal, and
 approve or skip them. Approved videos are written to the curated YAML as
-status=pending, ready to be processed by knowledge.process.
+status=pending, ready to be processed by ops.process.
 
 Usage:
     python -m knowledge.discover --make renault --model megane
@@ -464,7 +464,7 @@ class DiscoverApp(App[None]):
         self._known_ids.add(vid_id)
         self._update_status_cell(self._cur_row, "✓")
         self._set_status(
-            f"✓ Added to {make}_{model}_{gen}.yaml — run: python -m knowledge.process {make} {model} {gen}"
+            f"✓ Added to {make}_{model}_{gen}.yaml — run: python -m ops.process {make} {model} {gen}"
         )
 
     def action_skip_video(self) -> None:

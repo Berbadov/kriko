@@ -3,7 +3,7 @@
 Companion to add_part_code.py (which adds a field to every row of a variants
 YAML). This targets a single top-level field on one or more already-written
 part stub files — e.g. `manufacturer`, dropped by a since-fixed bug in
-knowledge.auto._ensure_part_stub for the cooling/electrical/body stub
+ops.auto._ensure_part_stub for the cooling/electrical/body stub
 branches.
 
 Usage:

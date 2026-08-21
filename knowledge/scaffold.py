@@ -90,7 +90,7 @@ def run(make: str, model: str, gen: str) -> None:
 Next steps:
   1. Edit {variants_path.relative_to(REPO_ROOT)}
        Fill in real variant rows — one entry per engine/power/transmission combo.
-  2. python -m knowledge.auto {make} {model} {gen} --max-sources 60
+  2. python -m ops.auto {make} {model} {gen} --max-sources 60
        Discovers sources automatically (Exa + YouTube) and runs extraction.
   3. docker compose -f deploy/docker-compose.yml restart api
        Syncs the new claims to the database.

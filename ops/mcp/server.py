@@ -27,8 +27,9 @@ from mcp.server.fastmcp import FastMCP
 from knowledge.agent import gates
 from knowledge.catalog import generations as gencat, model_state
 from knowledge.ledger import (
-    cluster, db, export, remediate, resolve, verdict,
+    cluster, db, export, resolve, verdict,
 )
+from ops import remediate
 from knowledge.ledger.costs import log_stage
 from knowledge.sources.tiers import resolve_tier
 

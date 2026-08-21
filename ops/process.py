@@ -5,8 +5,8 @@ YAML for the given make/model/gen, extracts claims, scores them, and writes
 auto-verified claims to the backend claims YAML. Then reloads the DB.
 
 Usage:
-    python -m knowledge.process renault megane 4
-    python -m knowledge.process toyota corolla e210 --dry-run
+    python -m ops.process renault megane 4
+    python -m ops.process toyota corolla e210 --dry-run
 """
 
 import argparse
@@ -159,7 +159,7 @@ def run(
     from knowledge.sources.curated import CuratedSource
     raise RuntimeError(
         "the judge/promote pipeline was retired at the B16 catalog swap "
-        "(2026-08-03) — run `python -m knowledge.ledger.run remediate` "
+        "(2026-08-03) — run `python -m ops.ledger_run remediate` "
         "instead; claims now reach serving through the ledger's deterministic "
         "verdict stage, never through a promoted YAML edit")
 
@@ -365,7 +365,7 @@ def run_part(
     from knowledge.sources.curated import CuratedSource
     raise RuntimeError(
         "the judge/promote pipeline was retired at the B16 catalog swap "
-        "(2026-08-03) — run `python -m knowledge.ledger.run remediate` "
+        "(2026-08-03) — run `python -m ops.ledger_run remediate` "
         "instead; claims now reach serving through the ledger's deterministic "
         "verdict stage, never through a promoted YAML edit")
 

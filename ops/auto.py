@@ -5,9 +5,9 @@ and YouTube videos via yt-dlp, writes them to curated YAML, then runs the
 full extraction + promotion pipeline.
 
 Usage:
-    python -m knowledge.auto renault megane 4
-    python -m knowledge.auto toyota corolla e210 --dry-run
-    python -m knowledge.auto renault megane 4 --no-youtube
+    python -m ops.auto renault megane 4
+    python -m ops.auto toyota corolla e210 --dry-run
+    python -m ops.auto renault megane 4 --no-youtube
 """
 
 from __future__ import annotations
@@ -270,7 +270,7 @@ def run(
     max_sources: int = 25,
 ) -> None:
     from knowledge.discover import _generate_templates
-    from knowledge.process import run as process_run
+    from ops.process import run as process_run
 
     templates = _generate_templates(make, model, gen)
     if not templates:
@@ -355,7 +355,7 @@ def run_part(
     and then processed through the standard extraction + promotion pipeline.
     """
     from knowledge.parts.search_templates import _find_make_model_for_part, templates_for_part
-    from knowledge.process import run_part as process_run_part
+    from ops.process import run_part as process_run_part
 
     # Ensure a scaffold stub exists before writing any claims — mirrors what
     # run_all_parts does per part. Without this, write_promoted_part_claims
@@ -461,7 +461,7 @@ def run_all_parts(
     and run the pipeline for each part sequentially.
 
     Usage:
-        python -m knowledge.auto --make volkswagen --model golf_7 --all-parts
+        python -m ops.auto --make volkswagen --model golf_7 --all-parts
     """
     variants_path = VARIANTS_DIR / f"{make}_{model}.yaml"
     if not variants_path.exists():

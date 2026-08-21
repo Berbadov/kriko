@@ -5,7 +5,8 @@ a test pins that with a small fixture DB so a schema or estimate regression
 shows up as a failing render, not a surprise bill.
 """
 
-from knowledge.ledger import db, panel
+from knowledge.ledger import db
+from ops import panel
 
 
 def _seed(conn):

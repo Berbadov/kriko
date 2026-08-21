@@ -156,10 +156,10 @@ python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-v
 python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-fitment
 
 # 2. Run the pipeline per part (or --all-parts)
-python3 -m knowledge.auto --part dq200 --part-type transmission
+python3 -m ops.auto --part dq200 --part-type transmission
 
 # 3. Re-run gates only — zero token cost, uses cached candidates
-python3 -m knowledge.process --part dq200 --part-type transmission --skip-extraction
+python3 -m ops.process --part dq200 --part-type transmission --skip-extraction
 
 # 4. Sync to DB
 python3 -m backend.sync          # (inside the api container when using Docker)
