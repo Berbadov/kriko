@@ -37,6 +37,8 @@ claims:
     site_or_channel: whatcar.com
     quote: '"Reason for recall: On affected vehicles the e-call service may not function."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: golf7_elec_electrical_golf7_elec_faulty_door_c_v1
   claim_key: golf7_elec_electrical_golf7_elec_faulty_door_c
   version: 1
@@ -108,6 +110,8 @@ claims:
     site_or_channel: lemberglaw.com
     quote: '"Parking sensors and cross traffic alerts shutting down"'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: golf7_elec_electrical_golf_7_electrical_front__v1
   claim_key: golf7_elec_electrical_golf_7_electrical_front_
   version: 1
@@ -142,6 +146,8 @@ claims:
     quote: '"Front Assist triggers phantom braking on some cars — safety-relevant,
       no recall"'
     independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
 - id: golf7_elec_electrical_infotainment_and_sos_fai_v1
   claim_key: golf7_elec_electrical_infotainment_and_sos_fai
   version: 1
@@ -180,6 +186,8 @@ claims:
       had reports of problems with the SOS function leading to costly replacements
       as well as warning messages appearing after a mandatory software update."'
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: golf7_elec_engine_golf7_elec_ignition_coil_v1
   claim_key: golf7_elec_engine_golf7_elec_ignition_coil
   version: 1
@@ -209,6 +217,8 @@ claims:
     site_or_channel: bumper.co
     quote: '"Ignition coil and spark plug failures causing engine misfires"'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: golf7_elec_fuel_system_adblue_system_issues_in__v1
   claim_key: golf7_elec_fuel_system_adblue_system_issues_in_
   version: 1
@@ -240,6 +250,8 @@ claims:
     quote: '"Mechanical reliability was generally solid, though a few diesel owners
       mentioned problems with the AdBlue system."'
     independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: golf7_elec_transmission_dsg_gearbox_software_iss_v1
   claim_key: golf7_elec_transmission_dsg_gearbox_software_iss
   version: 1
@@ -308,3 +320,5 @@ claims:
     site_or_channel: bumper.co
     quote: '"DSG gearbox hesitation or rough shifting"'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic

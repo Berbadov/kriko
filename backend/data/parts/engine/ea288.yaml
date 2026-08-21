@@ -51,6 +51,8 @@ claims:
       of carbon deposits in the EGR system, which can cause reduced engine performance
       and increased emissions."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: ea288_emissions_carbon_clogged_egr_valve_v1
   claim_key: ea288_emissions_carbon_clogged_egr_valve
   version: 1
@@ -83,6 +85,8 @@ claims:
     site_or_channel: vag-wiki.com
     quote: Carbon-clogged EGR valve/pipes
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: ea288_emissions_chronic_egr_cooler_block_v1
   claim_key: ea288_emissions_chronic_egr_cooler_block
   version: 1
@@ -114,6 +118,8 @@ claims:
     site_or_channel: vag-wiki.com
     quote: Failed EGR Cooler (blocked)
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: ea288_emissions_diesel_particulate_filte_v1
   claim_key: ea288_emissions_diesel_particulate_filte
   version: 1
@@ -151,6 +157,8 @@ claims:
       The DPF clogging prevents the engine from breathing properly and turning the
       amber warning light on as a sign of a fault."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: ea288_emissions_dpf_clogging_due_to_poor_v1
   claim_key: ea288_emissions_dpf_clogging_due_to_poor
   version: 1
@@ -183,6 +191,8 @@ claims:
       to the quality of fuel. This filter is pretty expensive, but this is a price
       for low emissions."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: ea288_emissions_dpf_failure_in_1_6_tdi_e_v1
   claim_key: ea288_emissions_dpf_failure_in_1_6_tdi_e
   version: 1
@@ -219,6 +229,8 @@ claims:
       TDI engines. This may result in decreased engine performance, elevated emissions,
       and the check engine light."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: ea288_emissions_ea288_1_6_tdi_dpf_clogs__v1
   claim_key: ea288_emissions_ea288_1_6_tdi_dpf_clogs_
   version: 1
@@ -254,6 +266,8 @@ claims:
       when the vehicle is mostly driven in short trips or in city traffic, where the
       engine does not get hot enough to burn off the trapped soot and particles."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: ea288_engine_carbon_buildup_in_combus_v1
   claim_key: ea288_engine_carbon_buildup_in_combus
   version: 1
@@ -287,6 +301,8 @@ claims:
       as: Reduced engine performance; Reduced fuel efficiency; Increased emissions;
       Difficulty starting the engine; Power loss."'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea288_engine_ea288_1_6_tdi_turbo_bear_v1
   claim_key: ea288_engine_ea288_1_6_tdi_turbo_bear
   version: 1
@@ -326,6 +342,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 150000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea288_engine_ea288_1_6_tdi_turbocharg_v1
   claim_key: ea288_engine_ea288_1_6_tdi_turbocharg
   version: 1
@@ -362,6 +380,8 @@ claims:
       coming from the turbocharger, which is typically caused by a worn bearing or
       a damaged turbine."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea288_engine_ea288_balancing_shaft_an_v1
   claim_key: ea288_engine_ea288_balancing_shaft_an
   version: 1
@@ -396,6 +416,8 @@ claims:
     site_or_channel: torquecars.com
     quote: '"Balancing shaft & chain tensioner problems"'
     independent: true
+  component_id: engine_timing_tensioner
+  detection: diagnostic
 - id: ea288_engine_ea288_coolant_pump_seizu_v1
   claim_key: ea288_engine_ea288_coolant_pump_seizu
   version: 1
@@ -428,6 +450,8 @@ claims:
     quote: '"The coolant pump on EA288 engines built before week 36/2014 can seize
       (VW TPI, engine overheating, $880–990)"'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea288_engine_ea288_idle_fluctuations__v1
   claim_key: ea288_engine_ea288_idle_fluctuations_
   version: 1
@@ -502,6 +526,8 @@ claims:
       Soğutma pompasını sistem aktif edemediğinde ise motor soğutma sıvısının sıcaklığı
       yükselerek ekranda uyarıyı verir."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea288_engine_ea288_turbocharger_imbal_v1
   claim_key: ea288_engine_ea288_turbocharger_imbal
   version: 1
@@ -535,6 +561,8 @@ claims:
     quote: '"Turbonuzun balansı bozulduğu için bu şekilde ses gelmektedir. Turbonuzu
       değiştirmenizi tavsiye ediyoruz."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea288_engine_ea288_water_pump_control_v1
   claim_key: ea288_engine_ea288_water_pump_control
   version: 1
@@ -576,6 +604,8 @@ claims:
     min_mileage_km: 60000
     applies_year_from: 2014
     applies_year_to: 2014
+  component_id: engine_water_pump
+  detection: visual
 - id: ea288_engine_ea288_wet_timing_belt_in_v1
   claim_key: ea288_engine_ea288_wet_timing_belt_in
   version: 1
@@ -626,6 +656,8 @@ claims:
     - new timing belt
     - cam belt changed
     - cambelt done
+  component_id: engine_timing_belt
+  detection: history_check
 - id: ea288_engine_egr_valve_gear_breakage__v1
   claim_key: ea288_engine_egr_valve_gear_breakage_
   version: 1
@@ -660,6 +692,8 @@ claims:
     quote: '"EGR’nin içiresinde bulunan motorların dişlileri bozulabiliyor, kırılabiliyor
       (V399)."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: ea288_engine_glow_plug_failure_cold_s_v1
   claim_key: ea288_engine_glow_plug_failure_cold_s
   version: 1
@@ -731,6 +765,8 @@ claims:
       in major engine damage. Tensioner failure is usually attributed to premature
       breaking due to their materials."'
     independent: true
+  component_id: engine_timing_belt
+  detection: history_check
 - id: ea288_engine_turbocharger_failure_chr_v1
   claim_key: ea288_engine_turbocharger_failure_chr
   version: 1
@@ -762,6 +798,8 @@ claims:
     quote: '"Numerous reports have surfaced regarding problems with 1.6 TDI engine
       vehicles'' turbocharger failures."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea288_fuel_system_cp4_1_pump_failure_conta_v1
   claim_key: ea288_fuel_system_cp4_1_pump_failure_conta
   version: 1
@@ -797,6 +835,8 @@ claims:
       sich über das Common Rail zu den Injektoren. [...] In schweren Fällen müssen
       neben der Pumpe alle vier Injektoren und das Rail erneuert werden."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea288_fuel_system_cp4_1_pump_flow_control__v1
   claim_key: ea288_fuel_system_cp4_1_pump_flow_control_
   version: 1
@@ -831,6 +871,8 @@ claims:
       sich per ODIS direkt ansteuern. Reagiert das Ventil korrekt auf Ansteuersignal,
       ist es elektrisch intakt. Kein Hub: mechanischer Defekt."'
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: ea288_fuel_system_ea288_cp4_1_fuel_pump_fa_v1
   claim_key: ea288_fuel_system_ea288_cp4_1_fuel_pump_fa
   version: 1
@@ -865,6 +907,8 @@ claims:
       Pumpe. Bei vernachlässigtem Kraftstofffilter-Tausch erhöhter Verschleiß. Pumpenausfall:
       Rail-Druck bricht nur unter Last ein."'
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: ea288_fuel_system_ea288_cp4_1_pump_failure_v1
   claim_key: ea288_fuel_system_ea288_cp4_1_pump_failure
   version: 1
@@ -906,6 +950,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: ea288_fuel_system_ea288_crkb_continental_i_v1
   claim_key: ea288_fuel_system_ea288_crkb_continental_i
   version: 1
@@ -950,6 +996,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 50000
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea288_fuel_system_fuel_injector_clogging_g_v1
   claim_key: ea288_fuel_system_fuel_injector_clogging_g
   version: 1
@@ -993,6 +1041,8 @@ claims:
       failure, clogging is a major cause of this problem. Failed fuel injector can
       also occur due to gasket failure."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea288_fuel_system_high_pressure_fuel_pump__v1
   claim_key: ea288_fuel_system_high_pressure_fuel_pump_
   version: 1
@@ -1031,6 +1081,8 @@ claims:
       the engine will not start or stall while driving. This annoying issue can be
       caused by a faulty HPFP or a clogged fuel filter."'
     independent: true
+  component_id: engine_fuel_pump
+  detection: diagnostic
 - id: ea288_fuel_system_injector_insulation_fail_v1
   claim_key: ea288_fuel_system_injector_insulation_fail
   version: 1
@@ -1061,3 +1113,5 @@ claims:
       powered by VAG 1.6 TDI engines. The insulation on the Siemens injectors that
       were installed in these engines had an issue."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic

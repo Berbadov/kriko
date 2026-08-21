@@ -83,6 +83,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 50000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: h5d_engine_excessive_vibration_due__v1
   claim_key: h5d_engine_excessive_vibration_due_
   version: 1
@@ -146,6 +148,8 @@ claims:
       içini darmadağın edebilir. Bazı serilerde kayışın erken aşındığı ya da gergi
       sisteminde sorun çıktığı da raporlandı."'
     independent: true
+  component_id: engine_timing_belt
+  detection: history_check
 - id: h5d_engine_ratchet_wear_binding_in__v1
   claim_key: h5d_engine_ratchet_wear_binding_in_
   version: 1
@@ -175,6 +179,8 @@ claims:
     quote: '"Ratchet wear or binding: Dirt or poor lubrication can cause the ratchet
       to skip or jam, especially in high-mileage engines."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5d_engine_timing_chain_guide_and_r_v1
   claim_key: h5d_engine_timing_chain_guide_and_r
   version: 1
@@ -207,6 +213,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 120000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: h5d_engine_turbo_failure_in_1_0_tsi_v1
   claim_key: h5d_engine_turbo_failure_in_1_0_tsi
   version: 1
@@ -244,6 +252,8 @@ claims:
       Motor yağı geç değişirse ya da araç soğukken sert kullanılırsa turbo erken yaşlanıyor.
       Anormal ıslık sesleri, güç kaybı ve egzozdan siyah duman tehlike işareti."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: h5d_transmission_dsg_mechatronic_failures_v1
   claim_key: h5d_transmission_dsg_mechatronic_failures
   version: 1

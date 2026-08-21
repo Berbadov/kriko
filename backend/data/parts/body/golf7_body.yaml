@@ -40,6 +40,8 @@ claims:
     quote: '"The front brake discs may not meet the required thickness dimension.
       Under extreme loads this could cause cracking, which may lead to fractures."'
     independent: true
+  component_id: brakes_discs
+  detection: visual
 - id: golf7_body_electrical_adas_sensor_faults_front_v1
   claim_key: golf7_body_electrical_adas_sensor_faults_front
   version: 1
@@ -75,6 +77,8 @@ claims:
       infotainment are prone to radar sensor failures and software lockups. These
       generate persistent warning lights and may disable safety features until rectified."'
     independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
 - id: golf7_body_engine_golf7_body_gti_high_oil__v1
   claim_key: golf7_body_engine_golf7_body_gti_high_oil_
   version: 1
@@ -113,6 +117,8 @@ claims:
       keep checking the oil level on these, even between services. If the level gets
       too low, it can cause damage to the engine or timing chain."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: golf7_body_engine_plastic_water_pump_housi_v1
   claim_key: golf7_body_engine_plastic_water_pump_housi
   version: 1
@@ -148,6 +154,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_water_pump
+  detection: visual
 - id: golf7_body_engine_premature_timing_chain_f_v1
   claim_key: golf7_body_engine_premature_timing_chain_f
   version: 1
@@ -184,6 +192,8 @@ claims:
       this can cause significant engine damage but can be mitigated by having the
       car serviced on time."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: golf7_body_engine_tsi_chain_tensioner_fail_v1
   claim_key: golf7_body_engine_tsi_chain_tensioner_fail
   version: 1
@@ -218,6 +228,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_timing_tensioner
+  detection: diagnostic
 - id: golf7_body_fuel_system_dpf_blockage_on_tdi_golf_v1
   claim_key: golf7_body_fuel_system_dpf_blockage_on_tdi_golf
   version: 1
@@ -254,6 +266,8 @@ claims:
       for short urban trips will have a blocked DPF. Request an independent DPF diagnostic
       before committing."'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: golf7_body_general_boot_and_door_seal_water_v1
   claim_key: golf7_body_general_boot_and_door_seal_water
   version: 1
@@ -287,6 +301,8 @@ claims:
       bagaj ve kapı fitillerinde su sızdırmasıdır. Yoğun yağış sonrasında bagaj havuzu,
       stop lambaları çevresi ya da kapı altlarında su birikintileri görülebilir."'
     independent: true
+  component_id: body_sunroof_drain
+  detection: visual
 - id: golf7_body_general_clogged_sunroof_drains_c_v1
   claim_key: golf7_body_general_clogged_sunroof_drains_c
   version: 1
@@ -319,6 +335,8 @@ claims:
     quote: '''we''re starting to see issues with blocked drain tubes in panoramic
       sunroofs too'''
     independent: true
+  component_id: body_sunroof_drain
+  detection: visual
 - id: golf7_body_general_clogged_vw_badge_drain_c_v1
   claim_key: golf7_body_general_clogged_vw_badge_drain_c
   version: 1
@@ -351,6 +369,8 @@ claims:
     quote: '''The drain tube for the rear handle AKA VW badge gets clogged and water
       overflows in there'''
     independent: true
+  component_id: body_water_ingress
+  detection: visual
 - id: golf7_body_general_door_speaker_seal_leaks__v1
   claim_key: golf7_body_general_door_speaker_seal_leaks_
   version: 1
@@ -384,6 +404,8 @@ claims:
     quote: '''The seals between the door speakers and the door frames fail, and allow
       rain water in there.'''
     independent: true
+  component_id: body_water_ingress
+  detection: visual
 - id: golf7_body_general_faulty_door_child_locks__v1
   claim_key: golf7_body_general_faulty_door_child_locks_
   version: 1
@@ -468,6 +490,8 @@ claims:
       apertures, where it obviously collects at the lowest point, which is the spare
       wheel well."'
     independent: true
+  component_id: body_water_ingress
+  detection: visual
 - id: golf7_body_general_golf_7_boot_badge_drain__v1
   claim_key: golf7_body_general_golf_7_boot_badge_drain_
   version: 1
@@ -506,6 +530,8 @@ claims:
       within the hatchback, eventually trickling out of the gaps between the metal
       boot lid and the plastic interior trims, then into the spare wheel well."'
     independent: true
+  component_id: body_water_ingress
+  detection: visual
 - id: golf7_body_general_golf_7_sunroof_drains_cl_v1
   claim_key: golf7_body_general_golf_7_sunroof_drains_cl
   version: 1
@@ -541,6 +567,8 @@ claims:
       sıcaklık değişimi nedeniyle yerinden çıkıyor. Tahliyenin dibindeki tıp suyu
       içeriye alıyor ve boruyu tıkayarak aracın içine su veriyor
     independent: true
+  component_id: body_sunroof_drain
+  detection: visual
 - id: golf7_body_general_sunroof_drain_clogging_c_v1
   claim_key: golf7_body_general_sunroof_drain_clogging_c
   version: 1
@@ -575,6 +603,8 @@ claims:
     quote: Tahliyenin giriş yerinin etrafı tıkanabilir veya tıkanmazsa rüzgar sesi
       verebilir.
     independent: true
+  component_id: body_sunroof_drain
+  detection: visual
 - id: golf7_body_suspension_front_and_rear_wheel_bea_v1
   claim_key: golf7_body_suspension_front_and_rear_wheel_bea
   version: 1
@@ -620,3 +650,5 @@ claims:
       Should a fractured housing occur there would be abnormal noises, bad tyre wear
       and a theoretical possibility of wheel loss."'
     independent: true
+  component_id: suspension_wheel_bearings
+  detection: test_drive

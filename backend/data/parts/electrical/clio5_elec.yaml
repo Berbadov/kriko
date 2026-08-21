@@ -35,6 +35,8 @@ claims:
       were fitted as if they''re not fitted correctly, the hoses can become worn and
       result in a brake fluid leak."'
     independent: true
+  component_id: brakes_pipes_hoses
+  detection: visual
 - id: clio5_elec_brakes_brake_pedal_switch_cause_v1
   claim_key: clio5_elec_brakes_brake_pedal_switch_cause
   version: 1
@@ -103,6 +105,8 @@ claims:
       lights. Multiple Clio owners describe this pattern and are advised to check
       sensors and wiring."'
     independent: true
+  component_id: brakes_abs_module
+  detection: diagnostic
 - id: clio5_elec_electrical_1_0_tce_clio_v_2022_inst_v1
   claim_key: clio5_elec_electrical_1_0_tce_clio_v_2022_inst
   version: 1
@@ -139,6 +143,8 @@ claims:
       lamba yanmıyor sadece motor lambası yanıyor ve öyle kalıyor. Aracı çalıştırdığımda
       sönüyor nedeni ne olabilir? Geçen haftaya kadar yoktu böyle bir şey."'
     independent: true
+  component_id: electrical_instrument_cluster
+  detection: visual
 - id: clio5_elec_electrical_can_bus_wiring_corrosion_v1
   claim_key: clio5_elec_electrical_can_bus_wiring_corrosion
   version: 1
@@ -176,6 +182,8 @@ claims:
       hatlarının geçtiği pinlerde direnci artırarak sinyalin zayıflamasına veya tamamen
       kesilmesine sebep olur."'
     independent: true
+  component_id: electrical_wiring_loom
+  detection: diagnostic
 - id: clio5_elec_electrical_clio_5_ecu_wiring_loom_c_v1
   claim_key: clio5_elec_electrical_clio_5_ecu_wiring_loom_c
   version: 1
@@ -215,6 +223,8 @@ claims:
       covers the wiring causes electrical interference causing all sorts of electrical
       faults, and ultimately damages the ECU."'
     independent: true
+  component_id: electrical_wiring_loom
+  detection: diagnostic
 - id: clio5_elec_electrical_clio_5_hybrid_electrical_v1
   claim_key: clio5_elec_electrical_clio_5_hybrid_electrical
   version: 1
@@ -291,6 +301,8 @@ claims:
       multimedia system. The touchscreen freezes or responds slowly. Connectivity
       with smartphones via Bluetooth or Apple CarPlay/Android Auto is not always stable.’
     independent: true
+  component_id: electrical_infotainment
+  detection: visual
 - id: clio5_elec_electrical_electrical_power_steerin_v1
   claim_key: clio5_elec_electrical_electrical_power_steerin
   version: 1
@@ -325,6 +337,8 @@ claims:
       ''direksiyon arızası'' uyarısı, dönüşlerde zorlanma. Çözüm: Elektrik destek
       ünitesi kontrol edilmeli, yazılım güncellemesi veya sistem sıfırlaması gerekebilir."'
     independent: true
+  component_id: steering_electric_power_steering
+  detection: diagnostic
 - id: clio5_elec_electrical_loose_ground_connections_v1
   claim_key: clio5_elec_electrical_loose_ground_connections
   version: 1
@@ -360,6 +374,8 @@ claims:
       bloğuna giden kalın şase kabloları bulunur. Fabrikasyon montaj esnasında veya
       kullanım sırasında bu bağlantılar gevşeyebilir veya korozyona uğrayabilir."'
     independent: true
+  component_id: electrical_wiring_loom
+  detection: diagnostic
 - id: clio5_elec_electrical_power_steering_system_fa_v1
   claim_key: clio5_elec_electrical_power_steering_system_fa
   version: 1
@@ -405,6 +421,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2019
+  component_id: steering_electric_power_steering
+  detection: diagnostic
 - id: clio5_elec_electrical_short_circuit_risk_in_cl_v1
   claim_key: clio5_elec_electrical_short_circuit_risk_in_cl
   version: 1
@@ -477,6 +495,8 @@ claims:
       This defect could result in the loss of steering assistance when stationary
       or driving at low speeds."'
     independent: true
+  component_id: steering_electric_power_steering
+  detection: diagnostic
 - id: clio5_elec_emissions_clio_5_dci_adblue_sensor_v1
   claim_key: clio5_elec_emissions_clio_5_dci_adblue_sensor
   version: 1
@@ -509,6 +529,8 @@ claims:
       çalışmayacak'' uyarıları. Çözüm: Sensör arızası, tank içi donmalar veya sistem
       kalibrasyonu yapılmalıdır."'
     independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
 - id: clio5_elec_emissions_clio_5_lambda_sensor_fai_v1
   claim_key: clio5_elec_emissions_clio_5_lambda_sensor_fai
   version: 1
@@ -549,6 +571,8 @@ claims:
       kaplanırsa veya sensör arızalanırsa, ECU motorun zengin mi yoksa fakir mi çalıştığını
       anlayamaz."'
     independent: true
+  component_id: engine_o2_sensor
+  detection: diagnostic
 - id: clio5_elec_emissions_clogged_dpf_in_clio_dies_v1
   claim_key: clio5_elec_emissions_clogged_dpf_in_clio_dies
   version: 1
@@ -579,6 +603,8 @@ claims:
       the car mainly does short trips. This leads to reduced performance and higher
       emissions.’
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: clio5_elec_emissions_egr_valve_clog_causes_li_v1
   claim_key: clio5_elec_emissions_egr_valve_clog_causes_li
   version: 1
@@ -612,6 +638,8 @@ claims:
       büyük oranda emisyon sistemleri yatar. Özellikle yoğun şehir içi trafikte kullanılan
       araçlarda, EGR valfi kurum bağlayarak açık veya kapalı konumda sıkışabilir."'
     independent: true
+  component_id: emissions_egr
+  detection: diagnostic
 - id: clio5_elec_engine_clio_5_ignition_coil_fai_v1
   claim_key: clio5_elec_engine_clio_5_ignition_coil_fai
   version: 1
@@ -651,6 +679,8 @@ claims:
       Nem, aşırı ısı veya motor yıkama sırasında su teması da bobinlerin performansını
       olumsuz etkileyebilir.
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: clio5_elec_engine_turbo_intake_leaks_trigg_v1
   claim_key: clio5_elec_engine_turbo_intake_leaks_trigg
   version: 1
@@ -689,6 +719,8 @@ claims:
       Hava Akış (MAF) sensörü arasındaki tutarsızlık, hava-yakıt oranını bozarak enjeksiyon
       uyarısının ekranda belirmesine yol açar."'
     independent: true
+  component_id: engine_intercooler
+  detection: visual
 - id: clio5_elec_engine_vacuum_leaks_in_intake_s_v1
   claim_key: clio5_elec_engine_vacuum_leaks_in_intake_s
   version: 1
@@ -724,6 +756,8 @@ claims:
       fazla hava girerse, karışım 'fakir' kalır ve bu da yanma verimliliğini düşürerek
       tekleme sorunlarına neden olur.
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: clio5_elec_engine_worn_spark_plugs_coils_c_v1
   claim_key: clio5_elec_engine_worn_spark_plugs_coils_c
   version: 1
@@ -760,6 +794,8 @@ claims:
       yanma gerçekleşmediğini anında tespit eder ve motoru korumak için enjeksiyon
       uyarısını aktif hale getirir."'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: clio5_elec_fuel_system_fuel_pressure_pump_senso_v1
   claim_key: clio5_elec_fuel_system_fuel_pressure_pump_senso
   version: 1
@@ -798,6 +834,8 @@ claims:
       motorun fakir karışımla çalışmasına yol açarak enjeksiyon sisteminde yapısal
       bir hata olarak kaydedilir."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: clio5_elec_fuel_system_fuel_pump_and_injector_f_v1
   claim_key: clio5_elec_fuel_system_fuel_pump_and_injector_f
   version: 1
@@ -830,6 +868,8 @@ claims:
     quote: ‘Petrol engines with direct injection have problems with the fuel pump
       and injectors.’
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: clio5_elec_general_worn_window_regulator_me_v1
   claim_key: clio5_elec_general_worn_window_regulator_me
   version: 1
@@ -857,6 +897,8 @@ claims:
     quote: '"Owners have reported electric windows becoming noisy when going up or
       down. This is usually down to wear or looseness in the window regulator mechanism."'
     independent: true
+  component_id: body_window_regulator
+  detection: visual
 - id: clio5_elec_transmission_automatic_gear_lever_sto_v1
   claim_key: clio5_elec_transmission_automatic_gear_lever_sto
   version: 1
@@ -947,6 +989,8 @@ claims:
       bastığınızda sürtünme sesi gelmesi. Çözüm: Bilya veya baskı balata aşınması;
       set komple kontrol edilmelidir."'
     independent: true
+  component_id: transmission_clutch_disc
+  detection: test_drive
 - id: clio5_elec_transmission_cvt_gearbox_jerks_and_de_v1
   claim_key: clio5_elec_transmission_cvt_gearbox_jerks_and_de
   version: 1

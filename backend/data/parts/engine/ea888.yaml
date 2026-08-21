@@ -40,6 +40,8 @@ claims:
     site_or_channel: vagpoint.com.tr
     quote: Termostat ve soğutma sistemi problemleri
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea888_cooling_chronic_thermostat_housi_v1
   claim_key: ea888_cooling_chronic_thermostat_housi
   version: 1
@@ -76,6 +78,8 @@ claims:
       kaynaklı gevşemesi, flanş eğrilmesi veya döner şiber valfinin içeriden sıkışması
       kronik su kaçaklarına ve ani hararet risklerine yol açar."'
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea888_cooling_ea888_coolant_pump_fails_v1
   claim_key: ea888_cooling_ea888_coolant_pump_fails
   version: 1
@@ -113,6 +117,8 @@ claims:
       kapasite çalışmıyor. Soğuk havada motorunuz çabuk ısınıyorsa mutlaka bir probleminiz
       vardır.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_gen1_2_plastic_wat_v1
   claim_key: ea888_cooling_ea888_gen1_2_plastic_wat
   version: 1
@@ -145,6 +151,8 @@ claims:
     site_or_channel: ampauto.io
     quote: 'Plastic water pump housing cracks. Symptoms: coolant loss, P0128, overheating.'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_gen3_plastic_water_v1
   claim_key: ea888_cooling_ea888_gen3_plastic_water
   version: 1
@@ -183,6 +191,8 @@ claims:
       fill and bleed. ... The crack only grows, and a sudden loss of coolant on a
       hot day overheats the engine within minutes. ..."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_gen3_thermostat_st_v1
   claim_key: ea888_cooling_ea888_gen3_thermostat_st
   version: 1
@@ -221,6 +231,8 @@ claims:
       its valve. Over time, that pellet can degrade or even leak, causing the valve
       to stick open or closed."'
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea888_cooling_ea888_gen3_water_pump_se_v1
   claim_key: ea888_cooling_ea888_gen3_water_pump_se
   version: 1
@@ -257,6 +269,8 @@ claims:
       common wear point. Once that seal goes, coolant leaks out, usually through a
       weep hole or into the timing chain cover area."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_gen3_water_pump_th_v1
   claim_key: ea888_cooling_ea888_gen3_water_pump_th
   version: 1
@@ -292,6 +306,8 @@ claims:
       essentially put a ticking time bomb in there. It accelerates electrolytic corrosion,
       attacking the aluminum mating surface and making that plastic housing brittle."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_gen_3_plastic_ther_v1
   claim_key: ea888_cooling_ea888_gen_3_plastic_ther
   version: 1
@@ -330,6 +346,8 @@ claims:
       heating and cooling cycle can cause the plastic to warp or crack, creating small
       but significant gaps where coolant can seep out."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_thermostat_housing_v1
   claim_key: ea888_cooling_ea888_thermostat_housing
   version: 1
@@ -372,6 +390,8 @@ claims:
       and water pump—sometimes days or weeks apart. To avoid repeat labour and workshop
       costs, most skilled European mechanics replace the entire system at once.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_water_pump_housing_v1
   claim_key: ea888_cooling_ea888_water_pump_housing
   version: 1
@@ -403,6 +423,8 @@ claims:
     quote: The composite water pump housing cracks and the integrated thermostat fails.
       Both are typically replaced together as one unit.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_ea888_water_pump_thermos_v1
   claim_key: ea888_cooling_ea888_water_pump_thermos
   version: 1
@@ -439,6 +461,8 @@ claims:
     quote: '"Because small seepage can land on hot engine surfaces and evaporate,
       leaving odor and residue instead of a visible drip."'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_gen_2_ea888_water_pump_i_v1
   claim_key: ea888_cooling_gen_2_ea888_water_pump_i
   version: 1
@@ -471,6 +495,8 @@ claims:
       is a documented issue on Gen 2. Upgraded metal impeller water pumps are available
       as replacements.'
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_thermostat_housing_coola_v1
   claim_key: ea888_cooling_thermostat_housing_coola
   version: 1
@@ -503,6 +529,8 @@ claims:
       is fairly common. The thermostat housing is the coolant outlet and, believe
       it or not, houses the thermostat, which regulates coolant flow.
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea888_cooling_thermostat_housing_crack_v1
   claim_key: ea888_cooling_thermostat_housing_crack
   version: 1
@@ -538,6 +566,8 @@ claims:
       especially on high-mileage Gen 2 engines. Coolant loss and overheating risk
       if not addressed promptly.'
     independent: true
+  component_id: engine_thermostat
+  detection: diagnostic
 - id: ea888_cooling_water_pump_and_thermosta_v1
   claim_key: ea888_cooling_water_pump_and_thermosta
   version: 1
@@ -568,6 +598,8 @@ claims:
     site_or_channel: tr.ml-vehicle.com
     quote: Neden:Plastik bileÅenler zamanla bozulur vesoÄutma sÄ±vÄ±sÄ± sÄ±zÄ±ntÄ±larÄ±.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_water_pump_failure_on_ge_v1
   claim_key: ea888_cooling_water_pump_failure_on_ge
   version: 1
@@ -600,6 +632,8 @@ claims:
       The water pump circulates coolant throughout the engine to keep it cool and
       returns the coolant to the radiator when it gets warm.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_water_pump_failures_comm_v1
   claim_key: ea888_cooling_water_pump_failures_comm
   version: 1
@@ -632,6 +666,8 @@ claims:
     site_or_channel: torquecars.com
     quote: Water pump failures are common
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_cooling_water_pump_impeller_brit_v1
   claim_key: ea888_cooling_water_pump_impeller_brit
   version: 1
@@ -665,6 +701,8 @@ claims:
     quote: The water pump on these engines uses a plastic impeller that gets brittle
       with age and breaks. When that happens you get sudden coolant loss and overheat.
     independent: true
+  component_id: engine_water_pump
+  detection: visual
 - id: ea888_electrical_ea888_gen_3_ignition_coi_v1
   claim_key: ea888_electrical_ea888_gen_3_ignition_coi
   version: 1
@@ -703,6 +741,8 @@ claims:
       it’s likely a result of a bad ignition coil, worn spark plugs, moisture intrusion,
       or valve cover leakages.
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea888_electrical_ea888_ignition_coil_fail_v1
   claim_key: ea888_electrical_ea888_ignition_coil_fail
   version: 1
@@ -736,6 +776,8 @@ claims:
     site_or_channel: modpark.com
     quote: '"Ateşleme bobinlerini set olarak değiştirdik, cüzdan biraz hafifledi."'
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea888_electrical_premature_ignition_coil__v1
   claim_key: ea888_electrical_premature_ignition_coil_
   version: 1
@@ -783,6 +825,8 @@ claims:
     - spark plugs changed
     - spark plugs replaced
     - new spark plugs
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea888_engine_cam_follower_wear_destro_v1
   claim_key: ea888_engine_cam_follower_wear_destro
   version: 1
@@ -826,6 +870,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 30000
+  component_id: engine_timing_variable_valve
+  detection: diagnostic
 - id: ea888_engine_chronic_oil_consumption__v1
   claim_key: ea888_engine_chronic_oil_consumption_
   version: 1
@@ -860,6 +906,8 @@ claims:
       ring design + cylinder finish caused widespread complaints. Audi/VW settled
       a class action and replaced pistons + rings on documented cars.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_diverter_valve_membrane__v1
   claim_key: ea888_engine_diverter_valve_membrane_
   version: 1
@@ -892,6 +940,8 @@ claims:
       boost pressure over time. Upgraded aftermarket units recommended for modified
       cars.'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_dv_pressure_valve_failur_v1
   claim_key: ea888_engine_dv_pressure_valve_failur
   version: 1
@@ -926,6 +976,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_ea888_2_0_tsi_piston_rin_v1
   claim_key: ea888_engine_ea888_2_0_tsi_piston_rin
   version: 1
@@ -974,6 +1026,8 @@ claims:
       çatlamasına, zamanlama kapaklarının sızdırmasına ve bujilerin kirlenmesine zemin
       hazırlıyor.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_2_0l_pcv_causes_ex_v1
   claim_key: ea888_engine_ea888_2_0l_pcv_causes_ex
   version: 1
@@ -1009,6 +1063,8 @@ claims:
     quote: 'All: May experience excessive oil consumption due to the PCV system. Volkswagen
       has released several updated PCV valves over the years which fix this.'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_2_0t_sudden_engine_v1
   claim_key: ea888_engine_ea888_2_0t_sudden_engine
   version: 1
@@ -1048,6 +1104,8 @@ claims:
       the engine shut off and was almost rear ended by a semi truck before I could
       get to the shoulder of the highway. Engine would not restart and I...
     independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
 - id: ea888_engine_ea888_cam_bridge_oil_scr_v1
   claim_key: ea888_engine_ea888_cam_bridge_oil_scr
   version: 1
@@ -1084,6 +1142,8 @@ claims:
       and gets sucked into the narrow oil passages, effectively becoming everything
       it is fighting against.*'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_chain_drive_eccent_v1
   claim_key: ea888_engine_ea888_chain_drive_eccent
   version: 1
@@ -1158,6 +1218,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_timing_tensioner
+  detection: diagnostic
 - id: ea888_engine_ea888_excessive_oil_cons_v1
   claim_key: ea888_engine_ea888_excessive_oil_cons
   version: 1
@@ -1196,6 +1258,8 @@ claims:
       Fundamental design flaw. Some examples consume 1L per 1,000 km. No proper fix
       — Audi lost class-action.'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_faulty_crankshaft__v1
   claim_key: ea888_engine_ea888_faulty_crankshaft_
   version: 1
@@ -1235,6 +1299,8 @@ claims:
       by crankshaft seals, and when retrofitted, a subsequent adjustment to the oil
       separator alleviates this problem.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_gen1_2_cam_followe_v1
   claim_key: ea888_engine_ea888_gen1_2_cam_followe
   version: 1
@@ -1271,6 +1337,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 30000
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: ea888_engine_ea888_gen1_2_plastic_tim_v1
   claim_key: ea888_engine_ea888_gen1_2_plastic_tim
   version: 1
@@ -1309,6 +1377,8 @@ claims:
       Plastic tensioner fails. Chain jumps or snaps destroying engine. Class-action
       won by owners.'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_gen1_2_timing_chai_v1
   claim_key: ea888_engine_ea888_gen1_2_timing_chai
   version: 1
@@ -1348,6 +1418,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_gen1_timing_chain__v1
   claim_key: ea888_engine_ea888_gen1_timing_chain_
   version: 1
@@ -1384,6 +1456,8 @@ claims:
       before it fails is a couple hundred dollars in parts, fixing the engine after
       it fails is several thousand.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_gen2_oil_consumpti_v1
   claim_key: ea888_engine_ea888_gen2_oil_consumpti
   version: 1
@@ -1419,6 +1493,8 @@ claims:
       have to replace the pistons and piston rings with the previous Gen 1. Or, if
       you’re lucky, it is just a faulty PCV valve.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_gen_1_2_excessive__v1
   claim_key: ea888_engine_ea888_gen_1_2_excessive_
   version: 1
@@ -1459,6 +1535,8 @@ claims:
       and a meaningful percentage of these engines ended up burning a quart every
       1,000 miles or worse.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_gen_1_2_timing_cha_v1
   claim_key: ea888_engine_ea888_gen_1_2_timing_cha
   version: 1
@@ -1494,6 +1572,8 @@ claims:
     quote: '"Earlier Gen 1/Gen 2 (2009–2015): More prone to chain stretch at lower
       mileages — these engines prompted the Gen 3 redesign."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_gen_1_timing_chain_v1
   claim_key: ea888_engine_ea888_gen_1_timing_chain
   version: 1
@@ -1535,6 +1615,8 @@ claims:
       codes. The Gen 1 EA888 tensioner (2008-2013) can release pressure during hot
       shutdowns. The chain goes slack, skips a tooth on next start, and bends valves.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_gen_3_timing_chain_v1
   claim_key: ea888_engine_ea888_gen_3_timing_chain
   version: 1
@@ -1574,6 +1656,8 @@ claims:
     independent: true
   applies_when:
     applies_year_from: 2013
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_pcv_oil_loss_accel_v1
   claim_key: ea888_engine_ea888_pcv_oil_loss_accel
   version: 1
@@ -1610,6 +1694,8 @@ claims:
       the PCV system — the relationship between PCV-related oil consumption and tensioner
       wear is worth understanding, because one problem can accelerate the other."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_pcv_valve_failure__v1
   claim_key: ea888_engine_ea888_pcv_valve_failure_
   version: 1
@@ -1642,6 +1728,8 @@ claims:
       oluşan yoğun karbon birikintileri, pozitif krank havalandırma (PCV) valfinin
       yapışkan hale gelerek işlevini yitirmesine yol açıyor."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_piston_ring_oil_co_v1
   claim_key: ea888_engine_ea888_piston_ring_oil_co
   version: 1
@@ -1675,6 +1763,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 20000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_piston_ring_wear_a_v1
   claim_key: ea888_engine_ea888_piston_ring_wear_a
   version: 1
@@ -1708,6 +1798,8 @@ claims:
     quote: Neden:AÅÄ±nmÄ±Å piston segmanlarÄ± ve arÄ±zalÄ± PCV (Pozitif Karter HavalandÄ±rmasÄ±)
       sistemi.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_piston_ring_wear_c_v1
   claim_key: ea888_engine_ea888_piston_ring_wear_c
   version: 1
@@ -1741,6 +1833,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_piston_rod_ring_de_v1
   claim_key: ea888_engine_ea888_piston_rod_ring_de
   version: 1
@@ -1783,6 +1877,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_ea888_timing_chain_guide_v1
   claim_key: ea888_engine_ea888_timing_chain_guide
   version: 1
@@ -1821,6 +1917,8 @@ claims:
       When the guide rails wear, the chain path lengthens, placing additional load
       on the tensioner to compensate."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_timing_chain_stret_v1
   claim_key: ea888_engine_ea888_timing_chain_stret
   version: 1
@@ -1858,6 +1956,8 @@ claims:
 
       *Up to you.*'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_timing_chain_tensi_v1
   claim_key: ea888_engine_ea888_timing_chain_tensi
   version: 1
@@ -1903,6 +2003,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 30000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_ea888_timing_cover_gaske_v1
   claim_key: ea888_engine_ea888_timing_cover_gaske
   version: 1
@@ -1940,6 +2042,8 @@ claims:
       basıncı, motorun ana contalarını ve sızdırmazlık elemanlarını zorlayarak bozulmalarına
       neden oluyor."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_ea888_turbo_boost_leaks__v1
   claim_key: ea888_engine_ea888_turbo_boost_leaks_
   version: 1
@@ -1971,6 +2075,8 @@ claims:
     quote: '"Hızlanırken gelen o ıslık sesi meğer vedaymış. Turbo borusunda kaçak
       varmış, performansı geri alana kadar canım çıktı."'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_ea888_turbo_exhaust_valv_v1
   claim_key: ea888_engine_ea888_turbo_exhaust_valv
   version: 1
@@ -2011,6 +2117,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 100000
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_ea888_turbo_recirculatio_v1
   claim_key: ea888_engine_ea888_turbo_recirculatio
   version: 1
@@ -2049,6 +2157,8 @@ claims:
       it will cause the engine to run rich and will likely activate the limp home
       mode.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_excessive_crankshaft_axi_v1
   claim_key: ea888_engine_excessive_crankshaft_axi
   version: 1
@@ -2089,6 +2199,8 @@ claims:
       boşluğu spesifikasyonu aşıldıktan sonra yağ basıncı düşüşünün, biyel yatağı
       arızasından önce genellikle 6.000 milden daha az bir mesafede başladığını gösterir;"'
     independent: true
+  component_id: engine_oil_pump
+  detection: diagnostic
 - id: ea888_engine_excessive_oil_consumptio_v1
   claim_key: ea888_engine_excessive_oil_consumptio
   version: 1
@@ -2123,6 +2235,8 @@ claims:
     site_or_channel: vagpoint.com.tr
     quote: Motorun yağ yakması ve piston segman aşınmaları
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_gen_2_ea888_high_oil_con_v1
   claim_key: ea888_engine_gen_2_ea888_high_oil_con
   version: 1
@@ -2163,6 +2277,8 @@ claims:
       oil range it is supposed to consume under normal operation. The high oil consumption
       happens because, in Gen 2, Volkswagen uses thinner piston rings.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_gen_3_ea888_timing_chain_v1
   claim_key: ea888_engine_gen_3_ea888_timing_chain
   version: 1
@@ -2198,6 +2314,8 @@ claims:
       used in the previous versions. Though they became thicker than the previous
       versions.
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_high_oil_consumption_in__v1
   claim_key: ea888_engine_high_oil_consumption_in_
   version: 1
@@ -2229,6 +2347,8 @@ claims:
     site_or_channel: tractorsinfo.com
     quote: high oil consumption
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_hydraulic_tensioner_fail_v1
   claim_key: ea888_engine_hydraulic_tensioner_fail
   version: 1
@@ -2272,6 +2392,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 80000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_intake_valve_carbon_buil_v1
   claim_key: ea888_engine_intake_valve_carbon_buil
   version: 1
@@ -2306,6 +2428,8 @@ claims:
     quote: '"60 binde araç resmen küstü, sarsıntıdan duramıyordum. Karbon temizliği
       şartmış, yaptırdım ama her 40 binde bir bu stres yaşanmaz."'
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_engine_n75_boost_valve_failure__v1
   claim_key: ea888_engine_n75_boost_valve_failure_
   version: 1
@@ -2341,6 +2465,8 @@ claims:
       around and if you've tuned your 2.0TFSi then this is a very good idea to sort
       before you get issues.
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_pcv_diaphragm_crack_in_e_v1
   claim_key: ea888_engine_pcv_diaphragm_crack_in_e
   version: 1
@@ -2373,6 +2499,8 @@ claims:
     quote: PCV diaphragm cracks, causing rough idle, lean codes (P0171), and high
       oil consumption. Replace with updated revision.
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_pcv_valve_diaphragm_fail_v1
   claim_key: ea888_engine_pcv_valve_diaphragm_fail
   version: 1
@@ -2409,6 +2537,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_piston_ring_flaw_causes__v1
   claim_key: ea888_engine_piston_ring_flaw_causes_
   version: 1
@@ -2442,6 +2572,8 @@ claims:
     quote: '"Motorun piston halkalarındaki yapısal kusurlar, yağın yanma odasına kontrolsüz
       bir şekilde sızmasına neden oluyor."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_piston_ring_oil_consumpt_v1
   claim_key: ea888_engine_piston_ring_oil_consumpt
   version: 1
@@ -2481,6 +2613,8 @@ claims:
       you may be able to submit a claim through your VW/Audi dealership to have repairs
       covered.'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_plastic_oil_pan_cracking_v1
   claim_key: ea888_engine_plastic_oil_pan_cracking
   version: 1
@@ -2512,6 +2646,8 @@ claims:
     site_or_channel: autobond.tr
     quote: '"Bu sürecin sonunda plastik yağ karterlerinde çatlamalar... ortaya çıkıyor."'
     independent: true
+  component_id: engine_oil_consumption
+  detection: visual
 - id: ea888_engine_timing_chain_stretch_in__v1
   claim_key: ea888_engine_timing_chain_stretch_in_
   version: 1
@@ -2544,6 +2680,8 @@ claims:
     site_or_channel: tractorsinfo.com
     quote: Problems include a stretched timing chain
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_timing_chain_tensioner_f_v1
   claim_key: ea888_engine_timing_chain_tensioner_f
   version: 1
@@ -2602,6 +2740,8 @@ claims:
       the older style between the new one by looking for a metal bracket on the part
       that contacts the chain guide.*'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_timing_chain_tensioner_w_v1
   claim_key: ea888_engine_timing_chain_tensioner_w
   version: 1
@@ -2639,6 +2779,8 @@ claims:
       is often the first audible sign that the timing chain tensioner is losing its
       ability to maintain proper chain tension."'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_timing_cover_bending_on__v1
   claim_key: ea888_engine_timing_cover_bending_on_
   version: 1
@@ -2679,6 +2821,8 @@ claims:
       a new lower 2.0t timing cover since they are stamped metal and often bend during
       removal because they are stuck on with sealant.*'
     independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_engine_turbocharger_failure_fro_v1
   claim_key: ea888_engine_turbocharger_failure_fro
   version: 1
@@ -2715,6 +2859,8 @@ claims:
       turbocharger due to a loose wastegate rod between the internal wastegate and
       the boost diaphragm'
     independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
 - id: ea888_engine_valve_seat_recession_and_v1
   claim_key: ea888_engine_valve_seat_recession_and
   version: 1
@@ -2750,6 +2896,8 @@ claims:
     site_or_channel: vagpoint.com.tr
     quote: Subap kurumlanması (özellikle FSI ve TSI motorlarda)
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_engine_wastegate_actuator_failu_v1
   claim_key: ea888_engine_wastegate_actuator_failu
   version: 1
@@ -2783,6 +2931,8 @@ claims:
     quote: Neden:Wastegate aktÃ¼atÃ¶rÃ¼nÃ¼n aÅÄ±nma nedenleritÄ±kÄ±rtÄ± sesive potansiyel
       destek kaybÄ±.
     independent: true
+  component_id: engine_turbo_actuator
+  detection: diagnostic
 - id: ea888_fuel_system_ea888_2_0_tfsi_intake_va_v1
   claim_key: ea888_fuel_system_ea888_2_0_tfsi_intake_va
   version: 1
@@ -2830,6 +2980,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_fuel_system_ea888_cam_follower_wear__v1
   claim_key: ea888_fuel_system_ea888_cam_follower_wear_
   version: 1
@@ -2868,6 +3020,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 20000
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: ea888_fuel_system_ea888_fuel_injector_clog_v1
   claim_key: ea888_fuel_system_ea888_fuel_injector_clog
   version: 1
@@ -2904,6 +3058,8 @@ claims:
     quote: Neden:Karbon birikmesi ve yÃ¼ksek-basÄ±nÃ§lÄ± Ã§alÄ±Åma,enjektÃ¶r tÄ±kanmasÄ±
       veya sÄ±zÄ±ntÄ±.
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea888_fuel_system_ea888_hpfp_cam_follower__v1
   claim_key: ea888_fuel_system_ea888_hpfp_cam_follower_
   version: 1
@@ -2945,6 +3101,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: engine_high_pressure_pump
+  detection: diagnostic
 - id: ea888_fuel_system_ea888_intake_valve_carbo_v1
   claim_key: ea888_fuel_system_ea888_intake_valve_carbo
   version: 1
@@ -2990,6 +3148,8 @@ claims:
     - spark plugs changed
     - spark plugs replaced
     - new spark plugs
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_fuel_system_fuel_injector_failure_in_v1
   claim_key: ea888_fuel_system_fuel_injector_failure_in
   version: 1
@@ -3026,6 +3186,8 @@ claims:
     quote: Fuel injector failures are also common on the 2.0 TSI/TFSI engine. So,
       why is this the case and...
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea888_fuel_system_gen1_2_ea888_intake_valv_v1
   claim_key: ea888_fuel_system_gen1_2_ea888_intake_valv
   version: 1
@@ -3069,6 +3231,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 60000
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_fuel_system_high_pressure_fuel_pump__v1
   claim_key: ea888_fuel_system_high_pressure_fuel_pump_
   version: 1
@@ -3102,6 +3266,8 @@ claims:
     quote: '"Araba bir sabah teklemeye başladı, sanki 3 silindir gibi gidiyordu. Ateşleme
       bobinlerini set olarak değiştirdik, cüzdan biraz hafifledi."'
     independent: true
+  component_id: engine_injectors
+  detection: diagnostic
 - id: ea888_fuel_system_intake_valve_carbon_buil_v1
   claim_key: ea888_fuel_system_intake_valve_carbon_buil
   version: 1
@@ -3134,6 +3300,8 @@ claims:
     site_or_channel: rxmechanic.com
     quote: carbon buildup in the intake valves
     independent: true
+  component_id: engine_intake_carbon
+  detection: history_check
 - id: ea888_general_ea888_timing_chain_jump__v1
   claim_key: ea888_general_ea888_timing_chain_jump_
   version: 1
@@ -3170,6 +3338,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 30000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: ea888_transmission_dsg_7_speed_dry_clutch_a_v1
   claim_key: ea888_transmission_dsg_7_speed_dry_clutch_a
   version: 1
@@ -3207,3 +3377,5 @@ claims:
     quote: '"70 binde vitesler kütlemeye, araç titremeye başladı. Yazılımla kurtardık
       ama DSG resmen pimi çekilmiş el bombası gibi."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic

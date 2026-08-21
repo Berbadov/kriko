@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -17,6 +18,9 @@ import yaml
 
 from knowledge.domains import VALID_DOMAINS
 from knowledge.stoplists import mentions_foreign_manufacturer_code, mentions_sibling_code
+from knowledge.catalog.registry import (
+    DETECTIONS, component_ids, detection_of, subsystem_of,
+)
 
 PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
 
@@ -26,6 +30,50 @@ REQUIRED_CLAIM_FIELDS = {"claim_key", "title", "kind", "domain", "severity", "st
 VALID_KINDS = {"known_issue", "maintenance", "recall"}
 VALID_SEVERITIES = {"high", "medium", "low"}
 VALID_STATUSES = {"draft", "verified", "review", "held", "rejected"}
+
+# ── schema v3 (overhaul Phase 2) ────────────────────────────────────────
+# All optional at the claim level (omitted = v2 behaviour) but validated
+# strictly when present, so the shape can never drift silently.
+_BILINGUAL_PAIRS = {  # EN field -> required TR twin (cleanup-script invariant,
+    "title": "title_tr",           # now enforced at write time)
+    "rationale": "rationale_tr",
+    "inspection_advice": "inspection_advice_tr",
+}
+_BUILD_MONTH = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+_COMPONENT_IDS = component_ids()  # snapshot at import: registry is static data
+
+
+def _domain_family_agrees(domain: str, subsystem: str) -> bool:
+    """True when a claim's domain plausibly belongs to the component's subsystem.
+
+    'engine' claims on engine/* components obviously agree; 'brakes' on
+    engine/cooling does not. Conservative: unknown mappings return True so
+    the check never blocks a legitimate new combination.
+
+    Legitimate crossings encoded below (each from real claims):
+    - 'electrical' attaches to sensors/modules in ANY family (a crank sensor
+      is an engine component carrying an electrical-domain claim);
+    - 'engine' covers emissions/* hardware bolted to the engine (EGR, DPF);
+    - 'emissions' covers engine-mounted sensors (lambda/O2);
+    - 'fuel system' covers emissions/* injection-adjacent hardware.
+    """
+    family = subsystem.split("/", 1)[0]
+    _AGREES = {
+        "engine": {"engine", "emissions"},
+        "transmission": {"transmission"},
+        "emissions": {"emissions", "engine"},
+        "brakes": {"brakes"},
+        "suspension": {"suspension"},
+        "electrical": None,             # electrical claims live in every family
+        "body": {"body"},
+        "cooling": {"engine"},          # engine/cooling components
+        "fuel system": {"engine", "emissions"},
+        "general": None,                # agrees with everything
+    }
+    ok = _AGREES.get(domain)
+    if ok is None or not ok:            # unmapped, 'electrical', 'general': never block
+        return True
+    return family in ok
 
 
 def validate_part(path: Path) -> list[str]:
@@ -126,6 +174,75 @@ def validate_part(path: Path) -> list[str]:
             sources = claim.get("sources", [])
             if not sources:
                 errors.append(f"{loc}: servable non-maintenance claim has no sources")
+
+        # ── schema v3 (overhaul Phase 2) ─────────────────────────────
+        # Bilingual invariant (folded from translate_claims.py's cleanup pass):
+        # an EN field present without its TR twin ships mixed-language text to
+        # buyers. Hard check so the half-finished translation pass becomes a
+        # pipeline invariant instead of a recurring mop.
+        for en, tr in _BILINGUAL_PAIRS.items():
+            if claim.get(en) and not claim.get(tr):
+                errors.append(f"{loc}: {en!r} present without {tr!r} (bilingual invariant)")
+
+        component_id = claim.get("component_id")
+        if component_id is not None:
+            if component_id not in _COMPONENT_IDS:
+                errors.append(
+                    f"{loc}: unknown component_id {component_id!r} — must resolve in "
+                    f"knowledge/catalog/components.yaml"
+                )
+            else:
+                # The claim's domain should agree with the component's
+                # subsystem family — 'brakes' claims on an engine component
+                # are almost always misattributed.
+                sub = subsystem_of(component_id) or ""
+                if domain in VALID_DOMAINS and sub and not _domain_family_agrees(domain, sub):
+                    errors.append(
+                        f"{loc}: domain {domain!r} disagrees with component "
+                        f"{component_id!r} subsystem {sub!r}"
+                    )
+
+        detection = claim.get("detection")
+        if detection is not None:
+            if detection not in DETECTIONS:
+                errors.append(f"{loc}: detection {detection!r} must be one of {sorted(DETECTIONS)}")
+            elif component_id in _COMPONENT_IDS:
+                comp_det = detection_of(component_id)
+                if detection != comp_det:
+                    errors.append(
+                        f"{loc}: detection {detection!r} contradicts component "
+                        f"{component_id!r} registry detection {comp_det!r}"
+                    )
+
+        symptoms = claim.get("symptoms")
+        if symptoms is not None:
+            if not isinstance(symptoms, list) or not all(isinstance(s, str) for s in symptoms):
+                errors.append(f"{loc}: symptoms must be a list of strings")
+
+        window = claim.get("affected_build_window")
+        if window is not None:
+            if not isinstance(window, dict) or set(window) - {"from", "to"}:
+                errors.append(f"{loc}: affected_build_window must be a mapping with from/to only")
+            else:
+                for k in ("from", "to"):
+                    if k in window and not _BUILD_MONTH.fullmatch(str(window[k] or "")):
+                        errors.append(f"{loc}: affected_build_window.{k} must be YYYY-MM, got {window[k]!r}")
+
+        cost = claim.get("repair_cost_band")
+        if cost is not None:
+            if not isinstance(cost, dict) or set(cost) - {"currency", "min", "max"}:
+                errors.append(f"{loc}: repair_cost_band must have currency/min/max only")
+            else:
+                for bound in ("min", "max"):
+                    val = cost.get(bound)
+                    if not isinstance(val, int) or isinstance(val, bool) or val < 0:
+                        errors.append(f"{loc}: repair_cost_band.{bound} must be a non-negative integer")
+                if "currency" in cost and not re.fullmatch(r"[A-Z]{3}", str(cost["currency"] or "")):
+                    errors.append(f"{loc}: repair_cost_band.currency must be ISO 4217 (e.g. TRY)")
+
+        fix = claim.get("fix_available")
+        if fix is not None and not isinstance(fix, str):
+            errors.append(f"{loc}: fix_available must be a string")
 
         # Sibling-code contamination (docs/design_flaws.md Flaw 1): a claim
         # naming a sibling component's code (same family, different physical

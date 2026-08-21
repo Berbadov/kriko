@@ -69,6 +69,8 @@ claims:
       resulting in leaks, and the rear retaining clips may be incorrect. This issue
       affected vehicles manufactured between 2013 and 2014."'
     independent: true
+  component_id: brakes_pipes_hoses
+  detection: visual
 - id: dc4_brakes_handbrake_cable_seizure__v1
   claim_key: dc4_brakes_handbrake_cable_seizure_
   version: 1
@@ -204,6 +206,8 @@ claims:
     quote: '"other reported problems include early Clio variants experiencing worn
       mechatronics units and software glitches."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dc4_emissions_dpf_failures_on_1_5_dci__v1
   claim_key: dc4_emissions_dpf_failures_on_1_5_dci_
   version: 1
@@ -238,6 +242,8 @@ claims:
     quote: '- Diesel particulate filter (DPF) issues on 1.5 dCi engines, especially
       in cars used for short journeys'
     independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
 - id: dc4_engine_failing_ignition_coils_a_v1
   claim_key: dc4_engine_failing_ignition_coils_a
   version: 1
@@ -271,6 +277,8 @@ claims:
     quote: '"Reported issues include failing ignition coils and catastrophic engine
       failure if the timing belts haven''t been changed at the specified intervals."'
     independent: true
+  component_id: engine_timing_belt
+  detection: history_check
 - id: dc4_engine_timing_chain_stretch_and_v1
   claim_key: dc4_engine_timing_chain_stretch_and
   version: 1
@@ -308,6 +316,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 150000
+  component_id: engine_timing_chain
+  detection: diagnostic
 - id: dc4_suspension_front_wheel_bearing_fail_v1
   claim_key: dc4_suspension_front_wheel_bearing_fail
   version: 1
@@ -341,6 +351,8 @@ claims:
     independent: true
   applies_when:
     min_mileage_km: 40000
+  component_id: suspension_wheel_bearings
+  detection: test_drive
 - id: dc4_suspension_premature_wear_of_suspen_v1
   claim_key: dc4_suspension_premature_wear_of_suspen
   version: 1
@@ -400,6 +412,8 @@ claims:
     quote: '"EDC şanzıman sorunları; ... 1. vites ile 2. vites geçişlerinde EDC şanzıman
       vurdurma sorunu"'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dc4_transmission_chronic_1st_to_2nd_gear__v1
   claim_key: dc4_transmission_chronic_1st_to_2nd_gear_
   version: 1
@@ -475,6 +489,8 @@ claims:
       it is due to careless operation. Still, other reported problems include early
       Clio variants experiencing worn mechatronics units and software glitches."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
 - id: dc4_transmission_dc4_transmission_lock_up_v1
   claim_key: dc4_transmission_dc4_transmission_lock_up
   version: 1
@@ -540,6 +556,8 @@ claims:
       gerekebilir. Aşınma genellikle belirli bir kilometre sonrasında belirgin hale
       gelir."'
     independent: true
+  component_id: transmission_clutch_disc
+  detection: test_drive
 - id: dc4_transmission_edc_control_unit_failure_v1
   claim_key: dc4_transmission_edc_control_unit_failure
   version: 1
@@ -574,6 +592,8 @@ claims:
       geçmemesi, ''Şanzıman Arızası'' uyarısı ekranda belirmesi, hızlanma sırasında
       tekleme veya vites atlamaması."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dc4_transmission_edc_dual_clutch_disc_wea_v1
   claim_key: dc4_transmission_edc_dual_clutch_disc_wea
   version: 1
@@ -608,6 +628,8 @@ claims:
     quote: '"Titreme ve Silkeleme: Özellikle yokuş kalkışlarında veya 1. vitesten
       2. vitese geçerken araçta ciddi bir titreme hissedilir."'
     independent: true
+  component_id: transmission_clutch_disc
+  detection: test_drive
 - id: dc4_transmission_edc_dual_clutch_gearbox__v1
   claim_key: dc4_transmission_edc_dual_clutch_gearbox_
   version: 1
@@ -639,6 +661,8 @@ claims:
     quote: '- EDC dual-clutch automatic gearbox can suffer from jerky operation, juddering,
       and premature clutch wear, particularly in early models (2013-2015)'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dc4_transmission_electronic_control_unit__v1
   claim_key: dc4_transmission_electronic_control_unit_
   version: 1
@@ -702,6 +726,8 @@ claims:
     site_or_channel: diagnosticgarage.com
     quote: '"Premature clutch wear and hydraulic release bearing failures."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dc4_transmission_transmission_actuator_or_v1
   claim_key: dc4_transmission_transmission_actuator_or
   version: 1
@@ -736,6 +762,8 @@ claims:
     quote: '"EDC lambası veya EDC arıza ışığı; şanzıman beyninde, kavrama sisteminde,
       aktüatörlerde ya da yazılım-kalibrasyon tarafında bir sorun algılandığında yanabilir."'
     independent: true
+  component_id: transmission_dct_clutch_pack
+  detection: test_drive
 - id: dc4_transmission_transmission_control_uni_v1
   claim_key: dc4_transmission_transmission_control_uni
   version: 1
@@ -772,3 +800,5 @@ claims:
     quote: '"Vites Kaybı: Araç sadece tekli viteslere (1-3-5) veya sadece çiftli viteslere
       (2-4-6) geçer. Diğer vitesleri tamamen atlar."'
     independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic
