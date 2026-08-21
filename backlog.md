@@ -153,7 +153,7 @@ catalog claims sit at `status: review`**, i.e. the pipeline never settles a
 claim and the serving tier is doing that judgement implicitly. The mechanism
 now exists — `knowledge/agent/gates.py` gives a deterministic keep/drop verdict
 with reasons, and the hub records where a human disagrees with it
-(`knowledge/hub/claim_signals.jsonl`). Remaining:
+(`ops/hub/claim_signals.jsonl`). Remaining:
 - [ ] Run the gate over the catalog as a pipeline step that writes a settled
       status/`value_tier`, not a hub button (no human in the data path).
 - [ ] Feed `claim_signals.jsonl` disagreements into the gate's calibration test
@@ -187,8 +187,8 @@ response, and logs a demand signal for the catalog. Windows may later be extende
 from TR-market data — also automatically, via the demand miner (B10).
 
 ### B20 — kriko-hub: clickable pipeline dashboard `[G2][G5]`
-**Landed 2026-08-04** (`knowledge/hub/`, USAGE §4d). **Web edition is the
-live one**: `knowledge/hub/web.py` (fastapi+uvicorn, 127.0.0.1:8787) — six
+**Landed 2026-08-04** (`ops/hub/`, USAGE §4d). **Web edition is the
+live one**: `ops/hub/web.py` (fastapi+uvicorn, 127.0.0.1:8787) — six
 browser tabs (Overview/Parts/Sources/Run/Ledger/Coverage) over the
 test-pinned `metrics.py`, run buttons spawning `knowledge.ledger.run`
 (`--max-usd` caps, streamed output, stop), 1s polling. The DearPyGui app
@@ -198,7 +198,7 @@ version renders in the host browser instead. `run.py` gained
 `verdict --import-only` for the $0 button.
 
 ### B21 — MCP server + kriko_research agent: subscription-LLM engine, $0 research `[G2][G5]`
-**Landed 2026-08-04** (`knowledge/mcp/server.py`, USAGE §4e, opencode.json →
+**Landed 2026-08-04** (`ops/mcp/server.py`, USAGE §4e, opencode.json →
 `mcp.kriko`, `.opencode/agents/kriko_research.md`). 13 stdio tools; the full
 agent loop tested end-to-end: `add_document` (hash-idempotent) →
 `add_evidence` (extractor_version=1, deduped) → `run_pipeline_pass`
@@ -273,7 +273,7 @@ paid tools to the MCP surface works against it. Revisit only if subscription
 throughput (rate limits, session ceilings) proves insufficient in practice. The
 analysis below stands if that happens.
 
-`knowledge/mcp/server.py` (B21) is the **$0 plane by construction**: every write tool is
+`ops/mcp/server.py` (B21) is the **$0 plane by construction**: every write tool is
 deterministic or import-only, `add_evidence` writes `extractor_version=1` rows that skip
 the paid extractor, and `run_pipeline_pass` / `run_remediate_import_only` never spend
 tokens. The paid engine (chunked DeepSeek extraction, batched verdicts) is reachable only

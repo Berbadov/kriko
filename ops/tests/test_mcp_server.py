@@ -12,7 +12,7 @@ import json
 import pytest
 
 from knowledge.ledger import db, verdict
-from knowledge.mcp import server
+from ops.mcp import server
 
 DATA_STUB = """part_id: k9k
 title: Renault K9K 1.5 dCi

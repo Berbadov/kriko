@@ -72,7 +72,7 @@ Commit `e5c00de`. 754 tests (was 698 + 1 failing).
   drift on the first run.
 - **Repo hygiene**: nine `imgui.ini` files committed under garbage names
   (`Constant with a value of 2`, `\240b\235\017`) by the deprecated
-  DearPyGui hub, plus `knowledge/hub/app.py` itself and its `dearpygui`
+  DearPyGui hub, plus `ops/hub/app.py` itself and its `dearpygui`
   requirement, retired. The web hub has been the live one since 2026-08-04.
 
 Commit `89ba247`. 759 tests.
@@ -112,14 +112,14 @@ agent now supplies the trim lineup from the web instead.
 
 ## 2026-08-04 — B20 + B21: kriko-hub desktop dashboard + MCP control layer
 
-- **B20 — `knowledge/hub/`** (DearPyGui, deps: `dearpygui`): six clickable
+- **B20 — `ops/hub/`** (DearPyGui, deps: `dearpygui`): six clickable
   windows — Overview (spend bar-plot, cost-to-finish, log tails), Model &
   Make (parts → claims/variants/findings), Sources (documents → raw text),
   Extraction (run buttons spawning `knowledge.ledger.run` with `--max-usd`
   caps, streaming output), Ledger browser (generic read-only SQLite
   explorer), Scaffold (coverage findings). ~1s read-only DB poll; GUI-free
   `metrics.py` pinned by tests; `run.py` gained `verdict --import-only`.
-- **B21 — `knowledge/mcp/server.py`** (stdio MCP, `mcp>=1.0,<2.0` — 2.0
+- **B21 — `ops/mcp/server.py`** (stdio MCP, `mcp>=1.0,<2.0` — 2.0
   dropped FastMCP): 13 tools, read + $0 write. `add_document`
   (hash-idempotent) → `add_evidence` (extractor_version=1, (doc_id,title)
   deduped) → `run_pipeline_pass` (resolve/cluster/import-verdicts/export,

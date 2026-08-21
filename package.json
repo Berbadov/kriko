@@ -1,9 +1,9 @@
 {
   "name": "kriko-extension",
   "private": true,
-  "description": "Tests for the Sahibinden listing scraper (extension_ui/content.js) and the kriko-hub browser console (knowledge/hub/static).",
+  "description": "Tests for the Sahibinden listing scraper (extension_ui/content.js) and the kriko-hub browser console (ops/hub/static).",
   "scripts": {
-    "test": "node --test --test-force-exit 'extension_ui/tests/**/*.test.js' 'knowledge/hub/tests/**/*.test.js'"
+    "test": "node --test --test-force-exit 'extension_ui/tests/**/*.test.js' 'ops/hub/tests/**/*.test.js'"
   },
   "devDependencies": {
     "jsdom": "^26.0.0"

@@ -7,7 +7,7 @@ dashboard.
 
 import json
 
-from knowledge.hub import metrics
+from ops.hub import metrics
 from knowledge.ledger import db
 
 DATA_STUB = """part_id: k9k
