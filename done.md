@@ -313,7 +313,7 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
   - **`parity --explain` acceptance report** (`84c2462`) — categorizes all 474
     only-in-existing claims (126 shipped under rewritten titles, ~230 gate drops
     working as designed, ~120 never ingested/extracted → tracked as B16's
-    pre-swap review). Artifact: `thoughts/ledger_acceptance_parity_2026-07-22.txt`.
+    pre-swap review). Artifact: `docs/historical/thoughts/ledger_acceptance_parity_2026-07-22.txt`.
   - Servable catalog deliberately NOT swapped: legacy part YAMLs still serve until
     the export carries serving-gate fields and fitment is remapped (B16).
 - **B12 completed** — `evidence-ledger-stage1` and `model-year-claim-windows`

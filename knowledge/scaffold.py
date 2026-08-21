@@ -95,7 +95,7 @@ Next steps:
   3. docker compose -f deploy/docker-compose.yml restart api
        Syncs the new claims to the database.
 
-Tip: to add sources manually instead of auto-discovering them, see docs/SCAFFOLD.md.
+Tip: to add sources manually instead of auto-discovering them, see docs/historical/SCAFFOLD.md.
 """)
 
 

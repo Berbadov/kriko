@@ -112,4 +112,4 @@ never add a human verification step to the pipeline.
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `docs/overhaul_plan.md`, `docs/claim_relevance_plan.md` | Claim-quality roadmap/specs | reference |
 | `docs/pipeline_postmortem.md` | Early pipeline history | historical |
-| `docs/handover.md`, `docs/SCAFFOLD.md`, `kriko_build_plan.md` | Pre-part-centric era | historical — do not follow |
+| `docs/historical/` | Pre-part-centric era (`handover.md`, `SCAFFOLD.md`) + superseded 2026-07 designs/plans (`thoughts/`) | historical — do not follow |
