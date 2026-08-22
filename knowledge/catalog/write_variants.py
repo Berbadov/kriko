@@ -161,12 +161,31 @@ TR_MARKET_TRIMS: dict[str, list[dict]] = {
     ],
 }
 
+PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
+
 # electrical_code / body_code per model — one shared fitment axis per generation,
-# not per engine (matches golf7_elec/golf7_body convention).
-_SHARED_CODES: dict[str, dict[str, str]] = {
-    "renault_clio_5": {"electrical_code": "clio5_elec", "body_code": "clio5_body"},
-    "volkswagen_golf_7": {"electrical_code": "golf7_elec", "body_code": "golf7_body"},
-}
+# not per engine (matches the golf7_elec/golf7_body convention).
+#
+# Read off the part files rather than hand-enumerated. The hand-written dict this
+# replaced listed clio_5 and golf_7 only; megane_4 had megane4_elec.yaml and
+# megane4_body.yaml on disk and its variant rows already carried those codes, but
+# no entry here — so regenerating megane_4 would have silently dropped both axes
+# from every row. That is the same drift docs/design_flaws.md Flaw 1 records for
+# SIBLING_CODE_FAMILIES, and the same fix catalog_code_manufacturers() uses:
+# derive it, so a model is covered the moment its part stubs exist.
+#
+# Fails open (CLAUDE.md automation principle): a model with no such part file
+# gets no code, never a guessed one.
+def shared_codes(key: str) -> dict[str, str]:
+    """{electrical_code, body_code} for a model key, from the part files on disk."""
+    base = key.partition("_")[2].replace("_", "")
+    out: dict[str, str] = {}
+    for field, subdir, suffix in (("electrical_code", "electrical", "elec"),
+                                  ("body_code", "body", "body")):
+        part_id = f"{base}_{suffix}"
+        if (PARTS_DIR / subdir / f"{part_id}.yaml").exists():
+            out[field] = part_id
+    return out
 
 
 # ── Trim validation (B23: agent-supplied trims) ──────────────────────────────
@@ -564,7 +583,7 @@ def run(make: str, model: str, trims: list[dict] | None = None,
         )
 
     _cross_check(make, model, trims)
-    shared = _SHARED_CODES.get(key, {})
+    shared = shared_codes(key)
     new_rows = build_rows(make, model, trims, shared)
 
     # Same powertrain described twice (a trim-shaped lineup) is fused before
