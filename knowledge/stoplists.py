@@ -4,8 +4,7 @@ INSPECTION_COVERED / WARNING_LIGHT_PATTERNS are used by gate_inspection_value
 in judge.py to quickly reject claims that a standard pre-purchase mechanic
 inspection already covers, or generic dashboard warning lights.
 
-FORUM_DOMAINS is used by ops.auto (to exclude forums from future Exa
-discovery) and by the one-off forum-source purge (knowledge/purge_forums.py).
+FORUM_DOMAINS is used by ops.auto to exclude forums from future Exa discovery.
 Forums surface a lot of genuine one-time/anecdotal issues that read like
 chronic patterns once extracted — see pipeline_postmortem. Owner-club and
 enthusiast-forum sites, and crowd-complaint boards, are all excluded; the

@@ -169,7 +169,7 @@ def _powertrain_compatible(claim_data: dict, variant_fuel: str) -> bool:
 # (e.g. "Haldex AWD Coupling Oil Degradation (Golf R)") and broadcast it to
 # FWD variants too — a 4WD-specific failure surfaced on a car that physically
 # does not have that hardware. `Variant.drivetrain` is populated on every row
-# (via knowledge/catalog/add_part_code.py, never hand-edited); absence on the
+# by the catalog pipeline, never hand-edited; absence on the
 # variant side (None) grounds broadly, mirroring _fuel_compatible.
 _AWD_RE = re.compile(
     r"\bawd\b|\b4wd\b|\b4x4\b|4matic|quattro|4motion|xdrive|haldex|"
