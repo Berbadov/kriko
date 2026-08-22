@@ -311,6 +311,28 @@ second pipeline. Applies to all parts; no per-model logic.
 
 ## P2
 
+### B28 — Split `ops/hub/web.py` into routers `[G5]` *(new 2026-08-22)*
+`web.py` is 831 lines and ~28 endpoints after the 2026-08-22 helper extraction
+(1151 originally; `textfmt.py`/`agents.py`/`claimview.py` took the pure helpers).
+Splitting the endpoints themselves is blocked on a test-coupling problem, not a
+code problem:
+
+Endpoints read `DATA_DIR`, `RUNS_LOG`, `CLAIM_SIGNAL_LOG` and `AGENT_RUN_LOG`
+from module scope, and `ops/tests/test_hub_web.py` patches them with
+`monkeypatch.setattr(web, "DATA_DIR", tmp_path)`. A function resolves globals
+from the module it was **defined** in, so moving `/api/models` to a
+`routes_catalog.py` detaches it from the patch — it would read the real
+`backend/data/` instead of the fixture and still return 200. A test that passes
+while testing nothing is worse than a red one.
+
+Doing this properly means moving the config globals to an `ops/hub/config.py`
+and repointing ~8 `monkeypatch` targets from `web` to that module — mechanically
+simple, arguably better tests (patch config, not the app module), but it is a
+test change, so it was held back from the behaviour-preserving pass.
+
+Acceptance: route table (path + methods) diffed identical before/after — the
+2026-08-22 pass used exactly this check and it caught a real over-capture.
+
 ### B13 — Remaining design-flaw work (`docs/design_flaws.md`)
 - Flaw 5: judge too weak → whack-a-mole patches. The ledger's verdict stage is now on
   `main` (B1, 2026-07-22) — closes for the pipeline; the *served* catalog inherits the
