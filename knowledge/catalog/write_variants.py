@@ -480,22 +480,11 @@ def build_rows(make: str, model: str, trims: list[dict], shared: dict[str, str])
     return rows
 
 
-def _default_aftertreatment(fuel: str | None, emissions: str | None) -> str | None:
-    """Derive aftertreatment from fuel + euro standard.
-
-    Closed engineering vocabulary (allowed constant per CLAUDE.md), not per-model
-    car data — mirrors backend/sync.py's same-named function so the generator
-    writes the same value sync-time grounding would derive.
-    """
-    f = (fuel or "").lower()
-    e = (emissions or "").lower()
-    if f != "diesel":
-        return "none" if f == "petrol" else None
-    if e.startswith("euro6d"):
-        return "scr"
-    if e.startswith("euro6b") or e.startswith("euro6c"):
-        return "lnt"
-    return None
+# Was a second, drifted implementation of the same rule: it returned None where
+# the tested one returns "none", so a euro5 diesel was written with no
+# aftertreatment value at all and _scr_compatible then failed open on it.
+from knowledge.catalog.emissions import (
+    default_aftertreatment as _default_aftertreatment)
 
 
 # The fitment axes — the part codes a variant is assembled from. Every one is
