@@ -23,7 +23,7 @@ DATA_DIR = REPO_ROOT / "backend" / "data"
 PART_AXES = ("engine_family", "transmission_code", "electrical_code", "body_code")
 
 # Placeholder codes that are engineering vocabulary, not a researchable part.
-PSEUDO_PART_CODES = {"manual", ""}
+from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: F401
 
 # Figures a researcher may fail to source. Their absence marks the row draft;
 # naming them lets the UI say *which* figure is missing instead of just "draft".

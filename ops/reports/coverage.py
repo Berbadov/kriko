@@ -67,11 +67,10 @@ from backend.core.resolver import SERVABLE_STATUSES
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 # Pseudo part-code a fitment row may use as a transmission placeholder that
-# deliberately has no part file. Mirrors backend/sync.py's PSEUDO_PART_CODES;
-# kept as its own tiny constant so this read-only, no-DB tool has no import
-# dependency on sync.py's DB-touching module. Closed engineering vocabulary,
-# not car-coverage data (CLAUDE.md scalability exception).
-PSEUDO_PART_CODES = frozenset({"manual"})
+# deliberately has no part file. Imported from knowledge.catalog.model_state,
+# which is pure pathlib+yaml — so this read-only tool still takes on no DB
+# dependency, and the constant has one definition instead of four.
+from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: F401
 
 
 @dataclass(frozen=True)

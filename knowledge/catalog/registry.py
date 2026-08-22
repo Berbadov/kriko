@@ -17,6 +17,13 @@ _REGISTRY_PATH = Path(__file__).resolve().parent / "components.yaml"
 
 DETECTIONS = frozenset({"visual", "test_drive", "diagnostic", "history_check"})
 
+# Placeholder part codes that are engineering vocabulary, not a researchable
+# part — a manual gearbox has no part file. Canonical definition: backend/sync.py,
+# ops/reports/coverage.py, ops/swap.py and catalog/model_state.py all import this
+# one. Closed engineering vocabulary, not car-coverage data (CLAUDE.md
+# scalability exception), so it does not grow with model coverage.
+PSEUDO_PART_CODES = frozenset({"manual"})
+
 
 @lru_cache(maxsize=1)
 def _load() -> dict:

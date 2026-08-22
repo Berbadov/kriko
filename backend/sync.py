@@ -45,7 +45,7 @@ FITMENT_DIR = DATA_DIR / "fitment"
 # car-coverage data, so it is safe as a constant. `resolver.py` special-cases
 # the same "manual" pseudo-code at serve time; `ops/reports/coverage.py`
 # mirrors this constant for its own catalog-only checks.
-PSEUDO_PART_CODES = frozenset({"manual"})
+from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: F401
 
 # ── Transmission-code grounding ────────────────────────────────────────────
 #
