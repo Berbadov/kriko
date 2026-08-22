@@ -1,0 +1,44 @@
+# Wikipedia bootstrap input for knowledge/catalog/discover.py.
+#
+# WHY THIS IS DATA, NOT A DERIVED LOOKUP
+# discover.py runs *before* a model has a catalog row — enumerating a model's
+# engine and gearbox codes is the first step of onboarding, and its whole job is
+# to create the data that would otherwise be derived from. So unlike
+# catalog_code_manufacturers() in knowledge/stoplists.py, this genuinely cannot
+# read the catalog: there is nothing there yet.
+#
+# It still must not live in Python. CLAUDE.md's scalability principle says
+# onboarding a model must never require editing a Python dict, because that edit
+# is the one people forget (docs/design_flaws.md Flaw 1). Onboarding a new model
+# means adding a row here and nothing else.
+#
+# articles: catalog key (make_model_generation) -> Wikipedia article title.
+# A key with no entry falls back to a title built from make + model, so an
+# unlisted model degrades to a guess rather than failing.
+
+articles:
+  renault_megane_4:    Renault Mégane
+  renault_clio_4:      Renault Clio
+  renault_clio_5:      Renault Clio
+  renault_duster_2:    Renault Duster
+  renault_kangoo_2:    Renault Kangoo
+  # VW Golf uses per-generation articles ({{Main article}} pattern)
+  volkswagen_golf_7:   Volkswagen Golf Mk7
+  volkswagen_golf_8:   Volkswagen Golf Mk8
+  volkswagen_passat_8: Volkswagen Passat
+  volkswagen_tiguan_2: Volkswagen Tiguan
+  toyota_corolla_12:   Toyota Corolla (E210)
+  toyota_rav4_5:       Toyota RAV4
+  ford_focus_3:        Ford Focus (third generation)
+  ford_focus_4:        Ford Focus (fourth generation)
+  hyundai_tucson_4:    Hyundai Tucson
+  kia_sportage_4:      Kia Sportage
+
+# Engine code aliases: the code Wikipedia prints -> the market code the catalog
+# uses. Mostly Nissan-internal codes on Renault-Nissan shared engines.
+engine_aliases:
+  h5dt: h5d   # Nissan HR10DDT = Renault H5D (1.0 I3)
+  h5ft: h5f   # Nissan HR12DDT = Renault H5F (1.2 TCe)
+  h5ht: h5h   # Nissan HR13DDT = Renault H5H (1.3 TCe)
+  m5mt: m5m   # 1.6 GT special
+  m5pt: m5p   # 1.8 RS special

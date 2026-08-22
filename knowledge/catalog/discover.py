@@ -16,8 +16,9 @@ Why wikitext, not extracts?
   Fuel type labels appear in bold:  '''Petrol:'''  /  '''Diesel:'''
   This is parsed deterministically — no LLM involved.
 
-Scalability: works for any Wikipedia article by adding one entry to
-  _WIKIPEDIA_ARTICLE_TITLES. The parser is model-agnostic.
+Scalability: works for any Wikipedia article by adding one row to
+  knowledge/catalog/wikipedia_articles.yaml — no Python edit. The parser
+  is model-agnostic.
 
 Usage:
     python -m knowledge.catalog.discover --make renault --model megane_4
@@ -31,6 +32,7 @@ import argparse
 import json
 import logging
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
 
@@ -65,34 +67,34 @@ _ORDINALS = {
 # Wikipedia article titles per (make, model).
 # Key: lowercase "{make}_{model}" — value: Wikipedia article title to fetch.
 # The generation is extracted from the model suffix (e.g. megane_4 → 4th gen section).
-_WIKIPEDIA_ARTICLE_TITLES: dict[str, str] = {
-    "renault_megane_4":    "Renault Mégane",
-    "renault_clio_4":      "Renault Clio",
-    "renault_clio_5":      "Renault Clio",
-    "renault_duster_2":    "Renault Duster",
-    "renault_kangoo_2":    "Renault Kangoo",
-    # VW Golf uses per-generation articles ({{Main article}} pattern)
-    "volkswagen_golf_7":   "Volkswagen Golf Mk7",
-    "volkswagen_golf_8":   "Volkswagen Golf Mk8",
-    "volkswagen_passat_8": "Volkswagen Passat",
-    "volkswagen_tiguan_2": "Volkswagen Tiguan",
-    "toyota_corolla_12":   "Toyota Corolla (E210)",
-    "toyota_rav4_5":       "Toyota RAV4",
-    "ford_focus_3":        "Ford Focus (third generation)",
-    "ford_focus_4":        "Ford Focus (fourth generation)",
-    "hyundai_tucson_4":    "Hyundai Tucson",
-    "kia_sportage_4":      "Kia Sportage",
-}
+_BOOTSTRAP_PATH = Path(__file__).resolve().parent / "wikipedia_articles.yaml"
 
-# Known engine code aliases: Wikipedia Nissan-internal codes → Renault market codes.
-# Extend as new makes are added.
-_ENGINE_ALIASES: dict[str, str] = {
-    "h5dt": "h5d",   # Nissan HR10DDT = Renault H5D (1.0 I3)
-    "h5ft": "h5f",   # Nissan HR12DDT = Renault H5F (1.2 TCe)
-    "h5ht": "h5h",   # Nissan HR13DDT = Renault H5H (1.3 TCe)
-    "m5mt": "m5m",   # 1.6 GT special
-    "m5pt": "m5p",   # 1.8 RS special
-}
+
+@lru_cache(maxsize=1)
+def _bootstrap() -> dict:
+    """Wikipedia article titles + engine-code aliases, read off YAML.
+
+    Kept as data rather than a Python dict because onboarding a model must
+    never mean editing Python (CLAUDE.md scalability principle). It cannot be
+    derived from the catalog the way catalog_code_manufacturers() is: discover
+    runs before the model has a catalog row, and exists to create one.
+    """
+    with open(_BOOTSTRAP_PATH, encoding="utf-8") as fh:
+        data = yaml.safe_load(fh) or {}
+    return {
+        "articles": data.get("articles") or {},
+        "engine_aliases": data.get("engine_aliases") or {},
+    }
+
+
+def wikipedia_article_title(key: str) -> str | None:
+    """Article title for a catalog key, or None to fall back to a guess."""
+    return _bootstrap()["articles"].get(key)
+
+
+def engine_alias(code: str) -> str | None:
+    """Market code for a Wikipedia-printed engine code, if it differs."""
+    return _bootstrap()["engine_aliases"].get(code)
 
 
 # ── Data types ────────────────────────────────────────────────────────────────
@@ -228,7 +230,7 @@ def _normalise_engine_code(raw_code: str) -> tuple[str, str]:
     # Strip common trailing descriptors
     code = re.sub(r'\s+(dci|tce|sce|phev|biturbo|turbo|hybrid).*$', '', raw_code,
                   flags=re.IGNORECASE).strip()
-    family = _ENGINE_ALIASES.get(code.lower(), code.lower())
+    family = engine_alias(code.lower()) or code.lower()
     return code, family
 
 
@@ -479,7 +481,7 @@ def discover(
         return ModelCatalog(make=make, model=model, engines=engines,
                             transmissions=transmissions, source="cache")
 
-    article_title = _WIKIPEDIA_ARTICLE_TITLES.get(key)
+    article_title = wikipedia_article_title(key)
     if not article_title:
         # Generic fallback: construct from make + model name
         model_name = re.sub(r'_\d+$', '', model).replace('_', ' ').title()
