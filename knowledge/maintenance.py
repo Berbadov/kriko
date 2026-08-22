@@ -1,57 +1,34 @@
-"""reclassify_maintenance.py — retag interval-shaped known_issue claims as
-`kind: maintenance` so the serving ranker's dead `due`/`due_stated` tiers light
-up.
+"""Maintenance-interval detection — retag interval-shaped known_issue claims
+as `kind: maintenance` so the serving ranker's `due`/`due_stated` tiers fire.
 
-Why this exists: every claim in the corpus is `kind: known_issue`, so
-`_resolve_maintenance_strength` (backend/core/resolver.py) never fires and the
-`strength` signal collapses to `reported` for ~all claims (design spec
-2026-07-12, Phase C). A timing belt, DSG fluid change, or clutch on a
-high-mileage car is not a "report" — it is a maintenance item **due at an
-interval unless the ad proves otherwise**. Reclassifying those claims with a
-`maintenance` interval block turns them into a real `due`/`due_stated` signal.
+Why this exists: a timing belt, DSG fluid change, or clutch on a high-mileage
+car is not a "report" — it is a maintenance item **due at an interval unless
+the ad proves otherwise**. Without the retag, `_resolve_maintenance_strength`
+(backend/core/resolver.py) never fires and `strength` collapses to `reported`
+for ~all claims (design spec 2026-07-12, Phase C).
 
-Companion to backfill_claim_mileage.py — same "propose deterministically, human
-signs off" shape (the no-hand-YAML rule):
-
-  * --auto — scan every servable claim, detect interval-shaped candidates from a
-    CLOSED maintenance-interval vocabulary (timing belt, DSG/mechatronic fluid,
-    clutch, haldex fluid, spark plug, major service — EN+TR), derive the
-    interval from the claim's already-grounded `min_mileage_km` (or ground it
-    from the text), and print a proposal table. Dry-run by default; --apply
-    writes YAML. A human approves the table before it is written.
-
-The interval vocabulary is a small closed engineering set (the allowed
-no-hardcoded-car-data exception, like fuel types) — it does NOT grow with car
-coverage; onboarding a new engine adds no entry here.
+Candidates are detected from a CLOSED maintenance-interval vocabulary (timing
+belt, DSG/mechatronic fluid, clutch, haldex fluid, spark plug, major service —
+EN+TR) and the interval is derived from the claim's already-grounded
+`min_mileage_km`, or grounded from the text. The vocabulary is a small closed
+engineering set (the allowed no-hardcoded-car-data exception, like fuel types);
+onboarding a new engine adds no entry here.
 
 Fail-safe: a claim whose text matches the vocabulary but for which NO interval
 can be derived is LEFT as known_issue. An invalid maintenance claim (no
 `maintenance` block) would fail validate_part_yaml and mis-serve, so we never
 emit one.
 
-Usage:
-    python -m knowledge.catalog.reclassify_maintenance --auto
-    python -m knowledge.catalog.reclassify_maintenance --auto --apply
+Entry points: `detect_maintenance_kind`, `build_maintenance_block`,
+`to_maintenance` (used by knowledge/ledger/export.py).
 """
 
 from __future__ import annotations
 
-import argparse
 import re
 from dataclasses import dataclass
-from pathlib import Path
-
-import yaml
 
 from knowledge.ground_mileage_threshold import ground_mileage_threshold
-
-REPO_ROOT = Path(__file__).parent.parent.parent
-PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
-
-# Statuses that can actually reach a buyer — matches backfill_claim_mileage's
-# SERVABLE. (held claims serve too, but we mirror the sibling backfill's scope
-# so the two propose over the same claim set.)
-SERVABLE = {"review", "verified"}
 
 # Plausible service-interval window in years; anything outside is not a real
 # maintenance interval (rejects model years like "2014", warranty spans, etc.).
@@ -280,62 +257,3 @@ def to_maintenance(claim: dict) -> bool:
     claim["kind"] = "maintenance"
     claim["maintenance"] = block
     return True
-
-
-def _auto(apply: bool) -> None:
-    proposals: list[tuple[Path, str, str, dict]] = []
-    touched: dict[Path, dict] = {}
-    for path in sorted(PARTS_DIR.rglob("*.yaml")):
-        data = yaml.safe_load(path.read_text()) or {}
-        for claim in data.get("claims", []) or []:
-            if claim.get("status") not in SERVABLE:
-                continue
-            built = build_maintenance_block(claim)
-            if built is None:
-                continue
-            category, block = built
-            proposals.append((path, claim.get("claim_key", ""), category, block))
-            if apply:
-                to_maintenance(claim)
-                touched[path] = data
-
-    print(f"{'APPLYING' if apply else 'DRY RUN'} — {len(proposals)} "
-          f"maintenance-reclassification proposal(s):\n")
-    print(f"  {'category':<14} {'interval':>16}  claim_key  (file)")
-    for path, key, category, block in proposals:
-        km = block.get("interval_km")
-        yrs = block.get("interval_years")
-        interval = " / ".join(
-            part for part in (
-                f"{km:,} km" if km is not None else "",
-                f"{yrs}y" if yrs is not None else "",
-            ) if part
-        )
-        print(f"  {category:<14} {interval:>16}  {key}  ({path.name})")
-
-    if not apply:
-        print("\nDry run — no files written. Re-run with --apply to write.")
-        return
-
-    for path, data in touched.items():
-        path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
-    print(f"\nWritten {len(touched)} file(s). "
-          f"Re-run knowledge.parts.validate_part_yaml before syncing.")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--auto", action="store_true",
-                        help="Propose reclassifications across all servable claims")
-    parser.add_argument("--apply", action="store_true",
-                        help="Write changes (default: dry run)")
-    args = parser.parse_args()
-
-    if not args.auto:
-        parser.error("give --auto (the only mode) — optionally with --apply")
-    _auto(args.apply)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,4 +1,4 @@
-"""to_maintenance() — the pure mutation behind reclassify_maintenance.py.
+"""to_maintenance() — the pure mutation behind knowledge/maintenance.py.
 
 Reclassifies an interval-shaped known_issue claim to kind=maintenance with a
 maintenance interval block that _resolve_maintenance_strength (backend/core/
@@ -7,7 +7,7 @@ term with NO derivable interval stays known_issue — the script never emits an
 invalid maintenance claim (validate_part_yaml requires a maintenance block).
 """
 
-from knowledge.catalog.reclassify_maintenance import (
+from knowledge.maintenance import (
     detect_maintenance_kind,
     to_maintenance,
 )
