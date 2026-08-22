@@ -6,6 +6,73 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-22 — Refactor pass: delete the archaeology, derive the hand-lists
+
+Seven commits (`dfe2469`..`0caaa64`). ~1,100 lines removed, suite 765 -> 768
+(14 obsolete tests deleted, 17 added). Every phase verified with the full suite
+before the next started.
+
+- **854 LOC of spent code deleted** (`dfe2469`). Six one-shot migrations whose
+  transform already ran on the checked-in YAML (`migrate_v3`, three `backfill_*`,
+  `add_part_code`, `strip_fitment_field`) and three zero-reference source modules
+  (`sources/forums.py`, `recalls.py`, `specialists.py`). Kept deliberately:
+  `doctor.py`, `repair_missing_stub_scaffold.py`, `ops/swap.py`,
+  `ledger/parity.py` — standing tools, not spent migrations. `swap check` is a
+  documented acceptance gate.
+- **`reclassify_maintenance.py` -> `knowledge/maintenance.py`** (`c2b4695`),
+  341 -> 259 LOC. Its name and location both misdescribed it: a domain rule, not
+  a catalog migration. Stripping the human-sign-off CLI (a path G5 forbids) also
+  orphaned `argparse`, `pathlib`, `yaml`, `REPO_ROOT`, `PARTS_DIR` and
+  `SERVABLE` — the module now takes a dict and returns a dict.
+- **Duplication consolidated where it was real** (`bc4aa6a`). `catalog_models()`
+  and `VARIANTS_DIR` (byte-identical across three feeds), `_model_part_hint`
+  (identical in two of three), and `PSEUDO_PART_CODES` (four definitions -> one
+  in `catalog/registry.py`). **Five other "duplicates" were left alone** and the
+  reason recorded at the shared definition: `_now_iso` emits different formats,
+  `_http_get` differs by `follow_redirects`, `_doc_text` is three different feed
+  schemas, and nhtsa's `_model_part_hint` uses a different algorithm. The grep
+  found name collisions, not copies.
+- **Onboarding data left Python** (`c647b8e`). `_WIKIPEDIA_ARTICLE_TITLES` (15
+  models) and `_ENGINE_ALIASES` moved to
+  `knowledge/catalog/wikipedia_articles.yaml`. These genuinely cannot be
+  catalog-derived — `discover.py` runs *before* a model has a catalog row and
+  exists to create one — so the fix is data, not derivation. The YAML header
+  says so, to stop the next reader "fixing" it.
+- **`ops/hub/web.py` 1151 -> 831** (`de6202a`), into `textfmt.py`, `agents.py`,
+  `claimview.py`. **The planned six-router split is not possible**: endpoints
+  read `DATA_DIR`/`RUNS_LOG`/`CLAIM_SIGNAL_LOG`/`AGENT_RUN_LOG` from module
+  scope and `test_hub_web.py` patches them via `monkeypatch.setattr(web, ...)`.
+  A function resolves globals from the module it was *defined* in, so moving an
+  endpoint detaches it from the patch — `/api/models` would read the real
+  catalog instead of `tmp_path` and still return 200. Only helpers reading no
+  patched global moved; `web.py` re-imports them so every call site and patch
+  still resolves. Verified by diffing the 28-route table before and after.
+
+**Two latent bugs surfaced by the dedup pass and fixed separately:**
+
+- **`_default_aftertreatment` drift** (`bf8590c`). Two copies: `backend/sync.py`
+  returned `"none"` for a euro4/euro5 diesel, `write_variants.py` returned
+  `None`. The dangerous part was *which* was tested — `test_scr_gate.py` covers
+  sync's version, but grep shows sync **never calls it**; `write_variants.py:477`
+  was the sole production caller, running the untested, divergent copy. A euro5
+  diesel was written with no aftertreatment, `_scr_compatible` fails open on
+  falsy, and an AdBlue/SCR claim could surface on a car with no SCR hardware.
+  Now one implementation in `knowledge/catalog/emissions.py` (knowledge layer,
+  because `backend/` may import it but not the reverse), plus a Dockerfile COPY
+  line the invariant test demanded.
+- **`_SHARED_CODES` stale** (`0caaa64`). Listed clio_5 and golf_7; megane_4 had
+  its part files and variant codes but no entry, so regenerating it would have
+  dropped `electrical_code`/`body_code` from every row. Now derived from
+  `backend/data/parts/{electrical,body}/`, the same pattern
+  `catalog_code_manufacturers()` uses.
+
+Both bugs are the failure mode `docs/design_flaws.md` Flaw 1 records for
+`SIBLING_CODE_FAMILIES`: a hand-maintained list that drifted. Both fixes make
+the *class* impossible — one asserts function identity, the other asserts
+`_SHARED_CODES` never returns.
+
+---
+
 ## 2026-08-21 — CI, contributor protocol, structural invariants
 
 No `.github/` existed: nothing verified a branch before merge.
