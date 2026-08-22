@@ -59,7 +59,7 @@ DEFAULT_BASELINE = REPO_ROOT / "backend" / "tests" / "fixtures" / "serving_basel
 _AXIS_SUFFIXES = ("_family", "_code")
 # Pseudo part-code fitment rows may use for a transmission with deliberately no
 # part file (mirrors backend/sync.py + ops/reports/coverage.py).
-PSEUDO_PART_CODES = frozenset({"manual"})
+from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: F401
 
 
 @dataclass

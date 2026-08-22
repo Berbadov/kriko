@@ -31,11 +31,12 @@ from xml.etree import ElementTree as ET
 import yaml
 
 from knowledge.ledger import db
+from knowledge.ledger.feeds import (VARIANTS_DIR, catalog_models,
+                                    model_part_hint as _model_part_hint)
 
 log = logging.getLogger(__name__)
 
 INDEX_URL = "https://ec.europa.eu/safety-gate-alerts/api/download/weeklyReport/list/xml/en"
-VARIANTS_DIR = Path(__file__).parent.parent.parent.parent / "backend" / "data" / "variants"
 
 FEEDS_EXTRACTOR_VERSION = 101
 
@@ -154,25 +155,6 @@ def fetch_alerts(make: str, model: str, *, getter=_http_get_bytes,
     return out
 
 
-def _model_part_hint(make: str, model_key: str, route: str) -> str:
-    """Derive the model-level part hint for body/electrical routing."""
-    base = model_key.split("_")[0]
-    suffix = "body" if route == "body" else "elec" if route == "elec" else ""
-    if not suffix:
-        return ""
-    part_id = f"{base}_{suffix}"
-    parts_dir = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
-    for sub in parts_dir.rglob(f"{part_id}.yaml"):
-        return part_id
-    for yaml_path in VARIANTS_DIR.glob(f"{make}_{model_key}.yaml"):
-        rows = yaml.safe_load(yaml_path.read_text()) or []
-        if rows:
-            field = "body_code" if suffix == "body" else "electrical_code"
-            hint = rows[0].get(field, "")
-            if hint:
-                return hint
-    return ""
-
 
 def _doc_text(alert: dict) -> str:
     title = alert.get("title", "")
@@ -240,15 +222,6 @@ def ingest_alerts(conn, make: str, model_key: str, *,
         summary["ingested"] += 1
     return summary
 
-
-def catalog_models() -> list[tuple[str, str]]:
-    """(make, model) pairs from the variants dir."""
-    out = []
-    for p in sorted(VARIANTS_DIR.glob("*.yaml")):
-        make_model = p.stem.split("_", 1)
-        if len(make_model) == 2:
-            out.append((make_model[0], make_model[1]))
-    return out
 
 
 def run(conn, *, getter=_http_get_bytes, only: tuple[str, str] | None = None) -> dict:
