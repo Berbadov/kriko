@@ -31,6 +31,7 @@ COPY knowledge/sources/__init__.py ./knowledge/sources/__init__.py
 COPY knowledge/sources/tiers.py ./knowledge/sources/tiers.py
 COPY knowledge/catalog/__init__.py ./knowledge/catalog/__init__.py
 COPY knowledge/catalog/registry.py ./knowledge/catalog/registry.py
+COPY knowledge/catalog/emissions.py ./knowledge/catalog/emissions.py
 COPY knowledge/catalog/components.yaml ./knowledge/catalog/components.yaml
 COPY knowledge/catalog/source_tiers.yaml ./knowledge/catalog/source_tiers.yaml
 
