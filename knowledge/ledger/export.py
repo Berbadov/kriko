@@ -18,7 +18,7 @@ grounded at export time by the EXISTING deterministic grounders (zero LLM):
     (exact token + direction cue in proximity — the same guard the legacy
     pipeline put in front of LLM-proposed windows). Widest grounded window
     wins; contradictory windows (from > to) drop both bounds;
-  * kind/maintenance — reclassify_maintenance.to_maintenance(), the same
+  * kind/maintenance — maintenance.to_maintenance(), the same
     closed interval vocabulary the legacy catalog used (schema v2:
     interval_km / interval_years / evidence_keywords);
   * requires_equipment is deliberately NOT emitted: verdicts carry no
@@ -42,7 +42,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from knowledge.catalog.reclassify_maintenance import to_maintenance
+from knowledge.maintenance import to_maintenance
 from knowledge.domains import normalize_domain
 from knowledge.ground_mileage_threshold import ground_mileage_threshold
 from knowledge.ground_year_window import ground_year_window
