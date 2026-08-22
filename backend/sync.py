@@ -221,22 +221,12 @@ def _scr_compatible(claim_data: dict, variant_aftertreatment: str | None) -> boo
     return variant_aftertreatment == "scr"
 
 
-def _default_aftertreatment(fuel: str | None, emissions: str | None) -> str | None:
-    """Derive aftertreatment from fuel + euro standard.
-
-    This is a closed engineering vocabulary (allowed constant per CLAUDE.md),
-    not per-model car data — it does not grow with car coverage.
-    """
-    f = (fuel or "").lower()
-    e = (emissions or "").lower()
-    if f != "diesel":
-        return "none" if f == "petrol" else None
-    # Diesel variants:
-    if e.startswith("euro6d"):
-        return "scr"
-    if e in ("euro6b", "euro6c"):
-        return "lnt"
-    return "none"
+# Re-exported under the old private name so backend/tests/test_scr_gate.py and
+# any caller keep working. The implementation moved down to the knowledge layer
+# because knowledge/catalog/write_variants.py needs the same rule and may not
+# import backend/ (layering principle).
+from knowledge.catalog.emissions import (  # noqa: E402
+    default_aftertreatment as _default_aftertreatment)
 
 
 def sync_variants(db: Session) -> int:
