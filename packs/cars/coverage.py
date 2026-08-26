@@ -1,28 +1,30 @@
-"""coverage.py — catalog coverage report over YAML only. No DB, no network.
+"""coverage.py — cars-pack catalog coverage report over YAML only. No DB, no network.
 
-Kriko's catalog (backend/data/**/*.yaml) can contain silent holes: part stubs
-with zero claims (dw5/dw6 today), fitment rows pointing at part_ids that don't
-exist, orphan parts no variant ever references, or an automatic-transmission
-variant with no real gearbox part behind it. Nothing surfaced these before
-this tool existed — sync.py even silently skipped an unknown part_id. This is
-the recurrence guard for that whole class of bug (backlog B7, CLAUDE.md
-generalization principle: "patch the car, ship the mechanism").
+The cars catalog (`packs/cars/data/**/*.yaml`) can contain silent holes: part
+stubs with zero claims, fitment rows pointing at part_ids that don't exist,
+orphan parts no variant ever references, or an automatic-transmission variant
+with no real gearbox part behind it. Nothing surfaced these before this tool
+existed. This is the recurrence guard for that whole class of bug (backlog B7,
+CLAUDE.md generalization principle: "patch the car, ship the mechanism").
+
+It lives in the pack, not the engine: every finding kind below is a statement
+about *car* catalog shape (fitment axes, gearbox technology, diesel emissions),
+so it moved here with the data in Phase 6 rather than staying in `ops/`.
 
 Reads:
-    backend/data/variants/*.yaml — variant rows (id, transmission, transmission_code, ...)
-    backend/data/fitment/*.yaml  — fitment rows (variant_id + one part_id per axis,
+    packs/cars/data/variants/*.yaml — variant rows (id, transmission, transmission_code, ...)
+    packs/cars/data/fitment/*.yaml  — fitment rows (variant_id + one part_id per axis,
                                     e.g. engine_family, transmission_code, electrical_code,
-                                    body_code — see backend/sync.py's part_keys)
-    backend/data/parts/<type>/*.yaml — part rows (part_id, part_type, claims: [...])
+                                    body_code)
+    packs/cars/data/parts/<type>/*.yaml — part rows (part_id, part_type, claims: [...])
 
-Reports five finding kinds, all catalog-derived (no hardcoded make/model/code
+Reports six finding kinds, all catalog-derived (no hardcoded make/model/code
 list — see CLAUDE.md's scalability principle):
     missing_part            — a fitment row's part_id has no part YAML anywhere
-                               under backend/data/parts/
+                               under packs/cars/data/parts/
     zero_claim_part         — a part YAML whose claims list is empty, or whose
-                               claims are all in a non-servable status
-                               (SERVABLE_STATUSES, imported from
-                               backend/core/resolver.py)
+                               claims are all in a status the pack does not
+                               export (see servable_statuses() below)
     orphan_part             — a part YAML that no fitment row references
     auto_variant_no_tx_part — a variant whose transmission field indicates an
                                automatic/automated technology but whose
@@ -33,13 +35,12 @@ list — see CLAUDE.md's scalability principle):
                                the gap must be visible — never a quiet wrong
                                value. Fail-open is fine; silence is not.
     draft_variant           — a variant row still carrying `draft: true`: not
-                               synced to serving, so listings for it no_match.
+                               built into the pack, so listings for it no_match.
                                Its power/year figures must come from automatic
                                derivation, never a human hand-fill (G5).
 
 The pseudo-code "manual" is skipped everywhere it appears as a fitment row's
-transmission placeholder — manual gearboxes deliberately have no part file
-(mirrors backend/sync.py's PSEUDO_PART_CODES).
+transmission placeholder — manual gearboxes deliberately have no part file.
 
 Part axes are derived from the `*_family` / `*_code` field-naming convention
 fitment rows already follow (engine_family, transmission_code, electrical_code,
@@ -47,31 +48,48 @@ body_code, ...) — a new axis is covered the moment a fitment row carries it,
 no code change needed here.
 
 Usage:
-    python -m ops.reports.coverage
-    python -m ops.reports.coverage --strict     # exit 1 if any finding (CI)
-    python -m ops.reports.coverage --data-dir /path/to/catalog-root
+    python -m packs.cars.coverage
+    python -m packs.cars.coverage --strict     # exit 1 if any finding (CI)
+    python -m packs.cars.coverage --data-dir /path/to/catalog-root
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
 from collections import defaultdict
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
 
-from backend.core.resolver import SERVABLE_STATUSES
-
-DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+PACK_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATA_DIR = PACK_ROOT / "data"
+MANIFEST_PATH = PACK_ROOT / "pack.toml"
 
 # Pseudo part-code a fitment row may use as a transmission placeholder that
-# deliberately has no part file. Imported from knowledge.catalog.model_state,
+# deliberately has no part file. Imported from knowledge.catalog.registry,
 # which is pure pathlib+yaml — so this read-only tool still takes on no DB
 # dependency, and the constant has one definition instead of four.
-from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: F401
+from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: E402
 
+
+@lru_cache(maxsize=4)
+def servable_statuses(manifest_path: Path = MANIFEST_PATH) -> tuple[str, ...]:
+    """Statuses the pack builder actually exports, read off `pack.toml`.
+
+    `[status_confidence]` is the single authority on what a status is worth:
+    `build.py` skips any claim whose confidence is <= 0 (`draft`, `rejected`).
+    Deriving the list here instead of re-hardcoding the old resolver's
+    `SERVABLE_STATUSES` tuple means retuning the table cannot leave the
+    coverage report reporting on a different notion of "servable" than the
+    builder uses — the class of drift CLAUDE.md's scalability principle is about.
+    """
+    manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    table = manifest.get("status_confidence") or {}
+    return tuple(sorted(k for k, v in table.items() if float(v) > 0))
 
 @dataclass(frozen=True)
 class Finding:
@@ -81,8 +99,7 @@ class Finding:
     message: str
     # part_id/axis are what the B19 auto-remediation loop consumes: which part
     # to re-research, and which axis (== part type vocabulary:
-    # engine|transmission|electrical|body|cooling — see backend/sync.py's
-    # part_keys) it belongs to. None when the finding isn't part-driven.
+    # engine|transmission|electrical|body|cooling — the fitment axis vocabulary) it belongs to. None when the finding isn't part-driven.
     part_id: str | None = None
     axis: str | None = None
 
@@ -156,6 +173,7 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
     No DB, no network — pure YAML-in, Report-out, so it's cheap to run in CI
     and easy to unit test with tmp-dir fixtures.
     """
+    statuses = servable_statuses()
     parts = _load_parts(parts_dir)
     fitment_rows = _load_rows(fitment_dir)
     variant_rows = _load_rows(variants_dir)
@@ -175,7 +193,7 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
                 findings.append(Finding(
                     "missing_part", part_id,
                     f"variant {vid!r} references {axis} part_id {part_id!r} — "
-                    f"no part YAML found under backend/data/parts/",
+                    f"no part YAML found under packs/cars/data/parts/",
                     part_id=part_id, axis=axis,
                 ))
 
@@ -189,11 +207,11 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
                 part_id=part_id, axis=part_type,
             ))
             continue
-        servable = [c for c in claims if c.get("status") in SERVABLE_STATUSES]
+        servable = [c for c in claims if c.get("status") in statuses]
         if not servable:
             findings.append(Finding(
                 "zero_claim_part", part_id,
-                f"{len(claims)} claim(s), none in a servable status {tuple(SERVABLE_STATUSES)}",
+                f"{len(claims)} claim(s), none in a servable status {statuses}",
                 part_id=part_id, axis=part_type,
             ))
 
@@ -270,7 +288,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "--data-dir", type=Path, default=DEFAULT_DATA_DIR,
-        help="catalog root containing variants/, fitment/, parts/ (default: backend/data)",
+        help="catalog root containing variants/, fitment/, parts/ "
+             "(default: packs/cars/data)",
     )
     parser.add_argument(
         "--strict", action="store_true",

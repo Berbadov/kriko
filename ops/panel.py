@@ -100,7 +100,7 @@ def pending_section(conn) -> list[str]:
 
 def catalog_section(data_dir: Path) -> list[str]:
     lines = ["\n3. CATALOG"]
-    from ops.reports.coverage import build_report
+    from packs.cars.coverage import build_report
     report = build_report(data_dir / "variants", data_dir / "fitment", data_dir / "parts")
     n_parts = n_claims = 0
     for p in sorted((data_dir / "parts").rglob("*.yaml")):
@@ -145,12 +145,11 @@ def guardrails_section() -> list[str]:
     lines.append("  paid research (explicit):    python -m ops.ledger_run remediate --max-usd 0.10")
     lines.append("  dry-runs:                    python -m ops.ledger_run extract --dry-run")
     lines.append("                               python -m ops.ledger_run verdict --dry-run")
-    lines.append("  swap acceptance gate:        python -m ops.swap check")
-    lines.append("  coverage:                    python -m ops.reports.coverage")
+    lines.append("  coverage:                    python -m packs.cars.coverage")
     return lines
 
 
-def render(conn, data_dir: Path = REPO_ROOT / "backend" / "data") -> str:
+def render(conn, data_dir: Path = REPO_ROOT / "packs" / "cars" / "data") -> str:
     sections = [
         [_SECTION, f"KRIKO PIPELINE PANEL — {_now_iso()}",
          f"ledger: {conn.execute('SELECT 1').fetchone() and 'connected'}",
@@ -168,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--db", default=str(DEFAULT_DB))
-    p.add_argument("--data-dir", type=Path, default=REPO_ROOT / "backend" / "data")
+    p.add_argument("--data-dir", type=Path, default=REPO_ROOT / "packs" / "cars" / "data")
     args = p.parse_args(argv)
     conn = db.connect(args.db)
     conn.row_factory = __import__("sqlite3").Row

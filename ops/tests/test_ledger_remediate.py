@@ -11,7 +11,7 @@ import json
 
 import yaml
 
-from ops.reports.coverage import Finding, Report, build_report
+from packs.cars.coverage import Finding, Report, build_report
 from knowledge.ledger import db
 from ops import remediate
 

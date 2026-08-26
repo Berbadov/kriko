@@ -2,7 +2,7 @@
 
 Writes the part-dict YAML schema sync.py expects (part_id / part_type /
 display_name / manufacturer / claims — the shape of any file under
-backend/data/parts/**) to a build directory. Part headers are derived from
+packs/cars/data/parts/**) to a build directory. Part headers are derived from
 the served catalog itself (component_part_meta), never hand-enumerated
 (no-hardcoded-car-data rule); a component with no catalog identity is
 skip-and-reported, exactly like an invalid cluster.
@@ -23,7 +23,7 @@ grounded at export time by the EXISTING deterministic grounders (zero LLM):
     interval_km / interval_years / evidence_keywords);
   * requires_equipment is deliberately NOT emitted: verdicts carry no
     equipment signal, and sync.py already derives it deterministically from
-    title+rationale at sync time (backend/core/equipment.py).
+    title+rationale at sync time (the retired backend/core/equipment.py).
 
 The purge_* scripts' invariants live here as per-cluster checks: a cluster
 whose verdict copy fails validation is skipped and reported, never shipped —
@@ -55,7 +55,7 @@ from knowledge.stoplists import (
 _SEVERITIES = {"high", "medium", "low"}
 _KINDS = {"known_issue", "maintenance", "recall"}
 
-_CATALOG_PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
+_CATALOG_PARTS_DIR = Path(__file__).parent.parent.parent / "packs" / "cars" / "data" / "parts"
 # Part ids follow the power-split convention (k9k_110, ea888_220) — the
 # trailing "_<hp>" is bookkeeping, not part of the engineering identity the
 # ledger clusters by (same reading as ledger/resolve.py's component_registry).

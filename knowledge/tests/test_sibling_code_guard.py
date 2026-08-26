@@ -4,7 +4,7 @@ must not ride the deterministic gate_variant bypass in on an unrelated code
 mention elsewhere in a multi-code comparison source page.
 
 Regression: DQ200 dry-clutch/accumulator claims (codes P189C/P17BF/P0841)
-reached `review` status in backend/data/parts/transmission/dq381.yaml (a
+reached `review` status in packs/cars/data/parts/transmission/dq381.yaml (a
 wet-clutch gearbox that does not have those failure modes) because the
 code-token bypass checks the FULL source text, and a DSG comparison article
 mentions "DQ381" somewhere too. See docs/design_flaws.md Flaw 1.

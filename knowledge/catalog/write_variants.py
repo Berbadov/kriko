@@ -3,7 +3,7 @@
 catalog.discover finds engine/transmission *codes* from Wikipedia, but the TR-market
 lineup — which trims were actually sold in Turkey, at what power/year, on what
 gearbox — isn't in a machine-readable source; it's domain knowledge. Per CLAUDE.md,
-`backend/data/*` is never hand-written, so that domain knowledge lives here as data
+`packs/cars/data/*` is never hand-written, so that domain knowledge lives here as data
 in a script (reviewable, diffable, rerunnable) instead of typed directly into YAML.
 
 Each model's trim list is cross-checked against catalog.discover's Wikipedia-derived
@@ -31,8 +31,8 @@ from knowledge.catalog.discover import discover
 log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
-FITMENT_DIR = REPO_ROOT / "backend" / "data" / "fitment"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
+FITMENT_DIR = REPO_ROOT / "packs" / "cars" / "data" / "fitment"
 
 # TR-market trim data, keyed by "{make}_{model}". Each row matches the schema
 # already used by hand-curated files (renault_megane_4.yaml, volkswagen_golf_7.yaml):
@@ -161,7 +161,7 @@ TR_MARKET_TRIMS: dict[str, list[dict]] = {
     ],
 }
 
-PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
+PARTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "parts"
 
 # electrical_code / body_code per model — one shared fitment axis per generation,
 # not per engine (matches the golf7_elec/golf7_body convention).

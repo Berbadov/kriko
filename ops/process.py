@@ -2,7 +2,7 @@
 
 Picks up every entry with status=pending (or no status) from the curated
 YAML for the given make/model/gen, extracts claims, scores them, and writes
-auto-verified claims to the backend claims YAML. Then reloads the DB.
+auto-verified claims to the pack's claims YAML.
 
 Usage:
     python -m ops.process renault megane 4
@@ -28,7 +28,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 REPO_ROOT   = Path(__file__).parent.parent
-DATA_DIR    = REPO_ROOT / "backend" / "data"
+DATA_DIR    = REPO_ROOT / "packs" / "cars" / "data"
 CURATED_DIR = Path(__file__).parent / "sources" / "curated"
 CACHE_DIR   = Path(__file__).parent / "cache"
 
@@ -85,7 +85,7 @@ def _read_candidate_cache(make, model, gen):
 
 
 def _find_data_file(subdir: str, make: str, model: str, gen: str) -> Path | None:
-    """Find backend/data/{subdir}/{make}_{model}_{gen}.yaml (exact match on gen)."""
+    """Find packs/cars/data/{subdir}/{make}_{model}_{gen}.yaml (exact match on gen)."""
     exact = DATA_DIR / subdir / f"{make}_{model}_{gen}.yaml"
     if exact.exists():
         return exact
@@ -284,17 +284,10 @@ def run(
 
     print(f"Sources processed: {len(processed_ids)} marked during extraction")
 
-    # ── Sync to DB ────────────────────────────────────────────────────────────
-    print("\nSyncing to DB…", end="", flush=True)
-    try:
-        import os
-        os.chdir(REPO_ROOT)
-        from backend.sync import run as sync_run
-        sync_run()
-        print(" OK")
-    except Exception as exc:
-        print(f" FAILED ({exc})")
-        print("Run manually: docker compose -f deploy/docker-compose.yml restart api")
+    # There is no database to sync to any more. Claims are served straight from
+    # the installed pack, so the step that used to push YAML into Postgres is now
+    # a pack rebuild:
+    print("\nNext: python -m packs.cars.build && kriko install dist/cars.kpack")
 
 
 def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str, str]]:
@@ -357,7 +350,7 @@ def run_part(
     """Run the knowledge pipeline for a specific part revision.
 
     Sources are read from curated/part_{part_id}_{part_type}.yaml.
-    Claims are written to backend/data/parts/{part_type}/{part_id}.yaml.
+    Claims are written to packs/cars/data/parts/{part_type}/{part_id}.yaml.
     Variant descriptors for gate_variant come from all variants with matching fitment.
     """
     from knowledge.extract import extract_claims
@@ -483,17 +476,10 @@ def run_part(
         f"{counts['held']} held, "
         f"{counts['rejected']} rejected"
     )
-    print(f"Part claims: backend/data/parts/{part_type}/{part_id}.yaml")
+    print(f"Part claims: packs/cars/data/parts/{part_type}/{part_id}.yaml")
 
     print("\nSyncing to DB…", end="", flush=True)
-    try:
-        import os
-        os.chdir(REPO_ROOT)
-        from backend.sync import run as sync_run
-        sync_run()
-        print(" OK")
-    except Exception as exc:
-        print(f" FAILED ({exc})")
+    print("Next: python -m packs.cars.build && kriko install dist/cars.kpack")
 
 
 def main() -> None:

@@ -227,7 +227,7 @@ GROUP_SIBLINGS: dict[str, frozenset[str]] = {
     "volkswagen": frozenset({"audi", "skoda", "seat", "cupra"}),
 }
 
-_CATALOG_PARTS_DIR = Path(__file__).parent.parent / "backend" / "data" / "parts"
+_CATALOG_PARTS_DIR = Path(__file__).parent.parent / "packs" / "cars" / "data" / "parts"
 
 
 @lru_cache(maxsize=1)

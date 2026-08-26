@@ -41,7 +41,7 @@ def test_all_pipeline_offline(tmp_path, monkeypatch):
                         lambda: {"DQ381": "dq381"})
     # Keep the "offline" run hermetic: point backfill at empty dirs so it
     # exercises only the injected document, not the repo's real knowledge/cache
-    # and backend/data/claims (whose volume would otherwise drift the test).
+    # and packs/cars/data/claims (whose volume would otherwise drift the test).
     (tmp_path / "empty_cache").mkdir()
     (tmp_path / "empty_claims").mkdir()
     monkeypatch.setattr(run, "_CACHE_DIR", tmp_path / "empty_cache")

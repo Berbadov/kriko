@@ -24,7 +24,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ops.reports.coverage import Report, build_report
+from packs.cars.coverage import Report, build_report
 from knowledge.ledger import acquire, cluster, export, extraction, resolve, verdict
 from knowledge.ledger.costs import Budget
 
@@ -42,8 +42,8 @@ def remediation_plan(report: Report) -> list[tuple[str, str]]:
 
     Part type comes from the finding's axis — the *_family/*_code fitment
     naming IS the part-type vocabulary (engine|transmission|electrical|body|
-    cooling, see backend/sync.py's part_keys), and coverage.py already set it
-    from the part file where one exists.
+    cooling), and packs/cars/coverage.py already set it from the part file
+    where one exists.
     """
     plan: list[tuple[str, str]] = []
     seen: set[str] = set()

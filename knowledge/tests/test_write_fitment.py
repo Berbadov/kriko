@@ -1,6 +1,6 @@
 """write_variants also emits the fitment projection.
 
-backend/data/fitment/*.yaml maps variant_id -> the part codes that variant is
+packs/cars/data/fitment/*.yaml maps variant_id -> the part codes that variant is
 built from. Every one of those fields (engine_family, transmission_code,
 electrical_code, body_code) is ALREADY a column on the variant row — the fitment
 file is a pure projection of the variants file, not independent data.
@@ -60,7 +60,7 @@ def test_live_catalog_fitment_covers_every_variant():
     """
     from pathlib import Path
 
-    root = Path(__file__).parent.parent.parent / "backend" / "data"
+    root = Path(__file__).parent.parent.parent / "packs" / "cars" / "data"
     for variants_path in sorted((root / "variants").glob("*.yaml")):
         fitment_path = root / "fitment" / variants_path.name
         variant_ids = {r["id"] for r in yaml.safe_load(variants_path.read_text())}

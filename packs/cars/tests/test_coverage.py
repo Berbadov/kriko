@@ -1,4 +1,4 @@
-"""ops.reports.coverage — catalog coverage report over YAML only (no DB, no
+"""packs.cars.coverage — cars-pack catalog coverage report over YAML only (no DB, no
 network). This is the recurrence guard for the dw5/dw6 class of bug (backlog
 B7, CLAUDE.md generalization principle): a fitment row can point at a part_id
 with no file, a part file can carry zero (or zero *servable*) claims, a part
@@ -18,13 +18,19 @@ deliberately have no part file.
 
 Everything here is catalog-derived: axis names (engine/transmission/electrical/
 body/...) come from the *_family / *_code field-naming convention already used
-by backend/sync.py, so a new axis or a new car needs no code change here.
+by the fitment rows themselves, so a new axis or a new car needs no code
+change here.
+
+`SERVABLE_STATUSES` is no longer a Python constant: the pack manifest's
+`[status_confidence]` table is the authority, and `servable_statuses()` reads
+it. The test below therefore asserts against what the *builder* would export.
 """
 
 import yaml
 
-from backend.core.resolver import SERVABLE_STATUSES
-from ops.reports import coverage
+from packs.cars import coverage
+
+SERVABLE_STATUSES = coverage.servable_statuses()
 
 
 # ── fixture helpers ──────────────────────────────────────────────────────────

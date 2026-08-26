@@ -9,7 +9,7 @@ def conn(tmp_path):
 
 @pytest.fixture
 def registry(monkeypatch):
-    # Registry is normally derived from backend/data/parts/**; pin it here so
+    # Registry is normally derived from packs/cars/data/parts/**; pin it here so
     # the test doesn't depend on which cars are currently onboarded.
     monkeypatch.setattr(resolve, "component_registry",
                         lambda: {"DQ200": "dq200", "DQ381": "dq381", "K9K": "k9k"})

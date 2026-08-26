@@ -36,7 +36,7 @@ from itertools import combinations
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = REPO_ROOT / "backend" / "data"
+DATA_DIR = REPO_ROOT / "packs" / "cars" / "data"
 
 # Matching tolerances — mirrored from backend/core/matcher.py. Two rows inside
 # these bands are the same car as far as an ad can tell.

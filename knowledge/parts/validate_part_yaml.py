@@ -1,11 +1,11 @@
-"""validate_part_yaml.py — validate all backend/data/parts/**/*.yaml files.
+"""validate_part_yaml.py — validate all packs/cars/data/parts/**/*.yaml files.
 
 Checks structure, required fields, and that claim_keys are unique across all parts.
 Used as a CI gate before sync.
 
 Usage:
     python -m knowledge.parts.validate_part_yaml
-    python -m knowledge.parts.validate_part_yaml backend/data/parts/engine/k9k.yaml
+    python -m knowledge.parts.validate_part_yaml packs/cars/data/parts/engine/k9k.yaml
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from knowledge.catalog.registry import (
     DETECTIONS, component_ids, detection_of, subsystem_of,
 )
 
-PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
+PARTS_DIR = Path(__file__).parent.parent.parent / "packs" / "cars" / "data" / "parts"
 
 REQUIRED_PART_FIELDS = {"part_id", "part_type", "display_name", "manufacturer", "claims"}
 VALID_PART_TYPES = {"engine", "transmission", "turbo", "fuel_intake", "exhaust", "cooling", "electrical", "body"}
