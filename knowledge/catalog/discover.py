@@ -711,9 +711,9 @@ def main() -> None:
     for fam in unique_families:
         fuel = next((s.fuel for s in catalog.engines if s.engine_family == fam), "")
         fuel_flag = f"--fuel {fuel}" if fuel else ""
-        print(f"  python -m ops.auto --part {fam} --part-type engine {fuel_flag}")
+        print(f"  python -m ops.ledger_run acquire --part {fam} --part-type engine {fuel_flag}")
     for tx in non_manual_tx:
-        print(f"  python -m ops.auto --part {tx} --part-type transmission")
+        print(f"  python -m ops.ledger_run acquire --part {tx} --part-type transmission")
 
     if args.write_variants:
         print("\nScaffolding draft variants YAML…")

@@ -73,7 +73,7 @@ def _cmd_report(conn) -> None:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ops.ledger_run")
     p.add_argument("command", choices=[
-        "acquire", "feeds", "backfill", "extract", "resolve", "cluster",
+        "acquire", "backfill", "extract", "resolve", "cluster",
         "verdict", "export", "report", "remediate", "all"])
     p.add_argument("--db", default=str(db.LEDGER_PATH))
     p.add_argument("--max-usd", type=float, default=None)
@@ -90,10 +90,6 @@ def main(argv=None) -> int:
     p.add_argument("--max-sources", type=int, default=15)
     p.add_argument("--max-per-query", type=int, default=5)
     p.add_argument("--no-youtube", action="store_true")
-    # feeds-stage flags (structured sources, no LLM)
-    p.add_argument("--feed", default="nhtsa", choices=["nhtsa", "safety_gate", "recalls_tr"])
-    p.add_argument("--make", default="", help="feeds: limit to one make")
-    p.add_argument("--model", default="", help="feeds: limit to one catalog model key")
     args = p.parse_args(argv)
 
     # $0 steady-state default (2026-08-03): remediate is import-only unless an
@@ -127,29 +123,6 @@ def main(argv=None) -> int:
               f"({s['skipped_duplicate']} dup, {s['skipped_fetch']} unfetchable, "
               f"{s['skipped_german']} german, {s['skipped_foreign']} foreign)")
 
-    def _cmd_feeds() -> None:
-        from knowledge.ledger.feeds import nhtsa, safety_gate, recalls_tr
-        only = None
-        if args.make or args.model:
-            if not (args.make and args.model):
-                raise SystemExit("feeds: --make and --model must be given together")
-            only = (args.make, args.model)
-        feed_map = {
-            "nhtsa": (nhtsa, "nhtsa"),
-            "safety_gate": (safety_gate, "safety_gate"),
-            "recalls_tr": (recalls_tr, "recalls_tr"),
-        }
-        if args.feed not in feed_map:
-            raise SystemExit(f"unknown feed: {args.feed}")
-        module, name = feed_map[args.feed]
-        per_model = module.run(conn, only=only)
-        for model_name, s in per_model.items():
-            ingested_key = "ingested"
-            campaign_key = "campaigns" if "campaigns" in s else "alerts" if "alerts" in s else "recalls"
-            print(f"feeds[{name}] {model_name}: {s[ingested_key]} recall(s) ingested "
-                  f"({s.get(campaign_key, 0)} campaigns, {s['duplicates']} dup, "
-                  f"{s['errors']} errors)")
-
     def _cmd_remediate(conn, args, budget) -> None:
         from ops import remediate
         if args.dry_run:
@@ -176,7 +149,6 @@ def main(argv=None) -> int:
 
     steps = {
         "acquire": _cmd_acquire,
-        "feeds": _cmd_feeds,
         "backfill": lambda: _cmd_backfill(conn, args),
         "extract": lambda: _cmd_extract(conn, args, budget),
         "resolve": lambda: print(f"resolve: {resolve.resolve_all(conn)}"),
@@ -186,7 +158,7 @@ def main(argv=None) -> int:
         "report": lambda: _cmd_report(conn),
         "remediate": lambda: _cmd_remediate(conn, args, budget),
     }
-    order = (["backfill", "feeds", "extract", "resolve", "cluster", "verdict", "export"]
+    order = (["backfill", "extract", "resolve", "cluster", "verdict", "export"]
              if args.command == "all" else [args.command])
     try:
         for name in order:

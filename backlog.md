@@ -45,6 +45,55 @@ spot-checks) are cancelled, not deferred — see B19, which absorbs B2/B3.
 
 ---
 
+## Goal G6 — Kriko becomes a product knowledge engine *(new 2026-08-26)*
+
+Kriko stops being a car product and becomes an open-source, local-first knowledge
+engine for any manufactured product. Cars become pack #1. Design and phases:
+`~/.claude/plans/let-s-go-with-the-eager-torvalds.md` (to be moved into
+`docs/superpowers/specs/` when Phase 1 lands).
+
+The pivot rests on one change: **slots become rows, not columns.** `variants`
+assumes every subject has a make, a model, an engine code and a displacement —
+already false for an EV, hopelessly false for a cordless drill with no components.
+Two contributors modelling a category differently must still produce mergeable
+databases; columns cannot union, rows can.
+
+Locked: subject/attribute/value rows in SQLite; `pack_id` on every row; no central
+authority (contradicting claims coexist, ranking happens at read time); packs
+authored as a directory and shipped as one `.kpack` file; Postgres and Docker
+deleted; research pluggable between the $0 agent/MCP path and an Exa/Tavily+LLM
+path; every install is both reader and author; language is a row attribute;
+monorepo with `packs/` beside the engine.
+
+### B29 — Phase 1: the `kriko/` core `[G6]`
+Pack schema, content-hash IDs, install/enable/uninstall isolation, WAL. Two
+databases, never merged: the append-only authoring ledger and the mutable
+installed store. Proof: two synthetic packs coexist, a shared fact dedupes,
+contradicting claims both persist, uninstalling one leaves the other untouched.
+
+### B30 — Phase 2: pack format and the drill pack `[G6]`
+Build the *non-car* pack first — it is cheap and it is the only thing that
+falsifies a car-shaped format. `content_digest` hashes sorted row ids, never zip
+bytes.
+
+### B31 — Phase 3: generic lookup `[G6]`
+One path replaces `matcher.py` + `resolver.py`, matching on attribute overlap
+rather than `subject_id` equality so differently-hashed subjects still union.
+Read-time trust, `evidence.stance='refutes'` halves rank.
+
+### B32 — Phase 4: cars pack + parity `[G6]`
+Export the 29 YAMLs; `status` becomes rank (verified 1.0, review/held 0.6,
+draft/rejected not exported) rather than being dropped — this closes B26
+mechanically. **Capture `parity_golden.jsonl` in this phase**: Phase 6 deletes the
+old engine and the comparison becomes impossible.
+
+### B33 — Phases 5–6: interfaces, then delete the old path `[G6]`
+CLI + web (finishing `ops/hub/web.py`, which lands B28) + MCP on the new core;
+extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/`,
+`ops/swap.py`, `ops/process.py` go.
+
+---
+
 ## P0
 
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`

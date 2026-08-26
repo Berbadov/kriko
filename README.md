@@ -175,8 +175,9 @@ python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-v
 #    → human fills in per-market hp/years, removes `draft: true` (sync refuses drafts)
 python3 -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-fitment
 
-# 2. Run the pipeline per part (or --all-parts)
-python3 -m ops.auto --part dq200 --part-type transmission
+# 2. Acquire sources for the part, then run the ledger pipeline
+python3 -m ops.ledger_run acquire --part dq200 --part-type transmission
+python3 -m ops.ledger_run all
 
 # 3. Re-run gates only — zero token cost, uses cached candidates
 python3 -m ops.process --part dq200 --part-type transmission --skip-extraction

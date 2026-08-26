@@ -6,6 +6,51 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-26 — Phase 0 of the knowledge-engine pivot: demolition
+
+First commit of goal **G6** (see `backlog.md`). Baseline established at 768 passing,
+then 12 files and ~1,500 LOC removed; suite 768 -> 741 (27 tests deleted with their
+modules) and 52s faster.
+
+- **`ops/auto.py` (635) deleted.** The legacy curated-YAML pipeline. The ledger flow
+  (`acquire -> ingest -> extract -> resolve -> cluster -> verdict -> export`) is the
+  one pipeline now. Its only importer was `ops/tests/test_auto_cap.py`.
+- **`knowledge/discover.py` (532) deleted.** A Textual TUI for approving YouTube
+  sources by hand — a human in the data path, which G5 forbids. Its only importer was
+  `ops/auto.py:272`; the two went together.
+- **`knowledge/ledger/feeds/` deleted** (nhtsa, safety_gate, recalls_tr, `__init__`)
+  plus three tests, plus the `feeds` stage unwired from `ops/ledger_run.py` — its
+  argparse flags (`--feed`, `--make`, `--model`, used by nothing else), the
+  `_cmd_feeds` body, the dispatch entry, and its slot in the `all` sequence.
+  B17 had already dropped the whole recall-feed effort.
+- **`add_car.sh` and `scripts/run_local.sh` deleted** — superseded onboarding and
+  serving wrappers.
+- **`knowledge/gold/gold.yaml` restored.** It was deleted in the working tree but
+  still live-referenced by `langextract_client.py:36` and `eval_verdict.py:16`; three
+  tests were failing on it. It is car-specific few-shot data and moves to
+  `packs/cars/research/few_shot.yaml` in Phase 4.
+
+Checked rather than assumed: deleting `auto.py` does **not** lose part-stub creation.
+`_ensure_part_stub` was only its caller — `generate_part_scaffold` stays in
+`knowledge/parts/search_templates.py`, `export.py:409` fails open and holds claims
+back when a stub is missing, and `ops/remediate.py`'s `missing_part` finding acts on
+it. That is B19's loop, which was supposed to own this anyway.
+
+Deferred out of Phase 0, with reasons: **`deploy/` stays** until
+`test_repo_invariants.py:124` is retargeted — it reads `deploy/Dockerfile` to enforce
+that the serving image never pulls in `mistralai`/`langextract`/`exa-py`, an invariant
+that matters *more* once `kriko/pipeline/` and `kriko/lookup/` are siblings.
+**Postgres stripping stays** because `backend/` is the parity reference until the old
+path is deleted. **`logs/` stays** — `analyses.jsonl` is the source of the parity
+corpus Phase 4 depends on.
+
+Docs updated rather than left dangling: `README.md` and `docs/USAGE.md` now show
+`ops.ledger_run acquire` + `ops.ledger_run all`; the 23-line YouTube-TUI section is
+gone from `USAGE.md` with headings renumbered; `docs/INTERNALS.md` marks the
+curated-YAML path legacy and names the live flow.
+
+---
+
 ## 2026-08-22 — Refactor pass: delete the archaeology, derive the hand-lists
 
 Seven commits (`dfe2469`..`0caaa64`). ~1,100 lines removed, suite 765 -> 768
