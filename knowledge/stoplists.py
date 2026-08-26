@@ -4,7 +4,7 @@ INSPECTION_COVERED / WARNING_LIGHT_PATTERNS are used by gate_inspection_value
 in judge.py to quickly reject claims that a standard pre-purchase mechanic
 inspection already covers, or generic dashboard warning lights.
 
-FORUM_DOMAINS is used by ops.auto to exclude forums from future Exa discovery.
+FORUM_DOMAINS is used by the acquire stage to exclude forums from Exa discovery.
 Forums surface a lot of genuine one-time/anecdotal issues that read like
 chronic patterns once extracted — see pipeline_postmortem. Owner-club and
 enthusiast-forum sites, and crowd-complaint boards, are all excluded; the
@@ -241,8 +241,8 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
     design_flaws.md remediation, 2026-07-05, and separately let
     SIBLING_CODE_FAMILIES go stale — see catalog_sibling_families() below,
     which replaced it the same way). Reading it off the catalog itself means
-    a new part's code is covered the moment its stub exists (ops/auto.py's
-    _ensure_part_stub / generate_part_scaffold already writes part_id +
+    a new part's code is covered the moment its stub exists
+    (knowledge.parts.search_templates.generate_part_scaffold writes part_id +
     manufacturer before any research runs), with no separate registration
     step to forget. Cached — rebuild by calling
     catalog_code_manufacturers.cache_clear() if the catalog changes within a

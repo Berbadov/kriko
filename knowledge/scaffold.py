@@ -90,12 +90,10 @@ def run(make: str, model: str, gen: str) -> None:
 Next steps:
   1. Edit {variants_path.relative_to(REPO_ROOT)}
        Fill in real variant rows — one entry per engine/power/transmission combo.
-  2. python -m ops.auto {make} {model} {gen} --max-sources 60
-       Discovers sources automatically (Exa + YouTube) and runs extraction.
-  3. docker compose -f deploy/docker-compose.yml restart api
-       Syncs the new claims to the database.
-
-Tip: to add sources manually instead of auto-discovering them, see docs/historical/SCAFFOLD.md.
+  2. python -m ops.ledger_run acquire --part <part_id> --part-type <type>
+       Discovers sources (Exa + YouTube), fetches them, and ingests to the ledger.
+  3. python -m ops.ledger_run all
+       Extract -> resolve -> cluster -> verdict -> export.
 """)
 
 
