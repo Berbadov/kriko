@@ -239,6 +239,24 @@ CREATE TABLE IF NOT EXISTS tier_trust (
   PRIMARY KEY (tier, pack_id)
 );
 
+-- ── pack assets — the non-tabular half of a pack ─────────────────────────
+-- A pack is authored as a directory and shipped as ONE file, so everything the
+-- directory holds that is not rows has to live somewhere: the value principle
+-- the research stage prompts with, the search templates, the site adapter that
+-- turns a scraped page into an identity. They are text, versioned with the pack
+-- and readable by a person deciding whether to install it.
+--
+-- Deliberately NOT executable. A pack may ship a JSON adapter describing which
+-- selectors to read; it may never ship code that runs in a browser or in the
+-- MCP process. See the risks section of the design.
+CREATE TABLE IF NOT EXISTS pack_assets (
+  pack_id TEXT NOT NULL,
+  name    TEXT NOT NULL,          -- 'principle.md' | 'templates.yaml' | 'adapters/x.json'
+  kind    TEXT NOT NULL,          -- principle | templates | adapter | doc
+  content TEXT NOT NULL,
+  PRIMARY KEY (pack_id, name)
+);
+
 -- ── LOCAL ONLY — never present in a distributed pack file ────────────────
 -- This table IS the "no authority" decision. Trust is not a property of the
 -- data; it is the reader's subscription, the way an adblock filter list is.
