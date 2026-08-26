@@ -1,0 +1,74 @@
+{
+  "id": "sahibinden",
+  "site": "sahibinden.com",
+  "subject_kind": "product",
+  "match": ["*sahibinden.com/ilan/*", "*sahibinden.com/*vasita*"],
+
+  "_comment": [
+    "Declarative on purpose. This file describes WHICH scraped labels mean what;",
+    "it contains no code, and it is interpreted server-side rather than in the",
+    "browser. A pack must never be able to ship JavaScript into a content script:",
+    "installing a pack would then mean granting it the ability to run on every",
+    "page the extension can see.",
+    "",
+    "The extension's job shrinks to: collect label/value pairs off the page and",
+    "POST them. Which labels matter, and what they mean, lives here — so a new",
+    "listing site is a JSON file, and a site redesign is a data edit rather than",
+    "an extension release."
+  ],
+
+  "identity": {
+    "make": {"labels": ["marka", "make", "brand"]},
+    "model": {"labels": ["seri", "series"]},
+    "fuel": {"labels": ["yakıt", "yakit", "yakıt tipi", "yakit tipi", "fuel", "fuel type"]},
+    "transmission": {"labels": ["vites", "gear", "transmission"]},
+    "displacement_cc": {
+      "labels": ["motor hacmi", "engine capacity"],
+      "parse": "int_range",
+      "min": 500,
+      "max": 8000
+    },
+    "power_min_hp": {
+      "labels": ["motor gücü", "motor gucu", "beygir gücü", "beygir gucu", "engine power"],
+      "parse": "int_range",
+      "min": 30,
+      "max": 700
+    },
+    "build_year": {
+      "labels": ["yıl", "yil", "üretim yılı", "uretim yili", "year"],
+      "parse": "int_range",
+      "min": 1980,
+      "max": 2035
+    }
+  },
+
+  "context": {
+    "usage_km": {
+      "labels": ["km", "kilometre", "kilometer", "mileage"],
+      "parse": "int_range",
+      "min": 0,
+      "max": 2000000
+    },
+    "build_year": {
+      "labels": ["yıl", "yil", "üretim yılı", "uretim yili", "year"],
+      "parse": "int_range",
+      "min": 1980,
+      "max": 2035
+    },
+    "free_text": {"from": "description"}
+  },
+
+  "derive": [
+    {
+      "_comment": "Age is arithmetic on the build year, not a scraped field.",
+      "key": "age_years",
+      "op": "years_since",
+      "from": "build_year"
+    }
+  ],
+
+  "ignore_labels": [
+    "renk", "color", "durum", "vehicle status", "garanti", "warranty",
+    "kasa tipi", "body type", "model", "trim", "fiyat", "price", "ilan no"
+  ]
+}

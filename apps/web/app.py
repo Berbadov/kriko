@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from apps.web.routers import packs, query, subjects
+from apps.web.routers import analyze, packs, query, subjects
 from apps.web.settings import Settings
 
 STATIC = Path(__file__).parent / "static"
@@ -29,7 +29,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Kriko", docs_url="/api/docs", redoc_url=None)
     app.state.settings = settings or Settings.from_env()
 
-    for router in (packs.router, query.router, subjects.router):
+    for router in (packs.router, query.router, subjects.router,
+                   analyze.router):
         app.include_router(router)
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
