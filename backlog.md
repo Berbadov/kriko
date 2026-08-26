@@ -396,7 +396,7 @@ second pipeline. Applies to all parts; no per-model logic.
 
 ## P2
 
-### B28 — Split `ops/hub/web.py` into routers `[G5]` *(new 2026-08-22)*
+### B28 — Split `ops/hub/web.py` into routers `[G5]` **(SUPERSEDED 2026-08-26 by B33 — `apps/web/` ships the router split on the new core; the blocker was import-time path constants, now a Settings value passed through an app factory)**
 `web.py` is 831 lines and ~28 endpoints after the 2026-08-22 helper extraction
 (1151 originally; `textfmt.py`/`agents.py`/`claimview.py` took the pure helpers).
 Splitting the endpoints themselves is blocked on a test-coupling problem, not a

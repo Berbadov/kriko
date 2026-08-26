@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Kriko</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/app.css">
+
+<header>
+  <h1>Kriko</h1>
+  <span class="sub">local product knowledge — no server, no account</span>
+  <nav>
+    <button class="tab active" data-tab="ask">Ask</button>
+    <button class="tab" data-tab="browse">Browse</button>
+    <button class="tab" data-tab="packs">Packs</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Ask ------------------------------------------------------------ -->
+  <section id="ask" class="active">
+    <div class="row">
+      <div class="field">
+        <label for="pack">Pack</label>
+        <select id="pack"></select>
+      </div>
+      <div class="field">
+        <label for="kind">Kind</label>
+        <select id="kind"></select>
+      </div>
+    </div>
+    <!-- Fields are generated from the pack's own identity attributes, so a
+         drill asks for brand and voltage while a car asks for make and fuel,
+         with nothing in this page knowing either. -->
+    <div class="row" id="identity-fields" style="margin-top:12px"></div>
+    <div class="row" id="context-fields" style="margin-top:12px"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="go">Ask</button>
+      <button id="clear" class="ghost">Clear</button>
+    </div>
+    <div id="result"></div>
+  </section>
+
+  <!-- Browse ---------------------------------------------------------- -->
+  <section id="browse">
+    <div class="row">
+      <div class="field">
+        <label for="search">Search subjects</label>
+        <input id="search" placeholder="k9k, makita, golf…" style="min-width:280px">
+      </div>
+    </div>
+    <div id="subjects"></div>
+    <div id="subject-detail"></div>
+  </section>
+
+  <!-- Packs ----------------------------------------------------------- -->
+  <section id="packs">
+    <div id="pack-list"></div>
+  </section>
+</main>
+
+<script type="module" src="/static/app.js"></script>
