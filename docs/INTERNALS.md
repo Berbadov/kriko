@@ -178,9 +178,11 @@ added_at: "YYYY-MM-DD"
 processed_at: "YYYY-MM-DD" | null
 ```
 
-`discover.py` writes `status: pending`. `process.py` updates to `status: processed`.
-Duplicate guard: `discover.py` scans all curated YAMLs for existing `video_id` before
-adding (`_load_known_ids()` in `knowledge/discover.py`).
+Curated YAMLs are a legacy hand-authored path. The live flow is
+`ops.ledger_run acquire`, which discovers, fetches and ingests straight to the
+ledger with no curated-YAML step and no human approval (see the automation
+principle in CLAUDE.md). `process.py` still updates `status: processed` for the
+entries that remain.
 
 ### Document fetching
 **`knowledge/sources/curated.py`** — `CuratedSource.fetch(make, model, pending_only=False)`

@@ -169,9 +169,12 @@ extra keys on existing rows are preserved. Use `--dry-run` to preview.
 **Step 4 — Run the pipeline per part**
 
 ```bash
-# Full run: Exa/YouTube discovery → fetch → LLM extract → gate → promote → sync
-python -m ops.auto --part k9k --part-type engine --fuel diesel
-python -m ops.auto --part edc --part-type transmission
+# Acquire: Exa/YouTube discovery → fetch → ingest to the ledger (no LLM)
+python -m ops.ledger_run acquire --part k9k --part-type engine --fuel diesel
+python -m ops.ledger_run acquire --part edc --part-type transmission
+
+# Then the ledger pipeline: extract → resolve → cluster → verdict → export
+python -m ops.ledger_run all
 
 # Re-run gates/promotion only — zero fetches, zero extraction tokens
 python -m ops.process --part k9k --part-type engine --skip-extraction
@@ -440,30 +443,7 @@ python -m ops.swap apply --in-place
 
 ---
 
-## 5. Discover YouTube sources (model-centric legacy mode)
-
-```bash
-python -m knowledge.discover "megane 4 1.5 dCi arıza" --make renault --model megane --gen 4
-```
-
-| Key | Action |
-|-----|--------|
-| `↑↓` | Navigate results |
-| `Enter` | Fetch transcript for selected video |
-| `A` | Approve — adds to curated YAML as `status: pending` |
-| `S` | Skip — marks in session only, no file write |
-| `T` | View full transcript in scrollable overlay |
-| `F5` | New search (focuses query input) |
-| `Q` | Quit |
-
-Status column: `·` not reviewed · `✓` approved · `—` skipped · `✗` already in YAML
-
-After the session, approved videos sit in `knowledge/sources/curated/{make}_{model}_{gen}.yaml`
-with `status: pending`.
-
----
-
-## 6. Add page sources manually
+## 5. Add page sources manually
 
 Edit `knowledge/sources/curated/{make}_{model}_{gen}.yaml` directly and append:
 
@@ -483,7 +463,7 @@ A claim needs **≥ 2 independent sources** that pass all gates to auto-verify. 
 
 ---
 
-## 7. Process pending sources
+## 6. Process pending sources
 
 ```bash
 # Preview (no writes)
@@ -547,7 +527,7 @@ writes; the legacy judge/promote stack retires with the B16 catalog swap.
 
 ---
 
-## 8. Check the database
+## 7. Check the database
 
 ```bash
 # All claims in DB
@@ -588,7 +568,7 @@ access to the deploy host.
 
 ---
 
-## 9. Eval the LLM gates (optional)
+## 8. Eval the LLM gates (optional)
 
 ```bash
 OPENROUTER_API_KEY=... python -m knowledge.eval_judge
