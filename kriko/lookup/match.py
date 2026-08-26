@@ -34,6 +34,10 @@ class Term:
     required: bool
     narrow_order: int | None
     tolerance: float | None
+    # A `range` term is stored once per subject with valid_from/valid_to bounds
+    # rather than one row per value — a production run of 2014-2020 is one fact,
+    # not seven. The query supplies a point that must fall inside.
+    is_range: bool = False
 
 
 def _match_rules(raw: str) -> dict:
@@ -64,7 +68,8 @@ def load_terms(conn, pack_ids) -> dict[str, Term]:
             term_id=row["term_id"], role=row["role"], datatype=row["datatype"],
             required=bool(rules.get("required")),
             narrow_order=rules.get("narrow_order"),
-            tolerance=rules.get("tolerance"))
+            tolerance=rules.get("tolerance"),
+            is_range=bool(rules.get("range")))
     return terms
 
 
@@ -83,11 +88,46 @@ def alias_map(conn, pack_ids) -> dict[str, str]:
         tuple(pack_ids))}
 
 
-def normalize_identity(identity: dict, aliases: dict[str, str]) -> dict:
-    """Resolve caller-supplied keys onto the pack's own term ids."""
+def value_alias_map(conn, pack_ids) -> dict[str, dict[str, str]]:
+    """parent term -> {alias -> canonical value}.
+
+    The other half of the normalisation story. Key aliases let a caller say
+    `make` where the pack says `brand`; value aliases let a scrape say
+    "Benzinli" where the catalog says "petrol". Both were Python dicts in
+    `normalize.py` (`_FUEL_MAP`, `_TX_MAP`) that a new market would have
+    required someone to remember to edit.
+
+    A canonical value is a term with `role='enum_value'` whose `parent_id` names
+    the attribute it belongs to, so the same word can mean different things
+    under different keys without collision.
+    """
+    if not pack_ids:
+        return {}
+    marks = ",".join("?" * len(pack_ids))
+    out: dict[str, dict[str, str]] = {}
+    rows = conn.execute(
+        f"SELECT t.term_id, t.parent_id, a.alias FROM terms t"
+        f" LEFT JOIN term_aliases a"
+        f"   ON a.term_id = t.term_id AND a.pack_id = t.pack_id"
+        f" WHERE t.pack_id IN ({marks}) AND t.role = 'enum_value'",
+        tuple(pack_ids))
+    for row in rows:
+        bucket = out.setdefault(row["parent_id"], {})
+        bucket[row["term_id"].casefold()] = row["term_id"]
+        if row["alias"]:
+            bucket[row["alias"].casefold()] = row["term_id"]
+    return out
+
+
+def normalize_identity(identity: dict, aliases: dict[str, str],
+                       values: dict[str, dict[str, str]] | None = None) -> dict:
+    """Resolve caller-supplied keys and values onto the pack's own vocabulary."""
+    values = values or {}
     out = {}
     for key, value in identity.items():
-        out[aliases.get(str(key).casefold(), key)] = value
+        term = aliases.get(str(key).casefold(), key)
+        canonical = values.get(term, {}).get(str(value).strip().casefold())
+        out[term] = canonical if canonical is not None else value
     return out
 
 
@@ -109,9 +149,46 @@ def _subjects_matching(conn, pack_ids, kind, key, value) -> set[str]:
     return {r["subject_id"] for r in rows}
 
 
+def _narrow(conn, pack_ids, candidates, term, value) -> set[str]:
+    """One soft narrowing step. Numeric terms use a tolerance, text terms equality."""
+    marks = ",".join("?" * len(pack_ids))
+    rows = conn.execute(
+        f"SELECT subject_id, value_text, value_num FROM attributes"
+        f" WHERE pack_id IN ({marks}) AND key = ?", (*pack_ids, term.term_id))
+
+    wanted_num = _number(value)
+    if wanted_num is not None:
+        tolerance = float(term.tolerance or 0)
+        return {r["subject_id"] for r in rows
+                if r["subject_id"] in candidates and r["value_num"] is not None
+                and abs(r["value_num"] - wanted_num) <= tolerance}
+
+    wanted = str(value).strip().casefold()
+    return {r["subject_id"] for r in rows
+            if r["subject_id"] in candidates
+            and r["value_text"].strip().casefold() == wanted}
+
+
+def _within_range(conn, pack_ids, candidates, key, point: float) -> set[str]:
+    """Subjects whose validity window contains `point`. Empty bound = unbounded."""
+    marks = ",".join("?" * len(pack_ids))
+    kept = set()
+    for row in conn.execute(
+            f"SELECT subject_id, valid_from, valid_to FROM attributes"
+            f" WHERE pack_id IN ({marks}) AND key = ?", (*pack_ids, key)):
+        if row["subject_id"] not in candidates:
+            continue
+        low = _number(row["valid_from"])
+        high = _number(row["valid_to"])
+        if (low is None or point >= low) and (high is None or point <= high):
+            kept.add(row["subject_id"])
+    return kept
+
+
 def resolve(conn, query, pack_ids) -> Resolution:
     terms = load_terms(conn, pack_ids)
-    identity = normalize_identity(query.identity, alias_map(conn, pack_ids))
+    identity = normalize_identity(query.identity, alias_map(conn, pack_ids),
+                                  value_alias_map(conn, pack_ids))
 
     given = {k: v for k, v in identity.items() if k in terms}
     unknown_keys = sorted(set(identity) - set(given))
@@ -126,7 +203,8 @@ def resolve(conn, query, pack_ids) -> Resolution:
     # not demand a subject whose recorded power is literally "148". Treating
     # hints as hard filters turns every approximate reading into no_match.
     hard_keys = [k for k in given
-                 if terms[k].role == "attribute" and terms[k].narrow_order is None]
+                 if terms[k].role == "attribute"
+                 and terms[k].narrow_order is None and not terms[k].is_range]
     if not hard_keys:
         return Resolution((), "no_match",
                           "no identity attributes supplied", tuple(flags))
@@ -151,23 +229,30 @@ def resolve(conn, query, pack_ids) -> Resolution:
         key=lambda t: t.narrow_order or 0)
 
     for term in narrowers:
-        wanted = _number(given[term.term_id])
-        if wanted is None or len(candidates) <= 1:
+        if len(candidates) <= 1:
             continue
-        tolerance = float(term.tolerance or 0)
-        marks = ",".join("?" * len(pack_ids))
-        kept = {
-            r["subject_id"] for r in conn.execute(
-                f"SELECT subject_id, value_num FROM attributes"
-                f" WHERE pack_id IN ({marks}) AND key = ? AND value_num IS NOT NULL",
-                (*pack_ids, term.term_id))
-            if r["subject_id"] in candidates
-            and abs(r["value_num"] - wanted) <= tolerance
-        }
+        kept = _narrow(conn, pack_ids, candidates, term, given[term.term_id])
         if kept:
             candidates = kept
         else:
+            # The listing contradicts every candidate. Keep them all and say so:
+            # dropping the car serves nobody, while the flag is a coverage
+            # signal that something in the catalog or the ad is wrong.
             flags.append(f"soft_narrow_fallback:{term.term_id}")
+
+    # Range terms (a production window, a build year) are applied last and are
+    # equally soft. Backlog B9 settled this: an out-of-window listing still
+    # matches and is logged as demand, because a year that is one off is far
+    # more often a catalog gap than a different car.
+    for key in [k for k in given if terms[k].is_range]:
+        point = _number(given[key])
+        if point is None or not candidates:
+            continue
+        kept = _within_range(conn, pack_ids, candidates, key, point)
+        if kept:
+            candidates = kept
+        else:
+            flags.append(f"out_of_range:{key}")
 
     ordered = tuple(sorted(candidates))
     if not ordered:

@@ -174,11 +174,13 @@ def build(root, out_path) -> Path:
                                     primary.get("title", ""))
             conn.execute(
                 "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
-                " kind, domain, severity, consequence, detection,"
-                " author_confidence, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " kind, domain, severity, consequence, detection, component,"
+                " subsystem, author_confidence, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (claim_id, pack_id, subject_id, entry["kind"], entry["domain"],
                  entry.get("severity", "medium"), entry.get("consequence", ""),
-                 entry.get("detection", ""), entry.get("confidence"), _now()))
+                 entry.get("detection", ""), entry.get("component", ""),
+                 entry.get("subsystem", ""), entry.get("confidence"), _now()))
             row_ids.append(claim_id)
 
             for lang, block in texts.items():
