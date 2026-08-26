@@ -128,6 +128,48 @@ CLI + web (finishing `ops/hub/web.py`, which lands B28) + MCP on the new core;
 extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/`,
 `ops/swap.py`, `ops/process.py` go.
 
+- [x] Phases 5a–5d **(landed 2026-08-26)** — CLI, MCP, the two research planes,
+      the local dashboard, and the pack-declared site adapter.
+- [x] **Phase 6a landed 2026-08-27** (`e5d7951`): `backend/` and `deploy/` deleted,
+      `ops/{hub,mcp,reports,swap}` gone, the car catalog moved to
+      `packs/cars/data/`, the coverage report moved to `packs/cars/coverage.py`
+      and now derives servability from the pack manifest. Layering re-derived
+      from a column to a fan and re-enforced in `test_repo_invariants.py`, with
+      a ratchet that keeps `backend/` deleted. Suite 534 -> 535, 3m -> 18s.
+- [x] **Phase 6 docs landed 2026-08-27** — `README.md` and `CLAUDE.md` rewritten
+      for the pack architecture (every command in the README verified to run).
+- [ ] **Phase 6b — finish the move.** `knowledge/{catalog,parts,fitment}` are
+      car-specific and still sit in the pipeline layer. Blocker is a real
+      coupling, not a file move: `knowledge/ledger/acquire.py` imports
+      `knowledge.parts.search_templates` and `export.py` imports
+      `validate_part_yaml`, so moving them into `packs/cars/` creates a
+      knowledge -> packs cycle. Two ways out, and they are a genuine fork —
+      see HUMAN DECISION #8.
+- [ ] **Phase 6c — rewire the Chrome extension.** Phase 5d moved the *selectors*
+      into `packs/cars/adapters/sahibinden.json`, but the extension client was
+      never rewired: `background.js` still POSTs `{listing_url, ad_metadata}` to
+      `/analyze` on ports 8000/8765, while the app serves `/api/analyze` on 8787
+      and wants `{url, fields, title}`. ~2,300 lines of JS (background, content,
+      hover_lite panel) plus 14 jsdom tests are on the old protocol. The
+      extension is currently non-functional against the new app; the server side
+      of the contract is verified working end to end.
+- [ ] Rewrite `docs/INTERNALS.md` and `docs/USAGE.md` (21 and 29 stale
+      references), and close B5/B11/B14/B26/B28 as subsumed; re-file B19
+      against the new core.
+
+**HUMAN DECISION #8 — where the car pipeline lives.** `knowledge/` is not a
+generic layer; it is the *cars* pipeline (stoplists derive from the car catalog,
+export hardcodes the parts dir, acquire needs car search templates). Either
+**(a)** split it — generic ledger/extraction up into `kriko/ledger` + `kriko/extract`,
+car-specific bits down into `packs/cars/`, with a pack-supplied research
+interface as the seam (the plan's target tree; several days, real design work,
+and the only option that lets a second real pack have a pipeline); or **(b)**
+move it wholesale to `packs/cars/pipeline/` — honest about what it is today,
+about a day's work, but a second real pack would then have to duplicate the
+extraction machinery, forcing the split later anyway. This is a policy call
+about how soon a second real pack is expected, which is why it is not being
+decided automatically.
+
 ---
 
 ## P0
