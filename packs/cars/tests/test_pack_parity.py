@@ -273,7 +273,7 @@ def test_review_status_lowers_rank_instead_of_hiding_the_claim(new_engine):
 
 # ── the frozen record ────────────────────────────────────────────────────
 
-def test_golden_output_is_stable(new_engine, cases):
+def test_golden_output_is_stable(new_engine, cases, request):
     """Freeze what the new engine answers, while the old one still exists.
 
     Phase 6 deletes `backend/`, and every test above dies with it. This one
@@ -296,7 +296,7 @@ def test_golden_output_is_stable(new_engine, cases):
             "claims": [c.title for c in result.claims],
         })
 
-    if not GOLDEN.exists():
+    if not GOLDEN.exists() or request.config.getoption("--regenerate-golden"):
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
         GOLDEN.write_text(
             "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True)
