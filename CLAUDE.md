@@ -1,8 +1,13 @@
 # Kriko — working notes for Claude
 
-Kriko is a Chrome extension + FastAPI backend that surfaces reliability risks for used cars
-on Sahibinden. See `docs/USAGE.md` (operation), `docs/INTERNALS.md` (architecture),
-`docs/pipeline_postmortem.md` (knowledge-pipeline history).
+Kriko is a local-first, open knowledge engine for manufactured products. It answers
+"what is known to go wrong with *this specific one*" from installed knowledge **packs**,
+and ships with `cars` as pack #1 (used cars on Sahibinden, via a Chrome extension).
+
+The engine knows nothing about cars. Adding a product category is a data change — a new
+pack directory — never an engine change. That is goal **G6** and every principle below
+exists to keep it true. See `docs/USAGE.md` (operation), `docs/INTERNALS.md`
+(architecture), `docs/pipeline_postmortem.md` (knowledge-pipeline history).
 
 ## Task tracking
 
@@ -11,6 +16,12 @@ items move to `done.md` with date + commit. Check the backlog before starting wo
 keep both files current — they are the single source of truth for project status.
 
 ## Product principle — what Kriko surfaces (READ THIS BEFORE TOUCHING CLAIM SELECTION)
+
+**Where this lives now:** each pack states its own bar, in `packs/<name>/research/principle.md`
+— the cars version below, and a very different one for `packs/drill/`. The engine enforces
+*ranking*, never *taste*; what counts as worth surfacing is a property of the category, so
+it ships as pack data. The cars principle is reproduced here because it is still the one
+almost every session works against.
 
 Kriko's value is **the config- and mileage-specific known risks a buyer cannot cheaply get
 from the standard pre-purchase inspection** — what to worry about for *this* specific car,
@@ -55,7 +66,7 @@ to remember to make for every new car, and history here shows that edit gets for
 `_MAKE_MAP`/`_MODEL_MAP` were the same failure mode).
 
 **Before adding a fixed list of car-specific values, ask:** can this be *derived* from the
-catalog (`backend/data/**/*.yaml`) instead of hand-enumerated? `catalog_code_manufacturers()`
+catalog (`packs/cars/data/**/*.yaml`) instead of hand-enumerated? `catalog_code_manufacturers()`
 in `knowledge/stoplists.py` is the reference pattern — it reads manufacturer-per-code
 straight off the part YAMLs, so a new part is covered the moment its stub exists, with no
 separate registration step to forget.
@@ -64,9 +75,16 @@ separate registration step to forget.
 technologies, a handful of spelling/abbreviation aliases) are fine as constants — this
 rule is about data that grows with car *coverage*, not fixed engineering categories.
 
+**Since the pivot there is a stronger form of this rule**, and it applies to the engine
+rather than the catalog: `kriko/` may not contain a car-shaped *anything*, derived or
+not. No `make`, no `engine_code`, no `fuel`. Identity keys, attribute names and gate
+vocabulary are pack-declared rows. `kriko/tests/test_core_is_domain_free.py` walks
+kriko/'s AST looking for car vocabulary in executable positions.
+
 Onboarding a new car model must never require a manual Python dict/list edit in
-`normalize.py` or `stoplists.py` — only new YAML data, ideally pipeline-generated rather
-than hand-authored (see `docs/USAGE.md`'s onboarding steps).
+`knowledge/stoplists.py` or anywhere else — only new YAML data under `packs/cars/data/`,
+ideally pipeline-generated rather than hand-authored (see `docs/USAGE.md`'s onboarding
+steps). Onboarding a whole new *category* must never require an edit to `kriko/` at all.
 
 ## Generalization principle — systemic fixes only, no per-model patches
 
@@ -102,42 +120,67 @@ never add a human verification step to the pipeline.
 
 ## Layering principle — dependencies flow one way (READ THIS BEFORE ADDING AN IMPORT ACROSS PACKAGES)
 
-Kriko is three layers. Each may import from the layers below it, never from the
-layers above:
+Kriko is four packages, and since the pivot the dependencies form a fan, not a
+column. Each may import from what it points at, never the other way:
 
 ```
-ops/        operator layer — hub, mcp, reports, auto, process, ledger_run,
-            swap, remediate, panel. Drives and inspects everything below.
-backend/    serving layer — sync ETL, api, resolver, db, matcher.
-knowledge/  catalog layer — extraction, catalog, parts, sources, ledger.
-            Imports nothing above it.
+apps/       interfaces — cli, web dashboard, mcp server.
+   |
+   v
+kriko/      the engine — pack store, generic lookup, ranking, research
+   ^        interface. Imports NONE of the others. Knows no category.
+   |
+packs/      one directory per product category: data, vocabulary, trust
+   |        tiers, builder, and that category's own coverage report.
+   |        This is the thing a third party authors.
+   v
+knowledge/  evidence ledger + grounded extraction — turns sources into
+            claims a pack can ship.
+
+ops/        pipeline drivers — ledger_run, remediate, panel, process.
+            May import knowledge/ and packs/. Nothing imports ops/.
 ```
+
+**`kriko/` importing anything on this list is the one unforgivable violation.**
+It is the load-bearing invariant of G6: the moment the engine knows what a car
+is, adding a category stops being a data-only change and nobody notices until
+someone attempts a second category. A pack is consumed *through the store*,
+never imported. If a core module wants something from a pack, the pack should
+be supplying it as a row.
 
 **A deferred import (one written inside a function body) that points *upward* is
 the smell.** It means someone hit `ImportError: partially initialized module` and
 pushed the import down to runtime rather than fixing the layering. Before
-2026-08-21 there were 11 of them, all pointing from `knowledge/` into `backend/`,
-because `backend/tools/` held operator tooling the pipeline needed. A deferred
-import pointing *downward* is fine — that is a startup-cost decision.
+2026-08-21 there were 11 of them, all pointing from `knowledge/` into the
+now-deleted `backend/`, because `backend/tools/` held operator tooling the
+pipeline needed. A deferred import pointing *downward* is fine — that is a
+startup-cost decision.
 
-Two greps must return nothing (tests excluded — an end-to-end test may span layers):
+Four greps must return nothing (tests excluded — an end-to-end test may span layers):
 
 ```bash
-grep -rnE "^[[:space:]]*(from|import) (backend|ops)" --include='*.py' knowledge/ | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) ops"            --include='*.py' backend/   | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|ops|apps|packs|knowledge)" --include='*.py' kriko/      | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|ops|apps|packs)"           --include='*.py' knowledge/  | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (ops|apps)"                         --include='*.py' packs/      | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|ops)"                      --include='*.py' apps/       | grep -v /tests/
 ```
 
+All four are enforced mechanically in `ops/tests/test_repo_invariants.py`, which
+also ratchets the deleted `backend/` shut.
+
 If a module needs something from the layer above, it is in the wrong layer — move
-the module, don't add the import. New CLI drivers and anything that spans layers
-belong in `ops/`. See `docs/INTERNALS.md` for the diagram and
+the module, don't add the import. New pipeline drivers belong in `ops/`; new
+interfaces in `apps/`; anything category-specific in `packs/<category>/`. See
+`docs/INTERNALS.md` for the diagram and
 `docs/superpowers/specs/2026-08-21-codebase-organisation-design.md` for the
-reasoning.
+original reasoning.
 
 ## Documentation map
 
 | Doc | What it's for | Status |
 |-----|---------------|--------|
 | `README.md` | Project overview, quickstart, supported cars | current |
+| `packs/<name>/README.md` | What that pack covers, and its own product principle | current |
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks | current |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
@@ -145,5 +188,6 @@ reasoning.
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `docs/overhaul_plan.md`, `docs/claim_relevance_plan.md` | Claim-quality roadmap/specs | reference |
+| `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |
 | `docs/pipeline_postmortem.md` | Early pipeline history | historical |
 | `docs/historical/` | Pre-part-centric era (`handover.md`, `SCAFFOLD.md`) + superseded 2026-07 designs/plans (`thoughts/`) | historical — do not follow |

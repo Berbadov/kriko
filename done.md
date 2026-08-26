@@ -6,6 +6,51 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-27 — Phase 6a of the pivot: backend/ deleted, catalog into the pack
+
+Commits `e5d7951` (code) and this one (docs + one engine bug). Suite 534 -> 536,
+and 3 minutes -> 16 seconds now that nothing starts Postgres.
+
+- **`backend/` and `deploy/` deleted** — sync ETL, SQLAlchemy models, the
+  650-line resolver, matcher, normalize, recover, equipment, the FastAPI api,
+  the Dockerfile and compose stack. Every one has a successor from Phases 1-5.
+  `ops/{hub,mcp,reports,swap.py}` went with them.
+- **The car catalog moved** to `packs/cars/data/`, and every reader was
+  repointed rather than left to guess.
+- **`ops/reports/coverage.py` -> `packs/cars/coverage.py`.** Its one engine
+  dependency went away with it: it imported `SERVABLE_STATUSES` from the deleted
+  resolver, and now derives servability from the pack manifest's
+  `[status_confidence]` table — the same authority `build.py` uses, so the
+  report and the builder can no longer disagree about what "servable" means.
+- **Layering re-derived**, not renamed: the column (`ops -> backend ->
+  knowledge`) became a fan (`apps -> kriko <- packs -> knowledge`, with `ops`
+  driving). Four invariants enforced in `test_repo_invariants.py`, plus a
+  ratchet asserting `backend/` stays deleted — a package deletion is easy to
+  undo by accident.
+- **`README.md` and `CLAUDE.md` rewritten** for the pack architecture. Every
+  command in the README was executed before being documented, which is how the
+  next two items were found.
+
+Two bugs the smoke test found, neither of which any unit test could have:
+
+- **`python -m apps.web` did not exist.** `app.py`'s own docstring and the
+  README both document the package form; only `python -m apps.web.app` worked.
+  Added `apps/web/__main__.py`.
+- **A contradicting identity attribute was silently dropped once the candidate
+  set was down to one** (`kriko/lookup/match.py`). Narrowing was skipped at
+  `len(candidates) <= 1` as an optimisation — but narrowing is also how a
+  contradiction is *detected*, so the skip made the most confident-looking case
+  the only silent one. Live effect: a Sahibinden ad for a 1.6 TDI Golf 7 saying
+  "Otomatik" resolved `exact` onto the sole manual variant, returned **zero**
+  gearbox claims, and raised no flag — the quiet zero G3 exists to prevent. Now
+  flagged `soft_narrow_fallback:transmission`. The fix can only add flags, never
+  change which subjects match, which the 98-row parity golden confirms.
+
+  The missing 1.6 TDI DSG catalog row is deliberately **not** patched: per the
+  generalization principle a per-model fix does not exist, and the gap is now
+  visible to B19's loop instead.
+
+
 ## 2026-08-26 — Phase 0 of the knowledge-engine pivot: demolition
 
 First commit of goal **G6** (see `backlog.md`). Baseline established at 768 passing,
