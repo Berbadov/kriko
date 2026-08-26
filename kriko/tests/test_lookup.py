@@ -164,6 +164,36 @@ def test_narrowing_is_soft_and_never_empties_the_candidates(store):
     assert "power_hp" in " ".join(result.resolution.flags)
 
 
+def test_a_contradiction_is_still_flagged_when_only_one_candidate_is_left(store):
+    """The single-candidate case is where a silent contradiction does most harm.
+
+    Narrowing used to be skipped once the candidate set was down to one — an
+    optimisation, since there is nothing left to narrow. The cost was that the
+    contradicting attribute was never *tested*, so no flag was raised, and the
+    result came back `exact` with no indication that the listing disagreed with
+    the catalog.
+
+    A real case: a Sahibinden ad for a 1.6 TDI Golf 7 says "Otomatik". Make,
+    model, fuel and displacement narrow to exactly one variant — the manual
+    1.6 TDI, because the catalog has no automatic row for that engine. The
+    gearbox attribute then went untested, so the buyer was told `exact`, shown
+    no gearbox claims at all, and nothing anywhere recorded that the automatic
+    they were looking at is missing from the catalog. Exactly the quiet zero
+    goal G3 exists to prevent.
+
+    Confidence must not be an artefact of having stopped checking.
+    """
+    result = lookup(store, Query(
+        kind="product",
+        identity={"brand": "acme", "model": "w100", "power_hp": 9999}))
+
+    assert result.resolution.subject_ids, "the car must still resolve — a contradiction is a flag, not a rejection"
+    assert "power_hp" in " ".join(result.resolution.flags), (
+        "the contradicting attribute must be flagged even though there was only "
+        "one candidate to contradict"
+    )
+
+
 # ── reaching claims through relations ────────────────────────────────────
 
 def test_a_component_claim_reaches_the_product_that_uses_it(store):

@@ -274,8 +274,13 @@ def _resolve_in_pack(conn, query, pack_id) -> Resolution:
         key=lambda t: t.narrow_order or 0)
 
     for term in narrowers:
-        if len(candidates) <= 1:
-            continue
+        # Deliberately NOT skipped when only one candidate is left. Skipping
+        # there looks free — there is nothing to narrow — but narrowing is also
+        # how a contradiction gets *detected*, so the skip turned the most
+        # confident-looking case into the only silent one: an ad saying
+        # "Otomatik" resolving `exact` onto the sole manual variant, with no
+        # gearbox claims and no flag saying why. Confidence must not be an
+        # artefact of having stopped checking.
         kept = _narrow(conn, pack_ids, candidates, term, given[term.term_id])
         if kept:
             candidates = kept
