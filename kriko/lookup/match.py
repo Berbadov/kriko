@@ -186,6 +186,51 @@ def _within_range(conn, pack_ids, candidates, key, point: float) -> set[str]:
 
 
 def resolve(conn, query, pack_ids) -> Resolution:
+    """Ask every enabled pack what it thinks this is, then union the answers.
+
+    Resolution is PER PACK, and it has to be. A pack's vocabulary is
+    self-contained: the cars pack calls the key `make` and accepts `brand` as an
+    alias, while the drill pack does the exact opposite. Merging both alias
+    tables into one map makes `brand -> make` and `make -> brand` fight, one
+    wins, and whichever pack loses becomes unreachable — with both packs
+    installed, neither answers. That is not a hypothetical; it is what happened
+    the first time two packs were queried through one store.
+
+    So each pack resolves the query in its own words, and the engine unions the
+    results. Ambiguity — "which variant is this?" — stays a within-pack
+    question; two packs each confidently answering is not ambiguity.
+    """
+    subjects: list[str] = []
+    flags: list[str] = []
+    notes: list[str] = []
+    ambiguous = False
+
+    for pack_id in pack_ids:
+        one = _resolve_in_pack(conn, query, pack_id)
+        if one.subject_ids:
+            subjects.extend(one.subject_ids)
+            if len(one.subject_ids) > 1:
+                ambiguous = True
+            if one.notes:
+                notes.append(f"{pack_id}: {one.notes}")
+        # A pack that does not know the word "fuel" and matched nothing is not
+        # telling us anything — only a pack that answered can meaningfully
+        # report which parts of the query it could not use.
+        if one.subject_ids:
+            flags.extend(f"{pack_id}/{f}" for f in one.flags)
+
+    if not subjects:
+        return Resolution((), "no_match",
+                          "; ".join(notes) or "no pack recognised this",
+                          tuple(dict.fromkeys(flags)))
+
+    return Resolution(tuple(sorted(set(subjects))),
+                      "ambiguous" if ambiguous else "exact",
+                      "; ".join(notes), tuple(dict.fromkeys(flags)))
+
+
+def _resolve_in_pack(conn, query, pack_id) -> Resolution:
+    pack_ids = (pack_id,)
     terms = load_terms(conn, pack_ids)
     identity = normalize_identity(query.identity, alias_map(conn, pack_ids),
                                   value_alias_map(conn, pack_ids))

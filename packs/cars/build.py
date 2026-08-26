@@ -189,10 +189,17 @@ def _compat_conditions(claim: dict, part_codes: set[str],
     kept = []
     for cond in out:
         values = spanned.get(cond["key"])
-        if values and len(values) > 1:
-            # The part is fitted across several values of this attribute, so the
-            # claim's text signal cannot be a property of the part. Drop the gate.
+        demanded = {v.strip() for v in str(cond["value"]).split(",")}
+        if values and len(values) > 1 and (values & demanded):
+            # The part is fitted across several values of this attribute AND the
+            # gate demands one of them, so the claim's text signal is telling us
+            # which car the source discussed rather than which cars have the
+            # part. Drop the gate — this is the shared-gearbox case.
             continue
+        # If the demanded value is OUTSIDE the span entirely, keep the gate. An
+        # E-Tech hybrid claim on a parts file fitted only to petrol and diesel
+        # cars is not a shared-part signal; it is a claim about hardware none of
+        # them has, and suppressing the gate would rank it first on a diesel.
         cond["weight"] = 1.0
         cond["on_missing"] = "ignore"
         kept.append(cond)
