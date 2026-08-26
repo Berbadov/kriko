@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-PARTS_DIR = REPO_ROOT / "backend" / "data" / "parts"
+PARTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "parts"
 
 # Part IDs follow a power-split convention (k9k_85, h5h_130, ea888_230, ...) —
 # each power tune is researched as its own part (see write_variants.py). The

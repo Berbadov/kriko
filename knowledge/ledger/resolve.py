@@ -17,7 +17,7 @@ from knowledge.stoplists import (
 )
 
 RESOLVER_VERSION = 1
-_PARTS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "parts"
+_PARTS_DIR = Path(__file__).parent.parent.parent / "packs" / "cars" / "data" / "parts"
 _POWER_SUFFIX_RE = re.compile(r"_\d+$")
 _SUFFIX_RE = re.compile(r"_.*$")  # Strip anything after underscore (domain/power suffix)
 

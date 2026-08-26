@@ -18,7 +18,7 @@ from pathlib import Path
 from knowledge.parts.search_templates import _find_make_model_for_part, templates_for_part
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
 
 
 def test_resolves_full_model_slug_with_generation_suffix():

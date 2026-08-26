@@ -23,19 +23,22 @@ CONTRACT = Path(__file__).resolve().parent / "kriko_research.md"
 
 AGENT_NAME = "kriko_research"
 DESCRIPTION = (
-    "Kriko knowledge-base researcher — researches a car's generation lineup, "
-    "or onboards one model, through the kriko MCP server at $0. Use when the "
-    "user names a make and model to onboard or asks which generations a car "
-    "has.")
+    "Kriko knowledge researcher — fills coverage gaps in the installed packs "
+    "through the kriko MCP server at $0. Use when the user names a product to "
+    "research, or asks what the installed packs are missing. Works for whatever "
+    "categories are installed, not cars specifically.")
 
 # The tools the agent is allowed to reach. MCP write tools are all $0; the two
 # web tools are the research surface. Anything else (bash, file edits) is
 # deliberately absent — the ledger is the only thing this agent changes.
+# The tools the contract grants. Five car-shaped ones (onboard_model,
+# submit_trims, list_generations, submit_generations, finish_model) collapsed
+# into generic equivalents when the MCP server moved onto the pack store — a
+# category is data now, so a tool per category was a tool per data edit.
 MCP_TOOLS = (
-    "onboard_model", "submit_trims", "list_generations", "submit_generations",
-    "research_brief", "finish_model", "get_part", "list_parts",
-    "coverage_report", "add_document", "add_evidence", "run_pipeline_pass",
-    "ledger_status", "spend_summary",
+    "list_packs", "store_status", "list_subjects", "get_subject",
+    "lookup", "research_brief", "coverage_gaps",
+    "submit_findings", "install_pack", "set_pack_enabled",
 )
 
 

@@ -10,7 +10,7 @@ Checks:
 
 Usage:
     python -m knowledge.fitment.validate_fitment
-    python -m knowledge.fitment.validate_fitment backend/data/fitment/renault_megane_4.yaml
+    python -m knowledge.fitment.validate_fitment packs/cars/data/fitment/renault_megane_4.yaml
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT    = Path(__file__).parent.parent.parent
-FITMENT_DIR  = REPO_ROOT / "backend" / "data" / "fitment"
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+FITMENT_DIR  = REPO_ROOT / "packs" / "cars" / "data" / "fitment"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
 
 
 def _load_variants(make_model: str) -> dict[str, dict]:

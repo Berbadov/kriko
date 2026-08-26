@@ -5,7 +5,7 @@ enforcement anywhere in the pipeline, so the extraction LLM has drifted into
 inventing values ("cooling system", "HVAC", "mechanical", "steering",
 "safety") and multi-value joins ("engine|brakes|suspension",
 "turbocharger/fuel system") — confirmed across ea888/h5d_100/megane4_body/
-dc4/clio5_body and others in backend/data/parts/**/*.yaml.
+dc4/clio5_body and others in packs/cars/data/parts/**/*.yaml.
 
 This is not cosmetic: backend/core/resolver.py's `_claims_share_domain()`
 does an exact string match to group maintenance claims by domain — a

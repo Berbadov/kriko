@@ -1,24 +1,35 @@
-"""Operator layer — tools that drive and inspect the other two layers.
+"""Operator layer — the pipeline drivers that fill a pack with knowledge.
 
-Kriko is three layers with dependencies flowing one way:
+After the knowledge-engine pivot (goal G6) Kriko is four packages, and the
+dependency arrows no longer form one column:
 
-    ops/        this package: hub, mcp, reports, swap, remediate, panel
-      |         operates and inspects the layers below
+    apps/       CLI, local web dashboard, MCP server — the interfaces
+      |
       v
-    backend/    sync ETL, api, resolver, db, matcher
-      |         ingests the catalog, serves risk to the extension
+    kriko/      the engine: pack store, generic lookup, ranking.
+      ^         Knows nothing about cars, or about any other category.
+      |
+    packs/      one directory per product category: data, vocabulary,
+      |         trust tiers, a builder, and the coverage report for its
+      |         own catalog shape. This is what a third party authors.
       v
-    knowledge/  catalog, extraction, ledger, parts, sources
-                produces the YAML catalog — imports nothing above it
+    knowledge/  the evidence ledger and grounded extraction — the machinery
+                that turns sources into claims a pack can ship.
 
-ops/ may import from backend/ and knowledge/. Neither may import from ops/.
-Before this package existed the operator tools lived under backend/tools/ and
-knowledge/, so knowledge/ had to reach up into backend/ — 11 of those imports
-were written inside function bodies to dodge the resulting import cycle.
+    ops/        this package: ledger_run, remediate, panel, process.
+                Drives the pipeline. Sits above knowledge/ and packs/,
+                and is the only place allowed to reach into both.
 
-Function-local imports still appear here (ops/swap.py defers SQLAlchemy and the
-FastAPI app; ops/process.py defers the extraction stack). Those are deliberate —
-they keep CLI startup cheap — and are no longer cycle workarounds. The tell is
-direction: a deferred import pointing *downward* is a cost decision, one pointing
-*upward* was a cycle being dodged. There are no upward ones left.
+ops/ may import from knowledge/ and packs/. Neither may import from ops/, and
+nothing at all may import from apps/. `kriko/` imports none of them — that is
+the load-bearing invariant of the pivot, because the moment the engine knows
+what a car is, adding a category stops being a data-only change.
+
+All four rules are enforced mechanically in ops/tests/test_repo_invariants.py.
+
+Function-local imports still appear here (ops/process.py defers the extraction
+stack). Those are deliberate — they keep CLI startup cheap — and are not cycle
+workarounds. The tell is direction: a deferred import pointing *downward* is a
+cost decision, one pointing *upward* was a cycle being dodged. There are no
+upward ones left.
 """

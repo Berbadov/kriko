@@ -10,12 +10,12 @@ untouched.
 
 Usage:
     python -m knowledge.catalog.repair_missing_stub_scaffold \
-        --file backend/data/parts/electrical/megane4_elec.yaml \
+        --file packs/cars/data/parts/electrical/megane4_elec.yaml \
         --part-id megane4_elec --part-type electrical \
         --make renault --model megane_4 --apply
 
     python -m knowledge.catalog.repair_missing_stub_scaffold \
-        --file backend/data/parts/engine/ea888.yaml \
+        --file packs/cars/data/parts/engine/ea888.yaml \
         --part-id ea888 --part-type engine \
         --make volkswagen --model golf_7 --apply
 """
@@ -30,7 +30,7 @@ import yaml
 from knowledge.parts.search_templates import generate_part_scaffold
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
 
 
 def main() -> None:

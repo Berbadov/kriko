@@ -1,27 +1,32 @@
-"""Full-payload /analyze logging — append-only JSONL, no browser/DB client needed.
+"""Append-only JSONL log of everything the browser plane was asked.
 
-docs/design_flaws.md "Observability gap": AnalysisLog (backend/db/models.py) stores
-only claim IDs and counts, not the listing context that drove gating or the response
-actually shown — reconstructing "what did the buyer see and why" needs manual joins
-and isn't possible at all for a bad match (nothing to replay). This module logs the
-full request + derived context + full response for each analysis, one JSON object per
-line, so both a human and an agent can read recent analyses without a DB client, and a
-fix can be verified by replaying a logged request (see ops/reports/replay.py).
+Kept deliberately when the old serving stack was deleted, because this file is
+where two things come from that nothing else provides:
 
-Writing here must never break the serve path — every call is best-effort.
+  * the demand signal — which cars people look up that no pack covers yet
+  * the replay corpus — the 98 real listings the parity gate was built on, and
+    the raw material for the next one
+
+A knowledge base with no record of what it was asked cannot tell which gaps
+matter. Losing it would have been the quiet kind of regression: nothing breaks,
+and six months later there is no way to prioritise anything.
+
+Writing here must never break a lookup — every call is best-effort.
 """
 
 import json
 import logging
+import os
 from pathlib import Path
 
-from backend import config
+DEFAULT_LOG_PATH = Path(
+    os.environ.get("KRIKO_ANALYSES_LOG", "logs/analyses.jsonl"))
 
 log = logging.getLogger(__name__)
 
 
 def log_analysis_jsonl(record: dict, path: Path | None = None) -> None:
-    path = path or config.ANALYSES_LOG_PATH
+    path = path or DEFAULT_LOG_PATH
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
@@ -64,7 +69,7 @@ def load_records(path: Path) -> tuple[list[dict], int]:
 
 def read_recent(limit: int = 20, model: str | None = None, path: Path | None = None) -> list[dict]:
     """Most-recent-first records, optionally filtered by (case-insensitive substring) model."""
-    path = path or config.ANALYSES_LOG_PATH
+    path = path or DEFAULT_LOG_PATH
     records, _ = load_records(path)
     matched = [
         rec for rec in records
@@ -76,7 +81,7 @@ def read_recent(limit: int = 20, model: str | None = None, path: Path | None = N
 
 
 def read_by_id(analysis_id: str, path: Path | None = None) -> dict | None:
-    path = path or config.ANALYSES_LOG_PATH
+    path = path or DEFAULT_LOG_PATH
     records, _ = load_records(path)
     for rec in records:
         if rec.get("id") == analysis_id:

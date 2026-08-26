@@ -1,7 +1,7 @@
 """scaffold.py — bootstrap YAML files for a new car model.
 
 Creates the two files required before running the knowledge pipeline:
-  - backend/data/variants/{make}_{model}_{gen}.yaml  (template — fill in real variants)
+  - packs/cars/data/variants/{make}_{model}_{gen}.yaml  (template — fill in real variants)
   - knowledge/sources/curated/{make}_{model}_{gen}.yaml  (empty list)
 
 Usage:
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT    = Path(__file__).parent.parent
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
 CURATED_DIR  = Path(__file__).parent / "sources" / "curated"
 
 # Template text for the variants YAML.  Written verbatim so comments and field
