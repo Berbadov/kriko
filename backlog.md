@@ -65,11 +65,17 @@ deleted; research pluggable between the $0 agent/MCP path and an Exa/Tavily+LLM
 path; every install is both reader and author; language is a row attribute;
 monorepo with `packs/` beside the engine.
 
-### B29 — Phase 1: the `kriko/` core `[G6]`
-Pack schema, content-hash IDs, install/enable/uninstall isolation, WAL. Two
-databases, never merged: the append-only authoring ledger and the mutable
-installed store. Proof: two synthetic packs coexist, a shared fact dedupes,
-contradicting claims both persist, uninstalling one leaves the other untouched.
+### B29 — Phase 1: the `kriko/` core `[G6]` **(LANDED 2026-08-26)**
+`kriko/store/{schema.sql,ids.py,db.py,packstore.py}` + 28 tests. WAL on; two
+databases, never merged. `test_kriko_core_never_imports_a_domain_layer` in
+`ops/tests/test_repo_invariants.py` is the mechanical guarantee that adding a
+category stays a data-only change.
+
+Corrected while writing the tests: identical facts from two packs do **not**
+collapse to one row. `pack_id` is in every primary key, so each pack keeps its
+own row with the same content hash — otherwise uninstalling one pack would
+delete a fact the other still asserts. Dedup is a read-time `GROUP BY` on the
+agreeing hash, never a storage-time merge.
 
 ### B30 — Phase 2: pack format and the drill pack `[G6]`
 Build the *non-car* pack first — it is cheap and it is the only thing that

@@ -38,6 +38,27 @@ def test_knowledge_never_imports_from_the_layers_above_it():
     assert hits == [], "knowledge/ reaches up into a higher layer:\n  " + "\n  ".join(hits)
 
 
+def test_kriko_core_never_imports_a_domain_layer():
+    """kriko/ is the engine — it must know nothing about cars, or about packs.
+
+    This is the load-bearing invariant of goal G6. The whole point of the pivot
+    is that adding a product category costs data and no engine code; the moment
+    kriko/ imports packs/ or backend/, that stops being true and nobody notices
+    until a second category is attempted.
+
+    A pack is consumed through the store, never imported. If a core module wants
+    something from a pack, the pack should be supplying it as a row.
+    """
+    hits = sum(
+        (_imports_of(pkg, REPO / "kriko")
+         for pkg in ("backend", "ops", "packs", "apps")),
+        [],
+    )
+    assert hits == [], (
+        "kriko/ reaches into a domain or operator layer:\n  " + "\n  ".join(hits)
+    )
+
+
 def test_backend_never_imports_from_the_operator_layer():
     """backend/ is layer 2 — it may import knowledge/, never ops/."""
     hits = _imports_of("ops", REPO / "backend")
