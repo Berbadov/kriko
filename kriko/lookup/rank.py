@@ -71,18 +71,33 @@ def trust_lookup(conn, pack_ids) -> dict[str, float]:
 
 
 def tier_of(domain: str, tiers: dict[str, str]) -> str:
-    """Exact domain first, then parent domains, so one row covers subdomains."""
+    """Resolve a domain to a tier, most specific rule first.
+
+    Four steps, in order: the exact domain, then each parent domain so one row
+    covers every subdomain, then `*substring*` contains-rules (which is how a
+    pack says "anything with 'forum.' in it is user-generated" without listing
+    the internet), then the pack's `*` default. Falling through all four gives
+    `unknown`, which is trust-neutral rather than a penalty — an unrecognised
+    domain is not evidence of a bad source.
+    """
     domain = (domain or "").casefold()
     if not domain:
         return "unknown"
     if domain in tiers:
         return tiers[domain]
+
     parts = domain.split(".")
     for i in range(1, len(parts)):
         parent = ".".join(parts[i:])
         if parent in tiers:
             return tiers[parent]
-    return "unknown"
+
+    for pattern, tier in tiers.items():
+        if pattern.startswith("*") and pattern.endswith("*") and len(pattern) > 2:
+            if pattern[1:-1] in domain:
+                return tier
+
+    return tiers.get("*", "unknown")
 
 
 def score_sources(rows, tiers, trusts) -> tuple[tuple[Source, ...], float, bool]:
@@ -122,9 +137,22 @@ def score_sources(rows, tiers, trusts) -> tuple[tuple[Source, ...], float, bool]
 
 
 def relevance(*, severity: str, condition_weight: float, detection: str,
-              trust: float, disputed: bool, pack_weight: float) -> float:
+              trust: float, disputed: bool, pack_weight: float,
+              author_confidence: float | None = None) -> float:
+    """Combine every factor into one comparable number.
+
+    `author_confidence` is where the old `status` column ended up. With no
+    authority there is nobody to "promote" a claim from review to verified, so
+    review state becomes rank rather than a gate: an unreviewed claim still
+    reaches the reader, ranked below a corroborated one. Dropping status
+    outright would have shipped the catalog's 696 unreviewed claims as
+    first-class (backlog B26); treating it as a hide would have been an
+    authority decision by another name.
+    """
     score = SEVERITY_WEIGHT.get(severity, 0.5)
     score *= condition_weight
+    if author_confidence is not None:
+        score *= author_confidence
     if detection == "visual":
         score *= VISUAL_DETECTION_FACTOR
     score *= trust or 1.0
