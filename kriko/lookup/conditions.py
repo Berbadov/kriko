@@ -44,7 +44,17 @@ class Outcome:
     reason: str       # human-readable, so why_shown can explain the downrank
 
 
-OPERATORS = frozenset({"gte", "lte", "eq", "neq", "in", "has", "mentions", "interval"})
+OPERATORS = frozenset({
+    "gte", "lte", "eq", "neq", "in", "has", "interval",
+    # `mentions` and `not_mentions` take a comma-separated list and mean
+    # "any of" / "none of". `not_mentions` is what expresses the
+    # maintenance rule that made this whole table necessary: an interval item
+    # is due *unless the listing proves otherwise*, so the claim applies
+    # precisely when the description does NOT mention the work being done.
+    # Absence of a description therefore means the claim applies — which is
+    # why its on_missing must be `open`, not `closed`.
+    "mentions", "not_mentions",
+})
 
 
 def _number(value) -> float | None:
@@ -122,8 +132,12 @@ def evaluate(cond: Condition, context: dict) -> Outcome:
         held = str(given).strip().casefold() in _collection(cond.value_text)
     elif cond.op == "has":
         held = cond.value_text.strip().casefold() in _collection(given)
-    else:  # mentions
-        held = cond.value_text.strip().casefold() in str(given).casefold()
+    elif cond.op == "mentions":
+        haystack = str(given).casefold()
+        held = any(n in haystack for n in _collection(cond.value_text))
+    else:  # not_mentions
+        haystack = str(given).casefold()
+        held = not any(n in haystack for n in _collection(cond.value_text))
 
     if held:
         return Outcome("met", True, 1.0, f"{cond.key} {cond.op} matches this listing")

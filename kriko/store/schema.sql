@@ -137,6 +137,15 @@ CREATE TABLE IF NOT EXISTS claims (
   severity    TEXT NOT NULL,      -- high|medium|low
   consequence TEXT NOT NULL DEFAULT '',
   detection   TEXT NOT NULL DEFAULT '',  -- visual|test_drive|diagnostic|history_check
+  -- Which sub-part of the subject the claim is about, and how to group it for
+  -- display. Both are pack vocabulary (terms with role='component'/'subsystem'),
+  -- not engine concepts — every manufactured product has sub-parts and every
+  -- catalog wants them grouped. Kept as claim columns rather than as a finer
+  -- subject because a component claim must reach the product through exactly
+  -- one hop; making it a subject would need a second traversal direction, and
+  -- that direction would also drag in sibling products sharing the same part.
+  component   TEXT NOT NULL DEFAULT '',
+  subsystem   TEXT NOT NULL DEFAULT '',
   -- The author's own confidence, carried through from the pipeline's verdict.
   -- The old `status` column (draft/review/verified) folds in here rather than
   -- being dropped: there is no authority to promote a claim, so review state

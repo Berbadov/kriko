@@ -1,0 +1,34 @@
+[pack]
+id = "org.kriko.cars"
+name = "Cars (TR market)"
+version = "0.1.0"
+license = "CC-BY-SA-4.0"
+publisher = "kriko"
+origin = "https://github.com/kriko/kriko"
+
+# What makes a car variant distinct. This is the pack's most consequential
+# declaration — it decides which of its rows can ever merge with another
+# contributor's cars pack.
+#
+# Seven keys is a judgement, not a fact. An author who thinks trim belongs here
+# will hash the same car differently and their rows will not collapse with
+# these. That is fine and expected: lookup matches on attribute overlap, so
+# both subjects answer the same query and their claims union. See
+# kriko/tests/test_lookup.py's cross-pack union tests.
+[identity]
+product = ["make", "model", "engine_code", "fuel", "displacement_cc",
+           "transmission_code", "power_min_hp"]
+part = ["part_code"]
+
+# Status was never a fact about the world — it was a record of how far the
+# pipeline had got. With no authority there is nobody to promote a claim, so it
+# becomes rank instead of a gate: an unreviewed claim still reaches the reader,
+# ranked below a corroborated one. Dropping it would have shipped 696
+# unreviewed claims as first-class (backlog B26); hiding on it would have been
+# an authority decision wearing a different hat.
+[status_confidence]
+verified = 1.0
+review = 0.6
+held = 0.6
+draft = 0.0      # 0 means: not exported at all
+rejected = 0.0

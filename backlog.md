@@ -104,11 +104,24 @@ riskiest property (two authors, different identity keys, different hashes, must
 still union). `test_core_is_domain_free.py` walks kriko/'s AST for car vocabulary
 in executable positions and carries its own negative test.
 
-### B32 — Phase 4: cars pack + parity `[G6]`
-Export the 29 YAMLs; `status` becomes rank (verified 1.0, review/held 0.6,
-draft/rejected not exported) rather than being dropped — this closes B26
-mechanically. **Capture `parity_golden.jsonl` in this phase**: Phase 6 deletes the
-old engine and the comparison becomes impossible.
+### B32 — Phase 4: cars pack + parity `[G6]` **(LANDED 2026-08-26)**
+`packs/cars/` — 699 claims, 26 variants, 21 parts, 89 relations, 676 conditions,
+725 evidence rows. `parity_golden.jsonl` captured (98 rows) while both engines
+still exist. Two gates green over 98 real listings: wherever the old engine
+matched, the new one resolves the identical car; and all 2,121 old claim
+instances are represented.
+
+Three deliberate divergences, each asserted by a test rather than assumed:
+status became rank (**closes B26**), year windows are soft (**B9**), and part
+attribution is stricter — the old sync served DC4 gearbox faults to a diesel
+Mégane out of the *h5f petrol engine's* part file, a car not fitted with that
+engine. Five titles listed in `KNOWN_ATTRIBUTION_FIXES`; the list must shrink to
+nothing when the catalog is refiled.
+
+Found while measuring: compatibility gates must be suppressed for any attribute
+the part is fitted *across* (a gearbox shared by petrol and diesel spans both
+fuels, so a text signal naming a petrol engine describes the source, not the
+part). Derived from fitment, never an exception list.
 
 ### B33 — Phases 5–6: interfaces, then delete the old path `[G6]`
 CLI + web (finishing `ops/hub/web.py`, which lands B28) + MCP on the new core;
@@ -219,7 +232,7 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
-### B26 — Settle the 696 `status: review` claims deterministically `[G1][G5]` *(new 2026-08-19)*
+### B26 — Settle the 696 `status: review` claims deterministically `[G1][G5]` **(CLOSED 2026-08-26 by B32 — status became rank, not a gate)**
 The claim inspector (done.md B25) made the size of this visible: **696 of ~699
 catalog claims sit at `status: review`**, i.e. the pipeline never settles a
 claim and the serving tier is doing that judgement implicitly. The mechanism

@@ -153,3 +153,25 @@ def test_outcome_is_reportable_so_why_shown_can_explain_itself():
     out = evaluate(_c(key="usage_km", op="gte", value=100_000), {})
     assert isinstance(out, Outcome)
     assert "usage_km" in out.reason
+
+
+# ── list-aware text matching ─────────────────────────────────────────────
+
+def test_mentions_takes_a_list_and_means_any_of():
+    cond = _c(key="free_text", op="mentions", text="triger,timing belt,cam belt")
+    assert evaluate(cond, {"free_text": "yeni TRIGER takıldı"}).state == "met"
+    assert evaluate(cond, {"free_text": "full service history"}).state == "unmet"
+
+
+def test_not_mentions_expresses_due_unless_the_ad_proves_otherwise():
+    """The maintenance rule. Silence is the signal, so silence must serve."""
+    cond = _c(key="free_text", op="not_mentions",
+              text="debriyaj değiş,clutch replaced", on_missing="open")
+    assert evaluate(cond, {"free_text": "tek elden, bakımlı"}).state == "met"
+    assert evaluate(cond, {"free_text": "geçen ay CLUTCH REPLACED"}).state == "unmet"
+
+
+def test_an_absent_description_still_serves_a_maintenance_claim():
+    """No description at all must not silently retire a due service item."""
+    out = evaluate(_c(key="free_text", op="not_mentions", text="clutch replaced"), {})
+    assert out.served is True
