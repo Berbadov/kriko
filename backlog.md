@@ -89,10 +89,20 @@ car-shaped format, not to inform: no engine/fuel/displacement, wear measured in
 `charge_cycles`/`usage_hours`, and one product with zero relations. Rebuild it
 from real sources once the researcher interface lands in Phase 5.
 
-### B31 — Phase 3: generic lookup `[G6]`
-One path replaces `matcher.py` + `resolver.py`, matching on attribute overlap
-rather than `subject_id` equality so differently-hashed subjects still union.
-Read-time trust, `evidence.stance='refutes'` halves rank.
+### B31 — Phase 3: generic lookup `[G6]` **(LANDED 2026-08-26)**
+`kriko/lookup/{conditions,match,rank,query}.py` + 52 tests. Replaces
+`matcher.py` (226) + `resolver.py` (650) with no car knowledge in either.
+Read-time trust; `stance='refutes'` halves rank and shows the rebuttal.
+
+The condition evaluator answers in **three** states, not two: `met`, `unmet`,
+`unknown`. Unknown is where an engine starts lying — an unstated mileage makes a
+"fails after 150k" claim neither true nor false, so it is served and downranked
+with the reason attached, per the fail-open rule in G5.
+
+`test_packs_that_disagree_on_identity_keys_still_both_answer` covers the design's
+riskiest property (two authors, different identity keys, different hashes, must
+still union). `test_core_is_domain_free.py` walks kriko/'s AST for car vocabulary
+in executable positions and carries its own negative test.
 
 ### B32 — Phase 4: cars pack + parity `[G6]`
 Export the 29 YAMLs; `status` becomes rank (verified 1.0, review/held 0.6,
