@@ -1,17 +1,16 @@
 """default_aftertreatment — one rule, shared by the generator and the ETL.
 
-This existed as two implementations that had drifted: backend/sync.py's copy
-was the tested one but was never called, and write_variants.py's copy was the
-one that actually ran. The bug that combination hid is locked below.
+This existed as three implementations that had drifted: the ETL's copy was the
+tested one but was never called, and write_variants.py's copy was the one that
+actually ran. The ETL is gone with backend/; the rule it shared survives here,
+and the generator must still be the same object rather than a lookalike.
 """
-from backend.sync import _default_aftertreatment as sync_impl
 from knowledge.catalog.emissions import default_aftertreatment
 from knowledge.catalog.write_variants import _default_aftertreatment as gen_impl
 
 
 def test_generator_and_etl_share_one_implementation():
     """The drift is structurally impossible now, not merely fixed."""
-    assert sync_impl is default_aftertreatment
     assert gen_impl is default_aftertreatment
 
 

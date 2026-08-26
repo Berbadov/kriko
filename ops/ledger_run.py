@@ -19,7 +19,7 @@ from knowledge.ledger import (
 from knowledge.ledger.costs import Budget, BudgetExceeded, log_stage
 
 _CACHE_DIR = Path(__file__).parent.parent / "cache"
-_CLAIMS_DIR = Path(__file__).parent.parent.parent / "backend" / "data" / "claims"
+_CLAIMS_DIR = Path(__file__).parent.parent.parent / "packs" / "cars" / "data" / "claims"
 _EXPORT_DIR = Path(__file__).parent.parent / "ledger_export"
 
 
@@ -81,7 +81,7 @@ def main(argv=None) -> int:
     p.add_argument("--import-only", action="store_true",
                    help="verdict: deterministic import verdicts only ($0, no LLM)")
     p.add_argument("--export-dir", default=str(_EXPORT_DIR))
-    p.add_argument("--data-dir", default=str(Path(__file__).parent.parent.parent / "backend" / "data"),
+    p.add_argument("--data-dir", default=str(Path(__file__).parent.parent.parent / "packs" / "cars" / "data"),
                    help="catalog root with variants/, fitment/, parts/ (remediate)")
     # acquire-stage flags (no LLM — discovery/fetch only)
     p.add_argument("--part", help="part id to acquire sources for (e.g. dw5)")
@@ -109,7 +109,7 @@ def main(argv=None) -> int:
             import yaml as _yaml
             from pathlib import Path as _Path
             for f in (_Path(__file__).parent.parent.parent
-                      / "backend" / "data" / "parts").rglob(f"{args.part}.yaml"):
+                      / "packs" / "cars" / "data" / "parts").rglob(f"{args.part}.yaml"):
                 part_type = (_yaml.safe_load(f.read_text()) or {}).get("part_type")
                 break
         if not part_type:

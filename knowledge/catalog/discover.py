@@ -45,8 +45,8 @@ load_dotenv()
 log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-FITMENT_DIR = REPO_ROOT / "backend" / "data" / "fitment"
-VARIANTS_DIR = REPO_ROOT / "backend" / "data" / "variants"
+FITMENT_DIR = REPO_ROOT / "packs" / "cars" / "data" / "fitment"
+VARIANTS_DIR = REPO_ROOT / "packs" / "cars" / "data" / "variants"
 CACHE_DIR = Path(__file__).parent / "cache"
 
 _HEADERS = {"User-Agent": "KrikoBot/1.0 (automotive reliability research; +https://github.com/kriko)"}
@@ -557,7 +557,7 @@ def discover(
 def write_variants_yaml(
     make: str, model: str, catalog: ModelCatalog, dry_run: bool = False
 ) -> list[dict]:
-    """Scaffold backend/data/variants/{make}_{model}.yaml from discovered engine
+    """Scaffold packs/cars/data/variants/{make}_{model}.yaml from discovered engine
     codes and transmissions — closes docs/USAGE.md's onboarding Step 1, the one
     fully-manual step left in the 4-step flow (Step 3, fitment, already had an
     automated path via write_fitment_yaml() above; this is its counterpart).
@@ -567,7 +567,7 @@ def write_variants_yaml(
     inventing one here would be exactly the kind of fabricated car data this
     whole initiative exists to reduce (see CLAUDE.md, knowledge/extract.py).
     So every row is written with power_min_hp/power_max_hp/year_to left
-    unset and a `draft: true` marker; backend/sync.py refuses to sync draft
+    unset and a `draft: true` marker; the pack builder refuses to build draft
     rows into the servable DB. A human fills in real figures (manufacturer
     spec sheet, TecDoc) and removes the marker before this feeds the pipeline.
 
@@ -670,7 +670,7 @@ def main() -> None:
         description=(
             "Discover engine/transmission codes for a car model from Wikipedia infoboxes.\n"
             "The model key must match the variants YAML filename: renault_megane_4 → "
-            "backend/data/variants/renault_megane_4.yaml"
+            "packs/cars/data/variants/renault_megane_4.yaml"
         )
     )
     parser.add_argument("--make", required=True, help="Make (e.g. renault, volkswagen)")

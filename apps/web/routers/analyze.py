@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from apps.web.deps import get_store
+from apps.web.observability import log_analysis_jsonl
 from kriko.adapters import adapt, adapter_for, load_adapters
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
@@ -50,7 +51,8 @@ def analyze(body: ScrapeRequest, store=Depends(get_store)):
     result = lookup(store, Query(kind=mapped.kind, identity=mapped.identity,
                                  context=mapped.context, lang=body.lang,
                                  limit=body.limit))
-    return {
+
+    payload = {
         "adapter": mapped.adapter_id,
         "identity": mapped.identity,
         "context": mapped.context,
@@ -70,3 +72,17 @@ def analyze(body: ScrapeRequest, store=Depends(get_store)):
                          "stance": s.stance, "tier": s.tier} for s in c.sources],
         } for c in result.claims],
     }
+
+    # Best-effort, and deliberately after the answer is assembled: a failure to
+    # write the log must never cost the reader their result. This log is where
+    # the demand signal and the next parity corpus come from.
+    log_analysis_jsonl({
+        "url": body.url, "adapter": mapped.adapter_id,
+        "identity": mapped.identity, "context": mapped.context,
+        "unmapped_labels": list(mapped.unmapped),
+        "method": result.resolution.method, "coverage": result.coverage,
+        "flags": list(result.resolution.flags),
+        "subjects": list(result.resolution.subject_ids),
+        "claim_titles": [c.title for c in result.claims],
+    })
+    return payload

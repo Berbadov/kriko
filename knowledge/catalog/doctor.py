@@ -39,7 +39,7 @@ from knowledge.catalog import identity
 from knowledge.catalog.write_variants import build_fitment_rows
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = REPO_ROOT / "backend" / "data"
+DATA_DIR = REPO_ROOT / "packs" / "cars" / "data"
 
 CODE_FIELDS = ("engine_family", "transmission_code", "electrical_code",
                "body_code")

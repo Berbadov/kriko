@@ -8,9 +8,9 @@ so this script reads the legacy shapes directly and writes the same rows.
 
 What it converts:
 
-    backend/data/variants/*.yaml      -> subjects(kind=product) + attributes
-    backend/data/parts/**/*.yaml      -> subjects(kind=part) + claims + evidence
-    backend/data/fitment/*.yaml       -> relations(part_of)
+    packs/cars/data/variants/*.yaml   -> subjects(kind=product) + attributes
+    packs/cars/data/parts/**/*.yaml   -> subjects(kind=part) + claims + evidence
+    packs/cars/data/fitment/*.yaml    -> relations(part_of)
     knowledge/catalog/components.yaml -> claim component/subsystem/detection
     knowledge/catalog/source_tiers.yaml -> source_tiers + tier_trust
 
@@ -45,8 +45,13 @@ from kriko.store.db import SCHEMA_VERSION, connect
 
 REPO = Path(__file__).resolve().parent.parent.parent
 PACK_ROOT = Path(__file__).resolve().parent
-DATA = REPO / "backend" / "data"
-CATALOG = REPO / "knowledge" / "catalog"
+
+# The car data lives in the pack now. It arrived here from backend/data/ and
+# knowledge/catalog/ unchanged — the golden parity record was re-verified
+# across the move, so the relocation is provably lossless.
+DATA = PACK_ROOT / "data"
+CATALOG = PACK_ROOT / "vocabulary"
+TRUST = PACK_ROOT / "trust"
 
 # Codes that name a shape rather than a part. "manual" is not a gearbox anyone
 # publishes failures about, and there is no part YAML for it.
@@ -290,7 +295,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
     components = {c["id"]: c for c in
                   (_yaml(CATALOG / "components.yaml", {}) or {}).get("components", [])}
-    tier_cfg = _yaml(CATALOG / "source_tiers.yaml", {}) or {}
+    tier_cfg = _yaml(TRUST / "source_tiers.yaml", {}) or {}
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists():

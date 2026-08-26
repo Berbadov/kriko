@@ -128,7 +128,7 @@ def test_gates_do_not_reject_the_bulk_of_the_existing_catalog():
     import yaml
 
     total = rejected = 0
-    parts = pathlib.Path(__file__).resolve().parents[2] / "backend" / "data" / "parts"
+    parts = pathlib.Path(__file__).resolve().parents[2] / "packs" / "cars" / "data" / "parts"
     for path in parts.rglob("*.yaml"):
         data = yaml.safe_load(path.read_text()) or {}
         for claim in data.get("claims") or []:

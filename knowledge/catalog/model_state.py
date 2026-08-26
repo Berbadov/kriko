@@ -15,7 +15,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = REPO_ROOT / "backend" / "data"
+DATA_DIR = REPO_ROOT / "packs" / "cars" / "data"
 
 # The variant columns that name a part to research — the same axes the fitment
 # file projects, so the work list follows the catalog instead of a list someone

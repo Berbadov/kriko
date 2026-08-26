@@ -223,7 +223,7 @@ def explain_only_old(conn, existing_dirs: list[Path], export_dir: Path) -> str:
 if __name__ == "__main__":
     import sys
     root = Path(__file__).parent.parent.parent
-    existing = [root / "backend" / "data" / "claims", root / "backend" / "data" / "parts"]
+    existing = [root / "packs" / "cars" / "data" / "claims", root / "packs" / "cars" / "data" / "parts"]
     export_dir = (Path(sys.argv[1]) if len(sys.argv) > 1 and not sys.argv[1].startswith("--")
                   else Path(__file__).parent.parent / "ledger_export")
     print(compare(existing, export_dir))

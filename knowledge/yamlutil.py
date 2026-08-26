@@ -1,6 +1,6 @@
 """Small shared helpers for reading YAML files at C speed (libyaml when present).
 
-The catalog YAML (backend/data/parts/**) is parsed on hot paths — the hub's
+The catalog YAML (packs/cars/data/parts/**) is parsed on hot paths — the hub's
 state poll and stoplist derivation in stoplists.py. Using CSafeLoader instead
 of the pure-Python safe_load is ~13x faster and never changes the parsed
 value, only the speed. Callers needing the "empty mapping on rougher input"
