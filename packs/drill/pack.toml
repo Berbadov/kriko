@@ -1,0 +1,23 @@
+[pack]
+id = "org.kriko.drill"
+name = "Cordless drills (example)"
+version = "0.1.0"
+license = "CC0-1.0"
+publisher = "kriko"
+origin = "https://github.com/kriko/kriko"
+
+# Every quote in this pack is synthetic and every URL points at the reserved
+# example.invalid domain. See README.md — this exists to falsify the pack
+# format, not to inform anyone about drills.
+synthetic = true
+
+# What makes a subject distinct, per kind. This is the pack's most consequential
+# declaration: it decides which of its rows can ever merge with another pack's.
+#
+# Note `product` needs no engine code, no fuel and no displacement, and
+# `battery_platform` is identified by a single key. Neither shape was
+# expressible in the old car-shaped `variants` table.
+[identity]
+product = ["brand", "model"]
+battery_platform = ["brand", "platform"]
+component = ["brand", "component"]

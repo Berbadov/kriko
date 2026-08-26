@@ -77,10 +77,17 @@ own row with the same content hash — otherwise uninstalling one pack would
 delete a fact the other still asserts. Dedup is a read-time `GROUP BY` on the
 agreeing hash, never a storage-time merge.
 
-### B30 — Phase 2: pack format and the drill pack `[G6]`
-Build the *non-car* pack first — it is cheap and it is the only thing that
-falsifies a car-shaped format. `content_digest` hashes sorted row ids, never zip
-bytes.
+### B30 — Phase 2: pack format and the drill pack `[G6]` **(LANDED 2026-08-26)**
+`kriko/pack/{manifest,build}.py` + `packs/drill/` + 24 tests. Authoring a pack is
+data-only: YAML in, SQLite out, no Python. The builder validates strictly — a
+claim pointing at a nonexistent subject, or an attribute using an undeclared
+term, fails the build rather than shipping a row nobody would see.
+
+The drill pack is deliberately **synthetic** (`synthetic = true`, every URL on
+the reserved `example.invalid` domain, pinned by a test). It exists to falsify a
+car-shaped format, not to inform: no engine/fuel/displacement, wear measured in
+`charge_cycles`/`usage_hours`, and one product with zero relations. Rebuild it
+from real sources once the researcher interface lands in Phase 5.
 
 ### B31 — Phase 3: generic lookup `[G6]`
 One path replaces `matcher.py` + `resolver.py`, matching on attribute overlap
