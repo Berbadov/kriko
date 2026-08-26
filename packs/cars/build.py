@@ -515,6 +515,27 @@ def build(out_path: Path) -> tuple[Path, dict]:
                     row_ids.append(relation_id)
                     stats["relations"] += 1
 
+        # ── research assets ──────────────────────────────────────────────
+        # The value principle used to be a string literal inside
+        # knowledge/ledger/verdict.py, which meant the question "what is worth
+        # keeping?" was answered once, in Python, for every product Kriko would
+        # ever know about. It belongs to the category.
+        for name, kind in (("research/principle.md", "principle"),
+                           ("research/templates.yaml", "templates")):
+            path = PACK_ROOT / name
+            if path.exists():
+                conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                             (pack_id, name, kind, path.read_text(encoding="utf-8")))
+                row_ids.append(f"asset:{name}")
+                stats["assets"] += 1
+
+        for path in sorted((PACK_ROOT / "adapters").glob("*.json")):
+            conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                         (pack_id, f"adapters/{path.name}", "adapter",
+                          path.read_text(encoding="utf-8")))
+            row_ids.append(f"asset:adapters/{path.name}")
+            stats["assets"] += 1
+
         # ── source tiers ─────────────────────────────────────────────────
         for tier, cfg in (tier_cfg.get("tiers") or {}).items():
             conn.execute("INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",

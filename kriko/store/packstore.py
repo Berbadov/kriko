@@ -35,6 +35,7 @@ PACK_TABLES = (
     "terms",
     "source_tiers",
     "tier_trust",
+    "pack_assets",
     "packs",
 )
 

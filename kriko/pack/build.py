@@ -224,6 +224,22 @@ def build(root, out_path) -> Path:
                      1 if ev.get("independent", True) else 0))
                 row_ids.append(evidence_id)
 
+        # Non-tabular assets: whatever the pack ships that is text rather than
+        # rows. Read in sorted order so the digest is stable.
+        for name, kind in (("research/principle.md", "principle"),
+                           ("research/templates.yaml", "templates")):
+            path = root / name
+            if path.exists():
+                conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                             (pack_id, name, kind, path.read_text(encoding="utf-8")))
+                row_ids.append(f"asset:{name}")
+
+        for path in sorted((root / "adapters").glob("*.json")):
+            conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                         (pack_id, f"adapters/{path.name}", "adapter",
+                          path.read_text(encoding="utf-8")))
+            row_ids.append(f"asset:adapters/{path.name}")
+
         for row in _load_yaml(root / "trust" / "source_tiers.yaml", []):
             conn.execute(
                 "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",

@@ -1,0 +1,11 @@
+# Search templates. `{label}`, `{alias}` and any identity key are substituted.
+#
+# This replaces knowledge/parts/search_templates.py — 300 lines of Python whose
+# query shapes were car-specific but whose machinery was not.
+- "{alias} common problems"
+- "{alias} known issues high mileage"
+- "{alias} arıza şikayet"
+- "{alias} yaygın arızalar"
+- "{label} failure symptoms"
+- "{alias} reliability problems forum"
+- "{alias} technical service bulletin"
