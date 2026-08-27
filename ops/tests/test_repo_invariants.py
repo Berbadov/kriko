@@ -133,3 +133,57 @@ def test_pytest_testpaths_covers_every_test_directory():
         f"package(s) with tests missing from pytest.ini testpaths: {missing}. "
         "Their tests are not running."
     )
+
+
+# ── every shipped pack must actually build ───────────────────────────────
+
+def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
+    """A pack that cannot be built is a pack nobody can install.
+
+    This exists because `packs/cars` spent a commit in exactly that state:
+    Phase 6a moved `trust/source_tiers.yaml` in from the deleted `backend/`
+    unchanged, the builder expected a different shape, and nothing noticed —
+    the parity and lookup suites all run against fixtures they build
+    themselves, so the one pack that actually ships was the one pack never
+    built in CI.
+
+    The emptiness check is the second half, and it is not belt-and-braces. A
+    pack may ship its own builder (`packs/<name>/build.py`) when its data
+    needs generating rather than transcribing; pointing the generic builder at
+    such a pack succeeds and produces a pack with nothing in it. "It built" is
+    therefore not the property worth asserting — "it answers" is.
+
+    Per the generalization principle this is the mechanism, not a fix for
+    cars: a third-party pack added tomorrow is covered with nothing to
+    register.
+    """
+    import importlib
+    from pathlib import Path
+
+    from kriko.pack import build
+    from kriko.store.db import connect
+
+    roots = sorted(p.parent for p in Path("packs").glob("*/pack.toml"))
+    assert roots, "no packs found — the glob is wrong, not the repo"
+
+    for root in roots:
+        out_path = tmp_path / f"{root.name}.kpack"
+        own_builder = (root / "build.py").exists()
+        if own_builder:
+            module = importlib.import_module(f"packs.{root.name}.build")
+            out = module.build(out_path)
+            out = out[0] if isinstance(out, tuple) else out
+        else:
+            out = build.build(root, out_path)
+
+        assert out.exists(), f"{root} produced no pack file"
+        conn = connect(out)
+        subjects = conn.execute(
+            "SELECT COUNT(*) AS n FROM subjects").fetchone()["n"]
+        claims = conn.execute(
+            "SELECT COUNT(*) AS n FROM claims").fetchone()["n"]
+        conn.close()
+        assert subjects and claims, (
+            f"{root} built empty ({subjects} subjects, {claims} claims)"
+            + (" — its own build.py ran" if own_builder else
+               " — it has no build.py, so the generic builder ran"))

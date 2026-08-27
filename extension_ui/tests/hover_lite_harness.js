@@ -9,13 +9,17 @@ const { JSDOM } = require("jsdom");
 
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
 
-function loadPanel() {
-  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", {
-    url: "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
-  });
+function loadPanel({
+  url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
+  analyzeResponse = { ok: false },
+} = {}) {
+  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
 
   const runtimeListeners = [];
   const storageListeners = [];
+  // Every message the panel sent to the service worker — the panel's half of
+  // the messaging contract, which Phase 6c renamed.
+  const sent = [];
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
@@ -29,7 +33,11 @@ function loadPanel() {
     chrome: {
       runtime: {
         onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
-        sendMessage() {},
+        sendMessage(message, callback) {
+          sent.push(message);
+          if (typeof callback !== "function") return;
+          callback(message.type === "ANALYZE" ? analyzeResponse : { ok: false });
+        },
         getURL: (p) => p,
       },
       storage: {
@@ -56,12 +64,36 @@ function loadPanel() {
     for (const fn of storageListeners) fn({ [key]: { newValue: entry } }, "session");
   }
 
+  function shadow() {
+    const host = dom.window.document.querySelector("kriko-panel-host");
+    return host && host.shadowRoot ? host.shadowRoot : null;
+  }
+
+  function listing() {
+    const root = shadow();
+    return root ? root.querySelector(".lite-listing") : null;
+  }
+
+  function errorText() {
+    const root = shadow();
+    const el = root && root.querySelector(".lite-error");
+    return el ? el.textContent.trim() : null;
+  }
+
   function footer() {
     const host = dom.window.document.querySelector("kriko-panel-host");
     return host && host.shadowRoot ? host.shadowRoot.querySelector(".lite-footer") : null;
   }
 
-  return { dom, openPanel, deliverEntry, footer };
+  // The panel keeps its pipeline stage on the host element so a test can read
+  // it without reaching into the closure.
+  function pipeline() {
+    const host = dom.window.document.querySelector("kriko-panel-host");
+    return host ? host.dataset.pipeline : null;
+  }
+
+  return { dom, openPanel, deliverEntry, footer, listing, shadow, sent,
+           errorText, pipeline };
 }
 
 module.exports = { loadPanel };

@@ -36,8 +36,9 @@ TERMS = """
 # A pack ships its own view of which domains are trustworthy. The engine holds
 # only fallback weights per tier, so trust is revisable by installing data.
 TIERS = """
-- {domain: maker.example.com, tier: manufacturer}
-- {domain: forum.example.org, tier: forum_ugc}
+domains:
+  maker.example.com: {tier: manufacturer}
+  forum.example.org: {tier: forum_ugc}
 """
 
 

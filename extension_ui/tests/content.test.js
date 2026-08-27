@@ -1,6 +1,16 @@
-// Scraper regression tests. The listing scraper had no tests, which is exactly
-// why a label change could silently zero out a required field: the extension
-// still "worked", the backend just answered "Missing required fields".
+// The scraper's job, after Phase 6c: report what the page says, and interpret
+// nothing.
+//
+// Everything this file used to assert — that "Yakıt" means fuel, that "Seri"
+// holds the model and "Model" the trim, that "110 hp" under "Engine Capacity"
+// is not a displacement — is now the cars pack's business, tested in
+// `kriko/tests/test_adapters.py`. What is left here is the part only a browser
+// can do: find label/value pairs in markup that changes without notice.
+//
+// The split matters because of how this used to fail. A Sahibinden redesign
+// would zero every field, the extension would go on reporting success, and the
+// only symptom was the server answering "Missing required fields". Keeping the
+// meaning server-side means a site change is a pack edit, not a release.
 const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
@@ -11,130 +21,146 @@ const { loadContentScript } = require("./harness.js");
 const fixture = (name) =>
   fs.readFileSync(path.join(__dirname, "fixtures", name), "utf8");
 
-// ── Classic markup: <ul class="classifiedInfoList"> ──────────────────────────
+// The labels the server hands down from the installed pack's adapter. The
+// content script has no vocabulary of its own — that is the point.
+const PACK_LABELS = [
+  "marka", "make", "brand", "seri", "series", "yıl", "yil", "year",
+  "yakıt", "yakit", "fuel", "vites", "gear", "kilometre", "km",
+  "motor hacmi", "engine capacity", "motor gücü", "engine power",
+  "renk", "color", "model", "trim", "kasa tipi", "body type",
+];
 
-test("classic info list: every field the matcher requires is extracted", () => {
+// ── the page's own labels, uninterpreted ────────────────────────────────
+
+test("classic info list: labels and values are reported exactly as written", () => {
   const s = loadContentScript(fixture("sahibinden_classic.html"));
-  const m = s.buildMetadata();
+  const { fields } = s.buildScrape(PACK_LABELS);
 
-  assert.equal(m.make, "Volkswagen");
-  assert.equal(m.model, "Golf");
-  assert.equal(m.year, 2014);
-  // Regression: the info-list label is bare "Yakıt", not "Yakıt Tipi". The
-  // mapping only carried "yakıt tipi", so fuel_type came back null and the
-  // backend rejected the listing with Missing required fields: ['fuel'].
-  assert.equal(m.fuel_type, "Dizel");
-  assert.equal(m.transmission, "Otomatik");
-  assert.equal(m.engine_volume_cc, 1598);
-  assert.equal(m.power_hp, 105);
-  assert.equal(m.mileage_km, 190000);
+  assert.equal(fields["Marka"], "Volkswagen");
+  assert.equal(fields["Seri"], "Golf");
+  assert.equal(fields["Yıl"], "2014");
+  assert.equal(fields["Yakıt"], "Dizel");
+  assert.equal(fields["Vites"], "Otomatik");
+  assert.equal(fields["Kilometre"], "190.000");
 });
 
-test("'Yakıt Tipi' (technical-details spelling) still maps to fuel_type", () => {
-  const s = loadContentScript(`
-    <h1>2014 Volkswagen Golf</h1>
-    <ul class="classifiedInfoList">
-      <li><strong>Yakıt Tipi</strong><span>Benzin</span></li>
-    </ul>`);
-  assert.equal(s.buildMetadata().fuel_type, "Benzin");
-});
-
-test("'Yakıt Tüketimi' / 'Yakıt Deposu' are NOT mistaken for the fuel type", () => {
-  // A bare "yakıt" substring match would otherwise capture consumption/tank
-  // size and hand the matcher garbage like "4,5 lt" as a fuel.
+test("a label the pack considers noise is still reported, not filtered here", () => {
+  // "Yakıt Tüketimi" is a near-miss for the fuel rule, and dropping it is the
+  // adapter's call. A client-side filter would put that decision in the one
+  // place that cannot be changed without shipping a new extension.
   const s = loadContentScript(`
     <h1>2014 Volkswagen Golf</h1>
     <ul class="classifiedInfoList">
       <li><strong>Yakıt Tüketimi</strong><span>4,5 lt</span></li>
-      <li><strong>Yakıt Deposu</strong><span>50 lt</span></li>
     </ul>`);
-  assert.equal(s.buildMetadata().fuel_type, null);
+  assert.equal(s.buildScrape(PACK_LABELS).fields["Yakıt Tüketimi"], "4,5 lt");
 });
 
-// ── Resilience: the info list is the single point of failure ─────────────────
+test("english locale is not a special case — the labels are just different", () => {
+  const s = loadContentScript(fixture("sahibinden_english.html"));
+  const { fields } = s.buildScrape(PACK_LABELS);
 
-test("year falls back to the title when the info list cannot be read", () => {
-  // The live failure: a DOM the info-list selectors don't match. make/model
-  // already fall back to the title; year did not, so it came back null and the
-  // backend rejected the listing with Missing required fields: ['year'].
-  const s = loadContentScript(`
-    <h1 class="classifiedTitle">2014 Volkswagen Golf 1.6 TDI Comfortline</h1>
-    <div class="some-new-layout">nothing the selectors know</div>`);
-  const m = s.buildMetadata();
-  assert.equal(m.make, "Volkswagen");
-  assert.equal(m.model, "Golf");
-  assert.equal(m.year, 2014);
+  assert.equal(fields["Make"], "Volkswagen");
+  assert.equal(fields["Series"], "Golf");
+  assert.equal(fields["Year"], "2016");
+  assert.equal(fields["KM"], "132.000");
 });
 
-test("a title with no year does not invent one", () => {
-  const s = loadContentScript(`<h1>Volkswagen Golf 1.6 TDI</h1>`);
-  assert.equal(s.buildMetadata().year, null);
+test("the technical panel is merged in without overwriting the info list", () => {
+  const s = loadContentScript(fixture("sahibinden_english.html"));
+  const { fields } = s.buildScrape(PACK_LABELS);
+
+  assert.equal(fields["Transmission / Drive Type"],
+               "DSG / 7 Gear / Front Wheel Drive");
+  // Sahibinden's own bug: "Engine Capacity" labels the power row in one table
+  // and the real capacity in another. The scraper keeps the first and lets the
+  // adapter's range bound decide — it does not guess here.
+  assert.ok(fields["Engine Capacity"]);
 });
 
-test("a number in the title that is not a plausible model year is ignored", () => {
-  const s = loadContentScript(`<h1>Volkswagen Golf 1.6 TDI 190.000 km</h1>`);
-  assert.equal(s.buildMetadata().year, null);
-});
+// ── surviving a redesign ────────────────────────────────────────────────
 
-// ── Layout-agnostic fallback ────────────────────────────────────────────────
-
-test("labels are still found when the info list uses an unknown container", () => {
-  // Sahibinden has redesigned this markup repeatedly. When no known selector
-  // matches, fall back to scanning for the known Turkish labels themselves, so
-  // a class rename degrades gracefully instead of zeroing every field.
+test("labels are found by text when no known container selector matches", () => {
   const s = loadContentScript(`
     <h1>2014 Volkswagen Golf 1.6 TDI</h1>
     <div class="brand-new-info-wrapper">
       <div class="row"><span>Yıl</span><span>2014</span></div>
       <div class="row"><span>Yakıt</span><span>Dizel</span></div>
-      <div class="row"><span>Vites</span><span>Otomatik</span></div>
       <div class="row"><span>Kilometre</span><span>190.000</span></div>
     </div>`);
-  const m = s.buildMetadata();
-  assert.equal(m.year, 2014);
-  assert.equal(m.fuel_type, "Dizel");
-  assert.equal(m.transmission, "Otomatik");
-  assert.equal(m.mileage_km, 190000);
+  const { fields } = s.buildScrape(PACK_LABELS);
+  assert.equal(fields["Yıl"], "2014");
+  assert.equal(fields["Yakıt"], "Dizel");
+  assert.equal(fields["Kilometre"], "190.000");
 });
 
-// ── English locale (the live failure) ───────────────────────────────────────
+test("the text scan looks only for labels the server supplied", () => {
+  // No built-in list. If the pack does not know a label, the scraper does not
+  // hunt for it — which is what makes the pack the single source of truth.
+  const s = loadContentScript(`
+    <div class="row"><span>Yıl</span><span>2014</span></div>`);
+  assert.deepEqual(s.buildScrape([]).fields, {});
+  assert.equal(s.buildScrape(["yıl"]).fields["Yıl"], "2014");
+});
+
+// ── what goes on the wire ───────────────────────────────────────────────
+
+test("the scrape carries the url, the title and the description", () => {
+  const s = loadContentScript(`
+    <h1 class="classifiedTitle">2014 Volkswagen Golf 1.6 TDI</h1>
+    <div id="classifiedDescription">Bakımlı araç.</div>`);
+  const scrape = s.buildScrape(PACK_LABELS);
+  assert.match(scrape.url, /sahibinden\.com/);
+  assert.equal(scrape.title, "2014 Volkswagen Golf 1.6 TDI");
+  assert.equal(scrape.description, "Bakımlı araç.");
+});
+
+test("damage and equipment stay local and never enter the posted fields", () => {
+  // The panel renders these; the engine has no rule for them. Sending them
+  // would put listing-specific personal-ish detail on the wire for nothing.
+  const s = loadContentScript(fixture("sahibinden_classic.html"));
+  const scrape = s.buildScrape(PACK_LABELS);
+  assert.ok(scrape.listing);
+  assert.ok(scrape.listing.damage_info);
+  assert.ok(scrape.listing.equipment);
+  assert.ok(!("damage_info" in scrape.fields));
+  assert.ok(!("equipment" in scrape.fields));
+});
+
+test("the scraper reports no identity of its own", () => {
+  // A regression guard for the whole point of Phase 6c: if `make`, `year` or
+  // `fuel_type` reappear on the scrape, the interpretation has crept back into
+  // the client and the pack has stopped being the source of truth.
+  const s = loadContentScript(fixture("sahibinden_classic.html"));
+  const scrape = s.buildScrape(PACK_LABELS);
+  for (const key of ["make", "model", "year", "fuel_type", "transmission",
+                     "engine_volume_cc", "power_hp", "mileage_km"]) {
+    assert.ok(!(key in scrape), `scrape must not interpret ${key}`);
+  }
+});
+
+// ── the two ends must fold labels identically ───────────────────────────
 //
-// Sahibinden serves the listing in English for some users: the info-list labels
-// are "Make"/"Series"/"Year"/"Fuel Type"/"Gear"/"KM", not the Turkish ones the
-// scraper knew. Every label missed, the info list read as empty, and the backend
-// answered "Missing required fields: ['make', 'fuel']". Fixture is a real
-// captured page.
+// The server hands down labels it has already reduced: lowercased, with
+// combining marks stripped, so a pack author writes "motor gucu" once instead
+// of enumerating every accented spelling. If this end folds differently the
+// scan silently finds nothing — the exact failure mode the label scan exists
+// to prevent, reintroduced by a mismatch nobody would think to look for.
 
-test("english locale: every field the matcher requires is extracted", () => {
-  const s = loadContentScript(fixture("sahibinden_english.html"));
-  const m = s.buildMetadata();
-
-  assert.equal(m.make, "Volkswagen");
-  assert.equal(m.model, "Golf");        // "Series" holds the model name
-  assert.equal(m.trim, "1.2 TSI Comfortline");  // "Model" holds the trim
-  assert.equal(m.year, 2016);
-  assert.equal(m.fuel_type, "Gasoline");
-  // The technical panel's "Transmission / Drive Type" ("DSG / 7 Gear / Front
-  // Wheel Drive") wins over the info list's "Gear: Automatic" — deliberately:
-  // it names the actual gearbox family, and normalize_transmission maps DSG to
-  // automatic anyway. The drive type is the LAST segment, not the second.
-  assert.equal(m.transmission, "DSG");
-  assert.equal(m.drivetrain, "Front Wheel Drive");
-  assert.equal(m.mileage_km, 132000);           // label is "KM"
-  assert.equal(m.power_hp, 110);
-  assert.equal(m.engine_volume_cc, 1197);
+test("an accented label on the page matches the server's folded spelling", () => {
+  const s = loadContentScript(`
+    <div class="row"><span>Motor Gücü</span><span>110 hp</span></div>`);
+  assert.equal(s.buildScrape(["motor gucu"]).fields["Motor Gücü"], "110 hp");
 });
 
-test("english locale: 'Engine Capacity' reading '110 hp' is not taken as cc", () => {
-  // Sahibinden's own bug: the Overview table labels the POWER row
-  // "Engine Capacity" (110 hp), while the real capacity (1197 cc) is in the
-  // Engine and Performance table under the same label. Taking the first hit
-  // would send the matcher engine_volume_cc=110 and match nothing.
-  const s = loadContentScript(fixture("sahibinden_english.html"));
-  assert.equal(s.buildMetadata().engine_volume_cc, 1197);
+test("Turkish dotted capital İ folds the same way the server folds it", () => {
+  const s = loadContentScript(`
+    <div class="row"><span>İlan No</span><span>1326798939</span></div>`);
+  assert.equal(s.buildScrape(["ilan no"]).fields["İlan No"], "1326798939");
 });
 
-test("english locale: 'Fuel Consumption' is not mistaken for the fuel type", () => {
-  const s = loadContentScript(fixture("sahibinden_english.html"));
-  assert.equal(s.buildMetadata().fuel_type, "Gasoline");
+test("a trailing colon on the page's label does not defeat the match", () => {
+  const s = loadContentScript(`
+    <div class="row"><span>Yıl:</span><span>2014</span></div>`);
+  assert.equal(s.buildScrape(["yıl"]).fields["Yıl:"], "2014");
 });

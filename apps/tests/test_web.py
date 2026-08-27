@@ -7,6 +7,7 @@ not be tested without monkeypatching the module and two tests could not run
 against two stores. That coupling is what blocked backlog B28's router split.
 """
 
+import json
 import textwrap
 
 import pytest
@@ -67,6 +68,28 @@ PACK = {
 }
 
 
+#: A second pack's worth of site knowledge, in the format the browser plane
+#: consumes. Nothing here is category-specific to the engine — the labels and
+#: the vocabulary attribute are the pack author's words.
+ADAPTER = {
+    "id": "toolshop",
+    "site": "toolshop.invalid",
+    "subject_kind": "product",
+    "match": ["*toolshop.invalid/item/*"],
+    "identity": {
+        "brand": {"labels": ["brand", "marke"], "from": "title",
+                  "vocabulary": "brand"},
+        "model": {"labels": ["model no", "model"]},
+    },
+    "context": {
+        "usage_hours": {"labels": ["hours used"], "parse": "int_range",
+                        "min": 0, "max": 100000},
+        "free_text": {"from": "description"},
+    },
+    "ignore_labels": ["price", "colour", "hours until service"],
+}
+
+
 @pytest.fixture
 def client(tmp_path):
     root = tmp_path / "p"
@@ -81,6 +104,9 @@ def client(tmp_path):
         textwrap.dedent(PACK["claims"]), encoding="utf-8")
     (root / "research" / "principle.md").write_text("Only the expensive.", encoding="utf-8")
     (root / "research" / "templates.yaml").write_text('- "{alias} faults"\n', encoding="utf-8")
+    (root / "adapters").mkdir()
+    (root / "adapters" / "toolshop.json").write_text(
+        json.dumps(ADAPTER), encoding="utf-8")
 
     store_path = tmp_path / "store.sqlite"
     conn = connect(store_path)
@@ -215,3 +241,122 @@ def test_a_gap_is_a_subject_nothing_reaches_even_through_relations(client):
     """
     gaps = client.get("/api/packs/tools/gaps").json()
     assert [g["label"] for g in gaps] == ["Orphan Tool"]
+
+
+# ── the browser plane ────────────────────────────────────────────────────
+#
+# This endpoint is the extension's entire contract, and the one place where a
+# page the engine has never seen becomes a query. Nothing car-shaped appears
+# below: the site, the labels and the identity keys are all the pack's.
+
+def test_a_scraped_page_becomes_a_query_through_the_packs_adapter(client):
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "title": "Makita DHP484 combi drill",
+        "fields": {"Model No": "DHP484", "Hours Used": "900", "Price": "£129"},
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["adapter"] == "toolshop"
+    assert body["identity"] == {"brand": "makita", "model": "DHP484"}
+    assert body["context"]["usage_hours"] == 900
+    assert [c["title"] for c in body["claims"]] == [
+        "Cell imbalance trips protection"]
+
+
+def test_a_site_no_installed_pack_can_read_is_a_404_not_an_empty_answer(client):
+    """Silence would look identical to "this product has no known issues"."""
+    r = client.post("/api/analyze", json={
+        "url": "https://elsewhere.invalid/item/1", "fields": {}})
+    assert r.status_code == 404
+
+
+def test_the_adapters_endpoint_tells_the_client_where_it_is_worth_scraping(client):
+    rows = client.get("/api/adapters").json()
+    assert [a["id"] for a in rows] == ["toolshop"]
+    assert rows[0]["match"] == ["*toolshop.invalid/item/*"]
+
+
+def test_the_adapters_endpoint_hands_the_client_the_labels_to_look_for(client):
+    """The content script keeps no vocabulary of its own.
+
+    Its fallback scraper — the one that anchors on label *text* when the
+    page's markup has been redesigned out from under the selectors — needs to
+    know which labels are worth finding. That list is site knowledge, so it
+    comes down the wire from the pack rather than living in JavaScript where
+    a site change would mean shipping an extension release.
+    """
+    rows = client.get("/api/adapters").json()
+    assert set(rows[0]["labels"]) >= {"brand", "marke", "model no", "model",
+                                      "hours used"}
+    #: Ignored labels come too: the client must be able to *see* a label in
+    #: order to report it, and the server is what decides it means nothing.
+    assert "colour" in rows[0]["labels"]
+
+
+def test_a_label_no_rule_covers_is_reported_rather_than_silently_dropped(client):
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484", "Torque": "54 Nm"}})
+    assert r.json()["unmapped_labels"] == ["Torque"]
+
+
+def test_an_ignored_label_never_answers_for_a_rule_it_merely_resembles(client):
+    """"Hours Until Service" contains "hours" and is not usage."""
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484", "Hours Until Service": "12"}})
+    assert "usage_hours" not in r.json()["context"]
+
+
+def test_identity_is_read_from_the_title_when_the_page_has_no_label_for_it(client):
+    """The values come from the pack's own identity rows, so this works
+    without the engine ever being told what a brand is."""
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "title": "Makita DHP484 combi drill",
+        "fields": {"Model No": "DHP484"}})
+    assert r.json()["identity"]["brand"] == "makita"
+
+
+def test_a_page_that_resolves_nothing_says_so_instead_of_erroring(client):
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/unknown",
+        "fields": {"Model No": "NOPE"}})
+    assert r.status_code == 200
+    assert r.json()["coverage"] == "NOT_MATCHED"
+    assert r.json()["claims"] == []
+
+
+def test_the_answer_names_the_packs_that_produced_it(client):
+    """Backlog B15's footer, re-pointed.
+
+    The panel has always named the build that answered, so that a stale deploy
+    was visible to anyone looking at it rather than silently serving pre-fix
+    behaviour. With no server to be stale, the thing a reader now needs to
+    identify is *whose knowledge* this is — and with several packs installed
+    and no central authority, that is not a detail. It is the answer's byline.
+    """
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484", "Hours Used": "900"}})
+    assert r.json()["packs"] == [{"pack_id": "tools", "version": "0.2.0"}]
+
+
+def test_a_page_with_no_claims_names_no_packs_rather_than_all_of_them(client):
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/x", "fields": {"Model No": "NOPE"}})
+    assert r.json()["packs"] == []
+
+
+def test_context_values_come_back_with_the_units_the_pack_declared(client):
+    """So the panel can render "900 hours" without knowing what hours are.
+
+    The alternative is a unit table in the extension, which is the same
+    hardcoded-list bug in a different language: correct until a pack measures
+    wear in charge cycles.
+    """
+    r = client.post("/api/analyze", json={
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484", "Hours Used": "900"}})
+    assert r.json()["context_units"] == {"usage_hours": "hours"}

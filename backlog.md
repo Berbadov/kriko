@@ -145,14 +145,59 @@ extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/
       `validate_part_yaml`, so moving them into `packs/cars/` creates a
       knowledge -> packs cycle. Two ways out, and they are a genuine fork —
       see HUMAN DECISION #8.
-- [ ] **Phase 6c — rewire the Chrome extension.** Phase 5d moved the *selectors*
-      into `packs/cars/adapters/sahibinden.json`, but the extension client was
-      never rewired: `background.js` still POSTs `{listing_url, ad_metadata}` to
-      `/analyze` on ports 8000/8765, while the app serves `/api/analyze` on 8787
-      and wants `{url, fields, title}`. ~2,300 lines of JS (background, content,
-      hover_lite panel) plus 14 jsdom tests are on the old protocol. The
-      extension is currently non-functional against the new app; the server side
-      of the contract is verified working end to end.
+- [x] **Phase 6c landed 2026-08-27** — the Chrome extension is on the new
+      protocol and the client keeps no site knowledge of its own.
+      `content.js` reports the page's own label/value pairs and interprets
+      nothing (697 -> 426 lines; `mapTurkishKeys`, `mapTechnicalDetails`,
+      `parseMakeModelFromTitle` and its hardcoded make list are gone);
+      `background.js` POSTs that to `/api/analyze` on 8787 and asks
+      `/api/adapters` which sites are worth scraping at all; the panel renders
+      the resolved identity rather than its own reading of the page. JS tests
+      14 -> 36, with `background.js` covered for the first time. Verified end
+      to end against the real cars pack: both captured fixtures resolve to a
+      full identity with **zero unmapped labels** and 8 ranked claims.
+
+      Five bugs the rewire found, each fixed as a mechanism:
+      - **`packs/cars` could not be built.** Phase 6a moved
+        `trust/source_tiers.yaml` in from `backend/` unchanged and the builder
+        expected a different shape; nothing noticed, because every suite built
+        its own fixture and the one pack that ships was never built in CI.
+        `test_every_pack_in_the_repo_builds_and_is_not_empty` is the mechanism
+        (it also catches the empty-build case, since a pack may ship its own
+        `build.py`), and an unreadable trust file is now a build error rather
+        than a pack that silently trusts nothing.
+      - **A near-miss label answered for a rule.** "Yakıt Tüketimi" contains
+        "yakıt", so consumption could be read as the fuel type. Labels now
+        match exact-before-loose, and `ignore_labels` is a real blocklist
+        rather than a reporting filter.
+      - **Turkish "İ" broke every accented label.** It casefolds to "i" plus a
+        combining dot, so `İlan No` never matched `ilan no` and the adapter
+        carried hand-kept transliterations. Both ends now strip combining
+        marks (letters, including "ı", are untouched).
+      - **The title fallback needed a make list.** Replaced by `vocabulary`:
+        an adapter rule says "find a known value of this attribute in the
+        title" and `kriko/` resolves it from the packs' own `is_identity`
+        rows — no list, in any language, and it works for a category nobody
+        has written yet.
+      - **The panel footer would have read "unknown" forever** (B15's
+        deploy-staleness guard, pointed at a `build` field the new payload has
+        no reason to carry). Re-pointed at what a reader now needs: which
+        pack, at which version, answered.
+
+      New adapter vocabulary, all closed and all interpreted server-side:
+      `from` (a labelled rule's text fallback), `vocabulary`, `segment`.
+      `/api/analyze` also returns `packs` and `context_units`; `/api/adapters`
+      returns `labels`.
+
+- [ ] **Phase 6c follow-up — the manifest is the last hardcoded site list.**
+      `extension_ui/manifest.json` still names `*.sahibinden.com` in
+      `content_scripts.matches` and `host_permissions`, so installing a pack
+      for a second listing site does nothing until someone edits it. Every
+      other layer is now adapter-driven. The fix is
+      `chrome.scripting.registerContentScripts` over the adapters' `site`
+      values, but MV3 cannot inject into a host it has no permission for, so
+      it needs `optional_host_permissions` plus a user grant — a UX decision,
+      not a mechanism gap, which is why it is filed rather than done.
 - [ ] Rewrite `docs/INTERNALS.md` and `docs/USAGE.md` (21 and 29 stale
       references), and close B5/B11/B14/B26/B28 as subsumed; re-file B19
       against the new core.
