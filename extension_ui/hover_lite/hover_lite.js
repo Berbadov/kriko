@@ -85,39 +85,61 @@
       .replace(/'/g, "&#39;");
   }
 
-  function deriveListingMeta(adMetadata) {
-    if (!adMetadata) return null;
-    // Equipment can arrive as array (older payloads) or { category: [features] }
-    // (current scraper). Normalize to a category map.
+  // What the panel puts above the risks. Two sources, and the split is the
+  // point of Phase 6c:
+  //
+  //   `entry.result`  — what the ENGINE understood. Rendering this rather than
+  //                     the page's own words makes the header double as the
+  //                     answer to "did it understand this car?", which is the
+  //                     question a reader actually has when the risks look
+  //                     wrong. A header echoing the page can never say that.
+  //   `entry.listing` — the damage and equipment panels, scraped locally and
+  //                     never sent anywhere, because the engine has no rule
+  //                     for them.
+  //
+  // Nothing below names a car attribute. The identity keys, the context keys
+  // and the units are all whatever the answering pack declared, so a pack for
+  // a category nobody has written yet renders here without an edit.
+  function deriveListingMeta(entry) {
+    if (!entry) return null;
+    const result = entry.result || {};
+    const listing = entry.listing || {};
+    const identity = result.identity || {};
+    const context = result.context || {};
+    const units = result.context_units || {};
+
     let equipment = {};
-    if (Array.isArray(adMetadata.equipment)) {
-      if (adMetadata.equipment.length) equipment = { "Donanım": adMetadata.equipment };
-    } else if (adMetadata.equipment && typeof adMetadata.equipment === "object") {
-      equipment = adMetadata.equipment;
+    if (Array.isArray(listing.equipment)) {
+      if (listing.equipment.length) equipment = { "Donanım": listing.equipment };
+    } else if (listing.equipment && typeof listing.equipment === "object") {
+      equipment = listing.equipment;
     }
-    const engineFamily =
-      adMetadata.trim ||
-      adMetadata.engine_family ||
-      [adMetadata.make, adMetadata.model].filter(Boolean).join(" ") ||
-      null;
+
+    const identityLine = Object.values(identity)
+      .filter((v) => v !== null && v !== undefined && v !== "")
+      .join(" ");
+
+    // A number with a unit is a magnitude and reads better grouped
+    // ("190,000 km"); a number without one is as likely to be a year, where
+    // grouping would render 2014 as "2,014".
+    const facts = Object.entries(context)
+      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .map(([key, value]) => {
+        const unit = units[key];
+        if (typeof value === "number" && unit) {
+          return `${value.toLocaleString()} ${unit}`;
+        }
+        return unit ? `${value} ${unit}` : String(value);
+      });
+
     return {
-      title: adMetadata.title || "Untitled listing",
-      year: adMetadata.year || null,
-      mileage_km: adMetadata.mileage_km || null,
-      annual_km: adMetadata.annual_km || null,
-      fuel: adMetadata.fuel_type || null,
-      engine_family: engineFamily,
-      damage_info: adMetadata.damage_info || null,
+      title: listing.title || identityLine || "Untitled listing",
+      identity_line: identityLine,
+      facts,
+      resolved: Boolean(identityLine),
+      damage_info: listing.damage_info || null,
       equipment,
     };
-  }
-
-  // Green / yellow / red tint based on average annual km.
-  function annualKmTone(annualKm) {
-    if (!annualKm) return null;
-    if (annualKm < 15000) return { ink: "var(--low-ink)",  surface: "var(--low-surface)" };
-    if (annualKm < 20000) return { ink: "var(--med-ink)",  surface: "var(--med-surface)" };
-    return                       { ink: "var(--high-ink)", surface: "var(--high-surface)" };
   }
 
   // ── Critical alerts: hard-coded rules over damage_info so the buyer can't
@@ -191,15 +213,13 @@
     return out;
   }
 
-  // ─── Backend messaging ────────────────────────────────────────────────
-  // Sahibinden listing detail pages auto-analyze in the background on load.
-  // When the panel opens on such a page with nothing cached yet, we want to
-  // show the analyzing state and join that run rather than sit on "idle".
-  function isAnalyzableListing() {
-    if (!window.location.hostname.includes("sahibinden.com")) return false;
-    const path = window.location.pathname;
-    return path.includes("/ilan/") || path.includes("/detail");
-  }
+  // ─── Talking to the worker ────────────────────────────────────────────
+  //
+  // Whether this page is worth analysing is the installed packs' answer, and
+  // the worker is the one holding it. The panel used to test for
+  // sahibinden.com here, which meant installing a pack for a second listing
+  // site changed nothing until someone edited this file. So it always asks,
+  // and treats NO_ADAPTER as "quiet", not as a failure.
 
   // triggerIfMissing: when there is no cached result, fall back to kicking off
   // analysis (joins any in-flight background run via the background's
@@ -211,7 +231,7 @@
         const missing =
           chrome.runtime.lastError || !response || !response.ok || !response.payload;
         if (missing) {
-          if (triggerIfMissing && state.pipeline === "idle" && isAnalyzableListing()) {
+          if (triggerIfMissing && state.pipeline === "idle") {
             triggerAnalyze();
           }
           return;
@@ -224,42 +244,50 @@
   // Apply entry helper
   function applyEntry(entry) {
     if (!entry) return;
-    if (entry.adMetadata) {
-      state.listingMeta = deriveListingMeta(entry.adMetadata);
+    if (entry.listing || (entry.ok && entry.result)) {
+      state.listingMeta = deriveListingMeta(entry);
     }
     if (entry.ok && entry.result) {
       state.result = entry.result;
       state.errorMsg = null;
-      state.pipeline = "result";
+      setPipeline("result");
       state.openIds = new Set();
     } else if (entry.ok === false) {
       state.errorMsg = entry.error || "Analysis failed.";
-      state.pipeline = "error";
+      setPipeline("error");
     }
     if (state.mounted) renderBody();
     if (state.mounted) renderCounts();
   }
 
   function triggerAnalyze() {
-    state.pipeline = "analyzing";
+    setPipeline("analyzing");
     state.errorMsg = null;
     renderBody();
     renderCounts();
 
-    // background.js re-fetches metadata from the page via content.js, runs
-    // /analyze, writes the full entry (adMetadata + result) to
-    // chrome.storage.session, and returns the result in the response.
+    // background.js asks content.js for a fresh scrape, POSTs it to
+    // /api/analyze, writes the full entry (result + the local-only listing
+    // extras) to chrome.storage.session, and returns the result here.
     chrome.runtime.sendMessage(
-      { type: "ANALYZE_AD", payload: { url: window.location.href } },
+      { type: "ANALYZE", payload: { url: window.location.href } },
       (response) => {
         if (chrome.runtime.lastError) {
-          state.pipeline = "error";
+          setPipeline("error");
           state.errorMsg = chrome.runtime.lastError.message || "Background unreachable.";
           renderBody();
           return;
         }
         if (response && !response.ok) {
-          state.pipeline = "error";
+          if (response.code === "NO_ADAPTER") {
+            // Nothing installed reads this site. Say nothing rather than
+            // painting a red banner over an ordinary web page.
+            setPipeline("idle");
+            state.errorMsg = null;
+            renderBody();
+            return;
+          }
+          setPipeline("error");
           state.errorMsg = response.error || "Analysis failed.";
           renderBody();
           return;
@@ -267,8 +295,8 @@
         // Apply the result the response already carries so the panel can never
         // get stuck on "analyzing" if the follow-up cache read races or the
         // service worker recycled the message port before onChanged fired.
-        // requestCached() then enriches with adMetadata (listing header,
-        // critical alerts, listing details), which the response omits.
+        // requestCached() then enriches with the listing extras (damage,
+        // equipment), which the response omits.
         if (response && response.ok && response.result) {
           applyEntry({ ok: true, result: response.result });
         }
@@ -309,6 +337,7 @@
 
     hostEl = document.createElement(HOST_TAG);
     hostEl.style.cssText = "all:initial;";
+    hostEl.dataset.pipeline = state.pipeline;
     document.documentElement.appendChild(hostEl);
     shadow = hostEl.attachShadow({ mode: "open" });
 
@@ -588,24 +617,17 @@
     const lm = state.listingMeta;
     if (!lm) { slot.innerHTML = ""; return; }
 
-    // Title + a compact meta line of year / km / fuel / engine.
-    // No price, no power — those live in the listing-details panel.
-    const tone = annualKmTone(lm.annual_km);
-    const kmTag = (lm.annual_km && tone)
-      ? `<span class="lite-km-tag" style="color:${tone.ink};background:${tone.surface};">~${Number(lm.annual_km).toLocaleString()}/yr</span>`
-      : "";
-
-    const bits = [];
-    if (lm.year)       bits.push(`<span>${escapeHtml(String(lm.year))}</span>`);
-    if (lm.mileage_km) bits.push(`<span class="km">${Number(lm.mileage_km).toLocaleString()} km${kmTag}</span>`);
-    if (lm.fuel)       bits.push(`<span>${escapeHtml(lm.fuel)}</span>`);
-    const metaLine = bits.join('<span class="sep">·</span>');
+    const metaLine = lm.facts
+      .map((fact) => `<span>${escapeHtml(fact)}</span>`)
+      .join('<span class="sep">·</span>');
 
     slot.innerHTML = `
       <div class="lite-listing">
         <div class="lite-listing-title">${escapeHtml(lm.title || "")}</div>
-        ${bits.length ? `<div class="lite-listing-meta">${metaLine}</div>` : ""}
-        ${lm.engine_family ? `<div class="lite-listing-engine">${escapeHtml(lm.engine_family)}</div>` : ""}
+        ${lm.facts.length ? `<div class="lite-listing-meta">${metaLine}</div>` : ""}
+        ${lm.identity_line
+            ? `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`
+            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised — no pack matched this page</div>`}
       </div>
     `;
   }
@@ -1031,10 +1053,17 @@
     }
   }
 
-  // Deploy-staleness guard (B15): the footer names the backend build that
-  // answered, so a stale deploy is visible to anyone looking at the panel.
-  // Pre-B15 backends omit `build` and unstamped builds report "unknown" — both
-  // render as "api · unknown", which is itself the tell.
+  // Backlog B15, re-pointed. The footer has always named whatever answered, so
+  // that a stale answer was visible to anyone looking at the panel rather than
+  // silently rendering as fresh. There is no server to be stale now — what a
+  // reader needs to identify is WHOSE knowledge this is, because several packs
+  // may be installed, none of them is authoritative, and "disable the pack
+  // that is wrong" is only possible if the panel says which one spoke.
+  function setPipeline(stage) {
+    state.pipeline = stage;
+    if (hostEl) hostEl.dataset.pipeline = stage;
+  }
+
   function renderFooter() {
     if (!footerEl) return;
     if (state.pipeline !== "result" || !state.result) {
@@ -1042,8 +1071,10 @@
       footerEl.textContent = "";
       return;
     }
-    const commit = state.result.build && state.result.build.commit;
-    footerEl.textContent = `api · ${commit || "unknown"}`;
+    const packs = Array.isArray(state.result.packs) ? state.result.packs : [];
+    footerEl.textContent = packs.length
+      ? packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ")
+      : "unknown";
     footerEl.hidden = false;
   }
 
