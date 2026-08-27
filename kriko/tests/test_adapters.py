@@ -15,7 +15,8 @@ confidently wrong one silently answers about a different car.
 
 import json
 
-from kriko.adapters import adapt, adapter_for, load_adapters
+from kriko.adapters import (adapt, adapter_for, identity_vocabulary,
+                            load_adapters)
 
 SPEC = {
     "id": "demo",
@@ -191,3 +192,208 @@ def test_the_real_cars_adapter_reads_a_real_listing_shape():
     # "Model" on Sahibinden is the trim, not the model — the model lives in
     # "Seri". Getting this backwards was a real bug in the old scraper.
     assert got.identity["model"] == "Megane"
+
+
+# ── raw scrapes contain near-miss labels ─────────────────────────────────
+#
+# These land the moment the extension stops pre-filtering labels in
+# JavaScript and posts the page's own label/value pairs (Phase 6c). The old
+# scraper kept a hand-written exclusion in `content.js`; that logic belongs
+# to the pack, not to the client, so it has to hold here instead.
+
+def _cars_spec():
+    from pathlib import Path
+    return json.loads(Path("packs/cars/adapters/sahibinden.json")
+                      .read_text(encoding="utf-8"))
+
+
+def test_an_exact_label_beats_a_longer_one_that_merely_contains_it():
+    """"Yakıt Tüketimi" must not answer for "Yakıt"."""
+    got = adapt(_cars_spec(),
+                {"Yakıt Tüketimi": "4,5 lt", "Yakıt": "Dizel"},
+                url="https://www.sahibinden.com/ilan/x")
+    assert got.identity["fuel"] == "Dizel"
+
+
+def test_an_ignored_label_is_never_picked_even_when_a_rule_would_match_it():
+    """Ignoring a label must mean *do not read it*, not merely *do not report
+    it as unmapped*. Otherwise the only defence against a near-miss label is
+    that some better label happened to exist on the page."""
+    got = adapt(_cars_spec(),
+                {"Yakıt Tüketimi": "4,5 lt"},
+                url="https://www.sahibinden.com/ilan/x")
+    assert "fuel" not in got.identity
+
+
+# ── the page's own labels are not always readable ────────────────────────
+#
+# Sahibinden has redesigned its info-list markup repeatedly, and every
+# redesign silently zeroed every field. The client used to paper over that
+# with title-parsing heuristics; those are site knowledge, so they belong to
+# the adapter. Two closed mechanisms cover it:
+#
+#   `from`       — a labelled rule may name a fallback text source.
+#   `vocabulary` — "find a value this attribute is already known to take".
+#
+# The second is what keeps the make list out of Python. The values come from
+# the pack's own rows, so a make is readable off a title the moment a subject
+# using it exists, with nothing to register and nothing to forget.
+
+TITLE_SPEC = {
+    "id": "titles",
+    "subject_kind": "product",
+    "match": ["*example.com/*"],
+    "identity": {
+        "build_year": {"labels": ["yıl", "year"], "from": "title",
+                       "parse": "int_range", "min": 1980, "max": 2035},
+        "make": {"labels": ["marka"], "from": "title", "vocabulary": "make"},
+    },
+}
+
+
+def test_a_labelled_rule_falls_back_to_a_text_source_when_no_label_matches():
+    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf 1.6 TDI")
+    assert got.identity["build_year"] == 2014
+
+
+def test_the_label_still_wins_when_the_page_has_one():
+    got = adapt(TITLE_SPEC, {"Yıl": "2016"}, title="2014 Volkswagen Golf")
+    assert got.identity["build_year"] == 2016
+
+
+def test_the_title_fallback_respects_the_range_and_invents_nothing():
+    """"1.6" and "190.000 km" are not model years."""
+    got = adapt(TITLE_SPEC, {}, title="Volkswagen Golf 1.6 TDI 190.000 km")
+    assert "build_year" not in got.identity
+
+
+def _store_with_identity_values(tmp_path, rows):
+    from kriko.store import packstore
+    from kriko.store.db import connect
+
+    store = connect(tmp_path / "s.sqlite")
+    with store:
+        packstore.write_pack_row(store, pack_id="p", name="P", version="1",
+                                 content_digest="x")
+        store.execute("INSERT INTO subjects VALUES ('s','p','product','S')")
+        for n, (key, value) in enumerate(rows):
+            store.execute(
+                "INSERT INTO attributes (attribute_id, pack_id, subject_id,"
+                " key, value_text, is_identity) VALUES (?,?,?,?,?,1)",
+                (f"a{n}", "p", "s", key, value))
+    return store
+
+
+def test_a_vocabulary_rule_reads_a_value_the_pack_already_knows(tmp_path):
+    store = _store_with_identity_values(
+        tmp_path, [("make", "volkswagen"), ("make", "renault")])
+    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf 1.6 TDI",
+                vocabulary=identity_vocabulary(store))
+    assert got.identity["make"] == "volkswagen"
+    store.close()
+
+
+def test_a_vocabulary_rule_prefers_the_longest_match(tmp_path):
+    """"land rover" must not be read as "rover"."""
+    store = _store_with_identity_values(
+        tmp_path, [("make", "rover"), ("make", "land rover")])
+    got = adapt(TITLE_SPEC, {}, title="2014 Land Rover Discovery",
+                vocabulary=identity_vocabulary(store))
+    assert got.identity["make"] == "land rover"
+    store.close()
+
+
+def test_a_vocabulary_rule_with_no_installed_values_invents_nothing():
+    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf", vocabulary={})
+    assert "make" not in got.identity
+
+
+def test_the_vocabulary_is_whatever_the_packs_declared_identity_on(tmp_path):
+    """Domain-free by construction: this reads `is_identity` rows, so a pack
+    for a category nobody has thought of yet is covered the moment it is
+    installed. There is no list to add a make to."""
+    store = _store_with_identity_values(
+        tmp_path, [("brand", "einhell"), ("chuck_mm", "13")])
+    assert identity_vocabulary(store) == {"brand": {"einhell"},
+                                          "chuck_mm": {"13"}}
+    store.close()
+
+
+# ── composite values ─────────────────────────────────────────────────────
+#
+# A page often packs several facts into one cell: "DSG / 7 Gear / Front Wheel
+# Drive" is a gearbox, a gear count and a drivetrain. The old client cut those
+# apart in JavaScript, with a branch per label — site knowledge in the one
+# place that cannot be updated without shipping a release. `segment` is the
+# closed replacement: pick an end of a delimited value, and nothing else.
+
+SEGMENT_SPEC = {
+    "id": "segments",
+    "subject_kind": "product",
+    "match": ["*x.invalid/*"],
+    "identity": {
+        "transmission": {"labels": ["transmission / drive type"],
+                         "segment": "first"},
+        "drivetrain": {"labels": ["transmission / drive type"],
+                       "segment": "last"},
+        "fuel": {"labels": ["fuel"], "segment": "first"},
+    },
+}
+
+
+def test_a_segment_rule_takes_the_named_end_of_a_delimited_value():
+    got = adapt(SEGMENT_SPEC, {
+        "Transmission / Drive Type": "DSG / 7 Gear / Front Wheel Drive",
+        "Fuel": "Gasoline / EURO 6",
+    })
+    assert got.identity["transmission"] == "DSG"
+    assert got.identity["drivetrain"] == "Front Wheel Drive"
+    assert got.identity["fuel"] == "Gasoline"
+
+
+def test_a_segment_rule_on_a_value_with_no_delimiter_returns_the_whole_value():
+    got = adapt(SEGMENT_SPEC, {"Fuel": "Dizel"})
+    assert got.identity["fuel"] == "Dizel"
+
+
+def test_first_and_last_are_the_same_segment_when_there_is_only_one():
+    got = adapt(SEGMENT_SPEC, {"Transmission / Drive Type": "Otomatik"})
+    assert got.identity["transmission"] == "Otomatik"
+    assert got.identity["drivetrain"] == "Otomatik"
+
+
+# ── labels are written by people, in their own alphabet ──────────────────
+#
+# Turkish "İ" casefolds to "i" plus a combining dot, so "İlan No" and
+# "ilan no" are different strings to `str.casefold()` and a pack author has no
+# way to tell. The same trap catches "Motor Gücü" against "motor gucu", which
+# is why the cars adapter carried both spellings of every accented label — a
+# hand-kept list of transliterations, and one more thing to forget.
+
+def test_a_label_matches_whatever_accents_the_page_happened_to_use():
+    got = adapt(SEGMENT_SPEC, {"FUEL": "Dizel"})
+    assert got.identity["fuel"] == "Dizel"
+
+
+def test_turkish_dotted_capital_i_matches_its_plain_spelling():
+    spec = {"id": "tr", "subject_kind": "product", "match": ["*"],
+            "identity": {"listing": {"labels": ["ilan no"]}}}
+    assert adapt(spec, {"İlan No": "123"}).identity["listing"] == "123"
+
+
+def test_an_accented_label_is_ignored_by_its_plain_spelling():
+    """The bug this was found by: `İlan No` and `İlan Tarihi` were listed as
+    ignored and were reported as unmapped anyway, because the blocklist could
+    not recognise its own entries once the page capitalised them."""
+    got = adapt(_cars_spec(), {"İlan No": "1", "İlan Tarihi": "13 July 2026"},
+                url="https://www.sahibinden.com/ilan/x")
+    assert got.unmapped == ()
+
+
+def test_accent_folding_does_not_merge_letters_turkish_treats_as_distinct():
+    """"ı" is a letter, not an "i" with something taken off it. Folding it
+    away would make "yakıt" and "yakit" the same label, which they are — but
+    only by luck; the rule must be diacritic-stripping, not transliteration."""
+    spec = {"id": "tr", "subject_kind": "product", "match": ["*"],
+            "identity": {"a": {"labels": ["yakıt"]}}}
+    assert "a" not in adapt(spec, {"yakit": "x"}).identity

@@ -1,10 +1,34 @@
-const DEFAULT_API_BASES = ["http://127.0.0.1:8000", "http://127.0.0.1:8765"];
+// The service worker: the only thing in the extension that talks to Kriko.
+//
+// Phase 6c rewired this end of the contract. It used to POST
+// `{listing_url, ad_metadata}` — a metadata dict the content script had
+// already interpreted — to `/analyze` on ports 8000/8765. Both the endpoint
+// and the payload are gone. It now POSTs the page's own label/value pairs to
+// `/api/analyze` on the local app's port, and the installed pack decides what
+// they mean.
+//
+// Two consequences worth knowing before editing:
+//
+//   * The worker asks the app which sites are worth scraping (`/api/adapters`)
+//     instead of testing the hostname itself. Installing a pack for a new
+//     listing site therefore needs no extension change at all.
+//   * Nothing here interprets a field. If you find yourself adding a branch on
+//     what a label means, it belongs in the pack's adapter JSON.
+
+const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const STORAGE_KEY_PREFIX = "kriko_result_";
 const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const ADAPTERS_TTL_MS = 5 * 60 * 1000;
+
+// Tiers whose word stands on its own. Anything else is corroboration: worth
+// showing, worth counting, not worth presenting as settled.
+const CONFIRMING_TIERS = new Set(["authoritative", "manufacturer"]);
+
 const latestRunIdByStorageKey = new Map();
 const inFlightByStorageKey = new Map();
 let nextRunId = 1;
+let adaptersCache = null;
 
 // Expose chrome.storage.session to content scripts. The Hover Lite panel is a
 // content script and relies on chrome.storage.onChanged (session area) to learn
@@ -24,9 +48,9 @@ function _ensureSessionAccessLevel() {
 }
 _ensureSessionAccessLevel();
 
-// Hover Lite is the only in-page surface; the toolbar action toggles it.
 chrome.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
 
+// Hover Lite is the only in-page surface; the toolbar action toggles it.
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
   try {
@@ -36,38 +60,99 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
+// ── where the app is ────────────────────────────────────────────────────
+
 function _normalizeBaseUrl(value) {
-  if (!value || typeof value !== "string") {
-    return null;
-  }
-
+  if (!value || typeof value !== "string") return null;
   const trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) {
-    return null;
-  }
-
+  if (!trimmed) return null;
   if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
     return `http://${trimmed}`;
   }
-
   return trimmed;
 }
 
-async function _getApiCandidates() {
-  const fromStorage = await chrome.storage.local.get(["lemonaidApiBaseUrl"]);
-  const customBase = _normalizeBaseUrl(fromStorage.lemonaidApiBaseUrl);
-
-  const candidates = [];
-  if (customBase) {
-    candidates.push(`${customBase}/analyze`);
-  }
-
-  for (const base of DEFAULT_API_BASES) {
-    candidates.push(`${base}/analyze`);
-  }
-
-  return [...new Set(candidates)];
+async function apiBase() {
+  const stored = await chrome.storage.local.get(["krikoApiBaseUrl"]);
+  return _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE;
 }
+
+// ── which sites are worth scraping ──────────────────────────────────────
+
+function globToRegExp(pattern) {
+  const escaped = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp("^" + escaped.replace(/\\\*/g, ".*") + "$", "i");
+}
+
+function adapterFor(url, adapters) {
+  for (const adapter of adapters || []) {
+    if ((adapter.match || []).some((p) => globToRegExp(p).test(url))) {
+      return adapter;
+    }
+  }
+  return null;
+}
+
+async function fetchAdapters() {
+  if (adaptersCache && Date.now() - adaptersCache.at < ADAPTERS_TTL_MS) {
+    return adaptersCache.rows;
+  }
+  const response = await fetch(`${await apiBase()}/api/adapters`);
+  if (!response.ok) {
+    throw new Error(`Kriko is not reachable (${response.status}).`);
+  }
+  const rows = await response.json();
+  adaptersCache = { at: Date.now(), rows };
+  return rows;
+}
+
+// ── the answer, in the shape the panel renders ──────────────────────────
+
+function _strengthOf(claim) {
+  const sources = Array.isArray(claim.sources) ? claim.sources : [];
+  return sources.some((s) => CONFIRMING_TIERS.has(s.tier))
+    ? "confirmed"
+    : "reported";
+}
+
+// The panel's vocabulary is older than the engine's and describes the card
+// rather than the claim, so the two are translated here — in one place, rather
+// than by teaching every renderer both. Nothing is invented: each field below
+// is a rename or a count of something the server already said.
+function toViewModel(payload) {
+  const claims = Array.isArray(payload.claims) ? payload.claims : [];
+  return {
+    adapter: payload.adapter,
+    identity: payload.identity || {},
+    context: payload.context || {},
+    coverage: payload.coverage,
+    method: payload.method,
+    flags: payload.flags || [],
+    unmapped_labels: payload.unmapped_labels || [],
+    risks: claims.map((claim) => {
+      const strength = _strengthOf(claim);
+      return {
+        title: claim.title,
+        rationale: claim.body,
+        inspection_advice: claim.advice,
+        severity: claim.severity,
+        domain: claim.domain,
+        subject: claim.subject,
+        strength,
+        // Only confirmed cards carry a number. On a "Reported" card a score
+        // reads as trustworthy and quietly undoes the label.
+        confidence: strength === "confirmed" ? claim.relevance : undefined,
+        source_count: (claim.sources || []).length,
+        why_shown: claim.why || [],
+        disputed: Boolean(claim.disputed),
+        pack_id: claim.pack_id,
+        sources: claim.sources || [],
+      };
+    }),
+  };
+}
+
+// ── caching ─────────────────────────────────────────────────────────────
 
 function _now() {
   return typeof performance !== "undefined" && performance.now
@@ -89,22 +174,13 @@ function _stableHash(value) {
   return (hash >>> 0).toString(16);
 }
 
-function _metadataSignature(adMetadata) {
+// Hashing the scrape itself, rather than a hand-listed set of fields, is what
+// keeps this honest: a page gaining a field the pack has since learned to read
+// changes the hash and re-asks, instead of serving a stale answer forever.
+function _scrapeSignature(scrape) {
   return _stableHash({
-    title: adMetadata?.title || "",
-    make: adMetadata?.make || "",
-    model: adMetadata?.model || "",
-    trim: adMetadata?.trim || "",
-    year: adMetadata?.year || "",
-    mileage_km: adMetadata?.mileage_km || "",
-    fuel_type: adMetadata?.fuel_type || "",
-    transmission: adMetadata?.transmission || "",
-    engine_volume_cc: adMetadata?.engine_volume_cc || "",
-    power_hp: adMetadata?.power_hp || "",
-    price_amount: adMetadata?.price_amount || "",
-    damage_info: adMetadata?.damage_info || null,
-    equipment: adMetadata?.equipment || null,
-    technical_details: adMetadata?.technical_details || null,
+    title: scrape?.title || "",
+    fields: scrape?.fields || {},
   });
 }
 
@@ -112,25 +188,23 @@ function _localCacheKey(url) {
   return LOCAL_CACHE_KEY_PREFIX + url;
 }
 
-function _isFreshCachedEntry(entry, metadataSignature) {
+function _isFreshCachedEntry(entry, signature) {
   if (!entry || entry.ok !== true || !entry.result) return false;
-  if (entry.metadataSignature !== metadataSignature) return false;
+  if (entry.signature !== signature) return false;
   const ageMs = Date.now() - Number(entry.fetchedAt || 0);
   return ageMs >= 0 && ageMs <= RESULT_CACHE_TTL_MS;
 }
 
-async function _readCachedAnalysis(url, metadataSignature) {
+async function _readCachedAnalysis(url, signature) {
   const cacheKey = _localCacheKey(url);
   const data = await chrome.storage.local.get(cacheKey);
   const entry = data[cacheKey];
-  if (_isFreshCachedEntry(entry, metadataSignature)) {
-    return entry;
-  }
+  if (_isFreshCachedEntry(entry, signature)) return entry;
   if (entry) {
     try {
       await chrome.storage.local.remove(cacheKey);
     } catch (error) {
-      console.warn("[lemonaid] local result cache cleanup failed", error?.message || error);
+      console.warn("[kriko] local result cache cleanup failed", error?.message || error);
     }
   }
   return null;
@@ -141,23 +215,21 @@ async function _writeCachedAnalysis(url, entry) {
   try {
     await chrome.storage.local.set({ [_localCacheKey(url)]: entry });
   } catch (error) {
-    console.warn("[lemonaid] local result cache write failed", error?.message || error);
+    console.warn("[kriko] local result cache write failed", error?.message || error);
   }
 }
 
 async function _updateBadgeForResult(result, tabId) {
-  const riskCount = Array.isArray(result?.risks) ? result.risks.length : 0;
-  const highCount = Array.isArray(result?.risks)
-    ? result.risks.filter((r) => r.severity === "high").length
-    : 0;
+  const risks = Array.isArray(result?.risks) ? result.risks : [];
+  const highCount = risks.filter((r) => r.severity === "high").length;
 
   let badgeText = "";
   let badgeColor = "#2d7b41"; // low green
   if (highCount > 0) {
     badgeText = String(highCount);
     badgeColor = "#b5392f"; // high red
-  } else if (riskCount > 0) {
-    badgeText = String(riskCount);
+  } else if (risks.length > 0) {
+    badgeText = String(risks.length);
     badgeColor = "#a3641a"; // medium orange
   }
 
@@ -165,94 +237,62 @@ async function _updateBadgeForResult(result, tabId) {
   await chrome.action.setBadgeBackgroundColor({ color: badgeColor, tabId });
 }
 
-async function requestAnalysis(adMetadata, timings = {}) {
-  const { lemonaidDebugMode = false } = await chrome.storage.local.get([
-    "lemonaidDebugMode",
-  ]);
-  const payload = {
-    listing_url: adMetadata.url,
-    ad_metadata: adMetadata,
-    debug: Boolean(lemonaidDebugMode),
-  };
+// ── scraping ────────────────────────────────────────────────────────────
 
-  const endpoints = await _getApiCandidates();
-  const errors = [];
-
-  for (const endpoint of endpoints) {
-    try {
-      const fetchStartedAt = _now();
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      timings.analyze_fetch_ms = _elapsed(fetchStartedAt);
-      timings.analyze_endpoint = endpoint;
-
-      if (!response.ok) {
-        const message = await response.text();
-        errors.push(`${endpoint} -> ${message || "HTTP error"}`);
-        continue;
-      }
-
-      const jsonStartedAt = _now();
-      const data = await response.json();
-      timings.analyze_json_ms = _elapsed(jsonStartedAt);
-
-      return {
-        endpoint,
-        debugRequested: payload.debug,
-        data,
-      };
-    } catch (error) {
-      const message = error?.message || "Network error";
-      errors.push(`${endpoint} -> ${message}`);
-    }
-  }
-
-  throw new Error(
-    `Analyzer API request failed on all endpoints. Tried: ${errors.join(" | ")}`
-  );
-}
-
-async function _ensureContentScript(tabId) {
-  // Try a quick ping first
+async function _requestScrape(tabId, labels) {
+  const ask = { type: "GET_SCRAPE", labels };
   try {
-    const pong = await chrome.tabs.sendMessage(tabId, { type: "GET_AD_METADATA" });
-    if (pong && pong.ok) {
-      return pong;
-    }
+    const reply = await chrome.tabs.sendMessage(tabId, ask);
+    if (reply && reply.ok) return reply;
   } catch (_) {
-    // Content script not responding — inject it
+    // Content script not responding — inject it below.
   }
 
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["content.js"],
-    });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
   } catch (_) {
-    // Cannot inject (e.g., chrome:// pages or restricted URLs)
-    return null;
+    return null;   // chrome:// or otherwise restricted
   }
 
-  // Wait for content script to initialize
   await new Promise((resolve) => setTimeout(resolve, 300));
-
   try {
-    return await chrome.tabs.sendMessage(tabId, { type: "GET_AD_METADATA" });
+    return await chrome.tabs.sendMessage(tabId, ask);
   } catch (_) {
     return null;
   }
 }
+
+async function requestAnalysis(scrape, timings = {}) {
+  const endpoint = `${await apiBase()}/api/analyze`;
+  const startedAt = _now();
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // `listing` is deliberately absent: the damage and equipment panels are
+    // rendered locally and the engine has no rule for them, so there is no
+    // reason to put them on the wire.
+    body: JSON.stringify({
+      url: scrape.url,
+      title: scrape.title || "",
+      description: scrape.description || "",
+      fields: scrape.fields || {},
+    }),
+  });
+  timings.analyze_fetch_ms = _elapsed(startedAt);
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`${endpoint} -> ${message || `HTTP ${response.status}`}`);
+  }
+  return response.json();
+}
+
+// ── the run ─────────────────────────────────────────────────────────────
 
 async function runAnalysisForTab(tabId, url) {
   const storageKey = STORAGE_KEY_PREFIX + url;
   const existingRun = inFlightByStorageKey.get(storageKey);
   if (existingRun) {
-    console.log("[lemonaid] joining in-flight analysis", { tabId, url });
     const result = await existingRun;
     await _updateBadgeForResult(result, tabId);
     return result;
@@ -274,126 +314,100 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
   const totalStartedAt = _now();
   const runId = nextRunId++;
   latestRunIdByStorageKey.set(storageKey, runId);
-  // Hoisted so the catch block can attach it to the error entry — critical
-  // alerts and the listing header are derived from metadata, not the LLM, so
-  // they should still render even when the analysis itself fails.
-  let adMetadata = null;
+  // Hoisted so the catch block can attach it: the listing header and the
+  // damage panel come from the scrape, not from the analysis, so they should
+  // still render when the analysis itself fails.
+  let scrape = null;
 
   try {
-    console.log("[lemonaid] runAnalysisForTab start", { tabId, url, runId });
-    const metadataStartedAt = _now();
-    const metaResponse = await _ensureContentScript(tabId);
-    timings.metadata_ms = _elapsed(metadataStartedAt);
-    console.log("[lemonaid] metaResponse", metaResponse?.ok ? "ok" : "fail");
-    if (!metaResponse || !metaResponse.ok) {
-      throw new Error("Unable to read ad metadata from this page.");
+    const adapters = await fetchAdapters();
+    const adapter = adapterFor(url, adapters);
+    if (!adapter) {
+      // Not an error the reader can act on — most pages are not listings —
+      // but not something to answer with an empty result either, which would
+      // read as "nothing is known about this car". Coded so the panel can
+      // fall quiet instead of showing a red banner on every ordinary page.
+      const noAdapter = new Error("No installed pack can read this page.");
+      noAdapter.code = "NO_ADAPTER";
+      throw noAdapter;
     }
 
-    adMetadata = metaResponse.payload;
-    const metadataSignature = _metadataSignature(adMetadata);
-    const cacheStartedAt = _now();
-    const cachedEntry = await _readCachedAnalysis(url, metadataSignature);
-    timings.cache_lookup_ms = _elapsed(cacheStartedAt);
+    const scrapeStartedAt = _now();
+    const reply = await _requestScrape(tabId, adapter.labels || []);
+    timings.scrape_ms = _elapsed(scrapeStartedAt);
+    if (!reply || !reply.ok) {
+      throw new Error("Unable to read this page.");
+    }
+    scrape = reply.payload;
+
+    const signature = _scrapeSignature(scrape);
+    const cachedEntry = await _readCachedAnalysis(url, signature);
     if (cachedEntry) {
-      console.log("[lemonaid] using cached analysis", {
-        title: adMetadata.title,
-        url,
-        ageMs: Date.now() - Number(cachedEntry.fetchedAt || 0),
-      });
       await chrome.storage.session.set({ [storageKey]: cachedEntry });
-      const badgeStartedAt = _now();
       await _updateBadgeForResult(cachedEntry.result, tabId);
-      timings.badge_ms = _elapsed(badgeStartedAt);
-      timings.total_ms = _elapsed(totalStartedAt);
-      console.log("[lemonaid] timings", timings);
       return cachedEntry.result;
     }
 
-    console.log("[lemonaid] POST /analyze", { title: adMetadata.title, url });
-    const response = await requestAnalysis(adMetadata, timings);
-    const result = response.data;
-    console.log("[lemonaid] /analyze returned", {
-      runId,
-      endpoint: response.endpoint,
-      debugRequested: response.debugRequested,
-      risks: result?.risks?.length,
-      hasDebugTrace: Boolean(result?.debug_trace),
-    });
+    const result = toViewModel(await requestAnalysis(scrape, timings));
 
     if (latestRunIdByStorageKey.get(storageKey) !== runId) {
-      console.log("[lemonaid] stale analysis result ignored", { tabId, url, runId });
-      return result;
+      return result;    // a newer run has already answered for this listing
     }
 
     const entry = {
       ok: true,
       result,
-      adMetadata,
-      metadataSignature,
+      listing: scrape.listing || {},
+      signature,
       fetchedAt: Date.now(),
     };
 
-    const sessionStartedAt = _now();
     await chrome.storage.session.set({ [storageKey]: entry });
-    timings.session_write_ms = _elapsed(sessionStartedAt);
-    const localCacheStartedAt = _now();
     await _writeCachedAnalysis(url, entry);
-    timings.local_cache_write_ms = _elapsed(localCacheStartedAt);
-
-    const badgeStartedAt = _now();
     await _updateBadgeForResult(result, tabId);
-    timings.badge_ms = _elapsed(badgeStartedAt);
     timings.total_ms = _elapsed(totalStartedAt);
-    console.log("[lemonaid] timings", timings);
-
     return result;
   } catch (error) {
-    console.warn("[lemonaid] analysis failed", error?.message || error);
-    if (latestRunIdByStorageKey.get(storageKey) !== runId) {
-      console.log("[lemonaid] stale analysis error ignored", { tabId, url, runId });
-      throw error;
-    }
+    console.warn("[kriko] analysis failed", error?.message || error);
+    if (latestRunIdByStorageKey.get(storageKey) !== runId) throw error;
+
     const errEntry = {
       ok: false,
       error: error.message || "Unknown error",
       fetchedAt: Date.now(),
     };
-    if (adMetadata) errEntry.adMetadata = adMetadata;
+    if (scrape) errEntry.listing = scrape.listing || {};
     await chrome.storage.session.set({ [storageKey]: errEntry });
     await chrome.action.setBadgeText({ text: "!", tabId });
     await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
-    timings.total_ms = _elapsed(totalStartedAt);
-    console.log("[lemonaid] timings", timings);
     throw error;
   }
 }
 
-// ── Message listeners ──
+// ── messages ────────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === "ANALYZE_AD") {
+  if (request.type === "ANALYZE") {
     const url = request.payload?.url;
     if (!url) {
       sendResponse({ ok: false, error: "Missing URL" });
       return false;
     }
 
-    // If triggered from popup (no sender.tab), resolve active tab first
     const run = async () => {
       let tabId = sender.tab?.id;
       if (!tabId) {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         tabId = tabs[0]?.id;
       }
-      if (!tabId) {
-        throw new Error("No active tab found.");
-      }
+      if (!tabId) throw new Error("No active tab found.");
       return runAnalysisForTab(tabId, url);
     };
 
     run()
       .then((result) => sendResponse({ ok: true, result }))
-      .catch((error) => sendResponse({ ok: false, error: error.message }));
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
 
     return true; // async
   }
@@ -401,17 +415,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "PAGE_LOADED") {
     const tabId = sender.tab?.id;
     const url = request.payload?.url;
-
     if (!tabId || !url) {
       sendResponse({ ok: false, error: "Missing tab or URL" });
       return false;
     }
 
-    // Kick off analysis in the background without waiting
-    runAnalysisForTab(tabId, url).catch(() => {
-      // Silently fail; popup will show error state
-    });
-
+    // Every page reports in; whether it is worth analysing is the installed
+    // packs' answer, resolved inside the run.
+    runAnalysisForTab(tabId, url).catch(() => {});
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
   }
@@ -440,8 +451,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// ── Clear badge on tab navigation ──
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+// ── clear the badge on navigation ───────────────────────────────────────
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
     chrome.action.setBadgeText({ text: "", tabId }).catch(() => {});
   }

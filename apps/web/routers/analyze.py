@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 
 from apps.web.deps import get_store
 from apps.web.observability import log_analysis_jsonl
-from kriko.adapters import adapt, adapter_for, load_adapters
+from kriko.adapters import (adapt, adapter_for, declared_labels,
+                            identity_vocabulary, load_adapters)
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
 
@@ -36,7 +37,35 @@ def list_adapters(store=Depends(get_store)):
     The extension uses this to know where it is worth scraping at all.
     """
     return [{"id": a.get("id"), "site": a.get("site"), "pack_id": a["pack_id"],
-             "match": a.get("match", [])} for a in load_adapters(store)]
+             "match": a.get("match", []), "labels": declared_labels(a)}
+            for a in load_adapters(store)]
+
+
+def _context_units(store, context) -> dict:
+    """The unit each context key is measured in, as the packs declared it.
+
+    The panel needs this to render a number a reader can act on, and asking it
+    to know that `usage_km` is kilometres would be the hardcoded-list bug in
+    JavaScript — right until a pack measures wear in charge cycles.
+    """
+    if not context:
+        return {}
+    placeholders = ",".join("?" * len(context))
+    rows = store.execute(
+        f"SELECT term_id, unit FROM terms WHERE term_id IN ({placeholders})"
+        " AND unit != ''", list(context))
+    return {r["term_id"]: r["unit"] for r in rows}
+
+
+def _packs_behind(store, claims) -> list[dict]:
+    ids = sorted({c.pack_id for c in claims})
+    if not ids:
+        return []
+    placeholders = ",".join("?" * len(ids))
+    rows = store.execute(
+        f"SELECT pack_id, version FROM packs WHERE pack_id IN ({placeholders})"
+        " ORDER BY pack_id", ids)
+    return [{"pack_id": r["pack_id"], "version": r["version"]} for r in rows]
 
 
 @router.post("/analyze")
@@ -46,14 +75,25 @@ def analyze(body: ScrapeRequest, store=Depends(get_store)):
         raise HTTPException(
             404, f"no installed pack has an adapter for {body.url}")
 
+    # The vocabulary is the packs' own identity rows. It is what lets the
+    # adapter read an identity value straight out of a page title when the
+    # page has no label for it, without a single value being written down in
+    # either the engine or the adapter JSON.
     mapped = adapt(spec, body.fields, url=body.url, title=body.title,
-                   description=body.description)
+                   description=body.description,
+                   vocabulary=identity_vocabulary(store))
     result = lookup(store, Query(kind=mapped.kind, identity=mapped.identity,
                                  context=mapped.context, lang=body.lang,
                                  limit=body.limit))
 
     payload = {
         "adapter": mapped.adapter_id,
+        # Whose knowledge this is. With several packs installed and no central
+        # authority deciding between them, the byline is not a detail — it is
+        # how a reader tells a manufacturer bulletin from a forum consensus,
+        # and how they know which pack to disable when one is wrong.
+        "packs": _packs_behind(store, result.claims),
+        "context_units": _context_units(store, mapped.context),
         "identity": mapped.identity,
         "context": mapped.context,
         # Labels the page had that no adapter rule covers. Not an error — a

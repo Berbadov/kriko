@@ -1,14 +1,24 @@
+// The listing scraper. Its whole job is to report what the page says.
+//
+// Before Phase 6c this file also decided what the page MEANT: which label was
+// the fuel type, that "Seri" holds the model while "Model" holds the trim,
+// that "110 hp" under "Engine Capacity" is not a displacement. All of that is
+// site knowledge, and site knowledge now lives in the pack, as
+// `packs/cars/adapters/sahibinden.json`. Two reasons it moved:
+//
+//   * A site redesign used to require an extension release. It is now a data
+//     edit — the same rule the catalog has always been held to.
+//   * Interpreting here meant a hardcoded list of car makes in JavaScript, and
+//     a make missing from it silently produced a listing nobody could match.
+//
+// What is left is the part only a browser can do: find label/value pairs in
+// markup that changes without notice. Even the labels to look for come down
+// the wire from the installed pack (`GET /api/adapters`), so this file carries
+// no vocabulary of its own.
+
 function textBySelector(selector) {
   const node = document.querySelector(selector);
   return node ? node.textContent.trim() : null;
-}
-
-function numberFromText(value) {
-  if (!value) {
-    return null;
-  }
-  const normalized = value.replace(/[^\d]/g, "");
-  return normalized ? Number(normalized) : null;
 }
 
 function cleanText(text) {
@@ -16,55 +26,59 @@ function cleanText(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-// The field labels Sahibinden puts on a vasıta detail page, in BOTH locales it
-// serves (Turkish and English). A closed vocabulary of FIELD names — not car
-// data, so it does not grow as models are onboarded. Used by the
-// layout-agnostic fallback below.
-const KNOWN_INFO_LABELS = [
-  // Turkish
-  "İlan No", "İlan Tarihi", "Marka", "Seri", "Model", "Yıl", "Yakıt",
-  "Yakıt Tipi", "Vites", "Kilometre", "Kasa Tipi", "Motor Gücü", "Motor Hacmi",
-  "Çekiş", "Renk", "Garanti", "Durumu", "Durum", "Ağır Hasar Kayıtlı",
-  "Takasa Uygun", "Kimden",
-  // English
-  "Listing No", "Listing Date", "Make", "Series", "Year", "Fuel Type", "Gear",
-  "Vehicle Status", "KM", "Body Type", "Engine Power", "Engine Capacity",
-  "Wheel Drive", "Color", "Warranty", "Salvage Record", "Plate", "From",
-  "Exchange",
-];
-
 // Last resort when no known container selector matches: find the LABEL text
 // itself anywhere in the document and read the value next to it. Sahibinden has
 // redesigned this markup repeatedly, and every redesign silently zeroed every
-// field — the extension kept "working" while the backend answered "Missing
-// required fields". Anchoring on the label instead of the container survives a
-// class rename.
-function extractInfoListByLabelScan() {
+// field — the extension kept "working" while the server answered "no identity
+// resolved". Anchoring on the label survives a class rename.
+//
+// `knownLabels` comes from the server, casefolded. With none supplied this
+// finds nothing, which is correct: an empty scrape fails open and is visible,
+// while a scrape guessed from a stale built-in list is wrong and is not.
+// Reduce a label the way the server reduces it, or the scan finds nothing and
+// nobody can see why. Combining marks are the trap: "İ".toLowerCase() is "i"
+// plus a combining dot, so "İlan No" and "ilan no" are different strings on
+// both ends — and the server has already stripped its side, which is what lets
+// a pack author write "motor gucu" once instead of enumerating every spelling.
+//
+// Deliberately NOT `toLocaleLowerCase("tr")`: Turkish casing maps "I" to "ı",
+// the server's casefold maps it to "i", and the two ends must agree more than
+// either needs to be locally correct.
+function foldLabel(text) {
+  return String(text)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .normalize("NFC")
+    .trim()
+    .replace(/:$/, "")
+    .trim();
+}
+
+function extractInfoListByLabelScan(knownLabels) {
   const details = {};
-  const wanted = new Map(
-    KNOWN_INFO_LABELS.map(l => [l.toLocaleLowerCase("tr"), l])
-  );
+  const wanted = new Set((knownLabels || []).map(foldLabel));
+  if (!wanted.size) return details;
 
   for (const node of document.querySelectorAll(
     "span, div, dt, th, td, strong, b, p, label"
   )) {
     const text = cleanText(node.textContent);
-    if (!text || text.length > 24) continue;
-    const canonical = wanted.get(text.toLocaleLowerCase("tr"));
-    if (!canonical || details[canonical]) continue;
+    if (!text || text.length > 32) continue;
+    if (!wanted.has(foldLabel(text)) || details[text]) continue;
 
     // The value sits next to the label — as a sibling, or as the parent's other
     // half when both are wrapped (…<span>Yıl</span><span>2014</span>…).
     const sibling = node.nextElementSibling;
     const value = cleanText(sibling && sibling.textContent);
     if (value && value !== text) {
-      details[canonical] = value;
+      details[text] = value;
     }
   }
   return details;
 }
 
-function extractInfoList() {
+function extractInfoList(knownLabels) {
   const details = {};
 
   const liItems = document.querySelectorAll(
@@ -114,97 +128,10 @@ function extractInfoList() {
   }
 
   if (Object.keys(details).length === 0) {
-    return extractInfoListByLabelScan();
+    return extractInfoListByLabelScan(knownLabels);
   }
 
   return details;
-}
-
-// Sahibinden's info list labels the fuel column "Yakıt" (TR) or "Fuel Type"
-// (EN); the technical-details panel uses "Yakıt Tipi" / "Fuel". All are the fuel
-// TYPE. "Yakıt Tüketimi" / "Fuel Consumption" and "Yakıt Deposu" / "Fuel
-// Capacity" are not — without the exclusion a bare match hands the matcher
-// "4,9 l" as a fuel.
-const FUEL_LABEL_RE = /yak[ıi]t|fuel/;
-const NOT_FUEL_TYPE_RE = /t[üu]ketim|depo|consumption|capacity/;
-
-function isFuelTypeLabel(key) {
-  return FUEL_LABEL_RE.test(key) && !NOT_FUEL_TYPE_RE.test(key);
-}
-
-function mapTurkishKeys(details) {
-  // Sahibinden serves the same page in Turkish OR English depending on the
-  // user's locale, with entirely different labels ("Marka"/"Make",
-  // "Yıl"/"Year", "Vites"/"Gear", "Kilometre"/"KM"). The scraper knew only the
-  // Turkish set, so an English listing read as an empty info list and the
-  // backend rejected it with "Missing required fields". Both locales are
-  // matched here; the label set is a fixed vocabulary, not car data.
-  const mapping = {
-    // Exact or partial label matches — Turkish first, then the English locale.
-    yıl: "year",
-    yil: "year",
-    "üretim yılı": "year",
-    "uretim yili": "year",
-    year: "year",
-    kilometre: "mileage_km",
-    km: "mileage_km",
-    vites: "transmission",
-    gear: "transmission",
-    "motor hacmi": "engine_volume_cc",
-    "engine capacity": "engine_volume_cc",
-    "motor gücü": "power_hp",
-    "motor gucu": "power_hp",
-    "beygir gücü": "power_hp",
-    "beygir gucu": "power_hp",
-    "engine power": "power_hp",
-    "kasa tipi": "body_type",
-    "body type": "body_type",
-    renk: "color",
-    color: "color",
-    durum: "condition",
-    "vehicle status": "condition",
-    garanti: "warranty",
-    warranty: "warranty",
-    "çekiş": "drivetrain",
-    "cekis": "drivetrain",
-    "wheel drive": "drivetrain",
-    marka: "make",
-    make: "make",
-    // Sahibinden uses "Model"/"Model" for trim/variant (e.g. "1.5 dCi Joy");
-    // the model name itself lives in "Seri" / "Series" (e.g. "Clio").
-    // "series".includes("seri") is true, so one entry covers both locales.
-    seri: "model",
-    model: "trim",
-  };
-
-  const mapped = {};
-  for (const [rawLabel, rawValue] of Object.entries(details)) {
-    const key = rawLabel.toLowerCase().trim();
-    if (isFuelTypeLabel(key)) {
-      mapped.fuel_type = rawValue;
-      continue;
-    }
-    for (const [turkish, english] of Object.entries(mapping)) {
-      if (key.includes(turkish)) {
-        mapped[english] = rawValue;
-        break;
-      }
-    }
-  }
-  return mapped;
-}
-
-// The listing title leads with the model year ("2014 Volkswagen Golf 1.6 TDI").
-// make/model already fall back to the title when the info list can't be read;
-// year did not, so a markup change left it null and the backend rejected the
-// listing outright. Bounded to plausible model years so a price or a mileage
-// figure can never be mistaken for one.
-function yearFromTitle(title) {
-  const match = (title || "").match(/\b(19\d{2}|20\d{2})\b/);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const maxYear = new Date().getFullYear() + 1;
-  return year >= 1980 && year <= maxYear ? year : null;
 }
 
 function extractTechnicalDetails() {
@@ -223,95 +150,6 @@ function extractTechnicalDetails() {
   return details;
 }
 
-function mapTechnicalDetails(details) {
-  const mapped = {};
-  for (const [rawLabel, rawValue] of Object.entries(details)) {
-    const key = rawLabel.toLowerCase().trim();
-    const value = cleanText(rawValue);
-    if (!value) continue;
-
-    if (key.includes("şanzıman / çekiş") || key.includes("sanziman / cekis")
-        || key.includes("transmission / drive type")) {
-      // TR: "Otomatik / Önden Çekiş". EN: "DSG / 7 Gear / Front Wheel Drive" —
-      // the drive type is the LAST segment, not the second.
-      const segments = value.split("/").map(v => cleanText(v)).filter(Boolean);
-      if (segments.length) {
-        mapped.transmission = segments[0];
-        if (segments.length > 1) mapped.drivetrain = segments[segments.length - 1];
-      }
-      continue;
-    }
-    if (isFuelTypeLabel(key)) {
-      // EN "Fuel" reads "Gasoline / EURO 6"; TR "Yakıt Tipi" reads "Dizel".
-      mapped.fuel_type = cleanText(value.split("/")[0]);
-      continue;
-    }
-    if (key.includes("motor hacmi") || key.includes("engine capacity")) {
-      // Sahibinden's own bug: the English "Overview" table labels the POWER row
-      // "Engine Capacity" (110 hp), while the real capacity (1197 cc) sits under
-      // the same label in "Engine and Performance". Accept a capacity only when
-      // it is actually expressed in cc, so "110 hp" can never become 110 cc.
-      if (/\d\s*cc\b/i.test(value)) {
-        mapped.engine_volume_cc = value;
-      }
-      continue;
-    }
-    if (key.includes("motor gücü") || key.includes("motor gucu")
-        || key.includes("engine power")) {
-      // Clean single value (e.g. "140 hp") — always wins over the composite
-      // "Maksimum Güç" / "Maximum Power" field below, which also carries kW/rpm.
-      mapped.power_hp = value;
-      continue;
-    }
-    if (key.includes("maksimum güç") || key.includes("maksimum guc")
-        || key.includes("maximum power")) {
-      if (!mapped.power_hp) {
-        // Composite (e.g. "110 hp (81 kw) / 4,600 rpm"). Extracting the raw
-        // string and letting numberFromText() strip all non-digits later
-        // concatenates hp+kW+rpm into garbage like "110814600" — pull out just
-        // the hp figure instead.
-        const hpMatch = value.match(/(\d+)\s*hp/i);
-        mapped.power_hp = hpMatch ? hpMatch[1] : value;
-      }
-      continue;
-    }
-    if (key.includes("kasa tipi") || key.includes("body type")) {
-      mapped.body_type = cleanText(value.split("/")[0]);
-      continue;
-    }
-    // TR "Motor Tipi" / EN "Engine Type" reads "Gasoline / 4 cylinders" — the
-    // fuel, but only as a fallback if the explicit fuel row was absent.
-    if ((key.includes("motor tipi") || key.includes("engine type"))
-        && !mapped.fuel_type) {
-      mapped.fuel_type = cleanText(value.split("/")[0]);
-    }
-  }
-  return mapped;
-}
-
-function parseMakeModelFromTitle(title) {
-  if (!title) return [null, null];
-  const cleaned = title.replace(/^\d{4}\s*/i, "").trim();
-  const knownMakes = [
-    "Renault", "Volkswagen", "VW", "Toyota", "Mini", "BMW", "Mercedes",
-    "Mercedes-Benz", "Audi", "Opel", "Ford", "Fiat", "Hyundai", "Kia",
-    "Peugeot", "Citroën", "Nissan", "Honda", "Mazda", "Skoda", "Seat",
-    "Volvo", "Dacia", "Suzuki", "Mitsubishi", "Subaru", "Jeep", "Land Rover",
-    "Porsche", "Ferrari",
-  ];
-  const cleanLower = cleaned.toLowerCase();
-  for (const make of knownMakes) {
-    const makeLower = make.toLowerCase();
-    if (cleanLower.startsWith(makeLower) || cleanLower.includes(" " + makeLower + " ")) {
-      const afterMake = cleaned.slice(cleaned.toLowerCase().indexOf(makeLower) + makeLower.length).trim();
-      // Model is next word(s) until engine/spec info
-      const modelMatch = afterMake.match(/^([a-zA-Z0-9\s]+?)(?:\s+\d|$)/);
-      const model = modelMatch ? modelMatch[1].trim() : afterMake.split(" ")[0];
-      return [make, model || null];
-    }
-  }
-  return [null, null];
-}
 
 // ── Sahibinden "Boya & Değişen" silhouette panel ──
 // The page renders a car silhouette where each panel (kapı, çamurluk, tampon,
@@ -535,163 +373,73 @@ function extractEquipment() {
   return grouped;
 }
 
-function computeAnnualKm(year, mileageKm) {
-  if (!year || !mileageKm) return null;
-  const currentYear = new Date().getFullYear();
-  const age = Math.max(1, currentYear - Number(year));
-  return Math.round(Number(mileageKm) / age);
-}
+// ── the scrape ──────────────────────────────────────────────────────────
 
-function extractSahibindenMetadata() {
-  const title = textBySelector("h1") || textBySelector("h1.classifiedTitle");
-  const priceText = textBySelector(".classified-price-wrapper, .classifiedInfo h3, .classified-price");
-  const description =
-    textBySelector("#classifiedDescription .classifiedDescriptionContent") ||
-    textBySelector("#classifiedDescription") ||
-    textBySelector(".classifiedDescription") ||
-    textBySelector("[itemprop='description']");
+const DESCRIPTION_SELECTORS = [
+  "#classifiedDescription .classifiedDescriptionContent",
+  "#classifiedDescription",
+  ".classifiedDescription",
+  "[itemprop='description']",
+];
 
-  const infoList = extractInfoList();
-  const mapped = mapTurkishKeys(infoList);
-  const technicalDetails = extractTechnicalDetails();
-  const technicalMapped = mapTechnicalDetails(technicalDetails);
-  const damage = extractDamageInfo();
-  const equipment = extractEquipment();
+// `fields` is what goes on the wire: the page's own labels, its own values,
+// no interpretation. `listing` is what stays here — the panel renders the
+// damage and equipment panels locally, and the engine has no rule for them,
+// so there is no reason to send them anywhere.
+function buildScrape(knownLabels) {
+  const infoList = extractInfoList(knownLabels);
+  const technical = extractTechnicalDetails();
 
-  // Extract make/model: prefer info list, fall back to title parsing
-  let make = mapped.make || null;
-  let model = mapped.model || null;
-  if (!make || !model) {
-    const [titleMake, titleModel] = parseMakeModelFromTitle(title);
-    if (!make) make = titleMake;
-    if (!model) model = titleModel;
+  // The info list wins a collision. Both tables label a row "Engine Capacity"
+  // on the English page and they disagree; deciding which is believable is a
+  // range question, and ranges are the adapter's.
+  const fields = { ...technical, ...infoList };
+
+  let description = null;
+  for (const selector of DESCRIPTION_SELECTORS) {
+    description = textBySelector(selector);
+    if (description) break;
   }
-
-  const yearNum = numberFromText(mapped.year) || yearFromTitle(title);
-  const mileageNum = numberFromText(mapped.mileage_km);
-  const annualKm = computeAnnualKm(yearNum, mileageNum);
-
-  // Build retrieval_text in the format the vector pipeline expects
-  const parts = [];
-  if (title) parts.push(title);
-  if (make) parts.push(`Make: ${make}`);
-  if (model) parts.push(`Model: ${model}`);
-  if (mapped.year) parts.push(`Year: ${mapped.year}`);
-  if (mapped.mileage_km) parts.push(`KM: ${mapped.mileage_km}`);
-  if (annualKm) parts.push(`Annual KM: ~${annualKm.toLocaleString()} km/year`);
-  const fuelType = technicalMapped.fuel_type || mapped.fuel_type || null;
-  const transmission = technicalMapped.transmission || mapped.transmission || null;
-  const engineVolume = technicalMapped.engine_volume_cc || mapped.engine_volume_cc || null;
-  const powerHp = technicalMapped.power_hp || mapped.power_hp || null;
-  const bodyType = technicalMapped.body_type || mapped.body_type || null;
-
-  if (powerHp) parts.push(`Engine Power: ${powerHp}`);
-  if (fuelType) parts.push(`Fuel: ${fuelType}`);
-  if (transmission) parts.push(`Transmission: ${transmission}`);
-  if (engineVolume) parts.push(`Engine: ${engineVolume}`);
-  if (damage.changed.length) parts.push(`Replaced parts: ${damage.changed.join(", ")}`);
-  if (damage.painted.length) parts.push(`Painted parts: ${damage.painted.join(", ")}`);
-  if (damage.local_painted.length) parts.push(`Local paint: ${damage.local_painted.join(", ")}`);
-  if (damage.tramer_amount) {
-    parts.push(`Damage claim: ${damage.tramer_amount.toLocaleString()} ${damage.tramer_currency || "TRY"}`);
-  }
-  const equipmentLines = Object.entries(equipment)
-    .filter(([, items]) => items && items.length)
-    .map(([cat, items]) => `${cat}: ${items.join(", ")}`);
-  if (equipmentLines.length) parts.push(`Equipment — ${equipmentLines.join(" | ")}`);
-  if (description) parts.push(description);
-
-  const retrievalText = parts.join("\n");
 
   return {
-    source: "sahibinden.com",
     url: window.location.href,
-    title,
-    make,
-    model,
-    price_amount: numberFromText(priceText),
-    currency: priceText && priceText.includes("TL") ? "TRY" : null,
+    title: textBySelector("h1.classifiedTitle") || textBySelector("h1"),
     description,
-    // Enriched fields
-    year: yearNum,
-    mileage_km: mileageNum,
-    annual_km: annualKm,
-    fuel_type: fuelType,
-    transmission,
-    trim: mapped.trim || null,
-    engine_volume_cc: numberFromText(engineVolume),
-    power_hp: numberFromText(powerHp),
-    body_type: bodyType,
-    // Was computed but never sent — Variant carries a drivetrain column and
-    // sync.py gates claims on it (_drivetrain_compatible).
-    drivetrain: technicalMapped.drivetrain || mapped.drivetrain || null,
-    condition: mapped.condition || null,
-    // Structured replaced/painted/tramer info
-    damage_info: damage,
-    // Equipment / Donanım: { category: [feature, ...] }
-    equipment,
-    technical_details: technicalDetails,
-    // Structured text for the RAG pipeline
-    retrieval_text: retrievalText,
-    // Raw technical details for debugging
-    _raw_details: infoList,
-    _raw_technical_details: technicalDetails,
+    fields,
+    listing: {
+      damage_info: extractDamageInfo(),
+      equipment: extractEquipment(),
+    },
   };
 }
 
-function extractGenericMetadata() {
-  const title = document.title || textBySelector("h1");
-  const description =
-    document.querySelector("meta[name='description']")?.getAttribute("content") || null;
-
-  return {
-    source: window.location.hostname,
-    url: window.location.href,
-    title,
-    description,
-    retrieval_text: [title, description].filter(Boolean).join("\n"),
-  };
-}
-
-function buildMetadata() {
-  const host = window.location.hostname;
-  if (host.includes("sahibinden.com")) {
-    return extractSahibindenMetadata();
-  }
-  return extractGenericMetadata();
-}
+// ── messages ────────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === "GET_AD_METADATA") {
-    sendResponse({ ok: true, payload: buildMetadata() });
+  if (request.type === "GET_SCRAPE") {
+    sendResponse({ ok: true, payload: buildScrape(request.labels) });
     return;
   }
 
   if (request.type === "TRIGGER_ANALYSIS") {
-    const metadata = buildMetadata();
-    chrome.runtime.sendMessage({ type: "ANALYZE_AD", payload: metadata }, (response) => {
-      sendResponse(response);
-    });
+    chrome.runtime.sendMessage(
+      { type: "ANALYZE", payload: { url: window.location.href } },
+      (response) => sendResponse(response)
+    );
     return true; // async
   }
 });
 
-// ── Background-driven auto-trigger ──
-// When the page is fully loaded, notify the background script.
+// ── auto-trigger ────────────────────────────────────────────────────────
+//
+// Which sites are worth scraping is the installed packs' answer, not this
+// file's. The background worker holds the adapter list; here we only report
+// that a page finished loading and let it decide.
 (function autoTrigger() {
-  const host = window.location.hostname;
-  if (!host.includes("sahibinden.com")) return;
-
-  // Only trigger on listing detail pages (URLs containing /detail or /ilan/)
-  if (!window.location.pathname.includes("/detail") && !window.location.pathname.includes("/ilan/")) {
-    return;
-  }
-
-  // Wait a short moment for dynamic content to settle
   setTimeout(() => {
     chrome.runtime.sendMessage({
       type: "PAGE_LOADED",
-      payload: { url: window.location.href, host },
+      payload: { url: window.location.href, host: window.location.hostname },
     });
   }, 1500);
 })();

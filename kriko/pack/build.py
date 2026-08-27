@@ -71,6 +71,62 @@ def _subject_key(entry: dict, identity_keys: dict) -> tuple[str, str]:
     return kind, ids.subject_id(kind, {k: identity[k] for k in declared})
 
 
+
+def _tier_rows(spec) -> list[tuple[str, str, str]]:
+    """A pack's trust file, translated into the patterns `tier_of` reads.
+
+    The pack author writes three human things — a table of domains, a few
+    "anything containing this" rules, and a fallback. The engine reads one
+    thing: a pattern-to-tier map where `*x*` means contains and `*` means
+    everything else. Translating here rather than teaching the engine the
+    pack's phrasing keeps the matcher a single loop with no special cases,
+    and keeps a pack author from ever writing a glob.
+    """
+    if not spec:
+        return []
+    if not isinstance(spec, dict):
+        raise ValueError(
+            "trust/source_tiers.yaml must be a mapping with `domains`, "
+            "`rules`, `default` and `tiers` keys; got "
+            f"{type(spec).__name__}. Building on regardless would ship a pack "
+            "whose sources all fall through to the unknown default, which is "
+            "invisible until someone wonders why a manufacturer bulletin "
+            "ranks below a forum thread.")
+
+    rows: list[tuple[str, str, str]] = []
+    for domain, body in (spec.get("domains") or {}).items():
+        body = body or {}
+        rows.append((str(domain).casefold(), body.get("tier", ""),
+                     body.get("note", "")))
+
+    for rule in spec.get("rules") or []:
+        for fragment in rule.get("domain_contains") or []:
+            rows.append((f"*{str(fragment).casefold()}*", rule.get("tier", ""),
+                         rule.get("note", "")))
+
+    if spec.get("default"):
+        rows.append(("*", str(spec["default"]), "pack default"))
+
+    return [r for r in rows if r[1]]
+
+
+def _tier_trust_rows(spec) -> list[tuple[str, float]]:
+    """What each tier is worth, per the pack that named it.
+
+    A pack may invent a tier the engine has no default weight for; without
+    this every claim behind it would quietly fall to the unknown default and
+    the pack author would never learn why.
+    """
+    if not isinstance(spec, dict):
+        return []      # already reported by _tier_rows
+    out = []
+    for tier, body in (spec.get("tiers") or {}).items():
+        trust = (body or {}).get("trust")
+        if trust is not None:
+            out.append((str(tier), float(trust)))
+    return out
+
+
 def build(root, out_path) -> Path:
     """Build `root` into a pack file at `out_path`. Returns the path."""
     root = Path(root)
@@ -240,11 +296,18 @@ def build(root, out_path) -> Path:
                           path.read_text(encoding="utf-8")))
             row_ids.append(f"asset:adapters/{path.name}")
 
-        for row in _load_yaml(root / "trust" / "source_tiers.yaml", []):
+        for pattern, tier, note in _tier_rows(
+                _load_yaml(root / "trust" / "source_tiers.yaml", {})):
             conn.execute(
                 "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
-                (row["domain"], pack_id, row["tier"], row.get("note", "")))
-            row_ids.append(f"tier:{row['domain']}")
+                (pattern, pack_id, tier, note))
+            row_ids.append(f"tier:{pattern}")
+
+        for tier, trust in _tier_trust_rows(
+                _load_yaml(root / "trust" / "source_tiers.yaml", {})):
+            conn.execute("INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",
+                         (tier, pack_id, trust))
+            row_ids.append(f"tier_trust:{tier}")
 
         conn.execute(
             "INSERT OR REPLACE INTO packs (pack_id, name, version, schema_version,"

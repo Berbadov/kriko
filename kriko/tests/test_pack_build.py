@@ -224,3 +224,105 @@ def test_built_pack_installs_and_answers(tmp_path):
         " WHERE p.enabled = 1 AND s.label LIKE 'Makita%'").fetchone()
     assert title.startswith("Chuck jaws slip")
     store.close()
+
+
+# ── trust ────────────────────────────────────────────────────────────────
+#
+# A pack says how much it trusts a source in two halves: which tier a domain
+# belongs to, and what a tier is worth. Both are pack data — the reader's own
+# rows win over them, and nothing here is an engine constant.
+
+TIERS_YAML = """
+tiers:
+  authoritative: {trust: 1.0}
+  forum_ugc:     {trust: 0.4}
+  seo_blog:      {trust: 0.2}
+
+default: seo_blog
+
+domains:
+  maker.example: {tier: authoritative, note: manufacturer docs}
+  another.example: {tier: authoritative}
+
+rules:
+  - tier: forum_ugc
+    domain_contains: ["forum.", "kulubu"]
+"""
+
+
+def _pack_with_tiers(tmp_path, yaml_text):
+    root = _write(tmp_path)
+    (root / "trust").mkdir(exist_ok=True)
+    (root / "trust" / "source_tiers.yaml").write_text(yaml_text, encoding="utf-8")
+    return root
+
+
+def test_a_domain_is_filed_under_the_tier_the_pack_gave_it(tmp_path):
+    from kriko.store.db import connect
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
+                      tmp_path / "p.kpack")
+    conn = connect(out)
+    rows = dict(conn.execute(
+        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    assert rows["maker.example"] == "authoritative"
+    conn.close()
+
+
+def test_a_contains_rule_becomes_the_wildcard_the_engine_understands(tmp_path):
+    """"Anything with 'forum.' in it is user-generated", without listing the
+    internet. `tier_of` already reads `*substring*`; the builder's job is only
+    to write the pack's phrasing into it."""
+    from kriko.store.db import connect
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
+                      tmp_path / "p.kpack")
+    conn = connect(out)
+    rows = dict(conn.execute(
+        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    assert rows["*forum.*"] == "forum_ugc"
+    assert rows["*kulubu*"] == "forum_ugc"
+    conn.close()
+
+
+def test_the_default_tier_is_stored_as_the_catch_all_pattern(tmp_path):
+    from kriko.store.db import connect
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
+                      tmp_path / "p.kpack")
+    conn = connect(out)
+    rows = dict(conn.execute(
+        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    assert rows["*"] == "seo_blog"
+    conn.close()
+
+
+def test_what_a_tier_is_worth_ships_with_the_pack_that_named_it(tmp_path):
+    """Otherwise a pack could invent a tier the engine has no weight for, and
+    every claim behind it would silently fall to the unknown default."""
+    from kriko.store.db import connect
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
+                      tmp_path / "p.kpack")
+    conn = connect(out)
+    rows = dict(conn.execute("SELECT tier, trust FROM tier_trust").fetchall())
+    assert rows == {"authoritative": 1.0, "forum_ugc": 0.4, "seo_blog": 0.2}
+    conn.close()
+
+
+def test_a_pack_with_no_trust_file_still_builds(tmp_path):
+    """Trust is optional. A pack that says nothing about sources gets the
+    engine's defaults rather than a build error."""
+    out = build.build(_write(tmp_path), tmp_path / "p.kpack")
+    assert out.exists()
+
+
+def test_a_trust_file_the_builder_cannot_read_fails_the_build(tmp_path):
+    """Loudly, rather than by shipping a pack with no tiers in it.
+
+    The silent version of this cost a commit: `packs/cars` moved its trust
+    file in from the old tree unchanged, the builder read a shape it did not
+    understand, and the pack built successfully with every source falling
+    through to the unknown default. A build error is recoverable in seconds;
+    a pack that quietly stopped trusting its manufacturer sources is not
+    visible at all.
+    """
+    root = _pack_with_tiers(tmp_path, "- {domain: a.example, tier: specialist}\n")
+    with pytest.raises(ValueError, match="source_tiers.yaml"):
+        build.build(root, tmp_path / "p.kpack")
