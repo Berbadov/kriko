@@ -74,6 +74,12 @@ ambiguous:
     - blue smoke
     - burning oil
 
+exempt:
+    # Text naming any of these waives every other gate outright. An official
+    # recall is authoritative even when it names a part an inspection also
+    # covers (was check_evidence's `recall = "recall" in blob.lower()`).
+    - recall
+
 noise:
     # Generic dashboard warning-light language.
     - {

@@ -14,6 +14,9 @@ class GateVocabulary:
     covered: frozenset[str] = frozenset()
     generic: frozenset[str] = frozenset()
     ambiguous: frozenset[str] = frozenset()
+    # Text that waives every other gate outright — an official recall is
+    # authoritative even when it names a part an inspection also covers.
+    exempt: frozenset[str] = frozenset()
     noise_patterns: tuple[re.Pattern, ...] = ()
     specificity_patterns: tuple[re.Pattern, ...] = ()
     # Structural limits the pack declares. Zero means "not declared": the
@@ -61,6 +64,7 @@ def vocabulary_from_rows(
         covered=literals("covered"),
         generic=literals("generic"),
         ambiguous=literals("ambiguous"),
+        exempt=literals("exempt"),
         noise_patterns=_compile(rows.get("noise", ())),
         specificity_patterns=_compile(rows.get("specificity", ())),
         max_title_chars=limit("max_title_chars"),
@@ -133,13 +137,34 @@ def is_specific(text: str, vocab: GateVocabulary) -> bool:
     return any(pattern.search(text) for pattern in vocab.specificity_patterns)
 
 
-def gate_reason(text: str, vocab: GateVocabulary) -> str | None:
-    """Return the rejecting rule name, or ``None`` when the claim is kept."""
+def gate_reason(
+    text: str, vocab: GateVocabulary, *, subject: str | None = None
+) -> str | None:
+    """Return the rejecting rule name, or ``None`` when the claim is kept.
+
+    ``subject`` is the part of the claim that names what it is *about* — a
+    title, typically — as distinct from ``text``, which is everything the
+    claim says, including a rationale that may mention routine-inspection
+    vocabulary while explaining a specific failure's mechanism ("clutch
+    debris contaminates the mechatronics" says "clutch" without being a
+    routine clutch-wear claim). ``covered`` only judges what the claim is
+    about, so it reads ``subject``; ``generic``, ``noise`` and ``ambiguous``
+    read the full ``text``. When a caller has no natural subject/text split,
+    omitting ``subject`` makes it default to ``text`` and every rule reads
+    the same string, which is the old, less precise behaviour.
+    """
     text = text or ""
+    subject = text if subject is None else (subject or "")
     lowered = text.casefold()
-    if any(term in lowered for term in vocab.covered):
+
+    if any(term in lowered for term in vocab.exempt):
+        return None
+
+    if any(term in subject.casefold() for term in vocab.covered) and not is_specific(
+        subject, vocab
+    ):
         return "covered"
-    if any(term in lowered for term in vocab.generic):
+    if any(term in lowered for term in vocab.generic) and not is_specific(text, vocab):
         return "generic"
     if any(pattern.search(text) for pattern in vocab.noise_patterns):
         return "noise"
