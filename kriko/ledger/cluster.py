@@ -2,7 +2,7 @@
 
 Greedy single-pass in evidence-id order (stable, deterministic): an evidence
 row joins the first existing cluster in the same domain whose representative
-text has word-Jaccard >= 0.4 (same threshold as packs.cars.pipeline.dedup.same_claim),
+text has word-Jaccard >= 0.4 (same threshold as packs.cars.pipeline.claims.dedup.same_claim),
 else it founds a new cluster. clusters/cluster_members are derived tables —
 rebuilt wholesale, never migrated."""
 
