@@ -49,13 +49,19 @@ def _vocabulary() -> GateVocabulary:
     path = PACK_ROOT / "vocabulary" / "gates.yaml"
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError):
+        rows = {
+            kind: [e["pattern"] if isinstance(e, dict) else e for e in (entries or [])]
+            for kind, entries in raw.items()
+            if isinstance(entries, list)
+        }
+    except (OSError, yaml.YAMLError, AttributeError, KeyError, TypeError):
+        # Fail open: a pack whose gate file is missing or mis-shaped gates
+        # nothing, rather than taking the pipeline down with it. CLAUDE.md's
+        # automation principle — emit no judgement rather than a wrong one.
+        # (An unknown gate *kind* is a different question: build.py raises
+        # on that at build time, deliberately strict; here we just skip
+        # non-list entries and stay silent — runtime is fail-open by design.)
         return GateVocabulary()
-    rows = {
-        kind: [e["pattern"] if isinstance(e, dict) else e for e in (entries or [])]
-        for kind, entries in raw.items()
-        if isinstance(entries, list)
-    }
     return vocabulary_from_rows(rows)
 
 
