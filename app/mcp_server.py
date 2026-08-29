@@ -323,14 +323,17 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
                 continue
 
             rationale = (item.get("rationale") or "").strip()
-            reason = gate_reason(f"{title} {rationale}", vocab, subject=title)
+            has_anchor = bool(item.get("component") or item.get("component_hint"))
+            reason = gate_reason(
+                f"{title} {rationale}", vocab, subject=title, has_anchor=has_anchor
+            )
             if reason:
                 rejected.append({"title": title, "reason": reason})
                 continue
 
             structural = structural_reasons(
                 title, rationale, vocab,
-                has_anchor=bool(item.get("component") or item.get("component_hint")),
+                has_anchor=has_anchor,
             )
             if structural:
                 rejected.append({"title": title, "reason": "; ".join(structural)})

@@ -43,9 +43,46 @@ def _vocab(tmp_path):
 
 
 def _rejected(title, rationale, has_anchor, vocab) -> bool:
-    if gate_reason(f"{title} {rationale}", vocab, subject=title):
+    if gate_reason(f"{title} {rationale}", vocab, subject=title, has_anchor=has_anchor):
         return True
     return bool(structural_reasons(title, rationale, vocab, has_anchor=has_anchor))
+
+
+def _reason(title, rationale, has_anchor, vocab) -> str | None:
+    """Which single rule rejected this claim, or None. For the per-kind guard."""
+    reason = gate_reason(
+        f"{title} {rationale}", vocab, subject=title, has_anchor=has_anchor
+    )
+    if reason:
+        return reason
+    if structural_reasons(title, rationale, vocab, has_anchor=has_anchor):
+        return "structural"
+    return None
+
+
+def _measure_by_kind(vocab, *, has_anchor_from_part_id: bool):
+    """Like `_measure`, but broken down by which single rule rejected a claim.
+
+    The aggregate ceiling below (`< 0.05`) hides a whole rule regressing as
+    long as the total stays under it — this is exactly how the `noise` bug
+    got past calibration: it added ~2% of the corpus, comfortably under a 5%
+    total ceiling that `covered` alone (before its own fix) already used up
+    most of. A per-kind bound cannot hide one rule's regression inside
+    another rule's margin.
+    """
+    total = 0
+    counts = {"covered": 0, "generic": 0, "noise": 0, "ambiguous": 0, "structural": 0}
+    for path in PARTS_ROOT.rglob("*.yaml"):
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        has_anchor = has_anchor_from_part_id and bool(data.get("part_id"))
+        for claim in data.get("claims") or []:
+            total += 1
+            reason = _reason(
+                claim.get("title", ""), claim.get("rationale", ""), has_anchor, vocab
+            )
+            if reason:
+                counts[reason] += 1
+    return counts, total
 
 
 def _measure(vocab, *, has_anchor_from_part_id: bool):
@@ -110,3 +147,40 @@ def test_the_unanchored_rejection_rate_is_measured_too(tmp_path):
     # Sanity only — the gate must still keep the overwhelming majority of the
     # catalog even in the worst case, or something has gone badly wrong.
     assert rejected / total < 0.5, f"{rejected}/{total} existing claims rejected"
+
+
+def test_each_gate_kind_is_bounded_on_its_own(tmp_path):
+    """The aggregate 5% ceiling above cannot see one rule regressing.
+
+    `noise` regressed to 14/699 (2.0%) while the aggregate (9/699, 1.29% at
+    the time) sat comfortably under the 5% total ceiling — a per-kind bound
+    is what would have caught it. These per-kind bounds are *measured*, not
+    aspirational: each is the corpus's current count for that kind (measured
+    2026-08-30, anchored case, 699 claims) with headroom, not a target to
+    design toward. If a change legitimately moves a count, remeasure and move
+    the bound — don't raise it reflexively to make a real regression pass.
+
+      covered:    8/699 (1.14%) — bound 3%  (21 claims)
+      generic:    0/699 (0.00%) — bound 2%  (14 claims)
+      noise:      1/699 (0.14%) — bound 1%  (7 claims;  catches the 14-claim regression)
+      ambiguous:  0/699 (0.00%) — bound 2%  (14 claims)
+      structural: 0/699 (0.00%) — bound 2%  (14 claims)
+    """
+    vocab = _vocab(tmp_path)
+    counts, total = _measure_by_kind(vocab, has_anchor_from_part_id=True)
+    assert total > 100
+
+    bounds = {
+        "covered": 0.03,
+        "generic": 0.02,
+        "noise": 0.01,
+        "ambiguous": 0.02,
+        "structural": 0.02,
+    }
+    for kind, bound in bounds.items():
+        rate = counts[kind] / total
+        assert rate < bound, (
+            f"{kind}: {counts[kind]}/{total} ({rate:.2%}) exceeds its bound "
+            f"of {bound:.0%} — the aggregate ceiling would not have caught "
+            "this on its own"
+        )

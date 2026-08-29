@@ -88,6 +88,45 @@ def test_subject_lets_a_rationale_only_covered_term_survive(store):
     assert gate_reason(text, vocab) == "covered"
 
 
+def test_noise_is_scoped_to_subject_and_waived_by_specificity(store):
+    """A rationale mentioning a warning light must not sink a specific chronic.
+
+    The bug: `noise` used to match `title + rationale` with no escape at
+    all, so a claim like "DQ200 hydraulic pressure tube failure" got refused
+    because its rationale happened to explain the failure's dashboard
+    symptom. `noise` now reads `subject` only, and — like `covered` — keeps
+    the specificity escape.
+    """
+    vocab = load_gates(store, "p")
+    title = "DQ200 mechatronics failure"
+    rationale = "This causes the ESP warning light to illuminate under load."
+    text = f"{title} {rationale}"
+    assert gate_reason(text, vocab, subject=title) is None
+    # A title that itself names the warning-light shape, with no anchor, is
+    # still refused — the escape is for the rationale riding along, not a
+    # blanket waiver of the rule.
+    assert gate_reason("ESP warning light", vocab, subject="ESP warning light") == (
+        "noise"
+    )
+
+
+def test_anchor_waives_generic_and_ambiguous_like_an_in_text_signal(store):
+    """A caller-supplied component anchor rescues generic/ambiguous wording.
+
+    Mirrors what `structural_reasons`' own specificity escape already does —
+    an agent that names a `component`/`component_hint` should not need to
+    also spell the identifier out in prose for `gate_reason` to accept it.
+    """
+    vocab = load_gates(store, "p")
+    text = "Wear and tear is normal"
+    assert gate_reason(text, vocab) == "generic"
+    assert gate_reason(text, vocab, has_anchor=True) is None
+
+    ambiguous_text = "Oil consumption is worth watching"
+    assert gate_reason(ambiguous_text, vocab) == "ambiguous"
+    assert gate_reason(ambiguous_text, vocab, has_anchor=True) is None
+
+
 def test_missing_pack_vocabulary_fails_open(tmp_path):
     conn = connect(tmp_path / "s.sqlite")
     with conn:

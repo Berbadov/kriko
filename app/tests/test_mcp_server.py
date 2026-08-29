@@ -52,6 +52,8 @@ PACK = {
     "gates": """
         noise:
             - { pattern: '\\bwarning\\s+light\\b', note: true of any tool }
+        generic:
+            - { pattern: normal wear and tear, note: routine phrase with no anchor }
         covered:
             # A deliberately routine-sounding phrase that also happens to sit
             # in "DQ381 mechatronics failure from 120000 km" — present so the
@@ -221,6 +223,27 @@ def test_the_documented_contract_is_actually_sufficient(store):
         "document_text": document,
         "source_url": "https://example.test/c",
         "component": "front_bearing",
+    }])
+    assert result["rejected"] == []
+    assert len(result["accepted"]) == 1
+
+
+def test_a_component_anchor_waives_a_generic_worded_finding(store):
+    """`component` rescues generic wording, not just the specificity rule.
+
+    Before this fix, `gate_reason` had no anchor parameter at all, so a
+    caller-supplied `component` satisfied `structural_reasons`' specificity
+    escape but not `generic`'s own escape — a finding phrased in routine
+    "normal wear and tear" language was refused even with a component named.
+    """
+    result = mcp_server.submit_findings(_subject(), "tools", [{
+        "title": "Chuck jaws show normal wear and tear",
+        "rationale": "Over years of heavy use the jaw teeth round off, which is "
+                     "normal wear and tear that eventually needs a replacement.",
+        "quote": "jaws show normal wear and tear",
+        "document_text": "Long-term owners note the chuck jaws show normal wear and tear.",
+        "source_url": "https://example.test/d",
+        "component": "chuck",
     }])
     assert result["rejected"] == []
     assert len(result["accepted"]) == 1
