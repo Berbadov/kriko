@@ -12,6 +12,7 @@ VOCAB = [
     ("ambiguous", "oil consumption", ""),
     ("noise", r"\bwarning\s+light\b", ""),
     ("specificity", r"\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b", ""),
+    ("exempt", "recall", ""),
 ]
 
 
@@ -46,6 +47,45 @@ def test_unmatched_text_is_kept(store):
         gate_reason("Mechatronic unit fails above 120,000 km", load_gates(store, "p"))
         is None
     )
+
+
+def test_exempt_waives_the_covered_rejection(store):
+    """An official recall is authoritative even when it names a covered part."""
+    vocab = load_gates(store, "p")
+    assert gate_reason("Recall: front brake pad replacement", vocab) is None
+
+
+def test_exempt_does_not_waive_a_noise_rejection(store):
+    """`exempt` narrows to `covered` only — it must not blanket-waive every gate.
+
+    A warning-light title stays refused even when the text also mentions a
+    recall: the recall carve-out is about routine-inspection vocabulary
+    describing an authoritative fix, not a licence for any other low-value
+    shape to ride along with it.
+    """
+    vocab = load_gates(store, "p")
+    assert (
+        gate_reason("ABS warning light illuminates (recall)", vocab) == "noise"
+    )
+
+
+def test_subject_lets_a_rationale_only_covered_term_survive(store):
+    """`covered` judges what the claim is about, not everything it mentions.
+
+    A rationale explaining a chronic's mechanism may use covered vocabulary
+    ("brake pad") without the claim itself being a routine pad-wear item —
+    passing `subject` scopes the covered check to the title; omitting it
+    scans the whole blob and still rejects.
+    """
+    vocab = load_gates(store, "p")
+    # No specificity anchor in either the title or the rationale here — the
+    # point under test is subject-scoping, not the anchor escape, so neither
+    # must accidentally trip it.
+    title = "Mechatronics unit failure"
+    rationale = "Debris from worn brake pad material can contaminate the unit."
+    text = f"{title} {rationale}"
+    assert gate_reason(text, vocab, subject=title) is None
+    assert gate_reason(text, vocab) == "covered"
 
 
 def test_missing_pack_vocabulary_fails_open(tmp_path):
