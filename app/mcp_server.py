@@ -312,7 +312,7 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
                 continue
 
             rationale = (item.get("rationale") or "").strip()
-            reason = gate_reason(f"{title} {rationale}", vocab)
+            reason = gate_reason(f"{title} {rationale}", vocab, subject=title)
             if reason:
                 rejected.append({"title": title, "reason": reason})
                 continue
