@@ -29,16 +29,15 @@ def _compile(patterns) -> tuple[re.Pattern, ...]:
     return tuple(compiled)
 
 
-def load_gates(conn, pack_id: str) -> GateVocabulary:
-    """Load one pack's gate rows, returning an empty vocabulary if absent."""
-    rows: dict[str, list[str]] = {}
-    for row in conn.execute(
-        "SELECT kind, pattern FROM gate_terms WHERE pack_id = ?", (pack_id,)
-    ):
-        rows.setdefault(row["kind"], []).append(row["pattern"])
+def vocabulary_from_rows(rows: dict[str, list[str]]) -> GateVocabulary:
+    """Build a vocabulary from raw {kind: [pattern]} rows.
 
+    ``load_gates`` reads those rows from an installed store; a pack's offline
+    pipeline has only the YAML it will later ship. Both end up here, so the
+    compilation and the fail-open behaviour cannot diverge.
+    """
     def literals(kind: str) -> frozenset[str]:
-        return frozenset(pattern.casefold() for pattern in rows.get(kind, ()))
+        return frozenset(p.casefold() for p in rows.get(kind, ()))
 
     return GateVocabulary(
         covered=literals("covered"),
@@ -47,6 +46,17 @@ def load_gates(conn, pack_id: str) -> GateVocabulary:
         noise_patterns=_compile(rows.get("noise", ())),
         specificity_patterns=_compile(rows.get("specificity", ())),
     )
+
+
+def load_gates(conn, pack_id: str) -> GateVocabulary:
+    """Load one pack's gate rows, returning an empty vocabulary if absent."""
+    rows: dict[str, list[str]] = {}
+    for row in conn.execute(
+        "SELECT kind, pattern FROM gate_terms WHERE pack_id = ?", (pack_id,)
+    ):
+        rows.setdefault(row["kind"], []).append(row["pattern"])
+
+    return vocabulary_from_rows(rows)
 
 
 def is_specific(text: str, vocab: GateVocabulary) -> bool:
