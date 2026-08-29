@@ -1986,6 +1986,10 @@ match them.
 - Add a note under B33 that the Phase 6c follow-up (the extension manifest's
   hardcoded site list) remains open — this plan did not touch it.
 - Add any deferred item this plan surfaced but did not fix.
+- **File the long-function residue** as a new P2 backlog item, listing the eight
+  functions Step 6's report prints with their current line counts, and noting
+  that Tasks 10-11 handled the two the spec scoped. Frame it as a readability
+  item, not a bug.
 
 - [ ] **Step 6: Final verification**
 
@@ -2035,7 +2039,19 @@ print("\n".join(bad) if bad else "no function over 80 lines")
 PY
 ```
 
-Expected: suite PASS; all four layering greps silent; no function over 80 lines.
+Expected: suite PASS; all four layering greps silent; every module has a
+docstring.
+
+**The function-length check is a report, not a gate.** Tasks 10 and 11 fix the
+two functions the spec scoped (457 and 300 lines). Eight others sit between 90
+and 194 lines and are outside every task in this plan — `validate_part()` (194),
+`process.run()` (153), `process.run_part()` (152), `ledger_run.main()` (144),
+`export_all()` (142), `submit_findings()` (128, which Task 7 lengthens),
+`lookup()` (119), `build_report()` (114). Print the list, do not fail on it, and
+file the residue as a backlog item in Step 5 rather than splitting them here.
+Splitting eight unrelated functions with no behaviour test behind them is a
+different piece of work than this pass, and pretending otherwise turns a
+readability target into an unfunded gate.
 
 Note: the second grep will now match `packs/cars/pipeline/` importing
 `packs.cars.pipeline.*` siblings — that is a self-import, not a layering
