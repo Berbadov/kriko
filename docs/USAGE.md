@@ -110,9 +110,9 @@ trim-shaped VW Golf 8 lineup got written and reported as a success:
   contaminate its siblings. Find the unit code (`dq381`) or leave the row out.
 - **No low-value rows.** Warning lights, ekspertiz-routine items (fluids, pads,
   compression), DTC litanies, filler rationales and rephrasings of a chronic
-  already on file are refused with the reason
-  (`packs/cars/pipeline/agent/gates.py`) — the CLAUDE.md product principle, enforced
-  rather than requested.
+  already on file are refused with the reason (`kriko/gates.py`, reading the
+  cars pack's own `packs/cars/vocabulary/gates.yaml` rows) — the CLAUDE.md
+  product principle, enforced rather than requested.
 - **No budget overrun.** More than 5 documents on one part is refused; forums,
   complaint boards and spec content farms are refused as sources.
 
