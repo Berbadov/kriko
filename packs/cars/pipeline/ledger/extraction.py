@@ -74,7 +74,8 @@ def _vocabulary() -> GateVocabulary:
 def _low_value_reason(claim: dict) -> str | None:
     title = claim.get("title", "")
     text = f"{title} {claim.get('rationale', '')}"
-    return gate_reason(text, _vocabulary(), subject=title)
+    has_anchor = bool(claim.get("component") or claim.get("component_hint"))
+    return gate_reason(text, _vocabulary(), subject=title, has_anchor=has_anchor)
 
 
 def extract_document(conn, doc_id: int, budget: Budget) -> int:

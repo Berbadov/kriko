@@ -14,8 +14,10 @@ class GateVocabulary:
     covered: frozenset[str] = frozenset()
     generic: frozenset[str] = frozenset()
     ambiguous: frozenset[str] = frozenset()
-    # Text that waives every other gate outright — an official recall is
-    # authoritative even when it names a part an inspection also covers.
+    # Text that waives the ``covered`` rejection only — an official recall is
+    # authoritative even when it names a part an inspection also covers, but
+    # it is not a blanket waiver: ``noise``/``generic``/``ambiguous`` still
+    # apply. See ``gate_reason``'s docstring.
     exempt: frozenset[str] = frozenset()
     noise_patterns: tuple[re.Pattern, ...] = ()
     specificity_patterns: tuple[re.Pattern, ...] = ()
@@ -138,7 +140,11 @@ def is_specific(text: str, vocab: GateVocabulary) -> bool:
 
 
 def gate_reason(
-    text: str, vocab: GateVocabulary, *, subject: str | None = None
+    text: str,
+    vocab: GateVocabulary,
+    *,
+    subject: str | None = None,
+    has_anchor: bool = False,
 ) -> str | None:
     """Return the rejecting rule name, or ``None`` when the claim is kept.
 
@@ -147,17 +153,28 @@ def gate_reason(
     claim says, including a rationale that may mention routine-inspection
     vocabulary while explaining a specific failure's mechanism ("clutch
     debris contaminates the mechatronics" says "clutch" without being a
-    routine clutch-wear claim). ``covered`` only judges what the claim is
-    about, so it reads ``subject``; ``generic``, ``noise`` and ``ambiguous``
-    read the full ``text``. When a caller has no natural subject/text split,
-    omitting ``subject`` makes every rule read the same string — ``covered``
-    and ``generic`` still keep their specificity escapes either way, so this
-    is not simply the pre-split behaviour, just a coarser subject.
+    routine clutch-wear claim). ``covered`` and ``noise`` only judge what the
+    claim is about, so they read ``subject``; ``generic`` and ``ambiguous``
+    read the full ``text`` (a rationale can legitimately explain routine
+    maintenance in generic terms, but a rationale mentioning a warning light
+    while describing a specific chronic failure should not sink it, which is
+    why ``noise`` — like ``covered`` — is scoped to ``subject`` and keeps a
+    specificity escape). When a caller has no natural subject/text split,
+    omitting ``subject`` makes every rule read the same string — ``covered``,
+    ``noise`` and ``generic`` still keep their specificity escapes either
+    way, so this is not simply the pre-split behaviour, just a coarser
+    subject.
 
     ``exempt`` waives ``covered`` alone — an official recall is authoritative
     even when it names a part an inspection also covers, but that says
     nothing about a warning-light title or generic filler riding along with
     it, so ``noise``/``generic``/``ambiguous`` still apply.
+
+    ``has_anchor`` lets a caller assert specificity a component identifier
+    carries in its own field rather than in the text — the same escape
+    ``structural_reasons`` grants its own specificity rule. It satisfies the
+    ``generic`` and ``ambiguous`` escapes exactly as an in-text specificity
+    pattern would.
     """
     text = text or ""
     subject = text if subject is None else (subject or "")
@@ -170,12 +187,20 @@ def gate_reason(
         and not is_specific(subject, vocab)
     ):
         return "covered"
-    if any(term in lowered for term in vocab.generic) and not is_specific(text, vocab):
+    if (
+        any(term in lowered for term in vocab.generic)
+        and not has_anchor
+        and not is_specific(text, vocab)
+    ):
         return "generic"
-    if any(pattern.search(text) for pattern in vocab.noise_patterns):
+    if any(
+        pattern.search(subject) for pattern in vocab.noise_patterns
+    ) and not is_specific(subject, vocab):
         return "noise"
-    if any(term in lowered for term in vocab.ambiguous) and not is_specific(
-        text, vocab
+    if (
+        any(term in lowered for term in vocab.ambiguous)
+        and not has_anchor
+        and not is_specific(text, vocab)
     ):
         return "ambiguous"
     return None
