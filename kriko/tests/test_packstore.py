@@ -17,25 +17,42 @@ from kriko.store import ids, packstore
 from kriko.store.db import connect
 
 
-def _pack(tmp_path, pack_id, claims, facts=(), name=None):
+def _pack(tmp_path, pack_id, claims, facts=(), name=None, version="0.1.0", digest=None):
     """Build a minimal one-subject pack file and return its path."""
-    path = tmp_path / f"{pack_id}.kpack.sqlite"
+    path = tmp_path / f"{pack_id}-{version}-{digest or 'default'}.kpack.sqlite"
     conn = connect(path)
     subject = ids.subject_id("product", {"make": "vw", "model": "golf"})
     packstore.write_pack_row(
-        conn, pack_id=pack_id, name=name or pack_id, version="0.1.0",
-        content_digest="x" * 64)
+        conn,
+        pack_id=pack_id,
+        name=name or pack_id,
+        version=version,
+        content_digest=digest or "x" * 64,
+    )
     conn.execute(
         "INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
-        (subject, pack_id, "product", "VW Golf"))
+        (subject, pack_id, "product", "VW Golf"),
+    )
     for key, value in facts:
         conn.execute(
             "INSERT OR IGNORE INTO attributes"
             " (attribute_id, pack_id, subject_id, key, value_text, value_num,"
             "  unit, valid_from, valid_to, is_identity, confidence)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-            (ids.attribute_id(subject, key, value), pack_id, subject, key,
-             str(value), None, "", "", "", 1, None))
+            (
+                ids.attribute_id(subject, key, value),
+                pack_id,
+                subject,
+                key,
+                str(value),
+                None,
+                "",
+                "",
+                "",
+                1,
+                None,
+            ),
+        )
     for title, severity in claims:
         cid = ids.claim_id(subject, "known_issue", "engine", title)
         conn.execute(
@@ -43,11 +60,23 @@ def _pack(tmp_path, pack_id, claims, facts=(), name=None):
             " (claim_id, pack_id, subject_id, kind, domain, severity,"
             "  consequence, detection, author_confidence, created_at)"
             " VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (cid, pack_id, subject, "known_issue", "engine", severity,
-             "", "", 0.8, "2026-08-26"))
+            (
+                cid,
+                pack_id,
+                subject,
+                "known_issue",
+                "engine",
+                severity,
+                "",
+                "",
+                0.8,
+                "2026-08-26",
+            ),
+        )
         conn.execute(
             "INSERT OR IGNORE INTO claim_text VALUES (?,?,?,?,?,?)",
-            (cid, pack_id, "en", title, "", ""))
+            (cid, pack_id, "en", title, "", ""),
+        )
     conn.commit()
     conn.close()
     return path
@@ -70,11 +99,22 @@ def store(tmp_path):
 
 
 def test_fresh_store_applies_the_schema(store):
-    tables = {r[0] for r in store.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"packs", "subjects", "attributes", "relations", "claims",
-            "claim_text", "claim_conditions", "sources", "evidence",
-            "terms", "pack_trust"} <= tables
+    tables = {
+        r[0] for r in store.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    }
+    assert {
+        "packs",
+        "subjects",
+        "attributes",
+        "relations",
+        "claims",
+        "claim_text",
+        "claim_conditions",
+        "sources",
+        "evidence",
+        "terms",
+        "pack_trust",
+    } <= tables
 
 
 def test_store_uses_wal(store):
@@ -110,11 +150,12 @@ def test_two_packs_asserting_the_same_fact_keep_one_row_each(store, tmp_path):
 
     rows = _rows(store, "attributes")
     assert len(rows) == 2
-    assert len({r[0] for r in rows}) == 1          # one content hash
-    assert {r[1] for r in rows} == {"a", "b"}      # two packs
+    assert len({r[0] for r in rows}) == 1  # one content hash
+    assert {r[1] for r in rows} == {"a", "b"}  # two packs
 
     distinct = store.execute(
-        "SELECT COUNT(DISTINCT attribute_id) FROM attributes").fetchone()[0]
+        "SELECT COUNT(DISTINCT attribute_id) FROM attributes"
+    ).fetchone()[0]
     assert distinct == 1
 
 
@@ -126,10 +167,16 @@ def test_contradicting_claims_from_two_packs_both_persist(store, tmp_path):
 
 
 def test_uninstall_leaves_other_packs_bit_for_bit_unchanged(store, tmp_path):
-    packstore.install(store, _pack(tmp_path, "cars", [("Timing chain", "high")],
-                                   facts=[("fuel", "diesel")]))
-    packstore.install(store, _pack(tmp_path, "drill", [("Chuck slips", "medium")],
-                                   facts=[("voltage", "18")]))
+    packstore.install(
+        store,
+        _pack(tmp_path, "cars", [("Timing chain", "high")], facts=[("fuel", "diesel")]),
+    )
+    packstore.install(
+        store,
+        _pack(
+            tmp_path, "drill", [("Chuck slips", "medium")], facts=[("voltage", "18")]
+        ),
+    )
 
     tables = ("subjects", "attributes", "claims", "claim_text", "packs")
     before = {t: _rows(store, t, "cars") for t in tables}
@@ -142,8 +189,10 @@ def test_uninstall_leaves_other_packs_bit_for_bit_unchanged(store, tmp_path):
 
 
 def test_uninstall_clears_every_table(store, tmp_path):
-    packstore.install(store, _pack(tmp_path, "cars", [("Timing chain", "high")],
-                                   facts=[("fuel", "diesel")]))
+    packstore.install(
+        store,
+        _pack(tmp_path, "cars", [("Timing chain", "high")], facts=[("fuel", "diesel")]),
+    )
     packstore.uninstall(store, "cars")
     for table in packstore.PACK_TABLES:
         assert _rows(store, table, "cars") == [], f"{table} still holds cars rows"
@@ -180,12 +229,165 @@ def test_install_rejects_a_pack_carrying_more_than_one_pack_row(store, tmp_path)
     """A pack file describes exactly one pack; two means a corrupt build."""
     path = _pack(tmp_path, "cars", [])
     conn = connect(path)
-    packstore.write_pack_row(conn, pack_id="stowaway", name="s", version="0.1.0",
-                             content_digest="y" * 64)
+    packstore.write_pack_row(
+        conn, pack_id="stowaway", name="s", version="0.1.0", content_digest="y" * 64
+    )
     conn.commit()
     conn.close()
     with pytest.raises(ValueError, match="exactly one"):
         packstore.install(store, path)
+
+
+def test_same_version_with_a_new_digest_is_rejected(store, tmp_path):
+    packstore.install(store, _pack(tmp_path, "cars", [], digest="a" * 64))
+    with pytest.raises(ValueError, match="immutable"):
+        packstore.install(store, _pack(tmp_path, "cars", [], digest="b" * 64))
+    assert store.execute("SELECT content_digest FROM packs").fetchone()[0] == "a" * 64
+
+
+def test_update_preserves_pack_trust(store, tmp_path):
+    packstore.install(store, _pack(tmp_path, "cars", [], digest="a" * 64))
+    store.execute(
+        "INSERT INTO pack_trust (pack_id, weight, pinned) VALUES (?, ?, ?)",
+        ("cars", 0.25, 1),
+    )
+    packstore.update(
+        store, _pack(tmp_path, "cars", [], version="2.0.0", digest="b" * 64)
+    )
+    assert tuple(
+        store.execute(
+            "SELECT weight, pinned FROM pack_trust WHERE pack_id = 'cars'"
+        ).fetchone()
+    ) == (0.25, 1)
+    packstore.activate(store, "cars", "a" * 64)
+    assert tuple(
+        store.execute(
+            "SELECT weight, pinned FROM pack_trust WHERE pack_id = 'cars'"
+        ).fetchone()
+    ) == (0.25, 1)
+
+
+def test_update_retains_the_old_revision_and_changes_active_rows(store, tmp_path):
+    packstore.install(
+        store,
+        _pack(tmp_path, "cars", [("old", "high")], version="1.0.0", digest="a" * 64),
+    )
+    packstore.update(
+        store,
+        _pack(tmp_path, "cars", [("new", "low")], version="2.0.0", digest="b" * 64),
+    )
+
+    assert store.execute("SELECT version FROM packs").fetchone()[0] == "2.0.0"
+    assert {r[0] for r in store.execute("SELECT title FROM claim_text")} == {"new"}
+    assert {r["version"] for r in packstore.revisions(store, "cars")} == {
+        "1.0.0",
+        "2.0.0",
+    }
+
+
+def test_same_version_with_a_new_digest_is_rejected_from_retained_history(
+    store, tmp_path
+):
+    packstore.install(
+        store, _pack(tmp_path, "cars", [], version="1.0.0", digest="a" * 64)
+    )
+    packstore.install(
+        store, _pack(tmp_path, "cars", [], version="2.0.0", digest="b" * 64)
+    )
+    with pytest.raises(ValueError, match="immutable"):
+        packstore.install(
+            store, _pack(tmp_path, "cars", [], version="1.0.0", digest="c" * 64)
+        )
+
+
+def test_same_digest_cannot_be_relabelled_with_another_version(store, tmp_path):
+    packstore.install(
+        store, _pack(tmp_path, "cars", [], version="1.0.0", digest="a" * 64)
+    )
+    with pytest.raises(ValueError, match="another version"):
+        packstore.install(
+            store, _pack(tmp_path, "cars", [], version="2.0.0", digest="a" * 64)
+        )
+
+
+def test_rollback_walks_back_through_three_revisions(store, tmp_path):
+    for version, digest, title in (
+        ("1.0.0", "a", "one"),
+        ("2.0.0", "b", "two"),
+        ("3.0.0", "c", "three"),
+    ):
+        packstore.install(
+            store,
+            _pack(
+                tmp_path, "cars", [(title, "high")], version=version, digest=digest * 64
+            ),
+        )
+
+    initial = {
+        row["version"]: row["activated_at"]
+        for row in packstore.revisions(store, "cars")
+    }
+    packstore.rollback(store, "cars")
+    assert store.execute("SELECT version FROM packs").fetchone()[0] == "2.0.0"
+    assert store.execute("SELECT title FROM claim_text").fetchone()[0] == "two"
+    after_first = {
+        row["version"]: row["activated_at"]
+        for row in packstore.revisions(store, "cars")
+    }
+    assert after_first["3.0.0"] == initial["3.0.0"]
+    assert after_first["2.0.0"] > initial["2.0.0"]
+
+    packstore.rollback(store, "cars")
+    assert store.execute("SELECT version FROM packs").fetchone()[0] == "1.0.0"
+    assert store.execute("SELECT title FROM claim_text").fetchone()[0] == "one"
+    after_second = {
+        row["version"]: row["activated_at"]
+        for row in packstore.revisions(store, "cars")
+    }
+    assert after_second["2.0.0"] == after_first["2.0.0"]
+    assert after_second["1.0.0"] > initial["1.0.0"]
+    assert [r["action"] for r in packstore.events(store, "cars")] == [
+        "install",
+        "update",
+        "update",
+        "rollback",
+        "rollback",
+    ]
+
+
+def test_activation_rejects_an_incomplete_snapshot_without_changing_active_rows(
+    store, tmp_path
+):
+    packstore.install(
+        store,
+        _pack(tmp_path, "cars", [("one", "high")], version="1.0.0", digest="a" * 64),
+    )
+    packstore.install(
+        store,
+        _pack(tmp_path, "cars", [("two", "high")], version="2.0.0", digest="b" * 64),
+    )
+    store.execute(
+        "DELETE FROM pack_revision_rows WHERE revision_id = ? AND table_name = 'claims'",
+        ("cars@" + "a" * 64,),
+    )
+    store.commit()
+
+    with pytest.raises(ValueError, match="incomplete snapshot"):
+        packstore.activate(store, "cars", "a" * 64)
+
+    assert store.execute("SELECT version FROM packs").fetchone()[0] == "2.0.0"
+    assert store.execute("SELECT title FROM claim_text").fetchone()[0] == "two"
+
+
+def test_activation_can_select_a_revision_by_digest(store, tmp_path):
+    packstore.install(
+        store, _pack(tmp_path, "cars", [], version="1.0.0", digest="a" * 64)
+    )
+    packstore.install(
+        store, _pack(tmp_path, "cars", [], version="2.0.0", digest="b" * 64)
+    )
+    packstore.activate(store, "cars", "a" * 64)
+    assert store.execute("SELECT version FROM packs").fetchone()[0] == "1.0.0"
 
 
 def test_install_is_atomic(store, tmp_path, monkeypatch):

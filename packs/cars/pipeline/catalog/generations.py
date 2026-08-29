@@ -1,0 +1,159 @@
+"""Researched generation lineups — phase 1 of model onboarding (B23).
+
+Kriko's model keys carry a generation (`megane_4`, `golf_7`), but the demand
+queue (`ops/reports/demand.py`) only knows make/model/year off scraped
+listings. So onboarding a new car is two phases:
+
+  1. an agent researches which generations exist  → this module
+  2. you pick one, and the trim/part research runs against `{model}_{gen}`
+
+Phase 1 also resolves the scrape's display name to a canonical slug — the
+demand queue says "VW CC 1.4 TSI" and "3 Series", which are not model keys.
+Guessing that mapping in code would be another hand-maintained car list
+(CLAUDE.md scalability rule), so the researcher resolves it and we record the
+alias.
+
+Lineups live in `packs/cars/pipeline/catalog/generations/{make}_{model}.yaml`, written
+only through `write_generations` — machine-written from a validated payload,
+never hand-authored.
+"""
+
+import re
+import unicodedata
+from pathlib import Path
+
+import yaml
+
+from packs.cars.pipeline.paths import REPO_ROOT
+GENERATIONS_DIR = Path(__file__).resolve().parent / "generations"
+
+# A car cannot predate the automobile or be more than a model year ahead.
+MIN_YEAR, MAX_YEAR = 1900, 2100
+
+
+def slugify(text: str) -> str:
+    """Display name -> catalog-shaped key ('VW CC 1.4 TSI' -> 'vw_cc_1_4_tsi').
+
+    Accent-folds first so 'Mégane' and 'Megane' land on the same key.
+    """
+    folded = unicodedata.normalize("NFKD", str(text))
+    ascii_only = "".join(c for c in folded if not unicodedata.combining(c))
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_",
+                                     ascii_only.lower())).strip("_")
+
+
+def validate_generations(gens: list[dict]) -> list[str]:
+    """Deterministic structural check on a researched lineup.
+
+    Returns human-readable errors; empty means safe to write. Only catches what
+    a rule can decide — whether the Q2's second generation really started in
+    2024 is not knowable here, which is why every row must cite a source.
+    """
+    if not gens:
+        return ["no generations supplied"]
+
+    errors: list[str] = []
+    seen: set[int] = set()
+    for i, gen in enumerate(gens):
+        num = gen.get("generation")
+        where = f"generation {num}" if num not in (None, "") else f"generations[{i}]"
+
+        if not isinstance(num, int) or isinstance(num, bool) or num < 1:
+            errors.append(f"{where}: generation must be a positive integer")
+        elif num in seen:
+            errors.append(f"{where}: duplicate generation number")
+        else:
+            seen.add(num)
+
+        y_from, y_to = gen.get("year_from"), gen.get("year_to")
+        if not isinstance(y_from, int):
+            errors.append(f"{where}: year_from is required")
+        elif not MIN_YEAR <= y_from <= MAX_YEAR:
+            errors.append(f"{where}: year_from {y_from} is implausible")
+
+        if y_to is not None:
+            if not isinstance(y_to, int):
+                errors.append(f"{where}: year_to must be a year or null")
+            elif not MIN_YEAR <= y_to <= MAX_YEAR:
+                errors.append(f"{where}: year_to {y_to} is implausible")
+            elif isinstance(y_from, int) and y_to < y_from:
+                errors.append(
+                    f"{where}: year_to {y_to} precedes year_from {y_from}")
+
+        if not [u for u in (gen.get("source_urls") or []) if str(u).strip()]:
+            errors.append(f"{where}: needs at least one source_url")
+    return errors
+
+
+def _path(gdir: Path, make: str, model: str) -> Path:
+    return gdir / f"{slugify(make)}_{slugify(model)}.yaml"
+
+
+def write_generations(make: str, model: str, gens: list[dict],
+                      gdir: Path = GENERATIONS_DIR,
+                      canonical_model: str = "") -> dict:
+    """Validate and write one model's generation lineup.
+
+    `canonical_model` is the researcher's corrected slug when the queried name
+    came off a scrape ('vw_cc_1_4_tsi' -> 'passat_cc'); the queried name is
+    kept as an alias so a later lookup by the dirty name still resolves.
+    """
+    errors = validate_generations(gens)
+    if errors:
+        return {"errors": errors, "generations": 0}
+
+    make_s = slugify(make)
+    queried = slugify(model)
+    canonical = slugify(canonical_model) or queried
+    aliases = sorted({queried, canonical})
+
+    rows = [{"generation": g["generation"],
+             "name": g.get("name") or f"gen {g['generation']}",
+             "year_from": g["year_from"],
+             "year_to": g.get("year_to"),
+             "model_key": f"{canonical}_{g['generation']}",
+             "source_urls": [str(u) for u in g.get("source_urls") or []]}
+            for g in sorted(gens, key=lambda x: x["generation"])]
+
+    gdir.mkdir(parents=True, exist_ok=True)
+    payload = {"make": make_s, "model": canonical, "aliases": aliases,
+               "generations": rows}
+    path = _path(gdir, make_s, canonical)
+    path.write_text(
+        "# Generated by the kriko_research agent via MCP submit_generations.\n"
+        "# Do not hand-edit — re-run the generation research instead.\n"
+        + yaml.dump(payload, allow_unicode=True, sort_keys=False))
+
+    return {"errors": [], "model_key": f"{make_s}_{canonical}",
+            "model": canonical, "generations": len(rows),
+            "keys": [r["model_key"] for r in rows], "path": str(path)}
+
+
+def read_generations(make: str, model: str,
+                     gdir: Path = GENERATIONS_DIR) -> dict | None:
+    """One model's lineup, or None if nobody has researched it yet.
+
+    Resolves through aliases, so a lookup by the demand queue's dirty display
+    slug finds the lineup filed under the canonical one.
+    """
+    if not gdir.exists():
+        return None
+    make_s, model_s = slugify(make), slugify(model)
+
+    direct = _path(gdir, make_s, model_s)
+    if direct.exists():
+        return _load(direct)
+
+    for path in sorted(gdir.glob(f"{make_s}_*.yaml")):
+        data = _load(path)
+        if data and model_s in (data.get("aliases") or []):
+            return data
+    return None
+
+
+def _load(path: Path) -> dict | None:
+    try:
+        data = yaml.safe_load(path.read_text())
+    except yaml.YAMLError:
+        return None
+    return data if isinstance(data, dict) else None

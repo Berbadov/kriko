@@ -3,7 +3,7 @@
     identity + context  ->  subjects  ->  claims  ->  gated  ->  ranked  ->  capped
 
 This replaces `backend/core/matcher.py` and `backend/core/resolver.py`, which
-together held 876 lines of car knowledge. Nothing here knows what a car is; the
+together held 876 lines of car packs.cars.pipeline. Nothing here knows what a car is; the
 rules arrive as pack rows. The proof is mechanical rather than aspirational:
 `test_kriko_core_never_imports_a_domain_layer` forbids this package from
 importing `packs/`, and the drill pack's suite runs the same code path over

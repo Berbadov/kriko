@@ -100,8 +100,12 @@ def test_manifest_rejects_a_missing_id(tmp_path):
 
 def test_manifest_rejects_a_pack_with_no_identity_keys(tmp_path):
     """Without identity keys every subject of a kind would hash together."""
-    root = _write(tmp_path, toml=PACK_TOML.replace(
-        '[identity]\nproduct = ["brand", "model"]', "[identity]"))
+    root = _write(
+        tmp_path,
+        toml=PACK_TOML.replace(
+            '[identity]\nproduct = ["brand", "model"]', "[identity]"
+        ),
+    )
     with pytest.raises(ValueError, match="identity"):
         manifest.load(root)
 
@@ -132,7 +136,8 @@ def test_digest_changes_when_data_changes(tmp_path):
     root = _write(tmp_path)
     before = build.digest_of(build.build(root, tmp_path / "a.kpack"))
     (root / "data" / "subjects.yaml").write_text(
-        SUBJECTS.replace("voltage_v: 18", "voltage_v: 36"), encoding="utf-8")
+        SUBJECTS.replace("voltage_v: 18", "voltage_v: 36"), encoding="utf-8"
+    )
     after = build.digest_of(build.build(root, tmp_path / "b.kpack"))
     assert before != after
 
@@ -143,15 +148,18 @@ def test_subject_ids_match_the_shared_hash(tmp_path):
     conn = connect(out)
     (row,) = conn.execute("SELECT subject_id FROM subjects")
     assert row["subject_id"] == ids.subject_id(
-        "product", {"brand": "makita", "model": "DHP484"})
+        "product", {"brand": "makita", "model": "DHP484"}
+    )
     conn.close()
 
 
 def test_identity_attributes_are_marked_and_stored(tmp_path):
     out = build.build(_write(tmp_path), tmp_path / "drill.kpack")
     conn = connect(out)
-    got = {r["key"]: (r["value_text"], r["is_identity"]) for r in
-           conn.execute("SELECT key, value_text, is_identity FROM attributes")}
+    got = {
+        r["key"]: (r["value_text"], r["is_identity"])
+        for r in conn.execute("SELECT key, value_text, is_identity FROM attributes")
+    }
     assert got["brand"] == ("makita", 1)
     assert got["model"] == ("DHP484", 1)
     assert got["voltage_v"] == ("18", 0)
@@ -161,8 +169,7 @@ def test_identity_attributes_are_marked_and_stored(tmp_path):
 def test_numeric_attributes_get_value_num_for_range_queries(tmp_path):
     out = build.build(_write(tmp_path), tmp_path / "drill.kpack")
     conn = connect(out)
-    (row,) = conn.execute(
-        "SELECT value_num FROM attributes WHERE key = 'voltage_v'")
+    (row,) = conn.execute("SELECT value_num FROM attributes WHERE key = 'voltage_v'")
     assert row["value_num"] == 18.0
     conn.close()
 
@@ -184,7 +191,8 @@ def test_claim_text_conditions_and_evidence_land(tmp_path):
     assert text["title"].startswith("Chuck jaws slip")
 
     (cond,) = conn.execute(
-        "SELECT key, op, value_num, on_missing, weight FROM claim_conditions")
+        "SELECT key, op, value_num, on_missing, weight FROM claim_conditions"
+    )
     assert (cond["key"], cond["op"], cond["value_num"]) == ("usage_hours", "gte", 500.0)
     assert cond["on_missing"] == "open"
 
@@ -221,9 +229,47 @@ def test_built_pack_installs_and_answers(tmp_path):
         " JOIN claims c USING (claim_id, pack_id)"
         " JOIN subjects s USING (subject_id, pack_id)"
         " JOIN packs p USING (pack_id)"
-        " WHERE p.enabled = 1 AND s.label LIKE 'Makita%'").fetchone()
+        " WHERE p.enabled = 1 AND s.label LIKE 'Makita%'"
+    ).fetchone()
     assert title.startswith("Chuck jaws slip")
     store.close()
+
+
+GATES_YAML = """
+covered:
+  - {pattern: brake pad, note: the inspector measures pad thickness}
+generic:
+  - wear and tear is normal
+noise:
+  - {pattern: "\\\\bwarning\\\\s+light\\\\b", note: true of every car}
+"""
+
+
+def test_gate_vocabulary_ships_as_rows(tmp_path):
+    root = _write(tmp_path)
+    (root / "vocabulary" / "gates.yaml").write_text(GATES_YAML, encoding="utf-8")
+    out = build.build(root, tmp_path / "p.kpack")
+    conn = connect(out)
+    rows = {
+        (r["kind"], r["pattern"])
+        for r in conn.execute("SELECT kind, pattern FROM gate_terms")
+    }
+    assert ("covered", "brake pad") in rows
+    assert ("generic", "wear and tear is normal") in rows
+    note = conn.execute(
+        "SELECT note FROM gate_terms WHERE pattern = 'brake pad'"
+    ).fetchone()["note"]
+    assert "pad thickness" in note
+    conn.close()
+
+
+def test_an_unknown_gate_kind_fails_the_build(tmp_path):
+    root = _write(tmp_path)
+    (root / "vocabulary" / "gates.yaml").write_text(
+        "coverd:\n  - brake pad\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="unknown rule kinds"):
+        build.build(root, tmp_path / "p.kpack")
 
 
 # ── trust ────────────────────────────────────────────────────────────────
@@ -259,25 +305,27 @@ def _pack_with_tiers(tmp_path, yaml_text):
 
 def test_a_domain_is_filed_under_the_tier_the_pack_gave_it(tmp_path):
     from kriko.store.db import connect
-    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
-                      tmp_path / "p.kpack")
+
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML), tmp_path / "p.kpack")
     conn = connect(out)
-    rows = dict(conn.execute(
-        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    rows = dict(
+        conn.execute("SELECT domain_pattern, tier FROM source_tiers").fetchall()
+    )
     assert rows["maker.example"] == "authoritative"
     conn.close()
 
 
 def test_a_contains_rule_becomes_the_wildcard_the_engine_understands(tmp_path):
-    """"Anything with 'forum.' in it is user-generated", without listing the
+    """ "Anything with 'forum.' in it is user-generated", without listing the
     internet. `tier_of` already reads `*substring*`; the builder's job is only
     to write the pack's phrasing into it."""
     from kriko.store.db import connect
-    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
-                      tmp_path / "p.kpack")
+
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML), tmp_path / "p.kpack")
     conn = connect(out)
-    rows = dict(conn.execute(
-        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    rows = dict(
+        conn.execute("SELECT domain_pattern, tier FROM source_tiers").fetchall()
+    )
     assert rows["*forum.*"] == "forum_ugc"
     assert rows["*kulubu*"] == "forum_ugc"
     conn.close()
@@ -285,11 +333,12 @@ def test_a_contains_rule_becomes_the_wildcard_the_engine_understands(tmp_path):
 
 def test_the_default_tier_is_stored_as_the_catch_all_pattern(tmp_path):
     from kriko.store.db import connect
-    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
-                      tmp_path / "p.kpack")
+
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML), tmp_path / "p.kpack")
     conn = connect(out)
-    rows = dict(conn.execute(
-        "SELECT domain_pattern, tier FROM source_tiers").fetchall())
+    rows = dict(
+        conn.execute("SELECT domain_pattern, tier FROM source_tiers").fetchall()
+    )
     assert rows["*"] == "seo_blog"
     conn.close()
 
@@ -298,8 +347,8 @@ def test_what_a_tier_is_worth_ships_with_the_pack_that_named_it(tmp_path):
     """Otherwise a pack could invent a tier the engine has no weight for, and
     every claim behind it would silently fall to the unknown default."""
     from kriko.store.db import connect
-    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML),
-                      tmp_path / "p.kpack")
+
+    out = build.build(_pack_with_tiers(tmp_path, TIERS_YAML), tmp_path / "p.kpack")
     conn = connect(out)
     rows = dict(conn.execute("SELECT tier, trust FROM tier_trust").fetchall())
     assert rows == {"authoritative": 1.0, "forum_ugc": 0.4, "seo_blog": 0.2}
