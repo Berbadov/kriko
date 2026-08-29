@@ -27,6 +27,15 @@ a reader, and it names what would fix it:
   because "trust me" is not an evidence model.
 - a finding with no title, or no quote, is refused.
 - a finding pointing at a subject no installed pack has is refused.
+- **a finding tied to nothing specific is refused**, even when its quote is
+  perfectly grounded. The pack's own vocabulary judges this: routine
+  inspection language (fluids, pad wear, compression), generic maintenance
+  advice, and dashboard-warning-light titles are all refused unless the
+  finding is clearly about one configuration. Set `component` (or
+  `component_hint`) to the concrete part or unit, or make sure the title or
+  rationale itself names an identifier, a specification, or a usage figure —
+  "the DC4 clutch pack" or "past 120,000 km" is what separates a real chronic
+  from advice that fits any car.
 
 **Never retry a rejection with a reworded version of the same row.** Fix the
 substance, or drop the row and report the gap. A reported gap gets fixed by the
@@ -45,7 +54,10 @@ next pass; a padded row ships to a reader as a lie.
    specific; skip content farms and forum aggregators.
 5. **`submit_findings`** — one call, with the findings you can quote verbatim.
    Each needs: `title`, `domain` (from the pack's vocabulary), `severity`,
-   `quote`, `source_url`, and `document_text`.
+   `quote`, `source_url`, and `document_text`. Set `component`/`component_hint`
+   to the part or unit the finding is about — or make sure the title/rationale
+   already carries that specificity — or it is refused for naming nothing
+   concrete.
 6. **Read the response.** It reports `accepted` and `rejected` per finding,
    with reasons. Fix what you can fix honestly; report the rest.
 

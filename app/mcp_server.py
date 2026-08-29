@@ -259,15 +259,26 @@ def coverage_gaps(pack_id: str = "", limit: int = 50) -> list[dict]:
 
 @mcp.tool()
 def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict:
-    """Store what the agent read. Ungrounded quotes are refused.
+    """Store what the agent read. Ungrounded and low-value findings are refused.
 
     Each finding needs: title, domain, severity, quote, source_url, and the
     `document_text` the quote was taken from. The document text is what makes
     the grounding check possible — without it there is nothing to check against,
     and "trust me" is not an evidence model.
 
-    Returns a per-finding verdict so the agent learns which of its quotes did
-    not survive, rather than discovering later that half its work vanished.
+    A grounded finding still is not automatically kept: the installed pack's
+    own gate (`kriko.gates.gate_reason`, `kriko.gates.structural_reasons`) may
+    refuse it as routine, generic, or tied to nothing specific. Optionally set
+    `component` or `component_hint` to the concrete part/unit the finding is
+    about — that satisfies the "tied to something specific" requirement on its
+    own. Without either field, the finding's own title or rationale must carry
+    that specificity itself (an identifier, a specification, or a usage
+    figure), or it is refused for having nothing to anchor it to a
+    configuration.
+
+    Returns a per-finding verdict so the agent learns which of its quotes or
+    claims did not survive, rather than discovering later that half its work
+    vanished.
     """
     accepted, rejected = [], []
 
