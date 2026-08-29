@@ -5,9 +5,15 @@ ledger: extraction-cache JSONs carry full source text + extracted claims;
 claims YAMLs carry claim + per-source quotes (quote text stands in for the
 long-gone page). Backfilled evidence gets extractor_version=0; idempotency
 comes from documents' text-hash dedup — a (doc, title) pair already present
-is skipped."""
+is skipped.
+
+``backfill_cache_dir`` takes an optional ``claim_mapper``: a pack's cached
+candidates may carry the claim's hint under that pack's own vocabulary key,
+and the engine has no business knowing those key names — it just applies
+whatever mapper the pack injects before storage."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import yaml
@@ -35,7 +41,11 @@ def _evidence_exists(conn, doc_id: int, title: str) -> bool:
     )
 
 
-def backfill_cache_dir(conn, cache_dir: Path) -> tuple[int, int]:
+def backfill_cache_dir(
+    conn,
+    cache_dir: Path,
+    claim_mapper: Callable[[dict], dict] = lambda claim: claim,
+) -> tuple[int, int]:
     docs_before = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     ev_added = 0
     for path in sorted(cache_dir.glob("*_candidates.json")):
@@ -66,7 +76,7 @@ def backfill_cache_dir(conn, cache_dir: Path) -> tuple[int, int]:
             db.insert_evidence(
                 conn,
                 doc_id=doc_id,
-                claim=claim,
+                claim=claim_mapper(claim),
                 span_start=None,
                 span_end=None,
                 extractor_version=0,
