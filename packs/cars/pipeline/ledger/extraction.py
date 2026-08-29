@@ -14,11 +14,6 @@ from collections.abc import Iterable
 
 from kriko.ledger import extraction as _engine
 from kriko.ledger.costs import Budget
-from kriko.ledger.extraction import (  # noqa: F401 — re-exported for callers
-    EXTRACTION_MODEL,
-    EXTRACTOR_VERSION,
-    estimate_chunk_tokens,
-)
 from packs.cars.pipeline.langextract_client import extract_grounded
 from packs.cars.pipeline.ledger.chunking import chunk_has_signal
 from packs.cars.pipeline.stoplists import (
@@ -51,19 +46,25 @@ def _low_value_reason(claim: dict) -> str | None:
     return None
 
 
-_POLICY = dict(
-    extractor=_extract,
-    signal_detector=chunk_has_signal,
-    gate_reason=_low_value_reason,
-)
-
-
 def extract_document(conn, doc_id: int, budget: Budget) -> int:
-    return _engine.extract_document(conn, doc_id, budget, **_POLICY)
+    return _engine.extract_document(
+        conn,
+        doc_id,
+        budget,
+        extractor=_extract,
+        signal_detector=chunk_has_signal,
+        gate_reason=_low_value_reason,
+    )
 
 
 def extract_pending(conn, budget: Budget) -> int:
-    return _engine.extract_pending(conn, budget, **_POLICY)
+    return _engine.extract_pending(
+        conn,
+        budget,
+        extractor=_extract,
+        signal_detector=chunk_has_signal,
+        gate_reason=_low_value_reason,
+    )
 
 
 def pending_extraction_estimate(conn) -> tuple[int, float]:
