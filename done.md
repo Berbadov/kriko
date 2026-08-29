@@ -6,6 +6,101 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-30 — Simplification and readability pass: 14 tasks, gates.py rewired then deleted
+
+Fourteen tasks, `aa61266`..`63d2466` (docs) plus this entry. The plan's own
+baseline number was wrong at the start — `pytest.ini` already sets `-q`, so a bare
+`pytest -q` passes it twice and pytest drops the "N passed" summary line, so
+nobody had actually read the count before writing 610 into the spec; caught by
+the Task 1 implementer (`6dbf196`) and corrected to the real baseline, 594. Ends
+this task at **601 passed**, with `.venv/bin/python -m pytest -o addopts="" -q`
+as the invocation that actually prints the count.
+
+- **Task 1 — the `title_sim` fork deleted** (`34424bb`): a pack-local copy of
+  engine title-similarity logic, removed in favour of calling the engine
+  directly. The warm-up task, and the pattern every later collapse in this pass
+  follows: a pack may import the engine, so a pack-local reimplementation of
+  engine logic is never justified.
+- **Task 2 — the chunking fork collapsed** (`e05508b`): `packs/cars/pipeline/ledger/chunking.py`
+  duplicated the engine's chunker and lexicon, adding only cars'
+  `code_tokens()` detector. Chunking itself moved to `kriko/ledger/chunking.py`;
+  the pack now injects its own signal policy rather than owning a copy of the loop.
+- **Task 3 — the ingest fork collapsed** (`637b3f6`, `9fb8171`): `packs/cars/pipeline/ledger/ingest.py`
+  (172 lines) differed from the engine's `kriko/ledger/ingest.py` (168 lines)
+  in exactly three ways — a `Document` type hint, source-trust policy, and a
+  cache-dir mapper. One ingest now lives in the engine with cars' source policy
+  and claim mapper injected (`backfill_cache_dir` takes an injected mapper).
+- **Task 4 — the extraction fork collapsed** (`8f75136`, `0343f27`): the
+  largest of the five forks. `packs/cars/pipeline/ledger/extraction.py` (122
+  lines) reimplemented the engine's chunk loop, cache check, budget charge and
+  evidence insert. One extraction loop now lives in `kriko/ledger/extraction.py`;
+  cars supplies langextract as the extractor, the code-token chunk gate, and its
+  low-value-claim rules. The extraction-policy splat and dead re-exports it left
+  behind were dropped in the same task.
+- **Task 5 — cars' low-value rules became pack rows** (`e85f11b`, `f260d34`):
+  `packs/cars/vocabulary/gates.yaml` already declared cars' gate vocabulary as
+  rows and `kriko/gates.py` already evaluated it, but the extraction path still
+  read Python frozensets instead of the pack's own rows. Fixed, plus a real bug
+  found in the process: `_vocabulary()` did not fail open on a mis-shaped
+  `gates.yaml` (would raise instead of degrading).
+- **Task 6 — the engine learns the structural gate rules** (`367e62f`):
+  `packs/cars/pipeline/agent/gates.py` held rules that are not vocabulary and so
+  could not become rows — a title-length limit, a DTC-code shape check, a
+  minimum-evidence threshold. `kriko.gates.structural_reasons` now expresses
+  these as rule shapes the engine evaluates; the pack keeps only the numbers
+  (its `limits` rows).
+- **Task 7 — the gate wired into the agent write path, behaviour changed on
+  purpose** (`2a88372`, `2ea068b`, `40daf3f`, `73ec95f`, `ac4579a`):
+  `app/mcp_server.py:submit_findings` previously checked only that the quote
+  appears in the document — the 243-line `check_evidence` gate ran nowhere in
+  the live agent path. Now it does. Restoring it broke the `covered`/`generic`
+  specificity escapes (a claim naming a real config detail was being rejected as
+  generic); fixed by adding an `exempt` vocabulary category, then narrowing
+  `exempt` to waive only `covered` (matching the original scope, not the wider
+  one a first pass gave it — the `docs/USAGE.md` sentence describing this was
+  still wrong until Task 14 fixed it, below). The
+  gate-calibration guard was rebuilt and immediately found a real regression.
+  `submit_findings`'s docstring was updated to tell agents to send `component`
+  so the specificity check has something to anchor on (grew the function to 155
+  lines — filed as backlog B37). Two of the deleted `gates.py`'s three public
+  functions were not ported — filed as backlog B34 (see below) rather than
+  silently dropped.
+- **Task 8 — the pack contract written and tested** (`8b1238b`): `packs/drill/`
+  is five YAML files, `packs/cars/` is 12,900 lines, and nothing stated which
+  parts are required of either — a third-party pack author had two examples
+  that disagreed. A contract doc plus a test now state what every pack must ship.
+- **Task 9 — dead-code deletion found nothing to delete** (`2746830`): the task
+  assumed `packs/cars/pipeline/catalog/model_state.py` was unreferenced, from a
+  grep for the dotted import path. That grep cannot match
+  `from packs.cars.pipeline.catalog import model_state`, the form its eleven
+  tests actually use. Re-run correctly (all import forms, no test-directory
+  filter, entry-point and doc-mention detection), the repo has zero dead
+  modules. Recorded so the wrong grep is not repeated (see `CONTRIBUTING.md`'s
+  new "Checking for dead code" section and the plan doc's Task 9 write-up).
+- **Task 10 — `packs/cars/build.py`'s `build()` split** (`1d3b450`): 457 lines
+  became a sequence of named stages, longest 65 lines.
+- **Task 11 — `kriko/pack/build.py`'s `build()` split** (`d72cfa4`): 300 lines
+  became a sequence of named stages, longest 28 lines. This one mattered more
+  per line — it is the engine's, so every pack author reads it.
+- **Task 12 — the flat drawer grouped** (`1d16149`): `packs/cars/pipeline/` held
+  14 loose modules beside 6 tidy subpackages; regrouped so the directory listing
+  says what is what.
+- **Task 13 — a reading map written** (`886d309`, `63d2466`): a page making the
+  tree investigable without reading it all first; one bug in the extension
+  request path found and fixed while writing it.
+- **Task 14 — this entry.** Repo tidy: `deploy/` (stray untracked `.env` +
+  pytest cache, never git-tracked) deleted; `docs/INTERNALS.md`'s "Knowledge
+  Plane: Pipeline" section rewritten end to end — it still described the
+  pre-ledger `extract.py`/`dedup.py`/`judge.py`/`promote.py` design, all four
+  either moved or replaced by the ledger's `acquire.py` -> `resolve.py` ->
+  `verdict.py` -> `export.py` -> `parity.py` stages well before this pass; every
+  `knowledge/`-prefixed path in it repointed to `packs/cars/pipeline/`.
+  `docs/USAGE.md`'s low-value-rows bullet fixed — it read as though the recall
+  exemption also waived the warning-light rejection, but `exempt` only waives
+  `covered` (Task 7 confirmed this in code; the sentence just described it
+  wrong). Six items this pass surfaced but did not fix are filed as B34-B37 and
+  Human Decisions #8-#9 in `backlog.md`.
+
 ## 2026-08-27 — Phase 6a of the pivot: backend/ deleted, catalog into the pack
 
 Commits `e5d7951` (code) and this one (docs + one engine bug). Suite 534 -> 536,

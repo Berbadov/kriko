@@ -149,7 +149,7 @@ extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/
       a ratchet that keeps `backend/` deleted. Suite 534 -> 535, 3m -> 18s.
 - [x] **Phase 6 docs landed 2026-08-27** — `README.md` and `CLAUDE.md` rewritten
       for the pack architecture (every command in the README verified to run).
-- [x] **Phase 6b landed 2026-08-29** — generic ledger/extraction primitives moved
+- [x] **Phase 6b landed 2026-08-29** (`f038df9`) — generic ledger/extraction primitives moved
       to `kriko/ledger/` and `kriko/extract/`; car catalog, sources, parts, fitment,
       acquisition, export, resolution, and research policy moved to
       `packs/cars/pipeline/`; `knowledge/` is deleted. Pack vocabulary and gate
@@ -322,6 +322,68 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
+### B34 — Re-wire or drop the two orphaned gate capabilities from the deleted `gates.py` `[G2]`
+Phase 6b (`f038df9`) removed `packs/cars/pipeline/agent/gates.py` after re-wiring it —
+`check_evidence`'s vocabulary became `packs/cars/vocabulary/gates.yaml` rows, its
+thresholds became `limits` rows, and its rule shapes became
+`kriko.gates.structural_reasons`. Two of the old module's three public functions,
+plus one supporting mechanism, were **not** ported and now have no caller anywhere
+(so nothing running today changed — this is a capability gap, not a live bug):
+- `check_document(url, raw_text, target_hint, existing_for_target)` — rejected
+  blocked/forum domains, rejected snippets-instead-of-article-text, and enforced a
+  server-side per-part research budget.
+- `duplicate_of(title, known_titles)` plus `DUPLICATE_THRESHOLD` — title-level dedupe
+  against claims already on file for the same target.
+- The advisory-warning mechanism (`WEAK_TIERS` + `resolve_tier` integration) that
+  warned on weak source tiers and on a missing `inspection_advice`. `resolve_tier`
+  itself still exists in `packs/cars/pipeline/sources/tiers.py` but now has no caller
+  outside its own module.
+
+All three are fully recoverable — the deleted file existed at commit `367e62f`.
+Decide: re-wire document-level gating and title dedupe into the current agent research
+path (`app/mcp_server.py`'s `submit_findings`), or delete `resolve_tier` too if the
+project decides document-level gating isn't worth the research path's complexity.
+
+### B35 — Gate calibration: ~23% false-rejection rate when a claim carries no `component` anchor `[G2]`
+`packs/cars/pipeline/tests/test_gate_calibration.py` measures the write-path gate's
+false-rejection rate across every claim in `packs/cars/data/parts/**/*.yaml`. Two
+numbers, both measured 2026-08-29:
+- **Anchored** (claim has a `component` field): **3.29%** (23/699) — asserted in the
+  test, ceiling 5%.
+- **Unanchored** (no `component`): **23.03%** (161/699) — measured and reported by the
+  test, deliberately *not* asserted (would make the suite depend on catalog content
+  that is expected to keep changing).
+
+`app/mcp_server.py`'s `submit_findings` docstring was updated this pass to tell agents
+to always send `component`, which is why the anchored number is the one that should
+apply in practice going forward. The unanchored number is still worth tracking: it
+says roughly a quarter of catalog-shaped claims carry no configuration anchor in their
+own text, which reads as a statement about **catalog quality** as much as about the
+gate. Revisit if the unanchored rate moves a lot, or if agents keep omitting
+`component` despite the docstring. Not filed as a bug — no fix is proposed here.
+
+### B36 — Product-principle question: does a bare mileage figure earn the specificity escape? `[G3]` **(HUMAN DECISION #9 — open)**
+Under both the original write-path gate and the one restored in Phase 6b, a bare
+mileage figure in a claim's title satisfies the "config-specific" escape that waives
+the ekspertiz-routine (`covered`) rejection — so *"Brake pad wear at 60,000 km"*
+surfaces while a bare *"Brake pad wear"* is dropped. `CLAUDE.md`'s product principle
+explicitly names brake-pad wear as routine pre-purchase-inspection ground that Kriko
+should not surface ("Anything the standard pre-purchase mechanic inspection already
+catches as routine — fluid levels/leaks, **brake-pad wear**, injector bench tests,
+compression"). Read literally, that principle says neither phrasing should surface —
+a mileage figure alone doesn't make routine wear config-specific in the sense the
+principle means (engine/gearbox/fuel/market variant), it just adds a number.
+
+This is **pre-existing behaviour**, not introduced by the current pass — both the
+original gate (before Phase 6b) and the restored one preserve it identically. It is a
+**taste decision for the project owner**, not a refactoring decision: does "mileage
+present in the title" count as the kind of specificity the product principle asks for,
+or does it need to be tightened so routine-wear items still get dropped even with a
+mileage figure attached? Whichever way this is decided, the fix is a one-line change
+to `kriko/gates.py`'s specificity check (or to `packs/cars/vocabulary/gates.yaml`'s
+`covered` rows) plus a calibration-test update (B35) to confirm the rejection rate
+doesn't regress.
+
 ### B26 — Settle the 696 `status: review` claims deterministically `[G1][G5]` **(CLOSED 2026-08-26 by B32 — status became rank, not a gate)**
 The claim inspector (done.md B25) made the size of this visible: **696 of ~699
 catalog claims sit at `status: review`**, i.e. the pipeline never settles a
@@ -486,6 +548,35 @@ second pipeline. Applies to all parts; no per-model logic.
 
 ## P2
 
+### B37 — Long-function readability residue: eight (now more) functions over 90 lines `[G5]`
+Tasks 10–11 of the 2026-08-29 simplification pass split the two functions the spec
+scoped (457 → 65 lines, 300 → 28 lines). The plan named eight more, all outside that
+scope, with line counts measured when the plan was written: `validate_part()` (194),
+`process.run()` (153), `process.run_part()` (152), `ledger_run.main()` (144),
+`export_all()` (142), `submit_findings()` (128), `lookup()` (119), `build_report()`
+(114).
+
+Re-measured 2026-08-30 with the same AST walk (`ast.FunctionDef`/`AsyncFunctionDef`,
+excluding `/tests/`), those eight are all still present — `submit_findings()` grew to
+**155 lines** (a later fix in this same pass lengthened its docstring to document the
+`component` anchor requirement, B35) — and the same walk with the plan's >80-line
+threshold now also catches nine more that were not named in the plan (`build_report()`
+above is the one already named — these are new to this list):
+`packs/cars/build.py:_conditions_from()` (91),
+`packs/cars/pipeline/parts/search_templates.py:templates_for_part()` (98),
+`packs/cars/pipeline/catalog/discover.py:_match_specs_to_variants()` (91) and
+`discover()` (93), `packs/cars/pipeline/catalog/write_variants.py:run()` (92),
+`packs/cars/pipeline/catalog/doctor.py:repair()` (93),
+`packs/cars/pipeline/ledger/parity.py:explain_only_old()` (100),
+`app/web/routers/analyze.py:analyze()` (90), `kriko/store/packstore.py:install()` (91).
+
+None of this is a correctness bug — it's readability. Splitting seventeen unrelated
+functions with no behaviour test behind most of them is a different, larger piece of
+work than the simplification pass funded, and doing it without tests first would be
+trading a readability problem for a regression risk. If this is picked up, write
+characterization tests per function before splitting (test-driven-development skill),
+and do not attempt all seventeen in one pass — group by module/owner instead.
+
 ### B28 — Split `ops/hub/web.py` into routers `[G5]` **(SUPERSEDED 2026-08-26 by B33 — `apps/web/` ships the router split on the new core; the blocker was import-time path constants, now a Settings value passed through an app factory)**
 `web.py` is 831 lines and ~28 endpoints after the 2026-08-22 helper extraction
 (1151 originally; `textfmt.py`/`agents.py`/`claimview.py` took the pure helpers).
@@ -542,3 +633,5 @@ with B17, the official recalls adapter is retired — specialists/forums remain.
 | 5 | Source ToS (B18) | **Open** — one-time policy, the only allowed kind under G5 |
 | 6 | TR SGM recall feed | **Resolved 2026-08-03** — dropped with all official recall sources (B17) |
 | 7 | B11 emissions sign-off | **Resolved 2026-08-03** — cancelled; derive or fail open (G5) |
+| 8 | Split point for `knowledge/`'s deletion (B33 Phase 6b) | **Resolved 2026-08-29** — generic ledger/extract to `kriko/`, cars-specific pipeline to `packs/cars/pipeline/` |
+| 9 | Does a bare mileage figure earn the specificity escape for routine-wear claims? (B36) | **Open** — product-principle taste call, not a mechanism gap |
