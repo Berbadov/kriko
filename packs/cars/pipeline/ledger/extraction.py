@@ -49,10 +49,16 @@ def _vocabulary() -> GateVocabulary:
     path = PACK_ROOT / "vocabulary" / "gates.yaml"
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        entries = raw.pop("limits", None) or []
+        limits = {
+            e["pattern"]: str(e.get("note", ""))
+            for e in entries
+            if isinstance(e, dict) and "pattern" in e
+        }
         rows = {
-            kind: [e["pattern"] if isinstance(e, dict) else e for e in (entries or [])]
-            for kind, entries in raw.items()
-            if isinstance(entries, list)
+            kind: [e["pattern"] if isinstance(e, dict) else e for e in (v or [])]
+            for kind, v in raw.items()
+            if isinstance(v, list)
         }
     except (OSError, yaml.YAMLError, AttributeError, KeyError, TypeError):
         # Fail open: a pack whose gate file is missing or mis-shaped gates
@@ -62,7 +68,7 @@ def _vocabulary() -> GateVocabulary:
         # on that at build time, deliberately strict; here we just skip
         # non-list entries and stay silent — runtime is fail-open by design.)
         return GateVocabulary()
-    return vocabulary_from_rows(rows)
+    return vocabulary_from_rows(rows, limits)
 
 
 def _low_value_reason(claim: dict) -> str | None:

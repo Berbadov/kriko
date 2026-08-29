@@ -729,7 +729,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
             stats["assets"] += 1
 
         # ── gate vocabulary ───────────────────────────────────────────────
-        for kind in ("covered", "generic", "ambiguous", "noise", "specificity"):
+        for kind in ("covered", "generic", "ambiguous", "noise", "specificity", "limits"):
             for entry in gate_cfg.get(kind) or []:
                 if isinstance(entry, dict):
                     if "pattern" not in entry:
@@ -753,6 +753,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
             "ambiguous",
             "noise",
             "specificity",
+            "limits",
         }
         if unknown_gates:
             raise ValueError(

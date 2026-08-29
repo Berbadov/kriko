@@ -73,3 +73,46 @@ def test_bad_regex_does_not_disable_literal_rules(tmp_path):
         )
     assert gate_reason("Wear and tear is normal", load_gates(conn, "r")) == "generic"
     conn.close()
+
+
+from kriko.gates import GateVocabulary, structural_reasons
+
+
+def test_undeclared_limits_gate_nothing():
+    """Fail open: a pack that declares no limits gets no structural rejections.
+
+    CLAUDE.md's automation principle — where a value cannot be derived, emit
+    nothing rather than guess. A pack author who has not thought about title
+    length must not have the engine's opinion imposed on them.
+    """
+    assert structural_reasons("x", "y", GateVocabulary()) == []
+
+
+def test_a_title_over_the_declared_limit_is_rejected():
+    vocab = GateVocabulary(max_title_chars=20)
+    assert structural_reasons("x" * 21, "", vocab) != []
+    assert structural_reasons("x" * 20, "", vocab) == []
+
+
+def test_a_rationale_under_the_declared_minimum_is_rejected():
+    vocab = GateVocabulary(min_rationale_chars=30)
+    assert structural_reasons("a title", "too short", vocab) != []
+    assert structural_reasons("a title", "y" * 30, vocab) == []
+
+
+def test_text_with_no_specificity_anchor_is_rejected_when_patterns_exist():
+    """A pack that declares what 'specific' looks like gets the anchor rule.
+
+    A pack that declares no specificity patterns has no way to express the
+    rule, so it does not get it — again, fail open rather than guess.
+    """
+    vocab = GateVocabulary(specificity_patterns=_compiled(r"\bmk\d\b"))
+    assert structural_reasons("a vague problem", "", vocab) != []
+    assert structural_reasons("mk4 fails", "", vocab) == []
+    assert structural_reasons("a vague problem", "", vocab, has_anchor=True) == []
+    assert structural_reasons("a vague problem", "", GateVocabulary()) == []
+
+
+def _compiled(pattern: str):
+    import re
+    return (re.compile(pattern, re.IGNORECASE),)

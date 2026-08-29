@@ -30,7 +30,7 @@ from kriko.store import ids
 from kriko.store.db import SCHEMA_VERSION, connect
 
 _NUMERIC_TYPES = {"number", "year"}
-_GATE_KINDS = ("covered", "generic", "ambiguous", "noise", "specificity")
+_GATE_KINDS = ("covered", "generic", "ambiguous", "noise", "specificity", "limits")
 
 
 def _load_yaml(path: Path, default):
