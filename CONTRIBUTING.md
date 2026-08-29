@@ -66,6 +66,17 @@ The serving path is the local FastAPI app backed by the SQLite pack store. The
 pipeline remains separate from serving, so importing `app.web.app` must not load
 `app.pipeline` or the LLM extraction stack.
 
+## Checking for dead code
+
+A grep for a dotted module path (`packs.cars.pipeline.catalog.model_state`)
+misses `from packs.cars.pipeline.catalog import model_state` — the import form
+most test files actually use — and will falsely report a module as dead. This
+cost a wasted task: see `docs/superpowers/plans/2026-08-29-simplification-pass.md`,
+Task 9, for the working query (all import styles, no test-directory filter,
+plus entry-point and doc-mention detection) and its finding that the repo
+currently has no dead modules. Re-run that query rather than a plain grep
+before deleting anything on the strength of "nothing imports this."
+
 ## Architecture: engine, packs, and interfaces
 
 Dependencies flow one way. Each layer may import from the layers below it, never
