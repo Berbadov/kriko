@@ -8,21 +8,22 @@ and the invariants the system relies on. Read this before touching the pipeline.
 ## Architecture: Four Packages
 
 Dependencies form a fan. Interfaces and pipeline drivers sit above the generic
-engine; category packs provide data, while the knowledge package provides the
-evidence/extraction machinery used to build packs.
+engine; each category pack provides its own data, vocabulary, and evidence
+ledger/extraction machinery under `packs/<name>/pipeline/`.
 
 ```
 app/             CLI, local web dashboard, MCP server
   └─ app/pipeline/  ledger and remediation drivers
-                    ├─ packs/     category data, builders, vocabulary, coverage
-                    └─ knowledge/ evidence ledger and grounded extraction
-kriko/           generic pack store, lookup, ranking and research
+                    └─ packs/     category data, builders, vocabulary, coverage
+                                  └─ packs/cars/pipeline/  evidence ledger and
+                                     grounded extraction for the cars pack
+kriko/           generic pack store, lookup, ranking, and ledger primitives
 extension/       Chrome client for the cars pack adapter
 ```
 
-`kriko/` imports none of the other packages. `packs/` and `knowledge/` do not
-import `app/` or `app/pipeline/`; only pipeline drivers coordinate the evidence
-pipeline and pack data. The structural rules are enforced by
+`kriko/` imports none of the other packages. `packs/` does not import `app/` or
+`app/pipeline/`; only pipeline drivers coordinate the evidence pipeline and pack
+data. The structural rules are enforced by
 `app/pipeline/tests/test_repo_invariants.py`. The serving database is the local
 SQLite pack store; the evidence ledger is a separate SQLite build database.
 
@@ -30,8 +31,9 @@ The cars source of truth is under `packs/cars/data/`. There is no `backend/`,
 Postgres sync, or Docker-only serving layer in the current architecture.
 
 The pack files are built into the serving SQLite store; the evidence ledger remains
-separate from that read path. `app/pipeline/` is where operations that span packs and
-knowledge live.
+separate from that read path. `app/pipeline/` is where operations that span packs
+and their pipelines live; the generic ledger mechanics (chunking, ingest, cost
+budgeting) live in `kriko/ledger/`, with each pack injecting its own policy.
 
 ---
 
@@ -105,7 +107,7 @@ Queries `claim_variants` join table for all matched variant IDs, returns only
 `status='verified'` and `is_current=True` claims.
 
 Visual-detection suppression (payload v2): a claim whose registry component
-(`claims.component_id`, filled by sync from `knowledge/catalog/components.yaml`)
+(`claims.component_id`, filled by sync from `packs/cars/pipeline/catalog/components.yaml`)
 has `detection: visual` gets `ClaimResult.detection_factor = 0.35` — but ONLY
 when the claim has a component_id and a listing context exists. The claim is
 never dropped (fail-open); the API layer multiplies the factor into
@@ -142,83 +144,57 @@ small muted chips under each card title.
 
 ## Knowledge Plane: Pipeline
 
-### Source curation
-**`knowledge/sources/curated/{make}_{model}.yaml`**
+The pipeline is a ledger, not a curated-YAML approval queue: `app.pipeline.ledger_run`
+drives discovery through export with no human sign-off step (automation principle,
+CLAUDE.md). Each stage splits into a generic half in `kriko/ledger/` (orchestration —
+chunking loop, ingest, cost budgeting) and a cars-specific half in
+`packs/cars/pipeline/` (policy — what counts as signal, which sources are
+untrustworthy, which component an evidence chunk describes). A handful of legacy
+per-make/model curated YAMLs remain under
+`packs/cars/pipeline/sources/curated/part_{part_id}.yaml` (one file per *part*, not
+per make+model) as a residual manual-add path; they are not required by the live flow.
 
-One file per make+model. Each entry has `type: youtube|page`, identifiers,
-and lifecycle fields:
-```yaml
-status: pending | processed | skipped
-added_at: "YYYY-MM-DD"
-processed_at: "YYYY-MM-DD" | null
-```
+### Acquisition
+**`packs/cars/pipeline/ledger/acquire.py`** — discover → rank → fetch → ingest for a
+part, no LLM involved. Results are ranked by part-code specificity before fetching
+(backlog B8), rather than taking the first N results in discovery order.
 
-Curated YAMLs are a legacy hand-authored path. The live flow is
-`app.pipeline.ledger_run acquire`, which discovers, fetches and ingests straight to the
-ledger with no curated-YAML step and no human approval (see the automation
-principle in CLAUDE.md). `process.py` still updates `status: processed` for the
-entries that remain.
+### Chunking and extraction
+**`kriko/ledger/chunking.py`** / **`kriko/ledger/extraction.py`** — generic chunk loop,
+cache, and budget charge. **`packs/cars/pipeline/chunking.py`** supplies the cars chunk
+gate (the failure lexicon plus catalog-derived engine/gearbox code tokens — a chunk is
+worth extracting if it names a failure word or a code, so a new part is covered the
+moment its stub exists). **`packs/cars/pipeline/extract.py`** supplies langextract as
+the extractor via **`packs/cars/pipeline/langextract_client.py`** (grounded/few-shot
+extraction — each claim's quote is aligned to an exact character span in the source
+rather than trusted as a self-reported string) plus the low-value rules that flag which
+extracted claims are noise.
 
-### Document fetching
-**`knowledge/sources/curated.py`** — `CuratedSource.fetch(make, model, pending_only=False)`
+### Entity resolution
+**`packs/cars/pipeline/ledger/resolve.py`** — decides which component a piece of
+evidence describes, from the evidence's own text against catalog-derived codes, never
+from the search query that found the document (design_flaws.md Flaw 1).
 
-- YouTube entries → `knowledge/sources/youtube.py:get_transcript(video_id)` via yt-dlp
-- Page entries → `trafilatura.fetch_url(url)` + `trafilatura.extract()` (universal article extractor)
+### Verdict
+**`packs/cars/pipeline/ledger/verdict.py`** — one strong-model (`deepseek-v4-flash`)
+verdict per claim-cluster. This replaced the old five-gate ministral stack
+(`gate_generic`/`gate_variant`/`gate_support`/`gate_refute`) and the separate scored
+promotion step (design_flaws.md Flaw 5): a single call sees the whole cluster, the
+component, its sibling codes, and the product principle, and returns attribution +
+support + value + severity + bilingual (EN/TR) copy in one JSON object. Verdicts are
+cached by input hash. **`packs/cars/pipeline/ledger/eval_verdict.py`** runs the
+acceptance eval against `packs/cars/pipeline/gold/gold.yaml` (11 hand-judged entries).
 
-VTT normalization in `youtube.py:_normalize_vtt()` strips timestamp lines and collapses
-duplicate cues from YouTube's rolling-window auto-captions.
+### Export
+**`packs/cars/pipeline/ledger/export.py`** — claims as a deterministic view over
+verdicts, written as the part-dict YAML schema under `packs/cars/data/parts/**`. Part
+headers come from the served catalog itself, never hand-enumerated. The pack builder
+validates references and avoids shipping rows that cannot be served.
 
-### Claim extraction
-**`knowledge/extract.py`** — `extract_claims(doc) → list[CandidateClaim]`
-
-Sends `doc.text[:6000]` to `ministral-8b-latest` via `knowledge/langextract_client.py`
-(langextract, grounded/few-shot extraction — see that module's docstring for why: each
-claim's quote is aligned to an exact character span in the source rather than trusted as
-a self-reported string). Returns typed `CandidateClaim` objects: title, domain, severity,
-rationale, inspection_advice, verbatim quote, optional engine_or_variant_hint, and
-`quote_grounded` (whether the quote's span aligned exactly).
-
-### Deduplication
-**`knowledge/dedup.py`** — `merge_candidates(candidates)`
-
-Called internally by `promote()`. Groups same-claim candidates from different sources:
-- Fast path: different `domain` → definitely different claim
-- Same-claim check: `same_claim(a, b)` — deterministic title-token Jaccard ≥ 0.4, no LLM
-- Independence check: Jaccard word overlap >85% → non-independent (repost)
-
-### LLM Gates
-**`knowledge/judge.py`** — gate functions, all using `ministral-8b-latest` (Mistral API),
-with deterministic pre-checks ahead of each LLM call (see `knowledge/stoplists.py`)
-
-| Gate | Question | Passes if |
-|------|----------|-----------|
-| `gate_generic` | Is this claim true of all cars? | Claim is model-specific |
-| `gate_variant` | Does the quote mention this variant? | At least one variant confirmed |
-| `gate_support` | Does the quote actually support the claim? | Evidence is concrete |
-| `gate_refute` | Does the quote contradict the claim? | No contradiction found |
-
-### Promotion scoring
-**`knowledge/promote.py`** — `promote(candidates, variant_descriptors)`
-
-Each source that passes gate_support + gate_refute contributes 1 point. Domain trust is
-not used — the LLM gates are the sole quality filter.
-
-Disposition rules:
-- `score ≥ 2` → `VERIFY` (auto-promote), 20% sampled for audit → `REVIEW`
-- `score ≥ 1` → `REVIEW` (single source — human must confirm with a second)
-- `score = 0` → `HELD`
-- `severity == "high"` → always `REVIEW` regardless of score
-- `gate_generic` failed → `REJECT`
-- `gate_variant` failed → `HELD`
-
-### Writing claims
-**`knowledge/promote.py`** — `write_promoted_claims(results, make, model, claims_dir)`
-
-The ledger export writes claims into the cars pack under
-`packs/cars/data/parts/`. The pack builder validates references and avoids
-shipping rows that cannot be served.
-
-Claim ID format: `{make}_{model}_{domain}_{title_first_20}_v1`
+### Regression check
+**`packs/cars/pipeline/ledger/parity.py`** — diffs existing claim YAMLs against a fresh
+ledger export; matching is by stable identity, not title text, because the verdict
+stage rewrites titles (backlog B1 blocker 2).
 
 ### DB sync
 **`kriko/pack/build.py`** — build the pack into SQLite
@@ -275,7 +251,7 @@ the request path.
       independent: true
 ```
 
-### Curated sources YAML (`knowledge/sources/curated/{make}_{model}.yaml`)
+### Curated sources YAML (`packs/cars/pipeline/sources/curated/part_{part_id}.yaml`, legacy manual-add path)
 ```yaml
 - type: youtube                   # youtube | page
   video_id: "abc123xyz"           # for youtube

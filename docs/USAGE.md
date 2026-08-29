@@ -108,13 +108,15 @@ trim-shaped VW Golf 8 lineup got written and reported as a success:
 - **No description codes.** `transmission_code: "7-speed DSG"` is refused —
   "DSG" names three different gearboxes, so a claim attributed to it would
   contaminate its siblings. Find the unit code (`dq381`) or leave the row out.
-- **No low-value rows.** Warning lights, ekspertiz-routine items (fluids, pads,
-  compression) unless the title itself is config-specific or the text names an
-  official recall, generic maintenance advice with no config anchor, and a
-  title/rationale that is empty, too long, too short or ties to nothing
-  specific are refused with the reason (`kriko/gates.py` + `structural_reasons`,
-  reading the cars pack's own `packs/cars/vocabulary/gates.yaml` rows) — the
-  CLAUDE.md product principle, enforced rather than requested.
+- **No low-value rows.** Warning-light claims are always refused. Ekspertiz-routine
+  items (fluids, pads, compression) are refused unless the title itself is
+  config-specific or the text names an official recall — that recall exemption
+  waives only the ekspertiz-routine check, not warning lights. Generic
+  maintenance advice with no config anchor, and a title/rationale that is
+  empty, too long, too short, or ties to nothing specific, are also refused
+  with the reason (`kriko/gates.py` + `structural_reasons`, reading the cars
+  pack's own `packs/cars/vocabulary/gates.yaml` rows) — the CLAUDE.md product
+  principle, enforced rather than requested.
 - **Removed, not currently enforced.** The orphaned write-path gate this
   replaced also caught DTC-code litanies, rephrasings of a chronic already on
   file, a per-part research budget, and blocked forum/spec-farm sources —
