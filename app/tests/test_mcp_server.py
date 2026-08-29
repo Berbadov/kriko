@@ -197,6 +197,35 @@ def test_a_config_specific_finding_still_lands(store):
     assert len(result["accepted"]) == 1
 
 
+def test_the_documented_contract_is_actually_sufficient(store):
+    """submit_findings' own docstring must not describe a shape the gate refuses.
+
+    The docstring says a finding with no code/mileage in its own text still
+    survives if `component` names the concrete part — that a caller can
+    satisfy the anchor requirement with the field instead of the wording.
+    This finding is exactly that shape and nothing else: no engine/gearbox
+    code, no mileage figure, generic-sounding failure language, just a
+    `component`. If a future change to the gate or the docstring lets the two
+    disagree, this is the test that catches it.
+    """
+    document = (
+        "Continuous heavy-load drilling overheats the front bearing, which "
+        "then seizes and locks the chuck in place."
+    )
+    result = mcp_server.submit_findings(_subject(), "tools", [{
+        "title": "Chuck bearing seizes under heavy load",
+        "rationale": "Continuous heavy-load drilling overheats the front "
+                     "bearing, which then seizes and locks the chuck, "
+                     "requiring a full bearing replacement.",
+        "quote": "seizes and locks the chuck in place",
+        "document_text": document,
+        "source_url": "https://example.test/c",
+        "component": "front_bearing",
+    }])
+    assert result["rejected"] == []
+    assert len(result["accepted"]) == 1
+
+
 DOCUMENT = (
     "Owners report that the chuck jaws round off after heavy use "
     "and no longer grip smooth shanks."
