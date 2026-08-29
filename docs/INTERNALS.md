@@ -161,14 +161,17 @@ part, no LLM involved. Results are ranked by part-code specificity before fetchi
 
 ### Chunking and extraction
 **`kriko/ledger/chunking.py`** / **`kriko/ledger/extraction.py`** — generic chunk loop,
-cache, and budget charge. **`packs/cars/pipeline/chunking.py`** supplies the cars chunk
-gate (the failure lexicon plus catalog-derived engine/gearbox code tokens — a chunk is
-worth extracting if it names a failure word or a code, so a new part is covered the
-moment its stub exists). **`packs/cars/pipeline/extract.py`** supplies langextract as
-the extractor via **`packs/cars/pipeline/langextract_client.py`** (grounded/few-shot
-extraction — each claim's quote is aligned to an exact character span in the source
-rather than trusted as a self-reported string) plus the low-value rules that flag which
-extracted claims are noise.
+cache, and budget charge. **`packs/cars/pipeline/ledger/chunking.py`** supplies the cars
+chunk gate (the failure lexicon plus catalog-derived engine/gearbox code tokens — a
+chunk is worth extracting if it names a failure word or a code, so a new part is
+covered the moment its stub exists). **`packs/cars/pipeline/ledger/extraction.py`**
+supplies langextract as the extractor via **`packs/cars/pipeline/langextract_client.py`**
+(grounded/few-shot extraction — each claim's quote is aligned to an exact character span
+in the source rather than trusted as a self-reported string) plus the low-value rules
+(`kriko.gates.gate_reason` over this pack's `vocabulary/gates.yaml`) that flag which
+extracted claims are noise. `packs/cars/pipeline/extract.py` is a separate, offline-only
+module (its own docstring: "never on the /analyze request path") — it is not part of
+this ledger loop.
 
 ### Entity resolution
 **`packs/cars/pipeline/ledger/resolve.py`** — decides which component a piece of
