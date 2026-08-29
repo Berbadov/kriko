@@ -8,7 +8,7 @@ This module runs OFFLINE only — never on the /analyze request path.
 
 import logging
 
-from packs.cars.pipeline.title_sim import title_tokens
+from kriko.text.title_sim import title_tokens
 
 from packs.cars.pipeline.extract import CandidateClaim
 from packs.cars.pipeline.sources.base import Document
