@@ -1408,31 +1408,22 @@ EOF
 
 ---
 
-### Task 9: Delete dead code
+### Task 9: Delete dead code — COMPLETED AS A NO-OP
 
-**Files:**
-- Delete: `packs/cars/pipeline/catalog/model_state.py`
-- Possibly delete: whatever Step 2 confirms
+**Outcome: nothing was dead. Nothing was deleted.**
 
-**Interfaces:**
-- Consumes: nothing.
-- Produces: nothing.
+This task assumed `packs/cars/pipeline/catalog/model_state.py` was unreferenced.
+It is not — `packs/cars/pipeline/tests/test_model_state.py` imports it and
+exercises it across eleven tests. The claim came from a grep for the dotted path
+`packs.cars.pipeline.catalog.model_state`, which cannot match the
+`from ... import model_state` form the test actually uses.
 
-- [ ] **Step 1: Re-verify `model_state.py` is unreferenced**
+Re-run correctly (all import styles, no test-directory filter, entry-point and
+doc-mention detection), **the repo contains no dead modules**. Every candidate is
+either a test file — pytest discovers those without anything importing them — or
+a `python -m` entry point reachable from `docs/USAGE.md` or its own docstring.
 
-```bash
-grep -rn "model_state" --include='*.py' --include='*.md' --include='*.yml' \
-  --include='*.yaml' --include='*.json' --include='*.toml' . \
-  | grep -v node_modules | grep -v '\.venv' | grep -v __pycache__
-```
-
-Expected: only the file's own path, or nothing. If anything else appears, STOP
-and do not delete it.
-
-- [ ] **Step 2: Re-verify each remaining candidate individually**
-
-For each of these, run the same grep. They are **expected to be alive** as
-`python -m` entry points — the point is to confirm, not to delete:
+All six modules this task expected to confirm alive are alive, as expected:
 
 ```
 packs/cars/pipeline/catalog/doctor.py
@@ -1443,44 +1434,35 @@ packs/cars/pipeline/ledger/eval_verdict.py
 packs/cars/pipeline/consequence_tier.py
 ```
 
-A module is **alive** if any of these holds: it is reachable via `python -m` and
-that invocation appears in `docs/USAGE.md` or its own docstring; it has a test;
-or something imports it. Delete only modules where none holds. Record the verdict
-for each in the commit message.
-
-- [ ] **Step 3: Delete what Steps 1–2 confirmed dead**
+If you need to re-check this in future, the query that works is below. The one
+that does not is any search for a dotted module path, because it silently misses
+`from <package> import <module>`:
 
 ```bash
-git rm packs/cars/pipeline/catalog/model_state.py
-```
-
-- [ ] **Step 4: Run the whole suite**
-
-Run: `.venv/bin/python -m pytest -q`
-Expected: PASS.
-
-- [ ] **Step 5: Verify the packs still build**
-
-Run: `.venv/bin/python -m pytest app/pipeline/tests/test_repo_invariants.py -v`
-Expected: PASS, including
-`test_every_pack_in_the_repo_builds_and_is_not_empty`.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add -A
-git commit -F - <<'EOF'
-chore(cars): delete model_state.py, dead since the pivot
-
-Zero references in code, tests, docs or config. Every other module that
-looked unreferenced turned out to be a `python -m` entry point reachable
-from docs/USAGE.md or its own docstring — doctor, validate_fitment,
-scaffold, eval_verdict, repair_missing_stub_scaffold and
-consequence_tier all stay, verified one at a time rather than by batch
-grep.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
+.venv/bin/python - <<'DEADCODE'
+import ast, pathlib, re
+root = pathlib.Path('.')
+mods, srcs = {}, {}
+for p in root.rglob('*.py'):
+    s = str(p)
+    if any(x in s for x in ('node_modules', '.venv', '__pycache__', '.superpowers')):
+        continue
+    srcs[s] = p.read_text(errors='ignore')
+    if p.name != '__init__.py':
+        mods[s] = (p.stem, s[:-3].replace('/', '.'))
+for path, (stem, dotted) in sorted(mods.items()):
+    hits = sum(
+        1 for other, text in srcs.items()
+        if other != path and (
+            re.search(rf'\b{re.escape(dotted)}\b', text)
+            or re.search(rf'import\s+{re.escape(stem)}\b', text)
+            or re.search(rf'from\s+\S*\s+import\s+[^\n]*\b{re.escape(stem)}\b', text)
+        )
+    )
+    if hits == 0:
+        entry = 'if __name__' in srcs[path]
+        print(f"{path}  entry_point={entry}")
+DEADCODE
 ```
 
 ---

@@ -145,11 +145,27 @@ minimum-plus-vocabulary example; `packs/cars/` is the everything example.
 **G6 significance:** this is what makes the scope change landable by someone other
 than the author.
 
-### 5. Delete confirmed dead code
+### 5. Delete confirmed dead code — RESULT: THERE IS NONE
 
-`packs/cars/pipeline/catalog/model_state.py` (148 lines) has zero references
-anywhere, including docs. Each further candidate is re-verified individually
-before deletion.
+**Corrected 2026-08-30.** This section originally claimed
+`packs/cars/pipeline/catalog/model_state.py` had "zero references anywhere,
+including docs". That was wrong. It has `packs/cars/pipeline/tests/test_model_state.py`
+— eleven tests that import and exercise it.
+
+The error was in the method, not the module. The verification grep searched for
+the dotted path `packs.cars.pipeline.catalog.model_state`, a string that cannot
+match `from packs.cars.pipeline.catalog import model_state`. The zero it returned
+was an artefact of the query's shape.
+
+Re-run properly — every import style, no test-directory filter, with entry-point
+and documentation-mention detection — the repo has **no dead modules at all**.
+All 65 candidates are either test files, which pytest discovers without anything
+importing them, or `python -m` entry points reachable from `docs/USAGE.md` or
+their own docstrings.
+
+The original "14 modules with no production importer" figure earlier in this
+document came from the same filtered grep and should be read as "no *production*
+importer", which is a different and much weaker claim than "dead".
 
 **Confirmed alive, keep:** `catalog/doctor.py`, `fitment/validate_fitment.py`,
 `pipeline/scaffold.py`, `ledger/eval_verdict.py`,
