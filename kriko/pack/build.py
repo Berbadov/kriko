@@ -165,6 +165,319 @@ def _tier_trust_rows(spec) -> list[tuple[str, float]]:
     return out
 
 
+def _emit_terms(conn, pack_id, terms, row_ids: list[str]) -> None:
+    for t in terms:
+        conn.execute(
+            "INSERT OR REPLACE INTO terms (term_id, pack_id, role, datatype,"
+            " unit, parent_id, label_json, match_json) VALUES (?,?,?,?,?,?,?,?)",
+            (
+                t["term_id"],
+                pack_id,
+                t.get("role", "attribute"),
+                t.get("datatype", "text"),
+                t.get("unit", ""),
+                t.get("parent", ""),
+                yaml.safe_dump(t.get("label", {}), allow_unicode=True),
+                yaml.safe_dump(t.get("match", {}), allow_unicode=True),
+            ),
+        )
+        row_ids.append(f"term:{t['term_id']}")
+        for alias in t.get("aliases", []) or []:
+            conn.execute(
+                "INSERT OR IGNORE INTO term_aliases VALUES (?,?,?,?)",
+                (t["term_id"], pack_id, alias, ""),
+            )
+            row_ids.append(f"term_alias:{t['term_id']}:{alias}")
+
+
+def _emit_subjects(
+    conn, pack_id, subjects, man, term_by_id, row_ids: list[str]
+) -> dict[tuple[str, str], str]:
+    def numeric(key, value):
+        """value_num is set for declared-numeric terms so ranges stay indexable."""
+        if term_by_id.get(key, {}).get("datatype") in _NUMERIC_TYPES:
+            return _as_number(value)
+        return None
+
+    known: dict[tuple[str, str], str] = {}
+    for entry in subjects:
+        kind, subject_id = _subject_key(entry, man.identity_keys)
+        known[(kind, subject_id)] = subject_id
+        conn.execute(
+            "INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
+            (subject_id, pack_id, kind, entry.get("label", "")),
+        )
+        row_ids.append(subject_id)
+
+        identity = entry.get("identity") or {}
+        declared = set(man.identity_keys[kind])
+        merged = {**identity, **(entry.get("attributes") or {})}
+        for key, value in merged.items():
+            if key not in term_by_id:
+                raise ValueError(
+                    f"subject {entry.get('label', subject_id)!r} uses "
+                    f"undeclared term {key!r} — add it to vocabulary/terms.yaml"
+                )
+            attribute_id = ids.attribute_id(subject_id, key, value)
+            conn.execute(
+                "INSERT OR IGNORE INTO attributes (attribute_id, pack_id,"
+                " subject_id, key, value_text, value_num, unit, valid_from,"
+                " valid_to, is_identity, confidence) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    attribute_id,
+                    pack_id,
+                    subject_id,
+                    key,
+                    str(value),
+                    numeric(key, value),
+                    term_by_id[key].get("unit", ""),
+                    "",
+                    "",
+                    1 if key in declared else 0,
+                    None,
+                ),
+            )
+            row_ids.append(attribute_id)
+
+        for alias in entry.get("aliases", []) or []:
+            conn.execute(
+                "INSERT OR IGNORE INTO subject_aliases VALUES (?,?,?,?,?)",
+                (subject_id, pack_id, alias, "", "attribution_safe"),
+            )
+            row_ids.append(f"subject_alias:{subject_id}:{alias}")
+
+    return known
+
+
+def _emit_relations(conn, pack_id, subjects, man, known, row_ids: list[str]) -> None:
+    # Relations resolve after every subject exists, so an edge may point
+    # forward to a subject declared later in the file.
+    for entry in subjects:
+        _, subject_id = _subject_key(entry, man.identity_keys)
+        for rel in entry.get("relations", []) or []:
+            target_kind, target_id = _subject_key(rel["object"], man.identity_keys)
+            if (target_kind, target_id) not in known:
+                raise ValueError(
+                    f"relation from {entry.get('label')!r} points at unknown "
+                    f"subject {rel['object']!r}"
+                )
+            relation_id = ids.relation_id(subject_id, rel["predicate"], target_id)
+            conn.execute(
+                "INSERT OR IGNORE INTO relations VALUES (?,?,?,?,?,?)",
+                (
+                    relation_id,
+                    pack_id,
+                    subject_id,
+                    rel["predicate"],
+                    target_id,
+                    rel.get("note", ""),
+                ),
+            )
+            row_ids.append(relation_id)
+
+
+def _emit_claim_row(conn, pack_id, entry, man, known, row_ids: list[str]) -> str:
+    kind, subject_id = _subject_key(entry["subject"], man.identity_keys)
+    if (kind, subject_id) not in known:
+        raise ValueError(
+            f"claim {entry.get('text', {}).get('en', {}).get('title', '?')!r} "
+            f"points at unknown subject {entry['subject']!r}"
+        )
+
+    texts = entry.get("text") or {}
+    primary = texts.get("en") or next(iter(texts.values()), {})
+    claim_id = ids.claim_id(
+        subject_id, entry["kind"], entry["domain"], primary.get("title", "")
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
+        " kind, domain, severity, consequence, detection, component,"
+        " subsystem, author_confidence, created_at)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            claim_id,
+            pack_id,
+            subject_id,
+            entry["kind"],
+            entry["domain"],
+            entry.get("severity", "medium"),
+            entry.get("consequence", ""),
+            entry.get("detection", ""),
+            entry.get("component", ""),
+            entry.get("subsystem", ""),
+            entry.get("confidence"),
+            _now(),
+        ),
+    )
+    row_ids.append(claim_id)
+    return claim_id
+
+
+def _emit_claim_text(conn, pack_id, claim_id, entry, row_ids: list[str]) -> None:
+    texts = entry.get("text") or {}
+    for lang, block in texts.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO claim_text VALUES (?,?,?,?,?,?)",
+            (
+                claim_id,
+                pack_id,
+                lang,
+                block.get("title", ""),
+                block.get("body", ""),
+                block.get("advice", ""),
+            ),
+        )
+        row_ids.append(f"text:{claim_id}:{lang}")
+
+
+def _emit_claim_conditions(conn, pack_id, claim_id, entry, row_ids: list[str]) -> None:
+    for seq, cond in enumerate(entry.get("conditions", []) or []):
+        conn.execute(
+            "INSERT OR REPLACE INTO claim_conditions (claim_id, pack_id,"
+            " seq, key, op, value_text, value_num, on_missing, weight)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (
+                claim_id,
+                pack_id,
+                seq,
+                cond["key"],
+                cond["op"],
+                str(cond.get("value", "")),
+                _as_number(cond.get("value")),
+                cond.get("on_missing", "open"),
+                float(cond.get("weight", 1.0)),
+            ),
+        )
+        row_ids.append(f"cond:{claim_id}:{seq}")
+
+
+def _emit_claim_evidence(conn, pack_id, claim_id, entry, row_ids: list[str]) -> None:
+    for ev in entry.get("evidence", []) or []:
+        url = ev.get("url", "")
+        source_id = ids.source_id(url=url, text=ev.get("quote", ""))
+        conn.execute(
+            "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"
+            " domain, site_or_channel, title, lang, source_type,"
+            " published_at, retrieved_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (
+                source_id,
+                pack_id,
+                url,
+                _domain_of(url),
+                ev.get("site", ""),
+                ev.get("source_title", ""),
+                ev.get("lang", ""),
+                ev.get("source_type", "page"),
+                ev.get("published_at", ""),
+                ev.get("retrieved_at", ""),
+            ),
+        )
+        row_ids.append(source_id)
+
+        evidence_id = ids.evidence_id(source_id, ev.get("quote", ""))
+        conn.execute(
+            "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
+            " claim_id, source_id, quote, locator, stance, independent)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (
+                evidence_id,
+                pack_id,
+                claim_id,
+                source_id,
+                ev.get("quote", ""),
+                ev.get("locator", ""),
+                ev.get("stance", "supports"),
+                1 if ev.get("independent", True) else 0,
+            ),
+        )
+        row_ids.append(evidence_id)
+
+
+def _emit_claims(conn, pack_id, claims, man, known, row_ids: list[str]) -> None:
+    for entry in claims:
+        claim_id = _emit_claim_row(conn, pack_id, entry, man, known, row_ids)
+        _emit_claim_text(conn, pack_id, claim_id, entry, row_ids)
+        _emit_claim_conditions(conn, pack_id, claim_id, entry, row_ids)
+        _emit_claim_evidence(conn, pack_id, claim_id, entry, row_ids)
+
+
+def _emit_pack_assets(conn, pack_id, root, row_ids: list[str]) -> None:
+    # Non-tabular assets: whatever the pack ships that is text rather than
+    # rows. Read in sorted order so the digest is stable.
+    for name, kind in (
+        ("research/principle.md", "principle"),
+        ("research/templates.yaml", "templates"),
+    ):
+        path = root / name
+        if path.exists():
+            conn.execute(
+                "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                (pack_id, name, kind, path.read_text(encoding="utf-8")),
+            )
+            row_ids.append(f"asset:{name}")
+
+    for path in sorted((root / "adapters").glob("*.json")):
+        conn.execute(
+            "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+            (
+                pack_id,
+                f"adapters/{path.name}",
+                "adapter",
+                path.read_text(encoding="utf-8"),
+            ),
+        )
+        row_ids.append(f"asset:adapters/{path.name}")
+
+
+def _emit_trust_and_gates(conn, pack_id, root, row_ids: list[str]) -> None:
+    for pattern, tier, note in _tier_rows(
+        _load_yaml(root / "trust" / "source_tiers.yaml", {})
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
+            (pattern, pack_id, tier, note),
+        )
+        row_ids.append(f"tier:{pattern}")
+
+    for kind, pattern, note in _gate_rows(
+        _load_yaml(root / "vocabulary" / "gates.yaml", {})
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO gate_terms VALUES (?,?,?,?)",
+            (pack_id, kind, pattern, note),
+        )
+        row_ids.append(f"gate:{kind}:{pattern}")
+
+    for tier, trust in _tier_trust_rows(
+        _load_yaml(root / "trust" / "source_tiers.yaml", {})
+    ):
+        conn.execute(
+            "INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",
+            (tier, pack_id, trust),
+        )
+        row_ids.append(f"tier_trust:{tier}")
+
+
+def _write_manifest_row(conn, pack_id, man, row_ids: list[str]) -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO packs (pack_id, name, version, schema_version,"
+        " built_at, publisher, license, origin_url, content_digest,"
+        " manifest_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (
+            pack_id,
+            man.name,
+            man.version,
+            SCHEMA_VERSION,
+            _now(),
+            man.publisher,
+            man.license,
+            man.origin_url,
+            ids.content_digest(row_ids),
+            yaml.safe_dump(man.raw, allow_unicode=True),
+        ),
+    )
+
+
 def build(root, out_path) -> Path:
     """Build `root` into a pack file at `out_path`. Returns the path."""
     root = Path(root)
@@ -183,286 +496,14 @@ def build(root, out_path) -> Path:
     pack_id = man.pack_id
     row_ids: list[str] = []
 
-    def numeric(key, value):
-        """value_num is set for declared-numeric terms so ranges stay indexable."""
-        if term_by_id.get(key, {}).get("datatype") in _NUMERIC_TYPES:
-            return _as_number(value)
-        return None
-
     with conn:
-        for t in terms:
-            conn.execute(
-                "INSERT OR REPLACE INTO terms (term_id, pack_id, role, datatype,"
-                " unit, parent_id, label_json, match_json) VALUES (?,?,?,?,?,?,?,?)",
-                (
-                    t["term_id"],
-                    pack_id,
-                    t.get("role", "attribute"),
-                    t.get("datatype", "text"),
-                    t.get("unit", ""),
-                    t.get("parent", ""),
-                    yaml.safe_dump(t.get("label", {}), allow_unicode=True),
-                    yaml.safe_dump(t.get("match", {}), allow_unicode=True),
-                ),
-            )
-            row_ids.append(f"term:{t['term_id']}")
-            for alias in t.get("aliases", []) or []:
-                conn.execute(
-                    "INSERT OR IGNORE INTO term_aliases VALUES (?,?,?,?)",
-                    (t["term_id"], pack_id, alias, ""),
-                )
-                row_ids.append(f"term_alias:{t['term_id']}:{alias}")
-
-        known: dict[tuple[str, str], str] = {}
-        for entry in subjects:
-            kind, subject_id = _subject_key(entry, man.identity_keys)
-            known[(kind, subject_id)] = subject_id
-            conn.execute(
-                "INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
-                (subject_id, pack_id, kind, entry.get("label", "")),
-            )
-            row_ids.append(subject_id)
-
-            identity = entry.get("identity") or {}
-            declared = set(man.identity_keys[kind])
-            merged = {**identity, **(entry.get("attributes") or {})}
-            for key, value in merged.items():
-                if key not in term_by_id:
-                    raise ValueError(
-                        f"subject {entry.get('label', subject_id)!r} uses "
-                        f"undeclared term {key!r} — add it to vocabulary/terms.yaml"
-                    )
-                attribute_id = ids.attribute_id(subject_id, key, value)
-                conn.execute(
-                    "INSERT OR IGNORE INTO attributes (attribute_id, pack_id,"
-                    " subject_id, key, value_text, value_num, unit, valid_from,"
-                    " valid_to, is_identity, confidence) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    (
-                        attribute_id,
-                        pack_id,
-                        subject_id,
-                        key,
-                        str(value),
-                        numeric(key, value),
-                        term_by_id[key].get("unit", ""),
-                        "",
-                        "",
-                        1 if key in declared else 0,
-                        None,
-                    ),
-                )
-                row_ids.append(attribute_id)
-
-            for alias in entry.get("aliases", []) or []:
-                conn.execute(
-                    "INSERT OR IGNORE INTO subject_aliases VALUES (?,?,?,?,?)",
-                    (subject_id, pack_id, alias, "", "attribution_safe"),
-                )
-                row_ids.append(f"subject_alias:{subject_id}:{alias}")
-
-        # Relations resolve after every subject exists, so an edge may point
-        # forward to a subject declared later in the file.
-        for entry in subjects:
-            _, subject_id = _subject_key(entry, man.identity_keys)
-            for rel in entry.get("relations", []) or []:
-                target_kind, target_id = _subject_key(rel["object"], man.identity_keys)
-                if (target_kind, target_id) not in known:
-                    raise ValueError(
-                        f"relation from {entry.get('label')!r} points at unknown "
-                        f"subject {rel['object']!r}"
-                    )
-                relation_id = ids.relation_id(subject_id, rel["predicate"], target_id)
-                conn.execute(
-                    "INSERT OR IGNORE INTO relations VALUES (?,?,?,?,?,?)",
-                    (
-                        relation_id,
-                        pack_id,
-                        subject_id,
-                        rel["predicate"],
-                        target_id,
-                        rel.get("note", ""),
-                    ),
-                )
-                row_ids.append(relation_id)
-
-        for entry in claims:
-            kind, subject_id = _subject_key(entry["subject"], man.identity_keys)
-            if (kind, subject_id) not in known:
-                raise ValueError(
-                    f"claim {entry.get('text', {}).get('en', {}).get('title', '?')!r} "
-                    f"points at unknown subject {entry['subject']!r}"
-                )
-
-            texts = entry.get("text") or {}
-            primary = texts.get("en") or next(iter(texts.values()), {})
-            claim_id = ids.claim_id(
-                subject_id, entry["kind"], entry["domain"], primary.get("title", "")
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
-                " kind, domain, severity, consequence, detection, component,"
-                " subsystem, author_confidence, created_at)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (
-                    claim_id,
-                    pack_id,
-                    subject_id,
-                    entry["kind"],
-                    entry["domain"],
-                    entry.get("severity", "medium"),
-                    entry.get("consequence", ""),
-                    entry.get("detection", ""),
-                    entry.get("component", ""),
-                    entry.get("subsystem", ""),
-                    entry.get("confidence"),
-                    _now(),
-                ),
-            )
-            row_ids.append(claim_id)
-
-            for lang, block in texts.items():
-                conn.execute(
-                    "INSERT OR IGNORE INTO claim_text VALUES (?,?,?,?,?,?)",
-                    (
-                        claim_id,
-                        pack_id,
-                        lang,
-                        block.get("title", ""),
-                        block.get("body", ""),
-                        block.get("advice", ""),
-                    ),
-                )
-                row_ids.append(f"text:{claim_id}:{lang}")
-
-            for seq, cond in enumerate(entry.get("conditions", []) or []):
-                conn.execute(
-                    "INSERT OR REPLACE INTO claim_conditions (claim_id, pack_id,"
-                    " seq, key, op, value_text, value_num, on_missing, weight)"
-                    " VALUES (?,?,?,?,?,?,?,?,?)",
-                    (
-                        claim_id,
-                        pack_id,
-                        seq,
-                        cond["key"],
-                        cond["op"],
-                        str(cond.get("value", "")),
-                        _as_number(cond.get("value")),
-                        cond.get("on_missing", "open"),
-                        float(cond.get("weight", 1.0)),
-                    ),
-                )
-                row_ids.append(f"cond:{claim_id}:{seq}")
-
-            for ev in entry.get("evidence", []) or []:
-                url = ev.get("url", "")
-                source_id = ids.source_id(url=url, text=ev.get("quote", ""))
-                conn.execute(
-                    "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"
-                    " domain, site_or_channel, title, lang, source_type,"
-                    " published_at, retrieved_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    (
-                        source_id,
-                        pack_id,
-                        url,
-                        _domain_of(url),
-                        ev.get("site", ""),
-                        ev.get("source_title", ""),
-                        ev.get("lang", ""),
-                        ev.get("source_type", "page"),
-                        ev.get("published_at", ""),
-                        ev.get("retrieved_at", ""),
-                    ),
-                )
-                row_ids.append(source_id)
-
-                evidence_id = ids.evidence_id(source_id, ev.get("quote", ""))
-                conn.execute(
-                    "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
-                    " claim_id, source_id, quote, locator, stance, independent)"
-                    " VALUES (?,?,?,?,?,?,?,?)",
-                    (
-                        evidence_id,
-                        pack_id,
-                        claim_id,
-                        source_id,
-                        ev.get("quote", ""),
-                        ev.get("locator", ""),
-                        ev.get("stance", "supports"),
-                        1 if ev.get("independent", True) else 0,
-                    ),
-                )
-                row_ids.append(evidence_id)
-
-        # Non-tabular assets: whatever the pack ships that is text rather than
-        # rows. Read in sorted order so the digest is stable.
-        for name, kind in (
-            ("research/principle.md", "principle"),
-            ("research/templates.yaml", "templates"),
-        ):
-            path = root / name
-            if path.exists():
-                conn.execute(
-                    "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
-                    (pack_id, name, kind, path.read_text(encoding="utf-8")),
-                )
-                row_ids.append(f"asset:{name}")
-
-        for path in sorted((root / "adapters").glob("*.json")):
-            conn.execute(
-                "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
-                (
-                    pack_id,
-                    f"adapters/{path.name}",
-                    "adapter",
-                    path.read_text(encoding="utf-8"),
-                ),
-            )
-            row_ids.append(f"asset:adapters/{path.name}")
-
-        for pattern, tier, note in _tier_rows(
-            _load_yaml(root / "trust" / "source_tiers.yaml", {})
-        ):
-            conn.execute(
-                "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
-                (pattern, pack_id, tier, note),
-            )
-            row_ids.append(f"tier:{pattern}")
-
-        for kind, pattern, note in _gate_rows(
-            _load_yaml(root / "vocabulary" / "gates.yaml", {})
-        ):
-            conn.execute(
-                "INSERT OR REPLACE INTO gate_terms VALUES (?,?,?,?)",
-                (pack_id, kind, pattern, note),
-            )
-            row_ids.append(f"gate:{kind}:{pattern}")
-
-        for tier, trust in _tier_trust_rows(
-            _load_yaml(root / "trust" / "source_tiers.yaml", {})
-        ):
-            conn.execute(
-                "INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",
-                (tier, pack_id, trust),
-            )
-            row_ids.append(f"tier_trust:{tier}")
-
-        conn.execute(
-            "INSERT OR REPLACE INTO packs (pack_id, name, version, schema_version,"
-            " built_at, publisher, license, origin_url, content_digest,"
-            " manifest_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (
-                pack_id,
-                man.name,
-                man.version,
-                SCHEMA_VERSION,
-                _now(),
-                man.publisher,
-                man.license,
-                man.origin_url,
-                ids.content_digest(row_ids),
-                yaml.safe_dump(man.raw, allow_unicode=True),
-            ),
-        )
+        _emit_terms(conn, pack_id, terms, row_ids)
+        known = _emit_subjects(conn, pack_id, subjects, man, term_by_id, row_ids)
+        _emit_relations(conn, pack_id, subjects, man, known, row_ids)
+        _emit_claims(conn, pack_id, claims, man, known, row_ids)
+        _emit_pack_assets(conn, pack_id, root, row_ids)
+        _emit_trust_and_gates(conn, pack_id, root, row_ids)
+        _write_manifest_row(conn, pack_id, man, row_ids)
 
     conn.close()
     return out_path
