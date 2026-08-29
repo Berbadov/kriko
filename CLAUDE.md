@@ -67,7 +67,7 @@ to remember to make for every new car, and history here shows that edit gets for
 
 **Before adding a fixed list of car-specific values, ask:** can this be *derived* from the
 catalog (`packs/cars/data/**/*.yaml`) instead of hand-enumerated? `catalog_code_manufacturers()`
-in `knowledge/stoplists.py` is the reference pattern — it reads manufacturer-per-code
+in `packs/cars/pipeline/stoplists.py` is the reference pattern — it reads manufacturer-per-code
 straight off the part YAMLs, so a new part is covered the moment its stub exists, with no
 separate registration step to forget.
 
@@ -82,7 +82,7 @@ vocabulary are pack-declared rows. `kriko/tests/test_core_is_domain_free.py` wal
 kriko/'s AST looking for car vocabulary in executable positions.
 
 Onboarding a new car model must never require a manual Python dict/list edit in
-`knowledge/stoplists.py` or anywhere else — only new YAML data under `packs/cars/data/`,
+`packs/cars/pipeline/stoplists.py` or anywhere else — only new YAML data under `packs/cars/data/`,
 ideally pipeline-generated rather than hand-authored (see `docs/USAGE.md`'s onboarding
 steps). Onboarding a whole new *category* must never require an edit to `kriko/` at all.
 
@@ -124,7 +124,7 @@ Kriko is four packages, and since the pivot the dependencies form a fan, not a
 column. Each may import from what it points at, never the other way:
 
 ```
-apps/       interfaces — cli, web dashboard, mcp server.
+app/       interfaces — cli, web dashboard, mcp server.
    |
    v
 kriko/      the engine — pack store, generic lookup, ranking, research
@@ -134,11 +134,11 @@ packs/      one directory per product category: data, vocabulary, trust
    |        tiers, builder, and that category's own coverage report.
    |        This is the thing a third party authors.
    v
-knowledge/  evidence ledger + grounded extraction — turns sources into
+packs/cars/pipeline/  evidence ledger + grounded extraction — turns sources into
             claims a pack can ship.
 
-ops/        pipeline drivers — ledger_run, remediate, panel, process.
-            May import knowledge/ and packs/. Nothing imports ops/.
+app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
+            May import packs/cars/pipeline/ and packs/. Nothing imports app/pipeline/.
 ```
 
 **`kriko/` importing anything on this list is the one unforgivable violation.**
@@ -151,26 +151,26 @@ be supplying it as a row.
 **A deferred import (one written inside a function body) that points *upward* is
 the smell.** It means someone hit `ImportError: partially initialized module` and
 pushed the import down to runtime rather than fixing the layering. Before
-2026-08-21 there were 11 of them, all pointing from `knowledge/` into the
+2026-08-21 there were 11 of them, all pointing from `packs/cars/pipeline/` into the
 now-deleted `backend/`, because `backend/tools/` held operator tooling the
 pipeline needed. A deferred import pointing *downward* is fine — that is a
 startup-cost decision.
 
-Four greps must return nothing (tests excluded — an end-to-end test may span layers):
+The following layering checks must return nothing (tests excluded — an end-to-end test may span layers):
 
 ```bash
-grep -rnE "^[[:space:]]*(from|import) (backend|ops|apps|packs|knowledge)" --include='*.py' kriko/      | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) (backend|ops|apps|packs)"           --include='*.py' knowledge/  | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) (ops|apps)"                         --include='*.py' packs/      | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) (backend|ops)"                      --include='*.py' apps/       | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|app|packs|knowledge)" --include='*.py' kriko/      | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|app|packs)"           --include='*.py' packs/cars/pipeline/  | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (app|app.pipeline)"                         --include='*.py' packs/      | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.py' app/       | grep -v /pipeline/ | grep -v /tests/
 ```
 
-All four are enforced mechanically in `ops/tests/test_repo_invariants.py`, which
+All four are enforced mechanically in `app/pipeline/tests/test_repo_invariants.py`, which
 also ratchets the deleted `backend/` shut.
 
 If a module needs something from the layer above, it is in the wrong layer — move
-the module, don't add the import. New pipeline drivers belong in `ops/`; new
-interfaces in `apps/`; anything category-specific in `packs/<category>/`. See
+the module, don't add the import. New pipeline drivers belong in `app/pipeline/`; new
+interfaces in `app/`; anything category-specific in `packs/<category>/`. See
 `docs/INTERNALS.md` for the diagram and
 `docs/superpowers/specs/2026-08-21-codebase-organisation-design.md` for the
 original reasoning.

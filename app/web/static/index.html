@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Kriko control plane</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/static/app.css" />
+
+<header>
+    <h1>Kriko</h1>
+    <span class="sub">local product knowledge control plane</span>
+    <nav>
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="ask">Ask</button>
+        <button class="tab" data-tab="analyze">Analyze</button>
+        <button class="tab" data-tab="coverage">Coverage</button>
+        <button class="tab" data-tab="packs">Packs</button>
+        <button class="tab" data-tab="browse">Browse</button>
+    </nav>
+</header>
+
+<main>
+    <section id="dashboard" class="active">
+        <div id="status" class="stats"></div>
+        <h2>Recent analysis activity</h2>
+        <div id="activity"></div>
+    </section>
+
+    <section id="ask">
+        <h2>Ask the installed knowledge</h2>
+        <div class="row">
+            <div class="field">
+                <label for="pack">Pack</label
+                ><select id="pack"></select>
+            </div>
+            <div class="field">
+                <label for="kind">Kind</label
+                ><select id="kind"></select>
+            </div>
+        </div>
+        <div class="row" id="identity-fields"></div>
+        <div class="row" id="context-fields"></div>
+        <div class="row">
+            <button id="go">Ask</button
+            ><button id="clear" class="ghost">Clear</button>
+        </div>
+        <div id="result" aria-live="polite"></div>
+    </section>
+
+    <section id="analyze">
+        <h2>Analyze a raw listing</h2>
+        <p class="meta">
+            Send the listing as captured. Pack adapters decide which fields
+            matter.
+        </p>
+        <div class="field wide">
+            <label for="raw-url">URL</label
+            ><input
+                id="raw-url"
+                type="url"
+                required
+                placeholder="https://example.invalid/item/1"
+            />
+        </div>
+        <div class="field wide">
+            <label for="raw-title">Title</label><input id="raw-title" />
+        </div>
+        <div class="field wide">
+            <label for="raw-description">Description</label
+            ><textarea id="raw-description" rows="3"></textarea>
+        </div>
+        <div class="field wide">
+            <label for="raw-fields">Raw fields (JSON object)</label
+            ><textarea
+                id="raw-fields"
+                rows="6"
+                placeholder='{"Model": "example", "Usage": "100"}'
+            >
+{}</textarea
+            >
+        </div>
+        <div class="row">
+            <button id="raw-go">Analyze</button
+            ><button id="raw-clear" class="ghost">Clear</button>
+        </div>
+        <div id="raw-result" aria-live="polite"></div>
+    </section>
+
+    <section id="coverage">
+        <h2>Coverage gaps</h2>
+        <div id="coverage-list"></div>
+    </section>
+
+    <section id="packs">
+        <h2>Installed packs</h2>
+        <div class="row">
+            <input id="pack-file" type="file" accept=".kpack,application/octet-stream" />
+            <button id="pack-install">Install pack</button>
+        </div>
+        <div id="pack-install-result" aria-live="polite"></div>
+        <div id="pack-list"></div>
+    </section>
+
+    <section id="browse">
+        <div class="row">
+            <div class="field">
+                <label for="search">Search subjects</label
+                ><input
+                    id="search"
+                    placeholder="Search subjects"
+                    style="min-width: 280px"
+                />
+            </div>
+        </div>
+        <div id="subjects"></div>
+        <div id="subject-detail"></div>
+    </section>
+</main>
+<script type="module" src="/static/app.js"></script>

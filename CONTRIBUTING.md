@@ -43,52 +43,53 @@ not to do when it isn't obvious.
 ## Tests
 
 ```bash
-python -m pytest      # all 761 — no arguments
-npm test              # extension scraper + hub console
+python -m pytest      # all tests — no arguments
+npm test              # extension scraper + panel
 ```
 
 **Run `pytest` with no arguments.** `pytest.ini` pins `testpaths`; naming
 directories by hand is how the suite quietly shrank to 576 of 761 tests when
-`ops/` was added, skipping every test in `ops/tests` without failing.
+`app/pipeline/` was added, skipping every test in `app/pipeline/tests` without failing.
 
 The suite must pass with **no API keys and no `.env`**. A test that needs a key is
 reaching the network and belongs behind a marker — CI runs with no secrets, on
 purpose.
 
-If you touched `deploy/Dockerfile`, or moved a module the serving path imports,
-also run:
+If you move a module used by the serving path, also run the import and pack checks:
 
 ```bash
-docker build -f deploy/Dockerfile -t kriko-check .
-docker run --rm kriko-check python -c "import backend.api.main, backend.core.resolver, backend.sync"
+python -c "import app.web.app, kriko.lookup, kriko.store"
+python -m pytest app/pipeline/tests/test_repo_invariants.py
 ```
 
-That Dockerfile copies a deliberate stdlib-only slice of `knowledge/` to keep the
-LLM dependencies off the serving image, so a module move can produce an image that
-builds clean and dies at request time. Tests run against the full source tree and
-cannot see it. CI does this build for you; running it locally saves a round trip.
+The serving path is the local FastAPI app backed by the SQLite pack store. The
+pipeline remains separate from serving, so importing `app.web.app` must not load
+`app.pipeline` or the LLM extraction stack.
 
-## Architecture: three layers
+## Architecture: engine, packs, and interfaces
 
 Dependencies flow one way. Each layer may import from the layers below it, never
 from the layers above:
 
 ```
-ops/        hub, mcp, reports, auto, process, ledger_run, swap, remediate, panel
-backend/    sync ETL, api, resolver, db, matcher
-knowledge/  extraction, catalog, parts, sources, ledger — imports nothing above it
+app/             CLI, local web dashboard, MCP server
+app/pipeline/    ledger and remediation orchestration
+kriko/           generic store, ledger/extract, lookup, ranking, research
+packs/           category data, builders, vocabulary, coverage and pack pipelines
+extension/       thin browser client; no product/site interpretation
 ```
 
 If a module needs something from the layer above, **the module is in the wrong
-layer — move it, don't add the import.** New CLI drivers and anything spanning
-layers belong in `ops/`.
+layer — move it, don't add the import.** Interfaces belong in `app/`, pipeline
+drivers in `app/pipeline/`, generic engine code in `kriko/`, and category data in
+`packs/<category>/`.
 
 A deferred import (one written inside a function body) that points *upward* is the
 smell: it means someone hit `ImportError: partially initialized module` and pushed
 the import to runtime instead of fixing the layering. Pointing *downward* it is
 just a startup-cost decision, and fine.
 
-`ops/tests/test_repo_invariants.py` enforces this, so a violation fails the suite
+`app/pipeline/tests/test_repo_invariants.py` enforces this, so a violation fails the suite
 rather than waiting to be noticed in review.
 
 ## What CI checks
@@ -103,9 +104,8 @@ rather than waiting to be noticed in review.
 There is no docker-build job. The repo is private, so Actions minutes are billed,
 and an image build was 3-5 of the ~10 minutes per push. What it guarded is checked
 statically instead: `test_dockerfile_copies_every_knowledge_module_the_serving_path_imports`
-computes the transitive closure of `knowledge/` imports reachable from `backend/`
-and asserts `deploy/Dockerfile` copies each one. That runs in milliseconds as part
-of the normal suite.
+checks the package boundaries and test-path coverage. Those checks run in
+milliseconds as part of the normal suite.
 
 It cannot catch everything a real build would — a broken `pip install`, a bad base
 image, a missing data file — so still build locally when you change the Dockerfile.

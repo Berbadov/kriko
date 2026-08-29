@@ -172,7 +172,7 @@ def test_an_unknown_parse_hint_falls_back_to_plain_text():
 
 
 def test_the_real_cars_adapter_reads_a_real_listing_shape():
-    """The shape extension_ui/content.js actually produces today."""
+    """The shape extension/content.js actually produces today."""
     from pathlib import Path
     spec = json.loads(Path("packs/cars/adapters/sahibinden.json")
                       .read_text(encoding="utf-8"))

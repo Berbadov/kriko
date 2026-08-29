@@ -1,63 +1,63 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+    push:
+        branches: [main]
+    pull_request:
 
 # A newer push to the same branch cancels the older run — this suite is ~3
 # minutes and there is no value in finishing a superseded one.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  python:
-    name: pytest (serving + catalog + ops)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    python:
+        name: pytest (engine + catalog + pipeline)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-          cache: pip
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+                  cache: pip
 
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt -r knowledge/requirements.txt
+            - name: Install
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r packs/cars/pipeline/requirements.txt
 
-      # No arguments: pytest.ini pins testpaths. Naming directories by hand is
-      # how the suite silently shrank to 576 of 761 tests once ops/ existed.
-      # ops/tests/test_repo_invariants.py enforces the layering rules and the
-      # testpaths coverage, so the architecture is checked here too.
-      #
-      # Deliberately no secrets: the suite must pass with no API keys. If a new
-      # test needs one, it is reaching the network and belongs behind a marker.
-      - name: Test
-        run: python -m pytest
+            # No arguments: pytest.ini pins testpaths. Naming directories by hand is
+            # how the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
+            # app/pipeline/tests/test_repo_invariants.py enforces the layering rules and the
+            # testpaths coverage, so the architecture is checked here too.
+            #
+            # Deliberately no secrets: the suite must pass with no API keys. If a new
+            # test needs one, it is reaching the network and belongs behind a marker.
+            - name: Test
+              run: python -m pytest
 
-  extension:
-    name: node (scraper + hub console)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    extension:
+        name: node (scraper + extension panel)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
 
-      # `npm install`, not `npm ci`: package-lock.json is gitignored, so there
-      # is no lockfile to install from. Commit the lockfile and switch this to
-      # `npm ci` if reproducible installs matter more than a tidy tree.
-      - run: npm install --no-audit --no-fund
-      - run: npm test
+            # `npm install`, not `npm ci`: package-lock.json is gitignored, so there
+            # is no lockfile to install from. Commit the lockfile and switch this to
+            # `npm ci` if reproducible installs matter more than a tidy tree.
+            - run: npm install --no-audit --no-fund
+            - run: npm test
 
 # No docker-build job on purpose. This repo is private, so Actions minutes are
 # billed, and a full image build was 3-5 of the ~10 minutes per push. The
 # breakage it guarded — deploy/Dockerfile not copying a knowledge/ module the
 # serving path imports — is covered statically instead, in milliseconds, by
-# ops/tests/test_repo_invariants.py::test_dockerfile_copies_every_knowledge_module_the_serving_path_imports
+# app/pipeline/tests/test_repo_invariants.py::test_dockerfile_copies_every_knowledge_module_the_serving_path_imports
 # which the python job already runs. Build the image locally when you touch
 # the Dockerfile; CONTRIBUTING.md has the command.

@@ -19,7 +19,7 @@ SCHEMA_VERSION = 1
 # append-only with DELETE/UPDATE triggers, while this store must support
 # `DELETE WHERE pack_id = ?`. Those two facts cannot share a database.
 DEFAULT_HOME = Path.home() / ".kriko"
-DEFAULT_STORE = DEFAULT_HOME / "knowledge.sqlite"
+DEFAULT_STORE = DEFAULT_HOME / "packs.cars.pipeline.sqlite"
 
 
 def connect(path=None, *, read_only: bool = False) -> sqlite3.Connection:

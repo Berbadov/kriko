@@ -14,9 +14,8 @@ labels: claim-quality
 
 ### What Kriko showed
 
-<!-- Paste the risk card text, or the /analyze response. `python -m ops.reports.analyses
-     --last 20` lists recent requests; `python -m ops.reports.replay <analysis-id>`
-     re-runs one through the current code and diffs it. -->
+<!-- Paste the risk card text or the /analyze response. Recent analysis activity is
+     available from the local dashboard and `python -m app.pipeline.panel`. -->
 
 ### What it should have shown
 

@@ -41,11 +41,11 @@ docker compose -f deploy/docker-compose.yml down
 ## 2. Chrome Extension
 
 1. Open Chrome → `chrome://extensions` → enable **Developer mode**
-2. Click **Load unpacked** → select `~/kriko/extension_ui/`
+2. Click **Load unpacked** → select `~/kriko/extension/`
 3. Visit any Sahibinden.com listing for a supported car (Renault Megane IV)
 4. The Kriko panel appears automatically after ~1.5 seconds
 
-After any code change to `extension_ui/`:
+After any code change to `extension/`:
 ```bash
 # Chrome → chrome://extensions → click the reload (↺) button on Kriko
 ```
@@ -56,7 +56,7 @@ After any code change to `extension_ui/`:
 
 ```bash
 cd ~/kriko
-pip install -r knowledge/requirements.txt
+pip install -r packs/cars/pipeline/requirements.txt
 pip install exa-py yt-dlp trafilatura mistralai
 ```
 
@@ -97,21 +97,21 @@ is a rule a cheap model can break and be told "OK" — that is exactly how a
 trim-shaped VW Golf 8 lineup got written and reported as a success:
 
 - **No guessed figures.** A trim whose power or displacement the agent could not
-  source is written `draft: true`; `backend/sync.py` skips it and the coverage
+  source is written `draft: true`; the pack build skips it and the coverage
   report raises `draft_variant`. A visible gap, never a plausible invention.
 - **No fabricated citations.** `add_evidence` rejects any quote that is not
   literally present in the document the agent submitted (whitespace- and
   case-insensitive). An agent cannot cite a source it did not read.
 - **No trim-shaped lineups.** A row is a *powertrain*: two rows a listing could
   never tell apart are merged or refused, and an id must name the engine, not
-  the showroom (`knowledge/catalog/identity.py`).
+  the showroom (`packs/cars/pipeline/catalog/identity.py`).
 - **No description codes.** `transmission_code: "7-speed DSG"` is refused —
   "DSG" names three different gearboxes, so a claim attributed to it would
   contaminate its siblings. Find the unit code (`dq381`) or leave the row out.
 - **No low-value rows.** Warning lights, ekspertiz-routine items (fluids, pads,
   compression), DTC litanies, filler rationales and rephrasings of a chronic
   already on file are refused with the reason
-  (`knowledge/agent/gates.py`) — the CLAUDE.md product principle, enforced
+  (`packs/cars/pipeline/agent/gates.py`) — the CLAUDE.md product principle, enforced
   rather than requested.
 - **No budget overrun.** More than 5 documents on one part is refused; forums,
   complaint boards and spec content farms are refused as sources.
@@ -123,8 +123,8 @@ row — fix the substance or report the gap.
 **Repairing what is already on disk** (the other half of the same rule):
 
 ```bash
-python -m knowledge.catalog.doctor          # report identity damage, all cars
-python -m knowledge.catalog.doctor --fix    # $0 deterministic repair
+python -m packs.cars.pipeline.catalog.doctor          # report identity damage, all cars
+python -m packs.cars.pipeline.catalog.doctor --fix    # $0 deterministic repair
 ```
 
 It canonicalizes codes, renames trim-shaped ids, merges duplicate powertrains,
@@ -139,18 +139,18 @@ ultimately drives.
 **Step 1 — Catalog discovery + variants scaffold** — what configs exist
 
 ```bash
-python -m knowledge.catalog.discover --make renault --model megane_4 --write-variants
+python -m packs.cars.pipeline.catalog.discover --make renault --model megane_4 --write-variants
 # → K9K (k9k, diesel), H5H (h5h, petrol), EDC (edc, transmission) …
 ```
 
 This reads the Wikipedia article for the model, extracts engine/transmission codes
-from the infobox, and writes a **draft** `backend/data/variants/{make}_{model}.yaml`
+from the infobox, and writes a **draft** `packs/cars/data/variants/{make}_{model}.yaml`
 (one row per engine × transmission combination, marked `draft: true`). Wikipedia
 doesn't reliably give per-market power figures or exact trim years, so those fields
 are left unset rather than guessed — they are derived automatically or the row fails
 open (not synced; surfaced by the coverage report's `draft_variant` finding and the
-demand miner's no_match rows). `backend/sync.py` refuses to sync draft rows.
-If `backend/data/variants/{make}_{model}.yaml` already exists, this step is skipped
+demand miner's no_match rows). The pack builder refuses to include draft rows.
+If `packs/cars/data/variants/{make}_{model}.yaml` already exists, this step is skipped
 (never overwrites). Use `--dry-run` to preview without writing.
 
 **Step 2 — (included above)** catalog discovery also prints the research targets
@@ -159,29 +159,29 @@ If `backend/data/variants/{make}_{model}.yaml` already exists, this step is skip
 **Step 3 — Fitment YAML** — map variant_id → part codes
 
 ```bash
-python -m knowledge.catalog.discover --make renault --model megane_4 --write-fitment
+python -m packs.cars.pipeline.catalog.discover --make renault --model megane_4 --write-fitment
 ```
 
 Matches the discovered engine/transmission specs to the variants YAML from Step 1 and
-writes/updates `backend/data/fitment/{make}_{model}.yaml` automatically — hand-curated
+writes/updates `packs/cars/data/fitment/{make}_{model}.yaml` automatically
 extra keys on existing rows are preserved. Use `--dry-run` to preview.
 
 **Step 4 — Run the pipeline per part**
 
 ```bash
 # Acquire: Exa/YouTube discovery → fetch → ingest to the ledger (no LLM)
-python -m ops.ledger_run acquire --part k9k --part-type engine --fuel diesel
-python -m ops.ledger_run acquire --part edc --part-type transmission
+python -m app.pipeline.ledger_run acquire --part k9k --part-type engine --fuel diesel
+python -m app.pipeline.ledger_run acquire --part edc --part-type transmission
 
 # Then the ledger pipeline: extract → resolve → cluster → verdict → export
-python -m ops.ledger_run all
+python -m app.pipeline.ledger_run all
 
 # Re-run gates/promotion only — zero fetches, zero extraction tokens
-python -m ops.process --part k9k --part-type engine --skip-extraction
+python -m app.pipeline.process --part k9k --part-type engine --skip-extraction
 ```
 
 > **Retired 2026-08-03 (B16 swap):** the judge/promote gate stack no longer
-> exists — `ops.process`'s promote steps raise with a pointer to the
+> exists — `app.pipeline.process`'s promote steps raise with a pointer to the
 > ledger path. Claims reach serving only through the ledger's deterministic
 > verdict stage. For new-part research, use Step 4b instead.
 
@@ -192,11 +192,11 @@ trigger; the ledger pipeline fills the gap unattended:
 
 ```bash
 # What would the loop fix right now?
-python -m ops.ledger_run remediate --dry-run
+python -m app.pipeline.ledger_run remediate --dry-run
 
 # One budget-capped, resumable pass: acquire → extract → resolve → cluster →
 # verdict → export for every zero-claim/missing part the coverage report flags
-python -m ops.ledger_run remediate --max-usd 2.0
+python -m app.pipeline.ledger_run remediate --max-usd 2.0
 
 # Any findings that aren't part-driven (e.g. diesel variants without an
 # emissions value) are reported and logged, never silently fixed
@@ -213,7 +213,7 @@ One read-only screen answers "what is the pipeline doing" and "what would it
 cost to finish it" — the dry-run estimates, live:
 
 ```bash
-python -m ops.panel
+python -m app.pipeline.panel
 ```
 
 Shows total spend by stage/model, pending extraction/verdict cost-to-finish
@@ -228,13 +228,13 @@ native on the host — the DearPyGui desktop app is deprecated; GL rendering
 on WSLg was slow and broken):
 
 ```bash
-.venv/bin/python -m ops.hub.web     # then open http://127.0.0.1:8787
+.venv/bin/python -m app.web          # then open http://127.0.0.1:8787
 ```
 
 Tabs: **Models** (default — onboarding control room, below), **Claims** (the
 claim inspector: every claim with the deterministic gate's verdict and its
 reasons — agree/disagree records gate feedback in
-`ops/hub/claim_signals.jsonl` and never edits the catalog, because a
+`logs/claim_signals.jsonl` and never edits the catalog, because a
 human decision inside the data path is what G5 forbids), Overview (ledger
 counts, spend plot, cost-to-finish, recent runs),
 Parts (part → claims/variants), Sources (documents → raw text, tiered), Run
@@ -252,10 +252,9 @@ The onboarding control room — a top-down picker, no typing:
 
 **1 · Make → 2 · Model → 3 · Generation → 4 · Run.** Each step reveals the next.
 
-Makes and models are **not a maintained list** — they come from
-`GET /api/demand`, which mines `logs/analyses.jsonl` through
-`ops.reports.demand`. The buttons are the cars real buyers hit, ranked by
-hits, with `not_onboarded` first. You onboard what people actually search for.
+Makes and models are **not a maintained list** — they come from the installed
+pack and its research workflow. The dashboard exposes the available subjects and
+coverage state; onboarding is driven by pack data and recorded analysis activity.
 
 Generation can't come from traffic (listings carry a year, not a generation
 number), so it is **researched first**:
@@ -282,7 +281,7 @@ submits `canonical_model: passat_cc` and the queried name is kept as an alias,
 so the picker's dirty slug still resolves afterwards. Guessing that mapping in
 code would have been another hand-maintained car list.
 
-Lineups are written to `knowledge/catalog/generations/{make}_{model}.yaml` —
+Lineups are written to `packs/cars/pipeline/catalog/generations/{make}_{model}.yaml` —
 machine-written from a validated payload, never hand-edited.
 
 - **Catalog** lists every car with its rollup — `5 researched / 0 empty / 7
@@ -321,7 +320,7 @@ repo. They are split by how they bill:
   `*_API_KEY` names in `.env` — a new key is classified the moment it appears.
 
 Three safety notes on the run buttons, since this is the only place the hub
-executes something other than `ops.ledger_run`: make/model must match
+executes something other than `app.pipeline.ledger_run`: make/model must match
 `[a-z0-9_]{1,40}` and the model id `[A-Za-z0-9_./:-]{1,80}` (argv only, never a
 shell); the task selects a fixed prompt template and the harness a fixed argv
 template, so neither the prompt nor the command comes from the request. The hub
@@ -347,9 +346,9 @@ The server registers 19 tools: read (`ledger_status`, `spend_summary`,
 Two of those shape the agent's *method* rather than its output:
 
 - **`research_brief(part_id)`** — called before any web search. It returns what
-  this subsystem can fail at (from `knowledge/catalog/components.yaml`), which
+  this subsystem can fail at (from `packs/cars/pipeline/catalog/components.yaml`), which
   chronics are already on file, how much of the 5-document budget is left, and
-  which source tiers count (`knowledge/catalog/source_tiers.yaml`). "Do web
+  which source tiers count (`packs/cars/pipeline/catalog/source_tiers.yaml`). "Do web
   research" left a cheap model to invent its own checklist per part, so
   coverage depended on what it happened to think of; the brief is derived from
   the catalog, so it is current without a prompt edit.
@@ -379,7 +378,7 @@ Codex and Cline configs live outside the repo. Codex — add to `~/.codex/config
 ```toml
 [mcp_servers.kriko]
 command = "/home/beraat/kriko/.venv/bin/python"
-args = ["-m", "ops.mcp.server"]
+args = ["-m", "app.mcp_server"]
 env = { PYTHONPATH = "/home/beraat/kriko" }
 ```
 
@@ -391,19 +390,19 @@ Configure):
   "mcpServers": {
     "kriko": {
       "command": "/home/beraat/kriko/.venv/bin/python",
-      "args": ["-m", "ops.mcp.server"],
+      "args": ["-m", "app.mcp_server"],
       "env": { "PYTHONPATH": "/home/beraat/kriko" }
     }
   }
 }
 ```
 
-The agent prompt has exactly one source: `knowledge/agent/kriko_research.md`.
+The agent prompt has exactly one source: `packs/cars/pipeline/agent/kriko_research.md`.
 The harness files (`.opencode/agents/`, `.claude/agents/`) are **generated**:
 
 ```bash
-python -m knowledge.agent.render          # rewrite the harness files
-python -m knowledge.agent.render --check  # CI: are they current?
+python -m packs.cars.pipeline.agent.render          # rewrite the harness files
+python -m packs.cars.pipeline.agent.render --check  # CI: are they current?
 ```
 
 Two hand-maintained copies meant the harness a run happened to use decided
@@ -414,38 +413,24 @@ prompt.
 Tool names are prefixed per host (`kriko_onboard_model` in opencode,
 `mcp__kriko__onboard_model` in Claude Code) — the prompt says so.
 
-**Step 5 — Sync to DB**
+**Step 5 — Build and install the pack**
+
+The cars pack is the source of truth. Build it into the local SQLite store, then
+use the web app or CLI to inspect the result:
 
 ```bash
-docker exec deploy-api-1 python -m backend.sync
+python -m app.cli build packs/cars
+python -m app.cli packs
 ```
 
-Part claims (from `backend/data/parts/`) are assembled into variant links using the
-fitment YAML. The serving plane (`/analyze`) is unchanged.
-
-**Step 6 — Catalog swap to the ledger export (backlog B16)**
-
-The ledger export is the future serving catalog; swapping is mechanical and gated,
-never a manual edit:
-
-```bash
-# What would change? (remap, superseded/retained files, fitment edits)
-python -m ops.swap plan
-
-# The automated acceptance gate — parity loss, serving monotonicity, coverage.
-# Exits 1 while the export is thinner than the legacy catalog (the remediate
-# loop is the fix); 0 = swap is safe to land.
-python -m ops.swap check
-
-# Land it (runs on a temp copy unless --in-place; revert: git checkout -- backend/data)
-python -m ops.swap apply --in-place
-```
+Part claims from `packs/cars/data/parts/` are assembled through the pack builder.
+There is no separate Postgres sync or catalog-swap step.
 
 ---
 
 ## 5. Add page sources manually
 
-Edit `knowledge/sources/curated/{make}_{model}_{gen}.yaml` directly and append:
+Edit `packs/cars/pipeline/sources/curated/{make}_{model}_{gen}.yaml` directly and append:
 
 ```yaml
 - type: page
@@ -467,17 +452,17 @@ A claim needs **≥ 2 independent sources** that pass all gates to auto-verify. 
 
 ```bash
 # Preview (no writes)
-python -m ops.process renault megane 4 --dry-run
+python -m app.pipeline.process renault megane 4 --dry-run
 
 # Full run
-python -m ops.process renault megane 4
+python -m app.pipeline.process renault megane 4
 
 # Re-run gates/promotion on cached candidates — zero fetches, zero extraction LLM calls
-python -m ops.process renault megane 4 --skip-extraction
+python -m app.pipeline.process renault megane 4 --skip-extraction
 ```
 
 This runs: fetch → LLM extract → dedup → gate → score → write claims YAML → sync DB.
-Extracted candidates are cached to `knowledge/cache/{make}_{model}_{gen}_candidates.json`;
+Extracted candidates are cached to `packs/cars/pipeline/cache/{make}_{model}_{gen}_candidates.json`;
 `--skip-extraction` replays the cache, so tuning gates/thresholds costs no tokens.
 High-severity claims always go to manual review regardless of score.
 
@@ -490,7 +475,7 @@ docker compose -f deploy/docker-compose.yml restart api
 ### What buyers see (serving model)
 
 The pipeline writes claims to the YAML with a `status` field. The extension shows **two
-strengths**, never blurring them (`backend/core/resolver.py`, `_servable_claims_for`):
+strengths**, never blurring them (`kriko/lookup`, `lookup`):
 
 | Status | Shown as | Meaning |
 |--------|----------|---------|
@@ -512,7 +497,7 @@ OBD-code dumps) never reaches a buyer. The `/analyze` summary counts "confirmed 
 ### Promoting & rejecting claims — retired (automation principle, 2026-08-03)
 
 Statuses are pipeline-owned: the evidence ledger's deterministic verdict stage
-(`knowledge/ledger/verdict.py` + the product-value gate) decides them —
+(`packs/cars/pipeline/ledger/verdict.py` + the product-value gate) decides them —
 **hand-editing `status`/`promoted_by` in the claim YAMLs is a banned human step**
 (no human verification anywhere in the data path; CLAUDE.md automation
 principle). The status vocabulary above still describes what the pipeline
@@ -548,17 +533,8 @@ docker exec deploy-db-1 psql -U postgres -d kriko \
 gating), read `logs/analyses.jsonl` instead — no `docker exec`/psql needed:
 
 ```bash
-# Last 20 analyses, one-line summaries
-python -m ops.reports.analyses --last 20
-
-# Filter by model, full JSON per record
-python -m ops.reports.analyses --last 20 --model golf --json
-
-# Re-run a logged request through the CURRENT pipeline and diff the result —
-# use this to confirm a promote.py/gate/fitment fix actually changed the served
-# claims for a request that was previously wrong.
-python -m ops.reports.replay <analysis-id>
-python -m ops.reports.replay --last 5
+# Pipeline state, spend, and recent activity
+python -m app.pipeline.panel
 ```
 
 `GET /debug/analyses?limit=20&model=golf` exposes the same JSONL over HTTP, but is
@@ -571,8 +547,8 @@ access to the deploy host.
 ## 8. Eval the LLM gates (optional)
 
 ```bash
-OPENROUTER_API_KEY=... python -m knowledge.eval_judge
+DEEPSEEK_API_KEY=... python -m packs.cars.pipeline.ledger.eval_verdict
 ```
 
-Runs the 2-gate check (generic + support) over `knowledge/gold/gold.yaml` and prints
-precision/recall. Add more gold entries to `gold.yaml` as you run the pipeline.
+Runs the verdict-quality check over `packs/cars/pipeline/gold/gold.yaml` and prints
+per-entry outcomes. Add more gold entries to `gold.yaml` as you run the pipeline.

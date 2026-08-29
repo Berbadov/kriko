@@ -5,65 +5,40 @@ and the invariants the system relies on. Read this before touching the pipeline.
 
 ---
 
-## Architecture: Three Layers
+## Architecture: Four Packages
 
-Dependencies flow one way. Each layer may import from the layers below it and
-never from the layers above.
+Dependencies form a fan. Interfaces and pipeline drivers sit above the generic
+engine; category packs provide data, while the knowledge package provides the
+evidence/extraction machinery used to build packs.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  ops/          OPERATOR LAYER — drives and inspects the rest     │
-│                                                                  │
-│  hub/          browser dashboard (FastAPI, 127.0.0.1:8787)      │
-│  mcp/          stdio MCP server — the $0 agent control plane     │
-│  reports/      coverage · demand · replay · analyses             │
-│  auto · process · ledger_run · swap · remediate · panel          │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │  imports freely from both layers below
-┌──────────────────────────▼──────────────────────────────────────┐
-│  backend/      SERVING LAYER  (Docker, no LLM, <10ms/request)   │
-│                                                                  │
-│  sync.py  →  PostgreSQL                                          │
-│       │                                                          │
-│  FastAPI /analyze  →  matcher  →  resolver  →  JSON response    │
-│       ▲                                                          │
-│  Chrome extension (content.js → background.js → hover_lite.js)  │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │  imports knowledge/ for validation,
-                           │  the component registry and source tiers
-┌──────────────────────────▼──────────────────────────────────────┐
-│  knowledge/    CATALOG LAYER (offline, uses LLM)                │
-│                                                                  │
-│  discover · extract · dedup · stoplists · domains                │
-│  catalog/ · parts/ · sources/ · ledger/                          │
-│       │                                                          │
-│       ▼                                                          │
-│  backend/data/parts/*.yaml   (source of truth)                  │
-└─────────────────────────────────────────────────────────────────┘
+app/             CLI, local web dashboard, MCP server
+  └─ app/pipeline/  ledger and remediation drivers
+                    ├─ packs/     category data, builders, vocabulary, coverage
+                    └─ knowledge/ evidence ledger and grounded extraction
+kriko/           generic pack store, lookup, ranking and research
+extension/       Chrome client for the cars pack adapter
 ```
 
-`knowledge/` imports nothing from `backend/` or `ops/`; `backend/` imports nothing
-from `ops/`. Enforceable as a grep:
+`kriko/` imports none of the other packages. `packs/` and `knowledge/` do not
+import `app/` or `app/pipeline/`; only pipeline drivers coordinate the evidence
+pipeline and pack data. The structural rules are enforced by
+`app/pipeline/tests/test_repo_invariants.py`. The serving database is the local
+SQLite pack store; the evidence ledger is a separate SQLite build database.
 
-```bash
-grep -rnE "^[[:space:]]*(from|import) (backend|ops)" --include='*.py' knowledge/ | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) ops"            --include='*.py' backend/   | grep -v /tests/
-```
+The cars source of truth is under `packs/cars/data/`. There is no `backend/`,
+Postgres sync, or Docker-only serving layer in the current architecture.
 
-Both must return nothing. Until 2026-08-21 they did not: `backend/tools/` held
-operator tooling that `knowledge/` had to reach up for, and 11 of those imports
-were written inside function bodies to dodge the resulting import cycle.
-
-The catalog and serving layers still never communicate at runtime — YAML remains
-the handoff, `sync.py` the one-way gate. `ops/` is where anything that spans the
-two now lives.
+The pack files are built into the serving SQLite store; the evidence ledger remains
+separate from that read path. `app/pipeline/` is where operations that span packs and
+knowledge live.
 
 ---
 
 ## Serving Plane: Request Path
 
 ### 1. Content script extracts listing data
-**`extension_ui/content.js`** — `extractSahibindenMetadata()`
+**`extension/content.js`** — `extractSahibindenMetadata()`
 
 Queries the DOM of a Sahibinden listing page and returns a structured object:
 ```js
@@ -81,14 +56,14 @@ Key mapping in `mapTurkishKeys()`: Sahibinden uses "Yakıt Tipi"/"Benzinli" etc.
 converts Turkish field names → English keys. "Benzinli" → `fuel_type: "Benzinli"`.
 
 ### 2. Background script POSTs to /analyze
-**`extension_ui/background.js`** — `requestAnalysis(adMetadata)`
+**`extension/background.js`** — `requestAnalysis(adMetadata)`
 
 Sends `POST http://127.0.0.1:8000/analyze` with the metadata as `ad_metadata`. Tries
 two fallback URLs (`8000`, `8765`). Results are cached in `chrome.storage.session` for
 6 hours by URL+metadata signature hash.
 
 ### 3. FastAPI /analyze endpoint
-**`backend/api/main.py`** — `analyze(payload, db)`
+**`app/web/app.py`** — `create_app()` and the `/api/analyze` route
 
 Always returns HTTP 200. Exceptions are caught and wrapped as `coverage_state: unavailable`.
 
@@ -99,10 +74,10 @@ claims = resolve_claims(match, db)     # → list[Claim]
 ```
 
 ### 4. Variant matcher
-**`backend/core/matcher.py`** — `match_variant(meta, db)`
+**`kriko/lookup/match.py`** — generic identity and attribute matching
 
 Normalizes raw metadata → canonical values:
-- `normalize_fuel("Benzinli")` → `"petrol"` (`backend/core/normalize.py:_FUEL_MAP`)
+- `normalize_fuel("Benzinli")` → "petrol" (pack-declared vocabulary and adapter normalization)
 - `normalize_make("Renault")` → `"renault"`
 - `normalize_model("Megane")` → `"megane"`
 - `normalize_transmission("Otomatik")` → `"automatic"`
@@ -124,7 +99,7 @@ if not make or not model or not fuel or not year:
 ```
 
 ### 5. Claim resolver
-**`backend/core/resolver.py`** — `resolve_claims(match, db)`
+**`kriko/lookup/__init__.py`** — `lookup(query, conn)`
 
 Queries `claim_variants` join table for all matched variant IDs, returns only
 `status='verified'` and `is_current=True` claims.
@@ -137,7 +112,7 @@ never dropped (fail-open); the API layer multiplies the factor into
 `relevance_score`.
 
 ### 5b. Ranking & payload v2
-**`backend/api/main.py`** — `run_analysis` + `_claim_to_risk`
+**`app/web/routers/analyze.py`** — the `/api/analyze` route
 
 `relevance_score = severity weight (low 0.3 / medium 0.6 / high 1.0)
 × mileage-gate match (satisfied 1.0 / unknown 0.7, fail-open)
@@ -154,7 +129,7 @@ risks grouped by registry subsystem (`claims.subsystem`) for the v2 UI; the
 flat `risks` array stays for the current extension.
 
 ### 6. Response rendering
-**`extension_ui/hover_lite/hover_lite.js`**
+**`extension/hover_lite/hover_lite.js`**
 
 Reads `coverage_state`, `risks[]`, `summary`, `disclaimer` from the API response.
 Renders the panel overlay with severity-colored risk cards.
@@ -179,7 +154,7 @@ processed_at: "YYYY-MM-DD" | null
 ```
 
 Curated YAMLs are a legacy hand-authored path. The live flow is
-`ops.ledger_run acquire`, which discovers, fetches and ingests straight to the
+`app.pipeline.ledger_run acquire`, which discovers, fetches and ingests straight to the
 ledger with no curated-YAML step and no human approval (see the automation
 principle in CLAUDE.md). `process.py` still updates `status: processed` for the
 entries that remain.
@@ -239,28 +214,27 @@ Disposition rules:
 ### Writing claims
 **`knowledge/promote.py`** — `write_promoted_claims(results, make, model, claims_dir)`
 
-Only writes `disposition == VERIFY` claims. Appends to
-`backend/data/claims/{make}_{model}.yaml`. Checks `existing_keys` to avoid duplicates.
+The ledger export writes claims into the cars pack under
+`packs/cars/data/parts/`. The pack builder validates references and avoids
+shipping rows that cannot be served.
 
 Claim ID format: `{make}_{model}_{domain}_{title_first_20}_v1`
 
 ### DB sync
-**`backend/sync.py`** — `run()`
+**`kriko/pack/build.py`** — build the pack into SQLite
 
-Upserts all YAML files in `backend/data/variants/` and `backend/data/claims/` into Postgres.
-Runs automatically via Dockerfile CMD on container start. Re-trigger:
-```bash
-docker compose -f deploy/docker-compose.yml restart api
-```
+Builds the pack YAML into the local SQLite serving store. Rebuild explicitly with
+`python -m app.cli build packs/cars`.
 
-Tables: `variants`, `claims`, `claim_variants` (join), `claim_sources`, `analysis_log`.
-ORM: `backend/db/models.py`. Session: `backend/db/session.py`.
+The serving store contains generic subjects, attributes, claims, evidence and
+relations. The evidence ledger uses its own SQLite database and is never read by
+the request path.
 
 ---
 
 ## Data Formats
 
-### Variants YAML (`backend/data/variants/{make}_{model}_{gen}.yaml`)
+### Variants YAML (`packs/cars/data/variants/{make}_{model}_{gen}.yaml`)
 ```yaml
 - id: megane4_h5h_140          # stable forever, never rename
   make: renault                 # lowercase canonical
@@ -277,7 +251,7 @@ ORM: `backend/db/models.py`. Session: `backend/db/session.py`.
   market: TR
 ```
 
-### Claims YAML (`backend/data/claims/{make}_{model}_{gen}.yaml`)
+### Claims YAML (`packs/cars/data/parts/{part_type}/{part_id}.yaml`)
 ```yaml
 - id: megane4_h5h_timingchain_v1      # {claim_key}_v{version}
   claim_key: megane4_h5h_timingchain  # stable across versions
@@ -320,21 +294,21 @@ ORM: `backend/db/models.py`. Session: `backend/db/session.py`.
 1. **Variant IDs are permanent.** Once a variant is in the DB, its ID never changes.
    Claims reference variant IDs — renaming breaks the link silently.
 
-2. **YAML is the source of truth, not the DB.** The DB is rebuilt from YAML on every
-   `sync.py` run. Never edit the DB directly; edit the YAML.
+2. **Pack YAML is the source of truth, not the serving DB.** Rebuild the local
+   SQLite pack from YAML with `python -m app.cli build packs/cars`; never edit the
+   generated store directly.
 
-3. **`AnalysisLog.id` uses `UUID(as_uuid=False)`** (`backend/db/models.py:84`).
-   The column is `UUID` in Postgres but stored as a plain string in Python.
-   `as_uuid=False` tells psycopg to bind it as the proper Postgres UUID type.
+3. **The serving store is generic and local.** Pack data is compiled into SQLite;
+   the request path does not call the evidence ledger or an LLM.
 
-4. **High-severity claims always require human review.** They can be served only
-   after a human sets `status: verified` in the claims YAML and restarts the API.
+4. **Verdicts are pipeline-owned.** Deterministic gates and verdict stages decide
+   what can be exported; no human sign-off is part of the data path.
 
 5. **The serving plane never calls an LLM.** `/analyze` only reads the DB. All LLM
    work happens offline in the knowledge plane.
 
-6. **`normalize_fuel()` maps Turkish adjective forms.** "Benzinli" → "petrol",
-   not "Benzin". Both are in `_FUEL_MAP` (`backend/core/normalize.py`).
+6. **Category vocabulary is pack-owned.** Cars-specific labels and aliases live
+   under `packs/cars/`; the generic engine does not contain car constants.
 
 7. **WSL2 + Docker port conflict.** Never run `uvicorn` directly in WSL while Docker
    is up. Both listen on `0.0.0.0:8000` and WSL2 localhost forwarding means Windows

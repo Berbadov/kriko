@@ -23,10 +23,10 @@ an unticked box is fine if you say why.
 - [ ] **No human in the data path.** No review, sign-off or spot-check step added
       to extraction or scraping. Where a value can't be derived automatically, the
       system fails open: no claim, a gap in the coverage report, a logged signal.
-- [ ] **Layering holds.** No new import from `knowledge/` into `backend/` or `ops/`,
-      and none from `backend/` into `ops/`. If a module needs something from the
+- [ ] **Layering holds.** No new import from `knowledge/` into `backend/` or `app/pipeline/`,
+      and none from `backend/` into `app/pipeline/`. If a module needs something from the
       layer above, it is in the wrong layer — move the module.
-      (`ops/tests/test_repo_invariants.py` enforces this.)
+      (`app/pipeline/tests/test_repo_invariants.py` enforces this.)
 - [ ] **Claim selection clears the bar.** If this touches what gets surfaced: the
       claim is config-specific, predictable from the listing, and not something a
       standard pre-purchase inspection already catches.

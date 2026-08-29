@@ -70,10 +70,10 @@ DEFAULT_DATA_DIR = PACK_ROOT / "data"
 MANIFEST_PATH = PACK_ROOT / "pack.toml"
 
 # Pseudo part-code a fitment row may use as a transmission placeholder that
-# deliberately has no part file. Imported from knowledge.catalog.registry,
+# deliberately has no part file. Imported from packs.cars.pipeline.catalog.registry,
 # which is pure pathlib+yaml — so this read-only tool still takes on no DB
 # dependency, and the constant has one definition instead of four.
-from knowledge.catalog.registry import PSEUDO_PART_CODES  # noqa: E402
+from packs.cars.pipeline.catalog.registry import PSEUDO_PART_CODES  # noqa: E402
 
 
 @lru_cache(maxsize=4)
@@ -225,7 +225,7 @@ def build_report(variants_dir: Path, fitment_dir: Path, parts_dir: Path) -> Repo
 
     # (d) auto_variant_no_tx_part — automatic-tech variant, no real tx part.
     # The catalog's "transmission" field is a closed two-value vocabulary
-    # today (manual/automatic — see knowledge/catalog/write_variants.py), but
+    # today (manual/automatic — see packs/cars/pipeline/catalog/write_variants.py), but
     # rather than hardcode "automatic" we treat anything that isn't the
     # "manual" placeholder as an automatic/automated technology, so a future
     # value (e.g. "cvt", "semi-automatic") is covered without a code change.

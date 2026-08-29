@@ -70,6 +70,18 @@ CREATE TABLE IF NOT EXISTS term_aliases (
   PRIMARY KEY (term_id, pack_id, alias, lang)
 );
 
+-- ── gate vocabulary — what a pack considers not worth surfacing ──────────
+-- This is taste, and taste is a property of the category, so it is pack data
+-- and never an engine constant. `pattern` is a literal phrase for covered,
+-- generic and ambiguous, and a regular expression for noise and specificity.
+CREATE TABLE IF NOT EXISTS gate_terms (
+  pack_id TEXT NOT NULL,
+  kind    TEXT NOT NULL,   -- covered|generic|ambiguous|noise|specificity
+  pattern TEXT NOT NULL,
+  note    TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (pack_id, kind, pattern)
+);
+
 -- ── subjects — the ONLY entity table ─────────────────────────────────────
 -- A product, a variant, a component, or an aspect. A component is not a special
 -- table; it is a subject with a `part_of` relation. A drill with no components
@@ -270,3 +282,54 @@ CREATE TABLE IF NOT EXISTS local_prefs (
   k TEXT PRIMARY KEY,
   v TEXT NOT NULL
 );
+
+-- ── local revision history ────────────────────────────────────────────────
+-- `packs` is the active-read projection kept for backwards-compatible queries.
+-- These tables make each installed content digest durable without adding a
+-- revision column to every data row (which would change the public pack schema).
+CREATE TABLE IF NOT EXISTS pack_revisions (
+  revision_id  TEXT PRIMARY KEY,       -- pack_id + content digest
+  pack_id      TEXT NOT NULL,
+  version      TEXT NOT NULL,
+  content_digest TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  publisher    TEXT NOT NULL DEFAULT '',
+  license      TEXT NOT NULL DEFAULT '',
+  origin_url   TEXT NOT NULL DEFAULT '',
+  manifest_json TEXT NOT NULL DEFAULT '{}',
+  installed_at TEXT NOT NULL,
+  activated_at TEXT NOT NULL DEFAULT '',
+  UNIQUE (pack_id, content_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_pack_revisions_pack ON pack_revisions(pack_id);
+
+-- A JSON copy of the rows belonging to a revision. This is local-only state;
+-- it lets rollback work after the original .kpack file has disappeared.
+CREATE TABLE IF NOT EXISTS pack_revision_rows (
+  revision_id TEXT NOT NULL,
+  table_name  TEXT NOT NULL,
+  row_key     INTEGER NOT NULL,
+  row_json    TEXT NOT NULL,
+  PRIMARY KEY (revision_id, table_name, row_key)
+);
+
+-- Expected row counts make a snapshot auditable: an empty table is valid, but
+-- a missing final row in a non-empty table is not indistinguishable from empty.
+CREATE TABLE IF NOT EXISTS pack_revision_tables (
+  revision_id TEXT NOT NULL,
+  table_name  TEXT NOT NULL,
+  row_count   INTEGER NOT NULL,
+  PRIMARY KEY (revision_id, table_name)
+);
+
+CREATE TABLE IF NOT EXISTS pack_events (
+  event_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  pack_id       TEXT NOT NULL,
+  action        TEXT NOT NULL,          -- install|update|activate|rollback|enable|disable|uninstall
+  revision_id   TEXT NOT NULL DEFAULT '',
+  version       TEXT NOT NULL DEFAULT '',
+  content_digest TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL,
+  details_json  TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_pack_events_pack ON pack_events(pack_id, event_id);

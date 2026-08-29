@@ -1,0 +1,117 @@
+{
+  "engines": [
+    {
+      "engine_code": "H5Dt",
+      "engine_family": "h5d",
+      "fuel": "petrol",
+      "displacement_cc": 1000,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H5Ft",
+      "engine_family": "h5f",
+      "fuel": "petrol",
+      "displacement_cc": 1200,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H5Ht",
+      "engine_family": "h5h",
+      "fuel": "petrol",
+      "displacement_cc": 1300,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H4M",
+      "engine_family": "h4m",
+      "fuel": "petrol",
+      "displacement_cc": 1600,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "M5Mt",
+      "engine_family": "m5m",
+      "fuel": "petrol",
+      "displacement_cc": 1600,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "M5Pt",
+      "engine_family": "m5p",
+      "fuel": "petrol",
+      "displacement_cc": 1800,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "K9K",
+      "engine_family": "k9k",
+      "fuel": "diesel",
+      "displacement_cc": 1500,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "R9M",
+      "engine_family": "r9m",
+      "fuel": "diesel",
+      "displacement_cc": 1600,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "R9N",
+      "engine_family": "r9n",
+      "fuel": "diesel",
+      "displacement_cc": 1700,
+      "transmission_codes": [
+        "manual",
+        "cvt",
+        "edc"
+      ],
+      "notes": ""
+    }
+  ],
+  "transmissions": [
+    "manual",
+    "cvt",
+    "edc"
+  ]
+}
