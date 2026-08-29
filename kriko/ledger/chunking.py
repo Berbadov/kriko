@@ -49,11 +49,6 @@ FAILURE_LEXICON: frozenset[str] = frozenset(
         "repair",
         "chronic",
         "stretch",
-        "rattle",
-        "shudder",
-        "judder",
-        "misfire",
-        "clog",
     }
 )
 

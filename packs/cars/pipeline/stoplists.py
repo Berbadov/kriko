@@ -80,6 +80,14 @@ GENERIC_MAINTENANCE_TERMS: frozenset[str] = frozenset({
     "fluids need to be changed periodically", "wear and tear is normal",
 })
 
+# Failure words specific to machines with engines and drivetrains. These used
+# to sit in kriko/ledger/chunking.py's FAILURE_LEXICON, which made the engine
+# hold car vocabulary. Closed engineering vocabulary, so a constant is allowed
+# per CLAUDE.md's scalability-principle exception.
+CAR_FAILURE_TERMS: frozenset[str] = frozenset({
+    "misfire", "judder", "shudder", "clog", "rattle",
+})
+
 # "Oil consumption" / "blue smoke" / "burning oil" describe BOTH the routine
 # dipstick-and-road-test check every used car needs AND well-documented,
 # mileage-specific chronic defects in particular engine families (e.g. VW
