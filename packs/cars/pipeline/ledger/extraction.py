@@ -72,8 +72,9 @@ def _vocabulary() -> GateVocabulary:
 
 
 def _low_value_reason(claim: dict) -> str | None:
-    text = f"{claim.get('title', '')} {claim.get('rationale', '')}"
-    return gate_reason(text, _vocabulary())
+    title = claim.get("title", "")
+    text = f"{title} {claim.get('rationale', '')}"
+    return gate_reason(text, _vocabulary(), subject=title)
 
 
 def extract_document(conn, doc_id: int, budget: Budget) -> int:

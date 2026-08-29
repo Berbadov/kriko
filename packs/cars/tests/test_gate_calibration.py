@@ -43,7 +43,7 @@ def _vocab(tmp_path):
 
 
 def _rejected(title, rationale, has_anchor, vocab) -> bool:
-    if gate_reason(f"{title} {rationale}", vocab):
+    if gate_reason(f"{title} {rationale}", vocab, subject=title):
         return True
     return bool(structural_reasons(title, rationale, vocab, has_anchor=has_anchor))
 

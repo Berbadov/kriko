@@ -21,7 +21,13 @@ def _installed(tmp_path):
 def test_cars_pack_emits_and_installs_gate_rows(tmp_path):
     conn = _installed(tmp_path)
     vocab = load_gates(conn, "org.kriko.cars")
-    assert gate_reason("Brake pad wear at 60,000 km", vocab) == "covered"
+    # No mileage number here on purpose: kriko.gates.gate_reason now
+    # exempts a "covered" hit whose subject carries a specificity anchor
+    # (a mileage or an engine/gearbox code) — a mileage figure alone
+    # doesn't make routine pad wear config-specific, but this fixture
+    # must not accidentally trip that escape while testing the plain
+    # "covered" path.
+    assert gate_reason("Brake pad wear", vocab) == "covered"
     assert gate_reason("Injector bench test recommended", vocab) == "covered"
     assert gate_reason("ABS warning light", vocab) == "noise"
     conn.close()
@@ -44,5 +50,6 @@ def test_cars_yaml_retains_every_stoplist_group(tmp_path):
     assert len(spec["covered"]) == 44
     assert len(spec["generic"]) == 11
     assert len(spec["ambiguous"]) == 3
+    assert len(spec["exempt"]) == 1
     assert len(spec["noise"]) == 4
     assert len(spec["specificity"]) == 3
