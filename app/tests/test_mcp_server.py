@@ -49,6 +49,13 @@ PACK = {
     """,
     "principle": "Keep only what handling the tool would not reveal.",
     "templates": '- "{alias} common faults"\n',
+    "gates": """
+        noise:
+            - { pattern: '\\bwarning\\s+light\\b', note: true of any tool }
+        limits:
+            - { pattern: max_title_chars, note: "100" }
+            - { pattern: min_rationale_chars, note: "60" }
+    """,
 }
 
 
@@ -71,6 +78,9 @@ def store(tmp_path, monkeypatch):
     (root / "research" / "principle.md").write_text(PACK["principle"], encoding="utf-8")
     (root / "research" / "templates.yaml").write_text(
         PACK["templates"], encoding="utf-8"
+    )
+    (root / "vocabulary" / "gates.yaml").write_text(
+        textwrap.dedent(PACK["gates"]), encoding="utf-8"
     )
 
     path = tmp_path / "store.sqlite"
@@ -143,6 +153,40 @@ def test_coverage_gaps_finds_the_unresearched_subject(store):
 
 # ── writes, and the grounding rule ───────────────────────────────────────
 
+
+def test_a_warning_light_finding_is_refused_by_the_packs_own_gate(store):
+    """The product principle is enforced at write time, not requested in a prompt.
+
+    The pack's own vocabulary/gates.yaml declares dashboard-warning-light
+    language under `noise`. A finding matching it must not become evidence, and
+    the agent must be told which rule refused it — a prompt asks, a gate
+    decides.
+    """
+    result = mcp_server.submit_findings(_subject(), "tools", [{
+        "title": "ABS warning light illuminates",
+        "rationale": "The ABS light can come on and should be investigated by a mechanic.",
+        "quote": "the ABS warning light illuminates",
+        "document_text": "Owners report the ABS warning light illuminates.",
+        "source_url": "https://example.test/a",
+    }])
+    assert result["accepted"] == []
+    assert result["rejected"][0]["reason"] == "noise"
+
+
+def test_a_config_specific_finding_still_lands(store):
+    """The gate must not swallow what Kriko exists to surface."""
+    result = mcp_server.submit_findings(_subject(), "tools", [{
+        "title": "DQ381 mechatronics failure from 120000 km",
+        "rationale": "The mechatronics unit is a documented weak point on this "
+                     "gearbox and replacement is expensive.",
+        "quote": "DQ381 mechatronics failure",
+        "document_text": "Reports of DQ381 mechatronics failure are common.",
+        "source_url": "https://example.test/b",
+    }])
+    assert result["rejected"] == []
+    assert len(result["accepted"]) == 1
+
+
 DOCUMENT = (
     "Owners report that the chuck jaws round off after heavy use "
     "and no longer grip smooth shanks."
@@ -154,6 +198,8 @@ def _finding(**kw):
         title="Chuck jaws round off",
         domain="mech",
         severity="medium",
+        rationale="Heavy use gradually rounds off the jaw teeth, so the chuck no "
+        "longer grips smooth-shank bits securely and needs replacement.",
         quote="the chuck jaws round off after heavy use",
         document_text=DOCUMENT,
         source_url="https://e.example/x",

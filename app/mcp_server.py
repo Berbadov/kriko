@@ -27,6 +27,8 @@ from contextlib import contextmanager
 
 from mcp.server.fastmcp import FastMCP
 
+from kriko.extract.grounding import is_grounded
+from kriko.gates import gate_reason, load_gates, structural_reasons
 from kriko.research import get_researcher, plan_task
 from kriko.store import ids, packstore
 from kriko.store.db import connect
@@ -277,6 +279,8 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
         if subject is None:
             return {"error": f"no subject {subject_id} in pack {pack_id}"}
 
+        vocab = load_gates(conn, pack_id)
+
         for item in findings:
             quote = (item.get("quote") or "").strip()
             document = item.get("document_text") or ""
@@ -288,7 +292,7 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
             if not quote:
                 rejected.append({"title": title, "reason": "no quote"})
                 continue
-            if document and quote not in document:
+            if document and not is_grounded(document, quote):
                 rejected.append(
                     {
                         "title": title,
@@ -305,6 +309,20 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
                         "checked; send the text the quote came from",
                     }
                 )
+                continue
+
+            rationale = (item.get("rationale") or "").strip()
+            reason = gate_reason(f"{title} {rationale}", vocab)
+            if reason:
+                rejected.append({"title": title, "reason": reason})
+                continue
+
+            structural = structural_reasons(
+                title, rationale, vocab,
+                has_anchor=bool(item.get("component") or item.get("component_hint")),
+            )
+            if structural:
+                rejected.append({"title": title, "reason": "; ".join(structural)})
                 continue
 
             url = item.get("source_url") or ""
