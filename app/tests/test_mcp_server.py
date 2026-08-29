@@ -52,6 +52,16 @@ PACK = {
     "gates": """
         noise:
             - { pattern: '\\bwarning\\s+light\\b', note: true of any tool }
+        covered:
+            # A deliberately routine-sounding phrase that also happens to sit
+            # in "DQ381 mechatronics failure from 120000 km" — present so the
+            # config-specific test's DQ381 code / 120000 km mileage anchor is
+            # load-bearing: without a declared specificity pattern to escape
+            # it, this term alone would reject that finding as covered.
+            - { pattern: mechatronics failure, note: stand-in routine phrase }
+        specificity:
+            - { pattern: '\\b[A-Za-z]{1,4}\\d[A-Za-z0-9]{0,3}\\b' }
+            - { pattern: '\\b\\d[\\d,.]*\\s*(km|kilomet|mile|mi)\\b' }
         limits:
             - { pattern: max_title_chars, note: "100" }
             - { pattern: min_rationale_chars, note: "60" }
@@ -203,6 +213,12 @@ def _finding(**kw):
         quote="the chuck jaws round off after heavy use",
         document_text=DOCUMENT,
         source_url="https://e.example/x",
+        # component_hint doubles as the has_anchor signal submit_findings reads
+        # (see app/mcp_server.py). Real production findings name a concrete
+        # part; these grounding-rule tests are not about the specificity
+        # anchor rule, so carry one rather than leaning on title/rationale
+        # text to satisfy the pack's own specificity patterns incidentally.
+        component="chuck",
     )
     base.update(kw)
     return base

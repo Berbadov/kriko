@@ -150,18 +150,24 @@ def gate_reason(
     routine clutch-wear claim). ``covered`` only judges what the claim is
     about, so it reads ``subject``; ``generic``, ``noise`` and ``ambiguous``
     read the full ``text``. When a caller has no natural subject/text split,
-    omitting ``subject`` makes it default to ``text`` and every rule reads
-    the same string, which is the old, less precise behaviour.
+    omitting ``subject`` makes every rule read the same string — ``covered``
+    and ``generic`` still keep their specificity escapes either way, so this
+    is not simply the pre-split behaviour, just a coarser subject.
+
+    ``exempt`` waives ``covered`` alone — an official recall is authoritative
+    even when it names a part an inspection also covers, but that says
+    nothing about a warning-light title or generic filler riding along with
+    it, so ``noise``/``generic``/``ambiguous`` still apply.
     """
     text = text or ""
     subject = text if subject is None else (subject or "")
     lowered = text.casefold()
+    exempt = any(term in lowered for term in vocab.exempt)
 
-    if any(term in lowered for term in vocab.exempt):
-        return None
-
-    if any(term in subject.casefold() for term in vocab.covered) and not is_specific(
-        subject, vocab
+    if (
+        not exempt
+        and any(term in subject.casefold() for term in vocab.covered)
+        and not is_specific(subject, vocab)
     ):
         return "covered"
     if any(term in lowered for term in vocab.generic) and not is_specific(text, vocab):

@@ -109,12 +109,18 @@ trim-shaped VW Golf 8 lineup got written and reported as a success:
   "DSG" names three different gearboxes, so a claim attributed to it would
   contaminate its siblings. Find the unit code (`dq381`) or leave the row out.
 - **No low-value rows.** Warning lights, ekspertiz-routine items (fluids, pads,
-  compression), DTC litanies, filler rationales and rephrasings of a chronic
-  already on file are refused with the reason (`kriko/gates.py`, reading the
-  cars pack's own `packs/cars/vocabulary/gates.yaml` rows) — the CLAUDE.md
-  product principle, enforced rather than requested.
-- **No budget overrun.** More than 5 documents on one part is refused; forums,
-  complaint boards and spec content farms are refused as sources.
+  compression) unless the title itself is config-specific or the text names an
+  official recall, generic maintenance advice with no config anchor, and a
+  title/rationale that is empty, too long, too short or ties to nothing
+  specific are refused with the reason (`kriko/gates.py` + `structural_reasons`,
+  reading the cars pack's own `packs/cars/vocabulary/gates.yaml` rows) — the
+  CLAUDE.md product principle, enforced rather than requested.
+- **Removed, not currently enforced.** The orphaned write-path gate this
+  replaced also caught DTC-code litanies, rephrasings of a chronic already on
+  file, a per-part research budget, and blocked forum/spec-farm sources —
+  none of that is wired into the current agent path. Tracked as a backlog
+  item rather than silently assumed; do not rely on the server to catch any
+  of these until it is re-wired.
 
 A rejection is an instruction: it names what would fix the row. The contract
 tells the agent never to retry a rejection with a reworded version of the same
