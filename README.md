@@ -149,6 +149,10 @@ python -m app.cli install dist/cars.kpack
 python -m app.cli packs                    # what is installed, and its trust weight
 ```
 
+Authoring a pack for a new category? `docs/PACK_CONTRACT.md` states the required
+minimum and the optional parts, with `packs/drill/` as the copy-this-first example
+and `packs/cars/` as what a mature pack grows into.
+
 ### Ask it something
 
 ```bash
