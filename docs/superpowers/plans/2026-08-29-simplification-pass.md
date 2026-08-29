@@ -13,14 +13,24 @@
 ## Global Constraints
 
 - **Run tests with the repo venv:** `.venv/bin/python -m pytest`. A bare `python` does not exist on this machine.
-- **The whole suite is the gate, always.** It runs in ~15s (610 tests). Run `.venv/bin/python -m pytest -q` before every commit, not a subset.
+- **The whole suite is the gate, always.** Run it before every commit, not a subset:
+
+  ```bash
+  .venv/bin/python -m pytest -o addopts="" -q
+  ```
+
+  **Baseline: 594 passed, ~24s.** Use `-o addopts=""` — `pytest.ini` already sets
+  `-q`, so a plain `pytest -q` passes `-q` twice and pytest suppresses the
+  `N passed` summary line entirely. Without the override you get a wall of dots
+  and no count, which is how the number in an earlier draft of this plan was
+  wrong for three commits.
 - **`kriko/` may not import `app/`, `packs/`, `backend/` or `knowledge/`.** This is the load-bearing G6 invariant. `app/pipeline/tests/test_repo_invariants.py` enforces it; never weaken that test to make a task pass.
 - **Behaviour is preserved except in Tasks 6–7**, which change behaviour deliberately. If `packs/cars/tests/test_pack_parity.py` breaks in any other task, the task is wrong — revert it, do not update the golden.
 - **No hardcoded car data in `kriko/`.** No `make`, `engine_code`, `fuel`, or car vocabulary in executable positions. `kriko/tests/test_core_is_domain_free.py` walks the AST for this.
 - **Commit per task**, with the message body explaining *why*, per `CONTRIBUTING.md`. End every commit message with:
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
 - **Do not push or open a PR.** The user integrates manually.
-- **Baseline:** `f038df9` (Phase 6b), spec at `b7c74a0`. Branch `feat/knowledge-engine-pivot`.
+- **Baseline:** `f038df9` (Phase 6b, 594 tests green), spec at `b7c74a0`. Branch `feat/knowledge-engine-pivot`.
 
 ---
 
@@ -121,7 +131,7 @@ git rm packs/cars/pipeline/title_sim.py
 - [ ] **Step 5: Run the whole suite**
 
 Run: `.venv/bin/python -m pytest -q`
-Expected: PASS, same test count as the baseline (610).
+Expected: PASS, same test count as the baseline (594).
 
 - [ ] **Step 6: Commit**
 

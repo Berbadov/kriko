@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-29
 **Branch:** `feat/knowledge-engine-pivot`
-**Baseline:** `f038df9` (Phase 6b landed; 610 tests green, ~15s)
+**Baseline:** `f038df9` (Phase 6b landed; 594 tests green, ~15s)
 **Goal alignment:** G6 (Kriko becomes a category-free knowledge engine)
 
 ## Problem
@@ -88,7 +88,7 @@ its own commit against a green suite.
 
 ### 1. Land Phase 6b — DONE (`f038df9`)
 
-Baseline commit so later diffs are readable. 610 tests green.
+Baseline commit so later diffs are readable. 594 tests green.
 
 ### 2. Collapse the five forks
 
