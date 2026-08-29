@@ -40,6 +40,7 @@ from pathlib import Path
 import tomllib
 import yaml
 
+from kriko.pack.build import _GATE_KINDS
 from kriko.store import ids
 from kriko.store.db import SCHEMA_VERSION, connect
 
@@ -781,7 +782,7 @@ def _emit_research_assets(conn, pack_id: str, row_ids: list, stats: Counter) -> 
 def _emit_gate_vocabulary(
     conn, pack_id: str, gate_cfg: dict, row_ids: list, stats: Counter
 ) -> None:
-    for kind in ("covered", "generic", "ambiguous", "exempt", "noise", "specificity", "limits"):
+    for kind in _GATE_KINDS:
         for entry in gate_cfg.get(kind) or []:
             if isinstance(entry, dict):
                 if "pattern" not in entry:
@@ -799,15 +800,7 @@ def _emit_gate_vocabulary(
             row_ids.append(f"gate:{kind}:{pattern}")
             stats["gate_terms"] += 1
 
-    unknown_gates = set(gate_cfg) - {
-        "covered",
-        "generic",
-        "ambiguous",
-        "exempt",
-        "noise",
-        "specificity",
-        "limits",
-    }
+    unknown_gates = set(gate_cfg) - set(_GATE_KINDS)
     if unknown_gates:
         raise ValueError(
             f"vocabulary/gates.yaml has unknown rule kinds {sorted(unknown_gates)}"

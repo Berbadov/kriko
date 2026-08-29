@@ -323,7 +323,7 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 ## P1
 
 ### B34 — Re-wire or drop the two orphaned gate capabilities from the deleted `gates.py` `[G2]`
-Phase 6b (`f038df9`) removed `packs/cars/pipeline/agent/gates.py` after re-wiring it —
+This pass (`2a88372`) removed `packs/cars/pipeline/agent/gates.py` after re-wiring it —
 `check_evidence`'s vocabulary became `packs/cars/vocabulary/gates.yaml` rows, its
 thresholds became `limits` rows, and its rule shapes became
 `kriko.gates.structural_reasons`. Two of the old module's three public functions,
@@ -338,34 +338,43 @@ plus one supporting mechanism, were **not** ported and now have no caller anywhe
   warned on weak source tiers and on a missing `inspection_advice`. `resolve_tier`
   itself still exists in `packs/cars/pipeline/sources/tiers.py` but now has no caller
   outside its own module.
+- `title_has_dtc_code` (a raw diagnostic-trouble-code shape check on the title) —
+  a fourth lost rule, omitted from this inventory until the final review of this
+  pass caught it. It still lives in `packs/cars/pipeline/stoplists.py` with no
+  caller in the current write path (see `docs/USAGE.md`'s "Removed, not currently
+  enforced").
 
 All three are fully recoverable — the deleted file existed at commit `367e62f`.
 Decide: re-wire document-level gating and title dedupe into the current agent research
 path (`app/mcp_server.py`'s `submit_findings`), or delete `resolve_tier` too if the
 project decides document-level gating isn't worth the research path's complexity.
 
-### B35 — Gate calibration: ~23% false-rejection rate when a claim carries no `component` anchor `[G2]`
-`packs/cars/pipeline/tests/test_gate_calibration.py` measures the write-path gate's
-false-rejection rate across every claim in `packs/cars/data/parts/**/*.yaml`. Two
-numbers, both measured 2026-08-29:
-- **Anchored** (claim has a `component` field): **3.29%** (23/699) — asserted in the
-  test, ceiling 5%.
-- **Unanchored** (no `component`): **23.03%** (161/699) — measured and reported by the
+### B35 — Gate calibration: false-rejection rate when a claim carries no `component` anchor `[G2]`
+`packs/cars/tests/test_gate_calibration.py` (not `packs/cars/pipeline/tests/...` — that
+path was a mislabel) measures the write-path gate's false-rejection rate across every
+claim in `packs/cars/data/parts/**/*.yaml`. Two numbers, remeasured 2026-08-30 after the
+`noise`-scoping fix and the `has_anchor` threading through `gate_reason` (final review
+of this pass, finding 1/2):
+- **Anchored** (claim has a `component` field): **1.29%** (9/699) — asserted in the
+  test, ceiling 5% in aggregate, plus a per-kind bound per rule (added by the same fix).
+  Was 3.29% (23/699) before the fix — the drop is `noise` losing its false rejections of
+  rationale text mentioning a warning light while describing a real chronic.
+- **Unanchored** (no `component`): **21.46%** (150/699) — measured and reported by the
   test, deliberately *not* asserted (would make the suite depend on catalog content
-  that is expected to keep changing).
+  that is expected to keep changing). Was 23.03% (161/699) before the fix.
 
 `app/mcp_server.py`'s `submit_findings` docstring was updated this pass to tell agents
 to always send `component`, which is why the anchored number is the one that should
 apply in practice going forward. The unanchored number is still worth tracking: it
-says roughly a quarter of catalog-shaped claims carry no configuration anchor in their
+says roughly a fifth of catalog-shaped claims carry no configuration anchor in their
 own text, which reads as a statement about **catalog quality** as much as about the
 gate. Revisit if the unanchored rate moves a lot, or if agents keep omitting
 `component` despite the docstring. Not filed as a bug — no fix is proposed here.
 
 ### B36 — Product-principle question: does a bare mileage figure earn the specificity escape? `[G3]` **(HUMAN DECISION #9 — open)**
-Under both the original write-path gate and the one restored in Phase 6b, a bare
-mileage figure in a claim's title satisfies the "config-specific" escape that waives
-the ekspertiz-routine (`covered`) rejection — so *"Brake pad wear at 60,000 km"*
+Under both the original write-path gate and the one restored by this pass (`2a88372`),
+a bare mileage figure in a claim's title satisfies the "config-specific" escape that
+waives the ekspertiz-routine (`covered`) rejection — so *"Brake pad wear at 60,000 km"*
 surfaces while a bare *"Brake pad wear"* is dropped. `CLAUDE.md`'s product principle
 explicitly names brake-pad wear as routine pre-purchase-inspection ground that Kriko
 should not surface ("Anything the standard pre-purchase mechanic inspection already
@@ -375,7 +384,7 @@ a mileage figure alone doesn't make routine wear config-specific in the sense th
 principle means (engine/gearbox/fuel/market variant), it just adds a number.
 
 This is **pre-existing behaviour**, not introduced by the current pass — both the
-original gate (before Phase 6b) and the restored one preserve it identically. It is a
+original gate (before this pass) and the restored one preserve it identically. It is a
 **taste decision for the project owner**, not a refactoring decision: does "mileage
 present in the title" count as the kind of specificity the product principle asks for,
 or does it need to be tightened so routine-wear items still get dropped even with a
@@ -576,6 +585,46 @@ work than the simplification pass funded, and doing it without tests first would
 trading a readability problem for a regression risk. If this is picked up, write
 characterization tests per function before splitting (test-driven-development skill),
 and do not attempt all seventeen in one pass — group by module/owner instead.
+
+### B38 — Measure how much the offline ledger's low-value gate widened `[G2]`
+`packs/cars/pipeline/ledger/extraction.py:_low_value_reason` (`extract_document`'s
+`gate_reason` callback) now routes through the full `kriko.gates.gate_reason`, which
+means the offline ledger's chunk-extraction path flags evidence under `covered` and
+`ambiguous` too — two rule kinds the old `_deterministic_low_value_reason` this
+replaced never applied there (it only ever caught `noise`-shaped warning-light
+language at extraction time; `covered`/`ambiguous` were write-path-only checks before
+this pass). Flagged evidence is excluded from clustering
+(`kriko/ledger/cluster.py:41`), so a false-positive `covered`/`ambiguous` flag here
+can never reach export — this is a silent widening of what evidence gets dropped
+before a human or agent ever sees it, not a live bug, and nothing currently measures
+its rate.
+
+Found during the final review of the 2026-08-29 simplification pass (finding 4);
+filed rather than fixed per that review's own instruction not to fix findings 4/8 in
+the same wave. Next step: instrument or backfill a measurement of how often
+`covered`/`ambiguous` (as opposed to `noise`) fire on this path across a ledger run,
+then decide whether the widening is wanted — it may well be (evidence that reads as
+routine-and-unspecific is plausibly not worth clustering either), but that is a
+decision to make with the number in hand, not by default.
+
+### B39 — The research brief still tells agents to call tools that don't exist `[G2]`
+`kriko/research/agent.py:53` (`research_brief`'s generated prompt) still tells
+research agents to call `add_document` then `add_evidence` — neither tool exists;
+the real (and only) write path is `submit_findings`. It also lists only
+`quote`/`title`/`domain`/`severity` as the fields to send, omitting `document_text`
+(without which `submit_findings` refuses every finding — see the grounding check at
+`app/mcp_server.py`) and `component` (the anchor field that waives the specificity/
+generic/ambiguous escapes, per B34/finding 2 of the 2026-08-29 pass's final review).
+
+Two other surfaces carrying the same contract were already corrected in that pass —
+`submit_findings`' own docstring and `.claude/agents/kriko_research.md` — this third
+one (the brief the engine itself generates and hands to an agent at the start of a
+research session) was missed. An agent following this brief literally would call
+tools that raise `AttributeError`/tool-not-found, then likely improvise a shape that
+`submit_findings` refuses for missing `document_text`. Fix: rewrite the brief's
+tool-call example to name `submit_findings` with its real field list
+(`title`, `rationale`, `quote`, `document_text`, `source_url`, `component`, plus
+`domain`/`severity`).
 
 ### B28 — Split `ops/hub/web.py` into routers `[G5]` **(SUPERSEDED 2026-08-26 by B33 — `apps/web/` ships the router split on the new core; the blocker was import-time path constants, now a Settings value passed through an app factory)**
 `web.py` is 831 lines and ~28 endpoints after the 2026-08-22 helper extraction
