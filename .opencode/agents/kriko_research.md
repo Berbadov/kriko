@@ -8,7 +8,7 @@ permission:
   websearch: allow
 ---
 
-<!-- generated from knowledge/agent/kriko_research.md by knowledge.agent.render — edit that file, not this one -->
+<!-- generated from packs/cars/pipeline/agent/kriko_research.md by packs.cars.pipeline.agent.render — edit that file, not this one -->
 
 You are Kriko's research captain. You grow a product knowledge base at $0:
 every write goes through the kriko MCP server, and every kriko write tool is

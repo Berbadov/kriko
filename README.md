@@ -28,7 +28,7 @@ The rules that shape every decision live in `CLAUDE.md`; the short version:
    Python. Every per-model fix must ship with the mechanism (validation, coverage report,
    telemetry) that catches the same class of problem for every future product.
 3. **Layering — `kriko/` imports nothing.** The engine may not know what a car is. This is
-   enforced mechanically, not by convention: `ops/tests/test_repo_invariants.py` and
+   enforced mechanically, not by convention: `app/pipeline/tests/test_repo_invariants.py` and
    `kriko/tests/test_core_is_domain_free.py`.
 
 Task tracking: open work in [`backlog.md`](backlog.md), finished work in [`done.md`](done.md).
@@ -53,7 +53,7 @@ A per-listing cap keeps the panel readable instead of encyclopedic.
 ## Architecture
 
 ```
-Chrome extension  ─→  POST /analyze  ─→  apps/web
+Chrome extension  ─→  POST /analyze  ─→  app/web
                                             │
 site adapter (pack-declared selectors)  ────┤   raw scrape → identity dict
                                             │
@@ -71,10 +71,11 @@ Four packages. Dependencies form a fan, not a column:
   its own product principle, a builder, a site adapter, and the coverage report for its own
   catalog shape. This is what a third party authors, and it is data plus a builder — never
   code that runs inside the engine.
-- **`knowledge/`** — evidence ledger and grounded extraction: turns sources into claims a
-  pack can ship (acquire → ingest → extract → resolve → cluster → verdict → export).
-- **`apps/`** — the interfaces: `cli`, the local web dashboard, the MCP server.
-- **`ops/`** — pipeline drivers (`ledger_run`, `remediate`, `panel`, `process`).
+- **`kriko/ledger/` and `kriko/extract/`** — generic evidence ledger and grounded
+  extraction primitives; they turn sources into pack-owned claims without category logic.
+- **`app/`** — the interfaces: CLI, local web dashboard, and MCP server.
+- **`app/pipeline/`** — orchestration drivers (`ledger_run`, `remediate`, `panel`, `process`).
+- **`packs/cars/pipeline/`** — cars-only acquisition, catalog, fitment, export, and research policy.
 
 See the layering principle in `CLAUDE.md` for the four greps that enforce this.
 
@@ -113,18 +114,18 @@ packs/
     vocabulary/  trust/  research/      terms, components, source tiers, principle
     adapters/sahibinden.json            the extension's DOM knowledge, as data
     build.py  coverage.py               YAML → .kpack; catalog-hole report
+    pipeline/                            cars-only research/acquisition pipeline
   drill/                                synthetic second pack — the car-shape falsifier
-knowledge/
-  ledger/      acquire → ingest → extract → resolve → cluster → verdict → export
-  sources/     source fetchers + the source-tier registry
-  catalog/     Wikipedia bootstrap, variants/fitment writers, component registry
-  parts/       part YAML validation; extract.py dedup.py stoplists.py
-apps/
+kriko/
+  ledger/      generic ledger DB, ingest, chunking, clustering, costs
+  extract/     generic grounded extraction helpers
+  store/       installed pack revisions and active-read projection
+app/
   cli.py       kriko packs | install | uninstall | enable | build | lookup
   web/         local dashboard + /analyze (FastAPI, 127.0.0.1:8787)
   mcp_server.py  stdio MCP server — the $0 agent control plane
-ops/           ledger_run.py remediate.py panel.py process.py
-extension_ui/  Chrome extension (content.js scraper + panel)
+app/pipeline/           ledger_run.py remediate.py panel.py process.py
+extension/  Chrome extension (content.js scraper + panel)
 logs/analyses.jsonl   every /analyze request+response
 ```
 
@@ -144,14 +145,14 @@ logs/analyses.jsonl   every /analyze request+response
 
 ```bash
 python -m packs.cars.build                  # → dist/cars.kpack
-python -m apps.cli install dist/cars.kpack
-python -m apps.cli packs                    # what is installed, and its trust weight
+python -m app.cli install dist/cars.kpack
+python -m app.cli packs                    # what is installed, and its trust weight
 ```
 
 ### Ask it something
 
 ```bash
-python -m apps.cli lookup make=volkswagen model=golf year=2015 fuel=diesel \
+python -m app.cli lookup make=volkswagen model=golf year=2015 fuel=diesel \
     transmission=automatic --ctx usage_km=190000 -v
 ```
 
@@ -162,23 +163,23 @@ claim ranked where it did, and its sources.
 ### Start the local app
 
 ```bash
-python -m apps.web            # dashboard + /analyze on http://127.0.0.1:8787
+python -m app.web            # dashboard + /analyze on http://127.0.0.1:8787
 ```
 
 ### Load the Chrome extension
 
-Chrome → `chrome://extensions` → Developer mode → Load unpacked → select `extension_ui/`
+Chrome → `chrome://extensions` → Developer mode → Load unpacked → select `extension/`
 
 ### Tests
 
 ```bash
-python -m pytest      # all 535 — testpaths in pytest.ini
+python -m pytest      # all tests — testpaths in pytest.ini
 npm test              # extension scraper (jsdom)
 ```
 
 Run `pytest` with no arguments. Naming directories by hand is how the suite quietly shrank
-once already: `pytest backend knowledge` collected 576 of 761 tests after `ops/` was added,
-skipping every test in `ops/tests` without failing.
+once already: `pytest backend knowledge` collected 576 of 761 tests after `app/pipeline/` was added,
+skipping every test in `app/pipeline/tests` without failing.
 
 ---
 
@@ -186,19 +187,19 @@ skipping every test in `ops/tests` without failing.
 
 ```bash
 # 1. Bootstrap a new model: variants scaffold + fitment derived from it
-python -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-variants
-python -m knowledge.catalog.discover --make volkswagen --model golf_7 --write-fitment
+python -m packs.cars.pipeline.catalog.discover --make volkswagen --model golf_7 --write-variants
+python -m packs.cars.pipeline.catalog.discover --make volkswagen --model golf_7 --write-fitment
 
 # 2. Acquire sources for the part, then run the ledger pipeline
-python -m ops.ledger_run acquire --part dq200 --part-type transmission
-python -m ops.ledger_run all
+python -m app.pipeline.ledger_run acquire --part dq200 --part-type transmission
+python -m app.pipeline.ledger_run all
 
 # 3. Re-run gates only — zero token cost, uses cached candidates
-python -m ops.process --part dq200 --part-type transmission --skip-extraction
+python -m app.pipeline.process --part dq200 --part-type transmission --skip-extraction
 
 # 4. See what is still missing, then rebuild and reinstall
 python -m packs.cars.coverage
-python -m packs.cars.build && python -m apps.cli install dist/cars.kpack
+python -m packs.cars.build && python -m app.cli install dist/cars.kpack
 ```
 
 There is no human approval step anywhere in that sequence, by design — see the automation

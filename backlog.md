@@ -65,6 +65,17 @@ deleted; research pluggable between the $0 agent/MCP path and an Exa/Tavily+LLM
 path; every install is both reader and author; language is a row attribute;
 monorepo with `packs/` beside the engine.
 
+### Current delivery constraint — web-first minimal slice
+The next milestone is a usable local browser workflow, not another CLI-only path. Every
+operation must be operable and inspectable from the dashboard with a visible result,
+error, and durable status. The minimal slice covers: health and installed pack state;
+pack build/install/revision/enable/disable/uninstall; generic product/listing analysis;
+identity, coverage, flags, ranked claims, reasons, and sources; subject browsing;
+coverage gaps; recent activity; and explicit empty/unknown results.
+
+Research execution and the remaining pipeline separation stay behind browser-visible
+job state rather than requiring a terminal, MCP client, or manual data-path step.
+
 ### B29 — Phase 1: the `kriko/` core `[G6]` **(LANDED 2026-08-26)**
 `kriko/store/{schema.sql,ids.py,db.py,packstore.py}` + 28 tests. WAL on; two
 databases, never merged. `test_kriko_core_never_imports_a_domain_layer` in
@@ -138,13 +149,11 @@ extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/
       a ratchet that keeps `backend/` deleted. Suite 534 -> 535, 3m -> 18s.
 - [x] **Phase 6 docs landed 2026-08-27** — `README.md` and `CLAUDE.md` rewritten
       for the pack architecture (every command in the README verified to run).
-- [ ] **Phase 6b — finish the move.** `knowledge/{catalog,parts,fitment}` are
-      car-specific and still sit in the pipeline layer. Blocker is a real
-      coupling, not a file move: `knowledge/ledger/acquire.py` imports
-      `knowledge.parts.search_templates` and `export.py` imports
-      `validate_part_yaml`, so moving them into `packs/cars/` creates a
-      knowledge -> packs cycle. Two ways out, and they are a genuine fork —
-      see HUMAN DECISION #8.
+- [x] **Phase 6b landed 2026-08-29** — generic ledger/extraction primitives moved
+      to `kriko/ledger/` and `kriko/extract/`; car catalog, sources, parts, fitment,
+      acquisition, export, resolution, and research policy moved to
+      `packs/cars/pipeline/`; `knowledge/` is deleted. Pack vocabulary and gate
+      terms are data, not engine constants. `app/pipeline/` owns orchestration.
 - [x] **Phase 6c landed 2026-08-27** — the Chrome extension is on the new
       protocol and the client keeps no site knowledge of its own.
       `content.js` reports the page's own label/value pairs and interprets
@@ -198,22 +207,16 @@ extension becomes a cars-pack site adapter. Then `backend/`, `knowledge/catalog/
       values, but MV3 cannot inject into a host it has no permission for, so
       it needs `optional_host_permissions` plus a user grant — a UX decision,
       not a mechanism gap, which is why it is filed rather than done.
-- [ ] Rewrite `docs/INTERNALS.md` and `docs/USAGE.md` (21 and 29 stale
-      references), and close B5/B11/B14/B26/B28 as subsumed; re-file B19
-      against the new core.
+- [x] Architecture and usage docs rewritten for the new `app/`, `kriko/`,
+      `packs/`, and `extension/` layout; old interface references removed from
+      active documentation. Older product-quality work is re-filed against the
+      new core where still applicable.
 
-**HUMAN DECISION #8 — where the car pipeline lives.** `knowledge/` is not a
-generic layer; it is the *cars* pipeline (stoplists derive from the car catalog,
-export hardcodes the parts dir, acquire needs car search templates). Either
-**(a)** split it — generic ledger/extraction up into `kriko/ledger` + `kriko/extract`,
-car-specific bits down into `packs/cars/`, with a pack-supplied research
-interface as the seam (the plan's target tree; several days, real design work,
-and the only option that lets a second real pack have a pipeline); or **(b)**
-move it wholesale to `packs/cars/pipeline/` — honest about what it is today,
-about a day's work, but a second real pack would then have to duplicate the
-extraction machinery, forcing the split later anyway. This is a policy call
-about how soon a second real pack is expected, which is why it is not being
-decided automatically.
+**HUMAN DECISION #8 — resolved 2026-08-29.** Choose the long-term split: generic
+ledger/extraction lives in `kriko/ledger/` and `kriko/extract/`; car-specific
+acquisition, catalog, parts, fitment, export, and research policy live in
+`packs/cars/pipeline/`. `app/pipeline/` is orchestration only. This leaves a
+pack-supplied seam for future categories without making the core car-aware.
 
 ---
 

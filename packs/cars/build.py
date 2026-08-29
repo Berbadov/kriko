@@ -11,8 +11,8 @@ What it converts:
     packs/cars/data/variants/*.yaml   -> subjects(kind=product) + attributes
     packs/cars/data/parts/**/*.yaml   -> subjects(kind=part) + claims + evidence
     packs/cars/data/fitment/*.yaml    -> relations(part_of)
-    knowledge/catalog/components.yaml -> claim component/subsystem/detection
-    knowledge/catalog/source_tiers.yaml -> source_tiers + tier_trust
+    packs/cars/pipeline/catalog/components.yaml -> claim component/subsystem/detection
+    packs/cars/pipeline/catalog/source_tiers.yaml -> source_tiers + tier_trust
 
 Three conversions carry a decision rather than a mapping:
 
@@ -33,11 +33,11 @@ script is replaced by the standard builder.
 
 import argparse
 import re
-import tomllib
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+import tomllib
 import yaml
 
 from kriko.store import ids
@@ -47,7 +47,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 PACK_ROOT = Path(__file__).resolve().parent
 
 # The car data lives in the pack now. It arrived here from backend/data/ and
-# knowledge/catalog/ unchanged — the golden parity record was re-verified
+# packs/cars/pipeline/catalog/ unchanged — the golden parity record was re-verified
 # across the move, so the relocation is provably lossless.
 DATA = PACK_ROOT / "data"
 CATALOG = PACK_ROOT / "vocabulary"
@@ -121,28 +121,39 @@ def _label(variant: dict) -> str:
 # claims lower, only a reason not to exclude. The mileage gates use `open`
 # because there an unknown genuinely does reduce confidence; here it does not.
 
-_DIESEL_RE = re.compile(r"\b(k9k|r9m|r9n|ea288|d[ck]i|tdi|diesel|dizel|adblue|dpf)\b", re.I)
+_DIESEL_RE = re.compile(
+    r"\b(k9k|r9m|r9n|ea288|d[ck]i|tdi|diesel|dizel|adblue|dpf)\b", re.I
+)
 _PETROL_RE = re.compile(
-    r"\b(h5f|h5h|h4m|m5m|m5p|ea211|tce|tsi|puretech|petrol|benzin|gasoline)\b", re.I)
+    r"\b(h5f|h5h|h4m|m5m|m5p|ea211|tce|tsi|puretech|petrol|benzin|gasoline)\b", re.I
+)
 _EV_HYBRID_RE = re.compile(
     r"e-tech|\bhybrid\b|dc charging|ac charging|heat pump|state of charge|"
     r"precondition|traction battery|\bhv battery\b|"
     r"charging (?:port|door|impossible|abort)|trappe de recharge|"
-    r"onboard charger|regenerative braking|\bev mode\b|\bkwh\b|fully electric", re.I)
+    r"onboard charger|regenerative braking|\bev mode\b|\bkwh\b|fully electric",
+    re.I,
+)
 _AWD_RE = re.compile(
     r"\bawd\b|\b4wd\b|\b4x4\b|4matic|quattro|4motion|xdrive|haldex|"
-    r"all[- ]wheel drive|4\s*[çc]eker", re.I)
+    r"all[- ]wheel drive|4\s*[çc]eker",
+    re.I,
+)
 _RWD_RE = re.compile(r"\brwd\b|rear[- ]wheel drive|arkadan\s*iti[şs]", re.I)
 _SCR_RE = re.compile(r"\b(adblue|ad\s?blue|scr|urea|def)\b", re.I)
 _AUTO_ONLY_RE = re.compile(
     r"\b(dsg|dct|edc|cvt|tiptronic|s-tronic|powershift|mechatronic|mekatronik|"
-    r"torque converter|dual[- ]clutch|çift kavrama|otomatik şanzıman)\b", re.I)
+    r"torque converter|dual[- ]clutch|çift kavrama|otomatik şanzıman)\b",
+    re.I,
+)
 _MANUAL_ONLY_RE = re.compile(
-    r"\b(manual gearbox|manuel şanzıman|clutch pedal|debriyaj pedal)\b", re.I)
+    r"\b(manual gearbox|manuel şanzıman|clutch pedal|debriyaj pedal)\b", re.I
+)
 
 
-def _compat_conditions(claim: dict, part_codes: set[str],
-                       spanned: dict[str, set] | None = None) -> list[dict]:
+def _compat_conditions(
+    claim: dict, part_codes: set[str], spanned: dict[str, set] | None = None
+) -> list[dict]:
     """Turn a claim's own text into the constraints it implies.
 
     `spanned` says which attribute values the part is actually fitted across,
@@ -182,10 +193,13 @@ def _compat_conditions(claim: dict, part_codes: set[str],
     # A claim naming specific gearbox codes belongs only to those gearboxes.
     # The code list is derived from the part catalog, never hand-written — a new
     # gearbox is covered the moment its part file exists.
-    mentioned = sorted(c for c in part_codes
-                       if re.search(rf"\b{re.escape(c)}\b", text, re.I))
+    mentioned = sorted(
+        c for c in part_codes if re.search(rf"\b{re.escape(c)}\b", text, re.I)
+    )
     if mentioned:
-        out.append({"key": "transmission_code", "op": "in", "value": ",".join(mentioned)})
+        out.append(
+            {"key": "transmission_code", "op": "in", "value": ",".join(mentioned)}
+        )
     elif _AUTO_ONLY_RE.search(text):
         out.append({"key": "transmission", "op": "eq", "value": "automatic"})
     elif _MANUAL_ONLY_RE.search(text):
@@ -221,38 +235,86 @@ def _conditions_from(claim: dict) -> list[dict]:
     applies = claim.get("applies_when") or {}
 
     if applies.get("min_mileage_km") is not None:
-        out.append({"key": "usage_km", "op": "gte",
-                    "value": applies["min_mileage_km"], "weight": 0.7})
+        out.append(
+            {
+                "key": "usage_km",
+                "op": "gte",
+                "value": applies["min_mileage_km"],
+                "weight": 0.7,
+            }
+        )
     if applies.get("max_mileage_km") is not None:
-        out.append({"key": "usage_km", "op": "lte",
-                    "value": applies["max_mileage_km"], "weight": 0.7})
+        out.append(
+            {
+                "key": "usage_km",
+                "op": "lte",
+                "value": applies["max_mileage_km"],
+                "weight": 0.7,
+            }
+        )
     if applies.get("min_age_years") is not None:
-        out.append({"key": "age_years", "op": "gte",
-                    "value": applies["min_age_years"], "weight": 0.8})
+        out.append(
+            {
+                "key": "age_years",
+                "op": "gte",
+                "value": applies["min_age_years"],
+                "weight": 0.8,
+            }
+        )
     if applies.get("applies_year_from") is not None:
-        out.append({"key": "build_year", "op": "gte",
-                    "value": applies["applies_year_from"], "weight": 0.8})
+        out.append(
+            {
+                "key": "build_year",
+                "op": "gte",
+                "value": applies["applies_year_from"],
+                "weight": 0.8,
+            }
+        )
     if applies.get("applies_year_to") is not None:
-        out.append({"key": "build_year", "op": "lte",
-                    "value": applies["applies_year_to"], "weight": 0.8})
+        out.append(
+            {
+                "key": "build_year",
+                "op": "lte",
+                "value": applies["applies_year_to"],
+                "weight": 0.8,
+            }
+        )
 
     for tag in claim.get("requires_equipment") or []:
         out.append({"key": "equipment", "op": "has", "value": tag, "weight": 0.6})
 
     maintenance = claim.get("maintenance") or {}
     if maintenance.get("interval_km"):
-        out.append({"key": "usage_km", "op": "interval",
-                    "value": maintenance["interval_km"], "weight": 0.8})
+        out.append(
+            {
+                "key": "usage_km",
+                "op": "interval",
+                "value": maintenance["interval_km"],
+                "weight": 0.8,
+            }
+        )
     if maintenance.get("interval_years"):
-        out.append({"key": "age_years", "op": "interval",
-                    "value": maintenance["interval_years"], "weight": 0.8})
+        out.append(
+            {
+                "key": "age_years",
+                "op": "interval",
+                "value": maintenance["interval_years"],
+                "weight": 0.8,
+            }
+        )
     if maintenance.get("evidence_keywords"):
         # Due UNLESS the ad proves otherwise. Silence is the signal, so the
         # condition holds precisely when the description does not mention the
         # work — and an absent description must still serve the claim.
-        out.append({"key": "free_text", "op": "not_mentions",
-                    "value": ",".join(maintenance["evidence_keywords"]),
-                    "weight": 1.0, "on_missing": "open"})
+        out.append(
+            {
+                "key": "free_text",
+                "op": "not_mentions",
+                "value": ",".join(maintenance["evidence_keywords"]),
+                "weight": 1.0,
+                "on_missing": "open",
+            }
+        )
 
     return out
 
@@ -280,8 +342,13 @@ def _part_spans() -> dict[str, dict[str, set]]:
                 if not code or code in PSEUDO_PART_CODES:
                     continue
                 bucket = spans.setdefault(code, {})
-                for attribute in ("fuel", "drivetrain", "aftertreatment",
-                                  "transmission", "transmission_code"):
+                for attribute in (
+                    "fuel",
+                    "drivetrain",
+                    "aftertreatment",
+                    "transmission",
+                    "transmission_code",
+                ):
                     if variant.get(attribute):
                         bucket.setdefault(attribute, set()).add(variant[attribute])
     return spans
@@ -293,9 +360,12 @@ def build(out_path: Path) -> tuple[Path, dict]:
     identity_keys = manifest["identity"]
     status_confidence = manifest["status_confidence"]
 
-    components = {c["id"]: c for c in
-                  (_yaml(CATALOG / "components.yaml", {}) or {}).get("components", [])}
+    components = {
+        c["id"]: c
+        for c in (_yaml(CATALOG / "components.yaml", {}) or {}).get("components", [])
+    }
     tier_cfg = _yaml(TRUST / "source_tiers.yaml", {}) or {}
+    gate_cfg = _yaml(CATALOG / "gates.yaml", {}) or {}
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists():
@@ -311,7 +381,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
     row_ids: list[str] = []
     stats = Counter()
-    id_map: dict[str, str] = {}     # legacy variant_id -> subject_id
+    id_map: dict[str, str] = {}  # legacy variant_id -> subject_id
     part_subjects: dict[str, str] = {}
 
     with conn:
@@ -319,15 +389,23 @@ def build(out_path: Path) -> tuple[Path, dict]:
             conn.execute(
                 "INSERT OR REPLACE INTO terms (term_id, pack_id, role, datatype,"
                 " unit, parent_id, label_json, match_json) VALUES (?,?,?,?,?,?,?,?)",
-                (term["term_id"], pack_id, term.get("role", "attribute"),
-                 term.get("datatype", "text"), term.get("unit", ""),
-                 term.get("parent", ""),
-                 yaml.safe_dump(term.get("label", {}), allow_unicode=True),
-                 yaml.safe_dump(term.get("match", {}), allow_unicode=True)))
+                (
+                    term["term_id"],
+                    pack_id,
+                    term.get("role", "attribute"),
+                    term.get("datatype", "text"),
+                    term.get("unit", ""),
+                    term.get("parent", ""),
+                    yaml.safe_dump(term.get("label", {}), allow_unicode=True),
+                    yaml.safe_dump(term.get("match", {}), allow_unicode=True),
+                ),
+            )
             row_ids.append(f"term:{term['term_id']}")
             for alias in term.get("aliases") or []:
-                conn.execute("INSERT OR IGNORE INTO term_aliases VALUES (?,?,?,?)",
-                             (term["term_id"], pack_id, alias, ""))
+                conn.execute(
+                    "INSERT OR IGNORE INTO term_aliases VALUES (?,?,?,?)",
+                    (term["term_id"], pack_id, alias, ""),
+                )
                 row_ids.append(f"term_alias:{term['term_id']}:{alias}")
             stats["terms"] += 1
 
@@ -342,8 +420,10 @@ def build(out_path: Path) -> tuple[Path, dict]:
                 identity = _identity_of(variant, identity_keys["product"])
                 subject_id = ids.subject_id("product", identity)
                 id_map[variant["id"]] = subject_id
-                conn.execute("INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
-                             (subject_id, pack_id, "product", _label(variant)))
+                conn.execute(
+                    "INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
+                    (subject_id, pack_id, "product", _label(variant)),
+                )
                 row_ids.append(subject_id)
                 stats["variants"] += 1
 
@@ -358,9 +438,20 @@ def build(out_path: Path) -> tuple[Path, dict]:
                         " subject_id, key, value_text, value_num, unit, valid_from,"
                         " valid_to, is_identity, confidence)"
                         " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                        (attribute_id, pack_id, subject_id, key, str(value),
-                         _num(value) if key in numeric_keys else None, "", "", "",
-                         1 if key in identity_keys["product"] else 0, None))
+                        (
+                            attribute_id,
+                            pack_id,
+                            subject_id,
+                            key,
+                            str(value),
+                            _num(value) if key in numeric_keys else None,
+                            "",
+                            "",
+                            "",
+                            1 if key in identity_keys["product"] else 0,
+                            None,
+                        ),
+                    )
                     row_ids.append(attribute_id)
 
                 # One row with bounds, not two attributes: a production run is
@@ -370,16 +461,31 @@ def build(out_path: Path) -> tuple[Path, dict]:
                     valid_from = str(variant["year_from"])
                     valid_to = str(variant.get("year_to") or "")
                     attribute_id = ids.attribute_id(
-                        subject_id, "build_year", "production",
-                        valid_from=valid_from, valid_to=valid_to)
+                        subject_id,
+                        "build_year",
+                        "production",
+                        valid_from=valid_from,
+                        valid_to=valid_to,
+                    )
                     conn.execute(
                         "INSERT OR IGNORE INTO attributes (attribute_id, pack_id,"
                         " subject_id, key, value_text, value_num, unit, valid_from,"
                         " valid_to, is_identity, confidence)"
                         " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                        (attribute_id, pack_id, subject_id, "build_year",
-                         f"{valid_from}-{valid_to or 'present'}", None, "",
-                         valid_from, valid_to, 0, None))
+                        (
+                            attribute_id,
+                            pack_id,
+                            subject_id,
+                            "build_year",
+                            f"{valid_from}-{valid_to or 'present'}",
+                            None,
+                            "",
+                            valid_from,
+                            valid_to,
+                            0,
+                            None,
+                        ),
+                    )
                     row_ids.append(attribute_id)
 
         # Which attribute values each part is actually fitted across. Derived
@@ -395,9 +501,10 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
             subject_id = ids.subject_id("part", {"part_code": part_code})
             part_subjects[part_code] = subject_id
-            conn.execute("INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
-                         (subject_id, pack_id, "part",
-                          part.get("display_name", part_code)))
+            conn.execute(
+                "INSERT OR IGNORE INTO subjects VALUES (?,?,?,?)",
+                (subject_id, pack_id, "part", part.get("display_name", part_code)),
+            )
             row_ids.append(subject_id)
             stats["parts"] += 1
 
@@ -409,13 +516,27 @@ def build(out_path: Path) -> tuple[Path, dict]:
                         " subject_id, key, value_text, value_num, unit, valid_from,"
                         " valid_to, is_identity, confidence)"
                         " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                        (attribute_id, pack_id, subject_id, key, str(part[key]),
-                         None, "", "", "", 0, None))
+                        (
+                            attribute_id,
+                            pack_id,
+                            subject_id,
+                            key,
+                            str(part[key]),
+                            None,
+                            "",
+                            "",
+                            "",
+                            0,
+                            None,
+                        ),
+                    )
                     row_ids.append(attribute_id)
 
             for alias in part.get("known_also_as") or []:
-                conn.execute("INSERT OR IGNORE INTO subject_aliases VALUES (?,?,?,?,?)",
-                             (subject_id, pack_id, alias, "", "attribution_safe"))
+                conn.execute(
+                    "INSERT OR IGNORE INTO subject_aliases VALUES (?,?,?,?,?)",
+                    (subject_id, pack_id, alias, "", "attribution_safe"),
+                )
                 row_ids.append(f"subject_alias:{subject_id}:{alias}")
 
             for claim in part.get("claims") or []:
@@ -426,46 +547,77 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
                 component = components.get(claim.get("component_id") or "", {})
                 title = claim.get("title", "")
-                claim_id = ids.claim_id(subject_id, claim.get("kind", "known_issue"),
-                                        claim.get("domain", "general"), title)
+                claim_id = ids.claim_id(
+                    subject_id,
+                    claim.get("kind", "known_issue"),
+                    claim.get("domain", "general"),
+                    title,
+                )
 
                 conn.execute(
                     "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
                     " kind, domain, severity, consequence, detection, component,"
                     " subsystem, author_confidence, created_at)"
                     " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (claim_id, pack_id, subject_id, claim.get("kind", "known_issue"),
-                     claim.get("domain", "general"), claim.get("severity", "medium"),
-                     claim.get("consequence", ""), claim.get("detection", ""),
-                     claim.get("component_id", ""), component.get("subsystem", ""),
-                     float(claim.get("confidence", 0.6)) * confidence, _now()))
+                    (
+                        claim_id,
+                        pack_id,
+                        subject_id,
+                        claim.get("kind", "known_issue"),
+                        claim.get("domain", "general"),
+                        claim.get("severity", "medium"),
+                        claim.get("consequence", ""),
+                        claim.get("detection", ""),
+                        claim.get("component_id", ""),
+                        component.get("subsystem", ""),
+                        float(claim.get("confidence", 0.6)) * confidence,
+                        _now(),
+                    ),
+                )
                 row_ids.append(claim_id)
                 stats["claims"] += 1
 
                 for lang, tkey, bkey, akey in (
-                        ("en", "title", "rationale", "inspection_advice"),
-                        ("tr", "title_tr", "rationale_tr", "inspection_advice_tr")):
+                    ("en", "title", "rationale", "inspection_advice"),
+                    ("tr", "title_tr", "rationale_tr", "inspection_advice_tr"),
+                ):
                     text = claim.get(tkey)
                     if not text:
                         continue
                     conn.execute(
                         "INSERT OR IGNORE INTO claim_text VALUES (?,?,?,?,?,?)",
-                        (claim_id, pack_id, lang, text, claim.get(bkey, ""),
-                         claim.get(akey, "")))
+                        (
+                            claim_id,
+                            pack_id,
+                            lang,
+                            text,
+                            claim.get(bkey, ""),
+                            claim.get(akey, ""),
+                        ),
+                    )
                     row_ids.append(f"text:{claim_id}:{lang}")
                     stats[f"text_{lang}"] += 1
 
-                conditions = (_conditions_from(claim)
-                              + _compat_conditions(claim, transmission_codes,
-                                                   part_spans.get(part_code, {})))
+                conditions = _conditions_from(claim) + _compat_conditions(
+                    claim, transmission_codes, part_spans.get(part_code, {})
+                )
                 for seq, cond in enumerate(conditions):
                     conn.execute(
                         "INSERT OR REPLACE INTO claim_conditions (claim_id, pack_id,"
                         " seq, key, op, value_text, value_num, on_missing, weight)"
                         " VALUES (?,?,?,?,?,?,?,?,?)",
-                        (claim_id, pack_id, seq, cond["key"], cond["op"],
-                         str(cond["value"]), _num(cond["value"]),
-                         cond.get("on_missing", "open"), cond["weight"]))
+                        (
+                            claim_id,
+                            pack_id,
+                            seq,
+                            cond["key"],
+                            cond["op"],
+                            str(cond["value"]),
+                            _num(cond["value"]),
+                            cond.get("on_missing", "open"),
+                            cond["weight"],
+                        ),
+                    )
                     row_ids.append(f"cond:{claim_id}:{seq}")
                     stats["conditions"] += 1
 
@@ -479,9 +631,19 @@ def build(out_path: Path) -> tuple[Path, dict]:
                         "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"
                         " domain, site_or_channel, title, lang, source_type,"
                         " published_at, retrieved_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                        (source_id, pack_id, url, source.get("source_domain", ""),
-                         source.get("site_or_channel", ""), source.get("title") or "",
-                         "", "page", "", ""))
+                        (
+                            source_id,
+                            pack_id,
+                            url,
+                            source.get("source_domain", ""),
+                            source.get("site_or_channel", ""),
+                            source.get("title") or "",
+                            "",
+                            "page",
+                            "",
+                            "",
+                        ),
+                    )
                     row_ids.append(source_id)
 
                     evidence_id = ids.evidence_id(source_id, quote)
@@ -489,9 +651,17 @@ def build(out_path: Path) -> tuple[Path, dict]:
                         "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
                         " claim_id, source_id, quote, locator, stance, independent)"
                         " VALUES (?,?,?,?,?,?,?,?)",
-                        (evidence_id, pack_id, claim_id, source_id, quote,
-                         str(source.get("timestamp_s") or ""), "supports",
-                         1 if source.get("independent", True) else 0))
+                        (
+                            evidence_id,
+                            pack_id,
+                            claim_id,
+                            source_id,
+                            quote,
+                            str(source.get("timestamp_s") or ""),
+                            "supports",
+                            1 if source.get("independent", True) else 0,
+                        ),
+                    )
                     row_ids.append(evidence_id)
                     stats["evidence"] += 1
 
@@ -515,41 +685,93 @@ def build(out_path: Path) -> tuple[Path, dict]:
                     relation_id = ids.relation_id(subject_id, "part_of", target)
                     conn.execute(
                         "INSERT OR IGNORE INTO relations VALUES (?,?,?,?,?,?)",
-                        (relation_id, pack_id, subject_id, "part_of", target,
-                         f"Part fitment: {code} ({part_type})"))
+                        (
+                            relation_id,
+                            pack_id,
+                            subject_id,
+                            "part_of",
+                            target,
+                            f"Part fitment: {code} ({part_type})",
+                        ),
+                    )
                     row_ids.append(relation_id)
                     stats["relations"] += 1
 
         # ── research assets ──────────────────────────────────────────────
         # The value principle used to be a string literal inside
-        # knowledge/ledger/verdict.py, which meant the question "what is worth
+        # packs/cars/pipeline/ledger/verdict.py, which meant the question "what is worth
         # keeping?" was answered once, in Python, for every product Kriko would
         # ever know about. It belongs to the category.
-        for name, kind in (("research/principle.md", "principle"),
-                           ("research/templates.yaml", "templates")):
+        for name, kind in (
+            ("research/principle.md", "principle"),
+            ("research/templates.yaml", "templates"),
+        ):
             path = PACK_ROOT / name
             if path.exists():
-                conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
-                             (pack_id, name, kind, path.read_text(encoding="utf-8")))
+                conn.execute(
+                    "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                    (pack_id, name, kind, path.read_text(encoding="utf-8")),
+                )
                 row_ids.append(f"asset:{name}")
                 stats["assets"] += 1
 
         for path in sorted((PACK_ROOT / "adapters").glob("*.json")):
-            conn.execute("INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
-                         (pack_id, f"adapters/{path.name}", "adapter",
-                          path.read_text(encoding="utf-8")))
+            conn.execute(
+                "INSERT OR REPLACE INTO pack_assets VALUES (?,?,?,?)",
+                (
+                    pack_id,
+                    f"adapters/{path.name}",
+                    "adapter",
+                    path.read_text(encoding="utf-8"),
+                ),
+            )
             row_ids.append(f"asset:adapters/{path.name}")
             stats["assets"] += 1
 
+        # ── gate vocabulary ───────────────────────────────────────────────
+        for kind in ("covered", "generic", "ambiguous", "noise", "specificity"):
+            for entry in gate_cfg.get(kind) or []:
+                if isinstance(entry, dict):
+                    if "pattern" not in entry:
+                        raise ValueError(
+                            f"vocabulary/gates.yaml {kind!r} entry has no pattern"
+                        )
+                    pattern = str(entry["pattern"])
+                    note = str(entry.get("note", ""))
+                else:
+                    pattern, note = str(entry), ""
+                conn.execute(
+                    "INSERT OR REPLACE INTO gate_terms VALUES (?,?,?,?)",
+                    (pack_id, kind, pattern, note),
+                )
+                row_ids.append(f"gate:{kind}:{pattern}")
+                stats["gate_terms"] += 1
+
+        unknown_gates = set(gate_cfg) - {
+            "covered",
+            "generic",
+            "ambiguous",
+            "noise",
+            "specificity",
+        }
+        if unknown_gates:
+            raise ValueError(
+                f"vocabulary/gates.yaml has unknown rule kinds {sorted(unknown_gates)}"
+            )
+
         # ── source tiers ─────────────────────────────────────────────────
         for tier, cfg in (tier_cfg.get("tiers") or {}).items():
-            conn.execute("INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",
-                         (tier, pack_id, float(cfg["trust"])))
+            conn.execute(
+                "INSERT OR REPLACE INTO tier_trust VALUES (?,?,?)",
+                (tier, pack_id, float(cfg["trust"])),
+            )
             row_ids.append(f"tier_trust:{tier}")
 
         for domain, cfg in (tier_cfg.get("domains") or {}).items():
-            conn.execute("INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
-                         (domain, pack_id, cfg["tier"], ""))
+            conn.execute(
+                "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
+                (domain, pack_id, cfg["tier"], ""),
+            )
             row_ids.append(f"tier:{domain}")
             stats["source_tiers"] += 1
 
@@ -558,24 +780,35 @@ def build(out_path: Path) -> tuple[Path, dict]:
         # enumerating the internet.
         for rule in tier_cfg.get("rules") or []:
             for fragment in rule.get("domain_contains") or []:
-                conn.execute("INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
-                             (f"*{fragment}*", pack_id, rule["tier"],
-                              "contains-rule"))
+                conn.execute(
+                    "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
+                    (f"*{fragment}*", pack_id, rule["tier"], "contains-rule"),
+                )
                 row_ids.append(f"tier:*{fragment}*")
         if tier_cfg.get("default"):
-            conn.execute("INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
-                         ("*", pack_id, tier_cfg["default"], "pack default"))
+            conn.execute(
+                "INSERT OR REPLACE INTO source_tiers VALUES (?,?,?,?)",
+                ("*", pack_id, tier_cfg["default"], "pack default"),
+            )
             row_ids.append("tier:*")
 
         conn.execute(
             "INSERT OR REPLACE INTO packs (pack_id, name, version, schema_version,"
             " built_at, publisher, license, origin_url, content_digest,"
             " manifest_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (pack_id, manifest["pack"]["name"], manifest["pack"]["version"],
-             SCHEMA_VERSION, _now(), manifest["pack"].get("publisher", ""),
-             manifest["pack"].get("license", ""), manifest["pack"].get("origin", ""),
-             ids.content_digest(row_ids),
-             yaml.safe_dump(manifest, allow_unicode=True)))
+            (
+                pack_id,
+                manifest["pack"]["name"],
+                manifest["pack"]["version"],
+                SCHEMA_VERSION,
+                _now(),
+                manifest["pack"].get("publisher", ""),
+                manifest["pack"].get("license", ""),
+                manifest["pack"].get("origin", ""),
+                ids.content_digest(row_ids),
+                yaml.safe_dump(manifest, allow_unicode=True),
+            ),
+        )
 
     conn.close()
     return out_path, {"stats": dict(stats), "id_map": id_map}
