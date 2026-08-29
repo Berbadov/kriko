@@ -42,7 +42,7 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
 | `app/pipeline/` | Pipeline drivers that orchestrate the ledger and packs/cars pipeline | `app/pipeline/ledger_run.py` |
 | `kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `kriko/store/packstore.py` |
 | `packs/` | One directory per product category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
-| `packs/cars/pipeline/` | Evidence ledger + grounded extraction that turns scraped sources into claims for the cars pack | `packs/cars/pipeline/ledger/ingest.py` |
+| `packs/cars/pipeline/` | Evidence ledger + grounded extraction that turns scraped sources into claims for the cars pack | `packs/cars/pipeline/ledger/acquire.py` |
 | `extension/` | Chrome extension: scrapes a listing page, its background worker calls the web API, renders the risk card | `extension/content.js` |
 
 ## Chasing X? read these
@@ -82,12 +82,18 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
   of `_emit_*` stages.
 - `kriko/store/packstore.py:176` (`install()`) and `:377` (`activate()`) —
   loads a built pack file into the store as a new revision.
-- `packs/cars/build.py:871` (`build()`) — the cars pack's own build, which
-  layers catalog/gearbox-code derivation on top of the same `_emit_*` shape
-  before calling into `kriko/pack/build.py`.
+- `packs/cars/build.py:871` (`build()`) — the cars pack's own build. It does
+  **not** call into `kriko/pack/build.py` — its own docstring is explicit
+  that this is "a migration, not the general pack builder": the legacy car
+  YAML shapes predate the standard pack layout, so this script reads them
+  directly and writes the same `_emit_*`-shaped rows itself. The two
+  builders are parallel implementations that share a naming convention, not
+  a caller and a callee.
 
 **Where evidence comes from:**
-- `packs/cars/pipeline/ledger/ingest.py` — pulls and stores raw source pages.
+- `packs/cars/pipeline/ledger/acquire.py` — pulls raw source pages;
+  `packs/cars/pipeline/ledger/ingest.py` stores them (a ~40-line adapter over
+  `kriko/ledger/db.py`).
 - `kriko/ledger/extraction.py` and `kriko/ledger/chunking.py` — the
   category-agnostic grounded-extraction machinery packs/cars/pipeline reuses
   rather than forking.

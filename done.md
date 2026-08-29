@@ -45,10 +45,12 @@ as the invocation that actually prints the count.
   `gates.yaml` (would raise instead of degrading).
 - **Task 6 — the engine learns the structural gate rules** (`367e62f`):
   `packs/cars/pipeline/agent/gates.py` held rules that are not vocabulary and so
-  could not become rows — a title-length limit, a DTC-code shape check, a
-  minimum-evidence threshold. `kriko.gates.structural_reasons` now expresses
-  these as rule shapes the engine evaluates; the pack keeps only the numbers
-  (its `limits` rows).
+  could not become rows — a title-length limit, a rationale-length minimum, and
+  the config-specificity anchor rule. `kriko.gates.structural_reasons` now
+  expresses these three as rule shapes the engine evaluates; the pack keeps
+  only the numbers (its `limits` rows). The orphan's other two rules — a
+  DTC-code shape check and a minimum-evidence threshold — were not ported; see
+  `docs/USAGE.md`'s "Removed, not currently enforced" and backlog B34.
 - **Task 7 — the gate wired into the agent write path, behaviour changed on
   purpose** (`2a88372`, `2ea068b`, `40daf3f`, `73ec95f`, `ac4579a`):
   `app/mcp_server.py:submit_findings` previously checked only that the quote
