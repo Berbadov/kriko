@@ -1,8 +1,13 @@
-"""Curated stoplists for the inspection-value gate and source discovery.
+"""Curated stoplists for source discovery, code-family bookkeeping, and
+language/verbosity checks over the extraction pipeline.
 
-INSPECTION_COVERED / WARNING_LIGHT_PATTERNS are used by gate_inspection_value
-in judge.py to quickly reject claims that a standard pre-purchase mechanic
-inspection already covers, or generic dashboard warning lights.
+The claim-selection judgement this module used to carry (INSPECTION_COVERED,
+GENERIC_MAINTENANCE_TERMS, AMBIGUOUS_INSPECTION_TERMS, WARNING_LIGHT_PATTERNS,
+has_specificity_signal — read by the now-deleted gate_inspection_value in
+judge.py) moved to packs/cars/vocabulary/gates.yaml, read through
+kriko.gates. Those frozensets/function were a byte-for-byte duplicate with
+zero importers once judge.py was deleted, so they were removed rather than
+carried as dead weight — see the layering principle in CLAUDE.md.
 
 FORUM_DOMAINS is used by the acquire stage to exclude forums from Exa discovery.
 Forums surface a lot of genuine one-time/anecdotal issues that read like
@@ -30,56 +35,6 @@ from urllib.parse import urlparse
 
 from packs.cars.pipeline.util.yamlutil import load_yaml
 
-# Items a standard pre-purchase mechanic inspection (ekspertiz) covers as routine.
-# A claim matching any of these keywords is low value by the CLAUDE.md principle.
-INSPECTION_COVERED: frozenset[str] = frozenset({
-    # Fluids (inspector checks all fluid levels)
-    "brake fluid", "coolant level", "oil level", "power steering fluid",
-    "transmission fluid", "fluid level",
-    # Brake wear (inspector measures pad/disc thickness)
-    "brake pad", "brake disc", "brake rotor", "brake wear",
-    # Injector bench tests (diesel specialist routine)
-    "injector cleaning", "injector test", "injector bench", "injector flow test",
-    # Compression (mechanic checks with gauge)
-    "compression test",
-    # Tire wear (visual inspection)
-    "tire wear", "tyre wear",
-    # Steering/suspension play (inspector checks all joints)
-    "ball joint", "track rod", "tie rod", "wheel bearing play",
-    # Clutch and manual gearbox (inspector test-drives — all caught on the road)
-    "clutch wear", "clutch slip", "clutch drag", "synchro wear",
-    "difficulty engaging gear", "grinding noise", "stuck in gear",
-    "leaking gearbox oil", "gearbox oil leak",
-    "selector fork", "synchromesh",
-    # Exhaust visual (inspector checks for leaks/damage)
-    "exhaust leak", "exhaust corrosion",
-    # Generic gearbox symptoms (inspector test-drive catches these)
-    "jerking in gear", "dropping out of gear", "burning smell from gearbox",
-    # Generic system categories — too vague to act on; inspector covers these
-    "brake system failure", "suspension failure", "steering system malfunction",
-    "engine mounting", "engine mount",
-    # Generic selector issues — inspector test-drives through all gears
-    "difficulty selecting reverse", "cannot select reverse",
-})
-
-# Trivially-generic claims true of any car regardless of model — gate_generic's
-# own stated purpose. Found live (2026-07-04) that ministral-8b fails even its
-# own textbook example: asked to judge "Regular oil changes prevent engine wear"
-# / "Not changing oil causes engine wear in all cars", it answered "keep" while
-# its own stated reason was "...relevant to any car buyer regardless of model
-# specificity" — the reasoning and the boolean contradicted each other. Same
-# specificity-escape-valve design as AMBIGUOUS_INSPECTION_TERMS below: fast-
-# reject only when no engine/transmission code, displacement+fuel-tech label,
-# or mileage figure accompanies the phrase — a claim like "K9K requires more
-# frequent oil changes due to injector return flow" is config-specific, not
-# generic advice, and must not be caught here.
-GENERIC_MAINTENANCE_TERMS: frozenset[str] = frozenset({
-    "regular oil change", "routine oil change", "oil changes prevent",
-    "brakes wear over time", "brake pads wear over time", "tires wear over time",
-    "tyres wear over time", "regular maintenance prevents", "routine maintenance prevents",
-    "fluids need to be changed periodically", "wear and tear is normal",
-})
-
 # Failure words specific to machines with engines and drivetrains. These used
 # to sit in kriko/ledger/chunking.py's FAILURE_LEXICON, which made the engine
 # hold car vocabulary. Closed engineering vocabulary, so a constant is allowed
@@ -88,30 +43,12 @@ CAR_FAILURE_TERMS: frozenset[str] = frozenset({
     "misfire", "judder", "shudder", "clog", "rattle",
 })
 
-# "Oil consumption" / "blue smoke" / "burning oil" describe BOTH the routine
-# dipstick-and-road-test check every used car needs AND well-documented,
-# mileage-specific chronic defects in particular engine families (e.g. VW
-# EA111/EA211 1.4 TSI/TFSI piston-ring oil consumption, addressed by extended
-# warranty campaigns) — exactly the config-specific, mileage-predictable risk
-# CLAUDE.md wants surfaced. An unconditional keyword reject killed the latter
-# alongside the former. The LLM alone doesn't reliably separate them either —
-# tested empirically, it defaulted to "keep everything" once the keyword
-# pre-reject was removed, including deliberately generic filler claims with no
-# engine reference at all. So: fast-reject only when NO specificity signal
-# (engine/transmission code, displacement+fuel-tech label, or an explicit
-# mileage figure) accompanies the term — that signal is itself the evidence
-# this is config/mileage-specific rather than generic used-car advice.
-AMBIGUOUS_INSPECTION_TERMS: frozenset[str] = frozenset({
-    "oil consumption", "blue smoke", "burning oil",
-})
-
 # Engine/transmission code tokens (EA211, DQ200, K9K, H5H, R9M, DC4, ...): 1-4
 # letters, a digit, then up to 3 more alphanumerics. Matches every code format
 # used in this catalog's variant descriptors. Shared by promote.py's deterministic
-# gate_variant bypass and has_specificity_signal below.
+# gate_variant bypass and has_variant_anchor below.
 CODE_TOKEN_RE = re.compile(r"\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b")
 _DISPLACEMENT_RE = re.compile(r"\b\d\.\d\s*(tsi|tdi|tfsi|dci|tce|sce|hdi|vti)\b", re.I)
-_MILEAGE_RE = re.compile(r"\b\d[\d,.]*\s*(km|kilomet|mile|mi)\b", re.I)
 
 
 def code_tokens(text: str) -> set[str]:
@@ -376,27 +313,6 @@ def document_is_foreign_to_part(text: str, make: str, model: str) -> bool:
     return mentions_foreign_manufacturer_code(text, own_makes)
 
 
-def has_specificity_signal(text: str) -> bool:
-    """True if text names a specific engine/transmission code (EA211, DQ200, K9K),
-    a displacement+fuel-tech label (e.g. "1.4 TSI"), or an explicit mileage
-    figure — i.e. it plausibly describes a config- or mileage-specific claim
-    rather than generic used-car advice.
-    """
-    return bool(
-        CODE_TOKEN_RE.search(text)
-        or _DISPLACEMENT_RE.search(text)
-        or _MILEAGE_RE.search(text)
-    )
-
-# Generic dashboard warning lights — true of any car, not this specific
-# variant/config. A regex approach handles "ABS warning light", "ABS fault", etc.
-WARNING_LIGHT_PATTERNS: tuple[re.Pattern, ...] = (
-    re.compile(r"\b(abs|esp|epc|dpf|scr|adblue)\s*(warning|light|fault|indicator)\b", re.I),
-    re.compile(r"\b(check|engine|management)\s+(light|warning)\b", re.I),
-    re.compile(r"\bdashboard\s+(warning|light)\b", re.I),
-    re.compile(r"\bwarning\s+light\b", re.I),
-)
-
 # Owner forums, enthusiast/club sites, and crowd-complaint boards.
 FORUM_DOMAINS: frozenset[str] = frozenset({
     "forum.donanimhaber.com", "meganeownersclub.co.uk", "renaultforums.co.uk",
@@ -514,8 +430,9 @@ def has_variant_anchor(text: str) -> bool:
     brief title still needs ("injector problems" is as useless as "brakes
     wear"; "injector fouling (K9K 1.5 dCi)" is the target).
 
-    Deliberately excludes has_specificity_signal's plain code_tokens() check:
-    a DTC code (P1781, P0300) matches the SAME loose code-token shape as a
+    Deliberately excludes a plain code_tokens() check (the loose shape
+    CODE_TOKEN_RE matches on its own): a DTC code (P1781, P0300) matches the
+    SAME loose code-token shape as a
     real engine code (both are 1-4 letters + digit + alnum), so a DTC-litany
     title would otherwise look "anchored" by the very diagnostic code that's
     the problem. Only a non-DTC code token, or a displacement label, counts.
