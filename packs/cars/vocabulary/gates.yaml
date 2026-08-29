@@ -89,3 +89,12 @@ specificity:
     - { pattern: '\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b' }
     - { pattern: '\b\d\.\d\s*(tsi|tdi|tfsi|dci|tce|sce|hdi|vti)\b' }
     - { pattern: '\b\d[\d,.]*\s*(km|kilomet|mile|mi)\b' }
+
+limits:
+    # A title over this is a sentence, not a failure name. A rationale under
+    # the minimum is a restated title rather than an explanation. Both were
+    # Python constants in the orphaned agent gate (title_is_verbose's
+    # max_len=100 and MIN_RATIONALE_CHARS=60); they are category taste, so
+    # this is where they belong.
+    - { pattern: max_title_chars, note: "100" }
+    - { pattern: min_rationale_chars, note: "60" }
