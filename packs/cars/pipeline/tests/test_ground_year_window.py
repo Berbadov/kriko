@@ -9,7 +9,7 @@ ever WIDENS the window — the fail-open-safe direction. So a hallucinated bound
 can never narrow the window past what the evidence supports.
 """
 
-from packs.cars.pipeline.ground_year_window import ground_year_window
+from packs.cars.pipeline.claims.ground_year_window import ground_year_window
 
 
 def test_grounded_lower_and_upper_are_both_kept():

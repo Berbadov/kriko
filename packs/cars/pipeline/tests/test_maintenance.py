@@ -7,7 +7,7 @@ term with NO derivable interval stays known_issue — the script never emits an
 invalid maintenance claim (validate_part_yaml requires a maintenance block).
 """
 
-from packs.cars.pipeline.maintenance import (
+from packs.cars.pipeline.claims.maintenance import (
     detect_maintenance_kind,
     to_maintenance,
 )
