@@ -8,7 +8,7 @@ bias LOW (take the earliest mileage in a range) so we never gate a claim off a
 car that should still see it.
 """
 
-from packs.cars.pipeline.ground_mileage_threshold import ground_mileage_threshold as g
+from packs.cars.pipeline.claims.ground_mileage_threshold import ground_mileage_threshold as g
 
 
 def test_extracts_km_figure_with_onset_cue():

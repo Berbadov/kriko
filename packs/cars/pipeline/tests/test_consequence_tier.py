@@ -9,7 +9,7 @@ never on ambiguous words like "software" (infotainment vs ECU). Multilingual
 (TR + EN) so Turkish terms like `mekatronik`/`enjektör` are not missed → buried.
 """
 
-from packs.cars.pipeline.consequence_tier import consequence_tier as t
+from packs.cars.pipeline.claims.consequence_tier import consequence_tier as t
 
 
 def test_timing_belt_is_high():

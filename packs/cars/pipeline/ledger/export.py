@@ -43,10 +43,10 @@ from urllib.parse import urlparse
 import yaml
 from packs.cars.pipeline.paths import REPO_ROOT
 
-from packs.cars.pipeline.maintenance import to_maintenance
-from packs.cars.pipeline.domains import normalize_domain
-from packs.cars.pipeline.ground_mileage_threshold import ground_mileage_threshold
-from packs.cars.pipeline.ground_year_window import ground_year_window
+from packs.cars.pipeline.claims.maintenance import to_maintenance
+from packs.cars.pipeline.util.domains import normalize_domain
+from packs.cars.pipeline.claims.ground_mileage_threshold import ground_mileage_threshold
+from packs.cars.pipeline.claims.ground_year_window import ground_year_window
 from packs.cars.pipeline.ledger.verdict import cluster_payload, gate_product_value, input_hash
 from packs.cars.pipeline.parts.validate_part_yaml import validate_part
 from packs.cars.pipeline.stoplists import (

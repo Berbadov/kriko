@@ -17,7 +17,7 @@ from pathlib import Path
 import yaml
 from packs.cars.pipeline.paths import REPO_ROOT
 
-from packs.cars.pipeline.domains import VALID_DOMAINS
+from packs.cars.pipeline.util.domains import VALID_DOMAINS
 from packs.cars.pipeline.stoplists import mentions_foreign_manufacturer_code, mentions_sibling_code
 from packs.cars.pipeline.catalog.registry import (
     DETECTIONS, component_ids, detection_of, subsystem_of,

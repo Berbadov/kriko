@@ -28,7 +28,7 @@ from packs.cars.pipeline.paths import REPO_ROOT
 from pathlib import Path
 from urllib.parse import urlparse
 
-from packs.cars.pipeline.yamlutil import load_yaml
+from packs.cars.pipeline.util.yamlutil import load_yaml
 
 # Items a standard pre-purchase mechanic inspection (ekspertiz) covers as routine.
 # A claim matching any of these keywords is low value by the CLAUDE.md principle.

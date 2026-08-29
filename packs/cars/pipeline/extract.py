@@ -16,7 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from packs.cars.pipeline.domains import normalize_domain
+from packs.cars.pipeline.util.domains import normalize_domain
 from packs.cars.pipeline.langextract_client import extract_grounded
 from packs.cars.pipeline.sources.base import Document
 

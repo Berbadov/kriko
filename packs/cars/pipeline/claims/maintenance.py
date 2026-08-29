@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from packs.cars.pipeline.ground_mileage_threshold import ground_mileage_threshold
+from packs.cars.pipeline.claims.ground_mileage_threshold import ground_mileage_threshold
 
 # Plausible service-interval window in years; anything outside is not a real
 # maintenance interval (rejects model years like "2014", warranty spans, etc.).
