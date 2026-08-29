@@ -128,3 +128,31 @@ def test_low_value_reason_comes_from_pack_rows_not_python_constants():
                               "rationale": ""}) == "noise"
     assert _low_value_reason({"title": "DQ381 mechatronics unit fails at 120000 km",
                               "rationale": "Known weak point."}) is None
+
+
+def test_vocabulary_fails_open_on_mis_shaped_gates_file(tmp_path, monkeypatch):
+    """A gates.yaml that parses but is shaped wrong must gate nothing.
+
+    ``_vocabulary``'s own docstring promises "a missing or unreadable file
+    gates nothing" — that promise has to hold for YAML that parses fine but
+    has the wrong shape too (a list entry with no ``pattern`` key, say), not
+    just for a missing file or invalid YAML syntax. This exercises the real
+    function against a real file rather than ``vocabulary_from_rows``
+    directly, because the bug this guards against lives in the row-shaping
+    step between the parse and the compile.
+    """
+    from kriko.gates import GateVocabulary
+    from packs.cars.pipeline.ledger import extraction
+
+    vocab_dir = tmp_path / "vocabulary"
+    vocab_dir.mkdir()
+    (vocab_dir / "gates.yaml").write_text(
+        "noise:\n  - pattern_typo: not a pattern key\n"
+    )
+    monkeypatch.setattr(extraction, "PACK_ROOT", tmp_path)
+
+    extraction._vocabulary.cache_clear()
+    try:
+        assert extraction._vocabulary() == GateVocabulary()
+    finally:
+        extraction._vocabulary.cache_clear()
