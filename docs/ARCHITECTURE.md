@@ -43,17 +43,23 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
 | `kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `kriko/store/packstore.py` |
 | `packs/` | One directory per product category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
 | `packs/cars/pipeline/` | Evidence ledger + grounded extraction that turns scraped sources into claims for the cars pack | `packs/cars/pipeline/ledger/ingest.py` |
-| `extension/` | Chrome extension: scrapes a listing page, calls the web API, renders the risk card | `extension/content.js` |
+| `extension/` | Chrome extension: scrapes a listing page, its background worker calls the web API, renders the risk card | `extension/content.js` |
 
 ## Chasing X? read these
 
 **How a listing becomes risk cards** (end-to-end request path):
-1. `extension/content.js` — scrapes the page, calls `POST /api/analyze`.
-2. `app/web/routers/analyze.py:88` (`analyze()`) — turns the scrape into a
+1. `extension/content.js:423-428` — scrapes the page and messages the
+   extension's background worker (`chrome.runtime.sendMessage({type:
+   "ANALYZE", ...})`). A content script cannot make a cross-origin request to
+   the local web API itself under Manifest V3, so it hands the URL to the
+   background service worker instead.
+2. `extension/background.js:266-268` (`requestAnalysis()`) — makes the actual
+   `POST /api/analyze` call.
+3. `app/web/routers/analyze.py:88` (`analyze()`) — turns the scrape into a
    `Query` via `kriko.adapters.adapt()`, then calls `kriko.lookup.lookup()`.
-3. `kriko/adapters.py` — pack-supplied label/parse rules turn raw scraped
+4. `kriko/adapters.py` — pack-supplied label/parse rules turn raw scraped
    text into typed identity/context fields (no JS from a pack is ever run).
-4. `kriko/lookup/__init__.py:94` (`lookup()`) — matches the subject, scores
+5. `kriko/lookup/__init__.py:94` (`lookup()`) — matches the subject, scores
    and ranks its claims, returns a `LookupResult`.
 
 **Why a claim did or did not show:**
@@ -114,7 +120,9 @@ Every `python -m` target in the tree:
 | `python -m app.web` | FastAPI web dashboard (`http://127.0.0.1:8787`) |
 | `python -m packs.cars.build` | Builds the cars pack (also reachable via `app.cli build packs/cars`) |
 | `python -m packs.cars.coverage` | Cars pack coverage report |
-| several `packs/cars/pipeline/{catalog,fitment,ledger,parts,sources}/*.py` scripts | One-off catalog/fitment/ledger maintenance tools — run each with `--help` |
+| `packs/cars/pipeline/catalog/{discover,doctor,write_variants,repair_missing_stub_scaffold}.py` | Catalog maintenance: discovery, health check, variant/stub generation |
+| `packs/cars/pipeline/fitment/validate_fitment.py`, `packs/cars/pipeline/parts/validate_part_yaml.py` | Validate fitment/part YAML against the schema |
+| `packs/cars/pipeline/ledger/{eval_verdict,parity}.py`, `packs/cars/pipeline/sources/curated.py`, `packs/cars/pipeline/scaffold.py`, `packs/cars/pipeline/agent/render.py` | Remaining one-off ledger/scaffold/render tools — run each with `--help` |
 
 ## How to run things
 
