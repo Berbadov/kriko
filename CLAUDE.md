@@ -184,8 +184,10 @@ original reasoning.
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks | current |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
+| `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
+| `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `docs/overhaul_plan.md`, `docs/claim_relevance_plan.md` | Claim-quality roadmap/specs | reference |
 | `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |

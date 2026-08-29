@@ -234,8 +234,10 @@ the generalization principle for why per-model fixes don't exist here.
 | `CLAUDE.md` | Product, scalability, automation and layering principles; doc map |
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks |
 | `packs/<name>/README.md` | What that pack covers, and its own product principle |
+| `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns |
 | `docs/USAGE.md` | Full operational guide (stack, pipeline, claim lifecycle) |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference |
+| `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may |
 | `docs/design_flaws.md` | The 2026-07-04 audit — root causes behind claim mismatches |
 | `docs/overhaul_plan.md` / `docs/claim_relevance_plan.md` | Claim-quality roadmap |
 | `docs/pipeline_postmortem.md` | Early pipeline history (what failed and why) |
