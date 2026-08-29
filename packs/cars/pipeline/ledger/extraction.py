@@ -10,17 +10,17 @@ monkeypatch it by dotted path; the extractor resolves it at call time so the
 patch is seen.
 """
 
+import functools
 from collections.abc import Iterable
 
+import yaml
+
+from kriko.gates import GateVocabulary, gate_reason, vocabulary_from_rows
 from kriko.ledger import extraction as _engine
 from kriko.ledger.costs import Budget
 from packs.cars.pipeline.langextract_client import extract_grounded
 from packs.cars.pipeline.ledger.chunking import chunk_has_signal
-from packs.cars.pipeline.stoplists import (
-    GENERIC_MAINTENANCE_TERMS,
-    WARNING_LIGHT_PATTERNS,
-    has_specificity_signal,
-)
+from packs.cars.pipeline.paths import PACK_ROOT
 
 
 def _extract(text: str) -> Iterable[dict]:
@@ -35,15 +35,33 @@ def _extract(text: str) -> Iterable[dict]:
         yield mapped
 
 
+@functools.lru_cache(maxsize=1)
+def _vocabulary() -> GateVocabulary:
+    """Cars' gate vocabulary, read from the rows this pack ships.
+
+    The same vocabulary/gates.yaml that packs/cars/build.py turns into
+    gate_terms rows at install time. Reading it directly is what lets the
+    offline pipeline and the serving path answer "is this worth surfacing"
+    from one source. Cached: the ledger asks once per extracted claim and the
+    file does not change inside a run. Fails open — a missing or unreadable
+    file gates nothing, per CLAUDE.md's automation principle.
+    """
+    path = PACK_ROOT / "vocabulary" / "gates.yaml"
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return GateVocabulary()
+    rows = {
+        kind: [e["pattern"] if isinstance(e, dict) else e for e in (entries or [])]
+        for kind, entries in raw.items()
+        if isinstance(entries, list)
+    }
+    return vocabulary_from_rows(rows)
+
+
 def _low_value_reason(claim: dict) -> str | None:
-    text = f"{claim.get('title', '')} {claim.get('rationale', '')}".lower()
-    for pat in WARNING_LIGHT_PATTERNS:
-        if pat.search(text):
-            return "warning-light pattern"
-    hit = next((kw for kw in GENERIC_MAINTENANCE_TERMS if kw in text), None)
-    if hit and not has_specificity_signal(text):
-        return f"generic maintenance: {hit!r}"
-    return None
+    text = f"{claim.get('title', '')} {claim.get('rationale', '')}"
+    return gate_reason(text, _vocabulary())
 
 
 def extract_document(conn, doc_id: int, budget: Budget) -> int:

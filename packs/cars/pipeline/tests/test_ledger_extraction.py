@@ -112,3 +112,19 @@ def test_malformed_claims_do_not_break_chunk_cache(conn, monkeypatch):
     added = extraction.extract_document(conn, doc_id, budget)
     assert added == 0
     assert len(calls) == 1  # no new calls (same as before, cached)
+
+
+def test_low_value_reason_comes_from_pack_rows_not_python_constants():
+    """The gate's vocabulary is data the pack ships, not an engine constant.
+
+    A warning-light claim is rejected because packs/cars/vocabulary/gates.yaml
+    declares that pattern under `noise` — not because a frozenset in
+    stoplists.py happens to list it. The reason string is the rule kind, which
+    is what makes a rejection traceable back to the row that caused it.
+    """
+    from packs.cars.pipeline.ledger.extraction import _low_value_reason
+
+    assert _low_value_reason({"title": "ABS warning light comes on",
+                              "rationale": ""}) == "noise"
+    assert _low_value_reason({"title": "DQ381 mechatronics unit fails at 120000 km",
+                              "rationale": "Known weak point."}) is None
