@@ -239,9 +239,10 @@ the generalization principle for why per-model fixes don't exist here.
 | `docs/INTERNALS.md` | Mechanism-level architecture reference |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may |
 | `docs/design_flaws.md` | The 2026-07-04 audit — root causes behind claim mismatches |
-| `docs/overhaul_plan.md` / `docs/claim_relevance_plan.md` | Claim-quality roadmap |
-| `docs/pipeline_postmortem.md` | Early pipeline history (what failed and why) |
 
-Everything under `docs/historical/` predates the part-centric system — `handover.md` and
-`SCAFFOLD.md` describe the old model-centric flow, and `thoughts/` holds superseded 2026-07
-designs and plans. Historical context only; don't follow their instructions.
+Everything under `docs/historical/` predates the part-centric system, or predates the pivot
+that made Kriko category-free — `handover.md` and `SCAFFOLD.md` describe the old
+model-centric flow, `thoughts/` holds superseded 2026-07 designs and plans, and
+`overhaul_plan.md` / `claim_relevance_plan.md` / `pipeline_postmortem.md` are the pre-pivot
+claim-quality roadmap and pipeline history. Historical context only; don't follow their
+instructions.
