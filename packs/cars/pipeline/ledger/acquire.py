@@ -1,13 +1,12 @@
 """Ledger acquisition: discover → rank → fetch → ingest for a part. No LLM.
 
-This is the ledger-plane replacement for auto.py's curated-YAML discovery
-flow (spec §2.2). Differences from the legacy path, all deliberate:
+This is the ledger-plane discovery flow (spec §2.2). Deliberate design choices:
 
-- **Ranked before fetching** (backlog B8): the legacy pipeline extracted the
-  first N sources in Exa discovery order; here every result is scored by
+- **Ranked before fetching** (backlog B8): every result is scored by
   part-code specificity in the title, failure-signal in the title, and source
   class (blocked domains excluded, forums allowed but ranked below editorial
-  — the ledger's aggregation is what makes forum anecdotes safe, spec §2.2).
+  — the ledger's aggregation is what makes forum anecdotes safe, spec §2.2),
+  rather than fetched in raw discovery order.
 - **Full text**: no doc.text[:6000]/[:8000] cap anywhere — chunking +
   the deterministic chunk gate handle volume downstream.
 - **Lands in `documents`** with the part as `target_hint` (a HINT, never

@@ -15,8 +15,8 @@ class Query:
     `identity` is what the product *is* — brand, model, engine code. `context`
     is what this particular one has *been through* — a usage figure, hours
     run, charge cycles, age, free text from the ad. The split matters:
-    identity selects the subject, context gates the claims. The old code
-    blurred them, which is why a usage figure ended up as columns on the
+    identity selects the subject, context gates the claims. Keep them
+    separate: a usage figure belongs in context, never as a column on the
     claim table.
     """
 
