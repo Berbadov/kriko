@@ -12,6 +12,21 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
 SRC = REPO / "src"
 
+# The layering guards below only check what they can see. A wrong REPO/SRC
+# root doesn't raise — `_imports_of` just rglobs an empty or nonexistent
+# directory and returns no hits, so a broken path computation makes every
+# guard below pass while scanning nothing. This is exactly the regression a
+# src/ move introduced once already (the scans still pointed at REPO/"kriko"
+# and REPO/"app" after those packages moved under src/) — caught only by
+# manually injecting a cross-layer import and noticing nothing complained.
+# Fail loudly here, at collection time, naming the path, instead of relying
+# on that kind of manual check again.
+for _root in (SRC / "kriko", SRC / "app", REPO / "packs"):
+    assert _root.is_dir() and any(_root.rglob("*.py")), (
+        f"{_root} holds no Python files — the layering guards below would "
+        f"scan nothing and pass. Fix this path, not the tests."
+    )
+
 
 # A cross-package import at the start of a line, with or without indentation:
 # both `from backend.x import y` and `import backend.x as z`, top-level or
@@ -111,8 +126,12 @@ def test_the_legacy_backend_package_stays_deleted():
     hits = sum(
         (
             _imports_of("backend", root)
-            for root in (SRC / "kriko", SRC / "app", REPO / "packs")
-            if root.exists()
+            # "knowledge" is a pre-backend/ historical name (see
+            # docs/historical/); it never exists on disk today, and
+            # _imports_of degrades to no hits on a missing directory — kept
+            # here deliberately so the ratchet still names it rather than
+            # silently forgetting it existed.
+            for root in (SRC / "kriko", SRC / "app", REPO / "packs", REPO / "knowledge")
         ),
         [],
     )
