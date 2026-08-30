@@ -9,11 +9,10 @@ mode CLAUDE.md records for `SIBLING_CODE_FAMILIES` and `normalize.py`'s
 
 So this test checks. It scans `kriko/` for car vocabulary in *executable*
 positions — identifiers, attribute names, and string literals that are not
-docstrings. Prose used to be exempt, on the reasoning that the docstrings
-explain themselves by reference to the car code they replaced. This repository
-is now public, and a reader arriving to write a pack for a product Kriko has
-never seen cannot run this AST check — they just read, and believe what they
-read. So prose is checked too, separately: `_offences` still skips docstrings
+docstrings. That alone is not enough: this repository is public, and a reader
+arriving to write a pack for a product Kriko has never seen cannot run this
+AST check — they just read, and believe what they read. So prose is checked
+too, separately: `_offences` still skips docstrings
 (comments were never reachable by `ast` at all), and `_prose_offences` is the
 scanner that catches banned vocabulary in exactly those two places, docstrings
 and comments, against an explicit `ALLOWED_PROSE` allowlist of the category
@@ -28,8 +27,7 @@ from pathlib import Path
 
 CORE = Path(__file__).resolve().parent.parent
 
-# Vocabulary that belongs to a pack, never to the engine. Each of these was a
-# column, a constant or a branch in the old serving path.
+# Vocabulary that belongs to a pack, never to the engine.
 BANNED = {
     "make", "model", "variant", "trim", "engine", "fuel", "diesel", "petrol",
     "mileage", "odometer", "displacement", "transmission", "gearbox", "dsg",

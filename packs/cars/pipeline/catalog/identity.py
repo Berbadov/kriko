@@ -4,16 +4,16 @@ Kriko identifies a car by its **powertrain**, never by its trim name: a listing
 gives us make, model, year, fuel, displacement, power and gearbox, and nothing
 else. Two catalog rows that agree on all of those are indistinguishable at
 match time, so shipping both is not "more coverage" — it is an unresolvable
-ambiguity the matcher can never narrow (see `backend/core/matcher.py`).
+ambiguity the matcher can never narrow.
 
-That rule used to live only in `backend/tests/test_catalog.py`, i.e. it was a
-CI gate and nothing else. The agent onboarding path (B23) therefore *accepted*
-a Golf 8 lineup keyed on marketing trims — Impression / Life / Style / R-Line —
-wrote four rows describing two powertrains, reported success to the agent, and
-the breakage surfaced hours later in a test the agent never runs. This module
-is that rule promoted to a mechanism:
+History: this rule once lived only as a CI gate, so the agent onboarding path
+(B23) *accepted* a Golf 8 lineup keyed on marketing trims — Impression / Life /
+Style / R-Line — wrote four rows describing two powertrains, reported success
+to the agent, and the breakage surfaced hours later in a test the agent never
+runs. This module is that rule promoted to a mechanism:
 
-  * `find_overlaps` — the CI gate (test_catalog.py now imports it from here).
+  * `find_overlaps` — the CI gate (`test_catalog_identity.py` imports it from
+    here).
   * `collapse_duplicates` — the *fix*: powertrain-identical rows merge into one
     row before anything is written, so the ambiguity cannot be created.
   * `canonical_code` / `code_errors` — part codes must be real unit codes

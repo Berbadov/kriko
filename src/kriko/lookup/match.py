@@ -1,11 +1,10 @@
 """Identity in, candidate subjects out.
 
-The generic form of the old category-specific matcher. Everything that file
-knew about one category — which attributes are required, which match within a
-numeric tolerance, which must match exactly — now arrives as
+Everything about one category — which attributes are required, which match
+within a numeric tolerance, which must match exactly — arrives as
 `terms.match_json` rows supplied by the pack.
 
-Two rules carried over from the old matcher because they were hard-won:
+Two rules matter and are easy to get wrong:
 
 **Matching is on attribute overlap, never on `subject_id` equality.** Two packs
 whose authors disagreed about identity keys hash the same product differently.
@@ -13,10 +12,10 @@ If lookup keyed on the hash, their claims would never meet, and the pivot's
 whole premise — install several packs, get the union — would quietly fail.
 
 **Narrowing is soft.** A hint that matches no candidate must never turn a real
-match into `no_match`. The old code learned this from listings whose stated
-configuration contradicted the catalog: dropping the subject entirely served
-nothing, while keeping it and flagging the contradiction surfaced a coverage
-gap.
+match into `no_match`: a listing whose stated configuration contradicts the
+catalog should keep the subject and flag the contradiction rather than drop
+it — dropping it entirely would tell the reader nothing, while keeping it
+surfaces a coverage gap.
 """
 
 import json

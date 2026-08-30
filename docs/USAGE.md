@@ -56,8 +56,7 @@ After any code change to `extension/`:
 
 ```bash
 cd ~/kriko
-pip install -r packs/cars/pipeline/requirements.txt
-pip install exa-py yt-dlp trafilatura mistralai
+pip install -e ".[pipeline]"
 ```
 
 Set keys in `deploy/.env` and export locally:

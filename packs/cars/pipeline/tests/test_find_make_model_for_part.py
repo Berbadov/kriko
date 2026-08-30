@@ -39,7 +39,7 @@ def test_resolved_model_reassembles_to_a_real_variants_file():
 
 
 def test_resolves_full_model_slug_for_renault_parts():
-    # Power-split legacy ids merged into family parts at the B16 swap: the
+    # History: B16 merged the power-split ids into one family part — the
     # catalog now serves k9k (covering k9k_85/90/100/110), not the per-power
     # files. clio_5 sorts before megane_4 in fitment scan order.
     make, model = _find_make_model_for_part("k9k", "engine")

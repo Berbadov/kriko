@@ -66,12 +66,12 @@ def code_tokens(text: str) -> set[str]:
 # checks the full source page for ANY code match, and a DSG comparison
 # article mentions "DQ381" somewhere too.
 #
-# This used to be a hand-maintained SIBLING_CODE_FAMILIES tuple living only
-# here — exactly the failure mode CLAUDE.md's scalability principle now bans:
-# H5F/R9M/M9R went unrecognized for a while because nobody remembered to add
-# them to this separate list. Family membership is now declared per-part, via
-# each part YAML's own `code_family` field (see catalog_sibling_families()
-# below) — the same derive-from-catalog pattern as catalog_code_manufacturers().
+# History: this was a hand-maintained SIBLING_CODE_FAMILIES tuple (CLAUDE.md's
+# scalability principle Flaw 1) — H5F/R9M/M9R went unrecognized because nobody
+# remembered to add them to the separate list. Family membership is now
+# declared per-part, via each part YAML's own `code_family` field (see
+# catalog_sibling_families() below) — the same derive-from-catalog pattern as
+# catalog_code_manufacturers().
 
 # Part IDs follow a power-split convention (k9k_85, ea888_220, ...) — the
 # trailing "_<hp>" is bookkeeping, not part of the engineering code. Also,

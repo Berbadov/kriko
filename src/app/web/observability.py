@@ -1,11 +1,11 @@
 """Append-only JSONL log of everything the browser plane was asked.
 
-Kept deliberately when the old serving stack was deleted, because this file is
-where two things come from that nothing else provides:
+This file is where two things come from that nothing else provides:
 
-  * the demand signal — which cars people look up that no pack covers yet
-  * the replay corpus — the 98 real listings the parity gate was built on, and
-    the raw material for the next one
+  * the demand signal — which subjects people look up that no installed pack
+    covers yet
+  * the replay corpus — real listings a parity gate was built on, and the raw
+    material for the next one
 
 A knowledge base with no record of what it was asked cannot tell which gaps
 matter. Losing it would have been the quiet kind of regression: nothing breaks,

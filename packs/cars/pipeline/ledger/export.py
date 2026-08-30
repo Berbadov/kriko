@@ -15,9 +15,9 @@ grounded at export time by the EXISTING deterministic grounders (zero LLM):
     low = fail-open-safe);
   * applies_when.applies_year_from/to — every plausible year token in the
     cited quotes is PROPOSED as a bound and vetted by ground_year_window()
-    (exact token + direction cue in proximity — the same guard the legacy
-    pipeline put in front of LLM-proposed windows). Widest grounded window
-    wins; contradictory windows (from > to) drop both bounds;
+    (exact token + direction cue in proximity guards against a false window).
+    Widest grounded window wins; contradictory windows (from > to) drop both
+    bounds;
   * kind/maintenance — maintenance.to_maintenance(), the same
     closed interval vocabulary the legacy catalog used (schema v2:
     interval_km / interval_years / evidence_keywords);
@@ -72,9 +72,9 @@ def merged_part_id(part_id: str) -> str:
     """Power-collapsed identity: k9k_110 -> k9k.
 
     The trailing "_<hp>" is bookkeeping, not engineering identity (same reading
-    as component_part_meta and ledger/resolve.py). Public so the catalog-swap
-    mechanism (ops/swap.py) derives the legacy -> merged fitment
-    remap without a hand-enumerated list — the scalability rule.
+    as component_part_meta and ledger/resolve.py). Public so a fitment remap
+    can derive the legacy -> merged mapping without a hand-enumerated list —
+    the scalability rule.
     """
     return _POWER_SUFFIX_RE.sub("", part_id)
 
@@ -213,10 +213,10 @@ def _ground_applies_when(claim_text: str, source_text: str) -> dict:
 
     applies_year_from/to: every plausible year token in the cited quotes is
     proposed as a bound and vetted by ground_year_window() (exact token +
-    direction-appropriate cue in proximity — the same guard the legacy
-    pipeline put in front of LLM-proposed windows). Widest grounded window
-    wins (min from / max to — narrowing only ever hides cars, so wide is the
-    safe direction); contradictory windows (from > to) drop both bounds.
+    direction-appropriate cue in proximity guards against a false window).
+    Widest grounded window wins (min from / max to — narrowing only ever
+    hides cars, so wide is the safe direction); contradictory windows
+    (from > to) drop both bounds.
     """
     aw: dict = {}
     km = ground_mileage_threshold(f"{claim_text} {source_text}".strip())

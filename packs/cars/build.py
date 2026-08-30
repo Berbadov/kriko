@@ -27,8 +27,8 @@ what a model year is.
 parses "Part fitment: {id} ({type})" today, so preserving it keeps the parity
 harness able to compare old and new attribution.
 
-After Phase 6 the legacy directories move under `packs/cars/data/` and this
-script is replaced by the standard builder.
+This script will be retired once the standard builder (`kriko/pack/build.py`)
+can consume these shapes directly.
 """
 
 import argparse
@@ -85,7 +85,7 @@ def _num(value):
 
 
 def _vocabulary() -> list[dict]:
-    """The car vocabulary, as rows. Everything normalize.py used to hard-code."""
+    """The car vocabulary, as rows."""
     return _yaml(PACK_ROOT / "vocabulary" / "terms.yaml", [])
 
 
@@ -227,10 +227,10 @@ def _compat_conditions(
 
 
 def _conditions_from(claim: dict) -> list[dict]:
-    """Every gate the old claim row carried, as condition rows.
+    """Every gate the legacy claim row carried, as condition rows.
 
-    `weight` values mirror the old serving path's treatment of an unstated
-    value: present but less certain, never hidden and never assumed.
+    `weight` values follow the fail-open rule: an unstated value is served,
+    present but less certain, never hidden and never assumed.
     """
     out = []
     applies = claim.get("applies_when") or {}
@@ -748,10 +748,9 @@ def _emit_fitment(
 
 
 def _emit_research_assets(conn, pack_id: str, row_ids: list, stats: Counter) -> None:
-    # The value principle used to be a string literal inside
-    # packs/cars/pipeline/ledger/verdict.py, which meant the question "what is worth
-    # keeping?" was answered once, in Python, for every product Kriko would
-    # ever know about. It belongs to the category.
+    # History: the value principle used to be a Python string literal, which
+    # answered "what is worth keeping?" once for every product Kriko would
+    # ever know about. It belongs to the category, so it ships as pack data.
     for name, kind in (
         ("research/principle.md", "principle"),
         ("research/templates.yaml", "templates"),

@@ -1,10 +1,8 @@
 """Read-time ranking — where "no authority" is actually cashed out.
 
-The old pipeline stamped `source_tier` and `source_trust` onto each claim row at
-ETL time, which froze a judgement made once, by one pipeline, and made it
-unrevisable. Here trust is computed on every read from the evidence itself, so
-installing a better source-tier table or disabling a pack changes the answer
-without rebuilding anything.
+Trust is computed on every read from the evidence itself, never stamped onto
+a claim row at write time — installing a better source-tier table or
+disabling a pack changes the answer without rebuilding anything.
 
 This matters more than it sounds. With no central authority, ranking *is* the
 product: every installed pack gets to assert whatever it likes, and the only

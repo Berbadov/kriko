@@ -168,11 +168,11 @@ def test_narrowing_is_soft_and_never_empties_the_candidates(store):
 def test_a_contradiction_is_still_flagged_when_only_one_candidate_is_left(store):
     """The single-candidate case is where a silent contradiction does most harm.
 
-    Narrowing used to be skipped once the candidate set was down to one — an
-    optimisation, since there is nothing left to narrow. The cost was that the
-    contradicting attribute was never *tested*, so no flag was raised, and the
-    result came back `exact` with no indication that the listing disagreed with
-    the catalog.
+    History: narrowing used to be skipped once the candidate set was down to
+    one, on the reasoning that there was nothing left to narrow — but that
+    left the contradicting attribute untested, so no flag was raised and the
+    result came back `exact` with no indication that the listing disagreed
+    with the catalog.
 
     A real case: a Sahibinden ad for a 1.6 TDI Golf 7 says "Otomatik". Make,
     model, fuel and displacement narrow to exactly one variant — the manual

@@ -1,11 +1,10 @@
 """Does this claim apply, given what the reader could actually tell us?
 
-One evaluator replaces every gate the old serving path hard-coded: usage
-thresholds and ceilings, age floors, production-window checks, equipment
-requirements, maintenance intervals, and configuration-compatibility checks
-that lived in per-category code. They were never really different
-mechanisms — each asked whether a claim applies to a particular reading of a
-particular product.
+One evaluator handles every gate a pack can declare: usage thresholds and
+ceilings, age floors, production-window checks, equipment requirements,
+maintenance intervals, and configuration-compatibility checks. They are
+never really different mechanisms — each asks whether a claim applies to a
+particular reading of a particular product.
 
 The design point worth stating: **the answer has three states, not two.**
 
