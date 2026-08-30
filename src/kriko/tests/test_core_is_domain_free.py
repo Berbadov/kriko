@@ -37,6 +37,20 @@ BANNED = {
     "ekspertiz",
 }
 
+# Prose needs a narrower list than BANNED. BANNED is written for executable
+# positions, where `engine` in an identifier (`engine_code`) is a real
+# violation. In prose, three of its words are this project's own vocabulary:
+#
+#   engine  — kriko/ IS "the engine"; "the engine owns orchestration" is
+#             correct and appears throughout.
+#   make    — the English verb.
+#   model   — "data model", "the model".
+#
+# The executable check still catches all three as identifiers, attributes and
+# non-docstring strings, so dropping them here narrows the prose gate without
+# weakening the guarantee that matters.
+PROSE_BANNED = BANNED - {"engine", "make", "model"}
+
 # Words that legitimately contain a banned substring. Matching is on whole words,
 # so this stays short; it exists for the cases where it genuinely is not.
 # An empty set, not an empty dict — `{}` here would be a dict and the set
@@ -129,13 +143,13 @@ def _prose_offences(path: Path) -> list[str]:
         text = ast.get_docstring(node)
         if not text:
             continue
-        hits = sorted({w for w in _split_identifier(text) if w in BANNED} - permitted)
+        hits = sorted({w for w in _split_identifier(text) if w in PROSE_BANNED} - permitted)
         if hits:
             line = getattr(node, "lineno", 1)
             found.append(f"{path.name}:{line}: docstring contains {hits}")
 
     for lineno, text in _comments(path):
-        hits = sorted({w for w in _split_identifier(text) if w in BANNED} - permitted)
+        hits = sorted({w for w in _split_identifier(text) if w in PROSE_BANNED} - permitted)
         if hits:
             found.append(f"{path.name}:{lineno}: comment contains {hits}")
 
