@@ -36,7 +36,7 @@ REMEDIABLE_KINDS = frozenset(
     {"missing_part", "zero_claim_part", "auto_variant_no_tx_part"}
 )
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 LOG_PATH = REPO_ROOT / "logs" / "remediation.jsonl"
 
 

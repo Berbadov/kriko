@@ -9,7 +9,8 @@ import re
 from configparser import ConfigParser
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent.parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
+SRC = REPO / "src"
 
 
 # A cross-package import at the start of a line, with or without indentation:
@@ -40,7 +41,7 @@ def test_kriko_core_never_imports_a_domain_layer():
     """
     hits = sum(
         (
-            _imports_of(pkg, REPO / "kriko")
+            _imports_of(pkg, SRC / "kriko")
             for pkg in ("backend", "app", "packs", "knowledge")
         ),
         [],
@@ -87,9 +88,9 @@ def test_app_never_imports_the_pipeline_layer():
     """
     hits = [
         hit
-        for hit in _imports_of("app.pipeline", REPO / "app")
-        if not hit.startswith("app/pipeline/")
-    ] + _imports_of("backend", REPO / "app")
+        for hit in _imports_of("app.pipeline", SRC / "app")
+        if not hit.startswith("src/app/pipeline/")
+    ] + _imports_of("backend", SRC / "app")
     assert hits == [], "app/ reaches into the pipeline layer:\n  " + "\n  ".join(hits)
 
 
@@ -109,8 +110,9 @@ def test_the_legacy_backend_package_stays_deleted():
     )
     hits = sum(
         (
-            _imports_of("backend", REPO / pkg)
-            for pkg in ("kriko", "app", "packs", "knowledge")
+            _imports_of("backend", root)
+            for root in (SRC / "kriko", SRC / "app", REPO / "packs")
+            if root.exists()
         ),
         [],
     )
@@ -132,8 +134,8 @@ def test_pytest_testpaths_covers_every_test_directory():
     configured = set(cfg["pytest"]["testpaths"].split())
 
     found = {
-        d.relative_to(REPO).parts[0]
-        for d in REPO.glob("*/tests")
+        str(d.parent.relative_to(REPO))
+        for d in list(REPO.glob("*/tests")) + list(REPO.glob("src/*/tests"))
         if d.is_dir() and any(d.glob("test_*.py"))
     }
     missing = sorted(found - configured)

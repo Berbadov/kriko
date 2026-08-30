@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kriko"
+version = "0.1.0"
+description = "A local-first, open knowledge engine for manufactured products"
+readme = "README.md"
+requires-python = ">=3.14"
+
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pydantic>=2.0",
+    "pyyaml>=6.0.1",
+    "mcp>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+# Building knowledge, not reading it. None of this is needed to install a
+# pack and answer a question; all of it is needed to research one.
+pipeline = [
+    "httpx>=0.27.0",
+    "selectolax>=0.3.21",
+    "mistralai>=1.0.0",
+    "langextract>=1.6.0",
+    "yt-dlp>=2024.1.1",
+    "trafilatura>=1.9.0",
+    "textual>=0.60.0",
+    "exa-py>=2.14.0",
+    "anthropic",
+    "python-dotenv",
+]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kriko*", "app*"]
