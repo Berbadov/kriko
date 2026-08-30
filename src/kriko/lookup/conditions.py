@@ -1,10 +1,11 @@
 """Does this claim apply, given what the reader could actually tell us?
 
-One evaluator replaces every gate the old serving path hard-coded: mileage
-floors and ceilings, age floors, model-year windows, equipment requirements,
-maintenance intervals, and the five car-specific compatibility checks that lived
-in `backend/sync.py`. They were never really different mechanisms — each asked
-whether a claim applies to a particular reading of a particular product.
+One evaluator replaces every gate the old serving path hard-coded: usage
+thresholds and ceilings, age floors, production-window checks, equipment
+requirements, maintenance intervals, and configuration-compatibility checks
+that lived in per-category code. They were never really different
+mechanisms — each asked whether a claim applies to a particular reading of a
+particular product.
 
 The design point worth stating: **the answer has three states, not two.**
 
@@ -13,8 +14,8 @@ The design point worth stating: **the answer has three states, not two.**
     unknown  the reader could not supply the value
 
 `unknown` is the interesting one, and getting it wrong is how a knowledge engine
-starts lying. If an ad does not state the mileage, a "fails after 150,000 km"
-claim is neither true nor false for that car. Hiding it loses a real risk;
+starts lying. If a listing omits a usage figure a claim is gated on, that claim
+is neither true nor false for this particular one. Hiding it loses a real risk;
 showing it at full confidence invents certainty. So it is served and downranked
 by the condition's `weight` — the fail-open rule from CLAUDE.md's automation
 principle, made mechanical.

@@ -2,8 +2,8 @@
 
 Replaces extract.py's doc.text[:6000] cap: the WHOLE document is chunked, but
 a chunk only reaches the extraction LLM if it contains failure-lexicon signal
-or an engine/transmission code token — transcripts are mostly filler, and this
-gate is where 50-70% of extraction tokens are saved at zero cost."""
+or a pack-declared component code token — transcripts are mostly filler, and
+this gate is where 50-70% of extraction tokens are saved at zero cost."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass

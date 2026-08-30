@@ -99,9 +99,10 @@ def subject_id(kind: str, identity: dict) -> str:
     every attribute the subject has — otherwise adding a `notes` field would
     mint a new subject.
 
-    An author who includes `trim` in identity gets a different id from one who
-    does not. That is intended: they are asserting different things about what
-    makes a product distinct. The lookup path unions them by attribute overlap.
+    An author who includes one more attribute in identity gets a different id
+    from one who does not. That is intended: they are asserting different
+    things about what makes a product distinct. The lookup path unions them
+    by attribute overlap.
     """
     if not identity:
         raise ValueError(

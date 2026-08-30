@@ -3,8 +3,8 @@
 Content hashing gives *storage* identity, and it works: the same URL, the same
 quote, the same normalised value all collapse. It does almost nothing for
 claims, because claim titles are written by language models and language models
-do not write the same sentence twice. The live car catalog holds three separate
-titles for one physical EGR failure, produced by the same pipeline on the same
+do not write the same sentence twice. A live catalog can hold three separate
+titles for one physical failure, produced by the same pipeline on the same
 day. Two independent packs will produce three more.
 
 So this is not a nicety layered on top of the real mechanism — for claims it *is*

@@ -127,7 +127,12 @@ def _comments(path: Path) -> list[tuple[int, str]]:
 # exception is a visible decision rather than an oversight.
 #
 # filename -> the banned terms that file may use in prose.
-ALLOWED_PROSE: dict[str, set[str]] = {}
+ALLOWED_PROSE: dict[str, set[str]] = {
+    # Locale-dependent number formatting is hard to convey abstractly; the
+    # "148.000 km" case is a real hazard this module exists to handle, and it
+    # is framed as one instance of the hazard rather than the definition of it.
+    "adapters.py": {"mileage"},
+}
 
 
 def _prose_offences(path: Path) -> list[str]:

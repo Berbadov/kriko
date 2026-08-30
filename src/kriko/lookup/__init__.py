@@ -2,9 +2,10 @@
 
     identity + context  ->  subjects  ->  claims  ->  gated  ->  ranked  ->  capped
 
-This replaces `backend/core/matcher.py` and `backend/core/resolver.py`, which
-together held 876 lines of car packs.cars.pipeline. Nothing here knows what a car is; the
-rules arrive as pack rows. The proof is mechanical rather than aspirational:
+This replaces the old category-specific matcher and resolver, which together
+held 876 lines of category-specific matching and resolution logic. Nothing
+here knows what any particular product category is; the rules arrive as pack
+rows. The proof is mechanical rather than aspirational:
 `test_kriko_core_never_imports_a_domain_layer` forbids this package from
 importing `packs/`, and the drill pack's suite runs the same code path over
 charge cycles and chuck sizes.
@@ -49,14 +50,16 @@ def _agreed_attributes(conn, subject_ids, pack_ids) -> dict:
     """What the catalog says about the matched thing, where the candidates agree.
 
     Conditions are evaluated against the union of this and the reader's context,
-    because "does this claim apply" depends on both what the catalog knows (this
-    car is a diesel) and what the reader supplied (it has done 180,000 km).
+    because "does this claim apply" depends on both what the catalog knows
+    about the subject's configuration and what the reader supplied about their
+    particular one.
 
     Only *agreed* values are included. If two candidate subjects disagree — one
-    diesel, one petrol — the key is omitted, which makes the condition
-    `unknown` and therefore fail open. That is the right answer: with the
-    candidates in disagreement we genuinely do not know, and guessing either way
-    would either hide a real risk or invent one.
+    recorded one value, the other recorded a different one — the key is
+    omitted, which makes the condition `unknown` and therefore fail open. That
+    is the right answer: with the candidates in disagreement we genuinely do
+    not know, and guessing either way would either hide a real risk or invent
+    one.
     """
     if not subject_ids or not pack_ids:
         return {}
@@ -104,15 +107,15 @@ def lookup(conn, query: Query) -> LookupResult:
     # Ambiguity is resolved WITHIN a pack, never across packs.
     #
     # Within one pack, two matching subjects mean the catalog cannot tell which
-    # variant this listing is, so serve only what holds for both. Telling a
-    # buyer about a gearbox belonging to one of two candidates is worse than
-    # saying less — the claim is not wrong, it is unattributable, and an
-    # unattributable claim about an expensive part is the noise that makes
-    # people stop reading.
+    # specific configuration this reading is, so serve only what holds for
+    # both. Telling a reader about an attribute belonging to only one of two
+    # candidates is worse than saying less — the claim is not wrong, it is
+    # unattributable, and an unattributable claim about an expensive part is
+    # the noise that makes people stop reading.
     #
-    # Across packs it is the opposite: two packs matching the same car is not
-    # ambiguity, it is two answers to one question, and intersecting them would
-    # mean installing a second pack could only ever *reduce* what you see.
+    # Across packs it is the opposite: two packs matching the same subject is
+    # not ambiguity, it is two answers to one question, and intersecting them
+    # would mean installing a second pack could only ever *reduce* what you see.
     reached = {}
     for pack_id in pack_ids:
         in_pack = [sid for sid in resolution.subject_ids
@@ -132,8 +135,9 @@ def lookup(conn, query: Query) -> LookupResult:
 
     if not reached:
         return LookupResult(resolution, (), "MATCHED_NO_DATA")
-    # The reader's own words win over the catalog's generic row: if the ad says
-    # the gearbox is automatic, that beats what the catalog assumed.
+    # The reader's own words win over the catalog's generic row: if the
+    # listing states a context value directly, that beats what the catalog
+    # assumed for the general case.
     context = {**_agreed_attributes(conn, resolution.subject_ids, pack_ids),
                **query.context}
 
