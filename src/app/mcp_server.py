@@ -40,9 +40,10 @@ STORE_PATH = None
 
 #: Rank weight for a claim an agent wrote. A subscription harness is a source,
 #: not an authority: its claims reach the reader, ranked as *reported* rather
-#: than confirmed, until something independent corroborates them. Same value the
-#: cars exporter gives an unreviewed legacy claim, so the two cannot be told
-#: apart by rank alone — which is correct, because neither has been checked.
+#: than confirmed, until something independent corroborates them. Same value
+#: an installed pack's exporter gives an unreviewed, unverified claim, so the
+#: two cannot be told apart by rank alone — which is correct, because neither
+#: has been checked.
 AGENT_CONFIDENCE = 0.6
 
 

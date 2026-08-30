@@ -3,9 +3,8 @@
 One schema serves both (see `schema.sql`), so this module makes no distinction
 between them — `connect()` opens either.
 
-No ORM. The old serving plane used SQLAlchemy against Postgres; that bought
-dialect portability we no longer want, since the pack format *is* SQLite and a
-pack file is meant to be openable by anything that speaks it.
+No ORM: the pack format *is* SQLite, and a pack file is meant to be openable
+by anything that speaks it, so dialect portability is not a goal here.
 """
 
 import sqlite3

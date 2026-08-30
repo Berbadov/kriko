@@ -105,7 +105,7 @@ def few_shot_examples() -> tuple[data.ExampleData, ...]:
     support a zero-extraction example (a real document can yield zero
     extractions fine; an example cannot — the aligner crashes on an empty
     extraction list). "This is generic, skip it" is taught through
-    PROMPT_DESCRIPTION's instructions instead, same as the old SYSTEM_PROMPT.
+    PROMPT_DESCRIPTION's instructions instead.
     Cached — rebuild by calling few_shot_examples.cache_clear() if gold.yaml
     changes within a process lifetime (tests do this).
     """

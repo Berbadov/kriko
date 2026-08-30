@@ -1,6 +1,5 @@
 """repair_missing_stub_scaffold.py — one-time repair for parts written before
-run_part() ensured a part stub existed (the legacy ops.auto and ops.process
---part paths, both since removed).
+run_part() guaranteed a part stub existed.
 
 Reconstructs part_id/part_type/display_name/manufacturer/known_also_as using
 packs.cars.pipeline.parts.search_templates.generate_part_scaffold — the same generation

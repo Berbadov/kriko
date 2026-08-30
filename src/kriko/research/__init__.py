@@ -40,9 +40,8 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
               budget_usd: float = 0.0, max_documents: int = 5) -> ResearchTask:
     """Assemble everything the pack knows about how to research this subject.
 
-    Every category-specific thing the old pipeline hard-coded — the query
-    templates in `search_templates.py`, the product principle inlined in
-    `verdict.py` — arrives here as pack data instead.
+    Everything category-specific — query templates, the product principle —
+    arrives here as pack data, never as engine code.
     """
     subject = conn.execute(
         "SELECT kind, label FROM subjects WHERE subject_id = ? AND pack_id = ?",
