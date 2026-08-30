@@ -5,7 +5,7 @@ that surfaces **the config- and mileage-specific risks a buyer can't cheaply get
 standard pre-purchase inspection** (the principle — see `CLAUDE.md`).
 
 This is the strategic map. Phase-level mechanics for claim relevance live in
-`docs/claim_relevance_plan.md`; this doc places them in the larger picture and adds the
+`docs/historical/claim_relevance_plan.md`; this doc places them in the larger picture and adds the
 sourcing, serving, and scaling layers.
 
 ---
@@ -101,17 +101,17 @@ Tombstoned the inspection-covered / generic-warning noise so the panel reads rig
 ### Phase 1 — Context plumbing + mileage/age gating + first authored claims
 `ListingContext` from `ad_metadata`, threaded into `resolve_claims`; `applies_when` gating,
 fail-open on missing data; author ~4 real mileage-tagged Megane-4 claims.
-→ details in `docs/claim_relevance_plan.md` (Phase 1).
+→ details in `docs/historical/claim_relevance_plan.md` (Phase 1).
 
 ### Phase 2 — Maintenance-due claims
 `kind: maintenance`, interval logic, ad-evidence **downranks (never hides)**, "Due unless
 serviced" label, per-engine belt-vs-chain grounding.
-→ details in `docs/claim_relevance_plan.md` (Phase 2).
+→ details in `docs/historical/claim_relevance_plan.md` (Phase 2).
 
 ### Phase 3 — Relevance filter (systematic)
 Offline `gate_inspection_value` + extended `gate_generic`; sets `value_tier`; drops the noise at
 the source so it never returns. Re-grade existing cache with `--skip-extraction`.
-→ details in `docs/claim_relevance_plan.md` (Phase 3).
+→ details in `docs/historical/claim_relevance_plan.md` (Phase 3).
 
 ### Phase 4 — Sourcing overhaul (curated-first + authoritative feeds)
 - Make **hand-authoring** a first-class, documented workflow (a per-model authoring checklist

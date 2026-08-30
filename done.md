@@ -2,7 +2,7 @@
 
 Completed work, newest first. Entries move here from `backlog.md` with date + commit.
 Seeded 2026-07-16 from git history; older history lives in `git log` and
-`docs/pipeline_postmortem.md`.
+`docs/historical/pipeline_postmortem.md`.
 
 ---
 
@@ -737,4 +737,4 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
 - **Observability** — `logs/analyses.jsonl` + `ops.reports.analyses` / `replay`
   (branch `observability-analyses-log`, merged content on current branch).
 - **Docs** — `docs/INTERNALS.md`, `docs/USAGE.md`, `docs/design_flaws.md` (Flaws 1–4
-  addressed; 5–6 tracked as backlog B13), `docs/pipeline_postmortem.md`.
+  addressed; 5–6 tracked as backlog B13), `docs/historical/pipeline_postmortem.md`.
