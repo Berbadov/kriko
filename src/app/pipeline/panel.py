@@ -29,7 +29,7 @@ from pathlib import Path
 from kriko.ledger import db
 from kriko.ledger.costs import log_stage  # noqa: F401 — re-exported usage hint
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DEFAULT_DB = db.LEDGER_PATH
 REMEDIATION_LOG = REPO_ROOT / "logs" / "remediation.jsonl"
 ANALYSES_LOG = REPO_ROOT / "logs" / "analyses.jsonl"

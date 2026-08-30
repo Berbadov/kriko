@@ -11,7 +11,7 @@ import pytest
 
 from kriko.pack.manifest import load
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[3]
 PACKS = sorted(p for p in (REPO / "packs").iterdir() if (p / "pack.toml").exists())
 
 
