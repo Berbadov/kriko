@@ -1,8 +1,8 @@
 """Turning a scraped page into a query, using rules a pack supplies.
 
-A listing site says "Motor Hacmi: 1.461 cm3". The engine needs
-`displacement_cc = 1461`. The mapping between those is category knowledge and
-site knowledge, and neither belongs in Python here — a pack ships it as JSON.
+A listing site labels each field in its own words and its own units. Mapping
+a label to an attribute key and a value is category knowledge and site
+knowledge, and neither belongs in Python here — a pack ships it as JSON.
 
 **The rules are data and are interpreted here, never executed in the browser.**
 That is a security boundary, not a style preference. If a pack could ship
@@ -12,12 +12,14 @@ adapter format is a fixed vocabulary of label lists and parse hints, and
 anything it cannot express is a reason to extend this file — in review, once —
 rather than to open that door.
 
-The parse hints exist because scraped values lie in a specific way. A page might
-render mileage as "148.000 km" and engine size as "1.461 cm3"; the same digits
-mean a hundred and forty-eight thousand in one and one thousand four hundred
-sixty-one in the other. Range bounds resolve that: a value that lands outside
-the plausible range for its field is discarded rather than believed, because a
-wrong number is worse than a missing one — a missing one fails open and says so.
+The parse hints exist because scraped values lie in a specific way: a
+locale's own number formatting is ambiguous out of context. One instance a
+pack has to handle is mileage rendered as "148.000 km" — a period used as the
+thousands separator, not a decimal point, so the raw digits mean a hundred
+and forty-eight thousand rather than one hundred forty-eight point zero.
+Range bounds resolve that: a value that lands outside the plausible range for
+its field is discarded rather than believed, because a wrong number is worse
+than a missing one — a missing one fails open and says so.
 """
 
 import json
@@ -98,11 +100,11 @@ def _apply(rule: dict, raw):
         return _number(raw, rule.get("min"), rule.get("max"))
 
     text = str(raw).strip()
-    # A page often packs several facts into one cell — "DSG / 7 Gear / Front
-    # Wheel Drive" is a gearbox, a gear count and a drivetrain. Naming an end
-    # of the split is the whole vocabulary on purpose: anything richer becomes
-    # a small programming language shipped by pack authors, which is the door
-    # this module exists to keep shut.
+    # A page often packs several facts into one cell — three attributes
+    # separated by slashes, say. Naming an end of the split is the whole
+    # vocabulary on purpose: anything richer becomes a small programming
+    # language shipped by pack authors, which is the door this module exists
+    # to keep shut.
     segment = rule.get("segment")
     if segment in ("first", "last"):
         parts = [p.strip() for p in text.split(rule.get("split", "/"))]
@@ -194,10 +196,10 @@ def _pick(rule: dict, fields: dict, extras: dict, blocked: frozenset = frozenset
     Three sources, tried in order of how much the page actually committed to
     the answer: an exact label, a loose label, then a text fallback.
 
-    Exact labels go first because a page that lists both "Yakıt Tüketimi"
-    (consumption) and "Yakıt" (fuel type) would otherwise be answered by
-    whichever came first in the DOM, and half the time the engine would be
-    told the car runs on "4,5 lt".
+    Exact labels go first because a page can carry two labels where one is a
+    substring of the other — a rate, and the quantity it is a rate of, say —
+    and loose matching would answer with whichever came first in the DOM,
+    silently confident it had the right one.
 
     The text fallback exists because the info list is a single point of
     failure: this site has redesigned that markup repeatedly, and every

@@ -12,11 +12,12 @@ from dataclasses import dataclass, field
 class Query:
     """What the reader knows about the thing in front of them.
 
-    `identity` is what the product *is* — brand, model, engine code. `context` is
-    what this particular one has *been through* — mileage, hours, charge cycles,
-    age, free text from the ad. The split matters: identity selects the subject,
-    context gates the claims. The old code blurred them, which is why mileage
-    ended up as columns on the claim table.
+    `identity` is what the product *is* — brand, model, engine code. `context`
+    is what this particular one has *been through* — a usage figure, hours
+    run, charge cycles, age, free text from the ad. The split matters:
+    identity selects the subject, context gates the claims. The old code
+    blurred them, which is why a usage figure ended up as columns on the
+    claim table.
     """
 
     kind: str

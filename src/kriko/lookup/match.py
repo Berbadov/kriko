@@ -1,9 +1,9 @@
 """Identity in, candidate subjects out.
 
-The generic form of `backend/core/matcher.py`. Everything that file knew about
-cars — that `make` and `model` are required, that displacement matches within
-±100 cc, that power matches within a few hp — now arrives as `terms.match_json`
-rows supplied by the pack.
+The generic form of the old category-specific matcher. Everything that file
+knew about one category — which attributes are required, which match within a
+numeric tolerance, which must match exactly — now arrives as
+`terms.match_json` rows supplied by the pack.
 
 Two rules carried over from the old matcher because they were hard-won:
 
@@ -14,8 +14,9 @@ whole premise — install several packs, get the union — would quietly fail.
 
 **Narrowing is soft.** A hint that matches no candidate must never turn a real
 match into `no_match`. The old code learned this from listings whose stated
-gearbox contradicted the catalog: dropping the car entirely served nothing,
-while keeping it and flagging the contradiction surfaced a coverage gap.
+configuration contradicted the catalog: dropping the subject entirely served
+nothing, while keeping it and flagging the contradiction surfaced a coverage
+gap.
 """
 
 import json
@@ -92,10 +93,10 @@ def value_alias_map(conn, pack_ids) -> dict[str, dict[str, str]]:
     """parent term -> {alias -> canonical value}.
 
     The other half of the normalisation story. Key aliases let a caller say
-    `make` where the pack says `brand`; value aliases let a scrape say
-    "Benzinli" where the catalog says "petrol". Both were Python dicts in
-    `normalize.py` (`_FUEL_MAP`, `_TX_MAP`) that a new market would have
-    required someone to remember to edit.
+    `make` where the pack says `brand`; value aliases let a scrape say one
+    market's term where the catalog canonicalizes to another. Both were
+    Python dicts in `normalize.py` (`_FUEL_MAP`, `_TX_MAP`) that a new market
+    would have required someone to remember to edit.
 
     A canonical value is a term with `role='enum_value'` whose `parent_id` names
     the attribute it belongs to, so the same word can mean different things
@@ -197,7 +198,7 @@ def resolve(conn, query, pack_ids) -> Resolution:
     the first time two packs were queried through one store.
 
     So each pack resolves the query in its own words, and the engine unions the
-    results. Ambiguity — "which variant is this?" — stays a within-pack
+    results. Ambiguity — "which one of these is this?" — stays a within-pack
     question; two packs each confidently answering is not ambiguity.
     """
     subjects: list[str] = []
@@ -213,8 +214,8 @@ def resolve(conn, query, pack_ids) -> Resolution:
                 ambiguous = True
             if one.notes:
                 notes.append(f"{pack_id}: {one.notes}")
-        # A pack that does not know the word "fuel" and matched nothing is not
-        # telling us anything — only a pack that answered can meaningfully
+        # A pack that does not recognize a supplied key and matched nothing is
+        # not telling us anything — only a pack that answered can meaningfully
         # report which parts of the query it could not use.
         if one.subject_ids:
             flags.extend(f"{pack_id}/{f}" for f in one.flags)
@@ -244,9 +245,11 @@ def _resolve_in_pack(conn, query, pack_id) -> Resolution:
 
     # Hard filter: intersect on the identity-bearing keys the caller supplied.
     # A term that declares a `narrow_order` is a soft hint BY DEFINITION and is
-    # excluded here — a stated power of 148 hp should pick the 150 hp variant,
-    # not demand a subject whose recorded power is literally "148". Treating
-    # hints as hard filters turns every approximate reading into no_match.
+    # excluded here — a stated value close to but not identical to the
+    # catalog's own reading should still pick the nearest candidate, not
+    # demand an exact match on a value that is meant to be approximate.
+    # Treating hints as hard filters turns every approximate reading into
+    # no_match.
     hard_keys = [k for k in given
                  if terms[k].role == "attribute"
                  and terms[k].narrow_order is None and not terms[k].is_range]
@@ -277,23 +280,24 @@ def _resolve_in_pack(conn, query, pack_id) -> Resolution:
         # Deliberately NOT skipped when only one candidate is left. Skipping
         # there looks free — there is nothing to narrow — but narrowing is also
         # how a contradiction gets *detected*, so the skip turned the most
-        # confident-looking case into the only silent one: an ad saying
-        # "Otomatik" resolving `exact` onto the sole manual variant, with no
-        # gearbox claims and no flag saying why. Confidence must not be an
-        # artefact of having stopped checking.
+        # confident-looking case into the only silent one: a listing stating
+        # one value resolving `exact` onto the sole candidate holding the
+        # opposite value, with no contradiction flagged and no way to tell
+        # why. Confidence must not be an artefact of having stopped checking.
         kept = _narrow(conn, pack_ids, candidates, term, given[term.term_id])
         if kept:
             candidates = kept
         else:
             # The listing contradicts every candidate. Keep them all and say so:
-            # dropping the car serves nobody, while the flag is a coverage
-            # signal that something in the catalog or the ad is wrong.
+            # dropping the subject entirely serves nobody, while the flag is a
+            # coverage signal that something in the catalog or the listing is
+            # wrong.
             flags.append(f"soft_narrow_fallback:{term.term_id}")
 
     # Range terms (a production window, a build year) are applied last and are
     # equally soft. Backlog B9 settled this: an out-of-window listing still
-    # matches and is logged as demand, because a year that is one off is far
-    # more often a catalog gap than a different car.
+    # matches and is logged as demand, because a value that is one off is far
+    # more often a catalog gap than a genuinely different subject.
     for key in [k for k in given if terms[k].is_range]:
         point = _number(given[key])
         if point is None or not candidates:
