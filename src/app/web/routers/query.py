@@ -3,7 +3,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.web.deps import get_store
+from app.web import state
+from app.web.deps import get_app_state, get_store
+from app.web.routers.history import label_for
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
 
@@ -21,7 +23,11 @@ class LookupRequest(BaseModel):
 
 
 @router.post("/lookup")
-def run_lookup(body: LookupRequest, store=Depends(get_store)):
+def run_lookup(
+    body: LookupRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
     result = lookup(
         store,
         Query(
@@ -32,7 +38,7 @@ def run_lookup(body: LookupRequest, store=Depends(get_store)):
             limit=body.limit,
         ),
     )
-    return {
+    payload = {
         "method": result.resolution.method,
         "coverage": result.coverage,
         "notes": result.resolution.notes,
@@ -67,6 +73,17 @@ def run_lookup(body: LookupRequest, store=Depends(get_store)):
             for c in result.claims
         ],
     }
+
+    # Recorded after the answer is assembled, so a history write cannot cost
+    # the reader their result — the same order the analysis log uses.
+    payload["lookup_id"] = state.record_lookup(
+        app_state,
+        source="ask",
+        label=label_for(body.identity),
+        request=body.model_dump(),
+        response=payload,
+    )
+    return payload
 
 
 @router.get("/kinds")

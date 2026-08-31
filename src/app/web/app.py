@@ -19,7 +19,15 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.web.routers import analyze, control, health, packs, query, subjects
+from app.web.routers import (
+    analyze,
+    control,
+    health,
+    history,
+    packs,
+    query,
+    subjects,
+)
 from app.web.settings import Settings
 
 STATIC = Path(__file__).parent / "static"
@@ -36,6 +44,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         analyze.router,
         control.router,
         health.router,
+        history.router,
     ):
         app.include_router(router)
 

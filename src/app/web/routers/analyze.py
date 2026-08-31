@@ -9,7 +9,9 @@ JSON file in a pack.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.web.deps import get_store
+from app.web import state
+from app.web.deps import get_app_state, get_store
+from app.web.routers.history import label_for  # noqa: F401
 from app.web.observability import log_analysis_jsonl
 from kriko.adapters import (
     adapt,
@@ -85,7 +87,12 @@ def _packs_behind(store, claims) -> list[dict]:
 
 
 @router.post("/analyze")
-def analyze(request: Request, body: ScrapeRequest, store=Depends(get_store)):
+def analyze(
+    request: Request,
+    body: ScrapeRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
     spec = adapter_for(store, body.url)
     if spec is None:
         raise HTTPException(404, f"no installed pack has an adapter for {body.url}")
@@ -174,5 +181,17 @@ def analyze(request: Request, body: ScrapeRequest, store=Depends(get_store)):
             "claim_titles": [c.title for c in result.claims],
         },
         path=request.app.state.settings.analysis_log_path,
+    )
+
+    # The JSONL log above and this row are different artifacts on purpose: the
+    # log is the parity corpus and the demand signal, this is the reader's
+    # history. Collapsing them would make clearing your history delete
+    # research data.
+    payload["lookup_id"] = state.record_lookup(
+        app_state,
+        source="analyze",
+        label=body.title.strip() or body.url,
+        request=body.model_dump(),
+        response=payload,
     )
     return payload
