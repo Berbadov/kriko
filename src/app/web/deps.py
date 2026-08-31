@@ -6,6 +6,7 @@ WAL mode, so concurrent readers are free and a writer does not block them.
 
 from fastapi import Request
 
+from app.web import state
 from kriko.store.db import connect
 
 
@@ -14,5 +15,18 @@ def get_store(request: Request):
     try:
         yield conn
         conn.commit()
+    finally:
+        conn.close()
+
+
+def get_app_state(request: Request):
+    """Request-scoped access to the UI's own SQLite file.
+
+    Separate from `get_store` on purpose: this connection never sees pack data
+    and pack data never sees history. See app/web/state.py.
+    """
+    conn = state.connect(request.app.state.settings.app_state_path)
+    try:
+        yield conn
     finally:
         conn.close()
