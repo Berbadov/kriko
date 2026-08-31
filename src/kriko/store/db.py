@@ -8,6 +8,7 @@ by anything that speaks it, so dialect portability is not a goal here.
 """
 
 import sqlite3
+import sys
 from pathlib import Path
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
@@ -18,7 +19,46 @@ SCHEMA_VERSION = 1
 # append-only with DELETE/UPDATE triggers, while this store must support
 # `DELETE WHERE pack_id = ?`. Those two facts cannot share a database.
 DEFAULT_HOME = Path.home() / ".kriko"
-DEFAULT_STORE = DEFAULT_HOME / "packs.cars.pipeline.sqlite"
+DEFAULT_STORE = DEFAULT_HOME / "knowledge.sqlite"
+
+# DEFAULT_STORE's filename has changed before this branch's own history: an
+# earlier default briefly shipped under a different name. Renaming a default
+# path silently starts a second store and orphans whatever the old default
+# already wrote — and there is no way for this module to know, in general,
+# what an old default used to be called. So the guard below does not name
+# one specific old filename; it looks for *any other* store-shaped file
+# sitting where the default is about to be created, and warns once rather
+# than guessing which one the owner considers current.
+_warned_other_store_present = False
+
+
+def _warn_if_other_store_present(path: Path) -> None:
+    """Warn once if another `*.sqlite` file already sits beside the default.
+
+    Only fires for the *default* location — an explicit `path=` is the
+    caller's own choice and not this module's business to second-guess.
+    Never moves, deletes, or reads the other file; naming both paths is the
+    entire job.
+    """
+    global _warned_other_store_present
+    if _warned_other_store_present or not path.parent.is_dir():
+        return
+    others = sorted(
+        p for p in path.parent.glob("*.sqlite")
+        if p != path and p.is_file()
+    )
+    if not others:
+        return
+    _warned_other_store_present = True
+    other_list = ", ".join(str(p) for p in others)
+    print(
+        f"kriko: using {path} as the default store.\n"
+        f"kriko: also found {other_list} in the same directory — it is not "
+        f"being read or written. If it holds data you expect to see, point "
+        f"KRIKO_STORE at it (or migrate it into {path} yourself); kriko "
+        f"will not move, delete, or merge it automatically.",
+        file=sys.stderr,
+    )
 
 
 def connect(path=None, *, read_only: bool = False) -> sqlite3.Connection:
@@ -29,7 +69,10 @@ def connect(path=None, *, read_only: bool = False) -> sqlite3.Connection:
     journal that is an `SQLITE_BUSY` waiting to happen; today's code only avoids
     it by using two separate database files.
     """
+    used_default = path is None
     path = Path(path) if path is not None else DEFAULT_STORE
+    if used_default:
+        _warn_if_other_store_present(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if read_only:
