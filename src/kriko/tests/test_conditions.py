@@ -25,24 +25,24 @@ def _c(key="charge_cycles", op="gte", value=None, text="", on_missing="open", we
 # ── numeric comparison ───────────────────────────────────────────────────
 
 def test_gte_holds_at_and_above_the_threshold():
-    cond = _c(op="gte", value=100_000)
-    assert evaluate(cond, {"charge_cycles": 150_000}).state == "met"
-    assert evaluate(cond, {"charge_cycles": 100_000}).state == "met"
-    assert evaluate(cond, {"charge_cycles": 80_000}).state == "unmet"
+    cond = _c(op="gte", value=800)
+    assert evaluate(cond, {"charge_cycles": 900}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 800}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 600}).state == "unmet"
 
 
 def test_lte_holds_at_and_below_the_threshold():
-    cond = _c(op="lte", value=2016)
-    assert evaluate(cond, {"charge_cycles": 2014}).state == "met"
-    assert evaluate(cond, {"charge_cycles": 2016}).state == "met"
-    assert evaluate(cond, {"charge_cycles": 2018}).state == "unmet"
+    cond = _c(op="lte", value=800)
+    assert evaluate(cond, {"charge_cycles": 700}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 800}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 900}).state == "unmet"
 
 
 def test_numeric_context_tolerates_strings_and_separators():
-    """Adapters scrape text; '150.000 km' must not silently become unknown."""
-    cond = _c(op="gte", value=100_000)
-    assert evaluate(cond, {"charge_cycles": "150,000"}).state == "met"
-    assert evaluate(cond, {"charge_cycles": " 150000 "}).state == "met"
+    """Adapters scrape text; a comma-grouped '1,200' must not silently become unknown."""
+    cond = _c(op="gte", value=1000)
+    assert evaluate(cond, {"charge_cycles": "1,200"}).state == "met"
+    assert evaluate(cond, {"charge_cycles": " 1000 "}).state == "met"
 
 
 # ── equality and membership ──────────────────────────────────────────────
@@ -87,21 +87,21 @@ def test_interval_holds_once_the_first_service_point_is_passed():
 
 def test_missing_context_defaults_to_open_and_downranks():
     """Unknown is not the same as false. Serve it, but rank it below the certain."""
-    out = evaluate(_c(op="gte", value=100_000, weight=0.7), {})
+    out = evaluate(_c(op="gte", value=800, weight=0.7), {})
     assert out.state == "unknown"
     assert out.weight == 0.7
     assert out.served is True
 
 
 def test_missing_context_with_closed_hides_the_claim():
-    out = evaluate(_c(op="gte", value=100_000, on_missing="closed"), {})
+    out = evaluate(_c(op="gte", value=800, on_missing="closed"), {})
     assert out.state == "unknown"
     assert out.served is False
 
 
 def test_missing_context_with_ignore_is_neutral():
     """For gates that only ever narrow — absence must not cost the claim rank."""
-    out = evaluate(_c(op="gte", value=100_000, on_missing="ignore"), {})
+    out = evaluate(_c(op="gte", value=800, on_missing="ignore"), {})
     assert out.state == "unknown"
     assert out.served is True
     assert out.weight == 1.0
@@ -117,7 +117,7 @@ def test_an_unmet_condition_is_not_served():
 
 def test_unparseable_context_is_unknown_not_unmet():
     """A scrape that yielded 'like new' must not read as a low cycle count."""
-    out = evaluate(_c(op="gte", value=100_000), {"charge_cycles": "like new"})
+    out = evaluate(_c(op="gte", value=800), {"charge_cycles": "like new"})
     assert out.state == "unknown"
 
 
@@ -151,7 +151,7 @@ def test_no_conditions_means_always_applies_at_full_weight():
 
 def test_outcome_is_reportable_so_why_shown_can_explain_itself():
     """Every downrank must be explainable to the reader, not a silent number."""
-    out = evaluate(_c(key="charge_cycles", op="gte", value=100_000), {})
+    out = evaluate(_c(key="charge_cycles", op="gte", value=800), {})
     assert isinstance(out, Outcome)
     assert "charge_cycles" in out.reason
 
