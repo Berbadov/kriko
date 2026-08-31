@@ -1,4 +1,5 @@
 <script lang="ts">
+    import History from "./lib/History.svelte";
     import { route, toHash } from "./lib/router";
     import Analyze from "./routes/Analyze.svelte";
     import Ask from "./routes/Ask.svelte";
@@ -7,6 +8,7 @@
     import Dashboard from "./routes/Dashboard.svelte";
     import Health from "./routes/Health.svelte";
     import Packs from "./routes/Packs.svelte";
+    import Result from "./routes/Result.svelte";
 
     const VIEWS = [
         { name: "ask", label: "Ask" },
@@ -17,6 +19,12 @@
         { name: "health", label: "Health" },
         { name: "packs", label: "Packs" },
     ];
+
+    // The sidebar belongs where a past answer is relevant: beside the forms
+    // that produce one and beside a result being read. It would be noise on
+    // Packs or Coverage.
+    const WITH_HISTORY = new Set(["ask", "analyze", "result"]);
+    const showHistory = $derived(WITH_HISTORY.has($route.name));
 </script>
 
 <header>
@@ -33,7 +41,7 @@
     </nav>
 </header>
 
-<main>
+<main class:with-history={showHistory}>
     <section class="active">
         {#if $route.name === "ask"}
             <Ask />
@@ -49,8 +57,19 @@
             <Browse />
         {:else if $route.name === "health"}
             <Health />
+        {:else if $route.name === "result"}
+            <!-- Keyed: Result fetches once on init, so moving between two
+                 stored results must remount rather than reuse. -->
+            {#key $route.params[0]}
+                <Result lookupId={$route.params[0]} />
+            {/key}
         {:else}
             <h2>{$route.name}</h2>
         {/if}
     </section>
+    {#if showHistory}
+        {#key $route.params[0] ?? $route.name}
+            <History />
+        {/key}
+    {/if}
 </main>
