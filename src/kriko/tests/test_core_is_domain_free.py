@@ -64,6 +64,37 @@ def _split_identifier(name: str) -> list[str]:
     return _WORD.findall(re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower())
 
 
+def _stem(word: str) -> str:
+    """A deliberately dumb trailing-s/-es stripper, applied only for matching.
+
+    Whole-word matching alone let plurals through: `cars`, `vehicles`,
+    `gearboxes`, `models` all pass a whole-word check against a BANNED list
+    written in the singular. This is what let `packs.cars.pipeline.sqlite`
+    (Critical, this review) go unseen — it splits to `['packs', 'cars', ...]`
+    and `car != cars`.
+
+    The length guards keep this from mangling short words into noise
+    (`"gas"` stays `"gas"`), and because `_split_identifier` already yields
+    whole words, stripping a suffix can never manufacture a false substring
+    match — the risk a plain substring search would carry.
+    """
+    if word.endswith("es") and len(word) > 4:
+        return word[:-2]
+    if word.endswith("s") and len(word) > 3:
+        return word[:-1]
+    return word
+
+
+def _banned_stems(vocabulary: set[str]) -> set[str]:
+    return {_stem(w) for w in vocabulary} | vocabulary
+
+
+def _hits(words: list[str], vocabulary: set[str]) -> list[str]:
+    """Words matching `vocabulary` exactly or once trailing-s/-es is stripped."""
+    stems = _banned_stems(vocabulary)
+    return sorted({w for w in words if w in vocabulary or _stem(w) in stems})
+
+
 def _docstring_nodes(tree: ast.AST) -> set[int]:
     """Every string node that is a docstring, by identity, so prose is exempt."""
     out = set()
@@ -100,7 +131,7 @@ def _offences(path: Path) -> list[str]:
                 continue
             words, where = _split_identifier(node.value), f"string {node.value[:40]!r}"
 
-        hits = sorted({w for w in words if w in BANNED} - ALLOWED_EXACT)
+        hits = sorted(set(_hits(words, BANNED)) - ALLOWED_EXACT)
         if hits:
             line = getattr(node, "lineno", 0)
             found.append(f"{path.name}:{line}: {where} contains {hits}")
@@ -130,6 +161,17 @@ ALLOWED_PROSE: dict[str, set[str]] = {
     # "148.000 km" case is a real hazard this module exists to handle, and it
     # is framed as one instance of the hazard rather than the definition of it.
     "adapters.py": {"mileage"},
+    # `resolve()`'s docstring explains why resolution is per-pack, not merged,
+    # by naming a real collision it prevents: two installed packs disagreeing
+    # about what to call the same attribute (cars' `make`/`brand` vs drill's
+    # opposite convention). Two categories side by side is the illustration,
+    # not a mechanism explained through one category's vocabulary — the case
+    # this gate exists to catch.
+    "match.py": {"cars"},
+    # base.py's docstring makes the same point the same way: "what makes a
+    # claim worth keeping" differs by category, shown as cars vs. a washing
+    # machine — two examples, neither treated as the definition.
+    "base.py": {"cars"},
 }
 
 
@@ -146,13 +188,13 @@ def _prose_offences(path: Path) -> list[str]:
         text = ast.get_docstring(node)
         if not text:
             continue
-        hits = sorted({w for w in _split_identifier(text) if w in PROSE_BANNED} - permitted)
+        hits = sorted(set(_hits(_split_identifier(text), PROSE_BANNED)) - permitted)
         if hits:
             line = getattr(node, "lineno", 1)
             found.append(f"{path.name}:{line}: docstring contains {hits}")
 
     for lineno, text in _comments(path):
-        hits = sorted({w for w in _split_identifier(text) if w in PROSE_BANNED} - permitted)
+        hits = sorted(set(_hits(_split_identifier(text), PROSE_BANNED)) - permitted)
         if hits:
             found.append(f"{path.name}:{lineno}: comment contains {hits}")
 

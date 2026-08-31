@@ -93,9 +93,9 @@ def value_alias_map(conn, pack_ids) -> dict[str, dict[str, str]]:
 
     The other half of the normalisation story. Key aliases let a caller say
     `make` where the pack says `brand`; value aliases let a scrape say one
-    market's term where the catalog canonicalizes to another. Both were
-    Python dicts in `normalize.py` (`_FUEL_MAP`, `_TX_MAP`) that a new market
-    would have required someone to remember to edit.
+    market's term where the catalog canonicalizes to another. Both used to be
+    hand-maintained Python dicts, one per enum attribute, that a new market's
+    spelling would have required someone to remember to edit.
 
     A canonical value is a term with `role='enum_value'` whose `parent_id` names
     the attribute it belongs to, so the same word can mean different things
@@ -325,7 +325,8 @@ def expand(conn, subject_ids, pack_ids, max_hops: int = 2) -> dict[str, str]:
 
     A subject with no relations yields nothing extra. That is the drill case, and
     it must fall out of an empty result rather than a branch — the moment the
-    engine needs `if has_components`, it has learned about cars again.
+    engine needs `if has_components`, it has learned about one product
+    category again.
     """
     if not subject_ids or not pack_ids:
         return {}
