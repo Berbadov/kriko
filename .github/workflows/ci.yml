@@ -54,6 +54,28 @@ jobs:
             - run: npm install --no-audit --no-fund
             - run: npm test
 
+    ui:
+        name: vitest + stale-bundle check
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            - run: npm --prefix ui ci --no-audit --no-fund
+            - run: npm --prefix ui test
+
+            # src/app/web/static/ is committed build output: the wheel ships it,
+            # so a stale bundle means `pip install kriko` serves a UI nobody can
+            # reproduce from source. Rebuild and require a clean diff.
+            - name: Bundle is not stale
+              run: |
+                  npm --prefix ui run build
+                  git diff --exit-code -- src/app/web/static \
+                    || { echo "::error::src/app/web/static is stale — run 'npm --prefix ui run build' and commit"; exit 1; }
+
 # No docker-build job. Actions minutes are billed, and a full image build was
 # 3-5 of the ~10 minutes per push. There is no Dockerfile or deploy/ directory
 # in the repo at all right now — this workflow does not build or ship an

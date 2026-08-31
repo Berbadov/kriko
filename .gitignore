@@ -60,3 +60,9 @@ src/*.egg-info/
 # purpose — the wheel ships it, so `pip install kriko` needs no Node.
 ui/node_modules/
 ui/.svelte-kit/
+
+# ...but ui/package-lock.json IS committed, overriding the repo-wide ignore on
+# line 32. The CI stale-bundle check rebuilds and diffs the committed output,
+# so a floating dependency version would change an asset hash and fail the
+# build for no reason. Reproducible installs are load-bearing here.
+!ui/package-lock.json

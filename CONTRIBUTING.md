@@ -43,8 +43,9 @@ not to do when it isn't obvious.
 ## Tests
 
 ```bash
-python -m pytest      # all tests — no arguments
-npm test              # extension scraper + panel
+python -m pytest        # all tests — no arguments
+npm test                # extension scraper + panel
+npm --prefix ui test    # the dashboard's Svelte components
 ```
 
 **Run `pytest` with no arguments.** `pytest.ini` pins `testpaths`; naming
@@ -65,6 +66,31 @@ python -m pytest src/app/pipeline/tests/test_repo_invariants.py
 The serving path is the local FastAPI app backed by the SQLite pack store. The
 pipeline remains separate from serving, so importing `app.web.app` must not load
 `app.pipeline` or the LLM extraction stack.
+
+## The frontend
+
+`ui/` is the Svelte + Vite source; `src/app/web/static/` is its **committed build
+output**. The wheel ships the bundle, so `pip install kriko` serves a working UI with no
+Node toolchain — which is only true if the committed output matches the source.
+
+After changing anything under `ui/src/`:
+
+```bash
+npm --prefix ui test
+npm --prefix ui run build      # rewrites src/app/web/static/
+git add ui src/app/web/static
+```
+
+CI rebuilds and fails on a dirty diff, so a forgotten rebuild is caught rather than
+shipped. `ui/package-lock.json` is committed (overriding the repo-wide ignore) because
+that check needs the same dependency versions to produce the same asset hashes.
+
+`ui/src/` must contain **no pack vocabulary** — no `make`, `model`, `fuel` and so on.
+Every form field comes from `/api/identity-keys/{pack_id}` and
+`/api/packs/{pack_id}/vocabulary` at runtime. `test_ui_contains_no_pack_vocabulary` in
+`src/app/pipeline/tests/test_repo_invariants.py` enforces it: the engine's
+domain-freedom has to survive the trip to the DOM, and TypeScript is where it is
+easiest to break unnoticed.
 
 ## Checking for dead code
 
@@ -111,6 +137,7 @@ the suite rather than waiting to be noticed in review.
 |---|---|
 | `python` | the full suite, plus the layering and testpaths invariants |
 | `extension` | scraper and hub-console tests under jsdom |
+| `ui` | Svelte component tests, and a rebuild that fails if the committed bundle is stale |
 
 There is no docker-build job — there is currently no Dockerfile or `deploy/`
 directory in the repo at all, so there is nothing for a build job to build.
@@ -120,6 +147,8 @@ the normal suite. If a Dockerfile comes back, add a real build step (or an
 equivalent static check) alongside it — don't let this paragraph go stale
 again.
 
-CI runs with no secrets. `npm install` rather than `npm ci`, because
-`package-lock.json` is gitignored — commit the lockfile if you want reproducible
-installs, and switch that one line.
+CI runs with no secrets. The `extension` job uses `npm install` rather than `npm ci`,
+because the root `package-lock.json` is gitignored. The `ui` job uses `npm ci`: its
+lockfile *is* committed, because the stale-bundle check compares a fresh build against
+the committed one and a floating dependency version would change an asset hash and fail
+the build for no reason.

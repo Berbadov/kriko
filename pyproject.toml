@@ -34,6 +34,11 @@ pipeline = [
 ]
 dev = ["pytest>=8.0.0"]
 
+# The built frontend. ui/ is the source and is not packaged; this bundle is,
+# so `pip install kriko` serves a working UI with no Node toolchain.
+[tool.setuptools.package-data]
+"app.web" = ["static/**/*"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["kriko*", "app*"]
