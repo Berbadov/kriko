@@ -12,6 +12,7 @@
         <button class="tab" data-tab="ask">Ask</button>
         <button class="tab" data-tab="analyze">Analyze</button>
         <button class="tab" data-tab="coverage">Coverage</button>
+        <button class="tab" data-tab="health">Health</button>
         <button class="tab" data-tab="packs">Packs</button>
         <button class="tab" data-tab="browse">Browse</button>
     </nav>
@@ -87,6 +88,18 @@
     <section id="coverage">
         <h2>Coverage gaps</h2>
         <div id="coverage-list"></div>
+    </section>
+
+    <section id="health">
+        <h2>Claim health</h2>
+        <p class="meta">
+            The weakest-supported claims we ship, worst first. Contradicted,
+            then fewest independent sources, then weakest best source, then
+            stalest. No combined score — each signal is its own column.
+            <em>Independence and stance are flags the pack author supplied,
+            not verified facts.</em>
+        </p>
+        <div id="health-list"></div>
     </section>
 
     <section id="packs">

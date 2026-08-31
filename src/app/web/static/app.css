@@ -322,3 +322,6 @@ h2 {
     border-bottom: 1px solid var(--line);
     font-size: 13px;
 }
+tr.concern td { border-left: 3px solid #b3261e; }
+.signal { white-space: nowrap; }
+.stale { opacity: 0.55; font-style: italic; }

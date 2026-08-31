@@ -205,6 +205,72 @@ async function renderCoverage() {
     }
 }
 
+const SIGNAL_NOTE = {
+    refuted: "a source in the pack contradicts this claim",
+    thin: "only one independent source supports this",
+    weak: "the best supporting source is a low-trust tier",
+};
+
+function healthRow(claim) {
+    const refuted = claim.refuted_by > 0;
+    const stale = claim.oldest_retrieved_at || "unknown";
+    const note = refuted
+        ? SIGNAL_NOTE.refuted
+        : claim.independent_sources <= 1
+          ? SIGNAL_NOTE.thin
+          : claim.best_trust < 0.5
+            ? SIGNAL_NOTE.weak
+            : "";
+    return `<tr class="${refuted ? "concern" : ""}">
+        <td>${esc(claim.title)}<div class="meta">${esc(claim.subject_label)} · ${esc(claim.pack_id)}</div>${note ? `<div class="meta">${esc(note)}</div>` : ""}</td>
+        <td class="num signal">${refuted ? `<span class="badge">${claim.refuted_by} refuting</span>` : "—"}</td>
+        <td class="num signal">${claim.independent_sources}</td>
+        <td class="signal">${esc(claim.best_tier)} <span class="meta">${claim.best_trust.toFixed(2)}</span></td>
+        <td class="signal ${claim.oldest_retrieved_at ? "" : "stale"}">${esc(stale)}</td>
+        <td><button data-tree="${esc(claim.subject_id)}">Evidence</button></td>
+    </tr>`;
+}
+
+async function renderHealth() {
+    const target = $("#health-list");
+    try {
+        const { claims } = await api("/api/health/weakest?limit=40");
+        if (!claims.length) {
+            target.innerHTML = `<p class="state empty">No sourced claims installed yet.</p>`;
+            return;
+        }
+        target.innerHTML = `<table><thead><tr>
+                <th>Claim</th><th>Contradicted</th><th>Independent sources</th>
+                <th>Best source</th><th>Last retrieved</th><th></th>
+            </tr></thead><tbody>${claims.map(healthRow).join("")}</tbody></table>
+            <div id="health-tree"></div>`;
+        $$("[data-tree]", target).forEach((button) =>
+            button.addEventListener("click", () =>
+                renderHealthTree(button.dataset.tree),
+            ),
+        );
+    } catch (error) {
+        showError("#health-list", error);
+    }
+}
+
+async function renderHealthTree(subjectId) {
+    const target = $("#health-tree");
+    try {
+        const tree = await api(
+            `/api/health/subject/${encodeURIComponent(subjectId)}`,
+        );
+        target.innerHTML = `<article class="card"><h3>${esc(tree.label || subjectId)} <span class="badge">${tree.claims.length} claim(s)</span></h3>${tree.claims
+            .map(
+                ({ health, evidence }) =>
+                    `<details><summary>${esc(health.title)} <span class="meta">${health.independent_sources} source(s) · ${esc(health.best_tier)}</span></summary>${evidence.length ? evidence.map((row) => `<blockquote class="${row.stance === "refutes" ? "refutes" : ""}">${esc(row.quote)}<footer class="meta">${esc(row.domain)} · ${esc(row.tier)} · ${esc(row.stance)}${row.independent ? "" : " · not independent"} · retrieved ${esc(row.retrieved_at || "unknown")}</footer></blockquote>`).join("") : `<p class="state empty">No sources — this claim rests on an interval or a rule, not a citation.</p>`}</details>`,
+            )
+            .join("")}</article>`;
+    } catch (error) {
+        showError("#health-tree", error);
+    }
+}
+
 async function renderRevisions(packId) {
     const target = $(`[data-revisions="${CSS.escape(packId)}"]`);
     try {
@@ -313,6 +379,7 @@ $$(".tab").forEach((tab) =>
         if (tab.dataset.tab === "dashboard") renderDashboard();
         if (tab.dataset.tab === "ask") prepareAsk();
         if (tab.dataset.tab === "coverage") renderCoverage();
+        if (tab.dataset.tab === "health") renderHealth();
         if (tab.dataset.tab === "packs") renderPacks();
         if (tab.dataset.tab === "browse") renderSubjects();
     }),
