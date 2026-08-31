@@ -219,3 +219,65 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
                 else " — it has no build.py, so the generic builder ran"
             )
         )
+
+
+UI_SRC = REPO / "ui" / "src"
+
+# Pack vocabulary. The engine's domain-freedom is checked by
+# src/kriko/tests/test_core_is_domain_free.py walking kriko/'s AST; the same
+# failure mode is now reachable in TypeScript, where no Python test looks. One
+# `if (key === "make")` in a form component and G6 is over at the DOM boundary.
+PACK_VOCABULARY = (
+    "make",
+    "model",
+    "engine_code",
+    "gearbox",
+    "fuel",
+    "mileage",
+    "vehicle",
+    "car",
+)
+
+
+def test_ui_contains_no_pack_vocabulary():
+    """ui/ builds its forms from pack rows, never from a hardcoded key list.
+
+    Identity keys come from /api/identity-keys/{pack_id} and context keys from
+    /api/packs/{pack_id}/vocabulary. A literal key name in the frontend is the
+    same scalability bug as a Python constant, in a language the AST test does
+    not read.
+
+    Test fixtures are excluded: they need realistic-looking values, and a
+    fixture cannot leak into what a user sees.
+    """
+    if not UI_SRC.is_dir():
+        return
+    pattern = re.compile(rf"\b(?:{'|'.join(PACK_VOCABULARY)})\b", re.IGNORECASE)
+    hits = []
+    for path in sorted(UI_SRC.rglob("*")):
+        if path.suffix not in {".ts", ".svelte"} or path.name.endswith(".test.ts"):
+            continue
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if pattern.search(line):
+                hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+    assert not hits, (
+        "pack vocabulary in ui/src — build the field from the pack's own rows "
+        "(/api/identity-keys, /api/packs/{id}/vocabulary) instead:\n" + "\n".join(hits)
+    )
+
+
+def test_no_hand_written_frontend_survives():
+    """app.js was replaced by ui/, not supplemented by it.
+
+    Two frontends in one directory is how the built bundle silently stops
+    being what the server serves.
+    """
+    stale = [
+        p.name
+        for p in (REPO / "src" / "app" / "web" / "static").glob("*")
+        if p.name in {"app.js", "app.css"}
+    ]
+    assert not stale, (
+        f"{stale} still in the served static dir — the Svelte build in ui/ "
+        f"replaces them; delete them and rebuild."
+    )
