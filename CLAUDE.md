@@ -79,7 +79,7 @@ rule is about data that grows with car *coverage*, not fixed engineering categor
 **Since the pivot there is a stronger form of this rule**, and it applies to the engine
 rather than the catalog: `kriko/` may not contain a car-shaped *anything*, derived or
 not. No `make`, no `engine_code`, no `fuel`. Identity keys, attribute names and gate
-vocabulary are pack-declared rows. `kriko/tests/test_core_is_domain_free.py` walks
+vocabulary are pack-declared rows. `src/kriko/tests/test_core_is_domain_free.py` walks
 kriko/'s AST looking for car vocabulary in executable positions.
 
 Onboarding a new car model must never require a manual Python dict/list edit in
@@ -160,13 +160,13 @@ startup-cost decision.
 The following layering checks must return nothing (tests excluded — an end-to-end test may span layers):
 
 ```bash
-grep -rnE "^[[:space:]]*(from|import) (backend|app|packs|knowledge)" --include='*.py' kriko/      | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) (backend|app|packs|knowledge)" --include='*.py' src/kriko/  | grep -v /tests/
 grep -rnE "^[[:space:]]*(from|import) (backend|app|packs)"           --include='*.py' packs/cars/pipeline/  | grep -v /tests/
 grep -rnE "^[[:space:]]*(from|import) (app|app.pipeline)"                         --include='*.py' packs/      | grep -v /tests/
-grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.py' app/       | grep -v /pipeline/ | grep -v /tests/
+grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.py' src/app/   | grep -v /pipeline/ | grep -v /tests/
 ```
 
-All four are enforced mechanically in `app/pipeline/tests/test_repo_invariants.py`, which
+All four are enforced mechanically in `src/app/pipeline/tests/test_repo_invariants.py`, which
 also ratchets the deleted `backend/` shut.
 
 If a module needs something from the layer above, it is in the wrong layer — move
