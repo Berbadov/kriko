@@ -13,10 +13,11 @@ import textwrap
 import pytest
 from fastapi.testclient import TestClient
 
+from app import mcp_server
 from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.pack import build
-from kriko.store import packstore
+from kriko.store import ids, packstore
 from kriko.store.db import connect
 
 PACK = {
@@ -133,13 +134,17 @@ def client(tmp_path):
     conn = connect(store_path)
     packstore.install(conn, build.build(root, tmp_path / "p.kpack"))
     conn.close()
-    return TestClient(
+    tc = TestClient(
         create_app(
             Settings(
                 store_path=store_path, analysis_log_path=tmp_path / "analyses.jsonl"
             )
         )
     )
+    # Exposed so tests that need to point another surface (e.g. the MCP
+    # server) at this exact store can do so without rebuilding it.
+    tc.store_path = store_path
+    return tc
 
 
 # ── the page itself ──────────────────────────────────────────────────────
@@ -531,3 +536,22 @@ def test_the_health_view_never_writes(client):
     before = client.get("/api/health/weakest").json()
     client.get("/api/health/weakest")
     assert client.get("/api/health/weakest").json() == before
+
+
+def test_the_mcp_tool_and_the_dashboard_agree_on_one_store(client, monkeypatch):
+    """The dashboard and an agent must not be able to disagree.
+
+    Both `subject_health` (mcp_server.py) and `/api/health/subject/{id}`
+    (this router) are thin callers of `kriko.lookup.tree.tree_json` — this
+    test is what makes that fact load-bearing rather than incidental: point
+    both surfaces at the exact same store and their payloads must be
+    byte-identical, not merely similar field-by-field.
+    """
+    monkeypatch.setattr(mcp_server, "STORE_PATH", client.store_path)
+    subject_id = ids.subject_id("platform", {"brand": "makita", "platform": "LXT"})
+
+    over_http = client.get(f"/api/health/subject/{subject_id}").json()
+    over_mcp = mcp_server.subject_health(subject_id=subject_id)
+
+    assert over_mcp == over_http
+    assert over_http["claims"]  # not a vacuous comparison of two empty trees
