@@ -2,6 +2,7 @@
     import ClaimCard from "../lib/ClaimCard.svelte";
     import { api } from "../lib/api";
     import { collect } from "../lib/fields";
+    import { navigate } from "../lib/router";
     import type { LookupResult, Pack, Term } from "../lib/types";
 
     let packs = $state<Pack[]>([]);
@@ -43,11 +44,16 @@
         error = "";
         result = null;
         try {
-            result = await api.lookup({
+            const data = await api.lookup({
                 kind,
                 identity: collect(identity),
                 context: collect(context),
             });
+            // A stored answer has a URL, so send the reader to it. The inline
+            // branch below stays as the fallback for a server that returned no
+            // id — degrade to the old behaviour rather than to a blank page.
+            if (data.lookup_id) navigate("result", data.lookup_id);
+            else result = data;
         } catch (e) {
             error = (e as Error).message;
         } finally {
