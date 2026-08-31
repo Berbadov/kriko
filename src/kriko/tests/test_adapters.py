@@ -86,10 +86,15 @@ def test_labels_match_regardless_of_case_colon_or_extra_words():
 
 
 def test_range_bounds_disambiguate_identical_digit_patterns():
-    """A plain reading and a comma-grouped one both parse; each field's own
-    range is what decides whether the result is believable."""
-    got = adapt(SPEC, {"Tork": "162 Nm", "Şarj": "1,200"})
-    assert got.identity["max_torque_nm"] == 162
+    """The crux. The parser strips a grouping separator the same way no
+    matter which field it landed on — it never infers what the dot means
+    from context. Fed the identical dot-grouped digits "1.200" under two
+    labels, both strip to the same integer, 1200. Only each field's own
+    declared range decides whether that is believable: 1200 Nm blows past
+    any real drill's torque ceiling and is dropped, while 1200 charge
+    cycles is a believable battery life."""
+    got = adapt(SPEC, {"Tork": "1.200 Nm", "Şarj": "1.200"})
+    assert "max_torque_nm" not in got.identity
     assert got.context["charge_cycles"] == 1200
 
 
@@ -333,11 +338,12 @@ def test_the_vocabulary_is_whatever_the_packs_declared_identity_on(tmp_path):
 # ── composite values ─────────────────────────────────────────────────────
 #
 # A page often packs several facts into one cell: "Brushless / 13mm Keyless /
-# Metal Gear" is a motor type, a chuck size and a gear housing. The old
+# Metal Gear" is a motor type, a chuck description and a component. The old
 # client cut those apart in JavaScript, with a branch per label — site
 # knowledge in the one place that cannot be updated without shipping a
 # release. `segment` is the closed replacement: pick an end of a delimited
-# value, and nothing else.
+# value, and nothing else — the middle segment goes unused on purpose, the
+# same way the original three-part Sahibinden cell dropped its gear count.
 
 SEGMENT_SPEC = {
     "id": "segments",
@@ -345,7 +351,7 @@ SEGMENT_SPEC = {
     "match": ["*x.invalid/*"],
     "identity": {
         "motor_type": {"labels": ["motor / chuck"], "segment": "first"},
-        "chuck_type": {"labels": ["motor / chuck"], "segment": "last"},
+        "component": {"labels": ["motor / chuck"], "segment": "last"},
         "voltage_v": {"labels": ["voltage"], "segment": "first"},
     },
 }
@@ -357,7 +363,7 @@ def test_a_segment_rule_takes_the_named_end_of_a_delimited_value():
         "Voltage": "18V / Li-ion",
     })
     assert got.identity["motor_type"] == "Brushless"
-    assert got.identity["chuck_type"] == "Metal Gear"
+    assert got.identity["component"] == "Metal Gear"
     assert got.identity["voltage_v"] == "18V"
 
 
@@ -369,7 +375,7 @@ def test_a_segment_rule_on_a_value_with_no_delimiter_returns_the_whole_value():
 def test_first_and_last_are_the_same_segment_when_there_is_only_one():
     got = adapt(SEGMENT_SPEC, {"Motor / Chuck": "Brushless"})
     assert got.identity["motor_type"] == "Brushless"
-    assert got.identity["chuck_type"] == "Brushless"
+    assert got.identity["component"] == "Brushless"
 
 
 # ── labels are written by people, in their own alphabet ──────────────────
