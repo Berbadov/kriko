@@ -37,15 +37,40 @@ def test_component_part_meta_exact_match():
     assert meta["display_name"] and meta["manufacturer"]
 
 
-def test_component_part_meta_power_collapsed():
-    """k9k has no exact part file (k9k_85/90/100/110 do) — the merged header
-    is derived from the power-split catalog parts, not hand-enumerated."""
+def test_component_part_meta_power_collapsed(monkeypatch):
+    """Exercises the power-collapse branch: a component id with no exact part
+    file, but catalog entries for its power-split variants (k9k_100/k9k_110).
+
+    This used to be true of the live catalog for k9k itself, but the catalog
+    is data that changes — a real part file can appear for a formerly
+    power-split-only id at any time (it did, for k9k) and silently retire
+    whichever component this test was pinned to, leaving the branch
+    unguarded with a green suite. So the catalog headers are stubbed here
+    instead of read from disk: the premise (no exact match, matching
+    power-suffixed entries) is then true by construction, not by accident of
+    what happens to be onboarded today."""
+    headers = {
+        "k9k_100": {
+            "part_type": "engine", "manufacturer": "renault", "code_family": "k9k",
+            "display_name": "Renault K9K 1.5 dCi 100hp",
+            "known_also_as": ["1.5 dCi"],
+        },
+        "k9k_110": {
+            "part_type": "engine", "manufacturer": "renault", "code_family": "k9k",
+            "display_name": "Renault K9K 1.5 dCi",
+            "code_family_extra": ["k9k_extra"], "known_also_as": ["dCi 110"],
+            "production_years": "2013-2020",
+        },
+    }
+    monkeypatch.setattr(export, "_catalog_part_headers", lambda: headers)
     meta = export.component_part_meta("k9k")
     assert meta["part_id"] == "k9k"
     assert meta["part_type"] == "engine"
     assert meta["manufacturer"] == "renault"
-    assert meta["code_family"]           # engine parts must declare one
+    assert meta["code_family"] == "k9k"
     assert "hp" not in meta["display_name"]  # tune-specific suffix stripped
+    assert meta["known_also_as"] == ["1.5 dCi", "dCi 110"]
+    assert meta["code_family_extra"] == ["k9k_extra"]
 
 
 def test_component_part_meta_unknown_is_none():
