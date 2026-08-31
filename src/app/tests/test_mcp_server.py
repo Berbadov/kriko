@@ -359,3 +359,38 @@ def test_no_tool_reaches_into_a_pack_for_python():
     text = open(source, encoding="utf-8").read()
     assert "import packs" not in text
     assert "from packs" not in text
+
+
+def test_a_submitted_finding_records_when_it_was_retrieved(store):
+    """An agent submitting a quote now *is* the retrieval.
+
+    Nothing else can supply this date: the agent read the page during the call.
+    Left empty — as it was until 2026-08-31 — the staleness signal in
+    kriko.lookup.tree is permanently blank and the health view ships a dead
+    column.
+    """
+    from kriko.store.db import connect
+
+    mcp_server.submit_findings(
+        subject_id=_subject(),
+        pack_id="tools",
+        findings=[{
+            "title": "Chuck jaws slip under load",
+            "rationale": "Reported repeatedly on the 18V platform above 400 hours"
+            " of use, per multiple owners in the same forum thread.",
+            "domain": "mech",
+            "component": "chuck",
+            "severity": "high",
+            "quote": "The chuck lost grip on a 10mm bit within a year.",
+            "document_text": "The chuck lost grip on a 10mm bit within a year.",
+            "source_url": "https://forum.example.org/thread/1",
+        }],
+    )
+    conn = connect(store)
+    retrieved = conn.execute(
+        "SELECT retrieved_at FROM sources WHERE url = ?",
+        ("https://forum.example.org/thread/1",),
+    ).fetchone()[0]
+    conn.close()
+    assert retrieved, "submit_findings must stamp retrieved_at"
+    assert retrieved.startswith("20")

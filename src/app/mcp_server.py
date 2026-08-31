@@ -24,6 +24,7 @@ of the evidence chain is that this cannot pass quietly.
 """
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 from mcp.server.fastmcp import FastMCP
 
@@ -362,7 +363,7 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
                     "",
                     item.get("source_type", "page"),
                     "",
-                    "",
+                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 ),
             )
             conn.execute(

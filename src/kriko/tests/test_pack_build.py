@@ -203,6 +203,20 @@ def test_claim_text_conditions_and_evidence_land(tmp_path):
     conn.close()
 
 
+def test_a_sources_retrieval_date_survives_the_build(tmp_path):
+    """`retrieved_at` in the YAML must reach sources.retrieved_at."""
+    claims = CLAIMS.replace(
+        "quote: After about two years of daily use the chuck would not hold a bit.",
+        "quote: After about two years of daily use the chuck would not hold a bit.\n"
+        "      retrieved_at: \"2026-08-01\"",
+    )
+    out = build.build(_write(tmp_path, claims=claims), tmp_path / "drill.kpack")
+    conn = connect(out)
+    (retrieved_at,) = conn.execute("SELECT retrieved_at FROM sources")
+    assert retrieved_at["retrieved_at"] == "2026-08-01"
+    conn.close()
+
+
 def test_build_rejects_a_claim_pointing_at_an_unknown_subject(tmp_path):
     """A dangling reference must fail the build, not ship a claim nobody sees."""
     root = _write(tmp_path, claims=CLAIMS.replace("DHP484", "GHOST999"))
