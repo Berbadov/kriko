@@ -1,5 +1,6 @@
 <script lang="ts">
     import { route, toHash } from "./lib/router";
+    import Dashboard from "./routes/Dashboard.svelte";
 
     const VIEWS = [
         { name: "ask", label: "Ask" },
@@ -27,5 +28,11 @@
 </header>
 
 <main>
-    <section class="active"><h2>{$route.name}</h2></section>
+    <section class="active">
+        {#if $route.name === "dashboard"}
+            <Dashboard />
+        {:else}
+            <h2>{$route.name}</h2>
+        {/if}
+    </section>
 </main>
