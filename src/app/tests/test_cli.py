@@ -263,3 +263,96 @@ def test_an_unstated_context_value_is_reported_as_the_reason(both, capsys):
 def test_a_bad_argument_is_rejected_clearly(store_path):
     with pytest.raises(SystemExit, match="key=value"):
         main(["--store", store_path, "lookup", "brandmakita"])
+
+
+def test_build_prefers_a_packs_own_builder(tmp_path, capsys):
+    """cars ships build.py because its data needs generating, not transcribing.
+
+    Pointing the generic builder at it "succeeds" and produces a pack with
+    vocabulary and nothing else — 46 terms, 0 claims. This is the bug: `kriko
+    build packs/cars` must run cars' own build.py, not the generic one.
+    """
+    out = tmp_path / "cars.kpack"
+    code, output = _run(
+        capsys, "--store", str(tmp_path / "store.sqlite"), "build", "packs/cars", "--out", str(out)
+    )
+    assert code == 0
+    assert out.exists()
+
+    from kriko.store.db import connect
+
+    conn = connect(out)
+    try:
+        claims = conn.execute("SELECT COUNT(*) FROM claims").fetchone()[0]
+        subjects = conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0]
+    finally:
+        conn.close()
+
+    assert claims > 100, f"expected cars' own builder to run, got {claims} claims"
+    assert subjects > 0
+    assert f"{claims} claims" in output
+
+
+def test_build_still_works_for_a_pack_with_no_builder_of_its_own(tmp_path, capsys):
+    """packs/drill has no build.py — the generic path must still work for it."""
+    out = tmp_path / "drill.kpack"
+    code, output = _run(
+        capsys, "--store", str(tmp_path / "store.sqlite"), "build", "packs/drill", "--out", str(out)
+    )
+    assert code == 0
+    assert out.exists()
+    assert "claims" in output
+
+
+def test_build_refuses_an_empty_pack_without_force(tmp_path, capsys):
+    """A pack with vocabulary and no knowledge cannot answer anything.
+
+    `install` accepts it cheerfully, so `build` is where the emptiness has to
+    be caught — refuse to write it, unless the author passes --force because
+    an empty pack is a legitimate intermediate state while authoring one.
+    """
+    root = tmp_path / "empty"
+    (root / "vocabulary").mkdir(parents=True)
+    (root / "data").mkdir(parents=True)
+    (root / "pack.toml").write_text(
+        textwrap.dedent(
+            """
+            [pack]
+            id = "empty"
+            name = "Empty"
+            version = "0.1.0"
+            [identity]
+            product = ["brand", "model"]
+            """
+        ),
+        encoding="utf-8",
+    )
+    (root / "vocabulary" / "terms.yaml").write_text(
+        textwrap.dedent(
+            """
+            - {term_id: product, role: subject_kind}
+            - {term_id: brand, role: attribute, datatype: text, match: {required: true}}
+            - {term_id: model, role: attribute, datatype: text, match: {required: true}}
+            """
+        ),
+        encoding="utf-8",
+    )
+    (root / "data" / "subjects.yaml").write_text("", encoding="utf-8")
+    (root / "data" / "claims.yaml").write_text("", encoding="utf-8")
+
+    out = tmp_path / "empty.kpack"
+
+    code, _ = _run(
+        capsys, "--store", str(tmp_path / "store.sqlite"), "build", str(root), "--out", str(out)
+    )
+    assert code == 1
+    assert not out.exists()
+
+    code, output = _run(
+        capsys,
+        "--store", str(tmp_path / "store.sqlite"),
+        "build", str(root), "--out", str(out), "--force",
+    )
+    assert code == 0
+    assert out.exists()
+    assert "0 subjects" in output
