@@ -52,6 +52,9 @@ PACK = {
         - kind: product
           label: Orphan Tool
           identity: {brand: acme, model: orphan}
+        - kind: product
+          label: Widget Bit
+          identity: {brand: acme, model: widget}
     """,
     "claims": """
         - subject: {kind: platform, identity: {brand: makita, platform: LXT}}
@@ -64,6 +67,13 @@ PACK = {
           evidence:
             - {url: "https://e.invalid/x", quote: Packs past 400 hours drift.}
             - {url: "https://f.invalid/y", quote: Mine is fine at 900., stance: refutes}
+        - subject: {kind: product, identity: {brand: acme, model: widget}}
+          kind: known_issue
+          domain: mech
+          severity: low
+          text: {en: {title: Bit shank corrodes in storage, body: b, advice: a}}
+          evidence:
+            - {url: "https://g.invalid/z", quote: Rust after a damp winter.}
     """,
 }
 
@@ -164,8 +174,8 @@ def test_status_and_activity_are_control_plane_snapshots(client):
 def test_packs_lists_what_is_installed_with_its_contents(client):
     (pack,) = client.get("/api/packs").json()
     assert pack["pack_id"] == "tools"
-    assert pack["subjects"] == 3
-    assert pack["claims"] == 1
+    assert pack["subjects"] == 4
+    assert pack["claims"] == 2
     assert pack["license"] == "CC0-1.0"
     assert pack["enabled"] is True
 
@@ -174,7 +184,7 @@ def test_disabling_a_pack_hides_it_from_reads_without_deleting_it(client):
     client.post("/api/packs/tools/enabled?enabled=false")
     assert client.get("/api/subjects").json() == []
     # ...but the rows are still there, so re-enabling is free.
-    assert client.get("/api/packs").json()[0]["subjects"] == 3
+    assert client.get("/api/packs").json()[0]["subjects"] == 4
     client.post("/api/packs/tools/enabled?enabled=true")
     assert client.get("/api/subjects").json()
 
@@ -459,3 +469,65 @@ def test_context_values_come_back_with_the_units_the_pack_declared(client):
         },
     )
     assert r.json()["context_units"] == {"usage_hours": "hours"}
+
+
+# ── claim health ─────────────────────────────────────────────────────────
+#
+# PACK now ships two sourced claims: "Cell imbalance trips protection" carries
+# a refutation, "Bit shank corrodes in storage" carries only a supporting
+# source. The refuted claim must rank first for that reason, not by accident
+# of list order.
+
+
+def test_the_liveness_probe_still_answers_after_the_health_router(client):
+    """`/api/health` is the probe; `/api/health/weakest` is the new view."""
+    assert client.get("/api/health").json()["ok"] is True
+
+
+def test_the_weakest_endpoint_lists_claims_worst_first(client):
+    body = client.get("/api/health/weakest").json()
+    titles = [c["title"] for c in body["claims"]]
+    assert titles == [
+        "Cell imbalance trips protection",
+        "Bit shank corrodes in storage",
+    ]
+    concerns = [tuple(c["concern"]) for c in body["claims"]]
+    assert concerns == sorted(concerns)
+
+
+def test_the_weakest_endpoint_reports_each_signal_separately(client):
+    claim = client.get("/api/health/weakest").json()["claims"][0]
+    for field in ("refuted_by", "independent_sources", "best_tier",
+                  "best_trust", "oldest_retrieved_at", "newest_published_at"):
+        assert field in claim
+
+
+def test_the_weakest_endpoint_honours_the_limit(client):
+    body = client.get("/api/health/weakest?limit=1").json()
+    assert len(body["claims"]) <= 1
+
+
+def test_the_weakest_endpoint_can_be_scoped_to_one_pack(client):
+    body = client.get("/api/health/weakest?pack_id=tools").json()
+    assert {c["pack_id"] for c in body["claims"]} <= {"tools"}
+
+
+def test_the_subject_endpoint_returns_the_tree_with_its_evidence(client):
+    subject = client.get("/api/subjects").json()[0]["subject_id"]
+    body = client.get(f"/api/health/subject/{subject}").json()
+    assert body["subject_id"] == subject
+    assert body["claims"]
+    assert "evidence" in body["claims"][0]
+    assert "health" in body["claims"][0]
+
+
+def test_an_unknown_subject_is_an_empty_tree_not_a_500(client):
+    body = client.get("/api/health/subject/nope").json()
+    assert body["claims"] == []
+
+
+def test_the_health_view_never_writes(client):
+    """Read-only by contract. If this view can mutate, it is not observability."""
+    before = client.get("/api/health/weakest").json()
+    client.get("/api/health/weakest")
+    assert client.get("/api/health/weakest").json() == before
