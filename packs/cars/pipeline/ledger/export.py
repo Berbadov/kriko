@@ -174,7 +174,7 @@ def component_part_meta(component_id: str) -> dict | None:
     part_types = {m.get("part_type") for m in matches}
     if len(part_types) != 1 or not next(iter(part_types)):
         return None  # ambiguous identity — never guess
-        meta: dict = {"part_id": component_id, "part_type": next(iter(part_types))}
+    meta: dict = {"part_id": component_id, "part_type": next(iter(part_types))}
     names = [m["display_name"] for m in matches if m.get("display_name")]
     if names:
         # "Renault H5F (1.2 TCe) 130hp" reads wrong on a tune-merged file.
