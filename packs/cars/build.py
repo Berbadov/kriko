@@ -623,8 +623,8 @@ def _emit_claim_evidence(
                 source.get("title") or "",
                 "",
                 "page",
-                "",
-                "",
+                source.get("published_at", ""),
+                source.get("retrieved_at", ""),
             ),
         )
         row_ids.append(source_id)
