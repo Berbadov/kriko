@@ -7,10 +7,10 @@ from kriko.store import packstore
 from kriko.store.db import connect
 
 VOCAB = [
-    ("covered", "brake pad", ""),
+    ("covered", "battery contact", ""),
     ("generic", "wear and tear is normal", ""),
-    ("ambiguous", "oil consumption", ""),
-    ("noise", r"\bwarning\s+light\b", ""),
+    ("ambiguous", "chuck runout", ""),
+    ("noise", r"\bindicator\s+light\b", ""),
     ("specificity", r"\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b", ""),
     ("exempt", "recall", ""),
 ]
@@ -31,20 +31,20 @@ def store(tmp_path):
 
 def test_literal_and_regex_rules_reject(store):
     vocab = load_gates(store, "p")
-    assert gate_reason("Brake pad wear", vocab) == "covered"
+    assert gate_reason("Battery contact wear", vocab) == "covered"
     assert gate_reason("Wear and tear is normal", vocab) == "generic"
-    assert gate_reason("ESP warning light", vocab) == "noise"
+    assert gate_reason("Battery indicator light", vocab) == "noise"
 
 
 def test_ambiguous_term_survives_with_specificity(store):
     vocab = load_gates(store, "p")
-    assert gate_reason("Oil consumption in EA211 engines", vocab) is None
-    assert gate_reason("Oil consumption is worth watching", vocab) == "ambiguous"
+    assert gate_reason("Chuck runout in DHP484 drills", vocab) is None
+    assert gate_reason("Chuck runout is worth watching", vocab) == "ambiguous"
 
 
 def test_unmatched_text_is_kept(store):
     assert (
-        gate_reason("Mechatronic unit fails above 120,000 km", load_gates(store, "p"))
+        gate_reason("Motor unit fails above 1,200 charge cycles", load_gates(store, "p"))
         is None
     )
 
@@ -52,7 +52,7 @@ def test_unmatched_text_is_kept(store):
 def test_exempt_waives_the_covered_rejection(store):
     """An official recall is authoritative even when it names a covered part."""
     vocab = load_gates(store, "p")
-    assert gate_reason("Recall: front brake pad replacement", vocab) is None
+    assert gate_reason("Recall: battery contact replacement", vocab) is None
 
 
 def test_exempt_does_not_waive_a_noise_rejection(store):
@@ -65,7 +65,7 @@ def test_exempt_does_not_waive_a_noise_rejection(store):
     """
     vocab = load_gates(store, "p")
     assert (
-        gate_reason("ABS warning light illuminates (recall)", vocab) == "noise"
+        gate_reason("Battery indicator light illuminates (recall)", vocab) == "noise"
     )
 
 
@@ -73,41 +73,40 @@ def test_subject_lets_a_rationale_only_covered_term_survive(store):
     """`covered` judges what the claim is about, not everything it mentions.
 
     A rationale explaining a chronic's mechanism may use covered vocabulary
-    ("brake pad") without the claim itself being a routine pad-wear item —
-    passing `subject` scopes the covered check to the title; omitting it
-    scans the whole blob and still rejects.
+    ("battery contact") without the claim itself being a routine
+    contact-wear item — passing `subject` scopes the covered check to the
+    title; omitting it scans the whole blob and still rejects.
     """
     vocab = load_gates(store, "p")
     # No specificity anchor in either the title or the rationale here — the
     # point under test is subject-scoping, not the anchor escape, so neither
     # must accidentally trip it.
-    title = "Mechatronics unit failure"
-    rationale = "Debris from worn brake pad material can contaminate the unit."
+    title = "Motor housing crack"
+    rationale = "Debris from worn battery contact material can contaminate the unit."
     text = f"{title} {rationale}"
     assert gate_reason(text, vocab, subject=title) is None
     assert gate_reason(text, vocab) == "covered"
 
 
 def test_noise_is_scoped_to_subject_and_waived_by_specificity(store):
-    """A rationale mentioning a warning light must not sink a specific chronic.
+    """A rationale mentioning an indicator light must not sink a specific chronic.
 
     The bug: `noise` used to match `title + rationale` with no escape at
-    all, so a claim like "DQ200 hydraulic pressure tube failure" got refused
-    because its rationale happened to explain the failure's dashboard
+    all, so a claim like "DHP484 motor housing crack" got refused
+    because its rationale happened to explain the failure's indicator-light
     symptom. `noise` now reads `subject` only, and — like `covered` — keeps
     the specificity escape.
     """
     vocab = load_gates(store, "p")
-    title = "DQ200 mechatronics failure"
-    rationale = "This causes the ESP warning light to illuminate under load."
+    title = "DHP484 motor housing crack"
+    rationale = "This causes the battery indicator light to illuminate under load."
     text = f"{title} {rationale}"
     assert gate_reason(text, vocab, subject=title) is None
-    # A title that itself names the warning-light shape, with no anchor, is
-    # still refused — the escape is for the rationale riding along, not a
+    # A title that itself names the indicator-light shape, with no anchor,
+    # is still refused — the escape is for the rationale riding along, not a
     # blanket waiver of the rule.
-    assert gate_reason("ESP warning light", vocab, subject="ESP warning light") == (
-        "noise"
-    )
+    assert gate_reason("Battery indicator light", vocab,
+                        subject="Battery indicator light") == "noise"
 
 
 def test_anchor_waives_generic_and_ambiguous_like_an_in_text_signal(store):
@@ -122,7 +121,7 @@ def test_anchor_waives_generic_and_ambiguous_like_an_in_text_signal(store):
     assert gate_reason(text, vocab) == "generic"
     assert gate_reason(text, vocab, has_anchor=True) is None
 
-    ambiguous_text = "Oil consumption is worth watching"
+    ambiguous_text = "Chuck runout is worth watching"
     assert gate_reason(ambiguous_text, vocab) == "ambiguous"
     assert gate_reason(ambiguous_text, vocab, has_anchor=True) is None
 
