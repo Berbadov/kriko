@@ -6,6 +6,81 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-31 — Decontamination and packaging: seven tasks, then a review pass fixed what it found
+
+Seven tasks, `ac685a1`..`122b54e`, plus a follow-up review round
+(`9832643`..`7c3a687`) and this pass's own fix wave (see below). Kriko becomes
+`pip install`-able and the engine's own prose and tests stop leaking cars.
+
+- **Task 1 — `src/` layout and `pyproject.toml`** (`ac685a1`): `kriko/` and
+  `app/` moved under `src/`; `packs/` and `extension/` did not move.
+  `pyproject.toml` makes an editable install (`pip install -e ".[dev,pipeline]"`)
+  the supported way to set up the repo. `cadd33b` made the layering-guard scan
+  roots self-checking (they no longer silently pass if a path stops existing).
+- **Task 2 — the docs map** (`641b4b2`): pre-pivot planning documents moved to
+  `docs/historical/`; `CLAUDE.md`'s documentation map states current vs.
+  historical for every doc.
+- **Task 3 — README rewritten** (`11cb189`): for someone who has never seen
+  the project; every command in it verified to run.
+- **Task 4 — the domain-free gate learns to read prose** (`09fddfa`,
+  `844f670`): `test_core_is_domain_free.py` gained `_prose_offences`, scanning
+  docstrings and comments (not just executable positions) against a narrower
+  `PROSE_BANNED` list, with an `ALLOWED_PROSE` allowlist for deliberate
+  category examples. It failed immediately, as designed — see Task 5.
+- **Task 5 — the engine's prose decontaminated** (`343a591`): the offences
+  Task 4 found, fixed — generic mechanisms restated without pointing at
+  `packs.cars.pipeline.*` by module path.
+- **Task 6 — the archaeology removed, repo-wide** (`122b54e`): ~66 "the old
+  pipeline"/pre-pivot narrative references deleted from active documentation.
+- **Task 7 — the engine's own tests stop proving generality with cars**
+  (`91c82c8`, `ac4f98a`, `11c8b6f`): `src/kriko/tests/` fixtures moved from
+  car vocabulary to `packs/drill/`'s (brand, model line, battery platform,
+  charge cycles) — the deliberate car-shape falsifier, no engine/fuel/
+  displacement. Two review rounds followed: round 1 fixed a fixture swap that
+  had silently stayed within the cars category (Toyota/Corolla, same keys,
+  same site) and rescaled car-magnitude numbers that had only been relabelled
+  (a torque field carrying Mégane's displacement_cc, a "charge_cycles" field
+  carrying model years); round 2 fixed an invented pack term
+  (`chuck_type` — the pack declares `chuck_size_mm`) and reconstructed
+  `test_range_bounds_disambiguate_identical_digit_patterns`, whose fixture no
+  longer demonstrated its own name after the rescale.
+  **Known coverage loss, accepted, not fixed:** the original test disambiguated
+  two *different*, independently-plausible readings sharing one digit-grouped
+  format (`"1.461 Nm"` a plausible torque, `"148.000"` a plausible mileage,
+  same dot-grouping, decided only by which field the label put it in). Drill's
+  magnitude profile (torque ~1–200, charge cycles ~0–2000) has no such pair —
+  any dot-grouped integer plausible for one field is implausible for the
+  other — so round 2's replacement demonstrates accept/reject on one shared
+  value instead: `"1.200"` fed to both fields, believed as `charge_cycles`
+  and correctly absent from `max_torque_nm`. That is a real demonstration of
+  "range bounds decide," but the "two mutually plausible values, identical
+  format" case is no longer covered by any test. Filed as **B41** (below).
+- **Review-round fix (this pass) — the Critical and four Important findings**
+  from the branch review: `DEFAULT_STORE` renamed from
+  `packs.cars.pipeline.sqlite` (a leftover of a mangled rename) back to
+  `knowledge.sqlite`, with a non-destructive one-time stderr warning when
+  another `*.sqlite` file sits at the default location — never auto-selects
+  or migrates either file; the gate gained plural stemming (`cars`,
+  `vehicles`, `gearboxes`, `models` now match their singular BANNED entries)
+  and the 7 offences that found were fixed or allowlisted; every doc except
+  the README was swept for pre-`src/` paths, with every `docs/ARCHITECTURE.md`
+  anchor re-verified against the actual function (three had drifted
+  independently of the move); CI and CONTRIBUTING.md's claim of a
+  Dockerfile-invariant test that does not exist was corrected; this `done.md`
+  entry and backlog items B40–B44 (below) were added.
+- Along the way: `2f0d061` fixed a real pre-existing bug Task 7's rewritten
+  test found by actually exercising its branch —
+  `component_part_meta`'s power-collapse `meta = {...}` sat one indent level
+  too deep, inside the ambiguous-identity branch after its `return None`, so
+  every reference to `meta` in the reachable power-collapse path raised
+  `UnboundLocalError`. The old test's premise (`k9k` has no exact part file)
+  had gone stale once a real `k9k.yaml` was added, so it always took the
+  earlier exact-match return and never reached the buggy code — green suite,
+  unguarded branch, for however long that had been true. Fixed and reapplied
+  to confirm: broken code reds the rewritten test, the fix greens it. A
+  sibling of the same bug shape is filed as **B40** rather than
+  guessed-and-fixed (below).
+
 ## 2026-08-30 — Simplification and readability pass: 14 tasks, gates.py rewired then deleted
 
 Fourteen tasks, `aa61266`..`63d2466` (docs) plus this entry. The plan's own
