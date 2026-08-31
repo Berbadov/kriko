@@ -30,8 +30,8 @@ jobs:
 
             # No arguments: pytest.ini pins testpaths. Naming directories by hand is
             # how the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
-            # app/pipeline/tests/test_repo_invariants.py enforces the layering rules and the
-            # testpaths coverage, so the architecture is checked here too.
+            # src/app/pipeline/tests/test_repo_invariants.py enforces the layering rules and
+            # the testpaths coverage, so the architecture is checked here too.
             #
             # Deliberately no secrets: the suite must pass with no API keys. If a new
             # test needs one, it is reaching the network and belongs behind a marker.
@@ -54,10 +54,10 @@ jobs:
             - run: npm install --no-audit --no-fund
             - run: npm test
 
-# No docker-build job on purpose. This repo is private, so Actions minutes are
-# billed, and a full image build was 3-5 of the ~10 minutes per push. The
-# breakage it guarded — deploy/Dockerfile not copying a knowledge/ module the
-# serving path imports — is covered statically instead, in milliseconds, by
-# app/pipeline/tests/test_repo_invariants.py::test_dockerfile_copies_every_knowledge_module_the_serving_path_imports
-# which the python job already runs. Build the image locally when you touch
-# the Dockerfile; CONTRIBUTING.md has the command.
+# No docker-build job. Actions minutes are billed, and a full image build was
+# 3-5 of the ~10 minutes per push. There is no Dockerfile or deploy/ directory
+# in the repo at all right now — this workflow does not build or ship an
+# image — so there is nothing here to guard statically either. If a
+# Dockerfile comes back, add both a build step here (or an equivalent static
+# check in src/app/pipeline/tests/test_repo_invariants.py) and a note here of
+# which one you chose.
