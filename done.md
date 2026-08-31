@@ -6,6 +6,42 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-08-31 — Knowledge-tree observability: reading the evidence back out
+
+Six tasks, `9903083`..`bd72788`. Spec: `.superpowers/sdd/2026-08-31-knowledge-tree-observability/`.
+Kriko can now answer "how well supported is this claim" as well as "what is
+missing" — `weakest_claims()`/`subject_tree()` in `src/kriko/lookup/tree.py`
+report four signals (contradiction, corroboration, best-source trust,
+staleness) separately, ordered lexicographically, never collapsed into a
+score.
+
+- **Task 1 — `kriko/lookup/tree.py`** (`11b21c7`, `e2544fe`): `weakest_claims()`
+  and `subject_tree()`, `ClaimHealth.concern` as the public sort key, reusing
+  `rank.py`'s `tier_lookup`/`trust_lookup`/`tier_of` rather than re-resolving
+  trust. Claims with no evidence are excluded from `weakest_claims()` (that's
+  the coverage report's question) but stay visible in `subject_tree()`. An
+  absent `retrieved_at` sorts last, not first.
+- **Task 2 — producers write `retrieved_at`** (`d1935bf`, `2fce7bf`): the
+  ledger exporter from `documents.fetched_at`, `packs/cars/build.py` from the
+  source dict, `src/app/mcp_server.py` from the submission time. Nothing was
+  backfilled — the 193 legacy sources stay blank and render as "unknown".
+- **Task 3 — `GET /api/health/weakest` and `GET /api/health/subject/{id}`**
+  (`39dded3`): `src/app/web/routers/health.py`, read-only, serialising through
+  `tree.py`'s `health_json`/`tree_json`. Renamed the web app's inline
+  liveness closure `health()` → `liveness()` so it stops shadowing the
+  imported router module.
+- **Task 4 — MCP tools** (`ecfa9ea`): `subject_health(subject_id, pack_id="")`
+  and `weakest_claims(pack_id="", limit=20)` in `src/app/mcp_server.py`, after
+  `coverage_gaps`.
+- **Task 5 — dashboard Health tab** (`bd72788`): `src/app/web/static/`.
+- **Task 6 — this doc/backlog pass**: `docs/ARCHITECTURE.md`,
+  `docs/INTERNALS.md`, `README.md` updated; backlog items **B45**–**B49**
+  filed (published_at never written, independent always 1, no producer emits
+  refutes, health signal not yet fed into ranking, and `rank.py`/`tree.py`
+  disagreeing on what "independent" means). 650 tests passing.
+
+---
+
 ## 2026-08-31 — Decontamination and packaging: seven tasks, then a review pass fixed what it found
 
 Seven tasks, `ac685a1`..`122b54e`, plus a follow-up review round

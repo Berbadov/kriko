@@ -69,6 +69,12 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
   mileage/year/config conditions match this subject.
 - `src/kriko/gates.py:91` (`structural_reasons()`) and `:137` (`is_specific()`) —
   whether the claim clears the product-principle bar at all.
+- `lookup/tree.py` — the same rows `rank.py` scores, read the other way: how
+  well supported is each claim? Four separate signals, lexicographic
+  ordering, no score.
+
+**Why is this claim ranked so low / who says so?** → `src/kriko/lookup/tree.py`,
+then `src/app/web/routers/health.py`.
 
 **What a pack contains:**
 - `docs/PACK_CONTRACT.md` — the contract, in prose.
