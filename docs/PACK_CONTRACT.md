@@ -1,12 +1,12 @@
 # The pack contract
 
 A pack is a directory under `packs/`. This is the whole contract: what
-`kriko/pack/manifest.py` enforces when it loads one, plus the parts a pack
+`src/kriko/pack/manifest.py` enforces when it loads one, plus the parts a pack
 grows into once it needs more than the minimum. It is written for someone who
 has never seen this repo and wants to ship a pack for a product category
 nobody has thought about yet.
 
-Enforcement lives in one place: `kriko/tests/test_pack_contract.py`. It loads
+Enforcement lives in one place: `src/kriko/tests/test_pack_contract.py`. It loads
 every pack under `packs/` and checks each against the rules below, plus a
 guard that the repo ships more than one pack — a contract validated against a
 single example proves nothing. If your pack fails that test, fix your pack,
@@ -46,7 +46,7 @@ identity. Get the attribute set wrong (too narrow, and unrelated products
 collide into one subject; too specific, and the same real-world product ends
 up split across several subjects that never see each other's claims) and the
 result is silent — not a crash, just claims that never combine, or claims
-that combine when they shouldn't. As `kriko/pack/manifest.py` puts it in the
+that combine when they shouldn't. As `src/kriko/pack/manifest.py` puts it in the
 error it raises when `[identity]` is empty: without declared identity keys,
 "every subject of a kind would hash to the same id."
 
@@ -59,7 +59,7 @@ hashes its `product` kind on two keys (`brand`, `model`) and gives a
 schema could not express at all. A different author modelling the same
 category with a different identity table is not wrong; their rows simply
 won't collapse with yours. They'll still union at lookup by attribute
-overlap (see `kriko/tests/test_lookup.py`'s cross-pack union tests) — which
+overlap (see `src/kriko/tests/test_lookup.py`'s cross-pack union tests) — which
 is the intended failure mode, not a bug to fix.
 
 ## The optional parts
@@ -100,7 +100,7 @@ four items in "The required minimum" are.
 
 ## Enforcement
 
-`kriko/tests/test_pack_contract.py` is the authority. It is parametrized over
+`src/kriko/tests/test_pack_contract.py` is the authority. It is parametrized over
 every pack the repo ships and checks each against the required minimum above,
 plus a guard that the repo ships more than one pack. If this document and
 that test ever disagree, the test is right and this document needs fixing.

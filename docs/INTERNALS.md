@@ -24,7 +24,7 @@ extension/       Chrome client for the cars pack adapter
 `kriko/` imports none of the other packages. `packs/` does not import `app/` or
 `app/pipeline/`; only pipeline drivers coordinate the evidence pipeline and pack
 data. The structural rules are enforced by
-`app/pipeline/tests/test_repo_invariants.py`. The serving database is the local
+`src/app/pipeline/tests/test_repo_invariants.py`. The serving database is the local
 SQLite pack store; the evidence ledger is a separate SQLite build database.
 
 The cars source of truth is under `packs/cars/data/`. There is no `backend/`,
@@ -33,7 +33,7 @@ Postgres sync, or Docker-only serving layer in the current architecture.
 The pack files are built into the serving SQLite store; the evidence ledger remains
 separate from that read path. `app/pipeline/` is where operations that span packs
 and their pipelines live; the generic ledger mechanics (chunking, ingest, cost
-budgeting) live in `kriko/ledger/`, with each pack injecting its own policy.
+budgeting) live in `src/kriko/ledger/`, with each pack injecting its own policy.
 
 ---
 
@@ -65,7 +65,7 @@ two fallback URLs (`8000`, `8765`). Results are cached in `chrome.storage.sessio
 6 hours by URL+metadata signature hash.
 
 ### 3. FastAPI /analyze endpoint
-**`app/web/app.py`** — `create_app()` and the `/api/analyze` route
+**`src/app/web/app.py`** — `create_app()` and the `/api/analyze` route
 
 Always returns HTTP 200. Exceptions are caught and wrapped as `coverage_state: unavailable`.
 
@@ -76,7 +76,7 @@ claims = resolve_claims(match, db)     # → list[Claim]
 ```
 
 ### 4. Variant matcher
-**`kriko/lookup/match.py`** — generic identity and attribute matching
+**`src/kriko/lookup/match.py`** — generic identity and attribute matching
 
 Normalizes raw metadata → canonical values:
 - `normalize_fuel("Benzinli")` → "petrol" (pack-declared vocabulary and adapter normalization)
@@ -101,7 +101,7 @@ if not make or not model or not fuel or not year:
 ```
 
 ### 5. Claim resolver
-**`kriko/lookup/__init__.py`** — `lookup(query, conn)`
+**`src/kriko/lookup/__init__.py`** — `lookup(query, conn)`
 
 Queries `claim_variants` join table for all matched variant IDs, returns only
 `status='verified'` and `is_current=True` claims.
@@ -114,7 +114,7 @@ never dropped (fail-open); the API layer multiplies the factor into
 `relevance_score`.
 
 ### 5b. Ranking & payload v2
-**`app/web/routers/analyze.py`** — the `/api/analyze` route
+**`src/app/web/routers/analyze.py`** — the `/api/analyze` route
 
 `relevance_score = severity weight (low 0.3 / medium 0.6 / high 1.0)
 × mileage-gate match (satisfied 1.0 / unknown 0.7, fail-open)
@@ -146,7 +146,7 @@ small muted chips under each card title.
 
 The pipeline is a ledger, not a curated-YAML approval queue: `app.pipeline.ledger_run`
 drives discovery through export with no human sign-off step (automation principle,
-CLAUDE.md). Each stage splits into a generic half in `kriko/ledger/` (orchestration —
+CLAUDE.md). Each stage splits into a generic half in `src/kriko/ledger/` (orchestration —
 chunking loop, ingest, cost budgeting) and a cars-specific half in
 `packs/cars/pipeline/` (policy — what counts as signal, which sources are
 untrustworthy, which component an evidence chunk describes). A handful of legacy
@@ -160,7 +160,7 @@ part, no LLM involved. Results are ranked by part-code specificity before fetchi
 (backlog B8), rather than taking the first N results in discovery order.
 
 ### Chunking and extraction
-**`kriko/ledger/chunking.py`** / **`kriko/ledger/extraction.py`** — generic chunk loop,
+**`src/kriko/ledger/chunking.py`** / **`src/kriko/ledger/extraction.py`** — generic chunk loop,
 cache, and budget charge. **`packs/cars/pipeline/ledger/chunking.py`** supplies the cars
 chunk gate (the failure lexicon plus catalog-derived engine/gearbox code tokens — a
 chunk is worth extracting if it names a failure word or a code, so a new part is
@@ -200,7 +200,7 @@ ledger export; matching is by stable identity, not title text, because the verdi
 stage rewrites titles (backlog B1 blocker 2).
 
 ### DB sync
-**`kriko/pack/build.py`** — build the pack into SQLite
+**`src/kriko/pack/build.py`** — build the pack into SQLite
 
 Builds the pack YAML into the local SQLite serving store. Rebuild explicitly with
 `python -m app.cli build packs/cars`.
