@@ -113,7 +113,7 @@ trim-shaped VW Golf 8 lineup got written and reported as a success:
   waives only the ekspertiz-routine check, not warning lights. Generic
   maintenance advice with no config anchor, and a title/rationale that is
   empty, too long, too short, or ties to nothing specific, are also refused
-  with the reason (`kriko/gates.py` + `structural_reasons`, reading the cars
+  with the reason (`src/kriko/gates.py` + `structural_reasons`, reading the cars
   pack's own `packs/cars/vocabulary/gates.yaml` rows) — the CLAUDE.md product
   principle, enforced rather than requested.
 - **Removed, not currently enforced.** The orphaned write-path gate this
@@ -482,7 +482,7 @@ docker compose -f deploy/docker-compose.yml restart api
 ### What buyers see (serving model)
 
 The pipeline writes claims to the YAML with a `status` field. The extension shows **two
-strengths**, never blurring them (`kriko/lookup`, `lookup`):
+strengths**, never blurring them (`src/kriko/lookup`, `lookup`):
 
 | Status | Shown as | Meaning |
 |--------|----------|---------|
