@@ -79,12 +79,61 @@ def cmd_enable(args, store) -> int:
 def cmd_build(args, store) -> int:
     # Imported here: the builder pulls in yaml and tomllib, which a reader who
     # only ever installs packs should not pay for on every command.
-    from kriko.pack.build import build, digest_of
+    import importlib
+
+    from kriko.pack.build import build as generic_build, digest_of
+    from kriko.store.db import connect as connect_store
 
     root = Path(args.root)
     out = Path(args.out) if args.out else Path("dist") / f"{root.name}.kpack"
-    build(root, out)
+
+    # A pack may ship its own builder (packs/<name>/build.py) for data that
+    # needs generating rather than transcribing — see docs/PACK_CONTRACT.md.
+    # Pointing the generic builder at such a pack "succeeds" and produces a
+    # pack with nothing in it, so the pack's own builder takes precedence
+    # when present. Same convention as
+    # test_every_pack_in_the_repo_builds_and_is_not_empty.
+    own_builder = (root / "build.py").exists()
+    stats = None
+    if own_builder:
+        module = importlib.import_module(f"packs.{root.name}.build")
+        result = module.build(out)
+        if isinstance(result, tuple):
+            out, report = result
+            if isinstance(report, dict):
+                stats = report.get("stats", report)
+        else:
+            out = result
+    else:
+        generic_build(root, out)
+
+    conn = connect_store(out)
+    try:
+        counts = {
+            table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in ("subjects", "claims", "evidence")
+        }
+    finally:
+        conn.close()
+
     print(f"built {out}  digest {digest_of(out)[:16]}")
+    print("  " + ", ".join(f"{v} {k}" for k, v in counts.items()))
+    if stats:
+        for key, value in sorted(stats.items()):
+            print(f"  {key:34} {value}")
+
+    if not counts["subjects"] and not counts["claims"]:
+        print(
+            f"kriko: {out} has no subjects and no claims — it cannot answer "
+            "anything and will not be written.\n"
+            "  If this is a legitimate intermediate state (a pack under "
+            "authoring), pass --force to write it anyway.",
+            file=sys.stderr,
+        )
+        if not args.force:
+            out.unlink(missing_ok=True)
+            return 1
+
     return 0
 
 
@@ -151,6 +200,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("build", help="build a pack directory into a .kpack")
     p.add_argument("root")
     p.add_argument("--out")
+    p.add_argument("--force", action="store_true",
+                   help="write the pack even if it has no subjects and no claims")
     p.set_defaults(fn=cmd_build)
 
     p = sub.add_parser("lookup", help="ask the installed packs about a product")
