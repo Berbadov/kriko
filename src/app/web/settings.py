@@ -22,6 +22,9 @@ class Settings:
     packs_dir: Path = Path("packs")
     title: str = "Kriko"
     analysis_log_path: Path = Path("logs/analyses.jsonl")
+    #: UI state — history and interface settings. Beside the engine's store in
+    #: ~/.kriko, never inside it: see app/web/state.py for why.
+    app_state_path: Path = DEFAULT_STORE.parent / "app.sqlite"
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":
@@ -32,6 +35,9 @@ class Settings:
             "packs_dir": Path(os.environ.get("KRIKO_PACKS", "packs")),
             "analysis_log_path": Path(
                 os.environ.get("KRIKO_ANALYSES_LOG", "logs/analyses.jsonl")
+            ),
+            "app_state_path": Path(
+                os.environ.get("KRIKO_APP_STATE", DEFAULT_STORE.parent / "app.sqlite")
             ),
         }
         base.update(overrides)
