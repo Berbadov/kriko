@@ -148,7 +148,20 @@ weight nobody can justify. Two deliberate asymmetries:
 - **An absent `retrieved_at` sorts LAST, not first.** No timestamp is not
   evidence of staleness. Before 2026-08-31 all three producers wrote `''`
   here; they now derive it (`documents.fetched_at` in the ledger, the
-  submission time over MCP), and legacy rows stay honestly blank.
+  submission time over MCP), and legacy rows stay honestly blank. One
+  consequence follows from that choice: a claim with a known, fresh date
+  ranks *worse* on this element than a claim with no date at all, because
+  blank is deliberately treated as carrying no information rather than as
+  maximally stale. Until B45–B47 land and the other three signals stop
+  being near-universally inert, that makes the better-documented half of the
+  catalog look worse than the undocumented half on this one column.
+- **The three producers agree on the column, not on the semantic.** The
+  ledger exporter writes `MAX(d.fetched_at)` — "the last time we saw the
+  page." `mcp_server.py` and `packs/cars/build.py` both write it with
+  `INSERT OR IGNORE`, so a URL that is resubmitted, or shared by two claims,
+  keeps whatever stamp it was *first* given. `EvidenceRow.retrieved_at`'s
+  comment ("when WE last saw the page") is exactly true for the ledger path
+  and only approximately true for the other two.
 
 Served read-only via `GET /api/health/weakest` and `GET /api/health/subject/{id}`
 (`src/app/web/routers/health.py`) and the `subject_health`/`weakest_claims` MCP
