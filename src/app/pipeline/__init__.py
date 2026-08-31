@@ -1,4 +1,4 @@
-"""Operator layer — the pipeline drivers that fill a pack with packs.cars.pipeline.
+"""Operator layer — the pipeline drivers that fill a pack with data via packs/cars/pipeline/.
 
 After the knowledge-engine pivot (goal G6) Kriko is four packages, and the
 dependency arrows no longer form one column:
