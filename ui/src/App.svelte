@@ -2,8 +2,10 @@
     import { route, toHash } from "./lib/router";
     import Analyze from "./routes/Analyze.svelte";
     import Ask from "./routes/Ask.svelte";
+    import Browse from "./routes/Browse.svelte";
     import Coverage from "./routes/Coverage.svelte";
     import Dashboard from "./routes/Dashboard.svelte";
+    import Health from "./routes/Health.svelte";
     import Packs from "./routes/Packs.svelte";
 
     const VIEWS = [
@@ -43,6 +45,10 @@
             <Coverage />
         {:else if $route.name === "packs"}
             <Packs />
+        {:else if $route.name === "browse"}
+            <Browse />
+        {:else if $route.name === "health"}
+            <Health />
         {:else}
             <h2>{$route.name}</h2>
         {/if}
