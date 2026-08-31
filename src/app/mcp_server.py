@@ -30,6 +30,9 @@ from mcp.server.fastmcp import FastMCP
 
 from kriko.extract.grounding import is_grounded
 from kriko.gates import gate_reason, load_gates, structural_reasons
+from kriko.lookup.tree import health_json, tree_json
+from kriko.lookup.tree import subject_tree as _subject_tree
+from kriko.lookup.tree import weakest_claims as _weakest_claims
 from kriko.research import get_researcher, plan_task
 from kriko.store import ids, packstore
 from kriko.store.db import connect
@@ -254,6 +257,37 @@ def coverage_gaps(pack_id: str = "", limit: int = 50) -> list[dict]:
                 (*args, limit),
             )
         ]
+
+
+@mcp.tool()
+def subject_health(subject_id: str, pack_id: str = "") -> dict:
+    """How well supported is everything we know about this subject?
+
+    The read-back that lets an agent catch its own mistake. Each claim comes
+    with four separate signals — how many sources refute it, how many
+    independent sources support it, the best source's trust tier, and when we
+    last saw the page — plus the evidence itself. No score: an agent that gets
+    one number cannot tell a weak claim from an old one.
+
+    `independent` and `stance` are flags whoever wrote the evidence supplied.
+    They are assertions about the sources, not verified facts.
+    """
+    packs = [pack_id] if pack_id else None
+    with _store() as conn:
+        return tree_json(_subject_tree(conn, subject_id, packs))
+
+
+@mcp.tool()
+def weakest_claims(pack_id: str = "", limit: int = 20) -> list[dict]:
+    """The shipped claims that are least well supported, worst first.
+
+    `coverage_gaps` answers what is missing; this answers what is thin. A
+    claim with no sources at all appears in neither — it is not weak evidence,
+    it is no evidence, and it belongs to the coverage report.
+    """
+    packs = [pack_id] if pack_id else None
+    with _store() as conn:
+        return [health_json(h) for h in _weakest_claims(conn, packs, limit=limit)]
 
 
 # ── writes: all $0, all deterministic ────────────────────────────────────
