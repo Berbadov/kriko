@@ -241,9 +241,9 @@ def weakest_claims(conn, pack_ids=None, limit: int = 20) -> list[ClaimHealth]:
     """
     ranked = sorted(
         (node.health for node in _nodes(conn, pack_ids) if node.evidence),
-        key=lambda health: (health.concern, health.claim_id),
+        key=lambda health: (health.concern, health.claim_id, health.pack_id),
     )
-    return ranked[:limit]
+    return ranked[:max(0, limit)]
 
 
 def subject_tree(conn, subject_id: str, pack_ids=None) -> SubjectTree:
@@ -258,7 +258,7 @@ def subject_tree(conn, subject_id: str, pack_ids=None) -> SubjectTree:
     """
     nodes = sorted(
         _nodes(conn, pack_ids, subject_id=subject_id),
-        key=lambda node: (node.health.concern, node.health.claim_id),
+        key=lambda node: (node.health.concern, node.health.claim_id, node.health.pack_id),
     )
     return SubjectTree(
         subject_id=subject_id,

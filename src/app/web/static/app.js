@@ -227,14 +227,26 @@ function healthRow(claim) {
         <td class="num signal">${claim.independent_sources}</td>
         <td class="signal">${esc(claim.best_tier)} <span class="meta">${claim.best_trust.toFixed(2)}</span></td>
         <td class="signal ${claim.oldest_retrieved_at ? "" : "stale"}">${esc(stale)}</td>
-        <td><button data-tree="${esc(claim.subject_id)}">Evidence</button></td>
+        <td><button data-tree="${esc(claim.subject_id)}" data-claim="${esc(claim.claim_id)}">Evidence</button></td>
     </tr>`;
+}
+
+function tieNote(claims) {
+    if (!claims.length) return "";
+    const top = JSON.stringify(claims[0].concern);
+    const tied = claims.filter((c) => JSON.stringify(c.concern) === top).length;
+    if (tied < 2) return "";
+    return `${tied} of the claims shown tie on every signal but best-source
+        trust — today only that one column differentiates the top of this
+        list. This list is not the whole ranking, just the worst ${claims.length}.`;
 }
 
 async function renderHealth() {
     const target = $("#health-list");
+    const note = $("#health-tie-note");
     try {
         const { claims } = await api("/api/health/weakest?limit=40");
+        if (note) note.textContent = tieNote(claims);
         if (!claims.length) {
             target.innerHTML = `<p class="state empty">No sourced claims installed yet.</p>`;
             return;
@@ -246,7 +258,7 @@ async function renderHealth() {
             <div id="health-tree"></div>`;
         $$("[data-tree]", target).forEach((button) =>
             button.addEventListener("click", () =>
-                renderHealthTree(button.dataset.tree),
+                renderHealthTree(button.dataset.tree, button.dataset.claim),
             ),
         );
     } catch (error) {
@@ -254,18 +266,39 @@ async function renderHealth() {
     }
 }
 
-async function renderHealthTree(subjectId) {
+function evidenceHtml(evidence) {
+    return evidence.length
+        ? evidence
+              .map(
+                  (row) =>
+                      `<blockquote class="${row.stance === "refutes" ? "refutes" : ""}">${esc(row.quote)}<footer class="meta">${esc(row.domain)} · ${esc(row.tier)} · ${esc(row.stance)}${row.independent ? "" : " · not independent"} · retrieved ${esc(row.retrieved_at || "unknown")}</footer></blockquote>`,
+              )
+              .join("")
+        : `<p class="state empty">No sources — this claim rests on an interval or a rule, not a citation.</p>`;
+}
+
+function claimDetails({ health, evidence }, { open = false, asked = false } = {}) {
+    return `<details${open ? " open" : ""} class="${asked ? "asked" : ""}"><summary>${esc(health.title)} <span class="meta">${health.independent_sources} source(s) · ${esc(health.best_tier)}</span></summary>${evidenceHtml(evidence)}</details>`;
+}
+
+async function renderHealthTree(subjectId, claimId) {
     const target = $("#health-tree");
     try {
         const tree = await api(
             `/api/health/subject/${encodeURIComponent(subjectId)}`,
         );
-        target.innerHTML = `<article class="card"><h3>${esc(tree.label || subjectId)} <span class="badge">${tree.claims.length} claim(s)</span></h3>${tree.claims
-            .map(
-                ({ health, evidence }) =>
-                    `<details><summary>${esc(health.title)} <span class="meta">${health.independent_sources} source(s) · ${esc(health.best_tier)}</span></summary>${evidence.length ? evidence.map((row) => `<blockquote class="${row.stance === "refutes" ? "refutes" : ""}">${esc(row.quote)}<footer class="meta">${esc(row.domain)} · ${esc(row.tier)} · ${esc(row.stance)}${row.independent ? "" : " · not independent"} · retrieved ${esc(row.retrieved_at || "unknown")}</footer></blockquote>`).join("") : `<p class="state empty">No sources — this claim rests on an interval or a rule, not a citation.</p>`}</details>`,
-            )
-            .join("")}</article>`;
+        const asked = claimId
+            ? tree.claims.find((node) => node.health.claim_id === claimId)
+            : undefined;
+        const rest = tree.claims.filter((node) => node !== asked);
+        const askedHtml = asked
+            ? `<p class="meta"><span class="badge">Asked about</span> ${esc(asked.health.title)}</p>${claimDetails(asked, { open: true, asked: true })}`
+            : "";
+        const restHtml = rest.length
+            ? `<p class="meta">Rest of ${esc(tree.label || subjectId)} <span class="badge">${rest.length} more claim(s)</span></p>${rest.map((node) => claimDetails(node)).join("")}`
+            : "";
+        target.innerHTML = `<article class="card"><h3>${esc(tree.label || subjectId)} <span class="badge">${tree.claims.length} claim(s)</span></h3>${askedHtml}${restHtml}</article>`;
+        if (asked) $(".asked", target)?.scrollIntoView({ block: "nearest" });
     } catch (error) {
         showError("#health-tree", error);
     }

@@ -190,6 +190,10 @@ select:focus {
 details {
     margin-top: 8px;
 }
+details.asked {
+    border-left: 2px solid var(--accent);
+    padding-left: 8px;
+}
 summary {
     cursor: pointer;
     color: var(--dim);

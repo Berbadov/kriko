@@ -116,6 +116,16 @@ BETA_CLAIMS = """
 """
 
 
+GAMMA_TOML = """
+[pack]
+id = "gamma"
+name = "Gamma"
+version = "0.1.0"
+[identity]
+product = ["brand", "model_name"]
+"""
+
+
 def _pack(tmp_path, name, *, toml, subjects, claims):
     root = tmp_path / name
     (root / "vocabulary").mkdir(parents=True)
@@ -148,6 +158,37 @@ def two_packs(tmp_path):
                                   subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
     packstore.install(conn, _pack(tmp_path, "beta", toml=BETA_TOML,
                                   subjects=ALPHA_SUBJECTS, claims=BETA_CLAIMS))
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+def tied_packs_alpha_first(tmp_path):
+    """Alpha and gamma assert byte-identical claims, so every signal ties:
+    same claim_id (it hashes subject/kind/domain/title/lang, never pack_id —
+    see `store/ids.py`), same evidence, same concern tuple. Only `pack_id`
+    differs. Installed alpha-then-gamma."""
+    root = tmp_path / "fwd"
+    conn = connect(root / "store.sqlite")
+    packstore.install(conn, _pack(root, "alpha", toml=ALPHA_TOML,
+                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
+    packstore.install(conn, _pack(root, "gamma", toml=GAMMA_TOML,
+                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+def tied_packs_gamma_first(tmp_path):
+    """Same tie as `tied_packs_alpha_first`, but installed gamma-then-alpha —
+    the reversed insertion order that SQLite row order would otherwise leak
+    into the result if `pack_id` were not part of the sort key."""
+    root = tmp_path / "rev"
+    conn = connect(root / "store.sqlite")
+    packstore.install(conn, _pack(root, "gamma", toml=GAMMA_TOML,
+                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
+    packstore.install(conn, _pack(root, "alpha", toml=ALPHA_TOML,
+                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
     yield conn
     conn.close()
 
@@ -257,6 +298,33 @@ def test_staleness_breaks_a_tie_when_everything_else_matches(store):
     assert older[3] < newer[3]
 
 
+# ── the tied-concern case: two packs, same claim, deterministic order ──────
+
+def test_a_full_tie_between_two_packs_breaks_on_pack_id(tied_packs_alpha_first):
+    """`claim_id` carries no `pack_id` (store/ids.py), so a claim asserted
+    identically by two packs is a genuine tie on `concern` *and* `claim_id`.
+    The only remaining element that can produce a deterministic order is
+    `pack_id` itself."""
+    rows = weakest_claims(tied_packs_alpha_first)
+    tied = [r for r in rows if r.title == "Refuted item"]
+    assert [r.pack_id for r in tied] == ["alpha", "gamma"]
+
+
+def test_the_tie_order_does_not_depend_on_insertion_order(
+    tied_packs_alpha_first, tied_packs_gamma_first,
+):
+    """The two fixtures hold the same rows, installed in opposite order. If
+    the sort key ever drops `pack_id`, ties fall back to SQLite row order —
+    which insertion order controls — and this assertion catches it: without
+    `pack_id` in the key, `tied_packs_gamma_first` would list gamma before
+    alpha, disagreeing with `tied_packs_alpha_first`."""
+    forward = [r.pack_id for r in weakest_claims(tied_packs_alpha_first)
+               if r.title == "Refuted item"]
+    reversed_install = [r.pack_id for r in weakest_claims(tied_packs_gamma_first)
+                         if r.title == "Refuted item"]
+    assert forward == reversed_install == ["alpha", "gamma"]
+
+
 # ── two packs ────────────────────────────────────────────────────────────
 
 def test_the_list_unions_across_enabled_packs(two_packs):
@@ -297,6 +365,14 @@ def test_an_unknown_subject_returns_an_empty_tree_not_an_error(store):
 
 def test_the_limit_is_honoured(store):
     assert len(weakest_claims(store, limit=2)) == 2
+
+
+def test_a_negative_limit_returns_an_empty_list_not_the_whole_catalog(store):
+    """A Python slice with a negative stop counts from the end, so
+    `limit=-1` used to return every row but the last. Negative is clamped to
+    zero rather than treated as an error — the read-only, fail-open surface
+    the rest of the module already keeps."""
+    assert weakest_claims(store, limit=-1) == []
 
 
 # ── one tier-resolution path, not two ────────────────────────────────────

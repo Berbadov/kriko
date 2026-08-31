@@ -765,6 +765,29 @@ does dedupe (`len({e.url for e in supporting if e.url and e.independent})`), so 
 health view and the ranking now disagree on the same claim. Fix `rank.py` to
 dedupe by URL, and add a test asserting the two agree.
 
+### B50 — URL-less sources count as zero sources in the health view
+`tree.py`'s `supporting_sources`/`independent_sources` dedupe on `e.url` and
+filter `if e.url`, so a source with no URL contributes to neither count. The
+schema does not require one: `source_type` includes `manual|structured|dataset`,
+`ids.source_id` falls back to hashing the quote text when there is no URL, and
+`packs/cars/build.py` happily accepts a quote-only source. Three scanned
+service bulletins with no URLs would report `independent_sources=0` and rank
+as maximally uncorroborated even though three genuinely independent sources
+back the claim. Nothing has caught this yet because nothing has to: 0 of the
+193 live sources have an empty `url`. Fix by deduping on a source identity
+that falls back to the quote hash (`ids.source_id`'s own logic) instead of
+`url` directly.
+
+### B51 — `lang` is hardcoded `"en"` in `tree.py`, unlike `/api/query`
+`_nodes()` takes a `lang` parameter but neither `GET /api/health/weakest` /
+`GET /api/health/subject/{id}` nor the `subject_health`/`weakest_claims` MCP
+tools expose it — every caller gets `lang="en"`. The store holds 699 `en` and
+699 `tr` `claim_text` rows, so a pack shipping only `tr` claims yields
+`title=''` on every health row: blank table cells, and an evidence `<details>`
+with an empty, unclickable summary. Add a `lang` parameter to both surfaces,
+matching `/api/query`'s existing precedent, with a fallback to any available
+language rather than an empty title when the requested one is missing.
+
 ---
 
 ## Human decisions — status under G5

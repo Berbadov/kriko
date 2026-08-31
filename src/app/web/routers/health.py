@@ -23,6 +23,13 @@ router = APIRouter(prefix="/api/health", tags=["health"])
 
 @router.get("/weakest")
 def weakest(limit: int = 20, pack_id: str = "", store=Depends(get_store)):
+    """The shipped claims that are least well supported, worst first.
+
+    Claims with **no** evidence at all are excluded, not ranked last: absence
+    is a coverage question (see `/api/packs/{id}/gaps`), not a weakness one.
+    A negative `limit` is clamped to zero rather than erroring or inverting
+    the slice.
+    """
     packs = [pack_id] if pack_id else None
     return {"claims": [health_json(h)
                        for h in weakest_claims(store, packs, limit=limit)]}
