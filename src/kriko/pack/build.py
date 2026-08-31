@@ -2,9 +2,9 @@
 
 Authoring is YAML; the artifact is SQLite. One generic builder serves every
 pack, so onboarding a product category never requires a line of Python — see
-CLAUDE.md's scalability principle. A pack that needs bespoke import logic (the
-cars migration, which reads a decade of legacy YAML shapes) ships its own script
-that emits this same standard layout.
+CLAUDE.md's scalability principle. A pack that needs bespoke import logic
+(migrating years of legacy data recorded in inconsistent shapes, say) ships
+its own script that emits this same standard layout.
 
 Expected layout:
 

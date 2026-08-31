@@ -139,8 +139,8 @@ def backfill_claims_dir(conn, claims_dir: Path) -> tuple[int, int]:
 
 def flag_blocked_sources(conn, is_blocked_source_domain=lambda _url: False) -> int:
     """Flag (exclude from clustering) every un-flagged evidence row whose source
-    document is a blocked domain — forums and unreliable-content sites
-    (packs.cars.pipeline.stoplists). A re-runnable derivation, not a one-off: backfilled
+    document is a blocked domain — forums and unreliable-content sites, as a
+    pack's own stoplist defines them. A re-runnable derivation, not a one-off: backfilled
     evidence never passed through extraction's deterministic gate, so this is
     where blocked sources get marked for it. Idempotent — already-flagged rows
     are skipped, so re-running after adding a domain only marks the new hits."""
@@ -160,8 +160,8 @@ def flag_blocked_sources(conn, is_blocked_source_domain=lambda _url: False) -> i
 def flag_foreign_language(conn, is_foreign_language=lambda _text: False) -> int:
     """Flag un-flagged evidence whose English-intended title/rationale is
     actually German — leaked untranslated from a German-language source. The
-    live fetch path drops German pages (packs.cars.pipeline.sources.curated), but
-    backfilled evidence predates that gate. Cross-language text also silently
+    live fetch path drops German pages, per a pack's own curated-sources
+    list, but backfilled evidence predates that gate. Cross-language text also silently
     breaks lexical clustering (a German claim and its English twin score ~0
     Jaccard and never merge), so excluding it fixes dedup as well as quality.
     Re-runnable / idempotent."""
