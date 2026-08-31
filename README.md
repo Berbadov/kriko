@@ -44,7 +44,8 @@ it's shown anyway but ranked lower.
 ## Install and run
 
 Requires Python 3.14+. No Docker, no Postgres — the store is a single SQLite file at
-`~/.kriko/knowledge.sqlite`.
+`~/.kriko/knowledge.sqlite`. The dashboard keeps its own history and settings
+beside it in `~/.kriko/app.sqlite`, so clearing one never touches the other.
 
 ```bash
 pip install -e ".[dev,pipeline]"            # editable install; pipeline extra is

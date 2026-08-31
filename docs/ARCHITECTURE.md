@@ -17,6 +17,11 @@ Dependencies point down and in, never up or sideways (copied from
 is the source of truth):
 
 ```
+ui/        the frontend — Svelte + Vite source, built into src/app/web/static/.
+           Talks to app/ over HTTP; imports no Python. Holds no pack
+           vocabulary (enforced by test_repo_invariants.py).
+   |
+   v
 app/       interfaces — cli, web dashboard, mcp server.
    |
    v
@@ -38,6 +43,7 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
 
 | Package | Owns | File to read first |
 |---|---|---|
+| `ui/` | The dashboard's Svelte source; `npm --prefix ui run build` writes the committed bundle in `src/app/web/static/` | `ui/src/App.svelte` |
 | `src/app/` | Interfaces: CLI, FastAPI web dashboard, MCP server for research agents | `src/app/cli.py` |
 | `src/app/pipeline/` | Pipeline drivers that orchestrate the ledger and packs/cars pipeline | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `src/kriko/store/packstore.py` |

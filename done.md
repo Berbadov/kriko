@@ -6,6 +6,37 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-09-01 — The standalone app, phases 0–1: a Svelte frontend that remembers
+
+Thirteen tasks, `c4b3b8b`..`1170e13`. Spec:
+`docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md`; plan:
+`docs/superpowers/plans/2026-09-01-standalone-app-ui-phase-0-1.md`.
+The 443-line `app.js` control plane is gone. `ui/` is a Svelte 5 + Vite +
+TypeScript app built into the committed bundle at `src/app/web/static/`, and a
+lookup now has a URL that survives a reload.
+
+- **Phase 0 — parity** (`c4b3b8b`..`05c5ba3`): all seven views ported behind a
+  hash router, so the back button and a linkable view work for the first time.
+  A typed client (`ui/src/lib/api.ts`) replaces fifteen `innerHTML` string
+  builders; loading, error and empty are three visible states rather than a
+  blank div. Ask still builds its form from `/api/identity-keys` and the pack
+  vocabulary — asserted by a test now, not just by convention.
+- **The invariants are mechanisms, not rules** (`f563edc`): a grep fails when
+  pack vocabulary appears in `ui/src/`, and a CI job rebuilds and diffs the
+  committed bundle so a stale one cannot ship. Both were verified by injecting
+  the violation they exist to catch. `ui/package-lock.json` is committed so the
+  diff is reproducible.
+- **Phase 1 — persistence**: `src/app/web/state.py` over `~/.kriko/app.sqlite`,
+  deliberately *not* the engine's `knowledge.sqlite` — uninstalling a pack must
+  not drop your history, and a history row must not affect a `content_digest`.
+  `/api/lookup` and `/api/analyze` return a `lookup_id`; `/api/lookup/{id}`
+  reopens it; `/api/history` lists and `DELETE /api/history/{id}` forgets. The
+  JSONL analysis log is untouched — it is the parity corpus, not the UI's
+  memory.
+- **Counts**: 668 pytest (up from 655), 32 vitest, 36 node.
+
+---
+
 ## 2026-08-31 — Knowledge-tree observability: reading the evidence back out
 
 Six tasks, `9903083`..`bd72788`. Spec: `.superpowers/sdd/2026-08-31-knowledge-tree-observability/`.
