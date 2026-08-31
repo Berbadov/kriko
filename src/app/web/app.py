@@ -47,6 +47,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "ok": True,
             "store": str(app.state.settings.store_path),
             "analysis_log": str(app.state.settings.analysis_log_path),
+            # Two SQLite files is a thing an operator has to know about, so
+            # the endpoint that names one names both.
+            "app_state": str(app.state.settings.app_state_path),
         }
 
     @app.get("/")
