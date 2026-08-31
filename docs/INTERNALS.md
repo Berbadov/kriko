@@ -130,6 +130,31 @@ response also carries `subsystems: [{name, display_tr, risks}]` — the same
 risks grouped by registry subsystem (`claims.subsystem`) for the v2 UI; the
 flat `risks` array stays for the current extension.
 
+### Claim health — reading the evidence back out
+
+`kriko/lookup/tree.py` answers the question the serving path cannot: *how well
+supported is what we ship?* Four signals, never combined into a score —
+contradiction (`evidence.stance = 'refutes'`), corroboration (distinct
+independent supporting sources), the best source's trust tier, and staleness
+(`sources.retrieved_at`).
+
+Ordering is lexicographic and ascending on every element, exposed as
+`ClaimHealth.concern`, so the order is inspectable rather than implied by a
+weight nobody can justify. Two deliberate asymmetries:
+
+- **A claim with no evidence is not weak, it is uncovered.** It is excluded
+  from `weakest_claims()` and reported by the coverage report instead, matching
+  `rank.py`'s treatment of source-free interval claims as trust-neutral.
+- **An absent `retrieved_at` sorts LAST, not first.** No timestamp is not
+  evidence of staleness. Before 2026-08-31 all three producers wrote `''`
+  here; they now derive it (`documents.fetched_at` in the ledger, the
+  submission time over MCP), and legacy rows stay honestly blank.
+
+Served read-only via `GET /api/health/weakest` and `GET /api/health/subject/{id}`
+(`src/app/web/routers/health.py`) and the `subject_health`/`weakest_claims` MCP
+tools (`src/app/mcp_server.py`); the dashboard's Health tab
+(`src/app/web/static/`) renders the same JSON.
+
 ### 6. Response rendering
 **`extension/hover_lite/hover_lite.js`**
 
