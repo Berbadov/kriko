@@ -1,5 +1,6 @@
 <script lang="ts">
     import { route, toHash } from "./lib/router";
+    import Ask from "./routes/Ask.svelte";
     import Dashboard from "./routes/Dashboard.svelte";
 
     const VIEWS = [
@@ -29,7 +30,9 @@
 
 <main>
     <section class="active">
-        {#if $route.name === "dashboard"}
+        {#if $route.name === "ask"}
+            <Ask />
+        {:else if $route.name === "dashboard"}
             <Dashboard />
         {:else}
             <h2>{$route.name}</h2>
