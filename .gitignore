@@ -55,3 +55,8 @@ src/*.egg-info/
 
 # Subagent-driven-development scratch (ledger, briefs, review packages)
 .superpowers/
+
+# UI build inputs. The build *output* (src/app/web/static/) is committed on
+# purpose — the wheel ships it, so `pip install kriko` needs no Node.
+ui/node_modules/
+ui/.svelte-kit/

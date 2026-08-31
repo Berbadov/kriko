@@ -19,8 +19,8 @@ talks to the existing FastAPI routers over `/api`. Phase 1 adds `src/app/web/sta
 
 ## Global Constraints
 
-- **Python ≥ 3.14**; the interpreter on this machine is `python3` (bare `python` is not on
-  PATH). Run tests as `python3 -m pytest`.
+- **Python ≥ 3.14.** Use the project venv: `.venv/bin/python -m pytest`. Bare `python3` is system 3.13 and lacks the deps.
+
 - **Node 24 / npm 11.** CI's node job uses `node-version: "24"`.
 - **`kriko/` must not be modified by this plan.** A diff under `src/kriko/` means something
   went wrong. Layering: `ui/` and `tauri/` reach `app/` over HTTP only.
@@ -91,7 +91,7 @@ def test_built_assets_are_committed():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python3 -m pytest src/app/tests/test_web_bundle.py -v`
+Run: `.venv/bin/python -m pytest src/app/tests/test_web_bundle.py -v`
 Expected: FAIL — `index.html is not the Svelte mount point`.
 
 - [ ] **Step 3: Create the scaffold**
@@ -260,12 +260,12 @@ intended; they are replaced, and Task 10 confirms nothing still references them.
 
 - [ ] **Step 7: Run test to verify it passes**
 
-Run: `python3 -m pytest src/app/tests/test_web_bundle.py -v`
+Run: `.venv/bin/python -m pytest src/app/tests/test_web_bundle.py -v`
 Expected: PASS (2 passed).
 
 - [ ] **Step 8: Run the whole Python suite**
 
-Run: `python3 -m pytest`
+Run: `.venv/bin/python -m pytest`
 Expected: PASS. If `src/app/tests/test_web.py` asserts on old markup, update those
 assertions to the new mount point — do not restore `app.js`.
 
@@ -726,7 +726,7 @@ nav a.tab {
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `npm --prefix ui test && npm --prefix ui run build && python3 -m pytest src/app/tests/test_web_bundle.py`
+Run: `npm --prefix ui test && npm --prefix ui run build && .venv/bin/python -m pytest src/app/tests/test_web_bundle.py`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -2214,7 +2214,7 @@ values, and `ui/src/lib/types.ts` uses only generic names (`Claim`, `Subject`,
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python3 -m pytest src/app/pipeline/tests/test_repo_invariants.py -v`
+Run: `.venv/bin/python -m pytest src/app/pipeline/tests/test_repo_invariants.py -v`
 Expected: FAIL if `app.js`/`app.css` survived the build, or if any ported view kept a
 literal key name. Fix the source, not the test.
 
@@ -2227,7 +2227,7 @@ npm --prefix ui run build
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python3 -m pytest src/app/pipeline/tests/test_repo_invariants.py -v`
+Run: `.venv/bin/python -m pytest src/app/pipeline/tests/test_repo_invariants.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Add the CI job**
@@ -2292,7 +2292,7 @@ shipped.
 
 - [ ] **Step 8: Run everything**
 
-Run: `python3 -m pytest && npm --prefix ui test && npm test`
+Run: `.venv/bin/python -m pytest && npm --prefix ui test && npm test`
 Expected: all PASS.
 
 - [ ] **Step 9: Commit**
@@ -2417,7 +2417,7 @@ def test_settings_keeps_ui_state_beside_the_store_but_separate(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python3 -m pytest src/app/tests/test_state.py -v`
+Run: `.venv/bin/python -m pytest src/app/tests/test_state.py -v`
 Expected: FAIL — `ImportError: cannot import name 'state'`.
 
 - [ ] **Step 3: Write `state.py`**
@@ -2597,7 +2597,7 @@ names the store, so it is the honest place to name the other one.
 
 - [ ] **Step 7: Run test to verify it passes**
 
-Run: `python3 -m pytest src/app/tests/test_state.py -v`
+Run: `.venv/bin/python -m pytest src/app/tests/test_state.py -v`
 Expected: PASS (6 passed).
 
 - [ ] **Step 8: Commit**
@@ -2712,7 +2712,7 @@ def test_history_stays_empty_when_nothing_was_asked(client):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python3 -m pytest src/app/tests/test_history_api.py -v`
+Run: `.venv/bin/python -m pytest src/app/tests/test_history_api.py -v`
 Expected: FAIL — `KeyError: 'lookup_id'` and 404s on `/api/history`.
 
 - [ ] **Step 3: Write the router**
@@ -2820,7 +2820,7 @@ In `src/app/web/app.py`, import `history` and add `history.router` to the tuple.
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `python3 -m pytest src/app/tests/test_history_api.py -v && python3 -m pytest`
+Run: `.venv/bin/python -m pytest src/app/tests/test_history_api.py -v && .venv/bin/python -m pytest`
 Expected: PASS.
 
 - [ ] **Step 8: Commit**
@@ -3074,7 +3074,7 @@ and render `<History />` beside `<main>` for the `ask` and `analyze` routes.
 
 - [ ] **Step 8: Run tests to verify they pass**
 
-Run: `npm --prefix ui test && npm --prefix ui run build && python3 -m pytest`
+Run: `npm --prefix ui test && npm --prefix ui run build && .venv/bin/python -m pytest`
 Expected: PASS.
 
 - [ ] **Step 9: Commit**
@@ -3125,7 +3125,7 @@ constraint.
 
 - [ ] **Step 4: Run the full suite one more time**
 
-Run: `python3 -m pytest && npm --prefix ui test && npm test`
+Run: `.venv/bin/python -m pytest && npm --prefix ui test && npm test`
 Expected: all PASS.
 
 - [ ] **Step 5: Commit**
