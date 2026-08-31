@@ -329,3 +329,8 @@ h2 {
 tr.concern td { border-left: 3px solid #b3261e; }
 .signal { white-space: nowrap; }
 .stale { opacity: 0.55; font-style: italic; }
+
+nav a.tab {
+    text-decoration: none;
+    display: inline-block;
+}
