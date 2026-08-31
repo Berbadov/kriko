@@ -188,7 +188,7 @@ def test_a_contradiction_is_still_flagged_when_only_one_candidate_is_left(store)
         kind="product",
         identity={"brand": "acme", "model": "w100", "power_hp": 9999}))
 
-    assert result.resolution.subject_ids, "the car must still resolve — a contradiction is a flag, not a rejection"
+    assert result.resolution.subject_ids, "the product must still resolve — a contradiction is a flag, not a rejection"
     assert "power_hp" in " ".join(result.resolution.flags), (
         "the contradicting attribute must be flagged even though there was only "
         "one candidate to contradict"
