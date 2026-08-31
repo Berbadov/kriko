@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.web.routers import analyze, control, packs, query, subjects
+from app.web.routers import analyze, control, health, packs, query, subjects
 from app.web.settings import Settings
 
 STATIC = Path(__file__).parent / "static"
@@ -35,13 +35,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         subjects.router,
         analyze.router,
         control.router,
+        health.router,
     ):
         app.include_router(router)
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     @app.get("/api/health")
-    def health():
+    def liveness():
         return {
             "ok": True,
             "store": str(app.state.settings.store_path),
