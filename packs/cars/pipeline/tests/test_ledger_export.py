@@ -57,7 +57,7 @@ def test_component_part_meta_power_collapsed(monkeypatch):
         },
         "k9k_110": {
             "part_type": "engine", "manufacturer": "renault", "code_family": "k9k",
-            "display_name": "Renault K9K 1.5 dCi",
+            "display_name": "Renault K9K 1.5 dCi 90hp",
             "code_family_extra": ["k9k_extra"], "known_also_as": ["dCi 110"],
             "production_years": "2013-2020",
         },
@@ -68,7 +68,12 @@ def test_component_part_meta_power_collapsed(monkeypatch):
     assert meta["part_type"] == "engine"
     assert meta["manufacturer"] == "renault"
     assert meta["code_family"] == "k9k"
-    assert "hp" not in meta["display_name"]  # tune-specific suffix stripped
+    # k9k_110's name is the shortest match (so it's the one selected before
+    # stripping) *and* carries a trailing power figure — deleting the
+    # _HP_DISPLAY_RE.sub() call must turn this assertion red, not just a
+    # broken tie-break.
+    assert meta["display_name"] == "Renault K9K 1.5 dCi"
+    assert meta["production_years"] == "2013-2020"
     assert meta["known_also_as"] == ["1.5 dCi", "dCi 110"]
     assert meta["code_family_extra"] == ["k9k_extra"]
 
