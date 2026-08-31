@@ -626,6 +626,61 @@ tool-call example to name `submit_findings` with its real field list
 (`title`, `rationale`, `quote`, `document_text`, `source_url`, `component`, plus
 `domain`/`severity`).
 
+### B40 — `packs/cars/pipeline/ledger/export.py`'s `errors`/`path` may be read unbound `[G5]`
+Same bug family as the `component_part_meta` fix in the 2026-08-31 decontamination
+pass (`2f0d061`, filed in `done.md`): `errors` and `path` inside the `for comp, claims
+in sorted(by_component.items()):` loop of the export function around lines 438-455
+are only assigned inside the `for _attempt in range(2):` sub-loop, then read after it
+at `if errors or not kept:`. `range(2)` always runs at least once in the reachable
+path today, so this has not fired — but that is exactly the shape that hid the
+`component_part_meta` bug for however long it went unguarded (a branch that happens
+to always run, verified by nothing). Deliberately left alone rather than
+guessed-and-fixed in this pass: the fix belongs with a test that actually forces the
+sub-loop to be skippable (or proves it can't be), the same way `2f0d061` rebuilt
+`test_component_part_meta_power_collapsed` to force its branch by construction
+rather than by accident of current data.
+
+### B41 — Coverage loss: `test_adapters.py` no longer covers "two mutually plausible
+values, identical digit format" `[G5]`
+Pre-pivot, `test_range_bounds_disambiguate_identical_digit_patterns` fed
+`"1.461 Nm"` and `"148.000"` — two independently plausible readings (a real torque, a
+real mileage) sharing one dot-grouped digit pattern, disambiguated only by which
+field's declared range believed which. The 2026-08-31 decontamination pass (Task 7)
+moved this fixture to `packs/drill/`'s vocabulary; drill's magnitude profile (torque
+~1-200, charge cycles ~0-2000) has no pair of dot-grouped integers that are each
+independently plausible for a *different* field — any value plausible for one is
+implausible for the other. Round 2 (`11c8b6f`) replaced it with a real but weaker
+demonstration: `"1.200"` fed to both fields, believed for `charge_cycles`, correctly
+absent from `max_torque_nm` (an accept/reject split on one shared value, not two
+independently-valid readings). If the engine's adapter-parsing test suite ever needs
+this exact case back, it needs either a fixture category whose two fields' plausible
+ranges genuinely overlap in one digit-grouped format, or a synthetic (non-pack)
+SPEC built for the purpose rather than borrowed from an installed pack's real
+vocabulary.
+
+### B42 — `pip install .` (non-editable) is unverified `[G5]`
+`pyproject.toml`, added in the 2026-08-31 decontamination-and-packaging pass, has no
+`package-data` or `MANIFEST.in` entry. `src/kriko/store/schema.sql` and
+`src/app/web/static/*` are non-`.py` files the serving path needs at runtime; without
+an explicit data-files declaration, a built wheel would plausibly ship without them
+while `pip install -e .`'s editable `.pth` (which points straight at the source tree)
+would still find them and hide the gap. Every command this pass verified went through
+the editable install only. Needs: build a real wheel (`python -m build`), install it
+into a clean venv with no source checkout on the path, and run the server/build
+commands against that install.
+
+### B43 — The prose gate is a worklist, not a proof `[G5]`
+`src/kriko/tests/test_core_is_domain_free.py`'s `_prose_offences` check (added
+2026-08-31) is real and load-bearing, but its guarantee is narrower than it sounds:
+green means "no un-allowlisted `PROSE_BANNED` word appears in a `kriko/` docstring or
+comment," not "no category leakage." It cannot catch a leak phrased without any
+banned word (an explanation that names a mechanism by *behaviour* specific to one
+category rather than by vocabulary), and every `ALLOWED_PROSE` entry is a judgment
+call about whether an example "genuinely clarifies," not a mechanically checked
+property. Worth restating for whoever runs the next pass: a green gate narrows the
+search, it does not end it. No action item — this is a documentation gap in what the
+gate proves, not a bug in the gate.
+
 ### B28 — Split `ops/hub/web.py` into routers `[G5]` **(SUPERSEDED 2026-08-26 by B33 — `apps/web/` ships the router split on the new core; the blocker was import-time path constants, now a Settings value passed through an app factory)**
 `web.py` is 831 lines and ~28 endpoints after the 2026-08-22 helper extraction
 (1151 originally; `textfmt.py`/`agents.py`/`claimview.py` took the pure helpers).
@@ -673,6 +728,17 @@ licensing/policy gate, not per-car review. Once confirmed, wiring into
 `knowledge/ledger/acquire.py` (with a `--sources` flag) is fully automated. Note:
 with B17, the official recalls adapter is retired — specialists/forums remain.
 
+### B44 — No LICENSE file `[G5]` **(HUMAN DECISION #10 — open)**
+There is no `LICENSE` file anywhere in the repo, and no licence is named in
+`README.md`, `CLAUDE.md`, or `pyproject.toml`. `README.md` calls Kriko "open," but
+with no licence granted, default copyright applies — all rights reserved — which is
+the opposite of what "open" implies to a reader on GitHub. Per the 2026-08-31 branch
+review that caught this: an earlier ruling had promised to file this decision and did
+not — filing it here for real. One-time policy decision, same
+category as B18's source-ToS call: which licence (if any) to publish under, and
+whether `pyproject.toml`'s classifiers/`license` field should be updated to match.
+Not a mechanism gap — nothing to automate here.
+
 ---
 
 ## Human decisions — status under G5
@@ -684,3 +750,4 @@ with B17, the official recalls adapter is retired — specialists/forums remain.
 | 7 | B11 emissions sign-off | **Resolved 2026-08-03** — cancelled; derive or fail open (G5) |
 | 8 | Split point for `knowledge/`'s deletion (B33 Phase 6b) | **Resolved 2026-08-29** — generic ledger/extract to `kriko/`, cars-specific pipeline to `packs/cars/pipeline/` |
 | 9 | Does a bare mileage figure earn the specificity escape for routine-wear claims? (B36) | **Open** — product-principle taste call, not a mechanism gap |
+| 10 | No LICENSE file, despite README calling Kriko "open" (B44) | **Open** — which licence (if any) to publish under |
