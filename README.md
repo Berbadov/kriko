@@ -59,6 +59,8 @@ python -m app.cli lookup make=volkswagen model=golf year=2015 fuel=diesel \
     transmission=automatic --ctx usage_km=190000 -v
 
 python -m app.web                           # dashboard + /analyze on 127.0.0.1:8787
+                                             # dashboard's Health tab shows the
+                                             # weakest-sourced claims, worst first
 ```
 
 Identity is passed as bare `key=value` pairs, not `--make/--model` flags: the keys are

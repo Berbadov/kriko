@@ -739,6 +739,32 @@ category as B18's source-ToS call: which licence (if any) to publish under, and
 whether `pyproject.toml`'s classifiers/`license` field should be updated to match.
 Not a mechanism gap — nothing to automate here.
 
+### B45 — `sources.published_at` is written by nobody
+The ledger has no publication-date extractor, so the tree reports it always empty.
+Derive it from page metadata during ingest, or drop the column.
+
+### B46 — `evidence.independent` is `1` on all 719 rows; nothing ever computes independence
+Until it does, "independent sources" means "distinct sources", and the health view
+says so. Deriving it (same domain, same syndicated text, same author) is the real fix.
+
+### B47 — no producer emits `stance = 'refutes'`, so the sharpest signal in the health view has zero live hits
+The verdict step already sees contradicting evidence within a cluster; it should
+record the rebuttal rather than discarding it.
+
+### B48 — feed observed weakness back into `relevance()`
+Deliberately out of scope for the knowledge-tree observability pass (spec
+non-goal), but a claim with one forum source ranking beside one with three
+bulletins is a ranking question, not only a reporting one.
+
+### B49 — `rank.py`'s `score_sources` and `tree.py` disagree about what "independent" means
+`src/kriko/lookup/rank.py:score_sources` increments its `independent` counter once
+per *evidence row*, with no deduplication by source URL. Two quotes extracted from
+one page therefore count as two independent sources and earn the claim a
+corroboration step on the serving path buyers actually see. `kriko/lookup/tree.py`
+does dedupe (`len({e.url for e in supporting if e.url and e.independent})`), so the
+health view and the ranking now disagree on the same claim. Fix `rank.py` to
+dedupe by URL, and add a test asserting the two agree.
+
 ---
 
 ## Human decisions — status under G5
