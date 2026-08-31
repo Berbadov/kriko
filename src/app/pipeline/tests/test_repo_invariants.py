@@ -70,7 +70,7 @@ def test_packs_never_import_an_interface_or_operator_layer():
     """A pack is data plus a builder. It may sit on kriko/, never above it.
 
     Packs are the thing third parties author. If a pack can import app/ or
-        app.pipeline/, "install a pack" stops meaning "add rows to a database" and starts
+    app.pipeline/, "install a pack" stops meaning "add rows to a database" and starts
     meaning "run someone's code inside the dashboard process".
     """
     hits = _imports_of("app", REPO / "packs") + _imports_of(
@@ -98,7 +98,7 @@ def test_app_never_imports_the_pipeline_layer():
     """app/ is CLI + web + MCP over kriko/. Pipeline drivers live in app/pipeline/.
 
     An interface that imports app/pipeline/ drags the extraction stack
-    langextract, exa-py) into the serving process, which is exactly what the
+    (langextract, exa-py) into the serving process, which is exactly what the
     now-deleted Dockerfile COPY-list invariant existed to prevent.
     """
     hits = [

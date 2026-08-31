@@ -47,8 +47,9 @@ Requires Python 3.14+. No Docker, no Postgres — the store is a single SQLite f
 `~/.kriko/knowledge.sqlite`.
 
 ```bash
-pip install -e ".[pipeline]"                # editable install; pipeline extra is
-                                             # only needed to research, never to serve
+pip install -e ".[dev,pipeline]"            # editable install; pipeline extra is
+                                             # only needed to research, never to serve;
+                                             # dev extra is needed to run the tests below
 
 python -m app.cli build packs/cars          # → dist/cars.kpack
 python -m app.cli install dist/cars.kpack
