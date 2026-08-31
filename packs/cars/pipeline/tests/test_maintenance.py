@@ -1,10 +1,10 @@
 """to_maintenance() — the pure mutation behind packs/cars/pipeline/maintenance.py.
 
 Reclassifies an interval-shaped known_issue claim to kind=maintenance with a
-maintenance interval block that _resolve_maintenance_strength (backend/core/
-resolver.py) can serve as due/due_stated. Fail-safe: a matched interval-vocab
-term with NO derivable interval stays known_issue — the script never emits an
-invalid maintenance claim (validate_part_yaml requires a maintenance block).
+maintenance interval block that the engine's condition evaluator can serve as
+due/due_stated. Fail-safe: a matched interval-vocab term with NO derivable
+interval stays known_issue — the script never emits an invalid maintenance
+claim (validate_part_yaml requires a maintenance block).
 """
 
 from packs.cars.pipeline.claims.maintenance import (
