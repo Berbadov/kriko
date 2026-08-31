@@ -394,3 +394,27 @@ def test_a_submitted_finding_records_when_it_was_retrieved(store):
     conn.close()
     assert retrieved, "submit_findings must stamp retrieved_at"
     assert retrieved.startswith("20")
+
+
+def test_an_agent_can_read_back_the_evidence_shape_of_a_subject(store):
+    """This is the whole point: an agent notices its own asymmetry.
+
+    A finding it just submitted rests on one forum post. An existing claim
+    rests on three specialist sources. Nothing before this could show it that.
+    """
+    tree = mcp_server.subject_health(subject_id=_subject())
+    assert tree["subject_id"] == _subject()
+    assert tree["claims"]
+    node = tree["claims"][0]
+    assert "concern" in node["health"]
+    assert {"refuted_by", "independent_sources", "best_tier"} <= set(node["health"])
+
+
+def test_the_weakest_tool_ranks_worst_first(store):
+    rows = mcp_server.weakest_claims()
+    concerns = [tuple(r["concern"]) for r in rows]
+    assert concerns == sorted(concerns)
+
+
+def test_an_unknown_subject_is_an_empty_tree_over_mcp(store):
+    assert mcp_server.subject_health(subject_id="nope")["claims"] == []
