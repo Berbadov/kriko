@@ -330,6 +330,10 @@ def test_health_json_carries_concern_alongside_every_field(store):
 def test_tree_json_carries_health_and_evidence_per_claim(store):
     tree = subject_tree(store, SUBJECT)
     payload = tree_json(tree)
+    assert payload["subject_id"] == SUBJECT
+    assert payload["label"] == "Widget 100"
+    assert payload["pack_ids"] == ["alpha"]
     first = payload["claims"][0]
     assert "health" in first
     assert "evidence" in first
+    assert first["health"]["title"]

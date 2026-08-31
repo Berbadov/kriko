@@ -197,6 +197,8 @@ def _node(bucket) -> ClaimNode:
 
     # Distinct URL, not distinct evidence row: two quotes off one page are one
     # source, and counting rows would let a single chatty page look corroborated.
+    # This is also distinct source_id, not merely distinct URL: source_id is a
+    # content hash of the normalised URL, so counting one counts the other.
     supporting_sources = len({e.url for e in supporting if e.url})
     independent_sources = len({e.url for e in supporting if e.url and e.independent})
 
