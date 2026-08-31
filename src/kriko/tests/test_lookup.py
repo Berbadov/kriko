@@ -174,13 +174,13 @@ def test_a_contradiction_is_still_flagged_when_only_one_candidate_is_left(store)
     result came back `exact` with no indication that the listing disagreed
     with the catalog.
 
-    A real case: a Sahibinden ad for a 1.6 TDI Golf 7 says "Otomatik". Make,
-    model, fuel and displacement narrow to exactly one variant — the manual
-    1.6 TDI, because the catalog has no automatic row for that engine. The
-    gearbox attribute then went untested, so the buyer was told `exact`, shown
-    no gearbox claims at all, and nothing anywhere recorded that the automatic
-    they were looking at is missing from the catalog. Exactly the quiet zero
-    goal G3 exists to prevent.
+    A real case, found on the cars pack: a listing named a hint value the
+    catalog had no matching row for, but the other identity fields still
+    narrowed to exactly one variant anyway. That hint attribute then went
+    untested, so the buyer was told `exact`, shown no claims that depended
+    on it, and nothing anywhere recorded that what they were looking at is
+    missing from the catalog. Exactly the quiet zero goal G3 exists to
+    prevent.
 
     Confidence must not be an artefact of having stopped checking.
     """
@@ -321,7 +321,7 @@ BETA_CLAIMS = """
   kind: known_issue
   domain: mech
   severity: high
-  text: {en: {title: Gearbox bearing whine, body: b, advice: a}}
+  text: {en: {title: Bearing whine, body: b, advice: a}}
   evidence:
     - {url: "https://maker.example.com/tsb/7", quote: Bearing revised in later builds.}
 """
@@ -340,7 +340,7 @@ def test_packs_that_disagree_on_identity_keys_still_both_answer(two_packs):
                                      identity={"brand": "acme", "model": "w100"},
                                      context={"usage_km": 200_000}))
     assert {c.pack_id for c in result.claims} == {"alpha", "beta"}
-    assert "Gearbox bearing whine" in _titles(result)
+    assert "Bearing whine" in _titles(result)
     assert "Chain tensioner fails" in _titles(result)
 
 

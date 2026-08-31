@@ -13,12 +13,12 @@ from kriko.research.agent import AgentResearcher
 
 def _task(**kw):
     base = dict(
-        subject_id="s1", subject_label="Renault K9K", subject_kind="product",
-        pack_id="cars", identity={"make": "renault", "engine_code": "K9K"},
-        attribution_aliases=("1.5 dCi",), search_aliases=("dCi",),
+        subject_id="s1", subject_label="Makita DHP484", subject_kind="product",
+        pack_id="drill", identity={"brand": "makita", "model": "DHP484"},
+        attribution_aliases=("DHP484Z",), search_aliases=("DHP 484",),
         queries=("{alias} common problems", "{label} failure symptoms"),
         value_principle="Keep only what an inspection would not catch.",
-        domains=("engine", "transmission"), max_documents=3,
+        domains=("mechanical", "battery"), max_documents=3,
     )
     base.update(kw)
     return ResearchTask(**base)
@@ -56,19 +56,19 @@ def test_the_brief_carries_the_packs_own_value_principle():
 
 def test_the_brief_renders_the_packs_query_templates():
     brief = AgentResearcher().brief(_task())
-    assert "Renault K9K common problems" in brief
-    assert "Renault K9K failure symptoms" in brief
+    assert "Makita DHP484 common problems" in brief
+    assert "Makita DHP484 failure symptoms" in brief
 
 
 def test_the_brief_names_the_packs_domain_vocabulary():
-    assert "engine, transmission" in AgentResearcher().brief(_task())
+    assert "mechanical, battery" in AgentResearcher().brief(_task())
 
 
 def test_search_only_aliases_are_marked_as_unusable_for_attribution():
     """Design-flaw 3: a search alias shared with siblings attributed a claim."""
     brief = AgentResearcher().brief(_task())
     assert "never be used to attribute" in brief
-    assert "dCi" in brief.split("never be used to attribute")[1]
+    assert "DHP 484" in brief.split("never be used to attribute")[1]
 
 
 def test_the_brief_demands_verbatim_quotes():
@@ -121,20 +121,22 @@ def test_a_quote_absent_from_the_document_is_discarded():
     pass quietly. An LLM asked for verbatim text will sometimes produce
     something plausible instead, so the check is mechanical.
     """
-    document = Document(url="https://e.example", text="The injectors foul at high mileage.")
+    document = Document(url="https://e.example",
+                        text="The chuck bearing wears at high charge cycles.")
     researcher = ApiResearcher(
         search=lambda *_: [], fetch=lambda _: "",
-        complete=lambda _: '[{"title":"Injector fouling","domain":"engine",'
-                           '"severity":"high","quote":"The turbo explodes weekly."}]')
+        complete=lambda _: '[{"title":"Chuck bearing wear","domain":"mechanical",'
+                           '"severity":"high","quote":"The battery pack catches fire weekly."}]')
     assert researcher.extract(_task(), document) == []
 
 
 def test_a_grounded_quote_survives():
-    document = Document(url="https://e.example", text="The injectors foul at high mileage.")
+    document = Document(url="https://e.example",
+                        text="The chuck bearing wears at high charge cycles.")
     researcher = ApiResearcher(
         search=lambda *_: [], fetch=lambda _: "",
-        complete=lambda _: '[{"title":"Injector fouling","domain":"engine",'
-                           '"severity":"high","quote":"The injectors foul at high mileage."}]')
+        complete=lambda _: '[{"title":"Chuck bearing wear","domain":"mechanical",'
+                           '"severity":"high","quote":"The chuck bearing wears at high charge cycles."}]')
     (finding,) = researcher.extract(_task(), document)
     assert isinstance(finding, Finding)
     assert finding.source_url == "https://e.example"

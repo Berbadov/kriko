@@ -9,7 +9,8 @@ def conn(tmp_path):
 
 
 def _resolved_evidence(
-    conn, title, rationale, component="ea888", domain="engine", flagged=False, url=None
+    conn, title, rationale, component="keyless_chuck_13", domain="mechanical",
+    flagged=False, url=None
 ):
     doc_id = db.insert_document(
         conn,
@@ -46,18 +47,18 @@ def _resolved_evidence(
 def test_similar_claims_cluster_together(conn):
     a = _resolved_evidence(
         conn,
-        "EA888 timing chain tensioner failure",
-        "timing chain tensioner wears causing chain stretch",
+        "Keyless chuck bearing wear on the DHP484",
+        "the chuck bearing wears causing runout",
     )
     b = _resolved_evidence(
         conn,
-        "Timing chain stretch on EA888 engines",
-        "tensioner failure lets the timing chain stretch",
+        "Chuck bearing runout on DHP484 drills",
+        "bearing wear lets the chuck develop runout",
     )
     _resolved_evidence(
         conn,
-        "EA888 excessive oil consumption",
-        "piston rings allow oil burning at high mileage",
+        "DHP484 battery pack capacity loss",
+        "cells degrade allowing less runtime at high charge cycles",
     )
     n = cluster.rebuild_clusters(conn)
     assert n == 2
@@ -74,15 +75,15 @@ def test_similar_claims_cluster_together(conn):
 
 
 def test_foreign_unresolved_and_flagged_excluded(conn):
-    _resolved_evidence(conn, "BMW N47 chain failure", "wrong car", component="foreign")
+    _resolved_evidence(conn, "Dyson digital motor failure", "wrong product", component="foreign")
     _resolved_evidence(conn, "vague issue", "no idea", component="unresolved")
-    _resolved_evidence(conn, "ABS light", "generic", flagged=True)
+    _resolved_evidence(conn, "LED indicator flicker", "generic", flagged=True)
     assert cluster.rebuild_clusters(conn) == 0
 
 
 def test_rebuild_is_deterministic(conn):
-    _resolved_evidence(conn, "EA888 timing chain tensioner failure", "stretch")
-    _resolved_evidence(conn, "EA888 water pump leak", "coolant loss from pump")
+    _resolved_evidence(conn, "Keyless chuck bearing wear on the DHP484", "runout")
+    _resolved_evidence(conn, "DHP484 motor housing crack", "housing cracks near the motor mount")
     first = cluster.rebuild_clusters(conn)
     rows1 = conn.execute("SELECT * FROM cluster_members ORDER BY 1,2").fetchall()
     second = cluster.rebuild_clusters(conn)
@@ -94,7 +95,7 @@ def test_rebuild_preserves_content_addressed_verdicts(conn):
     # Regression: verdicts are keyed by input_hash, not cluster_id. A rebuild
     # with a live verdict row must neither raise a FOREIGN KEY error nor evict
     # the cached verdict (that is what makes reruns cost $0).
-    _resolved_evidence(conn, "EA888 timing chain tensioner failure", "stretch")
+    _resolved_evidence(conn, "Keyless chuck bearing wear on the DHP484", "runout")
     cluster.rebuild_clusters(conn)
     conn.execute(
         "INSERT INTO verdicts (input_hash, model, verdict_json, tokens_in,"
