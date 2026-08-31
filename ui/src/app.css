@@ -334,3 +334,34 @@ nav a.tab {
     text-decoration: none;
     display: inline-block;
 }
+
+.with-history {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    gap: 1.5rem;
+    align-items: start;
+}
+.history {
+    border-left: 1px solid #e5e5e5;
+    padding-left: 1rem;
+}
+.history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.history li {
+    display: grid;
+    gap: 0.125rem;
+    justify-items: start;
+    margin-bottom: 0.75rem;
+}
+@media (max-width: 900px) {
+    .with-history {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .history {
+        border-left: 0;
+        padding-left: 0;
+    }
+}

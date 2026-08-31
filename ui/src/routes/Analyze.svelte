@@ -1,6 +1,7 @@
 <script lang="ts">
     import ClaimCard from "../lib/ClaimCard.svelte";
     import { ApiError, api } from "../lib/api";
+    import { navigate } from "../lib/router";
     import type { AnalyzeResult } from "../lib/types";
 
     let url = $state("");
@@ -44,6 +45,12 @@
             result = await api.analyze({ url: url.trim(), title, description, fields });
             messageState = outcome(result);
             message = SUMMARY[messageState];
+            // Only navigate away when there is something to read. An empty or
+            // unmatched analysis is more useful beside the form that produced
+            // it, where the reader can correct the input.
+            if (result.lookup_id && result.claims.length) {
+                navigate("result", result.lookup_id);
+            }
         } catch (e) {
             messageState = e instanceof ApiError && e.status === 404 ? "unknown" : "error";
             message =
