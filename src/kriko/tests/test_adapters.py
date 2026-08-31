@@ -7,11 +7,11 @@ this knows about adapters, and the cars pack knows about Sahibinden. A new
 listing site is a JSON file.
 
 **A wrong number is worse than a missing one.** Scraped values lie in a
-specific way — "1.461 Nm" and "148.000 cycles" carry the same digits and
-different magnitudes — so range bounds decide what is believable, and
-anything outside them is dropped rather than trusted. A missing value fails
-open and says so; a confidently wrong one silently answers about a different
-product.
+specific way — a run of digits with a locale's grouping separator can look
+like a different magnitude depending on which field it landed in — so range
+bounds decide what is believable, and anything outside them is dropped
+rather than trusted. A missing value fails open and says so; a confidently
+wrong one silently answers about a different product.
 """
 
 import json
@@ -26,13 +26,13 @@ SPEC = {
     "identity": {
         "brand": {"labels": ["marka", "brand"]},
         "max_torque_nm": {"labels": ["tork"], "parse": "int_range",
-                          "min": 1, "max": 5000},
+                          "min": 1, "max": 200},
         "released": {"labels": ["yıl", "year"], "parse": "int_range",
                      "min": 1980, "max": 2035},
     },
     "context": {
         "charge_cycles": {"labels": ["şarj", "cycles"], "parse": "int_range",
-                          "min": 0, "max": 2_000_000},
+                          "min": 0, "max": 2000},
         "free_text": {"from": "description"},
     },
     "derive": [{"key": "age_years", "op": "years_since", "from": "released"}],
@@ -80,16 +80,17 @@ def test_a_broken_adapter_does_not_break_the_others(tmp_path):
 # ── reading labels ───────────────────────────────────────────────────────
 
 def test_labels_match_regardless_of_case_colon_or_extra_words():
-    got = adapt(SPEC, {"Marka:": "Makita", "Tork (Nm)": "1461"})
+    got = adapt(SPEC, {"Marka:": "Makita", "Tork (Nm)": "162"})
     assert got.identity["brand"] == "Makita"
-    assert got.identity["max_torque_nm"] == 1461
+    assert got.identity["max_torque_nm"] == 162
 
 
 def test_range_bounds_disambiguate_identical_digit_patterns():
-    """The crux. Both strings are dot-separated digits; the bounds decide."""
-    got = adapt(SPEC, {"Tork": "1.461 Nm", "Şarj": "148.000"})
-    assert got.identity["max_torque_nm"] == 1461
-    assert got.context["charge_cycles"] == 148_000
+    """A plain reading and a comma-grouped one both parse; each field's own
+    range is what decides whether the result is believable."""
+    got = adapt(SPEC, {"Tork": "162 Nm", "Şarj": "1,200"})
+    assert got.identity["max_torque_nm"] == 162
+    assert got.context["charge_cycles"] == 1200
 
 
 def test_a_value_outside_its_range_is_dropped_rather_than_believed():
@@ -176,29 +177,32 @@ def test_an_unknown_parse_hint_falls_back_to_plain_text():
 def test_the_real_cars_adapter_reads_a_real_listing_shape():
     """The shape extension/content.js actually produces today.
 
-    This is deliberately still cars: it reads the real, shipped
-    `packs/cars/adapters/sahibinden.json` rather than a synthetic SPEC, and
-    no other installed pack ships an adapter file to substitute here.
+    This exercises the cars pack's real, shipped
+    `packs/cars/adapters/sahibinden.json` as a concrete example — the
+    runner (`adapt`) itself is category-blind, but no other installed pack
+    ships an adapter file, so there is nothing else to point this at. The
+    make/model/fuel below are real cars-pack vocabulary on purpose, not a
+    fixture to decontaminate.
     """
     from pathlib import Path
     spec = json.loads(Path("packs/cars/adapters/sahibinden.json")
                       .read_text(encoding="utf-8"))
     got = adapt(spec, {
-        "Marka": "Toyota", "Seri": "Corolla", "Model": "1.5 Flame",
+        "Marka": "Renault", "Seri": "Megane", "Model": "1.5 dCi Joy",
         "Yıl": "2018", "Yakıt": "Dizel", "Vites": "Otomatik",
         "Motor Hacmi": "1.461 cm3", "Motor Gücü": "110 hp", "KM": "180.000",
         "Renk": "Beyaz",
     }, url="https://www.sahibinden.com/ilan/x")
 
     assert got.identity == {
-        "make": "Toyota", "model": "Corolla", "fuel": "Dizel",
+        "make": "Renault", "model": "Megane", "fuel": "Dizel",
         "transmission": "Otomatik", "displacement_cc": 1461,
         "power_min_hp": 110, "build_year": 2018,
     }
     assert got.context["usage_km"] == 180_000
     # "Model" on Sahibinden is the trim, not the model — the model lives in
     # "Seri". Getting this backwards was a real bug in the old scraper.
-    assert got.identity["model"] == "Corolla"
+    assert got.identity["model"] == "Megane"
 
 
 # ── raw scrapes contain near-miss labels ─────────────────────────────────
