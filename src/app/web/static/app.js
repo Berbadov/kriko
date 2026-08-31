@@ -236,9 +236,10 @@ function tieNote(claims) {
     const top = JSON.stringify(claims[0].concern);
     const tied = claims.filter((c) => JSON.stringify(c.concern) === top).length;
     if (tied < 2) return "";
-    return `${tied} of the claims shown tie on every signal but best-source
-        trust — today only that one column differentiates the top of this
-        list. This list is not the whole ranking, just the worst ${claims.length}.`;
+    return `${tied} of the claims shown tie on every signal — contradiction,
+        independent sources, best-source trust and staleness alike — so
+        their order relative to each other is arbitrary. This list is not
+        the whole ranking, just the worst ${claims.length}.`;
 }
 
 async function renderHealth() {
