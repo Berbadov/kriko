@@ -365,9 +365,12 @@ def export_all(conn, out_dir: Path) -> list[Path]:
                                if s["url"].startswith("http")
                                else (s["site_or_channel"] or "")),
              "site_or_channel": s["site_or_channel"],
+             # When we last actually saw the page. Feeds sources.retrieved_at
+             # and, through it, the staleness signal in kriko.lookup.tree.
+             "retrieved_at": s["fetched_at"] or "",
              "quote": s["quote"], "independent": True}
             for s in conn.execute(
-                "SELECT DISTINCT d.url, d.site_or_channel, e.quote"
+                "SELECT DISTINCT d.url, d.site_or_channel, d.fetched_at, e.quote"
                 " FROM cluster_members m JOIN evidence e ON e.id=m.evidence_id"
                 " JOIN documents d ON d.id=e.doc_id WHERE m.cluster_id=?"
                 " ORDER BY d.url", (row["id"],))
