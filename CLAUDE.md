@@ -121,10 +121,15 @@ never add a human verification step to the pipeline.
 
 ## Layering principle — dependencies flow one way (READ THIS BEFORE ADDING AN IMPORT ACROSS PACKAGES)
 
-Kriko is four packages, and since the pivot the dependencies form a fan, not a
-column. Each may import from what it points at, never the other way:
+Kriko is five packages — four Python, plus the frontend — and since the pivot
+the dependencies form a fan, not a column. Each may import from what it points at, never the other way:
 
 ```
+ui/        the frontend — Svelte + Vite source, built into src/app/web/static/.
+           Talks to app/ over HTTP; imports no Python. Holds no pack
+           vocabulary (enforced by test_repo_invariants.py).
+   |
+   v
 app/       interfaces — cli, web dashboard, mcp server.
    |
    v
@@ -169,6 +174,18 @@ grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.p
 All four are enforced mechanically in `src/app/pipeline/tests/test_repo_invariants.py`, which
 also ratchets the deleted `backend/` shut.
 
+`ui/` is source, `src/app/web/static/` is committed build output. Rebuild with
+`npm --prefix ui run build` and commit both; CI fails on a stale bundle. `ui/src/`
+may not name a pack's identity keys — forms are built from
+`/api/identity-keys/{pack_id}` and `/api/packs/{pack_id}/vocabulary` at runtime,
+and `test_ui_contains_no_pack_vocabulary` enforces it.
+
+**Two SQLite files, on purpose.** `~/.kriko/knowledge.sqlite` is the engine's
+store; `~/.kriko/app.sqlite` (`app/web/state.py`) is the interface's own history
+and settings. Interface state never goes in the engine's schema: uninstalling a
+pack must not drop your history, and a history row must not affect a pack's
+`content_digest`. `/api/health` reports both paths.
+
 If a module needs something from the layer above, it is in the wrong layer — move
 the module, don't add the import. New pipeline drivers belong in `app/pipeline/`; new
 interfaces in `app/`; anything category-specific in `packs/<category>/`. See
@@ -189,6 +206,7 @@ original reasoning.
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
+| `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — phases 0–1 landed |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |
 | `docs/historical/` | Pre-part-centric era (`handover.md`, `SCAFFOLD.md`) + superseded 2026-07 designs/plans (`thoughts/`) + pre-pivot claim-quality roadmap/specs and pipeline history (`overhaul_plan.md`, `claim_relevance_plan.md`, `pipeline_postmortem.md`) | historical — do not follow |
