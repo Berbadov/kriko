@@ -13,53 +13,54 @@ from kriko.store import ids
 
 
 def test_hash_is_stable_across_calls():
-    a = ids.subject_id("product", {"make": "volkswagen", "model": "golf"})
-    b = ids.subject_id("product", {"make": "volkswagen", "model": "golf"})
+    a = ids.subject_id("product", {"brand": "makita", "model": "dhp484"})
+    b = ids.subject_id("product", {"brand": "makita", "model": "dhp484"})
     assert a == b
 
 
 def test_hash_is_order_independent():
     """Identity is a set of key/value pairs, not a sequence of them."""
-    a = ids.subject_id("product", {"make": "volkswagen", "model": "golf"})
-    b = ids.subject_id("product", {"model": "golf", "make": "volkswagen"})
+    a = ids.subject_id("product", {"brand": "makita", "model": "dhp484"})
+    b = ids.subject_id("product", {"model": "dhp484", "brand": "makita"})
     assert a == b
 
 
 def test_hash_normalises_case_and_whitespace():
-    a = ids.subject_id("product", {"make": "Volkswagen", "model": "  Golf "})
-    b = ids.subject_id("product", {"make": "volkswagen", "model": "golf"})
+    a = ids.subject_id("product", {"brand": "Makita", "model": "  DHP484 "})
+    b = ids.subject_id("product", {"brand": "makita", "model": "dhp484"})
     assert a == b
 
 
 def test_hash_normalises_numeric_punctuation():
-    """'1,395' and '1395' and 1395 are the same displacement."""
-    a = ids.subject_id("product", {"cc": "1,395"})
-    b = ids.subject_id("product", {"cc": "1395"})
-    c = ids.subject_id("product", {"cc": 1395})
+    """'1,200' and '1200' and 1200 are the same charge-cycle count."""
+    a = ids.subject_id("product", {"charge_cycles": "1,200"})
+    b = ids.subject_id("product", {"charge_cycles": "1200"})
+    c = ids.subject_id("product", {"charge_cycles": 1200})
     assert a == b == c
 
 
 def test_different_kind_is_a_different_subject():
-    """A component named 'golf' is not the product named 'golf'."""
-    a = ids.subject_id("product", {"model": "golf"})
-    b = ids.subject_id("component", {"model": "golf"})
+    """A component named 'chuck' is not the product named 'chuck'."""
+    a = ids.subject_id("product", {"model": "chuck"})
+    b = ids.subject_id("component", {"model": "chuck"})
     assert a != b
 
 
 def test_extra_identity_key_yields_a_different_subject():
     """This is the documented limit of hash-dedup, pinned so nobody 'fixes' it.
 
-    An author who considers `trim` part of identity is making a different
+    An author who considers `platform` part of identity is making a different
     assertion from one who does not. The lookup path unions them by attribute
     overlap; the hash must not pretend they are the same row.
     """
-    five = ids.subject_id("product", {"make": "vw", "model": "golf"})
-    seven = ids.subject_id("product", {"make": "vw", "model": "golf", "trim": "gti"})
+    five = ids.subject_id("product", {"brand": "makita", "model": "dhp484"})
+    seven = ids.subject_id(
+        "product", {"brand": "makita", "model": "dhp484", "platform": "lxt"})
     assert five != seven
 
 
 def test_attribute_id_covers_value_and_validity_window():
-    base = dict(subject_id="s1", key="power_hp", value="105", unit="hp")
+    base = dict(subject_id="s1", key="max_torque_nm", value="54", unit="nm")
     plain = ids.attribute_id(**base)
     assert plain == ids.attribute_id(**base)
     assert plain != ids.attribute_id(**base, valid_from="2014")
@@ -84,9 +85,10 @@ def test_source_id_keeps_meaningful_query_parameters():
 
 
 def test_evidence_id_is_source_plus_quote():
-    q = "The timing chain tensioner fails around 150,000 km."
+    q = "The battery pack degrades noticeably after about 1,200 charge cycles."
     a = ids.evidence_id("src1", q)
-    assert a == ids.evidence_id("src1", "  The timing chain tensioner   fails around 150,000 km.  ")
+    assert a == ids.evidence_id(
+        "src1", "  The battery pack degrades   noticeably after about 1,200 charge cycles.  ")
     assert a != ids.evidence_id("src2", q)
 
 
@@ -97,9 +99,9 @@ def test_claim_id_is_stable_but_title_sensitive():
     clustering is what a reader experiences as dedup — this test exists so the
     limitation is documented in code, not discovered in production.
     """
-    a = ids.claim_id("s1", "known_issue", "engine", "EGR valve carbon buildup")
-    assert a == ids.claim_id("s1", "known_issue", "engine", "egr valve   carbon buildup")
-    assert a != ids.claim_id("s1", "known_issue", "engine", "Carbon-clogged EGR valve")
+    a = ids.claim_id("s1", "known_issue", "mechanical", "keyless chuck bearing wear")
+    assert a == ids.claim_id("s1", "known_issue", "mechanical", "keyless chuck   bearing wear")
+    assert a != ids.claim_id("s1", "known_issue", "mechanical", "chuck bearing seizure")
 
 
 def test_relation_id_is_directional():
@@ -107,7 +109,7 @@ def test_relation_id_is_directional():
 
 
 def test_ids_are_hex_and_fixed_width():
-    got = ids.subject_id("product", {"make": "vw"})
+    got = ids.subject_id("product", {"brand": "makita"})
     assert len(got) == 32
     assert all(c in "0123456789abcdef" for c in got)
 

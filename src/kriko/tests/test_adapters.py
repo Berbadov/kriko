@@ -7,10 +7,11 @@ this knows about adapters, and the cars pack knows about Sahibinden. A new
 listing site is a JSON file.
 
 **A wrong number is worse than a missing one.** Scraped values lie in a
-specific way — "1.461 cm3" and "148.000 km" carry the same digits and different
-magnitudes — so range bounds decide what is believable, and anything outside
-them is dropped rather than trusted. A missing value fails open and says so; a
-confidently wrong one silently answers about a different car.
+specific way — "1.461 Nm" and "148.000 cycles" carry the same digits and
+different magnitudes — so range bounds decide what is believable, and
+anything outside them is dropped rather than trusted. A missing value fails
+open and says so; a confidently wrong one silently answers about a different
+product.
 """
 
 import json
@@ -23,18 +24,18 @@ SPEC = {
     "subject_kind": "product",
     "match": ["*example.com/ilan/*"],
     "identity": {
-        "make": {"labels": ["marka", "make"]},
-        "displacement_cc": {"labels": ["motor hacmi"], "parse": "int_range",
-                            "min": 500, "max": 8000},
-        "build_year": {"labels": ["yıl", "year"], "parse": "int_range",
-                       "min": 1980, "max": 2035},
+        "brand": {"labels": ["marka", "brand"]},
+        "max_torque_nm": {"labels": ["tork"], "parse": "int_range",
+                          "min": 1, "max": 5000},
+        "released": {"labels": ["yıl", "year"], "parse": "int_range",
+                     "min": 1980, "max": 2035},
     },
     "context": {
-        "usage_km": {"labels": ["km", "kilometre"], "parse": "int_range",
-                     "min": 0, "max": 2_000_000},
+        "charge_cycles": {"labels": ["şarj", "cycles"], "parse": "int_range",
+                          "min": 0, "max": 2_000_000},
         "free_text": {"from": "description"},
     },
-    "derive": [{"key": "age_years", "op": "years_since", "from": "build_year"}],
+    "derive": [{"key": "age_years", "op": "years_since", "from": "released"}],
     "ignore_labels": ["renk"],
 }
 
@@ -79,29 +80,30 @@ def test_a_broken_adapter_does_not_break_the_others(tmp_path):
 # ── reading labels ───────────────────────────────────────────────────────
 
 def test_labels_match_regardless_of_case_colon_or_extra_words():
-    got = adapt(SPEC, {"Marka:": "Renault", "Motor Hacmi (cm3)": "1461"})
-    assert got.identity["make"] == "Renault"
-    assert got.identity["displacement_cc"] == 1461
+    got = adapt(SPEC, {"Marka:": "Makita", "Tork (Nm)": "1461"})
+    assert got.identity["brand"] == "Makita"
+    assert got.identity["max_torque_nm"] == 1461
 
 
 def test_range_bounds_disambiguate_identical_digit_patterns():
     """The crux. Both strings are dot-separated digits; the bounds decide."""
-    got = adapt(SPEC, {"Motor Hacmi": "1.461 cm3", "KM": "148.000"})
-    assert got.identity["displacement_cc"] == 1461
-    assert got.context["usage_km"] == 148_000
+    got = adapt(SPEC, {"Tork": "1.461 Nm", "Şarj": "148.000"})
+    assert got.identity["max_torque_nm"] == 1461
+    assert got.context["charge_cycles"] == 148_000
 
 
 def test_a_value_outside_its_range_is_dropped_rather_than_believed():
-    """Fail open. A missing mileage downranks a claim and says why; a mileage of
-    nine million would gate every interval claim wrongly and say nothing."""
-    got = adapt(SPEC, {"KM": "9.000.000.000"})
-    assert "usage_km" not in got.context
+    """Fail open. A missing charge-cycle count downranks a claim and says why;
+    a count of nine million would gate every interval claim wrongly and say
+    nothing."""
+    got = adapt(SPEC, {"Şarj": "9.000.000.000"})
+    assert "charge_cycles" not in got.context
 
 
 def test_a_field_the_page_does_not_have_is_simply_absent():
-    got = adapt(SPEC, {"Marka": "Renault"})
-    assert got.identity == {"make": "Renault"}
-    assert "usage_km" not in got.context
+    got = adapt(SPEC, {"Marka": "Makita"})
+    assert got.identity == {"brand": "Makita"}
+    assert "charge_cycles" not in got.context
 
 
 def test_text_fields_come_from_named_sources_not_labels():
@@ -116,7 +118,7 @@ def test_derived_values_are_arithmetic_not_scraping():
 
 
 def test_derivation_is_skipped_when_its_input_is_missing():
-    assert "age_years" not in adapt(SPEC, {"Marka": "Renault"}).context
+    assert "age_years" not in adapt(SPEC, {"Marka": "Makita"}).context
 
 
 # ── coverage signal ──────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ def test_labels_with_no_rule_are_reported_not_silently_dropped():
     Silently ignoring unknown labels is how an adapter rots: the page starts
     carrying something worth reading and nobody finds out for a year.
     """
-    got = adapt(SPEC, {"Marka": "Renault", "Kimden": "Sahibinden",
+    got = adapt(SPEC, {"Marka": "Makita", "Kimden": "Sahibinden",
                        "Takasa Uygun": "Evet"})
     assert got.unmapped == ("Kimden", "Takasa Uygun")
 
@@ -172,26 +174,31 @@ def test_an_unknown_parse_hint_falls_back_to_plain_text():
 
 
 def test_the_real_cars_adapter_reads_a_real_listing_shape():
-    """The shape extension/content.js actually produces today."""
+    """The shape extension/content.js actually produces today.
+
+    This is deliberately still cars: it reads the real, shipped
+    `packs/cars/adapters/sahibinden.json` rather than a synthetic SPEC, and
+    no other installed pack ships an adapter file to substitute here.
+    """
     from pathlib import Path
     spec = json.loads(Path("packs/cars/adapters/sahibinden.json")
                       .read_text(encoding="utf-8"))
     got = adapt(spec, {
-        "Marka": "Renault", "Seri": "Megane", "Model": "1.5 dCi Joy",
+        "Marka": "Toyota", "Seri": "Corolla", "Model": "1.5 Flame",
         "Yıl": "2018", "Yakıt": "Dizel", "Vites": "Otomatik",
         "Motor Hacmi": "1.461 cm3", "Motor Gücü": "110 hp", "KM": "180.000",
         "Renk": "Beyaz",
     }, url="https://www.sahibinden.com/ilan/x")
 
     assert got.identity == {
-        "make": "Renault", "model": "Megane", "fuel": "Dizel",
+        "make": "Toyota", "model": "Corolla", "fuel": "Dizel",
         "transmission": "Otomatik", "displacement_cc": 1461,
         "power_min_hp": 110, "build_year": 2018,
     }
     assert got.context["usage_km"] == 180_000
     # "Model" on Sahibinden is the trim, not the model — the model lives in
     # "Seri". Getting this backwards was a real bug in the old scraper.
-    assert got.identity["model"] == "Megane"
+    assert got.identity["model"] == "Corolla"
 
 
 # ── raw scrapes contain near-miss labels ─────────────────────────────────
@@ -244,27 +251,27 @@ TITLE_SPEC = {
     "subject_kind": "product",
     "match": ["*example.com/*"],
     "identity": {
-        "build_year": {"labels": ["yıl", "year"], "from": "title",
-                       "parse": "int_range", "min": 1980, "max": 2035},
-        "make": {"labels": ["marka"], "from": "title", "vocabulary": "make"},
+        "released": {"labels": ["yıl", "year"], "from": "title",
+                     "parse": "int_range", "min": 1980, "max": 2035},
+        "brand": {"labels": ["marka"], "from": "title", "vocabulary": "brand"},
     },
 }
 
 
 def test_a_labelled_rule_falls_back_to_a_text_source_when_no_label_matches():
-    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf 1.6 TDI")
-    assert got.identity["build_year"] == 2014
+    got = adapt(TITLE_SPEC, {}, title="2014 Makita DHP484 18V Brushless")
+    assert got.identity["released"] == 2014
 
 
 def test_the_label_still_wins_when_the_page_has_one():
-    got = adapt(TITLE_SPEC, {"Yıl": "2016"}, title="2014 Volkswagen Golf")
-    assert got.identity["build_year"] == 2016
+    got = adapt(TITLE_SPEC, {"Yıl": "2016"}, title="2014 Makita DHP484")
+    assert got.identity["released"] == 2016
 
 
 def test_the_title_fallback_respects_the_range_and_invents_nothing():
-    """"1.6" and "190.000 km" are not model years."""
-    got = adapt(TITLE_SPEC, {}, title="Volkswagen Golf 1.6 TDI 190.000 km")
-    assert "build_year" not in got.identity
+    """"18" and "1.200 charge cycles" are not model years."""
+    got = adapt(TITLE_SPEC, {}, title="Makita DHP484 18V 1.200 charge cycles")
+    assert "released" not in got.identity
 
 
 def _store_with_identity_values(tmp_path, rows):
@@ -286,26 +293,26 @@ def _store_with_identity_values(tmp_path, rows):
 
 def test_a_vocabulary_rule_reads_a_value_the_pack_already_knows(tmp_path):
     store = _store_with_identity_values(
-        tmp_path, [("make", "volkswagen"), ("make", "renault")])
-    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf 1.6 TDI",
+        tmp_path, [("brand", "makita"), ("brand", "einhell")])
+    got = adapt(TITLE_SPEC, {}, title="2014 Makita DHP484 18V Brushless",
                 vocabulary=identity_vocabulary(store))
-    assert got.identity["make"] == "volkswagen"
+    assert got.identity["brand"] == "makita"
     store.close()
 
 
 def test_a_vocabulary_rule_prefers_the_longest_match(tmp_path):
-    """"land rover" must not be read as "rover"."""
+    """"bosch professional" must not be read as "bosch"."""
     store = _store_with_identity_values(
-        tmp_path, [("make", "rover"), ("make", "land rover")])
-    got = adapt(TITLE_SPEC, {}, title="2014 Land Rover Discovery",
+        tmp_path, [("brand", "bosch"), ("brand", "bosch professional")])
+    got = adapt(TITLE_SPEC, {}, title="2014 Bosch Professional GSR 18V",
                 vocabulary=identity_vocabulary(store))
-    assert got.identity["make"] == "land rover"
+    assert got.identity["brand"] == "bosch professional"
     store.close()
 
 
 def test_a_vocabulary_rule_with_no_installed_values_invents_nothing():
-    got = adapt(TITLE_SPEC, {}, title="2014 Volkswagen Golf", vocabulary={})
-    assert "make" not in got.identity
+    got = adapt(TITLE_SPEC, {}, title="2014 Makita DHP484", vocabulary={})
+    assert "brand" not in got.identity
 
 
 def test_the_vocabulary_is_whatever_the_packs_declared_identity_on(tmp_path):
@@ -321,45 +328,44 @@ def test_the_vocabulary_is_whatever_the_packs_declared_identity_on(tmp_path):
 
 # ── composite values ─────────────────────────────────────────────────────
 #
-# A page often packs several facts into one cell: "DSG / 7 Gear / Front Wheel
-# Drive" is a gearbox, a gear count and a drivetrain. The old client cut those
-# apart in JavaScript, with a branch per label — site knowledge in the one
-# place that cannot be updated without shipping a release. `segment` is the
-# closed replacement: pick an end of a delimited value, and nothing else.
+# A page often packs several facts into one cell: "Brushless / 13mm Keyless /
+# Metal Gear" is a motor type, a chuck size and a gear housing. The old
+# client cut those apart in JavaScript, with a branch per label — site
+# knowledge in the one place that cannot be updated without shipping a
+# release. `segment` is the closed replacement: pick an end of a delimited
+# value, and nothing else.
 
 SEGMENT_SPEC = {
     "id": "segments",
     "subject_kind": "product",
     "match": ["*x.invalid/*"],
     "identity": {
-        "transmission": {"labels": ["transmission / drive type"],
-                         "segment": "first"},
-        "drivetrain": {"labels": ["transmission / drive type"],
-                       "segment": "last"},
-        "fuel": {"labels": ["fuel"], "segment": "first"},
+        "motor_type": {"labels": ["motor / chuck"], "segment": "first"},
+        "chuck_type": {"labels": ["motor / chuck"], "segment": "last"},
+        "voltage_v": {"labels": ["voltage"], "segment": "first"},
     },
 }
 
 
 def test_a_segment_rule_takes_the_named_end_of_a_delimited_value():
     got = adapt(SEGMENT_SPEC, {
-        "Transmission / Drive Type": "DSG / 7 Gear / Front Wheel Drive",
-        "Fuel": "Gasoline / EURO 6",
+        "Motor / Chuck": "Brushless / 13mm Keyless / Metal Gear",
+        "Voltage": "18V / Li-ion",
     })
-    assert got.identity["transmission"] == "DSG"
-    assert got.identity["drivetrain"] == "Front Wheel Drive"
-    assert got.identity["fuel"] == "Gasoline"
+    assert got.identity["motor_type"] == "Brushless"
+    assert got.identity["chuck_type"] == "Metal Gear"
+    assert got.identity["voltage_v"] == "18V"
 
 
 def test_a_segment_rule_on_a_value_with_no_delimiter_returns_the_whole_value():
-    got = adapt(SEGMENT_SPEC, {"Fuel": "Dizel"})
-    assert got.identity["fuel"] == "Dizel"
+    got = adapt(SEGMENT_SPEC, {"Voltage": "18V"})
+    assert got.identity["voltage_v"] == "18V"
 
 
 def test_first_and_last_are_the_same_segment_when_there_is_only_one():
-    got = adapt(SEGMENT_SPEC, {"Transmission / Drive Type": "Otomatik"})
-    assert got.identity["transmission"] == "Otomatik"
-    assert got.identity["drivetrain"] == "Otomatik"
+    got = adapt(SEGMENT_SPEC, {"Motor / Chuck": "Brushless"})
+    assert got.identity["motor_type"] == "Brushless"
+    assert got.identity["chuck_type"] == "Brushless"
 
 
 # ── labels are written by people, in their own alphabet ──────────────────
@@ -371,8 +377,8 @@ def test_first_and_last_are_the_same_segment_when_there_is_only_one():
 # hand-kept list of transliterations, and one more thing to forget.
 
 def test_a_label_matches_whatever_accents_the_page_happened_to_use():
-    got = adapt(SEGMENT_SPEC, {"FUEL": "Dizel"})
-    assert got.identity["fuel"] == "Dizel"
+    got = adapt(SEGMENT_SPEC, {"VOLTAGE": "18V"})
+    assert got.identity["voltage_v"] == "18V"
 
 
 def test_turkish_dotted_capital_i_matches_its_plain_spelling():

@@ -8,7 +8,7 @@ def conn(tmp_path):
     return db.connect(tmp_path / "ledger.db")
 
 
-def _doc(conn, text="EA888 timing chain stretch", url="https://x.test/a"):
+def _doc(conn, text="Keyless chuck bearing wear on the DHP484", url="https://x.test/a"):
     return db.insert_document(conn, url=url, source_type="page", raw_text=text)
 
 
@@ -23,9 +23,9 @@ def test_documents_and_evidence_are_append_only(conn):
     doc_id = _doc(conn)
     ev_id = db.insert_evidence(
         conn, doc_id=doc_id,
-        claim={"title": "t", "domain": "engine", "severity": "medium",
+        claim={"title": "t", "domain": "mechanical", "severity": "medium",
                "rationale": "r", "inspection_advice": "i", "quote": "q",
-               "engine_or_variant_hint": "EA888", "quote_grounded": True},
+               "component_hint": "keyless_chuck_13", "quote_grounded": True},
         span_start=0, span_end=5, extractor_version=2,
     )
     for stmt in (

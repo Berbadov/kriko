@@ -6,9 +6,10 @@ interval block, and five car-specific compatibility checks. All of them are one
 mechanism: *does this claim apply, given what the reader could tell us?*
 
 The answer has three states, not two. A claim whose gate cannot be evaluated —
-because the ad did not say the mileage — must neither be hidden nor treated as
-certain. It is served and downranked. That is the fail-open rule from CLAUDE.md's
-automation principle, and `on_missing` is where it lives.
+because the listing did not state the value a condition checks — must neither
+be hidden nor treated as certain. It is served and downranked. That is the
+fail-open rule from CLAUDE.md's automation principle, and `on_missing` is
+where it lives.
 """
 
 import pytest
@@ -16,7 +17,7 @@ import pytest
 from kriko.lookup.conditions import Condition, Outcome, evaluate, evaluate_all
 
 
-def _c(key="usage_km", op="gte", value=None, text="", on_missing="open", weight=0.7):
+def _c(key="charge_cycles", op="gte", value=None, text="", on_missing="open", weight=0.7):
     return Condition(key=key, op=op, value_num=value, value_text=text,
                      on_missing=on_missing, weight=weight)
 
@@ -25,38 +26,38 @@ def _c(key="usage_km", op="gte", value=None, text="", on_missing="open", weight=
 
 def test_gte_holds_at_and_above_the_threshold():
     cond = _c(op="gte", value=100_000)
-    assert evaluate(cond, {"usage_km": 150_000}).state == "met"
-    assert evaluate(cond, {"usage_km": 100_000}).state == "met"
-    assert evaluate(cond, {"usage_km": 80_000}).state == "unmet"
+    assert evaluate(cond, {"charge_cycles": 150_000}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 100_000}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 80_000}).state == "unmet"
 
 
 def test_lte_holds_at_and_below_the_threshold():
     cond = _c(op="lte", value=2016)
-    assert evaluate(cond, {"usage_km": 2014}).state == "met"
-    assert evaluate(cond, {"usage_km": 2016}).state == "met"
-    assert evaluate(cond, {"usage_km": 2018}).state == "unmet"
+    assert evaluate(cond, {"charge_cycles": 2014}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 2016}).state == "met"
+    assert evaluate(cond, {"charge_cycles": 2018}).state == "unmet"
 
 
 def test_numeric_context_tolerates_strings_and_separators():
     """Adapters scrape text; '150.000 km' must not silently become unknown."""
     cond = _c(op="gte", value=100_000)
-    assert evaluate(cond, {"usage_km": "150,000"}).state == "met"
-    assert evaluate(cond, {"usage_km": " 150000 "}).state == "met"
+    assert evaluate(cond, {"charge_cycles": "150,000"}).state == "met"
+    assert evaluate(cond, {"charge_cycles": " 150000 "}).state == "met"
 
 
 # ── equality and membership ──────────────────────────────────────────────
 
 def test_eq_and_neq_compare_case_insensitively():
-    assert evaluate(_c(key="fuel", op="eq", text="diesel"),
-                    {"fuel": "Diesel"}).state == "met"
-    assert evaluate(_c(key="fuel", op="neq", text="manual"),
-                    {"fuel": "manual"}).state == "unmet"
+    assert evaluate(_c(key="motor_type", op="eq", text="brushless"),
+                    {"motor_type": "Brushless"}).state == "met"
+    assert evaluate(_c(key="motor_type", op="neq", text="brushed"),
+                    {"motor_type": "brushed"}).state == "unmet"
 
 
 def test_in_matches_any_of_a_comma_separated_list():
-    cond = _c(key="fuel", op="in", text="petrol,diesel")
-    assert evaluate(cond, {"fuel": "diesel"}).state == "met"
-    assert evaluate(cond, {"fuel": "electric"}).state == "unmet"
+    cond = _c(key="motor_type", op="in", text="brushed,brushless")
+    assert evaluate(cond, {"motor_type": "brushless"}).state == "met"
+    assert evaluate(cond, {"motor_type": "pneumatic"}).state == "unmet"
 
 
 def test_has_looks_inside_a_collection():
@@ -107,29 +108,29 @@ def test_missing_context_with_ignore_is_neutral():
 
 
 def test_a_met_condition_costs_no_rank():
-    assert evaluate(_c(op="gte", value=100), {"usage_km": 200}).weight == 1.0
+    assert evaluate(_c(op="gte", value=100), {"charge_cycles": 200}).weight == 1.0
 
 
 def test_an_unmet_condition_is_not_served():
-    assert evaluate(_c(op="gte", value=100), {"usage_km": 10}).served is False
+    assert evaluate(_c(op="gte", value=100), {"charge_cycles": 10}).served is False
 
 
 def test_unparseable_context_is_unknown_not_unmet():
-    """A scrape that yielded 'çok temiz' must not read as low mileage."""
-    out = evaluate(_c(op="gte", value=100_000), {"usage_km": "çok temiz"})
+    """A scrape that yielded 'like new' must not read as a low cycle count."""
+    out = evaluate(_c(op="gte", value=100_000), {"charge_cycles": "like new"})
     assert out.state == "unknown"
 
 
 def test_an_unknown_operator_is_a_build_error_not_a_silent_pass():
     with pytest.raises(ValueError, match="unknown operator"):
-        evaluate(_c(op="approximately"), {"usage_km": 5})
+        evaluate(_c(op="approximately"), {"charge_cycles": 5})
 
 
 # ── combining conditions ─────────────────────────────────────────────────
 
 def test_all_conditions_must_be_served_for_the_claim_to_show():
-    conds = [_c(op="gte", value=100), _c(key="fuel", op="eq", text="diesel")]
-    served, weight, _ = evaluate_all(conds, {"usage_km": 200, "fuel": "petrol"})
+    conds = [_c(op="gte", value=100), _c(key="motor_type", op="eq", text="brushless")]
+    served, weight, _ = evaluate_all(conds, {"charge_cycles": 200, "motor_type": "brushed"})
     assert served is False
 
 
@@ -150,28 +151,28 @@ def test_no_conditions_means_always_applies_at_full_weight():
 
 def test_outcome_is_reportable_so_why_shown_can_explain_itself():
     """Every downrank must be explainable to the reader, not a silent number."""
-    out = evaluate(_c(key="usage_km", op="gte", value=100_000), {})
+    out = evaluate(_c(key="charge_cycles", op="gte", value=100_000), {})
     assert isinstance(out, Outcome)
-    assert "usage_km" in out.reason
+    assert "charge_cycles" in out.reason
 
 
 # ── list-aware text matching ─────────────────────────────────────────────
 
 def test_mentions_takes_a_list_and_means_any_of():
-    cond = _c(key="free_text", op="mentions", text="triger,timing belt,cam belt")
-    assert evaluate(cond, {"free_text": "yeni TRIGER takıldı"}).state == "met"
+    cond = _c(key="free_text", op="mentions", text="brush kit,new brushes,brush replaced")
+    assert evaluate(cond, {"free_text": "fitted NEW BRUSHES last month"}).state == "met"
     assert evaluate(cond, {"free_text": "full service history"}).state == "unmet"
 
 
 def test_not_mentions_expresses_due_unless_the_ad_proves_otherwise():
     """The maintenance rule. Silence is the signal, so silence must serve."""
     cond = _c(key="free_text", op="not_mentions",
-              text="debriyaj değiş,clutch replaced", on_missing="open")
-    assert evaluate(cond, {"free_text": "tek elden, bakımlı"}).state == "met"
-    assert evaluate(cond, {"free_text": "geçen ay CLUTCH REPLACED"}).state == "unmet"
+              text="battery pack replaced,new battery pack", on_missing="open")
+    assert evaluate(cond, {"free_text": "well maintained, single owner"}).state == "met"
+    assert evaluate(cond, {"free_text": "NEW BATTERY PACK last year"}).state == "unmet"
 
 
 def test_an_absent_description_still_serves_a_maintenance_claim():
     """No description at all must not silently retire a due service item."""
-    out = evaluate(_c(key="free_text", op="not_mentions", text="clutch replaced"), {})
+    out = evaluate(_c(key="free_text", op="not_mentions", text="battery pack replaced"), {})
     assert out.served is True
