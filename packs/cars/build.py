@@ -23,9 +23,9 @@ attributes. A production run of 2014-2020 is one fact about the car, and storing
 it as bounds lets a listing year be tested against it without the engine knowing
 what a model year is.
 
-**Fitment edges keep their note string verbatim.** `resolver._GROUNDING_PART_RE`
-parses "Part fitment: {id} ({type})" today, so preserving it keeps the parity
-harness able to compare old and new attribution.
+**Fitment edges keep their note string verbatim.** The exact `"Part fitment:
+{id} ({type})"` format is preserved rather than reformatted, so nothing
+downstream that keys off this string is silently broken by this conversion.
 
 This script will be retired once the standard builder (`kriko/pack/build.py`)
 can consume these shapes directly.

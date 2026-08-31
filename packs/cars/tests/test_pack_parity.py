@@ -131,12 +131,11 @@ def test_review_status_lowers_rank_instead_of_hiding_the_claim(new_engine):
 # ── the frozen record ────────────────────────────────────────────────────
 
 def test_golden_output_is_stable(new_engine, cases, request):
-    """Freeze what the new engine answers, while the old one still exists.
+    """Freeze what the new engine answers, as a regression baseline.
 
-    Phase 6 deletes `backend/`, and every test above dies with it. This one
-    survives, because it compares the new engine against a recording of itself
-    made while the comparison was still possible. Without this file the largest
-    deletion in the project would have no regression net at all.
+    Compares the engine's live answers against a recorded snapshot, so a
+    serving change that shifts an answer is caught here rather than
+    discovered by a reader.
 
     Regenerate deliberately: `pytest --regenerate-golden` after an intended
     serving change, and read the diff.
