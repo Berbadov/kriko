@@ -292,3 +292,64 @@ def test_all_invalid_clusters_export_nothing(populated, tmp_path, capsys):
     paths = export.export_all(populated, tmp_path / "out")
     assert paths == []
     assert "skipped 1 invalid item(s)" in capsys.readouterr().out
+
+
+def _insert_document_fetched_at(conn, *, url, raw_text, target_hint, fetched_at):
+    """Like db.insert_document, but with an explicit fetched_at.
+
+    documents is append-only (trigger-enforced no-update/no-delete), so a
+    test that needs two distinct fetch times for the same URL cannot insert
+    then UPDATE — it has to supply fetched_at at insert time, same as this
+    layer would."""
+    h = db.text_hash(raw_text)
+    cur = conn.execute(
+        "INSERT INTO documents (url, source_type, site_or_channel, lang,"
+        " target_hint, raw_text, text_hash, fetched_at) VALUES (?,?,?,?,?,?,?,?)",
+        (url, "page", "", "", target_hint, raw_text, h, fetched_at),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def test_two_fetches_of_the_same_url_collapse_to_one_source(tmp_path):
+    """A page refetched later (documents.url is not unique — only text_hash
+    is) must still count as ONE independent source, with retrieved_at set to
+    the LATER fetch.
+
+    Before the GROUP BY fix, adding d.fetched_at to a `SELECT DISTINCT`
+    stopped the DISTINCT from collapsing two documents rows for the same URL,
+    so the same page was emitted as two source dicts (both independent=True)
+    — silently inflating a claim's independent-source count on the serving
+    path. Assert the count, not just the date: the count is what regresses."""
+    conn = db.connect(tmp_path / "l.db")
+    url = "https://dup.test/page"
+    quote = "chronic mechatronic solenoid wear reported by many owners"
+    earlier, later = "2024-01-01T00:00:00+00:00", "2024-06-01T00:00:00+00:00"
+    ev_ids = []
+    for raw, fetched_at in [(f"first fetch text {quote}", earlier),
+                            (f"second fetch text {quote}", later)]:
+        doc_id = _insert_document_fetched_at(
+            conn, url=url, raw_text=raw, target_hint="dq381", fetched_at=fetched_at)
+        ev_id = db.insert_evidence(conn, doc_id=doc_id, claim={
+            "title": "DQ381 mechatronic solenoid wear", "domain": "transmission",
+            "severity": "medium", "rationale": "r", "inspection_advice": "i",
+            "quote": quote, "engine_or_variant_hint": "DQ381",
+            "quote_grounded": True}, span_start=None, span_end=None,
+            extractor_version=2)
+        conn.execute("INSERT INTO resolutions VALUES (?,?,?,?)",
+                     (ev_id, "dq381", "alias", 1))
+        ev_ids.append(ev_id)
+    conn.commit()
+
+    conn.execute("INSERT INTO clusters (component_id, domain, cluster_version)"
+                 " VALUES ('dq381','transmission',1)")
+    for ev_id in ev_ids:
+        conn.execute("INSERT INTO cluster_members VALUES (1,?)", (ev_id,))
+    conn.commit()
+    _add_verdict(conn, _verdict())
+
+    paths = export.export_all(conn, tmp_path / "out")
+    doc = yaml.safe_load(paths[0].read_text())
+    sources = doc["claims"][0]["sources"]
+    assert len(sources) == 1, f"expected one collapsed source, got {sources}"
+    assert sources[0]["retrieved_at"] == later

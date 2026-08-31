@@ -367,12 +367,21 @@ def export_all(conn, out_dir: Path) -> list[Path]:
              "site_or_channel": s["site_or_channel"],
              # When we last actually saw the page. Feeds sources.retrieved_at
              # and, through it, the staleness signal in kriko.lookup.tree.
+             # GROUP BY, not DISTINCT: documents.url is not unique (only
+             # text_hash is — a page refetched later is a new row), so
+             # DISTINCT over a per-row fetched_at would stop collapsing
+             # repeat fetches of the same page and double-count it as two
+             # independent sources. MAX picks the most recent fetch, and
+             # tree.py takes the MIN across a claim's sources for staleness,
+             # so the freshest per-source date is the right one to keep.
              "retrieved_at": s["fetched_at"] or "",
              "quote": s["quote"], "independent": True}
             for s in conn.execute(
-                "SELECT DISTINCT d.url, d.site_or_channel, d.fetched_at, e.quote"
+                "SELECT d.url, d.site_or_channel, MAX(d.fetched_at) AS fetched_at,"
+                " e.quote"
                 " FROM cluster_members m JOIN evidence e ON e.id=m.evidence_id"
                 " JOIN documents d ON d.id=e.doc_id WHERE m.cluster_id=?"
+                " GROUP BY d.url, d.site_or_channel, e.quote"
                 " ORDER BY d.url", (row["id"],))
         ]
         domain = normalize_domain(row["domain"])
