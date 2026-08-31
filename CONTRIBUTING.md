@@ -59,7 +59,7 @@ If you move a module used by the serving path, also run the import and pack chec
 
 ```bash
 python -c "import app.web.app, kriko.lookup, kriko.store"
-python -m pytest app/pipeline/tests/test_repo_invariants.py
+python -m pytest src/app/pipeline/tests/test_repo_invariants.py
 ```
 
 The serving path is the local FastAPI app backed by the SQLite pack store. The
@@ -83,25 +83,25 @@ Dependencies flow one way. Each layer may import from the layers below it, never
 from the layers above:
 
 ```
-app/             CLI, local web dashboard, MCP server
-app/pipeline/    ledger and remediation orchestration
-kriko/           generic store, ledger/extract, lookup, ranking, research
-packs/           category data, builders, vocabulary, coverage and pack pipelines
-extension/       thin browser client; no product/site interpretation
+src/app/             CLI, local web dashboard, MCP server
+src/app/pipeline/    ledger and remediation orchestration
+src/kriko/           generic store, ledger/extract, lookup, ranking, research
+packs/                category data, builders, vocabulary, coverage and pack pipelines
+extension/            thin browser client; no product/site interpretation
 ```
 
 If a module needs something from the layer above, **the module is in the wrong
-layer — move it, don't add the import.** Interfaces belong in `app/`, pipeline
-drivers in `app/pipeline/`, generic engine code in `kriko/`, and category data in
-`packs/<category>/`.
+layer — move it, don't add the import.** Interfaces belong in `src/app/`, pipeline
+drivers in `src/app/pipeline/`, generic engine code in `src/kriko/`, and category
+data in `packs/<category>/`.
 
 A deferred import (one written inside a function body) that points *upward* is the
 smell: it means someone hit `ImportError: partially initialized module` and pushed
 the import to runtime instead of fixing the layering. Pointing *downward* it is
 just a startup-cost decision, and fine.
 
-`app/pipeline/tests/test_repo_invariants.py` enforces this, so a violation fails the suite
-rather than waiting to be noticed in review.
+`src/app/pipeline/tests/test_repo_invariants.py` enforces this, so a violation fails
+the suite rather than waiting to be noticed in review.
 
 ## What CI checks
 
@@ -109,17 +109,16 @@ rather than waiting to be noticed in review.
 
 | Job | What it catches |
 |---|---|
-| `python` | the full suite, plus the layering, testpaths and Dockerfile invariants |
+| `python` | the full suite, plus the layering and testpaths invariants |
 | `extension` | scraper and hub-console tests under jsdom |
 
-There is no docker-build job. The repo is private, so Actions minutes are billed,
-and an image build was 3-5 of the ~10 minutes per push. What it guarded is checked
-statically instead: `test_dockerfile_copies_every_knowledge_module_the_serving_path_imports`
-checks the package boundaries and test-path coverage. Those checks run in
-milliseconds as part of the normal suite.
-
-It cannot catch everything a real build would — a broken `pip install`, a bad base
-image, a missing data file — so still build locally when you change the Dockerfile.
+There is no docker-build job — there is currently no Dockerfile or `deploy/`
+directory in the repo at all, so there is nothing for a build job to build.
+Package boundaries and test-path coverage are still checked statically, in
+milliseconds, by `src/app/pipeline/tests/test_repo_invariants.py` as part of
+the normal suite. If a Dockerfile comes back, add a real build step (or an
+equivalent static check) alongside it — don't let this paragraph go stale
+again.
 
 CI runs with no secrets. `npm install` rather than `npm ci`, because
 `package-lock.json` is gitignored — commit the lockfile if you want reproducible
