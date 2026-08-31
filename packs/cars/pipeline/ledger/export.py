@@ -156,9 +156,13 @@ def component_part_meta(component_id: str) -> dict | None:
     """Part-dict header for an exported component id, derived from the catalog.
 
     1. exact part_id match (dc4, golf7_body): copy the catalog header verbatim.
-    2. power-collapsed match (k9k <- k9k_110/k9k_100/...): fields every match
-       agrees on; display_name = shortest (least tune-specific) with any
-       trailing power figure stripped; known_also_as = union.
+    2. power-collapsed match (k9k <- k9k_110/k9k_100/...): manufacturer,
+       code_family and production_years are kept only where every matched
+       variant agrees; display_name = shortest (least tune-specific) with any
+       trailing power figure stripped; code_family_extra and known_also_as are
+       unioned instead — a sibling alias or code family that only one variant
+       declares still needs to be visible, not silently dropped because
+       another variant's stub omits it.
     None when the component has no catalog identity at all, or an ambiguous
     part_type — the caller skip-and-reports, since a part-dict without a real
     header would only fail sync's validation gate later.
