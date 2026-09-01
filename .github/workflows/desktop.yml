@@ -106,7 +106,7 @@ jobs:
               run: |
                   python packaging/configure_updater.py \
                       --repo "${{ github.repository }}" \
-                      --version "${{ github.ref_name }}"
+                      --version "${{ github.ref_type == 'tag' && github.ref_name || '' }}"
 
             # Unsigned, on all three — code signing needs certificates, which is
             # a policy decision (an Apple developer account, an EV cert) and not
