@@ -35,6 +35,35 @@ def test_the_committed_config_ships_no_updater():
     assert "createUpdaterArtifacts" not in (CONFIG.get("bundle") or {})
 
 
+def test_the_four_version_strings_agree():
+    """One release, one number — in four files nothing links together.
+
+    The updater compares the running app's version against the manifest, so a
+    shell that says 0.1.0 inside a 0.2.0 release offers itself its own update
+    forever. Nothing in the toolchain notices: Cargo, npm, setuptools and Tauri
+    each read their own file.
+    """
+    import tomllib
+
+    versions = {
+        "tauri.conf.json": CONFIG["version"],
+        "pyproject.toml": tomllib.loads(
+            (REPO / "pyproject.toml").read_text(encoding="utf-8")
+        )["project"]["version"],
+        "src-tauri/Cargo.toml": tomllib.loads(
+            (REPO / "tauri" / "src-tauri" / "Cargo.toml").read_text(encoding="utf-8")
+        )["package"]["version"],
+        "tauri/package.json": json.loads(
+            (REPO / "tauri" / "package.json").read_text(encoding="utf-8")
+        )["version"],
+    }
+    assert len(set(versions.values())) == 1, (
+        "these files disagree about which version this is: "
+        + ", ".join(f"{name}={value}" for name, value in sorted(versions.items()))
+    )
+    assert configure_updater.SEMVER.match(CONFIG["version"]), CONFIG["version"]
+
+
 def test_configuring_with_a_key_turns_the_updater_on():
     out = configure_updater.configure(CONFIG, "owner/name", "pub-key-here", "v9.9.9")
     updater = out["plugins"]["updater"]
