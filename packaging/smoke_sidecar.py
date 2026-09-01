@@ -44,6 +44,67 @@ def post(port: int, path: str, body: dict) -> dict:
         return {"error": error.read().decode("utf-8", "replace"), "status": error.code}
 
 
+def mcp_speaks(binary: Path, environment: dict) -> bool:
+    """Does `--mcp` still complete a real handshake?
+
+    Its own subprocess, because MCP mode owns stdio and the HTTP mode above owns
+    a port; nothing is shared but the binary. FastMCP resolves transports and
+    validators by string at import time, so this is the check that a frozen
+    build did not silently lose the agents' only door into an installed app.
+    """
+    process = subprocess.Popen(
+        [str(binary), "--mcp"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=environment,
+    )
+    try:
+        process.stdin.write(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {},
+                        "clientInfo": {"name": "smoke", "version": "0"},
+                    },
+                }
+            )
+            + "\n"
+        )
+        process.stdin.flush()
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            line = process.stdout.readline()
+            if not line:
+                break
+            try:
+                body = json.loads(line)
+            except ValueError:
+                continue
+            if body.get("result", {}).get("serverInfo", {}).get("name") == "kriko":
+                print("mcp ok: initialize answered")
+                return True
+            print(f"the MCP server answered oddly: {body}")
+            return False
+        print("the MCP server never answered initialize")
+        print(process.stderr.read() or "(it wrote nothing to stderr)")
+        return False
+    finally:
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(__doc__)
@@ -160,6 +221,9 @@ def main(argv: list[str]) -> int:
             print(f"the frozen binary is missing a module:\n{row['log']}")
             return 1
         print(f"job ok: failed cleanly with {row['message']!r}")
+
+        if not mcp_speaks(binary, environment):
+            return 1
         return 0
     finally:
         process.terminate()

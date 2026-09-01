@@ -823,15 +823,14 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   port, while the sidecar only ever bound an OS-chosen one. The sidecar now
   serves both sockets and `EXTENSION_PORT` is one constant with a guard test.
   Untested against a real Chrome profile and a real Sahibinden page.
-- **There is still no agent-driven research plane inside the app.** *Coverage →
-  Research* starts a real job, but on the default `agent` plane it produces a
-  *brief* — `AgentResearcher.gather()`/`extract()` return nothing by design —
-  and the harness that acts on a brief (`.mcp.json`, `.claude/agents/
-  kriko_research.md`) only exists in a source checkout. So a first-run reader
-  who opens the app to build data for their own interest cannot. The protocol
-  is written down and enforced (`app/findings.py`); what is missing is an
-  address for an external agent to reach the *installed* app. Next step: ship
-  `python -m app.mcp_server` as a second sidecar command.
+- **An agent can now reach the installed app; nobody has driven one yet.**
+  *Coverage → Research* still produces a *brief* on the free plane, by design —
+  the gathering is done by a coding agent you already pay for. What was missing
+  was an address, and that is fixed: the sidecar binary takes `--mcp` and serves
+  the MCP stdio server on the same `~/.kriko`, and *Coverage → Connect an agent*
+  hands over a per-machine `.mcp.json` block naming the store this window reads.
+  Untested with a real harness against a real installer, and there is still no
+  in-app *view* of what an agent submitted beyond the ordinary claim screens.
 - **What is already mechanical**: the handshake string must match on both
   sides, no engine vocabulary may appear in Rust, the boot screen must be able
   to render a failure, every data file under `src/` must be declared package

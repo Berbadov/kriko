@@ -13,6 +13,7 @@ binary, and a port announced before it is held — went unnoticed.
 import json
 import subprocess
 import sys
+from pathlib import Path
 import time
 import urllib.error
 import urllib.request
@@ -260,3 +261,95 @@ def test_a_taken_extension_port_is_not_fatal(tmp_path):
         process.terminate()
         process.wait(timeout=15)
         holder.close()
+
+
+def _rpc(process, message: dict) -> None:
+    process.stdin.write(json.dumps(message) + "\n")
+    process.stdin.flush()
+
+
+def _reply(process, timeout: float = 20.0):
+    """Read lines until one is a JSON-RPC response with a result."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        line = process.stdout.readline()
+        if not line:
+            return None
+        try:
+            body = json.loads(line)
+        except ValueError:
+            continue  # a log line on stdout would be a bug, but not this test's
+        if "result" in body or "error" in body:
+            return body
+    return None
+
+
+def test_the_same_binary_serves_mcp_over_stdio(tmp_path):
+    """The agent's door into an *installed* app.
+
+    Before this, the research protocol only existed for someone with a source
+    checkout: an installed reader had a Research button that produces a brief
+    and nothing able to act on it. The handshake is spoken for real rather than
+    mocked, because what breaks in the frozen binary is exactly the dynamic
+    imports FastMCP does at startup — and that fails identically to a hang.
+    """
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "app.sidecar",
+            "--mcp",
+            "--store",
+            str(tmp_path / "knowledge.sqlite"),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_env(tmp_path),
+    )
+    try:
+        _rpc(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "pytest", "version": "0"},
+                },
+            },
+        )
+        hello = _reply(process)
+        assert hello is not None, "the MCP server never answered initialize"
+        assert hello.get("result", {}).get("serverInfo", {}).get("name") == "kriko"
+
+        _rpc(process, {"jsonrpc": "2.0", "method": "notifications/initialized"})
+        _rpc(process, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+        listed = _reply(process)
+        assert listed is not None, "the MCP server never listed its tools"
+        names = {tool["name"] for tool in listed["result"]["tools"]}
+        # The acceptance path and the gap report: without both, an agent can
+        # neither find work nor hand anything back.
+        assert {"submit_findings", "coverage_gaps"} <= names, names
+    finally:
+        process.stdin.close()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:  # pragma: no cover
+            process.kill()
+            process.wait(timeout=10)
+
+
+def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
+    """stdout is the transport in MCP mode, so nothing else may write to it."""
+    source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()
+    body = source.split("def main(")[1]
+    dispatch = body.index("return serve_mcp")
+    announce = body.index(f'print(f"{{PORT_LINE}}')
+    assert dispatch < announce, (
+        "the port is announced before the MCP dispatch — a stray line on stdout "
+        "is a protocol error the client reports as malformed JSON"
+    )

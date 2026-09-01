@@ -32,6 +32,20 @@ Three distinct bugs behind one dialog, all fixed as mechanisms:
   `EXTENSION_PORT` for the extension, skipped with a stderr line if taken. The
   number is one constant and a repo invariant compares it to the extension's.
 
+And the other half of the same gap: **an agent had no address for an installed
+app.** The research protocol was fully written down — the MCP tool set, and
+`app/findings.py` refusing a quote it cannot find in the document — but
+`.mcp.json` pointed at a source checkout, so a reader who *installed* Kriko had
+a Research button producing briefs nothing could act on. `--exit-with-parent`'s
+sibling `--mcp` runs the MCP stdio server out of the same binary against the
+same store, and `/api/agent-config` generates the config block per machine
+(frozen → the app's own path; a checkout → `sys.executable`, deliberately
+*unresolved*, because `.venv/bin/python` resolves to a base interpreter with no
+`fastapi` on its path — caught by running the advertised command in a test
+rather than checking its shape). *Coverage → Connect an agent* shows it, and the
+card above the gap list now says the free plane writes a brief rather than
+gathering, because a button that returns instructions reads as broken otherwise.
+
 Four new guards in the ordinary pytest suite (no Rust toolchain): the
 `--exit-with-parent` flag must be spelled on both sides, `start_engine` must
 reach `emit_failure`, the NSIS hook must kill the binary Tauri actually ships
