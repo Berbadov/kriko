@@ -90,7 +90,17 @@ def main(argv: list[str]) -> int:
             except (urllib.error.URLError, TimeoutError, ConnectionError):
                 time.sleep(0.2)
         else:
+            # Dump stderr before giving up. This is the failure mode a Windows
+            # runner hit — port printed, nothing listening — and "announced a
+            # port it never served" with no traceback under it cost a whole
+            # CI round-trip to diagnose.
             print("the sidecar announced a port it never served")
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            print(process.stderr.read() or "(the sidecar wrote nothing to stderr)")
             return 1
 
         print(f"health ok: {health}")
