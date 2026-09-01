@@ -6,6 +6,40 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-09-01 — Four installers, and the three bugs CI had to find first
+
+`4bec392`, `165cff3`, `264551d`, `e27404d`. B52's build verification.
+
+The desktop workflow ran for the first time (as PR #3 — `workflow_dispatch` is
+unavailable until the workflow reaches the default branch). It failed three
+times, and every failure was real:
+
+- **The catalog was scanned in directory order.** `Path.glob` returns whatever
+  the filesystem hands back, so `_find_make_model_for_part("k9k")` — a part
+  fitted to both `clio_5` and `megane_4` — answered differently on CI than
+  here, from identical data. That made every generated search query
+  machine-dependent. All 11 unsorted scans under `src/` and `packs/` are sorted
+  now, with `test_the_catalog_is_never_scanned_in_directory_order` walking the
+  AST for the next one (`# any-order: <why>` to opt out).
+- **Six files could not be checked out on Windows or macOS.** An unrelated GUI
+  program wrote `imgui.ini` layouts into the repo root under non-UTF-8 names and
+  a `git add -A` committed them. Both runners died in *checkout*.
+  `test_every_tracked_path_is_checkoutable_on_windows_and_macos` applies
+  Windows' rules to every tracked path.
+- **`uvicorn.run(fd=…)` is POSIX-only.** Windows printed `KRIKO_PORT 58378` and
+  never served it — precisely the failure reserve-then-announce exists to
+  prevent. `uvicorn.Server(config).run(sockets=[sock])` passes the socket
+  object, which needs no re-creation anywhere.
+
+**Result**: `Kriko_0.1.0_amd64.deb`, `Kriko_0.1.0_amd64.AppImage`,
+`Kriko_0.1.0_aarch64.dmg`, `Kriko_0.1.0_x64-setup.exe`. The sidecar extracted
+from the shipped `.deb` passes the full smoke — handshake, health, frontend, a
+real lookup, and a research job — so the artifact contains a working engine and
+not just a binary that links. Unsigned, and no human has opened the window yet:
+both are B52.
+
+---
+
 ## 2026-09-01 — The frozen sidecar, proven (and a wheel bug it found)
 
 This commit. B52 verification work.
