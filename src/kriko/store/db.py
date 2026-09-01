@@ -44,7 +44,7 @@ def _warn_if_other_store_present(path: Path) -> None:
     if _warned_other_store_present or not path.parent.is_dir():
         return
     others = sorted(
-        p for p in path.parent.glob("*.sqlite")
+        p for p in sorted(path.parent.glob("*.sqlite"))
         if p != path and p.is_file()
     )
     if not others:

@@ -196,7 +196,7 @@ def catalog_code_manufacturers() -> dict[str, frozenset[str]]:
     process lifetime (tests do this).
     """
     owners: dict[str, set[str]] = {}
-    for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
+    for path in sorted(_CATALOG_PARTS_DIR.glob("**/*.yaml")):
         data = load_yaml(path)
         part_id = data.get("part_id")
         manufacturer = data.get("manufacturer")
@@ -224,7 +224,7 @@ def catalog_sibling_families() -> dict[str, frozenset[str]]:
     within a process lifetime (tests do this).
     """
     groups: dict[str, set[str]] = {}
-    for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
+    for path in sorted(_CATALOG_PARTS_DIR.glob("**/*.yaml")):
         data = load_yaml(path)
         part_id = data.get("part_id")
         family = data.get("code_family")

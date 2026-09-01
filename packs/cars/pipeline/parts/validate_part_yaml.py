@@ -306,7 +306,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         paths = [Path(p) for p in sys.argv[1:]]
     else:
-        paths = list(PARTS_DIR.rglob("*.yaml"))
+        paths = sorted(PARTS_DIR.rglob("*.yaml"))
 
     if not paths:
         print(f"No part YAML files found under {PARTS_DIR}")

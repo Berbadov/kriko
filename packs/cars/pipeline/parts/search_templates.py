@@ -38,7 +38,7 @@ def _search_code(part_id: str) -> str:
 
 def _part_meta(part_id: str) -> dict:
     """Load part YAML metadata (display_name, known_also_as, etc.)."""
-    for path in PARTS_DIR.rglob(f"{part_id}.yaml"):
+    for path in sorted(PARTS_DIR.rglob(f"{part_id}.yaml")):
         data = yaml.safe_load(path.read_text()) or {}
         if data.get("part_id") == part_id:
             return data
@@ -184,7 +184,13 @@ def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
         "body": "body_code",
     }.get(part_type, "engine_family")
 
-    for path in fitment_dir.glob("*.yaml"):
+    # sorted(), not glob() order: a part fitted to more than one model (k9k is
+    # in both clio_5 and megane_4) has more than one right answer here, and
+    # `Path.glob` returns directory order, which differs between filesystems.
+    # This passed locally and failed on CI for exactly that reason — meaning
+    # every search query generated for a multi-model part was machine-dependent.
+    # Sorting makes the winner a property of the catalog, not of the disk.
+    for path in sorted(fitment_dir.glob("*.yaml")):
         stem_parts = path.stem.split("_")
         if len(stem_parts) >= 2:
             make = stem_parts[0]

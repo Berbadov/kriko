@@ -135,7 +135,7 @@ def _catalog_part_headers() -> dict[str, dict]:
     stoplists.catalog_code_manufacturers(): a new part is covered the moment
     its stub exists, with no separate registration step to forget."""
     headers: dict[str, dict] = {}
-    for path in _CATALOG_PARTS_DIR.glob("**/*.yaml"):
+    for path in sorted(_CATALOG_PARTS_DIR.glob("**/*.yaml")):
         try:
             data = yaml.safe_load(path.read_text()) or {}
         except yaml.YAMLError:
