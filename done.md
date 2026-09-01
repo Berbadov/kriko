@@ -6,6 +6,23 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### v0.2.4 released — mcp freezes without its cli extra — 2026-09-01 (6b63c3c, 20a4ffa)
+v0.2.3's bundles failed identically on all three runners at the freeze step:
+`collect_submodules("mcp")` walks the package by *importing* each submodule, and
+`mcp.cli` raises "typer is required" when the `[cli]` extra is absent — which it
+is in the sidecar's frozen environment. The exclusion now lives in
+`packaging/freeze_imports.py` (`MCP_EXCLUDED_PREFIXES`, applied via
+`collect_submodules`'s pre-import `filter=`), not in the spec, so
+`src/app/tests/test_freeze_imports.py` can pin it — including a guard that the
+spec never grows a second collection of its own. A widening now fails in pytest
+instead of ten minutes into a release build; the smoke test's `--mcp` handshake
+catches a submodule that went missing in the job that produced the binary.
+
+**v0.2.4 is on GitHub Releases** with all four bundles (x64 setup.exe, amd64 .deb,
+amd64 .AppImage, aarch64 .dmg) plus `packs.json`, `cars.kpack`, `drill.kpack` —
+one download now carries the installer fixes *and* the agent path. Still unsigned
+(no minisign key), so self-update stays inert.
+
 ### The install that failed, and the extension that could not find the app — 2026-09-01 (this commit)
 A reader ran the v0.2.1 Windows installer and got "Error opening file for
 writing: ...\kriko-sidecar.exe"; *Ignore* then produced an app that did not open.
