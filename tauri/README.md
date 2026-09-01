@@ -52,3 +52,30 @@ policy decision, not an engineering one, and is deferred.
 The sidecar resolves `~/.kriko/` the same way the CLI does, so a pack installed
 in the app is visible to `python -m app.cli` and the other way round. An
 app-private store would silently split a reader's knowledge base in half.
+
+## Self-update
+
+The shell checks for a newer release on startup (`offer_update` in `main.rs`),
+asks, and only then downloads, kills the engine and restarts. Killing first is
+not optional: the running sidecar holds `knowledge.sqlite`'s WAL lock, and a
+restart around it makes the *next* launch fail for a reason nobody can see.
+
+The updater config is not in `tauri.conf.json` — it is applied at build time by
+`packaging/configure_updater.py`, from `TAURI_SIGNING_PUBLIC_KEY`. With no key
+configured the build produces plain installers and `app.updater()` returns an
+error the shell ignores. That is deliberate: committing an endpoint and a
+`createUpdaterArtifacts` flag would make every fork's build fail on a missing
+secret, and building updater artifacts with a throwaway key would ship an app
+that downloads its own updates and then rejects them.
+
+To enable it on this repo:
+
+```bash
+npm --prefix tauri run tauri signer generate -w ~/.kriko-updater.key
+```
+
+Then set the repository **secret** `TAURI_SIGNING_PRIVATE_KEY` (the file's
+contents), the secret `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if you gave one, and
+the repository **variable** `TAURI_SIGNING_PUBLIC_KEY`. The next tag publishes
+`latest.json` beside the installers. Keep the private key: rotating it strands
+every already-installed copy, which can then only be updated by hand.

@@ -95,10 +95,28 @@ jobs:
                   npm --prefix tauri install --no-audit --no-fund
                   npm --prefix tauri run tauri icon src-tauri/icons/icon.png
 
-            # Unsigned, on all three. Signing needs certificates, which is a
-            # policy decision (an Apple developer account, an EV cert) and not
-            # this workflow's to make.
+            # Self-update is a build-time decision, because the key that makes
+            # it trustworthy lives in a repository secret. Without the secret
+            # this is a no-op and the run still produces installers — see
+            # packaging/configure_updater.py.
+            - name: Configure self-update
+              shell: bash
+              env:
+                  TAURI_SIGNING_PUBLIC_KEY: ${{ vars.TAURI_SIGNING_PUBLIC_KEY }}
+              run: |
+                  python packaging/configure_updater.py \
+                      --repo "${{ github.repository }}" \
+                      --version "${{ github.ref_name }}"
+
+            # Unsigned, on all three — code signing needs certificates, which is
+            # a policy decision (an Apple developer account, an EV cert) and not
+            # this workflow's to make. The updater's minisign key below is a
+            # different thing entirely: it signs the update payload, not the
+            # executable, so it works on unsigned builds.
             - name: Bundle
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
               run: npm --prefix tauri run tauri build
 
             - uses: actions/upload-artifact@v4
@@ -109,6 +127,8 @@ jobs:
                       tauri/src-tauri/target/release/bundle/**/*.AppImage
                       tauri/src-tauri/target/release/bundle/**/*.dmg
                       tauri/src-tauri/target/release/bundle/**/*.exe
+                      tauri/src-tauri/target/release/bundle/**/*.tar.gz
+                      tauri/src-tauri/target/release/bundle/**/*.sig
                   if-no-files-found: error
 
     # The knowledge, built once and published beside the installers. Packs are
@@ -166,6 +186,10 @@ jobs:
         permissions:
             contents: write
         steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
             - uses: actions/download-artifact@v4
               with:
                   path: artifacts
@@ -183,6 +207,24 @@ jobs:
                       -exec cp {} release/ \;
                   ls -lh release
                   test -n "$(ls -A release)"
+
+            # The one manifest an installed app polls, joined from three
+            # runners' artifacts. Skipped rather than failed when no signing key
+            # is configured: a release with installers and no self-update is a
+            # release; a failed release job is not.
+            - name: The update manifest
+              run: |
+                  if find artifacts -name '*.sig' | grep -q .; then
+                      python packaging/updater_manifest.py \
+                          --artifacts artifacts \
+                          --version "${GITHUB_REF_NAME#v}" \
+                          --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
+                          --notes "Kriko ${{ github.ref_name }}" \
+                          --out release/latest.json
+                      cat release/latest.json
+                  else
+                      echo "no updater artifacts — TAURI_SIGNING_PRIVATE_KEY is unset"
+                  fi
 
             - uses: softprops/action-gh-release@v2
               with:

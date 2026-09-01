@@ -67,6 +67,28 @@ Every release is built by `.github/workflows/desktop.yml` on three runners, and
 each frozen sidecar has to answer a real lookup and run a real job
 (`packaging/smoke_sidecar.py`) before it is allowed into a bundle.
 
+### Staying current — two clocks
+
+Knowledge changes far more often than the app does, so the two update
+separately and neither waits for the other.
+
+**Packs.** *Packs → Check for updates*. Kriko reads `packs.json` from the
+latest release, compares each installed pack's version and content digest
+against what is offered, and downloads only what is genuinely newer — a
+renumbered pack with identical knowledge is not an update, and a version
+republished with *different* knowledge is refused outright, because a version
+is an immutable identifier. The download is verified against the index's
+`sha256` before it is allowed near the store, and installs through the same
+path as `kriko install`. Point it elsewhere with `KRIKO_PACK_INDEX`.
+
+**The app.** Kriko asks on startup when a newer release exists, then downloads,
+installs and restarts. Updates are verified against a minisign key baked into
+the app — separate from OS code signing, which is why it works on the unsigned
+builds above. Releases built without the signing secret simply ship no
+self-update; the installers are unaffected.
+
+Both leave `~/.kriko` alone.
+
 ---
 
 ## Install and run from source

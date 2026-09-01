@@ -801,12 +801,18 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   Windows SmartScreen flags the NSIS installer. Signing needs an Apple
   developer account and an EV certificate — a policy/spend decision, not an
   engineering one (see the human-decisions table).
-- **Releases are wired but the store is empty.** A `v*` tag runs the matrix and
-  the `release` job attaches all four installers to a GitHub release
-  (`softprops/action-gh-release`, `contents: write` scoped to that job alone).
-  What no release can carry yet is a *pack*: the app installs with no
-  `cars.kpack`, so a first-run experience is an empty store until pack
-  distribution is decided — ship one in the bundle, or fetch on first launch.
+- **Distribution is wired end to end.** A `v*` tag builds every pack, publishes
+  `packs.json` beside the four installers, and the app updates its packs from
+  it (*Packs → Check for updates*). The app updates itself the same way, from
+  `latest.json` — but self-update is **off until someone generates the minisign
+  keypair** and sets `TAURI_SIGNING_PRIVATE_KEY` (secret) and
+  `TAURI_SIGNING_PUBLIC_KEY` (variable); see `tauri/README.md`. Until then
+  releases ship installers only, which is a deliberate no-op rather than a
+  failure.
+- **First run is still an empty store.** The installer carries no pack, so a
+  fresh launch answers nothing until the reader presses *Check for updates*.
+  Either ship `cars.kpack` inside the bundle, or make the first launch offer
+  the index by itself.
 - **What is already mechanical**: the handshake string must match on both
   sides, no engine vocabulary may appear in Rust, the boot screen must be able
   to render a failure, every data file under `src/` must be declared package

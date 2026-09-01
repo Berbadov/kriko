@@ -210,6 +210,15 @@ and settings. Interface state never goes in the engine's schema: uninstalling a
 pack must not drop your history, and a history row must not affect a pack's
 `content_digest`. `/api/health` reports both paths.
 
+**Two update clocks, and neither waits for the other.** Knowledge changes
+weekly; the binary rarely. Packs update through the engine — `kriko/pack/
+updates.py` decides (it parses an index and compares version + `content_digest`,
+refusing a republished version exactly as `packstore.install` does) and
+`app/packsource.py` fetches, because the engine owns no socket. The app updates
+itself through Tauri's minisign-signed updater, configured at build time by
+`packaging/configure_updater.py` so a tree with no signing key still builds.
+Checking is a request; installing is a job.
+
 If a module needs something from the layer above, it is in the wrong layer — move
 the module, don't add the import. New pipeline drivers belong in `app/pipeline/`; new
 interfaces in `app/`; anything category-specific in `packs/<category>/`. See
