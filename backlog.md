@@ -788,32 +788,27 @@ with an empty, unclickable summary. Add a `lang` parameter to both surfaces,
 matching `/api/query`'s existing precedent, with a fallback to any available
 language rather than an empty title when the requested one is missing.
 
-### B52 — The standalone app: installers on three OSes `[G6]`
-Phases 0–5 are written and landed 2026-09-01 (see `done.md`). What remains is
-**verification of phase 5 only**, and it cannot be done on this machine:
+### B52 — The standalone app: signing, and a window nobody has opened `[G6]`
+Phases 0–5 landed and **all four installers now build** — see `done.md`
+(2026-09-01). What is left is what CI cannot answer:
 
-- **The installers have never been built.** There is no Rust toolchain here
-  (`cargo`/`rustc` absent), so `tauri/` and `packaging/kriko-sidecar.spec` are
-  reviewed code, not proven code. `.github/workflows/desktop.yml` builds them on
-  three runners; the first `workflow_dispatch` run is the real test, and every
-  PyInstaller `hiddenimports` guess in the spec is a candidate failure.
-- **The frozen sidecar is now proven on Linux.** `packaging/freeze.sh` builds it
-  with PyInstaller and runs `packaging/smoke_sidecar.py` against the binary —
-  handshake, health, served frontend, a real `/api/lookup`, and a research job
-  that fails *cleanly* rather than with `ModuleNotFoundError`. Doing this the
-  first time found a genuine defect: `kriko/store/schema.sql` is read from disk
-  and was not declared as package data, so the frozen binary (**and any
-  non-editable wheel**) raised `FileNotFoundError` on the first query. Fixed in
-  `pyproject.toml`, in the spec's `datas`, and mechanically by
-  `test_every_data_file_under_src_is_declared_as_package_data`. Still unproven:
-  the Windows and macOS freezes, where `hiddenimports` may differ.
-- **What is already mechanical**: `test_the_shell_and_the_sidecar_agree_on_the
-  _handshake` fails if either side renames `KRIKO_PORT`, and
-  `test_the_shell_holds_no_engine_logic` fails if engine vocabulary appears in
-  Rust. Both run in the ordinary pytest suite with no toolchain.
-- **Out of scope, deliberately**: code signing (needs an Apple developer
-  account and an EV certificate — a policy decision, see the human-decisions
-  table) and auto-update.
+- **No human has opened the window.** CI proves the bundle links, not that the
+  boot screen hands over to the app. The sequence to watch is: window appears
+  with "Starting Kriko…", the shell reads `KRIKO_PORT`, `/api/health` answers,
+  `location.replace` swaps in the dashboard. Failing that, the failure screen
+  must show the sidecar's stderr rather than going blank.
+- **Nothing is signed.** macOS shows an unidentified-developer warning and
+  Windows SmartScreen flags the NSIS installer. Signing needs an Apple
+  developer account and an EV certificate — a policy/spend decision, not an
+  engineering one (see the human-decisions table).
+- **No release exists.** The workflow uploads artifacts per run; it does not
+  attach them to a tag. `push: tags: [v*]` fires the same matrix, so cutting a
+  release is a tag plus an upload step.
+- **What is already mechanical**: the handshake string must match on both
+  sides, no engine vocabulary may appear in Rust, the boot screen must be able
+  to render a failure, every data file under `src/` must be declared package
+  data, and no tracked path may be unnameable on Windows. All in the ordinary
+  pytest suite, no toolchain needed.
 
 Also open from the phase-2 work: the report screen makes weak claim selection
 obvious, which is the product principle's open work (B36), not this item's.
