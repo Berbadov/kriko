@@ -41,11 +41,38 @@ it's shown anyway but ranked lower.
 
 ---
 
-## Install and run
+## Download
 
-Requires Python 3.14+. No Docker, no Postgres — the store is a single SQLite file at
-`~/.kriko/knowledge.sqlite`. The dashboard keeps its own history and settings
-beside it in `~/.kriko/app.sqlite`, so clearing one never touches the other.
+The desktop app carries its own Python. Nothing to install, nothing to run
+alongside it — **no Docker, no Postgres, no service**. Grab the installer for
+your platform from the [latest release](../../releases/latest):
+
+| Platform | File |
+|----------|------|
+| Windows | `Kriko_<version>_x64-setup.exe` |
+| macOS (Apple Silicon) | `Kriko_<version>_aarch64.dmg` |
+| Debian / Ubuntu | `Kriko_<version>_amd64.deb` |
+| Any Linux | `Kriko_<version>_amd64.AppImage` |
+
+Builds are **unsigned**: macOS calls it an unidentified developer (right-click →
+Open) and Windows SmartScreen warns on the installer (More info → Run anyway).
+Signing needs an Apple developer account and an EV certificate — backlog B52.
+
+Everything lives in `~/.kriko`: `knowledge.sqlite` holds the packs you install,
+`app.sqlite` holds your own lookup history. They are separate files on purpose,
+so uninstalling a pack cannot drop your history. Uninstalling the app leaves
+both.
+
+Every release is built by `.github/workflows/desktop.yml` on three runners, and
+each frozen sidecar has to answer a real lookup and run a real job
+(`packaging/smoke_sidecar.py`) before it is allowed into a bundle.
+
+---
+
+## Install and run from source
+
+Requires Python 3.14+. Same two SQLite files as the app above — a pack installed
+by the CLI is visible in the desktop app and the other way round.
 
 ```bash
 pip install -e ".[dev,pipeline]"            # editable install; pipeline extra is
@@ -86,9 +113,18 @@ Run the tests with `python -m pytest` (no arguments — `testpaths` is set in `p
 sidecar, waits for `/api/health`, and shows the UI — the identical UI a browser
 gets, from the identical `~/.kriko/` store, so a pack installed in the app is
 visible to `python -m app.cli`. Building it needs a Rust toolchain and Node;
-neither the wheel nor the test suite does. See `tauri/README.md`. **The
-installers have not been built yet** — CI (`.github/workflows/desktop.yml`) is
-where they will first exist (backlog B52).
+neither the wheel nor the test suite does. See `tauri/README.md`.
+
+Installers are built by `.github/workflows/desktop.yml`: on every pull request
+that touches the packaging, to prove the bundle still builds, and on a `v*` tag,
+where the four installers are attached to a GitHub release. To cut one:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+Locally, `packaging/freeze.sh` builds and smoke-tests the sidecar alone, which
+needs no Rust toolchain.
 
 ---
 

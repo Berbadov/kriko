@@ -801,9 +801,12 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   Windows SmartScreen flags the NSIS installer. Signing needs an Apple
   developer account and an EV certificate — a policy/spend decision, not an
   engineering one (see the human-decisions table).
-- **No release exists.** The workflow uploads artifacts per run; it does not
-  attach them to a tag. `push: tags: [v*]` fires the same matrix, so cutting a
-  release is a tag plus an upload step.
+- **Releases are wired but the store is empty.** A `v*` tag runs the matrix and
+  the `release` job attaches all four installers to a GitHub release
+  (`softprops/action-gh-release`, `contents: write` scoped to that job alone).
+  What no release can carry yet is a *pack*: the app installs with no
+  `cars.kpack`, so a first-run experience is an empty store until pack
+  distribution is decided — ship one in the bundle, or fetch on first launch.
 - **What is already mechanical**: the handshake string must match on both
   sides, no engine vocabulary may appear in Rust, the boot screen must be able
   to render a failure, every data file under `src/` must be declared package
