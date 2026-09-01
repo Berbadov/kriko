@@ -14,10 +14,13 @@
 # frozen binary starts and then fails at the first request with
 # `ModuleNotFoundError: uvicorn.protocols.http.h11_impl`.
 #
-# `collect_submodules("mcp")` — the same problem one layer out. `--mcp` runs the
-# MCP stdio server out of this binary, and FastMCP resolves transports and
+# `mcp_submodules()` — the same problem one layer out. `--mcp` runs the MCP
+# stdio server out of this binary, and FastMCP resolves transports and
 # validators by string at startup. The failure is a binary that answers HTTP
-# perfectly and dies on the agent's first `initialize`.
+# perfectly and dies on the agent's first `initialize`. It lives in
+# packaging/freeze_imports.py because a spec file cannot be tested and this one
+# has already been wrong once — collecting all of `mcp` pulls in `mcp.cli`,
+# which raises "typer is required" and fails the freeze on every runner.
 #
 # `datas` — two things in this repo are read from disk rather than imported, and
 # both are invisible to PyInstaller's import graph: the built frontend
@@ -30,7 +33,8 @@
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_submodules
+sys.path.insert(0, SPECPATH)
+from freeze_imports import mcp_submodules
 
 ROOT = Path(SPECPATH).parent
 STATIC = ROOT / "src" / "app" / "web" / "static"
@@ -65,7 +69,7 @@ a = Analysis(
         "kriko.research.api",
         "app.mcp_server",
     ]
-    + collect_submodules("mcp"),
+    + mcp_submodules(),
     hookspath=[],
     runtime_hooks=[],
     # The research API plane and the whole pipeline are optional extras; a
