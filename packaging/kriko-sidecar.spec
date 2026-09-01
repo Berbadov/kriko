@@ -14,8 +14,13 @@
 # frozen binary starts and then fails at the first request with
 # `ModuleNotFoundError: uvicorn.protocols.http.h11_impl`.
 #
-# `datas` — the built frontend lives in src/app/web/static/ and is loaded from
-# the filesystem, not imported. Without it the app serves 404 for its own UI.
+# `datas` — two things in this repo are read from disk rather than imported, and
+# both are invisible to PyInstaller's import graph: the built frontend
+# (src/app/web/static/, or the app 404s on its own UI) and the store's DDL
+# (src/kriko/store/schema.sql, or every query raises FileNotFoundError). The
+# second one was found by running this build, not by reading the code — see
+# test_every_data_file_under_src_is_declared_as_package_data, which now fails
+# if a third one appears.
 
 import sys
 from pathlib import Path
@@ -33,7 +38,10 @@ a = Analysis(
     [str(ROOT / "src" / "app" / "sidecar.py")],
     pathex=[str(ROOT / "src")],
     binaries=[],
-    datas=[(str(STATIC), "app/web/static")],
+    datas=[
+        (str(STATIC), "app/web/static"),
+        (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
+    ],
     hiddenimports=[
         "uvicorn.logging",
         "uvicorn.loops.auto",

@@ -6,6 +6,35 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-09-01 — The frozen sidecar, proven (and a wheel bug it found)
+
+This commit. B52 verification work.
+
+- **`packaging/freeze.sh`** builds the sidecar with PyInstaller and immediately
+  smokes the binary, so the class of failure that only exists in a build — a
+  missing hidden import, an undeclared data file — has a local reproduction and
+  a name. No Rust toolchain needed; it stops short of the Tauri bundle.
+- **`packaging/smoke_sidecar.py` now goes past liveness**: a real
+  `/api/lookup`, a `POST /api/research` that must return a job id, and that
+  job reaching `done` in state `failed` *without* `ModuleNotFoundError` in its
+  log. It runs the binary in a temp directory with `KRIKO_STORE` /
+  `KRIKO_APP_STATE` redirected — a lookup that passes only because the
+  developer has the cars pack installed proves nothing.
+- **The bug it found on the first run**: `kriko/store/schema.sql` is read from
+  disk at every `connect()`, and `pyproject.toml` declared only
+  `app.web/static`. The frozen binary answered `/api/health` and 500'd on the
+  first query with `FileNotFoundError`; **a non-editable `pip install` was
+  broken the same way** and no test could see it. Fixed in `pyproject.toml`,
+  in the spec's `datas`, and generalised: 
+  `test_every_data_file_under_src_is_declared_as_package_data` walks `src/`
+  for non-`.py` files and fails on any that `package-data` does not cover.
+- **A frozen build has no `packs/`**, so `tasks.pack_build` now turns
+  `ModuleNotFoundError` on `packs.<name>.build` into a message that says to
+  build the pack from a checkout and install the `.kpack`, instead of a
+  traceback.
+
+---
+
 ## 2026-09-01 — The standalone app, phases 2–5: advice, jobs, and a desktop shell
 
 `127ec40`, `54c2ecf`, and this commit. Spec:

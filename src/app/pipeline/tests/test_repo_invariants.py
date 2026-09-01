@@ -362,3 +362,51 @@ def test_the_boot_screen_can_render_a_failure():
         "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
         "lock and breaks the next launch"
     )
+
+
+def test_every_data_file_under_src_is_declared_as_package_data():
+    """A file read from disk must be shipped, or only editable installs work.
+
+    `src/kriko/store/schema.sql` is read at every `connect()`. It was declared
+    nowhere, so an editable install worked, a real wheel raised
+    `FileNotFoundError` on the first query, and the PyInstaller build failed the
+    same way — one missing line, three broken distributions, none of them
+    visible from the source tree.
+
+    So the rule is mechanical rather than remembered: every non-Python file
+    under `src/` is either declared in `pyproject.toml`'s `package-data` or
+    named here as deliberately unshipped.
+    """
+    import tomllib
+
+    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text())
+    declared = pyproject["tool"]["setuptools"]["package-data"]
+
+    # Build the set of (package, glob) rules as concrete path prefixes.
+    globs: list[tuple[Path, str]] = []
+    for package, patterns in declared.items():
+        base = SRC / Path(package.replace(".", "/"))
+        for pattern in patterns:
+            globs.append((base, pattern))
+
+    # Not distributed, on purpose: build metadata and caches.
+    ignored_parts = {"__pycache__", ".egg-info", ".pytest_cache"}
+
+    undeclared = []
+    for path in SRC.rglob("*"):
+        if not path.is_file() or path.suffix == ".py":
+            continue
+        if any(part in ignored_parts or part.endswith(".egg-info") for part in path.parts):
+            continue
+        if not any(
+            path in set(base.glob(pattern)) for base, pattern in globs
+        ):
+            undeclared.append(str(path.relative_to(REPO)))
+
+    assert undeclared == [], (
+        "these files live under src/ but no package-data rule ships them, so a "
+        "wheel install cannot read them:\n  "
+        + "\n  ".join(undeclared)
+        + "\nAdd them to [tool.setuptools.package-data] in pyproject.toml (and "
+        "to packaging/kriko-sidecar.spec's `datas` if the sidecar needs them)."
+    )
