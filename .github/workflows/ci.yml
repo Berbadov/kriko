@@ -1,9 +1,13 @@
 name: CI
 
+# PAUSED 2026-09-01 — hand-run only, until the desktop app is known good.
+# The suite is ~3 minutes and it is not what is failing: v0.2.4 built green and
+# then would not open. While the shell is being chased, the loop that matters is
+# `desktop.yml` (which still runs on tags, dispatches and packaging PRs) and
+# pytest locally. Restore by putting `push`/`pull_request` back — one revert of
+# this block, nothing else changed.
 on:
-    push:
-        branches: [main]
-    pull_request:
+    workflow_dispatch:
 
 # A newer push to the same branch cancels the older run — this suite is ~3
 # minutes and there is no value in finishing a superseded one.

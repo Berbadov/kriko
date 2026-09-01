@@ -10,6 +10,28 @@ exists to keep it true. See `docs/USAGE.md` (operation), `docs/INTERNALS.md`
 (architecture), `docs/historical/pipeline_postmortem.md` (early knowledge-pipeline
 history, pre-pivot — historical only).
 
+## TEMPORARY — the app-first phase *(2026-09-01, delete when it ends)*
+
+Until a Windows install opens, runs an analysis, and the reader says so, the
+loop is the *app*, not the suite. `.github/workflows/ci.yml` is paused to
+`workflow_dispatch` only — three minutes of pytest on every push was not what
+was failing; v0.2.4 was green and would not open.
+
+The gate moved, it did not disappear:
+
+1. **Run `pytest` locally before every push.** `.venv/bin/python -m pytest -q`.
+   A paused workflow is not permission to push a broken tree.
+2. **Don't block on a CI run.** Push, tag, and keep working; read the run when
+   it lands. `gh run watch` in the foreground is the habit being cut.
+3. **`desktop.yml` still runs** — on tags, on hand-dispatch, and on packaging
+   PRs. It is the only thing that produces an installer, and its smoke steps
+   are the checks that would have caught v0.2.4. Do not trim them for speed.
+4. **Ship to the reader, not to the branch.** A fix that is not in an installer
+   they can double-click is not a fix yet.
+
+**Ending this phase** = restore `on: push/pull_request` in `ci.yml` and delete
+this section. Nothing else was changed to get here.
+
 ## Task tracking
 
 Open work lives in `backlog.md` (prioritized, with goals G1–G5 and evidence); finished
