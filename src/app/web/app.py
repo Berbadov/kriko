@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.web.jobs import JobRunner
 from app.web.routers import (
+    agent,
     analyze,
     control,
     health,
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings or Settings.from_env()
 
     for router in (
+        agent.router,
         packs.router,
         query.router,
         subjects.router,

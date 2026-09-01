@@ -45,6 +45,16 @@ export type PackUpdates = {
     packs: PackUpdate[];
 };
 
+// How an agent reaches this installation. The shape is the server's, verbatim:
+// the JSON block is meant to be copied, not rebuilt here from parts.
+export type AgentConfig = {
+    server_name: string;
+    frozen: boolean;
+    store: string;
+    mcp_json: unknown;
+    tools: string[];
+};
+
 export type Kind = { kind: string; pack_id: string };
 export type IdentityKey = { key: string; match_json?: string };
 export type Term = { term_id: string; unit: string };

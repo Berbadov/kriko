@@ -23,6 +23,15 @@ server, two doors; if the port is taken (a second Kriko, or a `python -m
 app.web` in a terminal) the extension door is simply skipped and the app is
 unaffected.
 
+**It is also how an agent reaches an installed app.** `--mcp` runs the MCP
+stdio server (`app/mcp_server.py`) instead of the HTTP one, out of the same
+binary and against the same `~/.kriko`. Without it the research protocol existed
+only for someone with a source checkout: a reader who installed the app had a
+*Research* button that produces a brief and nothing able to act on it. The two
+modes share this file rather than shipping a second executable because they must
+resolve the store identically — an agent writing to a different SQLite file than
+the window reads is the one failure that would look like success.
+
 **It dies with its parent, and that is code, not a hope.** With
 `--exit-with-parent` the sidecar watches its own stdin: the write end of that
 pipe lives in the shell, so the shell going away — cleanly, crashed, or killed
@@ -101,6 +110,21 @@ def exit_when_parent_goes(server, stream=None, grace: float = GRACE_SECONDS):
     return thread
 
 
+def serve_mcp(store=None) -> int:
+    """Hand stdin/stdout to the MCP server and get out of the way.
+
+    No port, no handshake, no parent watchdog: stdin *is* the transport here, so
+    the watchdog would consume the very bytes it is meant to outlive, and EOF on
+    it already ends the process the way MCP intends.
+    """
+    from app import mcp_server
+
+    if store is not None:
+        mcp_server.STORE_PATH = store
+    mcp_server.mcp.run()
+    return 0
+
+
 def also_reserve(host: str, port: int):
     """Bind a second, fixed port — or don't, and say so.
 
@@ -135,6 +159,11 @@ def main(argv=None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=0, help="0 asks the OS (default)")
     parser.add_argument("--store", default=None)
+    parser.add_argument(
+        "--mcp",
+        action="store_true",
+        help="run the MCP stdio server instead of the HTTP one, on the same store",
+    )
     # Off by default: `python -m app.sidecar < /dev/null` in a terminal would
     # otherwise read EOF at once and exit. The desktop shell always passes it.
     parser.add_argument(
@@ -150,11 +179,20 @@ def main(argv=None) -> int:
     )
     args = parser.parse_args(argv)
 
-    overrides = {}
+    store = None
     if args.store:
         from pathlib import Path
 
-        overrides["store_path"] = Path(args.store)
+        store = Path(args.store)
+
+    # Before anything binds: the MCP mode owns stdio and must print nothing of
+    # its own on it. A stray handshake line here would be a protocol error.
+    if args.mcp:
+        return serve_mcp(store)
+
+    overrides = {}
+    if store is not None:
+        overrides["store_path"] = store
 
     sock, port = reserve(args.host, args.port)
     # Unbuffered and flushed: the shell blocks on this line, and a buffered
