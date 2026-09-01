@@ -284,13 +284,28 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Engine::default())
         .setup(|app| {
-            // After setup, not before: the engine's startup is what the reader
-            // is waiting on, and an update prompt in front of a window that has
-            // not opened yet would look like the app failing to start.
-            offer_update(app.handle().clone());
+            // The updater is registered *here*, not on the builder, because it
+            // is the one plugin whose configuration is written at package time:
+            // `packaging/configure_updater.py` removes `plugins.updater`
+            // entirely from a build with no signing key, which is every fork
+            // and every release this repo has cut so far. A plugin on the
+            // builder is initialized before `build()` returns, and the updater
+            // refuses a missing config — so v0.2.4 died in `build().expect(..)`
+            // with a panic on stderr nobody sees and no window at all. Rule 2
+            // again: a shell that cannot check for updates still has to open.
+            let updatable = app
+                .handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())
+                .is_ok();
+            if updatable {
+                // After setup, not before: the engine's startup is what the
+                // reader is waiting on, and an update prompt in front of a
+                // window that has not opened yet would look like the app
+                // failing to start.
+                offer_update(app.handle().clone());
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![start_engine])

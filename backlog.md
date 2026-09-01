@@ -792,6 +792,17 @@ language rather than an empty title when the requested one is missing.
 Phases 0–5 landed and **all four installers now build** — see `done.md`
 (2026-09-01). What is left is what CI cannot answer:
 
+- **v0.2.4 on Windows did not open at all, and now the shell's own start is
+  checked.** The app panicked in `build().expect(..)` before it drew anything:
+  `PluginInitialization("updater", "invalid type: null, expected struct
+  Config")`. `configure_updater.py` removes `plugins.updater` from a build with
+  no signing key — which is every release so far — while `main.rs` registered
+  the plugin unconditionally, so the two halves were each correct and together
+  fatal. The updater is now registered from `setup` via `AppHandle::plugin`,
+  where the failure is a `Result` the shell shrugs at. The *mechanism*, since
+  "the installers built" was never evidence that the app opens:
+  `packaging/smoke_app.py` launches the bundled shell on the Linux and Windows
+  runners and fails on a panic or an early exit.
 - **A reader has now run the installer, and it failed.** v0.2.1 on Windows 11
   stopped with "Error opening file for writing: ...\kriko-sidecar.exe", and after
   *Ignore* the app did not open at all. Two causes, both fixed in v0.2.2: a
@@ -836,6 +847,16 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   to render a failure, every data file under `src/` must be declared package
   data, and no tracked path may be unnameable on Windows. All in the ordinary
   pytest suite, no toolchain needed.
+
+### B53 — The desktop shell has no `Cargo.lock`, so no two builds are the same
+`tauri/src-tauri/Cargo.lock` is not committed and `tauri-plugin-updater = "2"`
+floats, so every CI run resolves whatever crates.io holds that minute. This is
+not theoretical: v0.2.1 opened and v0.2.4, four hours later, panicked on a
+config both builds shipped identically — the plugin's tolerance for a missing
+`plugins.updater` changed underneath an unchanged tree. A lockfile makes a
+release reproducible and makes a dependency bump a commit somebody can revert.
+Needs a Rust toolchain to generate (`cargo generate-lockfile` in
+`tauri/src-tauri/`), which is why it is a row rather than a diff.
 
 Also open from the phase-2 work: the report screen makes weak claim selection
 obvious, which is the product principle's open work (B36), not this item's.

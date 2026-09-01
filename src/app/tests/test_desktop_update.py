@@ -225,3 +225,70 @@ def test_the_scripts_run_as_scripts(tmp_path):
     )
     assert done.returncode == 0, done.stderr
     assert "updater disabled" in done.stdout
+
+
+def test_the_updater_plugin_is_never_required_to_start_the_app():
+    """The one that shipped: v0.2.4 panicked before it drew a window.
+
+    `configure_updater.py` removes `plugins.updater` from a build with no
+    signing key — which is every fork, every local build, and every release of
+    this repo so far. A plugin registered on the *builder* is initialized
+    before `build()` returns, and the updater refuses a null config:
+
+        PluginInitialization("updater", "Error deserializing 'plugins.updater'
+        within your Tauri configuration: invalid type: null, expected struct
+        Config")
+
+    `build().expect(..)` turns that into a panic with no window and no dialog —
+    a double-clicked icon that does nothing at all. So the updater is
+    registered from `setup`, where the failure is a `Result` this shell is
+    allowed to shrug at, exactly as `offer_update` already shrugs at a missing
+    endpoint.
+    """
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    builder, setup = main_rs.split("fn main()", 1)[1].split(".setup(", 1)
+    assert "tauri_plugin_updater" not in builder, (
+        "the updater is registered on the builder — a build with no signing "
+        "key has no `plugins.updater`, and initializing it there panics "
+        "before the window exists"
+    )
+    registration = re.search(
+        r"\.plugin\(\s*tauri_plugin_updater::Builder::new\(\)\.build\(\)\s*\)"
+        r"\s*\.is_ok\(\)",
+        setup,
+        re.S,
+    )
+    assert registration, (
+        "the updater must be registered inside setup via AppHandle::plugin, "
+        "and its Result read — an unread Result is the panic again"
+    )
+    # And the offer only goes out if the plugin actually came up: `updater()`
+    # on an uninitialized plugin is an error, not an absent update.
+    assert setup.index("offer_update(") > registration.end(), setup
+
+
+def test_a_shell_plugin_failure_can_never_be_a_panic():
+    """Rule 2 of main.rs, mechanically. Any plugin may be misconfigured.
+
+    `build()` is still allowed to `expect` — a broken context is a broken
+    build — but nothing whose configuration is written at *package* time may
+    be initialized where the only failure mode is a silent process exit.
+    """
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    builder = main_rs.split("fn main()", 1)[1].split(".setup(", 1)[0]
+    configured_at_build_time = ("updater",)
+    for name in configured_at_build_time:
+        assert f"tauri_plugin_{name}" not in builder, name
+
+
+def test_ci_launches_the_shell_and_not_only_builds_it():
+    """A green bundle job is not evidence that the app opens; v0.2.4 was both."""
+    workflow = (REPO / ".github" / "workflows" / "desktop.yml").read_text()
+    assert "smoke_app.py" in workflow, (
+        "nothing in CI starts the shell — the failure this catches is a panic "
+        "on a stderr no double-click has"
+    )
+    # It has to run against the built binary, after the bundler.
+    assert workflow.index("tauri build") < workflow.index("smoke_app.py")
+    # Headless Linux needs a display for the webview to even init.
+    assert "xvfb" in workflow

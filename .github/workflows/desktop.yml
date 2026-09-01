@@ -56,7 +56,7 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
-                    librsvg2-dev patchelf libssl-dev
+                    librsvg2-dev patchelf libssl-dev xvfb
 
             - name: Install Python side
               run: |
@@ -118,6 +118,28 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
               run: npm --prefix tauri run tauri build
+
+            # The installers building is not the app starting. v0.2.4 built
+            # green on all three runners and then panicked in `build()` before
+            # its first window, because a plugin configured at package time was
+            # registered unconditionally — a failure with nowhere to be seen but
+            # a stderr no double-click has. So the shell is launched here.
+            #
+            # Not on macOS: a Tauri binary run outside its .app is a different
+            # question there, and a check that fails for reasons unrelated to
+            # the build is a check that gets switched off. Linux and Windows
+            # share the config path that broke, which is what this is for.
+            - name: The bundled shell opens
+              if: matrix.label != 'macos'
+              shell: bash
+              run: |
+                  shell_binary=tauri/src-tauri/target/release/kriko
+                  [ "${{ matrix.label }}" = "windows" ] && shell_binary="$shell_binary.exe"
+                  if [ "${{ matrix.label }}" = "linux" ]; then
+                      xvfb-run -a python packaging/smoke_app.py "$shell_binary"
+                  else
+                      python packaging/smoke_app.py "$shell_binary"
+                  fi
 
             - uses: actions/upload-artifact@v4
               with:
