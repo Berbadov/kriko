@@ -792,11 +792,16 @@ language rather than an empty title when the requested one is missing.
 Phases 0–5 landed and **all four installers now build** — see `done.md`
 (2026-09-01). What is left is what CI cannot answer:
 
-- **No human has opened the window.** CI proves the bundle links, not that the
-  boot screen hands over to the app. The sequence to watch is: window appears
-  with "Starting Kriko…", the shell reads `KRIKO_PORT`, `/api/health` answers,
-  `location.replace` swaps in the dashboard. Failing that, the failure screen
-  must show the sidecar's stderr rather than going blank.
+- **A reader has now run the installer, and it failed.** v0.2.1 on Windows 11
+  stopped with "Error opening file for writing: ...\kriko-sidecar.exe", and after
+  *Ignore* the app did not open at all. Two causes, both fixed in v0.2.2: a
+  leaked sidecar kept its own onefile image mapped (now: `--exit-with-parent`,
+  a Windows tree kill, and an NSIS pre-install hook), and `start_engine`
+  returned its error into a window that is created hidden, so "no sidecar"
+  rendered nowhere (now: every failure path goes through `emit_failure`, which
+  shows the window). **Still unconfirmed by a human: the success path** —
+  window appears with "Starting Kriko…", the shell reads `KRIKO_PORT`,
+  `/api/health` answers, `location.replace` swaps in the dashboard.
 - **Nothing is signed.** macOS shows an unidentified-developer warning and
   Windows SmartScreen flags the NSIS installer. Signing needs an Apple
   developer account and an EV certificate — a policy/spend decision, not an
@@ -813,6 +818,20 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   fresh launch answers nothing until the reader presses *Check for updates*.
   Either ship `cars.kpack` inside the bundle, or make the first launch offer
   the index by itself.
+- **The extension could not reach the installed app, and now can.** It
+  hardcodes `http://127.0.0.1:8787` because a page cannot be told a random
+  port, while the sidecar only ever bound an OS-chosen one. The sidecar now
+  serves both sockets and `EXTENSION_PORT` is one constant with a guard test.
+  Untested against a real Chrome profile and a real Sahibinden page.
+- **There is still no agent-driven research plane inside the app.** *Coverage →
+  Research* starts a real job, but on the default `agent` plane it produces a
+  *brief* — `AgentResearcher.gather()`/`extract()` return nothing by design —
+  and the harness that acts on a brief (`.mcp.json`, `.claude/agents/
+  kriko_research.md`) only exists in a source checkout. So a first-run reader
+  who opens the app to build data for their own interest cannot. The protocol
+  is written down and enforced (`app/findings.py`); what is missing is an
+  address for an external agent to reach the *installed* app. Next step: ship
+  `python -m app.mcp_server` as a second sidecar command.
 - **What is already mechanical**: the handshake string must match on both
   sides, no engine vocabulary may appear in Rust, the boot screen must be able
   to render a failure, every data file under `src/` must be declared package

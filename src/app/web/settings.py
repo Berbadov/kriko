@@ -15,6 +15,17 @@ from pathlib import Path
 
 from kriko.store.db import DEFAULT_STORE
 
+#: The one port anything outside this process is allowed to assume.
+#:
+#: The desktop sidecar takes an OS-chosen port on purpose — a port it has
+#: already bound cannot be stolen between the choosing and the binding — but a
+#: Chrome extension has no way to be told a random number: it cannot read a
+#: port file, and there is no channel from the shell to a page. So the sidecar
+#: *also* listens here when it can, and this constant is the single place the
+#: number lives. `extension/background.js` hardcodes the same one, which
+#: test_the_extension_and_the_server_agree_on_a_port keeps honest.
+EXTENSION_PORT = 8787
+
 
 @dataclass(frozen=True)
 class Settings:

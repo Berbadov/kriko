@@ -12,7 +12,15 @@
 //    the one outcome that is not allowed.
 // 3. **Nothing outlives the app.** The child is killed when the window closes
 //    and when the process exits, because an orphaned uvicorn holding the WAL
-//    lock makes the *next* launch fail for a reason nobody can see.
+//    lock makes the *next* launch fail for a reason nobody can see. Three
+//    belts, because one was not enough: `--exit-with-parent` makes the sidecar
+//    end itself when this process's stdin pipe closes (covering a *crash*,
+//    which no handler here would run for), `kill_engine` ends it on both exit
+//    paths, and on Windows the kill takes the whole tree — PyInstaller onefile
+//    re-execs, so the pid we spawned is a bootloader and the process actually
+//    holding the `.exe` is its child. A survivor there does not just leak: it
+//    keeps its own image mapped, and the next *installer* fails with "Error
+//    opening file for writing: kriko-sidecar.exe".
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -90,12 +98,27 @@ fn start_engine(app: AppHandle, engine: State<'_, Engine>) -> Result<(), String>
         return Ok(()); // a reload must not start a second engine
     }
 
-    let (mut rx, child) = app
+    // Errors here are *shown*, not only returned. The window is created
+    // hidden and the boot page can only render into a visible one, so a bare
+    // `Err` — which is what "Ignore" on a locked kriko-sidecar.exe produces —
+    // would be a process with no window at all. Rule 2 has no exceptions.
+    let spawned = app
         .shell()
         .sidecar("kriko-sidecar")
-        .map_err(|error| format!("the engine binary is missing from this build: {error}"))?
-        .spawn()
-        .map_err(|error| format!("the engine would not start: {error}"))?;
+        .map_err(|error| format!("the engine binary is missing from this build: {error}"))
+        .and_then(|command| {
+            command
+                .args(["--exit-with-parent"])
+                .spawn()
+                .map_err(|error| format!("the engine would not start: {error}"))
+        });
+    let (mut rx, child) = match spawned {
+        Ok(pair) => pair,
+        Err(reason) => {
+            emit_failure(&app, "Kriko's engine could not be started", &reason);
+            return Err(reason);
+        }
+    };
 
     *engine.child.lock().unwrap() = Some(child);
 
@@ -208,6 +231,12 @@ fn offer_update(app: AppHandle) {
         if !answer {
             return;
         }
+        // Before the installer runs, not after: on Windows the update *is* an
+        // NSIS run over these very files, and a live sidecar keeps its own
+        // onefile image mapped. Installing around it is the same failure a
+        // reader hit by hand — "Error opening file for writing:
+        // kriko-sidecar.exe" — except here nobody is there to press Retry.
+        kill_engine(&app);
         if let Err(error) = update.download_and_install(|_, _| {}, || {}).await {
             app.dialog()
                 .message(format!("Kriko could not update itself: {error}"))
@@ -225,10 +254,31 @@ fn offer_update(app: AppHandle) {
 fn kill_engine(app: &AppHandle) {
     if let Some(engine) = app.try_state::<Engine>() {
         if let Some(child) = engine.child.lock().unwrap().take() {
+            let pid = child.pid();
             let _ = child.kill();
+            kill_tree(pid);
         }
     }
 }
+
+/// End the descendants the spawned pid may have left behind.
+///
+/// Only Windows needs this, and only because the sidecar is a PyInstaller
+/// onefile binary: the bootloader we spawned re-execs itself, and it is that
+/// second process which holds the extracted image — and the file lock that
+/// breaks the next install. `taskkill /T` is the one tool guaranteed present.
+#[cfg(windows)]
+fn kill_tree(pid: u32) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let _ = std::process::Command::new("taskkill")
+        .args(["/F", "/T", "/PID", &pid.to_string()])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status();
+}
+
+#[cfg(not(windows))]
+fn kill_tree(_pid: u32) {}
 
 fn main() {
     tauri::Builder::default()
