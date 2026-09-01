@@ -1,0 +1,323 @@
+part_id: clio5_body
+part_type: body
+display_name: Renault Clio 5 Body & Water Sealing
+manufacturer: renault
+known_also_as:
+- Renault Clio 5 body
+- Renault Clio 5 boot leak
+- Renault Clio 5 water ingress
+claims:
+- id: clio5_body_brakes_brake_pipe_corrosion_v1
+  claim_key: clio5_body_brakes_brake_pipe_corrosion
+  version: 1
+  is_current: true
+  title: Brake pipe corrosion
+  title_tr: Brake pipe corrosion
+  kind: known_issue
+  domain: brakes
+  severity: medium
+  confidence: 0.6
+  rationale: Corrosion in brake pipes can lead to leaks or reduced braking efficiency,
+    posing a safety risk.
+  rationale_tr: Corrosion in brake pipes can lead to leaks or reduced braking efficiency,
+    posing a safety risk.
+  inspection_advice: Inspect brake pipes for rust, pitting, or leaks. Check for any
+    signs of fluid loss or reduced brake pedal firmness.
+  inspection_advice_tr: Inspect brake pipes for rust, pitting, or leaks. Check for
+    any signs of fluid loss or reduced brake pedal firmness.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.carcostcheck.co.uk/common-problems/renault/clio
+    source_domain: carcostcheck.co.uk
+    site_or_channel: carcostcheck.co.uk
+    quote: Brake pipe corroded
+    independent: true
+  component_id: brakes_pipes_hoses
+  detection: visual
+- id: clio5_body_emissions_catalyst_and_dpf_failure_v1
+  claim_key: clio5_body_emissions_catalyst_and_dpf_failure
+  version: 1
+  is_current: true
+  title: Catalyst and DPF failures in clio5_body emissions
+  title_tr: clio5_body emisyon sisteminde katalizör ve DPF arızaları
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: Renault Clio models often develop exhaust emissions problems, especially
+    catalytic converter inefficiency and Diesel Particulate Filter (DPF) blockage.
+    These issues can lead to MOT failure and expensive repairs.
+  rationale_tr: Renault Clio modellerinde egzoz emisyon sorunları sık görülür, özellikle
+    katalitik konvertör verimsizliği ve Dizel Partikül Filtresi (DPF) tıkanması. Bu
+    sorunlar MOT başarısızlığına ve pahalı onarımlara yol açabilir.
+  inspection_advice: Check for a valid MOT, look for warning lights, and perform an
+    OBD scan for emissions-related codes such as P0420 (catalyst) or DPF blockage
+    codes. Ask if the catalyst or DPF has been replaced recently.
+  inspection_advice_tr: Geçerli bir MOT kontrol edin, uyarı lambalarına bakın ve P0420
+    (katalizör) veya DPF tıkanıklığı gibi emisyon kodları için OBD taraması yapın.
+    Katalizör veya DPF'in yakın zamanda değiştirilip değiştirilmediğini sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.carcostcheck.co.uk/common-problems/renault/clio
+    source_domain: carcostcheck.co.uk
+    site_or_channel: carcostcheck.co.uk
+    quote: Exhaust emissions exceed limits, catalytic converter efficiency low, DPF
+      warning
+    independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
+- id: clio5_body_emissions_chronic_catalytic_conver_v1
+  claim_key: clio5_body_emissions_chronic_catalytic_conver
+  version: 1
+  is_current: true
+  title: Chronic catalytic converter clogging causing loss of power and poor throttle
+    response
+  title_tr: Chronic catalytic converter clogging causing loss of power and poor throttle
+    response
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: The text describes a scenario where the Renault Clio 5 exhibits a loss
+    of power and poor throttle response, which is attributed to potential catalytic
+    converter clogging. This is a known chronic issue in turbocharged engines where
+    exhaust backpressure builds up, restricting exhaust flow and reducing engine performance.
+    The mention of 'katalitik konvertör tıkalı olabilir' (catalytic converter may
+    be clogged) supports this defect.
+  rationale_tr: The text describes a scenario where the Renault Clio 5 exhibits a
+    loss of power and poor throttle response, which is attributed to potential catalytic
+    converter clogging. This is a known chronic issue in turbocharged engines where
+    exhaust backpressure builds up, restricting exhaust flow and reducing engine performance.
+    The mention of 'katalitik konvertör tıkalı olabilir' (catalytic converter may
+    be clogged) supports this defect.
+  inspection_advice: Check for excessive backpressure in the exhaust system using
+    a manifold vacuum gauge or exhaust flow tester. Inspect the catalytic converter
+    for physical damage or excessive heat buildup. Listen for unusual exhaust noises
+    (e.g., rattling or hissing) that may indicate a clogged converter.
+  inspection_advice_tr: Check for excessive backpressure in the exhaust system using
+    a manifold vacuum gauge or exhaust flow tester. Inspect the catalytic converter
+    for physical damage or excessive heat buildup. Listen for unusual exhaust noises
+    (e.g., rattling or hissing) that may indicate a clogged converter.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Katalitik konvertör tıkalı olabilir. Eğer motor gaz yemiyorsa, egzoz
+      gazları düzgün atılamıyordur."'
+    independent: true
+  component_id: emissions_catalytic_converter
+  detection: diagnostic
+- id: clio5_body_engine_crankshaft_camshaft_sens_v1
+  claim_key: clio5_body_engine_crankshaft_camshaft_sens
+  version: 1
+  is_current: true
+  title: Crankshaft/camshaft sensor failure on 1.3 TCe (clio5_body)
+  title_tr: Krank/eksantrik sensör arızası 1.3 TCe (clio5_body)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The crankshaft and camshaft position sensors tell the engine computer
+    when to spark and inject fuel. On this 1.3 TCe engine, they can fail chronically,
+    causing delayed cranking, rough idle, and weak throttle response even after other
+    parts are replaced. A buyer cannot see this without a diagnostic scan because
+    it may not illuminate a warning light until the sensor completely fails.
+  rationale_tr: Krank ve eksantrik mili sensörleri, motor bilgisayarına ateşleme ve
+    yakıt enjeksiyonu zamanlamasını söyler. Bu 1.3 TCe motorda kronik olarak arızalanabilir;
+    gecikmiş başlatma, düzensiz rölanti ve zayıf gaz tepkisine neden olabilirler,
+    hatta diğer parçalar değiştirilse bile. Bu durum, sensör tamamen arızalanana kadar
+    uyarı lambası yakmayabileceğinden, alıcı bunu teşhis taraması olmadan göremez.
+  inspection_advice: Check for DTC codes P0335/P0340 (crank/cam sensor circuit). Try
+    a cold start; note if it cranks long before firing. If the car has service records
+    for repeated sensor or injection-related repairs, suspect it. A scan tool showing
+    intermittent sensor faults confirms the risk.
+  inspection_advice_tr: P0335/P0340 (krank/kam sensör devresi) DTC kodlarını kontrol
+    edin. Soğuk çalıştırma deneyin; ateşlemeden önce uzun süre marş basıyorsa not
+    edin. Araçta tekrarlanan sensör veya enjeksiyonla ilgili onarımlar varsa şüphelenin.
+    Bir tarama aletiyle aralıklı sensör hatalarının tespiti riski doğrular.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Krank sensörü veya eksantrik mili sensörleri düzgün çalışıyor mu? (Bozulursa
+      düzensiz yanmaya ve marşta gecikmeye neden olabilir.)"'
+    independent: true
+  component_id: engine_cam_crank_sensors
+  detection: diagnostic
+- id: clio5_body_fuel_system_fuel_injector_leaks_caus_v1
+  claim_key: clio5_body_fuel_system_fuel_injector_leaks_caus
+  version: 1
+  is_current: true
+  title: Fuel injector leaks cause delayed starts in Clio 5
+  title_tr: Clio 5'te enjektör kaçağı geç çalışmaya neden oluyor
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: This evidence points to a chronic fuel injector issue in the 1.3 TCe
+    engine, where small leaks cause delayed starts and poor throttle response. The
+    problem persists even after cleaning or replacement, indicating a design or component
+    weakness. Buyers should be aware as this is not easily caught in a routine inspection
+    and can be costly to fix.
+  rationale_tr: Bu kanıt, 1.3 TCe motorunda kronik bir enjektör sorununa işaret ediyor;
+    küçük kaçaklar geç çalışmaya ve zayıf gaz tepkisine neden oluyor. Sorun temizlik
+    veya değişim sonrası bile devam ediyor, bu da tasarım veya parça zafiyetini gösteriyor.
+    Alıcılar bunun rutin kontrolde kolayca tespit edilemeyeceğini ve tamirinin maliyetli
+    olabileceğini bilmeli.
+  inspection_advice: Check for engine codes like P0171/P0172 during a diagnostic scan.
+    Listen for long cranking times on cold start, smell fuel near the engine bay,
+    and ask if injectors have been replaced or cleaned (and if the problem returned).
+  inspection_advice_tr: Diagnostik taramada P0171/P0172 gibi motor kodlarını kontrol
+    edin. Soğuk çalıştırmada uzun marş süresini dinleyin, motor bölümünde yakıt kokusu
+    alıp almadığınıza bakın ve enjektörlerin değiştirilip temizlenmediğini (ve sorunun
+    geri dönüp dönmediğini) sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://yoldakiusta.com/motor-arizalari/renault-clio-5-enjeksiyonu-kontrol-ettirin-arizasi-286.html
+    source_domain: yoldakiusta.com
+    site_or_channel: yoldakiusta.com
+    quote: '"Enjektörlerden şüphelenmiyorlar ama bazen enjektörlerde küçük kaçaklar
+      olabilir ve bu da zengin veya fakir karışımla çalışma sorunları yaratır. Aracın
+      geç çalışması ve marşın uzun sürmesi enjektör sızıntısının işareti olabilir."'
+    independent: true
+  component_id: engine_injectors
+  detection: diagnostic
+- id: clio5_body_general_clio5_body_structural_co_v1
+  claim_key: clio5_body_general_clio5_body_structural_co
+  version: 1
+  is_current: true
+  title: clio5_body structural corrosion, chassis weakness
+  title_tr: clio5_body yapısal korozyon, şasi zayıflığı
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  rationale: The Clio5 body shell and subframe can suffer from structural corrosion,
+    affecting body mountings and chassis strength. This is a known chronic issue in
+    Renault Clio models and can compromise safety and lead to expensive repairs.
+  rationale_tr: Clio5 gövde ve alt şasi, gövde bağlantıları ve şasi mukavemetini etkileyen
+    yapısal korozyona uğrayabilir. Bu, Renault Clio modellerinde bilinen kronik bir
+    sorundur ve güvenliği tehlikeye atabilir ve pahalı onarımlara yol açabilir.
+  inspection_advice: During inspection, check the underbody for rust, especially body
+    mountings, subframe, sills, and floor pan. Look for bubbling paint or corroded
+    spots. A professional underbody inspection on a lift is necessary to assess structural
+    integrity.
+  inspection_advice_tr: İnceleme sırasında, özellikle gövde bağlantıları, alt şasi,
+    eşikler ve zemin paneli olmak üzere aracın altını pas açısından kontrol edin.
+    Kabarcık yapan boya veya korozyon noktaları arayın. Yapısal bütünlüğü değerlendirmek
+    için liftli profesyonel bir alt kontrol gereklidir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.carcostcheck.co.uk/common-problems/renault/clio
+    source_domain: carcostcheck.co.uk
+    site_or_channel: carcostcheck.co.uk
+    quote: Structural corrosion, body mounting corroded through, chassis weakness
+    independent: true
+  component_id: body_rust_corrosion
+  detection: visual
+- id: clio5_body_general_clio_5_aeb_system_failur_v1
+  claim_key: clio5_body_general_clio_5_aeb_system_failur
+  version: 1
+  is_current: true
+  title: Clio 5 AEB system failure triggers warning light
+  title_tr: Clio 5 Otonom acil frenleme arızası uyarı ışığı yakar
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  rationale: The Renault Clio 5 can experience a failure in its autonomous emergency
+    braking system, which may illuminate the master warning light without an obvious
+    mechanical or electrical cause. This suggests a possible design or software flaw
+    that could affect braking performance in critical situations. A buyer cannot easily
+    detect this issue during a standard pre-purchase inspection, so it represents
+    an unpredictable safety risk.
+  rationale_tr: Renault Clio 5'te otonom acil frenleme sisteminde bir arıza meydana
+    gelebilir ve bu durum, belirgin bir mekanik veya elektriksel neden olmaksızın
+    ana uyarı lambasını yakabilir. Bu, kritik durumlarda fren performansını etkileyebilecek
+    olası bir tasarım veya yazılım hatasına işaret eder. Bu sorun standart bir satış
+    öncesi ekspertizde kolayca tespit edilemez, bu nedenle öngörülemeyen bir güvenlik
+    riski oluşturur.
+  inspection_advice: During the viewing, ask the seller whether the master warning
+    light has ever appeared. If possible, have a diagnostic scan performed for AEB-related
+    DTCs (e.g., in the ABS or electronic brake control module). A test drive in a
+    safe, open area may reveal unexpected braking interventions or warning lights.
+  inspection_advice_tr: Araç görüşmesinde satıcıya ana uyarı lambasının hiç yanıp
+    yanmadığını sorun. Mümkünse, AEB ile ilgili DTC'ler için (örn. ABS veya elektronik
+    fren kontrol modülünde) diagnostik tarama yaptırın. Güvenli ve açık bir alanda
+    deneme sürüşü, beklenmedik fren müdahalelerini veya uyarı ışıklarını ortaya çıkarabilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://aracustasi.com/renault-clio-5-ucgen-icinde-unlem-isareti-ne-anlama-geliyor/
+    source_domain: aracustasi.com
+    site_or_channel: aracustasi.com
+    quote: '"Otonom acil frenleme arızası"'
+    independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
+- id: clio5_body_suspension_ball_joint_excessive_pla_v1
+  claim_key: clio5_body_suspension_ball_joint_excessive_pla
+  version: 1
+  is_current: true
+  title: Ball joint excessive play
+  title_tr: Ball joint excessive play
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.6
+  rationale: Excessive play in ball joints can lead to loss of wheel alignment, uneven
+    tire wear, and potential wheel detachment.
+  rationale_tr: Excessive play in ball joints can lead to loss of wheel alignment,
+    uneven tire wear, and potential wheel detachment.
+  inspection_advice: Check for excessive movement in ball joints by applying force
+    to the suspension components. Listen for clunking noises when driving over rough
+    terrain.
+  inspection_advice_tr: Check for excessive movement in ball joints by applying force
+    to the suspension components. Listen for clunking noises when driving over rough
+    terrain.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.carcostcheck.co.uk/common-problems/renault/clio
+    source_domain: carcostcheck.co.uk
+    site_or_channel: carcostcheck.co.uk
+    quote: Ball joint excessive play
+    independent: true
+  component_id: suspension_control_arm_bushings
+  detection: visual
+- id: clio5_body_suspension_coil_spring_breakage_v1
+  claim_key: clio5_body_suspension_coil_spring_breakage
+  version: 1
+  is_current: true
+  title: Coil spring breakage
+  title_tr: Coil spring breakage
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.6
+  rationale: Broken coil springs can cause severe handling issues, vehicle instability,
+    and pose a safety risk.
+  rationale_tr: Broken coil springs can cause severe handling issues, vehicle instability,
+    and pose a safety risk.
+  inspection_advice: Visually inspect coil springs for cracks or breaks. Check for
+    uneven ride height or vehicle sagging on one side.
+  inspection_advice_tr: Visually inspect coil springs for cracks or breaks. Check
+    for uneven ride height or vehicle sagging on one side.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.carcostcheck.co.uk/common-problems/renault/clio
+    source_domain: carcostcheck.co.uk
+    site_or_channel: carcostcheck.co.uk
+    quote: Coil spring broken
+    independent: true
+  component_id: suspension_coil_springs
+  detection: visual
