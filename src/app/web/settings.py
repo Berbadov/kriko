@@ -25,6 +25,13 @@ class Settings:
     #: UI state — history and interface settings. Beside the engine's store in
     #: ~/.kriko, never inside it: see app/web/state.py for why.
     app_state_path: Path = DEFAULT_STORE.parent / "app.sqlite"
+    #: Where to look for newer packs. A `packs.json` published beside the
+    #: installers on the releases page — knowledge ships on its own clock, so
+    #: `latest` rather than a pinned tag, and overridable for anyone running
+    #: their own catalogue.
+    pack_index_url: str = (
+        "https://github.com/Berbadov/kriko/releases/latest/download/packs.json"
+    )
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":
@@ -38,6 +45,9 @@ class Settings:
             ),
             "app_state_path": Path(
                 os.environ.get("KRIKO_APP_STATE", DEFAULT_STORE.parent / "app.sqlite")
+            ),
+            "pack_index_url": os.environ.get(
+                "KRIKO_PACK_INDEX", cls.pack_index_url
             ),
         }
         base.update(overrides)

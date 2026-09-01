@@ -91,6 +91,11 @@ export const api = {
             `/api/packs/${seg(packId)}/activate?revision=${encodeURIComponent(revision)}`,
             { method: "POST" },
         ),
+    packUpdates: () => get<T.PackUpdates>("/api/packs/updates"),
+    updatePacks: (packId?: string) =>
+        postJson<{ job_id: string; kind: string }>("/api/packs/update", {
+            pack_id: packId ?? null,
+        }),
     installPack: (file: File) =>
         request<{ pack: T.Pack; revision: T.Revision }>("/api/packs/install", {
             method: "POST",

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { api } from "../lib/api";
-    import type { Pack, PackEvent, Revision } from "../lib/types";
+    import { follow, stateWord } from "../lib/jobs";
+    import type { Job, Pack, PackEvent, PackUpdates, Revision } from "../lib/types";
 
     let packs = $state<Pack[]>([]);
     let error = $state("");
@@ -53,6 +54,53 @@
         lifecycle = { ...lifecycle, [packId]: { revisions, events } };
     }
 
+    // Updating is two operations, deliberately: checking is a cheap request
+    // whose answer is a table, installing is a job whose progress outlives the
+    // page. Collapsing them into one button would mean either a blocking
+    // download or a check nobody can read.
+    let updates = $state<PackUpdates | null>(null);
+    let checking = $state(false);
+    let updateJob = $state<Job | null>(null);
+
+    const WORDS: Record<string, string> = {
+        available: "update available",
+        up_to_date: "up to date",
+        not_installed: "not installed",
+        refused: "refused",
+        unknown: "unknown",
+    };
+
+    async function check() {
+        checking = true;
+        try {
+            updates = await api.packUpdates();
+        } catch (e) {
+            updates = { index_url: "", error: (e as Error).message, packs: [] };
+        } finally {
+            checking = false;
+        }
+    }
+
+    async function applyUpdate(packId?: string) {
+        updateJob = null;
+        try {
+            const { job_id } = await api.updatePacks(packId);
+            updateJob = await api.job(job_id);
+            follow(job_id, async (job) => {
+                updateJob = job;
+                if (job.done) {
+                    await refresh();
+                    await check();
+                }
+            });
+        } catch (e) {
+            updateJob = { state: "failed", message: (e as Error).message, done: true } as Job;
+        }
+    }
+
+    const actionable = (u: PackUpdates | null) =>
+        (u?.packs ?? []).filter((p) => p.state === "available" || p.state === "not_installed");
+
     const ready = refresh();
 </script>
 
@@ -62,6 +110,61 @@
     <input type="file" accept=".kpack,application/octet-stream" bind:files />
     <button onclick={install}>Install pack</button>
 </div>
+<section class="card">
+    <h3>Updates</h3>
+    <div class="row">
+        <button onclick={check} disabled={checking}>
+            {checking ? "Checking…" : "Check for updates"}
+        </button>
+        {#if actionable(updates).length}
+            <button onclick={() => applyUpdate()}>
+                Update all ({actionable(updates).length})
+            </button>
+        {/if}
+        {#if updates?.index_url}<span class="meta">{updates.index_url}</span>{/if}
+    </div>
+    {#if updates?.error}
+        <p class="state error">Could not reach the pack index: {updates.error}</p>
+    {/if}
+    {#if updates && !updates.error}
+        {#if !updates.packs.length}
+            <p class="state empty">The index lists nothing.</p>
+        {:else}
+            <table>
+                <thead>
+                    <tr><th>Pack</th><th>Installed</th><th>Offered</th><th>State</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {#each updates.packs as row (row.pack_id)}
+                        <tr>
+                            <td>{row.name}</td>
+                            <td class="meta">{row.installed_version || "—"}</td>
+                            <td class="meta">{row.offered_version || "—"}</td>
+                            <td>
+                                {WORDS[row.state] ?? row.state}
+                                <span class="meta">{row.reason}</span>
+                            </td>
+                            <td>
+                                {#if row.state === "available" || row.state === "not_installed"}
+                                    <button onclick={() => applyUpdate(row.pack_id)}>
+                                        {row.state === "available" ? "Update" : "Install"}
+                                    </button>
+                                {/if}
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+    {/if}
+    {#if updateJob}
+        <p class="state {updateJob.state === 'failed' ? 'error' : 'results'}" aria-live="polite">
+            <span class="badge state-{updateJob.state}">{stateWord(updateJob)}</span>
+            {updateJob.message}
+        </p>
+    {/if}
+</section>
+
 {#if installMessage}
     <p class="state {installState}" aria-live="polite">{installMessage}</p>
 {/if}

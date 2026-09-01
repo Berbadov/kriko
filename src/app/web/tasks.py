@@ -13,13 +13,21 @@ the whole point of the jobs layer.
 """
 
 import importlib
+from datetime import UTC, datetime
 from pathlib import Path
+
+from app import packsource
 
 from app.findings import accept_findings
 from app.web.jobs import Progress
+from kriko.pack import updates
 from kriko.research import get_researcher, plan_task
 from kriko.store import packstore
 from kriko.store.db import connect
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _subject_pack(conn, subject_id: str) -> str:
@@ -219,4 +227,165 @@ def pack_build(settings, params: dict, progress: Progress) -> dict:
     }
 
 
-HANDLERS = {"research": research, "pack_build": pack_build}
+def _installed_rows(conn):
+    return conn.execute(
+        "SELECT pack_id, name, version, content_digest, origin_url FROM packs"
+        " ORDER BY pack_id"
+    ).fetchall()
+
+
+def check_updates(settings, index_url: str = "") -> dict:
+    """Compare what is installed against what the index offers.
+
+    Synchronous and cheap — one small JSON fetch — so it is a request rather
+    than a job. Network failure is reported as a value, not raised: "we could
+    not reach the index" is a legitimate answer to "is anything newer", and a
+    500 would make the Packs screen look broken when only the network is.
+    """
+    url = index_url or settings.pack_index_url
+    conn = connect(settings.store_path)
+    try:
+        rows = _installed_rows(conn)
+    finally:
+        conn.close()
+
+    try:
+        candidates = packsource.fetch_index(url)
+    except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
+        return {
+            "index_url": url,
+            "error": f"{type(exc).__name__}: {exc}",
+            "checked_at": _now(),
+            "packs": [
+                {
+                    "pack_id": row["pack_id"],
+                    "name": row["name"],
+                    "installed_version": row["version"],
+                    "state": updates.UNKNOWN,
+                    "reason": "the pack index could not be reached",
+                }
+                for row in rows
+            ],
+        }
+
+    decisions = updates.plan(rows, candidates)
+    known = {row["pack_id"] for row in rows}
+    names = {row["pack_id"]: row["name"] for row in rows}
+    payload = [
+        {
+            "pack_id": d.pack_id,
+            "name": names.get(d.pack_id, d.pack_id),
+            "installed_version": d.installed_version,
+            "offered_version": d.offered_version,
+            "state": d.state,
+            "reason": d.reason,
+            "url": d.candidate.url if d.candidate else "",
+            "size": d.candidate.size if d.candidate else 0,
+            "published_at": d.candidate.published_at if d.candidate else "",
+        }
+        for d in decisions
+    ]
+    # Packs the index offers that are not installed yet. Shown because an empty
+    # store is the normal state of a fresh install: the first "update" a reader
+    # wants is the one that gives them any knowledge at all.
+    payload += [
+        {
+            "pack_id": c.pack_id,
+            "name": c.name or c.pack_id,
+            "installed_version": "",
+            "offered_version": c.version,
+            "state": "not_installed",
+            "reason": "available, not installed",
+            "url": c.url,
+            "size": c.size,
+            "published_at": c.published_at,
+        }
+        for c in candidates
+        if c.pack_id not in known
+    ]
+    return {"index_url": url, "error": None, "checked_at": _now(), "packs": payload}
+
+
+def pack_update(settings, params: dict, progress: Progress) -> dict:
+    """Download and install every pack the index has something newer for.
+
+    Goes through `packstore.install` like every other door: an updated pack is
+    not a special kind of pack, and a second install path is a second place for
+    the immutability rule to be forgotten.
+    """
+    only = params.get("pack_id") or ""
+    index_url = params.get("index_url") or settings.pack_index_url
+    progress.set(0.05, f"reading {index_url}")
+    candidates = packsource.fetch_index(index_url)
+    progress.log(f"index offers {len(candidates)} pack(s)")
+
+    conn = connect(settings.store_path)
+    try:
+        rows = _installed_rows(conn)
+    finally:
+        conn.close()
+
+    known = {row["pack_id"] for row in rows}
+    wanted = [d for d in updates.plan(rows, candidates) if d.actionable]
+    wanted += [
+        updates.Decision(c.pack_id, updates.AVAILABLE, "not installed",
+                         "", c.version, c)
+        for c in candidates
+        if c.pack_id not in known
+    ]
+    if only:
+        wanted = [d for d in wanted if d.pack_id == only]
+        if not wanted:
+            raise ValueError(
+                f"the index offers nothing newer for {only!r}"
+                if only in known
+                else f"the index does not carry a pack called {only!r}"
+            )
+    if not wanted:
+        progress.set(1.0, "everything is up to date")
+        return {"index_url": index_url, "updated": [], "skipped": len(rows)}
+
+    into = Path(settings.store_path).parent / "downloads"
+    updated = []
+    for position, decision in enumerate(wanted, start=1):
+        progress.check()
+        share = (position - 1) / len(wanted)
+        candidate = decision.candidate
+        progress.set(0.1 + 0.8 * share, f"downloading {candidate.pack_id} {candidate.version}")
+        path = packsource.download(
+            candidate,
+            into,
+            lambda read, total: progress.set(
+                0.1 + 0.8 * (share + (read / total if total else 0) / len(wanted)),
+                f"downloading {candidate.pack_id} {read // 1024} KiB",
+            ),
+        )
+        progress.check()
+        progress.log(f"installing {path.name}")
+        store = connect(settings.store_path)
+        try:
+            pack_id = packstore.install(store, path)
+            store.commit()
+        finally:
+            store.close()
+        # The file is the transport, not the record: the store holds the
+        # revision, so keeping downloads around would only grow ~/.kriko.
+        path.unlink(missing_ok=True)
+        updated.append(
+            {
+                "pack_id": pack_id,
+                "version": candidate.version,
+                "from": decision.installed_version,
+            }
+        )
+        progress.log(f"{pack_id} is now {candidate.version}")
+
+    progress.set(1.0, f"updated {len(updated)} pack(s)")
+    return {"index_url": index_url, "updated": updated, "skipped": len(rows) - len(updated)}
+
+
+HANDLERS = {
+    "research": research,
+    "pack_build": pack_build,
+    "pack_update": pack_update,
+}
