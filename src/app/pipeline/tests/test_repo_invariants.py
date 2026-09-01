@@ -7,6 +7,7 @@ message names the fix rather than just the fact.
 
 import ast
 import re
+import subprocess
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -458,5 +459,45 @@ def test_the_catalog_is_never_scanned_in_directory_order():
     assert offenders == [], (
         "these scans depend on directory order — wrap them in sorted(), or "
         "mark the line `# any-order: <why>` if the result cannot depend on it:\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_every_tracked_path_is_checkoutable_on_windows_and_macos():
+    """A filename this machine accepts is not a filename every machine accepts.
+
+    Six 541-byte `imgui.ini` files, written into the repo root by an unrelated
+    GUI program with non-UTF-8 names, were swept in by a `git add -A`. Linux
+    stored them happily; the macOS runner said `unable to create file: Illegal
+    byte sequence` and the Windows runner said `invalid path` — both failing in
+    *checkout*, before a single line of ours ran. The desktop build looked
+    broken on two of three platforms for a reason that had nothing to do with
+    the desktop build.
+
+    The rules are Windows', because they are the strictest: printable ASCII
+    only, none of `<>:"|?*`, and no trailing dot or space in any component.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=REPO,
+        capture_output=True,
+        check=True,
+    ).stdout.split(b"\0")
+
+    forbidden = set('<>:"|?*')
+    offenders = []
+    for raw in filter(None, tracked):
+        if any(byte < 0x20 or byte > 0x7E for byte in raw):
+            offenders.append(f"{raw!r}: not printable ASCII")
+            continue
+        name = raw.decode()
+        for part in name.split("/"):
+            if set(part) & forbidden:
+                offenders.append(f"{name}: illegal character on Windows")
+            elif part != part.rstrip(". "):
+                offenders.append(f"{name}: component ends in a dot or space")
+
+    assert offenders == [], (
+        "these tracked paths cannot be checked out on Windows or macOS:\n"
         + "\n".join(offenders)
     )
