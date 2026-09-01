@@ -68,6 +68,16 @@ export const api = {
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
     brief: (subjectId: string) =>
         get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),
+    jobs: (limit = 30) => get<{ items: T.Job[] }>(`/api/jobs?limit=${limit}`),
+    job: (jobId: string) => get<T.Job>(`/api/jobs/${seg(jobId)}`),
+    research: (body: T.ResearchRequest) =>
+        postJson<{ job_id: string; kind: string }>("/api/research", body),
+    buildPack: (root: string, install = true) =>
+        postJson<{ job_id: string; kind: string }>("/api/packs/build", { root, install }),
+    cancelJob: (jobId: string) =>
+        request<{ job_id: string; state: string }>(`/api/jobs/${seg(jobId)}/cancel`, {
+            method: "POST",
+        }),
     forget: (lookupId: string) =>
         request<{ deleted: boolean }>(`/api/history/${seg(lookupId)}`, {
             method: "DELETE",

@@ -7,6 +7,7 @@
     import Coverage from "./routes/Coverage.svelte";
     import Dashboard from "./routes/Dashboard.svelte";
     import Health from "./routes/Health.svelte";
+    import Jobs from "./routes/Jobs.svelte";
     import Packs from "./routes/Packs.svelte";
     import Result from "./routes/Result.svelte";
 
@@ -19,6 +20,7 @@
         { name: "dashboard", label: "Dashboard" },
         { name: "browse", label: "Browse" },
         { name: "coverage", label: "Coverage" },
+        { name: "jobs", label: "Jobs" },
         { name: "health", label: "Health" },
         { name: "packs", label: "Packs" },
     ];
@@ -85,6 +87,8 @@
                 <Browse />
             {:else if $route.name === "health"}
                 <Health />
+            {:else if $route.name === "jobs"}
+                <Jobs />
             {:else if $route.name === "result"}
                 <!-- Keyed: Result fetches once on init, so moving between two
                      stored results must remount rather than reuse. -->

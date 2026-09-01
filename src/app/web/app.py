@@ -13,28 +13,44 @@ protect. Serving this on 0.0.0.0 would expose an unauthenticated pack-uninstall
 endpoint to the network, so the default host is not a preference.
 """
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.web.jobs import JobRunner
 from app.web.routers import (
     analyze,
     control,
     health,
     history,
+    jobs,
     packs,
     query,
     subjects,
 )
 from app.web.settings import Settings
+from app.web.tasks import HANDLERS
 
 STATIC = Path(__file__).parent / "static"
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # A job that was running when the process died is not running now. Saying
+    # so at startup is the difference between durable status and a row that
+    # lies forever.
+    app.state.jobs.recover()
+    yield
+    app.state.jobs.shutdown()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
-    app = FastAPI(title="Kriko", docs_url="/api/docs", redoc_url=None)
+    app = FastAPI(
+        title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
+    )
     app.state.settings = settings or Settings.from_env()
 
     for router in (
@@ -45,8 +61,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         control.router,
         health.router,
         history.router,
+        jobs.router,
     ):
         app.include_router(router)
+
+    # One runner per app, built here so a test app gets its own pool pointed at
+    # its own temporary app.sqlite.
+    app.state.jobs = JobRunner(app.state.settings, HANDLERS)
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

@@ -37,6 +37,25 @@ CREATE TABLE IF NOT EXISTS settings (
 -- /api/analyze payload has no claim_id and the reader's checkmark must
 -- survive anyway. The key is whatever the UI can compute from a claim it
 -- has in hand; the engine never sees it.
+-- Long work, as rows first and a stream second. A job that exists only in a
+-- thread cannot be recovered after a restart, and "a spinner that never
+-- resolves" is the failure mode this table exists to make impossible.
+CREATE TABLE IF NOT EXISTS jobs (
+    job_id           TEXT PRIMARY KEY,
+    kind             TEXT NOT NULL,
+    params_json      TEXT NOT NULL,
+    state            TEXT NOT NULL,
+    progress         REAL NOT NULL DEFAULT 0,
+    message          TEXT NOT NULL DEFAULT '',
+    log              TEXT NOT NULL DEFAULT '',
+    result_json      TEXT,
+    cancel_requested INTEGER NOT NULL DEFAULT 0,
+    created_at       TEXT NOT NULL,
+    started_at       TEXT,
+    finished_at      TEXT
+);
+CREATE INDEX IF NOT EXISTS jobs_created_at ON jobs (created_at DESC);
+
 CREATE TABLE IF NOT EXISTS claim_checks (
     lookup_id  TEXT NOT NULL,
     claim_key  TEXT NOT NULL,
@@ -195,3 +214,167 @@ def set_checked(
         )
     conn.commit()
     return checked_keys(conn, lookup_id)
+
+
+# ── jobs ─────────────────────────────────────────────────────────────────
+#
+# `queued -> running -> (succeeded | failed | cancelled | interrupted)`.
+# `interrupted` is not an error state a handler can produce: it is what a row
+# left `running` by a killed process becomes at the next startup, so a lost job
+# is visible as a state rather than as a spinner nobody can explain.
+
+QUEUED, RUNNING = "queued", "running"
+SUCCEEDED, FAILED, CANCELLED, INTERRUPTED = (
+    "succeeded",
+    "failed",
+    "cancelled",
+    "interrupted",
+)
+TERMINAL = frozenset({SUCCEEDED, FAILED, CANCELLED, INTERRUPTED})
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def create_job(conn: sqlite3.Connection, kind: str, params: dict) -> str:
+    job_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO jobs (job_id, kind, params_json, state, created_at)"
+        " VALUES (?, ?, ?, ?, ?)",
+        (job_id, kind, json.dumps(params, default=str), QUEUED, _now()),
+    )
+    conn.commit()
+    return job_id
+
+
+def start_job(conn: sqlite3.Connection, job_id: str) -> None:
+    conn.execute(
+        "UPDATE jobs SET state = ?, started_at = ? WHERE job_id = ?",
+        (RUNNING, _now(), job_id),
+    )
+    conn.commit()
+
+
+def update_job(
+    conn: sqlite3.Connection,
+    job_id: str,
+    *,
+    progress: float | None = None,
+    message: str | None = None,
+    line: str | None = None,
+) -> None:
+    """Progress, a headline, and an appended log line — any subset.
+
+    The log is appended in SQL rather than read-modify-written in Python so a
+    reader polling the row cannot see a line vanish between two writes.
+    """
+    sets, args = [], []
+    if progress is not None:
+        sets.append("progress = ?")
+        args.append(max(0.0, min(1.0, progress)))
+    if message is not None:
+        sets.append("message = ?")
+        args.append(message)
+    if line is not None:
+        sets.append("log = log || ?")
+        args.append(f"{line}\n")
+    if not sets:
+        return
+    args.append(job_id)
+    conn.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE job_id = ?", args)
+    conn.commit()
+
+
+def finish_job(
+    conn: sqlite3.Connection,
+    job_id: str,
+    state: str,
+    *,
+    result: dict | None = None,
+    message: str = "",
+) -> None:
+    conn.execute(
+        "UPDATE jobs SET state = ?, finished_at = ?, progress = ?,"
+        "       message = COALESCE(NULLIF(?, ''), message), result_json = ?"
+        " WHERE job_id = ?",
+        (
+            state,
+            _now(),
+            1.0 if state == SUCCEEDED else 0.0,
+            message,
+            json.dumps(result, default=str) if result is not None else None,
+            job_id,
+        ),
+    )
+    conn.commit()
+
+
+def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
+    """Ask a job to stop, and report the state it is in.
+
+    A queued job is cancelled outright — nothing has happened yet. A running
+    one is only *asked*: the flag is a row the handler reads between steps,
+    because killing a thread mid-write is how a half-installed pack happens.
+    """
+    row = get_job(conn, job_id)
+    if row is None:
+        return None
+    if row["state"] == QUEUED:
+        finish_job(conn, job_id, CANCELLED, message="cancelled before it started")
+        return CANCELLED
+    if row["state"] == RUNNING:
+        conn.execute(
+            "UPDATE jobs SET cancel_requested = 1, message = ? WHERE job_id = ?",
+            ("cancelling…", job_id),
+        )
+        conn.commit()
+        return RUNNING
+    return row["state"]
+
+
+def cancel_requested(conn: sqlite3.Connection, job_id: str) -> bool:
+    row = conn.execute(
+        "SELECT cancel_requested FROM jobs WHERE job_id = ?", (job_id,)
+    ).fetchone()
+    return bool(row and row["cancel_requested"])
+
+
+def _job(row: sqlite3.Row) -> dict:
+    out = dict(row)
+    out["params"] = json.loads(out.pop("params_json") or "{}")
+    result = out.pop("result_json")
+    out["result"] = json.loads(result) if result else None
+    out["cancel_requested"] = bool(out["cancel_requested"])
+    out["done"] = out["state"] in TERMINAL
+    return out
+
+
+def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
+    row = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+    return _job(row) if row else None
+
+
+def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    rows = conn.execute(
+        "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (max(0, limit),),
+    ).fetchall()
+    return [_job(row) for row in rows]
+
+
+def interrupt_running(conn: sqlite3.Connection) -> int:
+    """Called at startup. Anything still `running` belongs to a dead process."""
+    cursor = conn.execute(
+        "UPDATE jobs SET state = ?, finished_at = ?, message = ?"
+        " WHERE state IN (?, ?)",
+        (
+            INTERRUPTED,
+            _now(),
+            "the server stopped while this was running",
+            RUNNING,
+            QUEUED,
+        ),
+    )
+    conn.commit()
+    return cursor.rowcount
