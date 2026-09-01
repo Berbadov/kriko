@@ -6,6 +6,45 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### v0.2.5 — the app that panicked before it had a window — 2026-09-01 (053fa51)
+v0.2.4 installed on Windows 11 and then did nothing at all when opened. Not a
+blank window: no window, and no dialog — the panic went to a stderr a
+double-click does not have.
+
+    panicked at src\main.rs:303:10: failed to start Kriko:
+    PluginInitialization("updater", "Error deserializing 'plugins.updater'
+    within your Tauri configuration: invalid type: null, expected struct Config")
+
+Two halves that were each individually right. `packaging/configure_updater.py`
+removes `plugins.updater` from any build without a signing key — every fork,
+every local build, and every release cut so far, since the minisign keypair was
+never generated. `main.rs` registered `tauri_plugin_updater` on the *builder*,
+where a plugin is initialized before `build()` returns and its failure lands in
+`.expect("failed to start Kriko")`. Two guard tests existed on either side of
+the gap (`test_the_committed_config_ships_no_updater` asserted the config has no
+updater) and neither could see the other.
+
+The plugin moves into `setup`, registered through `AppHandle::plugin`, whose
+`Result` decides whether the update is offered at all — the same shrug
+`offer_update` already gave a missing endpoint. Rule 2 of `main.rs`: a shell
+that cannot check for updates still has to open.
+
+**The mechanism**, because "the installers built" was never evidence that the app
+starts — v0.2.4 was green on all three runners: `packaging/smoke_app.py` launches
+the bundled shell, holds it 25s, and fails on a panic or an early exit. Wired
+into `desktop.yml` after the bundler on Linux (under xvfb) and Windows; it
+deliberately asserts nothing about *windows*, since a headless webview is a
+flakier question than the one that broke, and macOS is skipped because a Tauri
+binary run outside its `.app` is a different question there. Verified green on
+both runners before the tag. Guarded in `test_desktop_update.py` so the step
+cannot be quietly dropped for speed.
+
+Also here: `.github/workflows/ci.yml` drops to `workflow_dispatch` while the app
+is the loop (see CLAUDE.md's temporary section — the gate moves to the local
+suite, it does not disappear), and B53 files the missing
+`tauri/src-tauri/Cargo.lock`: `tauri-plugin-updater = "2"` floats, which is why
+v0.2.1 opened and v0.2.4, four hours later, did not, on identical config.
+
 ### v0.2.4 released — mcp freezes without its cli extra — 2026-09-01 (6b63c3c, 20a4ffa)
 v0.2.3's bundles failed identically on all three runners at the freeze step:
 `collect_submodules("mcp")` walks the package by *importing* each submodule, and
