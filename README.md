@@ -143,6 +143,66 @@ must satisfy, and what it may optionally add, is in `docs/PACK_CONTRACT.md`.
 
 ---
 
+## Growing the knowledge base
+
+Kriko's default research plane costs **$0**, and that is a design decision
+rather than a limitation. A Claude Code, opencode, Codex or Cline subscription
+already includes web search and a model that can read. Kriko does not buy either
+again — it says precisely what to look for, what counts as worth keeping, and
+what shape to return, and lets the harness that is already paid for do the
+reading (`src/kriko/research/agent.py`).
+
+Wire the MCP server once (`.mcp.json` is checked in), then hand a subject to the
+research agent:
+
+```
+use the kriko_research agent to onboard renault megane_4
+```
+
+It asks the server for the work list, researches the trim lineup and submits it,
+researches each part into the evidence ledger, and runs a pipeline pass. Every
+write goes through an MCP tool that is deterministic or import-only, so nothing
+it does can spend a token of Kriko's own money. `.claude/agents/kriko_research.md`
+is generated from the pack — the agent works for whatever categories are
+installed, not for cars specifically.
+
+**The server is the referee.** Every rule in the agent's prompt is also enforced
+in code at the write path, because a rule that lives only in a prompt is a rule a
+cheap model can break and be told "OK":
+
+| Refused | Why |
+|---------|-----|
+| A quote not literally in the submitted document | `add_evidence` checks it. An agent cannot cite a source it did not read. |
+| A figure the agent could not source | Written `draft: true`, skipped by the build, raised in the coverage report. A visible gap, never a plausible invention. |
+| `transmission_code: "7-speed DSG"` | "DSG" names three gearboxes; a claim attributed to it would contaminate its siblings. Find the unit code (`dq381`). |
+| Warning-light and inspection-routine claims | The pack's own product principle, enforced rather than requested. |
+
+A rejection names what would fix the row, and the contract forbids retrying it
+reworded — fix the substance or report the gap.
+
+**The other two planes.** A paid API researcher (`backend: "api"`, with a
+`budget_usd`) exists for unattended runs and is never the default: a tool that
+starts spending because a key happened to be in the environment is a tool people
+stop trusting. And from the app itself, the **Coverage** screen has a *Research*
+button on every gap and the **Jobs** screen has a build form — both run as jobs
+with a live log, a durable result and a cancel button. Note that the $0 plane
+inside the app produces a *brief* rather than findings: there is no harness in
+the desktop process to do the reading, and quietly falling back to a paid path
+would turn "free" into a surprise bill.
+
+Then build and install what the research produced:
+
+```bash
+python -m app.cli build packs/cars      # → dist/cars.kpack
+python -m app.cli install dist/cars.kpack
+```
+
+Full walkthrough — trim research, the manual CLI fallback, the deterministic
+catalog repair pass (`catalog.doctor --fix`), and gate evaluation — is
+`docs/USAGE.md` §4.
+
+---
+
 ## Supported cars (TR market)
 
 | Make | Model | Generation | Engines | Gearboxes |
@@ -165,4 +225,6 @@ the generalization principle for why per-model fixes don't exist here.
 | `CLAUDE.md` | The principles every change is judged against |
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks |
 | `backlog.md` / `done.md` | Open work and finished work — status, always current |
+| `docs/USAGE.md` | Operating it, and growing the knowledge base end to end |
+| `docs/PACK_CONTRACT.md` | Authoring a pack for a new product category |
 | `tauri/README.md` | The desktop shell — launch sequence, failure surface, local build |
