@@ -6,6 +6,20 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### Two clocks: packs update themselves, and so does the app — 2026-09-01 (`1bf7af9` + this commit)
+The store had carried `origin_url`, `version` and `content_digest` on every pack
+row since the schema was written and nothing read them. Now `kriko/pack/
+updates.py` decides (index parsing, version+digest comparison, the same
+republished-version refusal `packstore.install` enforces — moved early enough
+that it costs a comparison rather than a download), `app/packsource.py` fetches
+and verifies, and `app/web/tasks.py:pack_update` installs through the ordinary
+acceptance path. Checking is a request, updating is a job, both on the Packs
+screen. CI builds every pack and publishes `packs.json` with tag-pinned asset
+URLs. The app's own update rides Tauri's updater, whose minisign key is
+independent of OS code signing — applied at build time so a tree without the
+secret still produces installers.
+
+
 ## 2026-09-01 — Four installers, and the three bugs CI had to find first
 
 `4bec392`, `165cff3`, `264551d`, `e27404d`. B52's build verification.

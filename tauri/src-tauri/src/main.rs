@@ -20,8 +20,10 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_updater::UpdaterExt;
 
 /// The sidecar's handshake. Must match `PORT_LINE` in `src/app/sidecar.py`.
 const PORT_LINE: &str = "KRIKO_PORT";
@@ -167,6 +169,59 @@ fn start_engine(app: AppHandle, engine: State<'_, Engine>) -> Result<(), String>
     Ok(())
 }
 
+/// Offer the app's own update, once, in the background.
+///
+/// Packs update themselves through the engine (`/api/packs/update`) because
+/// knowledge changes weekly; this is the other clock — the shell and the frozen
+/// engine inside it, which change rarely and cannot replace themselves while
+/// running. Hence a restart, and hence asking first: a download the reader did
+/// not ask for that then closes their window is not an improvement.
+///
+/// Never fatal. No updater configured, no network, a malformed manifest — all
+/// of it ends here quietly. An app that refuses to run because it could not
+/// check for a newer one is worse than an old app.
+fn offer_update(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let updater = match app.updater() {
+            Ok(updater) => updater,
+            // The common case on an unsigned local build: no endpoint, no key.
+            Err(_) => return,
+        };
+        let update = match updater.check().await {
+            Ok(Some(update)) => update,
+            _ => return,
+        };
+        let version = update.version.clone();
+        let answer = app
+            .dialog()
+            .message(format!(
+                "Kriko {version} is available. It will download in the \
+                 background and restart the app.\n\nYour knowledge packs and \
+                 history in ~/.kriko are not touched."
+            ))
+            .title("Update Kriko")
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Update".into(),
+                "Not now".into(),
+            ))
+            .blocking_show();
+        if !answer {
+            return;
+        }
+        if let Err(error) = update.download_and_install(|_, _| {}, || {}).await {
+            app.dialog()
+                .message(format!("Kriko could not update itself: {error}"))
+                .title("Update failed")
+                .blocking_show();
+            return;
+        }
+        // The installer replaced the binary; the engine still running beside it
+        // is the old one, and it holds the store's WAL lock.
+        kill_engine(&app);
+        app.restart();
+    });
+}
+
 fn kill_engine(app: &AppHandle) {
     if let Some(engine) = app.try_state::<Engine>() {
         if let Some(child) = engine.child.lock().unwrap().take() {
@@ -178,7 +233,16 @@ fn kill_engine(app: &AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Engine::default())
+        .setup(|app| {
+            // After setup, not before: the engine's startup is what the reader
+            // is waiting on, and an update prompt in front of a window that has
+            // not opened yet would look like the app failing to start.
+            offer_update(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![start_engine])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
