@@ -56,7 +56,13 @@ def main(argv: list[str]) -> int:
     # A smoke test that writes to ~/.kriko would both pollute the reader's own
     # store and read its data back — a lookup that only passes because the
     # developer happens to have the cars pack installed is not a smoke test.
-    scratch = tempfile.TemporaryDirectory(prefix="kriko-smoke-")
+    # ignore_cleanup_errors: Windows refuses to remove a directory anything
+    # still has open, and a process that has just been terminated is not yet a
+    # process that has let go of its SQLite files. A leftover temp directory is
+    # not a smoke-test failure; every check above it already passed.
+    scratch = tempfile.TemporaryDirectory(
+        prefix="kriko-smoke-", ignore_cleanup_errors=True
+    )
     environment = os.environ | {
         "KRIKO_STORE": str(Path(scratch.name) / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(Path(scratch.name) / "app.sqlite"),
@@ -67,7 +73,6 @@ def main(argv: list[str]) -> int:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd=scratch.name,
         env=environment,
     )
     try:
