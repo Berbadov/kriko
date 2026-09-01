@@ -54,6 +54,20 @@ export const api = {
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
+    settings: () => get<Record<string, unknown>>("/api/settings"),
+    putSettings: (values: Record<string, unknown>) =>
+        postJson<Record<string, unknown>>("/api/settings", { values }),
+    checked: (lookupId: string) =>
+        get<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`),
+    setChecked: (lookupId: string, claimKey: string, checked: boolean) =>
+        postJson<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`, {
+            claim_key: claimKey,
+            checked,
+        }),
+    adapters: () => get<T.Adapter[]>("/api/adapters"),
+    subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
+    brief: (subjectId: string) =>
+        get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),
     forget: (lookupId: string) =>
         request<{ deleted: boolean }>(`/api/history/${seg(lookupId)}`, {
             method: "DELETE",
