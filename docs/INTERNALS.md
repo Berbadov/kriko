@@ -5,14 +5,16 @@ and the invariants the system relies on. Read this before touching the pipeline.
 
 ---
 
-## Architecture: Four Packages
+## Architecture: Four Packages, a Frontend, and a Shell
 
 Dependencies form a fan. Interfaces and pipeline drivers sit above the generic
 engine; each category pack provides its own data, vocabulary, and evidence
 ledger/extraction machinery under `packs/<name>/pipeline/`.
 
 ```
-app/             CLI, local web dashboard, MCP server
+tauri/           desktop shell (Rust) — owns the sidecar's lifetime, nothing else
+ui/              Svelte + Vite frontend source, built into src/app/web/static/
+app/             CLI, local web dashboard, MCP server, job runner, sidecar
   └─ app/pipeline/  ledger and remediation drivers
                     └─ packs/     category data, builders, vocabulary, coverage
                                   └─ packs/cars/pipeline/  evidence ledger and
@@ -179,6 +181,80 @@ Turkish label (`display_tr`) instead of per domain; `why_shown` renders as
 small muted chips under each card title.
 
 ---
+
+## Jobs Plane: long work with a state a browser can see
+
+Two operations grow the knowledge base — researching a subject and building a
+pack — and both used to be reachable only from a terminal, which contradicted
+G6's delivery constraint directly.
+
+**`src/app/web/state.py`** — the `jobs` table in `~/.kriko/app.sqlite` (never in
+the engine's store). Columns: `state`, `progress`, `message`, `log`,
+`result_json`, `cancel_requested`, plus the three timestamps. States are
+`queued`, `running`, and the terminal set `succeeded | failed | cancelled |
+interrupted`.
+
+**`src/app/web/jobs.py`** — `JobRunner` over a `ThreadPoolExecutor(max_workers=1)`.
+
+- *Rows first, thread second.* Every transition is a row write. `recover()`
+  runs from the app's lifespan and turns `running`/`queued` rows left by a dead
+  process into `interrupted` — a killed server leaves an explanation, not a row
+  that claims forever to be working.
+- *One worker.* Two concurrent builds writing the same pack directory is a bug
+  that should not be expressible.
+- *Cooperative cancel.* `Progress.check()` raises `Cancelled` between steps.
+  Killing a thread mid-write is how a half-installed pack happens.
+- Each job opens its own sqlite connection: connections are thread-bound and
+  the submitting request is long gone by the time the worker starts.
+
+**`src/app/web/tasks.py`** — the two handlers, signature
+`(settings, params, progress) -> dict`. `research` drives `kriko.research`'s
+`Researcher` protocol (`plan_task` → `brief` → `gather` → `extract`) and hands
+findings to `app/findings.py`'s `accept_findings` — the *same* grounding and
+gate path the MCP `submit_findings` tool uses, so a claim's provenance does not
+depend on which door it came in. On the default `agent` plane `gather()` returns
+nothing by design; the brief is the output, and that is the $0 path, not a
+degraded one. `pack_build` mirrors `kriko pack build`, including "a pack with
+its own `build.py` uses it" and "an artifact with no subjects and no claims is
+refused rather than installed".
+
+**`src/app/web/routers/jobs.py`** — `POST /api/research`, `POST /api/packs/build`,
+`GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs/{id}/cancel`, and
+`GET /api/jobs/{id}/stream`. The stream is SSE over a *poll of the row*, not a
+push from the worker: a queue would need plumbing through the pool and would
+still lose everything on reconnect, so the row stays the single source of
+truth. `ui/src/lib/jobs.ts` falls back to plain polling when `EventSource` is
+absent or the stream dies mid-job.
+
+---
+
+## Desktop Shell: one store, two front doors
+
+**`src/app/sidecar.py`** — the server as a child process. It binds port 0,
+holds the socket, prints `KRIKO_PORT <n>` as its first line of stdout, and
+passes the bound socket to uvicorn as `fd=`. The child chooses the port because
+a parent that finds a free one has already lost it by the time the child binds;
+handing over the socket means uvicorn cannot rebind and serve elsewhere. Paths
+resolve exactly as the CLI resolves them, so a pack installed in the app is
+visible to `python -m app.cli`.
+
+**`tauri/src-tauri/src/main.rs`** — ~180 lines of process supervisor and no
+engine logic (`test_the_shell_holds_no_engine_logic` fails if that changes).
+The window is created hidden; Rust spawns the sidecar, reads the handshake,
+polls `/api/health`, then emits `kriko://ready` and shows it. On failure it
+emits `kriko://failed` with the captured stderr, which `tauri/shell-ui/index.html`
+renders through `textContent` — a blank window is a bug, and stderr is
+subprocess output, not markup. The child is killed on window `Destroyed` *and*
+on `RunEvent::Exit`: a quit from the dock destroys no window, and the orphan
+would hold the store's WAL lock into the next launch.
+
+**`packaging/kriko-sidecar.spec`** freezes it (the `hiddenimports` list exists
+because uvicorn resolves its protocol implementations by string, and the `datas`
+entry because the frontend is read from the filesystem, not imported).
+`packaging/smoke_sidecar.py` checks handshake + health + a served frontend
+between freeze and bundle. `.github/workflows/desktop.yml` builds unsigned
+installers on three runners. As of 2026-09-01 none of these have been built on
+a machine with a Rust toolchain — see backlog B52.
 
 ## Knowledge Plane: Pipeline
 

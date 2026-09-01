@@ -6,6 +6,54 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+## 2026-09-01 — The standalone app, phases 2–5: advice, jobs, and a desktop shell
+
+`127ec40`, `54c2ecf`, and this commit. Spec:
+`docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` (B52).
+
+- **Phase 2 — a result reads as advice** (`127ec40`). One `/api/lookup`
+  response, two renderings, and the split lives entirely in the frontend
+  (`ui/src/lib/mode.ts`, `report.ts`, `Report.svelte`): no request carries a
+  mode and no endpoint branches on one, so the engine cannot grow a second
+  answer shape to keep in sync. The buyer report inverts the engine's
+  `(-relevance, severity, title)` order to consequence-first, groups by the
+  pack's own `domain` strings without enumerating any of them, and turns
+  `advice` into "what to ask". Triage checkmarks live in `app.sqlite` and are
+  deleted with their lookup.
+- **Phase 3 — the JSON textarea is gone** (`127ec40`). `Check.svelte` takes a
+  pasted URL; an unreadable host answers with which sites the packs *can* read,
+  from `/api/adapters`. The guided form is built from
+  `/api/identity-keys/{pack}` and the pack vocabulary at runtime, names what is
+  still missing rather than failing on submit, and autocompletes off installed
+  subjects.
+- **Phase 4 — nothing in the data path is terminal-only** (`54c2ecf`). This is
+  the commit that closes G6's delivery constraint. A `jobs` table in
+  `app.sqlite`, a single-worker runner (`app/web/jobs.py`), the two handlers in
+  `app/web/tasks.py`, `POST /api/research`, `POST /api/packs/build`, SSE over a
+  poll of the row with a polling fallback in the client, and cooperative
+  cancel. Rows first, thread second: a process that dies leaves `interrupted`
+  jobs, not rows that claim forever to be running. `submit_findings`'s
+  grounding and gate logic moved to `app/findings.py` so a browser-started job
+  and the MCP plane share one acceptance path — provenance must not depend on
+  which door a claim came in.
+- **Phase 5 — the desktop shell.** `src/app/sidecar.py` binds an OS-chosen port
+  and prints `KRIKO_PORT <n>`: the child picks the port because a parent that
+  finds a free one has already lost it by the time the child binds.
+  `tauri/src-tauri/` spawns it, polls `/api/health`, shows a hidden window only
+  when healthy, renders the captured stderr when not, and kills the child on
+  close *and* on exit — an orphaned uvicorn holds the WAL lock and breaks the
+  next launch. `packaging/kriko-sidecar.spec` freezes it;
+  `.github/workflows/desktop.yml` bundles unsigned installers on three
+  runners.
+- **Verified here, and not.** 690 pytest, 55 vitest, svelte-check clean; the
+  sidecar handshake and orphan-free exit are real subprocess tests, and
+  `packaging/smoke_sidecar.py` passes against a live server. **The installers
+  were never built** — there is no Rust toolchain on this machine. That is
+  what is left of B52.
+- **Counts**: 690 pytest (from 668), 55 vitest (from 32), 36 node.
+
+---
+
 ## 2026-09-01 — The standalone app, phases 0–1: a Svelte frontend that remembers
 
 Thirteen tasks, `c4b3b8b`..`1170e13`. Spec:

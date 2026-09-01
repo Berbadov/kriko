@@ -64,6 +64,11 @@ python -m app.web                           # dashboard + /analyze on 127.0.0.1:
                                              # weakest-sourced claims, worst first
 ```
 
+The dashboard is not a read-only view: researching a subject and building a pack
+both run from it as **jobs** with a live log, a durable result and a cancel
+button, so nothing that grows the knowledge base is terminal-only. A job whose
+server died comes back marked `interrupted` rather than spinning forever.
+
 Identity is passed as bare `key=value` pairs, not `--make/--model` flags: the keys are
 pack-declared data, so the CLI can only pass them through opaquely.
 
@@ -74,6 +79,16 @@ Only *running the research pipeline* needs API keys (`MISTRAL_API_KEY`, `EXA_API
 repo-root `.env`) — never serving a lookup.
 
 Run the tests with `python -m pytest` (no arguments — `testpaths` is set in `pytest.ini`).
+
+### As a desktop app
+
+`tauri/` wraps the same server in a window: a Rust shell spawns a PyInstaller
+sidecar, waits for `/api/health`, and shows the UI — the identical UI a browser
+gets, from the identical `~/.kriko/` store, so a pack installed in the app is
+visible to `python -m app.cli`. Building it needs a Rust toolchain and Node;
+neither the wheel nor the test suite does. See `tauri/README.md`. **The
+installers have not been built yet** — CI (`.github/workflows/desktop.yml`) is
+where they will first exist (backlog B52).
 
 ---
 
@@ -114,3 +129,4 @@ the generalization principle for why per-model fixes don't exist here.
 | `CLAUDE.md` | The principles every change is judged against |
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks |
 | `backlog.md` / `done.md` | Open work and finished work — status, always current |
+| `tauri/README.md` | The desktop shell — launch sequence, failure surface, local build |
