@@ -788,37 +788,28 @@ with an empty, unclickable summary. Add a `lang` parameter to both surfaces,
 matching `/api/query`'s existing precedent, with a fallback to any available
 language rather than an empty title when the requested one is missing.
 
-### B52 — The standalone app, phases 2–5 `[G6]`
-Phases 0–1 landed 2026-09-01 (see `done.md`): the frontend is Svelte in `ui/`,
-every view is linkable, and lookups persist in `~/.kriko/app.sqlite`. What the
-spec (`docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md`) still
-has open, in order:
+### B52 — The standalone app: installers on three OSes `[G6]`
+Phases 0–5 are written and landed 2026-09-01 (see `done.md`). What remains is
+**verification of phase 5 only**, and it cannot be done on this machine:
 
-- **Phase 2 — buyer/author projections.** One `/api/lookup` response, two
-  renderings: the buyer sees severity and "ask the seller", the author sees
-  `relevance`, `pack_id`, trust tiers and `why[]`. No endpoint branches on
-  mode. The report screen groups by `domain` and orders by urgency; today a
-  claim is still a flat card with a raw relevance float, and `advice`/`why`
-  are in the payload but shown nowhere in buyer terms.
-- **Phase 3 — input.** Analyze still demands a hand-typed JSON object. Wanted:
-  paste-a-URL, autocomplete off installed subjects, validation before submit,
-  and an unrecognised host answered with which sites the packs *can* read
-  (from `/api/adapters`) rather than a bare 404.
-- **Phase 4 — jobs.** *This is what closes G6's web-first delivery
-  constraint.* There is no job infrastructure in the repo at all: research
-  runs via MCP or `app/pipeline/` scripts, and a pack is built only from the
-  CLI, so the two operations that grow the knowledge base are terminal-only.
-  Wanted: a `jobs` table in `app.sqlite`, a single-worker runner, SSE progress
-  with a polling fallback, `POST /api/research` and `POST /api/packs/build`,
-  and a row still `running` at startup marked `interrupted` rather than
-  spinning forever.
-- **Phase 5 — Tauri.** A Rust shell over a PyInstaller sidecar: ephemeral
-  port, `/api/health` handshake before the window shows, sidecar killed on
-  close, captured stderr shown instead of a blank page, and `~/.kriko/`
-  resolved identically to the CLI so one store has two front doors. Unsigned
-  installers on three OSes; signing and auto-update are out of scope.
+- **The installers have never been built.** There is no Rust toolchain here
+  (`cargo`/`rustc` absent), so `tauri/` and `packaging/kriko-sidecar.spec` are
+  reviewed code, not proven code. `.github/workflows/desktop.yml` builds them on
+  three runners; the first `workflow_dispatch` run is the real test, and every
+  PyInstaller `hiddenimports` guess in the spec is a candidate failure.
+- **The frozen sidecar's handshake** is checked by `packaging/smoke_sidecar.py`
+  between freeze and bundle. It passes against a real server here; it has never
+  run against a frozen binary.
+- **What is already mechanical**: `test_the_shell_and_the_sidecar_agree_on_the
+  _handshake` fails if either side renames `KRIKO_PORT`, and
+  `test_the_shell_holds_no_engine_logic` fails if engine vocabulary appears in
+  Rust. Both run in the ordinary pytest suite with no toolchain.
+- **Out of scope, deliberately**: code signing (needs an Apple developer
+  account and an EV certificate — a policy decision, see the human-decisions
+  table) and auto-update.
 
-Each phase gets its own plan. Phases 0–4 are worth shipping even if 5 slips.
+Also open from the phase-2 work: the report screen makes weak claim selection
+obvious, which is the product principle's open work (B36), not this item's.
 
 ---
 

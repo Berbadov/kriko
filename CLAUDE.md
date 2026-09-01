@@ -125,6 +125,10 @@ Kriko is five packages — four Python, plus the frontend — and since the pivo
 the dependencies form a fan, not a column. Each may import from what it points at, never the other way:
 
 ```
+tauri/     the desktop shell — Rust, ~180 lines, owns the sidecar's lifetime
+   |       and nothing else. No engine logic in Rust, ever (enforced by
+   |       test_the_shell_holds_no_engine_logic).
+   v
 ui/        the frontend — Svelte + Vite source, built into src/app/web/static/.
            Talks to app/ over HTTP; imports no Python. Holds no pack
            vocabulary (enforced by test_repo_invariants.py).
@@ -180,6 +184,26 @@ may not name a pack's identity keys — forms are built from
 `/api/identity-keys/{pack_id}` and `/api/packs/{pack_id}/vocabulary` at runtime,
 and `test_ui_contains_no_pack_vocabulary` enforces it.
 
+**Long work is a row, not a request.** Research and pack builds run through
+`app/web/jobs.py` (single worker, cooperative cancel) with their state in
+`app.sqlite`'s `jobs` table and their handlers in `app/web/tasks.py`. A
+`POST` returns a job id immediately; the log, the result and the failure all
+outlive the request and the process — a row still `running` at startup is
+marked `interrupted`, never left spinning. Both handlers go through the same
+acceptance path MCP uses (`app/findings.py`): a claim's provenance must not
+depend on which door it came in.
+
+**The desktop shell is a supervisor, not a second engine.** `src/app/sidecar.py`
+binds an OS-chosen port and prints `KRIKO_PORT <n>` as its first line of
+stdout — the child picks the port because a parent that finds a free one has
+already lost it by the time the child binds. `tauri/` reads that line, polls
+`/api/health`, and only then shows the window; on failure it renders the
+captured stderr, because a blank window is a bug. It kills the sidecar on
+window close *and* on app exit — an orphaned uvicorn holds the store's WAL lock
+and breaks the *next* launch. Two pytest guards keep this honest with no Rust
+toolchain installed: the handshake string must match on both sides, and engine
+vocabulary in Rust fails the suite. See `tauri/README.md`.
+
 **Two SQLite files, on purpose.** `~/.kriko/knowledge.sqlite` is the engine's
 store; `~/.kriko/app.sqlite` (`app/web/state.py`) is the interface's own history
 and settings. Interface state never goes in the engine's schema: uninstalling a
@@ -206,7 +230,8 @@ original reasoning.
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
-| `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — phases 0–1 landed |
+| `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — all phases landed; installers unbuilt (B52) |
+| `tauri/README.md` | The desktop shell: launch sequence, failure surface, local build | current — never built on a machine with a Rust toolchain |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |
 | `docs/historical/` | Pre-part-centric era (`handover.md`, `SCAFFOLD.md`) + superseded 2026-07 designs/plans (`thoughts/`) + pre-pivot claim-quality roadmap/specs and pipeline history (`overhaul_plan.md`, `claim_relevance_plan.md`, `pipeline_postmortem.md`) | historical — do not follow |

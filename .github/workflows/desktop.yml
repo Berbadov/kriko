@@ -1,0 +1,107 @@
+name: desktop
+
+# Not on every push: three OS runners with a Rust build each is minutes nobody
+# needs on a docs commit. Tags, hand-runs, and changes to the packaging itself.
+on:
+    push:
+        tags: ["v*"]
+    workflow_dispatch:
+    pull_request:
+        paths:
+            - "tauri/**"
+            - "packaging/**"
+            - "src/app/sidecar.py"
+            - ".github/workflows/desktop.yml"
+
+concurrency:
+    group: desktop-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    bundle:
+        name: ${{ matrix.label }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            # fail-fast off: "does it build on Windows" and "does it build on
+            # macOS" are separate answers, and one failing must not hide the
+            # other.
+            fail-fast: false
+            matrix:
+                include:
+                    - { os: ubuntu-22.04, label: linux, sidecar: kriko-sidecar }
+                    - { os: macos-latest, label: macos, sidecar: kriko-sidecar }
+                    - { os: windows-latest, label: windows, sidecar: kriko-sidecar.exe }
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            # WebKitGTK and friends. Tauri 2 on Linux needs the 4.1 ABI; 4.0
+            # builds and then fails to open a window.
+            - name: Linux system deps
+              if: matrix.label == 'linux'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+                    librsvg2-dev patchelf libssl-dev
+
+            - name: Install Python side
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e "." pyinstaller
+
+            # The UI first: the spec refuses to freeze without it rather than
+            # shipping an app that 404s on its own frontend.
+            - name: Build the UI
+              run: |
+                  npm --prefix ui ci --no-audit --no-fund
+                  npm --prefix ui run build
+
+            - name: Freeze the sidecar
+              run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
+
+            # A frozen binary that cannot print its port is a blank window, so
+            # the handshake is checked here, before it is bundled into anything.
+            - name: The frozen sidecar answers
+              shell: bash
+              run: python packaging/smoke_sidecar.py "dist/${{ matrix.sidecar }}"
+
+            # Tauri resolves externalBin as <name>-<target triple>.
+            - name: Place the sidecar
+              shell: bash
+              run: |
+                  triple=$(rustc -Vv | sed -n 's/host: //p')
+                  mkdir -p tauri/src-tauri/binaries
+                  ext=""
+                  [ "${{ matrix.label }}" = "windows" ] && ext=".exe"
+                  cp "dist/${{ matrix.sidecar }}" \
+                     "tauri/src-tauri/binaries/kriko-sidecar-$triple$ext"
+
+            - name: Icons
+              run: |
+                  npm --prefix tauri install --no-audit --no-fund
+                  npm --prefix tauri run tauri icon src-tauri/icons/icon.png
+
+            # Unsigned, on all three. Signing needs certificates, which is a
+            # policy decision (an Apple developer account, an EV cert) and not
+            # this workflow's to make.
+            - name: Bundle
+              run: npm --prefix tauri run tauri build
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: kriko-${{ matrix.label }}
+                  path: |
+                      tauri/src-tauri/target/release/bundle/**/*.deb
+                      tauri/src-tauri/target/release/bundle/**/*.AppImage
+                      tauri/src-tauri/target/release/bundle/**/*.dmg
+                      tauri/src-tauri/target/release/bundle/**/*.exe
+                  if-no-files-found: error

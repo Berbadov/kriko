@@ -281,3 +281,84 @@ def test_no_hand_written_frontend_survives():
         f"{stale} still in the served static dir — the Svelte build in ui/ "
         f"replaces them; delete them and rebuild."
     )
+
+
+# ── the desktop shell ─────────────────────────────────────────────────────
+# tauri/ is optional: no Rust toolchain is needed for the wheel or this suite.
+# But three things about it are load-bearing and break invisibly — a blank
+# window, or an engine reimplemented in Rust — so they are pinned in Python
+# where CI already runs.
+
+TAURI = REPO / "tauri"
+
+
+def test_the_shell_and_the_sidecar_agree_on_the_handshake():
+    """One string decides whether the app opens or shows a white rectangle.
+
+    Rust reads the sidecar's first line of stdout to learn the port. If either
+    side renames the marker, the window never opens and nothing anywhere says
+    why — there is no shared type to break and no test the compiler runs.
+    """
+    from app.sidecar import PORT_LINE
+
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', main_rs)
+    assert declared, "main.rs no longer declares PORT_LINE"
+    assert declared.group(1) == PORT_LINE, (
+        f"the shell greps for {declared.group(1)!r} but app/sidecar.py prints "
+        f"{PORT_LINE!r}. The window would never open."
+    )
+
+
+def test_the_shell_holds_no_engine_logic():
+    """Tauri wraps the Python engine; it does not become a second one.
+
+    The moment a query, a rank or a pack read exists in Rust, there are two
+    engines to keep in agreement and the layering fan in CLAUDE.md is a
+    drawing rather than a rule. The shell's whole job is the sidecar's
+    lifetime.
+    """
+    rust = list((TAURI / "src-tauri" / "src").rglob("*.rs"))
+    assert rust, "no Rust sources found — fix this path, not the test"
+
+    # Engine vocabulary, not shell vocabulary. `spawn`, `kill`, `health` and
+    # `port` are exactly what a supervisor is allowed to know about.
+    forbidden = re.compile(
+        r"\b(sqlite|rusqlite|SELECT\s|INSERT\s|claim|pack_id|subject_id|"
+        r"relevance|severity)\b",
+        re.IGNORECASE,
+    )
+    for path in rust:
+        for number, line in enumerate(path.read_text().splitlines(), start=1):
+            code = line.split("//")[0]
+            assert not forbidden.search(code), (
+                f"{path.relative_to(REPO)}:{number} puts engine vocabulary in "
+                f"the shell: {line.strip()!r}. Rust owns the sidecar's "
+                f"lifetime and nothing else — see tauri/README.md."
+            )
+
+
+def test_the_boot_screen_can_render_a_failure():
+    """A sidecar that dies must produce an explanation, not a blank page.
+
+    The boot page is plain HTML with no build step for the same reason: it has
+    to render when everything else is broken.
+    """
+    page = (TAURI / "shell-ui" / "index.html").read_text()
+    assert "kriko://failed" in page, "the boot screen ignores the failure event"
+    # The stderr goes through textContent. It is a subprocess's output, so an
+    # innerHTML assignment carrying it would be an injection with a very short
+    # path from "the engine crashed" to "the engine crashed and ran something".
+    assert "textContent" in page
+    injectable = [
+        line
+        for line in page.splitlines()
+        if "innerHTML" in line.split("//")[0] and 'innerHTML = ""' not in line
+    ]
+    assert injectable == [], f"stderr must not reach innerHTML: {injectable}"
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    assert "kriko://failed" in main_rs, "the shell never emits a failure"
+    assert "kill_engine" in main_rs, (
+        "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
+        "lock and breaks the next launch"
+    )

@@ -66,3 +66,14 @@ ui/.svelte-kit/
 # so a floating dependency version would change an asset hash and fail the
 # build for no reason. Reproducible installs are load-bearing here.
 !ui/package-lock.json
+
+# The desktop shell's build products. The Rust target directory is ~2GB, the
+# frozen sidecar is per-OS, and `tauri icon` generates every icon from the one
+# source PNG that *is* committed (tauri/src-tauri/icons/icon.png).
+tauri/node_modules/
+tauri/src-tauri/target/
+tauri/src-tauri/binaries/
+tauri/src-tauri/gen/
+tauri/src-tauri/icons/*
+!tauri/src-tauri/icons/icon.png
+build/
