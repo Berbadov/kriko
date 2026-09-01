@@ -80,7 +80,30 @@ export type Subject = {
     claims: number;
 };
 
-export type Gap = { label: string; kind: string };
+export type Gap = { subject_id: string; label: string; kind: string };
+
+export type Job = {
+    job_id: string;
+    kind: string;
+    params: Record<string, unknown>;
+    state: string;
+    progress: number;
+    message: string;
+    log: string;
+    result: Record<string, unknown> | null;
+    done: boolean;
+    created_at: string;
+    started_at: string | null;
+    finished_at: string | null;
+};
+
+export type ResearchRequest = {
+    subject_id: string;
+    pack_id?: string;
+    backend?: string;
+    budget_usd?: number;
+    max_documents?: number;
+};
 
 export type ClaimHealth = {
     claim_id: string;
