@@ -1,40 +1,58 @@
 # Kriko — Usage Guide
 
-Kriko is a Chrome extension that surfaces known reliability risks for used cars on Sahibinden.com.
-This guide covers everything from starting the stack to growing the knowledge base.
+Kriko is a local-first knowledge engine for manufactured products. It ships as a
+desktop app; the `cars` pack surfaces known reliability risks for used cars on
+Sahibinden.com through a Chrome extension. This guide covers running it and
+growing the knowledge base.
 
 ---
 
 ## Prerequisites
 
-- **Docker Desktop** running (with WSL2 integration enabled)
-- **Python 3.11+** in WSL (for the offline knowledge tools)
-- **uv** recommended: `pip install uv` — fast package manager
-- **MISTRAL_API_KEY** — LLM extraction + judge gates (`ministral-8b-latest`)
-- **EXA_API_KEY** — web source discovery (Exa neural search)
+- **Nothing to install and nothing to run** if you use the desktop app: the
+  installer carries its own Python. There is no Docker, no Postgres, no service
+  to start — the store is a single SQLite file at `~/.kriko/knowledge.sqlite`
+  and the interface's own history is beside it in `app.sqlite`.
+- **Python 3.14+** only if you work from a checkout (the pipeline, the CLI, the
+  tests).
+- **MISTRAL_API_KEY** — LLM extraction + judge gates (`ministral-8b-latest`),
+  for the pipeline only.
+- **EXA_API_KEY** — web source discovery (Exa neural search), for the pipeline
+  only.
 
 ---
 
-## 1. Start the API + Database
+## 1. Run it
+
+**As a desktop app** — install `Kriko_<version>_amd64.deb`,
+`Kriko_<version>_amd64.AppImage`, `Kriko_<version>_aarch64.dmg`, or
+`Kriko_<version>_x64-setup.exe` from the `desktop` workflow's artifacts and
+launch it. The window owns the engine: it starts a sidecar on an OS-chosen port,
+waits for `/api/health`, and shuts the sidecar down when you close the window.
+Nothing is left listening. See `tauri/README.md`.
+
+**From a checkout**, for development:
 
 ```bash
 cd ~/kriko
-docker compose -f deploy/docker-compose.yml up -d
+.venv/bin/python -m uvicorn app.web.app:create_app --factory --port 8000
 ```
 
 Check it's healthy:
 ```bash
-curl http://127.0.0.1:8000/health
-# → {"status":"ok","db":"ok"}
+curl http://127.0.0.1:8000/api/health
+# → {"ok":true,"store":"~/.kriko/knowledge.sqlite","app_state":"~/.kriko/app.sqlite", ...}
 ```
 
-Stop everything:
-```bash
-docker compose -f deploy/docker-compose.yml down
-```
+Stop it with Ctrl-C. There is nothing else running.
 
-> The API restarts automatically on Docker Desktop launch (`restart: unless-stopped`).
-> Don't run `uvicorn` directly in WSL — it will conflict with the Docker port binding.
+> **No Docker.** Kriko was a Postgres-and-compose deployment once; the pivot to
+> a standalone app deleted `deploy/`, and
+> `test_the_app_stays_standalone` in `src/app/pipeline/tests/test_repo_invariants.py`
+> fails if a Dockerfile, a compose file, or a Postgres driver comes back. If you
+> have containers left from that era, remove them — a restart-looping container
+> with a bind mount into this repo will recreate directories inside your
+> checkout.
 
 ---
 
@@ -473,11 +491,10 @@ Extracted candidates are cached to `packs/cars/pipeline/cache/{make}_{model}_{ge
 `--skip-extraction` replays the cache, so tuning gates/thresholds costs no tokens.
 High-severity claims always go to manual review regardless of score.
 
-After processing, the API container auto-reloads via the Docker `restart` policy. If it
-doesn't pick up new claims immediately:
-```bash
-docker compose -f deploy/docker-compose.yml restart api
-```
+Processing writes YAML under `packs/cars/data/`. Nothing is serving it until the
+pack is rebuilt and installed — `python -m app.cli build packs/cars`, or the
+**Jobs** screen's build form, which does the same thing through the same
+acceptance path.
 
 ### What buyers see (serving model)
 
@@ -519,25 +536,33 @@ writes; the legacy judge/promote stack retires with the B16 catalog swap.
 
 ---
 
-## 7. Check the database
+## 7. Check the store
+
+The store is one SQLite file. No server, no container, no credentials:
 
 ```bash
-# All claims in DB
-docker exec deploy-db-1 psql -U postgres -d kriko \
-  -c "SELECT id, title, severity FROM claims WHERE status='verified';"
+# All claims currently served
+sqlite3 ~/.kriko/knowledge.sqlite \
+  "SELECT c.claim_id, t.title, c.severity
+     FROM claims c JOIN claim_text t USING (claim_id, pack_id)
+    WHERE t.lang = 'en' LIMIT 20;"
 
-# Recent analysis log (what the extension queried)
-docker exec deploy-db-1 psql -U postgres -d kriko \
-  -c "SELECT make, model, coverage_state, claims_returned, created_at FROM analysis_log ORDER BY created_at DESC LIMIT 10;"
+# What is installed, and how big
+sqlite3 ~/.kriko/knowledge.sqlite \
+  "SELECT pack_id, version, built_at FROM packs;"
 
-# Variants
-docker exec deploy-db-1 psql -U postgres -d kriko \
-  -c "SELECT id, fuel, displacement_cc, power_min_hp FROM variants;"
+# Subjects a pack knows about
+sqlite3 ~/.kriko/knowledge.sqlite \
+  "SELECT subject_id, kind FROM subjects LIMIT 20;"
 ```
+
+`/api/health` reports both file paths, and the **Store** screen shows the same
+counts without a shell. Interface history (what you looked up, and when) is a
+*separate* file — `~/.kriko/app.sqlite` — so uninstalling a pack cannot drop it.
 
 `analysis_log` above only has IDs and counts. For the full request/response payload
 (what a specific buyer actually saw, and why — mileage/equipment/description that drove
-gating), read `logs/analyses.jsonl` instead — no `docker exec`/psql needed:
+gating), read `logs/analyses.jsonl`:
 
 ```bash
 # Pipeline state, spend, and recent activity

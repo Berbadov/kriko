@@ -403,7 +403,9 @@ the request path.
 6. **Category vocabulary is pack-owned.** Cars-specific labels and aliases live
    under `packs/cars/`; the generic engine does not contain car constants.
 
-7. **WSL2 + Docker port conflict.** Never run `uvicorn` directly in WSL while Docker
-   is up. Both listen on `0.0.0.0:8000` and WSL2 localhost forwarding means Windows
-   Chrome will hit whichever bound the port first. The Docker stack is the only correct
-   way to run the serving plane.
+7. **Nothing is deployed.** Kriko is a standalone app: one process, two SQLite
+   files, no container and no database server. The desktop shell's sidecar binds
+   an OS-chosen port precisely so two copies cannot fight over 8000, which is
+   what the retired Docker stack used to do to a `uvicorn` started in WSL.
+   `test_the_app_stays_standalone` fails if a Dockerfile, a compose file, or a
+   Postgres driver reappears.

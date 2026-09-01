@@ -501,3 +501,40 @@ def test_every_tracked_path_is_checkoutable_on_windows_and_macos():
         "these tracked paths cannot be checked out on Windows or macOS:\n"
         + "\n".join(offenders)
     )
+
+
+def test_the_app_stays_standalone():
+    """No container, no database server, no deployment.
+
+    Kriko was a Postgres-and-compose deployment before the pivot, and the
+    difference is not stylistic: a user installs a desktop app, they do not
+    stand up a stack. The two SQLite files exist so that there is nothing to
+    run. Docker's residue is also actively harmful here — a stale compose
+    service with a bind mount into the checkout recreates directories inside
+    the repo as root, which is how `backend/` came back after being deleted.
+
+    Docs may *describe* the retired stack; this checks that the machinery
+    cannot return.
+    """
+    names = ("Dockerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yml")
+    tracked = (
+        subprocess.run(
+            ["git", "ls-files"], cwd=REPO, capture_output=True, text=True, check=True
+        )
+        .stdout.splitlines()
+    )
+    found = [
+        path
+        for path in tracked
+        if Path(path).name in names or path.startswith("deploy/")
+    ]
+    assert found == [], f"the deployment stack is back: {found}"
+
+    # A Postgres driver in the dependencies means something intends to talk to
+    # a server, whatever the docs say.
+    pyproject = (REPO / "pyproject.toml").read_text().lower()
+    for driver in ("psycopg", "asyncpg", "sqlalchemy", "alembic"):
+        assert driver not in pyproject, (
+            f"{driver} is a dependency again — the store is SQLite, and the "
+            f"engine talks to it with the stdlib sqlite3 module"
+        )

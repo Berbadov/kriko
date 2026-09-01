@@ -38,8 +38,8 @@ an unticked box is fine if you say why.
 
 - [ ] `python -m pytest` — no arguments, so `pytest.ini` picks up every testpath
 - [ ] `npm test`
-- [ ] There is currently no Dockerfile or `deploy/` directory in the repo, so
-      nothing to build here — if you add one back, add this checkbox back too.
+- [ ] If this touches `packaging/`, `tauri/`, or `src/app/sidecar.py`, the
+      `desktop` workflow ran and all three runners are green.
 
 ```
 paste test output here
