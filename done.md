@@ -6,6 +6,40 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### The install that failed, and the extension that could not find the app — 2026-09-01 (this commit)
+A reader ran the v0.2.1 Windows installer and got "Error opening file for
+writing: ...\kriko-sidecar.exe"; *Ignore* then produced an app that did not open.
+Three distinct bugs behind one dialog, all fixed as mechanisms:
+
+- **The orphan.** `src/app/sidecar.py` promised in its own docstring to die with
+  its parent and did not. `--exit-with-parent` watches stdin, whose write end
+  lives in the shell, so a crash — the case no `kill_engine` handler can cover —
+  is an EOF. `kill_engine` additionally kills the *tree* on Windows, because
+  PyInstaller onefile re-execs and the child is what holds the image.
+  `installer.nsh` kills it in `NSIS_HOOK_PREINSTALL` for machines where one
+  already leaked, and `offer_update` now kills before installing rather than
+  after — on Windows the update *is* an NSIS run over the running sidecar's own
+  file, unattended.
+- **The invisible failure.** `start_engine` returned `Err` for a missing binary,
+  and the boot page rendered it into a window that is created hidden. Every
+  failure path now goes through `emit_failure`, which shows the window. A
+  guard test asserts it, because "the app does not open" is the one outcome
+  `main.rs`'s rule 2 forbids and the only one with no evidence.
+- **The unreachable extension.** `extension/background.js` hardcodes
+  `127.0.0.1:8787` because a page cannot be told a random port, while the
+  desktop sidecar only ever bound an OS-chosen one. `uvicorn.Server.run` takes a
+  list of sockets, so the sidecar serves both: the announced port for the shell,
+  `EXTENSION_PORT` for the extension, skipped with a stderr line if taken. The
+  number is one constant and a repo invariant compares it to the extension's.
+
+Four new guards in the ordinary pytest suite (no Rust toolchain): the
+`--exit-with-parent` flag must be spelled on both sides, `start_engine` must
+reach `emit_failure`, the NSIS hook must kill the binary Tauri actually ships
+with `/T`, and the extension's port must equal the server's constant. Plus two
+real-subprocess tests: closing stdin ends the sidecar, and a taken extension
+port is not fatal. 739 tests pass (one deselected: a root-owned `backend/` left by an old
+Docker container, not this work).
+
 ### Two clocks: packs update themselves, and so does the app — 2026-09-01 (`1bf7af9` + this commit)
 The store had carried `origin_url`, `version` and `content_digest` on every pack
 row since the schema was written and nothing read them. Now `kriko/pack/

@@ -6,6 +6,7 @@ message names the fix rather than just the fact.
 """
 
 import ast
+import json
 import re
 import subprocess
 from configparser import ConfigParser
@@ -364,6 +365,88 @@ def test_the_boot_screen_can_render_a_failure():
         "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
         "lock and breaks the next launch"
     )
+
+
+def test_the_extension_and_the_server_agree_on_a_port():
+    """The extension's only address, pinned on both sides.
+
+    A page cannot be told a random port: no filesystem, no channel from the
+    shell. So the number is hardcoded in `extension/background.js` and bound by
+    the sidecar, and nothing but this test connects the two — a drift here is an
+    extension that silently does nothing, with no error anywhere.
+    """
+    from app.web.settings import EXTENSION_PORT
+
+    worker = (REPO / "extension" / "background.js").read_text()
+    found = re.search(r"DEFAULT_API_BASE\s*=\s*.http://127\.0\.0\.1:(\d+)", worker)
+    assert found, "extension/background.js no longer declares DEFAULT_API_BASE"
+    assert int(found.group(1)) == EXTENSION_PORT, (
+        f"the extension talks to port {found.group(1)} and the server binds "
+        f"{EXTENSION_PORT}. Nothing would report the mismatch."
+    )
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    assert "EXTENSION_PORT" in sidecar, (
+        "the sidecar no longer binds the extension's fixed port — the desktop "
+        "app would only be on an OS-chosen one, which the extension cannot know"
+    )
+
+
+def test_the_shell_tells_the_sidecar_to_die_with_it():
+    """The flag is the only thing covering a *crashed* shell.
+
+    `kill_engine` runs on window close and on exit. Neither runs when the shell
+    is killed or panics, and the survivor keeps the store's WAL lock — and, on
+    Windows, its own image, which is what made an installer fail with "Error
+    opening file for writing: kriko-sidecar.exe". A flag spelled on one side
+    only is silent: argparse would reject it and the window would never open.
+    """
+    flag = "--exit-with-parent"
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    assert flag in main_rs, f"the shell does not pass {flag} — an orphan survives a crash"
+    assert flag in sidecar, f"the sidecar does not accept {flag} — it would fail to start"
+
+
+def test_a_sidecar_that_cannot_start_still_gets_a_window():
+    """`Err` from `start_engine` has nowhere to be read.
+
+    The window is created hidden and shown once the engine is healthy, so an
+    error returned to the boot page renders into something invisible: the app
+    "does not open", with no window and no message. Every failure path has to
+    reach `emit_failure`, which shows the window itself.
+    """
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    body = main_rs.split("fn start_engine")[1].split("\nfn ")[0]
+    assert "emit_failure" in body, (
+        "start_engine can fail without showing the window — the process would "
+        "have no window at all, which is the blank-window bug in its worst form"
+    )
+
+
+def test_the_windows_installer_stops_a_running_engine_first():
+    """The install failure a reader actually hit, pinned.
+
+    NSIS overwrites the sidecar in place. A live one — leaked by an earlier
+    version, or by a crash — keeps its onefile image mapped, and the installer
+    stops with Abort/Retry/Ignore, all three of which are wrong. So the
+    installer kills it, and the name it kills has to be the name Tauri ships.
+    """
+    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text())
+    hooks = config["bundle"]["windows"]["nsis"]["installerHooks"]
+    script = TAURI / "src-tauri" / hooks
+    assert script.exists(), f"{hooks} is configured but missing"
+    text = script.read_text()
+
+    binaries = config["bundle"]["externalBin"]
+    name = Path(binaries[0]).name
+    assert f"{name}.exe" in text, (
+        f"the hook does not stop {name}.exe, which is the file the installer "
+        f"fails to open for writing"
+    )
+    for macro in ("NSIS_HOOK_PREINSTALL", "NSIS_HOOK_PREUNINSTALL"):
+        assert macro in text, f"{hooks} defines no {macro}"
+    # /T because the pid holding the image is a child of the one we spawned.
+    assert "/T" in text, "taskkill without /T leaves the onefile child alive"
 
 
 def test_every_data_file_under_src_is_declared_as_package_data():

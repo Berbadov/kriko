@@ -31,7 +31,7 @@ from app.web.routers import (
     query,
     subjects,
 )
-from app.web.settings import Settings
+from app.web.settings import EXTENSION_PORT, Settings
 from app.web.tasks import HANDLERS
 
 STATIC = Path(__file__).parent / "static"
@@ -96,7 +96,7 @@ def main(argv=None) -> int:
 
     parser = argparse.ArgumentParser(prog="app.web")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument("--port", type=int, default=EXTENSION_PORT)
     parser.add_argument("--store", default=None)
     args = parser.parse_args(argv)
 

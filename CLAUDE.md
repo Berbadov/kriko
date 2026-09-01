@@ -199,10 +199,22 @@ stdout — the child picks the port because a parent that finds a free one has
 already lost it by the time the child binds. `tauri/` reads that line, polls
 `/api/health`, and only then shows the window; on failure it renders the
 captured stderr, because a blank window is a bug. It kills the sidecar on
-window close *and* on app exit — an orphaned uvicorn holds the store's WAL lock
-and breaks the *next* launch. Two pytest guards keep this honest with no Rust
-toolchain installed: the handshake string must match on both sides, and engine
-vocabulary in Rust fails the suite. See `tauri/README.md`.
+window close *and* on app exit, and on Windows kills the *tree* — PyInstaller
+onefile re-execs, so the pid we spawned is a bootloader and its child is what
+holds the image. The sidecar also ends itself when its stdin closes
+(`--exit-with-parent`), which is the only belt that covers a crashed shell. An
+orphan does not merely hold the store's WAL lock: on Windows it keeps its own
+`.exe` mapped, and the next *installer* fails with "Error opening file for
+writing: kriko-sidecar.exe" — hence `tauri/src-tauri/installer.nsh` as well.
+The sidecar serves two sockets, the announced one and the fixed
+`EXTENSION_PORT`, because a browser extension cannot be told a random port.
+Pytest guards keep all of this honest with no Rust toolchain installed: the
+handshake string and the flag must match on both sides, the extension's
+hardcoded port must match the server's constant, every failure path in
+`start_engine` must reach `emit_failure` (a window created hidden cannot show
+an error it was only *returned*), the NSIS hook must kill the binary Tauri
+actually ships, and engine vocabulary in Rust fails the suite. See
+`tauri/README.md`.
 
 **Two SQLite files, on purpose.** `~/.kriko/knowledge.sqlite` is the engine's
 store; `~/.kriko/app.sqlite` (`app/web/state.py`) is the interface's own history

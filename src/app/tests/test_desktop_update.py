@@ -188,6 +188,15 @@ def test_the_shell_asks_before_it_restarts_the_app():
     order = main_rs.index("kill_engine(&app);\n        app.restart();")
     assert order > 0
 
+    # And it must already be dead when the installer starts writing, because on
+    # Windows the installer overwrites the running sidecar's own file.
+    body = main_rs.split("fn offer_update")[1]
+    install = body.index("download_and_install")
+    assert body[:install].rindex("kill_engine(&app);") < install, (
+        "the update installs while the engine is still running — on Windows "
+        "that is the locked kriko-sidecar.exe failure, unattended"
+    )
+
 
 def test_the_workflow_never_hard_requires_the_signing_secret():
     """A fork with no secret must still get installers out of a tag."""

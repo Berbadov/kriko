@@ -19,7 +19,7 @@ import urllib.request
 
 import pytest
 
-from app.sidecar import PORT_LINE, reserve
+from app.sidecar import EXTRA_LINE, PORT_LINE, reserve
 
 
 def test_reserve_returns_a_port_that_is_already_bound():
@@ -44,17 +44,24 @@ def test_an_explicit_port_is_honoured():
         again.close()
 
 
-@pytest.fixture
-def sidecar(tmp_path):
-    env = {
+def _env(tmp_path):
+    return {
         "KRIKO_STORE": str(tmp_path / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(tmp_path / "app.sqlite"),
         "KRIKO_ANALYSES_LOG": str(tmp_path / "analyses.jsonl"),
         "PATH": "/usr/bin:/bin",
         "PYTHONPATH": "src",
     }
+
+
+@pytest.fixture
+def sidecar(tmp_path):
+    env = _env(tmp_path)
     process = subprocess.Popen(
-        [sys.executable, "-m", "app.sidecar"],
+        # `--extension-port 0`: the fixed port is exercised on purpose below,
+        # and a fixture that takes it would make every other test in the file
+        # depend on what else is running on this machine.
+        [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -112,3 +119,144 @@ def test_terminating_the_sidecar_leaves_nothing_holding_the_port(sidecar):
             if sock is not None:
                 sock.close()
     raise AssertionError(f"port {port} is still held after the sidecar exited")
+
+
+def test_the_sidecar_exits_when_its_parent_goes_away(tmp_path):
+    """The orphan that breaks the *installer*, not just the next launch.
+
+    A sidecar that outlives the shell keeps its own binary mapped on Windows,
+    and the next install stops on "Error opening file for writing:
+    kriko-sidecar.exe" — a message that names the file and not the cause. The
+    shell passing `--exit-with-parent` is what makes that unreachable, so the
+    behaviour is tested by actually losing the pipe rather than by mocking one.
+    """
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "app.sidecar",
+            "--exit-with-parent",
+            "--extension-port",
+            "0",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_env(tmp_path),
+    )
+    try:
+        line = process.stdout.readline().strip()
+        assert line.startswith(PORT_LINE), line
+
+        # Closing our end of the pipe is precisely what a crashed shell does.
+        # No signal is sent, and no handler in the child could have run.
+        process.stdin.close()
+        process.wait(timeout=20)
+        assert process.returncode is not None
+    finally:
+        if process.poll() is None:  # pragma: no cover — the failure path
+            process.kill()
+            process.wait(timeout=10)
+
+
+def test_the_watchdog_is_off_unless_asked(tmp_path):
+    """`< /dev/null` in a terminal must not be an instant exit.
+
+    The flag exists because stdin has three different meanings here — a tty, a
+    pipe from the shell, and nothing at all — and only the second one carries
+    the parent's lifetime. Defaulting to on would make the operator's own
+    `python -m app.sidecar` unusable under nohup, cron, or a systemd unit.
+    """
+    process = subprocess.Popen(
+        [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_env(tmp_path),
+    )
+    try:
+        assert process.stdout.readline().strip().startswith(PORT_LINE)
+        with pytest.raises(subprocess.TimeoutExpired):
+            process.wait(timeout=3)
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:  # pragma: no cover
+            process.kill()
+            process.wait(timeout=10)
+
+
+def _health(port: int, timeout: float = 20.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/api/health", timeout=1
+            ) as response:
+                return json.load(response)
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            time.sleep(0.1)
+    return None
+
+
+def test_the_extension_port_is_served_as_well_as_the_announced_one(tmp_path):
+    """Two doors, one server.
+
+    The extension hardcodes a port because nothing can hand it one — it has no
+    filesystem and no channel from the window. Before this the desktop app was
+    only ever on an OS-chosen port, so the extension could not reach it at all,
+    and the symptom was an extension that worked against `python -m app.web`
+    and silently did nothing against the installed app.
+    """
+    sock, free = reserve("127.0.0.1", 0)
+    sock.close()  # a port nobody holds, standing in for the fixed one
+    process = subprocess.Popen(
+        [sys.executable, "-m", "app.sidecar", "--extension-port", str(free)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_env(tmp_path),
+    )
+    try:
+        announced = int(process.stdout.readline().strip().split()[1])
+        second = process.stdout.readline().strip()
+        assert second.startswith(EXTRA_LINE), second
+        assert int(second.split()[1]) == free
+        assert announced != free
+
+        for port in (announced, free):
+            body = _health(port)
+            assert body is not None, f"nothing served on {port}"
+            assert body["ok"] is True
+    finally:
+        process.terminate()
+        process.wait(timeout=15)
+
+
+def test_a_taken_extension_port_is_not_fatal(tmp_path):
+    """A second instance, or a terminal already on 8787, must still open.
+
+    The app has the port it needs before this bind is attempted. Treating a
+    convenience socket as a startup requirement would turn "the dashboard is
+    already running" into "the app will not launch".
+    """
+    holder, taken = reserve("127.0.0.1", 0)
+    process = subprocess.Popen(
+        [sys.executable, "-m", "app.sidecar", "--extension-port", str(taken)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_env(tmp_path),
+    )
+    try:
+        line = process.stdout.readline().strip()
+        assert line.startswith(PORT_LINE), line
+        body = _health(int(line.split()[1]))
+        assert body is not None and body["ok"] is True
+    finally:
+        process.terminate()
+        process.wait(timeout=15)
+        holder.close()
