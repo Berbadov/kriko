@@ -47,6 +47,17 @@ def test_configuring_with_a_key_turns_the_updater_on():
     assert out["version"] == "9.9.9"
 
 
+@pytest.mark.parametrize("version", ["3/merge", "main", "v", "0.1", "latest"])
+def test_a_version_that_is_not_semver_is_ignored_rather_than_stamped(version):
+    """CI passes `github.ref_name`, which on a pull request is `<n>/merge`.
+
+    Tauri refuses a non-semver version outright, so stamping one turns every
+    non-tag build into three failed OS runners.
+    """
+    out = configure_updater.configure(CONFIG, "owner/name", "", version)
+    assert out["version"] == CONFIG["version"]
+
+
 def test_configuring_without_a_key_is_a_no_op_the_build_survives():
     out = configure_updater.configure(CONFIG, "owner/name", "  ")
     assert "updater" not in out["plugins"]
