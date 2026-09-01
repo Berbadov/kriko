@@ -103,7 +103,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         paths = [Path(p) for p in sys.argv[1:]]
     else:
-        paths = list(FITMENT_DIR.glob("*.yaml"))
+        paths = sorted(FITMENT_DIR.glob("*.yaml"))
 
     if not paths:
         print(f"No fitment YAML files found under {FITMENT_DIR}")
