@@ -47,6 +47,46 @@ CI does exactly this on macOS, Windows and Linux
 (`.github/workflows/desktop.yml`). Bundles are **unsigned**; signing is a
 policy decision, not an engineering one, and is deferred.
 
+## Nothing outlives the app
+
+Three belts, because one was not enough:
+
+1. **`--exit-with-parent`.** The sidecar watches its own stdin, whose write end
+   lives in the shell. The shell going away — cleanly, killed, or crashed — is
+   an EOF, and the engine stops itself. This is the only one that covers a
+   crash, where no handler in `main.rs` runs at all.
+2. **`kill_engine`** on window close *and* on `RunEvent::Exit`, since a quit
+   from the dock destroys no window.
+3. **A tree kill on Windows.** The sidecar is a PyInstaller *onefile* binary:
+   the process we spawned is a bootloader that re-execs, and the child is what
+   holds the extracted image. `child.kill()` alone leaves it running, so
+   `kill_tree` runs `taskkill /F /T /PID`.
+
+The failure this prevents is not a leak, it is the *installer*:
+
+```
+Error opening file for writing:
+C:\Users\<you>\AppData\Local\Kriko\kriko-sidecar.exe
+```
+
+A live sidecar keeps its own `.exe` mapped, so NSIS cannot overwrite it and
+offers Abort/Retry/Ignore — and Ignore leaves the old engine beside a new shell.
+`src-tauri/installer.nsh` therefore kills the engine in `NSIS_HOOK_PREINSTALL`
+too, which is the belt for a machine where one leaked *before* this version.
+
+If you hit that dialog on an older build: close Kriko, run
+`taskkill /F /T /IM kriko-sidecar.exe` in a terminal, then run the installer
+again.
+
+## Two ports, one server
+
+The window gets an OS-chosen port it is told about. The Chrome extension gets
+the fixed `EXTENSION_PORT` (8787) from `app/web/settings.py`, because a page
+cannot be told a random number — it has no filesystem and no channel from the
+shell. `uvicorn.Server.run` takes a list of sockets, so both are the same
+server. If 8787 is taken (a second Kriko, a `python -m app.web` in a terminal)
+that door is skipped with a line on stderr and the app opens regardless.
+
 ## One store, two front doors
 
 The sidecar resolves `~/.kriko/` the same way the CLI does, so a pack installed
