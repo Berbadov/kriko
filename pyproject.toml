@@ -38,6 +38,12 @@ dev = ["pytest>=8.0.0"]
 # so `pip install kriko` serves a working UI with no Node toolchain.
 [tool.setuptools.package-data]
 "app.web" = ["static/**/*"]
+# The store's DDL is read from disk at every `connect()`, not imported. Without
+# this line an editable install works and a real wheel raises FileNotFoundError
+# on the first query — which is how it went unnoticed until a PyInstaller build
+# hit the same missing-data-file problem. Enforced by
+# test_every_data_file_under_src_is_declared_as_package_data.
+"kriko.store" = ["*.sql"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

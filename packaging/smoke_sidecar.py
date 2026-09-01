@@ -12,8 +12,10 @@ a name.
 """
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -21,6 +23,25 @@ from pathlib import Path
 
 PORT_LINE = "KRIKO_PORT"
 TIMEOUT = 60
+
+
+def fetch(port: int, path: str) -> dict:
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=10) as r:
+        return json.load(r)
+
+
+def post(port: int, path: str, body: dict) -> dict:
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}{path}",
+        data=json.dumps(body).encode(),
+        headers={"content-type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as error:
+        return {"error": error.read().decode("utf-8", "replace"), "status": error.code}
 
 
 def main(argv: list[str]) -> int:
@@ -32,8 +53,22 @@ def main(argv: list[str]) -> int:
         print(f"no such binary: {binary}")
         return 1
 
+    # A smoke test that writes to ~/.kriko would both pollute the reader's own
+    # store and read its data back — a lookup that only passes because the
+    # developer happens to have the cars pack installed is not a smoke test.
+    scratch = tempfile.TemporaryDirectory(prefix="kriko-smoke-")
+    environment = os.environ | {
+        "KRIKO_STORE": str(Path(scratch.name) / "knowledge.sqlite"),
+        "KRIKO_APP_STATE": str(Path(scratch.name) / "app.sqlite"),
+        "KRIKO_ANALYSES_LOG": str(Path(scratch.name) / "analyses.jsonl"),
+    }
     process = subprocess.Popen(
-        [str(binary)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        [str(binary)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=scratch.name,
+        env=environment,
     )
     try:
         line = process.stdout.readline().strip()
@@ -70,6 +105,46 @@ def main(argv: list[str]) -> int:
             print("the sidecar served no frontend — check the spec's datas entry")
             return 1
         print("frontend ok")
+
+        # Beyond liveness. Each of these fails *only* when freezing dropped
+        # something, and each drops a different module graph:
+        #   lookup   -> kriko.lookup + the store
+        #   jobs     -> the runner thread and its own sqlite connection
+        #   research -> kriko.research, imported by app/web/tasks.py
+        # A binary that answers /api/health and nothing else is exactly the
+        # bundle we would otherwise ship.
+        lookup = post(
+            port, "/api/lookup", {"kind": "product", "identity": {}, "context": {}}
+        )
+        if "claims" not in lookup:
+            print(f"the engine could not answer a lookup: {lookup}")
+            return 1
+        print(f"lookup ok: coverage {lookup.get('coverage')}")
+
+        job = post(port, "/api/research", {"subject_id": "smoke-test-no-such-subject"})
+        if "job_id" not in job:
+            print(f"the job runner did not accept work: {job}")
+            return 1
+        deadline = time.time() + 30
+        row = {}
+        while time.time() < deadline:
+            row = fetch(port, f"/api/jobs/{job['job_id']}")
+            if row.get("done"):
+                break
+            time.sleep(0.2)
+        else:
+            print("a job was accepted and then never finished")
+            return 1
+        # It *should* fail — there is no such subject. What matters is that it
+        # failed with an explanation rather than an ImportError, which is what
+        # a missing hidden import looks like from here.
+        if row.get("state") != "failed":
+            print(f"expected the job to fail cleanly, got {row}")
+            return 1
+        if "ModuleNotFoundError" in row.get("log", ""):
+            print(f"the frozen binary is missing a module:\n{row['log']}")
+            return 1
+        print(f"job ok: failed cleanly with {row['message']!r}")
         return 0
     finally:
         process.terminate()
@@ -77,6 +152,7 @@ def main(argv: list[str]) -> int:
             process.wait(timeout=15)
         except subprocess.TimeoutExpired:
             process.kill()
+        scratch.cleanup()
 
 
 if __name__ == "__main__":

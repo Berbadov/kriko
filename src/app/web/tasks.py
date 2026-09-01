@@ -148,7 +148,20 @@ def pack_build(settings, params: dict, progress: Progress) -> dict:
     stats = None
     if (root / "build.py").exists():
         progress.log(f"{root.name} ships its own builder")
-        module = importlib.import_module(f"packs.{root.name}.build")
+        try:
+            module = importlib.import_module(f"packs.{root.name}.build")
+        except ModuleNotFoundError as exc:
+            # The frozen desktop sidecar bundles the engine, not the repo's
+            # packs. A pack whose builder is Python can only be built where
+            # that Python is importable, and saying so beats a traceback about
+            # a module nobody asked for.
+            raise ValueError(
+                f"{root.name} builds itself with Python (packs/{root.name}/"
+                f"build.py), which this build of Kriko cannot import "
+                f"({exc}). Build it from a source checkout with "
+                f"`python -m app.cli build {root}`, then install the .kpack "
+                f"here."
+            ) from exc
         result = module.build(out)
         if isinstance(result, tuple):
             out, report = result
