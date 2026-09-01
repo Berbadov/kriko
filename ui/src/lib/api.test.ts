@@ -24,7 +24,7 @@ describe("api", () => {
     });
 
     it("encodes path segments so an id with a slash cannot escape", async () => {
-        const fetchMock = vi.fn(async () => new Response("[]"));
+        const fetchMock = vi.fn(async (_path: string) => new Response("[]"));
         vi.stubGlobal("fetch", fetchMock);
         await api.identityKeys("a/b");
         expect(fetchMock.mock.calls[0][0]).toBe("/api/identity-keys/a%2Fb");

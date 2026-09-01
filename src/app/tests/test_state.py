@@ -69,3 +69,31 @@ def test_settings_keeps_ui_state_beside_the_store_but_separate(tmp_path):
     settings = Settings()
     assert settings.app_state_path != settings.store_path
     assert settings.app_state_path.name == "app.sqlite"
+
+
+def test_settings_merge_rather_than_replace(tmp_path):
+    conn = state.connect(tmp_path / "app.sqlite")
+    state.put_settings(conn, {"mode": "author", "pack": "tools"})
+    # A caller that only knows about one key must not clear the others.
+    merged = state.put_settings(conn, {"mode": "buyer"})
+    assert merged == {"mode": "buyer", "pack": "tools"}
+    assert state.all_settings(conn) == merged
+
+
+def test_a_checked_claim_is_remembered_and_can_be_undone(tmp_path):
+    conn = state.connect(tmp_path / "app.sqlite")
+    assert state.checked_keys(conn, "abc") == []
+    state.set_checked(conn, "abc", "tools:Timing belt", True)
+    state.set_checked(conn, "abc", "tools:Timing belt", True)  # idempotent
+    assert state.checked_keys(conn, "abc") == ["tools:Timing belt"]
+    assert state.set_checked(conn, "abc", "tools:Timing belt", False) == []
+
+
+def test_forgetting_a_lookup_forgets_its_triage(tmp_path):
+    conn = state.connect(tmp_path / "app.sqlite")
+    lookup_id = state.record_lookup(
+        conn, source="ask", label="x", request={}, response={"claims": []}
+    )
+    state.set_checked(conn, lookup_id, "k", True)
+    assert state.delete_lookup(conn, lookup_id) is True
+    assert state.checked_keys(conn, lookup_id) == []

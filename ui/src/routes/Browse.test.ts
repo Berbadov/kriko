@@ -5,7 +5,7 @@ import Browse from "./Browse.svelte";
 describe("Browse", () => {
     it("lists subjects and re-queries as you type", async () => {
         const fetchMock = vi.fn(
-            async () =>
+            async (_path: string) =>
                 new Response(
                     JSON.stringify([
                         { label: "Bench Grinder 8in", kind: "product", pack_id: "tools", claims: 3 },

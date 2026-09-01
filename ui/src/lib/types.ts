@@ -26,7 +26,7 @@ export type Pack = {
 };
 
 export type Kind = { kind: string; pack_id: string };
-export type IdentityKey = { key: string };
+export type IdentityKey = { key: string; match_json?: string };
 export type Term = { term_id: string; unit: string };
 export type Vocabulary = { context_key?: Term[] } & Record<string, Term[] | undefined>;
 
@@ -39,6 +39,7 @@ export type Source = {
 };
 
 export type Claim = {
+    claim_id?: string;
     title: string;
     body: string;
     advice?: string;
@@ -47,6 +48,8 @@ export type Claim = {
     subject: string;
     relevance: number;
     disputed?: boolean;
+    detection?: string;
+    trust?: number;
     pack_id: string;
     why?: string[];
     sources?: Source[];
@@ -151,3 +154,28 @@ export type StoredLookup = {
     request: Record<string, unknown>;
     response: LookupResult;
 };
+
+export type Adapter = {
+    id: string;
+    site: string;
+    pack_id: string;
+    match: string[];
+    labels: string[];
+};
+
+export type SubjectDetail = {
+    subject_id: string;
+    pack_id: string;
+    kind: string;
+    label: string;
+    attributes: {
+        key: string;
+        value_text: string;
+        unit: string;
+        is_identity: number;
+    }[];
+    relations: { predicate: string; object_label: string; object_id: string }[];
+    claims: { claim_id: string; title: string; severity: string; domain: string }[];
+};
+
+export type Brief = { subject: string; queries: string[]; brief: string };

@@ -67,3 +67,23 @@ def test_a_lookup_can_be_forgotten(client):
 
 def test_history_stays_empty_when_nothing_was_asked(client):
     assert client.get("/api/history").json()["items"] == []
+
+
+def test_settings_round_trip_through_the_api(client):
+    assert client.get("/api/settings").json() == {}
+    client.post("/api/settings", json={"values": {"mode": "author"}})
+    assert client.get("/api/settings").json() == {"mode": "author"}
+
+
+def test_checking_a_claim_persists_across_requests(client):
+    body = {"claim_key": "tools:Timing belt", "checked": True}
+    posted = client.post("/api/lookups/xyz/checked", json=body).json()
+    assert posted["checked"] == ["tools:Timing belt"]
+    assert client.get("/api/lookups/xyz/checked").json()["checked"] == [
+        "tools:Timing belt"
+    ]
+    client.post(
+        "/api/lookups/xyz/checked",
+        json={"claim_key": "tools:Timing belt", "checked": False},
+    )
+    assert client.get("/api/lookups/xyz/checked").json()["checked"] == []

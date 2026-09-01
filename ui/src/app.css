@@ -98,12 +98,6 @@ main {
     max-width: 1100px;
     margin: 0 auto;
 }
-section {
-    display: none;
-}
-section.active {
-    display: block;
-}
 
 .row {
     display: flex;
@@ -364,4 +358,99 @@ nav a.tab {
         border-left: 0;
         padding-left: 0;
     }
+}
+
+.modes {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 14px;
+    padding-left: 14px;
+    border-left: 1px solid var(--line);
+}
+.modes button {
+    text-transform: capitalize;
+    font-size: 12.5px;
+    padding: 5px 10px;
+}
+
+.report-head {
+    margin-bottom: 18px;
+}
+.report-head h2 {
+    margin-bottom: 4px;
+}
+.lede {
+    font-size: 15px;
+    margin: 6px 0 0;
+}
+.high-count {
+    color: var(--high);
+}
+.group {
+    margin: 22px 0;
+}
+.group-head {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    margin: 0 0 6px;
+}
+
+.risk-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.risk-head h3 {
+    margin: 0;
+    flex: 1;
+}
+.risk.done {
+    opacity: 0.5;
+}
+.risk.done h3 {
+    text-decoration: line-through;
+}
+.check {
+    font-size: 12px;
+    color: var(--dim);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.ask {
+    margin: 8px 0 4px;
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.field.grow {
+    flex: 1;
+    min-width: 220px;
+}
+.field.grow input {
+    width: 100%;
+}
+.req {
+    color: var(--high);
+}
+.matches {
+    list-style: none;
+    margin: 6px 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.matches button {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+}
+hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 28px 0 18px;
 }
