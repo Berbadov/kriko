@@ -797,9 +797,16 @@ Phases 0–5 are written and landed 2026-09-01 (see `done.md`). What remains is
   reviewed code, not proven code. `.github/workflows/desktop.yml` builds them on
   three runners; the first `workflow_dispatch` run is the real test, and every
   PyInstaller `hiddenimports` guess in the spec is a candidate failure.
-- **The frozen sidecar's handshake** is checked by `packaging/smoke_sidecar.py`
-  between freeze and bundle. It passes against a real server here; it has never
-  run against a frozen binary.
+- **The frozen sidecar is now proven on Linux.** `packaging/freeze.sh` builds it
+  with PyInstaller and runs `packaging/smoke_sidecar.py` against the binary —
+  handshake, health, served frontend, a real `/api/lookup`, and a research job
+  that fails *cleanly* rather than with `ModuleNotFoundError`. Doing this the
+  first time found a genuine defect: `kriko/store/schema.sql` is read from disk
+  and was not declared as package data, so the frozen binary (**and any
+  non-editable wheel**) raised `FileNotFoundError` on the first query. Fixed in
+  `pyproject.toml`, in the spec's `datas`, and mechanically by
+  `test_every_data_file_under_src_is_declared_as_package_data`. Still unproven:
+  the Windows and macOS freezes, where `hiddenimports` may differ.
 - **What is already mechanical**: `test_the_shell_and_the_sidecar_agree_on_the
   _handshake` fails if either side renames `KRIKO_PORT`, and
   `test_the_shell_holds_no_engine_logic` fails if engine vocabulary appears in
