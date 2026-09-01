@@ -23,7 +23,14 @@ key, ships an app that downloads its own updates and then rejects them.
 import argparse
 import json
 import os
+import re
 from pathlib import Path
+
+#: Tauri parses `version` as semver and refuses anything else. CI hands us
+#: `github.ref_name`, which on a pull request is something like `3/merge` — so
+#: the stamp is validated here rather than discovered as a bundler crash three
+#: OS runners later.
+SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 CONFIG = Path(__file__).resolve().parent.parent / "tauri" / "src-tauri" / "tauri.conf.json"
 
@@ -48,11 +55,16 @@ def configure(config: dict, repo: str, pubkey: str, version: str = "") -> dict:
         plugins.pop("updater", None)
         bundle.pop("createUpdaterArtifacts", None)
     out = config | {"plugins": plugins, "bundle": bundle}
-    if version:
+    stamp = version.lstrip("v").strip()
+    if stamp and not SEMVER.match(stamp):
+        # Not fatal: a PR build has no version to stamp and still has to
+        # produce installers. The committed version stands.
+        stamp = ""
+    if stamp:
         # The updater compares the running app's version against the manifest,
         # so a build made from tag v0.2.0 that still calls itself 0.1.0 would
         # offer itself its own update, forever.
-        out["version"] = version.lstrip("v")
+        out["version"] = stamp
     return out
 
 
