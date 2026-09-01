@@ -1,0 +1,184 @@
+# Car vocabulary — as rows.
+#
+# This file is where `backend/core/normalize.py`'s `_MAKE_MAP`, `_MODEL_MAP`,
+# `_FUEL_MAP` and `_TX_MAP` end up. They were Python dicts that someone had to
+# remember to edit for every new car, and CLAUDE.md records that they went
+# stale exactly as predicted. As rows they cost nothing to extend and the engine
+# never needs recompiling to learn a word.
+#
+# `match` drives the lookup path:
+#   required: true     part of the hard filter — the claim must match on it
+#   narrow_order: N    a soft hint, applied in order; never empties the result
+#   tolerance: X       numeric slack for a narrowing hint
+#   range: true        stored once with valid_from/valid_to bounds
+
+# ── subject kinds ────────────────────────────────────────────────────────
+- {term_id: product, role: subject_kind, label: {en: Car, tr: Araç}}
+- {term_id: part, role: subject_kind, label: {en: Part, tr: Parça}}
+
+# ── predicates ───────────────────────────────────────────────────────────
+- {term_id: part_of, role: predicate, label: {en: is fitted with}}
+
+# ── identity: the hard filter ────────────────────────────────────────────
+# Turkish listing sites use their own words for these. Aliases are how a scrape
+# reaches the right term without the engine parsing Turkish.
+- term_id: make
+  role: attribute
+  datatype: text
+  label: {en: Make, tr: Marka}
+  aliases: [marka, brand, manufacturer]
+  match: {required: true}
+
+- term_id: model
+  role: attribute
+  datatype: text
+  label: {en: Model, tr: Model}
+  aliases: [seri, series]
+  match: {required: true}
+
+- term_id: fuel
+  role: attribute
+  datatype: text
+  label: {en: Fuel, tr: Yakıt}
+  aliases: [yakit, yakıt, fuel_type, yakit_tipi]
+  match: {required: true}
+
+# ── identity, but not a filter ───────────────────────────────────────────
+# An engine code is part of what makes a variant distinct, but no listing states
+# it, so it must never gate a match.
+- term_id: engine_code
+  role: attribute
+  datatype: text
+  label: {en: Engine code, tr: Motor kodu}
+  match: {narrow_order: 9}
+
+- term_id: engine_family
+  role: attribute
+  datatype: text
+  label: {en: Engine family}
+
+- term_id: transmission_code
+  role: attribute
+  datatype: text
+  label: {en: Gearbox code, tr: Şanzıman kodu}
+  match: {narrow_order: 8}
+
+# ── narrowing hints ──────────────────────────────────────────────────────
+# Tolerances carried over from backend/core/matcher.py: a listed 1598 cc and a
+# catalogued 1600 cc are the same engine, and a power figure is a marketing
+# number before it is a measurement.
+- term_id: displacement_cc
+  role: attribute
+  datatype: number
+  unit: cc
+  label: {en: Engine size, tr: Motor hacmi}
+  aliases: [motor hacmi, engine_volume_cc, cc, hacim]
+  match: {narrow_order: 1, tolerance: 100}
+
+- term_id: power_min_hp
+  role: attribute
+  datatype: number
+  unit: hp
+  label: {en: Power, tr: Motor gücü}
+  aliases: [power_hp, motor gucu, motor gücü, hp, beygir]
+  match: {narrow_order: 2, tolerance: 10}
+
+- term_id: power_max_hp
+  role: attribute
+  datatype: number
+  unit: hp
+  label: {en: Power (max)}
+
+- term_id: transmission
+  role: attribute
+  datatype: text
+  label: {en: Transmission, tr: Vites}
+  aliases: [vites, gearbox, sanziman, şanzıman]
+  match: {narrow_order: 3}
+
+- term_id: build_year
+  role: attribute
+  datatype: year
+  label: {en: Model year, tr: Yıl}
+  aliases: [yil, yıl, year, model_year]
+  # Soft by design. Backlog B9 settled it: a listing one year outside the
+  # catalogued production window is far more often a catalog gap than a
+  # different car, so it still matches and the gap is logged.
+  match: {range: true}
+
+# ── descriptive ──────────────────────────────────────────────────────────
+- {term_id: generation, role: attribute, datatype: text, label: {en: Generation, tr: Nesil}}
+- {term_id: drivetrain, role: attribute, datatype: text, label: {en: Drivetrain}}
+- {term_id: market, role: attribute, datatype: text, label: {en: Market}}
+- {term_id: emissions, role: attribute, datatype: text, label: {en: Emissions standard}}
+- {term_id: aftertreatment, role: attribute, datatype: text, label: {en: Aftertreatment}}
+- {term_id: electrical_code, role: attribute, datatype: text, label: {en: Electrical package}}
+- {term_id: body_code, role: attribute, datatype: text, label: {en: Body}}
+- {term_id: part_code, role: attribute, datatype: text, label: {en: Part code}}
+- {term_id: part_type, role: attribute, datatype: text, label: {en: Part type}}
+- {term_id: manufacturer, role: attribute, datatype: text, label: {en: Manufacturer}}
+- {term_id: code_family, role: attribute, datatype: text, label: {en: Code family}}
+
+# ── context keys — what this particular car has been through ─────────────
+- term_id: usage_km
+  role: context_key
+  datatype: number
+  unit: km
+  label: {en: Mileage, tr: Kilometre}
+  aliases: [km, kilometre, mileage_km, odometer]
+
+- term_id: age_years
+  role: context_key
+  datatype: number
+  unit: years
+  label: {en: Age, tr: Yaş}
+
+- term_id: equipment
+  role: context_key
+  datatype: text
+  label: {en: Equipment, tr: Donanım}
+
+- term_id: free_text
+  role: context_key
+  datatype: text
+  label: {en: Listing description, tr: İlan açıklaması}
+  aliases: [description, aciklama, açıklama]
+
+# ── domains ──────────────────────────────────────────────────────────────
+- {term_id: engine, role: domain, label: {en: Engine, tr: Motor}}
+- {term_id: transmission_domain, role: domain, label: {en: Transmission, tr: Şanzıman}}
+- {term_id: electrical, role: domain, label: {en: Electrical, tr: Elektrik}}
+- {term_id: emissions_domain, role: domain, label: {en: Emissions, tr: Emisyon}}
+- {term_id: fuel_system, role: domain, label: {en: Fuel system, tr: Yakıt sistemi}}
+- {term_id: brakes, role: domain, label: {en: Brakes, tr: Fren}}
+- {term_id: suspension, role: domain, label: {en: Suspension, tr: Süspansiyon}}
+- {term_id: cooling, role: domain, label: {en: Cooling, tr: Soğutma}}
+- {term_id: body, role: domain, label: {en: Body, tr: Kaporta}}
+- {term_id: general, role: domain, label: {en: General, tr: Genel}}
+
+# ── canonical values, and the words listings actually use ────────────────
+#
+# The other half of what `normalize.py` hard-coded. `_FUEL_MAP` and `_TX_MAP`
+# were Python dicts; a new market meant editing code. As enum_value rows a
+# contributor adds a language by adding aliases.
+#
+# `parent` scopes each value to its attribute, so "otomatik" under
+# `transmission` cannot collide with some other key's identically-spelled value.
+
+- {term_id: petrol, role: enum_value, parent: fuel, label: {en: Petrol, tr: Benzin},
+   aliases: [benzin, benzinli, gasoline, gas, otto]}
+- {term_id: diesel, role: enum_value, parent: fuel, label: {en: Diesel, tr: Dizel},
+   aliases: [dizel, tdi, dci, hdi]}
+- {term_id: hybrid, role: enum_value, parent: fuel, label: {en: Hybrid, tr: Hibrit},
+   aliases: [hibrit, hybrid electric, e-tech, mhev, phev]}
+- {term_id: electric, role: enum_value, parent: fuel, label: {en: Electric, tr: Elektrik},
+   aliases: [elektrik, elektrikli, ev, bev]}
+- {term_id: lpg, role: enum_value, parent: fuel, label: {en: LPG, tr: LPG},
+   aliases: [lpg & benzin, benzin & lpg, lpgli]}
+
+- {term_id: manual, role: enum_value, parent: transmission, label: {en: Manual, tr: Manuel},
+   aliases: [manuel, düz, duz, mt, standart]}
+- {term_id: automatic, role: enum_value, parent: transmission,
+   label: {en: Automatic, tr: Otomatik},
+   aliases: [otomatik, yarı otomatik, yari otomatik, semi-automatic, at, dsg, dct,
+             edc, cvt, tiptronic, s-tronic, powershift, multitronic]}

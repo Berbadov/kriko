@@ -1,0 +1,84 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+# A newer push to the same branch cancels the older run — this suite is ~3
+# minutes and there is no value in finishing a superseded one.
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    python:
+        name: pytest (engine + catalog + pipeline)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+                  cache: pip
+
+            - name: Install
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e ".[dev,pipeline]"
+
+            # No arguments: pytest.ini pins testpaths. Naming directories by hand is
+            # how the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
+            # src/app/pipeline/tests/test_repo_invariants.py enforces the layering rules and
+            # the testpaths coverage, so the architecture is checked here too.
+            #
+            # Deliberately no secrets: the suite must pass with no API keys. If a new
+            # test needs one, it is reaching the network and belongs behind a marker.
+            - name: Test
+              run: python -m pytest
+
+    extension:
+        name: node (scraper + extension panel)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            # `npm install`, not `npm ci`: package-lock.json is gitignored, so there
+            # is no lockfile to install from. Commit the lockfile and switch this to
+            # `npm ci` if reproducible installs matter more than a tidy tree.
+            - run: npm install --no-audit --no-fund
+            - run: npm test
+
+    ui:
+        name: vitest + stale-bundle check
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            - run: npm --prefix ui ci --no-audit --no-fund
+            - run: npm --prefix ui test
+
+            # src/app/web/static/ is committed build output: the wheel ships it,
+            # so a stale bundle means `pip install kriko` serves a UI nobody can
+            # reproduce from source. Rebuild and require a clean diff.
+            - name: Bundle is not stale
+              run: |
+                  npm --prefix ui run build
+                  git diff --exit-code -- src/app/web/static \
+                    || { echo "::error::src/app/web/static is stale — run 'npm --prefix ui run build' and commit"; exit 1; }
+
+# No docker-build job, by design rather than by omission: Kriko ships as a
+# desktop app, so there is no image and no stack. test_the_app_stays_standalone
+# in src/app/pipeline/tests/test_repo_invariants.py fails if a Dockerfile,
+# compose file, deploy/ directory, or Postgres driver comes back, which is the
+# guard this comment used to ask someone to remember. The artifact that does
+# get built lives in .github/workflows/desktop.yml.

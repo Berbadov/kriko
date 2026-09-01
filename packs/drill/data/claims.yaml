@@ -1,0 +1,111 @@
+# Claims.
+#
+# EVERY QUOTE BELOW IS SYNTHETIC and every URL points at example.invalid, a
+# reserved domain that cannot resolve. See README.md. This pack proves the
+# format, not any fact about drills.
+#
+# What it exercises that a car-shaped schema could not:
+#
+#   * conditions keyed on charge_cycles and usage_hours, not kilometres
+#   * a claim on a battery platform, reaching every tool on that platform
+#   * a claim on a bare product with no components at all
+#   * a `refutes` evidence row, so a disputed claim still surfaces, ranked below
+#   * two languages on one claim, as rows rather than title_tr columns
+
+# ── a claim on a shared battery platform ─────────────────────────────────
+- subject: {kind: battery_platform, identity: {brand: makita, platform: LXT}}
+  kind: known_issue
+  domain: battery
+  severity: high
+  detection: diagnostic
+  confidence: 0.7
+  text:
+    en:
+      title: Cell imbalance trips the pack protection early
+      body: >
+        High-cycle packs develop uneven cell voltages, and the protection board
+        cuts out under load well before the charge is used up.
+      advice: >
+        Run the tool until it stops under load, then check whether the charger
+        reports a fault rather than a normal full charge.
+    tr:
+      title: Hücre dengesizliği koruma devresini erken devreye sokar
+      body: >
+        Çok döngü görmüş bataryalarda hücre voltajları dengesizleşir ve koruma
+        kartı yük altında şarj bitmeden kesme yapar.
+      advice: Aleti yük altında durana kadar çalıştırın, sonra şarj cihazının hata verip vermediğine bakın.
+  conditions:
+    - {key: charge_cycles, op: gte, value: 500, on_missing: open, weight: 0.6}
+  evidence:
+    - url: https://example.invalid/tool-teardown/lxt-cells
+      quote: Packs past roughly five hundred cycles showed a 0.4 V spread across cells.
+      stance: supports
+    - url: https://example.invalid/forum/thread-9912
+      quote: Mine has well over eight hundred cycles and still balances fine.
+      stance: refutes
+      independent: true
+
+# ── a claim on a shared component ────────────────────────────────────────
+- subject: {kind: component, identity: {brand: makita, component: keyless_chuck_13}}
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  detection: test_drive
+  confidence: 0.6
+  text:
+    en:
+      title: Keyless chuck slips on round shanks once worn
+      body: >
+        The jaw serrations round off with heavy use and the chuck stops holding
+        smooth-shank bits under torque.
+      advice: Clamp a smooth drill bit and try to twist it by hand before buying.
+  conditions:
+    - {key: usage_hours, op: gte, value: 400, on_missing: open, weight: 0.7}
+  evidence:
+    - url: https://example.invalid/reviews/chuck-wear
+      quote: After two years of daily use the chuck would no longer hold a smooth bit.
+      stance: supports
+
+# ── a maintenance-interval claim, expressed in hours rather than km ───────
+- subject: {kind: product, identity: {brand: makita, model: DHP482}}
+  kind: maintenance
+  domain: electrical
+  severity: medium
+  detection: diagnostic
+  confidence: 0.8
+  text:
+    en:
+      title: Brushed motor needs brush replacement at service intervals
+      body: >
+        Unlike the brushless DHP484, this model has carbon brushes that wear and
+        are a consumable rather than a fault.
+      advice: >
+        Ask when the brushes were last changed. If the ad does not say, assume
+        they are due.
+  conditions:
+    - {key: usage_hours, op: interval, value: 300, on_missing: open, weight: 0.8}
+  evidence:
+    - url: https://example.invalid/manuals/dhp482-service
+      quote: Inspect and replace carbon brushes every 300 hours of operation.
+      stance: supports
+
+# ── a claim on a product with NO components at all ───────────────────────
+- subject: {kind: product, identity: {brand: einhell, model: TC-CD-18-2}}
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  detection: visual
+  confidence: 0.5
+  text:
+    en:
+      title: Gearbox selector sticks between speed settings
+      body: >
+        The two-speed selector jams mid-travel and the tool then runs in neither
+        gear cleanly.
+      advice: Cycle the selector between both speeds several times and listen for the change.
+  conditions:
+    - {key: age_years, op: gte, value: 3, on_missing: open, weight: 0.7}
+  evidence:
+    - url: https://example.invalid/reviews/tc-cd-18-2
+      quote: The speed selector on ours needed working back and forth before it would engage.
+      stance: supports

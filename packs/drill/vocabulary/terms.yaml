@@ -1,0 +1,115 @@
+# Vocabulary — attribute keys, context keys, domains and subject kinds.
+#
+# This file is the whole reason onboarding a category costs no Python. The
+# engine has never heard of "chuck_size_mm" or "charge_cycles"; it learns them
+# by reading these rows. Compare the old normalize.py, which hard-coded make and
+# model maps and had to be edited for every new car.
+
+# ── subject kinds ────────────────────────────────────────────────────────
+- term_id: product
+  role: subject_kind
+  label: {en: Product}
+
+- term_id: battery_platform
+  role: subject_kind
+  label: {en: Battery platform}
+
+- term_id: component
+  role: subject_kind
+  label: {en: Component}
+
+# ── predicates ───────────────────────────────────────────────────────────
+- term_id: part_of
+  role: predicate
+  label: {en: is part of}
+
+# ── identity attributes ──────────────────────────────────────────────────
+- term_id: brand
+  role: attribute
+  datatype: text
+  label: {en: Brand, tr: Marka}
+  aliases: [manufacturer, make]      # 'make' is a car word; here it is just an alias
+  match: {required: true}
+
+- term_id: model
+  role: attribute
+  datatype: text
+  label: {en: Model}
+  aliases: [model_number, part_number]
+  match: {required: true}
+
+- term_id: platform
+  role: attribute
+  datatype: text
+  label: {en: Platform}
+
+- term_id: component
+  role: attribute
+  datatype: text
+  label: {en: Component}
+
+# ── descriptive attributes ───────────────────────────────────────────────
+- term_id: voltage_v
+  role: attribute
+  datatype: number
+  unit: v
+  label: {en: Battery voltage}
+  match: {narrow_order: 1, tolerance: 0}
+
+- term_id: chuck_size_mm
+  role: attribute
+  datatype: number
+  unit: mm
+  label: {en: Chuck capacity}
+
+- term_id: motor_type
+  role: attribute
+  datatype: text
+  label: {en: Motor type}
+  aliases: [motor]
+
+- term_id: max_torque_nm
+  role: attribute
+  datatype: number
+  unit: nm
+  label: {en: Maximum torque}
+
+- term_id: released
+  role: attribute
+  datatype: year
+  label: {en: Released}
+
+# ── context keys — the "when does this claim apply" vocabulary ────────────
+# Cars measure wear in kilometres. Nothing in the engine assumes that; a pack
+# declares whatever its category actually wears out by.
+- term_id: charge_cycles
+  role: context_key
+  datatype: number
+  unit: cycles
+  label: {en: Charge cycles}
+
+- term_id: usage_hours
+  role: context_key
+  datatype: number
+  unit: hours
+  label: {en: Running hours}
+  aliases: [hours_used, runtime_hours]
+
+- term_id: age_years
+  role: context_key
+  datatype: number
+  unit: years
+  label: {en: Age}
+
+# ── domains ──────────────────────────────────────────────────────────────
+- term_id: mechanical
+  role: domain
+  label: {en: Mechanical}
+
+- term_id: electrical
+  role: domain
+  label: {en: Electrical}
+
+- term_id: battery
+  role: domain
+  label: {en: Battery}
