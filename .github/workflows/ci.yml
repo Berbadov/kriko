@@ -76,10 +76,9 @@ jobs:
                   git diff --exit-code -- src/app/web/static \
                     || { echo "::error::src/app/web/static is stale — run 'npm --prefix ui run build' and commit"; exit 1; }
 
-# No docker-build job. Actions minutes are billed, and a full image build was
-# 3-5 of the ~10 minutes per push. There is no Dockerfile or deploy/ directory
-# in the repo at all right now — this workflow does not build or ship an
-# image — so there is nothing here to guard statically either. If a
-# Dockerfile comes back, add both a build step here (or an equivalent static
-# check in src/app/pipeline/tests/test_repo_invariants.py) and a note here of
-# which one you chose.
+# No docker-build job, by design rather than by omission: Kriko ships as a
+# desktop app, so there is no image and no stack. test_the_app_stays_standalone
+# in src/app/pipeline/tests/test_repo_invariants.py fails if a Dockerfile,
+# compose file, deploy/ directory, or Postgres driver comes back, which is the
+# guard this comment used to ask someone to remember. The artifact that does
+# get built lives in .github/workflows/desktop.yml.

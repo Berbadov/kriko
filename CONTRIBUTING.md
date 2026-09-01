@@ -139,13 +139,12 @@ the suite rather than waiting to be noticed in review.
 | `extension` | scraper and hub-console tests under jsdom |
 | `ui` | Svelte component tests, and a rebuild that fails if the committed bundle is stale |
 
-There is no docker-build job — there is currently no Dockerfile or `deploy/`
-directory in the repo at all, so there is nothing for a build job to build.
-Package boundaries and test-path coverage are still checked statically, in
-milliseconds, by `src/app/pipeline/tests/test_repo_invariants.py` as part of
-the normal suite. If a Dockerfile comes back, add a real build step (or an
-equivalent static check) alongside it — don't let this paragraph go stale
-again.
+There is no docker-build job, and there will not be one: Kriko is a standalone
+app, not a deployment. `test_the_app_stays_standalone` fails if a Dockerfile, a
+compose file, a `deploy/` directory, or a Postgres driver returns — so this
+paragraph cannot go stale without the suite going red. The `desktop` workflow
+builds the actual shipping artifact (four installers on three runners) and runs
+`packaging/smoke_sidecar.py` against the frozen binary before bundling it.
 
 CI runs with no secrets. The `extension` job uses `npm install` rather than `npm ci`,
 because the root `package-lock.json` is gitignored. The `ui` job uses `npm ci`: its
