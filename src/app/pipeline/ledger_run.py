@@ -138,7 +138,7 @@ def main(argv=None) -> int:
         if not part_type:
             import yaml as _yaml
 
-            for f in (DATA_DIR / "parts").rglob(f"{args.part}.yaml"):
+            for f in sorted((DATA_DIR / "parts").rglob(f"{args.part}.yaml")):
                 part_type = (_yaml.safe_load(f.read_text()) or {}).get("part_type")
                 break
         if not part_type:

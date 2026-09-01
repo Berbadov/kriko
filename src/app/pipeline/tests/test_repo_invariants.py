@@ -5,6 +5,7 @@ module. Both encode a regression that actually happened, so each failure
 message names the fix rather than just the fact.
 """
 
+import ast
 import re
 from configparser import ConfigParser
 from pathlib import Path
@@ -409,4 +410,53 @@ def test_every_data_file_under_src_is_declared_as_package_data():
         + "\n  ".join(undeclared)
         + "\nAdd them to [tool.setuptools.package-data] in pyproject.toml (and "
         "to packaging/kriko-sidecar.spec's `datas` if the sidecar needs them)."
+    )
+
+
+def test_the_catalog_is_never_scanned_in_directory_order():
+    """`Path.glob` returns directory order, which is a property of the disk.
+
+    A part fitted to two models has two candidate answers, and whichever the
+    filesystem hands back first becomes the search query the pipeline runs.
+    That is a machine-dependent pipeline: `_find_make_model_for_part("k9k")`
+    resolved to `clio_5` locally and `megane_4` on a CI runner, from identical
+    data. Sorting costs nothing here — no scan is hot — and it converts "it
+    depends" into a property of the catalog.
+
+    Opt out on the line itself with `# any-order:` and a reason, for a scan
+    whose result genuinely cannot depend on order (a membership test, a count).
+    """
+    scans = ("glob", "rglob", "iterdir")
+    offenders = []
+    for root in (SRC, REPO / "packs"):
+        for path in sorted(root.rglob("*.py")):
+            if "tests" in path.parts or "__pycache__" in path.parts:
+                continue
+            lines = path.read_text().splitlines()
+            tree = ast.parse("\n".join(lines))
+            sorted_args = {
+                id(node.args[0])
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in ("sorted", "min", "max", "len", "any", "all")
+                and node.args
+            }
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in scans
+                    and id(node) not in sorted_args
+                ):
+                    line = lines[node.lineno - 1]
+                    if "any-order:" in line:
+                        continue
+                    offenders.append(
+                        f"{path.relative_to(REPO)}:{node.lineno}: {line.strip()}"
+                    )
+    assert offenders == [], (
+        "these scans depend on directory order — wrap them in sorted(), or "
+        "mark the line `# any-order: <why>` if the result cannot depend on it:\n"
+        + "\n".join(offenders)
     )

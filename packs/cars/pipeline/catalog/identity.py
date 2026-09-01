@@ -151,7 +151,7 @@ def known_part_codes(data_dir: Path | None = None) -> set[str]:
     stub exists (`packs/cars/pipeline/stoplists.py::catalog_code_manufacturers` pattern).
     """
     parts = (data_dir or DATA_DIR) / "parts"
-    return {p.stem for p in parts.rglob("*.yaml")} if parts.exists() else set()
+    return {p.stem for p in sorted(parts.rglob("*.yaml"))} if parts.exists() else set()
 
 
 # ── Powertrain identity ──────────────────────────────────────────────────────

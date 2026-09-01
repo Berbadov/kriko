@@ -26,7 +26,7 @@ _SUFFIX_RE = re.compile(r"_.*$")  # Strip anything after underscore (domain/powe
 def _iter_part_ids():
     """part_id strings straight off every part YAML — the single catalog read
     both component_registry() and known_part_ids() derive from."""
-    for path in _PARTS_DIR.glob("**/*.yaml"):
+    for path in sorted(_PARTS_DIR.glob("**/*.yaml")):
         try:
             data = yaml.safe_load(path.read_text()) or {}
         except yaml.YAMLError:

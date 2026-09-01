@@ -882,7 +882,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
     # new gearbox is covered the moment its part file exists.
     transmission_codes = {
         (_yaml(p, {}) or {}).get("part_id")
-        for p in (DATA / "parts" / "transmission").glob("*.yaml")
+        for p in sorted((DATA / "parts" / "transmission").glob("*.yaml"))
     } - {None}
 
     row_ids: list[str] = []
