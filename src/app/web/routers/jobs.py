@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.web import state
+from app.web import state, tasks
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["jobs"])
@@ -38,6 +38,13 @@ class ResearchRequest(BaseModel):
     backend: str = "agent"
     budget_usd: float = 0.0
     max_documents: int = Field(5, ge=1, le=50)
+
+
+class UpdateRequest(BaseModel):
+    #: Empty means "everything the index has something newer for". Naming one
+    #: pack is the exception, not the shape of the operation.
+    pack_id: str | None = None
+    index_url: str | None = None
 
 
 class BuildRequest(BaseModel):
@@ -62,6 +69,20 @@ def start_research(body: ResearchRequest, runner=Depends(get_jobs)):
 @router.post("/packs/build")
 def start_build(body: BuildRequest, runner=Depends(get_jobs)):
     return _submit(runner, "pack_build", body.model_dump())
+
+
+@router.get("/packs/updates")
+def check_pack_updates(
+    index_url: str | None = Query(default=None),
+    runner=Depends(get_jobs),
+):
+    """Is anything newer? Answered in the request — it is one small fetch."""
+    return tasks.check_updates(runner.settings, index_url or "")
+
+
+@router.post("/packs/update")
+def start_update(body: UpdateRequest, runner=Depends(get_jobs)):
+    return _submit(runner, "pack_update", body.model_dump())
 
 
 @router.get("/jobs")

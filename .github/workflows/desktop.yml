@@ -111,6 +111,48 @@ jobs:
                       tauri/src-tauri/target/release/bundle/**/*.exe
                   if-no-files-found: error
 
+    # The knowledge, built once and published beside the installers. Packs are
+    # what the app is *for*, and they change far more often than the binary —
+    # so they ship as their own assets with an index an installed Kriko can
+    # poll, rather than being frozen into a release nobody can update without
+    # reinstalling.
+    packs:
+        name: packs
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+            - name: Install
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e "."
+            - name: Build every pack
+              run: |
+                  mkdir -p release
+                  for root in packs/*/; do
+                      [ -f "$root/pack.toml" ] || continue
+                      name=$(basename "$root")
+                      python -m app.cli build "$root" --out "release/$name.kpack"
+                  done
+                  ls -lh release
+            # The index names the tag's own asset URLs, not `latest`: a version
+            # is immutable, so the file it points at must be too. The app finds
+            # this file through `releases/latest/download/packs.json`, which
+            # GitHub redirects to the newest release's copy.
+            - name: Write the index
+              run: |
+                  python packaging/publish_index.py \
+                      --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
+                      --out release/packs.json release/*.kpack
+                  cat release/packs.json
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: kriko-packs
+                  path: release/*
+                  if-no-files-found: error
+
     # A run's artifacts expire and need a GitHub login to fetch. A release is a
     # permanent URL anyone with the repo can click, which is the difference
     # between "CI produced a binary" and "the app is downloadable". Tags only:
@@ -118,7 +160,7 @@ jobs:
     # on PRs to prove the bundle still builds.
     release:
         name: release
-        needs: bundle
+        needs: [bundle, packs]
         if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         permissions:
@@ -136,7 +178,8 @@ jobs:
               run: |
                   mkdir -p release
                   find artifacts -type f \
-                      \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.exe' \) \
+                      \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' \
+                         -o -name '*.exe' -o -name '*.kpack' -o -name 'packs.json' \) \
                       -exec cp {} release/ \;
                   ls -lh release
                   test -n "$(ls -A release)"

@@ -25,6 +25,26 @@ export type Pack = {
     digest: string;
 };
 
+export type PackUpdate = {
+    pack_id: string;
+    name: string;
+    installed_version: string;
+    offered_version?: string;
+    /** available | up_to_date | unknown | refused | not_installed */
+    state: string;
+    reason: string;
+    url?: string;
+    size?: number;
+    published_at?: string;
+};
+
+export type PackUpdates = {
+    index_url: string;
+    error: string | null;
+    checked_at?: string;
+    packs: PackUpdate[];
+};
+
 export type Kind = { kind: string; pack_id: string };
 export type IdentityKey = { key: string; match_json?: string };
 export type Term = { term_id: string; unit: string };
