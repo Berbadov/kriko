@@ -2,7 +2,7 @@
     import Async from "../lib/Async.svelte";
     import { api } from "../lib/api";
     import { follow, stateWord } from "../lib/jobs";
-    import type { Gap, Job } from "../lib/types";
+    import type { AgentConfig, Gap, Job } from "../lib/types";
 
     const load = async () => {
         const packs = await api.packs();
@@ -11,6 +11,33 @@
         );
     };
     const data = load();
+
+    // Research on the free plane produces a *brief* — instructions — not
+    // claims. Saying so beside the button is the difference between "nothing
+    // happened" and "here is the next step", and the next step needs an
+    // address, which is what this fetches.
+    let config = $state<AgentConfig | null>(null);
+    let configError = $state("");
+    let copied = $state(false);
+
+    async function showConfig() {
+        try {
+            config = await api.agentConfig();
+        } catch (cause) {
+            configError = String(cause);
+        }
+    }
+
+    const snippet = $derived(config ? JSON.stringify(config.mcp_json, null, 2) : "");
+
+    async function copy() {
+        try {
+            await navigator.clipboard.writeText(snippet);
+            copied = true;
+        } catch {
+            copied = false; // a denied clipboard is not an error worth a banner
+        }
+    }
 
     // A gap is only interesting if you can act on it, and until now acting on
     // it meant leaving the browser for a terminal. Keyed by subject so the
@@ -44,6 +71,29 @@
 </script>
 
 <h2>Coverage gaps</h2>
+
+<article class="card">
+    <h3>Who does the research</h3>
+    <p class="meta">
+        <em>Research</em> below writes a <strong>brief</strong> — what to look for and what
+        counts as evidence — and does not gather anything itself. That is deliberate: the
+        free plane costs nothing because a coding agent you already pay for does the
+        reading. Point one at this app and it can submit findings back through the same
+        acceptance path, quotes checked against their source.
+    </p>
+    {#if configError}
+        <p class="state error">Could not read the agent config: {configError}</p>
+    {:else if config}
+        <p class="meta">
+            Paste into your harness (Claude Code: <code>.mcp.json</code>). It points at this
+            window's own store, <code>{config.store}</code>. Tools: {config.tools.join(", ")}.
+        </p>
+        <pre>{snippet}</pre>
+        <button onclick={copy}>{copied ? "Copied" : "Copy"}</button>
+    {:else}
+        <button onclick={showConfig}>Connect an agent</button>
+    {/if}
+</article>
 <Async promise={data}>
     {#snippet children(sections)}
         {#if !sections.length}

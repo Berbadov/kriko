@@ -63,6 +63,37 @@ Stop it with Ctrl-C. There is nothing else running.
 3. Visit any Sahibinden.com listing for a supported car (Renault Megane IV)
 4. The Kriko panel appears automatically after ~1.5 seconds
 
+The extension talks to `127.0.0.1:8787` and cannot be told a different port —
+a page has no filesystem and no channel from the app. Both `python -m app.web`
+and the **desktop app** serve that port (the desktop sidecar additionally takes
+an OS-chosen one for its own window), so either will answer. If something else
+already holds 8787, the desktop app logs a line on stderr, opens anyway, and the
+extension will not find it — stop the other listener.
+
+---
+
+## 2b. Connect a coding agent to the installed app
+
+*Coverage → Research* writes a **brief**: what to look for, and what counts as
+evidence. It gathers nothing itself, because the free plane costs nothing
+precisely by using a coding agent you already pay for. To let one act on a brief,
+open **Coverage → Connect an agent** and copy the block it shows into your
+harness (`.mcp.json` for Claude Code). It is generated per machine, so the
+command is right whether you are running from a checkout or from an installer,
+and it names the store the window is reading — an agent pointed at a different
+`knowledge.sqlite` writes findings nobody ever sees.
+
+The same binary serves both roles:
+
+```bash
+kriko-sidecar --mcp --store ~/.kriko/knowledge.sqlite   # installed
+python -m app.sidecar --mcp                             # from a checkout
+```
+
+Findings arrive as drafts through `app/findings.py`, which refuses a quote it
+cannot find in the document it cites — the acceptance path is the same one the
+web UI and the CLI use.
+
 After any code change to `extension/`:
 ```bash
 # Chrome → chrome://extensions → click the reload (↺) button on Kriko

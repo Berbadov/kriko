@@ -35,6 +35,7 @@ export const api = {
         ),
     packs: () => get<T.Pack[]>("/api/packs"),
     kinds: () => get<T.Kind[]>("/api/kinds"),
+    agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
     identityKeys: (packId: string) =>
         get<T.IdentityKey[]>(`/api/identity-keys/${seg(packId)}`),
     vocabulary: (packId: string) =>
