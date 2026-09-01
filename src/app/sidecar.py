@@ -71,14 +71,19 @@ def main(argv=None) -> int:
     # stdout in a frozen binary would look exactly like a sidecar that hung.
     print(f"{PORT_LINE} {port}", flush=True)
 
-    uvicorn.run(
+    # `sockets=[sock]`, not host/port and not `fd=`. Not host/port because
+    # uvicorn must not rebind — the port we announced and the port it serves
+    # cannot be allowed to differ. Not `fd=` because that is POSIX-only:
+    # uvicorn rebuilds the socket with `socket.fromfd`, which on Windows the
+    # first Windows CI run showed as the exact failure this design exists to
+    # prevent — `KRIKO_PORT 58378` printed, then nothing ever listening on it.
+    # A socket object needs no re-creation on any platform.
+    config = uvicorn.Config(
         create_app(Settings.from_env(**overrides)),
-        # `fd=` rather than host/port: uvicorn must not rebind, or the port we
-        # announced and the port it serves can differ.
-        fd=sock.fileno(),
         log_level="warning",
         access_log=False,
     )
+    uvicorn.Server(config).run(sockets=[sock])
     return 0
 
 
