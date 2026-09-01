@@ -1,0 +1,324 @@
+part_id: golf7_elec
+part_type: electrical
+display_name: Volkswagen Golf 7 Electrical Systems
+manufacturer: volkswagen
+known_also_as:
+- Volkswagen Golf 7 electrical
+- Volkswagen Golf 7 electronics
+- Volkswagen Golf 7 battery
+claims:
+- id: golf7_elec_electrical_e_call_failure_in_online_v1
+  claim_key: golf7_elec_electrical_e_call_failure_in_online
+  version: 1
+  is_current: true
+  title: E-call failure in online control unit (golf7_elec)
+  title_tr: Çevrimiçi kontrol ünitesinde e-call arızası (golf7_elec)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: The e-call system may fail to contact emergency services after a crash
+    due to a software fault in the Online Control Unit. This is a known recall issue,
+    but if not fixed, it leaves occupants without automatic emergency assistance.
+  rationale_tr: E-call sistemi, Online Kontrol Ünitesindeki bir yazılım hatası nedeniyle
+    kaza sonrası acil servisleri arayamayabilir. Bu bilinen bir geri çağırma sorunudur,
+    ancak giderilmezse yolcular otomatik acil yardımdan yoksun kalır.
+  inspection_advice: Check if the dealership has completed the recall for the e-call
+    system. If possible, test the e-call button (with permission) and verify the system
+    status via diagnostic scan.
+  inspection_advice_tr: Bayinin e-call sistemi için geri çağırmayı tamamlayıp tamamlamadığını
+    kontrol edin. Mümkünse e-call düğmesini (izin alarak) test edin ve teşhis taraması
+    ile sistem durumunu doğrulayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n23128/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"Reason for recall: On affected vehicles the e-call service may not function."'
+    independent: true
+  component_id: electrical_infotainment
+  detection: visual
+- id: golf7_elec_electrical_golf7_elec_faulty_door_c_v1
+  claim_key: golf7_elec_electrical_golf7_elec_faulty_door_c
+  version: 1
+  is_current: true
+  title: 'golf7_elec: faulty door crash sensors may disable airbags'
+  title_tr: 'golf7_elec: hatalı kapı çarpışma sensörleri hava yastıklarını devre dışı
+    bırakabilir'
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: A recall has been issued for defective crash sensors in the front doors
+    that can affect airbag and restraint systems. If not repaired, these sensors could
+    prevent airbags from deploying in a crash, creating a serious safety risk. Buyers
+    should ensure the recall work has been completed on any used Golf 7.
+  rationale_tr: Ön kapılardaki hatalı çarpışma sensörleri için geri çağırma yayınlanmıştır;
+    bu sensörler hava yastığı ve emniyet kemeri sistemlerini etkileyebilir. Onarılmazsa,
+    bu sensörler bir kazada hava yastıklarının açılmasını engelleyebilir ve ciddi
+    güvenlik riski oluşturabilir. Alıcılar, kullanılmış Golf 7'de bu geri çağırmanın
+    yapıldığından emin olmalıdır.
+  inspection_advice: Check the vehicle's VIN against Volkswagen's recall database
+    to confirm the crash sensor recall has been performed. Ask service records for
+    proof of recall completion.
+  inspection_advice_tr: Aracın VIN numarasını Volkswagen'in geri çağırma veritabanında
+    kontrol ederek çarpışma sensörü geri çağrısının yapıldığını doğrulayın. Geri çağırmanın
+    tamamlandığına dair servis kayıtlarını isteyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n23128/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"Reason for recall: Faulty crash sensors for airbag and restraint systems
+      may have been fitted in the front doors."'
+    independent: true
+- id: golf7_elec_electrical_golf7_elec_infotainment__v1
+  claim_key: golf7_elec_electrical_golf7_elec_infotainment_
+  version: 1
+  is_current: true
+  title: golf7_elec infotainment errors disable parking sensors and cross-traffic
+    alerts
+  title_tr: golf7_elec bilgi-eğlence hataları park sensörlerini ve çapraz trafik uyarılarını
+    devre dışı bırakıyor
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: The infotainment system in a Golf 7 can show error messages that unexpectedly
+    turn off parking sensors and cross-traffic alerts. This is a safety issue because
+    these driver assistance features may fail without warning. A buyer should know
+    this specific electrical problem.
+  rationale_tr: Golf 7'deki bilgi-eğlence sistemi, park sensörlerini ve çapraz trafik
+    uyarılarını beklenmedik şekilde kapatan hata mesajları gösterebilir. Bu, sürücü
+    yardım özelliklerinin uyarı vermeden devre dışı kalabilmesi nedeniyle güvenlik
+    sorunudur. Alıcı bu spesifik elektrik sorununu bilmelidir.
+  inspection_advice: During the viewing, start the engine and check the infotainment
+    screen for error messages. Test the parking sensors by engaging reverse and moving
+    near an obstacle, and verify cross-traffic alerts if possible. A diagnostic scan
+    for fault codes in the infotainment and driver assistance modules is recommended.
+  inspection_advice_tr: Araç incelenirken motoru çalıştırın ve bilgi-eğlence ekranında
+    hata mesajları olup olmadığını kontrol edin. Geri vitese takıp bir engele yaklaşarak
+    park sensörlerini test edin, mümkünse çapraz trafik uyarılarını doğrulayın. Bilgi-eğlence
+    ve sürücü yardım modüllerinde hata kodları için diagnostik tarama önerilir.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://lemberglaw.com/volkswagen-golf-infotainment-problems/
+    source_domain: lemberglaw.com
+    site_or_channel: lemberglaw.com
+    quote: '"Parking sensors and cross traffic alerts shutting down"'
+    independent: true
+  component_id: electrical_infotainment
+  detection: visual
+- id: golf7_elec_electrical_golf_7_electrical_front__v1
+  claim_key: golf7_elec_electrical_golf_7_electrical_front_
+  version: 1
+  is_current: true
+  title: 'Golf 7 electrical: Front Assist phantom braking'
+  title_tr: 'Golf 7 elektrik: Front Assist hayalet frenleme'
+  kind: known_issue
+  domain: electrical
+  severity: high
+  confidence: 0.6
+  rationale: Some Golf 7 models have a fault where the Front Assist emergency braking
+    system activates for no reason, causing sudden unintended braking. This is a safety-critical
+    electronic issue that may require a software update or deactivating the system.
+    It is not detectable during a routine pre-purchase inspection.
+  rationale_tr: Bazı Golf 7 modellerinde Front Assist acil fren sistemi sebepsiz yere
+    devreye girerek ani istenmeyen frenlemelere neden olur. Bu, yazılım güncellemesi
+    veya sistemin devre dışı bırakılmasını gerektirebilecek güvenlik açısından kritik
+    bir elektronik sorundur. Rutin satış öncesi muayenede tespit edilemez.
+  inspection_advice: Ask for the service history and any software updates for the
+    Front Assist system. During the test drive, note any sudden braking or warning
+    messages. Inspect the radar sensor and windshield camera for damage or misalignment.
+  inspection_advice_tr: Servis geçmişini ve Front Assist sistemi için yapılmış yazılım
+    güncellemelerini sorun. Test sürüşü sırasında ani frenleme veya uyarı mesajları
+    olup olmadığını not edin. Radar sensörünü ve ön cam kamerasını hasar veya hizalama
+    bozukluğu açısından inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://what-breaks.com/vw/golf-7
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Front Assist triggers phantom braking on some cars — safety-relevant,
+      no recall"'
+    independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
+- id: golf7_elec_electrical_infotainment_and_sos_fai_v1
+  claim_key: golf7_elec_electrical_infotainment_and_sos_fai
+  version: 1
+  is_current: true
+  title: Infotainment and SOS failures in Golf 7 electrical system
+  title_tr: Golf 7 elektrik sisteminde bilgi-eğlence ve SOS arızaları
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: Owners report that the touchscreen infotainment system often freezes
+    or fails completely, and the SOS emergency call function can trigger warning lights
+    and require expensive repairs after software updates. This is an electrical/electronic
+    issue that may not be evident during a short test drive.
+  rationale_tr: Sahipler, dokunmatik bilgi-eğlence sisteminin sık sık donduğunu veya
+    tamamen durduğunu ve SOS acil çağrı fonksiyonunun uyarı lambaları yakabildiğini
+    ve yazılım güncellemelerinden sonra pahalı onarımlar gerektirebildiğini bildiriyor.
+    Bu, kısa bir test sürüşü sırasında görülmeyebilecek elektrik/elektronik bir sorundur.
+  inspection_advice: Test the infotainment screen for lag/freezing, check for any
+    SOS warning lights, and verify the SOS system responds to a test call if possible.
+    During a diagnostic scan, look for fault codes in the infotainment and emergency
+    call modules.
+  inspection_advice_tr: Bilgi-eğlence ekranını gecikme/donma açısından test edin,
+    SOS uyarı ışıklarını kontrol edin ve mümkünse SOS sisteminin bir test çağrısına
+    yanıt verdiğini doğrulayın. Teşhis taraması sırasında bilgi-eğlence ve acil çağrı
+    modüllerinde hata kodları arayın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n23128/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"The Volkswagen Golf is smooth, sophisticated and comfortable, but it
+      has a poor reliability record... The most notable is the touchscreen infotainment
+      system, which can fail to respond quickly or even fail completely. We''ve also
+      had reports of problems with the SOS function leading to costly replacements
+      as well as warning messages appearing after a mandatory software update."'
+    independent: true
+  component_id: electrical_infotainment
+  detection: visual
+- id: golf7_elec_engine_golf7_elec_ignition_coil_v1
+  claim_key: golf7_elec_engine_golf7_elec_ignition_coil
+  version: 1
+  is_current: true
+  title: golf7_elec ignition coil/plug misfires
+  title_tr: golf7_elec ateşleme bobini/buji teklemeleri
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: Known issue in Golf 7 (2013–2017) where ignition coils and spark plugs
+    can fail, causing misfires. This can lead to rough running, reduced fuel economy,
+    and if ignored, possible engine damage.
+  rationale_tr: Golf 7'de (2013–2017) ateşleme bobinleri ve bujiler arızalanabilir,
+    bu da tekleme yapar. Bu, düzensiz çalışma, yakıt ekonomisinin düşmesi ve ihmal
+    edilirse motor hasarına yol açabilir.
+  inspection_advice: Ask for a diagnostic scan and look for misfire codes (P0300-P0308).
+    Also check if coils and plugs have been replaced recently.
+  inspection_advice_tr: Diagnostik tarama isteyin ve tekleme kodlarına (P0300-P0308)
+    bakın. Ayrıca bobin ve bujilerin yakın zamanda değiştirilip değiştirilmediğini
+    kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"Ignition coil and spark plug failures causing engine misfires"'
+    independent: true
+  component_id: engine_spark_ignition
+  detection: diagnostic
+- id: golf7_elec_fuel_system_adblue_system_issues_in__v1
+  claim_key: golf7_elec_fuel_system_adblue_system_issues_in_
+  version: 1
+  is_current: true
+  title: AdBlue system issues in diesel models
+  title_tr: AdBlue system issues in diesel models
+  kind: known_issue
+  domain: fuel system
+  severity: medium
+  confidence: 0.6
+  rationale: Diesel owners have reported problems with the AdBlue system, which is
+    critical for emissions control and may lead to drivability issues or failure to
+    meet emissions standards.
+  rationale_tr: Diesel owners have reported problems with the AdBlue system, which
+    is critical for emissions control and may lead to drivability issues or failure
+    to meet emissions standards.
+  inspection_advice: Check for warning lights related to the AdBlue system. Verify
+    if the system has been serviced recently and if there are any error codes stored
+    in the vehicle's computer.
+  inspection_advice_tr: Check for warning lights related to the AdBlue system. Verify
+    if the system has been serviced recently and if there are any error codes stored
+    in the vehicle's computer.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n23128/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"Mechanical reliability was generally solid, though a few diesel owners
+      mentioned problems with the AdBlue system."'
+    independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
+- id: golf7_elec_transmission_dsg_gearbox_software_iss_v1
+  claim_key: golf7_elec_transmission_dsg_gearbox_software_iss
+  version: 1
+  is_current: true
+  title: DSG gearbox software issues cause erratic shifting (golf7_elec)
+  title_tr: DSG şanzıman yazılım sorunları düzensiz vites değişimine neden olur (golf7_elec)
+  kind: known_issue
+  domain: transmission
+  severity: medium
+  confidence: 0.6
+  rationale: The DSG automatic gearbox in the Golf 7.5 can have software glitches
+    that cause rough or unexpected gear changes. A software update might fix it temporarily,
+    but the problem can come back, affecting drivability and potentially leading to
+    costly repairs.
+  rationale_tr: Golf 7.5'teki DSG otomatik şanzıman, vites değişimlerinde sert veya
+    beklenmedik davranışlara neden olan yazılım hataları yaşayabilir. Yazılım güncellemesi
+    geçici olarak çözebilir, ancak sorun tekrarlayabilir, sürüş konforunu etkiler
+    ve pahalı onarımlara yol açabilir.
+  inspection_advice: During a test drive, pay attention to hesitation, jerky shifts,
+    or unexpected gear changes, especially in stop-and-go traffic. Ask if the DSG
+    software has been updated recently, and consider having a dealer scan for transmission
+    fault codes (e.g., related to the mechatronic unit).
+  inspection_advice_tr: Test sürüşü sırasında, özellikle dur-kalk trafikte tereddüt,
+    sert vites geçişleri veya beklenmedik vites değişimlerine dikkat edin. DSG yazılımının
+    son zamanlarda güncellenip güncellenmediğini sorun ve bir bayide şanzıman arıza
+    kodlarını (ör. mekatronik üniteyle ilgili) taratmayı düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"DSG gearbox software issues"'
+    independent: true
+- id: golf7_elec_transmission_golf7_dsg_hesitation_and_v1
+  claim_key: golf7_elec_transmission_golf7_dsg_hesitation_and
+  version: 1
+  is_current: true
+  title: Golf7 DSG hesitation and rough shifting
+  title_tr: Golf7 DSG tereddüt ve sert vites geçişi
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The DSG is a dual-clutch automatic gearbox. Hesitation or jerky shifts
+    can indicate problems with the mechatronic control unit or degraded transmission
+    fluid. Without proper servicing, this may lead to expensive repairs or complete
+    transmission failure.
+  rationale_tr: DSG, çift kavramalı otomatik şanzımandır. Tereddüt veya sert vites
+    geçişleri, mekatronik kontrol ünitesinde veya şanzıman yağının bozulmasında sorun
+    olduğunu gösterebilir. Doğru bakım yapılmazsa pahalı onarımlara veya şanzımanın
+    tamamen arızalanmasına yol açabilir.
+  inspection_advice: During a test drive, accelerate smoothly from a standstill and
+    note any hesitation or jerky shifts. Check the service history for DSG oil changes
+    (VW recommends every 60,000 km). If possible, scan fault codes; look for mechatronic-related
+    codes such as P17B4.
+  inspection_advice_tr: Test sürüşünde düzgün hızlanırken tereddüt veya sert vites
+    geçişlerine dikkat edin. Servis geçmişinde DSG yağı değişimlerini kontrol edin
+    (VW her 60.000 km'de önerir). Mümkünse hata kodlarını taratın; P17B4 gibi mekatronik
+    ile ilgili kodlara bakın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.bumper.co/blog/vw-golf-common-problems
+    source_domain: bumper.co
+    site_or_channel: bumper.co
+    quote: '"DSG gearbox hesitation or rough shifting"'
+    independent: true
+  component_id: transmission_dct_mechatronics
+  detection: diagnostic

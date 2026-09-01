@@ -1,0 +1,242 @@
+name: desktop
+
+# Not on every push: three OS runners with a Rust build each is minutes nobody
+# needs on a docs commit. Tags, hand-runs, and changes to the packaging itself.
+on:
+    push:
+        tags: ["v*"]
+    workflow_dispatch:
+    pull_request:
+        paths:
+            - "tauri/**"
+            - "packaging/**"
+            - "src/app/sidecar.py"
+            - ".github/workflows/desktop.yml"
+
+concurrency:
+    group: desktop-${{ github.ref }}
+    cancel-in-progress: true
+
+# Read-only by default; the release job asks for `contents: write` itself, so a
+# bundle job that is compromised by a dependency cannot publish anything.
+permissions:
+    contents: read
+
+jobs:
+    bundle:
+        name: ${{ matrix.label }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            # fail-fast off: "does it build on Windows" and "does it build on
+            # macOS" are separate answers, and one failing must not hide the
+            # other.
+            fail-fast: false
+            matrix:
+                include:
+                    - { os: ubuntu-22.04, label: linux, sidecar: kriko-sidecar }
+                    - { os: macos-latest, label: macos, sidecar: kriko-sidecar }
+                    - { os: windows-latest, label: windows, sidecar: kriko-sidecar.exe }
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            # WebKitGTK and friends. Tauri 2 on Linux needs the 4.1 ABI; 4.0
+            # builds and then fails to open a window.
+            - name: Linux system deps
+              if: matrix.label == 'linux'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+                    librsvg2-dev patchelf libssl-dev
+
+            - name: Install Python side
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e "." pyinstaller
+
+            # The UI first: the spec refuses to freeze without it rather than
+            # shipping an app that 404s on its own frontend.
+            - name: Build the UI
+              run: |
+                  npm --prefix ui ci --no-audit --no-fund
+                  npm --prefix ui run build
+
+            - name: Freeze the sidecar
+              run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
+
+            # A frozen binary that cannot print its port is a blank window, so
+            # the handshake is checked here, before it is bundled into anything.
+            - name: The frozen sidecar answers
+              shell: bash
+              run: python packaging/smoke_sidecar.py "dist/${{ matrix.sidecar }}"
+
+            # Tauri resolves externalBin as <name>-<target triple>.
+            - name: Place the sidecar
+              shell: bash
+              run: |
+                  triple=$(rustc -Vv | sed -n 's/host: //p')
+                  mkdir -p tauri/src-tauri/binaries
+                  ext=""
+                  [ "${{ matrix.label }}" = "windows" ] && ext=".exe"
+                  cp "dist/${{ matrix.sidecar }}" \
+                     "tauri/src-tauri/binaries/kriko-sidecar-$triple$ext"
+
+            - name: Icons
+              run: |
+                  npm --prefix tauri install --no-audit --no-fund
+                  npm --prefix tauri run tauri icon src-tauri/icons/icon.png
+
+            # Self-update is a build-time decision, because the key that makes
+            # it trustworthy lives in a repository secret. Without the secret
+            # this is a no-op and the run still produces installers — see
+            # packaging/configure_updater.py.
+            - name: Configure self-update
+              shell: bash
+              env:
+                  TAURI_SIGNING_PUBLIC_KEY: ${{ vars.TAURI_SIGNING_PUBLIC_KEY }}
+              run: |
+                  python packaging/configure_updater.py \
+                      --repo "${{ github.repository }}" \
+                      --version "${{ github.ref_name }}"
+
+            # Unsigned, on all three — code signing needs certificates, which is
+            # a policy decision (an Apple developer account, an EV cert) and not
+            # this workflow's to make. The updater's minisign key below is a
+            # different thing entirely: it signs the update payload, not the
+            # executable, so it works on unsigned builds.
+            - name: Bundle
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+              run: npm --prefix tauri run tauri build
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: kriko-${{ matrix.label }}
+                  path: |
+                      tauri/src-tauri/target/release/bundle/**/*.deb
+                      tauri/src-tauri/target/release/bundle/**/*.AppImage
+                      tauri/src-tauri/target/release/bundle/**/*.dmg
+                      tauri/src-tauri/target/release/bundle/**/*.exe
+                      tauri/src-tauri/target/release/bundle/**/*.tar.gz
+                      tauri/src-tauri/target/release/bundle/**/*.sig
+                  if-no-files-found: error
+
+    # The knowledge, built once and published beside the installers. Packs are
+    # what the app is *for*, and they change far more often than the binary —
+    # so they ship as their own assets with an index an installed Kriko can
+    # poll, rather than being frozen into a release nobody can update without
+    # reinstalling.
+    packs:
+        name: packs
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+            - name: Install
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e "."
+            - name: Build every pack
+              run: |
+                  mkdir -p release
+                  for root in packs/*/; do
+                      [ -f "$root/pack.toml" ] || continue
+                      name=$(basename "$root")
+                      python -m app.cli build "$root" --out "release/$name.kpack"
+                  done
+                  ls -lh release
+            # The index names the tag's own asset URLs, not `latest`: a version
+            # is immutable, so the file it points at must be too. The app finds
+            # this file through `releases/latest/download/packs.json`, which
+            # GitHub redirects to the newest release's copy.
+            - name: Write the index
+              run: |
+                  python packaging/publish_index.py \
+                      --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
+                      --out release/packs.json release/*.kpack
+                  cat release/packs.json
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: kriko-packs
+                  path: release/*
+                  if-no-files-found: error
+
+    # A run's artifacts expire and need a GitHub login to fetch. A release is a
+    # permanent URL anyone with the repo can click, which is the difference
+    # between "CI produced a binary" and "the app is downloadable". Tags only:
+    # a release per pull request would be noise, and `desktop.yml` already runs
+    # on PRs to prove the bundle still builds.
+    release:
+        name: release
+        needs: [bundle, packs]
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.14"
+            - uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+
+            # The bundlers nest by format (deb/, dmg/, nsis/, appimage/). Flatten
+            # so the release page lists four files rather than four directories,
+            # and fail loudly on an empty set — a release with no installers in
+            # it is worse than no release, because it looks like one.
+            - name: Collect the installers
+              run: |
+                  mkdir -p release
+                  find artifacts -type f \
+                      \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' \
+                         -o -name '*.exe' -o -name '*.kpack' -o -name 'packs.json' \) \
+                      -exec cp {} release/ \;
+                  ls -lh release
+                  test -n "$(ls -A release)"
+
+            # The one manifest an installed app polls, joined from three
+            # runners' artifacts. Skipped rather than failed when no signing key
+            # is configured: a release with installers and no self-update is a
+            # release; a failed release job is not.
+            - name: The update manifest
+              run: |
+                  if find artifacts -name '*.sig' | grep -q .; then
+                      python packaging/updater_manifest.py \
+                          --artifacts artifacts \
+                          --version "${GITHUB_REF_NAME#v}" \
+                          --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
+                          --notes "Kriko ${{ github.ref_name }}" \
+                          --out release/latest.json
+                      cat release/latest.json
+                  else
+                      echo "no updater artifacts — TAURI_SIGNING_PRIVATE_KEY is unset"
+                  fi
+
+            - uses: softprops/action-gh-release@v2
+              with:
+                  files: release/*
+                  generate_release_notes: true
+                  body: |
+                      Unsigned builds. macOS will call this an unidentified
+                      developer (right-click → Open) and Windows SmartScreen
+                      will warn on the installer (More info → Run anyway) —
+                      code signing needs an Apple developer account and an EV
+                      certificate, tracked as B52.
+
+                      Kriko keeps everything in `~/.kriko`: `knowledge.sqlite`
+                      for installed packs, `app.sqlite` for your own history.
+                      Uninstalling the app leaves both.

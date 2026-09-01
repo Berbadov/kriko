@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Kriko</title>
+<style>
+    :root {
+        color-scheme: light dark;
+        font: 14px/1.5 system-ui, sans-serif;
+    }
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+    }
+    main {
+        max-width: 46rem;
+    }
+    h1 {
+        font-size: 1.1rem;
+        margin: 0 0 0.5rem;
+    }
+    p {
+        margin: 0.3rem 0;
+        opacity: 0.75;
+    }
+    pre {
+        margin-top: 1rem;
+        padding: 0.8rem;
+        background: rgba(127, 127, 127, 0.14);
+        border-radius: 5px;
+        white-space: pre-wrap;
+        max-height: 22rem;
+        overflow: auto;
+        font-size: 0.82rem;
+        opacity: 1;
+    }
+    .bad h1 {
+        color: #c0392b;
+    }
+</style>
+<!--
+    The boot screen, and the failure screen. It exists because the alternative
+    to "the engine did not start, here is what it said" is a blank white
+    window, which tells a reader nothing and tells us less. Deliberately plain
+    HTML with no build step: whatever is wrong, this page has to render.
+-->
+<main id="root">
+    <h1>Starting Kriko…</h1>
+    <p>Opening your local knowledge store.</p>
+</main>
+<script type="module">
+    const root = document.getElementById("root");
+
+    const fail = (title, detail) => {
+        document.body.classList.add("bad");
+        root.innerHTML = "";
+        const heading = document.createElement("h1");
+        heading.textContent = title;
+        const hint = document.createElement("p");
+        hint.textContent =
+            "Kriko's engine could not start, so nothing below this is available. " +
+            "The engine's own output follows.";
+        root.append(heading, hint);
+        if (detail) {
+            const pre = document.createElement("pre");
+            // textContent, not innerHTML: this string is a subprocess's stderr.
+            pre.textContent = detail;
+            root.append(pre);
+        }
+    };
+
+    try {
+        const { event } = window.__TAURI__;
+        await event.listen("kriko://ready", ({ payload }) => {
+            location.replace(payload.url);
+        });
+        await event.listen("kriko://failed", ({ payload }) => {
+            fail(payload.title ?? "Kriko could not start", payload.detail ?? "");
+        });
+        // Told last, so no event can fire before both listeners exist.
+        await window.__TAURI__.core.invoke("start_engine");
+    } catch (cause) {
+        fail("Kriko could not start", String(cause));
+    }
+</script>

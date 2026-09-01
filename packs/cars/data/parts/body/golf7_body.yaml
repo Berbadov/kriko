@@ -1,0 +1,654 @@
+part_id: golf7_body
+part_type: body
+display_name: Volkswagen Golf 7 Body & Water Sealing
+manufacturer: volkswagen
+known_also_as:
+- Volkswagen Golf 7 body
+- Volkswagen Golf 7 boot leak
+- Volkswagen Golf 7 water ingress
+claims:
+- id: golf7_body_brakes_front_brake_disc_crackin_v1
+  claim_key: golf7_body_brakes_front_brake_disc_crackin
+  version: 1
+  is_current: true
+  title: Front brake disc cracking/fracture risk (recall)
+  title_tr: Front brake disc cracking/fracture risk (recall)
+  kind: known_issue
+  domain: brakes
+  severity: high
+  confidence: 0.6
+  rationale: Front brake discs may not meet the required thickness dimension, leading
+    to cracking and potential fractures under extreme loads. This compromises braking
+    performance and poses a safety risk.
+  rationale_tr: Front brake discs may not meet the required thickness dimension, leading
+    to cracking and potential fractures under extreme loads. This compromises braking
+    performance and poses a safety risk.
+  inspection_advice: Inspect the front brake discs for cracks or uneven wear. Listen
+    for unusual noises (e.g., grinding) during braking. Verify if the vehicle was
+    part of the recall (56 units affected). Check the thickness of the brake discs
+    against manufacturer specifications.
+  inspection_advice_tr: Inspect the front brake discs for cracks or uneven wear. Listen
+    for unusual noises (e.g., grinding) during braking. Verify if the vehicle was
+    part of the recall (56 units affected). Check the thickness of the brake discs
+    against manufacturer specifications.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"The front brake discs may not meet the required thickness dimension.
+      Under extreme loads this could cause cracking, which may lead to fractures."'
+    independent: true
+  component_id: brakes_discs
+  detection: visual
+- id: golf7_body_electrical_adas_sensor_faults_front_v1
+  claim_key: golf7_body_electrical_adas_sensor_faults_front
+  version: 1
+  is_current: true
+  title: ADAS sensor faults (Front Assist/Lane Assist)
+  title_tr: ADAS sensor faults (Front Assist/Lane Assist)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: Advanced Driver Assistance Systems (ADAS) such as Front Assist and Lane
+    Assist, particularly on 2014+ models with 'Discover Pro' infotainment, are prone
+    to radar sensor failures and software lockups. This can lead to persistent warning
+    lights and disablement of safety features.
+  rationale_tr: Advanced Driver Assistance Systems (ADAS) such as Front Assist and
+    Lane Assist, particularly on 2014+ models with 'Discover Pro' infotainment, are
+    prone to radar sensor failures and software lockups. This can lead to persistent
+    warning lights and disablement of safety features.
+  inspection_advice: Check for any persistent warning lights related to ADAS systems.
+    Test the Front Assist and Lane Assist features during the drive to ensure they
+    function correctly.
+  inspection_advice_tr: Check for any persistent warning lights related to ADAS systems.
+    Test the Front Assist and Lane Assist features during the drive to ensure they
+    function correctly.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"Front assist / lane assist sensor faults: ADAS systems (Front Assist,
+      Lane Assist, Adaptive Cruise Control) on 2014+ cars with the ''Discover Pro''
+      infotainment are prone to radar sensor failures and software lockups. These
+      generate persistent warning lights and may disable safety features until rectified."'
+    independent: true
+  component_id: electrical_adas_sensors
+  detection: diagnostic
+- id: golf7_body_engine_golf7_body_gti_high_oil__v1
+  claim_key: golf7_body_engine_golf7_body_gti_high_oil_
+  version: 1
+  is_current: true
+  title: golf7_body GTI high oil consumption
+  title_tr: golf7_body GTI yüksek yağ tüketimi
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The Golf Mk7 GTI is known for consuming engine oil at a high rate, especially
+    under hard driving. If you don't check and top up the oil regularly, the engine
+    can suffer serious damage, including to the timing chain. This is a chronic issue
+    specific to the performance-tuned GTI engine.
+  rationale_tr: Golf Mk7 GTI, özellikle sert sürüşte yüksek oranda motor yağı tüketmesiyle
+    bilinir. Yağı düzenli olarak kontrol edip tamamlamazsanız, motor ciddi hasar görebilir,
+    buna zamanlama zinciri de dahildir. Bu, performans odaklı GTI motoruna özgü kronik
+    bir sorundur.
+  inspection_advice: At the viewing, check the oil level with a cold engine and look
+    for evidence of frequent top-ups (e.g., oil bottles in the boot, service receipts).
+    Ask the owner if they've had to add oil between services. A one-off inspection
+    cannot predict the rate of consumption, but low oil or a history of top-ups is
+    a red flag.
+  inspection_advice_tr: Araç görüşmesinde, soğuk motorda yağ seviyesini kontrol edin
+    ve sık yağ ekleme belirtileri arayın (örn. bagajda yağ şişeleri, servis fişleri).
+    Sahibine servis aralarında yağ eklemek zorunda kalıp kalmadığını sorun. Tek seferlik
+    bir inceleme tüketim hızını öngöremez, ancak düşük yağ seviyesi veya yağ ekleme
+    geçmişi kırmızı bayraktır.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"GTI models can suffer from high oil consumption, so it’s important to
+      keep checking the oil level on these, even between services. If the level gets
+      too low, it can cause damage to the engine or timing chain."'
+    independent: true
+  component_id: engine_oil_consumption
+  detection: visual
+- id: golf7_body_engine_plastic_water_pump_housi_v1
+  claim_key: golf7_body_engine_plastic_water_pump_housi
+  version: 1
+  is_current: true
+  title: Plastic Water Pump Housing Cracking (TSI Engines)
+  title_tr: Plastic Water Pump Housing Cracking (TSI Engines)
+  kind: known_issue
+  domain: engine
+  severity: medium
+  confidence: 0.6
+  rationale: The plastic water pump housing in TSI engines is prone to cracking and
+    leaking internally between 60,000 and 100,000 miles, leading to coolant loss,
+    temperature fluctuations, and potential overheating.
+  rationale_tr: The plastic water pump housing in TSI engines is prone to cracking
+    and leaking internally between 60,000 and 100,000 miles, leading to coolant loss,
+    temperature fluctuations, and potential overheating.
+  inspection_advice: Inspect the water pump housing for cracks or coolant leaks. Check
+    for sweet smells in the engine bay or temperature gauge fluctuations, especially
+    in TSI models with high mileage.
+  inspection_advice_tr: Inspect the water pump housing for cracks or coolant leaks.
+    Check for sweet smells in the engine bay or temperature gauge fluctuations, especially
+    in TSI models with high mileage.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://vwownersclub.co.uk/vw-golf-mk7-common-problems-the-issues-owners-actually-report/
+    source_domain: vwownersclub.co.uk
+    site_or_channel: vwownersclub.co.uk
+    quote: '"The plastic water pump housing on TSI engines has a reputation for cracking
+      and leaking, typically between 60,000 and 100,000 miles. You might notice coolant
+      loss without visible leaks (it often seeps internally), a sweet smell from the
+      engine bay, or temperature gauge fluctuations."'
+    independent: true
+  applies_when:
+    min_mileage_km: 60000
+  component_id: engine_water_pump
+  detection: visual
+- id: golf7_body_engine_premature_timing_chain_f_v1
+  claim_key: golf7_body_engine_premature_timing_chain_f
+  version: 1
+  is_current: true
+  title: Premature timing chain failure in golf7_body petrol engine
+  title_tr: golf7_body benzinli motorda erken triger zinciri kopması
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The timing chain in certain Golf Mk7 petrol engines can snap earlier
+    than expected, causing severe engine damage. Regular servicing may reduce the
+    risk, but it is a costly repair that can occur without warning. This is a specific
+    engine issue that a standard inspection cannot easily predict.
+  rationale_tr: Bazı Golf Mk7 benzinli motorlarında triger zinciri beklenenden erken
+    kopabilir ve ciddi motor hasarına yol açabilir. Düzenli bakım riski azaltabilir,
+    ancak uyarı olmadan gerçekleşebilecek pahalı bir onarımdır. Bu, standart bir ekspertizin
+    kolayca öngöremeyeceği motora özgü bir sorundur.
+  inspection_advice: Check the service history, especially for regular oil changes.
+    Listen for a rattling noise from the engine on cold start, which may indicate
+    chain stretch. Request a diagnostic scan for timing-related fault codes such as
+    P0011 or P0016.
+  inspection_advice_tr: Bakım geçmişini kontrol edin, özellikle düzenli yağ değişimlerine
+    bakın. Soğuk çalıştırmada motordan gelen tıkırtı sesini dinleyin, bu zincir gevşemesine
+    işaret edebilir. P0011 veya P0016 gibi zamanlama ile ilgili hata kodları için
+    diagnostik tarama isteyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"Timing chains fitted to petrol engines have been known to snap prematurely;
+      this can cause significant engine damage but can be mitigated by having the
+      car serviced on time."'
+    independent: true
+  component_id: engine_timing_chain
+  detection: diagnostic
+- id: golf7_body_engine_tsi_chain_tensioner_fail_v1
+  claim_key: golf7_body_engine_tsi_chain_tensioner_fail
+  version: 1
+  is_current: true
+  title: TSI chain tensioner failures (1.2/1.4 TSI)
+  title_tr: TSI chain tensioner failures (1.2/1.4 TSI)
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: The timing chain tensioner in 1.2 TSI and 1.4 TSI engines is prone to
+    failure, especially after 60,000 miles or 8+ years. This results in a noticeable
+    rattle on cold starts and can lead to catastrophic engine damage if ignored.
+  rationale_tr: The timing chain tensioner in 1.2 TSI and 1.4 TSI engines is prone
+    to failure, especially after 60,000 miles or 8+ years. This results in a noticeable
+    rattle on cold starts and can lead to catastrophic engine damage if ignored.
+  inspection_advice: Request proof of timing chain tensioner replacement or inspection
+    if the car has over 60,000 miles or is older than 8 years. Listen for a rattle
+    on cold starts during the test drive.
+  inspection_advice_tr: Request proof of timing chain tensioner replacement or inspection
+    if the car has over 60,000 miles or is older than 8 years. Listen for a rattle
+    on cold starts during the test drive.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"TSI chain tensioner (1.2 TSI / 1.4 TSI): ask for proof of timing chain
+      tensioner replacement or inspection if over 60,000 miles or more than 8 years
+      old. Symptom is a rattle on cold start."'
+    independent: true
+  applies_when:
+    min_mileage_km: 60000
+  component_id: engine_timing_tensioner
+  detection: diagnostic
+- id: golf7_body_fuel_system_dpf_blockage_on_tdi_golf_v1
+  claim_key: golf7_body_fuel_system_dpf_blockage_on_tdi_golf
+  version: 1
+  is_current: true
+  title: DPF blockage on TDI Golf Mk7 (golf7_body)
+  title_tr: TDI Golf Mk7'de DPF tıkanması (golf7_body)
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: TDI diesel Golf Mk7 cars used mainly for short urban trips are prone
+    to Diesel Particulate Filter (DPF) blockages because the filter cannot burn off
+    soot properly. This leads to reduced performance and costly replacement. A DPF
+    diagnostic before purchase is recommended.
+  rationale_tr: Kısa şehir içi yolculuklarda kullanılan TDI dizel Golf Mk7 araçlarda,
+    filtre kurumunu düzgün yakamadığı için Dizel Partikül Filtresi (DPF) tıkanması
+    sık görülür. Bu durum performans düşüşüne ve pahalı değişime yol açar. Satın almadan
+    önce DPF teşhisi önerilir.
+  inspection_advice: Check MOT history for DPF advisories and request an independent
+    DPF diagnostic (e.g., pressure test or regeneration check). Look for warning lights
+    and take a long motorway drive to see if the car performs well and regenerates
+    properly.
+  inspection_advice_tr: MOT geçmişinde DPF tavsiyelerini kontrol edin ve bağımsız
+    bir DPF teşhisi (örn. basınç testi veya rejenerasyon kontrolü) isteyin. Uyarı
+    ışıklarını izleyin ve aracın iyi performans gösterip gösterdiğini ve düzgün rejenere
+    olup olmadığını görmek için uzun bir otoyol sürüşü yapın.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://smartcarcheck.co.uk/guides/volkswagen/golf-mk7
+    source_domain: smartcarcheck.co.uk
+    site_or_channel: smartcarcheck.co.uk
+    quote: '"DPF condition (TDI): check MOT history for DPF advisories. A diesel used
+      for short urban trips will have a blocked DPF. Request an independent DPF diagnostic
+      before committing."'
+    independent: true
+  component_id: emissions_dpf
+  detection: diagnostic
+- id: golf7_body_general_boot_and_door_seal_water_v1
+  claim_key: golf7_body_general_boot_and_door_seal_water
+  version: 1
+  is_current: true
+  title: Boot and door seal water leakage in golf7_body
+  title_tr: Golf7_body bagaj ve kapı fitillerinden su sızıntısı
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The Golf 7 is prone to water ingress through faulty or hardened boot
+    and door seals, leading to moisture buildup, bad odors, and potential electrical
+    shorts. This is a known chronic issue that a standard inspection might miss unless
+    explicitly tested.
+  rationale_tr: Golf 7'de bagaj ve kapı fitillerinin bozulması veya sertleşmesi nedeniyle
+    su sızıntısı yaşanabilir, bu da nem birikimi, kötü koku ve elektrik arızalarına
+    yol açabilir. Standart bir muayene bu sorunu özel test olmadan fark edemeyebilir.
+  inspection_advice: Check boot and door seals for hardness or cracks; inspect interior
+    for dampness, moldy smell, or water stains in boot and footwells; consider a water
+    spray test.
+  inspection_advice_tr: Bagaj ve kapı fitillerini sertleşme veya çatlaklara karşı
+    kontrol edin; bagaj ve ayak boşluklarında nem, küf kokusu veya su lekeleri arayın;
+    su püskürtme testi yapmayı düşünün.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.otomobilce.com/volkswagen-golf-7-kronik-sorunlari-bilmeniz-gerekenler.html
+    source_domain: otomobilce.com
+    site_or_channel: otomobilce.com
+    quote: '"Golf 7 sahiplerinin sıklıkla şikayet ettiği bir diğer kronik sorun, özellikle
+      bagaj ve kapı fitillerinde su sızdırmasıdır. Yoğun yağış sonrasında bagaj havuzu,
+      stop lambaları çevresi ya da kapı altlarında su birikintileri görülebilir."'
+    independent: true
+  component_id: body_sunroof_drain
+  detection: visual
+- id: golf7_body_general_clogged_sunroof_drains_c_v1
+  claim_key: golf7_body_general_clogged_sunroof_drains_c
+  version: 1
+  is_current: true
+  title: Clogged sunroof drains cause water leaks (golf7_body)
+  title_tr: Tıkanmış sunroof drenajları su sızıntısına neden olur (golf7_body)
+  kind: known_issue
+  domain: general
+  severity: high
+  confidence: 0.6
+  rationale: The panoramic sunroof drain tubes on the Golf MK7 can clog with debris,
+    causing water to leak into the cabin. This can lead to damp carpets, mold, and
+    damage to electronic components, which is expensive to repair.
+  rationale_tr: Golf MK7'deki panoramik sunroof drenaj boruları kalıntılarla tıkanabilir
+    ve suyun kabine sızmasına neden olabilir. Bu, nemli halılar, küf ve elektronik
+    bileşenlerde hasara yol açabilir; onarımı pahalıdır.
+  inspection_advice: At viewing, check for damp carpets, musty odor, or water stains
+    on headliner. If possible, pour a small amount of water into the sunroof channels
+    and verify it drains quickly. Ask for service records of drain cleaning.
+  inspection_advice_tr: Aracı incelerken nemli halı, küf kokusu veya tavan döşemesinde
+    su lekeleri olup olmadığını kontrol edin. Mümkünse sunroof kanallarına az miktarda
+    su dökün ve hızlıca drenaj olduğunu doğrulayın. Drenaj temizliği servis kayıtlarını
+    sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html
+    source_domain: deutsche-parts.co.uk
+    site_or_channel: deutsche-parts.co.uk
+    quote: '''we''re starting to see issues with blocked drain tubes in panoramic
+      sunroofs too'''
+    independent: true
+  component_id: body_sunroof_drain
+  detection: visual
+- id: golf7_body_general_clogged_vw_badge_drain_c_v1
+  claim_key: golf7_body_general_clogged_vw_badge_drain_c
+  version: 1
+  is_current: true
+  title: Clogged VW badge drain causes boot water leak
+  title_tr: Tıkalı VW amblemi drenajı bagaj su sızıntısına neden olur
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The drain tube for the rear VW badge can clog, causing water to overflow
+    into the boot. This leads to dampness, mold, and potential damage to carpet and
+    electrics. It's a known issue on Golf 7 and is not easily spotted in a standard
+    check.
+  rationale_tr: Arka VW ambleminin drenaj borusu tıkanabilir ve suyun bagaja taşmasına
+    neden olabilir. Bu, nem, küf ve halı ile elektrik aksamında hasara yol açabilir.
+    Golf 7'de bilinen bir sorundur ve standart bir kontrolde kolayca fark edilmez.
+  inspection_advice: Check the boot for musty smell, damp carpet, or water stains.
+    Pour water over the rear VW badge area and observe if it drains properly away
+    from the boot seam.
+  inspection_advice_tr: Bagajda küf kokusu, nemli halı veya su lekeleri olup olmadığını
+    kontrol edin. Arka VW amblemi bölgesine su dökün ve bagaj dikişinden uzaklaşıp
+    uzaklaşmadığını gözlemleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html
+    source_domain: deutsche-parts.co.uk
+    site_or_channel: deutsche-parts.co.uk
+    quote: '''The drain tube for the rear handle AKA VW badge gets clogged and water
+      overflows in there'''
+    independent: true
+  component_id: body_water_ingress
+  detection: visual
+- id: golf7_body_general_door_speaker_seal_leaks__v1
+  claim_key: golf7_body_general_door_speaker_seal_leaks_
+  version: 1
+  is_current: true
+  title: Door speaker seal leaks water into golf7_body cabin
+  title_tr: Kapı hoparlör contası hatası golf7_body kabinine su sızdırıyor
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The seals between the door speakers and door frames degrade, allowing
+    rainwater to enter the cabin, especially the rear footwells. This can lead to
+    damp carpets, mold, and potential electrical issues. It is a known Golf 7 body
+    issue that a buyer should check for.
+  rationale_tr: Kapı hoparlörleri ile kapı gövdesi arasındaki contalar bozularak yağmur
+    suyunun kabine, özellikle arka ayak bölgelerine girmesine neden olur. Bu, nemli
+    halılar, küf ve olası elektrik sorunlarına yol açabilir. Bu, Golf 7 gövdesinde
+    bilinen bir sorundur ve alıcının kontrol etmesi gereken bir noktadır.
+  inspection_advice: Check the rear carpets and footwells for dampness or water stains.
+    Inspect the door speaker areas for signs of water ingress or prior sealant repairs.
+    Ask the seller if the car has had any water leak issues.
+  inspection_advice_tr: Arka halıları ve ayak bölgelerini nem veya su lekeleri açısından
+    kontrol edin. Kapı hoparlör alanlarını su girişi veya önceki sızdırmazlık onarımları
+    açısından inceleyin. Satıcıya aracın su sızıntısı sorunu olup olmadığını sorun.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html
+    source_domain: deutsche-parts.co.uk
+    site_or_channel: deutsche-parts.co.uk
+    quote: '''The seals between the door speakers and the door frames fail, and allow
+      rain water in there.'''
+    independent: true
+  component_id: body_water_ingress
+  detection: visual
+- id: golf7_body_general_faulty_door_child_locks__v1
+  claim_key: golf7_body_general_faulty_door_child_locks_
+  version: 1
+  is_current: true
+  title: Faulty door child locks (recall)
+  title_tr: Faulty door child locks (recall)
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: A recall-affected issue where door child locks may disengage without
+    the driver's knowledge, potentially allowing the door to be opened from the inside
+    while the car is in motion or parked. This poses a safety risk, particularly to
+    children.
+  rationale_tr: A recall-affected issue where door child locks may disengage without
+    the driver's knowledge, potentially allowing the door to be opened from the inside
+    while the car is in motion or parked. This poses a safety risk, particularly to
+    children.
+  inspection_advice: Verify if the vehicle was part of the recall (13,620 units affected).
+    Test the child lock mechanism by engaging it and attempting to open the door from
+    the inside. Check for any visible modifications or replacements to the lock mechanism.
+  inspection_advice_tr: Verify if the vehicle was part of the recall (13,620 units
+    affected). Test the child lock mechanism by engaging it and attempting to open
+    the door from the inside. Check for any visible modifications or replacements
+    to the lock mechanism.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"The door child locks may disengage without driver knowledge. Though the
+      door remains closed it is possible for the door to then be opened from the inside."'
+    independent: true
+- id: golf7_body_general_golf_7_body_rear_seals_l_v1
+  claim_key: golf7_body_general_golf_7_body_rear_seals_l
+  version: 1
+  is_current: true
+  title: 'Golf 7 body: rear seals leak water into boot'
+  title_tr: 'Golf 7 gövde: arka contalardan bagaja su sızıyor'
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.8
+  rationale: The rear light and air vent seals on the Golf 7 can deteriorate, allowing
+    rainwater to enter the boot, especially the spare wheel well. This can lead to
+    dampness, electrical issues, and interior damage over time. It's a known weak
+    point on this model.
+  rationale_tr: Golf 7'de arka far ve havalandırma contaları bozulabilir ve yağmur
+    suyunun bagaja, özellikle stepne bölmesine girmesine neden olabilir. Bu durum
+    nem, elektrik sorunları ve zamanla iç mekanda hasara yol açabilir. Bu modelde
+    bilinen bir zayıf noktadır.
+  inspection_advice: Check the boot for dampness, musty smell, or water stains, especially
+    in the spare wheel well and around the rear light casings. Inspect the rear light
+    seals for cracks or gaps, and look for water marks behind the rear bumper where
+    the air vents are located.
+  inspection_advice_tr: Bagajda nem, küf kokusu veya su lekeleri olup olmadığını kontrol
+    edin, özellikle stepne bölmesinde ve arka far muhafazalarının çevresinde. Arka
+    far contalarında çatlak veya boşluk olup olmadığını inceleyin ve arka tamponun
+    arkasındaki havalandırma ızgaralarının olduğu bölgede su izlerine bakın.
+  status: verified
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html
+    source_domain: deutsche-parts.co.uk
+    site_or_channel: deutsche-parts.co.uk
+    quote: '''The rear light seals fail and lets water in'''
+    independent: true
+  - source_url: https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html
+    source_domain: deutsche-parts.co.uk
+    site_or_channel: deutsche-parts.co.uk
+    quote: '''The seals on the rear air vents (hidden behind the back bumper) fail
+      and allow sprayed up road water into the boot.'''
+    independent: true
+  - source_url: https://www.telegraph.co.uk/cars/advice/should-volkswagen-pay-to-repair-my-leaking-golf/
+    source_domain: telegraph.co.uk
+    site_or_channel: telegraph.co.uk
+    quote: '"The first is the seals around the rear lights. These are designed to
+      stop rainwater from entering through the apertures where the rear light casings
+      intrude into the boot space. However, these seals can deteriorate with time
+      and if this happens they allow water into the boot area through the rear light
+      apertures, where it obviously collects at the lowest point, which is the spare
+      wheel well."'
+    independent: true
+  component_id: body_water_ingress
+  detection: visual
+- id: golf7_body_general_golf_7_boot_badge_drain__v1
+  claim_key: golf7_body_general_golf_7_boot_badge_drain_
+  version: 1
+  is_current: true
+  title: Golf 7 boot badge drain tube leaks into spare wheel well
+  title_tr: Golf 7 bagaj amblemi drenaj borusu yedek lastik çukuruna su sızdırıyor
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The drain tube for the boot latch handle (the VW badge) can crack or
+    detach, allowing rainwater to pool in the boot lid and leak into the spare wheel
+    well. This can cause dampness, mold and damage to carpets and electrical components.
+  rationale_tr: Bagaj kilit kolu (VW amblemi) için olan drenaj borusu çatlayabilir
+    veya yerinden çıkabilir, bu da yağmur suyunun bagaj kapağında birikmesine ve yedek
+    lastik çukuruna sızmasına neden olur. Bu durum nem, küf ve halı ile elektrik bileşenlerinde
+    hasara yol açabilir.
+  inspection_advice: Check the spare wheel well for water, stains, or dampness. Pour
+    water over the boot lid and watch for proper drainage from the badge area. Inspect
+    the boot seals and interior trim for signs of water ingress.
+  inspection_advice_tr: Yedek lastik çukurunda su, leke veya nem olup olmadığını kontrol
+    edin. Bagaj kapağına su dökün ve amblem bölgesinden doğru drenajı gözlemleyin.
+    Bagaj contalarını ve iç döşemeyi su girişi işaretleri açısından inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.telegraph.co.uk/cars/advice/should-volkswagen-pay-to-repair-my-leaking-golf/
+    source_domain: telegraph.co.uk
+    site_or_channel: telegraph.co.uk
+    quote: '"The other possibility is a problem with the drain tube for the boot latch
+      handle, which doubles as the Volkswagen badge in the hatchback. This is mounted
+      in a recess in the boot lid, in which rainwater can collect, so VW engineered
+      a little drain hole, the other side of which is a tube that guides the water
+      downwards and out of a hole in the bottom of the boot lid. If this tube cracks
+      or falls off, however, the water doesn’t find its way out and instead gets stuck
+      within the hatchback, eventually trickling out of the gaps between the metal
+      boot lid and the plastic interior trims, then into the spare wheel well."'
+    independent: true
+  component_id: body_water_ingress
+  detection: visual
+- id: golf7_body_general_golf_7_sunroof_drains_cl_v1
+  claim_key: golf7_body_general_golf_7_sunroof_drains_cl
+  version: 1
+  is_current: true
+  title: Golf 7 sunroof drains clog/dislodge, causing cabin water leaks
+  title_tr: Golf 7 sunroof drenaj boruları tıkanır/yerinden çıkar, içeri su sızar
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The sunroof drain tubes in the Golf 7 can shift due to temperature changes,
+    causing them to detach and let water into the cabin. This can lead to wet carpets,
+    electrical problems, and mold. A standard pre-purchase inspection may not detect
+    this unless the drains are specifically tested.
+  rationale_tr: Golf 7'deki sunroof drenaj boruları sıcaklık değişimleri nedeniyle
+    yerinden çıkabilir ve kabine su girmesine neden olabilir. Bu durum ıslak halılar,
+    elektrik sorunları ve küf oluşumuna yol açabilir. Standart bir ekspertiz, drenajlar
+    özel olarak test edilmedikçe bunu tespit edemeyebilir.
+  inspection_advice: Pour a bottle of water into the sunroof drain channel and check
+    that it exits under the car. Inspect for damp carpets, water stains, or a musty
+    smell in the cabin.
+  inspection_advice_tr: Sunroof drenaj kanalına bir şişe su dökün ve arabanın altından
+    çıktığını kontrol edin. Kabinde ıslak halı, su lekesi veya küf kokusu olup olmadığını
+    inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/volkswagen-golf-7-sunroof-su-sorunu-cozumu-video-id1-fdiW7hLs
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Volkswagen Golf 7 sunroof su tahliye borularında sorun olduğu için araç
+      içine su alıyor. Mevcut boru direğin içinden geçerek yerine takılıyor, ancak
+      sıcaklık değişimi nedeniyle yerinden çıkıyor. Tahliyenin dibindeki tıp suyu
+      içeriye alıyor ve boruyu tıkayarak aracın içine su veriyor
+    independent: true
+  component_id: body_sunroof_drain
+  detection: visual
+- id: golf7_body_general_sunroof_drain_clogging_c_v1
+  claim_key: golf7_body_general_sunroof_drain_clogging_c
+  version: 1
+  is_current: true
+  title: Sunroof drain clogging causes cabin water leaks (Golf 7)
+  title_tr: Golf 7 sunroof drenajı tıkanması kabin su sızıntısına neden olur
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: The Golf 7's sunroof drain tubes can clog with leaves and dirt due to
+    the inlet design. When blocked, water overflows into the cabin, potentially damaging
+    upholstery, electronics, and causing mold. This is a known design flaw that is
+    not usually checked in a standard inspection.
+  rationale_tr: Golf 7'nin sunroof drenaj boruları, giriş tasarımı nedeniyle yaprak
+    ve kirle tıkanabilir. Tıkandığında su kabine taşar ve döşemeleri, elektroniği
+    hasara uğratabilir ve küf oluşumuna neden olabilir. Bu, standart muayenede genellikle
+    kontrol edilmeyen bilinen bir tasarım hatasıdır.
+  inspection_advice: At the viewing, pour a small amount of water into the sunroof
+    troughs and observe if it drains quickly through the tubes. Look for water stains
+    or damp smell inside the cabin, especially under the footwells and headliner.
+  inspection_advice_tr: Araç muayenesinde, sunroof oluklarına az miktarda su dökün
+    ve suyun borulardan hızla akıp akmadığını gözlemleyin. Kabin içinde, özellikle
+    ayak boşluklarında ve tavan döşemesinde su lekeleri veya nem kokusu olup olmadığını
+    kontrol edin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://yandex.com.tr/yaozet/auto/volkswagen-golf-7-sunroof-su-sorunu-cozumu-video-id1-fdiW7hLs
+    source_domain: yandex.com.tr
+    site_or_channel: yandex.com.tr
+    quote: Tahliyenin giriş yerinin etrafı tıkanabilir veya tıkanmazsa rüzgar sesi
+      verebilir.
+    independent: true
+  component_id: body_sunroof_drain
+  detection: visual
+- id: golf7_body_suspension_front_and_rear_wheel_bea_v1
+  claim_key: golf7_body_suspension_front_and_rear_wheel_bea
+  version: 1
+  is_current: true
+  title: Front and rear wheel bearing housing fracture risk (golf7_body)
+  title_tr: Ön ve arka tekerlek rulmanı yuvası kırılma riski (golf7_body)
+  kind: known_issue
+  domain: suspension
+  severity: high
+  confidence: 0.6
+  rationale: The Golf 7 may have been recalled for wheel bearing housings that can
+    fracture, potentially causing loss of control or wheel separation. This is a safety-critical
+    issue that may not be visible during a normal inspection. Check the VIN for open
+    recalls and confirm the repair has been done.
+  rationale_tr: Golf 7, kırılabilen ve aracın yön kontrolünü kaybetmesine veya tekerleğin
+    ayrılmasına neden olabilen tekerlek rulmanı yuvaları için geri çağrılmış olabilir.
+    Bu, normal bir muayene sırasında görülmeyebilecek kritik bir güvenlik sorunudur.
+    VIN üzerinden açık servis çağrısı olup olmadığını kontrol edin ve onarımın yapıldığını
+    doğrulayın.
+  inspection_advice: At viewing, obtain the VIN and check Volkswagen's recall status
+    online. Ask the seller for proof that any applicable wheel bearing housing recall
+    has been performed. Listen for humming or rumbling noises from wheels and inspect
+    tires for unusual wear.
+  inspection_advice_tr: Görüşmede, VIN numarasını alın ve Volkswagen'in servis çağrısı
+    durumunu internetten kontrol edin. Satıcıdan tekerlek rulmanı yuvası ile ilgili
+    servis çağrısının yapıldığına dair kanıt isteyin. Tekerleklerden uğultu veya vuruntu
+    sesleri dinleyin ve düzensiz lastik aşınması olup olmadığını inceleyin.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"Front wheel bearing housings with insufficient hardness may have been
+      fitted. This can lead to a fracture of a wheel bearing housing which can affect
+      the directional control of the vehicle."'
+    independent: true
+  - source_url: https://www.whatcar.com/volkswagen/golf/hatchback/used-review/n776/reliability
+    source_domain: whatcar.com
+    site_or_channel: whatcar.com
+    quote: '"The hardening process for the rear wheel bearing housings may not have
+      been correctly performed. In the worst case this could lead to a fractured housing.
+      Should a fractured housing occur there would be abnormal noises, bad tyre wear
+      and a theoretical possibility of wheel loss."'
+    independent: true
+  component_id: suspension_wheel_bearings
+  detection: test_drive

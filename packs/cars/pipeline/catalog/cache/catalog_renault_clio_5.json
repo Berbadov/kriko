@@ -1,0 +1,57 @@
+{
+  "engines": [
+    {
+      "engine_code": "H4D",
+      "engine_family": "h4d",
+      "fuel": "petrol",
+      "displacement_cc": 1000,
+      "transmission_codes": [
+        "manual"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H5Dt",
+      "engine_family": "h5d",
+      "fuel": "petrol",
+      "displacement_cc": 1000,
+      "transmission_codes": [
+        "manual"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H5Ht",
+      "engine_family": "h5h",
+      "fuel": "petrol",
+      "displacement_cc": 1300,
+      "transmission_codes": [
+        "manual"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "H4M",
+      "engine_family": "h4m",
+      "fuel": "petrol",
+      "displacement_cc": 1600,
+      "transmission_codes": [
+        "manual"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "K9K",
+      "engine_family": "k9k",
+      "fuel": "diesel",
+      "displacement_cc": 1500,
+      "transmission_codes": [
+        "manual"
+      ],
+      "notes": ""
+    }
+  ],
+  "transmissions": [
+    "manual"
+  ]
+}

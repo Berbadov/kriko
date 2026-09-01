@@ -1,0 +1,30 @@
+{
+  "engines": [
+    {
+      "engine_code": "EA211",
+      "engine_family": "ea211",
+      "fuel": "petrol",
+      "displacement_cc": 1000,
+      "transmission_codes": [
+        "manual",
+        "dsg"
+      ],
+      "notes": ""
+    },
+    {
+      "engine_code": "EA288",
+      "engine_family": "ea288",
+      "fuel": "diesel",
+      "displacement_cc": 1600,
+      "transmission_codes": [
+        "manual",
+        "dsg"
+      ],
+      "notes": ""
+    }
+  ],
+  "transmissions": [
+    "manual",
+    "dsg"
+  ]
+}

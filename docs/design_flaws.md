@@ -3,7 +3,7 @@
 An honest audit of why the project feels disappointing/incomplete after months of work,
 and why claims mismatch between similar-yet-different component models. Written after
 reading `matcher.py`, `resolver.py`, `promote.py`, the part YAMLs, and
-`pipeline_postmortem.md`.
+`docs/historical/pipeline_postmortem.md`.
 
 **Headline:** the failures are mostly ONE root design flaw expressing itself in
 different places — not months of wasted work. The serving plane (matcher/resolver)
@@ -134,7 +134,7 @@ is investigation-hostile:
    column on `AnalysisLog` or an append-only JSONL file (`logs/analyses.jsonl`).
 2. Add a read path that doesn't need a browser or DB client:
    `GET /debug/analyses?limit=20` (last N analyses, full payloads) and/or a small CLI
-   (`python -m backend.tools.analyses --last 20 --model golf`).
+   (`python -m ops.reports.analyses --last 20 --model golf`).
 3. Add a **replay** tool: feed a logged request back through `match_variant` +
    `resolve_claims` after a fix and diff the output.
 4. Once payloads are logged, **agents can audit them directly**: scan recent analyses
@@ -152,8 +152,8 @@ is investigation-hostile:
 - `resolver.py`: the fail-open (missing data) vs fail-closed (confirmed equipment
   mismatch) distinction is exactly right and well documented.
 - Serving plane is DB-only — no LLM on the request path. Correct architecture.
-- The postmortem discipline (`pipeline_postmortem.md`) is rare and valuable; most of
-  its findings were acted on.
+- The postmortem discipline (`docs/historical/pipeline_postmortem.md`) is rare and
+  valuable; most of its findings were acted on.
 - Honest UX copy: "no data ≠ problem-free", unavailable ≠ clean.
 
 **Structural weaknesses beyond the flaws above:**

@@ -1,0 +1,353 @@
+part_id: megane4_body
+part_type: body
+display_name: Renault Megane 4 Body & Water Sealing
+manufacturer: renault
+known_also_as:
+- Renault Megane 4 body
+- Renault Megane 4 boot leak
+- Renault Megane 4 water ingress
+claims:
+- id: megane4_body_electrical_parking_sensor_multiplex_v1
+  claim_key: megane4_body_electrical_parking_sensor_multiplex
+  version: 1
+  is_current: true
+  title: Parking sensor multiplex transmission failure (2011 Renault Mégane 3)
+  title_tr: Parking sensor multiplex transmission failure (2011 Renault Mégane 3)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: The car displays a 'Check parking sensor' error alongside a multiplex
+    transmission failure (C15900) for the parking sensor system, indicating a chronic
+    issue with the multiplexing system controlling sensor inputs. This suggests a
+    broader electrical multiplexing defect affecting multiple systems.
+  rationale_tr: The car displays a 'Check parking sensor' error alongside a multiplex
+    transmission failure (C15900) for the parking sensor system, indicating a chronic
+    issue with the multiplexing system controlling sensor inputs. This suggests a
+    broader electrical multiplexing defect affecting multiple systems.
+  inspection_advice: Scan for error codes (e.g., C15900) using an OBD-II scanner.
+    Inspect the multiplex wiring and control module for parking sensors, and check
+    if other sensor-controlled functions (e.g., rear parking sensors) are affected.
+  inspection_advice_tr: Scan for error codes (e.g., C15900) using an OBD-II scanner.
+    Inspect the multiplex wiring and control module for parking sensors, and check
+    if other sensor-controlled functions (e.g., rear parking sensors) are affected.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.startmycar.com/renault/megane/problems/body-paint-exterior
+    source_domain: startmycar.com
+    site_or_channel: startmycar.com
+    quote: '"Check parking sensor" error... C15900 – No Proximity Sensor Multiplex
+      Transmission'
+    independent: true
+  component_id: electrical_parking_sensors
+  detection: visual
+- id: megane4_body_electrical_r_link_multimedia_system_v1
+  claim_key: megane4_body_electrical_r_link_multimedia_system
+  version: 1
+  is_current: true
+  title: R-Link multimedia system software bugs and electrical instability (Megane
+    4)
+  title_tr: R-Link multimedia system software bugs and electrical instability (Megane
+    4)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: The Megane 4’s R-Link multimedia system suffers from software bugs causing
+    screen freezes, Bluetooth drops, and rear-view camera malfunctions. Voltage fluctuations
+    in the electrical system further exacerbate these issues, indicating a chronic
+    design flaw in the system’s integration.
+  rationale_tr: The Megane 4’s R-Link multimedia system suffers from software bugs
+    causing screen freezes, Bluetooth drops, and rear-view camera malfunctions. Voltage
+    fluctuations in the electrical system further exacerbate these issues, indicating
+    a chronic design flaw in the system’s integration.
+  inspection_advice: Test the multimedia system for screen freezes, Bluetooth connectivity,
+    and rear-view camera functionality. Check battery and charging system health during
+    a diagnostic scan.
+  inspection_advice_tr: Test the multimedia system for screen freezes, Bluetooth connectivity,
+    and rear-view camera functionality. Check battery and charging system health during
+    a diagnostic scan.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"Software bugs in the R-Link system and voltage fluctuations in the electrical
+      system."'
+    independent: true
+  component_id: electrical_infotainment
+  detection: visual
+- id: megane4_body_electrical_xenon_bulb_multiplex_tra_v1
+  claim_key: megane4_body_electrical_xenon_bulb_multiplex_tra
+  version: 1
+  is_current: true
+  title: Xenon bulb multiplex transmission failure (2011 Renault Mégane 3)
+  title_tr: Xenon bulb multiplex transmission failure (2011 Renault Mégane 3)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  confidence: 0.6
+  rationale: The car exhibits a persistent 'Check lighting' warning despite functional
+    bulbs and a replaced fuse, linked to a failure in the multiplex transmission system
+    for xenon bulbs. This suggests a chronic issue with the electrical multiplexing
+    system controlling the xenon headlights, which may also affect other multiplex-controlled
+    functions.
+  rationale_tr: The car exhibits a persistent 'Check lighting' warning despite functional
+    bulbs and a replaced fuse, linked to a failure in the multiplex transmission system
+    for xenon bulbs. This suggests a chronic issue with the electrical multiplexing
+    system controlling the xenon headlights, which may also affect other multiplex-controlled
+    functions.
+  inspection_advice: Check for error codes (e.g., C18100) using an OBD-II scanner.
+    Look for signs of electrical faults in the multiplex wiring or control module
+    related to xenon headlights, and verify if the automatic leveling system is responsive
+    or if it also fails with the same error.
+  inspection_advice_tr: Check for error codes (e.g., C18100) using an OBD-II scanner.
+    Look for signs of electrical faults in the multiplex wiring or control module
+    related to xenon headlights, and verify if the automatic leveling system is responsive
+    or if it also fails with the same error.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://www.startmycar.com/renault/megane/problems/body-paint-exterior
+    source_domain: startmycar.com
+    site_or_channel: startmycar.com
+    quote: '"Check lighting" even though all the bulbs are working... automatic leveling
+      (self-adjustment) doesn’t work anymore... C18100 – No Xenon Bulb Multiplex Transmission'
+    independent: true
+- id: megane4_body_emissions_adblue_crystallization_a_v1
+  claim_key: megane4_body_emissions_adblue_crystallization_a
+  version: 1
+  is_current: true
+  title: AdBlue crystallization and NOx sensor failures in 1.5 Blue dCi engines
+  title_tr: AdBlue crystallization and NOx sensor failures in 1.5 Blue dCi engines
+  kind: known_issue
+  domain: emissions
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 Blue dCi engines in the Megane 4 suffer from AdBlue crystallization
+    and NOx sensor failures, causing 'starting impossible' warnings, limp mode, and
+    reduced power. This is a chronic issue tied to the SCR system’s sensitivity to
+    AdBlue quality and environmental conditions.
+  rationale_tr: The 1.5 Blue dCi engines in the Megane 4 suffer from AdBlue crystallization
+    and NOx sensor failures, causing 'starting impossible' warnings, limp mode, and
+    reduced power. This is a chronic issue tied to the SCR system’s sensitivity to
+    AdBlue quality and environmental conditions.
+  inspection_advice: Check for 'starting impossible' warnings, verify NOx sensor functionality,
+    and inspect the AdBlue system for crystallization or blockages. Ensure high-quality
+    AdBlue is used.
+  inspection_advice_tr: Check for 'starting impossible' warnings, verify NOx sensor
+    functionality, and inspect the AdBlue system for crystallization or blockages.
+    Ensure high-quality AdBlue is used.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"AdBlue crystallization and NOx sensor failures."'
+    independent: true
+  component_id: emissions_scr_adblue
+  detection: diagnostic
+- id: megane4_body_emissions_egr_valve_clogging_in_1__v1
+  claim_key: megane4_body_emissions_egr_valve_clogging_in_1_
+  version: 1
+  is_current: true
+  title: EGR valve clogging in 1.5 dCi engines (Megane 3)
+  title_tr: EGR valve clogging in 1.5 dCi engines (Megane 3)
+  kind: known_issue
+  domain: emissions
+  severity: medium
+  confidence: 0.6
+  rationale: Frequent short trips and low-RPM driving cause carbon buildup in the
+    EGR valve of the 1.5 dCi engines, leading to hesitation, increased fuel consumption,
+    and engine warning lights. This is a chronic issue tied to driving habits but
+    also highlights a design vulnerability in the EGR system.
+  rationale_tr: Frequent short trips and low-RPM driving cause carbon buildup in the
+    EGR valve of the 1.5 dCi engines, leading to hesitation, increased fuel consumption,
+    and engine warning lights. This is a chronic issue tied to driving habits but
+    also highlights a design vulnerability in the EGR system.
+  inspection_advice: Check for hesitation at low RPM and verify the EGR valve for
+    carbon buildup. Listen for unusual engine noises during idle or acceleration.
+  inspection_advice_tr: Check for hesitation at low RPM and verify the EGR valve for
+    carbon buildup. Listen for unusual engine noises during idle or acceleration.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"Frequent short trips and continuous low-RPM driving cause carbon buildup
+      in the EGR valve."'
+    independent: true
+  component_id: emissions_egr
+  detection: diagnostic
+- id: megane4_body_engine_turbocharger_failure_due_v1
+  claim_key: megane4_body_engine_turbocharger_failure_due
+  version: 1
+  is_current: true
+  title: Turbocharger failure due to oil neglect in 1.5 dCi engines
+  title_tr: Turbocharger failure due to oil neglect in 1.5 dCi engines
+  kind: known_issue
+  domain: engine
+  severity: high
+  confidence: 0.6
+  rationale: Turbochargers in the 1.5 dCi engines fail prematurely due to delayed
+    oil changes and low-quality oil, causing loss of acceleration, excessive black
+    smoke, and whistling noises. This is a chronic issue tied to maintenance habits
+    rather than design alone but is exacerbated by Renault’s turbo design sensitivity.
+  rationale_tr: Turbochargers in the 1.5 dCi engines fail prematurely due to delayed
+    oil changes and low-quality oil, causing loss of acceleration, excessive black
+    smoke, and whistling noises. This is a chronic issue tied to maintenance habits
+    rather than design alone but is exacerbated by Renault’s turbo design sensitivity.
+  inspection_advice: Listen for whistling noises from the engine, check for excessive
+    black smoke, and verify oil change intervals. Inspect turbo shaft play and intercooler
+    hoses for wear or leaks.
+  inspection_advice_tr: Listen for whistling noises from the engine, check for excessive
+    black smoke, and verify oil change intervals. Inspect turbo shaft play and intercooler
+    hoses for wear or leaks.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"The main reasons are delayed oil changes and the use of low-quality engine
+      oil."'
+    independent: true
+  component_id: engine_turbocharger
+  detection: diagnostic
+- id: megane4_body_fuel_system_chronic_injector_wear_in_v1
+  claim_key: megane4_body_fuel_system_chronic_injector_wear_in
+  version: 1
+  is_current: true
+  title: Chronic injector wear in 1.5 dCi engines
+  title_tr: Chronic injector wear in 1.5 dCi engines
+  kind: known_issue
+  domain: fuel system
+  severity: high
+  confidence: 0.6
+  rationale: The 1.5 dCi engines in the Renault Megane 3 (2008–2015) suffer from premature
+    injector wear, exacerbated by poor fuel quality and irregular maintenance. This
+    leads to hard starting, misfiring, and power loss—often requiring costly injector
+    replacements or leak-back tests.
+  rationale_tr: The 1.5 dCi engines in the Renault Megane 3 (2008–2015) suffer from
+    premature injector wear, exacerbated by poor fuel quality and irregular maintenance.
+    This leads to hard starting, misfiring, and power loss—often requiring costly
+    injector replacements or leak-back tests.
+  inspection_advice: Check for signs of misfiring (rough idle, black/white exhaust
+    smoke) and verify fuel system health. Inspect injectors for wear or leaks during
+    a diagnostic scan or service.
+  inspection_advice_tr: Check for signs of misfiring (rough idle, black/white exhaust
+    smoke) and verify fuel system health. Inspect injectors for wear or leaks during
+    a diagnostic scan or service.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"In 1.5 dCi engines, injectors are prone to wear over time. Poor fuel
+      quality and irregular maintenance significantly accelerate this process."'
+    independent: true
+  component_id: engine_injectors
+  detection: diagnostic
+- id: megane4_body_general_motorhauben_befestigung__v1
+  claim_key: megane4_body_general_motorhauben_befestigung_
+  version: 1
+  is_current: true
+  title: Motorhauben-Befestigung (Pre-Facelift 2020)
+  title_tr: Motorhauben-Befestigung (Pre-Facelift 2020)
+  kind: known_issue
+  domain: general
+  severity: medium
+  confidence: 0.6
+  rationale: Die Motorhaube kann bei Autobahngeschwindigkeit abreißen, was ein Sicherheitsrisiko
+    darstellt. Dies wurde im Facelift 2020 behoben.
+  rationale_tr: Die Motorhaube kann bei Autobahngeschwindigkeit abreißen, was ein
+    Sicherheitsrisiko darstellt. Dies wurde im Facelift 2020 behoben.
+  inspection_advice: Motorhaubenbefestigung auf Korrosion und Festigkeit prüfen, besonders
+    bei älteren Modellen (2016–2019).
+  inspection_advice_tr: Motorhaubenbefestigung auf Korrosion und Festigkeit prüfen,
+    besonders bei älteren Modellen (2016–2019).
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://what-breaks.com/renault/megane-4
+    source_domain: what-breaks.com
+    site_or_channel: what-breaks.com
+    quote: '"Motorhauben-Befestigung bei Pre-FL konnte bei Autobahngeschwindigkeit
+      abreißen."'
+    independent: true
+- id: megane4_body_suspension_premature_suspension_wea_v1
+  claim_key: megane4_body_suspension_premature_suspension_wea
+  version: 1
+  is_current: true
+  title: Premature suspension wear (stabilizer links, control arm bushings, shock
+    absorbers)
+  title_tr: Premature suspension wear (stabilizer links, control arm bushings, shock
+    absorbers)
+  kind: known_issue
+  domain: suspension
+  severity: medium
+  confidence: 0.6
+  rationale: The Megane 3 and Megane 4 experience early wear of stabilizer links,
+    control arm bushings, and shock absorbers, leading to knocking noises, steering
+    vibrations, and reduced road holding. This is a chronic issue tied to design stress
+    and material choices in the suspension components.
+  rationale_tr: The Megane 3 and Megane 4 experience early wear of stabilizer links,
+    control arm bushings, and shock absorbers, leading to knocking noises, steering
+    vibrations, and reduced road holding. This is a chronic issue tied to design stress
+    and material choices in the suspension components.
+  inspection_advice: Listen for knocking noises from the front suspension, check for
+    steering wheel vibrations, and inspect suspension components for wear or damage
+    during a road test.
+  inspection_advice_tr: Listen for knocking noises from the front suspension, check
+    for steering wheel vibrations, and inspect suspension components for wear or damage
+    during a road test.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"Early wear of stabilizer links, control arm bushings, and shock absorbers."'
+    independent: true
+  component_id: suspension_shock_absorbers
+  detection: test_drive
+- id: megane4_body_transmission_edc_dual_clutch_transmis_v1
+  claim_key: megane4_body_transmission_edc_dual_clutch_transmis
+  version: 1
+  is_current: true
+  title: EDC dual-clutch transmission sensitivity to heat and software calibration
+    (Megane 4)
+  title_tr: EDC dual-clutch transmission sensitivity to heat and software calibration
+    (Megane 4)
+  kind: known_issue
+  domain: transmission
+  severity: high
+  confidence: 0.6
+  rationale: The EDC dual-clutch transmission in the Megane 4 (2016–2022) is prone
+    to jerky gear shifts, delayed take-offs, and warning messages due to heat sensitivity
+    and software calibration issues. This is a chronic reliability flaw in the transmission
+    control system.
+  rationale_tr: The EDC dual-clutch transmission in the Megane 4 (2016–2022) is prone
+    to jerky gear shifts, delayed take-offs, and warning messages due to heat sensitivity
+    and software calibration issues. This is a chronic reliability flaw in the transmission
+    control system.
+  inspection_advice: Test for jerky shifts, delayed acceleration, and transmission
+    warning messages. Verify transmission oil levels and condition, and check for
+    software updates.
+  inspection_advice_tr: Test for jerky shifts, delayed acceleration, and transmission
+    warning messages. Verify transmission oil levels and condition, and check for
+    software updates.
+  status: review
+  promoted_by: ledger
+  sources:
+  - source_url: https://diagnosticgarage.com/en/renault-megane-3%E2%80%934-common-problems-and-solutions
+    source_domain: diagnosticgarage.com
+    site_or_channel: diagnosticgarage.com
+    quote: '"EDC dual-clutch transmissions are sensitive to heat and software calibration
+      issues."'
+    independent: true

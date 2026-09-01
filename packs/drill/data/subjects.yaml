@@ -1,0 +1,85 @@
+# Subjects — products, battery platforms, and one shared component.
+#
+# The shapes here are the point:
+#
+#   * DHP484 has NO relations. A cordless drill does not decompose the way a car
+#     does. Under the old schema this would have been a row of NULL columns; here
+#     it is simply a subject with attributes and no edges.
+#
+#   * Two products from different brands point at different battery platforms via
+#     `part_of`. A claim on a platform therefore reaches every tool on it — the
+#     same traversal that lets a claim about an engine code reach every car
+#     fitted with that engine. One mechanism, two categories.
+#
+#   * TC-CD-18-2 carries fewer attributes than DHP484 and that is fine. Absence
+#     is absence of a row, never a NULL and never a sentinel.
+
+# ── battery platforms — shared across a brand's whole tool line ───────────
+- kind: battery_platform
+  label: Makita LXT 18V
+  identity: {brand: makita, platform: LXT}
+  attributes:
+    voltage_v: 18
+    released: 2005
+  aliases: [LXT, "18V LXT"]
+
+- kind: battery_platform
+  label: Einhell Power X-Change 18V
+  identity: {brand: einhell, platform: PXC}
+  attributes:
+    voltage_v: 18
+    released: 2013
+  aliases: [PXC, "Power X-Change"]
+
+# ── a component shared by a brand's drills ───────────────────────────────
+- kind: component
+  label: Makita keyless chuck (13 mm)
+  identity: {brand: makita, component: keyless_chuck_13}
+  attributes:
+    chuck_size_mm: 13
+
+# ── products ─────────────────────────────────────────────────────────────
+- kind: product
+  label: Makita DHP484 18V brushless combi drill
+  identity: {brand: makita, model: DHP484}
+  attributes:
+    voltage_v: 18
+    chuck_size_mm: 13
+    motor_type: brushless
+    max_torque_nm: 54
+    released: 2016
+  aliases: [DHP484Z, "DHP 484"]
+  relations:
+    - predicate: part_of
+      object: {kind: battery_platform, identity: {brand: makita, platform: LXT}}
+      note: Runs on the LXT 18V battery line.
+    - predicate: part_of
+      object: {kind: component, identity: {brand: makita, component: keyless_chuck_13}}
+      note: Fitted with the 13 mm keyless chuck.
+
+- kind: product
+  label: Makita DHP482 18V brushed combi drill
+  identity: {brand: makita, model: DHP482}
+  attributes:
+    voltage_v: 18
+    chuck_size_mm: 13
+    motor_type: brushed
+    max_torque_nm: 62
+    released: 2012
+  relations:
+    - predicate: part_of
+      object: {kind: battery_platform, identity: {brand: makita, platform: LXT}}
+      note: Runs on the LXT 18V battery line.
+    - predicate: part_of
+      object: {kind: component, identity: {brand: makita, component: keyless_chuck_13}}
+      note: Fitted with the 13 mm keyless chuck.
+
+# The degenerate case, on purpose: attributes, zero relations. Nothing in the
+# lookup path may branch on this — it must fall out of an empty result set.
+- kind: product
+  label: Einhell TC-CD 18/2 Li cordless drill
+  identity: {brand: einhell, model: TC-CD-18-2}
+  attributes:
+    voltage_v: 18
+    motor_type: brushed
+    released: 2018

@@ -1,0 +1,190 @@
+# Source tier registry — Phase 1 of the v3 overhaul.
+#
+# Not all sources are equal. This registry gives every source domain a tier
+# with a trust weight; verdicts/coverage use it for decomposed confidence
+# (source_trust x corroboration x specificity) instead of a hand-set 0.6.
+#
+# Tier semantics (docs/overhaul_plan.md Phase 1):
+#   authoritative — official/recall/manufacturer data; near-undeniable facts
+#   specialist    — repairers/engineers who fix this hardware daily; named
+#                   part prices and failure patterns; commercial bias exists
+#                   (they sell the repair) but the failure itself is real
+#   enthusiast    — model clubs, owner communities, editorial car press
+#   forum_ugc     — forum threads: real owner reports, unverified, anonymous
+#   seo_blog      — content farms / AI-SEO / aggregator lead-gen; lowest trust
+#
+# Domains below are seeded from the actual source_domain census of
+# backend/data/parts/** (top contributors classified by hand). Anything not
+# listed falls through `rules`, and anything the rules miss lands on the
+# `default` tier. A domain listed here always wins over a rule.
+
+tiers:
+  authoritative: {trust: 1.00}
+  specialist:    {trust: 0.75}
+  enthusiast:    {trust: 0.55}
+  forum_ugc:     {trust: 0.40}
+  seo_blog:      {trust: 0.20}
+
+default: seo_blog
+
+domains:
+  # ── authoritative ─────────────────────────────────────────────────
+  user-manual.renault.com: {tier: authoritative}   # manufacturer docs
+  nhtsa.gov: {tier: authoritative}                 # recall feed origin
+  recalls.gov: {tier: authoritative}
+  ec.europa.eu: {tier: authoritative}              # Safety Gate / RAPEX
+  boschcarservice.com: {tier: authoritative}       # OEM service network
+
+  # ── specialist: gearbox repairers ─────────────────────────────────
+  teknikotomatiksanziman.com: {tier: specialist}
+  dsgservisi.com: {tier: specialist}
+  asrgearboxrepairs.co.uk: {tier: specialist}
+  eco-torque.co.uk: {tier: specialist}
+  ecotorqueltd.wixsite.com: {tier: specialist}
+  actronics.co.uk: {tier: specialist}
+  tvsengineering.com: {tier: specialist}
+  oztepeotomatiksanziman.com: {tier: specialist}
+  akppcenter.com: {tier: specialist}
+  gearboxlist.com: {tier: specialist}
+  germanexpert: {tier: specialist}
+
+  # ── specialist: engine/turbo/injection/electrics ──────────────────
+  ankaturbo.com.tr: {tier: specialist}
+  m.maslakdpf.com: {tier: specialist}
+  dizelmarketim.com.tr: {tier: specialist}
+  erenservis.net: {tier: specialist}
+  cartechelectronics.com: {tier: specialist}
+  renaultelektronikservisi.com.tr: {tier: specialist}
+  absstuurapparaten.nl: {tier: specialist}
+  ankarakombiservisin.com: {tier: specialist}
+  enginescope.gr: {tier: specialist}
+  motorenlager.de: {tier: specialist}
+  kfz-dietrich.com: {tier: specialist}
+  germantechmotorworks.com: {tier: specialist}
+  volkkarihuolto.fi: {tier: specialist}
+  fdyotomotiv.com: {tier: specialist}
+  kiyiotomotiv.com.tr: {tier: specialist}
+  sandikmotor.com.tr: {tier: specialist}
+  rsamotorsports.com: {tier: specialist}
+  vagpoint.com.tr: {tier: specialist}
+  vagmanchester.com: {tier: specialist}
+  vaggarage.com.au: {tier: specialist}
+  motronix.net: {tier: specialist}
+  deutsche-parts.co.uk: {tier: specialist}
+  autoricambitritella.it: {tier: specialist}
+  autodiagly.com: {tier: specialist}
+  elektrikliturkiye.com: {tier: specialist}
+  arizacilik.com: {tier: specialist}
+
+
+  # ── enthusiast: owner clubs & editorial car press ─────────────────
+  volklub.com: {tier: enthusiast}
+  sciroccocentral.com: {tier: enthusiast}
+  vwownersclub.co.uk: {tier: enthusiast}
+  volkswagenbuddy.com: {tier: enthusiast}
+  vag-wiki.com: {tier: enthusiast}
+  whatcar.com: {tier: enthusiast}
+  autocar.co.uk: {tier: enthusiast}
+  telegraph.co.uk: {tier: enthusiast}
+  gearsmagazine.com: {tier: enthusiast}
+  otomobiloji.com: {tier: enthusiast}
+  arabalar.com.tr: {tier: enthusiast}
+  otocikma.com: {tier: enthusiast}
+  autoplus.fr: {tier: enthusiast}
+  carnews.nl: {tier: enthusiast}
+  hypermiler.co.uk: {tier: enthusiast}
+  carsandwrenches.com: {tier: enthusiast}
+  motorreviewer.com: {tier: enthusiast}
+  mycarly.com: {tier: enthusiast}      # maker of the OBD tool, technical depth
+  startmycar.com: {tier: enthusiast}
+  carswithfares.ca: {tier: enthusiast}
+  en.terjebjornstad.com: {tier: enthusiast}
+
+  # ── forum_ugc: owner reports, unverified ──────────────────────────
+  donanimhaber.com: {tier: forum_ugc}
+  forum.donanimarsivi.com: {tier: forum_ugc}
+  forums.hardwarezone.com.sg: {tier: forum_ugc}
+  kronikyorum.com: {tier: forum_ugc}
+  drivisual.tv: {tier: forum_ugc}      # video channel comments/community
+  youtube.com: {tier: forum_ugc}
+
+  # ── seo_blog: content farms, aggregators, lead-gen, scraped clones ─
+  araclo.com: {tier: seo_blog}
+  what-breaks.com: {tier: seo_blog}
+  lom-s.ru: {tier: seo_blog}
+  autozilla.co.uk: {tier: seo_blog}
+  guneroto.com: {tier: seo_blog}
+  aboutthecars.com: {tier: seo_blog}
+  torquecars.com: {tier: seo_blog}
+  motoranimal.com: {tier: seo_blog}
+  francemoteursutilitaires.com: {tier: seo_blog}
+  thevehiclecheck.co.uk: {tier: seo_blog}
+  autotrader.co.za: {tier: seo_blog}
+  au7o.io: {tier: seo_blog}
+  yandex.com.tr: {tier: seo_blog}      # search-engine cache page, not a source
+  pdfcoffee.com: {tier: seo_blog}      # scraped doc sharing
+  brisbanetuning.com.au: {tier: seo_blog}
+  bilgiweb.com.tr: {tier: seo_blog}
+  autodataplug.com: {tier: seo_blog}
+  ampauto.io: {tier: seo_blog}
+  accio.com: {tier: seo_blog}
+  autoguide.top: {tier: seo_blog}
+  modpark.com: {tier: seo_blog}
+  en.mercedesassistance.com: {tier: seo_blog}
+  mymotorlist.com: {tier: seo_blog}
+  diagnosticgarage.com: {tier: seo_blog}
+  automotive24.center: {tier: seo_blog}
+  willandservicecentre.co.uk: {tier: seo_blog}
+  yoldakiusta.com: {tier: seo_blog}
+  tr.ml-vehicle.com: {tier: seo_blog}
+  rxmechanic.com: {tier: seo_blog}
+  mycaros.com: {tier: seo_blog}
+  motorcarservice.net: {tier: seo_blog}
+  kshaber.com.tr: {tier: seo_blog}     # news-site syndicated filler
+  colvoss.com.au: {tier: seo_blog}
+  carcostcheck.co.uk: {tier: seo_blog}
+  problemsbyvin.com: {tier: seo_blog}
+  tgrthaber.com.tr: {tier: seo_blog}
+  mrthaber.com.tr: {tier: seo_blog}
+  mithaber.com.tr: {tier: seo_blog}
+  fmhaber.com.tr: {tier: seo_blog}
+  iscihaber.net: {tier: seo_blog}
+  ensonhaber.com: {tier: seo_blog}
+  edigital.com.tr: {tier: seo_blog}
+  whocanfixmycar.com: {tier: seo_blog} # lead-gen aggregator
+  clickmechanic.com: {tier: seo_blog}  # lead-gen aggregator
+  bumper.co: {tier: seo_blog}          # lead-gen aggregator
+  smartcarcheck.co.uk: {tier: seo_blog}
+  autoscore.pro: {tier: seo_blog}
+  foreignautomotive.ca: {tier: seo_blog}
+  gtautomotiveparts.co.uk: {tier: seo_blog}
+  1xmatch.com: {tier: seo_blog}
+  oborudow.ru: {tier: seo_blog}
+  avtotachki.com: {tier: seo_blog}
+  avtomobile.cc: {tier: seo_blog}
+  uscarsnew.com: {tier: seo_blog}
+  tractorsinfo.com: {tier: seo_blog}
+  play.google.com: {tier: seo_blog}
+  github.com: {tier: seo_blog}         # code hosting, not automotive sourcing
+  lemberglaw.com: {tier: seo_blog}     # class-action lead-gen
+  procarmanuals.com: {tier: seo_blog}
+  autopartswd.com: {tier: seo_blog}
+  euroracingparts.fr: {tier: seo_blog}
+  parcaekseni.com: {tier: seo_blog}
+  stedmansgarage.co.uk: {tier: seo_blog}
+  aracustasi.com: {tier: seo_blog}
+  otomobilce.com: {tier: seo_blog}
+  dmaperformance.co.uk: {tier: seo_blog}
+  carreliabilityreport.com: {tier: seo_blog}
+  oruidereman.com: {tier: seo_blog}
+  vwtuning.co: {tier: seo_blog}
+  carsniffer.com: {tier: seo_blog}
+  tr.duowei-motors.com: {tier: seo_blog}
+
+# ── fallback rules (first match wins; explicit domains above win) ─────
+# Applied to the registrable domain of the source URL when the domain isn't
+# listed above. When nothing matches, `default` applies. Conservative: rules
+# classify obvious low-signal shapes; anything ambiguous stays on default.
+rules:
+  - tier: forum_ugc
+    domain_contains: ["forum.", "forums.", "kulubu", "club"]

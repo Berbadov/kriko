@@ -1,0 +1,13 @@
+{
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "default",
+    "description": "The sidecar, its update, and nothing else. Tauri 2 denies by default and this file is the whole allowance — no filesystem access, no arbitrary shell, no HTTP client. The window talks to 127.0.0.1 with ordinary fetch, which needs no capability. The updater and the dialog it asks with are driven from Rust and are deliberately not granted to the frontend: a page that could trigger an install is a page that could be told to.",
+    "windows": ["main"],
+    "permissions": [
+        "core:default",
+        {
+            "identifier": "shell:allow-spawn",
+            "allow": [{ "name": "binaries/kriko-sidecar", "sidecar": true }]
+        }
+    ]
+}

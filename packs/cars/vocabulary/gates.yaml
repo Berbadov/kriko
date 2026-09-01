@@ -1,0 +1,109 @@
+# The cars product principle, as data.
+#
+# CLAUDE.md's bar — "would a buyer learn this from a normal pre-purchase
+# inspection anyway?" — used to live as frozensets in knowledge/stoplists.py,
+# which made the engine hold an opinion about brake pads. It is taste, taste is
+# a property of the category, and this is where the category's taste lives.
+#
+# See packs/cars/research/principle.md for the prose version.
+
+covered:
+    # Routine inspection ground: fluids, wear, test-drive symptoms and visual checks.
+    - { pattern: brake fluid, note: routine fluid-level check }
+    - coolant level
+    - oil level
+    - power steering fluid
+    - transmission fluid
+    - fluid level
+    - brake pad
+    - brake disc
+    - brake rotor
+    - brake wear
+    - injector cleaning
+    - injector test
+    - injector bench
+    - injector flow test
+    - compression test
+    - tire wear
+    - tyre wear
+    - ball joint
+    - track rod
+    - tie rod
+    - wheel bearing play
+    - clutch wear
+    - clutch slip
+    - clutch drag
+    - synchro wear
+    - difficulty engaging gear
+    - grinding noise
+    - stuck in gear
+    - leaking gearbox oil
+    - gearbox oil leak
+    - selector fork
+    - synchromesh
+    - exhaust leak
+    - exhaust corrosion
+    - jerking in gear
+    - dropping out of gear
+    - burning smell from gearbox
+    - brake system failure
+    - suspension failure
+    - steering system malfunction
+    - engine mounting
+    - engine mount
+    - difficulty selecting reverse
+    - cannot select reverse
+
+generic:
+    # Generic advice with no configuration or mileage anchor.
+    - regular oil change
+    - routine oil change
+    - oil changes prevent
+    - brakes wear over time
+    - brake pads wear over time
+    - tires wear over time
+    - tyres wear over time
+    - regular maintenance prevents
+    - routine maintenance prevents
+    - fluids need to be changed periodically
+    - wear and tear is normal
+
+ambiguous:
+    # These also describe documented, configuration-specific chronics.
+    - oil consumption
+    - blue smoke
+    - burning oil
+
+exempt:
+    # Text naming any of these waives the `covered` rejection only — an
+    # official recall is authoritative even when it names a part an
+    # inspection also covers (was check_evidence's `recall = "recall" in
+    # blob.lower()`). It is not a blanket waiver: `noise`/`generic`/
+    # `ambiguous` still apply (narrowed from the original wider scope —
+    # see kriko/gates.py's `gate_reason`).
+    - recall
+
+noise:
+    # Generic dashboard warning-light language.
+    - {
+          pattern: '\b(abs|esp|epc|dpf|scr|adblue)\s*(warning|light|fault|indicator)\b',
+          note: true of any car,
+      }
+    - { pattern: '\b(check|engine|management)\s+(light|warning)\b' }
+    - { pattern: '\bdashboard\s+(warning|light)\b' }
+    - { pattern: '\bwarning\s+light\b' }
+
+specificity:
+    # Engine/transmission code, displacement+fuel-tech label, or mileage anchor.
+    - { pattern: '\b[A-Za-z]{1,4}\d[A-Za-z0-9]{0,3}\b' }
+    - { pattern: '\b\d\.\d\s*(tsi|tdi|tfsi|dci|tce|sce|hdi|vti)\b' }
+    - { pattern: '\b\d[\d,.]*\s*(km|kilomet|mile|mi)\b' }
+
+limits:
+    # A title over this is a sentence, not a failure name. A rationale under
+    # the minimum is a restated title rather than an explanation. Both were
+    # Python constants in the orphaned agent gate (title_is_verbose's
+    # max_len=100 and MIN_RATIONALE_CHARS=60); they are category taste, so
+    # this is where they belong.
+    - { pattern: max_title_chars, note: "100" }
+    - { pattern: min_rationale_chars, note: "60" }
