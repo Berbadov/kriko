@@ -355,10 +355,14 @@ def test_no_tool_reaches_into_a_pack_for_python():
     own tools would mean importing pack Python here — the same door the browser
     extension keeps shut, for the same reason.
     """
-    source = mcp_server.__file__
-    text = open(source, encoding="utf-8").read()
-    assert "import packs" not in text
-    assert "from packs" not in text
+    import re
+
+    text = open(mcp_server.__file__, encoding="utf-8").read()
+    # Anchored to an import statement with a word boundary, because the naive
+    # substring version matched `from kriko.store import packstore` and would
+    # fail this file for the wrong reason.
+    offenders = re.findall(r"^\s*(?:from|import)\s+packs\b.*$", text, re.MULTILINE)
+    assert offenders == []
 
 
 def test_a_submitted_finding_records_when_it_was_retrieved(store):

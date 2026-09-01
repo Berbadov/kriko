@@ -30,3 +30,13 @@ def get_app_state(request: Request):
         yield conn
     finally:
         conn.close()
+
+
+def get_jobs(request: Request):
+    """The app's single job runner.
+
+    On `app.state` rather than constructed per request: the thread pool and the
+    work in it must outlive the request that started it, which is the whole
+    point of a job.
+    """
+    return request.app.state.jobs

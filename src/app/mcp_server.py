@@ -18,38 +18,27 @@ declare. The five car-shaped tools of the old server (`onboard_model`,
 `submit_trims`, `list_generations`, …) collapse into these.
 
 **A quote that is not in the document does not become evidence.** The check is
-mechanical and lives in `submit_findings`, because an agent asked for verbatim
+mechanical and lives in `app/findings.py`, because an agent asked for verbatim
 text will occasionally produce something plausible instead, and the whole value
 of the evidence chain is that this cannot pass quietly.
 """
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
 
 from mcp.server.fastmcp import FastMCP
 
-from kriko.extract.grounding import is_grounded
-from kriko.gates import gate_reason, load_gates, structural_reasons
+from app.findings import accept_findings
 from kriko.lookup.tree import health_json, tree_json
 from kriko.lookup.tree import subject_tree as _subject_tree
 from kriko.lookup.tree import weakest_claims as _weakest_claims
 from kriko.research import get_researcher, plan_task
-from kriko.store import ids, packstore
+from kriko.store import packstore
 from kriko.store.db import connect
 
 mcp = FastMCP("kriko")
 
 #: Overridden by tests so they never touch the real ~/.kriko store.
 STORE_PATH = None
-
-#: Rank weight for a claim an agent wrote. A subscription harness is a source,
-#: not an authority: its claims reach the reader, ranked as *reported* rather
-#: than confirmed, until something independent corroborates them. Same value
-#: an installed pack's exporter gives an unreviewed, unverified claim, so the
-#: two cannot be told apart by rank alone — which is correct, because neither
-#: has been checked.
-AGENT_CONFIDENCE = 0.6
-
 
 @contextmanager
 def _store():
@@ -316,149 +305,8 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
     claims did not survive, rather than discovering later that half its work
     vanished.
     """
-    accepted, rejected = [], []
-
     with _store() as conn:
-        subject = conn.execute(
-            "SELECT 1 FROM subjects WHERE subject_id = ? AND pack_id = ?",
-            (subject_id, pack_id),
-        ).fetchone()
-        if subject is None:
-            return {"error": f"no subject {subject_id} in pack {pack_id}"}
-
-        vocab = load_gates(conn, pack_id)
-
-        for item in findings:
-            quote = (item.get("quote") or "").strip()
-            document = item.get("document_text") or ""
-            title = (item.get("title") or "").strip()
-
-            if not title:
-                rejected.append({"title": title, "reason": "no title"})
-                continue
-            if not quote:
-                rejected.append({"title": title, "reason": "no quote"})
-                continue
-            if document and not is_grounded(document, quote):
-                rejected.append(
-                    {
-                        "title": title,
-                        "reason": "quote does not appear in the document text — "
-                        "copy it verbatim rather than reconstructing it",
-                    }
-                )
-                continue
-            if not document:
-                rejected.append(
-                    {
-                        "title": title,
-                        "reason": "document_text missing, so the quote cannot be "
-                        "checked; send the text the quote came from",
-                    }
-                )
-                continue
-
-            rationale = (item.get("rationale") or "").strip()
-            has_anchor = bool(item.get("component") or item.get("component_hint"))
-            reason = gate_reason(
-                f"{title} {rationale}", vocab, subject=title, has_anchor=has_anchor
-            )
-            if reason:
-                rejected.append({"title": title, "reason": reason})
-                continue
-
-            structural = structural_reasons(
-                title, rationale, vocab,
-                has_anchor=has_anchor,
-            )
-            if structural:
-                rejected.append({"title": title, "reason": "; ".join(structural)})
-                continue
-
-            url = item.get("source_url") or ""
-            source_id = ids.source_id(url=url, text=quote)
-            claim_id = ids.claim_id(
-                subject_id,
-                item.get("kind", "known_issue"),
-                item.get("domain", "general"),
-                title,
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"
-                " domain, site_or_channel, title, lang, source_type,"
-                " published_at, retrieved_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (
-                    source_id,
-                    pack_id,
-                    url,
-                    _domain_of(url),
-                    "",
-                    "",
-                    "",
-                    item.get("source_type", "page"),
-                    "",
-                    datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                ),
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
-                " kind, domain, severity, consequence, detection, component,"
-                " subsystem, author_confidence, created_at)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,datetime('now'))",
-                (
-                    claim_id,
-                    pack_id,
-                    subject_id,
-                    item.get("kind", "known_issue"),
-                    item.get("domain", "general"),
-                    item.get("severity", "medium"),
-                    "",
-                    item.get("detection", ""),
-                    item.get("component", ""),
-                    "",
-                    AGENT_CONFIDENCE,
-                ),
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO claim_text VALUES (?,?,?,?,?,?)",
-                (
-                    claim_id,
-                    pack_id,
-                    "en",
-                    title,
-                    item.get("body", ""),
-                    item.get("advice", ""),
-                ),
-            )
-            conn.execute(
-                "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
-                " claim_id, source_id, quote, locator, stance, independent)"
-                " VALUES (?,?,?,?,?,?,?,?)",
-                (
-                    ids.evidence_id(source_id, quote),
-                    pack_id,
-                    claim_id,
-                    source_id,
-                    quote,
-                    "",
-                    item.get("stance", "supports"),
-                    1,
-                ),
-            )
-            accepted.append({"title": title, "claim_id": claim_id})
-
-    return {
-        "accepted": accepted,
-        "rejected": rejected,
-        "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
-        "claims rank as reported, not confirmed, until corroborated",
-    }
-
-
-def _domain_of(url: str) -> str:
-    from urllib.parse import urlsplit
-
-    return urlsplit(url).netloc.lower().removeprefix("www.")
+        return accept_findings(conn, subject_id, pack_id, findings)
 
 
 @mcp.tool()
