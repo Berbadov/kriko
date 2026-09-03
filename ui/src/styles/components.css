@@ -375,13 +375,6 @@ pre {
 .report-head h2 {
     margin-bottom: var(--s-1);
 }
-.lede {
-    font-size: var(--t-base);
-    margin: var(--s-2) 0 0;
-}
-.high-count {
-    color: var(--high);
-}
 .group {
     margin: var(--s-5) 0;
 }
@@ -597,4 +590,58 @@ li.gap {
 }
 .worklist li > a:hover {
     text-decoration: underline;
+}
+
+/* ── the verdict, and the report's editorial measure ──────────────── */
+/* The report is the one editorial surface in the app: the reader reads it
+   rather than operating it, and prints it. Measure, leading and a document
+   hierarchy — none of it from a webfont, which an offline app cannot load. */
+.report-body {
+    max-width: var(--measure);
+    font-size: var(--t-md);
+    line-height: var(--lh-read);
+}
+.verdict {
+    border-left: var(--ring) solid var(--line);
+    padding: var(--s-3) 0 var(--s-3) var(--s-4);
+    margin-bottom: var(--s-5);
+}
+.verdict.alarm {
+    border-left-color: var(--high);
+}
+.verdict.caution {
+    border-left-color: var(--medium);
+}
+.verdict.unknown {
+    border-left-color: var(--dim);
+}
+.verdict-line {
+    font-size: var(--t-lg);
+    line-height: var(--lh-lg);
+    font-weight: 600;
+    margin: 0 0 var(--s-2);
+    font-variant-numeric: tabular-nums;
+}
+.verdict-note {
+    margin: var(--s-2) 0 0;
+    color: var(--dim);
+    font-size: var(--t-sm);
+    max-width: var(--measure);
+}
+.verdict-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--panel-2);
+    max-width: 22rem;
+}
+.verdict-bar .seg.high {
+    background: var(--high);
+}
+.verdict-bar .seg.medium {
+    background: var(--medium);
+}
+.verdict-bar .seg.low {
+    background: var(--low);
 }
