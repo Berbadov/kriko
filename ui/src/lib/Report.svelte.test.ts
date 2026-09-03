@@ -96,4 +96,10 @@ describe("Report — one payload, two renderings", () => {
         render(Report, { result: RESULT, lookupId: "L1" });
         expect(screen.getByText(/Matched/)).toBeInTheDocument();
     });
+
+    it("offers a printable copy of the answer", async () => {
+        stubFetch({ "/api/lookups/L1/checked": { checked: [] } });
+        render(Report, { result: RESULT, lookupId: "L1" });
+        expect(screen.getByRole("button", { name: /Print/ })).toBeInTheDocument();
+    });
 });

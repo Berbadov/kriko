@@ -1,2 +1,56 @@
-/* Filled in by the print task. The report is the one surface that goes to
- * paper, and paper is the one place the app is not an app. */
+/* Paper is the one place the app is not an app. The rail, the buttons and
+   every disclosure control are chrome; the answer is the document. Disclosures
+   are forced open because a folded source on paper is a source the reader
+   cannot reach.
+
+   This is also the one sheet allowed a raw colour, and tokens.test.ts exempts
+   it for that reason: paper has no theme, so a custom property that resolves
+   against the screen's palette is the wrong value here by construction. */
+@media print {
+    .shell {
+        display: block;
+    }
+    .rail,
+    .no-print,
+    .history,
+    button,
+    .check {
+        display: none !important;
+    }
+    .work {
+        padding: 0;
+        max-width: none;
+    }
+    .report-body {
+        max-width: none;
+    }
+    details {
+        display: block;
+    }
+    details > summary {
+        display: none;
+    }
+    details > *:not(summary) {
+        display: revert;
+    }
+    .card.risk {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        background: none;
+        border: 1px solid #999;
+        border-left-width: 3px;
+    }
+    .verdict {
+        break-after: avoid;
+    }
+    blockquote {
+        break-inside: avoid;
+    }
+    a[href^="#"]::after {
+        content: "";
+    }
+    a[href^="http"]::after {
+        content: " (" attr(href) ")";
+        font-size: 90%;
+    }
+}
