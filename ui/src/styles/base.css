@@ -1,0 +1,60 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: var(--t-base) / var(--lh-base) var(--font-sans);
+    font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+    letter-spacing: -0.01em;
+}
+h2 {
+    font-size: var(--t-lg);
+    line-height: var(--lh-lg);
+    margin: 0 0 var(--s-4);
+}
+h3 {
+    font-size: var(--t-md);
+    line-height: var(--lh-md);
+    margin: 0 0 var(--s-1);
+}
+
+a {
+    color: var(--accent);
+}
+
+code,
+pre {
+    font-family: var(--font-mono);
+}
+
+/* One focus treatment, on :focus-visible so a mouse click does not draw it.
+ * Previously only inputs had any focus style at all. */
+:focus-visible {
+    outline: var(--ring) solid var(--accent);
+    outline-offset: 1px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: var(--s-6) 0 var(--s-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 1ms !important;
+        animation-duration: 1ms !important;
+    }
+}
