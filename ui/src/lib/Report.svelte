@@ -47,6 +47,9 @@
 <header class="report-head">
     {#if heading}<h2>{heading}</h2>{/if}
     <Verdict {result} {handled} {mode} />
+    <div class="row no-print">
+        <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
+    </div>
 </header>
 
 <!-- No empty-state paragraph here: the verdict above already renders
