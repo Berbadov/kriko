@@ -21,3 +21,17 @@ export const collect = (
             .map(([key, value]) => [key, coerce(value)] as const)
             .filter(([, value]) => value !== ""),
     );
+
+/** A pack's key, spelled for a reader.
+ *
+ * Deliberately a string transform and not a lookup table. A table of
+ * key → friendly label would be pack vocabulary living in the frontend —
+ * the thing `test_ui_contains_no_pack_vocabulary` exists to catch, and the
+ * thing that goes stale the first time a pack adds a key. This reads whatever
+ * the API hands it, including keys from a category nobody has written yet.
+ */
+export const humanize = (key: string): string => {
+    const words = (key ?? "").replace(/[_-]+/g, " ").trim();
+    if (!words) return "";
+    return words.charAt(0).toUpperCase() + words.slice(1);
+};

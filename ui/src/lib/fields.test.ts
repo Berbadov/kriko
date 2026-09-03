@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coerce, collect } from "./fields";
+import { coerce, collect, humanize } from "./fields";
 
 describe("coerce", () => {
     it("keeps a numeric string as a number", () => {
@@ -19,5 +19,26 @@ describe("collect", () => {
     });
     it("tolerates undefined values from an unbound input", () => {
         expect(collect({ a: undefined as unknown as string, b: "y" })).toEqual({ b: "y" });
+    });
+});
+
+describe("humanize", () => {
+    it("turns a pack's key into something a reader can read", () => {
+        expect(humanize("engine_code")).toBe("Engine code");
+        expect(humanize("odometer_km")).toBe("Odometer km");
+    });
+
+    it("leaves an already-readable label alone", () => {
+        expect(humanize("Year")).toBe("Year");
+    });
+
+    it("survives the shapes a key can actually arrive in", () => {
+        expect(humanize("")).toBe("");
+        expect(humanize("a")).toBe("A");
+        expect(humanize("__")).toBe("");
+    });
+
+    it("is a transform, not a table — an unseen key still reads", () => {
+        expect(humanize("thermal_paste_grade")).toBe("Thermal paste grade");
     });
 });
