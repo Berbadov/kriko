@@ -1,5 +1,6 @@
 <script lang="ts">
     import EmptyState from "./lib/EmptyState.svelte";
+    import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import { initMode, mode } from "./lib/mode";
     import { hashWith, route } from "./lib/router";
@@ -13,6 +14,7 @@
     import Packs from "./routes/Packs.svelte";
     import Result from "./routes/Result.svelte";
     import Subjects from "./routes/Subjects.svelte";
+    import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
     // form that produces one and beside a result being read. On the History
@@ -25,7 +27,20 @@
     // rendering nothing would look like a broken link.
     const authorOnly = $derived($mode !== "author" && isAuthorOnly($route.name));
 
-    const ready = initMode($route.query.mode);
+    // First run is a state of the store, not a stored flag: nothing to reset,
+    // and a reader who removes every pack gets the offer again, which is the
+    // right answer at that moment too. A failing status call must never gate
+    // the app — an unreachable engine is a health problem, not a first run.
+    let empty = $state(false);
+    const checkStore = api
+        .status()
+        .then((s) => (empty = s.packs === 0))
+        .catch(() => (empty = false));
+
+    let dismissed = $state(false);
+    const firstRun = $derived(empty && !dismissed && $route.name !== "welcome");
+
+    const ready = Promise.all([initMode($route.query.mode), checkStore]);
 </script>
 
 <div class="shell">
@@ -36,7 +51,14 @@
             {#await ready}
                 <p class="state loading">Starting…</p>
             {:then}
-                {#if authorOnly}
+                {#if firstRun}
+                    <Welcome
+                        onDone={() => {
+                            dismissed = true;
+                            void api.status().then((s) => (empty = s.packs === 0));
+                        }}
+                    />
+                {:else if authorOnly}
                     <EmptyState
                         title="{$route.name} is an author view"
                         detail="It is real work a pack author does, and none of it helps
