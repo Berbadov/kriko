@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { stubFetch, stubFetchFailing } from "../lib/stub-fetch";
 import Dashboard from "./Dashboard.svelte";
 
 const STATUS = {
@@ -8,17 +9,6 @@ const STATUS = {
     enabled_packs: 1,
     counts: { subjects: 12, claims: 34 },
 };
-
-function stubFetch(routes: Record<string, unknown>) {
-    vi.stubGlobal(
-        "fetch",
-        vi.fn(async (path: string) => {
-            const key = Object.keys(routes).find((r) => path.startsWith(r));
-            if (!key) return new Response("not stubbed", { status: 500 });
-            return new Response(JSON.stringify(routes[key]));
-        }),
-    );
-}
 
 describe("Dashboard", () => {
     it("shows the store counts", async () => {
@@ -35,7 +25,7 @@ describe("Dashboard", () => {
     });
 
     it("surfaces a failure instead of rendering blank", async () => {
-        vi.stubGlobal("fetch", vi.fn(async () => new Response("boom", { status: 500 })));
+        stubFetchFailing();
         render(Dashboard);
         expect(await screen.findByText(/Could not load this view/)).toBeInTheDocument();
     });
