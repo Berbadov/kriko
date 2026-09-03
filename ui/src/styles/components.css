@@ -722,3 +722,15 @@ button.ghost.disclose {
     display: inline;
     margin: 0;
 }
+
+/* ── the first run ──────────────────────────────────────────────────────── */
+
+.welcome {
+    max-width: var(--measure);
+    margin: var(--s-6) auto;
+}
+.welcome h2 {
+    font-size: var(--t-xl);
+    line-height: var(--lh-xl);
+    margin: 0 0 var(--s-3);
+}
