@@ -559,3 +559,18 @@ li.gap {
     margin: 0;
     max-width: 52ch;
 }
+
+/* ── history as a page ────────────────────────────────────────────── */
+.history.page {
+    border-left: 0;
+    padding-left: 0;
+}
+.history.page li {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: baseline;
+    gap: var(--s-3);
+    justify-items: start;
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 0;
+}
