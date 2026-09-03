@@ -556,3 +556,24 @@ li.gap {
     display: flex;
     gap: var(--s-1);
 }
+
+/* ── empty states ─────────────────────────────────────────────────── */
+.empty-state {
+    display: grid;
+    justify-items: start;
+    gap: var(--s-2);
+    padding: var(--s-6);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    margin: var(--s-3) 0;
+}
+.empty-title {
+    margin: 0;
+    font-size: var(--t-md);
+    font-weight: 600;
+}
+.empty-state .meta {
+    margin: 0;
+    max-width: 52ch;
+}
