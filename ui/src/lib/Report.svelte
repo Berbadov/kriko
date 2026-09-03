@@ -2,8 +2,9 @@
     import { api } from "./api";
     import ClaimCard from "./ClaimCard.svelte";
     import type { Mode } from "./mode";
-    import { confidenceNote, claimKey, emptyReason, groupByDomain } from "./report";
+    import { claimKey, groupByDomain } from "./report";
     import type { LookupResult } from "./types";
+    import Verdict from "./Verdict.svelte";
 
     let {
         result,
@@ -18,9 +19,6 @@
     } = $props();
 
     const groups = $derived(groupByDomain(result.claims));
-    const worst = $derived(
-        result.claims.filter((c) => c.severity === "high").length,
-    );
 
     let handled = $state<string[]>([]);
 
@@ -48,39 +46,26 @@
 
 <header class="report-head">
     {#if heading}<h2>{heading}</h2>{/if}
-    <p class="meta">{confidenceNote(result)}</p>
-    {#if result.claims.length}
-        <p class="lede">
-            {result.claims.length} known risk{result.claims.length === 1 ? "" : "s"}
-            {#if worst}
-                · <strong class="high-count">{worst} serious</strong>
-            {/if}
-            {#if handled.length}
-                · {handled.length} handled
-            {/if}
-        </p>
-    {/if}
-    {#if mode === "author" && result.flags?.length}
-        <p class="flag">flags: {result.flags.join(", ")}</p>
-    {/if}
+    <Verdict {result} {handled} {mode} />
 </header>
 
-{#if !result.claims.length}
-    <p class="state {result.coverage === 'NOT_MATCHED' ? 'no-match' : 'unknown'}">
-        {emptyReason(result)}
-    </p>
-{:else}
-    {#each groups as group (group.domain)}
-        <section class="group">
-            <h3 class="group-head">{group.domain}</h3>
-            {#each group.claims as claim (claimKey(claim))}
-                <ClaimCard
-                    {claim}
-                    {mode}
-                    checked={handled.includes(claimKey(claim))}
-                    onCheck={(next) => check(claimKey(claim), next)}
-                />
-            {/each}
-        </section>
-    {/each}
+<!-- No empty-state paragraph here: the verdict above already renders
+     emptyReason(), and printing the same sentence twice was the shape the
+     old header had before it carried a verdict at all. -->
+{#if result.claims.length}
+    <div class="report-body">
+        {#each groups as group (group.domain)}
+            <section class="group">
+                <h3 class="group-head">{group.domain}</h3>
+                {#each group.claims as claim (claimKey(claim))}
+                    <ClaimCard
+                        {claim}
+                        {mode}
+                        checked={handled.includes(claimKey(claim))}
+                        onCheck={(next) => check(claimKey(claim), next)}
+                    />
+                {/each}
+            </section>
+        {/each}
+    </div>
 {/if}
