@@ -825,10 +825,13 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   `TAURI_SIGNING_PUBLIC_KEY` (variable); see `tauri/README.md`. Until then
   releases ship installers only, which is a deliberate no-op rather than a
   failure.
-- **First run is still an empty store.** The installer carries no pack, so a
-  fresh launch answers nothing until the reader presses *Check for updates*.
-  Either ship `cars.kpack` inside the bundle, or make the first launch offer
-  the index by itself.
+- **First run offers the index.** ~~The installer carries no pack, so a fresh
+  launch answers nothing until the reader presses *Check for updates*.~~ Fixed
+  2026-09-03: `Welcome.svelte` is gated on `packs === 0` and offers the index
+  by name, installs through the same job path *Packs* uses, and takes a
+  `.kpack` file when the index is unreachable. Deliberately *not* bundling
+  `cars.kpack`, which would pin knowledge to the binary's release cadence.
+  Still unconfirmed by a human on Windows.
 - **The extension could not reach the installed app, and now can.** It
   hardcodes `http://127.0.0.1:8787` because a page cannot be told a random
   port, while the sidecar only ever bound an OS-chosen one. The sidecar now
