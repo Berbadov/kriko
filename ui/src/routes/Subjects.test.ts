@@ -1,19 +1,25 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
-import Browse from "./Browse.svelte";
+import { stubFetch } from "../lib/stub-fetch";
+import Subjects from "./Subjects.svelte";
 
-describe("Browse", () => {
+describe("Subjects", () => {
     it("lists subjects and re-queries as you type", async () => {
         const fetchMock = vi.fn(
             async (_path: string) =>
                 new Response(
                     JSON.stringify([
-                        { label: "Bench Grinder 8in", kind: "product", pack_id: "tools", claims: 3 },
+                        {
+                            label: "Bench Grinder 8in",
+                            kind: "product",
+                            pack_id: "tools",
+                            claims: 3,
+                        },
                     ]),
                 ),
         );
         vi.stubGlobal("fetch", fetchMock);
-        render(Browse);
+        render(Subjects);
         expect(await screen.findByText("Bench Grinder 8in")).toBeInTheDocument();
 
         await fireEvent.input(screen.getByLabelText("Search subjects"), {
@@ -26,9 +32,10 @@ describe("Browse", () => {
         );
     });
 
-    it("says so when nothing matches", async () => {
-        vi.stubGlobal("fetch", vi.fn(async () => new Response("[]")));
-        render(Browse);
+    it("says what to type when the search finds nothing", async () => {
+        stubFetch({ "/api/subjects": [] });
+        render(Subjects);
         expect(await screen.findByText(/No matching subjects/)).toBeInTheDocument();
+        expect(await screen.findByText(/coverage is not there yet/)).toBeInTheDocument();
     });
 });

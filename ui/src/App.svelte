@@ -12,6 +12,7 @@
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Result from "./routes/Result.svelte";
+    import Subjects from "./routes/Subjects.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
     // form that produces one and beside a result being read. On the History
@@ -46,6 +47,8 @@
                     <Check mode={$mode} />
                 {:else if $route.name === "overview"}
                     <Overview />
+                {:else if $route.name === "subjects"}
+                    <Subjects />
                 {:else if $route.name === "history"}
                     <h2>History</h2>
                     <History page />
