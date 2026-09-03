@@ -680,3 +680,12 @@ li.gap {
 .provenance {
     margin-top: var(--s-2);
 }
+
+/* ── the staged form's disclosure ───────────────────────────────────────── */
+
+/* Own line, left-aligned with the fields above it: this reads as "there is
+   more below" rather than as an action beside the ask. */
+button.ghost.disclose {
+    display: block;
+    margin: var(--s-3) 0;
+}
