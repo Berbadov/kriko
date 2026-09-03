@@ -645,3 +645,38 @@ li.gap {
 .verdict-bar .seg.low {
     background: var(--low);
 }
+
+/* ── severity on the card ─────────────────────────────────────────── */
+/* Severity reaches the eye before the word does: a 3px rule down the card's
+   leading edge, in the same three colours the verdict bar uses. Colour alone
+   never carries it — the pill keeps the word for anyone who cannot see the
+   difference. */
+.card.risk {
+    border-left: 3px solid var(--line);
+}
+.card.risk:has(.sev.high) {
+    border-left-color: var(--high);
+    background: var(--high-soft);
+}
+.card.risk:has(.sev.medium) {
+    border-left-color: var(--medium);
+    background: var(--medium-soft);
+}
+.card.risk:has(.sev.low) {
+    border-left-color: var(--low);
+    background: var(--low-soft);
+}
+.card.risk.done {
+    opacity: 0.55;
+}
+.card.risk.done h3 {
+    text-decoration: line-through;
+}
+.ask {
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-2);
+    margin-top: var(--s-3);
+}
+.provenance {
+    margin-top: var(--s-2);
+}

@@ -38,19 +38,23 @@
 
     <p class="ask"><strong>What to ask:</strong> {askLine(claim)}</p>
 
+    <p class="meta">{claim.subject} · {sourceSummary(claim)}</p>
+
     {#if author}
-        <p class="meta">
-            {claim.subject} · {claim.pack_id} · relevance {claim.relevance}
-            {#if claim.detection} · detection {claim.detection}{/if}
-            {#if claim.disputed}<span class="badge disputed">disputed</span>{/if}
-        </p>
-        {#if claim.why?.length}
-            <ul class="why">
-                {#each claim.why as reason}<li>{reason}</li>{/each}
-            </ul>
-        {/if}
-    {:else}
-        <p class="meta">{claim.subject} · {sourceSummary(claim)}</p>
+        <details class="provenance">
+            <summary class="meta">Provenance</summary>
+            <p class="meta">
+                {claim.pack_id} · relevance {claim.relevance}
+                {#if claim.detection} · detection {claim.detection}{/if}
+                {#if claim.trust !== undefined} · trust {claim.trust}{/if}
+                {#if claim.disputed}<span class="badge disputed">disputed</span>{/if}
+            </p>
+            {#if claim.why?.length}
+                <ul class="why">
+                    {#each claim.why as reason}<li>{reason}</li>{/each}
+                </ul>
+            {/if}
+        </details>
     {/if}
 
     {#if claim.sources?.length}
