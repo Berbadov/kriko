@@ -574,3 +574,27 @@ li.gap {
     border-bottom: 1px solid var(--line);
     margin-bottom: 0;
 }
+
+/* ── the worklist ─────────────────────────────────────────────────── */
+.worklist {
+    list-style: none;
+    margin: 0 0 var(--s-5);
+    padding: 0;
+    display: grid;
+    gap: var(--s-1);
+}
+.worklist li {
+    display: flex;
+    gap: var(--s-3);
+    align-items: baseline;
+    flex-wrap: wrap;
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid var(--line);
+}
+.worklist li > a {
+    font-size: var(--t-md);
+    text-decoration: none;
+}
+.worklist li > a:hover {
+    text-decoration: underline;
+}
