@@ -60,6 +60,11 @@ export const route = readable<Route>(
     parseHash(typeof window === "undefined" ? "" : window.location.hash),
     (set) => {
         const onChange = () => set(parseHash(window.location.hash));
+        // Re-read on subscribe: the initial value above is a module-load
+        // snapshot, and the hash can change between this module being imported
+        // and the first component subscribing — main.ts imports before it
+        // mounts. Without this, the store starts one navigation stale.
+        onChange();
         window.addEventListener("hashchange", onChange);
         return () => window.removeEventListener("hashchange", onChange);
     },
