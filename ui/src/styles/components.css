@@ -1,0 +1,474 @@
+/* Ported from app.css. Every selector it had still exists here, so this is
+ * reviewable as a port: what changed is that colours come from tokens.css,
+ * spacing and type come from the scales, and the two duplicate `.row` rules
+ * are one rule plus a `.center` modifier. */
+
+/* ── page chrome ──────────────────────────────────────────────────── */
+header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-5);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 5;
+}
+header h1 {
+    font-size: var(--t-md);
+    margin: 0;
+}
+header .sub {
+    color: var(--dim);
+    font-size: var(--t-sm);
+}
+header nav {
+    margin-left: auto;
+    display: flex;
+    gap: var(--s-1);
+}
+
+main {
+    padding: var(--s-5);
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* ── controls ─────────────────────────────────────────────────────── */
+button,
+.tab {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--s-1) var(--s-3);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) ease;
+}
+button:hover,
+.tab:hover {
+    border-color: var(--accent);
+}
+.tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    /* was #fff, which printed white-on-light-blue in light mode */
+    color: var(--accent-ink);
+}
+button.ghost {
+    background: transparent;
+}
+button.danger:hover {
+    border-color: var(--high);
+    color: var(--high);
+}
+nav a.tab {
+    text-decoration: none;
+    display: inline-block;
+}
+
+/* One `.row`, being the union of the two app.css had. The jobs-era duplicate
+ * silently re-aligned every form row in the app to centre; the four callers
+ * that wanted that say so with `.center`. */
+.row {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+.row.center {
+    align-items: center;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+}
+.field label {
+    font-size: var(--t-xs);
+    color: var(--dim);
+}
+.field.grow {
+    flex: 1;
+    min-width: 220px;
+}
+.field.grow input {
+    width: 100%;
+}
+.req {
+    color: var(--high);
+}
+
+input,
+select,
+textarea {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--s-2) var(--s-3);
+    min-width: 150px;
+}
+input:focus,
+select:focus {
+    outline: var(--ring) solid var(--accent);
+    outline-offset: -1px;
+}
+
+.wide {
+    max-width: 760px;
+    margin: var(--s-3) 0;
+}
+.wide input,
+.wide textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+.matches {
+    list-style: none;
+    margin: var(--s-2) 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+.matches button {
+    display: flex;
+    gap: var(--s-2);
+    align-items: baseline;
+}
+
+/* ── cards, badges, disclosure ────────────────────────────────────── */
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--s-4);
+    margin: var(--s-3) 0;
+}
+.card h3 {
+    margin: 0 0 var(--s-1);
+    font-size: var(--t-base);
+    font-weight: 600;
+}
+.meta {
+    color: var(--dim);
+    font-size: var(--t-xs);
+}
+
+.sev {
+    display: inline-block;
+    padding: 1px var(--s-2);
+    border-radius: 999px;
+    font-size: var(--t-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.sev.high {
+    background: var(--high-soft);
+    color: var(--high);
+}
+.sev.medium {
+    background: var(--medium-soft);
+    color: var(--medium);
+}
+.sev.low {
+    background: var(--low-soft);
+    color: var(--low);
+}
+
+.badge {
+    font-size: var(--t-xs);
+    padding: 1px var(--s-2);
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--dim);
+}
+.badge.disputed {
+    color: var(--medium);
+    border-color: var(--medium);
+}
+.badge.state-failed,
+.badge.state-interrupted {
+    background: var(--high-soft);
+}
+.badge.state-succeeded {
+    background: var(--low-soft);
+}
+
+details {
+    margin-top: var(--s-2);
+}
+details.asked {
+    border-left: var(--ring) solid var(--accent);
+    padding-left: var(--s-2);
+}
+summary {
+    cursor: pointer;
+    color: var(--dim);
+    font-size: var(--t-xs);
+}
+summary:hover {
+    color: var(--accent);
+}
+.why {
+    margin: var(--s-2) 0 0;
+    padding-left: var(--s-5);
+    color: var(--dim);
+    font-size: var(--t-xs);
+}
+.why li {
+    margin: 2px 0;
+}
+blockquote {
+    margin: var(--s-2) 0 var(--s-2) var(--s-3);
+    padding-left: var(--s-3);
+    border-left: var(--ring) solid var(--line);
+    color: var(--dim);
+    font-size: var(--t-sm);
+}
+blockquote.refutes {
+    border-color: var(--medium);
+}
+
+/* ── tables and code ─────────────────────────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--t-sm);
+}
+th,
+td {
+    text-align: left;
+    padding: var(--s-2) var(--s-3);
+    border-bottom: 1px solid var(--line);
+}
+th {
+    color: var(--dim);
+    font-weight: 500;
+    font-size: var(--t-xs);
+}
+td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+tr.concern td {
+    border-left: 3px solid var(--high);
+}
+.signal {
+    white-space: nowrap;
+}
+.stale {
+    opacity: 0.55;
+    font-style: italic;
+}
+
+pre {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--s-3);
+    overflow-x: auto;
+    font-size: var(--t-xs);
+    white-space: pre-wrap;
+}
+
+/* ── states and stats ────────────────────────────────────────────── */
+.empty {
+    color: var(--dim);
+    padding: var(--s-5) 0;
+}
+.flag {
+    font-size: var(--t-xs);
+    color: var(--medium);
+}
+.stats {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-6);
+}
+.stat {
+    min-width: 110px;
+    padding: var(--s-3) var(--s-4);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+.stat strong,
+.stat span {
+    display: block;
+}
+.stat strong {
+    font-size: var(--t-lg);
+}
+.stat span {
+    color: var(--dim);
+    font-size: var(--t-xs);
+}
+.state {
+    padding: var(--s-3) var(--s-4);
+    margin: var(--s-3) 0;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+}
+.state span {
+    color: var(--dim);
+    margin-left: var(--s-2);
+}
+.state.error {
+    border-color: var(--high);
+    color: var(--high);
+}
+.state.loading {
+    color: var(--accent);
+}
+.state.no-match,
+.state.unknown {
+    border-color: var(--medium);
+}
+.event {
+    padding: var(--s-1) 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--t-sm);
+}
+
+/* ── the history rail ────────────────────────────────────────────── */
+.with-history {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    gap: var(--s-5);
+    align-items: start;
+}
+.history {
+    /* was a raw #e5e5e5: invisible in dark, and the reason this rule is the
+       poster child for the guard test */
+    border-left: 1px solid var(--line);
+    padding-left: var(--s-4);
+}
+.history ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.history li {
+    display: grid;
+    gap: 2px;
+    justify-items: start;
+    margin-bottom: var(--s-3);
+}
+@media (max-width: 900px) {
+    .with-history {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .history {
+        border-left: 0;
+        padding-left: 0;
+    }
+}
+
+.modes {
+    display: inline-flex;
+    gap: var(--s-1);
+    margin-left: var(--s-3);
+    padding-left: var(--s-3);
+    border-left: 1px solid var(--line);
+}
+.modes button {
+    text-transform: capitalize;
+    font-size: var(--t-xs);
+    padding: var(--s-1) var(--s-2);
+}
+
+/* ── the report ──────────────────────────────────────────────────── */
+.report-head {
+    margin-bottom: var(--s-5);
+}
+.report-head h2 {
+    margin-bottom: var(--s-1);
+}
+.lede {
+    font-size: var(--t-base);
+    margin: var(--s-2) 0 0;
+}
+.high-count {
+    color: var(--high);
+}
+.group {
+    margin: var(--s-5) 0;
+}
+.group-head {
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    margin: 0 0 var(--s-2);
+}
+
+.risk-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+}
+.risk-head h3 {
+    margin: 0;
+    flex: 1;
+}
+.risk.done {
+    opacity: 0.5;
+}
+.risk.done h3 {
+    text-decoration: line-through;
+}
+.check {
+    font-size: var(--t-xs);
+    color: var(--dim);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.ask {
+    margin: var(--s-2) 0 var(--s-1);
+    padding: var(--s-2) var(--s-3);
+    background: var(--panel-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--t-base);
+}
+
+/* ── jobs ────────────────────────────────────────────────────────── */
+.card.job.live {
+    border-left: 3px solid var(--accent);
+}
+.bar {
+    height: 6px;
+    background: var(--panel-2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: var(--s-1) 0;
+}
+.bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--dur-slow) ease;
+}
+.log {
+    max-height: 18rem;
+    overflow: auto;
+    background: var(--panel-2);
+    padding: var(--s-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--t-xs);
+    white-space: pre-wrap;
+}
+li.gap {
+    display: flex;
+    gap: var(--s-2);
+    align-items: center;
+    flex-wrap: wrap;
+}
