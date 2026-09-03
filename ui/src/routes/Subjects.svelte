@@ -1,4 +1,5 @@
 <script lang="ts">
+    import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
     import type { Subject } from "../lib/types";
 
@@ -53,6 +54,10 @@
             </tbody>
         </table>
     {:else}
-        <p class="state empty">No matching subjects.</p>
+        <EmptyState
+            title="No matching subjects"
+            detail="Search matches a subject's label as the installed packs spell it.
+                    An empty result may mean the coverage is not there yet."
+        />
     {/if}
 {/await}
