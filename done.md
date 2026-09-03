@@ -6,6 +6,12 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### v0.2.6 — the app that reads like an app — 2026-09-03 (81f0cb8)
+The design pass below, in an installer. Nothing in the engine moved: the whole
+diff is `ui/` plus its committed bundle, so this is the first build where the
+gate is entirely "does it open, and does it read right" — the two questions
+v0.2.4 and v0.2.5 were spent on separately.
+
 ### 2026-09-03 — the app design pass (`docs/superpowers/specs/2026-09-03-app-design-and-ia.md`)
 Seven flat tabs became a grouped rail over one route table; the report leads with
 a derived verdict and prints; the describe-it form stages what it asks for; first
