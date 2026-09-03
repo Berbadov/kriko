@@ -472,3 +472,87 @@ li.gap {
     align-items: center;
     flex-wrap: wrap;
 }
+
+/* ── the rail ─────────────────────────────────────────────────────── */
+.rail {
+    grid-area: rail;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+    padding: var(--s-4) var(--s-3);
+    border-right: 1px solid var(--line);
+    background: var(--n-1);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+}
+.brand {
+    display: flex;
+    gap: var(--s-2);
+    align-items: center;
+    padding: 0 var(--s-2);
+    text-decoration: none;
+    color: var(--text);
+}
+.brand .mark {
+    color: var(--accent);
+    font-size: var(--t-md);
+}
+.brand-text {
+    display: grid;
+}
+.brand-text strong {
+    font-size: var(--t-md);
+    letter-spacing: -0.01em;
+}
+.brand-text .meta {
+    font-size: var(--t-xs);
+}
+.rail-nav {
+    display: grid;
+    gap: var(--s-5);
+}
+.nav-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+}
+.nav-title {
+    margin: 0 var(--s-2) var(--s-2);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+}
+.nav-link {
+    display: block;
+    padding: var(--s-2) var(--s-2);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--n-8);
+    transition: background var(--dur-fast) ease;
+}
+.nav-link:hover {
+    background: var(--panel-2);
+    color: var(--text);
+}
+.nav-link.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+}
+.rail-foot {
+    margin-top: auto;
+    padding-top: var(--s-3);
+    border-top: 1px solid var(--line);
+}
+.rail-foot .modes {
+    margin: 0;
+    padding: 0;
+    border-left: 0;
+    display: flex;
+    gap: var(--s-1);
+}
