@@ -689,3 +689,36 @@ button.ghost.disclose {
     display: block;
     margin: var(--s-3) 0;
 }
+
+/* ── the check page: one hero, everything else below it ─────────────────── */
+
+.hero {
+    max-width: var(--measure);
+    margin-bottom: var(--s-6);
+}
+.hero h2 {
+    font-size: var(--t-xl);
+    line-height: var(--lh-xl);
+    margin: 0 0 var(--s-2);
+}
+.hero-sub {
+    color: var(--dim);
+    line-height: var(--lh-read);
+    margin: 0 0 var(--s-5);
+}
+.hero input {
+    font-size: var(--t-md);
+    padding: var(--s-3);
+}
+.alt-path {
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-4);
+    margin-top: var(--s-6);
+}
+.alt-path > summary {
+    cursor: pointer;
+}
+.alt-path > summary h3 {
+    display: inline;
+    margin: 0;
+}
