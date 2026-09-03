@@ -45,7 +45,7 @@
                     <Check mode={$mode} />
                 {:else if $route.name === "history"}
                     <h2>History</h2>
-                    <History />
+                    <History page />
                 {:else if $route.name === "coverage"}
                     <Coverage />
                 {:else if $route.name === "packs"}
