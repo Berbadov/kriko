@@ -9,6 +9,7 @@
     import Coverage from "./routes/Coverage.svelte";
     import Health from "./routes/Health.svelte";
     import Jobs from "./routes/Jobs.svelte";
+    import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Result from "./routes/Result.svelte";
 
@@ -43,6 +44,8 @@
                     />
                 {:else if $route.name === "check"}
                     <Check mode={$mode} />
+                {:else if $route.name === "overview"}
+                    <Overview />
                 {:else if $route.name === "history"}
                     <h2>History</h2>
                     <History page />
