@@ -3,6 +3,7 @@
     import ClaimCard from "./ClaimCard.svelte";
     import type { Mode } from "./mode";
     import { claimKey, groupByDomain } from "./report";
+    import { hashWith, route } from "./router";
     import type { LookupResult } from "./types";
     import Verdict from "./Verdict.svelte";
 
@@ -49,6 +50,13 @@
     <Verdict {result} {handled} {mode} />
     <div class="row no-print">
         <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
+        {#if lookupId}
+            <a
+                class="ghost button-like"
+                href={hashWith({ mode: $route.query.mode, left: lookupId }, "compare")}
+                >Compare with another</a
+            >
+        {/if}
     </div>
 </header>
 

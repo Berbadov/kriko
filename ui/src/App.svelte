@@ -7,6 +7,7 @@
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import { isAuthorOnly } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
+    import Compare from "./routes/Compare.svelte";
     import Coverage from "./routes/Coverage.svelte";
     import Health from "./routes/Health.svelte";
     import Jobs from "./routes/Jobs.svelte";
@@ -74,6 +75,8 @@
                 {:else if $route.name === "history"}
                     <h2>History</h2>
                     <History page />
+                {:else if $route.name === "compare"}
+                    <Compare />
                 {:else if $route.name === "coverage"}
                     <Coverage />
                 {:else if $route.name === "packs"}
