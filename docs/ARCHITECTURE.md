@@ -43,13 +43,30 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
 
 | Package | Owns | File to read first |
 |---|---|---|
-| `ui/` | The dashboard's Svelte source; `npm --prefix ui run build` writes the committed bundle in `src/app/web/static/` | `ui/src/App.svelte` |
+| `ui/` | The app's Svelte source; `npm --prefix ui run build` writes the committed bundle in `src/app/web/static/` | `ui/src/lib/shell/nav.ts` (the route table both the rail and the router read) |
 | `src/app/` | Interfaces: CLI, FastAPI web dashboard, MCP server for research agents | `src/app/cli.py` |
 | `src/app/pipeline/` | Pipeline drivers that orchestrate the ledger and packs/cars pipeline | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `src/kriko/store/packstore.py` |
 | `packs/` | One directory per product category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
 | `packs/cars/pipeline/` | Evidence ledger + grounded extraction that turns scraped sources into claims for the cars pack | `packs/cars/pipeline/ledger/acquire.py` |
 | `extension/` | Chrome extension: scrapes a listing page, its background worker calls the web API, renders the risk card | `extension/content.js` |
+
+### `ui/` — the frontend
+
+Svelte 5 + Vite, built into `src/app/web/static/`. Hash-routed, no framework
+router. The shell is a grouped rail (`lib/shell/`) over a route table in
+`lib/shell/nav.ts` — one list both halves read, so a destination cannot exist
+in the navigation and not in the router.
+
+- `styles/` — `tokens.css` (the only file naming a colour), `base.css`,
+  `components.css`, `print.css`. Class-based, no component `<style>` blocks.
+- `lib/` — the typed API client, pure derivation (`report.ts`, `verdict.ts`,
+  `compare.ts`, `health.ts`, `fields.ts`) and shared components. Derivation is
+  pure so it is tested without a DOM.
+- `routes/` — one component per destination.
+
+The report surface is deliberately the only editorial one: a 68ch measure,
+reading leading, and a print sheet. Everything else is instrument.
 
 ## Chasing X? read these
 

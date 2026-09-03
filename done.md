@@ -6,6 +6,14 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-03 — the app design pass (`docs/superpowers/specs/2026-09-03-app-design-and-ia.md`)
+Seven flat tabs became a grouped rail over one route table; the report leads with
+a derived verdict and prints; the describe-it form stages what it asks for; first
+run offers the pack index; two checks compare side by side. One design-token
+sheet with a guard test that fails on a colour literal anywhere else — which is
+the mechanism, not the cleanup: `#e5e5e5` in `.history` is the class of bug it
+now catches. No Python diff, no new endpoint, no layer crossed.
+
 ### v0.2.5 — the app that panicked before it had a window — 2026-09-01 (053fa51)
 v0.2.4 installed on Windows 11 and then did nothing at all when opened. Not a
 blank window: no window, and no dialog — the panic went to a stderr a
@@ -1109,3 +1117,5 @@ Two project rules changed in `CLAUDE.md` and the backlog, per the owner:
   (branch `observability-analyses-log`, merged content on current branch).
 - **Docs** — `docs/INTERNALS.md`, `docs/USAGE.md`, `docs/design_flaws.md` (Flaws 1–4
   addressed; 5–6 tracked as backlog B13), `docs/historical/pipeline_postmortem.md`.
+
+
