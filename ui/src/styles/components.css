@@ -734,3 +734,36 @@ button.ghost.disclose {
     line-height: var(--lh-xl);
     margin: 0 0 var(--s-3);
 }
+
+/* ── two checks, aligned ────────────────────────────────────────────────── */
+
+.lede-compare {
+    font-size: var(--t-md);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--s-4);
+}
+table.compare {
+    width: 100%;
+    border-collapse: collapse;
+}
+table.compare th[scope="row"] {
+    text-align: left;
+    font-weight: 400;
+    max-width: 34ch;
+}
+table.compare th,
+table.compare td {
+    padding: var(--s-2);
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+table.compare thead th {
+    font-size: var(--t-sm);
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.button-like {
+    display: inline-block;
+    text-decoration: none;
+}
