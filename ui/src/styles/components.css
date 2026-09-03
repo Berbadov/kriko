@@ -4,35 +4,17 @@
  * are one rule plus a `.center` modifier. */
 
 /* ── page chrome ──────────────────────────────────────────────────── */
-header {
-    display: flex;
-    align-items: baseline;
-    gap: var(--s-3);
-    padding: var(--s-4) var(--s-5);
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 5;
+.shell {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    grid-template-areas: "rail work";
+    min-height: 100vh;
 }
-header h1 {
-    font-size: var(--t-md);
-    margin: 0;
-}
-header .sub {
-    color: var(--dim);
-    font-size: var(--t-sm);
-}
-header nav {
-    margin-left: auto;
-    display: flex;
-    gap: var(--s-1);
-}
-
-main {
-    padding: var(--s-5);
+.work {
+    grid-area: work;
+    padding: var(--s-5) var(--s-6);
     max-width: 1100px;
-    margin: 0 auto;
+    width: 100%;
 }
 
 /* ── controls ─────────────────────────────────────────────────────── */
