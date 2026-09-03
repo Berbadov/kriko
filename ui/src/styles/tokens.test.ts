@@ -19,14 +19,20 @@ const stripComments = (css: string) =>
 // A literal colour is how #e5e5e5 got into `.history` and #b3261e into
 // `tr.concern`: both invisible in dark, both wrong in light. tokens.css is the
 // one file allowed to name a colour; everything else asks for one.
+//
+// print.css is the second exemption, for the opposite reason: paper has no
+// theme, so a token that resolves against the screen's palette is the wrong
+// value there by construction. It is exempt from *this* case only — the other
+// three still read it.
+const EXEMPT = new Set(["tokens.css", "print.css"]);
 const COLOUR = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
 
 describe("the stylesheets", () => {
-    it("names a colour only in tokens.css", () => {
+    it("names a colour only in tokens.css, and in print.css on paper", () => {
         const offenders: string[] = [];
         for (const [path, css] of Object.entries(SHEETS)) {
             const name = path.replace("./", "");
-            if (name === "tokens.css") continue;
+            if (EXEMPT.has(name)) continue;
             stripComments(css)
                 .split("\n")
                 .forEach((line, i) => {
