@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import Report from "./Report.svelte";
+import { stubFetch } from "./stub-fetch";
 import type { LookupResult } from "./types";
 
 const RESULT: LookupResult = {
@@ -81,5 +82,18 @@ describe("Report — one payload, two renderings", () => {
             props: { result: { method: "exact", coverage: "NO_RISKS", claims: [] } },
         });
         expect(await screen.findByText(/coverage gap, not a clean bill/)).toBeInTheDocument();
+    });
+
+    it("leads with a verdict, not with a bare count", async () => {
+        stubFetch({ "/api/lookups/L1/checked": { checked: [] } });
+        render(Report, { result: RESULT, lookupId: "L1" });
+        expect(await screen.findByText(/serious/)).toBeInTheDocument();
+        expect(screen.getByRole("img", { name: /severity mix/i })).toBeInTheDocument();
+    });
+
+    it("shows the reader how the match was made beside the verdict", () => {
+        stubFetch({ "/api/lookups/L1/checked": { checked: [] } });
+        render(Report, { result: RESULT, lookupId: "L1" });
+        expect(screen.getByText(/Matched/)).toBeInTheDocument();
     });
 });
