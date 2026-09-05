@@ -77,6 +77,7 @@ describe("the stylesheets", () => {
             "motion.css",
             "print.css",
             "themes/lemonade.css",
+            "themes/panel.css",
             "themes/slate.css",
             "tokens.css",
         ]);

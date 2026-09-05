@@ -6,6 +6,31 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-05 — the app opens wearing the extension's face (this commit)
+S2 shipped a theme ported from `extension/colors_and_type.css` — a stylesheet
+nothing loads. The extension has no HTML outside its test fixtures;
+`manifest.json` injects `hover_lite/hover_lite.css` into a shadow root, and that
+file is near-black `#0a0b0d` with a gold `#e8c04b` accent in IBM Plex, not cream
+and lemon in Sora. The port was faithful to a dead file, and the default theme
+was never switched, so 0.3.0 opens looking exactly like 0.2.6. The reader
+noticed before any test did.
+
+- `themes/panel.css` — ported from the live sheet, reusing slate's alias names
+  so no component changed. It takes bare `:root` (slate gives it up), because
+  whichever sheet holds that is what paints the first frame before JS runs — a
+  blue flash then a fade to near-black is worse than either theme alone.
+- `DEFAULT_THEME = "panel"`. A theme nobody selects is a preference, not an
+  identity.
+- IBM Plex Sans + Mono self-hosted, latin **and** latin-ext: the market is TR/EU
+  and `ş ğ ı İ ö ü ç` live in latin-ext, so a latin-only subset would fall back
+  to a system face mid-word.
+- `test_the_app_wears_the_extension_palette` is the mechanism half — it reads
+  ground and accent straight off `hover_lite.css` and fails when either window
+  is restyled without the other. The one-off fix would have gone stale the same
+  way the first one did.
+
+Not in the 0.3.0 installer; the tag was already cut.
+
 ### v0.3.0 — the app you can actually set up — 2026-09-05 (this commit)
 The five changes below, in an installer. A minor rather than a patch because
 three of them are capabilities the app did not have: it can update itself, it
