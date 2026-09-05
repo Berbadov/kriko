@@ -613,3 +613,71 @@ def test_an_unknown_origin_is_refused_rather_than_recorded(client):
         },
     )
     assert response.status_code == 422
+
+
+# ── the research protocol, as a skill ───────────────────────────────────
+
+
+def test_the_skill_says_what_this_installation_considers_worth_keeping(client):
+    """The protocol is assembled from the packs, not written in the binary.
+
+    The same agent researching a car and a power tool must be told two
+    different things about what counts, and neither sentence may live in
+    `app/` — otherwise the protocol stops versioning with the knowledge.
+    """
+    body = client.get("/api/agent-skill").json()["body"]
+    assert "Only the expensive." in body
+    assert "Tools" in body
+
+
+def test_the_skill_names_the_loop_in_order(client):
+    payload = client.get("/api/agent-skill").json()
+    assert [s["tool"] for s in payload["steps"]][0] == "coverage_gaps"
+    assert [s["tool"] for s in payload["steps"]][-1] == "submit_findings"
+    # The quote rule is the one thing an agent must not learn by trial and
+    # error: `submit_findings` rejects a paraphrase, and an agent that finds
+    # that out from an error has already thrown the document away.
+    assert "quote" in payload["body"]
+
+
+def test_the_frontmatter_description_is_one_line(client):
+    """A harness matches a skill by reading this line. A wrapped description
+    is not a description — it is a parse error the reader never sees."""
+    body = client.get("/api/agent-skill").json()["body"]
+    description = re.search(r"^description: (.+)$", body, re.M).group(1)
+    assert "\n" not in description
+    assert len(description) > 40
+
+
+def test_a_store_with_no_packs_gets_no_skill(tmp_path):
+    """Nothing to research, and nothing to say what would count."""
+    app_ = create_app(
+        Settings(
+            store_path=tmp_path / "empty.sqlite",
+            app_state_path=tmp_path / "app.sqlite",
+            analysis_log_path=tmp_path / "a.jsonl",
+        )
+    )
+    with TestClient(app_) as empty:
+        assert empty.get("/api/agent-skill").json()["body"] is None
+
+
+def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monkeypatch):
+    from app import agentconfig
+
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
+    written = client.post("/api/agent-targets/claude-code/connect").json()["skill"]
+
+    assert written.endswith("SKILL.md")
+    assert "Only the expensive." in (tmp_path / "home" / ".claude/skills"
+                                     / "kriko-research" / "SKILL.md").read_text()
+
+
+def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, monkeypatch):
+    from app import agentconfig
+
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
+    row = client.post("/api/agent-targets/cursor/connect").json()
+
+    assert row["state"] == "connected"
+    assert row["skill"] is None

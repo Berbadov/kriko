@@ -76,12 +76,51 @@ extension will not find it — stop the other listener.
 
 *Coverage → Research* writes a **brief**: what to look for, and what counts as
 evidence. It gathers nothing itself, because the free plane costs nothing
-precisely by using a coding agent you already pay for. To let one act on a brief,
-open **Coverage → Connect an agent** and copy the block it shows into your
-harness (`.mcp.json` for Claude Code). It is generated per machine, so the
-command is right whether you are running from a checkout or from an installer,
-and it names the store the window is reading — an agent pointed at a different
-`knowledge.sqlite` writes findings nobody ever sees.
+precisely by using a coding agent you already pay for.
+
+Open **System → Connect an agent**. It lists the harnesses on this machine —
+Claude Code, Claude Desktop, Cursor, VS Code — and says which state each is in:
+
+| State | Means |
+|-------|-------|
+| Not connected | the harness has no `kriko` server |
+| Connected | it has one, naming this window's store |
+| Points elsewhere | it has one, naming a *different* `knowledge.sqlite` |
+| Config unreadable | the file will not parse; nothing is written to it |
+
+**Points elsewhere** is the state worth having a word for: the agent runs, it
+answers, and its findings land in a store this window never reads. Nothing
+errors.
+
+*Connect* merges one key into that harness's config — re-serialised from what
+was parsed, never a template over the top, so the reader's other servers and
+settings survive. A config that will not parse is refused rather than replaced.
+Restart the harness afterwards; none of them re-read their config while running.
+
+*Verify* starts the advertised command and completes an MCP handshake with it.
+A written config and a working one fail separately: a moved virtual environment
+or a missing module surfaces here and, otherwise, only as an agent that quietly
+returns nothing. It will only ever start the command the app itself
+advertised — a local endpoint that runs a command the caller names would be an
+RCE hole reachable by anything that can reach the port.
+
+Any other harness still gets the paste-it-yourself block, generated per machine
+so the command is right from a checkout or an installer alike.
+
+### The research skill
+
+Wiring MCP tells an agent which tools exist. It does not tell it *when* any of
+this applies, or what this installation considers worth keeping. That is a
+skill, written to `~/.claude/skills/kriko-research/SKILL.md` alongside the
+config and **assembled from the installed packs** — each pack's own
+`research/principle.md`, which the store already carries as a pack asset. So a
+car and a power drill state two different bars without a line of `app/` knowing
+either, and updating a pack updates the protocol without updating the binary.
+Read it on the same screen, or at `GET /api/agent-skill`.
+
+Only harnesses with a skill mechanism get one (today: Claude Code). The rest
+still connect. A store with no enabled packs gets no skill at all — there is
+nothing to research and nothing to say what would count.
 
 The same binary serves both roles:
 

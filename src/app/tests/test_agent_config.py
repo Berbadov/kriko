@@ -125,3 +125,79 @@ def test_the_named_tools_exist_on_the_server():
     body = Path(mcp_server.__file__).read_text()
     for tool in ("research_brief", "coverage_gaps", "submit_findings"):
         assert f"def {tool}" in body, f"{tool} is advertised but not implemented"
+
+
+# ── the one-click path ──────────────────────────────────────────────────
+#
+# `_home` is redirected in every one of these. A test that wires the machine
+# it is running on would pass and then silently edit the author's own
+# ~/.claude.json, which is precisely the damage this feature has to be trusted
+# not to do.
+
+
+def test_every_known_harness_is_listed_with_its_state(tmp_path, monkeypatch):
+    from app import agentconfig
+
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
+    body = _client(tmp_path).get("/api/agent-targets").json()
+
+    assert {t["id"] for t in body["targets"]} >= {"claude-code", "cursor"}
+    assert all(t["state"] == "absent" for t in body["targets"])
+    assert body["store"].endswith("knowledge.sqlite")
+
+
+def test_connecting_writes_a_config_the_harness_can_read(tmp_path, monkeypatch):
+    from app import agentconfig
+
+    home = tmp_path / "home"
+    monkeypatch.setattr(agentconfig, "_home", lambda: home)
+    client = _client(tmp_path)
+
+    assert client.post("/api/agent-targets/claude-code/connect").json()["state"] == "connected"
+
+    written = json.loads((home / ".claude.json").read_text())["mcpServers"]["kriko"]
+    assert written == client.get("/api/agent-config").json()["mcp_json"]["mcpServers"]["kriko"]
+
+
+def test_the_listing_reflects_a_connection_that_was_just_made(tmp_path, monkeypatch):
+    from app import agentconfig
+
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
+    client = _client(tmp_path)
+    client.post("/api/agent-targets/cursor/connect")
+
+    states = {t["id"]: t["state"] for t in client.get("/api/agent-targets").json()["targets"]}
+    assert states["cursor"] == "connected"
+    assert states["claude-code"] == "absent"
+
+
+def test_a_harness_this_build_does_not_know_is_a_404(tmp_path):
+    assert _client(tmp_path).post("/api/agent-targets/emacs/connect").status_code == 404
+
+
+def test_a_config_the_reader_broke_is_refused_and_left_alone(tmp_path, monkeypatch):
+    from app import agentconfig
+
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".claude.json").write_text("{broken")
+    monkeypatch.setattr(agentconfig, "_home", lambda: home)
+
+    response = _client(tmp_path).post("/api/agent-targets/claude-code/connect")
+    assert response.status_code == 409
+    assert (home / ".claude.json").read_text() == "{broken"
+
+
+def test_verify_actually_starts_the_thing_it_advertised(tmp_path):
+    """The reader's question after Connect is "does it work", not "was it
+    written" — and those fail separately, for different reasons."""
+    body = _client(tmp_path).post("/api/agent-verify").json()
+    assert body == {"ok": True, "server": "kriko"}
+
+
+def test_verify_reports_a_command_that_cannot_start_rather_than_raising(tmp_path):
+    from app import agentconfig
+
+    row = agentconfig.handshake({"command": str(tmp_path / "nope"), "args": []})
+    assert row["ok"] is False
+    assert row["detail"]
