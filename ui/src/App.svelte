@@ -3,6 +3,7 @@
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import { initMode, mode } from "./lib/mode";
+    import { initTheme } from "./lib/theme";
     import { hashWith, route } from "./lib/router";
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import { isAuthorOnly } from "./lib/shell/nav";
@@ -42,7 +43,10 @@
     let dismissed = $state(false);
     const firstRun = $derived(empty && !dismissed && $route.name !== "welcome");
 
-    const ready = Promise.all([initMode($route.query.mode), checkStore]);
+    // The theme joins the same gate rather than running after it: a first
+    // paint in slate followed by a swap to lemonade is a flash the reader reads
+    // as a bug.
+    const ready = Promise.all([initMode($route.query.mode), initTheme(), checkStore]);
 </script>
 
 <div class="shell">

@@ -17,6 +17,12 @@ h2,
 h3 {
     letter-spacing: -0.01em;
 }
+/* Titles get the theme's display face; body text never does. In slate that
+ * alias resolves to --font-sans, so this rule changes nothing there. */
+h1,
+h2 {
+    font-family: var(--font-display);
+}
 h2 {
     font-size: var(--t-lg);
     line-height: var(--lh-lg);

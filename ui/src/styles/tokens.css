@@ -1,41 +1,15 @@
-/* The single place a colour is named.
+/* Everything a theme does NOT get to change.
  *
- * Eleven flat variables were why a new surface had no background to use and
- * someone reached for a literal. A ramp means the next panel already has a
- * value, and `styles/tokens.test.ts` fails the build if anyone reaches past it.
+ * Spacing, the type ramp, radii, motion and layout are structure: swapping the
+ * palette must not move anything. Colour lives in `themes/*.css`, one complete
+ * set per theme, and `tokens.test.ts` fails the build if a theme defines only
+ * some of it — half a theme paints elements with no colour at all, which is
+ * worse than the palette you were trying to replace.
+ *
+ * Font *families* are theme-owned (the lemonade theme's pixel display face is
+ * half its identity); font *sizes* are not.
  */
 :root {
-    /* neutrals — 0 is the page ground, 9 is the strongest text */
-    --n-0: #0f1115;
-    --n-1: #14171d;
-    --n-2: #171a21;
-    --n-3: #1e222b;
-    --n-4: #2a2f3a;
-    --n-5: #3a4150;
-    --n-6: #5b6475;
-    --n-7: #8b93a5;
-    --n-8: #c3c9d6;
-    --n-9: #e6e8ee;
-
-    --accent: #5b9dff;
-    --accent-ink: #0b1220;
-    --accent-soft: #1b2942;
-
-    --high: #ff6b6b;
-    --high-soft: #3a1f22;
-    --medium: #ffb454;
-    --medium-soft: #3a2e1a;
-    --low: #6ec7a0;
-    --low-soft: #172e26;
-
-    /* semantic aliases — components speak these, never a ramp step */
-    --bg: var(--n-0);
-    --panel: var(--n-2);
-    --panel-2: var(--n-3);
-    --line: var(--n-4);
-    --text: var(--n-9);
-    --dim: var(--n-7);
-
     /* spacing — 4 8 12 16 24 32 48 */
     --s-1: 4px;
     --s-2: 8px;
@@ -71,36 +45,4 @@
     --dur-slow: 240ms;
 
     --rail: 15rem;
-
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-/* Light is derived from the same ramp rather than patched on top of dark, which
- * is why `--high`/`--medium`/`--low` used to survive into light unchanged and
- * read as neon. */
-@media (prefers-color-scheme: light) {
-    :root {
-        --n-0: #f6f7f9;
-        --n-1: #ffffff;
-        --n-2: #ffffff;
-        --n-3: #f0f2f6;
-        --n-4: #dfe3ea;
-        --n-5: #c3cad6;
-        --n-6: #8b93a5;
-        --n-7: #626b7d;
-        --n-8: #3a4150;
-        --n-9: #1b1f27;
-
-        --accent: #2563eb;
-        --accent-ink: #ffffff;
-        --accent-soft: #e7effd;
-
-        --high: #b3261e;
-        --high-soft: #fdeceb;
-        --medium: #8a5a00;
-        --medium-soft: #fdf3e2;
-        --low: #1d6b4c;
-        --low-soft: #e9f6f0;
-    }
 }
