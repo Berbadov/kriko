@@ -6,7 +6,67 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
-### 2026-09-05 — the app opens wearing the extension's face (this commit)
+### 2026-09-05 — an extension the app can actually install (this commit)
+Until now the extension shipped in the repository and nowhere else: a reader
+with an installer had no way to get it, and the docs answered with `git clone`.
+
+**Check → Browser extension** does the four things a native app is permitted to
+do here — no browser lets an application install an extension, deliberately, and
+`chrome://extensions` cannot even be opened from a command line, so the last
+three steps stay the reader's.
+
+- **Stage** — `POST /api/extension/stage` writes a loadable copy to
+  `~/.kriko/extension/`. Beside the store, not inside the install directory: a
+  browser holds an unpacked extension *by path*, and an install directory is
+  replaced wholesale by the next installer, so staging there would silently
+  uninstall the extension on every app update. Replace-never-merge, because a
+  stale file the browser still loads is worse than a missing one.
+- **Reveal** — opens the folder, best-effort, and returns the path either way.
+  A box with no file manager is not worth a red banner when the path is already
+  on screen and copyable.
+- **Guide** — the load steps, with `chrome://extensions` and friends as
+  copy buttons, because a browser will not open its own settings page on an
+  app's say-so.
+- **Verify**, which is the half that matters. There is no registration
+  handshake and there should not be one; instead a middleware records
+  `Origin: chrome-extension://<id>`, a header only a browser can stamp, sent as
+  a side effect of the extension doing its actual work. So the page is a status,
+  not instructions: it turns green on its own, and it cannot be green while the
+  install is broken. One row per browser profile, since each install has its own
+  id.
+
+Two failures it now names that were previously invisible: a staged copy older
+than the one the app carries (*Add again*, then Reload), and **port 8787 held by
+something else** — the extension has no other address, so that install works
+perfectly and reaches nothing, and the reader's instinct, reinstalling the
+extension, never helps. The sidecar is the only thing that knows whether it won
+that bind, so it now says so through `KRIKO_EXTENSION_BOUND`.
+
+The extension rides inside the sidecar (`packaging/kriko-sidecar.spec` datas →
+`app/extension_src`), and `smoke_sidecar.py` fails the build if it is missing —
+the same class of silent packaging fault as the frontend, on the one page a
+reader opens *because* they need help. `test_the_shipped_list_matches_what_the_
+manifest_actually_references` reads `manifest.json` and checks nothing it names
+was left behind, so adding a content script cannot ship a folder Chrome refuses
+to load. NextStep gained `install-extension`, ranked above connecting an agent:
+the extension is what the reader came for, the agent is maintenance.
+
+### v0.3.1 — the palette and the extension, in an installer — 2026-09-05 (this commit)
+A patch with two reasons: 0.3.0's installer opens looking like 0.2.6, and it has
+no way to hand over the browser extension. The theme correction landed an hour after that tag was cut, and a fix nobody
+can double-click is not a fix yet.
+
+**The self-updater does not carry this one, and cannot.** 0.3.0 was built with
+`TAURI_SIGNING_PUBLIC_KEY` unset, so `configure_updater.py` took the updater
+plugin back out — those binaries have no update client compiled in and no
+endpoint to ask. There is nothing to fix in 0.3.1 that would change that; the
+missing half is in the already-shipped app. 0.3.1 is a manual download, and if
+the signing key is set before its build runs it becomes the first release that
+*can* update, with 0.3.2 the first update anyone receives. Ordinary for a
+first-updater release, and worth writing down so the next session does not
+read the empty `latest.json` as a bug.
+
+### 2026-09-05 — the app opens wearing the extension's face (`2e45c31`)
 S2 shipped a theme ported from `extension/colors_and_type.css` — a stylesheet
 nothing loads. The extension has no HTML outside its test fixtures;
 `manifest.json` injects `hover_lite/hover_lite.css` into a shadow root, and that

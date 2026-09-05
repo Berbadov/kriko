@@ -268,3 +268,26 @@ export type Health = {
     packs: { pack_id: string; version: string }[];
     releases_url: string;
 };
+
+export type ExtensionBrowser = { id: string; name: string; url: string };
+export type ExtensionSighting = {
+    origin: string;
+    first_at: string;
+    last_at: string;
+    hits: number;
+};
+export type ExtensionStatus = {
+    available: boolean;
+    version: string;
+    staged: boolean;
+    staged_version: string;
+    path: string;
+    port: number;
+    port_is_ours: boolean;
+    browsers: ExtensionBrowser[];
+    sightings: ExtensionSighting[];
+    connected: boolean;
+    seconds_since_seen: number | null;
+};
+export type ExtensionStaged = { path: string; written: string[]; version: string };
+export type ExtensionRevealed = { path: string; error: string };

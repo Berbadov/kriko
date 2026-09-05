@@ -58,10 +58,28 @@ Stop it with Ctrl-C. There is nothing else running.
 
 ## 2. Chrome Extension
 
+**From the app — the path a reader takes.** Open **Check → Browser extension**.
+Press *Add the extension* and it writes a loadable copy to `~/.kriko/extension/`,
+then walks the three steps below with the folder path on screen and a button to
+open it. Leave that page open while you load it: it turns green by itself the
+first time the extension reaches the app, which is real evidence rather than a
+setting — a browser stamps `Origin: chrome-extension://<id>` on every request its
+extensions make, and nothing else on the machine can produce that header.
+
+`~/.kriko/extension/` rather than the install directory because a browser
+remembers an unpacked extension **by path**, and an install directory is replaced
+wholesale by the next installer — staging there would uninstall the extension on
+every app update.
+
+**From a checkout**, `extension/` in the repo works just as well:
+
 1. Open Chrome → `chrome://extensions` → enable **Developer mode**
 2. Click **Load unpacked** → select `~/kriko/extension/`
 3. Visit any Sahibinden.com listing for a supported car (Renault Megane IV)
 4. The Kriko panel appears automatically after ~1.5 seconds
+
+After an app update ships a newer extension, the page says so and *Add again*
+plus the browser's own **Reload** is the whole repair.
 
 The extension talks to `127.0.0.1:8787` and cannot be told a different port —
 a page has no filesystem and no channel from the app. Both `python -m app.web`
