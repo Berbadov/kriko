@@ -1,6 +1,9 @@
 import type * as T from "./types";
 
 export class ApiError extends Error {
+    /** The server's own last stack frames, when it sent any. */
+    public trace: string[] = [];
+
     constructor(
         public status: number,
         body: string,
@@ -10,9 +13,42 @@ export class ApiError extends Error {
     }
 }
 
+/**
+ * The readable half of a failed response.
+ *
+ * FastAPI puts a handled error's reason in `detail`, and `app/web/app.py`'s
+ * unhandled-error handler puts an exception's type and message there too. What
+ * the reader used to see instead was the whole JSON body, or — before that
+ * handler existed — the literal words "Internal Server Error", which named
+ * nothing. A local app has one reader and no log viewer: whatever this returns
+ * is the entire diagnosis available to them.
+ */
+function explain(body: string): { message: string; trace: string[] } {
+    try {
+        const parsed = JSON.parse(body) as {
+            detail?: unknown;
+            trace?: unknown;
+        };
+        const detail = parsed.detail;
+        const trace = Array.isArray(parsed.trace)
+            ? parsed.trace.map(String)
+            : [];
+        if (typeof detail === "string" && detail) return { message: detail, trace };
+        if (detail !== undefined) return { message: JSON.stringify(detail), trace };
+        return { message: body, trace };
+    } catch {
+        return { message: body, trace: [] };
+    }
+}
+
 async function request<R>(path: string, init?: RequestInit): Promise<R> {
     const response = await fetch(path, init);
-    if (!response.ok) throw new ApiError(response.status, await response.text());
+    if (!response.ok) {
+        const { message, trace } = explain(await response.text());
+        const error = new ApiError(response.status, message);
+        error.trace = trace;
+        throw error;
+    }
     return (await response.json()) as R;
 }
 

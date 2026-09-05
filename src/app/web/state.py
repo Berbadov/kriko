@@ -16,6 +16,8 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
+from kriko.store.db import schema_stamp
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS lookups (
     lookup_id     TEXT PRIMARY KEY,
@@ -83,11 +85,28 @@ CREATE TABLE IF NOT EXISTS claim_checks (
 def connect(path: Path) -> sqlite3.Connection:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # See kriko.store.db.connect: same reason, same failure. A request-scoped
+    # connection is owned by the request, and FastAPI does not keep a request
+    # on one worker thread.
+    conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.executescript(SCHEMA)
-    conn.commit()
+    conn.execute("PRAGMA busy_timeout = 5000")
+    # Both of the lines below used to run unconditionally, which made every
+    # read of the history a writer holding an exclusive lock. See
+    # kriko.store.db._prepare for what that cost.
+    if conn.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError:
+            pass  # another connection is doing it, or it is already done
+    # Fingerprinted, not numbered — see kriko.store.db.schema_stamp. This
+    # schema has already grown once (extension_seen, 0.3.1) and a hand-bumped
+    # number is precisely the step that gets forgotten on the second one.
+    stamp = schema_stamp(SCHEMA)
+    if conn.execute("PRAGMA user_version").fetchone()[0] != stamp:
+        conn.executescript(SCHEMA)
+        conn.execute(f"PRAGMA user_version = {stamp}")
+        conn.commit()
     return conn
 
 

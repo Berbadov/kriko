@@ -13,11 +13,13 @@ protect. Serving this on 0.0.0.0 would expose an unauthenticated pack-uninstall
 endpoint to the network, so the default host is not a preference.
 """
 
+import sys
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.web.jobs import JobRunner
@@ -103,6 +105,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except Exception:
                 pass
         return await call_next(request)
+
+    # ── an unhandled error says what it was ──────────────────────────────
+    #
+    # Everything above is a local process with exactly one reader, who has no
+    # terminal, no log viewer and no way to reach the traceback that FastAPI
+    # writes to a stderr the desktop shell swallows. "Could not load this
+    # view: 500: Internal Server Error" is all they get, on every view at
+    # once, with nothing to send anyone.
+    #
+    # That is what happened to 0.3.1: a cross-thread SQLite connection made
+    # every store-backed view fail, and the message named neither SQLite nor
+    # threads. The connection bug is fixed in `kriko.store.db`; this exists so
+    # the *next* one is legible, because a local app has no operator to page
+    # and the reader is the only instrument we have.
+    #
+    # Safe to return the detail because there is nothing here to leak to:
+    # 127.0.0.1, no accounts, no other tenant. The one caller that is not the
+    # reader is the browser extension, which already runs on the reader's own
+    # machine on their behalf.
+    @app.exception_handler(Exception)
+    async def explain_the_failure(request: Request, exc: Exception):
+        trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        print("".join(trace), file=sys.stderr, flush=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": f"{type(exc).__name__}: {exc}",
+                "where": request.url.path,
+                # The last few frames, not the whole stack: enough to name the
+                # module that failed in a copyable line, without pasting the
+                # ASGI plumbing into the reader's screen.
+                "trace": [line.rstrip() for line in trace[-6:]],
+            },
+        )
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

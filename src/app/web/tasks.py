@@ -149,7 +149,7 @@ def pack_build(settings, params: dict, progress: Progress) -> dict:
     from kriko.pack.build import build as generic_build
     from kriko.pack.build import digest_of
 
-    out = Path(params.get("out") or Path("dist") / f"{root.name}.kpack")
+    out = Path(params.get("out") or settings.dist_dir / f"{root.name}.kpack")
     out.parent.mkdir(parents=True, exist_ok=True)
 
     progress.set(0.1, f"building {root.name}")

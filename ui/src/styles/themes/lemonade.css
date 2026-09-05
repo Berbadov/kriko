@@ -39,6 +39,18 @@
     --low: #3c7244;
     --low-soft: #dcebd9;
 
+
+    /* control surfaces — cream, so the same light-theme reasoning as slate's
+     * light block: white on top, a warm grey underneath, shadow doing the work. */
+    --btn: #fdfaf2;
+    --btn-hover: #f5efe0;
+    --btn-active: #ebe3d1;
+    --btn-hi: #ffffff;
+    --btn-lo: #d8cfb8;
+    --accent-hi: #3f7f7b;
+    --accent-lo: #244f4d;
+    --shadow-1: 0 1px 1px rgba(51, 43, 24, 0.08);
+    --shadow-2: 0 2px 8px rgba(51, 43, 24, 0.14);
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);

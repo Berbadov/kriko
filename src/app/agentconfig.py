@@ -199,6 +199,34 @@ def by_id(target_id: str) -> Target | None:
     return next((t for t in targets() if t.id == target_id), None)
 
 
+def _launch_environment(extra: dict) -> dict:
+    """The environment a *harness* would start this command in.
+
+    An earlier version handed the child `{"PATH": ...}` and nothing else, on the
+    theory that a minimal environment is a more honest test. It is the opposite:
+    it tests a situation no harness creates, and it fails for reasons the
+    advertised command never would.
+
+    On Windows it failed outright. A PyInstaller onefile binary is an archive
+    that unpacks itself into a temporary directory before any of our code runs,
+    and it finds that directory through `TEMP`/`TMP`. Strip those and the
+    process dies before `--mcp` is ever parsed, with
+
+        [PYI-24700:ERROR] Could not create temporary directory!
+
+    reported to the reader as *their* configuration being broken. It was ours.
+    `SystemRoot` is the same class of variable and its absence breaks sockets.
+
+    So: inherit the environment, then overlay what the config declares. That is
+    what Claude Code, Cursor and the rest do when they spawn a stdio server, and
+    a diagnostic is only worth running if it runs the real thing. Note that
+    `packaging/smoke_sidecar.py` has always launched the frozen binary with
+    `os.environ | {...}` — it was green on the same Windows build where this
+    was red, which is precisely how the divergence survived.
+    """
+    return {**os.environ, **extra}
+
+
 def handshake(server: dict, *, timeout: float = 30.0) -> dict:
     """Run the advertised command and complete an MCP `initialize` with it.
 
@@ -233,7 +261,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
             [server["command"], *server.get("args", [])],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True,
-            env={"PATH": os.environ.get("PATH", ""), **server.get("env", {})},
+            env=_launch_environment(server.get("env", {})),
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}

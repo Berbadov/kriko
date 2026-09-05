@@ -41,6 +41,12 @@
     --radius-sm: 8px;
     --ring: 2px;
 
+    /* How far a control sinks when pressed. Structure, not palette: a
+     * theme may repaint a button but the press must travel the same
+     * distance everywhere, and one pixel is the whole effect — two reads
+     * as the layout jumping. */
+    --lift: 1px;
+
     /* Motion is structure, not palette: a theme may repaint an element but
      * must not change how long it takes to appear. Three durations and two
      * curves, because a fourth of either is how a UI starts feeling assembled
