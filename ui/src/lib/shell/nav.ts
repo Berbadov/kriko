@@ -41,6 +41,14 @@ export const NAV: NavGroupSpec[] = [
             { name: "jobs", label: "Runs" },
         ],
     },
+    {
+        // Not author-only: "what version are you running" is asked of the
+        // reader who cannot open the author screens, and it is the first
+        // question any support exchange starts with.
+        title: "This install",
+        authorOnly: false,
+        items: [{ name: "about", label: "About" }],
+    },
 ];
 
 export const groupsFor = (mode: Mode): NavGroupSpec[] =>
