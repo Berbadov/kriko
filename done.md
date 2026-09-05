@@ -6,7 +6,54 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
-### 2026-09-05 — an extension the app can actually install (this commit)
+### 2026-09-05 — the four bugs 0.3.1 shipped with (this commit)
+A reader opened v0.3.1 and got 500s on most views, `[PYI-24700:ERROR] Could
+not create temporary directory!` under "Does it actually run?", no way to build
+a pack, and a lemon where the K should be. Four reports, three causes, all of
+them things the test suite agreed with.
+
+- **Every store-backed view 500s.** `sqlite3.ProgrammingError: SQLite objects
+  created in a thread can only be used in that same thread`. FastAPI splits a
+  sync generator dependency across the AnyIO worker pool — `__enter__` and the
+  endpoint body are separate `run_in_threadpool` calls — so a connection is
+  routinely used off the thread that made it. With one idle worker they
+  coincide, which is why a sequential sweep of all 21 endpoints was green and
+  the UI's `Promise.all` was not. `check_same_thread=False` plus per-request
+  ownership; `sqlite3.threadsafety == 3` is what makes that sound.
+- **…and then `database is locked`.** Surfaced by the new concurrency test on
+  its first run: `connect()` ran `executescript(schema.sql)` and
+  `PRAGMA journal_mode = WAL` on *every* connection, so every read was a writer
+  taking an exclusive lock. Now: `busy_timeout`, a read before the WAL switch,
+  and the schema applied only when `PRAGMA user_version` disagrees with a
+  fingerprint of the schema text (`kriko.store.db.schema_stamp`) — fingerprint
+  rather than a number because a hand-bumped constant is the step that gets
+  forgotten, and `app.sqlite`'s schema has already grown once.
+- **Verify killed the binary it was verifying.** `handshake()` launched the
+  advertised command with `{"PATH": ...}` and nothing else. A PyInstaller
+  onefile binary unpacks itself through `TEMP`/`TMP` before parsing an
+  argument, so on Windows it died with PYI-24700 and the app reported it as the
+  reader's configuration being wrong. `packaging/smoke_sidecar.py` had always
+  used `os.environ | {...}` and was green on the same build — the divergence
+  between the diagnostic and the product is what let it ship.
+- **Nothing could be built or logged.** `Settings.packs_dir`,
+  `Settings.analysis_log_path` and `pack_build`'s output were relative paths,
+  which resolve against a working directory an installed app does not own —
+  `C:\Program Files\Kriko` on Windows. Now anchored to the source checkout
+  when there is one and `~/.kriko` when there is not, with
+  `test_writable_paths.py` failing any future default that is relative.
+- **A 500 now says what it was.** A local app has one reader, no terminal and
+  no log viewer; "Could not load this view: 500" is not a bug report. The
+  handler returns the exception type, the path and the last few frames, and
+  `ui/src/lib/api.ts` carries them onto the screen.
+- **The mark is the extension's K**, in the rail, the favicon and the taskbar
+  tile, derived by `packaging/render_icon.py` and held to the extension's own
+  toolbar icon by a role-per-cell comparison — the lemon was left over from a
+  product this never was.
+- **Buttons look pressable.** A lit top edge, a shadowed bottom one, a 1px sink
+  on `:active`, one primary per view — the tokens live in every theme, so
+  `tokens.test.ts` still holds.
+
+### 2026-09-05 — an extension the app can actually install
 Until now the extension shipped in the repository and nowhere else: a reader
 with an installer had no way to get it, and the docs answered with `git clone`.
 

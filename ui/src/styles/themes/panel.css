@@ -59,6 +59,24 @@
     --low: #46b48c;
     --low-soft: #14251f;
 
+
+    /* ── control surfaces ─────────────────────────────────────────────
+     * A raised face needs three values, not one: the face itself, a hairline
+     * along the top that catches light, and a rule under the bottom that
+     * reads as its edge. In a dark theme "lighter" means up the ramp and the
+     * bottom edge is the ground itself. */
+    --btn: #1b1e24; /* n-3 — the face at rest */
+    --btn-hover: #232830;
+    --btn-active: #16181d; /* darker than the face: pressed, not lit */
+    --btn-hi: #363c47; /* the lit top edge */
+    --btn-lo: #0a0b0d; /* the ground, as the bottom edge */
+    --accent-hi: #f0cf6c; /* gold, one step up — hover */
+    --accent-lo: #cfa838; /* gold, one step down — pressed */
+    /* Elevation. Near-black shadows on a near-black ground do almost nothing,
+     * which is correct: in a dark theme depth comes from the edges above and
+     * the shadow only grounds them. */
+    --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55);
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);

@@ -18,33 +18,120 @@
 }
 
 /* ── controls ─────────────────────────────────────────────────────── */
+/*
+ * A button here is a *thing*, not a coloured word. The previous rule drew a
+ * flat rectangle whose only feedback was a border that changed hue on hover —
+ * which reads as a link with a box around it, gives no press, and left the
+ * reader unable to tell the one action a view is about from the four beside
+ * it. Three changes fix all of that and nothing else moves:
+ *
+ *   1. A face with edges. A hairline highlight along the top and a darker rule
+ *      under the bottom, plus a small shadow, is the whole vocabulary of a
+ *      physical control — enough to say "press me" without a skeuomorph.
+ *   2. A press that happens. `:active` sinks the face by `--lift` and drops the
+ *      shadow. This is the half that makes a click feel like it landed, and it
+ *      is entirely absent from a hover-only design.
+ *   3. One primary per view, filled with the extension's gold. `.primary` is
+ *      how a reader finds the action; `.ghost` is how everything else gets out
+ *      of its way.
+ *
+ * All of it is token-fed, so the same rules paint correctly in slate and
+ * lemonade — `--btn-hi` and `--btn-lo` are just "lighter than the face" and
+ * "darker than the face" in whichever direction that theme's ground runs.
+ */
 button,
 .tab {
     font: inherit;
+    font-weight: 500;
     color: var(--text);
-    background: var(--panel-2);
+    background: var(--btn);
     border: 1px solid var(--line);
+    border-top-color: var(--btn-hi);
+    border-bottom-color: var(--btn-lo);
     border-radius: var(--radius-sm);
-    padding: var(--s-1) var(--s-3);
+    padding: var(--s-2) var(--s-4);
     cursor: pointer;
-    transition: border-color var(--dur-fast) ease;
+    box-shadow: var(--shadow-1);
+    /* `transform` last and cheapest: the press must not wait on colour. */
+    transition:
+        background var(--dur-fast) ease,
+        border-color var(--dur-fast) ease,
+        box-shadow var(--dur-fast) ease,
+        transform var(--dur-fast) ease;
 }
 button:hover,
 .tab:hover {
+    background: var(--btn-hover);
     border-color: var(--accent);
+    box-shadow: var(--shadow-2);
 }
+button:active,
+.tab:active {
+    /* The press. Sunk and unlit — the shadow going away is what sells it. */
+    transform: translateY(var(--lift));
+    box-shadow: none;
+    background: var(--btn-active);
+}
+button:focus-visible,
+.tab:focus-visible {
+    outline: var(--ring) solid var(--accent);
+    outline-offset: var(--ring);
+}
+button:disabled,
+button[aria-disabled="true"] {
+    /* Not merely faded: a disabled control must also stop looking pressable,
+     * so it loses the lift and the pointer along with the contrast. */
+    opacity: 0.5;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* The one action a view is about. Gold on near-black is the extension's
+ * signature and the reason this app is recognisable as the same product. */
+button.primary,
 .tab.active {
     background: var(--accent);
     border-color: var(--accent);
+    border-top-color: var(--accent-hi);
+    border-bottom-color: var(--accent-lo);
     /* was #fff, which printed white-on-light-blue in light mode */
     color: var(--accent-ink);
+    font-weight: 600;
 }
+button.primary:hover,
+.tab.active:hover {
+    background: var(--accent-hi);
+    border-color: var(--accent-hi);
+}
+button.primary:active,
+.tab.active:active {
+    background: var(--accent-lo);
+}
+
+/* Everything that is not the action: still a button, still pressable, but it
+ * does not compete. It keeps the lift so the press still reads. */
 button.ghost {
     background: transparent;
+    box-shadow: none;
+    border-color: var(--line);
+    color: var(--dim);
+}
+button.ghost:hover {
+    background: var(--btn);
+    border-color: var(--accent);
+    color: var(--text);
+    box-shadow: var(--shadow-1);
 }
 button.danger:hover {
     border-color: var(--high);
     color: var(--high);
+    background: var(--high-soft);
+}
+button.small,
+.tab.small {
+    padding: var(--s-1) var(--s-2);
+    font-size: var(--t-sm);
 }
 nav a.tab {
     text-decoration: none;
@@ -471,8 +558,15 @@ li.gap {
     color: var(--text);
 }
 .brand .mark {
-    color: var(--accent);
-    font-size: var(--t-md);
+    /* The mark carries its own ground, so it is a tile rather than a glyph:
+     * rounded to sit beside text, and never squashed by the flex row. */
+    display: block;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    /* Pixel art. Any smoothing on an integer upscale turns the grid to mush. */
+    image-rendering: pixelated;
 }
 .brand-text {
     display: grid;
