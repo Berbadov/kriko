@@ -33,6 +33,17 @@
     --low: #6ec7a0;
     --low-soft: #172e26;
 
+
+    /* control surfaces — see themes/panel.css for what each one is for */
+    --btn: #1e222b;
+    --btn-hover: #262b36;
+    --btn-active: #191d25;
+    --btn-hi: #333a47;
+    --btn-lo: #0f1115;
+    --accent-hi: #7db0ff;
+    --accent-lo: #4880d8;
+    --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55);
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);
@@ -71,5 +82,18 @@
         --medium-soft: #fdf3e2;
         --low: #1d6b4c;
         --low-soft: #e9f6f0;
+
+        /* control surfaces — in a light theme the ramp runs the other way:
+         * the lit top edge is white and the bottom edge is a grey darker than
+         * the face, so the shadow is what carries most of the depth. */
+        --btn: #ffffff;
+        --btn-hover: #f0f2f6;
+        --btn-active: #e4e8ef;
+        --btn-hi: #ffffff;
+        --btn-lo: #c8cfdb;
+        --accent-hi: #3b78f0;
+        --accent-lo: #1d4fd0;
+        --shadow-1: 0 1px 1px rgba(16, 24, 40, 0.06);
+        --shadow-2: 0 2px 8px rgba(16, 24, 40, 0.12);
     }
 }

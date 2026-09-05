@@ -19,8 +19,12 @@ import logging
 import os
 from pathlib import Path
 
+from app.web.settings import default_analysis_log
+
+# Not `Path("logs/analyses.jsonl")`. That resolved against the working
+# directory, which an installed app does not own — see settings.KRIKO_HOME.
 DEFAULT_LOG_PATH = Path(
-    os.environ.get("KRIKO_ANALYSES_LOG", "logs/analyses.jsonl"))
+    os.environ.get("KRIKO_ANALYSES_LOG", default_analysis_log()))
 
 log = logging.getLogger(__name__)
 

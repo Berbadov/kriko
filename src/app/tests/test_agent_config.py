@@ -201,3 +201,25 @@ def test_verify_reports_a_command_that_cannot_start_rather_than_raising(tmp_path
     row = agentconfig.handshake({"command": str(tmp_path / "nope"), "args": []})
     assert row["ok"] is False
     assert row["detail"]
+
+
+def test_verify_runs_the_command_in_a_real_environment(monkeypatch):
+    """A diagnostic that strips the environment tests a situation nobody is in.
+
+    `handshake` used to hand the child `{"PATH": ...}` and nothing else. On
+    Windows that kills a PyInstaller onefile binary before it parses an
+    argument — it unpacks itself through `TEMP`/`TMP` — and the reader is told
+
+        [PYI-24700:ERROR] Could not create temporary directory!
+
+    under a heading asking whether *their* agent works. It was ours. Harnesses
+    inherit the environment and overlay the config's `env`; so does this now.
+    """
+    from app.agentconfig import _launch_environment
+
+    monkeypatch.setenv("TEMP", "/somewhere")
+    monkeypatch.setenv("KRIKO_STORE", "/inherited")
+    built = _launch_environment({"KRIKO_STORE": "/declared"})
+
+    assert built["TEMP"] == "/somewhere", "the harness's environment is inherited"
+    assert built["KRIKO_STORE"] == "/declared", "the config's env still wins"
