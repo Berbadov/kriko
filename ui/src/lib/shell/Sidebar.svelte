@@ -17,7 +17,11 @@
 
 <aside class="rail">
     <a class="brand" href={href("check")}>
-        <span class="mark" aria-hidden="true">◆</span>
+        <!-- The extension's toolbar icon, the same file the installer's
+             app icon is rendered from. The reader met this product in a
+             browser toolbar; a different mark here reads as a different
+             tool. -->
+        <img class="mark" src="/mark.svg" alt="" width="28" height="28" />
         <span class="brand-text">
             <strong>Kriko</strong>
             <span class="meta">local product knowledge</span>
