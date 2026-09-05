@@ -232,3 +232,19 @@ export type SubjectDetail = {
 };
 
 export type Brief = { subject: string; queries: string[]; brief: string };
+
+/** What `/api/health` reports about this install.
+ *
+ * `version`, `schema_version` and each pack's version are three independent
+ * clocks — see `app/version.py` for why they are never collapsed into one.
+ */
+export type Health = {
+    ok: boolean;
+    store: string;
+    app_state: string;
+    analysis_log: string;
+    version: string;
+    schema_version: number;
+    packs: { pack_id: string; version: string }[];
+    releases_url: string;
+};
