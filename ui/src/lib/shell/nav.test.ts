@@ -9,6 +9,10 @@ describe("the route table", () => {
             "check",
             "history",
             "compare",
+            // The extension is the buyer's half of the product, so it sits
+            // inside the one group they can see rather than behind the author
+            // gate with the other setup screens.
+            "extension",
         ]);
     });
 
@@ -32,6 +36,7 @@ describe("the route table", () => {
         expect(isAuthorOnly("health")).toBe(true);
         expect(isAuthorOnly("check")).toBe(false);
         expect(isAuthorOnly("compare")).toBe(false);
+        expect(isAuthorOnly("extension")).toBe(false);
     });
 
     it("lists every destination once, so App.svelte and the rail cannot drift", () => {
@@ -39,6 +44,7 @@ describe("the route table", () => {
             "check",
             "history",
             "compare",
+            "extension",
             "overview",
             "subjects",
             "coverage",

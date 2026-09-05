@@ -32,6 +32,21 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL
 );
 
+-- Sightings of the browser extension, keyed by the origin the browser
+-- stamped on the request. A `chrome-extension://<id>` origin cannot be
+-- forged by a config file or asserted by a reader who thinks they installed
+-- it: it means an extension exists, is running, and reached this process.
+-- That is the only evidence the app has that the install actually worked,
+-- and it is why the extension page is a status rather than instructions.
+-- Per-origin rather than one row, because two browser profiles get two ids
+-- and "which of my browsers is wired up" is the question that follows.
+CREATE TABLE IF NOT EXISTS extension_seen (
+    origin   TEXT PRIMARY KEY,
+    first_at TEXT NOT NULL,
+    last_at  TEXT NOT NULL,
+    hits     INTEGER NOT NULL DEFAULT 1
+);
+
 -- Triage: which claims of a stored answer the reader has dealt with.
 -- Keyed by (lookup_id, claim_key) rather than by claim_id, because an
 -- /api/analyze payload has no claim_id and the reader's checkmark must
@@ -182,6 +197,43 @@ def put_settings(conn: sqlite3.Connection, values: dict) -> dict:
     )
     conn.commit()
     return all_settings(conn)
+
+
+# ── the browser extension ────────────────────────────────────────────────
+
+
+def record_extension(conn: sqlite3.Connection, origin: str) -> None:
+    """Note that an extension origin reached us just now.
+
+    Deliberately cheap and deliberately silent. It runs inside a middleware on
+    a request the extension is waiting on, so it must not raise: a locked
+    database or a schema older than this table would otherwise turn "the
+    reader installed the extension" into "the extension reports the app is
+    broken", which is precisely backwards.
+    """
+    now = _now()
+    try:
+        conn.execute(
+            "INSERT INTO extension_seen (origin, first_at, last_at, hits)"
+            " VALUES (?, ?, ?, 1)"
+            " ON CONFLICT(origin) DO UPDATE SET last_at = excluded.last_at,"
+            " hits = extension_seen.hits + 1",
+            (origin, now, now),
+        )
+        conn.commit()
+    except sqlite3.Error:
+        pass
+
+
+def extension_sightings(conn: sqlite3.Connection) -> list[dict]:
+    """Every extension origin that has ever called, newest contact first."""
+    return [
+        dict(row)
+        for row in conn.execute(
+            "SELECT origin, first_at, last_at, hits FROM extension_seen"
+            " ORDER BY last_at DESC"
+        )
+    ]
 
 
 # ── triage ───────────────────────────────────────────────────────────────

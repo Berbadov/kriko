@@ -121,8 +121,10 @@ server died comes back marked `interrupted` rather than spinning forever.
 Identity is passed as bare `key=value` pairs, not `--make/--model` flags: the keys are
 pack-declared data, so the CLI can only pass them through opaquely.
 
-Then load the extension: Chrome → `chrome://extensions` → Developer mode → Load unpacked
-→ select `extension/`.
+Then load the extension. In the app, **Check → Browser extension** stages a copy to
+`~/.kriko/extension/`, opens the folder, and tells you when the extension actually
+reaches the app. From a checkout you can skip that: Chrome → `chrome://extensions` →
+Developer mode → Load unpacked → select `extension/`.
 
 Only *running the research pipeline* needs API keys (`MISTRAL_API_KEY`, `EXA_API_KEY` in a
 repo-root `.env`) — never serving a lookup.
