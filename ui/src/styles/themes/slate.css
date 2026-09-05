@@ -1,12 +1,14 @@
-/* Slate — the default, and the theme this app was designed in.
+/* Slate — the theme this app was designed in, and the only one that follows
+ * your system.
  *
- * Selected by `[data-theme="slate"]` and by having no attribute at all, so a
- * first run with nothing stored still paints. Follows the reader's system
- * preference for light/dark, which is why the light block is derived from the
- * same ramp rather than patched on top of dark — that patching is why
+ * Selected by `[data-theme="slate"]` only. It held bare `:root` while it was
+ * the default; panel does now, because whichever sheet holds it is what the
+ * first frame is painted with.
+ *
+ * It is the one theme with a light mode, and the light block is derived from
+ * the same ramp rather than patched on top of dark — that patching is why
  * `--high`/`--medium`/`--low` used to survive into light and read as neon.
  */
-:root,
 :root[data-theme="slate"] {
     /* neutrals — 0 is the page ground, 9 is the strongest text */
     --n-0: #0f1115;
@@ -47,7 +49,6 @@
 }
 
 @media (prefers-color-scheme: light) {
-    :root:not([data-theme]),
     :root[data-theme="slate"] {
         --n-0: #f6f7f9;
         --n-1: #ffffff;

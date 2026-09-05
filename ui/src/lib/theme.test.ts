@@ -17,7 +17,15 @@ describe("themes", () => {
     });
 
     it("names every theme the stylesheets ship", () => {
-        expect(THEMES).toEqual(["slate", "lemonade"]);
+        expect(THEMES).toEqual(["panel", "slate", "lemonade"]);
+    });
+
+    it("opens wearing the extension's palette", () => {
+        // The app and the extension are one product, and the reader met the
+        // extension first. Defaulting to slate meant the app opened looking
+        // like a different tool — which is not a preference to be set, it is
+        // the product being wrong out of the box.
+        expect(DEFAULT_THEME).toBe("panel");
     });
 
     it("writes the choice where CSS can see it", () => {

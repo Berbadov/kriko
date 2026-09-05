@@ -621,3 +621,52 @@ def test_the_app_stays_standalone():
             f"{driver} is a dependency again — the store is SQLite, and the "
             f"engine talks to it with the stdlib sqlite3 module"
         )
+
+
+def test_the_app_wears_the_extension_palette():
+    """The app's default theme tracks the extension's live stylesheet.
+
+    This exists because it already went wrong: the `lemonade` theme was ported
+    from `extension/colors_and_type.css`, a file nothing loads — the extension
+    has no HTML outside its test fixtures, and `manifest.json` ships
+    `hover_lite/hover_lite.css` into a shadow root instead. The port was
+    faithful to a stylesheet that had not painted a pixel in months, and the
+    only thing that caught it was the reader looking at both windows.
+
+    So the check is not "panel.css is correct" — that is a fact about one
+    afternoon. It is "panel.css and the live sheet still agree", which fails
+    the moment somebody restyles the extension and forgets the app, in either
+    direction.
+    """
+    live = (REPO / "extension" / "hover_lite" / "hover_lite.css").read_text()
+    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text()
+
+    def declared(css: str, prop: str) -> str | None:
+        found = re.search(rf"^\s*{re.escape(prop)}:\s*([^;]+);", css, re.M)
+        return found.group(1).strip().lower() if found else None
+
+    # Ground and accent are the two values a glance actually registers; if
+    # these drift the two windows stop looking like one product, whatever the
+    # other forty tokens say.
+    for label, live_prop, theme_prop in (
+        ("the ground", "--bg-base", "--n-0"),
+        ("the accent", "--accent", "--accent"),
+    ):
+        want, got = declared(live, live_prop), declared(theme, theme_prop)
+        assert want is not None, f"{live_prop} is gone from hover_lite.css"
+        assert got == want, (
+            f"{label} drifted: the extension paints {live_prop}: {want}, the "
+            f"app's panel theme has {theme_prop}: {got}. Whichever moved "
+            f"first, the other has to follow — they are one product."
+        )
+
+    for family in ("ibm plex sans", "ibm plex mono"):
+        assert family in theme.lower(), (
+            f"panel.css no longer names {family}, which hover_lite.css uses"
+        )
+
+    # And the app must actually open in it. A theme nobody selects is a
+    # preference, not an identity.
+    assert 'DEFAULT_THEME: Theme = "panel"' in (
+        REPO / "ui" / "src" / "lib" / "theme.ts"
+    ).read_text(), "the app no longer opens wearing the extension's palette"
