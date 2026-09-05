@@ -40,6 +40,21 @@
 <h2>Overview</h2>
 
 <Async promise={data}>
+    <!-- Overview's shape is fixed — three work items, then four counts — so the
+         skeleton is honest here in a way it would not be on a result page whose
+         length depends on what came back. -->
+    {#snippet skeleton()}
+        <ul class="worklist">
+            {#each [0, 1, 2] as row (row)}
+                <li><span class="skeleton">a work item waiting to be counted</span></li>
+            {/each}
+        </ul>
+        <div class="stats">
+            {#each [0, 1, 2, 3] as cell (cell)}
+                <div class="stat skeleton">0</div>
+            {/each}
+        </div>
+    {/snippet}
     {#snippet children(d)}
         {#if !d.packs.length}
             <EmptyState

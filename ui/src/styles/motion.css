@@ -1,0 +1,135 @@
+/* Every animation in the app, named once.
+ *
+ * Motion here has one job: say *what changed*. A view that arrives, a job that
+ * is still running, a value that just updated — each of those is a fact the
+ * reader would otherwise have to notice by re-reading. Nothing moves for
+ * decoration, and nothing moves on a timer.
+ *
+ * The rules are enforced rather than agreed:
+ *
+ * * **Durations and curves are tokens.** `tokens.test.ts` fails on a raw `ms`
+ *   or `cubic-bezier` in any other sheet, for the same reason it fails on a
+ *   raw colour: three components each picking their own 180ms is how an
+ *   interface stops feeling like one thing.
+ * * **Reduced motion removes the animation, not its effect.** The old blanket
+ *   `animation-duration: 1ms !important` left a skeleton mid-pulse and an
+ *   entering panel at whatever opacity frame zero happened to be. Each rule
+ *   below has a reduced-motion counterpart that lands on the *end* state.
+ */
+
+/* ── arriving ─────────────────────────────────────────────────────── */
+/* A view, a card, a result. Slight rise, because a panel that only fades in
+ * reads as a flicker at these durations. */
+@keyframes kriko-enter {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.enter {
+    animation: kriko-enter var(--dur-slow) var(--ease-out) both;
+}
+
+/* ── still working ────────────────────────────────────────────────── */
+/* A skeleton says how much is coming and roughly what shape; a spinner says
+ * only "wait". The sweep is what distinguishes it from an empty box. */
+@keyframes kriko-sweep {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton {
+    border-radius: var(--radius-sm);
+    background-image: linear-gradient(
+        90deg,
+        var(--panel-2) 25%,
+        var(--line) 37%,
+        var(--panel-2) 63%
+    );
+    background-size: 200% 100%;
+    animation: kriko-sweep 1400ms linear infinite;
+    /* A skeleton has no text. Without this it collapses to nothing and the
+     * page it is standing in for jumps when the real content lands. */
+    min-height: 1em;
+    color: transparent;
+    user-select: none;
+}
+
+/* ── live ─────────────────────────────────────────────────────────── */
+/* A running job. Slow and low-contrast on purpose: it is peripheral
+ * information, and something bright pulsing in the corner of a screen someone
+ * is reading is a hostile thing to build. */
+@keyframes kriko-breathe {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: kriko-breathe 2s var(--ease) infinite;
+}
+
+/* ── what just changed ────────────────────────────────────────────── */
+/* One pass, on the element that changed, when the change was not the reader's
+ * own doing — a job finishing, a status arriving. */
+@keyframes kriko-settle {
+    from {
+        background-color: var(--accent-soft);
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+.settled {
+    animation: kriko-settle var(--dur-slower) var(--ease-out) both;
+}
+
+/* Every "Loading…" in the app, without editing nine components. A spinner
+ * would be a new element in each of them; this is the sentence they already
+ * render, breathing, which is enough to say the wait is the app's and not the
+ * reader's. */
+.state.loading {
+    animation: kriko-breathe 1600ms var(--ease) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Landed, not frozen. Each of these is the final frame of the rule above,
+     * so a reader who asked for no motion sees the finished state rather than
+     * whatever the first keyframe happened to be. */
+    .enter,
+    .settled {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        background-color: transparent;
+    }
+    .skeleton {
+        animation: none;
+        background-image: none;
+        background-color: var(--panel-2);
+    }
+    .live-dot,
+    .state.loading {
+        animation: none;
+        opacity: 1;
+    }
+}

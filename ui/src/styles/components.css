@@ -767,3 +767,33 @@ table.compare thead th {
     display: inline-block;
     text-decoration: none;
 }
+
+/* The one suggestion the app makes about itself. Panel-coloured rather than
+ * accent-coloured: it is a hint standing above the view, not a warning about
+ * it, and something that appears on nearly every page cannot also shout. */
+.nextstep {
+    display: flex;
+    gap: var(--s-4);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: var(--s-3) var(--s-4);
+    margin-bottom: var(--s-5);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+}
+.nextstep strong {
+    display: block;
+}
+.nextstep .meta {
+    display: block;
+    margin-top: var(--s-1);
+}
+.nextstep-do {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    white-space: nowrap;
+}
