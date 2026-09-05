@@ -174,8 +174,11 @@ again — it says precisely what to look for, what counts as worth keeping, and
 what shape to return, and lets the harness that is already paid for do the
 reading (`src/kriko/research/agent.py`).
 
-Wire the MCP server once (`.mcp.json` is checked in), then hand a subject to the
-research agent:
+Wire the MCP server once — **System → Connect an agent** writes it into Claude
+Code, Claude Desktop, Cursor or VS Code, verifies the command actually starts,
+and installs a research skill built from the installed packs' own principles
+(`.mcp.json` is also checked in, for a source checkout). Then hand a subject to
+the research agent:
 
 ```
 use the kriko_research agent to onboard renault megane_4

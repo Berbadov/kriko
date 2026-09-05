@@ -48,19 +48,14 @@ describe("Coverage", () => {
         expect(screen.getByText(/does not gather anything itself/)).toBeInTheDocument();
     });
 
-    it("hands over a config that names this window's own store", async () => {
+    it("points at the screen that wires an agent, rather than wiring one here", async () => {
+        // Connecting writes files on this machine. That is not something to do
+        // from a button on a report; the report's job is to say the next step
+        // exists and where it lives.
         vi.stubGlobal("fetch", routes([]));
         render(Coverage);
-        await fireEvent.click(await screen.findByText("Connect an agent"));
-        // The store path is the whole point: an agent on a different SQLite
-        // file writes findings nobody ever sees, with no error in between.
-        // findAllByText: the path is shown twice on purpose — in the prose that
-        // says which store this is, and inside the block being copied.
-        expect(
-            (await screen.findAllByText(/home\/reader\/\.kriko\/knowledge\.sqlite/))
-                .length,
-        ).toBeGreaterThan(1);
-        expect(screen.getByText(/--mcp/)).toBeInTheDocument();
+        const link = await screen.findByText("Connect an agent");
+        expect(link.getAttribute("href")).toContain("connect");
     });
 
     it("still lists gaps and starts a job for one", async () => {

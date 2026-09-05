@@ -9,6 +9,7 @@
     import { isAuthorOnly } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
+    import Connect from "./routes/Connect.svelte";
     import Coverage from "./routes/Coverage.svelte";
     import About from "./routes/About.svelte";
     import Health from "./routes/Health.svelte";
@@ -84,6 +85,8 @@
                     <Compare />
                 {:else if $route.name === "coverage"}
                     <Coverage />
+                {:else if $route.name === "connect"}
+                    <Connect />
                 {:else if $route.name === "packs"}
                     <Packs />
                 {:else if $route.name === "health"}

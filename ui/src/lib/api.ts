@@ -37,6 +37,11 @@ export const api = {
     packs: () => get<T.Pack[]>("/api/packs"),
     kinds: () => get<T.Kind[]>("/api/kinds"),
     agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
+    agentTargets: () => get<T.AgentTargets>("/api/agent-targets"),
+    agentSkill: () => get<T.AgentSkill>("/api/agent-skill"),
+    verifyAgent: () => postJson<T.AgentVerify>("/api/agent-verify", {}),
+    connectAgent: (targetId: string) =>
+        postJson<T.AgentTarget>(`/api/agent-targets/${seg(targetId)}/connect`, {}),
     identityKeys: (packId: string) =>
         get<T.IdentityKey[]>(`/api/identity-keys/${seg(packId)}`),
     vocabulary: (packId: string) =>

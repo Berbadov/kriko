@@ -39,6 +39,7 @@ export const NAV: NavGroupSpec[] = [
         items: [
             { name: "packs", label: "Packs" },
             { name: "jobs", label: "Runs" },
+            { name: "connect", label: "Connect an agent" },
         ],
     },
     {

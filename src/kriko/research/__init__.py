@@ -9,7 +9,7 @@ from kriko.research.base import Document, Finding, Researcher, ResearchTask
 __all__ = [
     "AgentResearcher", "ApiResearcher", "BudgetExceeded",
     "Document", "Finding", "Researcher", "ResearchTask",
-    "get_researcher", "plan_task",
+    "get_researcher", "pack_asset", "plan_task",
 ]
 
 
@@ -29,7 +29,13 @@ def get_researcher(config: dict | None = None, **kwargs):
     raise ValueError(f"unknown research backend {backend!r} (expected agent|api)")
 
 
-def _asset(conn, pack_id: str, name: str) -> str:
+def pack_asset(conn, pack_id: str, name: str) -> str:
+    """One of a pack's non-tabular files, or "" if it ships none.
+
+    Public because the pack's own words — its principle, its templates — are
+    what any consumer of a pack needs; nothing outside should have to know the
+    asset table's shape to read them.
+    """
     row = conn.execute(
         "SELECT content FROM pack_assets WHERE pack_id = ? AND name = ?",
         (pack_id, name)).fetchone()
@@ -63,7 +69,7 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
             (subject_id, pack_id)):
         aliases.setdefault(row["tier"], []).append(row["alias"])
 
-    templates = yaml.safe_load(_asset(conn, pack_id, "research/templates.yaml")) or []
+    templates = yaml.safe_load(pack_asset(conn, pack_id, "research/templates.yaml")) or []
     domains = [row["term_id"] for row in conn.execute(
         "SELECT term_id FROM terms WHERE pack_id = ? AND role = 'domain'"
         " ORDER BY term_id", (pack_id,))]
@@ -77,7 +83,7 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         search_aliases=tuple(aliases.get("search_only") or ()),
         attribution_aliases=tuple(aliases.get("attribution_safe") or ()),
         queries=tuple(templates),
-        value_principle=_asset(conn, pack_id, "research/principle.md"),
+        value_principle=pack_asset(conn, pack_id, "research/principle.md"),
         domains=tuple(domains),
         budget_usd=budget_usd,
         max_documents=max_documents,

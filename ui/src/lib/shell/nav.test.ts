@@ -45,6 +45,7 @@ describe("the route table", () => {
             "health",
             "packs",
             "jobs",
+            "connect",
             "about",
         ]);
         expect(new Set(ALL_ROUTES).size).toBe(ALL_ROUTES.length);

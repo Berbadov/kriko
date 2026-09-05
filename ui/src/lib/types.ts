@@ -55,6 +55,26 @@ export type AgentConfig = {
     tools: string[];
 };
 
+export type AgentTarget = {
+    id: string;
+    label: string;
+    path: string;
+    exists: boolean;
+    state: "connected" | "stale" | "absent" | "unreadable";
+    detail?: string;
+};
+
+export type AgentTargets = { server_name: string; store: string; targets: AgentTarget[] };
+
+export type AgentSkill = {
+    name: string;
+    steps: { tool: string; why: string }[];
+    /** null when no pack is installed: there is no protocol without knowledge. */
+    body: string | null;
+};
+
+export type AgentVerify = { ok: boolean; server?: string; detail?: string };
+
 export type Kind = { kind: string; pack_id: string };
 export type IdentityKey = { key: string; match_json?: string };
 export type Term = { term_id: string; unit: string };

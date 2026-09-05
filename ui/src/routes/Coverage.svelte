@@ -2,7 +2,8 @@
     import Async from "../lib/Async.svelte";
     import { api } from "../lib/api";
     import { follow, stateWord } from "../lib/jobs";
-    import type { AgentConfig, Gap, Job } from "../lib/types";
+    import { hashWith } from "../lib/router";
+    import type { Gap, Job } from "../lib/types";
 
     const load = async () => {
         const packs = await api.packs();
@@ -14,31 +15,9 @@
 
     // Research on the free plane produces a *brief* — instructions — not
     // claims. Saying so beside the button is the difference between "nothing
-    // happened" and "here is the next step", and the next step needs an
-    // address, which is what this fetches.
-    let config = $state<AgentConfig | null>(null);
-    let configError = $state("");
-    let copied = $state(false);
-
-    async function showConfig() {
-        try {
-            config = await api.agentConfig();
-        } catch (cause) {
-            configError = String(cause);
-        }
-    }
-
-    const snippet = $derived(config ? JSON.stringify(config.mcp_json, null, 2) : "");
-
-    async function copy() {
-        try {
-            await navigator.clipboard.writeText(snippet);
-            copied = true;
-        } catch {
-            copied = false; // a denied clipboard is not an error worth a banner
-        }
-    }
-
+    // happened" and "here is the next step". The next step needs an agent, and
+    // wiring one is its own screen now: it writes files on this machine, which
+    // is not something to bury under a button on a report.
     // A gap is only interesting if you can act on it, and until now acting on
     // it meant leaving the browser for a terminal. Keyed by subject so the
     // status lands on the row that started it.
@@ -81,18 +60,7 @@
         reading. Point one at this app and it can submit findings back through the same
         acceptance path, quotes checked against their source.
     </p>
-    {#if configError}
-        <p class="state error">Could not read the agent config: {configError}</p>
-    {:else if config}
-        <p class="meta">
-            Paste into your harness (Claude Code: <code>.mcp.json</code>). It points at this
-            window's own store, <code>{config.store}</code>. Tools: {config.tools.join(", ")}.
-        </p>
-        <pre>{snippet}</pre>
-        <button onclick={copy}>{copied ? "Copied" : "Copy"}</button>
-    {:else}
-        <button onclick={showConfig}>Connect an agent</button>
-    {/if}
+    <a href={hashWith({}, "connect")}>Connect an agent</a>
 </article>
 <Async promise={data}>
     {#snippet children(sections)}
