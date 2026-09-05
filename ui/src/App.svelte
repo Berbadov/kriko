@@ -11,6 +11,7 @@
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Connect from "./routes/Connect.svelte";
+    import Extension from "./routes/Extension.svelte";
     import Coverage from "./routes/Coverage.svelte";
     import About from "./routes/About.svelte";
     import Health from "./routes/Health.svelte";
@@ -98,6 +99,8 @@
                         <Coverage />
                     {:else if $route.name === "connect"}
                         <Connect />
+                    {:else if $route.name === "extension"}
+                        <Extension />
                     {:else if $route.name === "packs"}
                         <Packs />
                     {:else if $route.name === "health"}

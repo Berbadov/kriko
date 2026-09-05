@@ -42,6 +42,9 @@ export const api = {
     verifyAgent: () => postJson<T.AgentVerify>("/api/agent-verify", {}),
     connectAgent: (targetId: string) =>
         postJson<T.AgentTarget>(`/api/agent-targets/${seg(targetId)}/connect`, {}),
+    extension: () => get<T.ExtensionStatus>("/api/extension"),
+    stageExtension: () => postJson<T.ExtensionStaged>("/api/extension/stage", {}),
+    revealExtension: () => postJson<T.ExtensionRevealed>("/api/extension/reveal", {}),
     identityKeys: (packId: string) =>
         get<T.IdentityKey[]>(`/api/identity-keys/${seg(packId)}`),
     vocabulary: (packId: string) =>

@@ -39,6 +39,21 @@ from freeze_imports import mcp_submodules
 ROOT = Path(SPECPATH).parent
 STATIC = ROOT / "src" / "app" / "web" / "static"
 
+# The browser extension travels *inside* the sidecar, unpacked to
+# `app/extension_src` where `app/extension.py` looks for it. It is data, not
+# code: nothing imports it, so PyInstaller cannot see it, and an installer that
+# omitted it would leave the extension page offering a folder that is not
+# there. Only what a browser loads goes in — `extension/tests/` and the dead
+# `colors_and_type.css` are excluded by app.extension.SHIPPED, which this
+# mirrors by copying the directory and letting the staging step filter.
+EXTENSION = ROOT / "extension"
+
+if not (EXTENSION / "manifest.json").exists():
+    raise SystemExit(
+        "extension/manifest.json is missing — the app ships the browser "
+        "extension and cannot install one it does not carry"
+    )
+
 if not (STATIC / "index.html").exists():
     raise SystemExit(
         "src/app/web/static/index.html is missing — run "
@@ -52,6 +67,7 @@ a = Analysis(
     datas=[
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
+        (str(EXTENSION), "app/extension_src"),
     ],
     hiddenimports=[
         "uvicorn.logging",

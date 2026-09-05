@@ -182,6 +182,16 @@ def main(argv: list[str]) -> int:
             return 1
         print("frontend ok")
 
+        # The browser extension is data too, and it fails the same way the
+        # frontend does: silently, in a shipped installer, on the one page a
+        # reader opens *because* they need help. `available: false` here means
+        # the spec's `datas` lost it.
+        ext = fetch(port, "/api/extension")
+        if not ext.get("available"):
+            print("the sidecar carries no browser extension — check the spec's datas")
+            return 1
+        print(f"extension ok: version {ext.get('version')}")
+
         # Beyond liveness. Each of these fails *only* when freezing dropped
         # something, and each drops a different module graph:
         #   lookup   -> kriko.lookup + the store
