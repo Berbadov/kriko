@@ -3,6 +3,7 @@
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import { initMode, mode } from "./lib/mode";
+    import NextStep from "./lib/NextStep.svelte";
     import { initTheme } from "./lib/theme";
     import { hashWith, route } from "./lib/router";
     import Sidebar from "./lib/shell/Sidebar.svelte";
@@ -58,57 +59,69 @@
             {#await ready}
                 <p class="state loading">Starting…</p>
             {:then}
-                {#if firstRun}
-                    <Welcome
-                        onDone={() => {
-                            dismissed = true;
-                            void api.status().then((s) => (empty = s.packs === 0));
-                        }}
-                    />
-                {:else if authorOnly}
-                    <EmptyState
-                        title="{$route.name} is an author view"
-                        detail="It is real work a pack author does, and none of it helps
-                                someone deciding whether to go and look at a listing.
-                                Switch to author mode in the rail to open it."
-                    />
-                {:else if $route.name === "check"}
-                    <Check mode={$mode} />
-                {:else if $route.name === "overview"}
-                    <Overview />
-                {:else if $route.name === "subjects"}
-                    <Subjects />
-                {:else if $route.name === "history"}
-                    <h2>History</h2>
-                    <History page />
-                {:else if $route.name === "compare"}
-                    <Compare />
-                {:else if $route.name === "coverage"}
-                    <Coverage />
-                {:else if $route.name === "connect"}
-                    <Connect />
-                {:else if $route.name === "packs"}
-                    <Packs />
-                {:else if $route.name === "health"}
-                    <Health />
-                {:else if $route.name === "about"}
-                    <About />
-                {:else if $route.name === "jobs"}
-                    <Jobs />
-                {:else if $route.name === "result"}
-                    <!-- Keyed: Result fetches once on init, so moving between two
-                         stored results must remount rather than reuse. -->
-                    {#key $route.params[0]}
-                        <Result lookupId={$route.params[0]} mode={$mode} />
-                    {/key}
-                {:else}
-                    <EmptyState
-                        title="No such view: {$route.name}"
-                        detail="The link may be from an older version."
-                        actionLabel="Go to New check"
-                        actionHref={hashWith({ mode: $route.query.mode }, "check")}
-                    />
+                <!-- Keyed so a view arrives rather than swapping in place: at a
+                     glance, an instant repaint of a same-shaped page is hard to
+                     tell from nothing having happened. NextStep sits outside the
+                     key because it is about the installation, not the page:
+                     re-animating it on every navigation would be nagging. -->
+                {#if !firstRun}
+                    <NextStep />
                 {/if}
+                {#key $route.name}
+                    <div class="enter">
+                    {#if firstRun}
+                        <Welcome
+                            onDone={() => {
+                                dismissed = true;
+                                void api.status().then((s) => (empty = s.packs === 0));
+                            }}
+                        />
+                    {:else if authorOnly}
+                        <EmptyState
+                            title="{$route.name} is an author view"
+                            detail="It is real work a pack author does, and none of it helps
+                                    someone deciding whether to go and look at a listing.
+                                    Switch to author mode in the rail to open it."
+                        />
+                    {:else if $route.name === "check"}
+                        <Check mode={$mode} />
+                    {:else if $route.name === "overview"}
+                        <Overview />
+                    {:else if $route.name === "subjects"}
+                        <Subjects />
+                    {:else if $route.name === "history"}
+                        <h2>History</h2>
+                        <History page />
+                    {:else if $route.name === "compare"}
+                        <Compare />
+                    {:else if $route.name === "coverage"}
+                        <Coverage />
+                    {:else if $route.name === "connect"}
+                        <Connect />
+                    {:else if $route.name === "packs"}
+                        <Packs />
+                    {:else if $route.name === "health"}
+                        <Health />
+                    {:else if $route.name === "about"}
+                        <About />
+                    {:else if $route.name === "jobs"}
+                        <Jobs />
+                    {:else if $route.name === "result"}
+                        <!-- Keyed: Result fetches once on init, so moving between two
+                             stored results must remount rather than reuse. -->
+                        {#key $route.params[0]}
+                            <Result lookupId={$route.params[0]} mode={$mode} />
+                        {/key}
+                    {:else}
+                        <EmptyState
+                            title="No such view: {$route.name}"
+                            detail="The link may be from an older version."
+                            actionLabel="Go to New check"
+                            actionHref={hashWith({ mode: $route.query.mode }, "check")}
+                        />
+                    {/if}
+                    </div>
+                {/key}
             {/await}
         </div>
         {#if showHistory}

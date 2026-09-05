@@ -105,7 +105,14 @@
         <h3>
             {job.kind === "research" ? "Research" : "Build"}
             <span class="meta">{subjectOf(job)}</span>
-            <span class="badge state-{job.state}">{stateWord(job)}</span>
+            <span class="badge state-{job.state}">
+                <!-- Only on a job that is still moving. A badge that reads
+                     "running" on a page nobody has refreshed says the same
+                     thing as one that is stale; the dot is what separates
+                     them without the reader having to reload to find out. -->
+                {#if isLive(job)}<span class="live-dot"></span>{/if}
+                {stateWord(job)}
+            </span>
         </h3>
         {#if isLive(job)}
             <div class="bar" role="progressbar" aria-valuenow={percent(job)}>

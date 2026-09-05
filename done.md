@@ -6,6 +6,52 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-05 — the usability pass, five specs (`ce79771`, `9516785`, `a14e664`, `3adc2cc`, this commit)
+Five changes the app needed before anyone but its author could run it, taken one
+at a time.
+
+**S1 — self-update and a version surface.** The updater was configured but
+unreachable; About now names the app version, offers the update, and lists each
+pack's installed and offered version. Two clocks, neither waiting on the other.
+
+**S2 — the theme is a file.** The extension's palette became `ui/src/styles/`
+tokens plus one theme sheet per look, with `tokens.test.ts` failing the suite on
+a colour literal in any other sheet. The extension's mark is the app icon.
+
+**S3 — the extension and the app know about each other.** `/api/analyze` records
+which door a run came in by (`origin`, a `Literal`, so an unknown one is a 422
+rather than a row); the panel links to the stored result in the app; a refused
+connection now says "Kriko is not running" instead of arriving as the same red
+banner a 500 does — `fetch` rejects rather than resolves there, so the two are
+only separable at the call site.
+
+**S4 — connect an agent in one click.** `app/agentconfig.py` finds the four
+harnesses on this machine, reports each as connected/stale/absent/unreadable
+(*stale* is the load-bearing one: wired, but pointing at a different
+`knowledge.sqlite`, which passes "is kriko in the config?" while being worse than
+absent), and merges one key atomically. `app/agentskill.py` renders the research
+protocol from the packs installed *right now*, so the protocol versions with the
+knowledge rather than the binary. `POST /api/agent-verify` runs the advertised
+command and completes an MCP handshake. Deliberately *not* the in-app terminal
+that was asked for: this process listens on a port a browser extension also
+talks to, and a run-what-the-caller-names route there is remote code execution.
+
+**S5 — motion and guidance.** `ui/src/styles/motion.css` holds every animation
+in the app, with `tokens.test.ts` failing on a raw duration or curve anywhere
+else — the colour rule one axis over. Reduced motion now lands each animation on
+its *end* state; the blanket `animation-duration: 1ms !important` it replaced
+froze a skeleton mid-pulse. `lib/nextStep.ts` is a pure function from store state
+to the one thing this installation is missing, in dependency order, silent when
+there is nothing to say and with no "seen it" flag anywhere — the same reasoning
+as `firstRun`.
+
+**Found while doing it:** vitest defaults to `css: false`, which resolves every
+CSS module to an empty string *by extension*, `?raw` included. `tokens.test.ts`
+had been reading eight empty strings and passing every rule vacuously since it
+was written. `css: true` in `vite.config.ts` fixed it and immediately surfaced
+two real violations. The names-only guard did not catch it because
+`import.meta.glob` yields its keys either way; it now asserts content too.
+
 ### v0.2.6 — the app that reads like an app — 2026-09-03 (81f0cb8)
 The design pass below, in an installer. Nothing in the engine moved: the whole
 diff is `ui/` plus its committed bundle, so this is the first build where the

@@ -61,10 +61,20 @@ describe("the stylesheets", () => {
     // empty list — which is how this test first "passed" before a single
     // stylesheet existed.
     it("is actually looking at the sheets", () => {
+        // The content assertion is the load-bearing half. Vitest stubs CSS
+        // modules to "" by default, and under that stub every rule in this file
+        // passed on eight empty strings — a suite that reported green while
+        // reading nothing. The names alone did not catch it: `import.meta.glob`
+        // yields its keys either way.
+        for (const [path, css] of Object.entries(SHEETS)) {
+            expect(css.length, `${path} came back empty — is test.css on?`)
+                .toBeGreaterThan(200);
+        }
         expect(names().sort()).toEqual([
             "base.css",
             "components.css",
             "fonts.css",
+            "motion.css",
             "print.css",
             "themes/lemonade.css",
             "themes/slate.css",
@@ -129,8 +139,48 @@ describe("the stylesheets", () => {
         expect(unanswered).toEqual([]);
     });
 
+    // The same argument as the colour rule, one axis over: three components
+    // each choosing their own 180ms is how an interface stops feeling like one
+    // thing. motion.css is exempt for its keyframe percentages and the two
+    // durations that have no token because nothing else may use them.
+    it("names a duration or a curve only in tokens.css and motion.css", () => {
+        const offenders: string[] = [];
+        const TIMING = /\b\d+m?s\b|cubic-bezier\(/;
+        for (const [path, css] of Object.entries(SHEETS)) {
+            const name = path.replace("./", "");
+            if (name === "tokens.css" || name === "motion.css") continue;
+            stripComments(css)
+                .split("\n")
+                .forEach((line, i) => {
+                    if (TIMING.test(line)) offenders.push(`${name}:${i + 1}: ${line.trim()}`);
+                });
+        }
+        expect(offenders).toEqual([]);
+    });
+
+    // The blanket `animation-duration: 1ms !important` this replaced did not
+    // honour the preference so much as break it: a skeleton stopped mid-pulse
+    // and an entering panel froze at whatever opacity frame zero held. Every
+    // animation must name its landed state.
+    it("lands every animation on its end state under reduced motion", () => {
+        const motion = stripComments(SHEETS["./motion.css"]);
+        const animated = [...motion.matchAll(/\.([a-z-]+)\s*\{[^}]*animation:/g)].map(
+            (m) => m[1],
+        );
+        expect(animated.length).toBeGreaterThan(2);
+
+        const reduced = motion.slice(motion.indexOf("prefers-reduced-motion"));
+        for (const name of animated) {
+            expect(reduced, `.${name} keeps animating under reduced motion`).toContain(
+                `.${name}`,
+            );
+        }
+    });
+
     it("loads no webfont — the app must render styled with no network", () => {
-        const all = Object.values(SHEETS).join("\n");
+        // Comments stripped: fonts.css explains this rule in prose, and a
+        // sheet is not allowed to fail a check by describing it.
+        const all = Object.values(SHEETS).map(stripComments).join("\n");
         expect(all).not.toMatch(/@import|fonts\.googleapis|fonts\.gstatic/);
     });
 });

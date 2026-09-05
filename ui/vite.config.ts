@@ -19,5 +19,11 @@ export default defineConfig(({ mode }) => ({
         environment: "jsdom",
         globals: true,
         setupFiles: ["./src/test-setup.ts"],
+        // Not a preference — a correctness fix. Vitest's default (`css: false`)
+        // resolves every CSS module to an empty string, and it does so by
+        // extension, so `?raw` is stubbed out too. tokens.test.ts reads the
+        // sheets as text; with the default it was reading eight empty strings
+        // and passing every rule vacuously for as long as it has existed.
+        css: true,
     },
 }));
