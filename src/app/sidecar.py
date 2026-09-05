@@ -204,6 +204,10 @@ def main(argv=None) -> int:
     extra = also_reserve(args.host, args.extension_port)
     if extra is not None:
         print(f"{EXTRA_LINE} {extra.getsockname()[1]}", flush=True)
+    # Through the environment rather than an override, because `Settings` is
+    # built from the environment a few lines down and this is the one fact
+    # about the running process that no configuration file could supply.
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if extra is not None else "0"
 
     # `sockets=[sock]`, not host/port and not `fd=`. Not host/port because
     # uvicorn must not rebind — the port we announced and the port it serves

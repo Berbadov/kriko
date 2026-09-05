@@ -21,6 +21,10 @@ export const NAV: NavGroupSpec[] = [
             { name: "check", label: "New check" },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
+            // Not author-only, and in Check rather than System: the extension
+            // is the reader's half of the product — the one who never opens
+            // an author screen is exactly the one who needs it installed.
+            { name: "extension", label: "Browser extension" },
         ],
     },
     {
