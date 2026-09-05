@@ -49,6 +49,14 @@ class Settings:
     #: says so rather than implying an in-app switch that does not exist.
     #: Overridable so a fork does not send its readers here.
     releases_url: str = "https://github.com/Berbadov/kriko/releases"
+    #: Did this process get `EXTENSION_PORT`? Only the sidecar knows — it tries
+    #: the bind and carries on without it, because failing to start over a
+    #: convenience socket would be worse than losing the socket. But the
+    #: extension has no other address, so when the bind lost, every listing the
+    #: reader opens will fail with a connection error and look exactly like a
+    #: botched install. The extension page says so instead of letting them
+    #: reinstall it twice.
+    extension_port_bound: bool = False
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":
@@ -67,6 +75,7 @@ class Settings:
                 "KRIKO_PACK_INDEX", cls.pack_index_url
             ),
             "releases_url": os.environ.get("KRIKO_RELEASES_URL", cls.releases_url),
+            "extension_port_bound": os.environ.get("KRIKO_EXTENSION_BOUND") == "1",
         }
         base.update(overrides)
         return cls(**base)

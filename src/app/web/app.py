@@ -16,7 +16,7 @@ endpoint to the network, so the default host is not a preference.
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -25,6 +25,7 @@ from app.web.routers import (
     agent,
     analyze,
     control,
+    extension,
     health,
     history,
     jobs,
@@ -32,6 +33,7 @@ from app.web.routers import (
     query,
     subjects,
 )
+from app.web import state
 from app.version import app_version, installed_versions
 from app.web.settings import EXTENSION_PORT, Settings
 from app.web.tasks import HANDLERS
@@ -63,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         subjects.router,
         analyze.router,
         control.router,
+        extension.router,
         health.router,
         history.router,
         jobs.router,
@@ -72,6 +75,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
     app.state.jobs = JobRunner(app.state.settings, HANDLERS)
+
+    # ── the extension announces itself by calling ────────────────────────
+    #
+    # There is no registration handshake and there should not be one: the
+    # extension's job is to answer questions about a listing, not to check in.
+    # But a browser stamps `Origin: chrome-extension://<id>` on every request
+    # its extensions make, and nothing else on this machine can produce that
+    # header. So the sighting is a side effect of the extension doing its
+    # actual work — which makes it the one piece of evidence that cannot be
+    # true while the install is broken.
+    #
+    # Guarded on the prefix so an ordinary request never opens app.sqlite, and
+    # swallowing failures so this can never be the reason a lookup 500s: the
+    # extension is waiting on that response, and losing a status detail is
+    # cheaper than losing the answer.
+    @app.middleware("http")
+    async def note_the_extension(request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        if origin.startswith(("chrome-extension://", "moz-extension://")):
+            try:
+                conn = state.connect(app.state.settings.app_state_path)
+                try:
+                    state.record_extension(conn, origin)
+                finally:
+                    conn.close()
+            except Exception:
+                pass
+        return await call_next(request)
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

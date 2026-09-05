@@ -11,11 +11,12 @@
     let dismissed = $state(false);
 
     const load = async () => {
-        const [status, updates, targets, history] = await Promise.all([
+        const [status, updates, targets, history, extension] = await Promise.all([
             api.status().catch(() => null),
             api.packUpdates().catch(() => null),
             api.agentTargets().catch(() => null),
             api.history(1).catch(() => null),
+            api.extension().catch(() => null),
         ]);
         if (!status) return;
         const packs = await api.packs().catch(() => []);
@@ -33,6 +34,11 @@
             updatable: (updates?.packs ?? []).filter((p) => p.state === "available")
                 .length,
             checks: (history?.items ?? []).length,
+            // Null, not false, when the status could not be read or this build
+            // carries no extension: a suggestion to install something that is
+            // not there would be the hint bar lying.
+            extensionConnected:
+                extension && extension.available ? extension.connected : null,
         });
     };
     void load();

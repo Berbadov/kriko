@@ -27,6 +27,9 @@ export type Signals = {
     updatable: number;
     /** Checks this reader has ever run. */
     checks: number;
+    /** Has a browser extension ever reached this app? Null when the build
+     * carries no extension to install, which is not a step to suggest. */
+    extensionConnected: boolean | null;
 };
 
 export type Step = {
@@ -63,6 +66,18 @@ export function nextStep(s: Signals): Step | null {
             detail: "Describe one thing you are about to buy and see what the installed packs already know about it.",
             route: "check",
             action: "New check",
+        };
+    // Above connecting an agent and below the first check, for the same
+    // reason: the extension is what the reader came for — Kriko on the listing
+    // they are actually looking at — while an agent is how the knowledge gets
+    // maintained. Ask for the thing that pays off today first.
+    if (s.extensionConnected === false)
+        return {
+            id: "install-extension",
+            title: "Kriko is not on your listing pages yet",
+            detail: "The browser extension reads the ad you are looking at and asks this app about that exact one. Adding it takes a minute.",
+            route: "extension",
+            action: "Add the extension",
         };
     // Only once the app has been used for what it is for. Connecting an agent
     // is how the knowledge grows, and that is a second question — asking it
