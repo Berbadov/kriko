@@ -1,0 +1,75 @@
+/* Panel — the look the extension actually wears, and the app's default.
+ *
+ * Ported from `extension/hover_lite/hover_lite.css`, which is the *live*
+ * stylesheet: `manifest.json` ships exactly one, into a shadow root on a
+ * listing page. `extension/colors_and_type.css` is a cream/lemon design system
+ * that nothing loads — the extension has no HTML at all — and the lemonade
+ * theme beside this file was built from it by mistake. Lemonade stays, because
+ * it is a good light theme and a reader may want it; it is simply not what the
+ * product looks like.
+ *
+ * Dark only, and not an oversight. The panel is drawn over Sahibinden's white
+ * page and is legible there *because* it is near-black — that contrast is the
+ * identity. A light inversion of it would be a different design wearing the
+ * same name, so `[data-theme]` beats the system preference and a reader on a
+ * light-mode machine still gets the dark panel. Slate is the theme that
+ * follows the system.
+ *
+ * It answers to bare `:root` as well as its own attribute, because being the
+ * default means being what paints *before* any JavaScript has run. A theme
+ * chosen only in `applyTheme` would show a frame of whatever sheet held bare
+ * `:root` — which is exactly the flash the theme split was built to stop.
+ *
+ * The alias names are slate's, deliberately: a theme that invented its own set
+ * would need every component rewritten, which is the thing the split exists to
+ * avoid. What changes is only which colour each name resolves to.
+ */
+:root,
+:root[data-theme="panel"] {
+    /* neutrals — the panel's own ramp, 0 the ground and 9 the strongest text.
+     * The middle steps are the panel's surfaces rather than an even ramp: this
+     * palette is five hand-chosen greys, not a generated scale. */
+    --n-0: #0a0b0d; /* --bg-base   — the page */
+    --n-1: #13151a; /* --bg-header */
+    --n-2: #15171c; /* --bg-panel  — cards, the rail */
+    --n-3: #1b1e24; /* --bg-surface — sunk surfaces, inputs */
+    --n-4: #2c313a; /* --border    — hairlines */
+    --n-5: #4d5460; /* --fg-faint */
+    --n-6: #6b727e; /* --fg-subtle */
+    --n-7: #7e858f; /* --fg-muted  — secondary text */
+    --n-8: #c2c7cf; /* --fg-body */
+    --n-9: #e7e9ed; /* --fg        — headings */
+
+    /* Gold, not blue. This is the single most recognisable thing about the
+     * panel and the reason the app did not look like the extension. */
+    --accent: #e8c04b;
+    /* Ink on gold: the panel never fills with accent, so it has no value for
+     * this. Near-black is the only readable choice against #e8c04b — white on
+     * it is 1.7:1. */
+    --accent-ink: #0a0b0d;
+    /* The panel's accent fills are rgba over the ground. Flattened here
+     * because this app puts text on top of them, where a translucent fill
+     * composites against whatever it lands on and stops being predictable. */
+    --accent-soft: #2b2517;
+
+    --high: #f0565b;
+    --high-soft: #2a1719;
+    --medium: #e2933f;
+    --medium-soft: #2a2015;
+    --low: #46b48c;
+    --low-soft: #14251f;
+
+    /* semantic aliases — components speak these, never a ramp step */
+    --bg: var(--n-0);
+    --panel: var(--n-2);
+    --panel-2: var(--n-3);
+    --line: var(--n-4);
+    --text: var(--n-9);
+    --dim: var(--n-7);
+
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    /* No pixel face here. Silkscreen is lemonade's signature and belongs to
+     * that palette; the panel's own display face is its body face, bolder. */
+    --font-display: var(--font-sans);
+}
