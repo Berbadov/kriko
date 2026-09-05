@@ -5,6 +5,7 @@ import App from "./App.svelte";
 // they are the half of the token set that a reader gets to choose.
 import "./styles/fonts.css";
 import "./styles/tokens.css";
+import "./styles/themes/panel.css";
 import "./styles/themes/slate.css";
 import "./styles/themes/lemonade.css";
 import "./styles/base.css";
