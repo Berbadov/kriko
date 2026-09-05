@@ -6,6 +6,8 @@ adapters, and the cars pack knows about Sahibinden. Adding a listing site is a
 JSON file in a pack.
 """
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -35,6 +37,15 @@ class ScrapeRequest(BaseModel):
     description: str = ""
     lang: str = "en"
     limit: int = 8
+    #: Which door this came in by. A closed vocabulary is safe here where a
+    #: hardcoded make/model would not be: doors are a fixed property of the
+    #: system, not data that grows with pack coverage.
+    origin: Literal["app", "extension"] = "app"
+
+
+#: History rows predate `origin` and say "analyze" for an in-app run; renaming
+#: them would only rewrite the past to look like the present.
+_SOURCE_FOR_ORIGIN = {"app": "analyze", "extension": "extension"}
 
 
 @router.get("/adapters")
@@ -189,7 +200,7 @@ def analyze(
     # research data.
     payload["lookup_id"] = state.record_lookup(
         app_state,
-        source="analyze",
+        source=_SOURCE_FOR_ORIGIN[body.origin],
         label=body.title.strip() or body.url,
         request=body.model_dump(),
         response=payload,

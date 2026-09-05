@@ -1075,6 +1075,19 @@
     footerEl.textContent = packs.length
       ? packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ")
       : "unknown";
+
+    // The app stored this same answer and can show the whole of it. Offered
+    // only when the app said so: a link to a report that was never written is
+    // worse than no link.
+    if (state.result.app_url) {
+      const link = document.createElement("a");
+      link.className = "lite-open-app";
+      link.href = state.result.app_url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Open in Kriko";
+      footerEl.append(" · ", link);
+    }
     footerEl.hidden = false;
   }
 

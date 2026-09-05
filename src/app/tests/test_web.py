@@ -579,3 +579,37 @@ def test_health_names_every_version_a_reader_might_be_asked_for(client):
     assert body["version"], "the app's own version is the first thing support asks for"
     assert body["schema_version"] == SCHEMA_VERSION
     assert body["packs"] == [{"pack_id": "tools", "version": "0.2.0"}]
+
+
+def test_an_analysis_records_which_door_it_came_in_by(client):
+    """The extension and the dashboard were the same row in history.
+
+    Both POST /api/analyze, and `source` was hardcoded, so a reader could not
+    tell an answer their browser produced from one they asked for here — which
+    is the first thing you want to know when a result surprises you.
+    """
+    body = {"url": "https://toolshop.invalid/item/dhp484", "fields": {}}
+    client.post("/api/analyze", json={**body, "origin": "extension"})
+    client.post("/api/analyze", json=body)
+
+    # Newest first, and the fixture's store carries earlier tests' rows, so
+    # read only the two this test just wrote.
+    items = client.get("/api/history").json()["items"][:2]
+    assert [item["source"] for item in items] == ["analyze", "extension"]
+
+
+def test_an_unknown_origin_is_refused_rather_than_recorded(client):
+    """`source` is free text in the table, so the endpoint is the only gate.
+
+    A closed vocabulary on purpose — this names which door a request came in
+    by, and doors do not grow with pack coverage.
+    """
+    response = client.post(
+        "/api/analyze",
+        json={
+            "url": "https://toolshop.invalid/item/dhp484",
+            "fields": {},
+            "origin": "whatever",
+        },
+    )
+    assert response.status_code == 422

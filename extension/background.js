@@ -93,11 +93,27 @@ function adapterFor(url, adapters) {
   return null;
 }
 
+// A refused connection and a 500 are different problems with different fixes,
+// and until now both arrived as one red banner. `fetch` rejects rather than
+// resolving when nothing is listening, so the two are only distinguishable
+// here, at the call — by the time an error reaches the panel it is a string.
+async function _fetchApp(url, init) {
+  try {
+    return await fetch(url, init);
+  } catch (cause) {
+    const down = new Error(
+      "Kriko is not running. Open the Kriko app, then try again.");
+    down.code = "APP_NOT_RUNNING";
+    down.cause = cause;
+    throw down;
+  }
+}
+
 async function fetchAdapters() {
   if (adaptersCache && Date.now() - adaptersCache.at < ADAPTERS_TTL_MS) {
     return adaptersCache.rows;
   }
-  const response = await fetch(`${await apiBase()}/api/adapters`);
+  const response = await _fetchApp(`${await apiBase()}/api/adapters`);
   if (!response.ok) {
     throw new Error(`Kriko is not reachable (${response.status}).`);
   }
@@ -119,7 +135,7 @@ function _strengthOf(claim) {
 // rather than the claim, so the two are translated here — in one place, rather
 // than by teaching every renderer both. Nothing is invented: each field below
 // is a rename or a count of something the server already said.
-function toViewModel(payload) {
+function toViewModel(payload, appBase) {
   const claims = Array.isArray(payload.claims) ? payload.claims : [];
   return {
     adapter: payload.adapter,
@@ -129,6 +145,11 @@ function toViewModel(payload) {
     method: payload.method,
     flags: payload.flags || [],
     unmapped_labels: payload.unmapped_labels || [],
+    // The app stores every analysis and already renders one at this route, so
+    // "see the whole thing" needs no new endpoint — only the id it handed back.
+    app_url: payload.lookup_id && appBase
+      ? `${appBase}/#/result/${payload.lookup_id}`
+      : undefined,
     risks: claims.map((claim) => {
       const strength = _strengthOf(claim);
       return {
@@ -265,7 +286,7 @@ async function _requestScrape(tabId, labels) {
 async function requestAnalysis(scrape, timings = {}) {
   const endpoint = `${await apiBase()}/api/analyze`;
   const startedAt = _now();
-  const response = await fetch(endpoint, {
+  const response = await _fetchApp(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // `listing` is deliberately absent: the damage and equipment panels are
@@ -276,6 +297,9 @@ async function requestAnalysis(scrape, timings = {}) {
       title: scrape.title || "",
       description: scrape.description || "",
       fields: scrape.fields || {},
+      // Which door this came in by. The app's history shows it, so a reader
+      // can tell an answer their browser produced from one they asked for.
+      origin: "extension",
     }),
   });
   timings.analyze_fetch_ms = _elapsed(startedAt);
@@ -348,7 +372,8 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       return cachedEntry.result;
     }
 
-    const result = toViewModel(await requestAnalysis(scrape, timings));
+    const result = toViewModel(
+      await requestAnalysis(scrape, timings), await apiBase());
 
     if (latestRunIdByStorageKey.get(storageKey) !== runId) {
       return result;    // a newer run has already answered for this listing
@@ -376,6 +401,7 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       error: error.message || "Unknown error",
       fetchedAt: Date.now(),
     };
+    if (error.code) errEntry.code = error.code;
     if (scrape) errEntry.listing = scrape.listing || {};
     await chrome.storage.session.set({ [storageKey]: errEntry });
     await chrome.action.setBadgeText({ text: "!", tabId });

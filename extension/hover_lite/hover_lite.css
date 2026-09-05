@@ -233,6 +233,13 @@
   text-align: right;
 }
 .lite-footer[hidden] { display: none; }
+/* The one action in a footer that is otherwise attribution — underlined so it
+   reads as a link at 10px, where colour alone does not. */
+.lite-open-app {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.lite-open-app:hover { color: var(--fg); }
 
 /* ─────────────────────────────────────────────
    Severity chips (counts strip)
