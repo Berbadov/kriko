@@ -17,7 +17,10 @@ is the single failure that would look exactly like success.
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app import agentconfig, agentskill
+from app.web.deps import get_store
 
 router = APIRouter(prefix="/api", tags=["agent"])
 
@@ -69,9 +72,7 @@ def agent_config(request: Request):
     """
     settings = request.app.state.settings
     entry = command_for(Path(settings.store_path))
-    server = {"type": "stdio", "command": entry["command"], "args": entry["args"]}
-    if entry["env"]:
-        server["env"] = entry["env"]
+    server = _server_block(settings)
     return {
         "server_name": SERVER_NAME,
         "frozen": entry["frozen"],
@@ -81,3 +82,99 @@ def agent_config(request: Request):
         # protocol: these are the two an agent cannot work without.
         "tools": ["research_brief", "coverage_gaps", "submit_findings"],
     }
+
+
+def _server_block(settings) -> dict:
+    entry = command_for(Path(settings.store_path))
+    server = {"type": "stdio", "command": entry["command"], "args": entry["args"]}
+    if entry["env"]:
+        server["env"] = entry["env"]
+    return server
+
+
+@router.get("/agent-targets")
+def agent_targets(request: Request):
+    """Which harnesses are on this machine, and whether each one is wired.
+
+    The copy-block above is still the honest fallback for a harness nobody has
+    taught us about; this exists because for the four we do know, "find this
+    file, understand its schema, merge one key without breaking the rest" is
+    work the app can simply do.
+    """
+    settings = request.app.state.settings
+    return {
+        "server_name": SERVER_NAME,
+        "store": str(settings.store_path),
+        "targets": [
+            agentconfig.status_of(
+                target,
+                server_name=SERVER_NAME,
+                store_path=Path(settings.store_path),
+            )
+            for target in agentconfig.targets()
+        ],
+    }
+
+
+@router.get("/agent-skill")
+def agent_skill(store=Depends(get_store)):
+    """The protocol, assembled from the packs that are installed right now.
+
+    Served as well as written so a reader on an unsupported harness can still
+    read it, and so the UI can show what Connect is about to put on disk.
+    """
+    body = agentskill.render(store)
+    return {
+        "name": agentskill.SKILL_NAME,
+        "steps": [{"tool": tool, "why": why} for tool, why in agentskill.STEPS],
+        # None, not "", when nothing is installed: there is no protocol for a
+        # store with no knowledge in it, and an empty string reads as a bug.
+        "body": body,
+    }
+
+
+@router.post("/agent-targets/{target_id}/connect")
+def connect_target(target_id: str, request: Request, store=Depends(get_store)):
+    """Write this installation's address into one harness's config.
+
+    A 409 rather than a 500 when the config will not parse: the reader broke
+    it, the fix is theirs, and the message names the file so they can make it.
+    """
+    target = agentconfig.by_id(target_id)
+    if target is None:
+        raise HTTPException(404, f"unknown harness: {target_id}")
+    settings = request.app.state.settings
+    try:
+        agentconfig.connect(
+            target, server_name=SERVER_NAME, server=_server_block(settings)
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(500, f"could not write {target.path}: {exc}") from exc
+    # Best-effort, and after the config: the connection is the thing the reader
+    # asked for, and a harness with nowhere to put a skill still gets one.
+    skill_written = None
+    body = agentskill.render(store)
+    if body:
+        try:
+            skill_written = agentconfig.write_skill(target, agentskill.SKILL_NAME, body)
+        except OSError:
+            skill_written = None
+    row = agentconfig.status_of(
+        target, server_name=SERVER_NAME, store_path=Path(settings.store_path)
+    )
+    return {**row, "skill": skill_written}
+
+
+@router.post("/agent-verify")
+def agent_verify(request: Request):
+    """Start the advertised command and see whether it answers.
+
+    Deliberately not an endpoint that runs a command the caller names. This
+    process listens on a local port that a browser extension also talks to; a
+    "run this for me" route there is a remote-code-execution hole with a nice
+    name. The only command this will ever start is the one it just told the
+    reader to configure.
+    """
+    return agentconfig.handshake(_server_block(request.app.state.settings))
