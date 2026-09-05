@@ -292,3 +292,28 @@ def test_ci_launches_the_shell_and_not_only_builds_it():
     assert workflow.index("tauri build") < workflow.index("smoke_app.py")
     # Headless Linux needs a display for the webview to even init.
     assert "xvfb" in workflow
+
+
+def test_the_version_the_app_reports_is_the_version_the_tree_says():
+    """The fifth place the number can be wrong, and the only live one.
+
+    `test_the_four_version_strings_agree` compares source files to each other;
+    none of them is what `/api/health` answers with. That comes from the
+    *installed* distribution's metadata, written at install time — so a stale
+    editable install, or a release built in an environment that was never
+    reinstalled, reports a version the tree has not been at for months. Caught
+    live: a tree at 0.2.6 served `"version": "0.1.0"`.
+
+    Failing here means the environment is stale, not the tree: reinstall.
+    """
+    import tomllib
+
+    from app.version import app_version
+
+    declared = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["version"]
+    assert app_version() == declared, (
+        f"the installed distribution says {app_version()}, pyproject says "
+        f"{declared} — reinstall (`pip install -e .`) before cutting a release"
+    )

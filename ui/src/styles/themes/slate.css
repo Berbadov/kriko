@@ -1,0 +1,74 @@
+/* Slate — the default, and the theme this app was designed in.
+ *
+ * Selected by `[data-theme="slate"]` and by having no attribute at all, so a
+ * first run with nothing stored still paints. Follows the reader's system
+ * preference for light/dark, which is why the light block is derived from the
+ * same ramp rather than patched on top of dark — that patching is why
+ * `--high`/`--medium`/`--low` used to survive into light and read as neon.
+ */
+:root,
+:root[data-theme="slate"] {
+    /* neutrals — 0 is the page ground, 9 is the strongest text */
+    --n-0: #0f1115;
+    --n-1: #14171d;
+    --n-2: #171a21;
+    --n-3: #1e222b;
+    --n-4: #2a2f3a;
+    --n-5: #3a4150;
+    --n-6: #5b6475;
+    --n-7: #8b93a5;
+    --n-8: #c3c9d6;
+    --n-9: #e6e8ee;
+
+    --accent: #5b9dff;
+    --accent-ink: #0b1220;
+    --accent-soft: #1b2942;
+
+    --high: #ff6b6b;
+    --high-soft: #3a1f22;
+    --medium: #ffb454;
+    --medium-soft: #3a2e1a;
+    --low: #6ec7a0;
+    --low-soft: #172e26;
+
+    /* semantic aliases — components speak these, never a ramp step */
+    --bg: var(--n-0);
+    --panel: var(--n-2);
+    --panel-2: var(--n-3);
+    --line: var(--n-4);
+    --text: var(--n-9);
+    --dim: var(--n-7);
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* No display face of its own: slate is the quiet theme, and headings in a
+     * pixel font would be a second identity nobody asked for. */
+    --font-display: var(--font-sans);
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]),
+    :root[data-theme="slate"] {
+        --n-0: #f6f7f9;
+        --n-1: #ffffff;
+        --n-2: #ffffff;
+        --n-3: #f0f2f6;
+        --n-4: #dfe3ea;
+        --n-5: #c3cad6;
+        --n-6: #8b93a5;
+        --n-7: #626b7d;
+        --n-8: #3a4150;
+        --n-9: #1b1f27;
+
+        --accent: #2563eb;
+        --accent-ink: #ffffff;
+        --accent-soft: #e7effd;
+
+        --high: #b3261e;
+        --high-soft: #fdeceb;
+        --medium: #8a5a00;
+        --medium-soft: #fdf3e2;
+        --low: #1d6b4c;
+        --low-soft: #e9f6f0;
+    }
+}
