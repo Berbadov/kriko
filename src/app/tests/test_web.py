@@ -19,7 +19,7 @@ from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.pack import build
 from kriko.store import ids, packstore
-from kriko.store.db import connect
+from kriko.store.db import SCHEMA_VERSION, connect
 
 PACK = {
     "toml": """
@@ -565,3 +565,17 @@ def test_the_mcp_tool_and_the_dashboard_agree_on_one_store(client, monkeypatch):
 
     assert over_mcp == over_http
     assert over_http["claims"]  # not a vacuous comparison of two empty trees
+
+
+def test_health_names_every_version_a_reader_might_be_asked_for(client):
+    """"What am I running" has three answers, and they move on different clocks.
+
+    The app binary, the store's schema, and each pack's own semver are
+    deliberately independent — packs update weekly through the engine, the
+    binary rarely and through Tauri. Collapsing them into one "version" is how
+    a reader reports the wrong one.
+    """
+    body = client.get("/api/health").json()
+    assert body["version"], "the app's own version is the first thing support asks for"
+    assert body["schema_version"] == SCHEMA_VERSION
+    assert body["packs"] == [{"pack_id": "tools", "version": "0.2.0"}]

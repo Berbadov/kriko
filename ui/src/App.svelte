@@ -9,6 +9,7 @@
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Coverage from "./routes/Coverage.svelte";
+    import About from "./routes/About.svelte";
     import Health from "./routes/Health.svelte";
     import Jobs from "./routes/Jobs.svelte";
     import Overview from "./routes/Overview.svelte";
@@ -83,6 +84,8 @@
                     <Packs />
                 {:else if $route.name === "health"}
                     <Health />
+                {:else if $route.name === "about"}
+                    <About />
                 {:else if $route.name === "jobs"}
                     <Jobs />
                 {:else if $route.name === "result"}

@@ -4,7 +4,7 @@ import { ALL_ROUTES, NAV, groupsFor, isAuthorOnly } from "./nav";
 describe("the route table", () => {
     it("gives a buyer exactly the group about using knowledge", () => {
         const groups = groupsFor("buyer");
-        expect(groups.map((g) => g.title)).toEqual(["Check"]);
+        expect(groups.map((g) => g.title)).toEqual(["Check", "This install"]);
         expect(groups[0].items.map((i) => i.name)).toEqual([
             "check",
             "history",
@@ -12,12 +12,19 @@ describe("the route table", () => {
         ]);
     });
 
-    it("gives an author all three groups", () => {
+    it("gives an author every group", () => {
         expect(groupsFor("author").map((g) => g.title)).toEqual([
             "Check",
             "Knowledge",
             "System",
+            "This install",
         ]);
+    });
+
+    it("shows a buyer what version they are running", () => {
+        // The person asked "which version are you on?" is usually the one who
+        // cannot open the author screens, so About is not behind that gate.
+        expect(isAuthorOnly("about")).toBe(false);
     });
 
     it("knows which routes a buyer may not open", () => {
@@ -38,8 +45,9 @@ describe("the route table", () => {
             "health",
             "packs",
             "jobs",
+            "about",
         ]);
         expect(new Set(ALL_ROUTES).size).toBe(ALL_ROUTES.length);
-        expect(NAV.length).toBe(3);
+        expect(NAV.length).toBe(4);
     });
 });

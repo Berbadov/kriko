@@ -43,6 +43,12 @@ class Settings:
     pack_index_url: str = (
         "https://github.com/Berbadov/kriko/releases/latest/download/packs.json"
     )
+    #: Where a reader goes to fetch a build by hand. The app updates itself
+    #: through Tauri's signed updater when a release carries signatures; until
+    #: one does, this page is the only way to move between versions, and About
+    #: says so rather than implying an in-app switch that does not exist.
+    #: Overridable so a fork does not send its readers here.
+    releases_url: str = "https://github.com/Berbadov/kriko/releases"
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":
@@ -60,6 +66,7 @@ class Settings:
             "pack_index_url": os.environ.get(
                 "KRIKO_PACK_INDEX", cls.pack_index_url
             ),
+            "releases_url": os.environ.get("KRIKO_RELEASES_URL", cls.releases_url),
         }
         base.update(overrides)
         return cls(**base)

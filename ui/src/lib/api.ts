@@ -28,6 +28,7 @@ const postJson = <R>(path: string, body: unknown) =>
 const seg = encodeURIComponent;
 
 export const api = {
+    health: () => get<T.Health>("/api/health"),
     status: () => get<T.Status>("/api/status"),
     activity: (limit = 20) =>
         get<{ items: T.ActivityItem[]; malformed: number }>(
