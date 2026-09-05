@@ -177,3 +177,35 @@ test("a failed analysis leaves an error entry the panel can show", async () => {
   assert.equal(entry.ok, false);
   assert.ok(entry.error);
 });
+
+// ── the bridge back to the app ──────────────────────────────────────────
+
+test("the request says which door it came in by", async () => {
+  const { state } = await analyse();
+  const post = state.requests.find((r) => r.method === "POST");
+  // Without this every analysis looks in-app in the reader's history, and the
+  // first question anyone asks about a surprising result — "where did this
+  // come from?" — has no answer.
+  assert.equal(post.body.origin, "extension");
+});
+
+test("the result carries a link that opens the same answer in the app", async () => {
+  const { result } = await analyse({
+    analysis: { ...ANALYSIS, lookup_id: "abc123" } });
+  assert.equal(result.app_url, "http://127.0.0.1:8787/#/result/abc123");
+});
+
+test("an answer the app did not store offers no link to it", async () => {
+  const { result } = await analyse();
+  assert.equal(result.app_url, undefined);
+});
+
+test("an app that is not running says so, rather than naming a status code", async () => {
+  const h = loadBackground({ offline: true, tabResponses: withTab() });
+  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, SCRAPE.url));
+  const entry = h.state.session["kriko_result_" + SCRAPE.url];
+  assert.equal(entry.code, "APP_NOT_RUNNING");
+  // The panel keys its "start Kriko" hint off the code, but the text is what
+  // a reader who never opens the panel's internals actually sees.
+  assert.match(entry.error, /not running|Kriko/i);
+});

@@ -137,3 +137,28 @@ test("a real failure is still shown as one", () => {
   assert.equal(p.pipeline(), "error");
   assert.match(p.errorText(), /not reachable/);
 });
+
+// ── the way back to the app ─────────────────────────────────────────────
+
+test("the footer offers to open the same answer in the app", () => {
+  // The panel is deliberately small — it shows the risks and stops. The full
+  // report, the sources and the comparison live in the app, and until now the
+  // only route there was to retype the listing url into it by hand.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, app_url: "http://127.0.0.1:8787/#/result/abc123" } });
+
+  const link = p.footer().querySelector("a");
+  assert.equal(link.getAttribute("href"), "http://127.0.0.1:8787/#/result/abc123");
+  assert.equal(link.getAttribute("target"), "_blank");
+  // The pack attribution the footer already carried must survive the addition.
+  assert.match(p.footer().textContent, /org\.kriko\.cars/);
+});
+
+test("an answer the app never stored offers no link", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  assert.equal(p.footer().querySelector("a"), null);
+});

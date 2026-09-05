@@ -10,7 +10,10 @@ const vm = require("node:vm");
 
 const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 
-function loadBackground({ routes = {}, tabResponses = {} } = {}) {
+// `offline` is the case a status-code stub cannot express: nothing is
+// listening, so `fetch` rejects before there is a response to inspect. That is
+// the ordinary state of the world for a reader who has not started the app.
+function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}) {
   const state = {
     session: {},
     local: {},
@@ -66,6 +69,7 @@ function loadBackground({ routes = {}, tabResponses = {} } = {}) {
       },
     },
     fetch: async (url, init) => {
+      if (offline) throw new TypeError("Failed to fetch");
       const body = init && init.body ? JSON.parse(init.body) : null;
       state.requests.push({ url, method: (init && init.method) || "GET", body });
       const route = Object.keys(routes).find((r) => url.endsWith(r));
