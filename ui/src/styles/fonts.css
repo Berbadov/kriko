@@ -1,0 +1,35 @@
+/* The three faces, served from the app's own static directory.
+ *
+ * The extension imports these from Google Fonts. A desktop app cannot: it may
+ * open with no network at all, and the request would leak that the app was
+ * launched. `tokens.test.ts` fails the build on any `@import` or
+ * `fonts.googleapis` reference so the shortcut cannot come back.
+ *
+ * `font-display: swap` on purpose — text in a fallback face beats no text.
+ * See `ui/public/fonts/README.md` for what each file is and its licence.
+ */
+@font-face {
+    font-family: "Sora";
+    font-style: normal;
+    /* One file for the whole range: Sora is variable, so asking Google for two
+     * weights returns the same bytes twice. */
+    font-weight: 100 800;
+    font-display: swap;
+    src: url("/static/fonts/sora.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Silkscreen";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/silkscreen-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/jetbrains-mono-400.woff2") format("woff2");
+}

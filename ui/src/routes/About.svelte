@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import { THEMES, THEME_LABELS, setTheme, theme } from "../lib/theme";
     import type { Health } from "../lib/types";
 
     let health = $state<Health | null>(null);
@@ -38,6 +39,26 @@
             <dt>App state</dt>
             <dd class="path">{health.app_state}</dd>
         </dl>
+
+        <h3>Appearance</h3>
+        <p class="meta">
+            A theme is one complete palette, not a tweak — every colour in the
+            app comes from the one you pick here.
+        </p>
+        <div class="row">
+            {#each THEMES as id (id)}
+                <label>
+                    <input
+                        type="radio"
+                        name="theme"
+                        value={id}
+                        checked={$theme === id}
+                        onchange={() => setTheme(id)}
+                    />
+                    {THEME_LABELS[id]}
+                </label>
+            {/each}
+        </div>
 
         <h3>Updating</h3>
         <p class="meta">
