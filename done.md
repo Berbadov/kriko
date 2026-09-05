@@ -6,6 +6,17 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### v0.3.0 — the app you can actually set up — 2026-09-05 (this commit)
+The five changes below, in an installer. A minor rather than a patch because
+three of them are capabilities the app did not have: it can update itself, it
+can wire an agent to its own store, and the extension and the app now know they
+are the same product. The engine did not move — `kriko/` is untouched across all
+five, which is G6 doing its job: every one of these is an interface change.
+
+The release gate is unchanged and is still the only one that counts: does the
+installer open on Windows, and does a check return claims. `desktop.yml` builds
+it from this tag.
+
 ### 2026-09-05 — the usability pass, five specs (`ce79771`, `9516785`, `a14e664`, `3adc2cc`, this commit)
 Five changes the app needed before anyone but its author could run it, taken one
 at a time.
