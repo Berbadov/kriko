@@ -41,8 +41,17 @@
     --radius-sm: 8px;
     --ring: 2px;
 
+    /* Motion is structure, not palette: a theme may repaint an element but
+     * must not change how long it takes to appear. Three durations and two
+     * curves, because a fourth of either is how a UI starts feeling assembled
+     * from parts. */
     --dur-fast: 120ms;
     --dur-slow: 240ms;
+    --dur-slower: 400ms;
+    /* Decelerating — for things arriving. Nothing here accelerates away;
+     * everything that leaves this UI leaves because the reader navigated. */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
     --rail: 15rem;
 }

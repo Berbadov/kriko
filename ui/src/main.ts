@@ -9,6 +9,7 @@ import "./styles/themes/slate.css";
 import "./styles/themes/lemonade.css";
 import "./styles/base.css";
 import "./styles/components.css";
+import "./styles/motion.css";
 import "./styles/print.css";
 
 export default mount(App, { target: document.getElementById("app")! });

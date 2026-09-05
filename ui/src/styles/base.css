@@ -55,12 +55,3 @@ hr {
     border-top: 1px solid var(--line);
     margin: var(--s-6) 0 var(--s-5);
 }
-
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        transition-duration: 1ms !important;
-        animation-duration: 1ms !important;
-    }
-}
