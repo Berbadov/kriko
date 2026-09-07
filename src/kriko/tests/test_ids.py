@@ -114,10 +114,52 @@ def test_ids_are_hex_and_fixed_width():
     assert all(c in "0123456789abcdef" for c in got)
 
 
+MAN = {"pack": {"id": "p", "name": "P", "version": "0.1.0"}}
+
+
 def test_content_digest_is_order_independent_and_change_sensitive():
-    a = ids.content_digest(["z", "a", "m"])
-    assert a == ids.content_digest(["a", "m", "z"])
-    assert a != ids.content_digest(["a", "m"])
+    a = ids.content_digest(["z", "a", "m"], MAN)
+    assert a == ids.content_digest(["a", "m", "z"], MAN)
+    assert a != ids.content_digest(["a", "m"], MAN)
+
+
+def test_content_digest_covers_what_the_pack_declares_itself_to_be():
+    """A manifest-only change must move the digest.
+
+    It did not, and that shipped: two releases published one pack under two
+    different names at the same version with the same digest, so
+    `updates.decide` said "newest version installed" and the corrected name
+    reached nobody. Identity keys live in the same manifest, and they decide
+    which of a pack's rows can ever merge with another author's — a silent
+    change there is worse than a wrong name.
+    """
+    rows = ["a", "m", "z"]
+    renamed = {"pack": {**MAN["pack"], "name": "P, corrected"}}
+    rekeyed = {**MAN, "identity": {"product": ["brand"]}}
+    assert ids.content_digest(rows, MAN) != ids.content_digest(rows, renamed)
+    assert ids.content_digest(rows, MAN) != ids.content_digest(rows, rekeyed)
+
+
+def test_content_digest_will_not_be_computed_without_a_manifest():
+    """Required, not optional, because packs bring their own builders.
+
+    An argument a pack author may omit is one a pack author will omit — and the
+    omission is invisible until a metadata fix fails to travel. TypeError at
+    build time is the whole mechanism.
+    """
+    with pytest.raises(TypeError):
+        ids.content_digest(["a"])
+
+
+def test_manifest_ordering_does_not_move_the_digest():
+    """Two spellings of the same declaration are the same declaration.
+
+    Otherwise reordering keys in a pack.toml would look like new knowledge, and
+    every reader would be handed a download for nothing.
+    """
+    a = {"pack": {"id": "p", "name": "P"}, "identity": {"product": ["brand"]}}
+    b = {"identity": {"product": ["brand"]}, "pack": {"name": "P", "id": "p"}}
+    assert ids.content_digest(["r"], a) == ids.content_digest(["r"], b)
 
 
 def test_empty_identity_is_rejected():
