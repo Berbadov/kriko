@@ -670,3 +670,40 @@ def test_the_app_wears_the_extension_palette():
     assert 'DEFAULT_THEME: Theme = "panel"' in (
         REPO / "ui" / "src" / "lib" / "theme.ts"
     ).read_text(), "the app no longer opens wearing the extension's palette"
+
+
+def test_no_two_tracked_files_differ_only_in_case():
+    """A repo that only checks out on Linux.
+
+    `NextStep.test.ts` and `nextStep.test.ts` sat beside each other for weeks —
+    two real test files, one for the component and one for the function it
+    reads. On this machine that is fine. On the machine this project is
+    actually shipping to it is not: Windows and macOS default to
+    case-insensitive filesystems, so a clone collapses the pair into whichever
+    one git wrote last and the other test silently stops existing. Not fails —
+    stops existing, which no suite reports.
+
+    The convention the repo already uses is the fix (`report.test.ts` for the
+    module, `Report.svelte.test.ts` for the component), so this test is only
+    here to keep the next collision from surviving a review.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split("\0")
+
+    seen: dict[str, str] = {}
+    clashes: list[str] = []
+    for path in filter(None, tracked):
+        key = path.lower()
+        if key in seen and seen[key] != path:
+            clashes.append(f"{seen[key]} vs {path}")
+        seen.setdefault(key, path)
+
+    assert clashes == [], (
+        "these paths differ only in case, so a Windows or macOS clone keeps "
+        f"one of each pair and loses the other: {clashes}"
+    )

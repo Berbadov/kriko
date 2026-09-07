@@ -6,7 +6,74 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
-### 2026-09-07 — the reader's eight, and the loop back from the panel (this commit)
+### 2026-09-07 — the twenty-eight, in five phases (this commit)
+A read of the whole app produced twenty-eight findings. None were bugs: every
+one was a place where the product could do something and had not been given
+the surface to do it, or where it knew something and told nobody. Worked as
+five phases, one commit each — `3284315` (buyer), `2bf60d2` (author and
+agent), `a55ac7a` (extension), and this one (shell, and closing the trust
+surfaces).
+
+**The buyer's half** stopped at "here is a verdict, here are cards, here is a
+print button". It now has the thing a buyer actually accumulates on a viewing:
+a note per claim (`claim_notes`, its own table beside `claim_checks`), a
+question sheet with a rail entry of its own — with no id it resolves to the
+newest saved answer, which is what it should do on inspection day — progress
+across `handled`, a compare that takes more than two, and an export that is
+not paper.
+
+**The author and agent half** was missing its consequences. Marks fed nothing;
+refusals were invisible; a failed job could only be re-run by retyping it;
+`/api/settings` had no screen; and authoring a pack — the thing the platform
+exists for — was the one task with no door in the app. All five have one now,
+and the marks half **closes B54**: `state.mark_signals` splits `wrong` (a
+knowledge problem, feeding the research job the app already runs) from
+`not_applicable` (a matching problem), and attributes the latter to the door
+the subject came through. Derived, not curated: no review queue, nothing
+waiting on a person.
+
+**The extension** got a keyboard shortcut behind the same function as the
+toolbar button, an options page for the one setting `apiBase()` has always
+read from a key nothing could write, and two ways back into the app. Both
+destination screens accept an id as a path segment, because `/api/focus`
+refuses a query string on purpose.
+
+**The shell** was doing none of navigation's non-visual half. A hash router
+replaces one document's contents: no load event, so a screen reader is told
+nothing, and focus stays wherever it was — in the rail, groups above the thing
+that just appeared. There is a live region now (outside the keyed subtree: one
+replaced in the same paint as its text announces nothing), focus moves to the
+view on navigation and *not* on first render, and a skip control sits first in
+the tab order — a button rather than `<a href="#main">`, because the app is
+hash-routed and the standard accessible pattern would have navigated to "No
+such view". Plus a palette on ⌘K/Ctrl+K and `?`, built from the same route
+table the rail renders, and the only place in the app that says out loud that
+a keyboard shortcut exists.
+
+**The trust surfaces** were the three findings that turned out to be one:
+`disputed` was folded inside a provenance `<details>` inside author mode — two
+folds away from the reader whose decision it changes; `relevance`, `trust` and
+`detection` were raw numbers with no scale; and nothing anywhere said why a
+claim was *not* in a report. The badge is out of both folds, `rankingNote`
+says the numbers in words before printing them, and `absenceNote` states the
+one thing this project must never leave implied: silence is what the packs do
+not hold, not a risk that has been ruled out.
+
+Two pieces of housekeeping the pass turned up, both mechanisms rather than
+edits. `--scrim` had to be added to *every* theme including the extension's,
+which has no dialog, because `tokens.test.ts` holds each theme to the union of
+aliases — half a theme paints elements with nothing. And
+`ui/src/lib/NextStep.test.ts` sat beside `nextStep.test.ts`: two real test
+files on this machine, one file on the Windows box this project is shipping
+to, where a clone keeps whichever git wrote last and the other test silently
+stops existing. Renamed to the convention the repo already used
+(`NextStep.svelte.test.ts`), and `test_no_two_tracked_files_differ_only_in_
+case` walks `git ls-files` so the next collision does not survive a review.
+
+Gates at each phase: pytest rc=0, vitest 263 across 37 files, extension 68,
+svelte-check 0 errors, bundle rebuilt and committed.
+
+### 2026-09-07 — the reader's eight, and the loop back from the panel
 A reader listed eight things wrong with the app. The interesting ones were not
 bugs: they were places where the product could see but not be told anything.
 

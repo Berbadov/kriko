@@ -53,4 +53,43 @@
         content: " (" attr(href) ")";
         font-size: 90%;
     }
+
+    /* ── the question sheet on paper ───────────────────────────────────── */
+
+    /* The sheet is the one thing here that is *made* to be printed, and the
+       rules above are wrong for it twice over: `.check` is chrome on a report
+       but on the sheet it wraps the question itself, and a textarea is a
+       control on screen and a place to write with a pen on paper. */
+    .sheet .check {
+        display: block !important;
+    }
+    .sheet .check input[type="checkbox"] {
+        display: none !important;
+    }
+    .sheet li {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        padding: 6pt 0;
+        border-bottom: 1px solid #999;
+    }
+    /* Ticked already, so it is not asked again — but kept on the page, because
+       "we covered this" is part of what the sheet records. */
+    .sheet li.done {
+        opacity: 1;
+        color: #666;
+    }
+    .sheet li textarea,
+    .focus-card textarea {
+        border: 0;
+        border-bottom: 1px solid #999;
+        min-height: 24pt;
+        width: 100%;
+        resize: none;
+        background: none;
+    }
+    .focus-card {
+        border: 0;
+        padding: 0;
+        background: none;
+    }
 }

@@ -91,3 +91,39 @@ def write_checked(lookup_id: str, body: Check, app_state=Depends(get_app_state))
         "lookup_id": lookup_id,
         "checked": state.set_checked(app_state, lookup_id, body.claim_key, body.checked),
     }
+
+class Note(BaseModel):
+    claim_key: str
+    #: Bounded, and generously: this is where "belt done at 140k per the
+    #: seller, receipt promised" goes. The cap exists so a paste of an entire
+    #: listing cannot become a history row.
+    note: str = Field(default="", max_length=4000)
+
+
+@router.get("/lookups/{lookup_id}/triage")
+def read_triage(lookup_id: str, app_state=Depends(get_app_state)):
+    """Both halves of the reader's own marks on one answer, in one request.
+
+    The checkmarks and the notes are read together because they are rendered
+    together: two requests for one screen means a report that paints its
+    checkboxes and then, a moment later, its notes.
+    """
+    return {
+        "lookup_id": lookup_id,
+        "checked": state.checked_keys(app_state, lookup_id),
+        "notes": state.notes(app_state, lookup_id),
+    }
+
+
+@router.post("/lookups/{lookup_id}/notes")
+def write_note(lookup_id: str, body: Note, app_state=Depends(get_app_state)):
+    """Record what the seller said about one risk.
+
+    Same tolerance as `write_checked`: a note for a lookup that has since been
+    forgotten is stored rather than refused, because the reader's own words are
+    the last thing this app should be losing to a race.
+    """
+    return {
+        "lookup_id": lookup_id,
+        "notes": state.set_note(app_state, lookup_id, body.claim_key, body.note),
+    }

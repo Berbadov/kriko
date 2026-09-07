@@ -51,6 +51,10 @@
     --accent-lo: #244f4d;
     --shadow-1: 0 1px 1px rgba(51, 43, 24, 0.08);
     --shadow-2: 0 2px 8px rgba(51, 43, 24, 0.14);
+    /* The ground a dialog sits on. Dark enough that the page behind reads as
+     * out of reach, translucent enough that the reader can still see where
+     * they were — an opaque cover is a navigation, not an overlay. */
+    --scrim: rgba(51, 43, 24, 0.34);
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);
