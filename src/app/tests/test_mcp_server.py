@@ -185,6 +185,31 @@ def test_a_warning_light_finding_is_refused_by_the_packs_own_gate(store):
     assert result["rejected"][0]["reason"] == "noise"
 
 
+def test_a_batch_through_the_agent_door_reaches_the_refusal_ledger(store):
+    """Both doors share one acceptance path, so both are logged.
+
+    The refusals are the highest-signal data anyone has for improving the
+    research skill, and MCP is the door most of them come through. The ledger
+    lives in app.sqlite beside the store rather than in it — a refusal is not
+    pack content and must not move a pack's content_digest.
+    """
+    from app.web import state
+
+    mcp_server.submit_findings(_subject(), "tools", [{
+        "title": "ABS warning light illuminates",
+        "rationale": "The ABS light can come on and should be looked at.",
+        "quote": "the ABS warning light illuminates",
+        "document_text": "Owners report the ABS warning light illuminates.",
+        "source_url": "https://example.test/a",
+    }])
+
+    conn = state.connect(store.parent / "app.sqlite")
+    (row,) = state.submissions(conn)
+    assert row["door"] == "mcp"
+    assert (row["accepted"], row["refused"]) == (0, 1)
+    assert state.refusal_reasons(conn)[0]["reason"] == "noise"
+
+
 def test_a_config_specific_finding_still_lands(store):
     """The gate must not swallow what Kriko exists to surface."""
     result = mcp_server.submit_findings(_subject(), "tools", [{

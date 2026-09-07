@@ -111,6 +111,14 @@ export type LookupResult = {
     flags?: string[];
     claims: Claim[];
     lookup_id?: string;
+    /** What the answer was computed against, when the caller sent any.
+     *
+     * Optional here rather than only on `AnalyzeResult` because a stored
+     * lookup is an analyze payload that has been through SQLite: the report
+     * renders both, and a reader asking "did it know how much use this one
+     * has had" is asking about the stored one as often as the fresh one. */
+    context?: Record<string, unknown>;
+    context_units?: Record<string, string>;
 };
 
 export type AnalyzeResult = LookupResult & {
@@ -320,3 +328,41 @@ export type ExtensionStatus = {
 };
 export type ExtensionStaged = { path: string; written: string[]; version: string };
 export type ExtensionRevealed = { path: string; error: string };
+
+
+/** The reader's own marks on one stored answer: what they ticked, and what
+ * the seller said. Read together because they render together. */
+export type Triage = {
+    lookup_id: string;
+    checked: string[];
+    notes: Record<string, string>;
+};
+
+/** One batch a researcher submitted, and what the gate did with it.
+ *
+ * `rejected` carries the gate's own sentence per finding — the most useful
+ * data in the system for improving the agent skill, and previously returned
+ * to the agent and then discarded.
+ */
+export type Submission = {
+    submission_id: string;
+    created_at: string;
+    /** mcp | job — which door it came in. */
+    door: string;
+    subject_id: string;
+    pack_id: string;
+    accepted: number;
+    refused: number;
+    verdicts: {
+        accepted?: { title: string; claim_id: string }[];
+        rejected?: { title: string; reason: string }[];
+        error?: string;
+    };
+};
+
+export type Submissions = {
+    items: Submission[];
+    accepted: number;
+    refused: number;
+    reasons: { reason: string; count: number }[];
+};

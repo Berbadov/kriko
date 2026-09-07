@@ -19,6 +19,7 @@
     import Jobs from "./routes/Jobs.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
+    import Questions from "./routes/Questions.svelte";
     import Result from "./routes/Result.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
@@ -108,6 +109,13 @@
                         <History page />
                     {:else if $route.name === "compare"}
                         <Compare />
+                    {:else if $route.name === "questions"}
+                        <!-- The id rides in the query rather than the path so
+                             the rail's own entry (no id at all) is the same
+                             route, and resolves to the newest saved answer. -->
+                        {#key $route.query.id ?? ""}
+                            <Questions lookupId={$route.query.id ?? ""} />
+                        {/key}
                     {:else if $route.name === "connect"}
                         <Connect />
                     {:else if $route.name === "extension"}

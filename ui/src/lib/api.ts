@@ -109,6 +109,21 @@ export const api = {
     settings: () => get<Record<string, unknown>>("/api/settings"),
     putSettings: (values: Record<string, unknown>) =>
         postJson<Record<string, unknown>>("/api/settings", { values }),
+    /** Both halves of the reader's own marks on one stored answer. */
+    triage: (lookupId: string) =>
+        get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),
+    setNote: (lookupId: string, claimKey: string, note: string) =>
+        postJson<{ notes: Record<string, string> }>(
+            `/api/lookups/${seg(lookupId)}/notes`,
+            { claim_key: claimKey, note },
+        ),
+    submissions: (limit = 30) =>
+        get<T.Submissions>(`/api/submissions?limit=${limit}`),
+    retryJob: (jobId: string) =>
+        postJson<{ job_id: string; kind: string }>(
+            `/api/jobs/${seg(jobId)}/retry`,
+            {},
+        ),
     checked: (lookupId: string) =>
         get<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`),
     setChecked: (lookupId: string, claimKey: string, checked: boolean) =>

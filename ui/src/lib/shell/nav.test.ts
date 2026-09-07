@@ -9,6 +9,7 @@ describe("the route table", () => {
             "check",
             "history",
             "compare",
+            "questions",
             // The extension is the buyer's half of the product, so it sits
             // inside the one group they can see rather than behind the author
             // gate with the other setup screens.
@@ -50,6 +51,7 @@ describe("the route table", () => {
             "check",
             "history",
             "compare",
+            "questions",
             "extension",
             "overview",
             "knowledge",

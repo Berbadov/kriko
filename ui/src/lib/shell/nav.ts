@@ -21,6 +21,12 @@ export const NAV: NavGroupSpec[] = [
             { name: "check", label: "New check" },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
+            // The artifact the reader takes *out* of the app: the asks, in
+            // order, big enough to read standing in front of the thing. It gets a
+            // rail entry rather than living only behind a report link
+            // because on inspection day it is the first screen they want,
+            // and with no id it resolves to the newest saved answer.
+            { name: "questions", label: "Question sheet" },
             // Not author-only, and in Check rather than System: the extension
             // is the reader's half of the product — the one who never opens
             // an author screen is exactly the one who needs it installed.

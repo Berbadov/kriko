@@ -61,6 +61,42 @@ describe("Compare", () => {
         expect(screen.getByLabelText("Second")).toBeInTheDocument();
     });
 
+    it("lines up three, which is what a shortlist actually looks like", async () => {
+        const third = {
+            lookup_id: "c3", created_at: "2026-09-03", source: "url",
+            label: "Three", claim_count: 1,
+        };
+        window.location.hash = "#/compare?ids=a1,b2,c3";
+        stubFetch({
+            ...BOTH,
+            "/api/history": { items: [...HISTORY["/api/history"].items, third] },
+            "/api/lookup/c3": {
+                lookup_id: "c3", created_at: "", source: "url", label: "Three", request: {},
+                response: { method: "exact", claims: [claim("z", "high")] },
+            },
+        });
+        render(Compare);
+        expect(
+            await screen.findByRole("columnheader", { name: "Three" }),
+        ).toBeInTheDocument();
+        expect(screen.getByText(/0 in all 3/)).toBeInTheDocument();
+        // Every row is three wide, and a risk only the third one has reads as
+        // present there and absent — a dash, not a blank — in the other two.
+        const zRow = screen.getByRole("rowheader", { name: "T-z" }).closest("tr")!;
+        expect(zRow.querySelectorAll("td")).toHaveLength(3);
+        expect(zRow.textContent).toBe("T-z——Serious");
+    });
+
+    it("still honours the report's own two-sided link", async () => {
+        // Every stored report links here with ?left=; a link is forever.
+        window.location.hash = "#/compare?left=a1&right=b2";
+        stubFetch(BOTH);
+        render(Compare);
+        expect(
+            await screen.findByRole("columnheader", { name: "One" }),
+        ).toBeInTheDocument();
+    });
+
     it("says there is nothing to compare with fewer than two stored answers", async () => {
         window.location.hash = "#/compare";
         stubFetch({ "/api/history": { items: [HISTORY["/api/history"].items[0]] } });

@@ -891,3 +891,157 @@ table.compare thead th {
     align-items: center;
     white-space: nowrap;
 }
+
+/* ── what the answer was computed against ───────────────────────────────── */
+
+/* A strip, not a table: the reader's question here is "did it even have the
+   mileage", which is answered by seeing the pairs at all. Key and value stay
+   on one line each so a long value wraps as a unit. */
+.context-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-3);
+    align-items: baseline;
+    margin: 0 0 var(--s-3);
+    font-size: var(--t-sm);
+}
+.context-pair {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The clipboard's fallback. Full width and monospaced, because the only thing
+   anyone does with it is select all and copy. */
+.handover {
+    display: block;
+    max-width: var(--measure);
+    margin-top: var(--s-3);
+}
+.handover textarea {
+    width: 100%;
+    font-family: ui-monospace, monospace;
+    font-size: var(--t-sm);
+}
+
+/* ── what the seller said ───────────────────────────────────────────────── */
+
+.note-field {
+    display: block;
+    margin-top: var(--s-3);
+}
+.note-field textarea {
+    width: 100%;
+    margin-top: var(--s-1);
+}
+
+/* A button that has to read as prose, because it sits in a paragraph's place
+   and opening a field is not an action worth a chrome-heavy control. */
+button.link-ish {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin-top: var(--s-3);
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--t-sm);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── triage progress ────────────────────────────────────────────────────── */
+
+/* Ten cards with three ticked said nothing at a glance. The bar is the
+   peripheral read; the sentence beside it is the accessible one, and the
+   aria-label carries the percentage for anyone who gets neither. */
+.verdict-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin: var(--s-3) 0 0;
+}
+.done-bar {
+    display: block;
+    width: 8rem;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    overflow: hidden;
+}
+.done-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--dur-slow) var(--ease-out);
+}
+
+/* ── the question sheet ─────────────────────────────────────────────────── */
+
+.sheet-head {
+    max-width: var(--measure);
+    margin-bottom: var(--s-5);
+}
+.sheet {
+    max-width: var(--measure);
+    list-style: decimal;
+    padding-left: var(--s-5);
+    margin: 0;
+}
+.sheet li {
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--line);
+}
+.sheet li.done {
+    opacity: 0.5;
+}
+.sheet li.done .sheet-ask {
+    text-decoration: line-through;
+}
+.sheet-ask {
+    font-size: var(--t-md);
+    line-height: var(--lh-md);
+}
+.sheet li textarea {
+    width: 100%;
+    margin-top: var(--s-2);
+}
+
+/* Inspection day: standing up, one hand, bright daylight. Type as large as the
+   measure allows and nothing else competing for the screen. */
+.focus-card {
+    max-width: var(--measure);
+    padding: var(--s-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+}
+.focus-card.done {
+    opacity: 0.6;
+}
+.focus-ask {
+    font-size: var(--t-xl);
+    line-height: var(--lh-xl);
+    margin: var(--s-3) 0;
+}
+.focus-card textarea {
+    width: 100%;
+    font-size: var(--t-md);
+    margin-bottom: var(--s-3);
+}
+
+/* ── why a report might be short ────────────────────────────────────────── */
+
+.absence {
+    max-width: var(--measure);
+    margin-top: var(--s-5);
+}
+
+/* ── comparing more than two ────────────────────────────────────────────── */
+
+.row.slots {
+    flex-wrap: wrap;
+}
+/* Four columns plus the risk name outgrows a narrow window; the table scrolls
+   inside its own box rather than pushing the page sideways. */
+.table-scroll {
+    overflow-x: auto;
+}

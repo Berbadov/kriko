@@ -36,6 +36,7 @@ from app.web.routers import (
     packs,
     query,
     subjects,
+    submissions,
 )
 from app.web import state
 from app.version import app_version, installed_versions
@@ -75,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         history.router,
         jobs.router,
         marks.router,
+        submissions.router,
     ):
         app.include_router(router)
 
