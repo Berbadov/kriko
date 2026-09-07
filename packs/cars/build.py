@@ -854,7 +854,7 @@ def _write_manifest(conn, pack_id: str, manifest: dict, row_ids: list) -> None:
             manifest["pack"].get("publisher", ""),
             manifest["pack"].get("license", ""),
             manifest["pack"].get("origin", ""),
-            ids.content_digest(row_ids),
+            ids.content_digest(row_ids, manifest),
             yaml.safe_dump(manifest, allow_unicode=True),
         ),
     )

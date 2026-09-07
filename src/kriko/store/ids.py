@@ -163,12 +163,36 @@ def claim_id(subject_id: str, kind: str, domain: str, title: str, lang: str = "e
     })
 
 
-def content_digest(row_ids) -> str:
-    """Digest a whole pack from its sorted row ids.
+def content_digest(row_ids, manifest) -> str:
+    """Digest a whole pack: its sorted row ids *and* what it declares itself to be.
 
     Deliberately NOT a checksum of the pack file: `zipfile` bakes in mtimes and
     entry ordering, so two builds of identical data would digest differently and
     break registry verification. Row ids are the content.
+
+    But row ids alone were not the whole content, and the gap was not
+    theoretical. A pack's manifest is where its name, licence, publisher and —
+    most consequentially — its identity keys live, and none of that produced a
+    row id. So two published releases carried one pack under two different
+    names at the same version with a byte-identical digest, `updates.decide`
+    answered "newest version installed", and the corrected name could not reach
+    a single installed store. A pack could likewise change the identity keys
+    that decide which of its rows merge with another author's, and every
+    existing install would still call itself current.
+
+    `manifest` is required, not optional, and that is the mechanism rather than
+    the one fix: a pack may bring its own builder, and some do — writing this
+    manifest row themselves — so an argument a builder may omit is one a
+    builder will omit, silently, and the class of bug returns with the next pack.
+    Omitting it is now a TypeError at build time.
+
+    Note the consequence, which is the intended one: because the digest's
+    *definition* changed, every pack's digest moved, so every pack needs a
+    version bump to install over its predecessor. `packstore.install` refuses a
+    republished version loudly, which is exactly what should happen when a
+    metadata change goes out without one.
     """
     joined = "\n".join(sorted(row_ids))
-    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
+    declared = json.dumps(manifest, sort_keys=True, ensure_ascii=False, default=str)
+    payload = f"{joined}\n--manifest--\n{declared}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()

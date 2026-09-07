@@ -142,6 +142,26 @@ def test_digest_changes_when_data_changes(tmp_path):
     assert before != after
 
 
+def test_digest_changes_when_only_the_manifest_changes(tmp_path):
+    """Renaming a pack is a content change, because the name is content.
+
+    Before this, it was not: the digest was computed over row ids alone, so a
+    corrected pack name carried the digest of the wrong one. Same version, same
+    digest, and `kriko.pack.updates.decide` answered "up to date" — the fix could not
+    reach an installed store at all. See `ids.content_digest`.
+    """
+    root = _write(tmp_path)
+    before = build.digest_of(build.build(root, tmp_path / "a.kpack"))
+    (root / "pack.toml").write_text(
+        textwrap.dedent(PACK_TOML).replace(
+            'name = "Cordless drills"', 'name = "Cordless drills, corrected"'
+        ),
+        encoding="utf-8",
+    )
+    after = build.digest_of(build.build(root, tmp_path / "b.kpack"))
+    assert before != after
+
+
 def test_subject_ids_match_the_shared_hash(tmp_path):
     """The builder must not invent its own identity scheme."""
     out = build.build(_write(tmp_path), tmp_path / "drill.kpack")
