@@ -5,21 +5,21 @@
     import { initMode, mode } from "./lib/mode";
     import NextStep from "./lib/NextStep.svelte";
     import { initTheme } from "./lib/theme";
+    import { watchFocus } from "./lib/focus";
     import { hashWith, route } from "./lib/router";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import { isAuthorOnly } from "./lib/shell/nav";
+    import { isAuthorOnly, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Connect from "./routes/Connect.svelte";
     import Extension from "./routes/Extension.svelte";
-    import Coverage from "./routes/Coverage.svelte";
+    import Console from "./routes/Console.svelte";
+    import Knowledge from "./routes/Knowledge.svelte";
     import About from "./routes/About.svelte";
-    import Health from "./routes/Health.svelte";
     import Jobs from "./routes/Jobs.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Result from "./routes/Result.svelte";
-    import Subjects from "./routes/Subjects.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -32,6 +32,12 @@
     // it is explained, and the switch is one click away in the rail. Silently
     // rendering nothing would look like a broken link.
     const authorOnly = $derived($mode !== "author" && isAuthorOnly($route.name));
+
+    // Retired route names still resolve. Three screens became three lenses on
+    // one, and `#/coverage` is a link the browser extension and this app's own
+    // older hints both hand out — turning those into "No such view" would be
+    // the reorganisation breaking the reader's bookmarks to prove a point.
+    const view = $derived(resolve($route.name));
 
     // First run is a state of the store, not a stored flag: nothing to reset,
     // and a reader who removes every pack gets the offer again, which is the
@@ -50,6 +56,13 @@
     // paint in slate followed by a swap to lemonade is a flash the reader reads
     // as a bug.
     const ready = Promise.all([initMode($route.query.mode), initTheme(), checkStore]);
+
+    // The browser extension's "Open in Kriko" arrives here: it posts a route
+    // to the engine, the shell raises the window, and this is the half that
+    // navigates. Mounted at the app root because the destination is any
+    // screen — a watcher living in one route could only ever hand off to
+    // itself. See lib/focus.ts.
+    $effect(() => watchFocus());
 </script>
 
 <div class="shell">
@@ -88,27 +101,25 @@
                         <Check mode={$mode} />
                     {:else if $route.name === "overview"}
                         <Overview />
-                    {:else if $route.name === "subjects"}
-                        <Subjects />
+                    {:else if view.name === "knowledge"}
+                        <Knowledge lens={view.lens ?? $route.query.lens ?? "all"} />
                     {:else if $route.name === "history"}
                         <h2>History</h2>
                         <History page />
                     {:else if $route.name === "compare"}
                         <Compare />
-                    {:else if $route.name === "coverage"}
-                        <Coverage />
                     {:else if $route.name === "connect"}
                         <Connect />
                     {:else if $route.name === "extension"}
                         <Extension />
                     {:else if $route.name === "packs"}
                         <Packs />
-                    {:else if $route.name === "health"}
-                        <Health />
                     {:else if $route.name === "about"}
                         <About />
                     {:else if $route.name === "jobs"}
                         <Jobs />
+                    {:else if $route.name === "console"}
+                        <Console />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->

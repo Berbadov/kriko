@@ -3,6 +3,11 @@
     import { signalNote, tieNote } from "../lib/health";
     import type { ClaimHealth, HealthTree } from "../lib/types";
 
+    // Its own page once, now one lens inside Knowledge. The heading is a
+    // prop rather than always-on because a second <h2> inside a screen that
+    // already has one reads as two pages stacked.
+    let { heading = true }: { heading?: boolean } = $props();
+
     let claims = $state<ClaimHealth[]>([]);
     let tree = $state<HealthTree | null>(null);
     let askedClaimId = $state("");
@@ -24,7 +29,7 @@
     const ready = load();
 </script>
 
-<h2>Claim health</h2>
+{#if heading}<h2>Claim health</h2>{/if}
 <p class="meta">
     The weakest-supported claims we ship, worst first. Contradicted, then fewest
     independent sources, then weakest best source, then stalest. No combined score — each

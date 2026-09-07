@@ -33,7 +33,13 @@ describe("the route table", () => {
 
     it("knows which routes a buyer may not open", () => {
         expect(isAuthorOnly("overview")).toBe(true);
+        expect(isAuthorOnly("knowledge")).toBe(true);
+        expect(isAuthorOnly("console")).toBe(true);
+        // Retired names keep the gate they had, because they resolve to a
+        // route that has one.
         expect(isAuthorOnly("health")).toBe(true);
+        expect(isAuthorOnly("coverage")).toBe(true);
+        expect(isAuthorOnly("marks")).toBe(true);
         expect(isAuthorOnly("check")).toBe(false);
         expect(isAuthorOnly("compare")).toBe(false);
         expect(isAuthorOnly("extension")).toBe(false);
@@ -46,11 +52,10 @@ describe("the route table", () => {
             "compare",
             "extension",
             "overview",
-            "subjects",
-            "coverage",
-            "health",
+            "knowledge",
             "packs",
             "jobs",
+            "console",
             "connect",
             "about",
         ]);

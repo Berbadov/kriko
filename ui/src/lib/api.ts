@@ -61,6 +61,8 @@ const postJson = <R>(path: string, body: unknown) =>
         body: JSON.stringify(body),
     });
 
+const del = <R>(path: string) => request<R>(path, { method: "DELETE" });
+
 const seg = encodeURIComponent;
 
 export const api = {
@@ -86,6 +88,10 @@ export const api = {
     vocabulary: (packId: string) =>
         get<T.Vocabulary>(`/api/packs/${seg(packId)}/vocabulary`),
     gaps: (packId: string) => get<T.Gap[]>(`/api/packs/${seg(packId)}/gaps`),
+    marks: (verdict = "") =>
+        get<T.Marks>(`/api/marks${verdict ? `?verdict=${seg(verdict)}` : ""}`),
+    unmark: (packId: string, claimId: string) =>
+        del<{ removed: boolean }>(`/api/marks/${seg(packId)}/${seg(claimId)}`),
     subjects: (q: string, limit = 60) =>
         get<T.Subject[]>(`/api/subjects?limit=${limit}&q=${encodeURIComponent(q)}`),
     weakest: (limit = 40) =>
@@ -111,6 +117,8 @@ export const api = {
             checked,
         }),
     adapters: () => get<T.Adapter[]>("/api/adapters"),
+    /** A route another process asked this window to show, consumed once. */
+    focus: () => get<{ route: string | null }>("/api/focus"),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
     brief: (subjectId: string) =>
         get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),

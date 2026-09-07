@@ -14,6 +14,15 @@ module knowing what either is, and it changes when the pack updates rather than
 when the binary does. That is the whole reason it is generated rather than
 checked in: the protocol versions with the knowledge.
 
+Everything past the principle is *also* read off the store, for the same
+reason and one more: an agent that has to guess a pack's identity keys, its
+domain words or its severity words will invent plausible ones, and an invented
+domain is a claim nobody can find again. So the skill states them — the keys
+that identify a subject, the vocabulary the pack declares, how much it already
+holds, where its gaps are, and one worked `submit_findings` call filled in with
+a real subject from this very installation. None of that is typed here; a
+second category gets its own version of all of it for free.
+
 An installation with no packs gets no skill. There is nothing to research and
 nothing to say what would count, and a skill that fires anyway is worse than
 none.
@@ -22,6 +31,11 @@ none.
 from kriko.research import pack_asset
 
 SKILL_NAME = "kriko-research"
+
+#: How many of a pack's declared words to name before the list stops earning
+#: its space. A skill is a prompt: the twentieth domain teaches nothing the
+#: fifth did not, and the agent can call `research_brief` for the rest.
+_MAX_WORDS = 12
 
 #: The loop, in the order an agent must run it. Stated once, here, because both
 #: the skill body and the UI's explanation of the protocol come from it.
@@ -58,16 +72,46 @@ the same finding is valuable for one pack and noise for another.
 
 ## What a finding must carry
 
-Every finding is submitted with the source URL and the **exact quote** from
-that document. `submit_findings` re-reads the document and refuses a quote it
-cannot find in it: a paraphrase, a tidied-up sentence, or a summary of two
-sentences is rejected. This is not a style rule — it is the only thing standing
-between a knowledge base and a plausible-sounding one.
+Submit findings with `submit_findings(subject_id, pack_id, findings)`. Each
+finding is an object, and these five fields are not optional:
+
+| field | what it is |
+|-------|------------|
+| `title` | the risk, in one line, specific to this configuration |
+| `domain` | one of the pack's declared domain words, listed per pack below |
+| `severity` | `high`, `medium` or `low` |
+| `quote` | the **exact** sentence from the document, copied character for character |
+| `source_url` | where you read it |
+| `document_text` | the text you read the quote in |
+
+Optional but worth setting: `component` or `component_hint` (the concrete part
+the finding is about), `rationale`, `advice`.
+
+`document_text` is what makes the grounding check possible. Without it there is
+nothing to check the quote against, and "trust me" is not an evidence model.
+
+## How a finding gets refused
+
+`submit_findings` returns a per-finding verdict, so you learn immediately which
+of your work did not survive. It refuses a finding for one of these reasons,
+and each is worth reading as instruction rather than as an error:
+
+- **`no quote` / `document_text missing`** — nothing to ground. Re-read the
+  page and copy the sentence.
+- **`quote does not appear in the document text`** — the quote was paraphrased,
+  tidied, translated, or stitched from two sentences. Copy it verbatim,
+  including its punctuation. This is the single most common refusal.
+- **the pack's own gate** — grounded, but routine, generic, or true of every
+  product in the category. The pack's principle below is the bar; a refusal
+  here means the finding cleared evidence and failed *taste*.
+- **nothing to anchor it** — no `component`, and neither the title nor the
+  rationale names an identifier, a specification, or a usage figure. A risk
+  that could belong to any configuration belongs to none.
 
 Findings arrive as drafts. Submitting is not publishing, so a finding you are
 unsure of is better filed with its weak source than dropped.
 
-## What each installed pack considers worth keeping
+## What is installed here
 """
 
 
@@ -87,6 +131,150 @@ def _when(packs: list[dict]) -> str:
         f"reports a coverage gap, or when a lookup returns nothing known about "
         f"a subject one of these packs covers."
     )
+
+
+def _words(conn, pack_id: str, role: str) -> list[str]:
+    """A pack's declared vocabulary for one role, in its own order."""
+    return [
+        row["term_id"]
+        for row in conn.execute(
+            "SELECT term_id FROM terms WHERE pack_id = ? AND role = ?"
+            " ORDER BY term_id",
+            (pack_id, role),
+        )
+    ]
+
+
+def _listed(words: list[str]) -> str:
+    """Render a vocabulary, saying so when it was cut rather than pretending."""
+    if not words:
+        return "_none declared_"
+    shown = ", ".join(f"`{w}`" for w in words[:_MAX_WORDS])
+    if len(words) > _MAX_WORDS:
+        shown += f", and {len(words) - _MAX_WORDS} more (`research_brief` lists them)"
+    return shown
+
+
+def _identity_keys(conn, pack_id: str) -> dict[str, list[str]]:
+    """Which attributes select a subject, per subject kind.
+
+    Read off the rows rather than off the manifest: the manifest states the
+    author's intent, the rows are what lookup actually matches on, and a skill
+    that describes the intent would send an agent looking for a key no subject
+    carries.
+    """
+    keys: dict[str, list[str]] = {}
+    for row in conn.execute(
+        "SELECT DISTINCT s.kind, a.key FROM attributes a"
+        " JOIN subjects s ON s.subject_id = a.subject_id AND s.pack_id = a.pack_id"
+        " WHERE a.pack_id = ? AND a.is_identity = 1 ORDER BY s.kind, a.key",
+        (pack_id,),
+    ):
+        keys.setdefault(row["kind"], []).append(row["key"])
+    return keys
+
+
+def _holdings(conn, pack_id: str) -> dict:
+    """How much this pack knows, and how much it admits it does not.
+
+    The gap count is the number that turns a skill into a task list, so it is
+    stated even when it is zero — "nothing is missing" is also an answer.
+    """
+    subjects = conn.execute(
+        "SELECT COUNT(*) AS n FROM subjects WHERE pack_id = ?", (pack_id,)
+    ).fetchone()["n"]
+    claims = conn.execute(
+        "SELECT COUNT(*) AS n FROM claims WHERE pack_id = ?", (pack_id,)
+    ).fetchone()["n"]
+    gaps = conn.execute(
+        "SELECT COUNT(*) AS n FROM subjects s WHERE s.pack_id = ?"
+        " AND NOT EXISTS (SELECT 1 FROM claims c"
+        "                 WHERE c.subject_id = s.subject_id AND c.pack_id = s.pack_id)",
+        (pack_id,),
+    ).fetchone()["n"]
+    return {"subjects": subjects, "claims": claims, "gaps": gaps}
+
+
+def _example(conn, pack_id: str) -> dict | None:
+    """A real subject from this installation, preferring one with a gap.
+
+    A worked example with a made-up id teaches an agent to make up ids. This
+    one can be pasted into `research_brief` and will work, and if there is a
+    gap it is a subject actually worth researching — the example doubles as
+    the first task.
+    """
+    row = conn.execute(
+        "SELECT s.subject_id, s.label, s.kind,"
+        "       EXISTS (SELECT 1 FROM claims c WHERE c.subject_id = s.subject_id"
+        "               AND c.pack_id = s.pack_id) AS has_claims"
+        " FROM subjects s WHERE s.pack_id = ?"
+        " ORDER BY has_claims ASC, s.label ASC LIMIT 1",
+        (pack_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    identity = {
+        r["key"]: r["value_text"]
+        for r in conn.execute(
+            "SELECT key, value_text FROM attributes"
+            " WHERE pack_id = ? AND subject_id = ? AND is_identity = 1 ORDER BY key",
+            (pack_id, row["subject_id"]),
+        )
+    }
+    return {
+        "subject_id": row["subject_id"],
+        "label": row["label"],
+        "kind": row["kind"],
+        "identity": identity,
+        "has_claims": bool(row["has_claims"]),
+    }
+
+
+def _pack_section(conn, pack: dict) -> str:
+    """One pack, described entirely in its own declared words."""
+    pack_id = pack["pack_id"]
+    held = _holdings(conn, pack_id)
+    out = f"\n### {pack['name']} (`{pack_id}` {pack['version']})\n\n"
+    out += (
+        f"Holds **{held['subjects']} subject(s)** and **{held['claims']} claim(s)**."
+        f" **{held['gaps']}** of those subjects have no claim at all"
+        + (" — those are the work.\n" if held["gaps"] else ".\n")
+    )
+
+    keys = _identity_keys(conn, pack_id)
+    if keys:
+        out += "\nWhat identifies a subject here:\n\n"
+        for kind, fields in keys.items():
+            out += f"- `{kind}` — {', '.join(f'`{f}`' for f in fields)}\n"
+        out += (
+            "\nThese are the pack's own keys. Do not invent others, and do not"
+            " rename them: a finding filed under a key this pack does not"
+            " declare is a finding nobody looks up again.\n"
+        )
+
+    out += f"\nDomains it accepts: {_listed(_words(conn, pack_id, 'domain'))}\n"
+    kinds = _words(conn, pack_id, "subject_kind")
+    if kinds:
+        out += f"\nSubject kinds: {_listed(kinds)}\n"
+
+    example = _example(conn, pack_id)
+    if example:
+        out += f"\nA subject that exists right now"
+        out += (
+            " and has nothing known about it"
+            if not example["has_claims"]
+            else ""
+        )
+        out += f" — start here:\n\n```\n"
+        out += f"research_brief(subject_id=\"{example['subject_id']}\", pack_id=\"{pack_id}\")\n```\n"
+        if example["identity"]:
+            out += f"\nIt is `{example['label']}`, identified as "
+            out += ", ".join(f"{k}={v!r}" for k, v in example["identity"].items())
+            out += ".\n"
+
+    out += f"\n#### What {pack['name']} considers worth keeping\n\n"
+    out += (pack["principle"] or "_This pack ships no principle._") + "\n"
+    return out
 
 
 def render(conn) -> str | None:
@@ -123,6 +311,5 @@ def render(conn) -> str | None:
         loop=loop,
     )
     for pack in packs:
-        body += f"\n### {pack['name']} (`{pack['pack_id']}` {pack['version']})\n\n"
-        body += (pack["principle"] or "_This pack ships no principle._") + "\n"
+        body += _pack_section(conn, pack)
     return body

@@ -8,10 +8,16 @@ const vm = require("node:vm");
 const { JSDOM } = require("jsdom");
 
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
+const CARD_JS = path.join(__dirname, "..", "hover_lite", "risk_card.js");
 
 function loadPanel({
   url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
   analyzeResponse = { ok: false },
+  // What the service worker says to the panel's *write* messages — marking a
+  // claim, raising the app, starting research. Defaults to success because
+  // that is the path nearly every test is about; a test that cares about
+  // refusal sets it, and the panel must roll its optimistic paint back.
+  workerResponse = { ok: true },
 } = {}) {
   const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
 
@@ -36,7 +42,7 @@ function loadPanel({
         sendMessage(message, callback) {
           sent.push(message);
           if (typeof callback !== "function") return;
-          callback(message.type === "ANALYZE" ? analyzeResponse : { ok: false });
+          callback(message.type === "ANALYZE" ? analyzeResponse : workerResponse);
         },
         getURL: (p) => p,
       },
@@ -47,11 +53,11 @@ function loadPanel({
   };
   // The panel pulls its icon/card renderers off window at load time.
   dom.window.__KrikoPanelIcons = { iconSvg: () => "", domainIconSvg: () => "" };
-  dom.window.__KrikoPanelRiskCard = {
-    renderRiskCard: () => dom.window.document.createElement("div"),
-    updateRiskCard() {},
-  };
   vm.createContext(sandbox);
+  // The *real* card renderer, not a stub. The controls a test cares about —
+  // the verdict buttons — are in this markup, so a stub returning a bare
+  // <div> would let the panel's wiring pass while shipping nothing clickable.
+  vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "risk_card.js" });
   vm.runInContext(fs.readFileSync(PANEL_JS, "utf8"), sandbox, { filename: "hover_lite.js" });
 
   function openPanel() {
@@ -92,8 +98,21 @@ function loadPanel({
     return host ? host.dataset.pipeline : null;
   }
 
-  return { dom, openPanel, deliverEntry, footer, listing, shadow, sent,
-           errorText, pipeline };
+  function risks() {
+    const root = shadow();
+    return root ? root.querySelector(".lite-risks") : null;
+  }
+
+  /** Click something in the shadow tree, by selector. */
+  function click(selector) {
+    const el = shadow() && shadow().querySelector(selector);
+    if (!el) throw new Error(`nothing matching ${selector} to click`);
+    el.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    return el;
+  }
+
+  return { dom, openPanel, deliverEntry, footer, listing, risks, click,
+           shadow, sent, errorText, pipeline };
 }
 
 module.exports = { loadPanel };

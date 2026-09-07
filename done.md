@@ -6,6 +6,61 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-07 — the reader's eight, and the loop back from the panel (this commit)
+A reader listed eight things wrong with the app. The interesting ones were not
+bugs: they were places where the product could see but not be told anything.
+
+- **The generated agent skill said "Cars (TR market)"** and little else. Traced
+  to one literal in `packs/cars/pack.toml` — correct, in that the engine holds
+  no category words — but the deeper fault was that the skill was *thin*: it
+  named the loop and nothing an agent needed to run it, so an agent invented
+  plausible identity keys. `src/app/agentskill.py` now derives all of it from
+  the store: identity keys per subject kind (off `attributes.is_identity`, not
+  the manifest), the pack's own domains and predicates, its holdings, its gap
+  count, a runnable `research_brief(...)` example against a real claim-less
+  subject, and every reason `app/findings.py` can refuse a finding. A second
+  category gets its version for free; `test_the_skill_generator_types_no_
+  category_words` walks the generator's source to keep it that way.
+- **"See in app" opened a browser tab.** A page cannot raise a native window,
+  so the route travels instead: the extension POSTs it to `/api/focus`, the
+  engine prints `KRIKO_FOCUS <route>` on stdout, `tauri/` raises the window
+  without ever parsing the route, and the SPA polls `/api/focus` and navigates.
+  The tab survives as the fallback for a terminal-run server. The route is
+  validated by a closed regex — it is the one untrusted input in the path.
+- **Marking knowledge from the panel.** Every risk card asks "was this any
+  use?"; the verdict goes to `claim_marks` in **`app.sqlite`**, never the
+  engine store, so a reader's opinion cannot move a pack's `content_digest`
+  and uninstalling a pack cannot erase it. `wrong` and `not_applicable` stay
+  distinct because they name different halves of the system — bad knowledge
+  versus bad matching — and that is the one thing no automated pass could
+  infer from the claim row afterwards. The title is stored on the mark so the
+  report still reads after the claim's pack is gone.
+- **Researching a gap from the panel.** `/api/analyze` was returning claims
+  with no identity at all, which is why the panel could describe a claim but
+  never point at one. It now carries `claim_id`/`subject_id` per claim and a
+  top-level `subjects` with each one's claim count; a subject that resolved
+  with zero claims renders as a named, one-click-fillable gap rather than an
+  empty state.
+- **A succeeded job reported "done".** `jobs.py` overwrote the handler's own
+  last word, which is how Research came to look like a dead button: it ran,
+  wrote a full brief, and reported one uninformative syllable. It keeps the
+  handler's message now, and `Brief.svelte` shows the artifact rather than the
+  state — plus the sentence that Kriko searched nothing, on purpose, because
+  that is the reader's actual question at that moment.
+- **Knowledge was three screens.** Subjects, Coverage and Health were not three
+  places, they were three questions about one list. One screen, four lenses
+  ("what is here / missing / thin / what readers said"), nothing expanded
+  until asked; the retired routes resolve to the lens that absorbed them, and
+  keep the author gate they had.
+- **A switched-off pack no longer reads as a missing one** on Connect, the
+  screen where an empty generated skill was most misleading.
+- Pack vocabulary that had crept into `ui/src/` is gone: the console spells its
+  usage hint from `/api/identity-keys` rather than naming a category's fields.
+
+Tests: 830 pytest, 195 vitest, 49 extension — all green.
+
+---
+
 ### 2026-09-05 — the four bugs 0.3.1 shipped with (this commit)
 A reader opened v0.3.1 and got 500s on most views, `[PYI-24700:ERROR] Could
 not create temporary directory!` under "Does it actually run?", no way to build

@@ -17,7 +17,8 @@
   window.__krikoPanelInstalled = true;
 
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
-  const { renderRiskCard, updateRiskCard } = window.__KrikoPanelRiskCard;
+  const { renderRiskCard, updateRiskCard, markRiskCard } =
+    window.__KrikoPanelRiskCard;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -38,6 +39,13 @@
     result: null,              // AnalyzeResponse
     errorMsg: null,
     listingMeta: null,         // derived from background metadata response
+    // claim_id -> verdict, for cards the reader has judged. Panel-local and
+    // deliberately not persisted here: the app owns the marks, this is only
+    // what to paint until the next analysis re-reads them.
+    marks: new Map(),
+    // subject_id currently being researched, so the button can say so rather
+    // than looking unpressed while a job starts.
+    researching: null,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -258,6 +266,77 @@
     }
     if (state.mounted) renderBody();
     if (state.mounted) renderCounts();
+  }
+
+  // The reader's verdict on one claim. Sent to the app, which owns it —
+  // nothing about ranking changes, because one reader's car is not a
+  // refutation. What it buys is a queue of claims worth re-researching in the
+  // reader's own words, which is the best signal this project can receive and
+  // was previously being dropped on the floor.
+  function markClaim(risk, verdict, cardEl) {
+    if (!risk.claim_id || !risk.pack_id) return;
+    const previous = state.marks.get(risk.claim_id);
+    // Pressing the pressed one takes it back. Painted immediately and
+    // reverted if the app disagrees: a verdict button that waits for a round
+    // trip feels broken on a local app that answers in 3ms.
+    const next = previous === verdict ? null : verdict;
+    if (next) state.marks.set(risk.claim_id, next);
+    else state.marks.delete(risk.claim_id);
+    if (cardEl) markRiskCard(cardEl, next);
+
+    chrome.runtime.sendMessage(
+      {
+        type: "MARK_CLAIM",
+        payload: {
+          pack_id: risk.pack_id,
+          claim_id: risk.claim_id,
+          subject_id: risk.subject_id || "",
+          title: risk.title || "",
+          verdict: next,
+        },
+      },
+      (response) => {
+        if (chrome.runtime.lastError || (response && !response.ok)) {
+          if (previous) state.marks.set(risk.claim_id, previous);
+          else state.marks.delete(risk.claim_id);
+          if (cardEl) markRiskCard(cardEl, previous);
+        }
+      }
+    );
+  }
+
+  // Raise the desktop app on a route. Not a link: a page cannot bring a
+  // native window to the front, and the link this replaced opened the report
+  // in a second browser tab beside the app the reader already had running.
+  function openInApp(route, fallbackUrl) {
+    chrome.runtime.sendMessage(
+      { type: "OPEN_IN_APP", payload: { route, fallbackUrl } },
+      () => {} // the app raising itself is the feedback; a toast would be noise
+    );
+  }
+
+  // Nothing known about a subject the packs *do* recognise. That is the one
+  // emptiness worth a button: the gap is identified, so filling it is a job
+  // the app can start rather than a shrug.
+  function researchSubject(subject, buttonEl) {
+    state.researching = subject.subject_id;
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.textContent = "Starting…";
+    }
+    chrome.runtime.sendMessage(
+      {
+        type: "RESEARCH_SUBJECT",
+        payload: { subject_id: subject.subject_id, pack_id: subject.pack_id },
+      },
+      (response) => {
+        state.researching = null;
+        if (!buttonEl) return;
+        const failed = chrome.runtime.lastError || (response && !response.ok);
+        buttonEl.disabled = false;
+        buttonEl.textContent = failed ? "Could not start — retry" : "Running in Kriko";
+      }
+    );
   }
 
   function triggerAnalyze() {
@@ -962,6 +1041,21 @@
       return;
     }
 
+    // An answer with no risks is not the same as no answer. If the packs
+    // resolved this listing and hold nothing on it, that gap is the content.
+    if (!state.result.risks || !state.result.risks.length) {
+      const gaps = (state.result.subjects || []).filter((s) => !s.claims);
+      if (!gaps.length) {
+        const empty = document.createElement("div");
+        empty.className = "lite-empty";
+        empty.textContent =
+          "Nothing matched this listing. No installed pack recognises it.";
+        risksListEl.appendChild(empty);
+      }
+      renderGaps();
+      return;
+    }
+
     // Group for display. Serving payload v2: when the backend sends
     // `subsystems` (registry component groups — engine/timing, body/comfort, …),
     // render those sections with the Turkish label; otherwise fall back to the
@@ -1035,6 +1129,18 @@
         const card = renderRiskCard(risk, { open: state.openIds.has(idx), compact: state.compact });
         const btn = card.querySelector(".lite-rc-toggle");
         btn.addEventListener("click", () => toggleOne(idx, card));
+        // Re-assert any verdict this claim already carries: the list is
+        // rebuilt on every expand-all and every fresh analysis, and a mark
+        // that disappeared on redraw would read as one that failed to save.
+        if (risk.claim_id && state.marks.has(risk.claim_id)) {
+          markRiskCard(card, state.marks.get(risk.claim_id));
+        }
+        card.querySelectorAll(".lite-rc-markbtn").forEach((markBtn) => {
+          markBtn.addEventListener("click", (event) => {
+            event.stopPropagation(); // the card header toggles on click
+            markClaim(risk, markBtn.dataset.verdict, card);
+          });
+        });
         wrap.appendChild(card);
         bodyEl.appendChild(wrap);
       });
@@ -1050,6 +1156,37 @@
       });
 
       risksListEl.appendChild(groupEl);
+    }
+
+    renderGaps();
+  }
+
+  /** "We know this car and have nothing on it" — the actionable emptiness.
+   *
+   * Distinct from "nothing matched", which is a coverage problem in the pack's
+   * adapter and not something the reader can act on. A subject that resolved
+   * with zero claims is a named gap, so it gets a button rather than an
+   * apology.
+   */
+  function renderGaps() {
+    if (!risksListEl || !state.result) return;
+    const gaps = (state.result.subjects || []).filter((s) => !s.claims);
+    if (!gaps.length) return;
+
+    for (const subject of gaps) {
+      const card = document.createElement("div");
+      card.className = "lite-gap";
+      card.innerHTML = `
+        <div class="lite-gap-body">
+          <div class="lite-gap-title">Nothing known about ${escapeHtml(subject.label)}</div>
+          <div class="lite-gap-note">This is in the catalogue, but no claim has been
+            researched for it yet.</div>
+        </div>
+        <button type="button" class="lite-gap-btn">Research it</button>
+      `;
+      const button = card.querySelector(".lite-gap-btn");
+      button.addEventListener("click", () => researchSubject(subject, button));
+      risksListEl.appendChild(card);
     }
   }
 
@@ -1079,14 +1216,19 @@
     // The app stored this same answer and can show the whole of it. Offered
     // only when the app said so: a link to a report that was never written is
     // worse than no link.
-    if (state.result.app_url) {
-      const link = document.createElement("a");
-      link.className = "lite-open-app";
-      link.href = state.result.app_url;
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = "Open in Kriko";
-      footerEl.append(" · ", link);
+    // A button, not a link. An `<a href>` at the app's own port opens the
+    // report in a *browser tab* — beside the desktop app the reader already
+    // has running, which is not what "open in Kriko" means to anyone. The
+    // button posts the route instead and the app raises itself; the tab is
+    // kept only as the fallback for when no shell is listening.
+    if (state.result.app_route || state.result.app_url) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-open-app";
+      button.textContent = "Open in Kriko";
+      button.addEventListener("click", () =>
+        openInApp(state.result.app_route || "check", state.result.app_url));
+      footerEl.append(" · ", button);
     }
     footerEl.hidden = false;
   }
