@@ -6,6 +6,38 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-08 — a pack's name is content, and the digest now says so
+
+`fix/digest-covers-the-manifest`. The generated agent skill still described the
+cars pack as "Cars (TR market)" long after `pack.toml` was corrected to "Used
+cars". `agentskill.py` was not at fault — it reads the installed store, which
+is the right source — and neither was the build, which produced the corrected
+name deterministically. The gap was in `ids.content_digest`, which hashed
+sorted row ids and nothing else, so the pack's own manifest was outside the
+value that identifies "this version of what Kriko knows".
+
+The evidence: v0.3.0 and v0.3.3 published the same pack id at version `0.1.0`
+with the byte-identical digest `d34e72d5db23e32b…` and two different names.
+`updates.decide` compares version then digest, so it answered `UP_TO_DATE`, and
+**no metadata-only correction could ever reach an installed store** — not a
+name, not a licence, and not the identity keys that decide which of a pack's
+rows merge with another author's.
+
+`content_digest(row_ids, manifest)` now hashes the declared manifest alongside
+the rows, canonicalised so key order does not move it. `manifest` is required
+rather than optional on purpose: a pack may bring its own builder, and an
+argument a builder can omit is one a builder will omit, invisibly, until the
+next metadata fix fails to travel. Omitting it is a TypeError at build time.
+
+Because the digest's definition moved, every pack's digest moved, so both packs
+go to `0.1.1` — a republished version is refused loudly by `packstore.install`,
+which is the correct noise when metadata changes without a bump.
+
+Guards: `test_content_digest_covers_what_the_pack_declares_itself_to_be`,
+`test_content_digest_will_not_be_computed_without_a_manifest`,
+`test_manifest_ordering_does_not_move_the_digest`,
+`test_digest_changes_when_only_the_manifest_changes`.
+
 ### 2026-09-07 — the twenty-eight, in five phases (this commit)
 A read of the whole app produced twenty-eight findings. None were bugs: every
 one was a place where the product could do something and had not been given

@@ -472,7 +472,7 @@ def _write_manifest_row(conn, pack_id, man, row_ids: list[str]) -> None:
             man.publisher,
             man.license,
             man.origin_url,
-            ids.content_digest(row_ids),
+            ids.content_digest(row_ids, man.raw),
             yaml.safe_dump(man.raw, allow_unicode=True),
         ),
     )
