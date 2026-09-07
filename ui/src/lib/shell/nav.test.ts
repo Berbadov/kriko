@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ALL_ROUTES, NAV, groupsFor, isAuthorOnly } from "./nav";
+import {
+    ALL_ROUTES,
+    NAV,
+    destinationsFor,
+    groupsFor,
+    isAuthorOnly,
+    labelOf,
+} from "./nav";
 
 describe("the route table", () => {
     it("gives a buyer exactly the group about using knowledge", () => {
@@ -69,5 +76,34 @@ describe("the route table", () => {
         ]);
         expect(new Set(ALL_ROUTES).size).toBe(ALL_ROUTES.length);
         expect(NAV.length).toBe(4);
+    });
+
+    // The palette renders this. Derived from the same table as the rail, so a
+    // screen added to one is reachable by name in the other on the same day —
+    // the failure being prevented is a palette quietly one release behind.
+    it("flattens to exactly what the rail offers, with the group kept", () => {
+        for (const mode of ["buyer", "author"] as const) {
+            const flat = destinationsFor(mode);
+            const groups = groupsFor(mode);
+            expect(flat.map((d) => d.name)).toEqual(
+                groups.flatMap((g) => g.items.map((i) => i.name)),
+            );
+            expect(new Set(flat.map((d) => d.group))).toEqual(
+                new Set(groups.map((g) => g.title)),
+            );
+        }
+    });
+
+    it("names every route, following an alias, and never answers with nothing", () => {
+        for (const name of ALL_ROUTES) {
+            expect(labelOf(name).length).toBeGreaterThan(0);
+            expect(labelOf(name)).not.toBe(name);
+        }
+        // An alias resolves to the label of the screen that absorbed it,
+        // because that is the screen the reader is now looking at.
+        expect(labelOf("coverage")).toBe("Browse");
+        // An unknown route still announces as something. A live region handed
+        // an empty string says nothing at all, which is the bug.
+        expect(labelOf("nonsense")).toBe("nonsense");
     });
 });

@@ -118,3 +118,29 @@ export const resolve = (name: string): { name: string; lens?: string } =>
 export const isAuthorOnly = (name: string): boolean =>
     AUTHOR_ROUTES.has(resolve(name).name);
 
+
+/** Every destination as one flat list, with the group it sits under.
+ *
+ * The rail renders groups; a palette renders a list. Derived from the same
+ * table rather than written twice, so a screen added to the rail is reachable
+ * by name on the day it appears — a palette that has to be told about a new
+ * route is a palette that is quietly one release behind.
+ */
+export const destinationsFor = (
+    mode: Mode,
+): { name: string; label: string; group: string }[] =>
+    groupsFor(mode).flatMap((group) =>
+        group.items.map((item) => ({ ...item, group: group.title })),
+    );
+
+/** What the rail calls a route. Falls back to the name so an aliased or
+ *  unknown route still announces as something rather than as nothing. */
+export const labelOf = (name: string): string => {
+    const target = resolve(name).name;
+    for (const group of NAV) {
+        for (const item of group.items) {
+            if (item.name === target) return item.label;
+        }
+    }
+    return name;
+};

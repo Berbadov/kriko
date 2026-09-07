@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
+import { fireEvent } from "@testing-library/dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "./App.svelte";
 import { stubFetch } from "./lib/stub-fetch";
@@ -92,5 +93,52 @@ describe("App", () => {
         render(App);
         expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
         expect(screen.queryByText(/knows nothing yet/)).not.toBeInTheDocument();
+    });
+
+    /* The shell's half of navigation.
+     *
+     * A hash router replaces the contents of one document: no load event, so
+     * nothing is announced, and focus stays wherever it was — in the rail,
+     * groups above whatever just appeared. Both of those are the browser's
+     * job going unclaimed, and neither is visible in a screenshot. */
+    it("puts a skip control first, and moves focus into the view", async () => {
+        stubFetch(EMPTY);
+        render(App);
+        const skip = await screen.findByRole("button", { name: "Skip to content" });
+        // First in the tab order: it is the first control in the document, not
+        // merely present somewhere.
+        const controls = document.querySelectorAll("button, a[href], input, select");
+        expect(controls[0]).toBe(skip);
+
+        await fireEvent.click(skip);
+        const view = document.querySelector(".view") as HTMLElement;
+        expect(view.getAttribute("tabindex")).toBe("-1");
+        expect(document.activeElement).toBe(view);
+    });
+
+    it("announces the screen it navigated to, and not the one it loaded on", async () => {
+        stubFetch(EMPTY);
+        render(App);
+        const live = await screen.findByRole("status");
+        // Load is not a navigation: announcing here would talk over a reader
+        // who has not heard the rail yet, and focus would be stolen from the
+        // top of the document.
+        expect(live.textContent?.trim()).toBe("");
+
+        window.location.hash = "#/history?mode=buyer";
+        await fireEvent(window, new HashChangeEvent("hashchange"));
+        expect((await screen.findByRole("status")).textContent).toContain("History");
+        expect(document.activeElement).toBe(document.querySelector(".view"));
+    });
+
+    it("carries the live region outside the keyed subtree", async () => {
+        // A live region that is itself replaced on navigation announces
+        // nothing: the text and the element carrying it arrive in the same
+        // paint, so there is no change for the reader to be told about.
+        stubFetch(EMPTY);
+        render(App);
+        const live = await screen.findByRole("status");
+        expect(live.closest(".enter")).toBeNull();
+        expect(live.getAttribute("aria-live")).toBe("polite");
     });
 });

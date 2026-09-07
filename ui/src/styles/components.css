@@ -1115,3 +1115,34 @@ kbd {
     border-radius: 4px;
     white-space: nowrap;
 }
+
+/* Announced, never painted.
+ *
+ * Not `display: none` and not `visibility: hidden` — both remove the element
+ * from the accessibility tree, which is the one thing this class exists to
+ * keep. A 1px clipped box stays in the tree and occupies nothing. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The first thing in the tab order, and invisible until it has focus. The
+ * rail is thirteen links deep; without this, reaching the page a keyboard
+ * reader actually came for costs thirteen tabs on every navigation. */
+.skip {
+    position: absolute;
+    inset-inline-start: var(--s-2);
+    inset-block-start: var(--s-2);
+    z-index: 60;
+    transform: translateY(-200%);
+}
+.skip:focus {
+    transform: none;
+}

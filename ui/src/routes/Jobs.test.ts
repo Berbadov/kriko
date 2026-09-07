@@ -45,12 +45,6 @@ describe("Jobs", () => {
         expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40");
     });
 
-    it("says so when there is nothing to show", async () => {
-        stub({ "/api/jobs": { items: [] } });
-        render(Jobs);
-        expect(await screen.findByText(/No jobs yet/)).toBeInTheDocument();
-    });
-
     it("reveals the log on demand, because a job that failed owes an explanation", async () => {
         stub({
             "/api/jobs": {
@@ -83,7 +77,7 @@ describe("Jobs", () => {
             "/api/packs/build": { job_id: "j2", kind: "pack_build" },
         });
         render(Jobs);
-        await screen.findByText(/No jobs yet/);
+        await screen.findByText("No runs yet");
         await fireEvent.input(screen.getByLabelText("Build a pack from a directory"), {
             target: { value: "packs/drill" },
         });
@@ -190,5 +184,15 @@ describe("Jobs", () => {
         // The contract refuses it too, much later — better to refuse the press
         // than to write a directory that cannot install.
         expect(screen.getByRole("button", { name: "Write the skeleton" })).toBeDisabled();
+    });
+
+    it("explains an empty run list, and points at where runs come from", async () => {
+        stub({ "/api/jobs": { items: [] } });
+        render(Jobs);
+        expect(await screen.findByText("No runs yet")).toBeInTheDocument();
+        // The gap screen is where the other door into this list is, so the
+        // empty state names it instead of leaving the reader on a form.
+        const link = screen.getByRole("link", { name: "Find a gap" }) as HTMLAnchorElement;
+        expect(link.getAttribute("href")).toBe("#/coverage");
     });
 });

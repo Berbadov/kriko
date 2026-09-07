@@ -7,8 +7,9 @@
     import { initTheme } from "./lib/theme";
     import { watchFocus } from "./lib/focus";
     import { hashWith, route } from "./lib/router";
+    import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import { isAuthorOnly, resolve } from "./lib/shell/nav";
+    import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Connect from "./routes/Connect.svelte";
@@ -66,13 +67,65 @@
     // screen — a watcher living in one route could only ever hand off to
     // itself. See lib/focus.ts.
     $effect(() => watchFocus());
+
+    /* Saying that the page changed, and putting focus where it changed.
+     *
+     * A hash router replaces the contents of one document. A sighted reader
+     * sees the swap; a screen reader is told nothing at all, because no
+     * document load happened, and focus stays on whatever was clicked — in
+     * the rail, three groups above the thing that just appeared. Both halves
+     * are the same omission: navigation that the browser would have narrated
+     * for free, now nobody's job.
+     *
+     * `.view` carries `tabindex="-1"` so it can receive focus without
+     * entering the tab order, and it sits *outside* the `{#key}` so the
+     * element focus lands on is not the one being replaced.
+     */
+    let viewEl = $state<HTMLElement | undefined>();
+    let announced = $state("");
+
+    // The first render is not a navigation. Stealing focus into the view on
+    // load would drop the reader past the rail and the skip control before
+    // they have heard either.
+    let navigated = false;
+
+    $effect(() => {
+        const name = $route.name;
+        if (!navigated) {
+            navigated = true;
+            return;
+        }
+        announced = labelOf(name);
+        viewEl?.focus();
+    });
 </script>
 
 <div class="shell">
+    <!-- A button, not `<a href="#main">`: the app is hash-routed, so a URL
+         fragment is an address here. `#main` would parse as the route `main`
+         and the skip link would navigate to "No such view" — the one place
+         where the standard accessible pattern is actively wrong. -->
+    <button
+        type="button"
+        class="skip"
+        onclick={() => {
+            announced = labelOf($route.name);
+            viewEl?.focus();
+        }}
+    >
+        Skip to content
+    </button>
+
     <Sidebar mode={$mode} />
+    <Palette mode={$mode} />
+
+    <!-- Polite, and outside the keyed subtree: a live region that is itself
+         replaced on navigation announces nothing, because the announcement
+         and the element carrying it arrive in the same paint. -->
+    <p class="sr-only" role="status" aria-live="polite">{announced}</p>
 
     <main class="work" class:with-history={showHistory}>
-        <div class="view">
+        <div class="view" bind:this={viewEl} tabindex="-1">
             {#await ready}
                 <p class="state loading">Starting…</p>
             {:then}

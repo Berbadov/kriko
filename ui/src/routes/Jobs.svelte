@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import EmptyState from "../lib/EmptyState.svelte";
     import { follow, isLive, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
@@ -221,9 +222,14 @@
 {/if}
 
 {#if !jobs.length}
-    <p class="state empty">
-        No jobs yet. Start one here, or from a gap on the Coverage screen.
-    </p>
+    <EmptyState
+        title="No runs yet"
+        detail="Long work is a row here rather than a request that hangs — research
+                and pack builds both land on this screen, and their log outlives
+                the page. Start one above, or from a gap on Coverage."
+        actionLabel="Find a gap"
+        actionHref="#/coverage"
+    />
 {/if}
 
 {#each jobs as job (job.job_id)}
