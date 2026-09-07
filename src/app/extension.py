@@ -44,6 +44,7 @@ SHIPPED = (
     "background.js",
     "content.js",
     "hover_lite",
+    "options",
     "assets",
 )
 

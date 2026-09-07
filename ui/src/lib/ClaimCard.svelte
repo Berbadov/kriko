@@ -1,27 +1,58 @@
 <script lang="ts">
     import type { Mode } from "./mode";
-    import { askLine, severityWord, sourceSummary } from "./report";
+    import { askLine, rankingNote, severityWord, sourceSummary } from "./report";
     import type { Claim } from "./types";
 
     let {
         claim,
         mode = "buyer",
         checked = false,
+        note = "",
         onCheck,
+        onNote,
     }: {
         claim: Claim;
         mode?: Mode;
         checked?: boolean;
+        note?: string;
         onCheck?: (checked: boolean) => void;
+        onNote?: (note: string) => void;
     } = $props();
 
     const author = $derived(mode === "author");
+
+    // The field opens when there is something in it, and stays open once the
+    // reader has opened it. A textarea under every card by default turns a
+    // report into a form; one behind a link that remembers its own state is
+    // the same feature without the wall of boxes.
+    let noteOpen = $state(false);
+    const showNote = $derived(noteOpen || Boolean(note));
+
+    // Saved on blur rather than per keystroke: this is one row in SQLite and a
+    // request per character would be a write storm for no gain. The parent
+    // paints optimistically either way.
+    let draft = $state("");
+    // Initialised in an effect rather than from the prop directly: `$state(note)`
+    // captures only the first value, so a card whose note arrives with the
+    // triage fetch (a beat after mount) would render an empty box over a
+    // stored sentence.
+    $effect(() => {
+        draft = note;
+    });
 </script>
 
 <article class="card risk" class:done={checked}>
     <header class="risk-head">
         <span class="sev {claim.severity}">{severityWord(claim.severity)}</span>
         <h3>{claim.title}</h3>
+        <!-- Out of the provenance fold and out of author mode. A disputed
+             claim is exactly the one whose dispute the reader needs to see:
+             folded twice, it reached nobody who was not already auditing. -->
+        {#if claim.disputed}
+            <span class="badge disputed" title="A source disagrees with this claim"
+                >disputed</span
+            >
+        {/if}
         {#if onCheck}
             <label class="check">
                 <input
@@ -38,16 +69,38 @@
 
     <p class="ask"><strong>What to ask:</strong> {askLine(claim)}</p>
 
+    {#if onNote}
+        {#if showNote}
+            <label class="note-field">
+                <span class="meta">What the seller said</span>
+                <textarea
+                    rows="2"
+                    bind:value={draft}
+                    placeholder="e.g. done at 140,000 — receipt promised"
+                    onblur={() => draft !== note && onNote(draft)}
+                ></textarea>
+            </label>
+        {:else}
+            <button type="button" class="link-ish" onclick={() => (noteOpen = true)}>
+                Add what the seller said
+            </button>
+        {/if}
+    {/if}
+
     <p class="meta">{claim.subject} · {sourceSummary(claim)}</p>
 
     {#if author}
         <details class="provenance">
-            <summary class="meta">Provenance</summary>
+            <summary class="meta">Why this ranked here</summary>
+            <!-- The numbers, but said in words first. A bare 0.72 is not
+                 auditable by anyone who does not already know the scale. -->
+            <p class="meta">{rankingNote(claim)}</p>
+            <!-- And then the raw values, because an author auditing a rank
+                 needs the number they can compare against another claim's. -->
             <p class="meta">
-                {claim.pack_id} · relevance {claim.relevance}
-                {#if claim.detection} · detection {claim.detection}{/if}
-                {#if claim.trust !== undefined} · trust {claim.trust}{/if}
-                {#if claim.disputed}<span class="badge disputed">disputed</span>{/if}
+                relevance {claim.relevance}{claim.trust !== undefined
+                    ? ` · trust ${claim.trust}`
+                    : ""} · {claim.pack_id}
             </p>
             {#if claim.why?.length}
                 <ul class="why">

@@ -38,6 +38,7 @@
     pipeline: "idle",          // idle | analyzing | result | error
     result: null,              // AnalyzeResponse
     errorMsg: null,
+    errorCode: null,
     listingMeta: null,         // derived from background metadata response
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
@@ -342,6 +343,7 @@
   function triggerAnalyze() {
     setPipeline("analyzing");
     state.errorMsg = null;
+    state.errorCode = null;
     renderBody();
     renderCounts();
 
@@ -353,6 +355,7 @@
       (response) => {
         if (chrome.runtime.lastError) {
           setPipeline("error");
+          state.errorCode = null;
           state.errorMsg = chrome.runtime.lastError.message || "Background unreachable.";
           renderBody();
           return;
@@ -367,6 +370,10 @@
             return;
           }
           setPipeline("error");
+          // The code, not only the sentence. "Kriko is not running" has a
+          // fix the reader can act on from here — every other failure is the
+          // app's to report, and offering its settings would be a guess.
+          state.errorCode = response.code || null;
           state.errorMsg = response.error || "Analysis failed.";
           renderBody();
           return;
@@ -1026,6 +1033,19 @@
       const err = document.createElement("div");
       err.className = "lite-error";
       err.textContent = state.errorMsg || "Analysis failed.";
+      // One failure has a cause the reader can only fix in the extension's
+      // own settings: the app is listening somewhere this extension is not
+      // looking. That page is otherwise reachable only through the browser's
+      // extension manager, which nobody opens while reading a listing.
+      if (state.errorCode === "APP_NOT_RUNNING") {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "lite-open-app";
+        button.textContent = "Extension settings";
+        button.addEventListener("click", () =>
+          chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => {}));
+        err.append(" ", button);
+      }
       risksListEl.appendChild(err);
       return;
     }
@@ -1221,6 +1241,8 @@
     // has running, which is not what "open in Kriko" means to anyone. The
     // button posts the route instead and the app raises itself; the tab is
     // kept only as the fallback for when no shell is listening.
+    const routes = state.result.app_routes || {};
+    const urls = state.result.app_urls || {};
     if (state.result.app_route || state.result.app_url) {
       const button = document.createElement("button");
       button.type = "button";
@@ -1228,6 +1250,28 @@
       button.textContent = "Open in Kriko";
       button.addEventListener("click", () =>
         openInApp(state.result.app_route || "check", state.result.app_url));
+      footerEl.append(" · ", button);
+    }
+
+    // The panel's job ends at "here is what to worry about"; these two are
+    // what a reader does with that. Both were app-only screens, so a reader
+    // who had just read the risks had to go and find the same listing again
+    // by hand — the answer is already stored under an id, and the id is right
+    // here.
+    //
+    // Offered only when the app handed back a route for them: a stored answer
+    // is what makes either screen possible, and a button that opens an empty
+    // question sheet teaches the reader that the button does not work.
+    for (const [key, label] of [
+      ["questions", "Ask the seller"],
+      ["compare", "Compare"],
+    ]) {
+      if (!routes[key]) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-open-app";
+      button.textContent = label;
+      button.addEventListener("click", () => openInApp(routes[key], urls[key]));
       footerEl.append(" · ", button);
     }
     footerEl.hidden = false;

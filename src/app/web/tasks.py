@@ -18,7 +18,7 @@ from pathlib import Path
 
 from app import packsource
 
-from app.findings import accept_findings
+from app.findings import accept_findings, log_submission
 from app.web.jobs import Progress
 from kriko.pack import updates
 from kriko.research import get_researcher, plan_task
@@ -108,6 +108,16 @@ def research(settings, params: dict, progress: Progress) -> dict:
             progress.set(0.85, f"checking {len(findings)} finding(s)")
             verdicts = accept_findings(conn, subject_id, pack_id, findings)
             conn.commit()
+            # The refusals are the point of the ledger, so it is written even
+            # when nothing was kept — a batch that lost everything is the one
+            # an author most needs to be able to read afterwards.
+            log_submission(
+                settings.app_state_path,
+                door="job",
+                subject_id=subject_id,
+                pack_id=pack_id,
+                verdicts=verdicts,
+            )
         for item in verdicts.get("rejected", []):
             progress.log(f"refused “{item['title']}”: {item['reason']}")
         for item in verdicts.get("accepted", []):

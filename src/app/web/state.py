@@ -80,6 +80,25 @@ CREATE TABLE IF NOT EXISTS claim_checks (
     PRIMARY KEY (lookup_id, claim_key)
 );
 
+-- What the seller said. The other half of triage: a checkmark records that
+-- the reader dealt with a risk, and this records *how it went* — "belt done
+-- at 140k, no receipt" is the sentence that turns a report into a record of
+-- a negotiation, and it is the thing they will want on the second visit.
+--
+-- Its own table rather than a column on `claim_checks`, for a mechanical
+-- reason: `connect()` re-runs SCHEMA when its fingerprint moves, and every
+-- statement in it is CREATE TABLE IF NOT EXISTS — a new table therefore
+-- migrates itself, while a new *column* on an existing table would not.
+-- Keeping them apart also keeps `claim_checks` honest: a row there means
+-- handled, and a note is not a checkmark.
+CREATE TABLE IF NOT EXISTS claim_notes (
+    lookup_id  TEXT NOT NULL,
+    claim_key  TEXT NOT NULL,
+    note       TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (lookup_id, claim_key)
+);
+
 -- What the reader thought of a claim, as opposed to whether they have dealt
 -- with it in one answer (`claim_checks`, above). A mark is about the claim
 -- itself: "this was wrong about my car" stays true on the next listing, so it
@@ -108,6 +127,32 @@ CREATE TABLE IF NOT EXISTS claim_marks (
     PRIMARY KEY (pack_id, claim_id)
 );
 CREATE INDEX IF NOT EXISTS claim_marks_updated ON claim_marks (updated_at DESC);
+
+-- What a researcher submitted, and what happened to it.
+--
+-- `app/findings.py` refuses most of what arrives — ungrounded quotes, generic
+-- items, claims anchored to nothing — and until this table those refusals were
+-- returned to the caller and then dropped on the floor. They are the highest
+-- signal this project produces: a refusal names, in the gate's own words, the
+-- thing the agent skill failed to ask for. An author who cannot read them is
+-- tuning the skill blind.
+--
+-- Interface state, deliberately, for the reason at the top of this file: a
+-- refused finding is not pack content and must not touch a `content_digest`.
+-- It is also why `door` is recorded — MCP and the in-app research job share
+-- one acceptance path, and the first question about a bad batch is which of
+-- them produced it.
+CREATE TABLE IF NOT EXISTS submissions (
+    submission_id TEXT PRIMARY KEY,
+    created_at    TEXT NOT NULL,
+    door          TEXT NOT NULL,
+    subject_id    TEXT NOT NULL,
+    pack_id       TEXT NOT NULL,
+    accepted      INTEGER NOT NULL DEFAULT 0,
+    refused       INTEGER NOT NULL DEFAULT 0,
+    verdicts_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
 """
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
@@ -228,6 +273,7 @@ def delete_lookup(conn: sqlite3.Connection, lookup_id: str) -> bool:
     # behind would let a new lookup that happened to reuse the id inherit
     # someone else's checkmarks.
     conn.execute("DELETE FROM claim_checks WHERE lookup_id = ?", (lookup_id,))
+    conn.execute("DELETE FROM claim_notes WHERE lookup_id = ?", (lookup_id,))
     conn.commit()
     return cursor.rowcount > 0
 
@@ -327,6 +373,44 @@ def set_checked(
     return checked_keys(conn, lookup_id)
 
 
+def notes(conn: sqlite3.Connection, lookup_id: str) -> dict[str, str]:
+    """Every note on one answer, keyed the way the UI keys a claim."""
+    return {
+        row["claim_key"]: row["note"]
+        for row in conn.execute(
+            "SELECT claim_key, note FROM claim_notes WHERE lookup_id = ?",
+            (lookup_id,),
+        )
+    }
+
+
+def set_note(
+    conn: sqlite3.Connection, lookup_id: str, claim_key: str, note: str
+) -> dict[str, str]:
+    """Write one note, or clear it.
+
+    An empty note deletes the row rather than storing `''`. A reader who
+    selects their own text and deletes it has said "there is no note here",
+    and an empty string would keep the claim in every "what did the seller
+    say" list forever.
+    """
+    if note.strip():
+        conn.execute(
+            "INSERT INTO claim_notes (lookup_id, claim_key, note, updated_at)"
+            " VALUES (?, ?, ?, ?)"
+            " ON CONFLICT (lookup_id, claim_key) DO UPDATE SET"
+            "   note = excluded.note, updated_at = excluded.updated_at",
+            (lookup_id, claim_key, note.strip(), _now()),
+        )
+    else:
+        conn.execute(
+            "DELETE FROM claim_notes WHERE lookup_id = ? AND claim_key = ?",
+            (lookup_id, claim_key),
+        )
+    conn.commit()
+    return notes(conn, lookup_id)
+
+
 # ── marks — what the reader thought of a claim ────────────────────────────
 
 
@@ -411,6 +495,173 @@ def mark_counts(conn: sqlite3.Connection) -> dict[str, int]:
     ):
         counts[row["verdict"]] = row["n"]
     return counts
+
+
+def mark_signals(conn: sqlite3.Connection, limit: int = 50) -> dict:
+    """The two queues a mark feeds, derived rather than curated.
+
+    A mark was a dead end: readers were answering "was this any use?" and the
+    answer went into a table nothing read. This is the mechanism that reads it,
+    and it is deliberately two queues rather than one list, because `wrong` and
+    `not_applicable` are failures of different systems:
+
+    * `research` — subjects carrying `wrong` marks. A knowledge problem: the
+      claim is not true of the thing it was written for, so the fix is another
+      research pass on that subject, which is a job this app already runs.
+    * `matching` — subjects carrying `not_applicable` marks. A *matching*
+      problem: the claim may be perfectly true of the product it was written
+      for and this was not that one, so the fix is upstream of the claim —
+      identity extraction, or a fitment gate that is too broad. `sources`
+      attributes it: a subject the reader only ever reached from a listing URL
+      points at the adapter, while one reached from the form points at the
+      reader's own typing or at the gate.
+
+    Both are counts and identifiers, never a review queue for a person: the
+    automation principle says nothing in the data path waits on sign-off. What
+    a human does with this is press "research", which is the same job an
+    automated pass calls.
+
+    `sources` is computed by asking the reader's own history which doors a
+    subject arrived through. A scan, because history is local and small — and
+    because the alternative is denormalising the door onto every mark, which
+    would make a mark's meaning depend on when it was written.
+    """
+    doors: dict[str, dict[str, int]] = {}
+    for row in conn.execute("SELECT source, response_json FROM lookups"):
+        payload = json.loads(row["response_json"] or "{}")
+        seen = {
+            str(claim.get("subject_id") or "")
+            for claim in payload.get("claims") or []
+        }
+        # `subjects` as well as the claims, and both shapes of it: /api/analyze
+        # sends resolved rows and /api/lookup sends bare ids. A subject that
+        # resolved and had nothing to say is exactly the interesting case here
+        # — there is no claim to carry it, and it is still a match the adapter
+        # made.
+        for entry in payload.get("subjects") or []:
+            seen.add(str(entry.get("subject_id") or "") if isinstance(entry, dict) else str(entry))
+        for subject in seen - {""}:
+            tally = doors.setdefault(subject, {})
+            tally[row["source"]] = tally.get(row["source"], 0) + 1
+
+    def queue(verdict: str, *, with_sources: bool) -> list[dict]:
+        grouped: dict[tuple[str, str], dict] = {}
+        for mark in marks(conn, verdict=verdict, limit=1000):
+            key = (mark["subject_id"], mark["pack_id"])
+            item = grouped.setdefault(
+                key,
+                {
+                    "subject_id": mark["subject_id"],
+                    "pack_id": mark["pack_id"],
+                    "count": 0,
+                    # The reader's own words are the most valuable field on a
+                    # mark, so they travel with the queue rather than being
+                    # aggregated away.
+                    "notes": [],
+                    "claim_ids": [],
+                },
+            )
+            item["count"] += 1
+            item["claim_ids"].append(mark["claim_id"])
+            if mark["note"]:
+                item["notes"].append(mark["note"])
+        out = sorted(
+            grouped.values(), key=lambda item: (-item["count"], item["subject_id"])
+        )
+        if with_sources:
+            for item in out:
+                item["sources"] = doors.get(item["subject_id"], {})
+        return out[:limit]
+
+    return {
+        "research": queue("wrong", with_sources=False),
+        "matching": queue("not_applicable", with_sources=True),
+    }
+
+
+# ── submissions ─ what a researcher sent, and what survived ────────
+
+
+#: How a submission reached the acceptance path. Two doors, and the constant
+#: exists so a third one cannot be added without naming itself here.
+DOORS = ("mcp", "job")
+
+
+def record_submission(
+    conn: sqlite3.Connection,
+    *,
+    door: str,
+    subject_id: str,
+    pack_id: str,
+    verdicts: dict,
+) -> str:
+    """Store one batch's outcome. Returns the row id.
+
+    The whole verdict payload is kept as JSON rather than split into rows per
+    finding: what an author reads is "this batch, these refusals, in the gate's
+    own sentences", and the reasons are free text from `kriko.gates` that no
+    schema here should try to enumerate.
+    """
+    accepted = verdicts.get("accepted") or []
+    refused = verdicts.get("rejected") or []
+    submission_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO submissions (submission_id, created_at, door, subject_id,"
+        " pack_id, accepted, refused, verdicts_json) VALUES (?,?,?,?,?,?,?,?)",
+        (
+            submission_id,
+            _now(),
+            door if door in DOORS else "job",
+            subject_id,
+            pack_id,
+            len(accepted),
+            len(refused),
+            json.dumps(verdicts, default=str),
+        ),
+    )
+    conn.commit()
+    return submission_id
+
+
+def _submission(row: sqlite3.Row) -> dict:
+    out = dict(row)
+    out["verdicts"] = json.loads(out.pop("verdicts_json") or "{}")
+    return out
+
+
+def submissions(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """Newest batch first."""
+    return [
+        _submission(row)
+        for row in conn.execute(
+            "SELECT * FROM submissions ORDER BY created_at DESC, rowid DESC LIMIT ?",
+            (max(0, limit),),
+        )
+    ]
+
+
+def refusal_reasons(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
+    """Why findings are being refused, commonest first.
+
+    Computed here rather than stored as a column because the reasons are
+    sentences, not codes: they are grouped on their first clause, which is the
+    part `kriko.gates` writes and the part that names the rule. Everything
+    after an em dash is advice to the agent about that one finding.
+    """
+    tally: dict[str, int] = {}
+    for row in conn.execute(
+        "SELECT verdicts_json FROM submissions"
+        " ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (max(0, limit),),
+    ):
+        for item in json.loads(row["verdicts_json"] or "{}").get("rejected") or []:
+            reason = str(item.get("reason") or "unstated")
+            head = reason.split("—")[0].split(";")[0].strip() or reason
+            tally[head] = tally.get(head, 0) + 1
+    return [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
 
 
 # ── jobs ─────────────────────────────────────────────────────────────────

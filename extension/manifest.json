@@ -22,6 +22,18 @@
             "48": "assets/icons/icon-48.png"
         }
     },
+    "commands": {
+        "toggle-panel": {
+            "suggested_key": {
+                "default": "Alt+K"
+            },
+            "description": "Show or hide the Kriko panel on this page"
+        }
+    },
+    "options_ui": {
+        "page": "options/options.html",
+        "open_in_tab": true
+    },
     "content_scripts": [
         {
             "matches": [

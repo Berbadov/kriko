@@ -1,0 +1,106 @@
+/* Deliberately not the app's design system.
+ *
+ * This page is rendered by the browser's own extension manager, in whatever
+ * theme the browser is wearing, and it is two controls long. Importing the
+ * app's tokens would tie a five-line settings screen to a build step and to a
+ * palette it cannot follow anyway — `color-scheme` plus system colours is the
+ * honest answer at this size. */
+:root {
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+h1 {
+  font-size: 1.35rem;
+  margin: 0 0 0.5rem;
+}
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+.lede {
+  margin: 0 0 2rem;
+  opacity: 0.8;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+input:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 1px;
+}
+.hint {
+  opacity: 0.75;
+  margin: 0.5rem 0 1rem;
+}
+.row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+button {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+button.quiet {
+  background: transparent;
+}
+.status {
+  min-height: 1.55rem;
+  margin: 1.25rem 0 0;
+}
+.status[data-state="ok"]::before {
+  content: "✓ ";
+}
+.status[data-state="warn"]::before {
+  content: "! ";
+}
+.status[data-state="error"]::before {
+  content: "✕ ";
+}
+.status[data-state="warn"],
+.status[data-state="error"] {
+  font-weight: 600;
+}
+.about {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+.about p {
+  margin: 0;
+  opacity: 0.85;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

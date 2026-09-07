@@ -99,4 +99,19 @@ describe("Packs", () => {
         await fireEvent.click(await screen.findByRole("button", { name: "Install pack" }));
         expect(await screen.findByText(/Choose a .kpack file first/)).toBeInTheDocument();
     });
+
+    /* A screen with nothing on it is a state, not an absence.
+     *
+     * This was one grey line reading "No packs installed." — the same fact
+     * with the next step left as an exercise, in an app where an empty store
+     * means every lookup succeeds and finds nothing. Every other screen-level
+     * absence in the app renders the shared EmptyState; this one now does
+     * too, which is the whole of the consistency being asked for. */
+    it("explains an empty store rather than labelling it", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([]))));
+        render(Packs);
+        expect(await screen.findByText("No packs installed")).toBeInTheDocument();
+        expect(screen.getByText(/finds nothing/)).toBeInTheDocument();
+        expect(document.querySelector(".empty-state")).not.toBeNull();
+    });
 });

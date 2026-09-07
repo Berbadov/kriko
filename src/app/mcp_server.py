@@ -24,10 +24,11 @@ of the evidence chain is that this cannot pass quietly.
 """
 
 from contextlib import contextmanager
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from app.findings import accept_findings
+from app.findings import accept_findings, log_submission
 from kriko.lookup.tree import health_json, tree_json
 from kriko.lookup.tree import subject_tree as _subject_tree
 from kriko.lookup.tree import weakest_claims as _weakest_claims
@@ -39,6 +40,20 @@ mcp = FastMCP("kriko")
 
 #: Overridden by tests so they never touch the real ~/.kriko store.
 STORE_PATH = None
+
+
+def _app_state_path():
+    """Where the interface's own database is, derived from the store's own
+    directory rather than imported from `app.web.settings`.
+
+    The two files are siblings in `~/.kriko` by construction, so the parent
+    directory is all this needs — and it means a test that points STORE_PATH at
+    a temporary directory gets a temporary submission log too, without knowing
+    this function exists.
+    """
+    from kriko.store.db import DEFAULT_STORE
+
+    return Path(STORE_PATH or DEFAULT_STORE).parent / "app.sqlite"
 
 @contextmanager
 def _store():
@@ -306,7 +321,18 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
     vanished.
     """
     with _store() as conn:
-        return accept_findings(conn, subject_id, pack_id, findings)
+        verdicts = accept_findings(conn, subject_id, pack_id, findings)
+    # Logged after the store connection closes, and to a different file: the
+    # refusals in this payload are what an author tunes the skill against, and
+    # they were previously returned to the agent and then lost.
+    log_submission(
+        _app_state_path(),
+        door="mcp",
+        subject_id=subject_id,
+        pack_id=pack_id,
+        verdicts=verdicts,
+    )
+    return verdicts
 
 
 @mcp.tool()

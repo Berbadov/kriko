@@ -112,3 +112,159 @@ export function confidenceNote(result: LookupResult): string {
 export const askLine = (claim: Claim): string =>
     claim.advice?.trim() ||
     "Ask the seller for proof this has been dealt with, and have it checked.";
+
+
+/** How far through the list the reader has got.
+ *
+ * Empty when nothing is ticked: "0 of 10 dealt with" on a report someone has
+ * just opened is a scold, not information. The count is of claims still
+ * present in this answer, so a checkmark left over from a claim a pack has
+ * since dropped cannot push the number past the total.
+ */
+export function handledNote(result: LookupResult, handled: string[]): string {
+    const marked = new Set(handled);
+    const done = result.claims.filter((claim) => marked.has(claimKey(claim))).length;
+    if (!done) return "";
+    const total = result.claims.length;
+    return done >= total
+        ? `All ${total} dealt with`
+        : `${done} of ${total} dealt with`;
+}
+
+/** What the answer was computed against, in the pack's own words.
+ *
+ * The reader's first question about a short report is "did it even know the
+ * usage figure", and the payload carries the answer. Rendered as key/value
+ * pairs exactly as the adapter sent them — naming a key here (or deciding which one
+ * is "the important one") would be the hardcoded-pack-data bug in the one
+ * place it is hardest to notice.
+ */
+export function contextLines(
+    context: Record<string, unknown> | undefined,
+    units: Record<string, string> | undefined = {},
+): { key: string; value: string }[] {
+    if (!context) return [];
+    return Object.entries(context)
+        .filter(([, value]) => value !== null && value !== undefined && value !== "")
+        .map(([key, value]) => ({
+            key: key.replace(/_/g, " "),
+            value: `${value}${units?.[key] ? ` ${units[key]}` : ""}`,
+        }));
+}
+
+/** The report as text, for a mechanic who does not have Kriko.
+ *
+ * Markdown rather than a PDF because the destination is a message: the reader
+ * pastes this into whatever they already use to talk to the seller or the
+ * garage. Print stays for paper (`print.css`); this is for handing over.
+ *
+ * Includes the reader's own notes when there are any — a report with "seller
+ * says belt done at 140k, no receipt" beside the claim is the artifact, and
+ * one without it is just the pack again.
+ */
+export function asMarkdown(
+    result: LookupResult,
+    options: {
+        heading?: string;
+        notes?: Record<string, string>;
+        handled?: string[];
+    } = {},
+): string {
+    const notes = options.notes ?? {};
+    const done = new Set(options.handled ?? []);
+    const lines: string[] = [`# ${options.heading || "Known risks"}`, ""];
+    lines.push(confidenceNote(result), "");
+    if (!result.claims.length) {
+        lines.push(emptyReason(result), "");
+        return lines.join("\n");
+    }
+    for (const group of groupByDomain(result.claims)) {
+        lines.push(`## ${group.domain}`, "");
+        for (const claim of group.claims) {
+            const key = claimKey(claim);
+            lines.push(
+                `### ${severityWord(claim.severity)} — ${claim.title}`,
+                "",
+                claim.body,
+                "",
+                `**Ask:** ${askLine(claim)}`,
+            );
+            if (notes[key]) lines.push("", `**Answer:** ${notes[key]}`);
+            if (done.has(key)) lines.push("", "*Dealt with.*");
+            lines.push("", `_${sourceSummary(claim)}_`, "");
+        }
+    }
+    // Named rather than implied. A report handed to someone else has to say
+    // what it is not: this is what the installed packs know, and silence in it
+    // is a coverage gap rather than a clean bill of health.
+    lines.push(
+        "---",
+        "",
+        "Produced by Kriko from installed knowledge packs. Absence of a risk " +
+            "here means no pack holds one, not that there is none.",
+    );
+    return lines.join("\n");
+}
+
+/** The question sheet: what to ask, worst first, with nothing else on it.
+ *
+ * The product principle is "what to worry about before you book the expert",
+ * so the artifact that principle implies is a list of questions — and until
+ * now `askLine` was readable one card at a time and nowhere as a whole.
+ */
+export type Question = {
+    key: string;
+    ask: string;
+    title: string;
+    severity: string;
+    domain: string;
+};
+
+export const questions = (result: LookupResult): Question[] =>
+    orderClaims(result.claims).map((claim) => ({
+        key: claimKey(claim),
+        ask: askLine(claim),
+        title: claim.title,
+        severity: claim.severity,
+        domain: claim.domain || "other",
+    }));
+
+
+/** What a score means, in words, before the number.
+ *
+ * `relevance`, `trust` and `detection` were author-only raw numbers with no
+ * legend: 0.72 is unreadable without knowing the scale, which makes ranking
+ * look like magic rather than something auditable. This says what the engine
+ * did, and leaves the figure in brackets for whoever wants to check it.
+ */
+export function rankingNote(claim: Claim): string {
+    const parts: string[] = [];
+    const relevance = claim.relevance;
+    if (typeof relevance === "number") {
+        const word =
+            relevance >= 0.8 ? "Close" : relevance >= 0.5 ? "Partial" : "Loose";
+        parts.push(`${word} match to the details given (${relevance})`);
+    }
+    if (claim.detection) {
+        parts.push(`matched by ${claim.detection.replace(/_/g, " ")}`);
+    }
+    if (typeof claim.trust === "number") {
+        const word = claim.trust >= 0.8 ? "strong" : claim.trust >= 0.5 ? "fair" : "weak";
+        parts.push(`${word} sourcing (${claim.trust})`);
+    }
+    return parts.join(" · ");
+}
+
+/** Why a report can be short, said out loud.
+ *
+ * The coverage lens answers "what is missing" for an author. A reader looking
+ * at three claims has the same question and no screen for it, and the honest
+ * answer is the one thing this project must never leave implied: silence here
+ * is what the packs do not hold, not a clean bill of health.
+ */
+export const absenceNote = (result: LookupResult): string =>
+    result.claims.length
+        ? "This is what the installed packs hold about this one. Anything not " +
+          "listed is knowledge nobody has published yet, or has not reached " +
+          "your packs — not a risk that has been ruled out."
+        : emptyReason(result);

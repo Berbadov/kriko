@@ -32,7 +32,9 @@ describe("Report — one payload, two renderings", () => {
     it("gives a buyer urgency and what to ask, not the score", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
         render(Report, { props: { result: RESULT, mode: "buyer" } });
-        expect(await screen.findByText("Serious")).toBeInTheDocument();
+        // Twice by design: the section heading carries the worst severity in
+        // it as a tile, and the card carries its own.
+        expect(await screen.findAllByText("Serious")).not.toHaveLength(0);
         expect(await screen.findByText(/Ask for the service record/)).toBeInTheDocument();
         // The count appears twice by design: on the claim's meta line and on
         // the collapsed sources summary.
@@ -51,7 +53,11 @@ describe("Report — one payload, two renderings", () => {
     it("groups under the pack's own domain and counts the serious ones", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
         render(Report, { props: { result: RESULT } });
-        expect(await screen.findByRole("heading", { name: "mech" })).toBeInTheDocument();
+        // By pattern: the heading now carries its worst severity and a count
+        // alongside the domain name.
+        expect(
+            await screen.findByRole("heading", { name: /mech/ }),
+        ).toBeInTheDocument();
         expect(await screen.findByText(/1 serious/)).toBeInTheDocument();
     });
 
@@ -101,5 +107,117 @@ describe("Report — one payload, two renderings", () => {
         stubFetch({ "/api/lookups/L1/checked": { checked: [] } });
         render(Report, { result: RESULT, lookupId: "L1" });
         expect(screen.getByRole("button", { name: /Print/ })).toBeInTheDocument();
+    });
+
+    it("reads both halves of triage in one request", async () => {
+        // Two requests for one screen paints the checkboxes and then, a beat
+        // later, the notes — which reads as two pages loading.
+        const fetcher = vi.fn(async (_path: string) =>
+            ok({ checked: ["c1"], notes: { c1: "said done" } }),
+        );
+        vi.stubGlobal("fetch", fetcher);
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        expect(await screen.findByDisplayValue("said done")).toBeInTheDocument();
+        expect(fetcher.mock.calls.map((c) => c[0])).toEqual(["/api/lookups/L1/triage"]);
+    });
+
+    it("persists what the seller said against the claim", async () => {
+        const fetcher = vi.fn(async (path: string, init?: RequestInit) =>
+            init?.method === "POST"
+                ? ok({ notes: { c1: "belt done at 140k" } })
+                : ok({ checked: [], notes: {} }),
+        );
+        vi.stubGlobal("fetch", fetcher);
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        await fireEvent.click(await screen.findByText(/Add what the seller said/));
+        const box = await screen.findByPlaceholderText(/receipt promised/);
+        // Input then blur: the field is `bind:value`, so setting the DOM value
+        // on the blur event alone never reaches the component's own state.
+        await fireEvent.input(box, { target: { value: "belt done at 140k" } });
+        await fireEvent.blur(box);
+        const [path, init] = fetcher.mock.calls.at(-1)!;
+        expect(path).toBe("/api/lookups/L1/notes");
+        expect(JSON.parse(String(init!.body))).toEqual({
+            claim_key: "c1",
+            note: "belt done at 140k",
+        });
+    });
+
+    it("shows progress once something is ticked, and not before", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        const { unmount } = render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        expect(screen.queryByText(/dealt with/)).not.toBeInTheDocument();
+        unmount();
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: ["c1"], notes: {} })));
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        expect(await screen.findByText(/All 1 dealt with/)).toBeInTheDocument();
+    });
+
+    it("hands the whole answer over as text, notes included", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: { c1: "said done" } })));
+        const writeText = vi.fn(async (_text: string) => {});
+        vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        await screen.findByDisplayValue("said done");
+        await fireEvent.click(screen.getByRole("button", { name: /Copy for a mechanic/ }));
+        expect(await screen.findByText(/Copied as Markdown/)).toBeInTheDocument();
+        expect(writeText.mock.calls[0][0]).toContain("**Answer:** said done");
+    });
+
+    it("falls back to selectable text when the webview refuses the clipboard", async () => {
+        // The bug this whole line of work started from is a button that
+        // silently does nothing.
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        vi.stubGlobal("navigator", {
+            ...navigator,
+            clipboard: {
+                writeText: async () => {
+                    throw new Error("denied");
+                },
+            },
+        });
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        await fireEvent.click(
+            await screen.findByRole("button", { name: /Copy for a mechanic/ }),
+        );
+        expect(await screen.findByText(/would not take it to the clipboard/)).toBeInTheDocument();
+    });
+
+    it("says what the answer was computed against", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        render(Report, {
+            props: {
+                result: { ...RESULT, context: { duty_hours: 300 }, context_units: { duty_hours: "h" } },
+                lookupId: "L1",
+            },
+        });
+        expect(await screen.findByText(/300 h/)).toBeInTheDocument();
+    });
+
+    it("answers the inverse question a short report raises", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        render(Report, { props: { result: RESULT } });
+        expect(await screen.findByText(/Why might this be short/)).toBeInTheDocument();
+        expect(screen.getByText(/not a risk that has been ruled out/)).toBeInTheDocument();
+    });
+
+    it("puts a dispute where the reader will see it, not behind two folds", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        render(Report, {
+            props: {
+                result: { ...RESULT, claims: [{ ...RESULT.claims[0], disputed: true }] },
+                mode: "buyer",
+            },
+        });
+        const badge = await screen.findByText("disputed");
+        expect(badge.closest("details")).toBeNull();
+    });
+
+    it("links to the sheet the reader takes to the seller", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
+        render(Report, { props: { result: RESULT, lookupId: "L1" } });
+        const link = await screen.findByRole("link", { name: "Question sheet" });
+        expect(link.getAttribute("href")).toContain("questions");
+        expect(link.getAttribute("href")).toContain("id=L1");
     });
 });

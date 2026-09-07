@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import EmptyState from "../lib/EmptyState.svelte";
     import { follow, isLive, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
@@ -45,6 +46,67 @@
         };
     });
 
+    // ── starting a pack, not only building one ───────────────────────────
+    //
+    // The app could build a directory and install the artifact, but the
+    // directory itself had to be created by hand from a document — so
+    // authoring a category, the thing this whole platform is for, was the one
+    // task with no door in the app. The scaffold writes a skeleton that
+    // already passes the contract; the reader then edits rows and presses
+    // Build below, which is why the two forms sit together.
+    let newRoot = $state("");
+    let newId = $state("");
+    let newName = $state("");
+    // One kind per line, `kind: key, key`. Free-form because an identity
+    // table's shape belongs to the author's category: a fixed set of fields
+    // here would be this app deciding what things are like.
+    let newIdentity = $state("");
+    let scaffolded = $state("");
+
+    function parseIdentity(text: string): Record<string, string[]> {
+        const out: Record<string, string[]> = {};
+        for (const line of text.split("\n")) {
+            const [kind, keys = ""] = line.split(":");
+            const cleanKind = kind.trim();
+            const cleanKeys = keys
+                .split(",")
+                .map((key) => key.trim())
+                .filter(Boolean);
+            if (cleanKind && cleanKeys.length) out[cleanKind] = cleanKeys;
+        }
+        return out;
+    }
+
+    const identityPreview = $derived(parseIdentity(newIdentity));
+    const canScaffold = $derived(
+        Boolean(newRoot.trim() && newId.trim() && newName.trim()) &&
+            Object.keys(identityPreview).length > 0,
+    );
+
+    async function startPack() {
+        if (!canScaffold) return;
+        busy = true;
+        error = "";
+        scaffolded = "";
+        try {
+            const made = await api.scaffoldPack({
+                root: newRoot.trim(),
+                pack_id: newId.trim(),
+                name: newName.trim(),
+                identity: identityPreview,
+            });
+            scaffolded = made.root;
+            // Hand the directory straight to the build form: the next thing
+            // the reader wants is to see it install, and retyping the path
+            // they just gave us would be the app forgetting on purpose.
+            root = made.root;
+        } catch (cause) {
+            error = String(cause);
+        } finally {
+            busy = false;
+        }
+    }
+
     async function build() {
         if (!root.trim()) return;
         busy = true;
@@ -71,6 +133,27 @@
         }
     }
 
+    /** Run a finished job's work again.
+     *
+     * A failure here is usually a network that was down or a source that was
+     * slow — nothing about the request was wrong, and retyping it from the
+     * form was the only way back. The new row keeps `retry_of`, so the two
+     * attempts stay legible as two attempts rather than one confusing
+     * duplicate, and the failed row keeps its log: the reason it failed is the
+     * most useful thing on this screen and a retry must not overwrite it.
+     */
+    async function retry(job: Job) {
+        try {
+            const { job_id } = await api.retryJob(job.job_id);
+            const fresh = await api.job(job_id);
+            replace(fresh);
+            watch(fresh);
+            open = job_id;
+        } catch (cause) {
+            error = String(cause);
+        }
+    }
+
     const percent = (job: Job) => Math.round((job.progress ?? 0) * 100);
     const subjectOf = (job: Job) =>
         String(job.params?.subject_id ?? job.params?.root ?? "");
@@ -81,6 +164,50 @@
     Research and pack builds run here, not in a terminal. A job keeps its log and
     its result, so a restart or a closed tab loses nothing.
 </p>
+
+<details class="authoring">
+    <summary>Start a new pack</summary>
+    <p class="meta">
+        Writes a skeleton that already passes the pack contract — a manifest, a
+        vocabulary, one placeholder subject and one placeholder claim — then hands
+        the directory to the builder below. It installs nothing on its own.
+    </p>
+    <form class="ask stack" onsubmit={(event) => (event.preventDefault(), startPack())}>
+        <label class="field">
+            <span>Directory to create it in</span>
+            <input bind:value={newRoot} placeholder="packs/mine" />
+        </label>
+        <label class="field">
+            <span>Pack id</span>
+            <input bind:value={newId} placeholder="org.example.mine" />
+        </label>
+        <label class="field">
+            <span>Name</span>
+            <input bind:value={newName} placeholder="What it covers, in a few words" />
+        </label>
+        <label class="field">
+            <span>Identity keys — one kind per line, as <code>kind: key, key</code></span>
+            <textarea
+                bind:value={newIdentity}
+                rows="3"
+                placeholder={"product: brand, series\nplatform: brand, family"}
+            ></textarea>
+            <span class="meta">
+                What makes two of these the same thing. It decides which rows can ever
+                merge with another pack's, and getting it wrong fails silently rather
+                than loudly — too few keys and unrelated things collide, too many and one
+                thing splits across subjects that never see each other's claims.
+            </span>
+        </label>
+        <button type="submit" disabled={busy || !canScaffold}>Write the skeleton</button>
+    </form>
+    {#if scaffolded}
+        <p class="meta">
+            Written to <code>{scaffolded}</code>. Edit the rows under
+            <code>data/</code>, then build it below — the path is already filled in.
+        </p>
+    {/if}
+</details>
 
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
@@ -95,9 +222,14 @@
 {/if}
 
 {#if !jobs.length}
-    <p class="state empty">
-        No jobs yet. Start one here, or from a gap on the Coverage screen.
-    </p>
+    <EmptyState
+        title="No runs yet"
+        detail="Long work is a row here rather than a request that hangs — research
+                and pack builds both land on this screen, and their log outlives
+                the page. Start one above, or from a gap on Coverage."
+        actionLabel="Find a gap"
+        actionHref="#/coverage"
+    />
 {/if}
 
 {#each jobs as job (job.job_id)}
@@ -127,6 +259,8 @@
             >
             {#if isLive(job)}
                 <button onclick={() => cancel(job)}>Cancel</button>
+            {:else}
+                <button onclick={() => retry(job)}>Run again</button>
             {/if}
         </p>
         {#if open === job.job_id}

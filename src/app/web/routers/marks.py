@@ -62,6 +62,24 @@ def list_marks(
     }
 
 
+@router.get("/signals")
+def signals(
+    limit: int = Query(50, ge=1, le=200), conn=Depends(get_app_state)
+) -> dict:
+    """What the marks add up to, split by which system has the problem.
+
+    The queue, not the marks: `wrong` groups into subjects worth re-researching
+    and `not_applicable` into subjects whose *matching* is wrong, with the
+    doors they arrived through attached. Declared before `""`'s siblings by
+    path, and above `POST` here only for reading order.
+
+    Not a review screen. The research queue is the input to the research job
+    this app already runs — see the automation principle: a mark that needs a
+    person to triage it is the same dead end it was before.
+    """
+    return state.mark_signals(conn, limit)
+
+
 @router.post("")
 def mark(body: MarkRequest, conn=Depends(get_app_state)) -> dict:
     try:

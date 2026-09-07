@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import EmptyState from "../lib/EmptyState.svelte";
     import { follow, stateWord } from "../lib/jobs";
     import type { Job, Pack, PackEvent, PackUpdates, Revision } from "../lib/types";
 
@@ -128,7 +129,10 @@
     {/if}
     {#if updates && !updates.error}
         {#if !updates.packs.length}
-            <p class="state empty">The index lists nothing.</p>
+            <p class="state empty">
+                The index answered, and lists no packs at all — so there is nothing
+                to update to yet. Nothing installed has gone stale.
+            </p>
         {:else}
             <table>
                 <thead>
@@ -175,7 +179,16 @@
     {#if error}
         <p class="state error">Could not load this view: {error}</p>
     {:else if !packs.length}
-        <p class="state empty">No packs installed.</p>
+        <!-- Screen-level absence, so it gets the screen-level idiom: a title,
+             why it is empty, and the one thing to do about it. The one-line
+             "No packs installed." this replaced was the same fact with the
+             next step left as an exercise. -->
+        <EmptyState
+            title="No packs installed"
+            detail="A pack is the knowledge — with none installed, a lookup succeeds
+                    and finds nothing. The file picker above installs a .kpack, and
+                    Check for updates fetches the index."
+        />
     {:else}
         {#each packs as pack (pack.pack_id)}
             <article class="card">

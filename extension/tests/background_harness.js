@@ -22,8 +22,14 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
     requests: [],
     // Every message it sent to a content script.
     tabMessages: [],
+    optionsOpened: 0,
   };
   const messageListeners = [];
+  // Keyboard commands fire at the browser, not at a tab, so the worker
+  // registers a listener the same way it registers the message one — captured
+  // here and called directly, since there is no Chrome to press a key.
+  const commandListeners = [];
+  const clickListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -49,6 +55,10 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
         onInstalled: { addListener() {} },
         onMessage: { addListener: (fn) => messageListeners.push(fn) },
         sendMessage() {},
+        openOptionsPage() { state.optionsOpened += 1; },
+      },
+      commands: {
+        onCommand: { addListener: (fn) => commandListeners.push(fn) },
       },
       storage: { session: area(state.session), local: area(state.local) },
       tabs: {
@@ -63,7 +73,7 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
       },
       scripting: { async executeScript() {} },
       action: {
-        onClicked: { addListener() {} },
+        onClicked: { addListener: (fn) => clickListeners.push(fn) },
         async setBadgeText({ text, tabId }) { state.badge[tabId] = text; },
         async setBadgeBackgroundColor() {},
       },
@@ -87,7 +97,25 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
   vm.runInContext(fs.readFileSync(BACKGROUND_JS, "utf8"), sandbox,
                   { filename: "background.js" });
 
-  return { sandbox, state, messageListeners };
+  return { sandbox, state, messageListeners, commandListeners, clickListeners };
 }
 
-module.exports = { loadBackground };
+// Calling a message listener the way Chrome does: one shot at
+// `sendResponse`, whether the handler answers synchronously or returns true
+// and answers later. A handler that never responds hangs the test, which is
+// the right failure — a message the worker silently drops leaves the panel
+// waiting exactly this long.
+const send = (h, message) =>
+  new Promise((resolve, reject) => {
+    let answered = false;
+    for (const listener of h.messageListeners) {
+      const handled = listener(message, {}, (response) => {
+        answered = true;
+        resolve(response);
+      });
+      if (handled === true || answered) return;
+    }
+    reject(new Error(`no handler answered ${message.type}`));
+  });
+
+module.exports = { loadBackground, send };

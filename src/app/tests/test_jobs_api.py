@@ -8,6 +8,7 @@ unhappy paths — failure text, cancel, and restart — at least as hard as the
 happy one.
 """
 
+import threading
 import time
 
 import pytest
@@ -180,6 +181,65 @@ def test_research_over_http_returns_an_id_and_then_a_status(client):
 def test_an_unknown_job_is_a_404(client):
     assert client.get("/api/jobs/missing").status_code == 404
     assert client.post("/api/jobs/missing/cancel").status_code == 404
+    assert client.post("/api/jobs/missing/retry").status_code == 404
+
+
+def test_a_failed_job_can_be_run_again_without_losing_why_it_failed(client):
+    """Retry is a new row, not a reset.
+
+    The failed attempt's log is the only record of *why* it failed, and reusing
+    the row would delete the evidence at the exact moment someone is looking
+    into it. The two are linked by `retry_of` instead.
+    """
+    first = client.post("/api/research", json={"subject_id": "nope"}).json()["job_id"]
+    for _ in range(400):
+        original = client.get(f"/api/jobs/{first}").json()
+        if original["done"]:
+            break
+        time.sleep(0.02)
+    assert original["state"] == state.FAILED
+
+    again = client.post(f"/api/jobs/{first}/retry")
+    assert again.status_code == 200
+    second = again.json()["job_id"]
+    assert second != first
+
+    row = client.get(f"/api/jobs/{second}").json()
+    assert row["kind"] == original["kind"]
+    assert row["params"]["subject_id"] == "nope"
+    assert row["params"]["retry_of"] == first
+    # The evidence is still there.
+    assert client.get(f"/api/jobs/{first}").json()["state"] == state.FAILED
+
+
+def test_retrying_a_job_that_is_still_going_is_refused(settings):
+    """"Retry" on a running job means the reader wanted to cancel it.
+
+    Quietly starting a second copy of a research run is how you get two writers
+    on one subject.
+    """
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow(params, log, should_cancel):
+        started.set()
+        release.wait(5)
+        return {}
+
+    runner = JobRunner(settings, {"slow": slow})
+    try:
+        job_id = runner.submit("slow", {})
+        assert started.wait(5)
+        app = create_app(settings)
+        app.state.jobs = runner
+        # No lifespan on purpose: startup marks every running row `interrupted`,
+        # which is right for a restarted process and would make this job look
+        # finished to the very check under test.
+        refused = TestClient(app).post(f"/api/jobs/{job_id}/retry")
+        assert refused.status_code == 409
+    finally:
+        release.set()
+        runner.shutdown(wait=True)
 
 
 def test_the_agent_plane_still_produces_a_brief(client, settings):

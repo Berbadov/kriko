@@ -44,6 +44,8 @@
     --accent-lo: #4880d8;
     --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.5);
     --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55);
+    /* See lemonade.css: the ground a dialog sits on. */
+    --scrim: rgba(0, 0, 0, 0.6);
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);
@@ -95,5 +97,6 @@
         --accent-lo: #1d4fd0;
         --shadow-1: 0 1px 1px rgba(16, 24, 40, 0.06);
         --shadow-2: 0 2px 8px rgba(16, 24, 40, 0.12);
+        --scrim: rgba(16, 24, 40, 0.34);
     }
 }

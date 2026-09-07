@@ -10,6 +10,7 @@ the pack it is about.
 import pytest
 from fastapi.testclient import TestClient
 
+from app.web import state
 from app.web.app import create_app
 from app.web.settings import Settings
 
@@ -112,3 +113,86 @@ def test_a_mark_is_interface_state_and_never_touches_the_engine(client, tmp_path
         )
     }
     assert "claim_marks" in tables
+
+
+# ── what a mark feeds ────────────────────────────────────────────────────
+
+
+def test_wrong_and_not_mine_land_in_different_queues(tmp_path):
+    """The two verdicts are failures of different systems, so they are two
+    queues. Merging them would hide which half needs the fix."""
+    conn = state.connect(tmp_path / "app.sqlite")
+    state.mark_claim(
+        conn, pack_id="p", claim_id="c1", verdict="wrong",
+        subject_id="s1", note="my mechanic says otherwise",
+    )
+    state.mark_claim(
+        conn, pack_id="p", claim_id="c2", verdict="not_applicable", subject_id="s2",
+    )
+    state.mark_claim(conn, pack_id="p", claim_id="c3", verdict="useful", subject_id="s3")
+
+    signals = state.mark_signals(conn)
+    assert [item["subject_id"] for item in signals["research"]] == ["s1"]
+    assert [item["subject_id"] for item in signals["matching"]] == ["s2"]
+    # A useful mark is not a problem to be queued.
+    assert all(
+        item["subject_id"] != "s3"
+        for queue in signals.values()
+        for item in queue
+    )
+    # The reader's own words travel with the queue: they are the most valuable
+    # field on a mark and the thing a later research pass wants.
+    assert signals["research"][0]["notes"] == ["my mechanic says otherwise"]
+
+
+def test_a_matching_problem_names_the_door_the_subject_arrived_through(tmp_path):
+    """A subject only ever reached from a listing points at the adapter.
+
+    `not mine` is upstream of the claim — identity extraction, or a gate that
+    is too broad — and which door it came through is what separates those.
+    """
+    conn = state.connect(tmp_path / "app.sqlite")
+    state.record_lookup(
+        conn, source="url", label="a listing", request={},
+        response={"claims": [{"claim_id": "c1", "subject_id": "s2"}]},
+    )
+    state.record_lookup(
+        conn, source="form", label="typed in", request={},
+        # A subject that resolved with nothing to say is still a match the
+        # adapter made, and `subjects` is the only place it appears.
+        response={"claims": [], "subjects": [{"subject_id": "s9"}]},
+    )
+    state.mark_claim(
+        conn, pack_id="p", claim_id="c1", verdict="not_applicable", subject_id="s2",
+    )
+    state.mark_claim(
+        conn, pack_id="p", claim_id="c9", verdict="not_applicable", subject_id="s9",
+    )
+    by_subject = {item["subject_id"]: item for item in state.mark_signals(conn)["matching"]}
+    assert by_subject["s2"]["sources"] == {"url": 1}
+    assert by_subject["s9"]["sources"] == {"form": 1}
+
+
+def test_the_queue_is_worst_first_and_counts_the_claims(tmp_path):
+    conn = state.connect(tmp_path / "app.sqlite")
+    for claim_id in ("a", "b"):
+        state.mark_claim(
+            conn, pack_id="p", claim_id=claim_id, verdict="wrong", subject_id="loud",
+        )
+    state.mark_claim(conn, pack_id="p", claim_id="c", verdict="wrong", subject_id="quiet")
+    research = state.mark_signals(conn)["research"]
+    assert [(item["subject_id"], item["count"]) for item in research] == [
+        ("loud", 2),
+        ("quiet", 1),
+    ]
+    assert sorted(research[0]["claim_ids"]) == ["a", "b"]
+
+
+def test_the_signals_endpoint_serves_both_queues(client):
+    client.post(
+        "/api/marks",
+        json={"pack_id": "p", "claim_id": "c1", "verdict": "wrong", "subject_id": "s1"},
+    )
+    body = client.get("/api/marks/signals").json()
+    assert body["research"][0]["subject_id"] == "s1"
+    assert body["matching"] == []

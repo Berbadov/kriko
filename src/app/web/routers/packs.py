@@ -5,8 +5,10 @@ import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.web.deps import get_store
+from kriko.pack.scaffold import scaffold
 from kriko.store import packstore
 
 router = APIRouter(prefix="/api", tags=["packs"])
@@ -174,3 +176,55 @@ def vocabulary(pack_id: str, store=Depends(get_store)):
     for term in terms:
         by_role.setdefault(term["role"], []).append(term)
     return by_role
+
+
+class NewPack(BaseModel):
+    """A pack about to exist, in the four fields the contract actually needs.
+
+    `identity` is free-form on purpose — kind to attribute keys, whatever the
+    author's category is shaped like. A typed field per kind would be this
+    server having an opinion about what products are, which is the one thing
+    G6 forbids.
+    """
+
+    root: str
+    pack_id: str = Field(min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=200)
+    identity: dict[str, list[str]] = Field(default_factory=dict)
+    version: str = Field(default="0.1.0", max_length=40)
+
+
+@router.post("/packs/scaffold")
+def scaffold_pack(body: NewPack):
+    """Write a new pack's skeleton to disk, ready to fill in and build.
+
+    Authoring a pack was the one thing this app could not start: it could build
+    a directory and install the artifact, but the directory itself had to be
+    created by hand from a document. This closes that — the reader gets a
+    contract-passing pack in one press and edits rows from there.
+
+    Writes files and installs nothing. Building is a job, and the artifact only
+    reaches the store when that job runs, so a mistake here costs a directory
+    and never a store row.
+    """
+    root = Path(body.root).expanduser()
+    if not str(root):
+        raise HTTPException(400, "a directory is required")
+    try:
+        written = scaffold(
+            root,
+            pack_id=body.pack_id,
+            name=body.name,
+            identity=body.identity,
+            version=body.version,
+        )
+    except FileExistsError as exc:
+        # 409, not 400: the request was well formed and the conflict is with
+        # the filesystem's current state — and the answer is a different
+        # directory, not a corrected field.
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
+    return {"root": str(root), "files": [str(path) for path in written]}

@@ -176,3 +176,43 @@ def accept_findings(conn, subject_id: str, pack_id: str, findings: list[dict]) -
     "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
     "claims rank as reported, not confirmed, until corroborated",
     }
+
+
+def log_submission(
+    app_state_path,
+    *,
+    door: str,
+    subject_id: str,
+    pack_id: str,
+    verdicts: dict,
+) -> None:
+    """Note what happened to a batch, in `app.sqlite`, and never raise.
+
+    Kept out of `accept_findings` on purpose: acceptance is a decision about
+    the knowledge store and takes its connection, while this is interface
+    bookkeeping in a different file. Passing both connections into one function
+    would make the acceptance path depend on the UI's database being present,
+    which is exactly the coupling the two-file split exists to prevent.
+
+    Silent on failure for the same reason `record_extension` is: an author
+    losing the refusal log is a nuisance, and a researcher losing an accepted
+    finding because the log could not be written is a bug.
+    """
+    from app.web import state
+
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 — see the docstring
+        return
+    try:
+        state.record_submission(
+            conn,
+            door=door,
+            subject_id=subject_id,
+            pack_id=pack_id,
+            verdicts=verdicts,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        conn.close()

@@ -855,33 +855,6 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   data, and no tracked path may be unnameable on Windows. All in the ordinary
   pytest suite, no toolchain needed.
 
-### B54 — Reader verdicts are collected but feed nothing `[G1]` `[P1]`
-*(new 2026-09-07)*
-
-Every risk card in the extension now asks "was this any use?", and the answers
-land in `claim_marks` in `app.sqlite` — visible on *Knowledge → what readers
-said*, and nowhere else. That is deliberate for one release: a verdict is
-interface state, and wiring it into ranking before there is any of it would be
-tuning against noise.
-
-What it is *for* is the thing the product principle has never had evidence for:
-which claims clear the "would a buyer learn this from a normal inspection
-anyway?" bar. `not_applicable` is the more valuable of the two negatives — it
-says the pack's *matching* was wrong, not its knowledge, and that is a
-resolution error the ledger cannot see from the claim row.
-
-The mechanism, when there is data (and it must be a mechanism, per the
-generalization principle — never a per-claim edit):
-
-- an aggregate the coverage report reads, so a claim marked wrong by several
-  readers surfaces as a candidate for re-extraction rather than a to-do;
-- `not_applicable` clusters attributed to the *adapter*, since a claim that is
-  repeatedly "not mine" for one pack is a fitment bug, not a bad claim;
-- nothing that requires a person to read a verdict and act on it.
-
-Blocked on having marks at all. It ships with no reader-facing behaviour today
-on purpose.
-
 ### B53 — The desktop shell has no `Cargo.lock`, so no two builds are the same
 `tauri/src-tauri/Cargo.lock` is not committed and `tauri-plugin-updater = "2"`
 floats, so every CI run resolves whatever crates.io holds that minute. This is

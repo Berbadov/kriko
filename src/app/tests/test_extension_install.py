@@ -8,6 +8,7 @@ install that silently reaches nothing) looks identical to a bad install.
 """
 
 import json
+import re
 
 from fastapi.testclient import TestClient
 
@@ -152,6 +153,8 @@ def test_the_shipped_list_matches_what_the_manifest_actually_references(tmp_path
     for resource in manifest.get("web_accessible_resources", []):
         referenced.update(resource.get("resources", []))
     referenced.update(manifest.get("icons", {}).values())
+    if manifest.get("options_ui", {}).get("page"):
+        referenced.add(manifest["options_ui"]["page"])
 
     client = _client(tmp_path)
     client.post("/api/extension/stage")
@@ -161,4 +164,30 @@ def test_the_shipped_list_matches_what_the_manifest_actually_references(tmp_path
     assert missing == [], (
         f"manifest.json references {missing}, which app.extension.SHIPPED does "
         f"not carry — the browser would refuse to load the staged folder"
+    )
+
+
+def test_a_staged_page_can_load_everything_it_asks_for(tmp_path):
+    """One step past the manifest, and for the same reason.
+
+    An HTML page in the extension pulls its own script and stylesheet, and
+    neither is named in `manifest.json` — so the allowlist can carry the page
+    and leave its two halves behind, which renders as an options screen that
+    silently does nothing. Derived from the staged files rather than listed
+    here, so a page added later is covered the moment it exists.
+    """
+    client = _client(tmp_path)
+    client.post("/api/extension/stage")
+    staged = tmp_path / "extension"
+
+    broken = []
+    for page in sorted(staged.rglob("*.html")):
+        text = page.read_text("utf-8")
+        for ref in re.findall(r'(?:src|href)="([^"#?:]+)"', text):
+            if ref.startswith("/"):
+                continue
+            if not (page.parent / ref).exists():
+                broken.append(f"{page.relative_to(staged)} → {ref}")
+    assert broken == [], (
+        f"staged pages reference files that were not shipped: {broken}"
     )
