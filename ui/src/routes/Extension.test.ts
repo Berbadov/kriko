@@ -137,6 +137,18 @@ describe("adding the browser extension", () => {
         expect(screen.getByText(/matches \/listing\//)).toBeInTheDocument();
     });
 
+    it("tells the reader the shortcut and where the address is changed", async () => {
+        // Both are unfindable otherwise: a browser never advertises an
+        // extension's keyboard command, and the options page lives two clicks
+        // deep in the extension manager — which is where a reader ends up
+        // only after the panel has already told them nothing is listening.
+        stubFetch({ "/api/extension": status({ staged: true }), "/api/adapters": [] });
+        render(Extension);
+        expect(await screen.findByText("Alt")).toBeInTheDocument();
+        expect(screen.getByText("K")).toBeInTheDocument();
+        expect(screen.getByText(/Extension options/)).toBeInTheDocument();
+    });
+
     it("says the panel will stay quiet when no pack ships an adapter", async () => {
         stubFetch({ "/api/extension": status({ staged: true }), "/api/adapters": [] });
         render(Extension);

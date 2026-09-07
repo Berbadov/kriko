@@ -76,6 +76,22 @@ def test_a_route_that_is_not_a_route_is_refused(client, route):
     assert client.post("/api/focus", json={"route": route}).status_code == 422
 
 
+@pytest.mark.parametrize(
+    "route", ["result/abc123", "questions/abc123", "compare/abc123", "jobs"]
+)
+def test_every_route_the_panel_can_hand_over_fits_the_shape(client, route):
+    """The closed shape is the defence, so it also decides what the extension
+    is *able* to offer — and that constraint runs the other way too.
+
+    The panel's "Ask the seller" and "Compare" buttons exist because those two
+    app screens accept an id as a path segment. If either ever moved to a
+    query-string-only address, this endpoint would refuse the handoff and the
+    buttons would silently stop working; failing here instead is the point.
+    """
+    assert client.post("/api/focus", json={"route": route}).status_code == 200
+    assert client.get("/api/focus").json()["route"] == route
+
+
 def test_a_stale_nudge_is_dropped_rather_than_replayed(client, monkeypatch):
     """A window opened minutes later must not jump to a forgotten report."""
     client.post("/api/focus", json={"route": "result/abc"})

@@ -1090,3 +1090,28 @@ form.ask.stack {
 form.ask.stack .field span.meta {
     max-width: var(--measure);
 }
+
+/* A list that is prose in list form: several separate things to know, none of
+ * them a step and none of them a row of data. The bullet is the only marker
+ * it needs, and the measure is what keeps it readable. */
+ul.plain {
+    list-style: disc;
+    padding-inline-start: var(--s-4);
+    max-width: var(--measure);
+}
+ul.plain li {
+    margin-block-end: var(--s-2);
+    color: var(--dim);
+}
+
+/* A key on a keyboard, in prose. Small enough not to shout, boxed enough to
+ * read as a key rather than as emphasis. */
+kbd {
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    line-height: var(--lh-xs);
+    padding: 0.1em 0.4em;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    white-space: nowrap;
+}

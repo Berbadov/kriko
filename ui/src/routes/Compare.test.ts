@@ -97,6 +97,22 @@ describe("Compare", () => {
         ).toBeInTheDocument();
     });
 
+    it("accepts an id as a path segment, which is all the extension can send", async () => {
+        // `/api/focus` refuses a query string on purpose — a route posted by a
+        // web page is only safe to act on because its shape is closed. So the
+        // panel's "Compare" button can only say `compare/<id>`, and this is
+        // the same destination in that alphabet: one column seeded, the rest
+        // left to pick, which is what "compare this with something" means.
+        window.location.hash = "#/compare/a1";
+        stubFetch(BOTH);
+        render(Compare);
+        const first = (await screen.findByLabelText("First")) as HTMLSelectElement;
+        expect(first.value).toBe("a1");
+        // And no table yet: one answer is not a comparison, so the screen is
+        // waiting on the reader for the other side rather than pretending.
+        expect(screen.queryByRole("columnheader", { name: "One" })).toBeNull();
+    });
+
     it("says there is nothing to compare with fewer than two stored answers", async () => {
         window.location.hash = "#/compare";
         stubFetch({ "/api/history": { items: [HISTORY["/api/history"].items[0]] } });

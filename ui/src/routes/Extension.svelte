@@ -229,6 +229,32 @@
         {/if}
 
         <article class="card">
+            <h3>Once it is loaded</h3>
+            <!-- Two facts a reader can only learn by being told. A keyboard
+                 shortcut nobody knows about is a shortcut nobody has, and the
+                 extension's own settings page is buried in the browser's
+                 extension manager — which is the last place someone looks
+                 when the panel says nothing is listening. -->
+            <ul class="plain">
+                <li>
+                    The panel opens from the toolbar button, or with
+                    <kbd>Alt</kbd> + <kbd>K</kbd> on the listing itself. If
+                    another extension already owns that combination the browser
+                    silently declines it — the toolbar button always works.
+                </li>
+                <li>
+                    It looks for this app at <code>{status.port
+                        ? `127.0.0.1:${status.port}`
+                        : "127.0.0.1"}</code>. If you run the app somewhere
+                    else, the extension's own options page is where that
+                    address is changed — reachable from
+                    <strong>Details → Extension options</strong> on your
+                    browser's extensions page.
+                </li>
+            </ul>
+        </article>
+
+        <article class="card">
             <h3>Sites the installed packs can read</h3>
             {#if adapters.length}
                 <ul>

@@ -37,6 +37,39 @@ describe("App", () => {
         expect(await screen.findByText(/No such view/)).toBeInTheDocument();
     });
 
+    it("opens the question sheet from a path the extension can hand over", async () => {
+        // The panel's "Ask the seller" button posts a route to `/api/focus`,
+        // which refuses a query string on purpose — so the id can only travel
+        // as a path segment. The rail's own entry (`#/questions`, no id) and
+        // the report's link (`?id=`) both still work; this is a third
+        // spelling of the same screen, added for the one caller that cannot
+        // use the other two.
+        window.location.hash = "#/questions/L1?mode=buyer";
+        stubFetch({
+            ...EMPTY,
+            "/api/history": {
+                items: [{
+                    lookup_id: "L1", created_at: "2026-09-01", source: "url",
+                    label: "The one", claim_count: 1,
+                }],
+            },
+            "/api/lookup/L1": {
+                lookup_id: "L1", created_at: "", source: "url",
+                label: "The one", request: {},
+                response: { method: "exact", claims: [{
+                    claim_id: "h", title: "T-h", body: "b",
+                    advice: "Ask for the receipt.", severity: "high",
+                    subject: "s", relevance: 0.5, pack_id: "p",
+                }] },
+            },
+            "/api/lookups/L1/triage": { checked: [], notes: {} },
+        });
+        render(App);
+        expect(
+            await screen.findByText("Ask for the receipt."),
+        ).toBeInTheDocument();
+    });
+
     it("shows first run when the store is empty", async () => {
         stubFetch({
             ...EMPTY,

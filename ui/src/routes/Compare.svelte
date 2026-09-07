@@ -18,10 +18,17 @@
     // the same reason mode does. `left`/`right` are still read because every
     // Report page links here with `?left=`, and a link that stops working is
     // a worse cost than carrying two spellings.
+    // `params[0]` is the extension's spelling: `/api/focus` refuses a query
+    // string, so a route posted from the panel can only carry an id as a path
+    // segment. It seeds the first column and leaves the rest to be picked,
+    // which is exactly what "compare this one with something" means.
     const ids = $derived(
         ($route.query.ids
             ? $route.query.ids.split(",")
-            : [$route.query.left ?? "", $route.query.right ?? ""]
+            : [
+                  $route.query.left ?? $route.params[0] ?? "",
+                  $route.query.right ?? "",
+              ]
         )
             .map((id) => id.trim())
             .filter(Boolean)

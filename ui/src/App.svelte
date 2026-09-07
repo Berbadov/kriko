@@ -114,9 +114,19 @@
                     {:else if $route.name === "questions"}
                         <!-- The id rides in the query rather than the path so
                              the rail's own entry (no id at all) is the same
-                             route, and resolves to the newest saved answer. -->
-                        {#key $route.query.id ?? ""}
-                            <Questions lookupId={$route.query.id ?? ""} />
+                             route, and resolves to the newest saved answer.
+
+                             A path segment is accepted as well, and only for
+                             one caller: the browser extension hands a route
+                             to `/api/focus`, which refuses a query string on
+                             purpose (a closed route shape is what makes an
+                             address posted by a web page safe to act on). So
+                             `questions/<id>` is the same destination spelled
+                             in the alphabet that handoff allows. -->
+                        {#key $route.params[0] ?? $route.query.id ?? ""}
+                            <Questions
+                                lookupId={$route.params[0] ?? $route.query.id ?? ""}
+                            />
                         {/key}
                     {:else if $route.name === "connect"}
                         <Connect />
