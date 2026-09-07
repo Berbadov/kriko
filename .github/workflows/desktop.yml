@@ -29,35 +29,50 @@ permissions:
     contents: read
 
 jobs:
+    # Which runners to bundle on, decided in one place.
+    #
+    # Windows only by default, because the reader is: one person opens these
+    # installers and they are on Windows, so a .deb and a .dmg nobody
+    # downloads are two more runners' minutes on every tag. A pull request
+    # still builds all three — that check exists to catch an OS-specific
+    # break *before* a release, and narrowing it would hide one until exactly
+    # the wrong moment. `platforms: all` on a hand-run brings them back.
+    #
+    # It is a job rather than a job-level `if` because a matrix leg cannot be
+    # switched off that way: `jobs.<id>.if` is evaluated once, before the
+    # matrix exists, so it cannot see `matrix.label`. Computing the matrix is
+    # the only way to have fewer legs.
+    which:
+        name: which runners
+        runs-on: ubuntu-latest
+        outputs:
+            legs: ${{ steps.pick.outputs.legs }}
+        steps:
+            - id: pick
+              shell: bash
+              run: |
+                  windows='{"os":"windows-latest","label":"windows","sidecar":"kriko-sidecar.exe"}'
+                  others='{"os":"ubuntu-22.04","label":"linux","sidecar":"kriko-sidecar"},{"os":"macos-latest","label":"macos","sidecar":"kriko-sidecar"}'
+                  if [ "${{ github.event_name }}" = "pull_request" ] \
+                     || [ "${{ inputs.platforms }}" = "all" ]; then
+                      legs="[$others,$windows]"
+                  else
+                      legs="[$windows]"
+                  fi
+                  echo "legs=$legs" >> "$GITHUB_OUTPUT"
+                  echo "$legs"
+
     bundle:
+        needs: which
         name: ${{ matrix.label }}
         runs-on: ${{ matrix.os }}
-        # Windows only, unless asked otherwise — and always all three on a
-        # pull request, because "does the bundle still build on each OS" is
-        # exactly what that check is for and narrowing it would hide a break
-        # until a release.
-        #
-        # Releases are Windows-only for now because the reader is: there is
-        # one person opening these installers and they are on Windows, and a
-        # .deb and a .dmg nobody downloads are twelve minutes of two runners
-        # per tag. `platforms: all` on a hand-run brings the others back, and
-        # the release job already tolerates a partial artifact set — it fails
-        # only on an *empty* one.
-        if: >-
-            matrix.label == 'windows'
-            || github.event_name == 'pull_request'
-            || inputs.platforms == 'all'
-
         strategy:
             # fail-fast off: "does it build on Windows" and "does it build on
             # macOS" are separate answers, and one failing must not hide the
             # other.
             fail-fast: false
             matrix:
-                include:
-                    - { os: ubuntu-22.04, label: linux, sidecar: kriko-sidecar }
-                    - { os: macos-latest, label: macos, sidecar: kriko-sidecar }
-                    - { os: windows-latest, label: windows, sidecar: kriko-sidecar.exe }
+                include: ${{ fromJSON(needs.which.outputs.legs) }}
         steps:
             - uses: actions/checkout@v4
 
