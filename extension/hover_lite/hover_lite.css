@@ -234,12 +234,159 @@
 }
 .lite-footer[hidden] { display: none; }
 /* The one action in a footer that is otherwise attribution — underlined so it
-   reads as a link at 10px, where colour alone does not. */
+   reads as a link at 10px, where colour alone does not.
+   A <button>, not an <a>, because it raises the desktop window rather than
+   navigating; the link styling stays because that is what it looks like it
+   does, and the reader should not have to care which. */
 .lite-open-app {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
   color: var(--accent);
   text-decoration: underline;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 .lite-open-app:hover { color: var(--fg); }
+.lite-open-app:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   Verdict row — "was this any use?"
+   ───────────────────────────────────────────── */
+/* Inside the expanded card, below the body: a verdict is the one thing a
+   reader can give back, and it is only cheap to ask while they are looking at
+   the car. Kept quiet (faint until hover) so it never competes with the
+   claim itself for attention. */
+.lite-rc-mark {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+}
+.lite-rc-mark-label {
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: var(--fg-faint);
+  margin-right: 2px;
+}
+.lite-rc-markbtn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.lite-rc-markbtn:hover {
+  color: var(--fg);
+  border-color: var(--border);
+  background: var(--bg-surface);
+}
+.lite-rc-markbtn:active { transform: scale(0.96); }
+.lite-rc-markbtn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The verdict actually held. Green for useful, red for wrong, neutral for
+   "not mine" — because "not mine" is a *matching* problem, not a claim
+   that is bad, and colouring it like one would misreport it. */
+.lite-rc-markbtn[aria-pressed="true"] {
+  color: var(--fg);
+  border-color: var(--border);
+  background: var(--bg-item);
+}
+.lite-rc-markbtn[aria-pressed="true"][data-verdict="useful"] {
+  color: var(--low-ink);
+  border-color: var(--low-border);
+  background: var(--low-surface);
+}
+.lite-rc-markbtn[aria-pressed="true"][data-verdict="wrong"] {
+  color: var(--high-ink);
+  border-color: var(--high-border);
+  background: var(--high-surface);
+}
+
+/* ─────────────────────────────────────────────
+   Gap card — a subject with nothing on it yet
+   ───────────────────────────────────────────── */
+/* Deliberately not styled as an error or an empty state. The packs resolved
+   this car and hold no claim for it: that is a named, fillable gap, so it
+   gets a dashed edge (unfinished, not broken) and a button. */
+.lite-gap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 11px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  animation: lite-gap-in var(--dur-med) var(--ease-out) both;
+}
+@keyframes lite-gap-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lite-gap { animation: none; }
+}
+.lite-gap-body { flex: 1; min-width: 0; }
+.lite-gap-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 3px;
+}
+.lite-gap-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+.lite-gap-btn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--high-border);
+  background: var(--high-surface);
+  color: var(--accent);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+.lite-gap-btn:hover { background: var(--bg-item); }
+.lite-gap-btn:active { transform: scale(0.97); }
+.lite-gap-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+.lite-gap-btn[disabled] {
+  cursor: default;
+  opacity: 0.6;
+  transform: none;
+}
 
 /* ─────────────────────────────────────────────
    Severity chips (counts strip)

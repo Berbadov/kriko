@@ -28,9 +28,11 @@ from app.web.routers import (
     analyze,
     control,
     extension,
+    focus,
     health,
     history,
     jobs,
+    marks,
     packs,
     query,
     subjects,
@@ -68,9 +70,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         analyze.router,
         control.router,
         extension.router,
+        focus.router,
         health.router,
         history.router,
         jobs.router,
+        marks.router,
     ):
         app.include_router(router)
 

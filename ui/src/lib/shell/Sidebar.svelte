@@ -21,7 +21,11 @@
              app icon is rendered from. The reader met this product in a
              browser toolbar; a different mark here reads as a different
              tool. -->
-        <img class="mark" src="/mark.svg" alt="" width="28" height="28" />
+        <!-- `/static/`, not `/`: Vite's base is /static/ because FastAPI
+             mounts StaticFiles there, so a root-relative path to a
+             public/ asset falls through to the SPA catch-all and the mark
+             renders as a broken image. Guarded by public-assets.test.ts. -->
+        <img class="mark" src="/static/mark.svg" alt="" width="28" height="28" />
         <span class="brand-text">
             <strong>Kriko</strong>
             <span class="meta">local product knowledge</span>

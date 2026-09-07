@@ -140,25 +140,163 @@ test("a real failure is still shown as one", () => {
 
 // ── the way back to the app ─────────────────────────────────────────────
 
-test("the footer offers to open the same answer in the app", () => {
+test("the footer raises the desktop app rather than opening a browser tab", () => {
   // The panel is deliberately small — it shows the risks and stops. The full
-  // report, the sources and the comparison live in the app, and until now the
-  // only route there was to retype the listing url into it by hand.
+  // report, the sources and the comparison live in the app.
+  //
+  // It used to get there with an <a href> at the engine's own port, which
+  // opens the report as *another browser tab* next to the desktop app the
+  // reader already has running. "Open in Kriko" has to mean the window, so
+  // the control is a button and the route travels as a message.
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...ENTRY, result: {
-    ...ENTRY.result, app_url: "http://127.0.0.1:8787/#/result/abc123" } });
+    ...ENTRY.result,
+    app_route: "result/abc123",
+    app_url: "http://127.0.0.1:8787/#/result/abc123",
+  } });
 
-  const link = p.footer().querySelector("a");
-  assert.equal(link.getAttribute("href"), "http://127.0.0.1:8787/#/result/abc123");
-  assert.equal(link.getAttribute("target"), "_blank");
+  assert.equal(p.footer().querySelector("a"), null, "no browser-tab link");
+  p.click(".lite-open-app");
+
+  const ask = p.sent.find((m) => m.type === "OPEN_IN_APP");
+  assert.ok(ask, "the panel asked the worker to raise the app");
+  assert.equal(ask.payload.route, "result/abc123");
+  // The tab survives as the *fallback* the worker uses when no shell answers,
+  // so it is still carried — just no longer the default path.
+  assert.equal(ask.payload.fallbackUrl, "http://127.0.0.1:8787/#/result/abc123");
   // The pack attribution the footer already carried must survive the addition.
   assert.match(p.footer().textContent, /org\.kriko\.cars/);
 });
 
-test("an answer the app never stored offers no link", () => {
+test("an answer the app never stored offers no way in", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry(ENTRY);
-  assert.equal(p.footer().querySelector("a"), null);
+  assert.equal(p.footer().querySelector(".lite-open-app"), null);
+});
+
+// ── marking knowledge from the panel ────────────────────────────────────
+
+const RISK = {
+  claim_id: "c1",
+  // A verdict is stored per (pack, claim): claim ids are only unique inside
+  // the pack that minted them, so the pack travels with the mark.
+  pack_id: "org.kriko.cars",
+  subject_id: "s1",
+  title: "Timing chain tensioner wear",
+  severity: "high",
+  strength: "reported",
+  domain: "engine",
+};
+
+test("a verdict on a claim reaches the app with the claim's own id", () => {
+  // The panel is where a reader is actually looking at the car, so it is the
+  // only place a verdict is cheap to collect. It travels by claim_id: a
+  // verdict against a *rendered position* would attach to whatever ranked
+  // third the next time the pack changed.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+
+  p.click('.lite-rc-markbtn[data-verdict="useful"]');
+
+  const mark = p.sent.find((m) => m.type === "MARK_CLAIM");
+  assert.ok(mark, "the verdict left the panel");
+  assert.equal(mark.payload.claim_id, "c1");
+  assert.equal(mark.payload.verdict, "useful");
+  assert.equal(mark.payload.subject_id, "s1");
+  assert.equal(mark.payload.pack_id, "org.kriko.cars");
+});
+
+test("the verdict paints immediately, before the app has answered", () => {
+  // A round trip to the engine is fast but not free, and a button that looks
+  // dead until it returns gets clicked twice.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+
+  const button = p.click('.lite-rc-markbtn[data-verdict="wrong"]');
+  assert.equal(button.getAttribute("aria-pressed"), "true");
+  // And only that one.
+  const useful = p.shadow().querySelector('.lite-rc-markbtn[data-verdict="useful"]');
+  assert.equal(useful.getAttribute("aria-pressed"), "false");
+});
+
+test("pressing the verdict already held takes it back", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+
+  p.click('.lite-rc-markbtn[data-verdict="useful"]');
+  const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
+
+  assert.equal(button.getAttribute("aria-pressed"), "false");
+  const asks = p.sent.filter((m) => m.type === "MARK_CLAIM");
+  // A falsy verdict is the retraction — the worker turns it into a DELETE.
+  assert.ok(!asks[asks.length - 1].payload.verdict);
+});
+
+test("a verdict the app refuses does not stay painted", () => {
+  // The optimism has to be reversible, or a mark that never reached the
+  // engine reads to the reader as one that did.
+  const p = loadPanel({ workerResponse: { ok: false, error: "no such claim" } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+
+  const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
+  assert.equal(button.getAttribute("aria-pressed"), "false");
+});
+
+test("a claim with no id offers no verdict at all", () => {
+  // Older stored answers predate claim_id. A verdict with nothing to attach
+  // to is worse than no verdict, so the control is absent rather than inert.
+  const p = loadPanel();
+  p.openPanel();
+  const { claim_id, ...anonymous } = RISK;
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [anonymous] } });
+
+  assert.equal(p.shadow().querySelector(".lite-rc-markbtn"), null);
+});
+
+// ── researching a gap from the panel ────────────────────────────────────
+
+const GAP_ENTRY = {
+  ...ENTRY,
+  result: {
+    ...ENTRY.result,
+    risks: [],
+    coverage: "NO_RISKS",
+    subjects: [{ subject_id: "s9", pack_id: "org.kriko.cars",
+                 label: "VW Golf 1.6 TDI", kind: "product", claims: 0 }],
+  },
+};
+
+test("a subject the packs know but hold nothing on becomes a research button", () => {
+  // The difference that matters: "nothing matched" is a pack adapter problem
+  // the reader cannot act on, while a subject that resolved with zero claims
+  // is a *named* gap. Naming it is what makes it researchable in one click.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(GAP_ENTRY);
+
+  const gap = p.shadow().querySelector(".lite-gap");
+  assert.ok(gap, "the gap was rendered");
+  assert.match(gap.textContent, /VW Golf 1\.6 TDI/);
+
+  p.click(".lite-gap-btn");
+  const ask = p.sent.find((m) => m.type === "RESEARCH_SUBJECT");
+  assert.ok(ask, "research was requested");
+  assert.equal(ask.payload.subject_id, "s9");
+  assert.equal(ask.payload.pack_id, "org.kriko.cars");
+});
+
+test("a subject that already has claims is not offered as a gap", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
+    risks: [RISK],
+    subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 4 }] } });
+
+  assert.equal(p.shadow().querySelector(".lite-gap"), null);
 });

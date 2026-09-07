@@ -84,6 +84,36 @@ def _context_units(store, context) -> dict:
     return {r["term_id"]: r["unit"] for r in rows}
 
 
+def _resolved(store, subject_ids) -> list[dict]:
+    """The subjects a lookup landed on, with how much is known about each.
+
+    Enabled packs only, matching every other read: a disabled pack's subject
+    must not appear as somewhere to send a research run.
+
+    The claim count is the point of the row. Zero is the actionable value —
+    the listing matched something the installed packs recognise and have
+    nothing to say about — and a caller that had to infer it from an empty
+    `claims` array could not tell it apart from "nothing matched at all".
+    """
+    ids = tuple(dict.fromkeys(subject_ids))
+    if not ids:
+        return []
+    marks = ",".join("?" * len(ids))
+    return [
+        dict(row)
+        for row in store.execute(
+            f"SELECT s.subject_id, s.pack_id, s.label, s.kind,"
+            f"       (SELECT COUNT(*) FROM claims c"
+            f"        WHERE c.subject_id = s.subject_id"
+            f"          AND c.pack_id = s.pack_id) AS claims"
+            f" FROM subjects s JOIN packs p USING (pack_id)"
+            f" WHERE p.enabled = 1 AND s.subject_id IN ({marks})"
+            f" ORDER BY s.label",
+            ids,
+        )
+    ]
+
+
 def _packs_behind(store, claims) -> list[dict]:
     ids = sorted({c.pack_id for c in claims})
     if not ids:
@@ -148,8 +178,19 @@ def analyze(
         "method": result.resolution.method,
         "coverage": result.coverage,
         "flags": list(result.resolution.flags),
+        # Which subjects the listing actually resolved to, claims or not.
+        # `claims` cannot answer this: the interesting case is a subject that
+        # resolved and has nothing known about it, which is exactly the row
+        # with no claim to carry it. It is what lets a caller offer "research
+        # this" on a gap instead of only "here is what we know".
+        "subjects": _resolved(store, result.resolution.subject_ids),
         "claims": [
             {
+                # The claim's own identity, so a caller can refer back to it —
+                # mark it, ask for it again, link to it. Without this the
+                # panel could only ever describe a claim, never point at one.
+                "claim_id": c.claim_id,
+                "subject_id": c.subject_id,
                 "title": c.title,
                 "body": c.body,
                 "advice": c.advice,

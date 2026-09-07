@@ -649,6 +649,71 @@ def test_the_frontmatter_description_is_one_line(client):
     assert len(description) > 40
 
 
+def test_the_skill_states_the_pack_keys_rather_than_letting_an_agent_guess(client):
+    """An agent that has to guess an identity key invents a plausible one.
+
+    The keys are read off the rows, per subject kind, so a second category
+    gets its own set with no edit here.
+    """
+    body = client.get("/api/agent-skill").json()["body"]
+    assert "`product` — `brand`, `model`" in body
+    assert "`platform` — `brand`, `platform`" in body
+    # The domain vocabulary is the other invented-value risk: a claim filed
+    # under a domain the pack never declared is unfindable.
+    assert "Domains it accepts: `mech`" in body
+
+
+def test_the_skill_counts_what_is_held_and_what_is_missing(client):
+    """The gap count is what turns a protocol document into a task list."""
+    body = client.get("/api/agent-skill").json()["body"]
+    assert "4 subject(s)" in body
+    assert "2 claim(s)" in body
+    assert "**2** of those subjects have no claim at all" in body
+
+
+def test_the_worked_example_is_a_real_gap_in_this_very_store(client):
+    """A made-up id in an example teaches an agent to make up ids.
+
+    It also picks a subject with no claims first, so the example doubles as
+    the first genuinely useful task.
+    """
+    body = client.get("/api/agent-skill").json()["body"]
+    # The claim-less subject that sorts first by label — the pack has three
+    # of them, and which one the example names matters far less than that it
+    # is one the store can actually resolve.
+    subject_id = ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
+    assert f'research_brief(subject_id="{subject_id}", pack_id="tools")' in body
+    assert "has nothing known about it" in body
+
+
+def test_the_skill_teaches_the_refusals_before_they_happen(client):
+    """Every refusal `accept_findings` can return is named in the document.
+
+    An agent that learns "quotes must be verbatim" from a rejection has
+    already closed the tab it read the sentence in.
+    """
+    body = client.get("/api/agent-skill").json()["body"]
+    for phrase in ("document_text", "verbatim", "`severity`", "`domain`"):
+        assert phrase in body
+
+
+def test_the_skill_generator_types_no_category_words(client):
+    """The whole point: `app/` may describe a pack, never know one.
+
+    A `_MAX_WORDS`-style constant is fine; "engine_code" is not. This walks
+    the module's own source rather than its output, because the output is
+    *supposed* to be full of the fixture pack's words.
+    """
+    from pathlib import Path
+
+    from app import agentskill
+
+    source = Path(agentskill.__file__).read_text(encoding="utf-8")
+    for word in ("engine_code", "make", "mileage", "brand", "voltage", "cam belt"):
+        assert f'"{word}"' not in source
+        assert f"'{word}'" not in source
+
+
 def test_a_store_with_no_packs_gets_no_skill(tmp_path):
     """Nothing to research, and nothing to say what would count."""
     app_ = create_app(
