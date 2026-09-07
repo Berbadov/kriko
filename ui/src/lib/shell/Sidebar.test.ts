@@ -6,7 +6,7 @@ describe("Sidebar", () => {
     it("shows a buyer two group-less destinations and no operator work", () => {
         render(Sidebar, { mode: "buyer" });
         expect(screen.getByRole("link", { name: "New check" })).toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "Coverage" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Browse" })).toBeNull();
         expect(screen.queryByText("Knowledge")).toBeNull();
     });
 
@@ -19,7 +19,7 @@ describe("Sidebar", () => {
 
     it("carries the mode into every link, so a click does not silently switch it", () => {
         render(Sidebar, { mode: "author" });
-        const link = screen.getByRole("link", { name: "Coverage" }) as HTMLAnchorElement;
+        const link = screen.getByRole("link", { name: "Browse" }) as HTMLAnchorElement;
         expect(link.getAttribute("href")).toContain("mode=author");
     });
 

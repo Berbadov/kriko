@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Connect from "./Connect.svelte";
 import { stubFetch, stubFetchFailing } from "../lib/stub-fetch";
@@ -129,5 +129,24 @@ describe("connecting an agent", () => {
         stubFetchFailing();
         render(Connect);
         expect(await screen.findByText(/Could not read the harness config/)).toBeInTheDocument();
+    });
+
+    it("blames the switch, not a missing download, when a pack is off", async () => {
+        // The most confusing state this app has: a pack is installed and
+        // disabled, so the generated skill is empty everywhere. Saying "no
+        // packs installed" sends the reader looking for a download when the
+        // fix is one toggle.
+        routes({
+            "/api/agent-skill": { name: "kriko-research", body: "", steps: [] },
+            "/api/packs": [
+                { pack_id: "p1", name: "Used cars", version: "1.0.0",
+                  enabled: false, subjects: 2, claims: 3 },
+            ],
+        });
+        render(Connect, {});
+        await waitFor(() =>
+            expect(screen.getByText(/switched off/)).toBeInTheDocument(),
+        );
+        expect(screen.getByText(/Used cars/)).toBeInTheDocument();
     });
 });

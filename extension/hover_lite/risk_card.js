@@ -74,6 +74,17 @@
                   ${escapeHtml(risk.inspection_advice)}
                 </div>
               </div>` : ""}
+            ${risk.claim_id ? `
+              <div class="lite-rc-mark" role="group" aria-label="Was this any use?">
+                <span class="lite-rc-mark-label">Was this any use?</span>
+                <button type="button" class="lite-rc-markbtn" data-verdict="useful"
+                        aria-pressed="false" title="Worth knowing">Useful</button>
+                <button type="button" class="lite-rc-markbtn" data-verdict="not_applicable"
+                        aria-pressed="false"
+                        title="True of this engine, but not of this car">Not mine</button>
+                <button type="button" class="lite-rc-markbtn" data-verdict="wrong"
+                        aria-pressed="false" title="Not true">Wrong</button>
+              </div>` : ""}
           </div>
         </div>
       </div>
@@ -98,5 +109,18 @@
     }
   }
 
-  window.__KrikoPanelRiskCard = { renderRiskCard, updateRiskCard };
+  /** Show which verdict, if any, this claim already carries.
+   *
+   * Separate from `updateRiskCard` because a mark arrives from a round trip
+   * to the app while `open`/`compact` are local state — folding them together
+   * would make every expand re-assert a verdict the server may have refused.
+   */
+  function markRiskCard(article, verdict) {
+    article.querySelectorAll(".lite-rc-markbtn").forEach((button) => {
+      const on = button.dataset.verdict === verdict;
+      button.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  window.__KrikoPanelRiskCard = { renderRiskCard, updateRiskCard, markRiskCard };
 })();

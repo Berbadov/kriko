@@ -1,0 +1,627 @@
+<script lang="ts">
+    import Brief from "../lib/Brief.svelte";
+    import EmptyState from "../lib/EmptyState.svelte";
+    import Health from "./Health.svelte";
+    import { api } from "../lib/api";
+    import { severityWord } from "../lib/report";
+    import type {
+        Gap,
+        Marks,
+        Pack,
+        Status,
+        Subject,
+        SubjectDetail,
+    } from "../lib/types";
+
+    /* One screen for "what does this install actually know".
+     *
+     * It replaces three — Subjects, Coverage, Health — which was the wrong
+     * split. Those are not three places, they are three *questions about the
+     * same list*: what is here, what is missing, and what is thinly supported.
+     * Splitting them by route meant a reader who wanted "the Golf" had to
+     * guess which of three tabs held it, and each tab answered by dumping its
+     * whole table on arrival — 47 subjects, then 40 weak claims, then the
+     * gaps, none of it asked for.
+     *
+     * So: one list, three lenses over it, nothing expanded until asked. The
+     * counts in the header are the only thing shown unprompted, because a
+     * count is an orientation and a table is a demand.
+     */
+
+    type Lens = "all" | "gaps" | "weak" | "marked";
+
+    // The lens can arrive from the route: `#/coverage` and `#/health` are
+    // links this app has been handing out for versions, and they resolve here
+    // now (see nav.ts's ALIASES). A bookmark must land on the lens it named.
+    let { lens: initial = "all" }: { lens?: string } = $props();
+
+    let lens = $state<Lens>((["all", "gaps", "weak", "marked"].includes(initial)
+        ? initial
+        : "all") as Lens);
+    let query = $state("");
+    let packFilter = $state("");
+    let shown = $state(25);
+
+    let status = $state<Status | null>(null);
+    let packs = $state<Pack[]>([]);
+    let subjects = $state<Subject[]>([]);
+    let gaps = $state<Gap[]>([]);
+    let error = $state("");
+    let loading = $state(true);
+
+    // Verdicts readers left, almost all of them from the browser extension —
+    // the panel is where someone is actually looking at the product, so it is
+    // the only place feedback is cheap to collect. They arrive here because
+    // "which claims are getting called wrong" is an authoring question, and
+    // this is the authoring screen.
+    let marks = $state<Marks | null>(null);
+    let markError = $state("");
+
+    // Which row is open, and what was fetched for it. Keyed by subject id
+    // rather than held as "the open row" so collapsing and re-expanding does
+    // not re-fetch, and so two rows can be compared without losing the first.
+    let open = $state<Record<string, boolean>>({});
+    let detail = $state<Record<string, SubjectDetail | string>>({});
+    // Research is deliberately not the same state as expansion: a reader who
+    // opened a row to read it must not have a job started underneath them.
+    let researching = $state<Record<string, boolean>>({});
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function loadList() {
+        loading = true;
+        try {
+            // 500 rather than the default 60, and paged in the client: this is
+            // a local SQLite read of one table, so the network is not the cost
+            // here — the cost is the reader's attention, and that is what
+            // `shown` bounds.
+            subjects = await api.subjects(query.trim(), 500);
+            error = "";
+        } catch (cause) {
+            error = String(cause);
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function loadFrame() {
+        const [s, p] = await Promise.all([
+            api.status().catch(() => null),
+            api.packs().catch(() => [] as Pack[]),
+        ]);
+        status = s;
+        packs = p;
+        // Gaps are per pack, and a disabled pack still reports them — a gap is
+        // a fact about the pack's own contents, not about whether the reader
+        // has it switched on.
+        const lists = await Promise.all(
+            p.map((pack) => api.gaps(pack.pack_id).catch(() => [] as Gap[])),
+        );
+        gaps = lists.flat();
+    }
+
+    async function loadMarks() {
+        try {
+            marks = await api.marks();
+            markError = "";
+        } catch (cause) {
+            markError = String(cause);
+        }
+    }
+
+    /** Drop a verdict.
+     *
+     * The author's move after acting on it: a claim they rewrote should stop
+     * being listed as wrong, and there is no other way to retract a mark from
+     * inside the app. It removes the *reader's note*, never the claim.
+     */
+    async function forget(packId: string, claimId: string) {
+        await api.unmark(packId, claimId);
+        await loadMarks();
+    }
+
+    const VERDICT_WORDS: Record<string, string> = {
+        useful: "Useful",
+        // Kept apart on purpose: `wrong` is a claim problem, `not_applicable`
+        // is a *matching* problem — the claim may be perfectly true of the
+        // product it was written for, and this was not that one. Merging them
+        // would hide which half of the system needs the fix.
+        not_applicable: "Not mine",
+        wrong: "Wrong",
+    };
+
+    function onInput() {
+        clearTimeout(timer);
+        shown = 25;
+        timer = setTimeout(loadList, 180);
+    }
+
+    async function expand(subject: Subject) {
+        open = { ...open, [subject.subject_id]: !open[subject.subject_id] };
+        if (detail[subject.subject_id]) return;
+        try {
+            detail = {
+                ...detail,
+                [subject.subject_id]: await api.subject(subject.subject_id),
+            };
+        } catch (cause) {
+            detail = { ...detail, [subject.subject_id]: String(cause) };
+        }
+    }
+
+    const ready = Promise.all([loadList(), loadFrame(), loadMarks()]);
+
+    // A pack that is installed and switched off is the single most confusing
+    // state this app has: `/api/subjects` filters on `enabled = 1`, so every
+    // list goes empty at once and nothing on screen says why. Said here
+    // because this is the screen where the emptiness is loudest.
+    const disabled = $derived(packs.filter((pack) => !pack.enabled));
+
+    const filtered = $derived(
+        subjects.filter((s) => !packFilter || s.pack_id === packFilter),
+    );
+    const visible = $derived(filtered.slice(0, shown));
+
+    const gapIds = $derived(new Set(gaps.map((gap) => gap.subject_id)));
+    const gapRows = $derived(
+        gaps.filter(
+            (gap) =>
+                !query.trim() ||
+                gap.label.toLowerCase().includes(query.trim().toLowerCase()),
+        ),
+    );
+
+    async function enable(pack: Pack) {
+        await api.setEnabled(pack.pack_id, true);
+        await Promise.all([loadList(), loadFrame()]);
+    }
+</script>
+
+<h2>Knowledge</h2>
+
+<!-- The header is counts, not content: five numbers say where you are
+     without asking the reader to read a table to find out. -->
+{#if status}
+    <ul class="statstrip enter" aria-label="What this install holds">
+        <li>
+            <strong>{status.enabled_packs}</strong>
+            <span class="meta">of {status.counts.packs} pack(s) on</span>
+        </li>
+        <li><strong>{status.counts.subjects}</strong><span class="meta">subjects</span></li>
+        <li><strong>{status.counts.claims}</strong><span class="meta">claims</span></li>
+        <li><strong>{status.counts.evidence}</strong><span class="meta">sources</span></li>
+        <li class={gaps.length ? "warn" : ""}>
+            <strong>{gaps.length}</strong><span class="meta">nothing known</span>
+        </li>
+    </ul>
+{/if}
+
+{#each disabled as pack (pack.pack_id)}
+    <article class="card notice">
+        <div>
+            <strong>{pack.name} is installed but switched off</strong>
+            <span class="meta">
+                It holds {pack.claims} claim(s) about {pack.subjects} subject(s), and
+                answers none of them while it is off — which is why the lists below are
+                empty rather than broken.
+            </span>
+        </div>
+        <button onclick={() => enable(pack)}>Switch it on</button>
+    </article>
+{/each}
+
+<div class="lenses" role="tablist" aria-label="Lens">
+    <button
+        class="tab"
+        role="tab"
+        aria-selected={lens === "all"}
+        class:active={lens === "all"}
+        onclick={() => (lens = "all")}>What is here</button
+    >
+    <button
+        class="tab"
+        role="tab"
+        aria-selected={lens === "gaps"}
+        class:active={lens === "gaps"}
+        onclick={() => (lens = "gaps")}
+        >What is missing{gaps.length ? ` (${gaps.length})` : ""}</button
+    >
+    <button
+        class="tab"
+        role="tab"
+        aria-selected={lens === "weak"}
+        class:active={lens === "weak"}
+        onclick={() => (lens = "weak")}>What is thin</button
+    >
+    <button
+        class="tab"
+        role="tab"
+        aria-selected={lens === "marked"}
+        class:active={lens === "marked"}
+        onclick={() => (lens = "marked")}
+        >What readers said{marks?.items.length ? ` (${marks.items.length})` : ""}</button
+    >
+</div>
+
+{#if lens === "all" || lens === "gaps"}
+    <div class="row filters">
+        <div class="field">
+            <label for="k-search">Search</label>
+            <input
+                id="k-search"
+                bind:value={query}
+                oninput={onInput}
+                placeholder="a name, as the packs spell it…"
+            />
+        </div>
+        {#if packs.length > 1 && lens === "all"}
+            <div class="field">
+                <label for="k-pack">Pack</label>
+                <select id="k-pack" bind:value={packFilter}>
+                    <option value="">Every pack</option>
+                    {#each packs as pack (pack.pack_id)}
+                        <option value={pack.pack_id}>{pack.name}</option>
+                    {/each}
+                </select>
+            </div>
+        {/if}
+    </div>
+{/if}
+
+{#await ready}
+    <p class="state loading">Reading the store…</p>
+{:then}
+    {#if error}
+        <p class="state error">Could not read the store: {error}</p>
+    {:else if lens === "weak"}
+        <Health heading={false} />
+    {:else if lens === "marked"}
+        {#if markError}
+            <p class="state error">Could not read the verdicts: {markError}</p>
+        {:else if !marks}
+            <p class="skeleton" style="height: 4rem">Reading…</p>
+        {:else}
+            <!-- Counts before the list, and every verdict present even at
+                 zero: "three claims called wrong" reads differently against
+                 three marks than against three hundred, and a strip that
+                 changes shape as data arrives is unreadable. -->
+            <ul class="statstrip" aria-label="Verdicts readers left">
+                {#each marks.verdicts as verdict (verdict)}
+                    <li class={verdict === "wrong" && marks.counts[verdict] ? "warn" : ""}>
+                        <strong>{marks.counts[verdict] ?? 0}</strong>
+                        <span class="meta">{VERDICT_WORDS[verdict] ?? verdict}</span>
+                    </li>
+                {/each}
+            </ul>
+
+            {#if !marks.items.length}
+                <EmptyState
+                    title="No one has marked anything yet"
+                    detail="Every risk card in the browser extension asks “was this any
+                            use?”. Answers land here — which claims readers found worth
+                            having, which ones were wrong, and which ones simply were not
+                            about their product."
+                />
+            {:else}
+                <ul class="klist">
+                    {#each marks.items as mark (mark.pack_id + mark.claim_id)}
+                        <li class="krow">
+                            <span class="kmain">
+                                <span class="klabel"
+                                    >{mark.title || mark.claim_id}</span
+                                >
+                                <span class="meta"
+                                    >{mark.pack_id} · {mark.updated_at.slice(0, 10)}</span
+                                >
+                            </span>
+                            <span class="verdict {mark.verdict}"
+                                >{VERDICT_WORDS[mark.verdict] ?? mark.verdict}</span
+                            >
+                            <button
+                                class="ghost"
+                                onclick={() => forget(mark.pack_id, mark.claim_id)}
+                                >Forget</button
+                            >
+                            {#if mark.note}
+                                <p class="kdetail meta">{mark.note}</p>
+                            {/if}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
+        {/if}
+    {:else if lens === "gaps"}
+        {#if !gapRows.length}
+            <EmptyState
+                title={gaps.length ? "No gap matches that" : "Nothing is missing"}
+                detail="A gap is a subject a pack names but holds no claim for. None
+                        listed means every subject the packs know about has something
+                        written against it."
+            />
+        {:else}
+            <ul class="klist">
+                {#each gapRows as gap (gap.subject_id)}
+                    <li class="krow">
+                        <div class="kmain">
+                            <span class="klabel">{gap.label}</span>
+                            <span class="meta">{gap.kind} · nothing known</span>
+                        </div>
+                        <button
+                            onclick={() =>
+                                (researching = {
+                                    ...researching,
+                                    [gap.subject_id]: !researching[gap.subject_id],
+                                })}
+                        >
+                            {researching[gap.subject_id] ? "Hide brief" : "Research"}
+                        </button>
+                        {#if researching[gap.subject_id]}
+                            <div class="kdetail">
+                                <Brief
+                                    subjectId={gap.subject_id}
+                                    packId={packs[0]?.pack_id ?? ""}
+                                    label={gap.label}
+                                    onClose={() =>
+                                        (researching = {
+                                            ...researching,
+                                            [gap.subject_id]: false,
+                                        })}
+                                />
+                            </div>
+                        {/if}
+                    </li>
+                {/each}
+            </ul>
+        {/if}
+    {:else if !filtered.length}
+        <EmptyState
+            title={query ? `Nothing matches “${query}”` : "No subjects to show"}
+            detail="Search matches a subject's label as the installed packs spell it.
+                    A switched-off pack contributes nothing to this list."
+        />
+    {:else}
+        <p class="meta count">
+            {visible.length === filtered.length
+                ? `${filtered.length} subject(s)`
+                : `${visible.length} of ${filtered.length} subject(s)`}
+        </p>
+        <ul class="klist">
+            {#each visible as subject (subject.subject_id)}
+                {@const isOpen = Boolean(open[subject.subject_id])}
+                {@const got = detail[subject.subject_id]}
+                <li class="krow" class:open={isOpen}>
+                    <button
+                        class="kopen"
+                        aria-expanded={isOpen}
+                        onclick={() => expand(subject)}
+                    >
+                        <span class="chev" aria-hidden="true">{isOpen ? "–" : "+"}</span>
+                        <span class="kmain">
+                            <span class="klabel">{subject.label}</span>
+                            <span class="meta">{subject.kind} · {subject.pack_id}</span>
+                        </span>
+                        <span class="badge" class:warn={subject.claims === 0}>
+                            {subject.claims} claim(s)
+                        </span>
+                    </button>
+                    <button
+                        class="ghost"
+                        onclick={() =>
+                            (researching = {
+                                ...researching,
+                                [subject.subject_id]: !researching[subject.subject_id],
+                            })}
+                    >
+                        {researching[subject.subject_id] ? "Hide brief" : "Research"}
+                    </button>
+
+                    {#if researching[subject.subject_id]}
+                        <div class="kdetail">
+                            <Brief
+                                subjectId={subject.subject_id}
+                                packId={subject.pack_id}
+                                label={subject.label}
+                                onClose={() =>
+                                    (researching = {
+                                        ...researching,
+                                        [subject.subject_id]: false,
+                                    })}
+                            />
+                        </div>
+                    {/if}
+
+                    {#if isOpen}
+                        <div class="kdetail enter">
+                            {#if typeof got === "string"}
+                                <p class="state error">{got}</p>
+                            {:else if !got}
+                                <p class="skeleton" style="height: 4rem">Reading…</p>
+                            {:else}
+                                {#if got.attributes.length}
+                                    <ul class="attrs">
+                                        {#each got.attributes as attr (attr.key)}
+                                            <li class:identity={attr.is_identity}>
+                                                <span class="meta">{attr.key}</span>
+                                                <span
+                                                    >{attr.value_text}{attr.unit
+                                                        ? ` ${attr.unit}`
+                                                        : ""}</span
+                                                >
+                                            </li>
+                                        {/each}
+                                    </ul>
+                                {/if}
+                                {#if got.claims.length}
+                                    <ol class="claims">
+                                        {#each got.claims as claim (claim.claim_id)}
+                                            <li>
+                                                <span class="sev {claim.severity}"
+                                                    >{severityWord(claim.severity)}</span
+                                                >
+                                                {claim.title ?? claim.claim_id}
+                                                <span class="meta">{claim.domain}</span>
+                                            </li>
+                                        {/each}
+                                    </ol>
+                                {:else}
+                                    <p class="state empty">
+                                        Nothing is known about this one yet — that is a gap,
+                                        and Research above writes the brief for it.
+                                    </p>
+                                {/if}
+                            {/if}
+                        </div>
+                    {/if}
+                </li>
+            {/each}
+        </ul>
+        {#if visible.length < filtered.length}
+            <button class="ghost more" onclick={() => (shown += 50)}>
+                Show {Math.min(50, filtered.length - visible.length)} more
+            </button>
+        {/if}
+    {/if}
+{/await}
+
+<style>
+    .statstrip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-5);
+        margin: 0 0 var(--s-4);
+        padding: 0;
+        list-style: none;
+    }
+    .statstrip li {
+        display: flex;
+        flex-direction: column;
+    }
+    .statstrip strong {
+        font-size: var(--t-lg);
+        line-height: var(--lh-lg);
+    }
+    .statstrip li.warn strong {
+        color: var(--medium);
+    }
+    .notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-4);
+        flex-wrap: wrap;
+        border-color: var(--medium);
+    }
+    .notice .meta {
+        display: block;
+        max-width: var(--measure);
+    }
+    .lenses {
+        display: flex;
+        gap: var(--s-2);
+        margin-bottom: var(--s-3);
+    }
+    .filters {
+        margin-bottom: var(--s-3);
+    }
+    .count {
+        margin: 0 0 var(--s-2);
+    }
+    .klist {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .krow {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--line);
+        padding: var(--s-1) 0;
+    }
+    /* The whole row is the affordance, not a link buried in it: the reader's
+     * target here is a name, and a 6px chevron is a worse target than the
+     * 40rem of row the name sits in. */
+    .kopen {
+        display: flex;
+        align-items: center;
+        gap: var(--s-3);
+        flex: 1 1 22rem;
+        min-width: 0;
+        background: none;
+        border: 0;
+        padding: var(--s-2) 0;
+        text-align: left;
+        color: inherit;
+        cursor: pointer;
+    }
+    .kopen:hover .klabel {
+        text-decoration: underline;
+    }
+    .chev {
+        width: 1rem;
+        text-align: center;
+        color: var(--dim);
+    }
+    .kmain {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+    }
+    .klabel {
+        overflow-wrap: anywhere;
+    }
+    .badge.warn {
+        background: var(--medium-soft);
+        color: var(--medium);
+    }
+    /* Full-width, so an expanded row's contents are not squeezed into
+     * whatever the flex row had left over. */
+    .kdetail {
+        flex: 1 0 100%;
+        padding: var(--s-2) 0 var(--s-4) var(--s-5);
+    }
+    .attrs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-1) var(--s-4);
+        margin: 0 0 var(--s-3);
+        padding: 0;
+        list-style: none;
+    }
+    .attrs li {
+        display: flex;
+        flex-direction: column;
+    }
+    .attrs li.identity span:last-child {
+        font-weight: 600;
+    }
+    .claims {
+        margin: 0;
+        padding-left: var(--s-5);
+        line-height: var(--lh-read);
+    }
+    .more {
+        margin-top: var(--s-3);
+    }
+    /* Borrows the severity vocabulary rather than inventing a second one:
+     * "wrong" is the only verdict that is a problem, so it is the only one
+     * that gets a problem's colour. */
+    .verdict {
+        font-size: var(--t-sm);
+        padding: 0 var(--s-2);
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--dim);
+        white-space: nowrap;
+    }
+    .verdict.useful {
+        color: var(--low);
+        border-color: var(--low);
+    }
+    .verdict.wrong {
+        color: var(--high);
+        border-color: var(--high);
+    }
+</style>
