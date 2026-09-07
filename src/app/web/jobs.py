@@ -116,7 +116,14 @@ class JobRunner:
                 return
             state.start_job(conn, job_id)
             result = self.handlers[kind](self.settings, params, progress)
-            state.finish_job(conn, job_id, state.SUCCEEDED, result=result, message="done")
+            # No message, so `finish_job`'s COALESCE keeps the handler's own
+            # last word. Every handler ends with a `progress.set(1.0, ...)`
+            # that says what actually happened — "0 claim(s) kept", "cars
+            # built and installed" — and passing "done" overwrote it. That is
+            # how the research job came to look like a button that did nothing:
+            # it succeeded, produced a brief, and reported a word carrying no
+            # information at all.
+            state.finish_job(conn, job_id, state.SUCCEEDED, result=result)
         except Cancelled:
             state.finish_job(conn, job_id, state.CANCELLED, message="cancelled")
         except Exception as exc:  # noqa: BLE001 — a failed job is data, not a crash

@@ -79,7 +79,47 @@ CREATE TABLE IF NOT EXISTS claim_checks (
     created_at TEXT NOT NULL,
     PRIMARY KEY (lookup_id, claim_key)
 );
+
+-- What the reader thought of a claim, as opposed to whether they have dealt
+-- with it in one answer (`claim_checks`, above). A mark is about the claim
+-- itself: "this was wrong about my car" stays true on the next listing, so it
+-- is keyed by the pack's claim identity rather than by a lookup.
+--
+-- Interface state, not engine state, for the reason at the top of this file:
+-- a reader's opinion must not change a pack's `content_digest`, and
+-- uninstalling a pack must not erase what they said about it. That also makes
+-- this the honest place for it — an opinion is not evidence, and the engine's
+-- schema is for things a pack writes or a ranker reads.
+--
+-- `subject_id` and `title` are copied in rather than joined out. A pack
+-- updates weekly and can be uninstalled; a mark whose claim row has since
+-- gone must still be readable, or the reader's own notes turn into a list of
+-- hashes. This is a snapshot on purpose, and it is why the copy is not a
+-- normalisation bug.
+CREATE TABLE IF NOT EXISTS claim_marks (
+    pack_id    TEXT NOT NULL,
+    claim_id   TEXT NOT NULL,
+    verdict    TEXT NOT NULL,
+    note       TEXT NOT NULL DEFAULT '',
+    subject_id TEXT NOT NULL DEFAULT '',
+    title      TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (pack_id, claim_id)
+);
+CREATE INDEX IF NOT EXISTS claim_marks_updated ON claim_marks (updated_at DESC);
 """
+
+#: The verdicts a reader may leave. Closed, and allowed to be a constant for
+#: the reason CLAUDE.md's scalability rule carves out: this does not grow with
+#: pack coverage. It is three answers to "was this any use", and a fourth
+#: category would be a product decision, not a new car.
+#:
+#: `not_applicable` is separate from `wrong` because they mean opposite things
+#: to whoever reads the marks later: "true of this engine but not of mine" is a
+#: matching problem, "not true at all" is a knowledge problem, and collapsing
+#: them would throw away the only signal that distinguishes the two.
+VERDICTS = ("useful", "wrong", "not_applicable")
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -285,6 +325,92 @@ def set_checked(
         )
     conn.commit()
     return checked_keys(conn, lookup_id)
+
+
+# ── marks — what the reader thought of a claim ────────────────────────────
+
+
+def mark_claim(
+    conn: sqlite3.Connection,
+    *,
+    pack_id: str,
+    claim_id: str,
+    verdict: str,
+    note: str = "",
+    subject_id: str = "",
+    title: str = "",
+) -> dict:
+    """Record or replace one verdict. Raises `ValueError` on an unknown one.
+
+    Upsert rather than insert: a reader who marks a claim twice has changed
+    their mind, and a history of one person's changing mind about one claim is
+    not worth a table. `created_at` survives the change, so "when did I first
+    flag this" is still answerable.
+    """
+    if verdict not in VERDICTS:
+        raise ValueError(f"unknown verdict {verdict!r} (expected one of {VERDICTS})")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    conn.execute(
+        "INSERT INTO claim_marks"
+        " (pack_id, claim_id, verdict, note, subject_id, title,"
+        "  created_at, updated_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT (pack_id, claim_id) DO UPDATE SET"
+        "   verdict = excluded.verdict, note = excluded.note,"
+        "   subject_id = excluded.subject_id, title = excluded.title,"
+        "   updated_at = excluded.updated_at",
+        (pack_id, claim_id, verdict, note, subject_id, title, now, now),
+    )
+    conn.commit()
+    return get_mark(conn, pack_id, claim_id) or {}
+
+
+def get_mark(conn: sqlite3.Connection, pack_id: str, claim_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM claim_marks WHERE pack_id = ? AND claim_id = ?",
+        (pack_id, claim_id),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def unmark_claim(conn: sqlite3.Connection, pack_id: str, claim_id: str) -> bool:
+    """Undo a mark. Pressing the same button again is how a reader takes it
+    back, so this is a normal path rather than an administrative one."""
+    changed = conn.execute(
+        "DELETE FROM claim_marks WHERE pack_id = ? AND claim_id = ?",
+        (pack_id, claim_id),
+    ).rowcount
+    conn.commit()
+    return bool(changed)
+
+
+def marks(
+    conn: sqlite3.Connection, *, verdict: str | None = None, limit: int = 200
+) -> list[dict]:
+    """Every mark, newest change first."""
+    sql = "SELECT * FROM claim_marks"
+    params: list = []
+    if verdict:
+        sql += " WHERE verdict = ?"
+        params.append(verdict)
+    sql += " ORDER BY updated_at DESC LIMIT ?"
+    params.append(limit)
+    return [dict(row) for row in conn.execute(sql, params)]
+
+
+def mark_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    """How many of each verdict, with the zeroes present.
+
+    Every verdict is a key even at zero: a dashboard that renders only the
+    non-empty ones changes shape as data arrives, and "no claims marked wrong"
+    is a thing worth stating rather than omitting.
+    """
+    counts = {verdict: 0 for verdict in VERDICTS}
+    for row in conn.execute(
+        "SELECT verdict, COUNT(*) AS n FROM claim_marks GROUP BY verdict"
+    ):
+        counts[row["verdict"]] = row["n"]
+    return counts
 
 
 # ── jobs ─────────────────────────────────────────────────────────────────

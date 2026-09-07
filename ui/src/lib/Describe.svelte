@@ -85,7 +85,7 @@
     async function pick(subject: Subject) {
         query = subject.label;
         matches = [];
-        const detail: SubjectDetail = await api.subject(subject.subject_id!);
+        const detail: SubjectDetail = await api.subject(subject.subject_id);
         kind = detail.kind;
         identity = Object.fromEntries(
             detail.attributes.filter((a) => a.is_identity).map((a) => [a.key, a.value_text]),

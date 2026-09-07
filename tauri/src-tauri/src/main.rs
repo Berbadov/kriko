@@ -35,6 +35,16 @@ use tauri_plugin_updater::UpdaterExt;
 
 /// The sidecar's handshake. Must match `PORT_LINE` in `src/app/sidecar.py`.
 const PORT_LINE: &str = "KRIKO_PORT";
+/// Raise the window. Must match `FOCUS_LINE` in
+/// `src/app/web/routers/focus.py`.
+///
+/// A page cannot raise a native window, so the browser extension's "Open in
+/// Kriko" posts a route to the engine and the engine prints this line. The
+/// shell is already reading stdout for the port, so this is the cheapest
+/// possible channel — and it stays a supervisor's job: the route itself is
+/// never parsed here. Which screen to show is the SPA's business, and it
+/// collects that from `GET /api/focus` on its own.
+const FOCUS_LINE: &str = "KRIKO_FOCUS";
 /// How long the engine gets to answer `/api/health` before we call it dead.
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -133,6 +143,9 @@ fn start_engine(app: AppHandle, engine: State<'_, Engine>) -> Result<(), String>
             match event {
                 CommandEvent::Stdout(bytes) => {
                     let line = String::from_utf8_lossy(&bytes).to_string();
+                    if line.contains(FOCUS_LINE) {
+                        show_window(&handle);
+                    }
                     if port.is_none() {
                         if let Some(rest) = line.split(PORT_LINE).nth(1) {
                             if let Ok(parsed) = rest.trim().parse::<u16>() {

@@ -1,6 +1,6 @@
 [pack]
 id = "org.kriko.cars"
-name = "Cars (TR market)"
+name = "Used cars"
 version = "0.1.0"
 license = "CC-BY-SA-4.0"
 publisher = "kriko"

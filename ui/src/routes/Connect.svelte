@@ -6,6 +6,7 @@
         AgentTarget,
         AgentTargets,
         AgentVerify,
+        Pack,
     } from "../lib/types";
 
     // Both halves are loaded together because they answer one question between
@@ -13,6 +14,13 @@
     // resolves half of it invites the reader to act on the wrong half.
     const load = async () =>
         Promise.all([api.agentTargets(), api.agentConfig(), api.agentSkill()]);
+
+    // Read alongside them, and only used to explain an empty skill. The skill
+    // is generated from *enabled* packs, so an install with one pack switched
+    // off generates an empty one — and "No packs installed" is then a lie
+    // that sends the reader looking for a download instead of a toggle.
+    let packs = $state<Pack[]>([]);
+    const disabled = $derived(packs.filter((pack) => !pack.enabled));
 
     let data = $state<[AgentTargets, AgentConfig, AgentSkill] | null>(null);
     let loadError = $state("");
@@ -23,6 +31,7 @@
     async function refresh() {
         try {
             data = await load();
+            packs = await api.packs().catch(() => [] as Pack[]);
             loadError = "";
         } catch (cause) {
             loadError = String(cause);
@@ -168,6 +177,16 @@
                 <summary>Read the skill</summary>
                 <pre>{data[2].body}</pre>
             </details>
+        {:else if disabled.length}
+            <!-- The distinction the reader needs: nothing is missing, something
+                 is switched off. The skill is built from enabled packs only, so
+                 this install generates an empty one while holding knowledge. -->
+            <p class="state empty">
+                {disabled.map((pack) => pack.name).join(", ")}
+                {disabled.length === 1 ? "is installed but switched off" : "are installed but switched off"},
+                and the skill is written from the packs that are on — so there is
+                nothing for it to say yet. Switch it on under Packs and this fills in.
+            </p>
         {:else}
             <p class="state empty">
                 No packs installed, so there is nothing to research yet and nothing to say
