@@ -109,6 +109,29 @@ def cancel_job(job_id: str, runner=Depends(get_jobs)):
     return {"job_id": job_id, "state": outcome}
 
 
+@router.post("/jobs/{job_id}/retry")
+def retry_job(job_id: str, app_state=Depends(get_app_state), runner=Depends(get_jobs)):
+    """Run the same work again, as a new row.
+
+    A new job rather than a reset of the old one: the failed attempt's log is
+    the only record of *why* it failed, and reusing the row would delete the
+    evidence at the exact moment someone is looking into it. The two are linked
+    by `retry_of` in the new job's params, so the pair stays readable.
+
+    Refused while the original is still going — "retry" on a running job means
+    the reader wanted to cancel it, and quietly starting a second copy of a
+    research run is how you get two writers on one subject.
+    """
+    row = state.get_job(app_state, job_id)
+    if row is None:
+        raise HTTPException(404, f"no such job: {job_id}")
+    if not row["done"]:
+        raise HTTPException(409, f"job {job_id} is still {row['state']}")
+    params = dict(row["params"] or {})
+    params["retry_of"] = job_id
+    return _submit(runner, row["kind"], params)
+
+
 @router.get("/jobs/{job_id}/stream")
 async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
     """Follow one job to its end.

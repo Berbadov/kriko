@@ -176,6 +176,73 @@ test("an answer the app never stored offers no way in", () => {
   assert.equal(p.footer().querySelector(".lite-open-app"), null);
 });
 
+test("the panel hands the reader on to the two screens they act from", () => {
+  // Reading the risks is half of it. The other half — the questions to take
+  // to the seller, and holding this listing against the others — lived only
+  // in the app, so a reader finishing the panel had to find the same listing
+  // again by hand. The answer is already saved under an id, and the routes
+  // arrive with it.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result,
+    app_route: "result/abc123",
+    app_url: "http://127.0.0.1:8787/#/result/abc123",
+    app_routes: {
+      result: "result/abc123",
+      questions: "questions/abc123",
+      compare: "compare/abc123",
+    },
+    app_urls: {
+      result: "http://127.0.0.1:8787/#/result/abc123",
+      questions: "http://127.0.0.1:8787/#/questions?id=abc123",
+      compare: "http://127.0.0.1:8787/#/compare?left=abc123",
+    },
+  } });
+
+  const labels = [...p.footer().querySelectorAll(".lite-open-app")]
+    .map((b) => b.textContent);
+  assert.deepEqual(labels, ["Open in Kriko", "Ask the seller", "Compare"]);
+
+  p.footer().querySelectorAll(".lite-open-app")[1].dispatchEvent(
+    new p.dom.window.MouseEvent("click", { bubbles: true }));
+  const ask = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
+  assert.equal(ask.payload.route, "questions/abc123");
+  assert.equal(ask.payload.fallbackUrl,
+               "http://127.0.0.1:8787/#/questions?id=abc123");
+});
+
+test("an app that gave no routes offers no buttons for them", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, app_route: "result/abc123" } });
+  const labels = [...p.footer().querySelectorAll(".lite-open-app")]
+    .map((b) => b.textContent);
+  assert.deepEqual(labels, ["Open in Kriko"]);
+});
+
+test("an app that is not running offers the settings that would fix it", () => {
+  // The one failure whose cause is on this side of the wire: the app is
+  // listening somewhere the extension is not looking. Every other error is
+  // the app's to explain, and offering its own settings there would be a
+  // guess dressed as help.
+  const p = loadPanel({ analyzeResponse: {
+    ok: false, code: "APP_NOT_RUNNING",
+    error: "Kriko is not running. Open the Kriko app, then try again." } });
+  p.openPanel();
+  assert.equal(p.pipeline(), "error");
+  p.click(".lite-error .lite-open-app");
+  assert.ok(p.sent.some((m) => m.type === "OPEN_OPTIONS"));
+});
+
+test("an ordinary failure offers nothing but the failure", () => {
+  const p = loadPanel({ analyzeResponse: {
+    ok: false, error: "Kriko is not reachable (502)." } });
+  p.openPanel();
+  assert.equal(p.shadow().querySelector(".lite-error .lite-open-app"), null);
+});
+
 // ── marking knowledge from the panel ────────────────────────────────────
 
 const RISK = {

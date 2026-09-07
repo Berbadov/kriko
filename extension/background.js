@@ -50,15 +50,41 @@ _ensureSessionAccessLevel();
 
 chrome.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
 
-// Hover Lite is the only in-page surface; the toolbar action toggles it.
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab || !tab.id) return;
+// Hover Lite is the only in-page surface, and there are two ways to reach it.
+//
+// One function rather than a listener each, because a keyboard shortcut whose
+// behaviour has drifted from the toolbar button's is worse than no shortcut:
+// the reader learns the key, and then one day it does something else.
+async function toggleHoverLite(tab) {
+  if (!tab || !tab.id) return false;
   try {
     await chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_HOVER_LITE" });
+    return true;
   } catch (_) {
     // Content script not present (e.g. chrome:// or unsupported host) — ignore.
+    return false;
   }
-});
+}
+
+chrome.action.onClicked.addListener((tab) => { void toggleHoverLite(tab); });
+
+// The keyboard door. `commands` is declared in the manifest with a *suggested*
+// key, not a claimed one — Chrome drops a suggestion that collides with
+// something the browser or another extension already owns, and the command
+// still exists with no key bound. So this listener must not assume it will
+// ever fire, and the panel must stay reachable without it; the shortcut is an
+// accelerator for a reader whose hands are on the keyboard reading a listing,
+// never the only way in.
+//
+// Unlike the toolbar click there is no tab argument: a command fires at the
+// browser, so the active tab has to be asked for.
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command !== "toggle-panel") return;
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    await toggleHoverLite(tabs[0]);
+  });
+}
 
 // ── where the app is ────────────────────────────────────────────────────
 
@@ -158,6 +184,32 @@ function toViewModel(payload, appBase) {
     app_route: payload.lookup_id ? `result/${payload.lookup_id}` : undefined,
     app_url: payload.lookup_id && appBase
       ? `${appBase}/#/result/${payload.lookup_id}`
+      : undefined,
+    // The two things a reader does next, once they have decided this listing
+    // is worth pursuing: take questions to the seller, and hold it against
+    // the others they are considering. Both were app-only, which meant the
+    // panel could inform a decision and then had nowhere to send it.
+    //
+    // Built here beside `app_route` rather than in the panel because a route
+    // is part of the app contract — the app's own screens accept an id as a
+    // path segment precisely so this handoff needs no query string, which the
+    // focus endpoint deliberately refuses.
+    app_routes: payload.lookup_id
+      ? {
+          result: `result/${payload.lookup_id}`,
+          questions: `questions/${payload.lookup_id}`,
+          compare: `compare/${payload.lookup_id}`,
+        }
+      : undefined,
+    // Same three, as browser URLs, for the same reason `app_url` exists: when
+    // no desktop shell is listening there is nothing to raise, and a tab is
+    // the honest best effort rather than a button that does nothing.
+    app_urls: payload.lookup_id && appBase
+      ? {
+          result: `${appBase}/#/result/${payload.lookup_id}`,
+          questions: `${appBase}/#/questions?id=${payload.lookup_id}`,
+          compare: `${appBase}/#/compare?left=${payload.lookup_id}`,
+        }
       : undefined,
     // Subjects the listing resolved to, claims or not. The rows with zero
     // claims are the interesting ones: the packs recognise this car and have
@@ -577,6 +629,82 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async
+  }
+
+  // ── where the app is ──────────────────────────────────────────────────
+  //
+  // The options page could read and write `krikoApiBaseUrl` itself — it has
+  // the storage permission. It asks the worker instead so that the rules
+  // about what a base URL *is* (`_normalizeBaseUrl`) live in exactly one
+  // place. A settings screen that normalises differently from the code that
+  // consumes the value is a settings screen that can save something the
+  // extension then ignores, silently.
+  if (request.type === "GET_API_BASE") {
+    chrome.storage.local
+      .get(["krikoApiBaseUrl"])
+      .then((stored) => sendResponse({
+        ok: true,
+        base: _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE,
+        stored: stored.krikoApiBaseUrl || "",
+        default: DEFAULT_API_BASE,
+      }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "SET_API_BASE") {
+    const raw = (request.payload?.url ?? "").trim();
+    const base = _normalizeBaseUrl(raw);
+    if (raw && !base) {
+      sendResponse({ ok: false, error: "That is not a URL Kriko can reach." });
+      return false;
+    }
+    const run = async () => {
+      // Empty means "go back to the default", which is a removal rather than
+      // a stored empty string: `apiBase()` falls back on a missing key, and
+      // storing "" would be a value that reads as a choice.
+      if (base) await chrome.storage.local.set({ krikoApiBaseUrl: base });
+      else await chrome.storage.local.remove("krikoApiBaseUrl");
+      const stored = base || "";
+      adaptersCache = null; // the old app's adapter list is not this one's
+      const effective = base || DEFAULT_API_BASE;
+      // Saved first, probed second, and the probe's failure is not the
+      // save's. Someone configuring the extension before starting the app is
+      // doing a reasonable thing, and refusing to remember the address until
+      // something answers at it would make that impossible.
+      try {
+        const response = await _fetchApp(`${effective}/api/health`);
+        if (!response.ok) {
+          return { ok: true, base: effective, stored, reachable: false,
+                   detail: `The app answered ${response.status}.` };
+        }
+        const health = await response.json();
+        return { ok: true, base: effective, stored, reachable: true,
+                 version: health.version };
+      } catch (error) {
+        return { ok: true, base: effective, stored, reachable: false,
+                 detail: error.message };
+      }
+    };
+    run()
+      .then(sendResponse)
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "OPEN_OPTIONS") {
+    // A page cannot navigate to a `chrome-extension://` settings page on its
+    // own, so the panel asks. Worth having because the one moment a reader
+    // needs this screen is the moment the panel is telling them nothing is
+    // listening — and the options page is otherwise buried in the browser's
+    // own extension manager.
+    try {
+      chrome.runtime.openOptionsPage();
+      sendResponse({ ok: true });
+    } catch (error) {
+      sendResponse({ ok: false, error: error.message });
+    }
+    return false;
   }
 
   if (request.type === "GET_CACHED_RESULT") {

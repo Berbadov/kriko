@@ -29,7 +29,7 @@ describe("ClaimCard", () => {
 
     it("gives an author the provenance, but folded away", () => {
         render(ClaimCard, { claim: CLAIM, mode: "author" });
-        const summary = screen.getByText(/Provenance/);
+        const summary = screen.getByText(/Why this ranked here/);
         expect(summary).toBeInTheDocument();
         expect(summary.closest("details")).not.toHaveAttribute("open");
     });

@@ -90,6 +90,8 @@ export const api = {
     gaps: (packId: string) => get<T.Gap[]>(`/api/packs/${seg(packId)}/gaps`),
     marks: (verdict = "") =>
         get<T.Marks>(`/api/marks${verdict ? `?verdict=${seg(verdict)}` : ""}`),
+    /** What the marks add up to — the two queues, not the raw list. */
+    markSignals: (limit = 50) => get<T.MarkSignals>(`/api/marks/signals?limit=${limit}`),
     unmark: (packId: string, claimId: string) =>
         del<{ removed: boolean }>(`/api/marks/${seg(packId)}/${seg(claimId)}`),
     subjects: (q: string, limit = 60) =>
@@ -101,6 +103,9 @@ export const api = {
     revisions: (packId: string) =>
         get<T.Revision[]>(`/api/packs/${seg(packId)}/revisions`),
     events: (packId: string) => get<T.PackEvent[]>(`/api/packs/${seg(packId)}/events`),
+    /** Write a new pack's skeleton to disk. Installs nothing — building is a job. */
+    scaffoldPack: (body: T.NewPack) =>
+        postJson<{ root: string; files: string[] }>("/api/packs/scaffold", body),
     lookup: (body: T.LookupRequest) => postJson<T.LookupResult>("/api/lookup", body),
     analyze: (body: T.AnalyzeRequest) => postJson<T.AnalyzeResult>("/api/analyze", body),
     history: (limit = 20) =>
@@ -109,6 +114,21 @@ export const api = {
     settings: () => get<Record<string, unknown>>("/api/settings"),
     putSettings: (values: Record<string, unknown>) =>
         postJson<Record<string, unknown>>("/api/settings", { values }),
+    /** Both halves of the reader's own marks on one stored answer. */
+    triage: (lookupId: string) =>
+        get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),
+    setNote: (lookupId: string, claimKey: string, note: string) =>
+        postJson<{ notes: Record<string, string> }>(
+            `/api/lookups/${seg(lookupId)}/notes`,
+            { claim_key: claimKey, note },
+        ),
+    submissions: (limit = 30) =>
+        get<T.Submissions>(`/api/submissions?limit=${limit}`),
+    retryJob: (jobId: string) =>
+        postJson<{ job_id: string; kind: string }>(
+            `/api/jobs/${seg(jobId)}/retry`,
+            {},
+        ),
     checked: (lookupId: string) =>
         get<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`),
     setChecked: (lookupId: string, claimKey: string, checked: boolean) =>

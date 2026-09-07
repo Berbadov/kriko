@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kriko — extension settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Kriko extension</h1>
+      <p class="lede">
+        One setting: where the Kriko app is listening. Everything else the
+        extension does — which sites it reads, what it says about a listing —
+        comes from the packs installed in that app, not from here.
+      </p>
+
+      <form id="form" novalidate>
+        <label for="base">The app's address</label>
+        <input
+          id="base"
+          name="base"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="http://127.0.0.1:8787"
+        />
+        <p class="hint">
+          Leave it empty to use the default,
+          <code id="default">http://127.0.0.1:8787</code>. Change it only if
+          you are running the app somewhere else — another port, or another
+          machine on your own network. The extension talks to nothing on the
+          internet.
+        </p>
+        <div class="row">
+          <button type="submit" id="save">Save and test</button>
+          <button type="button" id="reset" class="quiet">
+            Back to the default
+          </button>
+        </div>
+      </form>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <section class="about">
+        <h2>If nothing answers</h2>
+        <p>
+          The address is remembered either way — an app you have not started
+          yet is not a wrong address. Start Kriko, then press
+          <strong>Save and test</strong> again to confirm the two ends can see
+          each other.
+        </p>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

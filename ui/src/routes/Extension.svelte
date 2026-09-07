@@ -1,9 +1,16 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
-    import type { ExtensionStatus } from "../lib/types";
+    import type { Adapter, ExtensionStatus } from "../lib/types";
 
     let status = $state<ExtensionStatus | null>(null);
+    // Which sites the installed packs can read. It belongs on this screen
+    // rather than an author one: "will it do anything on the page I am
+    // looking at" is the reader's actual question about an extension, and
+    // until now the only way to find out was to open a listing and see. The
+    // list is pack data — a pack ships its adapters — so installing one
+    // changes this without a line of app code.
+    let adapters = $state<Adapter[]>([]);
     let loadError = $state("");
     let busy = $state("");
     let actionError = $state("");
@@ -12,6 +19,7 @@
     async function refresh() {
         try {
             status = await api.extension();
+            adapters = await api.adapters().catch(() => [] as Adapter[]);
             loadError = "";
         } catch (cause) {
             loadError = String(cause);
@@ -219,6 +227,59 @@
                 </ol>
             </article>
         {/if}
+
+        <article class="card">
+            <h3>Once it is loaded</h3>
+            <!-- Two facts a reader can only learn by being told. A keyboard
+                 shortcut nobody knows about is a shortcut nobody has, and the
+                 extension's own settings page is buried in the browser's
+                 extension manager — which is the last place someone looks
+                 when the panel says nothing is listening. -->
+            <ul class="plain">
+                <li>
+                    The panel opens from the toolbar button, or with
+                    <kbd>Alt</kbd> + <kbd>K</kbd> on the listing itself. If
+                    another extension already owns that combination the browser
+                    silently declines it — the toolbar button always works.
+                </li>
+                <li>
+                    It looks for this app at <code>{status.port
+                        ? `127.0.0.1:${status.port}`
+                        : "127.0.0.1"}</code>. If you run the app somewhere
+                    else, the extension's own options page is where that
+                    address is changed — reachable from
+                    <strong>Details → Extension options</strong> on your
+                    browser's extensions page.
+                </li>
+            </ul>
+        </article>
+
+        <article class="card">
+            <h3>Sites the installed packs can read</h3>
+            {#if adapters.length}
+                <ul>
+                    {#each adapters as adapter (adapter.id)}
+                        <li class="target">
+                            <code>{adapter.site}</code>
+                            <span class="meta">{adapter.pack_id}</span>
+                            {#if adapter.match.length}
+                                <span class="meta">matches {adapter.match.join(", ")}</span>
+                            {/if}
+                        </li>
+                    {/each}
+                </ul>
+                <p class="meta">
+                    On any other page the extension stays quiet — it has nothing to read
+                    the page with, and guessing would be worse than silence. Describing
+                    the thing by hand on New check works everywhere.
+                </p>
+            {:else}
+                <p class="state empty">
+                    No installed pack ships a site adapter, so the extension has nothing
+                    to read a page with yet. Everything still works by hand on New check.
+                </p>
+            {/if}
+        </article>
 
         {#if status.sightings.length}
             <article class="card">

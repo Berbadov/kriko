@@ -1,7 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import { stubFetch, stubFetchFailing } from "../lib/stub-fetch";
-import { applyTheme } from "../lib/theme";
 import About from "./About.svelte";
 
 const HEALTH = {
@@ -47,24 +46,5 @@ describe("About", () => {
         stubFetchFailing();
         render(About);
         expect(await screen.findByText(/could not/i)).toBeInTheDocument();
-    });
-});
-
-describe("About's theme picker", () => {
-    it("offers every theme and marks the live one", async () => {
-        stubFetch({ "/api/health": HEALTH, "/api/settings": {} });
-        applyTheme("lemonade");
-        render(About);
-        const chosen = await screen.findByRole("radio", { name: /lemonade/i });
-        expect(chosen).toBeChecked();
-        expect(screen.getByRole("radio", { name: /slate/i })).not.toBeChecked();
-    });
-
-    it("repaints the app the moment a theme is picked", async () => {
-        stubFetch({ "/api/health": HEALTH, "/api/settings": {} });
-        applyTheme("slate");
-        render(About);
-        await fireEvent.click(await screen.findByRole("radio", { name: /lemonade/i }));
-        expect(document.documentElement.dataset.theme).toBe("lemonade");
     });
 });

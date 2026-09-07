@@ -21,6 +21,12 @@ export const NAV: NavGroupSpec[] = [
             { name: "check", label: "New check" },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
+            // The artifact the reader takes *out* of the app: the asks, in
+            // order, big enough to read standing in front of the thing. It gets a
+            // rail entry rather than living only behind a report link
+            // because on inspection day it is the first screen they want,
+            // and with no id it resolves to the newest saved answer.
+            { name: "questions", label: "Question sheet" },
             // Not author-only, and in Check rather than System: the extension
             // is the reader's half of the product — the one who never opens
             // an author screen is exactly the one who needs it installed.
@@ -51,6 +57,11 @@ export const NAV: NavGroupSpec[] = [
         items: [
             { name: "packs", label: "Packs" },
             { name: "jobs", label: "Runs" },
+            // What came in through the agent door and what the gate did with
+            // it. In System rather than Knowledge because it is about the
+            // door, not about what is known — and it is the only place a
+            // refusal is legible at all.
+            { name: "submissions", label: "What researchers sent" },
             { name: "console", label: "Console" },
             { name: "connect", label: "Connect an agent" },
         ],
@@ -61,7 +72,14 @@ export const NAV: NavGroupSpec[] = [
         // question any support exchange starts with.
         title: "This install",
         authorOnly: false,
-        items: [{ name: "about", label: "About" }],
+        items: [
+            // Preferences before facts: a reader in this group is more often
+            // changing something than quoting a version, and the theme
+            // switcher was previously a heading two thirds of the way down
+            // About — findable only by someone who already knew.
+            { name: "settings", label: "Settings" },
+            { name: "about", label: "About" },
+        ],
     },
 ];
 
@@ -100,3 +118,29 @@ export const resolve = (name: string): { name: string; lens?: string } =>
 export const isAuthorOnly = (name: string): boolean =>
     AUTHOR_ROUTES.has(resolve(name).name);
 
+
+/** Every destination as one flat list, with the group it sits under.
+ *
+ * The rail renders groups; a palette renders a list. Derived from the same
+ * table rather than written twice, so a screen added to the rail is reachable
+ * by name on the day it appears — a palette that has to be told about a new
+ * route is a palette that is quietly one release behind.
+ */
+export const destinationsFor = (
+    mode: Mode,
+): { name: string; label: string; group: string }[] =>
+    groupsFor(mode).flatMap((group) =>
+        group.items.map((item) => ({ ...item, group: group.title })),
+    );
+
+/** What the rail calls a route. Falls back to the name so an aliased or
+ *  unknown route still announces as something rather than as nothing. */
+export const labelOf = (name: string): string => {
+    const target = resolve(name).name;
+    for (const group of NAV) {
+        for (const item of group.items) {
+            if (item.name === target) return item.label;
+        }
+    }
+    return name;
+};

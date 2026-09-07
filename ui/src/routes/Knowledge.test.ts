@@ -35,6 +35,7 @@ function serve(over: Record<string, unknown> = {}) {
         "/api/subjects": [],
         "/api/packs/org.kriko.cars/gaps": [],
         "/api/marks": { items: [], counts: {}, verdicts: ["useful", "not_applicable", "wrong"] },
+        "/api/marks/signals": { research: [], matching: [] },
         ...over,
     });
 }
@@ -93,5 +94,57 @@ describe("Knowledge", () => {
             expect(screen.getByText(/No one has marked anything yet/)).toBeInTheDocument(),
         );
         expect(screen.getByText(/browser extension/)).toBeInTheDocument();
+    });
+
+    it("turns a pile of wrong verdicts into something an author can start", async () => {
+        serve({
+            "/api/marks/signals": {
+                research: [
+                    {
+                        subject_id: "s1",
+                        pack_id: "org.kriko.cars",
+                        count: 2,
+                        notes: ["my mechanic says otherwise"],
+                        claim_ids: ["c1", "c2"],
+                    },
+                ],
+                matching: [],
+            },
+        });
+        render(Knowledge, { lens: "marked" });
+        await waitFor(() =>
+            expect(screen.getByText(/Worth researching again/)).toBeInTheDocument(),
+        );
+        expect(screen.getByText(/2 called wrong/)).toBeInTheDocument();
+        // The reader's own words travel with the queue: they are the most
+        // useful thing on a mark and the point of collecting one.
+        expect(screen.getByText(/my mechanic says otherwise/)).toBeInTheDocument();
+        // And a way to act on it, reusing the same brief the gaps lens starts.
+        expect(screen.getAllByRole("button", { name: "Research" }).length).toBe(1);
+    });
+
+    it("keeps a mismatch out of the research queue and names the door instead", async () => {
+        serve({
+            "/api/marks/signals": {
+                research: [],
+                matching: [
+                    {
+                        subject_id: "s2",
+                        pack_id: "org.kriko.cars",
+                        count: 1,
+                        notes: [],
+                        claim_ids: ["c9"],
+                        sources: { url: 3 },
+                    },
+                ],
+            },
+        });
+        render(Knowledge, { lens: "marked" });
+        await waitFor(() =>
+            expect(screen.getByText(/Matched the wrong thing/)).toBeInTheDocument(),
+        );
+        // Researching it again would fix nothing, so it is offered no brief.
+        expect(screen.queryByRole("button", { name: "Research" })).toBeNull();
+        expect(screen.getByText(/suspect what the page was read as/)).toBeInTheDocument();
     });
 });
