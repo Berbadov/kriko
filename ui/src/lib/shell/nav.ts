@@ -57,6 +57,11 @@ export const NAV: NavGroupSpec[] = [
         items: [
             { name: "packs", label: "Packs" },
             { name: "jobs", label: "Runs" },
+            // What came in through the agent door and what the gate did with
+            // it. In System rather than Knowledge because it is about the
+            // door, not about what is known — and it is the only place a
+            // refusal is legible at all.
+            { name: "submissions", label: "What researchers sent" },
             { name: "console", label: "Console" },
             { name: "connect", label: "Connect an agent" },
         ],
@@ -67,7 +72,14 @@ export const NAV: NavGroupSpec[] = [
         // question any support exchange starts with.
         title: "This install",
         authorOnly: false,
-        items: [{ name: "about", label: "About" }],
+        items: [
+            // Preferences before facts: a reader in this group is more often
+            // changing something than quoting a version, and the theme
+            // switcher was previously a heading two thirds of the way down
+            // About — findable only by someone who already knew.
+            { name: "settings", label: "Settings" },
+            { name: "about", label: "About" },
+        ],
     },
 ];
 

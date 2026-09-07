@@ -1045,3 +1045,48 @@ button.link-ish {
 .table-scroll {
     overflow-x: auto;
 }
+
+/* The two queues a mark feeds. Sectioned rather than tabbed: they are read
+   together — "wrong here, mismatched there" is one picture of one install —
+   and a tab would make the author choose which failure to know about. */
+.queue {
+    margin-block: var(--s-5);
+}
+.queue h3 {
+    margin-block-end: var(--s-1);
+}
+.queue > .meta {
+    max-width: var(--measure);
+    margin-block-end: var(--s-3);
+}
+.doors {
+    display: flex;
+    gap: var(--s-2);
+}
+
+/* The authoring form, folded. A reader who came to watch a run should not
+   have to scroll past a five-field form to reach the list; a reader starting
+   a pack is doing it deliberately and will open it. */
+details.authoring {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--s-3);
+    margin-block: var(--s-4);
+}
+details.authoring summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+details.authoring > .meta {
+    max-width: var(--measure);
+    margin-block: var(--s-2);
+}
+form.ask.stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-3);
+}
+form.ask.stack .field span.meta {
+    max-width: var(--measure);
+}

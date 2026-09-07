@@ -118,4 +118,30 @@ describe("adding the browser extension", () => {
         render(Extension);
         expect(await screen.findByText(/Could not read the extension status/)).toBeTruthy();
     });
+
+    it("names the sites a pack can read, which is the reader's real question", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true }),
+            "/api/adapters": [
+                {
+                    id: "a1",
+                    site: "example.invalid",
+                    pack_id: "org.kriko.cars",
+                    match: ["/listing/"],
+                    labels: [],
+                },
+            ],
+        });
+        render(Extension);
+        expect(await screen.findByText("example.invalid")).toBeInTheDocument();
+        expect(screen.getByText(/matches \/listing\//)).toBeInTheDocument();
+    });
+
+    it("says the panel will stay quiet when no pack ships an adapter", async () => {
+        stubFetch({ "/api/extension": status({ staged: true }), "/api/adapters": [] });
+        render(Extension);
+        expect(
+            await screen.findByText(/No installed pack ships a site adapter/),
+        ).toBeInTheDocument();
+    });
 });

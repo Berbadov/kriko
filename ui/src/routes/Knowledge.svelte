@@ -6,8 +6,10 @@
     import { severityWord } from "../lib/report";
     import type {
         Gap,
+        MarkQueueItem,
         Marks,
         Pack,
+        MarkSignals,
         Status,
         Subject,
         SubjectDetail,
@@ -57,6 +59,12 @@
     let marks = $state<Marks | null>(null);
     let markError = $state("");
 
+    // What the marks *add up to*. The raw list answers "what did people say";
+    // these two queues answer the only question an author can act on — which
+    // system has the problem. A mark that feeds nothing is a survey, and this
+    // is the half that makes it a signal (backlog B54).
+    let signals = $state<MarkSignals | null>(null);
+
     // Which row is open, and what was fetched for it. Keyed by subject id
     // rather than held as "the open row" so collapsing and re-expanding does
     // not re-fetch, and so two rows can be compared without losing the first.
@@ -102,11 +110,32 @@
 
     async function loadMarks() {
         try {
-            marks = await api.marks();
+            // Both in one pass: the queues are derived from the same rows, so
+            // a screen that showed the list and then, a beat later, its
+            // consequences would be describing one fetch as two.
+            [marks, signals] = await Promise.all([api.marks(), api.markSignals()]);
             markError = "";
         } catch (cause) {
             markError = String(cause);
         }
+    }
+
+    /** Which door implicates what.
+     *
+     * A `not mine` on a subject only ever reached from a page is an extraction
+     * problem — something on the page was read as an identity it is not. The
+     * same verdict on a typed-in query is a *gate* problem: what was entered
+     * matched more than it should. The distinction is the whole reason the
+     * door is carried through, so the screen says it in words rather than
+     * printing a tally and leaving the reading to the author.
+     */
+    function doorReading(item: MarkQueueItem): string {
+        const doors = Object.keys(item.sources ?? {});
+        if (!doors.length) return "No saved answer here names this subject.";
+        if (doors.length > 1) return "Reached both ways — look at the gate before the reader.";
+        return doors[0] === "url"
+            ? "Only ever reached from a page: suspect what the page was read as."
+            : "Only ever reached from a typed-in query: suspect the gate being too broad.";
     }
 
     /** Drop a verdict.
@@ -294,6 +323,93 @@
                 {/each}
             </ul>
 
+            <!-- The queues before the list. An author opening this screen is
+                 here to act, and "which subject is getting called wrong most"
+                 is the only ordering that helps them — the raw list is
+                 chronological, which is the ordering of nobody's work.
+                 Both are derived, never curated: no one signs anything off
+                 here, and nothing waits for them to (the automation
+                 principle). -->
+            {#if signals?.research?.length}
+                <section class="queue">
+                    <h3>Worth researching again</h3>
+                    <p class="meta">
+                        Readers say these claims are wrong. That is a knowledge problem:
+                        the research below rewrites what is held, it does not touch the
+                        reader's note.
+                    </p>
+                    <ul class="klist">
+                        {#each signals.research as item (item.pack_id + item.subject_id)}
+                            <li class="krow">
+                                <div class="kmain">
+                                    <span class="klabel">{item.subject_id}</span>
+                                    <span class="meta"
+                                        >{item.pack_id} · {item.count} called wrong</span
+                                    >
+                                </div>
+                                <button
+                                    onclick={() =>
+                                        (researching = {
+                                            ...researching,
+                                            [item.subject_id]: !researching[item.subject_id],
+                                        })}
+                                >
+                                    {researching[item.subject_id] ? "Hide brief" : "Research"}
+                                </button>
+                                {#each item.notes as note, i (i)}
+                                    <p class="kdetail meta">“{note}”</p>
+                                {/each}
+                                {#if researching[item.subject_id]}
+                                    <div class="kdetail">
+                                        <Brief
+                                            subjectId={item.subject_id}
+                                            packId={item.pack_id}
+                                            label={item.subject_id}
+                                            onClose={() =>
+                                                (researching = {
+                                                    ...researching,
+                                                    [item.subject_id]: false,
+                                                })}
+                                        />
+                                    </div>
+                                {/if}
+                            </li>
+                        {/each}
+                    </ul>
+                </section>
+            {/if}
+
+            {#if signals?.matching?.length}
+                <section class="queue">
+                    <h3>Matched the wrong thing</h3>
+                    <p class="meta">
+                        “Not mine” is not a claim being false — it is this claim reaching
+                        someone it was not written for. Researching it again would fix
+                        nothing; the door it arrived through is the lead.
+                    </p>
+                    <ul class="klist">
+                        {#each signals.matching as item (item.pack_id + item.subject_id)}
+                            <li class="krow">
+                                <div class="kmain">
+                                    <span class="klabel">{item.subject_id}</span>
+                                    <span class="meta"
+                                        >{item.pack_id} · {item.count} not theirs</span
+                                    >
+                                </div>
+                                <span class="meta doors">
+                                    {#each Object.entries(item.sources ?? {}) as [door, n] (door)}
+                                        <span class="context-pair"
+                                            ><span class="meta">{door}</span> {n}</span
+                                        >
+                                    {/each}
+                                </span>
+                                <p class="kdetail meta">{doorReading(item)}</p>
+                            </li>
+                        {/each}
+                    </ul>
+                </section>
+            {/if}
+
             {#if !marks.items.length}
                 <EmptyState
                     title="No one has marked anything yet"
@@ -303,6 +419,7 @@
                             about their product."
                 />
             {:else}
+                <h3>Every mark</h3>
                 <ul class="klist">
                     {#each marks.items as mark (mark.pack_id + mark.claim_id)}
                         <li class="krow">

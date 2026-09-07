@@ -48,6 +48,11 @@ def run_lookup(
             {
                 "claim_id": c.claim_id,
                 "pack_id": c.pack_id,
+                # The subject the claim was written against, not only its
+                # label. A reader marking a claim from the report has to be
+                # able to say *which* subject was matched — that is the half
+                # of a `not mine` verdict that names the failing system.
+                "subject_id": c.subject_id,
                 "title": c.title,
                 "body": c.body,
                 "advice": c.advice,

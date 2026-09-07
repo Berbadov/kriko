@@ -41,7 +41,11 @@ describe("the route table", () => {
         expect(isAuthorOnly("health")).toBe(true);
         expect(isAuthorOnly("coverage")).toBe(true);
         expect(isAuthorOnly("marks")).toBe(true);
+        expect(isAuthorOnly("submissions")).toBe(true);
         expect(isAuthorOnly("check")).toBe(false);
+        // A preference is not authoring: the reader who never opens an author
+        // screen is still the one choosing the palette.
+        expect(isAuthorOnly("settings")).toBe(false);
         expect(isAuthorOnly("compare")).toBe(false);
         expect(isAuthorOnly("extension")).toBe(false);
     });
@@ -57,8 +61,10 @@ describe("the route table", () => {
             "knowledge",
             "packs",
             "jobs",
+            "submissions",
             "console",
             "connect",
+            "settings",
             "about",
         ]);
         expect(new Set(ALL_ROUTES).size).toBe(ALL_ROUTES.length);

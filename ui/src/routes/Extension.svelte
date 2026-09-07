@@ -1,9 +1,16 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
-    import type { ExtensionStatus } from "../lib/types";
+    import type { Adapter, ExtensionStatus } from "../lib/types";
 
     let status = $state<ExtensionStatus | null>(null);
+    // Which sites the installed packs can read. It belongs on this screen
+    // rather than an author one: "will it do anything on the page I am
+    // looking at" is the reader's actual question about an extension, and
+    // until now the only way to find out was to open a listing and see. The
+    // list is pack data — a pack ships its adapters — so installing one
+    // changes this without a line of app code.
+    let adapters = $state<Adapter[]>([]);
     let loadError = $state("");
     let busy = $state("");
     let actionError = $state("");
@@ -12,6 +19,7 @@
     async function refresh() {
         try {
             status = await api.extension();
+            adapters = await api.adapters().catch(() => [] as Adapter[]);
             loadError = "";
         } catch (cause) {
             loadError = String(cause);
@@ -219,6 +227,33 @@
                 </ol>
             </article>
         {/if}
+
+        <article class="card">
+            <h3>Sites the installed packs can read</h3>
+            {#if adapters.length}
+                <ul>
+                    {#each adapters as adapter (adapter.id)}
+                        <li class="target">
+                            <code>{adapter.site}</code>
+                            <span class="meta">{adapter.pack_id}</span>
+                            {#if adapter.match.length}
+                                <span class="meta">matches {adapter.match.join(", ")}</span>
+                            {/if}
+                        </li>
+                    {/each}
+                </ul>
+                <p class="meta">
+                    On any other page the extension stays quiet — it has nothing to read
+                    the page with, and guessing would be worse than silence. Describing
+                    the thing by hand on New check works everywhere.
+                </p>
+            {:else}
+                <p class="state empty">
+                    No installed pack ships a site adapter, so the extension has nothing
+                    to read a page with yet. Everything still works by hand on New check.
+                </p>
+            {/if}
+        </article>
 
         {#if status.sightings.length}
             <article class="card">

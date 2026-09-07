@@ -169,6 +169,39 @@ export type Marks = {
     verdicts: string[];
 };
 
+/** What a pile of marks adds up to, split by which system has the problem.
+ *
+ * Two queues rather than one list, because the two verdicts are failures of
+ * different things: `wrong` is a knowledge problem (research it again),
+ * `not_applicable` is a *matching* problem (identity extraction, or a gate
+ * that is too broad). `sources` counts the doors the subject was reached
+ * through, which is what separates "the page was read wrong" from "what was
+ * typed in matched too much".
+ */
+export type MarkQueueItem = {
+    subject_id: string;
+    pack_id: string;
+    count: number;
+    notes: string[];
+    claim_ids: string[];
+    sources?: Record<string, number>;
+};
+
+export type MarkSignals = {
+    research: MarkQueueItem[];
+    matching: MarkQueueItem[];
+};
+
+/** A pack about to exist. `identity` is kind → the attribute keys that tell
+ *  two subjects of that kind apart; its shape is the author's, not this app's. */
+export type NewPack = {
+    root: string;
+    pack_id: string;
+    name: string;
+    identity: Record<string, string[]>;
+    version?: string;
+};
+
 export type Job = {
     job_id: string;
     kind: string;

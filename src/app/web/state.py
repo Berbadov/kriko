@@ -497,6 +497,88 @@ def mark_counts(conn: sqlite3.Connection) -> dict[str, int]:
     return counts
 
 
+def mark_signals(conn: sqlite3.Connection, limit: int = 50) -> dict:
+    """The two queues a mark feeds, derived rather than curated.
+
+    A mark was a dead end: readers were answering "was this any use?" and the
+    answer went into a table nothing read. This is the mechanism that reads it,
+    and it is deliberately two queues rather than one list, because `wrong` and
+    `not_applicable` are failures of different systems:
+
+    * `research` — subjects carrying `wrong` marks. A knowledge problem: the
+      claim is not true of the thing it was written for, so the fix is another
+      research pass on that subject, which is a job this app already runs.
+    * `matching` — subjects carrying `not_applicable` marks. A *matching*
+      problem: the claim may be perfectly true of the product it was written
+      for and this was not that one, so the fix is upstream of the claim —
+      identity extraction, or a fitment gate that is too broad. `sources`
+      attributes it: a subject the reader only ever reached from a listing URL
+      points at the adapter, while one reached from the form points at the
+      reader's own typing or at the gate.
+
+    Both are counts and identifiers, never a review queue for a person: the
+    automation principle says nothing in the data path waits on sign-off. What
+    a human does with this is press "research", which is the same job an
+    automated pass calls.
+
+    `sources` is computed by asking the reader's own history which doors a
+    subject arrived through. A scan, because history is local and small — and
+    because the alternative is denormalising the door onto every mark, which
+    would make a mark's meaning depend on when it was written.
+    """
+    doors: dict[str, dict[str, int]] = {}
+    for row in conn.execute("SELECT source, response_json FROM lookups"):
+        payload = json.loads(row["response_json"] or "{}")
+        seen = {
+            str(claim.get("subject_id") or "")
+            for claim in payload.get("claims") or []
+        }
+        # `subjects` as well as the claims, and both shapes of it: /api/analyze
+        # sends resolved rows and /api/lookup sends bare ids. A subject that
+        # resolved and had nothing to say is exactly the interesting case here
+        # — there is no claim to carry it, and it is still a match the adapter
+        # made.
+        for entry in payload.get("subjects") or []:
+            seen.add(str(entry.get("subject_id") or "") if isinstance(entry, dict) else str(entry))
+        for subject in seen - {""}:
+            tally = doors.setdefault(subject, {})
+            tally[row["source"]] = tally.get(row["source"], 0) + 1
+
+    def queue(verdict: str, *, with_sources: bool) -> list[dict]:
+        grouped: dict[tuple[str, str], dict] = {}
+        for mark in marks(conn, verdict=verdict, limit=1000):
+            key = (mark["subject_id"], mark["pack_id"])
+            item = grouped.setdefault(
+                key,
+                {
+                    "subject_id": mark["subject_id"],
+                    "pack_id": mark["pack_id"],
+                    "count": 0,
+                    # The reader's own words are the most valuable field on a
+                    # mark, so they travel with the queue rather than being
+                    # aggregated away.
+                    "notes": [],
+                    "claim_ids": [],
+                },
+            )
+            item["count"] += 1
+            item["claim_ids"].append(mark["claim_id"])
+            if mark["note"]:
+                item["notes"].append(mark["note"])
+        out = sorted(
+            grouped.values(), key=lambda item: (-item["count"], item["subject_id"])
+        )
+        if with_sources:
+            for item in out:
+                item["sources"] = doors.get(item["subject_id"], {})
+        return out[:limit]
+
+    return {
+        "research": queue("wrong", with_sources=False),
+        "matching": queue("not_applicable", with_sources=True),
+    }
+
+
 # ── submissions ─ what a researcher sent, and what survived ────────
 
 

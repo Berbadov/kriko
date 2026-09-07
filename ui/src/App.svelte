@@ -21,6 +21,8 @@
     import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
     import Result from "./routes/Result.svelte";
+    import Settings from "./routes/Settings.svelte";
+    import Submissions from "./routes/Submissions.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -122,10 +124,14 @@
                         <Extension />
                     {:else if $route.name === "packs"}
                         <Packs />
+                    {:else if $route.name === "settings"}
+                        <Settings />
                     {:else if $route.name === "about"}
                         <About />
                     {:else if $route.name === "jobs"}
                         <Jobs />
+                    {:else if $route.name === "submissions"}
+                        <Submissions />
                     {:else if $route.name === "console"}
                         <Console />
                     {:else if $route.name === "result"}

@@ -97,4 +97,98 @@ describe("Jobs", () => {
         );
         expect(await screen.findByText("done")).toBeInTheDocument();
     });
+
+    it("offers a failed job another attempt without losing why it failed", async () => {
+        const failed = {
+            ...JOB,
+            state: "failed",
+            done: true,
+            message: "the source timed out",
+            finished_at: "2026-09-01T10:05:00+00:00",
+        };
+        const fetchMock = stub({
+            "/api/jobs": { items: [failed] },
+            "/api/jobs/j1": failed,
+            "/api/jobs/j1/retry": { job_id: "j2", kind: "research" },
+            "/api/jobs/j2": { ...JOB, job_id: "j2", params: { subject_id: "s1", retry_of: "j1" } },
+        });
+        render(Jobs);
+        await fireEvent.click(await screen.findByRole("button", { name: "Run again" }));
+        await waitFor(() =>
+            expect(
+                fetchMock.mock.calls.some(([path]) =>
+                    String(path).includes("/api/jobs/j1/retry"),
+                ),
+            ).toBe(true),
+        );
+        // The failed row stays, with its reason: a retry is a second attempt,
+        // not a correction of the first.
+        expect(screen.getByText("the source timed out")).toBeInTheDocument();
+    });
+
+    it("does not offer to re-run a job that is still going", async () => {
+        stub({ "/api/jobs": { items: [JOB] }, "/api/jobs/j1": JOB });
+        render(Jobs);
+        await screen.findByText("reading forum thread");
+        expect(screen.queryByRole("button", { name: "Run again" })).toBeNull();
+        expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    });
+
+    it("starts a pack from nothing and hands the directory to the builder", async () => {
+        const fetchMock = stub({
+            "/api/jobs": { items: [] },
+            "/api/packs/scaffold": { root: "packs/mine", files: ["packs/mine/pack.toml"] },
+        });
+        render(Jobs);
+        await fireEvent.click(await screen.findByText("Start a new pack"));
+        await fireEvent.input(screen.getByLabelText("Directory to create it in"), {
+            target: { value: "packs/mine" },
+        });
+        await fireEvent.input(screen.getByLabelText("Pack id"), {
+            target: { value: "org.example.mine" },
+        });
+        await fireEvent.input(screen.getByLabelText("Name"), {
+            target: { value: "Mine" },
+        });
+        await fireEvent.input(
+            screen.getByLabelText(/Identity keys/),
+            { target: { value: "product: brand, series" } },
+        );
+        await fireEvent.click(screen.getByRole("button", { name: "Write the skeleton" }));
+        await waitFor(() => {
+            const call = fetchMock.mock.calls.find(([path]) =>
+                String(path).includes("/api/packs/scaffold"),
+            );
+            expect(call).toBeTruthy();
+            // The identity table travels as the author's own shape — kind to
+            // keys — because a fixed set of fields here would be the app
+            // deciding what things are like.
+            expect(JSON.parse(String(call![1]?.body)).identity).toEqual({
+                product: ["brand", "series"],
+            });
+        });
+        // And the path is already in the build field: retyping what they just
+        // gave us would be the app forgetting on purpose.
+        expect(
+            screen.getByLabelText("Build a pack from a directory"),
+        ).toHaveValue("packs/mine");
+    });
+
+    it("will not write a skeleton with no identity keys", async () => {
+        stub({ "/api/jobs": { items: [] } });
+        render(Jobs);
+        await fireEvent.click(await screen.findByText("Start a new pack"));
+        await fireEvent.input(screen.getByLabelText("Directory to create it in"), {
+            target: { value: "packs/mine" },
+        });
+        await fireEvent.input(screen.getByLabelText("Pack id"), {
+            target: { value: "org.example.mine" },
+        });
+        await fireEvent.input(screen.getByLabelText("Name"), {
+            target: { value: "Mine" },
+        });
+        // The contract refuses it too, much later — better to refuse the press
+        // than to write a directory that cannot install.
+        expect(screen.getByRole("button", { name: "Write the skeleton" })).toBeDisabled();
+    });
 });
