@@ -123,7 +123,11 @@ export type AnalyzeResult = LookupResult & {
 };
 
 export type Subject = {
-    subject_id?: string;
+    // Required, not optional. `/api/subjects` selects it in every branch, so
+    // an optional field here only forced every caller to handle a case the
+    // server cannot produce — which they did by asserting it away with `!`,
+    // i.e. by turning the type off.
+    subject_id: string;
     label: string;
     kind: string;
     pack_id: string;
@@ -131,6 +135,31 @@ export type Subject = {
 };
 
 export type Gap = { subject_id: string; label: string; kind: string };
+
+/** A reader's verdict on one claim.
+ *
+ * Interface state, not pack content: it lives in `app.sqlite`, so it cannot
+ * move a pack's `content_digest` and it survives uninstalling the pack the
+ * claim came from. Which is why `title` is stored *on the mark* — the claim
+ * it names may not be installed any more, and "you marked something wrong,
+ * we no longer know what" is not a report.
+ */
+export type Mark = {
+    pack_id: string;
+    claim_id: string;
+    verdict: string;
+    note: string;
+    subject_id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type Marks = {
+    items: Mark[];
+    counts: Record<string, number>;
+    verdicts: string[];
+};
 
 export type Job = {
     job_id: string;

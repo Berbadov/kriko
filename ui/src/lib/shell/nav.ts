@@ -32,9 +32,17 @@ export const NAV: NavGroupSpec[] = [
         authorOnly: true,
         items: [
             { name: "overview", label: "Overview" },
-            { name: "subjects", label: "Subjects" },
-            { name: "coverage", label: "Coverage" },
-            { name: "health", label: "Health" },
+            // One destination where there were three. Subjects, Coverage and
+            // Health were not three places — they were three questions about
+            // the same list ("what is here", "what is missing", "what is
+            // thin"), and splitting them by route made the reader guess which
+            // tab held the thing they came to look up. They are lenses on the
+            // Knowledge screen now; the old names still resolve, see
+            // ALIASES below.
+            // Labelled "Browse", not "Knowledge": the group is already
+            // called Knowledge, and a link whose text repeats its own
+            // heading tells the reader nothing about what clicking does.
+            { name: "knowledge", label: "Browse" },
         ],
     },
     {
@@ -43,6 +51,7 @@ export const NAV: NavGroupSpec[] = [
         items: [
             { name: "packs", label: "Packs" },
             { name: "jobs", label: "Runs" },
+            { name: "console", label: "Console" },
             { name: "connect", label: "Connect an agent" },
         ],
     },
@@ -69,4 +78,25 @@ const AUTHOR_ROUTES = new Set(
     ),
 );
 
-export const isAuthorOnly = (name: string): boolean => AUTHOR_ROUTES.has(name);
+/** Routes that no longer have a rail entry but must still resolve.
+ *
+ * A link is forever: the browser extension, a bookmark, and this app's own
+ * older `NextStep` hints all point at `#/coverage`. Retiring a tab must not
+ * turn those into "No such view" — they land on the lens that absorbed them,
+ * and they keep the author gate they had, which is why this is read *through*
+ * `isAuthorOnly` rather than beside it.
+ */
+export const ALIASES: Record<string, { name: string; lens: string }> = {
+    subjects: { name: "knowledge", lens: "all" },
+    coverage: { name: "knowledge", lens: "gaps" },
+    health: { name: "knowledge", lens: "weak" },
+    marks: { name: "knowledge", lens: "marked" },
+};
+
+/** The route a name actually renders, following one alias hop. */
+export const resolve = (name: string): { name: string; lens?: string } =>
+    ALIASES[name] ?? { name };
+
+export const isAuthorOnly = (name: string): boolean =>
+    AUTHOR_ROUTES.has(resolve(name).name);
+

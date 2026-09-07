@@ -52,7 +52,7 @@ def runner_with(settings, handler):
 def test_a_finished_job_keeps_its_result_and_its_log(settings):
     def handler(_settings, params, progress):
         progress.log("started")
-        progress.set(0.5, "halfway")
+        progress.set(1.0, "7 claim(s) kept")
         return {"echo": params["value"]}
 
     runner = runner_with(settings, handler)
@@ -65,7 +65,11 @@ def test_a_finished_job_keeps_its_result_and_its_log(settings):
     # A succeeded job reads 100%, whatever the handler last reported: a bar
     # stuck at 50% beside the word "done" is a bug report waiting to happen.
     assert row["progress"] == 1.0
-    assert row["message"] == "done"
+    # And it keeps the handler's own last word rather than overwriting it with
+    # "done". A word carrying no information is how the research job came to
+    # look like a dead button: it succeeded, wrote a full brief, and reported
+    # one syllable that named none of it.
+    assert row["message"] == "7 claim(s) kept"
     assert row["log"] == "started\n"
     runner.shutdown(wait=True)
 

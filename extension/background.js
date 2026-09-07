@@ -147,12 +147,30 @@ function toViewModel(payload, appBase) {
     unmapped_labels: payload.unmapped_labels || [],
     // The app stores every analysis and already renders one at this route, so
     // "see the whole thing" needs no new endpoint — only the id it handed back.
+    //
+    // Two forms of the same destination, and both are needed. `app_route` is
+    // what gets posted to `/api/focus`, which raises the *desktop window* —
+    // the thing the reader means by "open in Kriko". `app_url` is the
+    // fallback for when no shell is listening (someone running the server in
+    // a terminal), and opening a browser tab is then the honest best effort.
+    // Sending the reader to a second browser tab while their app sits behind
+    // the window was the bug; keeping the tab as a fallback is not.
+    app_route: payload.lookup_id ? `result/${payload.lookup_id}` : undefined,
     app_url: payload.lookup_id && appBase
       ? `${appBase}/#/result/${payload.lookup_id}`
       : undefined,
+    // Subjects the listing resolved to, claims or not. The rows with zero
+    // claims are the interesting ones: the packs recognise this car and have
+    // nothing to say about it, which is a gap the panel can offer to fill
+    // rather than an emptiness it has to apologise for.
+    subjects: Array.isArray(payload.subjects) ? payload.subjects : [],
     risks: claims.map((claim) => {
       const strength = _strengthOf(claim);
       return {
+        // Identity, so a card can be pointed at rather than only described:
+        // marking a claim wrong, or asking for it again, both need this.
+        claim_id: claim.claim_id,
+        subject_id: claim.subject_id,
         title: claim.title,
         rationale: claim.body,
         inspection_advice: claim.advice,
@@ -410,6 +428,55 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
   }
 }
 
+// ── acting on the app, rather than only asking it ───────────────────────
+//
+// Everything above this line reads: the worker sends a page's labels and gets
+// an answer. These three write, and they are what turns the panel from a
+// display into a place work starts.
+//
+// All three go through the app's own HTTP API — the same endpoints the app's
+// own UI uses. The extension gets no privileged door, and nothing here
+// interprets a claim; it forwards the reader's decision and reports what the
+// app said.
+
+async function _postApp(path, body) {
+  const response = await _fetchApp(`${await apiBase()}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      detail = (await response.json()).detail || detail;
+    } catch (_) {
+      // A body that is not JSON tells us nothing the status has not.
+    }
+    throw new Error(`Kriko refused that (${detail}).`);
+  }
+  return response.json();
+}
+
+/** Bring the desktop app to the front, on the given route.
+ *
+ * A page cannot raise a native window, so this posts the route and lets the
+ * engine tell the shell (see `src/app/web/routers/focus.py`). When there is no
+ * app to raise — the server running in a terminal, or nothing running at all —
+ * a browser tab is the fallback, which is what this used to do *always*.
+ */
+async function openInApp(route, fallbackUrl) {
+  try {
+    await _postApp("/api/focus", { route });
+    return { ok: true, raised: true };
+  } catch (error) {
+    if (fallbackUrl) {
+      await chrome.tabs.create({ url: fallbackUrl });
+      return { ok: true, raised: false, fallback: true };
+    }
+    throw error;
+  }
+}
+
 // ── messages ────────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -451,6 +518,65 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     runAnalysisForTab(tabId, url).catch(() => {});
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
+  }
+
+  if (request.type === "OPEN_IN_APP") {
+    const route = request.payload?.route;
+    if (!route) {
+      sendResponse({ ok: false, error: "Missing route" });
+      return false;
+    }
+    openInApp(route, request.payload?.fallbackUrl)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "MARK_CLAIM") {
+    const mark = request.payload || {};
+    if (!mark.claim_id || !mark.pack_id) {
+      sendResponse({ ok: false, error: "Missing claim" });
+      return false;
+    }
+    // No verdict means "take it back". Pressing the same button twice is how
+    // a reader unmarks, so the undo is the same message rather than a second
+    // one the panel has to decide between.
+    const run = mark.verdict
+      ? _postApp("/api/marks", mark)
+      : (async () => {
+          const base = await apiBase();
+          const url = `${base}/api/marks/${encodeURIComponent(mark.pack_id)}`
+            + `/${encodeURIComponent(mark.claim_id)}`;
+          const response = await _fetchApp(url, { method: "DELETE" });
+          if (!response.ok) throw new Error(`Kriko refused that (${response.status}).`);
+          return response.json();
+        })();
+    run
+      .then((row) => sendResponse({ ok: true, mark: row }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "RESEARCH_SUBJECT") {
+    const { subject_id, pack_id } = request.payload || {};
+    if (!subject_id) {
+      sendResponse({ ok: false, error: "Missing subject" });
+      return false;
+    }
+    // Research is a job, not a request — it outlives this service worker,
+    // which Chrome may stop at any moment. So the worker starts it and hands
+    // the reader off to the app's own Runs screen, where the log and the
+    // brief survive both the worker and the browser.
+    _postApp("/api/research", { subject_id, pack_id, backend: "agent" })
+      .then(async (job) => {
+        await openInApp("jobs").catch(() => {});
+        sendResponse({ ok: true, job });
+      })
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
   }
 
   if (request.type === "GET_CACHED_RESULT") {
