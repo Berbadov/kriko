@@ -6,6 +6,12 @@ on:
     push:
         tags: ["v*"]
     workflow_dispatch:
+        inputs:
+            platforms:
+                description: "which runners to bundle"
+                default: windows
+                type: choice
+                options: [windows, all]
     pull_request:
         paths:
             - "tauri/**"
@@ -26,6 +32,22 @@ jobs:
     bundle:
         name: ${{ matrix.label }}
         runs-on: ${{ matrix.os }}
+        # Windows only, unless asked otherwise — and always all three on a
+        # pull request, because "does the bundle still build on each OS" is
+        # exactly what that check is for and narrowing it would hide a break
+        # until a release.
+        #
+        # Releases are Windows-only for now because the reader is: there is
+        # one person opening these installers and they are on Windows, and a
+        # .deb and a .dmg nobody downloads are twelve minutes of two runners
+        # per tag. `platforms: all` on a hand-run brings the others back, and
+        # the release job already tolerates a partial artifact set — it fails
+        # only on an *empty* one.
+        if: >-
+            matrix.label == 'windows'
+            || github.event_name == 'pull_request'
+            || inputs.platforms == 'all'
+
         strategy:
             # fail-fast off: "does it build on Windows" and "does it build on
             # macOS" are separate answers, and one failing must not hide the
