@@ -79,10 +79,23 @@ def _pending(request: Request) -> dict | None:
 def ask_for_focus(body: FocusRequest, request: Request) -> dict:
     """Record a route and tell the shell to raise the window.
 
-    Returns `raised` as a claim about what was *attempted*, never about what
-    happened: whether a shell is listening on the other end of this stdout is
-    not knowable from here, and pretending otherwise would make the extension
-    hide its own fallback.
+    `delivery` is the honest answer, and it replaced a `raised: true` that
+    was structurally a lie. Whether a window was raised is not knowable from
+    inside this process — but *whether anybody is reading our stdout* is,
+    because the shell says so when it spawns us (`--supervised`). Those are
+    different claims and the extension needs the second one:
+
+      * `raised`   — a shell is attached; it read the line and called
+                     `show_window`. The extension must not open a tab.
+      * `no_shell` — nobody is reading stdout, because nobody is supervising
+                     this process. The nudge is still recorded (a window
+                     opened later within the TTL will take it), and a browser
+                     tab is the *correct* answer rather than a silent
+                     fallback the reader has to interpret.
+
+    `raised` is kept as an alias because the extension ships on its own clock
+    and an older one reads that key. It now says `delivery == "raised"`, which
+    is the thing it always claimed to mean.
     """
     route = body.route.lstrip("#/")
     if not ROUTE.match(route):
@@ -91,8 +104,20 @@ def ask_for_focus(body: FocusRequest, request: Request) -> dict:
     request.app.state.focus = {"route": route, "at": time.monotonic()}
     # Unbuffered, like the port handshake: a frozen binary's buffered stdout
     # would hold this line until the process exited, i.e. forever.
+    #
+    # Printed either way. With no shell attached it costs one line in a log
+    # nobody greps, and the alternative is a branch that makes the supervised
+    # path the only one ever exercised.
     print(f"{FOCUS_LINE} {route}", flush=True)
-    return {"accepted": True, "route": route, "raised": True}
+
+    attached = bool(request.app.state.settings.shell_attached)
+    delivery = "raised" if attached else "no_shell"
+    return {
+        "accepted": True,
+        "route": route,
+        "delivery": delivery,
+        "raised": delivery == "raised",
+    }
 
 
 @router.get("/focus")

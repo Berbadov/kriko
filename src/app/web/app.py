@@ -25,6 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import logs
+from app.web import origins
 from app.web.jobs import JobRunner
 from app.web.routers import (
     agent,
@@ -144,6 +145,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 pass
         return await call_next(request)
 
+    # ── who is allowed to ask ────────────────────────────────────────────
+    #
+    # Registered *last* and therefore outermost: `add_middleware` inserts at
+    # the front of the list, so the middleware added latest is the one a
+    # request meets first. A refused request must not record an extension
+    # sighting, open app.sqlite, or reach a router — so nothing may sit
+    # above this, and test_origins.py asserts the position rather than
+    # trusting a comment about it.
+    #
+    # `app/web/origins.py` carries the reasoning — the short version is that
+    # binding 127.0.0.1 protects the port from the network and not from the
+    # browser, and 8787 is a constant published in this repository.
+    @app.middleware("http")
+    async def only_from_here(request: Request, call_next):
+        why = origins.refuse(
+            request.headers.get("origin"), request.headers.get("host")
+        )
+        if why is not None:
+            # Logged, because the reader will see a view fail and this is the
+            # only place that says why. Warning rather than error: a page
+            # probing localhost is the system working, not a fault.
+            log.warning(
+                "refused %s %s: %s", request.method, request.url.path, why
+            )
+            return JSONResponse({"detail": why}, status_code=403)
+        return await call_next(request)
+
     # ── an unhandled error says what it was ──────────────────────────────
     #
     # Everything above is a local process with exactly one reader, who has no
@@ -207,6 +235,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "schema_version": SCHEMA_VERSION,
             "packs": installed_versions(app.state.settings.store_path),
             "releases_url": app.state.settings.releases_url,
+            # ── what the extension has to know, and could not ask ─────
+            #
+            # Both of these were knowable and neither was reachable, which is
+            # how "Open in App" came to open a browser tab for two entirely
+            # different reasons that looked identical from the outside.
+            #
+            # `shell_attached`: is anything reading our stdout? Without it a
+            # headless sidecar and a supervised one are the same server.
+            #
+            # `port_is_ours`: did *this* process win EXTENSION_PORT? If a
+            # stale sidecar holds 8787, the extension talks to the old process
+            # and a fresh install looks perfect while reaching nothing. It was
+            # already on /api/extension, which is the page a reader opens
+            # after they have decided something is broken — too late to be the
+            # thing that tells them.
+            "shell_attached": bool(app.state.settings.shell_attached),
+            "extension_port": EXTENSION_PORT,
+            "port_is_ours": bool(app.state.settings.extension_port_bound),
         }
 
     @app.get("/")
