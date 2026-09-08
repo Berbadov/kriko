@@ -132,3 +132,116 @@ def test_the_line_is_flushed_because_a_frozen_binary_buffers_stdout():
     the shell would receive the nudge when the process exited."""
     source = Path(focus.__file__).read_text(encoding="utf-8")
     assert 'print(f"{FOCUS_LINE} {route}", flush=True)' in source
+
+
+# ── the honest answer about delivery ─────────────────────────────────────
+#
+# The old response said `raised: true` unconditionally, which is a claim this
+# process is not in a position to make: it cannot see a window, and the line
+# it prints goes into a pipe that may have nobody on the other end. That is
+# how "Open in Kriko" came to look like a dead button — the extension was told
+# the window had been raised, so it correctly declined to open a tab, and a
+# reader running the sidecar by hand got nothing at all.
+
+
+def test_unsupervised_says_so_rather_than_claiming_a_window(client):
+    """No shell attached, so no window was raised, and the extension needs to
+    hear that — a tab is the right answer here, not a silent nothing."""
+    body = client.post("/api/focus", json={"route": "knowledge"}).json()
+    assert body["delivery"] == "no_shell"
+    assert body["raised"] is False
+    # Still recorded: a window opened within the TTL should take the nudge.
+    assert client.get("/api/focus").json()["route"] == "knowledge"
+
+
+def test_supervised_claims_the_raise(tmp_path):
+    """With a shell reading stdout, the printed line *is* the raise."""
+    app = create_app(
+        Settings(
+            store_path=tmp_path / "k.sqlite",
+            app_state_path=tmp_path / "app.sqlite",
+            analysis_log_path=tmp_path / "a.jsonl",
+            shell_attached=True,
+        )
+    )
+    with TestClient(app) as client:
+        body = client.post("/api/focus", json={"route": "knowledge"}).json()
+    assert body["delivery"] == "raised"
+    assert body["raised"] is True
+
+
+def test_the_line_is_printed_even_with_no_shell(client, capfd):
+    """Not a branch. If the print were conditional, the only path anyone ever
+    exercises locally would be the one that does nothing."""
+    client.post("/api/focus", json={"route": "packs"})
+    assert f"{focus.FOCUS_LINE} packs" in capfd.readouterr().out
+
+
+def test_the_shell_declares_its_supervision_when_it_spawns_the_sidecar():
+    """The one fact the sidecar cannot work out for itself.
+
+    A supervised sidecar and a hand-run one are identical over HTTP. If this
+    flag goes missing from the spawn, every focus request reports `no_shell`
+    and the extension opens a browser tab beside the running app — exactly
+    the bug this whole path exists to fix, and nothing else would fail.
+    """
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    assert '.args(["--exit-with-parent", "--supervised"])' in main_rs
+
+
+def test_the_sidecar_accepts_the_flag_the_shell_passes(capfd):
+    """The other half of the same joint.
+
+    A flag Rust passes and argparse has never heard of is not a degraded
+    feature — argparse exits 2, so the sidecar never binds and the window
+    never opens. Asked of the real parser rather than a copy of it, via the
+    one argv that makes `main` describe itself and stop.
+    """
+    from app import sidecar
+
+    with pytest.raises(SystemExit) as exited:
+        sidecar.main(["--help"])
+    assert exited.value.code == 0
+    assert "--supervised" in capfd.readouterr().out
+
+
+def test_settings_reads_the_supervision_flag_from_the_environment(monkeypatch):
+    """The sidecar exports it; Settings.from_env picks it up. Through the
+    environment because `Settings` is built after the flag is known and this
+    is a fact about the process, not a configuration choice."""
+    monkeypatch.setenv("KRIKO_SUPERVISED", "1")
+    assert Settings.from_env().shell_attached is True
+    monkeypatch.setenv("KRIKO_SUPERVISED", "0")
+    assert Settings.from_env().shell_attached is False
+    monkeypatch.delenv("KRIKO_SUPERVISED")
+    assert Settings.from_env().shell_attached is False
+
+
+# ── /api/health carries the two facts a broken door needs ────────────────
+#
+# Both of these are invisible from inside the window, which is why they had
+# to be published: the reader whose "Open in Kriko" does nothing has no way
+# to tell a lost 8787 from an unsupervised sidecar from a missing extension,
+# and neither did we when they asked.
+
+
+def test_health_publishes_the_extension_door_and_the_shell(client):
+    body = client.get("/api/health").json()
+    from app.web.settings import EXTENSION_PORT
+
+    assert body["extension_port"] == EXTENSION_PORT
+    assert "port_is_ours" in body
+    assert body["shell_attached"] is False
+
+
+def test_health_reports_a_shell_when_there_is_one(tmp_path):
+    app = create_app(
+        Settings(
+            store_path=tmp_path / "k.sqlite",
+            app_state_path=tmp_path / "app.sqlite",
+            analysis_log_path=tmp_path / "a.jsonl",
+            shell_attached=True,
+        )
+    )
+    with TestClient(app) as client:
+        assert client.get("/api/health").json()["shell_attached"] is True
