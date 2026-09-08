@@ -6,6 +6,53 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — B81: the installer stops needing GitHub's permission
+
+`main`. The v0.5.0 tag produced nothing. Every job in both workflows exited in
+three seconds with `runner_name: ""` and `steps: 0` — GitHub never assigned a
+runner, which is what a spending cap looks like from the inside. The tag is
+pushed, the suite is green, and there is no installer, because the only thing
+in the repository that could build one was `.github/workflows/desktop.yml`.
+
+That is the app-first phase's rule 4 failing on a technicality: *ship to the
+reader, not to the branch*. A fix that is not in an installer they can
+double-click is not a fix yet — and it turns out neither is a release.
+
+**`packaging/build_desktop.ps1`** runs the workflow's windows leg on a Windows
+box, in one command: install from `requirements.lock`, build the UI, freeze the
+sidecar, smoke the handshake, place it as `kriko-sidecar-<triple>.exe`,
+generate icons, configure the updater, `tauri build`, launch the bundled shell.
+Nothing was invented for it. PyInstaller cannot cross-compile, so a Windows
+sidecar has to be frozen on Windows regardless — the steps were never
+Actions-specific, they were just written down somewhere only Actions could
+read. `packaging/freeze.sh` covered the first half already and its header said
+so ("the Tauri bundle ... is still only built in desktop.yml"); that sentence
+is now a pointer rather than a dead end.
+
+**The gate, because two copies of a build drift.** A step added to CI and not
+to the script means a hand-built installer is quietly not the one a tag
+produces, and nobody finds out until a reader opens it — precisely the shape
+of failure the audit was about. `src/app/tests/test_the_installer_can_be_built_by_hand.py`
+reads the `bundle` job out of `desktop.yml`, extracts the artifacts it *names*
+(`requirements.lock`, `kriko-sidecar.spec`, `smoke_sidecar.py`,
+`configure_updater.py`, `smoke_app.py`), the npm surfaces it builds
+(`ui` and `tauri`, install and script) and the `tauri` subcommands it runs, and
+asserts the script names every one. Derived, not enumerated: a new
+`packaging/whatever.py` step fails this the day it lands. Plus the two order
+invariants a subset check cannot see — freeze before place before bundle
+(Tauri embeds whatever is in `binaries/` at bundle time, so the wrong order
+ships the *previous* run's sidecar, green and silent), and sidecar smoke before
+bundle before app smoke. Steps guarded to the linux/macos legs are skipped by
+reading their `if:`, never by an allow-list of windows steps — an allow-list
+would drop a new step, which is the drift being checked for.
+
+What this does not do: produce an installer from this machine. It cannot —
+that needs Windows. It removes the *runner* from the critical path, not the OS.
+
+Gate: pytest 1021 passed / 1 skipped locally; CI unavailable (quota).
+
+---
+
 ### 2026-09-08 — the 1.0.0 audit, part two: the subsystem, the sites, and the long tail
 
 `release/1.0.0-readiness`, commits `53f0ac0`, `9e4a376`, `39a7c50`, `56af236`,

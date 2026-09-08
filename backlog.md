@@ -882,9 +882,19 @@ in this file.
 
 **B54–B62, B65–B80 are done** and moved to `done.md` — two sections dated
 2026-09-08, the second covering [PR #12](https://github.com/Berbadov/kriko/pull/12).
-`B57` is done except `Cargo.lock`, which is `B53` and needs a Rust toolchain;
-`B44` (LICENSE) is its own row under P2. What stays open here is the two rows
-nobody can write code for:
+`B57` is done including `Cargo.lock` (that was `B53`, closed 2026-09-08 — a
+user-local rustup and `cargo generate-lockfile` turned out to be the whole
+"needs a Rust toolchain" blocker). `B44` (LICENSE) is its own row under P2.
+
+### B81 — Only CI could build an installer — **Done 2026-09-09**
+Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
+assigned, and `desktop.yml` was the sole path to a bundle.
+`packaging/build_desktop.ps1` runs that job on a Windows box, and
+`src/app/tests/test_the_installer_can_be_built_by_hand.py` reads the workflow
+to fail the script when the two drift. Does not remove the *OS* from the
+critical path — PyInstaller cannot cross-compile — only the runner.
+
+What stays open here is the two rows nobody can write code for:
 
 ### B63 — The updater and `packs.json` URLs 404 for a running app
 **Blocked on Q1.** The repository is private, so both point at endpoints a

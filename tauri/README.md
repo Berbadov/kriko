@@ -47,6 +47,18 @@ CI does exactly this on macOS, Windows and Linux
 (`.github/workflows/desktop.yml`). Bundles are **unsigned**; signing is a
 policy decision, not an engineering one, and is deferred.
 
+On Windows, `pwsh packaging/build_desktop.ps1` runs that whole job — install
+from the lock, build the UI, freeze, smoke, place, icons, updater config,
+bundle, smoke again — in one command. It exists because the workflow was the
+*only* path to an installer, and on 2026-09-09 that path was closed: every job
+on the v0.5.0 tag exited in three seconds with no runner assigned. A release
+that depends on a runner being available is a release someone else can cancel.
+PyInstaller cannot cross-compile, so the Windows sidecar has to be frozen on
+Windows either way — the script is not a workaround, it is the same build
+without the middleman. `test_the_installer_can_be_built_by_hand.py` reads the
+artifacts the workflow's bundle job names and fails if the script has not
+caught up, because two copies of one build drift.
+
 `src-tauri/Cargo.lock` is committed and every crate in it resolves from
 crates.io. Cargo folds all targets into that one file, so the lock a Linux
 machine generates pins the Windows and macOS graphs too — which is why
