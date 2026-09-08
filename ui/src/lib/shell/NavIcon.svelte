@@ -42,6 +42,8 @@
         packs: ["M12 3 3.5 7.5 12 12l8.5-4.5z", "M3.5 7.5v9L12 21l8.5-4.5v-9", "M12 12v9"],
         // a play triangle inside a ring: work that is running
         jobs: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M10 8.5 15.5 12 10 15.5z"],
+        // a funnel with drops below it: sources in, claims out
+        pipeline: ["M4 5h16l-6 7v6l-4 2v-8z", "M17.5 17.5v.01", "M20.5 20.5v.01"],
         // an inbox tray: what came in through the door
         submissions: ["M3.5 13.5 6 5h12l2.5 8.5v5h-17z", "M3.5 13.5h4l1.5 2.5h6l1.5-2.5h4"],
         // a prompt caret

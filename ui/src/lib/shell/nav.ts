@@ -57,6 +57,12 @@ export const NAV: NavGroupSpec[] = [
         items: [
             { name: "packs", label: "Packs" },
             { name: "jobs", label: "Runs" },
+            // Beside Runs, not inside it: a job says whether long work is
+            // going and what it printed; the pipeline says what it *did* —
+            // sources read, findings kept, refusals and why. A run that
+            // gathered nothing and a run that lost everything at the
+            // grounding check look identical in a job log.
+            { name: "pipeline", label: "Knowledge pipeline" },
             // What came in through the agent door and what the gate did with
             // it. In System rather than Knowledge because it is about the
             // door, not about what is known — and it is the only place a
