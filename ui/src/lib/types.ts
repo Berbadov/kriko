@@ -489,3 +489,18 @@ export type PipelineFrame = {
     cursor: number;
     live: boolean;
 };
+
+
+/** A label a listing page carried that no installed adapter reads.
+ *
+ * `seen` is the weight and `last_at` is the urgency: a label seen four hundred
+ * times over six months is a known gap somebody decided not to map, and one
+ * seen twice this week on a site that used to work is a markup change. */
+export type UnmappedLabel = {
+    adapter_id: string;
+    label: string;
+    seen: number;
+    first_at: string;
+    last_at: string;
+    sample_url: string;
+};

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import { stubFetch, stubFetchFailing } from "../lib/stub-fetch";
 import Overview from "./Overview.svelte";
@@ -55,6 +55,18 @@ const ROUTES = {
             },
         ],
     },
+    "/api/adapters/unmapped": {
+        labels: [
+            {
+                adapter_id: "a1",
+                label: "Something The Page Said",
+                seen: 4,
+                first_at: "2026-09-01T00:00:00Z",
+                last_at: "2026-09-07T00:00:00Z",
+                sample_url: "https://example.test/one",
+            },
+        ],
+    },
     "/api/health/weakest": {
         claims: [
             {
@@ -104,6 +116,61 @@ describe("Overview", () => {
         });
         render(Overview);
         expect(await screen.findByText(/No packs installed/i)).toBeInTheDocument();
+    });
+
+    it("names the labels no adapter reads, because nothing else reports them", async () => {
+        // A renamed field does not error: the lookup succeeds and returns
+        // fewer claims. This table is the only place that difference is
+        // visible, so its absence is the bug being fixed.
+        stubFetch(ROUTES);
+        render(Overview);
+        expect(
+            await screen.findByText("Something The Page Said"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("4")).toBeInTheDocument();
+        expect(screen.getByText("a1")).toBeInTheDocument();
+    });
+
+    it("links a label to the page it was seen on, so it can be checked", async () => {
+        stubFetch(ROUTES);
+        render(Overview);
+        const link = await screen.findByText("Something The Page Said");
+        expect(link).toHaveAttribute("href", "https://example.test/one");
+    });
+
+    it("strikes a dismissed label through rather than removing the row", async () => {
+        // Dismissal is a delete on the server, but the row stays put: one that
+        // vanishes under the cursor leaves no way to tell "dismissed" from
+        // "misclicked".
+        stubFetch(ROUTES);
+        render(Overview);
+        const button = await screen.findByRole("button", { name: /not a field/i });
+        await fireEvent.click(button);
+        const row = screen.getByText("Something The Page Said").closest("tr");
+        expect(row).toBeInTheDocument();
+        // The class is the assertion: `tr.gone td` is what strikes it through,
+        // and a test that only checked the text would pass on a row that
+        // silently looks untouched.
+        expect(row).toHaveClass("gone");
+        expect(button).toBeDisabled();
+    });
+
+    it("puts a label back when the dismissal did not reach the app", async () => {
+        stubFetch({
+            ...ROUTES,
+            "/api/adapters/unmapped/": { status: 500, body: "boom" },
+        });
+        render(Overview);
+        const button = await screen.findByRole("button", { name: /not a field/i });
+        await fireEvent.click(button);
+        // Enabled again: a label the app still holds must still be actionable.
+        await waitFor(() => expect(button).not.toBeDisabled());
+    });
+
+    it("says nothing is unread rather than printing an empty table", async () => {
+        stubFetch({ ...ROUTES, "/api/adapters/unmapped": { labels: [] } });
+        render(Overview);
+        expect(await screen.findByText(/Nothing unread/i)).toBeInTheDocument();
     });
 
     it("surfaces a failure instead of rendering blank", async () => {

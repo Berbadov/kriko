@@ -323,9 +323,22 @@ th {
     font-weight: 500;
     font-size: var(--t-xs);
 }
+th.num,
 td.num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+/* A dismissed row stays on screen, struck through: a row that disappears
+   under the cursor gives the reader no way to tell "dismissed" from
+   "misclicked", and the delete it stands for is already durable. */
+tr.gone td {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+/* link-ish carries a top margin because it usually stands where a paragraph
+   would. In a cell it stands where a word would. */
+td button.link-ish {
+    margin-top: 0;
 }
 tr.concern td {
     border-left: 3px solid var(--high);

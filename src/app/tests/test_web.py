@@ -8,6 +8,7 @@ against two stores. That coupling is what blocked backlog B28's router split.
 """
 
 import json
+import sqlite3
 import re
 import textwrap
 
@@ -138,7 +139,14 @@ def client(tmp_path):
     tc = TestClient(
         create_app(
             Settings(
-                store_path=store_path, analysis_log_path=tmp_path / "analyses.jsonl"
+                store_path=store_path,
+                analysis_log_path=tmp_path / "analyses.jsonl",
+                # Not optional, and it was missing: the default is
+                # `~/.kriko/app.sqlite`, so every test on this fixture used to
+                # write its history, marks and sightings into the developer's
+                # own. See src/app/tests/conftest.py — that is now a failure
+                # rather than a comment.
+                app_state_path=tmp_path / "app.sqlite",
             )
         )
     )
@@ -400,6 +408,69 @@ def test_a_label_no_rule_covers_is_reported_rather_than_silently_dropped(client)
             "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
         },
     )
+    assert r.json()["unmapped_labels"] == ["Torque"]
+
+
+def test_an_unmapped_label_outlives_the_lookup_that_found_it(client):
+    """Reported *and* kept.
+
+    The response has carried `unmapped_labels` since the beginning and every
+    caller dropped it, which made a site renaming a field invisible: the
+    lookup still succeeds, resolves less precisely and returns fewer claims,
+    so it reads as a thin pack rather than a broken adapter. B70 is the row
+    that survives the request.
+    """
+    for _ in range(3):
+        client.post(
+            "/api/analyze",
+            json={
+                "url": "https://toolshop.invalid/item/dhp484",
+                "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
+            },
+        )
+    rows = client.get("/api/adapters/unmapped").json()["labels"]
+    assert [r["label"] for r in rows] == ["Torque"]
+    # Three lookups, one row, a count of three — the signal, not a log.
+    assert rows[0]["seen"] == 3
+    assert rows[0]["sample_url"] == "https://toolshop.invalid/item/dhp484"
+    assert rows[0]["adapter_id"]
+
+
+def test_a_label_can_be_dismissed_and_returns_if_it_recurs(client):
+    client.post(
+        "/api/analyze",
+        json={
+            "url": "https://toolshop.invalid/item/dhp484",
+            "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
+        },
+    )
+    adapter_id = client.get("/api/adapters/unmapped").json()["labels"][0]["adapter_id"]
+    gone = client.delete(f"/api/adapters/unmapped/{adapter_id}/Torque")
+    assert gone.json() == {"forgotten": True}
+    assert client.get("/api/adapters/unmapped").json()["labels"] == []
+
+
+def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(client, monkeypatch):
+    """The instrument must not break the experiment.
+
+    Every caller of `record_unmapped` is on the path of a reader waiting for
+    an answer about a car they are standing next to. A coverage signal is
+    worth less than that, always.
+    """
+    from app.web import state as state_module
+
+    def explode(*args, **kwargs):
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(state_module, "record_unmapped", explode)
+    r = client.post(
+        "/api/analyze",
+        json={
+            "url": "https://toolshop.invalid/item/dhp484",
+            "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
+        },
+    )
+    assert r.status_code == 200
     assert r.json()["unmapped_labels"] == ["Torque"]
 
 
@@ -746,3 +817,4 @@ def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, 
 
     assert row["state"] == "connected"
     assert row["skill"] is None
+
