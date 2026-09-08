@@ -372,3 +372,83 @@ test("an answer the app did not store offers neither of them", async () => {
   assert.equal(result.app_routes, undefined);
   assert.equal(result.app_urls, undefined);
 });
+
+// ── "Open in Kriko" tells the truth about what it did ────────────────────
+//
+// The button's whole job is to put the reader in front of the *app*. It got
+// there by posting a route and trusting a 2xx to mean a window came to the
+// front — which it does not: a 2xx means the route was recorded, and whether
+// anything raised a window depends on whether a desktop shell is reading the
+// sidecar's stdout. With the server started from a terminal the old code
+// reported success and declined to open a tab, so the button did nothing at
+// all, visibly. These four tests are the four answers it can now give.
+
+test("a raised window means no browser tab", async () => {
+  const h = loadBackground({
+    routes: { "/api/focus": { accepted: true, route: "check", delivery: "raised" } },
+  });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.raised, true);
+  assert.deepEqual(h.state.tabsCreated, []);
+});
+
+test("no shell attached opens the tab the reader asked for", async () => {
+  // The case that produced the report. The route posts fine, nothing is
+  // listening for the line, and a tab is the correct answer rather than a
+  // fallback the reader has to interpret.
+  const h = loadBackground({
+    routes: { "/api/focus": { accepted: true, route: "check", delivery: "no_shell" } },
+  });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.raised, false);
+  assert.equal(got.delivery, "no_shell");
+  assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
+});
+
+test("nothing running still falls back to a tab", async () => {
+  const h = loadBackground({ offline: true });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.ok, true);
+  assert.equal(got.delivery, "unreachable");
+  assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
+});
+
+test("a route the app refuses is reported, not opened in a tab", async () => {
+  // A 422 can only mean this extension built a route the app cannot
+  // navigate to. Opening a tab at that same bad route hides a defect in our
+  // code behind a fallback meant for a missing app.
+  const h = loadBackground({
+    routes: { "/api/focus": { detail: "not a route this app could navigate to" } },
+    statuses: { "/api/focus": 422 },
+  });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "nope!", fallbackUrl: "http://127.0.0.1:8787/#/nope!" },
+  });
+  assert.equal(got.ok, false);
+  assert.match(got.error, /not a route/);
+  assert.deepEqual(h.state.tabsCreated, []);
+});
+
+test("an older extension's `raised` key still means what it said", async () => {
+  // The extension ships on its own clock, so the app keeps the alias — and
+  // the worker reads it when a server predating `delivery` answers.
+  const h = loadBackground({
+    routes: { "/api/focus": { accepted: true, route: "check", raised: true } },
+  });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.raised, true);
+  assert.deepEqual(h.state.tabsCreated, []);
+});

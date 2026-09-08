@@ -94,6 +94,7 @@ describe("Submissions", () => {
     it("explains a failure rather than rendering blank", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => new Response("boom", { status: 500 })));
         render(Submissions);
-        expect(await screen.findByText(/Could not load this view/)).toBeInTheDocument();
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(screen.getByText(/bug in Kriko, not something you did/)).toBeInTheDocument();
     });
 });

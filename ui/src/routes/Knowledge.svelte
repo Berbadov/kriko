@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Failure from "../lib/Failure.svelte";
+    import { remedyFor } from "../lib/failure";
     import Brief from "../lib/Brief.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import Health from "./Health.svelte";
@@ -48,7 +50,7 @@
     let packs = $state<Pack[]>([]);
     let subjects = $state<Subject[]>([]);
     let gaps = $state<Gap[]>([]);
-    let error = $state("");
+    let error = $state<unknown>(null);
     let loading = $state(true);
 
     // Verdicts readers left, almost all of them from the browser extension —
@@ -57,7 +59,7 @@
     // "which claims are getting called wrong" is an authoring question, and
     // this is the authoring screen.
     let marks = $state<Marks | null>(null);
-    let markError = $state("");
+    let markError = $state<unknown>(null);
 
     // What the marks *add up to*. The raw list answers "what did people say";
     // these two queues answer the only question an author can act on — which
@@ -84,9 +86,9 @@
             // here — the cost is the reader's attention, and that is what
             // `shown` bounds.
             subjects = await api.subjects(query.trim(), 500);
-            error = "";
+            error = null;
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         } finally {
             loading = false;
         }
@@ -114,9 +116,9 @@
             // a screen that showed the list and then, a beat later, its
             // consequences would be describing one fetch as two.
             [marks, signals] = await Promise.all([api.marks(), api.markSignals()]);
-            markError = "";
+            markError = null;
         } catch (cause) {
-            markError = String(cause);
+            markError = cause;
         }
     }
 
@@ -174,7 +176,12 @@
                 [subject.subject_id]: await api.subject(subject.subject_id),
             };
         } catch (cause) {
-            detail = { ...detail, [subject.subject_id]: String(cause) };
+            detail = {
+                ...detail,
+                // A row-sized failure: the headline only, derived from the
+                // status like every other sentence in the app (B72).
+                [subject.subject_id]: remedyFor(cause).headline,
+            };
         }
     }
 
@@ -301,12 +308,12 @@
     <p class="state loading">Reading the store…</p>
 {:then}
     {#if error}
-        <p class="state error">Could not read the store: {error}</p>
+        <Failure {error} retry={loadList} />
     {:else if lens === "weak"}
         <Health heading={false} />
     {:else if lens === "marked"}
         {#if markError}
-            <p class="state error">Could not read the verdicts: {markError}</p>
+            <Failure error={markError} retry={loadMarks} />
         {:else if !marks}
             <p class="skeleton" style="height: 4rem">Reading…</p>
         {:else}

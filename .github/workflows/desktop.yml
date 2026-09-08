@@ -86,6 +86,17 @@ jobs:
 
             - uses: dtolnay/rust-toolchain@stable
 
+            # The lock is the pin, and this is what makes it one. Cargo already
+            # *uses* a committed Cargo.lock; what it will also do, quietly, is
+            # rewrite it when Cargo.toml has moved — and then the release that
+            # got tagged is not the one anybody resolved. `--locked` turns that
+            # into a red job instead. Cheap: metadata resolves, it does not
+            # build. See B53 and `test_shell_is_locked.py`.
+            - name: The shell's crate graph is the one that was committed
+              shell: bash
+              run: cargo metadata --locked --format-version 1 > /dev/null
+              working-directory: tauri/src-tauri
+
             # WebKitGTK and friends. Tauri 2 on Linux needs the 4.1 ABI; 4.0
             # builds and then fails to open a window.
             - name: Linux system deps
@@ -98,7 +109,11 @@ jobs:
             - name: Install Python side
               run: |
                   python -m pip install --upgrade pip
-                  pip install -e "." pyinstaller
+                  # -r first: the lock is what a reader's sidecar contains, and
+                  # a floating resolve here is how two builds of one tag stop
+                  # being the same binary (B57). PyInstaller is a build tool
+                  # rather than part of the closure, so it is not locked.
+                  pip install -r requirements.lock -e "." pyinstaller
 
             # The UI first: the spec refuses to freeze without it rather than
             # shipping an app that 404s on its own frontend.
@@ -129,7 +144,10 @@ jobs:
 
             - name: Icons
               run: |
-                  npm --prefix tauri install --no-audit --no-fund
+                  # `ci`, not `install`: this resolves the Tauri CLI, and a
+                  # floating `^2` is exactly how v0.2.1 opened while v0.2.4
+                  # panicked on an identical tree four hours later.
+                  npm --prefix tauri ci --no-audit --no-fund
                   npm --prefix tauri run tauri icon src-tauri/icons/icon.png
 
             # Self-update is a build-time decision, because the key that makes
@@ -206,7 +224,7 @@ jobs:
             - name: Install
               run: |
                   python -m pip install --upgrade pip
-                  pip install -e "."
+                  pip install -r requirements.lock -e "."
             - name: Build every pack
               run: |
                   mkdir -p release

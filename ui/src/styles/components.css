@@ -323,9 +323,22 @@ th {
     font-weight: 500;
     font-size: var(--t-xs);
 }
+th.num,
 td.num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+/* A dismissed row stays on screen, struck through: a row that disappears
+   under the cursor gives the reader no way to tell "dismissed" from
+   "misclicked", and the delete it stands for is already durable. */
+tr.gone td {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+/* link-ish carries a top margin because it usually stands where a paragraph
+   would. In a cell it stands where a word would. */
+td button.link-ish {
+    margin-top: 0;
 }
 tr.concern td {
     border-left: 3px solid var(--high);
@@ -399,8 +412,34 @@ pre {
     color: var(--accent);
 }
 .state.no-match,
-.state.unknown {
+.state.unknown,
+/* B73's "behind but still works" verdict: a caution, not a fault — the
+   extension is doing its job, it is simply older than what ships. */
+.state.warn {
     border-color: var(--medium);
+}
+
+/* B72 — a failure is a small block, not a line: what happened, what to do,
+   and the exception folded away underneath. The headline reuses .state.error
+   so a failure looks like every other piece of app-said-something, and the
+   sentence under it is ordinary prose because that is the part being read. */
+.failure {
+    max-width: var(--measure);
+    margin: var(--s-3) 0;
+}
+.failure .state {
+    margin-bottom: var(--s-2);
+}
+.failure > p {
+    margin: 0;
+    line-height: var(--lh-read);
+}
+.failure .row {
+    margin-top: var(--s-3);
+    align-items: center;
+}
+.failure pre {
+    margin-top: var(--s-3);
 }
 .event {
     padding: var(--s-1) 0;
@@ -536,10 +575,24 @@ li.gap {
 }
 
 /* ── the rail ─────────────────────────────────────────────────────── */
+/* Application chrome does not scroll like a document.
+ *
+ * This was `flex-direction: column` with `overflow-y: auto` on the whole
+ * rail, which meant that at any window short enough to clip fourteen links,
+ * the brand mark and the mode switch scrolled away with them and a web-page
+ * scrollbar ran down the side of the navigation. Two things were wrong at
+ * once: the wrong element scrolled, and it announced itself as a page.
+ *
+ * A three-row grid fixes the first — brand and foot are `auto`, the nav is
+ * `minmax(0, 1fr)`, and `minmax(0, ...)` rather than `1fr` because a grid
+ * track's automatic minimum is its content, so `1fr` alone would refuse to
+ * shrink and push the overflow back out to the rail. `overflow: clip` on the
+ * rail itself is the belt: nothing here may ever scroll except the nav.
+ */
 .rail {
     grid-area: rail;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: var(--s-5);
     padding: var(--s-4) var(--s-3);
     border-right: 1px solid var(--line);
@@ -547,7 +600,7 @@ li.gap {
     height: 100vh;
     position: sticky;
     top: 0;
-    overflow-y: auto;
+    overflow: clip;
 }
 .brand {
     display: flex;
@@ -578,9 +631,81 @@ li.gap {
 .brand-text .meta {
     font-size: var(--t-xs);
 }
+/* The one thing in the rail allowed to scroll — and it does it as chrome.
+ *
+ * `scrollbar-width: none` because the bar itself was the complaint, and the
+ * four background gradients replace it: two solid caps painted with
+ * `background-attachment: local` sit on the content and scroll away, two
+ * shadows painted `scroll` are fixed to the frame. The shadow is therefore
+ * only visible when the caps have moved off it, which is exactly when there
+ * is something above or below to scroll to. No script, no resize observer,
+ * and nothing shown when the rows fit — which is most windows.
+ */
 .rail-nav {
+    position: relative;
     display: grid;
     gap: var(--s-5);
+    align-content: start;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background:
+        linear-gradient(var(--n-1) 40%, transparent) top / 100% 14px no-repeat,
+        linear-gradient(transparent, var(--n-1) 60%) bottom / 100% 14px no-repeat,
+        radial-gradient(
+                farthest-side at 50% 0,
+                color-mix(in oklab, var(--text) 16%, transparent),
+                transparent
+            )
+            top / 100% 6px no-repeat,
+        radial-gradient(
+                farthest-side at 50% 100%,
+                color-mix(in oklab, var(--text) 16%, transparent),
+                transparent
+            )
+            bottom / 100% 6px no-repeat;
+    background-attachment: local, local, scroll, scroll;
+}
+.rail-nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+/* Groups arrive in order when the mode switch adds them, rather than three
+ * blocks appearing at once. Short, and on mount only: this fires when the
+ * reader flips buyer/author, which is the moment the rail's shape changes and
+ * the one moment a stagger is telling them something. */
+.nav-slot {
+    animation: nav-in var(--dur-slow) ease both;
+    animation-delay: calc(var(--slot) * var(--stagger));
+}
+@keyframes nav-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+/* The marker that moves between rows. Positioned against `.rail-nav`, so it
+ * travels with the rows if they ever scroll. */
+.nav-mark {
+    position: absolute;
+    left: 0;
+    top: var(--mark-top);
+    width: 3px;
+    height: var(--mark-height);
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
+    opacity: 0;
+    transition:
+        top var(--dur-slow) var(--ease-out),
+        height var(--dur-slow) var(--ease-out),
+        opacity var(--dur-fast) var(--ease);
+    pointer-events: none;
+}
+.nav-mark.on {
+    opacity: 1;
 }
 .nav-group ul {
     list-style: none;
@@ -597,16 +722,46 @@ li.gap {
     color: var(--dim);
 }
 .nav-link {
-    display: block;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s-2);
     padding: var(--s-2) var(--s-2);
     border-radius: var(--radius-sm);
     text-decoration: none;
     color: var(--n-8);
-    transition: background var(--dur-fast) ease;
+    transition:
+        background var(--dur-fast) ease,
+        color var(--dur-fast) ease;
+}
+.nav-link .nav-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    /* Quieter than the label until the row matters: an icon at full text
+     * contrast competes with the word beside it for the same job. */
+    opacity: 0.62;
+    transition: opacity var(--dur-fast) ease;
+}
+.nav-label {
+    /* A long label wraps rather than widening the rail or being clipped. */
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 .nav-link:hover {
     background: var(--panel-2);
     color: var(--text);
+}
+.nav-link:hover .nav-icon,
+.nav-link.active .nav-icon {
+    opacity: 1;
+}
+/* Keyboard focus has to be visible on the element people navigate with. */
+.nav-link:focus-visible,
+.brand:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
 }
 .nav-link.active {
     background: var(--accent-soft);
@@ -614,9 +769,37 @@ li.gap {
     font-weight: 600;
 }
 .rail-foot {
-    margin-top: auto;
     padding-top: var(--s-3);
     border-top: 1px solid var(--line);
+}
+
+/* Tighten before scrolling. On a laptop the rows fit with less air between
+ * the groups, and less air is a far cheaper cost than a scroll region. */
+@media (max-height: 820px) {
+    .rail {
+        gap: var(--s-3);
+    }
+    .rail-nav {
+        gap: var(--s-3);
+    }
+    .nav-title {
+        margin-bottom: var(--s-1);
+    }
+    .nav-link {
+        padding-top: calc(var(--s-1) + 1px);
+        padding-bottom: calc(var(--s-1) + 1px);
+    }
+}
+
+/* Motion is a flourish here, never information: the active row has its own
+ * background and `aria-current` regardless. */
+@media (prefers-reduced-motion: reduce) {
+    .nav-mark {
+        transition: none;
+    }
+    .nav-slot {
+        animation: none;
+    }
 }
 .rail-foot .modes {
     margin: 0;

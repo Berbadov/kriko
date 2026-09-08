@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Failure from "../lib/Failure.svelte";
+    import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
     import type {
         AgentConfig,
@@ -23,7 +25,7 @@
     const disabled = $derived(packs.filter((pack) => !pack.enabled));
 
     let data = $state<[AgentTargets, AgentConfig, AgentSkill] | null>(null);
-    let loadError = $state("");
+    let loadError = $state<unknown>(null);
     let busy = $state("");
     let showManual = $state(false);
     let copied = $state(false);
@@ -32,25 +34,30 @@
         try {
             data = await load();
             packs = await api.packs().catch(() => [] as Pack[]);
-            loadError = "";
+            loadError = null;
         } catch (cause) {
-            loadError = String(cause);
+            loadError = cause;
         }
     }
     refresh();
 
     // Errors land on the row rather than the page: one harness whose config
     // someone broke by hand must not hide the three that are fine.
-    let rowError = $state<Record<string, string>>({});
+    //
+    // The exception per row, not a string per row: a row is too small for the
+    // whole Failure block, but the *sentence* still has to be derived from the
+    // status rather than written here (B72), so the row renders the headline
+    // and nothing else.
+    let rowError = $state<Record<string, unknown>>({});
 
     async function connect(target: AgentTarget) {
         busy = target.id;
-        rowError = { ...rowError, [target.id]: "" };
+        rowError = { ...rowError, [target.id]: null };
         try {
             await api.connectAgent(target.id);
             await refresh();
         } catch (cause) {
-            rowError = { ...rowError, [target.id]: String(cause) };
+            rowError = { ...rowError, [target.id]: cause };
         } finally {
             busy = "";
         }
@@ -79,7 +86,10 @@
         try {
             verdict = await api.verifyAgent();
         } catch (cause) {
-            verdict = { ok: false, detail: String(cause) };
+            // Not the whole remedy: the verdict block below already says
+            // "it did not answer", which is the headline. What it needs
+            // from the exception is the detail under it.
+            verdict = { ok: false, detail: remedyFor(cause).technical };
         } finally {
             verifying = false;
         }
@@ -105,7 +115,7 @@
 </article>
 
 {#if loadError}
-    <p class="state error">Could not read the harness config: {loadError}</p>
+    <Failure error={loadError} retry={refresh} />
 {:else if data}
     <article class="card">
         <h3>Harnesses on this machine</h3>
@@ -130,7 +140,9 @@
                     {/if}
                     {#if target.detail}<span class="meta">{target.detail}</span>{/if}
                     {#if rowError[target.id]}
-                        <span class="state error">{rowError[target.id]}</span>
+                        <span class="state error"
+                            >{remedyFor(rowError[target.id]).headline}</span
+                        >
                     {/if}
                 </li>
             {/each}
