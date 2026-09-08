@@ -870,6 +870,162 @@ obvious, which is the product principle's open work (B36), not this item's.
 
 ---
 
+## P0 — the 1.0.0 release audit *(2026-09-08)*
+
+The full assessment, with the finding-by-finding reasoning, the seven-phase
+plan and the six open questions, is the published artifact
+`https://claude.ai/code/artifact/b4a4aa7d-18cc-4c2e-b22c-14549587e4c8`
+("Kriko 1.0.0 Readiness"). This section is the tracked half — the rows, so
+status lives here rather than in a document nobody greps.
+
+**The headline finding, because it frames every row below.** Every automated
+gate was green — pytest, vitest, node, svelte-check — and *all four reported
+defects passed all of them*. Four defects, four missing categories of gate.
+So each row that fixes behaviour also names the gate that was absent, and a
+row without one is not finished.
+
+### B54 — Verdict signals split wrong/outdated *(done, see done.md)*
+
+### B55 — The analysis log wrote nothing for two months `[G6]`
+**Done 2026-09-08** — `1f3978e`. `observability.log_analysis_jsonl` reported
+its failures through `log.warning` into a root logger with no handler, so a
+`PermissionError` on every append produced output nowhere. The call site
+looked correct, which is what let it survive. Fixed as two rules, in
+`src/app/logs.py`: a diagnostic lands beside the store, never in the source
+tree; and a path we cannot write is *reported*, not swallowed — `probe()`
+returns the reason, `resolve_writable()` falls back rather than refusing to
+start, and both the path in use and the rejection reason reach `/api/health`
+and the About screen. CLAUDE.md's fail-open rule was never wrong; the missing
+half was reporting.
+
+### B56 — Anything a browser visits can drive this app `[G6]`
+**Done 2026-09-08** — `ae70e39`. 127.0.0.1 protects the port from the network
+and not from the browser: 8787 is a constant published in this repository. An
+`Origin` allowlist stops a cross-site GET (`GET /api/focus` is consume-once,
+so a page could burn a nudge it cannot even read); a `Host` allowlist stops
+DNS rebinding, which no `Origin` check can see. `src/app/web/origins.py`.
+
+### B57 — Four dependency surfaces, none of them locked
+`tauri/src-tauri/Cargo.lock` (that is B53), the root `package-lock.json`,
+`ui/package-lock.json` and the Python pins. `desktop.yml` should use `npm ci`
+for tauri. A release that cannot be rebuilt is not a release, and v0.2.1
+opening while v0.2.4 panicked on an identical tree is the evidence.
+
+### B58 — The Console could not be typed in `[G6]`
+**Done 2026-09-08** — `1f3978e`. Route changes moved focus to the view
+container, which stole it from the prompt the route exists to offer. Fixed by
+treating `[autofocus]` as a declaration: a route that autofocuses a control is
+taken at its word, and the view container is the fallback. Beats a hardcoded
+route-name list and beats racing `document.activeElement`.
+
+### B59 — "Open in App" claimed to raise a window it could not see `[G6]`
+**Done 2026-09-08** — `ae70e39`. The response said `raised: true` on any 2xx,
+and a 2xx only means the route was recorded. Whether a window came to the
+front depends on whether anything is reading the sidecar's stdout — which the
+process cannot observe and the shell can declare. `--supervised` on the spawn,
+`delivery: "raised" | "no_shell"` on the response.
+
+### B60 — The extension conflated "the app said no" with "there is no app" `[G6]`
+**Done 2026-09-08** — `ae70e39`. A 422 (this extension built a route the app
+cannot navigate to) was caught by the same `except` as ECONNREFUSED and opened
+a tab at the same bad route, hiding a defect in our own code behind a fallback
+meant for a missing app.
+
+### B61 — The rail scrolled as a document `[G6]`
+**Done 2026-09-08** — `1f3978e`. `grid-template-rows: auto minmax(0, 1fr)
+auto` is the whole fix: a track's automatic minimum is its content, so plain
+`1fr` refuses to shrink and pushes the overflow back out to the parent. The
+rail now clips and only `.rail-nav` scrolls, with auto-hiding shadows done in
+four backgrounds (`background-attachment: local, local, scroll, scroll`) — no
+script, no ResizeObserver.
+
+### B62 — The rail was plain, and said nothing about state `[G6]`
+**Done 2026-09-08** — `1f3978e`. Inline SVG icons for all 16 routes (inline
+rather than an icon font, because the app must render with no network and a
+font is a box on first paint on the element people navigate with), one sliding
+marker rather than fourteen borders that blink, and a stagger on mode switch.
+All reduced-motion-safe and token-guarded by `tokens.test.ts`.
+
+### B63 — The updater and `packs.json` URLs 404 for a running app
+**Blocked on Q1.** The repository is private, so both point at endpoints a
+reader's app cannot reach. Recommendation in the artifact: a releases-only
+public mirror.
+
+### B64 — Nothing is signed, so nothing can self-update
+**Blocked on Q2.** minisign now (free, and the key must never be lost);
+the ~$200–400/yr Windows authenticode certificate can wait.
+
+### B65 — Two more gates the defects walked past `[G6]`
+**Done 2026-09-08** — `3343126`. `test_extension_sites.py` derives from the
+pack tree that every adapter's site is one the extension actually injects on
+(and that the panel's stylesheet reaches it) — the seam where a pack can read
+a site the extension never runs on, which the reader sees as "nothing known
+about this car". And `smoke_sidecar.py` now asks whether a log can be written
+*in the frozen binary*, which is where the paths differ.
+
+### B66 — CI was paused, so the branch had no gate `[G6]`
+**Done 2026-09-08** — `3343126`. `ci.yml` runs on push/pull_request again,
+with svelte-check added: types were a local-only gate, i.e. one that ran when
+someone remembered. The app-first phase's other half stands — it ends when the
+reader opens an installer, not when a workflow goes green.
+
+### B67 — The knowledge pipeline has no event spine `[G6]`
+The reader's Console shows a job log and nothing about *what the pipeline is
+doing*: no stage, no counts, no live view of what was discovered or extracted.
+Design: `pipeline_runs` / `pipeline_stages` / `pipeline_events` in
+`app.sqlite` (interface state, never the engine's schema), an `emit` callback
+passed *into* the pipeline so `kriko/` emits nothing and knows nothing about
+the transport, and SSE at `/api/pipeline/stream`. Stages are
+Discovery / Extraction / Ingestion / Ledgering.
+
+### B68 — The Pipeline route `[G6]`
+The view over B67: per-stage progress, token counts as they accrue, the
+knowledge entries landing and the sources they came from, and transitions
+animated because a state change nobody sees is a state change nobody trusts.
+Depends on B67.
+
+### B69 — Adding a listing site is a manual manifest edit `[G6]`
+The server learns about a site the moment its adapter file exists; the
+extension learns about it when somebody edits `manifest.json`. Fix:
+`chrome.scripting.registerContentScripts` at runtime from `/api/adapters`,
+with the static manifest reduced to what is needed before the first
+successful call. B65's invariant is the gate under this and stays afterwards.
+
+### B70 — Unmapped labels are discarded, so a site redesign is invisible
+`unmapped_labels` is computed and dropped. Persisted, it is the signal that a
+site changed its markup — which today surfaces as claims quietly going
+missing.
+
+### B71 — There is no first run
+A reader who installs the app lands on a working screen with an empty store
+and no path to a populated one.
+
+### B72 — Error copy names exceptions, not next steps
+
+### B73 — Extension and app versions never handshake
+Each ships on its own clock, which is right, and neither checks the other, so
+a stale extension fails in ways that look like a broken app.
+
+### B74 — No route is reachable by keyboard alone end to end
+
+### B75 — `hover_lite.js` pulls a font from Google Fonts
+A content script fetching a webfont from a third party, on every listing the
+reader opens. `tokens.test.ts` already forbids this in the app; the panel
+predates the rule.
+
+### B76 — Seven other `overflow` sites, unaudited `[G6]`
+**Done 2026-09-08** — `1f3978e`. Audited: 346 and 1046 are correct
+`overflow-x` on table containers, 524 correct for the job log, and
+513/729/968/1130 are clips. Only the rail was wrong. `chrome.test.ts` holds
+the rail's shape against the stylesheet, because layout is exactly what jsdom
+does not do and a browser harness for one CSS property is not the trade.
+
+### B77–B80 — Onboarding, docs, state management, performance
+The long tail from the audit's independent findings. Rows kept together
+because none of them blocks 1.0.0 and each is small.
+
+---
+
 ## Human decisions — status under G5
 
 | # | Topic | Status |
