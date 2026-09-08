@@ -19,7 +19,7 @@
     let query = $state("");
     let matches = $state<Subject[]>([]);
     let searching = false;
-    let error = $state("");
+    let error = $state<unknown>(null);
     let busy = $state(false);
     let more = $state(false);
 
@@ -94,7 +94,7 @@
     }
 
     async function ask() {
-        error = "";
+        error = null;
         if (missing.length) return;
         busy = true;
         try {
@@ -106,7 +106,7 @@
                 }),
             );
         } catch (e) {
-            error = e instanceof Error ? e.message : String(e);
+            error = e;
         } finally {
             busy = false;
         }
@@ -117,7 +117,7 @@
         context = {};
         query = "";
         matches = [];
-        error = "";
+        error = null;
     }
 
     const ready = load();
@@ -237,7 +237,7 @@
         </div>
 
         <div aria-live="polite">
-            {#if error}<p class="state error">{error}</p>{/if}
+            {#if error}<Failure {error} />{/if}
         </div>
     {/if}
 {:catch e}

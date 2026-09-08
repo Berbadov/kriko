@@ -15,12 +15,13 @@
      */
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
+    import Failure from "../lib/Failure.svelte";
     import { followPipeline, runProgress, runWord, stageCount } from "../lib/pipeline";
     import type { PipelineFrame, PipelineRun } from "../lib/types";
 
     let frame = $state<PipelineFrame | null>(null);
     let runs = $state<PipelineRun[]>([]);
-    let error = $state("");
+    let error = $state<unknown>(null);
     let picked = $state<string | undefined>(undefined);
     let ready = $state(false);
 
@@ -28,7 +29,7 @@
         try {
             runs = (await api.pipelineRuns()).runs ?? [];
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         } finally {
             ready = true;
         }
@@ -89,7 +90,7 @@
 </p>
 
 {#if error}
-    <p class="state error">Could not read the pipeline: {error}</p>
+    <Failure {error} />
 {/if}
 
 {#if frame}

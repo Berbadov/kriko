@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
+    import Failure from "../lib/Failure.svelte";
     import type { Adapter, ExtensionStatus } from "../lib/types";
 
     let status = $state<ExtensionStatus | null>(null);
@@ -11,18 +12,18 @@
     // list is pack data — a pack ships its adapters — so installing one
     // changes this without a line of app code.
     let adapters = $state<Adapter[]>([]);
-    let loadError = $state("");
+    let loadError = $state<unknown>(null);
     let busy = $state("");
-    let actionError = $state("");
+    let actionError = $state<unknown>(null);
     let copied = $state("");
 
     async function refresh() {
         try {
             status = await api.extension();
             adapters = await api.adapters().catch(() => [] as Adapter[]);
-            loadError = "";
+            loadError = null;
         } catch (cause) {
-            loadError = String(cause);
+            loadError = cause;
         }
     }
     refresh();
@@ -37,12 +38,12 @@
 
     async function add() {
         busy = "stage";
-        actionError = "";
+        actionError = null;
         try {
             await api.stageExtension();
             await refresh();
         } catch (cause) {
-            actionError = String(cause);
+            actionError = cause;
         } finally {
             busy = "";
         }
@@ -50,14 +51,14 @@
 
     async function reveal() {
         busy = "reveal";
-        actionError = "";
+        actionError = null;
         try {
             const done = await api.revealExtension();
             // A machine with no file manager is not an error worth a banner —
             // the path is on screen and copyable, which is what they need.
-            actionError = done.error;
+            actionError = new Error(done.error);
         } catch (cause) {
-            actionError = String(cause);
+            actionError = cause;
         } finally {
             busy = "";
         }
@@ -106,7 +107,7 @@
 </article>
 
 {#if loadError}
-    <p class="state error">Could not read the extension status: {loadError}</p>
+    <Failure error={loadError} />
 {:else if status}
     {#if !status.available}
         <p class="state error">
@@ -205,7 +206,7 @@
             {#if status.staged}
                 <p><code class="path">{status.path}</code></p>
             {/if}
-            {#if actionError}<p class="state error">{actionError}</p>{/if}
+            {#if actionError}<Failure error={actionError} />{/if}
         </article>
 
         {#if status.staged}
