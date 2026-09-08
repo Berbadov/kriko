@@ -1113,6 +1113,41 @@ and `test_app_state_migration.py` ratchets the set of columns that could
 never be back-added.
 
 ### B74 — No route is reachable by keyboard alone end to end
+**Done 2026-09-08.** The claim in the audit row was too strong — the rail is
+real anchors, the skip control was already first in the tab order, focus
+already moves into the view on navigation, and nothing in the app uses a
+positive `tabindex`. What was true is that *nothing verified the walk*. Every
+keyboard test in the suite covered one route with its own hand-written hash, so
+three failures were invisible:
+
+1. A rail entry whose name `App.svelte`'s if-chain does not handle renders
+   "No such view" — the link is there, focusable, announced, and there is no
+   path to that screen at all, by keyboard or mouse.
+2. A screen that renders but has no `NAV` entry is reachable only by typing a
+   URL, which in a desktop app with no address bar means not reachable.
+3. Focus escaping a modal into the document behind its scrim.
+
+**(3) was a live defect and is fixed.** The palette declared
+`aria-modal="true"` and did not keep it: Tab off the last option walked into
+the rail behind the scrim — focus on a link the reader cannot see, no visible
+ring anywhere on screen, and no reason left to think Escape was listening. It
+now wraps at the two ends only, reading its stops off the dialog at the moment
+of the press because the list is filtered as the reader types.
+
+**The gates.** `ui/src/App.keyboard.test.ts` walks every destination in `NAV`
+— one case per screen rather than a loop, because "which screens are missing"
+is the useful answer — and asserts the skip control is first, no positive
+tabindex exists, and every destination has a focusable rail link. Driven off
+`NAV`, so a screen added tomorrow is covered the day it appears. A source gate
+beside it fails any component that claims `aria-modal` without handling Tab,
+because the palette is the app's first modal and the second will be written by
+someone reading the first.
+
+**One thing this cost, worth writing down:** the first version of the
+traversal test was green with a route deleted from the if-chain. `waitFor`
+retries until an assertion *passes*, so a negative assertion inside it passes
+on the empty first frame and never sees the screen it is judging. Wait for a
+positive signal, then assert negatives synchronously.
 
 ### B75 — `hover_lite.js` pulls a font from Google Fonts
 **Done 2026-09-08** — `bc7ae01`. A content script fetching a webfont from a

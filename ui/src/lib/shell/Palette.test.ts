@@ -82,4 +82,43 @@ describe("Palette", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
         field.remove();
     });
+
+    /* B74: `aria-modal="true"` was a claim the dialog did not keep.
+     *
+     * Tab from the last option walked straight out into the rail behind the
+     * scrim — focus on a link the reader cannot see, no visible ring anywhere
+     * on screen, and nothing but Escape (which they now have no reason to
+     * think is listening) to get back. A modal that says it is modal has to
+     * hold the tab order, or it should not say so.
+     */
+    it("holds the tab order it claims to hold", async () => {
+        render(Palette, { mode: "author" });
+        await press("?");
+        const stops = [
+            screen.getByRole("combobox"),
+            ...screen.getAllByRole("option").map((li) => li.querySelector("button")!),
+        ];
+        stops[stops.length - 1].focus();
+        await fireEvent.keyDown(stops[stops.length - 1], { key: "Tab" });
+        expect(document.activeElement).toBe(stops[0]);
+
+        stops[0].focus();
+        await fireEvent.keyDown(stops[0], { key: "Tab", shiftKey: true });
+        expect(document.activeElement).toBe(stops[stops.length - 1]);
+    });
+
+    it("leaves an ordinary Tab inside the dialog alone", async () => {
+        // Trapping means wrapping at the ends, not intercepting every press:
+        // a handler that preventDefaults each Tab leaves the middle of the
+        // list unwalkable, which is the same bug facing the other way.
+        render(Palette, { mode: "author" });
+        await press("?");
+        const input = screen.getByRole("combobox");
+        input.focus();
+        const event = new KeyboardEvent("keydown", {
+            key: "Tab", bubbles: true, cancelable: true,
+        });
+        input.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+    });
 });
