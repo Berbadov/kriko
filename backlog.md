@@ -906,10 +906,33 @@ so a page could burn a nudge it cannot even read); a `Host` allowlist stops
 DNS rebinding, which no `Origin` check can see. `src/app/web/origins.py`.
 
 ### B57 — Four dependency surfaces, none of them locked
-`tauri/src-tauri/Cargo.lock` (that is B53), the root `package-lock.json`,
-`ui/package-lock.json` and the Python pins. `desktop.yml` should use `npm ci`
-for tauri. A release that cannot be rebuilt is not a release, and v0.2.1
-opening while v0.2.4 panicked on an identical tree is the evidence.
+**Done 2026-09-08 except `Cargo.lock`, which is B53 and needs a Rust
+toolchain.** Three of the four were already closed by the time this row was
+worked: all three `package-lock.json` files are committed and `desktop.yml`
+uses `npm ci` for both `ui/` and `tauri/`. The one still floating was the
+Python closure — `pip install -e "."` resolves whatever PyPI holds the minute
+the job runs, and that job is the only one that produces the binary a reader
+double-clicks.
+
+`requirements.lock` pins the runtime closure, walked from `pyproject.toml`'s
+five roots by `tools/relock.py`. Runtime *only*: the pipeline and dev extras
+run on an authoring machine, and pinning them would make every research-tool
+bump a change to the artifact a reader downloads. Installed as
+`pip install -r requirements.lock -e "."` rather than with `--no-deps`,
+because two members of the closure are Windows-only (colorama via click,
+pywin32 via mcp) and cannot be pinned from a Linux resolve — pip fills those
+in, everything the two platforms share is fixed.
+
+**The gate is the half that catches things, and it runs in both directions.**
+A lockfile alone proves nothing: a pin nobody runs against is a guess with a
+version number on it. `test_dependencies_are_locked.py` asserts that every
+runtime root in `pyproject.toml` reaches the lock (a sixth dependency cannot
+be added without landing there), that every pin matches what the suite just
+passed against (the lock cannot go stale while the suite stays green), that no
+extras-only package leaked in, and that `desktop.yml` actually installs from
+it — a lock nothing reads is a document, not a gate. Regeneration stays a
+deliberate act: `tools/relock.py` prints the file, and the test only ever
+compares.
 
 ### B58 — The Console could not be typed in `[G6]`
 **Done 2026-09-08** — `1f3978e`. Route changes moved focus to the view
