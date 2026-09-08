@@ -143,6 +143,15 @@ export const api = {
     brief: (subjectId: string) =>
         get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),
     jobs: (limit = 30) => get<{ items: T.Job[] }>(`/api/jobs?limit=${limit}`),
+    /** Runs of the knowledge pipeline, newest first, plus the stage names —
+     *  which come from the server because the stage vocabulary is the
+     *  server's, and a second copy here is a second place to forget. */
+    pipelineRuns: (limit = 30) =>
+        get<{ runs: T.PipelineRun[]; stages: { stage: string; label: string }[] }>(
+            `/api/pipeline/runs?limit=${limit}`,
+        ),
+    pipelineRun: (runId: string, after = 0) =>
+        get<T.PipelineFrame>(`/api/pipeline/runs/${seg(runId)}?after=${after}`),
     job: (jobId: string) => get<T.Job>(`/api/jobs/${seg(jobId)}`),
     research: (body: T.ResearchRequest) =>
         postJson<{ job_id: string; kind: string }>("/api/research", body),
