@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import logs
-from app.web import origins
+from app.web import origins, pipeline
 from app.web.jobs import JobRunner
 from app.web.routers import (
     agent,
@@ -38,6 +38,7 @@ from app.web.routers import (
     jobs,
     marks,
     packs,
+    pipeline as pipeline_router,
     query,
     subjects,
     submissions,
@@ -59,6 +60,21 @@ async def lifespan(app: FastAPI):
     # so at startup is the difference between durable status and a row that
     # lies forever.
     app.state.jobs.recover()
+    # And the same for the pipeline's own rows. A run left `running` is a run
+    # that was killed — the process cannot resume one it has no memory of, and
+    # a row that says `running` forever renders as a pipeline that never
+    # finishes. Guarded, because a reconciliation failure must not be the
+    # reason the app will not start.
+    try:
+        conn = state.connect(app.state.settings.app_state_path)
+        try:
+            stranded = pipeline.mark_interrupted(conn)
+        finally:
+            conn.close()
+        if stranded:
+            log.warning("marked %d stranded pipeline run(s) interrupted", stranded)
+    except Exception:
+        log.warning("could not reconcile pipeline runs at startup", exc_info=True)
     yield
     app.state.jobs.shutdown()
 
@@ -99,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in (
         agent.router,
         packs.router,
+        pipeline_router.router,
         query.router,
         subjects.router,
         analyze.router,
