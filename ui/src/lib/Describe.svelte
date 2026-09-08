@@ -1,5 +1,6 @@
 <script lang="ts">
     import EmptyState from "./EmptyState.svelte";
+    import Failure from "./Failure.svelte";
     import { api } from "./api";
     import { collect, humanize } from "./fields";
     import type { LookupResult, Pack, Subject, SubjectDetail, Term } from "./types";
@@ -240,5 +241,5 @@
         </div>
     {/if}
 {:catch e}
-    <p class="state error">Could not load this view: {e.message}</p>
+    <Failure error={e} />
 {/await}
