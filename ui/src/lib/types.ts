@@ -417,3 +417,75 @@ export type Submissions = {
     refused: number;
     reasons: { reason: string; count: number }[];
 };
+
+// ── the knowledge pipeline ───────────────────────────────────────────────
+//
+// What a run *did*, as opposed to what a job printed. A `Job` says whether
+// long work is running and carries its log; these say which stage the
+// pipeline reached, how many sources it read, how many findings survived the
+// grounding check, and which source each one came from. Those are different
+// questions, and the second set is the one that distinguishes "found nothing"
+// from "found plenty and lost it all at acceptance".
+
+export type PipelineRun = {
+    run_id: string;
+    /** The job this ran under, so the two views are two views of one thing. */
+    job_id: string | null;
+    kind: string;
+    subject_id: string;
+    subject: string;
+    pack_id: string;
+    /** Which research plane paid for it: `agent` ($0) or `api` (per token). */
+    plane: string;
+    state: "running" | "done" | "failed" | "cancelled" | "interrupted";
+    sources: number;
+    findings: number;
+    accepted: number;
+    refused: number;
+    chars: number;
+    /** NULL when nobody counted — which is not the same as zero. See
+     *  `tokens_counted`: the agent plane's marginal cost really is zero, and
+     *  rendering an uncounted run as free would be a measurement we do not
+     *  have. */
+    tokens: number | null;
+    tokens_counted: boolean;
+    started_at: string;
+    ended_at: string | null;
+    error: string | null;
+};
+
+export type PipelineStage = {
+    stage: string;
+    label: string;
+    seq: number;
+    /** `waiting` is the server's word for a stage that has not begun, so the
+     *  view shows the pipeline's shape from the first frame rather than
+     *  growing one box at a time. `skipped` is a stage that correctly did
+     *  nothing — not a failure. */
+    state: "waiting" | "running" | "done" | "failed" | "skipped";
+    detail: string;
+    items: number;
+    started_at: string | null;
+    ended_at: string | null;
+};
+
+export type PipelineEvent = {
+    event_id: number;
+    run_id: string;
+    stage: string;
+    at: string;
+    level: "info" | "kept" | "refused" | "warn";
+    message: string;
+    source_url: string;
+    detail: Record<string, unknown>;
+};
+
+export type PipelineFrame = {
+    run: PipelineRun;
+    stages: PipelineStage[];
+    events: PipelineEvent[];
+    /** Send back as `after` next time. Carried in the frame so the client and
+     *  the server cannot disagree about what has already been seen. */
+    cursor: number;
+    live: boolean;
+};

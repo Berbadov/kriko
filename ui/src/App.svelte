@@ -18,6 +18,7 @@
     import Knowledge from "./routes/Knowledge.svelte";
     import About from "./routes/About.svelte";
     import Jobs from "./routes/Jobs.svelte";
+    import Pipeline from "./routes/Pipeline.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
@@ -214,6 +215,8 @@
                         <About />
                     {:else if $route.name === "jobs"}
                         <Jobs />
+                    {:else if $route.name === "pipeline"}
+                        <Pipeline />
                     {:else if $route.name === "submissions"}
                         <Submissions />
                     {:else if $route.name === "console"}
