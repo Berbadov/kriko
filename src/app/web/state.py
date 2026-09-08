@@ -153,6 +153,87 @@ CREATE TABLE IF NOT EXISTS submissions (
     verdicts_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
+
+-- ── the knowledge pipeline, as rows ──────────────────────────────────────
+--
+-- A `jobs` row already says whether long work is running, how far along it
+-- claims to be, and what it printed. What it cannot say is *what the pipeline
+-- did*: which stage, how many sources, how much text, what was kept, what was
+-- refused and why. So the Console showed a log and the reader had no way to
+-- tell a research run that found nothing from one that found plenty and threw
+-- it all away at the grounding check — two completely different situations
+-- with the same-looking output.
+--
+-- Three tables, because there are three questions with three lifetimes:
+-- "what runs have there been" (a run, kept), "how did this one move through
+-- the stages" (a stage, kept), and "what happened inside a stage" (an event,
+-- pruned). Rolling them into one would either lose the stage summary to event
+-- volume or force a rewrite of the run row on every event.
+--
+-- Interface state, for the same reason `submissions` is: none of this is pack
+-- content, so none of it may touch a `content_digest`. And it is a row before
+-- it is a stream — a run interrupted by a restart must be *readable*
+-- afterwards, which is the whole lesson of the jobs table.
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    run_id      TEXT PRIMARY KEY,
+    -- The job this run belongs to, when there is one. Nullable because a run
+    -- may be driven from the CLI or MCP, which have no job row.
+    job_id      TEXT,
+    kind        TEXT NOT NULL,          -- research | pack_build
+    subject_id  TEXT NOT NULL DEFAULT '',
+    subject     TEXT NOT NULL DEFAULT '',
+    pack_id     TEXT NOT NULL DEFAULT '',
+    plane       TEXT NOT NULL DEFAULT '',
+    state       TEXT NOT NULL,          -- running | done | failed | interrupted
+    -- Totals, denormalised on purpose: the overview lists runs and must not
+    -- aggregate thousands of events to render a row.
+    sources     INTEGER NOT NULL DEFAULT 0,
+    findings    INTEGER NOT NULL DEFAULT 0,
+    accepted    INTEGER NOT NULL DEFAULT 0,
+    refused     INTEGER NOT NULL DEFAULT 0,
+    chars       INTEGER NOT NULL DEFAULT 0,
+    -- Reported by the plane when it spends tokens, and left NULL when nobody
+    -- counted. NULL and 0 are different answers and the UI says which: the
+    -- agent plane's marginal cost really is zero, and an estimate presented as
+    -- a measurement is the `raised: true` mistake again.
+    tokens      INTEGER,
+    started_at  TEXT NOT NULL,
+    ended_at    TEXT,
+    error       TEXT
+);
+CREATE INDEX IF NOT EXISTS pipeline_runs_started ON pipeline_runs (started_at DESC);
+
+-- One row per stage per run, created when the stage opens so a stage that
+-- never finished is visible as exactly that rather than as an absence.
+CREATE TABLE IF NOT EXISTS pipeline_stages (
+    run_id     TEXT NOT NULL,
+    stage      TEXT NOT NULL,           -- see pipeline.STAGES
+    seq        INTEGER NOT NULL,        -- display order, from STAGES
+    state      TEXT NOT NULL,           -- running | done | failed | skipped
+    detail     TEXT NOT NULL DEFAULT '',
+    items      INTEGER NOT NULL DEFAULT 0,
+    started_at TEXT NOT NULL,
+    ended_at   TEXT,
+    PRIMARY KEY (run_id, stage)
+);
+
+-- What happened inside a stage. High volume, so it is the one table that is
+-- pruned — and pruned by run rather than by age, because half an event log is
+-- more misleading than none.
+CREATE TABLE IF NOT EXISTS pipeline_events (
+    event_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id     TEXT NOT NULL,
+    stage      TEXT NOT NULL,
+    at         TEXT NOT NULL,
+    level      TEXT NOT NULL DEFAULT 'info',   -- info | kept | refused | warn
+    message    TEXT NOT NULL,
+    -- The originating source, when the event has one. This is what makes a
+    -- live view of "what is being read right now, and what came out of it"
+    -- possible at all.
+    source_url TEXT NOT NULL DEFAULT '',
+    detail_json TEXT
+);
+CREATE INDEX IF NOT EXISTS pipeline_events_run ON pipeline_events (run_id, event_id);
 """
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
