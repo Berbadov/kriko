@@ -28,6 +28,7 @@
     let q = $state("");
     let at = $state(0);
     let input = $state<HTMLInputElement | undefined>();
+    let dialog = $state<HTMLElement | undefined>();
     // Where the reader was, so closing puts them back. A palette that
     // dismisses to nowhere leaves a keyboard user at the top of the document.
     let cameFrom: HTMLElement | null = null;
@@ -79,6 +80,40 @@
         navigate(name);
     }
 
+    /** Tab, wrapped at the two ends.
+     *
+     * `aria-modal="true"` is a claim, and it was one this dialog did not keep:
+     * tab off the last option and focus walked into the rail behind the scrim
+     * — a link the reader cannot see, with no visible ring anywhere on screen
+     * and no reason left to think Escape is listening.
+     *
+     * The stops are read off the dialog at the moment of the press rather than
+     * held in a variable, because the list is filtered as the reader types:
+     * anything captured on open is wrong by the second keystroke. Only the two
+     * ends are intercepted — a handler that preventDefaults every Tab leaves
+     * the middle of the list unwalkable, which is the same bug facing the
+     * other way.
+     */
+    function trap(event: KeyboardEvent): void {
+        if (!dialog) return;
+        const stops = [
+            ...dialog.querySelectorAll<HTMLElement>(
+                "input, button:not([disabled]), a[href]",
+            ),
+        ];
+        if (stops.length < 2) return;
+        const first = stops[0];
+        const last = stops[stops.length - 1];
+        const on = document.activeElement;
+        if (!event.shiftKey && on === last) {
+            event.preventDefault();
+            first.focus();
+        } else if (event.shiftKey && on === first) {
+            event.preventDefault();
+            last.focus();
+        }
+    }
+
     function onKeydown(event: KeyboardEvent) {
         if (!open) {
             const combo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
@@ -92,6 +127,10 @@
         if (event.key === "Escape") {
             event.preventDefault();
             hide();
+            return;
+        }
+        if (event.key === "Tab") {
+            trap(event);
             return;
         }
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -133,6 +172,7 @@
         aria-modal="true"
         aria-label="Go to a screen"
         tabindex="-1"
+        bind:this={dialog}
     >
         <input
             bind:this={input}
