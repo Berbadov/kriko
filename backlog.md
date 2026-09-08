@@ -1169,6 +1169,37 @@ does not do and a browser harness for one CSS property is not the trade.
 The long tail from the audit's independent findings. Rows kept together
 because none of them blocks 1.0.0 and each is small.
 
+#### B78 — Docs do not match the code
+**Done 2026-09-08.** Ten of the twelve tables in `app.sqlite` were named in no
+document at all, and six API surfaces — history, marks, subjects, pipeline,
+submissions, extension — had no endpoint written down anywhere. Both fixed in
+`docs/INTERNALS.md`: an *Interface State* section with a row per table and why
+it is not in the engine's schema, an *other API surfaces* section for the six,
+and `routers/focus.py` — the fix for "Open in App opens a browser tab" —
+introduced in the Desktop Shell plane, where it had been missing entirely.
+
+**The mechanism, because a docs audit performed by a person is the manual step
+G5 forbids** (and backlog B43 already says the prose gate is a worklist, not a
+proof). `src/app/tests/test_docs_match_the_code.py` asks questions *of the
+code* and looks for the answers in the documents: every table in
+`state.declared_columns()`, every API surface walked off the live route table,
+the two-database split, the handshake header names, and every path CLAUDE.md's
+documentation map cites. Nothing is listed in the test — a thirteenth table or
+a new router goes red the day it lands. What it deliberately cannot check is
+whether the prose is *right*; it checks that the thing exists in the
+sentence-writing surface at all, which is the failure that actually happened.
+
+**Two things this cost, both worth keeping.** The first version asked whether
+the string `"focus"` appeared in the docs, and it did — in every sentence about
+where focus lands after navigation — so the gate passed while the surface named
+`focus` was undocumented. A router whose name is also an English word is
+exactly the one a name check misses; the check is by *endpoint path* now, which
+is both stronger and the idiom the docs already use. The second: FastAPI keeps
+one `_IncludedRouter` per `include_router` call rather than flattening
+endpoints into `app.routes`, so the obvious one-level loop found nothing at all
+— caught only because the test asserts it found more than ten surfaces before
+judging them.
+
 ---
 
 ## Human decisions — status under G5

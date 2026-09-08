@@ -228,6 +228,107 @@ absent or the stream dies mid-job.
 
 ---
 
+## The other API surfaces
+
+Six doors that the planes above do not open. Listed here because a surface
+nobody wrote down is a surface the next change treats as private —
+`test_docs_match_the_code.py` fails until each one names an endpoint.
+
+**`GET /api/history`, `GET /api/lookup/{id}`** (`routers/history.py`) — the
+reader's own record, out of `app.sqlite`'s `lookups`. Also the per-lookup
+annotations: `POST /api/lookups/{id}/notes` (a note the reader wrote),
+`GET|POST /api/lookups/{id}/checked` (claims ticked off on the question sheet)
+and `GET /api/lookups/{id}/triage`. All *per lookup* on purpose — a note is
+about the answer that was given, not about the knowledge. Mode and theme ride
+here too (`GET|POST /api/settings`), because they are interface state in the
+same file.
+
+**`GET|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`,
+`GET /api/marks/signals`** (`routers/marks.py`) — an author's verdict on a
+claim: `wrong`, `outdated`, and the rest. Keyed by pack rather than by lookup,
+because the judgement is about the knowledge and outlives the lookup that
+surfaced it, and a withdrawal is a `DELETE` rather than a flag — a mark that
+is gone should read as never made. `signals` aggregates them for the Knowledge
+screen's "what is marked" lens.
+
+**`GET /api/subjects`, `GET /api/subjects/{id}`, `GET /api/subjects/{id}/brief`**
+(`routers/subjects.py`) — what a pack knows about one subject, and the research
+brief for it. The brief is the $0 path's actual output: on the default `agent`
+plane nothing is gathered by the engine, so the brief *is* the deliverable
+rather than a degraded version of one.
+
+**`GET /api/pipeline/runs`, `GET /api/pipeline/runs/{id}`,
+`GET /api/pipeline/stream`** (`routers/pipeline.py`) — the event spine over
+`pipeline_runs` / `pipeline_stages` / `pipeline_events`. A job log answers
+"did long work happen and what did it print"; this answers "what came of it" —
+sources read, findings kept, refusals with a reason. A run that gathered
+nothing and a run that lost everything at the grounding check look identical in
+a job log, which is why this is a second surface rather than a column on the
+first. The stream is SSE over a poll of the rows, for the same reason the job
+stream is.
+
+**`GET /api/submissions`** (`routers/submissions.py`) — what came in through
+the agent door and what the gate did with it. The only place a *refusal* is
+legible: `app/findings.py` rejects on grounding, and without this the rejection
+is a log line nobody reads.
+
+**`GET /api/extension`, `POST /api/extension/stage`,
+`POST /api/extension/reveal`** (`routers/extension.py`) — where the unpacked
+extension is on disk, staged into a stable directory the reader can point
+Chrome at, plus the version compatibility verdict described below. `reveal`
+opens the staged folder in the file manager — a convenience with a fallback,
+never a requirement: the response carries the path either way, because if the
+open fails the reader's next action is pasting it.
+
+---
+
+## Interface State: what `app.sqlite` holds, and why it is not in the store
+
+Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine's
+store; `~/.kriko/app.sqlite` (`src/app/web/state.py`) is the *interface's* own
+history and settings. The split is a rule, not a convenience: uninstalling a
+pack must not drop your history, and a history row must not move a pack's
+`content_digest`. `/api/health` reports both paths.
+
+Every table, and the question it answers:
+
+| Table | What it holds |
+|-------|---------------|
+| `settings` | Mode and theme. The reader's preferences, not the engine's config. |
+| `lookups` | Every analysis, request and response as stored JSON. The History panel and `#/result/<id>` read it; nothing else is the record of what the app actually answered. |
+| `claim_notes` | A note the reader wrote against one claim of one lookup. |
+| `claim_checks` | The reader ticking off a claim on the question sheet — inspection-day state, per lookup. |
+| `claim_marks` | An author's verdict on a claim (`wrong`, `outdated`, …), per pack rather than per lookup, because the judgement is about the knowledge and outlives the lookup that surfaced it. |
+| `jobs` | The row that outlives the request. See the Jobs Plane above. |
+| `pipeline_runs`, `pipeline_stages`, `pipeline_events` | The event spine: what a knowledge run *did*, stage by stage, with sources read, findings kept, and refusals with a reason. A job log says whether work happened; this says what came of it. |
+| `submissions` | What came in through the agent door and what the gate did with it — the only place a refusal is legible. |
+| `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
+| `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
+
+**Schema changes reach an existing file.** `connect()` stamps `PRAGMA
+user_version` with `schema_stamp(SCHEMA)` — a content fingerprint, so any edit
+re-runs `executescript(SCHEMA)`. That handles a new *table* and does nothing at
+all for a new *column*, because `CREATE TABLE IF NOT EXISTS` is a no-op on a
+table that exists. Every schema change before 2026-09-08 happened to be a new
+table, which is why nobody noticed. So `add_missing_columns()` parses the
+`CREATE TABLE` blocks out of `SCHEMA` itself (`declared_columns()`) and
+reconciles them against `PRAGMA table_info`: additions only, and it raises on
+anything SQLite refuses rather than papering over it. The declaration is
+already the truth — the same rule the catalog follows. `app.sqlite` is history,
+not a cache: it can never be dropped and rebuilt.
+
+**The version handshake.** The extension and the app update on separate clocks,
+and neither waits for the other. Every request out carries
+`X-Kriko-Extension`; every response back carries `X-Kriko-Minimum-Extension`.
+No poll and no endpoint — a check-in on a timer is a third clock to keep wound,
+and one that is stale between winds is the failure being fixed. The rule is one
+number in one place, `app.extension.MINIMUM_VERSION`. Four states, because
+`unknown` (nothing has ever called) has to be separate from `too_old`: telling
+a reader who never installed the extension that theirs is out of date is worse
+than saying nothing. `behind` still works.
+
+---
+
 ## Desktop Shell: one store, two front doors
 
 **`src/app/sidecar.py`** — the server as a child process. It binds port 0,
@@ -247,6 +348,25 @@ renders through `textContent` — a blank window is a bug, and stderr is
 subprocess output, not markup. The child is killed on window `Destroyed` *and*
 on `RunEvent::Exit`: a quit from the dock destroys no window, and the orphan
 would hold the store's WAL lock into the next launch.
+
+**`src/app/web/routers/focus.py`** — "Open in Kriko", which is the one handoff
+that cannot be a link. The extension's button was an `<a href>` at the app's
+own HTTP port: the route resolves, the SPA is served over HTTP, and the reader
+gets the report *in a browser tab* beside the desktop app they already have
+running. They asked for the app and got a web page that looks like it. A page
+cannot raise a native window, so the handoff runs the other way — the extension
+**posts a route** and the two processes that can act on it each take their half.
+The sidecar prints `KRIKO_FOCUS` on stdout (the shell is already reading that
+pipe for the port handshake, so it costs nothing) and the shell calls
+`show_window`; the window polls `GET /api/focus` and navigates. The shell can
+raise a window but has no business knowing the SPA's route table, and this
+module must not hold it either — so the posted route is validated as a *closed
+shape* (a name, optionally one `/`-separated id) rather than against a list of
+routes. It is in memory and expires: a nudge between two live processes is not
+history, and a route persisted across a restart resurfaces as the window
+jumping to a stale report days later. Consume-once on read, or two windows both
+navigate. `test_sidecar.py` fails if `FOCUS_LINE` and the Rust constant drift,
+because a renamed constant here reads as a dead button.
 
 **`packaging/kriko-sidecar.spec`** freezes it (the `hiddenimports` list exists
 because uvicorn resolves its protocol implementations by string, and the `datas`
