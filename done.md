@@ -6,6 +6,110 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-08 — the 1.0.0 audit: four defects, four missing gates
+
+`release/1.0.0-readiness`, commits `1f3978e`, `ae70e39`, `3343126`. Four
+defects were reported. Every automated gate was green at the time — pytest,
+vitest, node, svelte-check — and all four passed all of them. That is the
+finding: not four bugs, four missing *categories* of gate. So every fix
+shipped with the check that was absent, which is the generalization principle
+applied to the test suite rather than to the catalog.
+
+**B55 — nothing was written down.** `log_analysis_jsonl` reported its failures
+through `log.warning` into a root logger with no handler, so two months of
+`PermissionError` on every append produced output nowhere at all. The call
+site looks correct, and that is what let it survive review. `src/app/logs.py`
+now holds two rules: a diagnostic lands beside the store and never in the
+source tree (`source_root()` prefers the checkout, which is right for *data*
+and wrong for a file the reader must be able to send us), and a path we cannot
+write is reported rather than swallowed. `probe()` returns the reason and
+deliberately *opens* the file rather than calling `os.access`, because a mode
+check gets exactly the interesting cases wrong — another user's directory, a
+read-only mount, Program Files. Both the path in use and the rejection reason
+reach `/api/health` and the About screen. The gate: `test_logging.py` asserts
+on the *reporting*, because a test that only proved the log gets written when
+the directory is writable would have passed throughout the whole two months.
+
+**B58 — the Console could not be typed in.** Route changes moved focus to the
+view container, stealing it from the prompt the route exists to offer.
+`[autofocus]` is now read as a declaration: a route that autofocuses a control
+is taken at its word, the container is the fallback. Beats a hardcoded
+route-name list, and beats racing `document.activeElement`. Proven red against
+the old code, with two counter-assertions that pass both ways so the fix
+cannot license breaking the document routes.
+
+**B59/B60 — "Open in App" claimed a window it could not see.** The link was
+replaced by a posted route months ago; what remained was a *claim*. The
+response said `raised: true` on any 2xx, and a 2xx only means the route was
+recorded — whether a window came to the front depends on whether anything is
+reading the sidecar's stdout, which this process genuinely cannot observe and
+the shell can simply declare. `--supervised` on the spawn, `KRIKO_SUPERVISED`
+in the environment, `Settings.shell_attached`, `delivery: "raised" |
+"no_shell"` on the response; `raised` kept as an alias because the extension
+ships on its own clock. The line is printed either way, because a branch there
+would leave only the supervised path ever exercised. On the extension side a
+422 — this extension building a route the app cannot navigate to — was caught
+by the same `except` as ECONNREFUSED and opened a tab at the same bad route,
+hiding a defect in our own code behind a fallback meant for a missing app.
+Three of the five new node tests are red against the old worker; the two that
+pass are the two that should pass both ways.
+
+**B61/B62/B76 — the rail scrolled as a document.** `grid-template-rows: auto
+minmax(0, 1fr) auto` is the entire fix: a track's automatic minimum is its
+content, so plain `1fr` refuses to shrink and pushes the overflow back out to
+the parent. The rail clips, only `.rail-nav` scrolls, and its scroll shadows
+auto-hide through four backgrounds with `background-attachment: local, local,
+scroll, scroll` — two caps that scroll with the content, two shadows fixed to
+the frame, no script and no ResizeObserver. Alongside it: inline SVG icons for
+all 16 routes (inline rather than a font, because the app must render with no
+network and a webfont is a box on first paint on the element people navigate
+with), and one measured marker that slides rather than fourteen borders that
+blink. The other seven `overflow` sites were audited and only the rail was
+wrong. `chrome.test.ts` holds the shape against the stylesheet as text, since
+layout is precisely what jsdom does not do and a browser harness for one CSS
+property is not the trade.
+
+**B56 — the port answered anyone.** Grouped with B59 because it touches the
+same request path and should not be opened twice. Binding 127.0.0.1 protects
+the port from the network and not from the browser: 8787 is a constant
+published in this repository and hardcoded in the extension, and every page
+the reader visits runs script that can reach it. `Origin` stops a cross-site
+GET — most damage is already out of reach, since a JSON body is preflighted
+and we send no CORS headers, but a simple GET still executes, and `GET
+/api/focus` is consume-once, so a page could burn a nudge it cannot even read.
+`Host` stops DNS rebinding, where the attacker's own domain resolves to
+127.0.0.1 and is therefore genuinely same-origin. The Host rule is "a dot
+means a public DNS name, so it must be one of ours", which is why there is no
+test-only exemption: a rule with a hole cut in it for the suite is a rule the
+suite stops testing.
+
+**B65/B66 — the last two gates, and CI back on the branch.**
+`test_extension_sites.py` derives from the pack tree that every adapter's site
+is one the extension actually injects on, and that the panel's stylesheet
+reaches it. That seam is silent when it breaks: the pack installs,
+`/api/adapters` lists the site, and the reader opens a listing to no panel,
+which is indistinguishable from "nothing known about this car". Derived rather
+than listed, because a list would be the third place to forget. And
+`smoke_sidecar.py` now asks whether a diagnostic can be written *in the frozen
+binary* — where `_MEIPASS` vanishes and an installed app runs from Program
+Files, neither of which a source checkout reproduces. `ci.yml` runs on
+push/pull_request again with svelte-check added; the app-first phase's other
+half stands, since it ends when the reader opens an installer rather than when
+a workflow goes green.
+
+Still open and blocking the critical path: B63 and B64 are two decisions only
+the reader can make — the repository is private, so the updater and
+`packs.json` URLs 404 for a running app (recommendation: a releases-only
+public mirror), and nothing is signed (recommendation: minisign now, defer the
+authenticode certificate). B67–B80 are the pipeline subsystem, the runtime
+site registration, onboarding and the long tail.
+
+Gates at the cut: pytest green; vitest 39 files / 276 tests (from 263);
+svelte-check 279 files / 0 errors; node 73 tests (from 68);
+`smoke_sidecar.py` run end to end.
+
+---
+
 ### 2026-09-08 — a pack's name is content, and the digest now says so
 
 `fix/digest-covers-the-manifest`. The generated agent skill still described the
