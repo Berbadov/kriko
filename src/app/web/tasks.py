@@ -19,7 +19,8 @@ from pathlib import Path
 from app import packsource
 
 from app.findings import accept_findings, log_submission
-from app.web.jobs import Progress
+from app.web import pipeline
+from app.web.jobs import Cancelled, Progress
 from kriko.pack import updates
 from kriko.research import get_researcher, plan_task
 from kriko.store import packstore
@@ -40,14 +41,58 @@ def _subject_pack(conn, subject_id: str) -> str:
 
 
 def research(settings, params: dict, progress: Progress) -> dict:
-    """Research one subject with whichever plane the caller is paying for.
+    """Research one subject, writing down what the pipeline did as it does it.
+
+    Two channels, and they answer different questions. `progress` is the job's
+    own log — a line-oriented record of a single run, for the reader watching
+    that run. The `Emitter` is the pipeline's record: which stage, how many
+    sources, how many findings survived the grounding check, and which source
+    each one came from, in tables that outlive the request and can be read
+    against yesterday's run.
+
+    A `jobs` row could never have answered the second question. A run that
+    gathered nothing and a run that gathered plenty and lost all of it at
+    acceptance produce near-identical job logs, and they are entirely
+    different problems — the first is discovery, the second is evidence.
+
+    The emitter is constructed here rather than inside `_research` so the
+    run is opened before anything can fail: a crash in `plan_task` must leave
+    a readable `failed` row, not nothing at all. Nothing about this reaches
+    `kriko/` — the stages are boundaries in this driver, which is the layer
+    that sequences them.
+    """
+    emit = pipeline.Emitter(
+        getattr(settings, "app_state_path", None),
+        kind="research",
+        job_id=progress.job_id,
+    )
+    emit.begin(subject_id=params.get("subject_id") or "")
+    try:
+        result = _research(settings, params, progress, emit)
+    except Cancelled:
+        # Cancelled is not failed. The reader stopped it, and a view that
+        # colours a deliberate stop the same as a crash trains the reader to
+        # ignore the colour.
+        emit.finish("cancelled", "stopped by the reader")
+        raise
+    except Exception as error:
+        emit.finish("failed", f"{type(error).__name__}: {error}")
+        raise
+    emit.finish("done")
+    return result
+
+
+def _research(settings, params: dict, progress: Progress, emit) -> dict:
+    """The run itself, with the four stages named.
 
     The default plane is `agent`, whose `gather` returns nothing by design —
     the searching is done by a coding-agent harness whose subscription is
     already paid for. So on the default plane this job's real output is the
     brief, and that is not a degraded result: it is the $0 path, and refusing
     to run it because it cannot also fetch would push the cheapest way to grow
-    a pack back into the terminal.
+    a pack back into the terminal. Which is why the later stages are *skipped*
+    rather than completed-with-zero: "Extraction: done, 0 findings" reads as a
+    fault, and this is the path working exactly as intended.
     """
     subject_id = params.get("subject_id") or ""
     if not subject_id:
@@ -55,6 +100,8 @@ def research(settings, params: dict, progress: Progress) -> dict:
 
     conn = connect(settings.store_path)
     try:
+        # ── Discovery ────────────────────────────────────────────────────
+        emit.open_stage("discovery", "planning the search")
         pack_id = params.get("pack_id") or _subject_pack(conn, subject_id)
         task = plan_task(
             conn,
@@ -64,25 +111,49 @@ def research(settings, params: dict, progress: Progress) -> dict:
             max_documents=int(params.get("max_documents") or 5),
         )
         progress.set(0.1, f"planning {task.subject_label}")
+        emit.describe(pack_id=pack_id, subject=task.subject_label)
         for query in task.rendered_queries():
             progress.log(f"query: {query}")
+            emit.event(f"query: {query}", detail_kind="query")
 
         researcher = get_researcher({"backend": params.get("backend") or "agent"})
         brief = researcher.brief(task)
         progress.set(0.2, f"{researcher.name} plane ({researcher.cost_basis})")
+        emit.describe(plane=researcher.name)
+        emit.event(f"{researcher.name} plane, cost {researcher.cost_basis}")
         progress.check()
 
         documents = researcher.gather(task)
         progress.log(f"gathered {len(documents)} document(s)")
+        emit.count(sources=len(documents))
+        for document in documents:
+            emit.event(
+                f"source: {document.site_or_channel or document.url}",
+                source_url=document.url,
+                title=document.title,
+                chars=len(document.text or ""),
+            )
+        emit.close_stage(detail=f"{len(documents)} source(s)")
 
+        # ── Extraction ───────────────────────────────────────────────────
         findings: list[dict] = []
+        if not documents:
+            emit.skip_stage(
+                "extraction",
+                f"the {researcher.name} plane fetches nothing itself — the brief is the output",
+            )
+        else:
+            emit.open_stage("extraction", f"reading {len(documents)} source(s)")
         for index, document in enumerate(documents, start=1):
             progress.check()
             progress.set(
                 0.2 + 0.6 * index / max(1, len(documents)),
                 f"reading {document.site_or_channel or document.url}",
             )
+            emit.count(chars=len(document.text or ""))
+            found = 0
             for finding in researcher.extract(task, document):
+                found += 1
                 findings.append(
                     {
                         "title": finding.title,
@@ -101,13 +172,50 @@ def research(settings, params: dict, progress: Progress) -> dict:
                         "document_text": document.text,
                     }
                 )
+                emit.event(
+                    f"found “{finding.title}”",
+                    source_url=finding.source_url or document.url,
+                    severity=finding.severity,
+                    domain=finding.domain,
+                )
+            emit.count(findings=found)
+            if not found:
+                emit.event(
+                    f"nothing grounded in {document.site_or_channel or document.url}",
+                    level="warn",
+                    source_url=document.url,
+                )
+        if documents:
+            emit.close_stage(detail=f"{len(findings)} finding(s)")
 
+        # Whatever the plane knows about its own spend, and nothing invented.
+        # `Researcher` has no token field, so this is a duck-typed hook: a
+        # plane that counts reports a number, and every other plane leaves the
+        # column NULL. An estimate rendered as a measurement would be the
+        # `raised: true` mistake over again.
+        used = getattr(researcher, "tokens_used", None)
+        if isinstance(used, int):
+            emit.describe(tokens=used)
+
+        # ── Ingestion ────────────────────────────────────────────────────
         progress.check()
         verdicts = {"accepted": [], "rejected": []}
         if findings:
+            emit.open_stage("ingestion", f"checking {len(findings)} finding(s)")
             progress.set(0.85, f"checking {len(findings)} finding(s)")
             verdicts = accept_findings(conn, subject_id, pack_id, findings)
             conn.commit()
+            emit.count(
+                accepted=len(verdicts.get("accepted", [])),
+                refused=len(verdicts.get("rejected", [])),
+            )
+            emit.close_stage(
+                detail=f"{len(verdicts.get('accepted', []))} kept, "
+                f"{len(verdicts.get('rejected', []))} refused"
+            )
+
+            # ── Ledgering ────────────────────────────────────────────────
+            emit.open_stage("ledgering", "writing the verdicts down")
             # The refusals are the point of the ledger, so it is written even
             # when nothing was kept — a batch that lost everything is the one
             # an author most needs to be able to read afterwards.
@@ -118,13 +226,31 @@ def research(settings, params: dict, progress: Progress) -> dict:
                 pack_id=pack_id,
                 verdicts=verdicts,
             )
+        else:
+            emit.skip_stage("ingestion", "no findings to check")
+            emit.skip_stage("ledgering", "nothing to write down")
+
         for item in verdicts.get("rejected", []):
             progress.log(f"refused “{item['title']}”: {item['reason']}")
+            emit.event(
+                f"refused “{item['title']}”: {item['reason']}",
+                level="refused",
+                stage="ledgering",
+            )
         for item in verdicts.get("accepted", []):
             progress.log(f"kept “{item['title']}” as {item['claim_id']}")
+            emit.event(
+                f"kept “{item['title']}”",
+                level="kept",
+                stage="ledgering",
+                claim_id=item["claim_id"],
+            )
+        if findings:
+            emit.close_stage()
 
         progress.set(1.0, f"{len(verdicts.get('accepted', []))} claim(s) kept")
         return {
+            "run_id": emit.run_id,
             "subject": task.subject_label,
             "pack_id": pack_id,
             "plane": researcher.name,

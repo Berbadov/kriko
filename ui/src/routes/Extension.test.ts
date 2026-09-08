@@ -20,6 +20,12 @@ const status = (over: Record<string, unknown> = {}) => ({
     sightings: [],
     connected: false,
     seconds_since_seen: null,
+    compatibility: {
+        running_version: "",
+        minimum_version: "0.3.0",
+        state: "unknown",
+        detail: "",
+    },
     ...over,
 });
 
@@ -60,6 +66,7 @@ describe("adding the browser extension", () => {
                         first_at: "2026-09-05T10:00:00+00:00",
                         last_at: "2026-09-05T10:05:00+00:00",
                         hits: 4,
+                        version: "0.3.0",
                     },
                 ],
             }),
@@ -68,6 +75,61 @@ describe("adding the browser extension", () => {
         expect(await screen.findByText(/Connected/)).toBeTruthy();
         expect(screen.getByText(/just now/)).toBeTruthy();
         expect(screen.getByText("chrome-extension://abc")).toBeTruthy();
+    });
+
+    it("says nothing about versions when it has nothing to compare", async () => {
+        // Never having reached the app is not a version problem. Telling a
+        // reader who has not installed the extension that theirs is out of
+        // date is worse than saying nothing at all.
+        stubFetch({ "/api/extension": status({ staged: true, staged_version: "0.2.0" }) });
+        render(Extension);
+        await screen.findByText("/home/reader/.kriko/extension");
+        expect(screen.queryByText(/older than/)).toBeNull();
+        expect(screen.queryByText(/Reload it/)).toBeNull();
+    });
+
+    it("names the extension the browser is actually running when it is too old", async () => {
+        // The third version, and the only one that says what is loaded. Both
+        // of the others can read current while the browser holds a months-old
+        // copy — that is B73, and no view could tell the difference.
+        stubFetch({
+            "/api/extension": status({
+                staged: true,
+                staged_version: "0.4.0",
+                version: "0.4.0",
+                compatibility: {
+                    running_version: "0.1.0",
+                    minimum_version: "0.3.0",
+                    state: "too_old",
+                    detail:
+                        "The extension in your browser is 0.1.0, and this app needs "
+                        + "0.3.0 or newer. Reload it from the Extension page — the copy "
+                        + "on disk is already current.",
+                },
+            }),
+        });
+        render(Extension);
+        expect(await screen.findByText(/browser is 0.1.0/)).toBeTruthy();
+    });
+
+    it("renders the app's sentence rather than composing its own", async () => {
+        // The page holds no version rule: the floor is one number in
+        // app/extension.py, and a second copy of the comparison here would
+        // disagree with it without ever failing.
+        stubFetch({
+            "/api/extension": status({
+                staged: true,
+                staged_version: "0.4.0",
+                compatibility: {
+                    running_version: "0.3.0",
+                    minimum_version: "0.3.0",
+                    state: "behind",
+                    detail: "A sentence the app wrote.",
+                },
+            }),
+        });
+        render(Extension);
+        expect(await screen.findByText("A sentence the app wrote.")).toBeTruthy();
     });
 
     it("warns when the port the extension must use is not ours", async () => {
@@ -116,7 +178,10 @@ describe("adding the browser extension", () => {
     it("surfaces a failure to read the status instead of an empty page", async () => {
         stubFetchFailing();
         render(Extension);
-        expect(await screen.findByText(/Could not read the extension status/)).toBeTruthy();
+        // The sentence is derived from the status now, not written per view
+        // (B72), so this asserts the shape rather than this screen's own copy.
+        expect(await screen.findByRole("alert")).toBeTruthy();
+        expect(screen.getByText(/bug in Kriko, not something you did/)).toBeTruthy();
     });
 
     it("names the sites a pack can read, which is the reader's real question", async () => {

@@ -18,6 +18,7 @@
     import Knowledge from "./routes/Knowledge.svelte";
     import About from "./routes/About.svelte";
     import Jobs from "./routes/Jobs.svelte";
+    import Pipeline from "./routes/Pipeline.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
@@ -89,6 +90,27 @@
     // they have heard either.
     let navigated = false;
 
+    /* The container is the *fallback*, not the rule.
+     *
+     * This effect used to call `viewEl.focus()` unconditionally, which is
+     * correct for a document and wrong for a prompt: the Console autofocuses
+     * its input, we landed focus on the wrapping div instead, and the one
+     * screen in the app whose whole purpose is typing became a screen you
+     * could not type into. All 263 tests still passed, because none of them
+     * asserted where focus goes.
+     *
+     * So a view that autofocuses a control is taken at its word. `[autofocus]`
+     * is the declaration — already in the markup, already the thing Svelte
+     * acts on, and it means "this is the element the reader wants", which is
+     * exactly the question being asked here. Reading it beats both a
+     * hardcoded list of route names and a `document.activeElement` race.
+     */
+    function focusTheView() {
+        if (!viewEl) return;
+        const claimed = viewEl.querySelector<HTMLElement>("[autofocus]");
+        (claimed ?? viewEl).focus();
+    }
+
     $effect(() => {
         const name = $route.name;
         if (!navigated) {
@@ -96,7 +118,7 @@
             return;
         }
         announced = labelOf(name);
-        viewEl?.focus();
+        focusTheView();
     });
 </script>
 
@@ -110,7 +132,7 @@
         class="skip"
         onclick={() => {
             announced = labelOf($route.name);
-            viewEl?.focus();
+            focusTheView();
         }}
     >
         Skip to content
@@ -193,6 +215,8 @@
                         <About />
                     {:else if $route.name === "jobs"}
                         <Jobs />
+                    {:else if $route.name === "pipeline"}
+                        <Pipeline />
                     {:else if $route.name === "submissions"}
                         <Submissions />
                     {:else if $route.name === "console"}

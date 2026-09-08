@@ -12,6 +12,8 @@ import subprocess
 from configparser import ConfigParser
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
 SRC = REPO / "src"
 
@@ -706,4 +708,76 @@ def test_no_two_tracked_files_differ_only_in_case():
     assert clashes == [], (
         "these paths differ only in case, so a Windows or macOS clone keeps "
         f"one of each pair and loses the other: {clashes}"
+    )
+
+
+# --- Workflows that run on more than one OS -------------------------------
+#
+# A step's default shell is the runner's, not the author's: bash on Linux and
+# macOS, **PowerShell on Windows**. So a POSIX-ism in a `run:` block is not a
+# style question, it is a step that passes on two thirds of the matrix. The
+# case that produced this test: `cargo metadata --locked > /dev/null` — in
+# PowerShell that redirect names the path `C:\dev\null`, whose parent does not
+# exist, and the step fails before running anything. Two runners green, one
+# red, on a line that has nothing to do with either.
+#
+# The repo already had the convention (five steps in `desktop.yml` declare
+# `shell: bash`); what it did not have was anything that noticed a sixth
+# skipping it.
+
+#: Redirect targets and devices that only exist under a POSIX shell. Kept
+#: narrow on purpose: `&&`, `$(...)` and friends work in PowerShell 7 or fail
+#: loudly on the author's own machine, while these fail *only* on Windows and
+#: only in CI.
+POSIX_ONLY = ("/dev/null", "/dev/stdout", "/dev/stderr", "2>&1 |")
+
+WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
+
+
+def _multi_os_jobs(text: str) -> bool:
+    """Does this workflow put a step on a Windows runner at all?
+
+    Read off the text rather than a YAML parse of the matrix, because the
+    runner can be named in a matrix entry, an `include`, or a bare `runs-on` —
+    and the question here only has to be answered conservatively. A false
+    positive costs one `shell: bash`.
+    """
+    return "windows" in text
+
+
+def test_there_are_workflows_to_check():
+    assert len(WORKFLOWS) >= 2, [p.name for p in WORKFLOWS]
+
+
+@pytest.mark.parametrize("workflow", WORKFLOWS, ids=lambda p: p.name)
+def test_no_posix_only_step_runs_unshelled_on_a_windows_runner(workflow: Path):
+    text = workflow.read_text(encoding="utf-8")
+    if not _multi_os_jobs(text):
+        pytest.skip(f"{workflow.name} names no Windows runner")
+
+    lines = text.splitlines()
+    offenders = []
+    for index, line in enumerate(lines):
+        if line.strip().startswith("#"):
+            continue
+        if not any(token in line for token in POSIX_ONLY):
+            continue
+        # A step is `- name:`/`- run:` and everything indented under it until
+        # the next sibling `- `. Walk back to that boundary and look for a
+        # shell declaration anywhere inside it.
+        start = index
+        while start > 0 and not lines[start].lstrip().startswith("- "):
+            start -= 1
+        end = index
+        while end + 1 < len(lines) and not lines[end + 1].lstrip().startswith("- "):
+            end += 1
+        step = "\n".join(lines[start : end + 1])
+        if re.search(r"^\s*shell:\s*(bash|sh)\s*$", step, re.MULTILINE):
+            continue
+        offenders.append(f"{workflow.name}:{index + 1}: {line.strip()}")
+
+    assert offenders == [], (
+        "these steps use a POSIX-only redirect and do not declare "
+        "`shell: bash`, so they run under PowerShell on the Windows runner and "
+        f"fail there and only there: {offenders}"
     )

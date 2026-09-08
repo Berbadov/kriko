@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import Failure from "../lib/Failure.svelte";
     import { signalNote, tieNote } from "../lib/health";
     import type { ClaimHealth, HealthTree } from "../lib/types";
 
@@ -11,13 +12,17 @@
     let claims = $state<ClaimHealth[]>([]);
     let tree = $state<HealthTree | null>(null);
     let askedClaimId = $state("");
-    let error = $state("");
+    // The exception itself, not its message: Failure needs the status to
+    // know what the reader can do about it, and a string has already
+    // thrown that away.
+    let failure = $state<unknown>(null);
 
     async function load() {
         try {
             claims = (await api.weakest(40)).claims;
+            failure = null;
         } catch (e) {
-            error = (e as Error).message;
+            failure = e;
         }
     }
 
@@ -43,8 +48,8 @@
 {#await ready}
     <p class="state loading">Loading…</p>
 {:then}
-    {#if error}
-        <p class="state error">Could not load this view: {error}</p>
+    {#if failure}
+        <Failure error={failure} retry={load} />
     {:else if !claims.length}
         <p class="state empty">No sourced claims installed yet.</p>
     {:else}

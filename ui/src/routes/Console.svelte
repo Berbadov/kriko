@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { remedyFor } from "../lib/failure";
     import { byName, complete, tokenize, VERBS, type Line } from "../lib/console/commands";
 
     /* A terminal, inside the app, for the half of Kriko that was terminal-only.
@@ -99,7 +100,13 @@
             // The API's own reason, which `ApiError` has already extracted
             // from the response body. A console that printed "[object Object]"
             // would be worse than the screen it is meant to be faster than.
-            emit({ kind: "err", text: (cause as Error).message ?? String(cause) });
+            //
+            // `technical` rather than `headline`: this is the one surface in
+            // the app whose reader *asked for* the exception — a console that
+            // answered "that is a bug in Kriko" would be hiding the thing they
+            // opened it to see. It goes through `remedyFor` anyway so that
+            // "the exception as text" has one definition (B72).
+            emit({ kind: "err", text: remedyFor(cause).technical });
         } finally {
             busy = false;
             queueMicrotask(() => field?.focus());
