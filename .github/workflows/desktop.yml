@@ -129,7 +129,10 @@ jobs:
 
             - name: Icons
               run: |
-                  npm --prefix tauri install --no-audit --no-fund
+                  # `ci`, not `install`: this resolves the Tauri CLI, and a
+                  # floating `^2` is exactly how v0.2.1 opened while v0.2.4
+                  # panicked on an identical tree four hours later.
+                  npm --prefix tauri ci --no-audit --no-fund
                   npm --prefix tauri run tauri icon src-tauri/icons/icon.png
 
             # Self-update is a build-time decision, because the key that makes
