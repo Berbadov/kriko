@@ -6,6 +6,235 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-08 — the 1.0.0 audit, part two: the subsystem, the sites, and the long tail
+
+`release/1.0.0-readiness`, commits `53f0ac0`, `9e4a376`, `39a7c50`, `56af236`,
+`414ae74`, `e5ef22f`, `42dbab8`, `bc7ae01`, `23ecfb5`, `f2a310a`, `6070657`
+— [PR #12](https://github.com/Berbadov/kriko/pull/12). The rest of the audit's
+rows: B57's Python half, the pipeline event spine and its view, runtime site
+registration, and the independent findings B70–B80. Same rule as part one —
+every behavioural fix ships with the gate that was absent.
+
+**B67/B68 — the knowledge pipeline had no event spine.** The reader's Console
+showed a job log and nothing about what the pipeline was *doing*: no stage, no
+counts, no live view of what was discovered or extracted. Shipped as
+`app/web/pipeline.py` — `pipeline_runs` / `pipeline_stages` /
+`pipeline_events` in `app.sqlite` (interface state, never the engine's
+schema), an `Emitter` the *interface* owns so `kriko/` emits nothing and
+learns nothing about the transport, and SSE at `/api/pipeline/stream`. Stages
+are Discovery / Extraction / Ingestion / Ledgering. Rows land before the
+stream, so a run killed by a restart is still readable — and is marked
+`interrupted` at startup rather than left spinning. `NULL` tokens are not `0`:
+the agent plane meters nothing and says so, and `skipped` is not `done` with
+zero. The Pipeline route is the view over it: per-stage progress, token counts
+as they accrue, the knowledge entries landing and the sources they came from.
+Progress counts *settled stages* and is never interpolated from item counts —
+nothing knows how many findings a source will yield, and a bar that moves
+backwards is worse than a coarse one. The feed scrolls in its own `role="log"`
+region, focusable, because a region a keyboard cannot reach is a region it
+cannot read.
+
+**B69 — adding a listing site was a manual manifest edit.** The server learned
+about a site the moment its adapter file existed; the extension learned about
+it when somebody edited `manifest.json` — a scalability-principle violation
+sitting in the one file nobody thinks of as data. `syncSites()` in
+`background.js` reads `/api/adapters`, turns each `site` into exactly one match
+pattern, and reconciles `chrome.scripting`'s registrations towards it.
+*Detection* is the app's answer, never a hostname list in the worker;
+*synchronisation* reads back `getRegisteredContentScripts()` and converges,
+because an MV3 worker's memory does not survive it; *conflicts* are impossible
+by construction, ids being derived (`kriko-site-<host>`); *recovery* is a
+30-minute alarm plus startup and install, and a failed sync keeps every
+existing registration rather than tearing the panel down because the app is
+closed. The host permission stays a user gesture in the options page — Chrome
+requires it and is right to; that is consent for reading a third party's
+pages, not a human in the data path. A pack's `site` is validated as a bare
+hostname, so an adapter cannot ask for `https://*/*`. B65's invariant is
+relaxed rather than dropped: a site must be covered by the static manifest
+**or** by `optional_host_permissions`, still derived from the pack tree, and
+still failing when it is covered by neither.
+
+**B70 — a site redesign was invisible.** `unmapped_labels` was computed on
+every lookup and dropped. It is the only signal a site gives when it renames a
+field: nothing errors, the lookup succeeds, resolves less precisely and returns
+fewer claims — so a broken adapter reads as a thin pack. Now a table in
+`app.sqlite`, one row per (adapter, label) with a `seen` count. Accumulate
+rather than append: a row per sighting would grow with reading volume while
+answering a question about *distinct* labels. Dismissal is a `DELETE`, not a
+flag, so a label that recurs comes back — the honest answer to "I dismissed
+this and it is still happening". It lives in `app.sqlite`, not the store: a
+pack's adapter is content, what a reader's browsing revealed about a site is
+not, and it must never move a `content_digest`. **The gate that was missing
+came with it:** `src/app/tests/conftest.py` fails any test that opens the
+reader's own `~/.kriko/app.sqlite`. `test_web.py`'s fixture had been doing
+exactly that for 54 tests, which is how a new test first read `seen: 11`.
+
+**B72/B79 — error copy named exceptions, not next steps.** "Could not load this
+view: ConnectionError" is accurate and useless: the reader of a local app has
+no terminal, no log viewer and nobody to page, so whatever the screen says is
+the entire remedy available to them. The remedy is derived from the **HTTP
+status**, in one module (`ui/src/lib/failure.ts`), never from the view — a
+per-view table would be twenty places to keep in step and the twenty-first
+view would ship with none. Statuses are a closed vocabulary that does not grow
+with the product, which is exactly the exception the scalability rule carves
+out. Four things every failure carries: what happened in the reader's terms,
+the next action, whether trying again could plausibly work (a retry offered on
+a 404 is a button with no path to working), and the exception itself, folded
+away underneath rather than dropped.
+
+B79 is the sixteen views B72 did not reach, and the gate that stops the
+seventeenth. Every one did the same thing one line *earlier* than the bug B72's
+gate was looking for: `error = String(cause)` into a `$state("")`. By the time
+the markup runs there is no status left, so no remedy can be derived however
+good the component downstream is — and a gate that reads only markup cannot
+see it. Twenty-two sites across eleven files, in nine spellings of the same
+variable. Three shapes came out of it, and they are the pattern for anything
+new: a **view** renders `Failure`; a **row** is too small for that block and
+renders `remedyFor(x).headline`, the sentence still derived and only the frame
+smaller; the **Console** renders `remedyFor(x).technical`, because it is the
+one surface whose reader *asked for* the exception. Two findings fell out of
+the pass — `Check` was keeping a validation sentence this app wrote ("paste a
+link first") and an exception from the engine in the same string, so the
+reader's own typo and a dead engine rendered identically (two variables now);
+and `remedyFor(x).technical` turned out to be exactly the
+`(cause as Error).message ?? String(cause)` that four files had each written by
+hand, so "the exception as text" has one definition and the new gate needs no
+exemptions.
+
+**B73 — the extension and the app never handshook.** Two headers, both riding
+on requests that were already happening: `X-Kriko-Extension` out,
+`X-Kriko-Minimum-Extension` back. No poll, no endpoint, no third clock to keep
+wound. One number in one place, `extension.MINIMUM_VERSION`, bumped only when
+a wire change genuinely breaks an older client — not a compatibility matrix,
+because three clocks (knowledge weekly, the binary rarely, the extension
+again) would make a matrix wrong within a release. Three states, not two:
+`unknown` (nothing has called) is separate from `too_old`, because telling a
+reader who never installed the extension that theirs is out of date is worse
+than saying nothing. **The missing gate came out of it.** Adding
+`extension_seen.version` revealed that `CREATE TABLE IF NOT EXISTS` does
+nothing for a new *column*: the stamp moves, `PRAGMA user_version` is
+rewritten, and the column is silently absent on every existing reader's file
+until the first query names it. Every prior change to this schema had been a
+new table, which is why it survived. `state.add_missing_columns` reconciles
+what SCHEMA declares against `PRAGMA table_info` — parsed off the declaration,
+never a migration list to remember.
+
+**B74 — nothing verified the keyboard walk.** The audit row's claim was too
+strong: the rail is real anchors, the skip control was already first in the tab
+order, focus already moved into the view on navigation. What was true is that
+every keyboard test in the suite covered one route with its own hand-written
+hash, so three failures were invisible — a rail entry `App.svelte` does not
+handle (a link that is focusable, announced, and leads to "No such view"), a
+screen with no `NAV` entry (reachable only by typing a URL, which in a desktop
+app with no address bar means not reachable), and focus escaping a modal. **The
+third was a live defect and is fixed:** the palette declared
+`aria-modal="true"` and did not keep it, so Tab off the last option walked into
+the rail behind the scrim. It wraps at the two ends now, reading its stops off
+the dialog at the moment of the press because the list is filtered as the
+reader types. `ui/src/App.keyboard.test.ts` walks every destination in `NAV`,
+one case per screen rather than a loop, because "which screens are missing" is
+the useful answer. **One thing this cost, worth writing down:** the first
+version was green with a route deleted from the if-chain. `waitFor` retries
+until an assertion *passes*, so a negative assertion inside it passes on the
+empty first frame and never sees the screen it is judging. Wait for a positive
+signal, then assert negatives synchronously.
+
+**B75 — a content script pulled a font from Google.** On every listing the
+reader opened, from the one component running where that is observable: it told
+a third party which cars they were looking at, and it failed offline, which is
+the state the product is designed for. Fonts are system-first now, and the gate
+is derived from `app.extension.SHIPPED` — no remote host in anything shipped,
+by any of the three spellings of the mistake.
+
+**B77 — nothing checked that an onboarding link goes anywhere.** The path was
+already real; what it had no check on was whether the somewhere it points at
+*exists*. A dead link in onboarding is the worst dead link in the product: it
+is the reader's first minute, they have no model of the app yet to tell them
+the app is wrong rather than they are, and what they get is "No such view" —
+from where they sit, indistinguishable from a broken install.
+`ui/src/lib/links.test.ts` walks the source for every destination anyone writes
+down and asks whether `App.svelte` would render it, in all three spellings: a
+literal `#/name`, a `toHash`/`hashWith` call, and a route name handed to
+`NextStep`. The renderable set is read off `nav.ts` and off `App.svelte`'s own
+if-chain, including the parametric views with no rail entry, which would
+otherwise have needed the exemption list the file exists to avoid. And the one
+real defect on that screen: `Welcome` was still printing `e.message`, so the
+first sentence Kriko ever said to someone could be a `TypeError`.
+
+**B80 — 197 KB in one chunk, which nobody had decided.**
+`src/app/tests/test_bundle_budget.py` makes it a decision. The decision
+recorded there is that there is *no* code splitting and that this is right:
+splitting trades one download for several, which pays on a website, where the
+second chunk crosses a network and most visitors never reach the screen it
+holds. This bundle is read off local disk by a window the shell only shows
+after `/api/health` answers, and every reader has every route. So size is not
+something to optimise here, it is something to watch — and the failure guarded
+against is not a slow app, it is a dependency arriving that nobody weighed.
+Budgets are generous by about a third and deliberately **not** a ratchet: a
+ratchet that tightens every build turns unrelated commits red and teaches
+people to raise the number without reading it. Raising it is fine; raising it
+knowingly is the point.
+
+**B78 — the docs did not match the code.** Ten of the twelve tables in
+`app.sqlite` were named in no document, and six API surfaces — history, marks,
+subjects, pipeline, submissions, extension — had no endpoint written down
+anywhere. Fixed in `docs/INTERNALS.md`, with `routers/focus.py` (the fix for
+"Open in App opens a browser tab") finally introduced in the Desktop Shell
+plane. **The mechanism, because a docs audit performed by a person is the
+manual step G5 forbids:** `test_docs_match_the_code.py` asks questions *of the
+code* and looks for the answers in the prose — every table in
+`state.declared_columns()`, every API surface walked off the live route table,
+the two-database split, the handshake headers, every path CLAUDE.md's
+documentation map cites. Nothing is listed in the test, so a thirteenth table
+goes red the day it lands. **Two things this cost.** The first version asked
+whether the string `"focus"` appeared in the docs, and it did — in every
+sentence about where focus lands after navigation — so the gate passed while
+the surface named `focus` was undocumented; a router whose name is also an
+English word is exactly the one a name check misses, and the check is by
+endpoint *path* now. The second: FastAPI keeps one `_IncludedRouter` per
+`include_router` call rather than flattening endpoints into `app.routes`, so
+the obvious one-level loop found nothing at all — caught only because the test
+asserts it found more than ten surfaces before judging them.
+
+**B57 — the fourth dependency surface.** Three were already closed: all three
+`package-lock.json` files are committed and `desktop.yml` uses `npm ci`. The
+one still floating was the Python closure — `pip install -e "."` resolves
+whatever PyPI holds the minute the job runs, and that job is the only one that
+produces the binary a reader double-clicks. The evidence is not hypothetical:
+v0.2.1 opened and v0.2.4, built four hours later from an identical tree,
+panicked on a config both shipped. `requirements.lock` pins the runtime
+closure, walked from `pyproject.toml`'s five roots by `tools/relock.py`.
+Runtime *only* — pinning the pipeline and dev extras would make every
+research-tool bump a change to the artifact a reader downloads. Installed with
+`-r` rather than `--no-deps`, because two members are Windows-only (colorama
+via click, pywin32 via mcp) and cannot be pinned from a Linux resolve. **The
+gate runs in both directions**, because a pin nobody runs against is a guess
+with a version number on it: every runtime root reaches the lock, *and* every
+pin matches what the suite just passed against, so the lock cannot go stale
+while the suite stays green. Regeneration stays a deliberate act —
+`tools/relock.py` prints the file and the test only ever compares.
+
+**B71 — closed without a change.** The audit row was written from a screenshot
+and duplicated work already on `main` (`cb27d13`, `d362769`, 2026-09-05).
+Recorded rather than deleted, because "the audit found a gap that was not
+there" is the useful fact: a screenshot is evidence of what a screen looks
+like, not of what the code does. Same for F11's retry affordance — the
+endpoint, the API method and the button all existed.
+
+Still open, and none of it is code: **B63/B64** are two decisions only the
+reader can make (the repository is private, so the updater and `packs.json`
+URLs 404 for a running app — recommendation, a releases-only public mirror;
+and nothing is signed — recommendation, minisign now, defer the
+~$200–400/yr authenticode certificate). **B44** is the missing LICENSE.
+**B53** (`Cargo.lock`) needs a Rust toolchain. And the app-first phase still
+ends where it always did: a reader double-clicking an installer.
+
+Gates at the cut: pytest 997; vitest 43 files / 341 tests; node 103;
+svelte-check 0 errors; `tools/relock.py` reproduces `requirements.lock`
+byte-for-byte.
+
+---
+
 ### 2026-09-08 — the 1.0.0 audit: four defects, four missing gates
 
 `release/1.0.0-readiness`, commits `1f3978e`, `ae70e39`, `3343126`. Four
