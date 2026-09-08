@@ -179,6 +179,17 @@ def main(argv=None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Before the store, before the bind: whatever happens next has somewhere
+    # to be written down. The shell captures our stderr only until the window
+    # opens, so a failure five minutes in used to reach nobody at all.
+    #
+    # Except in MCP mode, which owns stdio — a StreamHandler on stderr is
+    # harmless there (the protocol is on stdout) and is left in place, but the
+    # file is what matters and it is configured the same way.
+    from app import logs
+
+    logs.configure()
+
     store = None
     if args.store:
         from pathlib import Path
