@@ -258,7 +258,28 @@ present, nothing resolves to a `git` or `path` source, and the workflow's
 `--locked` check comes *before* the build rather than after it, which is the
 ordering the whole thing turns on. Verified red by bumping one crate's major.
 
-Gates at the cut: pytest 1009; vitest 43 files / 341 tests; node 103;
+**And two things the branch's own CI found within the hour**, both of them
+the new gates catching the commit that introduced them. `test_shell_is_locked`
+and the `--locked` step went green locally and red on the Windows runner,
+because a step's default shell is the *runner's* — PowerShell there — and
+`> /dev/null` in PowerShell names `C:\dev\null`, whose parent does not exist.
+Two runners green, one red, on a line with nothing to do with either;
+`shell: bash` is the fix and `test_no_posix_only_step_runs_unshelled_on_a_windows_runner`
+is the gate, because the convention already existed on five steps and nothing
+noticed a sixth skipping it.
+
+The other was B57's drift check firing on `ci.yml`, which is the check working
+rather than failing: CI installed `-e ".[dev,pipeline]"` and resolved fastapi
+0.141.1 while the installer freezes 0.138.1, so the suite's central claim — it
+passed against the closure the artifact ships — was false in the one place that
+matters. `ci.yml` installs `-r requirements.lock` now, and the workflow half of
+the gate is per workflow and derived from the directory, since what actually
+went wrong was a *second* workflow installing Python with nobody remembering
+the rule covered it. What that deliberately gives up: nothing on a pull request
+notices a new upstream release breaking us. That belongs on a schedule — a PR
+that fails because a third party published something is a PR nobody can fix.
+
+Gates at the cut: pytest 1013; vitest 43 files / 341 tests; node 103;
 svelte-check 0 errors; `tools/relock.py` reproduces `requirements.lock`
 byte-for-byte.
 
