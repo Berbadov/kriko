@@ -158,6 +158,22 @@
                     extension's card in your browser.
                 </p>
             {/if}
+
+            <!-- A third version, and the only one that describes what is
+                 actually running: an unpacked extension is loaded once and
+                 stays loaded, so both numbers above can read current while
+                 the browser holds a copy from months ago. The app wrote the
+                 sentence, because the floor it was compared against lives
+                 there and a second copy of that rule would drift. -->
+            {#if status.compatibility?.detail}
+                <p
+                    class="state"
+                    class:error={status.compatibility.state === "too_old"}
+                    class:warn={status.compatibility.state === "behind"}
+                >
+                    {status.compatibility.detail}
+                </p>
+            {/if}
         </article>
 
         <article class="card">
