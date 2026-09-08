@@ -125,20 +125,48 @@ def test_the_lock_holds_the_runtime_closure_and_not_the_extras(locked):
     assert leaked == [], f"extras-only packages pinned in the runtime lock: {leaked}"
 
 
-def test_the_installer_installs_from_the_lock():
-    """A lock nothing reads is a document, not a gate.
+def _workflows() -> list[Path]:
+    return sorted((relock.ROOT / ".github" / "workflows").glob("*.yml"))
 
-    `desktop.yml` is the only job that produces the artifact a reader
-    double-clicks, so it is the one that has to pass `-r requirements.lock`.
+
+def test_there_are_workflows_to_check():
+    """A glob that matches nothing passes every check under it."""
+    assert len(_workflows()) >= 2, [p.name for p in _workflows()]
+
+
+@pytest.mark.parametrize("workflow", _workflows(), ids=lambda p: p.name)
+def test_every_workflow_that_installs_python_installs_the_lock(workflow: Path):
+    """A lock nothing reads is a document, not a gate — in *every* job.
+
+    This started as a check on `desktop.yml` alone, on the reasoning that it is
+    the only job producing the artifact a reader double-clicks. That reasoning
+    was right about the artifact and wrong about the gate, and the drift check
+    above proved it within the hour: `ci.yml` installed `-e ".[dev,pipeline]"`,
+    resolved whatever PyPI held that minute, and went red against a lock built
+    from a different closure. Which is the correct outcome — the suite's whole
+    claim is that it passed against the closure the installer freezes, and a
+    job that resolves freely cannot make that claim.
+
+    So the check is per workflow and derived from the directory, because the
+    thing that actually failed here was a *second* workflow installing Python
+    with nobody remembering this rule applied to it. A third one tomorrow is
+    covered the day it lands.
     """
-    workflow = (relock.ROOT / ".github" / "workflows" / "desktop.yml").read_text(
-        encoding="utf-8"
-    )
+    # Comments are skipped, and that is not a nicety: `ci.yml` explains the
+    # stale-bundle check with the words "pip install kriko" in prose, which the
+    # first version of this read as an unlocked install.
     installs = [
         line.strip()
-        for line in workflow.splitlines()
-        if "pip install" in line and "--upgrade pip" not in line
+        for line in workflow.read_text(encoding="utf-8").splitlines()
+        if "pip install" in line
+        and not line.strip().startswith("#")
+        and "--upgrade pip" not in line
     ]
-    assert installs, "desktop.yml installs no Python at all"
+    if not installs:
+        pytest.skip(f"{workflow.name} installs no Python")
     unlocked = [line for line in installs if "requirements.lock" not in line]
-    assert unlocked == [], f"desktop.yml installs without the lock: {unlocked}"
+    assert unlocked == [], (
+        f"{workflow.name} installs Python without the lock: {unlocked}. "
+        "Extras may be unpinned — they never reach a reader — but the runtime "
+        "closure has to be the one the artifact ships."
+    )
