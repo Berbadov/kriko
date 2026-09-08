@@ -970,26 +970,48 @@ someone remembered. The app-first phase's other half stands — it ends when the
 reader opens an installer, not when a workflow goes green.
 
 ### B67 — The knowledge pipeline has no event spine `[G6]`
-The reader's Console shows a job log and nothing about *what the pipeline is
+**Done 2026-09-08** — `53f0ac0`. The reader's Console showed a job log and nothing about *what the pipeline is
 doing*: no stage, no counts, no live view of what was discovered or extracted.
-Design: `pipeline_runs` / `pipeline_stages` / `pipeline_events` in
-`app.sqlite` (interface state, never the engine's schema), an `emit` callback
-passed *into* the pipeline so `kriko/` emits nothing and knows nothing about
-the transport, and SSE at `/api/pipeline/stream`. Stages are
-Discovery / Extraction / Ingestion / Ledgering.
+Shipped as `app/web/pipeline.py`: `pipeline_runs` / `pipeline_stages` /
+`pipeline_events` in `app.sqlite` (interface state, never the engine's
+schema), an `Emitter` the *interface* owns so `kriko/` emits nothing and
+learns nothing about the transport, and SSE at `/api/pipeline/stream`. Stages
+are Discovery / Extraction / Ingestion / Ledgering. Rows before stream, so a
+run killed by a restart is still readable — and marked `interrupted` at
+startup rather than left spinning. `NULL` tokens are not `0`: the agent plane
+meters nothing and says so. `skipped` is not `done` with zero.
 
 ### B68 — The Pipeline route `[G6]`
-The view over B67: per-stage progress, token counts as they accrue, the
+**Done 2026-09-08** — `9e4a376`. The view over B67: per-stage progress, token counts as they accrue, the
 knowledge entries landing and the sources they came from, and transitions
 animated because a state change nobody sees is a state change nobody trusts.
-Depends on B67.
+Progress is counted in *settled stages*, never interpolated from item counts —
+nothing knows how many findings a source will yield, and a bar that moves
+backwards is worse than a coarse one. The feed scrolls in its own `role="log"`
+region, focusable, because a region a keyboard cannot reach is a region it
+cannot read.
 
 ### B69 — Adding a listing site is a manual manifest edit `[G6]`
-The server learns about a site the moment its adapter file exists; the
-extension learns about it when somebody edits `manifest.json`. Fix:
-`chrome.scripting.registerContentScripts` at runtime from `/api/adapters`,
-with the static manifest reduced to what is needed before the first
-successful call. B65's invariant is the gate under this and stays afterwards.
+**Done 2026-09-08**. The server learned about a site the moment its adapter
+file existed; the extension learned about it when somebody edited
+`manifest.json`. `syncSites()` in `background.js` now reads `/api/adapters`,
+turns each `site` into exactly one match pattern, and reconciles
+`chrome.scripting`'s registrations towards it. The four pieces: *detection* is
+the app's answer, never a hostname list in the worker; *synchronisation* reads
+back `getRegisteredContentScripts()` and converges, because an MV3 worker's
+memory does not survive it; *conflicts* are impossible by construction, ids
+being derived (`kriko-site-<host>`); *recovery* is a 30-minute alarm plus
+startup and install, and a failed sync keeps every existing registration
+rather than tearing the panel down because the app is closed.
+
+The host permission stays a user gesture in the options page — Chrome requires
+it and is right to. That is consent for reading a third party's pages, not a
+human in the data path. A pack's `site` is validated as a bare hostname, so an
+adapter cannot ask for `https://*/*`.
+
+B65's invariant is relaxed, not dropped: a site must be covered by the static
+manifest **or** by `optional_host_permissions`, still derived from the pack
+tree, and still failing when it is covered by neither.
 
 ### B70 — Unmapped labels are discarded, so a site redesign is invisible
 `unmapped_labels` is computed and dropped. Persisted, it is the signal that a
@@ -1009,9 +1031,13 @@ a stale extension fails in ways that look like a broken app.
 ### B74 — No route is reachable by keyboard alone end to end
 
 ### B75 — `hover_lite.js` pulls a font from Google Fonts
-A content script fetching a webfont from a third party, on every listing the
-reader opens. `tokens.test.ts` already forbids this in the app; the panel
-predates the rule.
+**Done 2026-09-08** — `bc7ae01`. A content script fetching a webfont from a
+third party, on every listing the reader opened: it told Google which cars
+they were looking at, from the one component running where that is observable,
+and it failed offline — the state the product is designed for. Fonts are
+system-first now. The missing gate ships with it, derived from
+`app.extension.SHIPPED`: no remote host in anything shipped, by any of the
+three spellings of the mistake.
 
 ### B76 — Seven other `overflow` sites, unaudited `[G6]`
 **Done 2026-09-08** — `1f3978e`. Audited: 346 and 1046 are correct

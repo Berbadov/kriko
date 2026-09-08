@@ -16,8 +16,14 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // `statuses` is for the case the routes table cannot express: a server that
 // is up and *refuses*. "The app said no" and "there is no app" are different
 // answers, and the worker is now required to tell them apart.
+// `grantedOrigins` is the third axis the routes table cannot express: a
+// worker that knows about a site and has not been allowed to read it. Chrome
+// answers `permissions.contains` from its own table, and the difference
+// between "pending" and "reading" is the whole of B69's consent story — so the
+// test has to be able to set it.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, statuses = {},
+  grantedOrigins = [],
 } = {}) {
   const state = {
     session: {},
@@ -28,6 +34,14 @@ function loadBackground({
     // Every message it sent to a content script.
     tabMessages: [],
     optionsOpened: 0,
+    // Origins the reader has allowed, and the content-script registrations
+    // the worker holds — both live here rather than in the worker, which is
+    // the point: an MV3 worker is stopped constantly and Chrome is the one
+    // remembering.
+    granted: new Set(grantedOrigins),
+    registered: [],
+    alarms: {},
+    permissionRequests: [],
     // Tabs the worker opened as a fallback, in order. A tab opened when the
     // app was raised is the original bug; a tab *not* opened when it was not
     // is the same bug wearing the other hat.
@@ -39,6 +53,10 @@ function loadBackground({
   // here and called directly, since there is no Chrome to press a key.
   const commandListeners = [];
   const clickListeners = [];
+  // Both fire at the browser rather than at a tab, and both are how the site
+  // sync recovers from a failed one: captured so a test can be the alarm.
+  const alarmListeners = [];
+  const permissionListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -62,6 +80,13 @@ function loadBackground({
     chrome: {
       runtime: {
         onInstalled: { addListener() {} },
+        onStartup: { addListener() {} },
+        // The worker reads the packaged manifest to find out which sites it
+        // does *not* need to register — so the harness hands it the real
+        // file, not a summary of it. A manifest edit that drops a static
+        // block then changes what these tests see, which is correct.
+        getManifest: () => JSON.parse(fs.readFileSync(
+          path.join(__dirname, "..", "manifest.json"), "utf8")),
         onMessage: { addListener: (fn) => messageListeners.push(fn) },
         sendMessage() {},
         openOptionsPage() { state.optionsOpened += 1; },
@@ -81,7 +106,43 @@ function loadBackground({
           return typeof reply === "function" ? reply(message) : reply;
         },
       },
-      scripting: { async executeScript() {} },
+      scripting: {
+        async executeScript() {},
+        async getRegisteredContentScripts() { return [...state.registered]; },
+        async registerContentScripts(scripts) {
+          for (const script of scripts) {
+            // Chrome rejects the whole call on a duplicate id, and the worker
+            // is written around that — so the fake has to do it too, or the
+            // drop-then-add ordering would be untested.
+            if (state.registered.some((s) => s.id === script.id)) {
+              throw new Error(`Duplicate script ID '${script.id}'`);
+            }
+          }
+          state.registered.push(...scripts);
+        },
+        async unregisterContentScripts({ ids } = {}) {
+          const drop = new Set(ids || state.registered.map((s) => s.id));
+          state.registered = state.registered.filter((s) => !drop.has(s.id));
+        },
+      },
+      permissions: {
+        async contains({ origins = [] }) {
+          return origins.every((o) => state.granted.has(o));
+        },
+        request({ origins = [] }, callback) {
+          state.permissionRequests.push(origins);
+          for (const o of origins) state.granted.add(o);
+          const fired = permissionListeners.map((fn) => fn({ origins }));
+          if (callback) callback(true);
+          return Promise.all(fired).then(() => true);
+        },
+        onAdded: { addListener: (fn) => permissionListeners.push(fn) },
+        onRemoved: { addListener() {} },
+      },
+      alarms: {
+        create(name, info) { state.alarms[name] = info; },
+        onAlarm: { addListener: (fn) => alarmListeners.push(fn) },
+      },
       action: {
         onClicked: { addListener: (fn) => clickListeners.push(fn) },
         async setBadgeText({ text, tabId }) { state.badge[tabId] = text; },
@@ -109,7 +170,8 @@ function loadBackground({
   vm.runInContext(fs.readFileSync(BACKGROUND_JS, "utf8"), sandbox,
                   { filename: "background.js" });
 
-  return { sandbox, state, messageListeners, commandListeners, clickListeners };
+  return { sandbox, state, messageListeners, commandListeners, clickListeners,
+           alarmListeners, permissionListeners };
 }
 
 // Calling a message listener the way Chrome does: one shot at
