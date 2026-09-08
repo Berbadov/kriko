@@ -58,6 +58,23 @@
      * everything that leaves this UI leaves because the reader navigated. */
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    /* One step of a stagger. A fourth duration would break the rule above, so
+     * this is deliberately not one: it is the *gap* between two things that
+     * each take `--dur-slow`, and the rail's group entrance is the only
+     * sequence in the app long enough to need one. */
+    --stagger: 55ms;
 
     --rail: 15rem;
+
+    /* Measured, then written back as inline style — declared here so they
+     * resolve to something sane in the paint before measurement lands, and so
+     * the "references no property it never defines" rule can see them. A
+     * marker with no height is a marker nobody sees, which is the correct
+     * state before we know where it goes.
+     *
+     * `--slot` is a stagger index, and 0 means "first", which is the right
+     * answer for an element rendered without one. */
+    --mark-top: 0;
+    --mark-height: 0;
+    --slot: 0;
 }

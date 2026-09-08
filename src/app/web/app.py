@@ -13,15 +13,18 @@ protect. Serving this on 0.0.0.0 would expose an unauthenticated pack-uninstall
 endpoint to the network, so the default host is not a preference.
 """
 
+import logging
 import sys
 import traceback
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app import logs
 from app.web.jobs import JobRunner
 from app.web.routers import (
     agent,
@@ -44,6 +47,8 @@ from app.web.settings import EXTENSION_PORT, Settings
 from app.web.tasks import HANDLERS
 from kriko.store.db import SCHEMA_VERSION
 
+log = logging.getLogger(__name__)
+
 STATIC = Path(__file__).parent / "static"
 
 
@@ -62,6 +67,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
     )
     app.state.settings = settings or Settings.from_env()
+
+    # ── the log has to be somewhere this process can actually write ───────
+    #
+    # `default_analysis_log()` prefers the checkout, which is right for a
+    # developer's data and wrong the moment that directory is owned by
+    # somebody else — which is how every analysis append on the machine this
+    # was written on failed for two months into a root-owned `logs/`, through
+    # a `log.warning` that no configured handler was listening to.
+    #
+    # So: resolve it, fall back to ~/.kriko rather than refuse to start, and
+    # carry the reason out to /api/health. Falling back is the fail-open rule
+    # the data path already follows; carrying the reason is the part that was
+    # missing.
+    logs.configure()
+    resolved, why = logs.resolve_writable(
+        app.state.settings.analysis_log_path,
+        logs.KRIKO_HOME / "logs" / "analyses.jsonl",
+    )
+    if why is not None:
+        log.warning(
+            "analysis log %s is not writable, using %s (%s)",
+            app.state.settings.analysis_log_path,
+            resolved,
+            why,
+        )
+        app.state.settings = replace(app.state.settings, analysis_log_path=resolved)
+    app.state.analysis_log_problem = why
 
     for router in (
         agent.router,
@@ -133,6 +165,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(Exception)
     async def explain_the_failure(request: Request, exc: Exception):
         trace = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        # Both, on purpose: the file is what the reader sends us, and stderr
+        # is what the desktop shell captured before the file existed — and
+        # still the only surface if `logs.configure()` could not open one.
+        log.error("unhandled error at %s", request.url.path, exc_info=exc)
         print("".join(trace), file=sys.stderr, flush=True)
         return JSONResponse(
             status_code=500,
@@ -154,6 +190,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "ok": True,
             "store": str(app.state.settings.store_path),
             "analysis_log": str(app.state.settings.analysis_log_path),
+            # Not decoration: a null `log_file` or a non-null `*_problem` is
+            # the difference between "no bug reports came in" and "no bug
+            # report could have come in". Settings renders both.
+            "analysis_log_problem": app.state.analysis_log_problem,
+            "log_file": str(logs.active_path()) if logs.active_path() else None,
+            "log_problem": logs.failure_reason(),
             # Two SQLite files is a thing an operator has to know about, so
             # the endpoint that names one names both.
             "app_state": str(app.state.settings.app_state_path),

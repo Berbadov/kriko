@@ -1,4 +1,5 @@
 <script lang="ts">
+    import NavIcon from "./NavIcon.svelte";
     import type { NavGroupSpec } from "./nav";
 
     let {
@@ -25,8 +26,11 @@
                     class="nav-link"
                     class:active={current === item.name}
                     aria-current={current === item.name ? "page" : undefined}
-                    href={href(item.name)}>{item.label}</a
+                    href={href(item.name)}
                 >
+                    <NavIcon name={item.name} />
+                    <span class="nav-label">{item.label}</span>
+                </a>
             </li>
         {/each}
     </ul>
