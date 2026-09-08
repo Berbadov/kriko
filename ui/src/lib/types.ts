@@ -337,6 +337,24 @@ export type Health = {
     schema_version: number;
     packs: { pack_id: string; version: string }[];
     releases_url: string;
+    /* Diagnostics. Every one of these is a fact this window cannot observe
+     * about the process serving it, which is the only reason they are on the
+     * wire: a reader whose app is half-working has no other instrument, and
+     * neither do we when they write in.
+     *
+     * The two `*_problem` fields are the half that was missing. The paths
+     * were always chosen and the failures were always caught — into a logger
+     * with no handler, which is how two months of analyses went unwritten
+     * with nothing anywhere saying so. A path that could not be opened now
+     * says why, here, next to the path that was used instead. */
+    log_file: string | null;
+    log_problem: string | null;
+    analysis_log_problem: string | null;
+    /* Is anything reading the sidecar's stdout? The window cannot tell, and
+     * "Open in Kriko" behaves differently depending on the answer. */
+    shell_attached: boolean;
+    extension_port: number;
+    port_is_ours: boolean;
 };
 
 export type ExtensionBrowser = { id: string; name: string; url: string };
@@ -345,6 +363,19 @@ export type ExtensionSighting = {
     first_at: string;
     last_at: string;
     hits: number;
+    /** What the extension said it was, blank for one too old to say — which
+     * is itself the answer, since every version that can say is newer. */
+    version: string;
+};
+
+/** The two clocks compared. `state` is the app's verdict, not the page's:
+ * the floor lives in `app/extension.py` and nothing here knows which
+ * versions are compatible, so this cannot drift from the rule. */
+export type ExtensionCompatibility = {
+    running_version: string;
+    minimum_version: string;
+    state: "unknown" | "too_old" | "behind" | "current";
+    detail: string;
 };
 export type ExtensionStatus = {
     available: boolean;
@@ -358,6 +389,7 @@ export type ExtensionStatus = {
     sightings: ExtensionSighting[];
     connected: boolean;
     seconds_since_seen: number | null;
+    compatibility: ExtensionCompatibility;
 };
 export type ExtensionStaged = { path: string; written: string[]; version: string };
 export type ExtensionRevealed = { path: string; error: string };
@@ -398,4 +430,91 @@ export type Submissions = {
     accepted: number;
     refused: number;
     reasons: { reason: string; count: number }[];
+};
+
+// ── the knowledge pipeline ───────────────────────────────────────────────
+//
+// What a run *did*, as opposed to what a job printed. A `Job` says whether
+// long work is running and carries its log; these say which stage the
+// pipeline reached, how many sources it read, how many findings survived the
+// grounding check, and which source each one came from. Those are different
+// questions, and the second set is the one that distinguishes "found nothing"
+// from "found plenty and lost it all at acceptance".
+
+export type PipelineRun = {
+    run_id: string;
+    /** The job this ran under, so the two views are two views of one thing. */
+    job_id: string | null;
+    kind: string;
+    subject_id: string;
+    subject: string;
+    pack_id: string;
+    /** Which research plane paid for it: `agent` ($0) or `api` (per token). */
+    plane: string;
+    state: "running" | "done" | "failed" | "cancelled" | "interrupted";
+    sources: number;
+    findings: number;
+    accepted: number;
+    refused: number;
+    chars: number;
+    /** NULL when nobody counted — which is not the same as zero. See
+     *  `tokens_counted`: the agent plane's marginal cost really is zero, and
+     *  rendering an uncounted run as free would be a measurement we do not
+     *  have. */
+    tokens: number | null;
+    tokens_counted: boolean;
+    started_at: string;
+    ended_at: string | null;
+    error: string | null;
+};
+
+export type PipelineStage = {
+    stage: string;
+    label: string;
+    seq: number;
+    /** `waiting` is the server's word for a stage that has not begun, so the
+     *  view shows the pipeline's shape from the first frame rather than
+     *  growing one box at a time. `skipped` is a stage that correctly did
+     *  nothing — not a failure. */
+    state: "waiting" | "running" | "done" | "failed" | "skipped";
+    detail: string;
+    items: number;
+    started_at: string | null;
+    ended_at: string | null;
+};
+
+export type PipelineEvent = {
+    event_id: number;
+    run_id: string;
+    stage: string;
+    at: string;
+    level: "info" | "kept" | "refused" | "warn";
+    message: string;
+    source_url: string;
+    detail: Record<string, unknown>;
+};
+
+export type PipelineFrame = {
+    run: PipelineRun;
+    stages: PipelineStage[];
+    events: PipelineEvent[];
+    /** Send back as `after` next time. Carried in the frame so the client and
+     *  the server cannot disagree about what has already been seen. */
+    cursor: number;
+    live: boolean;
+};
+
+
+/** A label a listing page carried that no installed adapter reads.
+ *
+ * `seen` is the weight and `last_at` is the urgency: a label seen four hundred
+ * times over six months is a known gap somebody decided not to map, and one
+ * seen twice this week on a site that used to work is a markup change. */
+export type UnmappedLabel = {
+    adapter_id: string;
+    label: string;
+    seen: number;
+    first_at: string;
+    last_at: string;
+    sample_url: string;
 };

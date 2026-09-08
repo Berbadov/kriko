@@ -21,6 +21,15 @@ const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ADAPTERS_TTL_MS = 5 * 60 * 1000;
 
+// The handshake's two names, matched in `app/extension.py`. The header is
+// what we tell the app; `COMPAT_KEY` is where the verdict it gives back is
+// kept, because the options page has to be able to show it without the app
+// running — a reader whose extension is too old to talk to the app is
+// precisely the reader who needs to read the sentence.
+const VERSION_HEADER = "X-Kriko-Extension";
+const MINIMUM_HEADER = "X-Kriko-Minimum-Extension";
+const COMPAT_KEY = "krikoCompat";
+
 // Tiers whose word stands on its own. Anything else is corroboration: worth
 // showing, worth counting, not worth presenting as settled.
 const CONFIRMING_TIERS = new Set(["authoritative", "manufacturer"]);
@@ -123,15 +132,104 @@ function adapterFor(url, adapters) {
 // and until now both arrived as one red banner. `fetch` rejects rather than
 // resolving when nothing is listening, so the two are only distinguishable
 // here, at the call — by the time an error reaches the panel it is a string.
-async function _fetchApp(url, init) {
+// The version rides on every request, on purpose. A check-in on a timer is a
+// second clock to keep wound and goes stale between winds; a header on work
+// the worker was going to do anyway cannot be forgotten and cannot be true
+// while the extension is broken. Read off the manifest rather than written
+// here, because two places that both state the version eventually disagree
+// and the disagreement is invisible.
+//
+// Safe from a CORS preflight: `http://127.0.0.1/*` is in `host_permissions`,
+// which exempts the worker's own fetches — and the worker is the only thing
+// in this extension that fetches. A content script adding this header would
+// turn every lookup into an OPTIONS the app does not answer.
+function _ownVersion() {
   try {
-    return await fetch(url, init);
+    return String(chrome.runtime.getManifest().version || "");
+  } catch (_) {
+    return "";
+  }
+}
+
+async function _fetchApp(url, init) {
+  const stamped = { ...(init || {}) };
+  stamped.headers = { ...(stamped.headers || {}), [VERSION_HEADER]: _ownVersion() };
+  try {
+    const response = await fetch(url, stamped);
+    void _noteMinimum(response);
+    return response;
   } catch (cause) {
     const down = new Error(
       "Kriko is not running. Open the Kriko app, then try again.");
     down.code = "APP_NOT_RUNNING";
     down.cause = cause;
     throw down;
+  }
+}
+
+// ── the other half of the handshake ─────────────────────────────────────
+//
+// The app answers with the oldest extension it can talk to, on every
+// response. So the check is a read of an answer we already have — not a
+// second endpoint, not a poll, and not a version table in here that would
+// have to be edited in step with the app's. `parseVersion` and the states
+// match `app/extension.py`; the *floor* lives there, which is the point.
+//
+// Stored rather than held in a variable: a service worker is killed after
+// about thirty seconds idle, and the options page a reader opens minutes
+// later is a fresh worker with no memory of any of this.
+function parseVersion(text) {
+  const parts = [];
+  for (const piece of String(text || "").split(".")) {
+    const digits = /^\d+/.exec(piece);
+    if (!digits) break;
+    parts.push(Number(digits[0]));
+  }
+  return parts;
+}
+
+function _olderThan(have, floor) {
+  const length = Math.max(have.length, floor.length);
+  for (let i = 0; i < length; i += 1) {
+    const a = have[i] || 0;
+    const b = floor[i] || 0;
+    if (a !== b) return a < b;
+  }
+  return false;
+}
+
+async function _noteMinimum(response) {
+  // A response with no such header is an app too old to have the handshake,
+  // which is not a problem this extension has: an older app answers this
+  // extension's requests fine, and inventing a complaint about it would put
+  // a warning on the one reader who has nothing to fix.
+  let floor = "";
+  try {
+    floor = response.headers.get(MINIMUM_HEADER) || "";
+  } catch (_) {
+    return;
+  }
+  if (!floor) return;
+  const mine = _ownVersion();
+  const record = {
+    at: Date.now(),
+    minimum: floor,
+    running: mine,
+    stale: _olderThan(parseVersion(mine), parseVersion(floor)),
+  };
+  try {
+    await chrome.storage.local.set({ [COMPAT_KEY]: record });
+  } catch (_) {
+    // Nothing to do and nothing lost: the next response says it again.
+  }
+}
+
+async function readCompat() {
+  try {
+    const stored = await chrome.storage.local.get([COMPAT_KEY]);
+    return stored[COMPAT_KEY] || null;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -146,6 +244,284 @@ async function fetchAdapters() {
   const rows = await response.json();
   adaptersCache = { at: Date.now(), rows };
   return rows;
+}
+
+// ── the extension learning a new site by itself ─────────────────────────
+//
+// The header above has promised since Phase 6c that "installing a pack for a
+// new listing site needs no extension change at all". That was half true: the
+// *server* learned a site the moment its adapter file existed, and the
+// extension learned it when somebody remembered to edit `manifest.json`'s
+// `content_scripts` by hand. Nothing failed when they forgot — the pack
+// installed, `/api/adapters` listed the site, and the reader opened a listing
+// to no panel at all, which is indistinguishable from "nothing known about
+// this car".
+//
+// This closes it. The four pieces the seam needs:
+//
+// *Detection.* The app already knows; it is the only thing that can. So the
+// worker asks — `/api/adapters` is the same endpoint a run already uses, and
+// an adapter's `site` is a bare registrable host (`sahibinden.com`), which
+// becomes exactly one match pattern. No hostname list lives in this file, and
+// none should ever be added to it.
+//
+// *Synchronisation.* `chrome.scripting` holds the registration, not this
+// worker's memory — an MV3 worker is stopped and restarted constantly, and a
+// registration that lived in a variable would evaporate with it. So every
+// sync reads back what Chrome currently has (`getRegisteredContentScripts`)
+// and reconciles towards what the adapters ask for. Convergent, not
+// incremental: running it twice changes nothing the second time, which is
+// what lets it run from four unrelated triggers.
+//
+// *Conflicts.* Script ids are derived — `kriko-site-<host>` — so the same
+// site can never be registered twice, and a stale registration for a pack
+// that was uninstalled is recognisable by its id rather than by remembering
+// we made it. Sites the static manifest already covers are skipped
+// deliberately: registering them again would inject every content script
+// twice on the one site that works today.
+//
+// *Failure recovery.* The app is usually not running — that is the ordinary
+// state of a browser. So a failed sync is not an error state: it leaves every
+// existing registration exactly as it was, records why, and waits for the
+// next trigger (a 30-minute alarm, browser startup, install, or the reader
+// pressing the button in the options page). The registration outlives the
+// failure, so a reader whose app is closed keeps the panel on the sites they
+// have already granted.
+//
+// One thing is deliberately *not* automatic: the host permission. Chrome
+// requires `permissions.request` to come from a user gesture, and it is right
+// to — "this extension may now read every page on a site" is the reader's
+// decision, not a pack author's. That is not a human in the data path; it is
+// consent for reading a third party's pages, and the options page is where it
+// is asked for. Until it is granted the site sits in the status as `pending`,
+// visible, with a button.
+
+const SITE_SCRIPT_PREFIX = "kriko-site-";
+const SITE_SYNC_KEY = "krikoSiteSync";
+const SITE_SYNC_ALARM = "kriko-site-sync";
+const SITE_SYNC_PERIOD_MINUTES = 30;
+
+// The same files, in the same order, as `manifest.json`'s two static blocks.
+// A dynamic registration is one entry rather than two because order inside
+// the array is what matters: `icons.js` and `risk_card.js` define what
+// `hover_lite.js` calls.
+const SITE_SCRIPTS = [
+  "content.js",
+  "hover_lite/icons.js",
+  "hover_lite/risk_card.js",
+  "hover_lite/hover_lite.js",
+];
+
+// An adapter's `site` becomes a host permission and an injection target, so
+// it is the one pack-supplied string in this file with teeth. A registrable
+// hostname and nothing else: no wildcard, no path, no port, no scheme, no
+// credentials. A pack that wants to inject Kriko into a bank by writing
+// `site: "*"` gets nothing, and a typo becomes a visibly missing site rather
+// than a permission prompt for the whole web.
+const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+function siteToPattern(site) {
+  const host = String(site || "").trim().toLowerCase();
+  if (!HOSTNAME.test(host)) return null;
+  // `*.example.com` matches the bare host too, in Chrome's dialect — so one
+  // pattern covers both `example.com/…` and `www.example.com/…`.
+  return `https://*.${host}/*`;
+}
+
+// Hosts the packaged manifest already injects on. Read off the manifest at
+// runtime rather than repeated here, so trimming a static block cannot leave
+// a site silently uncovered by both mechanisms.
+function staticSiteHosts() {
+  const manifest = chrome.runtime.getManifest ? chrome.runtime.getManifest() : {};
+  const hosts = new Set();
+  for (const block of manifest.content_scripts || []) {
+    for (const pattern of block.matches || []) {
+      const text = String(pattern);
+      const tail = text.includes("://") ? text.split("://")[1] : text;
+      const host = tail.split("/")[0].replace(/^\*\./, "").toLowerCase();
+      if (host) hosts.add(host);
+    }
+  }
+  return hosts;
+}
+
+// What the installed packs want, minus what the package already does. Bad
+// `site` values are carried as rejects rather than dropped: a pack shipping an
+// adapter this worker refuses is worth seeing in the options page, because
+// from the reader's side it looks exactly like a site that does not work.
+function wantedSites(rows) {
+  const isStatic = staticSiteHosts();
+  const wanted = new Map();
+  for (const adapter of rows || []) {
+    const host = String(adapter && adapter.site || "").trim().toLowerCase();
+    if (!host || isStatic.has(host)) continue;
+    const pattern = siteToPattern(host);
+    if (!wanted.has(host)) {
+      wanted.set(host, { site: host, pattern, id: SITE_SCRIPT_PREFIX + host });
+    }
+  }
+  return [...wanted.values()];
+}
+
+async function _granted(pattern) {
+  if (!chrome.permissions || !chrome.permissions.contains) return false;
+  try {
+    return await chrome.permissions.contains({ origins: [pattern] });
+  } catch (_) {
+    return false;
+  }
+}
+
+async function _registeredSiteScripts() {
+  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return [];
+  try {
+    const all = await chrome.scripting.getRegisteredContentScripts();
+    return (all || []).filter((s) => String(s.id).startsWith(SITE_SCRIPT_PREFIX));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function _writeSiteStatus(record) {
+  try {
+    await chrome.storage.local.set({ [SITE_SYNC_KEY]: record });
+  } catch (_) {
+    // A status nobody can read is not a reason to undo a registration.
+  }
+}
+
+async function readSiteStatus() {
+  try {
+    const stored = await chrome.storage.local.get([SITE_SYNC_KEY]);
+    return stored[SITE_SYNC_KEY] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// The reconciliation. Returns the status it wrote, so the options page can
+// use the answer to its own request rather than reading storage back.
+async function syncSites({ fresh = false } = {}) {
+  if (fresh) adaptersCache = null;
+
+  let rows;
+  try {
+    rows = await fetchAdapters();
+  } catch (error) {
+    // The app is closed. Every existing registration stays exactly as it is —
+    // the reader keeps the panel on sites they already granted — and the
+    // previous list stays visible so the options page shows what it knows
+    // rather than an empty one.
+    const previous = await readSiteStatus();
+    const record = {
+      at: Date.now(),
+      sites: (previous && previous.sites) || [],
+      error: error.message,
+      code: error.code || "",
+    };
+    await _writeSiteStatus(record);
+    return record;
+  }
+
+  const wanted = wantedSites(rows);
+  const sites = [];
+  const keep = new Set();
+
+  for (const entry of wanted) {
+    if (!entry.pattern) {
+      sites.push({ site: entry.site, state: "refused",
+                   detail: "not a hostname the extension will inject on" });
+      continue;
+    }
+    if (!(await _granted(entry.pattern))) {
+      sites.push({ site: entry.site, pattern: entry.pattern, state: "pending" });
+      continue;
+    }
+    keep.add(entry.id);
+    sites.push({ site: entry.site, pattern: entry.pattern, state: "active",
+                 id: entry.id });
+  }
+
+  const existing = await _registeredSiteScripts();
+  const byId = new Map(existing.map((s) => [s.id, s]));
+
+  // Drop first, then add. A registration whose site is gone (the pack was
+  // uninstalled, or its permission revoked) must not survive, and an id that
+  // exists cannot be registered over — `registerContentScripts` rejects the
+  // whole call on a duplicate, which would take the new sites down with it.
+  const stale = existing.map((s) => s.id).filter((id) => !keep.has(id));
+  if (stale.length && chrome.scripting.unregisterContentScripts) {
+    try {
+      await chrome.scripting.unregisterContentScripts({ ids: stale });
+    } catch (_) {
+      // Already gone, or never there. Either way the desired end state is
+      // what the next block establishes.
+    }
+  }
+
+  const missing = [...keep].filter((id) => !byId.has(id));
+  const failures = [];
+  for (const entry of wanted) {
+    if (!missing.includes(entry.id)) continue;
+    try {
+      await chrome.scripting.registerContentScripts([{
+        id: entry.id,
+        matches: [entry.pattern],
+        js: SITE_SCRIPTS,
+        runAt: "document_idle",
+        allFrames: false,
+        persistAcrossSessions: true,
+      }]);
+    } catch (error) {
+      // One at a time, and one failure does not cost the others: a site
+      // Chrome refuses is one line in the status, not a dead sync.
+      failures.push(`${entry.site}: ${error.message}`);
+      for (const row of sites) {
+        if (row.site === entry.site) {
+          row.state = "refused";
+          row.detail = error.message;
+        }
+      }
+    }
+  }
+
+  const record = {
+    at: Date.now(),
+    sites,
+    error: failures.length ? failures.join("; ") : "",
+    code: "",
+  };
+  await _writeSiteStatus(record);
+  return record;
+}
+
+// Four triggers, one function, because the sync is convergent — none of these
+// needs to know what the others did.
+//
+// The alarm is the one that matters: the app is started and stopped
+// independently of the browser, so the first sync after install almost always
+// fails, and something has to try again without the reader doing anything.
+chrome.runtime.onInstalled.addListener(() => {
+  void syncSites({ fresh: true });
+});
+if (chrome.runtime.onStartup) {
+  chrome.runtime.onStartup.addListener(() => { void syncSites({ fresh: true }); });
+}
+if (chrome.alarms) {
+  chrome.alarms.create(SITE_SYNC_ALARM, {
+    periodInMinutes: SITE_SYNC_PERIOD_MINUTES,
+    delayInMinutes: 1,
+  });
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
+  });
+}
+// A grant is the event the pending list was waiting for, and a revocation has
+// to take the injection with it — an extension still running on a site the
+// reader took back is the worst failure available here.
+if (chrome.permissions && chrome.permissions.onAdded) {
+  chrome.permissions.onAdded.addListener(() => { void syncSites(); });
+  chrome.permissions.onRemoved.addListener(() => { void syncSites(); });
 }
 
 // ── the answer, in the shape the panel renders ──────────────────────────
@@ -504,7 +880,12 @@ async function _postApp(path, body) {
     } catch (_) {
       // A body that is not JSON tells us nothing the status has not.
     }
-    throw new Error(`Kriko refused that (${detail}).`);
+    // The status rides along, because "the app said no" and "there is no
+    // app" are different situations and the caller has to tell them apart —
+    // conflating them is what turned a rejected route into a browser tab.
+    const refusal = new Error(`Kriko refused that (${detail}).`);
+    refusal.status = response.status;
+    throw refusal;
   }
   return response.json();
 }
@@ -512,21 +893,50 @@ async function _postApp(path, body) {
 /** Bring the desktop app to the front, on the given route.
  *
  * A page cannot raise a native window, so this posts the route and lets the
- * engine tell the shell (see `src/app/web/routers/focus.py`). When there is no
- * app to raise — the server running in a terminal, or nothing running at all —
- * a browser tab is the fallback, which is what this used to do *always*.
+ * engine tell the shell (see `src/app/web/routers/focus.py`).
+ *
+ * The interesting part is what counts as success. This used to treat any 2xx
+ * as "the window was raised" and any error at all as "open a tab", and both
+ * halves were wrong in the same direction — towards lying about what
+ * happened:
+ *
+ *   * A 2xx only means the route was *recorded*. Whether a window came to the
+ *     front depends on whether anything is reading the sidecar's stdout, which
+ *     is what `delivery` now reports. With the server running in a terminal,
+ *     the old code returned `raised: true`, declined to open a tab, and the
+ *     button did visibly nothing — the bug this path exists to fix.
+ *   * A 422 means the route is not a shape the app could navigate to, i.e.
+ *     *this extension* built a bad route. Opening a tab at the same bad route
+ *     hides a defect behind a fallback that was designed for a missing app.
+ *     It is logged and rethrown instead.
+ *
+ * The fallback tab is therefore reserved for the two cases it was meant for:
+ * no server reachable, and a server with no shell attached to it.
  */
 async function openInApp(route, fallbackUrl) {
+  let delivery = "no_shell";
   try {
-    await _postApp("/api/focus", { route });
-    return { ok: true, raised: true };
+    const body = await _postApp("/api/focus", { route });
+    delivery = body?.delivery ?? (body?.raised ? "raised" : "no_shell");
+    if (delivery === "raised") return { ok: true, raised: true, delivery };
   } catch (error) {
-    if (fallbackUrl) {
-      await chrome.tabs.create({ url: fallbackUrl });
-      return { ok: true, raised: false, fallback: true };
+    // A refusal is an answer: the app is running and objected. Only a
+    // *transport* failure means there is nothing to raise.
+    if (error.status) {
+      console.warn(`Kriko rejected the route ${route}:`, error.message);
+      throw error;
     }
-    throw error;
+    delivery = "unreachable";
   }
+
+  if (fallbackUrl) {
+    await chrome.tabs.create({ url: fallbackUrl });
+    return { ok: true, raised: false, fallback: true, delivery };
+  }
+  // Nothing to raise and nowhere to fall back to. Still not an error: the
+  // route is recorded server-side for the TTL, so a window opened in the next
+  // thirty seconds picks it up.
+  return { ok: true, raised: false, delivery };
 }
 
 // ── messages ────────────────────────────────────────────────────────────
@@ -688,6 +1098,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     };
     run()
       .then(sendResponse)
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  // ── which sites this install actually covers ────────────────────────
+  //
+  // The options page asks; it does not compute. Whether a site is covered is
+  // a function of the manifest, the installed packs and Chrome's permission
+  // table, and a settings screen that worked any of those out for itself
+  // would be a second implementation to drift from this one.
+  //
+  // `KRIKO_SITE_STATUS` reads the last sync's record without touching the
+  // network, so opening the options page with the app closed shows what is
+  // known rather than an error. `KRIKO_SYNC_SITES` is the reader pressing the
+  // button, which is the only reason to bypass the adapter cache.
+  if (request.type === "KRIKO_SITE_STATUS") {
+    readSiteStatus()
+      .then((record) => sendResponse({ ok: true, status: record }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "KRIKO_SYNC_SITES") {
+    syncSites({ fresh: true })
+      .then((record) => sendResponse({ ok: true, status: record }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "KRIKO_COMPAT") {
+    // No network: the verdict was recorded by whatever request last reached
+    // the app, and the reader who needs this sentence most is the one whose
+    // app is closed right now.
+    readCompat()
+      .then((record) => sendResponse({ ok: true, compat: record }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true; // async
   }

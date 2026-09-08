@@ -29,7 +29,13 @@ local.db
 
 # Node deps for the extension scraper tests (npm test)
 node_modules/
-package-lock.json
+
+# package-lock.json is NOT ignored, and used to be -- as a bare pattern, which
+# matches at every depth, so it swallowed the root lockfile and tauri's while
+# ui/'s survived only because it was already tracked when the rule landed.
+# That is how `@tauri-apps/cli: "^2"` came to float: v0.2.1 opened and v0.2.4,
+# four hours later, panicked on a byte-identical tree. A release that cannot
+# be rebuilt is not a release.
 
 
 # Pytest scratch

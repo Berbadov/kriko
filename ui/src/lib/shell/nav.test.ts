@@ -68,6 +68,7 @@ describe("the route table", () => {
             "knowledge",
             "packs",
             "jobs",
+            "pipeline",
             "submissions",
             "console",
             "connect",

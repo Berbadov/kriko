@@ -6,6 +6,7 @@ adapters, and the cars pack knows about Sahibinden. Adding a listing site is a
 JSON file in a pack.
 """
 
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -24,6 +25,8 @@ from kriko.adapters import (
 )
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["analyze"])
 
@@ -64,6 +67,36 @@ def list_adapters(store=Depends(get_store)):
         }
         for a in load_adapters(store)
     ]
+
+
+@router.get("/adapters/unmapped")
+def unmapped(
+    limit: int = 100, adapter_id: str = "", app_state=Depends(get_app_state)
+):
+    """Labels the pages carried that no installed adapter reads.
+
+    The whole point of persisting them: this list is where "the site renamed a
+    field last Tuesday" is legible. A label with a high `seen` and a recent
+    `last_at` on a site that used to work is a markup change; one seen twice in
+    June is noise an author can dismiss.
+
+    Deliberately not derived from `declared_labels` — a label absent from the
+    adapter is not interesting, a label *present on the page* and absent from
+    the adapter is. Only the reader's actual browsing can tell the difference.
+    """
+    return {"labels": state.unmapped_labels(app_state, limit, adapter_id=adapter_id)}
+
+
+@router.delete("/adapters/unmapped/{adapter_id}/{label:path}")
+def forget_unmapped(adapter_id: str, label: str, app_state=Depends(get_app_state)):
+    """Dismiss one label.
+
+    A list that cannot be pruned stops being read, and some labels are never
+    going to be mapped. Not permanent: the next listing carrying the label puts
+    it back, which is the honest answer to "I dismissed this and it is still
+    happening".
+    """
+    return {"forgotten": state.forget_unmapped(app_state, adapter_id, label)}
 
 
 def _context_units(store, context) -> dict:
@@ -215,6 +248,23 @@ def analyze(
             for c in result.claims
         ],
     }
+
+    # ── the one signal that a site changed its markup ────────────────────
+    #
+    # `mapped.unmapped` was computed on every lookup and dropped on every
+    # lookup. When a listing site renames a field, nothing errors: the lookup
+    # succeeds, resolves less precisely and returns fewer claims, so the
+    # failure arrives as knowledge quietly going missing — indistinguishable
+    # from a thin pack. The label was in the response the whole time.
+    #
+    # Guarded and after the payload, like the log below: a coverage signal is
+    # never worth the reader's answer.
+    try:
+        state.record_unmapped(
+            app_state, mapped.adapter_id, mapped.unmapped, url=body.url
+        )
+    except Exception:
+        log.warning("could not record unmapped labels", exc_info=True)
 
     # Best-effort, and deliberately after the answer is assembled: a failure to
     # write the log must never cost the reader their result. This log is where

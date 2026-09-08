@@ -1,11 +1,15 @@
 <script lang="ts">
+    import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
+    import Failure from "../lib/Failure.svelte";
     import { follow, stateWord } from "../lib/jobs";
     import type { Job, Pack, PackEvent, PackUpdates, Revision } from "../lib/types";
 
     let packs = $state<Pack[]>([]);
-    let error = $state("");
+    // The exception, not its message — see Failure: the remedy comes off
+    // the status, which a string has already discarded.
+    let failure = $state<unknown>(null);
     let installMessage = $state("");
     let installState = $state("results");
     let files = $state<FileList | null>(null);
@@ -16,9 +20,9 @@
     async function refresh() {
         try {
             packs = await api.packs();
-            error = "";
+            failure = null;
         } catch (e) {
-            error = (e as Error).message;
+            failure = e;
         }
     }
 
@@ -38,7 +42,7 @@
             await refresh();
         } catch (e) {
             installState = "error";
-            installMessage = `Install failed: ${(e as Error).message}`;
+            installMessage = remedyFor(e).headline;
         }
     }
 
@@ -76,7 +80,7 @@
         try {
             updates = await api.packUpdates();
         } catch (e) {
-            updates = { index_url: "", error: (e as Error).message, packs: [] };
+            updates = { index_url: "", error: remedyFor(e).headline, packs: [] };
         } finally {
             checking = false;
         }
@@ -95,7 +99,7 @@
                 }
             });
         } catch (e) {
-            updateJob = { state: "failed", message: (e as Error).message, done: true } as Job;
+            updateJob = { state: "failed", message: remedyFor(e).headline, done: true } as Job;
         }
     }
 
@@ -176,8 +180,8 @@
 {#await ready}
     <p class="state loading">Loading packs…</p>
 {:then}
-    {#if error}
-        <p class="state error">Could not load this view: {error}</p>
+    {#if failure}
+        <Failure error={failure} retry={refresh} />
     {:else if !packs.length}
         <!-- Screen-level absence, so it gets the screen-level idiom: a title,
              why it is empty, and the one thing to do about it. The one-line

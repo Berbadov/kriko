@@ -1,5 +1,6 @@
 <script lang="ts">
     import Describe from "../lib/Describe.svelte";
+    import Failure from "../lib/Failure.svelte";
     import Report from "../lib/Report.svelte";
     import { ApiError, api } from "../lib/api";
     import type { Mode } from "../lib/mode";
@@ -13,7 +14,13 @@
     let unreadable = $state(false);
     let pageFields = $state<{ label: string; value: string }[]>([]);
     let result = $state<LookupResult | null>(null);
-    let error = $state("");
+    // Two different things, deliberately two variables. `hint` is a sentence
+    // this app wrote about the form ("paste a link first"); `error` is an
+    // exception the engine raised. They were one string, which meant the
+    // reader's own typo and a dead engine rendered identically — and neither
+    // could carry the remedy the other needed (B79).
+    let hint = $state("");
+    let error = $state<unknown>(null);
     let busy = $state(false);
 
     async function load() {
@@ -21,11 +28,12 @@
     }
 
     async function checkUrl() {
-        error = "";
+        hint = "";
+        error = null;
         unreadable = false;
         result = null;
         if (!url.trim()) {
-            error = "Paste the listing's web address first.";
+            hint = "Paste the listing's web address first.";
             return;
         }
         busy = true;
@@ -46,7 +54,7 @@
             // installed pack ships an adapter for that site, which has its own
             // answer and its own next step.
             if (e instanceof ApiError && e.status === 404) unreadable = true;
-            else error = e instanceof Error ? e.message : String(e);
+            else error = e;
         } finally {
             busy = false;
         }
@@ -106,8 +114,10 @@
     {/if}
 
     <div aria-live="polite">
-        {#if error}
-            <p class="state error">{error}</p>
+        {#if hint}
+            <p class="state no-match">{hint}</p>
+        {:else if error}
+            <Failure {error} />
         {:else if result}
             <Report {result} {mode} lookupId={result.lookup_id ?? ""} />
         {/if}

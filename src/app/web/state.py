@@ -11,6 +11,7 @@ a history row must never affect a pack's `content_digest`.
 """
 
 import json
+import re
 import secrets
 import sqlite3
 from datetime import UTC, datetime
@@ -46,7 +47,13 @@ CREATE TABLE IF NOT EXISTS extension_seen (
     origin   TEXT PRIMARY KEY,
     first_at TEXT NOT NULL,
     last_at  TEXT NOT NULL,
-    hits     INTEGER NOT NULL DEFAULT 1
+    hits     INTEGER NOT NULL DEFAULT 1,
+    -- What the extension says it is. Blank for a version that predates the
+    -- header, which is itself the answer to "how old is it" — an extension
+    -- too old to say is older than every extension that says anything. The
+    -- default is what lets this be added to an existing file at all; see
+    -- `add_missing_columns`.
+    version  TEXT NOT NULL DEFAULT ''
 );
 
 -- Triage: which claims of a stored answer the reader has dealt with.
@@ -153,6 +160,124 @@ CREATE TABLE IF NOT EXISTS submissions (
     verdicts_json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
+
+-- ── the knowledge pipeline, as rows ──────────────────────────────────────
+--
+-- A `jobs` row already says whether long work is running, how far along it
+-- claims to be, and what it printed. What it cannot say is *what the pipeline
+-- did*: which stage, how many sources, how much text, what was kept, what was
+-- refused and why. So the Console showed a log and the reader had no way to
+-- tell a research run that found nothing from one that found plenty and threw
+-- it all away at the grounding check — two completely different situations
+-- with the same-looking output.
+--
+-- Three tables, because there are three questions with three lifetimes:
+-- "what runs have there been" (a run, kept), "how did this one move through
+-- the stages" (a stage, kept), and "what happened inside a stage" (an event,
+-- pruned). Rolling them into one would either lose the stage summary to event
+-- volume or force a rewrite of the run row on every event.
+--
+-- Interface state, for the same reason `submissions` is: none of this is pack
+-- content, so none of it may touch a `content_digest`. And it is a row before
+-- it is a stream — a run interrupted by a restart must be *readable*
+-- afterwards, which is the whole lesson of the jobs table.
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    run_id      TEXT PRIMARY KEY,
+    -- The job this run belongs to, when there is one. Nullable because a run
+    -- may be driven from the CLI or MCP, which have no job row.
+    job_id      TEXT,
+    kind        TEXT NOT NULL,          -- research | pack_build
+    subject_id  TEXT NOT NULL DEFAULT '',
+    subject     TEXT NOT NULL DEFAULT '',
+    pack_id     TEXT NOT NULL DEFAULT '',
+    plane       TEXT NOT NULL DEFAULT '',
+    state       TEXT NOT NULL,          -- running | done | failed | interrupted
+    -- Totals, denormalised on purpose: the overview lists runs and must not
+    -- aggregate thousands of events to render a row.
+    sources     INTEGER NOT NULL DEFAULT 0,
+    findings    INTEGER NOT NULL DEFAULT 0,
+    accepted    INTEGER NOT NULL DEFAULT 0,
+    refused     INTEGER NOT NULL DEFAULT 0,
+    chars       INTEGER NOT NULL DEFAULT 0,
+    -- Reported by the plane when it spends tokens, and left NULL when nobody
+    -- counted. NULL and 0 are different answers and the UI says which: the
+    -- agent plane's marginal cost really is zero, and an estimate presented as
+    -- a measurement is the `raised: true` mistake again.
+    tokens      INTEGER,
+    started_at  TEXT NOT NULL,
+    ended_at    TEXT,
+    error       TEXT
+);
+CREATE INDEX IF NOT EXISTS pipeline_runs_started ON pipeline_runs (started_at DESC);
+
+-- One row per stage per run, created when the stage opens so a stage that
+-- never finished is visible as exactly that rather than as an absence.
+CREATE TABLE IF NOT EXISTS pipeline_stages (
+    run_id     TEXT NOT NULL,
+    stage      TEXT NOT NULL,           -- see pipeline.STAGES
+    seq        INTEGER NOT NULL,        -- display order, from STAGES
+    state      TEXT NOT NULL,           -- running | done | failed | skipped
+    detail     TEXT NOT NULL DEFAULT '',
+    items      INTEGER NOT NULL DEFAULT 0,
+    started_at TEXT NOT NULL,
+    ended_at   TEXT,
+    PRIMARY KEY (run_id, stage)
+);
+
+-- What happened inside a stage. High volume, so it is the one table that is
+-- pruned — and pruned by run rather than by age, because half an event log is
+-- more misleading than none.
+CREATE TABLE IF NOT EXISTS pipeline_events (
+    event_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id     TEXT NOT NULL,
+    stage      TEXT NOT NULL,
+    at         TEXT NOT NULL,
+    level      TEXT NOT NULL DEFAULT 'info',   -- info | kept | refused | warn
+    message    TEXT NOT NULL,
+    -- The originating source, when the event has one. This is what makes a
+    -- live view of "what is being read right now, and what came out of it"
+    -- possible at all.
+    source_url TEXT NOT NULL DEFAULT '',
+    detail_json TEXT
+);
+CREATE INDEX IF NOT EXISTS pipeline_events_run ON pipeline_events (run_id, event_id);
+
+-- ── labels no adapter reads ──────────────────────────────────────────────
+--
+-- `adapt()` already computes them: every label the page carried that no
+-- adapter rule covers. Until now the number was handed to the caller and
+-- thrown away, which made the one signal that a site has changed its markup
+-- the one signal nobody could see.
+--
+-- What that costs: a listing site renames "Motor Hacmi" and the adapter stops
+-- reading engine size. Nothing errors. The lookup still succeeds, resolves
+-- less precisely, and returns fewer claims — so the failure arrives as
+-- knowledge quietly going missing, which is indistinguishable from a thin
+-- pack. The label was in the response the whole time.
+--
+-- Accumulated rather than appended, one row per (adapter, label): a label on
+-- a template appears on every listing of that type, and a log of every
+-- sighting would be a table that grows with reading volume while answering a
+-- question about *distinct* labels. `seen` is the weight, `last_seen` is what
+-- separates "the site changed last week" from "this was odd once in June".
+--
+-- Interface state, deliberately: a pack's adapter is content, and what a
+-- reader's browsing happened to reveal about a site is not. It must never
+-- reach a `content_digest`, and clearing your history must not erase it —
+-- which is why it is its own table rather than a column on `lookups`.
+CREATE TABLE IF NOT EXISTS unmapped_labels (
+    adapter_id TEXT NOT NULL,
+    label      TEXT NOT NULL,
+    seen       INTEGER NOT NULL DEFAULT 0,
+    first_at   TEXT NOT NULL,
+    last_at    TEXT NOT NULL,
+    -- One example, overwritten. Enough to open the page and look; not a list,
+    -- because a reader debugging an adapter needs one URL and a count, not
+    -- every URL that had the label.
+    sample_url TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (adapter_id, label)
+);
+CREATE INDEX IF NOT EXISTS unmapped_labels_last ON unmapped_labels (last_at DESC);
 """
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
@@ -165,6 +290,10 @@ CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
 #: matching problem, "not true at all" is a knowledge problem, and collapsing
 #: them would throw away the only signal that distinguishes the two.
 VERDICTS = ("useful", "wrong", "not_applicable")
+
+#: Long enough for any semver anyone will ship, short enough that a header is
+#: not a place to put a payload.
+MAX_VERSION_CHARS = 32
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -190,9 +319,99 @@ def connect(path: Path) -> sqlite3.Connection:
     stamp = schema_stamp(SCHEMA)
     if conn.execute("PRAGMA user_version").fetchone()[0] != stamp:
         conn.executescript(SCHEMA)
+        # `CREATE TABLE IF NOT EXISTS` is a no-op on a table that already
+        # exists, so a *column* added to SCHEMA above never appears in a
+        # reader's file — the stamp moves, the script runs, and the column is
+        # silently missing until the first query names it. New tables landed
+        # fine, which is exactly why nobody noticed: the bug is invisible
+        # until the first schema change of the other kind.
+        add_missing_columns(conn)
         conn.execute(f"PRAGMA user_version = {stamp}")
         conn.commit()
     return conn
+
+
+def declared_columns(sql: str = SCHEMA) -> dict[str, dict[str, str]]:
+    """What SCHEMA says each table holds — parsed, never hand-listed.
+
+    A migration list someone has to remember to extend is the step that gets
+    forgotten (CLAUDE.md's scalability rule, applied to the schema rather than
+    to the catalog). The declaration above is already the truth; this reads it.
+    """
+    tables: dict[str, dict[str, str]] = {}
+    pattern = re.compile(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\n\);",
+        re.DOTALL | re.IGNORECASE,
+    )
+    for name, body in pattern.findall(sql):
+        columns: dict[str, str] = {}
+        for part in _split_top_level(body):
+            # A table constraint is not a column, and `PRIMARY KEY (a, b)`
+            # would otherwise be read as a column called "PRIMARY".
+            if part.split(None, 1)[0].upper() in _NOT_A_COLUMN:
+                continue
+            columns[part.split(None, 1)[0]] = part
+        tables[name] = columns
+    return tables
+
+
+#: Leading words that begin a table constraint rather than a column.
+_NOT_A_COLUMN = {"PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "CONSTRAINT"}
+
+
+def _split_top_level(body: str) -> list[str]:
+    """Split a CREATE TABLE body on its own commas, comments removed.
+
+    Depth-aware because `PRIMARY KEY (adapter_id, label)` and
+    `DEFAULT (datetime('now'))` both carry commas that are not separators.
+    """
+    lines = [line.split("--", 1)[0] for line in body.splitlines()]
+    text = "\n".join(lines)
+    parts: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for char in text:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+            continue
+        current.append(char)
+    parts.append("".join(current))
+    return [part.strip() for part in parts if part.strip()]
+
+
+def add_missing_columns(conn: sqlite3.Connection, sql: str = SCHEMA) -> list[str]:
+    """Bring an existing table up to what SCHEMA declares.
+
+    Only additions, and only ones SQLite can add in place — which is the
+    honest limit of a local file we must never rewrite behind the reader's
+    back. This is *their* history and settings, not a cache: dropping the
+    table to recreate it would trade a missing column for lost data, so a
+    column SQLite refuses raises rather than being papered over. Anything
+    beyond an added column is a real migration and has to be written as one.
+    """
+    added: list[str] = []
+    for table, columns in declared_columns(sql).items():
+        try:
+            existing = {
+                row[1] for row in conn.execute(f"PRAGMA table_info({table})")
+            }
+        except sqlite3.Error:
+            continue
+        if not existing:
+            continue  # the CREATE above made it, or it is not ours
+        for name, definition in columns.items():
+            if name in existing:
+                continue
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
+            added.append(f"{table}.{name}")
+    if added:
+        conn.commit()
+    return added
 
 
 def record_lookup(
@@ -307,8 +526,10 @@ def put_settings(conn: sqlite3.Connection, values: dict) -> dict:
 # ── the browser extension ────────────────────────────────────────────────
 
 
-def record_extension(conn: sqlite3.Connection, origin: str) -> None:
-    """Note that an extension origin reached us just now.
+def record_extension(
+    conn: sqlite3.Connection, origin: str, version: str = ""
+) -> None:
+    """Note that an extension origin reached us just now, and what it is.
 
     Deliberately cheap and deliberately silent. It runs inside a middleware on
     a request the extension is waiting on, so it must not raise: a locked
@@ -317,13 +538,23 @@ def record_extension(conn: sqlite3.Connection, origin: str) -> None:
     broken", which is precisely backwards.
     """
     now = _now()
+    # Truncated rather than validated: this is a header, so it is whatever the
+    # caller sent. It is only ever displayed and compared, never executed, and
+    # a version string that is not a version reads as an extension that cannot
+    # say what it is — which is the same conclusion by a different route.
+    version = str(version or "")[:MAX_VERSION_CHARS]
     try:
         conn.execute(
-            "INSERT INTO extension_seen (origin, first_at, last_at, hits)"
-            " VALUES (?, ?, ?, 1)"
+            "INSERT INTO extension_seen (origin, first_at, last_at, hits, version)"
+            " VALUES (?, ?, ?, 1, ?)"
             " ON CONFLICT(origin) DO UPDATE SET last_at = excluded.last_at,"
-            " hits = extension_seen.hits + 1",
-            (origin, now, now),
+            " hits = extension_seen.hits + 1,"
+            # COALESCE, not a plain overwrite: a request that carried no
+            # header must not erase what an earlier one told us. Only a
+            # non-blank version moves it.
+            " version = CASE WHEN excluded.version = '' THEN extension_seen.version"
+            "                ELSE excluded.version END",
+            (origin, now, now, version),
         )
         conn.commit()
     except sqlite3.Error:
@@ -335,7 +566,7 @@ def extension_sightings(conn: sqlite3.Connection) -> list[dict]:
     return [
         dict(row)
         for row in conn.execute(
-            "SELECT origin, first_at, last_at, hits FROM extension_seen"
+            "SELECT origin, first_at, last_at, hits, version FROM extension_seen"
             " ORDER BY last_at DESC"
         )
     ]
@@ -826,3 +1057,102 @@ def interrupt_running(conn: sqlite3.Connection) -> int:
     )
     conn.commit()
     return cursor.rowcount
+
+
+# ── labels no adapter reads ──────────────────────────────────────────────
+
+
+#: How many distinct labels one lookup may contribute. A page whose markup
+#: changed wholesale, or one an adapter matched by mistake, can carry
+#: hundreds — and a hundred labels from one page is not a hundred signals, it
+#: is one. Capping keeps a single odd page from burying the handful of
+#: labels that actually recur.
+MAX_UNMAPPED_PER_LOOKUP = 25
+
+#: A label longer than this is not a label. It is a paragraph that ended up in
+#: a definition list, and storing it whole makes the table unreadable.
+MAX_LABEL_CHARS = 120
+
+
+def record_unmapped(
+    conn: sqlite3.Connection,
+    adapter_id: str,
+    labels,
+    *,
+    url: str = "",
+) -> int:
+    """Count the labels this page had that the adapter does not read.
+
+    Idempotent per (adapter, label) and additive in `seen`, so the answer to
+    "is this recurring or was it once" survives without a row per sighting.
+
+    Best-effort by contract: every caller is on the path of a reader waiting
+    for an answer, and a coverage signal is never worth the answer. The count
+    of labels actually written is returned so a test can tell "nothing to
+    record" from "recording failed".
+    """
+    if not adapter_id:
+        return 0
+    now = _now()
+    written = 0
+    for label in list(labels)[:MAX_UNMAPPED_PER_LOOKUP]:
+        text = str(label).strip()[:MAX_LABEL_CHARS]
+        if not text:
+            continue
+        conn.execute(
+            """
+            INSERT INTO unmapped_labels
+                (adapter_id, label, seen, first_at, last_at, sample_url)
+            VALUES (?, ?, 1, ?, ?, ?)
+            ON CONFLICT(adapter_id, label) DO UPDATE SET
+                seen = seen + 1,
+                last_at = excluded.last_at,
+                sample_url = excluded.sample_url
+            """,
+            (adapter_id, text, now, now, url),
+        )
+        written += 1
+    conn.commit()
+    return written
+
+
+def unmapped_labels(
+    conn: sqlite3.Connection, limit: int = 100, *, adapter_id: str = ""
+) -> list[dict]:
+    """The labels, most recently seen first.
+
+    Recency before frequency on purpose: a label that appeared today is the
+    one that might mean the site changed this week, and a label seen four
+    hundred times over six months is a known gap somebody already decided not
+    to map.
+    """
+    where, args = "", []
+    if adapter_id:
+        where, args = "WHERE adapter_id = ?", [adapter_id]
+    rows = conn.execute(
+        f"""
+        SELECT adapter_id, label, seen, first_at, last_at, sample_url
+          FROM unmapped_labels {where}
+      ORDER BY last_at DESC, seen DESC
+         LIMIT ?
+        """,
+        (*args, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def forget_unmapped(conn: sqlite3.Connection, adapter_id: str, label: str) -> bool:
+    """Drop one label.
+
+    The dismissal an author needs: "Takasa Uygun" is never going to be mapped
+    and a list that cannot be pruned stops being read. Deleting a row that
+    recurs is not permanent — the next listing carrying it puts it back with a
+    fresh `first_at`, which is the correct answer to "I said I did not care
+    and it is still happening".
+    """
+    cur = conn.execute(
+        "DELETE FROM unmapped_labels WHERE adapter_id = ? AND label = ?",
+        (adapter_id, label),
+    )
+    conn.commit()
+    return cur.rowcount > 0

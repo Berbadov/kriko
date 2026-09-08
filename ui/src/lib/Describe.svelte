@@ -1,5 +1,6 @@
 <script lang="ts">
     import EmptyState from "./EmptyState.svelte";
+    import Failure from "./Failure.svelte";
     import { api } from "./api";
     import { collect, humanize } from "./fields";
     import type { LookupResult, Pack, Subject, SubjectDetail, Term } from "./types";
@@ -18,7 +19,7 @@
     let query = $state("");
     let matches = $state<Subject[]>([]);
     let searching = false;
-    let error = $state("");
+    let error = $state<unknown>(null);
     let busy = $state(false);
     let more = $state(false);
 
@@ -93,7 +94,7 @@
     }
 
     async function ask() {
-        error = "";
+        error = null;
         if (missing.length) return;
         busy = true;
         try {
@@ -105,7 +106,7 @@
                 }),
             );
         } catch (e) {
-            error = e instanceof Error ? e.message : String(e);
+            error = e;
         } finally {
             busy = false;
         }
@@ -116,7 +117,7 @@
         context = {};
         query = "";
         matches = [];
-        error = "";
+        error = null;
     }
 
     const ready = load();
@@ -236,9 +237,9 @@
         </div>
 
         <div aria-live="polite">
-            {#if error}<p class="state error">{error}</p>{/if}
+            {#if error}<Failure {error} />{/if}
         </div>
     {/if}
 {:catch e}
-    <p class="state error">Could not load this view: {e.message}</p>
+    <Failure error={e} />
 {/await}

@@ -855,18 +855,45 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   data, and no tracked path may be unnameable on Windows. All in the ordinary
   pytest suite, no toolchain needed.
 
-### B53 — The desktop shell has no `Cargo.lock`, so no two builds are the same
-`tauri/src-tauri/Cargo.lock` is not committed and `tauri-plugin-updater = "2"`
-floats, so every CI run resolves whatever crates.io holds that minute. This is
-not theoretical: v0.2.1 opened and v0.2.4, four hours later, panicked on a
-config both builds shipped identically — the plugin's tolerance for a missing
-`plugins.updater` changed underneath an unchanged tree. A lockfile makes a
-release reproducible and makes a dependency bump a commit somebody can revert.
-Needs a Rust toolchain to generate (`cargo generate-lockfile` in
-`tauri/src-tauri/`), which is why it is a row rather than a diff.
+### B53 — The desktop shell has no `Cargo.lock` — **Done 2026-09-08**
+Moved to `done.md`. `tauri/src-tauri/Cargo.lock` is committed (501 packages),
+`cargo metadata --locked` gates the release workflow before it builds, and
+`src/app/tests/test_shell_is_locked.py` holds the invariant with no Rust
+toolchain installed.
 
 Also open from the phase-2 work: the report screen makes weak claim selection
 obvious, which is the product principle's open work (B36), not this item's.
+
+---
+
+## P0 — the 1.0.0 release audit *(2026-09-08)*
+
+The full assessment, with the finding-by-finding reasoning, the seven-phase
+plan and the six open questions, is the published artifact
+`https://claude.ai/code/artifact/b4a4aa7d-18cc-4c2e-b22c-14549587e4c8`
+("Kriko 1.0.0 Readiness").
+
+**The headline finding, kept here because it outlives the rows.** Every
+automated gate was green — pytest, vitest, node, svelte-check — and *all four
+reported defects passed all of them*. Four defects, four missing categories of
+gate. So each row that fixed behaviour also named the gate that was absent,
+and a row without one was not treated as finished. Apply that to anything new
+in this file.
+
+**B54–B62, B65–B80 are done** and moved to `done.md` — two sections dated
+2026-09-08, the second covering [PR #12](https://github.com/Berbadov/kriko/pull/12).
+`B57` is done except `Cargo.lock`, which is `B53` and needs a Rust toolchain;
+`B44` (LICENSE) is its own row under P2. What stays open here is the two rows
+nobody can write code for:
+
+### B63 — The updater and `packs.json` URLs 404 for a running app
+**Blocked on Q1.** The repository is private, so both point at endpoints a
+reader's app cannot reach. Recommendation in the artifact: a releases-only
+public mirror.
+
+### B64 — Nothing is signed, so nothing can self-update
+**Blocked on Q2.** minisign now (free, and the key must never be lost);
+the ~$200–400/yr Windows authenticode certificate can wait.
 
 ---
 

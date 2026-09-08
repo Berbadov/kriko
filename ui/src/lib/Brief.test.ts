@@ -89,7 +89,9 @@ describe("Brief", () => {
         stubFetch({ "/api/research": { status: 409, body: '{"detail":"a job is running"}' } });
         render(Brief, PROPS);
         await waitFor(() =>
-            expect(screen.getByText(/a job is running/)).toBeInTheDocument(),
+            expect(
+                screen.getByText(/already doing this/i),
+            ).toBeInTheDocument(),
         );
     });
 });

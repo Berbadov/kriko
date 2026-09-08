@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "../lib/Async.svelte";
+    import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
     import { follow } from "../lib/jobs";
 
@@ -7,7 +8,11 @@
 
     let busy = $state(false);
     let log = $state("");
-    let failure = $state("");
+    // The exception itself, not its message. This is the reader's first
+    // minute with Kriko: a sentence about what to do next is worth more here
+    // than anywhere else in the app, and a string has already thrown away the
+    // status Failure needs to write one (B72).
+    let failure = $state<unknown>(null);
 
     const offer = api.packUpdates();
 
@@ -16,7 +21,7 @@
     // installed later.
     async function install() {
         busy = true;
-        failure = "";
+        failure = null;
         try {
             const { job_id } = await api.updatePacks();
             // follow() returns the way to stop watching, not a promise — the
@@ -27,13 +32,14 @@
                 follow(job_id, (job) => {
                     log = job.message || job.log.split("\n").slice(-1)[0] || "";
                     if (!job.done) return;
-                    if (job.state === "failed") failure = job.message || "Install failed.";
+                    if (job.state === "failed")
+                        failure = new Error(job.message || "Install failed.");
                     resolve();
                 });
             });
             if (!failure) onDone();
         } catch (e) {
-            failure = e instanceof Error ? e.message : String(e);
+            failure = e;
         } finally {
             busy = false;
         }
@@ -43,12 +49,12 @@
         const file = (event.currentTarget as HTMLInputElement).files?.[0];
         if (!file) return;
         busy = true;
-        failure = "";
+        failure = null;
         try {
             await api.installPack(file);
             onDone();
         } catch (e) {
-            failure = e instanceof Error ? e.message : String(e);
+            failure = e;
         } finally {
             busy = false;
         }
@@ -105,7 +111,7 @@
 
             <div aria-live="polite">
                 {#if log}<p class="meta">{log}</p>{/if}
-                {#if failure}<p class="state error">{failure}</p>{/if}
+                {#if failure}<Failure error={failure} retry={install} />{/if}
             </div>
         {/snippet}
     </Async>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Failure from "../lib/Failure.svelte";
     import Report from "../lib/Report.svelte";
     import { ApiError, api } from "../lib/api";
     import type { Mode } from "../lib/mode";
@@ -25,6 +26,8 @@
     {#if error instanceof ApiError && error.status === 404}
         <p class="state empty">That lookup is no longer in your history.</p>
     {:else}
-        <p class="state error">Could not load this view: {error.message}</p>
+        <!-- The 404 above keeps its own sentence because it knows what was
+             missing; everything else is generic by status. -->
+        <Failure {error} />
     {/if}
 {/await}

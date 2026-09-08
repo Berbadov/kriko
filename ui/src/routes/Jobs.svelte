@@ -1,11 +1,15 @@
 <script lang="ts">
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
+    import Failure from "../lib/Failure.svelte";
     import { follow, isLive, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
-    let error = $state("");
+    // The exception, not a rendering of it: Failure reads the status to
+    // decide what the reader can do next, and String(cause) has already
+    // thrown that away (B72).
+    let error = $state<unknown>(null);
     let open = $state<string | null>(null);
     let root = $state("");
     let busy = $state(false);
@@ -34,7 +38,7 @@
             jobs = (await api.jobs()).items ?? [];
             jobs.forEach(watch);
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         }
     };
 
@@ -86,7 +90,7 @@
     async function startPack() {
         if (!canScaffold) return;
         busy = true;
-        error = "";
+        error = null;
         scaffolded = "";
         try {
             const made = await api.scaffoldPack({
@@ -101,7 +105,7 @@
             // they just gave us would be the app forgetting on purpose.
             root = made.root;
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         } finally {
             busy = false;
         }
@@ -110,7 +114,7 @@
     async function build() {
         if (!root.trim()) return;
         busy = true;
-        error = "";
+        error = null;
         try {
             const { job_id } = await api.buildPack(root.trim());
             const job = await api.job(job_id);
@@ -118,7 +122,7 @@
             watch(job);
             open = job_id;
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         } finally {
             busy = false;
         }
@@ -129,7 +133,7 @@
             await api.cancelJob(job.job_id);
             replace(await api.job(job.job_id));
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         }
     }
 
@@ -150,7 +154,7 @@
             watch(fresh);
             open = job_id;
         } catch (cause) {
-            error = String(cause);
+            error = cause;
         }
     }
 
@@ -218,7 +222,7 @@
 </form>
 
 {#if error}
-    <p class="state error">{error}</p>
+    <Failure {error} retry={load} />
 {/if}
 
 {#if !jobs.length}

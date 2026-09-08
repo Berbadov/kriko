@@ -177,7 +177,28 @@ def main(argv=None) -> int:
         action="store_true",
         help="exit when stdin closes, i.e. when whatever spawned us goes away",
     )
+    # The one thing this process cannot work out for itself. A supervised
+    # sidecar and a hand-run one are identical over HTTP — same endpoints,
+    # same ports — and the only difference is whether anything is reading the
+    # stdout that `KRIKO_FOCUS` goes out on. So the shell declares it, and
+    # /api/focus stops claiming it raised a window nobody was listening for.
+    parser.add_argument(
+        "--supervised",
+        action="store_true",
+        help="a desktop shell is reading our stdout and can raise a window",
+    )
     args = parser.parse_args(argv)
+
+    # Before the store, before the bind: whatever happens next has somewhere
+    # to be written down. The shell captures our stderr only until the window
+    # opens, so a failure five minutes in used to reach nobody at all.
+    #
+    # Except in MCP mode, which owns stdio — a StreamHandler on stderr is
+    # harmless there (the protocol is on stdout) and is left in place, but the
+    # file is what matters and it is configured the same way.
+    from app import logs
+
+    logs.configure()
 
     store = None
     if args.store:
@@ -208,6 +229,9 @@ def main(argv=None) -> int:
     # built from the environment a few lines down and this is the one fact
     # about the running process that no configuration file could supply.
     os.environ["KRIKO_EXTENSION_BOUND"] = "1" if extra is not None else "0"
+    # Same route, same reason: a fact about this process's *supervision*, not
+    # a configuration choice, so it travels the same way the port bind does.
+    os.environ["KRIKO_SUPERVISED"] = "1" if args.supervised else "0"
 
     # `sockets=[sock]`, not host/port and not `fd=`. Not host/port because
     # uvicorn must not rebind — the port we announced and the port it serves

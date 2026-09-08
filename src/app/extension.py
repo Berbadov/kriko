@@ -49,6 +49,85 @@ SHIPPED = (
 )
 
 
+#: The header the extension stamps on every request it makes to us, and the
+#: oldest extension this app still knows how to answer.
+#:
+#: One number, in one place, bumped only when a wire change actually breaks an
+#: older client — not on every extension release. The two clocks are separate
+#: on purpose (knowledge weekly, the binary rarely, and the extension on its
+#: own schedule again), so a *compatibility matrix* would be three moving
+#: parts to keep in step and would be wrong within a release. A floor is one.
+#:
+#: Deliberately below the shipped version: "older than what this app carries"
+#: is worth *saying* and is not a fault, because the reader may simply not
+#: have reloaded the unpacked extension yet. "Older than the floor" is the
+#: only case where the two ends genuinely cannot talk.
+VERSION_HEADER = "x-kriko-extension"
+MINIMUM_HEADER = "x-kriko-minimum-extension"
+MINIMUM_VERSION = "0.3.0"
+
+
+def parse_version(text: str) -> tuple[int, ...]:
+    """A dotted version as a comparable tuple, unparseable parts dropped.
+
+    Returns `()` for anything that is not a version — including the blank an
+    extension too old to send the header leaves behind — and `()` sorts below
+    every real version, which is the answer that was wanted anyway.
+    """
+    parts: list[int] = []
+    for piece in str(text or "").split("."):
+        digits = ""
+        for char in piece:
+            if not char.isdigit():
+                break
+            digits += char
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def compatibility(running: str, shipped: str = "") -> dict:
+    """What to say about the extension the browser is actually running.
+
+    Three states, not two. `unknown` is separate from `too_old` because they
+    call for different sentences: nothing has called us yet, versus something
+    called us that we cannot answer. Collapsing them would tell a reader who
+    has not installed the extension that theirs is out of date.
+    """
+    have = parse_version(running)
+    floor = parse_version(MINIMUM_VERSION)
+    if not have:
+        state = "unknown"
+    elif have < floor:
+        state = "too_old"
+    elif shipped and have < parse_version(shipped):
+        state = "behind"
+    else:
+        state = "current"
+    return {
+        "running_version": str(running or ""),
+        "minimum_version": MINIMUM_VERSION,
+        "state": state,
+        # The app never asks the browser to do anything; it can only say what
+        # it sees. So the copy is the whole remedy, and it belongs next to the
+        # rule that produced it rather than in three views that drift apart.
+        "detail": {
+            "unknown": "",
+            "too_old": (
+                f"The extension in your browser is {running}, and this app "
+                f"needs {MINIMUM_VERSION} or newer. Reload it from the "
+                "Extension page — the copy on disk is already current."
+            ),
+            "behind": (
+                f"The extension in your browser is {running}; this app ships "
+                f"{shipped}. It still works. Reload it when convenient."
+            ),
+            "current": "",
+        }[state],
+    }
+
+
 def source_dir() -> Path | None:
     """Where the extension's files are on *this* installation.
 
