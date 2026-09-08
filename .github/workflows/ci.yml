@@ -58,10 +58,11 @@ jobs:
               with:
                   node-version: "24"
 
-            # `npm install`, not `npm ci`: package-lock.json is gitignored, so there
-            # is no lockfile to install from. Commit the lockfile and switch this to
-            # `npm ci` if reproducible installs matter more than a tidy tree.
-            - run: npm install --no-audit --no-fund
+            # `npm ci`: the lockfile is committed now (it was ignored by a bare
+            # pattern that matched at every depth). A test suite that resolves
+            # whatever npm holds this minute is a suite whose failures are not
+            # reproducible, which is the one property a gate has to have.
+            - run: npm ci --no-audit --no-fund
             - run: npm test
 
     ui:
