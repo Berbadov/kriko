@@ -51,7 +51,10 @@ describe("About", () => {
     it("surfaces a failure rather than rendering blank", async () => {
         stubFetchFailing();
         render(About);
-        expect(await screen.findByText(/could not/i)).toBeInTheDocument();
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(
+            screen.getByText(/bug in Kriko, not something you did/),
+        ).toBeInTheDocument();
     });
 
     // ── the diagnostics block ────────────────────────────────────────────

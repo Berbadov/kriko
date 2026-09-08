@@ -104,6 +104,26 @@ describe("no view writes its own error copy", () => {
         expect(offenders.map(([path]) => path)).toEqual([]);
     });
 
+    // B79. The markup gate above only caught the *last* step of the mistake.
+    // Eleven views were still doing the first: `error = String(cause)` in a
+    // catch block, into a `$state("")` — by which point the status is gone and
+    // no remedy can be derived downstream however good the component is. Same
+    // bug, one line earlier, and invisible to a gate that reads only markup.
+    //
+    // The sanctioned way to turn an exception into text is `remedyFor`, which
+    // is why its own `technical` field is the one spelling this allows.
+    it("nobody flattens an exception into state", () => {
+        const flattened = /(?:\b(?:e|err|error|cause)(?: as Error)?\)?\.message\b|String\((?:e|err|error|cause)\))/;
+        const offenders = Object.entries(SOURCES)
+            .filter(([path]) => !path.endsWith("/Failure.svelte"))
+            .filter(([, source]) => {
+                const script = stripAllComments(source).split("</script>")[0];
+                return flattened.test(script.replace(/remedyFor\([^)]*\)\.\w+/g, ""));
+            })
+            .map(([path]) => path);
+        expect(offenders).toEqual([]);
+    });
+
     it("the old sentence is gone and stays gone", () => {
         const offenders = Object.entries(SOURCES)
             .filter(([, source]) =>
@@ -118,3 +138,9 @@ describe("no view writes its own error copy", () => {
 // nothing — the same exemption tokens.test.ts makes for the same reason.
 const stripMarkupComments = (source: string) =>
     source.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+
+/** Comments too, not only markup ones: a script-block comment is where the
+ *  reasoning for holding the exception is written, and it names the mistake
+ *  it replaced. */
+const stripAllComments = (source: string) =>
+    stripMarkupComments(source).replace(/\/\/.*/g, "");

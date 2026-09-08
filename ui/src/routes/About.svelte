@@ -1,15 +1,16 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import Failure from "../lib/Failure.svelte";
     import type { Health } from "../lib/types";
 
     let health = $state<Health | null>(null);
-    let error = $state("");
+    let error = $state<unknown>(null);
 
     async function load() {
         try {
             health = await api.health();
         } catch (e) {
-            error = (e as Error).message;
+            error = e;
         }
     }
 
@@ -28,7 +29,7 @@
     <p class="state loading">Loading…</p>
 {:then}
     {#if error}
-        <p class="state error">Could not read this install's health: {error}</p>
+        <Failure {error} retry={load} />
     {:else if health}
         <dl class="facts">
             <dt>App</dt>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "./api";
+    import Failure from "./Failure.svelte";
     import { follow, stateWord } from "./jobs";
     import { hashWith } from "./router";
     import type { Job } from "./types";
@@ -32,7 +33,7 @@
     } = $props();
 
     let job = $state<Job | null>(null);
-    let error = $state("");
+    let error = $state<unknown>(null);
     let copied = $state("");
 
     // Result fields, read defensively: the job's result is a plain dict from
@@ -63,7 +64,7 @@
         } catch (cause) {
             // Inline, never thrown: one subject failing to start research must
             // not take the screen it was opened from down with it.
-            error = String(cause);
+            error = cause;
         }
     }
     void start();
@@ -95,7 +96,7 @@
     </header>
 
     {#if error}
-        <p class="state error">Research could not start: {error}</p>
+        <Failure {error} />
     {/if}
 
     {#if brief}

@@ -84,7 +84,9 @@ describe("connecting an agent", () => {
         render(Connect);
         await fireEvent.click((await screen.findAllByText("Connect"))[0]);
 
-        expect(await screen.findByText(/not valid JSON/)).toBeInTheDocument();
+        // The row shows the remedy's headline, not the server's body — the
+        // body is a 409's technical detail and lives behind the fold (B72).
+        expect(await screen.findByText(/already doing this/i)).toBeInTheDocument();
         expect(screen.getByText("Claude Code")).toBeInTheDocument();
     });
 
@@ -128,7 +130,10 @@ describe("connecting an agent", () => {
     it("surfaces a failure instead of rendering an empty page", async () => {
         stubFetchFailing();
         render(Connect);
-        expect(await screen.findByText(/Could not read the harness config/)).toBeInTheDocument();
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(
+            screen.getByText(/bug in Kriko, not something you did/),
+        ).toBeInTheDocument();
     });
 
     it("blames the switch, not a missing download, when a pack is off", async () => {
