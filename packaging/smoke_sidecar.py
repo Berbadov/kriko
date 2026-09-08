@@ -128,6 +128,9 @@ def main(argv: list[str]) -> int:
         "KRIKO_STORE": str(Path(scratch.name) / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(Path(scratch.name) / "app.sqlite"),
         "KRIKO_ANALYSES_LOG": str(Path(scratch.name) / "analyses.jsonl"),
+        # Into scratch so the assertion below is about *this* run and not
+        # about a log some earlier run left in the runner's home.
+        "KRIKO_LOG": str(Path(scratch.name) / "logs" / "app.log"),
     }
     process = subprocess.Popen(
         [str(binary)],
@@ -170,6 +173,51 @@ def main(argv: list[str]) -> int:
             return 1
 
         print(f"health ok: {health}")
+
+        # ── is anything being written down? ───────────────────────────────
+        #
+        # This is the gate that was missing for two months. The analysis log
+        # reported its own failures through `log.warning` into a root logger
+        # with no handler, so a `PermissionError` on every single append
+        # produced no output anywhere and `analyses.jsonl` stayed empty. Every
+        # other gate was green throughout, including this smoke test, because
+        # nothing here had ever asked whether the log existed.
+        #
+        # It is checked in the *frozen binary* rather than only in pytest
+        # because that is where the paths differ: `sys._MEIPASS` is a
+        # temporary directory that vanishes, an installed app runs from
+        # Program Files, and both are exactly the cases a source checkout
+        # cannot reproduce.
+        log_file = health.get("log_file")
+        if not log_file:
+            print(
+                "the sidecar is writing no log at all: "
+                f"{health.get('log_problem') or '(no reason given)'}"
+            )
+            return 1
+        if not Path(log_file).exists():
+            print(f"the sidecar named a log at {log_file} and never created it")
+            return 1
+        if health.get("log_problem"):
+            print(f"the log is degraded: {health['log_problem']}")
+            return 1
+        # The analysis log was pointed at scratch above, so a fallback here
+        # means `resolve_writable` refused a path we know is writable.
+        if health.get("analysis_log_problem"):
+            print(
+                "the analysis log fell back even though its path was ours: "
+                f"{health['analysis_log_problem']}"
+            )
+            return 1
+        print(f"log ok: {log_file}")
+
+        # Unsupervised on purpose — nothing is reading this process's stdout,
+        # and the honest answer is what the extension branches on. A binary
+        # that claimed a shell here would send "Open in Kriko" back to doing
+        # nothing at all.
+        if health.get("shell_attached"):
+            print("the sidecar claims a desktop shell nobody attached")
+            return 1
 
         # The frontend is loaded from the filesystem, not imported, so a
         # missing `datas` entry only shows up as a 404 here.
