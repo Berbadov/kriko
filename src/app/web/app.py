@@ -24,7 +24,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import logs
+from app import extension as ext, logs
 from app.web import origins, pipeline
 from app.web.jobs import JobRunner
 from app.web.routers import (
@@ -52,6 +52,17 @@ from kriko.store.db import SCHEMA_VERSION
 log = logging.getLogger(__name__)
 
 STATIC = Path(__file__).parent / "static"
+
+
+def _shipped_extension_version() -> str:
+    """What the app carries, or "" where it carries nothing.
+
+    A bundle built without the extension is a packaging shape, not a fault —
+    see `extension.source_dir` — so this answers rather than raising on the
+    endpoint the shell polls before it will show a window.
+    """
+    source = ext.source_dir()
+    return ext.version(source) if source else ""
 
 
 @asynccontextmanager
@@ -148,6 +159,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # swallowing failures so this can never be the reason a lookup 500s: the
     # extension is waiting on that response, and losing a status detail is
     # cheaper than losing the answer.
+    # The version rides along for the same reason. Asking the extension to
+    # check in on a schedule would be a second clock to keep wound; a header
+    # on work it was going to do anyway cannot go stale, cannot be forgotten,
+    # and cannot be true while the install is broken. An extension too old to
+    # send it leaves the column blank — which is itself the answer, because
+    # every version that sends anything is newer than one that cannot.
     @app.middleware("http")
     async def note_the_extension(request: Request, call_next):
         origin = request.headers.get("origin", "")
@@ -155,12 +172,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             try:
                 conn = state.connect(app.state.settings.app_state_path)
                 try:
-                    state.record_extension(conn, origin)
+                    state.record_extension(
+                        conn,
+                        origin,
+                        request.headers.get(ext.VERSION_HEADER, ""),
+                    )
                 finally:
                     conn.close()
             except Exception:
                 pass
-        return await call_next(request)
+        response = await call_next(request)
+        # And the other direction, on the same ride. The extension learns the
+        # floor from the answer to a request it was already making — no second
+        # endpoint, no poll, no third clock, and nothing to go stale between
+        # winds. Exposed explicitly because a header the browser will not let
+        # a caller read is a header that does not exist; the worker's own
+        # fetches are exempt from CORS via `host_permissions`, but the
+        # allowlist is what makes that not a thing to remember.
+        response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
+        response.headers["access-control-expose-headers"] = ext.MINIMUM_HEADER
+        return response
 
     # ── who is allowed to ask ────────────────────────────────────────────
     #
@@ -269,6 +300,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # thing that tells them.
             "shell_attached": bool(app.state.settings.shell_attached),
             "extension_port": EXTENSION_PORT,
+            # The extension's half of the handshake. It reads this on its own
+            # schedule and compares its manifest against the floor, because
+            # the app cannot make the browser do anything — only say what it
+            # needs. /api/health rather than /api/extension: the extension
+            # already polls this one, and a compatibility check that needs a
+            # second request is a check that fails when the first one does.
+            "minimum_extension_version": ext.MINIMUM_VERSION,
+            "extension_version": _shipped_extension_version(),
             "port_is_ours": bool(app.state.settings.extension_port_bound),
         }
 

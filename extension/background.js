@@ -21,6 +21,15 @@ const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ADAPTERS_TTL_MS = 5 * 60 * 1000;
 
+// The handshake's two names, matched in `app/extension.py`. The header is
+// what we tell the app; `COMPAT_KEY` is where the verdict it gives back is
+// kept, because the options page has to be able to show it without the app
+// running — a reader whose extension is too old to talk to the app is
+// precisely the reader who needs to read the sentence.
+const VERSION_HEADER = "X-Kriko-Extension";
+const MINIMUM_HEADER = "X-Kriko-Minimum-Extension";
+const COMPAT_KEY = "krikoCompat";
+
 // Tiers whose word stands on its own. Anything else is corroboration: worth
 // showing, worth counting, not worth presenting as settled.
 const CONFIRMING_TIERS = new Set(["authoritative", "manufacturer"]);
@@ -123,15 +132,104 @@ function adapterFor(url, adapters) {
 // and until now both arrived as one red banner. `fetch` rejects rather than
 // resolving when nothing is listening, so the two are only distinguishable
 // here, at the call — by the time an error reaches the panel it is a string.
-async function _fetchApp(url, init) {
+// The version rides on every request, on purpose. A check-in on a timer is a
+// second clock to keep wound and goes stale between winds; a header on work
+// the worker was going to do anyway cannot be forgotten and cannot be true
+// while the extension is broken. Read off the manifest rather than written
+// here, because two places that both state the version eventually disagree
+// and the disagreement is invisible.
+//
+// Safe from a CORS preflight: `http://127.0.0.1/*` is in `host_permissions`,
+// which exempts the worker's own fetches — and the worker is the only thing
+// in this extension that fetches. A content script adding this header would
+// turn every lookup into an OPTIONS the app does not answer.
+function _ownVersion() {
   try {
-    return await fetch(url, init);
+    return String(chrome.runtime.getManifest().version || "");
+  } catch (_) {
+    return "";
+  }
+}
+
+async function _fetchApp(url, init) {
+  const stamped = { ...(init || {}) };
+  stamped.headers = { ...(stamped.headers || {}), [VERSION_HEADER]: _ownVersion() };
+  try {
+    const response = await fetch(url, stamped);
+    void _noteMinimum(response);
+    return response;
   } catch (cause) {
     const down = new Error(
       "Kriko is not running. Open the Kriko app, then try again.");
     down.code = "APP_NOT_RUNNING";
     down.cause = cause;
     throw down;
+  }
+}
+
+// ── the other half of the handshake ─────────────────────────────────────
+//
+// The app answers with the oldest extension it can talk to, on every
+// response. So the check is a read of an answer we already have — not a
+// second endpoint, not a poll, and not a version table in here that would
+// have to be edited in step with the app's. `parseVersion` and the states
+// match `app/extension.py`; the *floor* lives there, which is the point.
+//
+// Stored rather than held in a variable: a service worker is killed after
+// about thirty seconds idle, and the options page a reader opens minutes
+// later is a fresh worker with no memory of any of this.
+function parseVersion(text) {
+  const parts = [];
+  for (const piece of String(text || "").split(".")) {
+    const digits = /^\d+/.exec(piece);
+    if (!digits) break;
+    parts.push(Number(digits[0]));
+  }
+  return parts;
+}
+
+function _olderThan(have, floor) {
+  const length = Math.max(have.length, floor.length);
+  for (let i = 0; i < length; i += 1) {
+    const a = have[i] || 0;
+    const b = floor[i] || 0;
+    if (a !== b) return a < b;
+  }
+  return false;
+}
+
+async function _noteMinimum(response) {
+  // A response with no such header is an app too old to have the handshake,
+  // which is not a problem this extension has: an older app answers this
+  // extension's requests fine, and inventing a complaint about it would put
+  // a warning on the one reader who has nothing to fix.
+  let floor = "";
+  try {
+    floor = response.headers.get(MINIMUM_HEADER) || "";
+  } catch (_) {
+    return;
+  }
+  if (!floor) return;
+  const mine = _ownVersion();
+  const record = {
+    at: Date.now(),
+    minimum: floor,
+    running: mine,
+    stale: _olderThan(parseVersion(mine), parseVersion(floor)),
+  };
+  try {
+    await chrome.storage.local.set({ [COMPAT_KEY]: record });
+  } catch (_) {
+    // Nothing to do and nothing lost: the next response says it again.
+  }
+}
+
+async function readCompat() {
+  try {
+    const stored = await chrome.storage.local.get([COMPAT_KEY]);
+    return stored[COMPAT_KEY] || null;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -1025,6 +1123,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "KRIKO_SYNC_SITES") {
     syncSites({ fresh: true })
       .then((record) => sendResponse({ ok: true, status: record }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "KRIKO_COMPAT") {
+    // No network: the verdict was recorded by whatever request last reached
+    // the app, and the reader who needs this sentence most is the one whose
+    // app is closed right now.
+    readCompat()
+      .then((record) => sendResponse({ ok: true, compat: record }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true; // async
   }

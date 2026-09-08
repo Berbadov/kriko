@@ -363,6 +363,19 @@ export type ExtensionSighting = {
     first_at: string;
     last_at: string;
     hits: number;
+    /** What the extension said it was, blank for one too old to say — which
+     * is itself the answer, since every version that can say is newer. */
+    version: string;
+};
+
+/** The two clocks compared. `state` is the app's verdict, not the page's:
+ * the floor lives in `app/extension.py` and nothing here knows which
+ * versions are compatible, so this cannot drift from the rule. */
+export type ExtensionCompatibility = {
+    running_version: string;
+    minimum_version: string;
+    state: "unknown" | "too_old" | "behind" | "current";
+    detail: string;
 };
 export type ExtensionStatus = {
     available: boolean;
@@ -376,6 +389,7 @@ export type ExtensionStatus = {
     sightings: ExtensionSighting[];
     connected: boolean;
     seconds_since_seen: number | null;
+    compatibility: ExtensionCompatibility;
 };
 export type ExtensionStaged = { path: string; written: string[]; version: string };
 export type ExtensionRevealed = { path: string; error: string };
