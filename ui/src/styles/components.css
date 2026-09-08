@@ -412,8 +412,34 @@ pre {
     color: var(--accent);
 }
 .state.no-match,
-.state.unknown {
+.state.unknown,
+/* B73's "behind but still works" verdict: a caution, not a fault — the
+   extension is doing its job, it is simply older than what ships. */
+.state.warn {
     border-color: var(--medium);
+}
+
+/* B72 — a failure is a small block, not a line: what happened, what to do,
+   and the exception folded away underneath. The headline reuses .state.error
+   so a failure looks like every other piece of app-said-something, and the
+   sentence under it is ordinary prose because that is the part being read. */
+.failure {
+    max-width: var(--measure);
+    margin: var(--s-3) 0;
+}
+.failure .state {
+    margin-bottom: var(--s-2);
+}
+.failure > p {
+    margin: 0;
+    line-height: var(--lh-read);
+}
+.failure .row {
+    margin-top: var(--s-3);
+    align-items: center;
+}
+.failure pre {
+    margin-top: var(--s-3);
 }
 .event {
     padding: var(--s-1) 0;
