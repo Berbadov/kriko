@@ -71,17 +71,26 @@
   let lastSummaryText = null;
   let lastDetailsListingMeta = null;
 
-  // ─── Font preload in host document ────────────────────────────────────
-  (function ensureFonts() {
-    if (document.getElementById("kriko-panel-fonts")) return;
-    const link = document.createElement("link");
-    link.id = "kriko-panel-fonts";
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700" +
-      "&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap";
-    (document.head || document.documentElement).appendChild(link);
-  })();
+  // ─── No font is fetched, and that is the feature ──────────────────────
+  //
+  // This used to inject a `fonts.googleapis.com` stylesheet into the host
+  // page. Three things wrong with that, and they compound:
+  //
+  //   * It told Google which car listings the reader was looking at. Kriko is
+  //     local-first — the engine runs on the reader's machine precisely so
+  //     that what they are shopping for is nobody else's business — and the
+  //     one component running inside a third-party page was the one making an
+  //     outbound request per listing.
+  //   * It failed offline, which is the state the whole product is designed
+  //     for. The panel rendered in a fallback face, differently from every
+  //     screenshot and every test.
+  //   * It mutated the host document's `<head>`, from a content script, on a
+  //     page we do not own.
+  //
+  // The panel's CSS asks for the same stack it always did; with nothing
+  // preloaded it lands on the system face, which is what the reader's other
+  // applications use. Guarded by a test that fails on a remote URL anywhere
+  // in the extension.
 
   // ─── Helpers ──────────────────────────────────────────────────────────
   function escapeHtml(s) {
