@@ -1014,9 +1014,28 @@ manifest **or** by `optional_host_permissions`, still derived from the pack
 tree, and still failing when it is covered by neither.
 
 ### B70 — Unmapped labels are discarded, so a site redesign is invisible
-`unmapped_labels` is computed and dropped. Persisted, it is the signal that a
-site changed its markup — which today surfaces as claims quietly going
-missing.
+**Done 2026-09-08.** `unmapped_labels` was computed on every lookup and
+dropped. It is the only signal a site gives when it renames a field: nothing
+errors, the lookup succeeds, resolves less precisely and returns fewer claims
+— so a broken adapter reads as a thin pack.
+
+Now a table in `app.sqlite`, one row per (adapter, label) with a `seen` count,
+newest first. Accumulate rather than append: a row per sighting would grow
+with reading volume while answering a question about *distinct* labels.
+Dismissal is a `DELETE`, not a flag, so a label that recurs comes back — the
+honest answer to "I dismissed this and it is still happening". The Overview
+table strikes a dismissed row through instead of removing it, and puts it back
+if the request failed.
+
+It lives in `app.sqlite`, not the store: a pack's adapter is content, what a
+reader's browsing revealed about a site is not — it must never move a
+`content_digest`, and clearing history must not erase it. The record call is
+guarded, because losing the signal is cheaper than losing the reader's answer.
+
+The gate that was missing came with it: `src/app/tests/conftest.py` fails any
+test that opens the reader's own `~/.kriko/app.sqlite`. `test_web.py`'s
+fixture had been doing exactly that for 54 tests, which is how a new test
+first read `seen: 11`.
 
 ### B71 — There is no first run
 A reader who installs the app lands on a working screen with an empty store

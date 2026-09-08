@@ -234,6 +234,43 @@ CREATE TABLE IF NOT EXISTS pipeline_events (
     detail_json TEXT
 );
 CREATE INDEX IF NOT EXISTS pipeline_events_run ON pipeline_events (run_id, event_id);
+
+-- ── labels no adapter reads ──────────────────────────────────────────────
+--
+-- `adapt()` already computes them: every label the page carried that no
+-- adapter rule covers. Until now the number was handed to the caller and
+-- thrown away, which made the one signal that a site has changed its markup
+-- the one signal nobody could see.
+--
+-- What that costs: a listing site renames "Motor Hacmi" and the adapter stops
+-- reading engine size. Nothing errors. The lookup still succeeds, resolves
+-- less precisely, and returns fewer claims — so the failure arrives as
+-- knowledge quietly going missing, which is indistinguishable from a thin
+-- pack. The label was in the response the whole time.
+--
+-- Accumulated rather than appended, one row per (adapter, label): a label on
+-- a template appears on every listing of that type, and a log of every
+-- sighting would be a table that grows with reading volume while answering a
+-- question about *distinct* labels. `seen` is the weight, `last_seen` is what
+-- separates "the site changed last week" from "this was odd once in June".
+--
+-- Interface state, deliberately: a pack's adapter is content, and what a
+-- reader's browsing happened to reveal about a site is not. It must never
+-- reach a `content_digest`, and clearing your history must not erase it —
+-- which is why it is its own table rather than a column on `lookups`.
+CREATE TABLE IF NOT EXISTS unmapped_labels (
+    adapter_id TEXT NOT NULL,
+    label      TEXT NOT NULL,
+    seen       INTEGER NOT NULL DEFAULT 0,
+    first_at   TEXT NOT NULL,
+    last_at    TEXT NOT NULL,
+    -- One example, overwritten. Enough to open the page and look; not a list,
+    -- because a reader debugging an adapter needs one URL and a count, not
+    -- every URL that had the label.
+    sample_url TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (adapter_id, label)
+);
+CREATE INDEX IF NOT EXISTS unmapped_labels_last ON unmapped_labels (last_at DESC);
 """
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
@@ -907,3 +944,102 @@ def interrupt_running(conn: sqlite3.Connection) -> int:
     )
     conn.commit()
     return cursor.rowcount
+
+
+# ── labels no adapter reads ──────────────────────────────────────────────
+
+
+#: How many distinct labels one lookup may contribute. A page whose markup
+#: changed wholesale, or one an adapter matched by mistake, can carry
+#: hundreds — and a hundred labels from one page is not a hundred signals, it
+#: is one. Capping keeps a single odd page from burying the handful of
+#: labels that actually recur.
+MAX_UNMAPPED_PER_LOOKUP = 25
+
+#: A label longer than this is not a label. It is a paragraph that ended up in
+#: a definition list, and storing it whole makes the table unreadable.
+MAX_LABEL_CHARS = 120
+
+
+def record_unmapped(
+    conn: sqlite3.Connection,
+    adapter_id: str,
+    labels,
+    *,
+    url: str = "",
+) -> int:
+    """Count the labels this page had that the adapter does not read.
+
+    Idempotent per (adapter, label) and additive in `seen`, so the answer to
+    "is this recurring or was it once" survives without a row per sighting.
+
+    Best-effort by contract: every caller is on the path of a reader waiting
+    for an answer, and a coverage signal is never worth the answer. The count
+    of labels actually written is returned so a test can tell "nothing to
+    record" from "recording failed".
+    """
+    if not adapter_id:
+        return 0
+    now = _now()
+    written = 0
+    for label in list(labels)[:MAX_UNMAPPED_PER_LOOKUP]:
+        text = str(label).strip()[:MAX_LABEL_CHARS]
+        if not text:
+            continue
+        conn.execute(
+            """
+            INSERT INTO unmapped_labels
+                (adapter_id, label, seen, first_at, last_at, sample_url)
+            VALUES (?, ?, 1, ?, ?, ?)
+            ON CONFLICT(adapter_id, label) DO UPDATE SET
+                seen = seen + 1,
+                last_at = excluded.last_at,
+                sample_url = excluded.sample_url
+            """,
+            (adapter_id, text, now, now, url),
+        )
+        written += 1
+    conn.commit()
+    return written
+
+
+def unmapped_labels(
+    conn: sqlite3.Connection, limit: int = 100, *, adapter_id: str = ""
+) -> list[dict]:
+    """The labels, most recently seen first.
+
+    Recency before frequency on purpose: a label that appeared today is the
+    one that might mean the site changed this week, and a label seen four
+    hundred times over six months is a known gap somebody already decided not
+    to map.
+    """
+    where, args = "", []
+    if adapter_id:
+        where, args = "WHERE adapter_id = ?", [adapter_id]
+    rows = conn.execute(
+        f"""
+        SELECT adapter_id, label, seen, first_at, last_at, sample_url
+          FROM unmapped_labels {where}
+      ORDER BY last_at DESC, seen DESC
+         LIMIT ?
+        """,
+        (*args, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def forget_unmapped(conn: sqlite3.Connection, adapter_id: str, label: str) -> bool:
+    """Drop one label.
+
+    The dismissal an author needs: "Takasa Uygun" is never going to be mapped
+    and a list that cannot be pruned stops being read. Deleting a row that
+    recurs is not permanent — the next listing carrying it puts it back with a
+    fresh `first_at`, which is the correct answer to "I said I did not care
+    and it is still happening".
+    """
+    cur = conn.execute(
+        "DELETE FROM unmapped_labels WHERE adapter_id = ? AND label = ?",
+        (adapter_id, label),
+    )
+    conn.commit()
+    return cur.rowcount > 0
