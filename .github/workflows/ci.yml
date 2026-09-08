@@ -1,13 +1,19 @@
 name: CI
 
-# PAUSED 2026-09-01 — hand-run only, until the desktop app is known good.
-# The suite is ~3 minutes and it is not what is failing: v0.2.4 built green and
-# then would not open. While the shell is being chased, the loop that matters is
-# `desktop.yml` (which still runs on tags, dispatches and packaging PRs) and
-# pytest locally. Restore by putting `push`/`pull_request` back — one revert of
-# this block, nothing else changed.
+# Un-paused 2026-09-08, for 1.0.0. It was hand-run only from 2026-09-01, and
+# the reasoning was sound at the time: the suite is ~3 minutes and it was not
+# what was failing — v0.2.4 built green and then would not open, so the loop
+# that mattered was `desktop.yml` and pytest locally.
+#
+# What changed is not that the shell is fixed; it is that a release needs the
+# gate *back on the branch*. The 1.0.0 audit found four reported defects that
+# every automated gate passed, and the fix for that is more gates running more
+# often, not fewer. "Ship to the reader, not to the branch" still stands — see
+# CLAUDE.md — and pytest still runs locally before every push. This is a
+# second net, not a replacement for either.
 on:
-    workflow_dispatch:
+    push:
+    pull_request:
 
 # A newer push to the same branch cancels the older run — this suite is ~3
 # minutes and there is no value in finishing a superseded one.
@@ -70,6 +76,16 @@ jobs:
 
             - run: npm --prefix ui ci --no-audit --no-fund
             - run: npm --prefix ui test
+
+            # Types, on the branch. This was a local-only gate, which means it
+            # was a gate that ran when someone remembered — and the 1.0.0
+            # audit's whole finding was that the defects nobody caught were
+            # the ones no gate was asking about. `--threshold error` because
+            # the two standing warnings are accessibility notes on markup that
+            # is deliberate, and a warning that fails a build is a warning
+            # somebody silences.
+            - name: Types
+              run: npm --prefix ui run check -- --threshold error
 
             # src/app/web/static/ is committed build output: the wheel ships it,
             # so a stale bundle means `pip install kriko` serves a UI nobody can

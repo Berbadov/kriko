@@ -13,9 +13,18 @@ history, pre-pivot — historical only).
 ## TEMPORARY — the app-first phase *(2026-09-01, delete when it ends)*
 
 Until a Windows install opens, runs an analysis, and the reader says so, the
-loop is the *app*, not the suite. `.github/workflows/ci.yml` is paused to
-`workflow_dispatch` only — three minutes of pytest on every push was not what
-was failing; v0.2.4 was green and would not open.
+loop is the *app*, not the suite.
+
+**Half of this ended 2026-09-08.** `ci.yml` runs on push and pull_request
+again, because the 1.0.0 audit found four reported defects that every
+automated gate passed — and the answer to that is more gates running more
+often. The pause was never wrong about *why* v0.2.4 failed; it was aimed at a
+suite that was not the problem, and a release needs it back anyway.
+
+The other half stands, and it is the half with the reader in it: the phase
+ends when an install they can double-click opens and works, and that has not
+happened yet. Rules 1, 3 and 4 below are unchanged. Rule 2 is now about
+`desktop.yml` rather than `ci.yml`.
 
 The gate moved, it did not disappear:
 
@@ -29,8 +38,9 @@ The gate moved, it did not disappear:
 4. **Ship to the reader, not to the branch.** A fix that is not in an installer
    they can double-click is not a fix yet.
 
-**Ending this phase** = restore `on: push/pull_request` in `ci.yml` and delete
-this section. Nothing else was changed to get here.
+**Ending this phase** = the reader confirms a double-clicked install opens and
+runs an analysis, then delete this section. Restoring `ci.yml` was the other
+half and is done (2026-09-08). Nothing else was changed to get here.
 
 ## Task tracking
 
