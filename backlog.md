@@ -855,15 +855,11 @@ Phases 0–5 landed and **all four installers now build** — see `done.md`
   data, and no tracked path may be unnameable on Windows. All in the ordinary
   pytest suite, no toolchain needed.
 
-### B53 — The desktop shell has no `Cargo.lock`, so no two builds are the same
-`tauri/src-tauri/Cargo.lock` is not committed and `tauri-plugin-updater = "2"`
-floats, so every CI run resolves whatever crates.io holds that minute. This is
-not theoretical: v0.2.1 opened and v0.2.4, four hours later, panicked on a
-config both builds shipped identically — the plugin's tolerance for a missing
-`plugins.updater` changed underneath an unchanged tree. A lockfile makes a
-release reproducible and makes a dependency bump a commit somebody can revert.
-Needs a Rust toolchain to generate (`cargo generate-lockfile` in
-`tauri/src-tauri/`), which is why it is a row rather than a diff.
+### B53 — The desktop shell has no `Cargo.lock` — **Done 2026-09-08**
+Moved to `done.md`. `tauri/src-tauri/Cargo.lock` is committed (501 packages),
+`cargo metadata --locked` gates the release workflow before it builds, and
+`src/app/tests/test_shell_is_locked.py` holds the invariant with no Rust
+toolchain installed.
 
 Also open from the phase-2 work: the report screen makes weak claim selection
 obvious, which is the product principle's open work (B36), not this item's.

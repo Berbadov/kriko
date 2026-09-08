@@ -229,7 +229,36 @@ and nothing is signed — recommendation, minisign now, defer the
 **B53** (`Cargo.lock`) needs a Rust toolchain. And the app-first phase still
 ends where it always did: a reader double-clicking an installer.
 
-Gates at the cut: pytest 997; vitest 43 files / 341 tests; node 103;
+**B53 — and the fifth surface, which needed a toolchain.** The last of the
+five: `tauri/src-tauri/Cargo.lock` was not in the repository, and every crate
+in `Cargo.toml` is a bare major (`tauri-plugin-updater = "2"`), so each CI run
+resolved whatever crates.io held that minute. This is the surface v0.2.4
+actually failed on — the plugin's tolerance for a missing `plugins.updater`
+changed underneath a byte-identical tree, and the installer built green and
+panicked before its first window. The row said "needs a Rust toolchain", which
+was true and was also the whole reason it kept not happening; rustup is a
+user-local install and `cargo generate-lockfile` only resolves, so it took
+minutes rather than a build environment. 501 packages, all from crates.io.
+
+**Cargo folds every target into the one lock**, which is the fact that makes a
+Linux resolve the right one: the file pins the Windows and macOS graphs too (73
+`windows*`/`objc2`/`core-foundation` entries), so no Windows box is needed to
+regenerate it. That is also the failure mode worth a gate, because if those
+families ever vanish the lock was produced some other way and pins nothing for
+the two platforms readers download.
+
+**The gate, in two halves, and neither needs Rust.** `cargo metadata --locked`
+runs in `desktop.yml` before the bundle step — cargo *uses* a committed lock
+without being asked, but it will also quietly rewrite one that has fallen
+behind the manifest, and then the tagged release is not the graph anybody
+reviewed. And `src/app/tests/test_shell_is_locked.py` asks four things of the
+tree on every machine: every declared crate is locked at the declared major
+(one case per crate, so the failure names it), the foreign-target families are
+present, nothing resolves to a `git` or `path` source, and the workflow's
+`--locked` check comes *before* the build rather than after it, which is the
+ordering the whole thing turns on. Verified red by bumping one crate's major.
+
+Gates at the cut: pytest 1009; vitest 43 files / 341 tests; node 103;
 svelte-check 0 errors; `tools/relock.py` reproduces `requirements.lock`
 byte-for-byte.
 
