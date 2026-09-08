@@ -173,9 +173,13 @@ describe("Overview", () => {
         expect(await screen.findByText(/Nothing unread/i)).toBeInTheDocument();
     });
 
-    it("surfaces a failure instead of rendering blank", async () => {
+    it("surfaces a failure as something the reader can act on", async () => {
+        // B72: the assertion used to be /Could not load this view/, which is
+        // the exception's name. What the reader needs is whose fault it is and
+        // where the log went.
         stubFetchFailing();
         render(Overview);
-        expect(await screen.findByText(/Could not load this view/)).toBeInTheDocument();
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(screen.getByText(/bug in Kriko, not something you did/)).toBeInTheDocument();
     });
 });

@@ -1038,10 +1038,49 @@ fixture had been doing exactly that for 54 tests, which is how a new test
 first read `seen: 11`.
 
 ### B71 — There is no first run
-A reader who installs the app lands on a working screen with an empty store
-and no path to a populated one.
+**Already done, closed 2026-09-08 without a change.** The audit row was written
+from a screenshot and duplicated work that was already on `main`:
+`ui/src/routes/Welcome.svelte` and `ui/src/lib/NextStep.svelte` landed in
+`cb27d13` and `d362769` (2026-09-05). `firstRun` fires when `status.packs === 0`
+and Welcome offers install-from-index (as a job), install-from-file, and skip.
+Recorded rather than deleted, because "the audit found a gap that was not there"
+is the useful fact — a screenshot is evidence of what a screen looks like, not
+of what the code does.
 
 ### B72 — Error copy names exceptions, not next steps
+**Done 2026-09-08.** Every error surface in the app named an exception.
+"Could not load this view: ConnectionError" and "500: Internal Server Error"
+are both accurate and both useless: the reader of a local app has no terminal,
+no log viewer and nobody to page, so whatever the screen says is the entire
+remedy available to them.
+
+The remedy is derived from the **HTTP status**, in one module
+(`ui/src/lib/failure.ts`), never from the view. A per-view table of error copy
+would be twenty places to keep in step and the twenty-first view would ship
+with none — the same failure mode as any hand-enumerated list in this repo.
+Statuses are a closed vocabulary that does not grow with the product, which is
+exactly the exception the scalability rule carves out.
+
+Four things every failure now carries: what happened in the reader's terms, the
+next action, whether trying again could plausibly work (a retry offered on a
+404 is a button with no path to working), and the exception itself — folded
+away underneath rather than dropped, because the remedy is what the reader
+needs and the exception is what we need when the remedy did not work. A
+rejection with no status at all is read as "the engine stopped answering",
+which is what it is nine times in ten: the engine is a separate process and can
+die while its window stays open.
+
+`Async.svelte` renders `Failure`, so a new view gets this by using `Async` at
+all. `Health.svelte` and `Packs.svelte` had to stop storing `(e as Error)
+.message` and keep the exception instead — a string has already thrown away the
+status the remedy is derived from.
+
+**The gate that was missing.** This was not one bad sentence, it was seven
+views each inventing its own, which is what per-view error copy always becomes.
+`ui/src/lib/failure.test.ts` scans every `.svelte` source through
+`import.meta.glob(..., { query: "?raw" })` and fails on `{error.message}` in
+markup or on the old sentence — with a count assertion first, because a glob
+that matches nothing passes every check under it.
 
 ### B73 — Extension and app versions never handshake
 **Done 2026-09-08.** Two headers, both riding on requests that were already
