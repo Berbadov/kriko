@@ -312,7 +312,23 @@
   function openInApp(route, fallbackUrl) {
     chrome.runtime.sendMessage(
       { type: "OPEN_IN_APP", payload: { route, fallbackUrl } },
-      () => {} // the app raising itself is the feedback; a toast would be noise
+      (response) => {
+        // The app raising itself is the feedback, and a tab opening is the
+        // feedback when there is no app to raise — so success needs no toast
+        // and this panel grows no notification system for it.
+        //
+        // A refusal is different: the only way to get one is for this
+        // extension to have built a route the app cannot navigate to, which
+        // is a defect in *our* code and belongs where a developer will find
+        // it rather than in front of the reader.
+        if (chrome.runtime.lastError || (response && !response.ok)) {
+          console.warn(
+            "Kriko: could not open the app on",
+            route,
+            chrome.runtime.lastError?.message || response?.error
+          );
+        }
+      }
     );
   }
 

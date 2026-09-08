@@ -110,6 +110,22 @@ class Settings:
     #: botched install. The extension page says so instead of letting them
     #: reinstall it twice.
     extension_port_bound: bool = False
+    #: Is a desktop shell supervising this process?
+    #:
+    #: Not a guess and not a probe — the shell *says so*, by passing
+    #: `--supervised` when it spawns us. Nothing else can know it: a headless
+    #: `python -m app.sidecar` and a Tauri-supervised one are identical over
+    #: HTTP, they answer the same endpoints on the same ports, and the only
+    #: difference is whether anybody is reading our stdout.
+    #:
+    #: Which is exactly the difference that matters to the browser extension.
+    #: "Open in Kriko" prints a line for the shell to act on; with no shell
+    #: attached that line goes nowhere, and the reader sees a browser tab open
+    #: for reasons the extension could not explain because it did not know.
+    #: `/api/focus` answers `delivery: "no_shell"` instead of claiming a
+    #: window was raised, and a tab is then the *right* answer rather than a
+    #: silent fallback.
+    shell_attached: bool = False
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":
@@ -132,6 +148,7 @@ class Settings:
             ),
             "releases_url": os.environ.get("KRIKO_RELEASES_URL", cls.releases_url),
             "extension_port_bound": os.environ.get("KRIKO_EXTENSION_BOUND") == "1",
+            "shell_attached": os.environ.get("KRIKO_SUPERVISED") == "1",
         }
         base.update(overrides)
         return cls(**base)

@@ -13,7 +13,12 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // `offline` is the case a status-code stub cannot express: nothing is
 // listening, so `fetch` rejects before there is a response to inspect. That is
 // the ordinary state of the world for a reader who has not started the app.
-function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}) {
+// `statuses` is for the case the routes table cannot express: a server that
+// is up and *refuses*. "The app said no" and "there is no app" are different
+// answers, and the worker is now required to tell them apart.
+function loadBackground({
+  routes = {}, tabResponses = {}, offline = false, statuses = {},
+} = {}) {
   const state = {
     session: {},
     local: {},
@@ -23,6 +28,10 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
     // Every message it sent to a content script.
     tabMessages: [],
     optionsOpened: 0,
+    // Tabs the worker opened as a fallback, in order. A tab opened when the
+    // app was raised is the original bug; a tab *not* opened when it was not
+    // is the same bug wearing the other hat.
+    tabsCreated: [],
   };
   const messageListeners = [];
   // Keyboard commands fire at the browser, not at a tab, so the worker
@@ -64,6 +73,7 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
       tabs: {
         onUpdated: { addListener() {} },
         async query() { return [{ id: 1 }]; },
+        async create({ url }) { state.tabsCreated.push(url); return { id: 99 }; },
         async sendMessage(tabId, message) {
           state.tabMessages.push({ tabId, message });
           const reply = tabResponses[message.type];
@@ -88,7 +98,9 @@ function loadBackground({ routes = {}, tabResponses = {}, offline = false } = {}
       }
       const value = routes[route];
       const payload = typeof value === "function" ? value(body) : value;
-      return { ok: true, status: 200, async json() { return payload; },
+      const status = statuses[route] || 200;
+      return { ok: status < 400, status,
+               async json() { return payload; },
                async text() { return JSON.stringify(payload); } };
     },
   };

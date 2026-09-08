@@ -118,7 +118,13 @@ fn start_engine(app: AppHandle, engine: State<'_, Engine>) -> Result<(), String>
         .map_err(|error| format!("the engine binary is missing from this build: {error}"))
         .and_then(|command| {
             command
-                .args(["--exit-with-parent"])
+                // `--supervised` is a *claim by this process about itself*:
+                // we are about to read the child's stdout, so a KRIKO_FOCUS
+                // line will actually raise a window. Without it the engine
+                // answers `delivery: "no_shell"` and the extension opens a
+                // browser tab — which is right for a hand-run sidecar and
+                // wrong here. Guarded by test_focus.py.
+                .args(["--exit-with-parent", "--supervised"])
                 .spawn()
                 .map_err(|error| format!("the engine would not start: {error}"))
         });

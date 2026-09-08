@@ -55,6 +55,62 @@
             changes far more often than this binary does.
         </p>
 
+        <h3>Diagnostics</h3>
+        <p class="meta">
+            What to send us when something is wrong. Every line here is
+            something this window cannot see for itself — it is reported by
+            the process serving it.
+        </p>
+        <dl class="facts">
+            <dt>Log file</dt>
+            <dd class="path">
+                {#if health.log_file}
+                    {health.log_file}
+                {:else}
+                    <span class="state error"
+                        >Nothing is being written down{health.log_problem
+                            ? `: ${health.log_problem}`
+                            : "."}</span
+                    >
+                {/if}
+            </dd>
+            <dt>Analysis log</dt>
+            <dd class="path">
+                {health.analysis_log}
+                {#if health.analysis_log_problem}
+                    <span class="state warn"
+                        >The configured path could not be written, so this one is
+                        in use instead: {health.analysis_log_problem}</span
+                    >
+                {/if}
+            </dd>
+            <dt>Desktop shell</dt>
+            <dd>
+                {#if health.shell_attached}
+                    Attached <span class="meta"
+                        >— "Open in Kriko" raises this window.</span
+                    >
+                {:else}
+                    Not attached
+                    <span class="meta"
+                        >— this server is running on its own, so "Open in Kriko"
+                        opens a browser tab instead of raising a window. That is
+                        the correct behaviour here, not a fault.</span
+                    >
+                {/if}
+            </dd>
+            <dt>Extension port</dt>
+            <dd>
+                {health.extension_port}
+                {#if !health.port_is_ours}
+                    <span class="state error"
+                        >— not held by this app, so the extension cannot reach
+                        it. Something else on this machine took it.</span
+                    >
+                {/if}
+            </dd>
+        </dl>
+
         <h3>Installed packs</h3>
         {#if health.packs.length}
             <table>

@@ -504,7 +504,12 @@ async function _postApp(path, body) {
     } catch (_) {
       // A body that is not JSON tells us nothing the status has not.
     }
-    throw new Error(`Kriko refused that (${detail}).`);
+    // The status rides along, because "the app said no" and "there is no
+    // app" are different situations and the caller has to tell them apart —
+    // conflating them is what turned a rejected route into a browser tab.
+    const refusal = new Error(`Kriko refused that (${detail}).`);
+    refusal.status = response.status;
+    throw refusal;
   }
   return response.json();
 }
@@ -512,21 +517,50 @@ async function _postApp(path, body) {
 /** Bring the desktop app to the front, on the given route.
  *
  * A page cannot raise a native window, so this posts the route and lets the
- * engine tell the shell (see `src/app/web/routers/focus.py`). When there is no
- * app to raise — the server running in a terminal, or nothing running at all —
- * a browser tab is the fallback, which is what this used to do *always*.
+ * engine tell the shell (see `src/app/web/routers/focus.py`).
+ *
+ * The interesting part is what counts as success. This used to treat any 2xx
+ * as "the window was raised" and any error at all as "open a tab", and both
+ * halves were wrong in the same direction — towards lying about what
+ * happened:
+ *
+ *   * A 2xx only means the route was *recorded*. Whether a window came to the
+ *     front depends on whether anything is reading the sidecar's stdout, which
+ *     is what `delivery` now reports. With the server running in a terminal,
+ *     the old code returned `raised: true`, declined to open a tab, and the
+ *     button did visibly nothing — the bug this path exists to fix.
+ *   * A 422 means the route is not a shape the app could navigate to, i.e.
+ *     *this extension* built a bad route. Opening a tab at the same bad route
+ *     hides a defect behind a fallback that was designed for a missing app.
+ *     It is logged and rethrown instead.
+ *
+ * The fallback tab is therefore reserved for the two cases it was meant for:
+ * no server reachable, and a server with no shell attached to it.
  */
 async function openInApp(route, fallbackUrl) {
+  let delivery = "no_shell";
   try {
-    await _postApp("/api/focus", { route });
-    return { ok: true, raised: true };
+    const body = await _postApp("/api/focus", { route });
+    delivery = body?.delivery ?? (body?.raised ? "raised" : "no_shell");
+    if (delivery === "raised") return { ok: true, raised: true, delivery };
   } catch (error) {
-    if (fallbackUrl) {
-      await chrome.tabs.create({ url: fallbackUrl });
-      return { ok: true, raised: false, fallback: true };
+    // A refusal is an answer: the app is running and objected. Only a
+    // *transport* failure means there is nothing to raise.
+    if (error.status) {
+      console.warn(`Kriko rejected the route ${route}:`, error.message);
+      throw error;
     }
-    throw error;
+    delivery = "unreachable";
   }
+
+  if (fallbackUrl) {
+    await chrome.tabs.create({ url: fallbackUrl });
+    return { ok: true, raised: false, fallback: true, delivery };
+  }
+  // Nothing to raise and nowhere to fall back to. Still not an error: the
+  // route is recorded server-side for the TTL, so a window opened in the next
+  // thirty seconds picks it up.
+  return { ok: true, raised: false, delivery };
 }
 
 // ── messages ────────────────────────────────────────────────────────────

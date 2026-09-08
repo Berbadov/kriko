@@ -337,6 +337,24 @@ export type Health = {
     schema_version: number;
     packs: { pack_id: string; version: string }[];
     releases_url: string;
+    /* Diagnostics. Every one of these is a fact this window cannot observe
+     * about the process serving it, which is the only reason they are on the
+     * wire: a reader whose app is half-working has no other instrument, and
+     * neither do we when they write in.
+     *
+     * The two `*_problem` fields are the half that was missing. The paths
+     * were always chosen and the failures were always caught — into a logger
+     * with no handler, which is how two months of analyses went unwritten
+     * with nothing anywhere saying so. A path that could not be opened now
+     * says why, here, next to the path that was used instead. */
+    log_file: string | null;
+    log_problem: string | null;
+    analysis_log_problem: string | null;
+    /* Is anything reading the sidecar's stdout? The window cannot tell, and
+     * "Open in Kriko" behaves differently depending on the answer. */
+    shell_attached: boolean;
+    extension_port: number;
+    port_is_ours: boolean;
 };
 
 export type ExtensionBrowser = { id: string; name: string; url: string };
