@@ -1,0 +1,52 @@
+# The runtime dependency closure, pinned.
+#
+# B57. `pip install -e "."` resolves whatever PyPI holds the minute the
+# installer job runs, which is the same unreproducibility that shipped v0.2.1
+# opening and v0.2.4 — four hours later, from an identical tree — panicking on
+# a config both builds carried. That one was a Rust crate; nothing made Python
+# any safer, it just had not bitten yet.
+#
+# Runtime only, on purpose: this is the closure PyInstaller freezes into the
+# sidecar a reader double-clicks. The pipeline and dev extras are an authoring
+# machine's problem and pinning them here would make every research-tool bump
+# a release-artifact change.
+#
+# Used as `pip install -r requirements.lock -e "."` rather than with
+# `--no-deps`: two of the closure's members are platform-only (colorama on
+# Windows via click, pywin32 on Windows via mcp) and cannot be pinned from a
+# Linux resolve. pip fills those in; everything a Linux and a Windows build
+# share is fixed here.
+#
+# Regenerate deliberately, never as a side effect — `python
+# tools/relock.py` prints this file from the current environment, and
+# `src/app/tests/test_dependencies_are_locked.py` fails if the two disagree.
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.14.1
+attrs==26.1.0
+certifi==2026.6.17
+click==8.4.2
+exceptiongroup==1.3.1
+fastapi==0.138.1
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+httpx-sse==0.4.3
+idna==3.18
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+mcp==1.29.0
+pydantic==2.13.4
+pydantic-core==2.46.4
+pydantic-settings==2.14.2
+pyjwt==2.13.0
+python-dotenv==1.2.2
+python-multipart==0.0.32
+pyyaml==6.0.3
+referencing==0.37.0
+rpds-py==2026.6.3
+sse-starlette==3.4.6
+starlette==1.3.1
+typing-extensions==4.15.0
+typing-inspection==0.4.2
+uvicorn==0.52.1
