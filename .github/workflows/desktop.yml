@@ -86,6 +86,16 @@ jobs:
 
             - uses: dtolnay/rust-toolchain@stable
 
+            # The lock is the pin, and this is what makes it one. Cargo already
+            # *uses* a committed Cargo.lock; what it will also do, quietly, is
+            # rewrite it when Cargo.toml has moved — and then the release that
+            # got tagged is not the one anybody resolved. `--locked` turns that
+            # into a red job instead. Cheap: metadata resolves, it does not
+            # build. See B53 and `test_shell_is_locked.py`.
+            - name: The shell's crate graph is the one that was committed
+              run: cargo metadata --locked --format-version 1 > /dev/null
+              working-directory: tauri/src-tauri
+
             # WebKitGTK and friends. Tauri 2 on Linux needs the 4.1 ABI; 4.0
             # builds and then fails to open a window.
             - name: Linux system deps

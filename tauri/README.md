@@ -47,6 +47,16 @@ CI does exactly this on macOS, Windows and Linux
 (`.github/workflows/desktop.yml`). Bundles are **unsigned**; signing is a
 policy decision, not an engineering one, and is deferred.
 
+`src-tauri/Cargo.lock` is committed and every crate in it resolves from
+crates.io. Cargo folds all targets into that one file, so the lock a Linux
+machine generates pins the Windows and macOS graphs too — which is why
+regenerating it needs no Windows box, only `cargo generate-lockfile` in
+`tauri/src-tauri/`. Do that in a commit of its own: a dependency bump should be
+something someone can read and revert. CI runs `cargo metadata --locked` before
+it builds, because cargo will otherwise rewrite a stale lock mid-build and ship
+a graph nobody reviewed — v0.2.4 is what that looks like from the outside
+(`src/app/tests/test_shell_is_locked.py` holds the rest of the invariant).
+
 ## Nothing outlives the app
 
 Three belts, because one was not enough:
