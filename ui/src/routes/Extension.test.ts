@@ -178,7 +178,10 @@ describe("adding the browser extension", () => {
     it("surfaces a failure to read the status instead of an empty page", async () => {
         stubFetchFailing();
         render(Extension);
-        expect(await screen.findByText(/Could not read the extension status/)).toBeTruthy();
+        // The sentence is derived from the status now, not written per view
+        // (B72), so this asserts the shape rather than this screen's own copy.
+        expect(await screen.findByRole("alert")).toBeTruthy();
+        expect(screen.getByText(/bug in Kriko, not something you did/)).toBeTruthy();
     });
 
     it("names the sites a pack can read, which is the reader's real question", async () => {

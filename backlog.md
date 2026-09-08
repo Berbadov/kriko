@@ -1169,6 +1169,85 @@ does not do and a browser harness for one CSS property is not the trade.
 The long tail from the audit's independent findings. Rows kept together
 because none of them blocks 1.0.0 and each is small.
 
+#### B77 — Nothing checked that an onboarding link goes anywhere
+**Done 2026-09-08.** The onboarding path itself was already real — `Welcome`
+on an empty store, `NextStep` after it, and an `EmptyState` on most screens
+whose entire job is to hand the reader somewhere to go. What none of it had was
+a check that the somewhere *exists*. The audit's F10 names the symptom rather
+than the cause: the Packs empty state pointed at a route that had to be
+corrected by hand, once, after a person clicked it.
+
+A dead link in onboarding is the worst dead link in the product. It is the
+reader's first minute, they have no model of the app yet to tell them the app
+is wrong rather than they are, and what they get is "No such view" — which from
+where they sit is indistinguishable from a broken install.
+
+`ui/src/lib/links.test.ts` walks the source for every destination anyone writes
+down and asks whether `App.svelte` would render it. Three spellings, because
+there are three: a literal `#/name` in markup, a `toHash`/`hashWith` call, and
+a route name handed to `NextStep`. The renderable set is read off `nav.ts` and
+off `App.svelte`'s own if-chain — including the parametric views that have no
+rail entry, which would otherwise have needed the exemption list this file
+exists to avoid. Verified red by misspelling one `actionHref`.
+
+**And the one real defect on that screen:** `Welcome` was still printing
+`e.message` at the reader, so the first sentence Kriko ever says to someone
+could be a `TypeError`. It holds the exception and renders `Failure` now, like
+everywhere else.
+
+#### B79 — Eleven views flattened the exception before anything could read it
+**Done 2026-09-08.** B72 shipped the mechanism and converted five views; this
+is the other eleven, and the gate that stops the twelfth. Every one of them
+did the same thing one line earlier than the bug B72's gate was looking for:
+`error = String(cause)` in a catch block, into a `$state("")`. By the time the
+markup runs there is no status left, so no remedy can be derived however good
+the component downstream is — and a gate that reads only markup cannot see it.
+
+Twenty-two sites across eleven files, in nine spellings of the same variable
+(`error`, `loadError`, `rowError`, `actionError`, `markError`, `installMessage`,
+`detail{}`, `verdict.detail`, a synthesised job `message`). All of them now
+hold the exception. Three shapes came out of it, and they are the pattern for
+anything new:
+
+* **A view** renders `Failure` — the headline, the next step, a route when the
+  remedy is on another screen, the exception folded away underneath.
+* **A row** is too small for that block, so it renders `remedyFor(x).headline`
+  and nothing else. The sentence is still derived; only the frame is smaller.
+* **The Console** renders `remedyFor(x).technical`, because it is the one
+  surface whose reader *asked for* the exception. A console answering "that is
+  a bug in Kriko" would be hiding the thing they opened it to see.
+
+**Two findings that fell out of the pass.** `Check` was keeping a validation
+sentence this app wrote ("paste a link first") and an exception from the engine
+in the same string, which meant the reader's own typo and a dead engine
+rendered identically — two variables now. And `remedyFor(x).technical` turned
+out to be exactly the `(cause as Error).message ?? String(cause)` that four
+files had each written by hand, so "the exception as text" has one definition
+and the new gate needs no exemptions at all.
+
+#### B80 — 197 KB in one chunk, which nobody had decided
+**Done 2026-09-08.** The audit's F16 flagged the bundle "so it is a decision
+rather than an oversight", and `src/app/tests/test_bundle_budget.py` is what
+makes it the former. The decision recorded there is that there is *no* code
+splitting and that this is right: splitting trades one download for several,
+which pays on a website, where the second chunk crosses a network and most
+visitors never reach the screen it holds. This bundle is read off local disk by
+a window the shell only shows after `/api/health` answers, and every reader has
+every route — the rail offers all of them and the Console reaches any of them
+by name. A lazy route would buy nothing and add a loading state to a screen
+that has none.
+
+So size is not something to optimise here, it is something to watch, and the
+failure guarded against is not a slow app: it is a dependency arriving that
+nobody weighed — a date library, an icon set, a charting package, each
+reasonable alone and none visible in a diff. Budgets are per kind and for the
+whole payload, generous by about a third, and deliberately **not** a ratchet: a
+ratchet that tightens every build turns unrelated commits red and teaches
+people to raise the number without reading it. Raising it is fine. Raising it
+knowingly is the point. Two more checks ride along — no source maps (a `.map`
+ships the source and no per-kind budget names it), and `index.html` asking for
+exactly the files present, which catches a stale bundle from the other end.
+
 #### B78 — Docs do not match the code
 **Done 2026-09-08.** Ten of the twelve tables in `app.sqlite` were named in no
 document at all, and six API surfaces — history, marks, subjects, pipeline,
