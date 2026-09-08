@@ -7,8 +7,9 @@
 #   packaging/freeze.sh            # build + smoke
 #   packaging/freeze.sh --no-ui    # skip the npm build (bundle already fresh)
 #
-# Needs no Rust toolchain. The Tauri bundle around this binary is still only
-# built in .github/workflows/desktop.yml.
+# Needs no Rust toolchain, and stops one step short of an installer. For the
+# whole bundle on a Windows box: packaging/build_desktop.ps1 (which does need
+# one, and runs these same two steps on its way).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
