@@ -1,7 +1,11 @@
 /* Hover Lite — Kriko Panel dark theme.
    Loaded inside a shadow root via hover_lite.js. */
 
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+/* No @import, on purpose. This sheet is injected into a page the reader is
+   shopping on; a font request per listing would tell a third party what they
+   are looking at, and would fail in exactly the offline state Kriko is built
+   for. The stack below lands on the system face. Enforced by
+   test_extension_sites.py, which fails on a remote URL in anything shipped. */
 
 :host {
   /* Dark palette */
@@ -35,8 +39,12 @@
   --accent: #e8c04b;
 
   /* Type */
-  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* The reader's own system face, first. IBM Plex is named only in case the
+   * host page happens to have it — the panel never fetches a font, because a
+   * request per listing to a font CDN would tell a third party what the
+   * reader is shopping for. See hover_lite.js. */
+  --font-body: system-ui, -apple-system, 'IBM Plex Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, 'IBM Plex Mono', monospace;
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

@@ -134,3 +134,93 @@ def test_the_adapters_carry_no_executable_anything():
 
         walk(adapter)
         assert not (keys & forbidden), f"{pack_id}: adapter carries {keys & forbidden}"
+
+
+# ── nothing the extension ships may phone out ────────────────────────────
+
+
+#: Hosts the extension is allowed to name. Two loopback spellings and the
+#: sites its own adapters cover — everything else is an outbound request from
+#: inside a page the reader is shopping on.
+ALLOWED_HOSTS = ("127.0.0.1", "localhost", "[::1]")
+
+#: A URL in a comment paints nothing and fetches nothing. Stripped first, for
+#: the same reason `tokens.test.ts` strips comments before hunting colours:
+#: the useful comments here are the ones explaining what was removed.
+_COMMENTS = (
+    (r"/\*[\s\S]*?\*/", ""),   # css and js block comments
+    (r"(?m)^\s*//.*$", ""),    # js line comments
+    (r"(?m)^\s*\*.*$", ""),    # jsdoc continuation lines
+)
+
+
+def shipped_files():
+    """Every file that actually reaches a browser, off the allowlist.
+
+    Derived from `app.extension.SHIPPED` rather than listed again here, so a
+    file added to what ships is covered the moment it ships — the same reason
+    `adapters()` above reads the pack tree instead of naming a pack.
+    """
+    import re
+
+    from app.extension import SHIPPED
+
+    root = REPO / "extension"
+    for name in SHIPPED:
+        target = root / name
+        paths = [target] if target.is_file() else sorted(target.rglob("*"))
+        for path in paths:
+            if not path.is_file() or path.suffix not in {".js", ".css", ".html", ".json"}:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for pattern, replacement in _COMMENTS:
+                text = re.sub(pattern, replacement, text)
+            yield path.relative_to(REPO), text
+
+
+def test_nothing_shipped_reaches_a_third_party():
+    """A local-first product with one component inside somebody else's page.
+
+    The panel used to inject a `fonts.googleapis.com` stylesheet into every
+    listing it opened on, which told Google which cars the reader was looking
+    at — from the one part of Kriko running where that is observable. It also
+    failed offline, which is the state the whole product is designed for.
+
+    This is the gate that was missing: the defect was a URL in a stylesheet,
+    and no test in the suite read a stylesheet. A remote host in anything
+    shipped fails here, whether it is a font, an analytics beacon, or a
+    convenience someone reached for at 2am.
+    """
+    import re
+
+    offenders = []
+    for path, text in shipped_files():
+        for match in re.finditer(r"https?://([^\s\"'()<>]+)", text):
+            host = match.group(1).split("/")[0].split(":")[0]
+            if host.lower() in ALLOWED_HOSTS or host.startswith("*."):
+                continue
+            # `http://${...}` is not a host — it is the scheme being prepended
+            # to whatever base URL the reader typed into the options page.
+            # Their own machine, their own choice.
+            if host.startswith("${") or host.startswith("'") or host.startswith("+"):
+                continue
+            # A `match` pattern in the manifest is a *permission*, not a
+            # fetch, and the test above already holds it against the packs.
+            if "sahibinden.com" in host or "carchecker.pro" in host:
+                continue
+            offenders.append(f"{path}: {match.group(0)}")
+    assert offenders == []
+
+
+def test_no_remote_font_is_loaded_by_any_mechanism():
+    """The three spellings of the same mistake, named so a fix cannot be a
+    rename: a `<link rel=stylesheet>` built in JS, an `@import` in CSS, and a
+    `@font-face` pointing at a URL."""
+    offenders = []
+    for path, text in shipped_files():
+        lowered = text.lower()
+        if "fonts.googleapis" in lowered or "fonts.gstatic" in lowered:
+            offenders.append(f"{path}: names a font CDN")
+        if "@import" in lowered and "://" in lowered:
+            offenders.append(f"{path}: @import of a remote sheet")
+    assert offenders == []
