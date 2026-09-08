@@ -88,6 +88,18 @@ export const api = {
     vocabulary: (packId: string) =>
         get<T.Vocabulary>(`/api/packs/${seg(packId)}/vocabulary`),
     gaps: (packId: string) => get<T.Gap[]>(`/api/packs/${seg(packId)}/gaps`),
+    /** Labels a page carried that no installed adapter reads.
+     *
+     * A coverage gap in the *reading*, where `gaps` above is a gap in the
+     * knowledge. High `seen` plus a recent `last_at` on a site that used to
+     * work is a site that renamed a field — which otherwise arrives as claims
+     * quietly going missing. */
+    unmappedLabels: (limit = 100) =>
+        get<{ labels: T.UnmappedLabel[] }>(`/api/adapters/unmapped?limit=${limit}`),
+    forgetLabel: (adapterId: string, label: string) =>
+        del<{ forgotten: boolean }>(
+            `/api/adapters/unmapped/${seg(adapterId)}/${seg(label)}`,
+        ),
     marks: (verdict = "") =>
         get<T.Marks>(`/api/marks${verdict ? `?verdict=${seg(verdict)}` : ""}`),
     /** What the marks add up to — the two queues, not the raw list. */
