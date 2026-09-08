@@ -15,13 +15,19 @@ indistinguishable from "no knowledge about this car". That is exactly the
 class of defect the 1.0.0 audit found four of: a real behaviour with no gate
 under it.
 
-This is the gate. It is deliberately a *pack-derived* check rather than a
-list of sites to keep in step — a list would be the third place to forget.
-Note what it does not do: it does not make the extension pick up a new site
-on its own. That is B69, and it registers the scripts at runtime from
-`/api/adapters`. Until then this test is what turns a silent gap into a
-failing suite, and after B69 it becomes the check that the static manifest
-still covers the sites needed before the first successful call to the server.
+This is the gate, and B69 changed what it has to assert. The worker now
+learns a site at runtime — it reads `/api/adapters`, converts each `site` to
+one match pattern, and registers the content scripts itself
+(`syncSites` in `extension/background.js`, tested in
+`extension/tests/background_sites.test.js`). So the manifest no longer has to
+name every site; it has to leave a *door* for the ones it does not name.
+
+Hence the two ways a site may be covered, and no third: the packaged
+`content_scripts` inject there already, or `optional_host_permissions` lets
+the reader grant it. A site with neither is unreachable however good its
+adapter is, and that is still a failing suite rather than a missing panel.
+It is deliberately pack-derived rather than a list of sites to keep in step —
+a list would be the third place to forget.
 """
 
 import json
@@ -55,6 +61,36 @@ def injected_patterns() -> list[str]:
     return patterns
 
 
+def grantable_patterns() -> list[str]:
+    """Every pattern the reader can be asked to allow at runtime.
+
+    The other half of the answer since B69. A site here is not injected on
+    when the extension is installed — it is injected on once the reader grants
+    it in the options page, which is the browser's rule about reading a third
+    party's pages and not ours to route around.
+    """
+    manifest = json.loads(MANIFEST.read_text())
+    return list(manifest.get("optional_host_permissions", []))
+
+
+def covers(patterns, host: str) -> bool:
+    """Does any of these patterns reach `host`?
+
+    `https://*/*` reaches everything, which is exactly what
+    `optional_host_permissions` is for and is meaningless in
+    `content_scripts` — so the wildcard is honoured here rather than being
+    mangled into a hostname by `host_of`.
+    """
+    for pattern in patterns:
+        tail = pattern.split("://", 1)[-1]
+        head = tail.split("/", 1)[0]
+        if head in {"*", "*.*"}:
+            return True
+        if host_of(pattern) == host:
+            return True
+    return False
+
+
 def host_of(pattern: str) -> str:
     """The host part of a match pattern or an adapter glob, lowercased.
 
@@ -78,10 +114,11 @@ def test_every_adapter_has_an_extension_that_runs_there(pack_id, adapter):
     """
     site = adapter.get("site", "")
     assert site, f"{pack_id}: an adapter with no `site` matches nothing"
-    hosts = {host_of(p) for p in injected_patterns()}
-    assert host_of(site) in hosts, (
+    host = host_of(site)
+    assert covers(injected_patterns(), host) or covers(grantable_patterns(), host), (
         f"{pack_id}/{adapter.get('id')} reads {site}, but the extension "
-        f"injects nothing there. Injected hosts: {sorted(hosts)}"
+        f"neither injects there nor can be granted it. Injected: "
+        f"{injected_patterns()}; grantable: {grantable_patterns()}"
     )
 
 
@@ -93,12 +130,19 @@ def test_the_panel_stylesheet_reaches_every_site_the_scripts_do(pack_id, adapter
     `content_scripts` and not here gets the scripts and no stylesheet, which
     renders as an unstyled pile of text over the listing — worse than no
     panel, because it looks like the app is broken rather than absent.
+
+    Since B69 the list is `https://*/*` with `use_dynamic_url`, because a site
+    granted at runtime cannot have been named here at build time. The
+    stylesheet is reachable from anywhere and its URL is rotated per session,
+    so no page can probe it to learn the extension's id — that pairing is
+    asserted on the extension side, in `background_sites.test.js`.
     """
     manifest = json.loads(MANIFEST.read_text())
-    reachable = set()
+    reachable = []
     for block in manifest.get("web_accessible_resources", []):
-        reachable.update(host_of(p) for p in block.get("matches", []))
-    assert host_of(adapter["site"]) in reachable, (
+        if any(r.endswith("hover_lite.css") for r in block.get("resources", [])):
+            reachable.extend(block.get("matches", []))
+    assert covers(reachable, host_of(adapter["site"])), (
         f"{pack_id}/{adapter.get('id')}: the panel's stylesheet is not "
         f"exposed on {adapter['site']}"
     )
