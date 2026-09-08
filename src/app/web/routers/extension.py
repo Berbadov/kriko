@@ -76,7 +76,30 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         "sightings": sightings,
         "connected": fresh is not None and fresh < FRESH_SECONDS,
         "seconds_since_seen": fresh,
+        # ── which extension is actually loaded ────────────────────────
+        #
+        # `version` above is what this app *carries* and `staged_version` is
+        # what it wrote to disk. Neither is what the browser is running: an
+        # unpacked extension is loaded once and stays loaded, so a reader can
+        # sit on a months-old copy while both of those numbers read current.
+        # That is the whole of B73 — a stale extension fails in ways that look
+        # like a broken app, and nothing here could tell the difference.
+        #
+        # Taken from the newest sighting that named a version rather than the
+        # newest sighting: two browsers may both have called, and the one that
+        # cannot say what it is has nothing to contribute to the question.
+        "compatibility": extension.compatibility(
+            _running_version(sightings),
+            extension.version(source) if source else "",
+        ),
     }
+
+
+def _running_version(sightings: list[dict]) -> str:
+    for row in sightings:  # newest contact first
+        if row.get("version"):
+            return str(row["version"])
+    return ""
 
 
 @router.post("/stage")

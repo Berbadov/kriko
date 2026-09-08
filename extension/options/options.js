@@ -204,3 +204,48 @@ grantButton.addEventListener("click", () => {
 recheckButton.addEventListener("click", () => { void loadSites(true); });
 
 void loadSites(false);
+
+// ── the two clocks ──────────────────────────────────────────────────────
+//
+// Same rule again: the worker holds the verdict, this page renders it. The
+// comparison was made against a floor the *app* stated, so nothing here
+// knows which versions are compatible — which is what keeps this page from
+// becoming a second, drifting copy of that rule.
+
+const compatEl = document.getElementById("compat");
+
+function renderCompat(compat) {
+  if (!compat) {
+    // Never having reached the app is not a version problem, and saying
+    // "up to date" would be a claim we have no evidence for.
+    compatEl.textContent =
+      `Extension ${chrome.runtime.getManifest().version}. `
+      + "The app has not answered yet, so there is nothing to compare it to.";
+    delete compatEl.dataset.state;
+    return;
+  }
+  if (compat.stale) {
+    compatEl.textContent =
+      `Extension ${compat.running} is older than the ${compat.minimum} this `
+      + "app needs. Open Kriko's Extension page and load the copy it wrote — "
+      + "yours is out of date, not broken.";
+    compatEl.dataset.state = "error";
+    return;
+  }
+  compatEl.textContent =
+    `Extension ${compat.running}, and the app accepts ${compat.minimum} or `
+    + "newer. Nothing to do.";
+  compatEl.dataset.state = "ok";
+}
+
+async function loadCompat() {
+  const reply = await ask({ type: "KRIKO_COMPAT" });
+  if (!reply.ok) {
+    compatEl.textContent = reply.error;
+    compatEl.dataset.state = "error";
+    return;
+  }
+  renderCompat(reply.compat);
+}
+
+void loadCompat();

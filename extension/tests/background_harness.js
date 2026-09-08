@@ -23,7 +23,7 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // test has to be able to set it.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, statuses = {},
-  grantedOrigins = [],
+  grantedOrigins = [], responseHeaders = {},
 } = {}) {
   const state = {
     session: {},
@@ -152,7 +152,12 @@ function loadBackground({
     fetch: async (url, init) => {
       if (offline) throw new TypeError("Failed to fetch");
       const body = init && init.body ? JSON.parse(init.body) : null;
-      state.requests.push({ url, method: (init && init.method) || "GET", body });
+      // Headers too: what the worker *says about itself* on every request is
+      // half the version handshake, and it is only visible here.
+      state.requests.push({
+        url, method: (init && init.method) || "GET", body,
+        headers: (init && init.headers) || {},
+      });
       const route = Object.keys(routes).find((r) => url.endsWith(r));
       if (route === undefined) {
         return { ok: false, status: 502, async text() { return "unreachable"; } };
@@ -160,7 +165,16 @@ function loadBackground({
       const value = routes[route];
       const payload = typeof value === "function" ? value(body) : value;
       const status = statuses[route] || 200;
+      // A real `Headers` is case-insensitive; a plain object is not, and the
+      // worker asks for the header by the casing it declares. Lowercasing
+      // both ends here is what keeps the test from passing on a name Chrome
+      // would have found and failing on one it would not.
+      const lower = {};
+      for (const [name, value] of Object.entries(responseHeaders)) {
+        lower[String(name).toLowerCase()] = value;
+      }
       return { ok: status < 400, status,
+               headers: { get: (name) => lower[String(name).toLowerCase()] ?? null },
                async json() { return payload; },
                async text() { return JSON.stringify(payload); } };
     },

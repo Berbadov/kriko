@@ -11,6 +11,7 @@ a history row must never affect a pack's `content_digest`.
 """
 
 import json
+import re
 import secrets
 import sqlite3
 from datetime import UTC, datetime
@@ -46,7 +47,13 @@ CREATE TABLE IF NOT EXISTS extension_seen (
     origin   TEXT PRIMARY KEY,
     first_at TEXT NOT NULL,
     last_at  TEXT NOT NULL,
-    hits     INTEGER NOT NULL DEFAULT 1
+    hits     INTEGER NOT NULL DEFAULT 1,
+    -- What the extension says it is. Blank for a version that predates the
+    -- header, which is itself the answer to "how old is it" — an extension
+    -- too old to say is older than every extension that says anything. The
+    -- default is what lets this be added to an existing file at all; see
+    -- `add_missing_columns`.
+    version  TEXT NOT NULL DEFAULT ''
 );
 
 -- Triage: which claims of a stored answer the reader has dealt with.
@@ -284,6 +291,10 @@ CREATE INDEX IF NOT EXISTS unmapped_labels_last ON unmapped_labels (last_at DESC
 #: them would throw away the only signal that distinguishes the two.
 VERDICTS = ("useful", "wrong", "not_applicable")
 
+#: Long enough for any semver anyone will ship, short enough that a header is
+#: not a place to put a payload.
+MAX_VERSION_CHARS = 32
+
 
 def connect(path: Path) -> sqlite3.Connection:
     path = Path(path)
@@ -308,9 +319,99 @@ def connect(path: Path) -> sqlite3.Connection:
     stamp = schema_stamp(SCHEMA)
     if conn.execute("PRAGMA user_version").fetchone()[0] != stamp:
         conn.executescript(SCHEMA)
+        # `CREATE TABLE IF NOT EXISTS` is a no-op on a table that already
+        # exists, so a *column* added to SCHEMA above never appears in a
+        # reader's file — the stamp moves, the script runs, and the column is
+        # silently missing until the first query names it. New tables landed
+        # fine, which is exactly why nobody noticed: the bug is invisible
+        # until the first schema change of the other kind.
+        add_missing_columns(conn)
         conn.execute(f"PRAGMA user_version = {stamp}")
         conn.commit()
     return conn
+
+
+def declared_columns(sql: str = SCHEMA) -> dict[str, dict[str, str]]:
+    """What SCHEMA says each table holds — parsed, never hand-listed.
+
+    A migration list someone has to remember to extend is the step that gets
+    forgotten (CLAUDE.md's scalability rule, applied to the schema rather than
+    to the catalog). The declaration above is already the truth; this reads it.
+    """
+    tables: dict[str, dict[str, str]] = {}
+    pattern = re.compile(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\n\);",
+        re.DOTALL | re.IGNORECASE,
+    )
+    for name, body in pattern.findall(sql):
+        columns: dict[str, str] = {}
+        for part in _split_top_level(body):
+            # A table constraint is not a column, and `PRIMARY KEY (a, b)`
+            # would otherwise be read as a column called "PRIMARY".
+            if part.split(None, 1)[0].upper() in _NOT_A_COLUMN:
+                continue
+            columns[part.split(None, 1)[0]] = part
+        tables[name] = columns
+    return tables
+
+
+#: Leading words that begin a table constraint rather than a column.
+_NOT_A_COLUMN = {"PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "CONSTRAINT"}
+
+
+def _split_top_level(body: str) -> list[str]:
+    """Split a CREATE TABLE body on its own commas, comments removed.
+
+    Depth-aware because `PRIMARY KEY (adapter_id, label)` and
+    `DEFAULT (datetime('now'))` both carry commas that are not separators.
+    """
+    lines = [line.split("--", 1)[0] for line in body.splitlines()]
+    text = "\n".join(lines)
+    parts: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for char in text:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+            continue
+        current.append(char)
+    parts.append("".join(current))
+    return [part.strip() for part in parts if part.strip()]
+
+
+def add_missing_columns(conn: sqlite3.Connection, sql: str = SCHEMA) -> list[str]:
+    """Bring an existing table up to what SCHEMA declares.
+
+    Only additions, and only ones SQLite can add in place — which is the
+    honest limit of a local file we must never rewrite behind the reader's
+    back. This is *their* history and settings, not a cache: dropping the
+    table to recreate it would trade a missing column for lost data, so a
+    column SQLite refuses raises rather than being papered over. Anything
+    beyond an added column is a real migration and has to be written as one.
+    """
+    added: list[str] = []
+    for table, columns in declared_columns(sql).items():
+        try:
+            existing = {
+                row[1] for row in conn.execute(f"PRAGMA table_info({table})")
+            }
+        except sqlite3.Error:
+            continue
+        if not existing:
+            continue  # the CREATE above made it, or it is not ours
+        for name, definition in columns.items():
+            if name in existing:
+                continue
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
+            added.append(f"{table}.{name}")
+    if added:
+        conn.commit()
+    return added
 
 
 def record_lookup(
@@ -425,8 +526,10 @@ def put_settings(conn: sqlite3.Connection, values: dict) -> dict:
 # ── the browser extension ────────────────────────────────────────────────
 
 
-def record_extension(conn: sqlite3.Connection, origin: str) -> None:
-    """Note that an extension origin reached us just now.
+def record_extension(
+    conn: sqlite3.Connection, origin: str, version: str = ""
+) -> None:
+    """Note that an extension origin reached us just now, and what it is.
 
     Deliberately cheap and deliberately silent. It runs inside a middleware on
     a request the extension is waiting on, so it must not raise: a locked
@@ -435,13 +538,23 @@ def record_extension(conn: sqlite3.Connection, origin: str) -> None:
     broken", which is precisely backwards.
     """
     now = _now()
+    # Truncated rather than validated: this is a header, so it is whatever the
+    # caller sent. It is only ever displayed and compared, never executed, and
+    # a version string that is not a version reads as an extension that cannot
+    # say what it is — which is the same conclusion by a different route.
+    version = str(version or "")[:MAX_VERSION_CHARS]
     try:
         conn.execute(
-            "INSERT INTO extension_seen (origin, first_at, last_at, hits)"
-            " VALUES (?, ?, ?, 1)"
+            "INSERT INTO extension_seen (origin, first_at, last_at, hits, version)"
+            " VALUES (?, ?, ?, 1, ?)"
             " ON CONFLICT(origin) DO UPDATE SET last_at = excluded.last_at,"
-            " hits = extension_seen.hits + 1",
-            (origin, now, now),
+            " hits = extension_seen.hits + 1,"
+            # COALESCE, not a plain overwrite: a request that carried no
+            # header must not erase what an earlier one told us. Only a
+            # non-blank version moves it.
+            " version = CASE WHEN excluded.version = '' THEN extension_seen.version"
+            "                ELSE excluded.version END",
+            (origin, now, now, version),
         )
         conn.commit()
     except sqlite3.Error:
@@ -453,7 +566,7 @@ def extension_sightings(conn: sqlite3.Connection) -> list[dict]:
     return [
         dict(row)
         for row in conn.execute(
-            "SELECT origin, first_at, last_at, hits FROM extension_seen"
+            "SELECT origin, first_at, last_at, hits, version FROM extension_seen"
             " ORDER BY last_at DESC"
         )
     ]

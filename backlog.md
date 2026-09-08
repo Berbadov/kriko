@@ -1044,8 +1044,34 @@ and no path to a populated one.
 ### B72 — Error copy names exceptions, not next steps
 
 ### B73 — Extension and app versions never handshake
-Each ships on its own clock, which is right, and neither checks the other, so
-a stale extension fails in ways that look like a broken app.
+**Done 2026-09-08.** Two headers, both riding on requests that were already
+happening: `X-Kriko-Extension` out, `X-Kriko-Minimum-Extension` back. No
+poll, no endpoint, no third clock to keep wound — the same reasoning as the
+extension *sighting*, which is a side effect of the extension doing its actual
+work and therefore cannot be true while the install is broken.
+
+The rule is one number in one place, `extension.MINIMUM_VERSION`, bumped only
+when a wire change genuinely breaks an older client. Not a compatibility
+matrix: three separate clocks (knowledge weekly, the binary rarely, the
+extension again) would make a matrix wrong within a release. The extension
+holds the *comparison* and no floor of its own; the dashboard holds neither
+and renders the sentence the app wrote. Tests assert all three, because any
+one of the files can be edited alone.
+
+Three states, not two: `unknown` (nothing has called) is separate from
+`too_old`, because telling a reader who never installed the extension that
+theirs is out of date is worse than saying nothing.
+
+**The missing gate came out of it.** Adding `extension_seen.version` revealed
+that `CREATE TABLE IF NOT EXISTS` does nothing for a new *column*: the stamp
+moves, the script runs, `PRAGMA user_version` is rewritten, and the column is
+silently absent on every existing reader's file until the first query names
+it. Every prior change to this schema had been a new table, which is exactly
+why it survived. `state.add_missing_columns` now reconciles what SCHEMA
+declares against `PRAGMA table_info` — parsed off the declaration, never a
+migration list to remember — adding only, raising on anything SQLite refuses,
+and `test_app_state_migration.py` ratchets the set of columns that could
+never be back-added.
 
 ### B74 — No route is reachable by keyboard alone end to end
 
