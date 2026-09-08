@@ -93,6 +93,7 @@ jobs:
             # into a red job instead. Cheap: metadata resolves, it does not
             # build. See B53 and `test_shell_is_locked.py`.
             - name: The shell's crate graph is the one that was committed
+              shell: bash
               run: cargo metadata --locked --format-version 1 > /dev/null
               working-directory: tauri/src-tauri
 
