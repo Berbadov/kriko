@@ -193,4 +193,9 @@ BACK_THEN = {
     # this table later would not have that excuse.
     "fact_checks.pack_id", "fact_checks.claim_id", "fact_checks.verdict",
     "fact_checks.checked_at",
+    # 2026-09-09, B86, and the same excuse again: `research_runs` and
+    # `research_run_claims` arrived as whole tables. A column added to either
+    # of them afterwards has to carry a default.
+    "research_runs.started_at", "research_run_claims.run_id",
+    "research_run_claims.pack_id", "research_run_claims.claim_id",
 }

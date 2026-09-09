@@ -372,6 +372,31 @@ def test_the_skill_carries_the_agenda_and_says_the_tool_wins(tmp_path):
     assert "the tool is right" in body
 
 
+def test_the_skill_carries_the_pack_s_own_identification_method(tmp_path):
+    """The agenda says what to research next; `research/skill.md` says how to
+    tell what a subject even is before searching for it. Phase 5 of
+    docs/superpowers/specs/2026-09-09-knowledge-building-design.md composes
+    both into the generated skill, alongside the principle — an agent that
+    only got the ordering would search a label instead of the attribute that
+    actually discriminates."""
+    from app import agentskill
+
+    conn = connect(tmp_path / "k.sqlite")
+    _pack(conn)
+    conn.execute(
+        "INSERT INTO pack_assets VALUES (?,?,?,?)",
+        ("p", "research/skill.md", "skill",
+         "Search the discriminating attribute, not the label."),
+    )
+    _subject(conn, "s1", "A thing")
+    conn.commit()
+
+    body = agentskill.render(conn)
+    conn.close()
+
+    assert "Search the discriminating attribute, not the label." in body
+
+
 def test_a_skill_built_without_a_snapshot_is_still_a_skill(tmp_path):
     # The caller that has no business reading a reader's history passes
     # nothing, and gets the protocol without the head start.

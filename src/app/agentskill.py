@@ -8,11 +8,15 @@ harness loads by description and applies when the description matches.
 
 The document is **assembled from the installed packs**, never written here.
 Each pack already ships `research/principle.md` — what is worth surfacing in
-its category — and the store already carries it as a pack asset. A skill built
-from those states two different bars for a car and a power drill without this
-module knowing what either is, and it changes when the pack updates rather than
-when the binary does. That is the whole reason it is generated rather than
-checked in: the protocol versions with the knowledge.
+its category — and, where it also ships one, `research/skill.md` — how to
+resolve a subject's identity before searching for it, since "the make and
+model" is a guess and the discriminating attribute is a method. Both arrive
+as pack assets the store already carries. A skill built from those states two
+different bars and two different identification methods for a car and a
+power drill without this module knowing what either is, and it changes when
+the pack updates rather than when the binary does. That is the whole reason
+it is generated rather than checked in: the protocol versions with the
+knowledge.
 
 Everything past the principle is *also* read off the store, for the same
 reason and one more: an agent that has to guess a pack's identity keys, its
@@ -276,6 +280,10 @@ def _pack_section(conn, pack: dict) -> str:
 
     out += f"\n#### What {pack['name']} considers worth keeping\n\n"
     out += (pack["principle"] or "_This pack ships no principle._") + "\n"
+
+    if pack["skill"]:
+        out += f"\n#### How to identify a {pack['name']} subject before searching\n\n"
+        out += pack["skill"] + "\n"
     return out
 
 
@@ -329,6 +337,7 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
             "name": row["name"],
             "version": row["version"],
             "principle": pack_asset(conn, row["pack_id"], "research/principle.md").strip(),
+            "skill": pack_asset(conn, row["pack_id"], "research/skill.md").strip(),
         }
         for row in conn.execute(
             "SELECT pack_id, name, version FROM packs WHERE enabled = 1"

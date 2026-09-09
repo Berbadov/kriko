@@ -1,7 +1,7 @@
 """The browser extension, from the app's side.
 
 Read `app/extension.py` first — it holds the reasoning about what a native app
-is and is not allowed to do here. This router is the thin part: three endpoints
+is and is not allowed to do here. This router is the thin part: four endpoints
 over that module plus the sightings table, shaped so the UI can be a status
 rather than a page of instructions.
 """
@@ -11,13 +11,24 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app import extension
+from app import extension, keys
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.settings import EXTENSION_PORT
 from kriko.adapters import load_adapters
+from kriko.research.agent import AgentResearcher
+from kriko.research.api import ApiResearcher
 
 router = APIRouter(prefix="/api/extension", tags=["extension"])
+
+#: The extension door's own spending cap (2026-09-09-knowledge-building-design.md
+#: §3). Nothing in this codebase yet computes a per-subject cost estimate for
+#: the api plane (that is Phase 2/3 work), so this is not an estimate — it is
+#: the number this endpoint tells `POST /api/research` to enforce for a run
+#: started from a listing page, chosen small enough that an unattended click
+#: from a browser panel cannot become a surprise. Raise it in Settings →
+#: Research once that screen exists, not here.
+EXTENSION_RESEARCH_BUDGET_USD = 0.20
 
 #: A sighting older than this stops counting as "connected". The extension
 #: polls on navigation rather than on a timer, so this is not a heartbeat
@@ -102,6 +113,36 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
             _running_version(sightings),
             extension.version(source) if source else "",
         ),
+    }
+
+
+@router.get("/research-plane")
+def research_plane(request: Request) -> dict:
+    """Which research plane a run started from the panel would use, and what
+    it costs — never a key.
+
+    The panel's "Research it" prompt has to name the cost *before* the reader
+    clicks it (2026-09-09-knowledge-building-design.md §3), and it cannot read
+    a key to decide that: an endpoint on this port that returned a key would
+    be a key the extension's origin — any page it is running on — could read
+    too. So this reuses `app.keys.status` — the same presence-only read `GET
+    /api/keys` already serves — for whether the api plane is even reachable,
+    and reports the plane name and `cost_basis` `kriko.research.get_researcher`
+    would act on, plus the cap this door enforces on the api plane. Nothing
+    else, and no key.
+    """
+    settings = request.app.state.settings
+    env_path = keys.env_path(getattr(settings, "app_state_path").parent)
+    if keys.ready(env_path):
+        return {
+            "backend": ApiResearcher.name,
+            "cost_basis": ApiResearcher.cost_basis,
+            "budget_usd": EXTENSION_RESEARCH_BUDGET_USD,
+        }
+    return {
+        "backend": AgentResearcher.name,
+        "cost_basis": AgentResearcher.cost_basis,
+        "budget_usd": 0.0,
     }
 
 

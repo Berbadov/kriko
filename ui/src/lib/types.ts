@@ -589,3 +589,87 @@ export type UnmappedLabel = {
     last_at: string;
     sample_url: string;
 };
+
+
+/** One research plane, as `/api/research-planes` describes it.
+ *
+ * `cost_basis` is the engine's own word (`subscription` / `per_token`) and
+ * `what` is the sentence a reader can act on. Both come from the server: the
+ * plane vocabulary belongs to `kriko/research/`, and a copy of it here would
+ * be a second place to forget when a third plane arrives. */
+export type ResearchPlane = {
+    id: string;
+    cost_basis: string;
+    what: string;
+    /** Whether it can run *now*. False on the paid plane with no keys set. */
+    ready: boolean;
+    needs_keys: boolean;
+};
+
+/** What `/api/keys` says about one provider — never the key itself.
+ *
+ * `hint` is a masked tail (`…4f2a`) and is the only part of a stored value
+ * that ever leaves the server. `source` distinguishes a key this app wrote
+ * from one that was already in the environment, because the second kind
+ * cannot be deleted from here and a delete button that silently does nothing
+ * is worse than no button. */
+export type ApiKeyStatus = {
+    id: string;
+    label: string;
+    env: string;
+    /** What this provider receives. Printed, not summarised: a screen that
+     *  asks for a key owes the reader the data-flow answer. */
+    purpose: string;
+    present: boolean;
+    hint: string;
+    source: "file" | "environment" | "";
+};
+
+export type ApiKeys = { providers: ApiKeyStatus[]; ready: boolean; path: string };
+
+/** One research run's provenance row.
+ *
+ * `spent_usd` is `null` when nobody counted — the agent plane never does —
+ * which is a different answer from a measured zero and is kept apart on
+ * purpose. `claims` counts what is *still* in the store, so an undone run
+ * reads as zero rather than advertising what it once added. */
+export type ResearchRun = {
+    run_id: string;
+    job_id: string;
+    plane: string;
+    /** Which completion API wrote these claims. `llm` rather than the
+     *  column's own name, which is a pack identity key the frontend may not
+     *  contain — see `state._research_run`. */
+    llm: string;
+    search_provider: string;
+    budget_usd: number | null;
+    spent_usd: number | null;
+    started_at: string;
+    ended_at: string;
+    outcome: string;
+    claims: number;
+    removed: number;
+};
+
+export type ResearchRunClaim = {
+    run_id: string;
+    pack_id: string;
+    claim_id: string;
+    subject_id: string;
+    title: string;
+    removed_at: string | null;
+};
+
+export type ResearchRunDetail = ResearchRun & {
+    claims_detail: ResearchRunClaim[];
+    /** The server's answer to "would the undo button do anything". */
+    undoable: boolean;
+};
+
+export type AgendaRunRequest = {
+    rows?: number;
+    pack_id?: string | null;
+    backend?: string;
+    budget_usd?: number;
+    max_documents?: number;
+};

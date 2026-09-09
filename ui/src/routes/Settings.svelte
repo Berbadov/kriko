@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "../lib/Async.svelte";
+    import Keys from "../lib/Keys.svelte";
     import { api } from "../lib/api";
     import { MODES, mode, setMode } from "../lib/mode";
     import { THEMES, THEME_LABELS, setTheme, theme } from "../lib/theme";
@@ -51,7 +52,8 @@
 <h2>Settings</h2>
 <p class="lede">
     Two preferences, both remembered in this install's own database — never in a
-    pack, so uninstalling knowledge cannot change how the app looks.
+    pack, so uninstalling knowledge cannot change how the app looks. Research
+    keys are the exception and are kept in a file of their own, below.
 </p>
 
 <section>
@@ -98,6 +100,10 @@
         {/each}
     </div>
 </section>
+
+<!-- Before "what is remembered", because it is the one thing on this page
+     that is *not* in app.sqlite, and the section below says so. -->
+<Keys />
 
 <section>
     <h3>What is remembered</h3>
