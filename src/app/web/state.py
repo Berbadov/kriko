@@ -305,6 +305,68 @@ CREATE TABLE IF NOT EXISTS unmapped_labels (
     PRIMARY KEY (adapter_id, label)
 );
 CREATE INDEX IF NOT EXISTS unmapped_labels_last ON unmapped_labels (last_at DESC);
+
+-- ── who researched this, with what, and what it cost ─────────────────────
+--
+-- `pipeline_runs` already answers "what happened in this run". These two
+-- tables answer the different question a reader asks *afterwards*: which of
+-- my claims came from the paid plane, which model wrote them, and can I take
+-- them back out.
+--
+-- **In app.sqlite, and that is the load-bearing decision.** A claim's own
+-- evidence chain — its quote, its source URL, its confidence — belongs to the
+-- pack and lives in the engine store, because it is what makes the claim
+-- checkable by anyone. *Who ran the research* is not: it is a fact about this
+-- installation. Putting it in the engine schema would make a pack's
+-- `content_digest` depend on which machine grew it, and pack-update refusal is
+-- built entirely on two installations computing the same digest for the same
+-- version. Two readers who researched the same subject would then disagree
+-- about whether an update is a republish.
+CREATE TABLE IF NOT EXISTS research_runs (
+    -- The same id `pipeline_runs` uses, so Activity joins the two without a
+    -- second identifier for one run.
+    run_id          TEXT PRIMARY KEY,
+    job_id          TEXT,
+    -- `agent` | `api`. Not "provider": the plane is what determines whether
+    -- anything left this machine.
+    plane           TEXT NOT NULL DEFAULT '',
+    -- Named, not inferred. "researched by an LLM" is not a provenance record;
+    -- "gpt-4o-mini via api.openai.com, searched with Exa" is one. Empty on the
+    -- agent plane, where the model is whatever harness the reader was using
+    -- and this process genuinely does not know.
+    model           TEXT NOT NULL DEFAULT '',
+    search_provider TEXT NOT NULL DEFAULT '',
+    -- The ceiling and the actual, both. A run that stopped because it hit the
+    -- ceiling and a run that finished under it look identical without the pair.
+    budget_usd      REAL,
+    spent_usd       REAL,
+    started_at      TEXT NOT NULL,
+    ended_at        TEXT,
+    -- done | cancelled | budget | failed. `budget` is deliberately not
+    -- `failed`: a hard stop working is not a fault, and colouring it as one
+    -- teaches the reader to ignore the colour.
+    outcome         TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS research_runs_started ON research_runs (started_at DESC);
+
+-- What a run added, so it can be taken back out. One row per accepted claim.
+--
+-- Undo is why this exists, and undo is why it is per-claim rather than a count:
+-- "this run added 6 claims" cannot be reversed, and a reader who accepted a
+-- run they later distrust needs the reversal, not the number.
+CREATE TABLE IF NOT EXISTS research_run_claims (
+    run_id     TEXT NOT NULL,
+    pack_id    TEXT NOT NULL,
+    claim_id   TEXT NOT NULL,
+    subject_id TEXT NOT NULL DEFAULT '',
+    title      TEXT NOT NULL DEFAULT '',
+    -- Set when an undo has taken this claim back out, so a second undo of the
+    -- same run is a no-op that can say so rather than a silent success.
+    removed_at TEXT,
+    PRIMARY KEY (run_id, pack_id, claim_id)
+);
+CREATE INDEX IF NOT EXISTS research_run_claims_claim
+    ON research_run_claims (pack_id, claim_id);
 """
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
@@ -1271,3 +1333,145 @@ def fact_check_counts(conn: sqlite3.Connection) -> dict:
         "SELECT verdict, COUNT(*) AS n FROM fact_checks GROUP BY verdict"
     ).fetchall()
     return {row["verdict"]: row["n"] for row in rows}
+
+
+# ── research provenance and undo ──────────────────────────────────────────
+
+
+def open_research_run(
+    conn: sqlite3.Connection,
+    run_id: str,
+    *,
+    job_id: str = "",
+    plane: str = "",
+    model: str = "",
+    search_provider: str = "",
+    budget_usd: float | None = None,
+) -> None:
+    """Write the run down before it spends anything.
+
+    Opened rather than recorded-on-completion for the reason the jobs table
+    exists: a run that crashed or was killed mid-way is the one a reader most
+    needs to be able to read afterwards, and a row written at the end is a row
+    that is never written for exactly those runs.
+
+    `spent_usd` opens NULL rather than 0.0. The agent plane never counts, so
+    its rows stay NULL for their whole life, and "cost nothing" and "nobody
+    counted" are different answers a cost column has to keep apart — opening
+    at 0.0 makes every unmeasured run claim a measured zero, and `close`'s
+    COALESCE then preserves the claim.
+    """
+    conn.execute(
+        "INSERT OR REPLACE INTO research_runs"
+        " (run_id, job_id, plane, model, search_provider, budget_usd,"
+        "  spent_usd, started_at, outcome)"
+        " VALUES (?, ?, ?, ?, ?, ?, NULL, ?, '')",
+        (run_id, job_id or None, plane, model, search_provider, budget_usd, _now()),
+    )
+    conn.commit()
+
+
+def close_research_run(
+    conn: sqlite3.Connection, run_id: str, outcome: str, spent_usd: float | None = None
+) -> None:
+    conn.execute(
+        "UPDATE research_runs SET outcome = ?, spent_usd = COALESCE(?, spent_usd),"
+        " ended_at = ? WHERE run_id = ?",
+        (outcome, spent_usd, _now(), run_id),
+    )
+    conn.commit()
+
+
+def record_run_claims(
+    conn: sqlite3.Connection, run_id: str, pack_id: str, subject_id: str, accepted: list
+) -> int:
+    """Remember which claims this run put in, so they can be taken back out."""
+    rows = [
+        (run_id, pack_id, item["claim_id"], subject_id, item.get("title") or "")
+        for item in accepted or []
+        if item.get("claim_id")
+    ]
+    conn.executemany(
+        "INSERT OR IGNORE INTO research_run_claims"
+        " (run_id, pack_id, claim_id, subject_id, title) VALUES (?, ?, ?, ?, ?)",
+        rows,
+    )
+    conn.commit()
+    return len(rows)
+
+
+def _research_run(row: sqlite3.Row) -> dict:
+    return {
+        "run_id": row["run_id"],
+        "job_id": row["job_id"] or "",
+        "plane": row["plane"],
+        "model": row["model"],
+        "search_provider": row["search_provider"],
+        "budget_usd": row["budget_usd"],
+        "spent_usd": row["spent_usd"],
+        "started_at": row["started_at"],
+        "ended_at": row["ended_at"] or "",
+        "outcome": row["outcome"],
+        "claims": row["claims"] if "claims" in row.keys() else 0,
+        "removed": row["removed"] if "removed" in row.keys() else 0,
+    }
+
+
+def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """The runs, newest first, each with how many claims it still owns.
+
+    `claims` and `removed` are counted here rather than stored on the run
+    because an undo changes them: a denormalised total would be a number that
+    silently stops being true the moment the feature it exists for is used.
+    """
+    return [
+        _research_run(row)
+        for row in conn.execute(
+            "SELECT r.*,"
+            " (SELECT COUNT(*) FROM research_run_claims c"
+            "   WHERE c.run_id = r.run_id AND c.removed_at IS NULL) AS claims,"
+            " (SELECT COUNT(*) FROM research_run_claims c"
+            "   WHERE c.run_id = r.run_id AND c.removed_at IS NOT NULL) AS removed"
+            " FROM research_runs r ORDER BY r.started_at DESC LIMIT ?",
+            (limit,),
+        )
+    ]
+
+
+def get_research_run(conn: sqlite3.Connection, run_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT r.*,"
+        " (SELECT COUNT(*) FROM research_run_claims c"
+        "   WHERE c.run_id = r.run_id AND c.removed_at IS NULL) AS claims,"
+        " (SELECT COUNT(*) FROM research_run_claims c"
+        "   WHERE c.run_id = r.run_id AND c.removed_at IS NOT NULL) AS removed"
+        " FROM research_runs r WHERE r.run_id = ?",
+        (run_id,),
+    ).fetchone()
+    return _research_run(row) if row else None
+
+
+def run_claims(conn: sqlite3.Connection, run_id: str) -> list[dict]:
+    return [
+        {
+            "pack_id": row["pack_id"],
+            "claim_id": row["claim_id"],
+            "subject_id": row["subject_id"],
+            "title": row["title"],
+            "removed_at": row["removed_at"] or "",
+        }
+        for row in conn.execute(
+            "SELECT * FROM research_run_claims WHERE run_id = ? ORDER BY rowid",
+            (run_id,),
+        )
+    ]
+
+
+def mark_claim_removed(
+    conn: sqlite3.Connection, run_id: str, pack_id: str, claim_id: str
+) -> None:
+    conn.execute(
+        "UPDATE research_run_claims SET removed_at = ?"
+        " WHERE run_id = ? AND pack_id = ? AND claim_id = ?",
+        (_now(), run_id, pack_id, claim_id),
+    )

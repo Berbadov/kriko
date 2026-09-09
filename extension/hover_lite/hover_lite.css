@@ -407,6 +407,13 @@
   line-height: 1.45;
   color: var(--fg-muted);
 }
+.lite-gap-cost {
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
 .lite-gap-btn {
   appearance: none;
   cursor: pointer;

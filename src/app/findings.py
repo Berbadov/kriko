@@ -216,3 +216,38 @@ def log_submission(
         pass
     finally:
         conn.close()
+
+
+#: Deleted in this order so that a foreign key never dangles mid-transaction:
+#: children first, the `claims` row last. `sources` is deliberately absent —
+#: see `retract_claim`.
+CLAIM_TABLES = ("evidence", "claim_conditions", "claim_text", "claims")
+
+
+def retract_claim(conn, pack_id: str, claim_id: str) -> bool:
+    """Take one claim back out of the store. False if it was already gone.
+
+    The reverse of `accept_findings`, and the reason an unattended multi-row
+    research run is a feature rather than a liability: whatever it wrote can
+    be taken back out, by run, without touching what anyone else wrote.
+
+    **`sources` rows are left alone on purpose.** A source is shared between
+    claims — two findings from the same page are one `sources` row — so
+    deleting it with the claim that happened to be undone would leave a
+    dangling `source_id` on a claim nobody asked about. An unreferenced source
+    row is harmless; a dangling reference is not.
+
+    Returning a bool rather than raising, because "already absent" is the
+    ordinary case for a second undo, a hand-deleted claim, or a pack
+    reinstall — and an undo that fails on those is an undo nobody presses.
+    """
+    present = conn.execute(
+        "SELECT 1 FROM claims WHERE claim_id = ? AND pack_id = ?",
+        (claim_id, pack_id),
+    ).fetchone()
+    for table in CLAIM_TABLES:
+        conn.execute(
+            f"DELETE FROM {table} WHERE claim_id = ? AND pack_id = ?",
+            (claim_id, pack_id),
+        )
+    return present is not None

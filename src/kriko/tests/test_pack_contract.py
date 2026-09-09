@@ -41,3 +41,21 @@ def test_pack_has_a_readme_stating_what_it_covers(root):
     assert (root / "README.md").is_file(), (
         "a pack is a thing someone installs; it must say what it covers"
     )
+
+
+@pytest.mark.parametrize(
+    "root",
+    [p for p in PACKS if (p / "research" / "templates.yaml").is_file()],
+    ids=lambda p: p.name,
+)
+def test_a_pack_with_search_queries_also_ships_how_to_aim_them(root):
+    """A pack that declares `research/templates.yaml` is telling a harness to
+    go search for something. `research/skill.md` is how to identify *what*
+    before those queries run — without it a harness has queries but no method,
+    and will search a label instead of the attribute that actually
+    discriminates. docs/superpowers/specs/2026-09-09-knowledge-building-design.md
+    §5 states this as the testing rule directly: a pack cannot ship queries
+    without a method."""
+    assert (root / "research" / "skill.md").is_file(), (
+        f"{root.name} ships research templates but no research/skill.md"
+    )
