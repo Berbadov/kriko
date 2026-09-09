@@ -6,6 +6,50 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — The agent is told what to research next (B82)
+
+Branch `b82-research-agenda`, spec
+`docs/superpowers/specs/2026-09-09-research-agenda-design.md`. The last row of
+the reader's 0.5.0 list, and the one that was not a UI change: an agent
+arriving at the MCP door was told what it *accepts* and nothing about what this
+installation actually needs. `coverage_gaps` answered a version of that already
+— alphabetically, which is to say it answered "what is missing" and never "what
+is missing that anyone has asked for".
+
+`src/app/agenda.py` computes a ranked agenda on read, from four signals kept
+separate: demand out of `analyses.jsonl` (the designated demand corpus, which
+survives clearing history, and whose *position* is exact recency in an
+append-only file — the record carries no timestamp, so the window is the newest
+500 records rather than a date range), subjects with no claims, claims with one
+source, and `fact_checks` whose quote has gone missing. No score: the row kind
+and the demand count are shown separately, same principle as `ClaimHealth`.
+
+**`NOT_MATCHED` is the strongest signal we had and the only one nothing could
+see.** A reader bringing us a product the catalog cannot name is invisible to
+every gap list, because a gap list can only name subjects that exist. It ships
+as an `unknown_subject` row with no `subject_id` at all — so `submit_findings`
+cannot be aimed at a neighbour — and both the MCP docstring and the copyable
+prompt say in as many words that it is not a task for an agent.
+
+Three doors on one computation: the `research_agenda` MCP tool (its docstring
+opens "**Call this first.**"), `GET /api/agenda`, and the generated skill,
+which now leads its loop with `research_agenda` and says that if the skill's
+snapshot and the tool disagree, the tool is right. The Agents screen shows the
+same rows above "What the agent is told", each copyable as a prompt for a
+harness that is not wired to MCP at all.
+
+Gates: the ordering gate from the spec (`["s-zeta", "s-audi"]` — a subject
+asked about twice outranks an alphabetically-earlier gap nobody asked about,
+the test that fails against `coverage_gaps`); a total sort order so two runs
+agree; MCP and HTTP proved to be one computation; an unreadable log is a note
+rather than an exception, and an unreadable `app.sqlite` costs only the stale
+rows; no row carries the listing the reader was looking at; and the `KIND_WORD`
+/ `KIND_TONE` maps in `ui/src/lib/agenda.ts` are regex-read from
+`test_agenda.py` so a fifth kind cannot reach a screen as a bare token. 19
+Python tests, 10 UI tests.
+
+---
+
 ### 2026-09-09 — The 0.5.0 usability pass: shell, rail, one-click install, fact check
 
 Branch `ui-0.5.0-shell-and-agents`, four commits. All from one reading of the

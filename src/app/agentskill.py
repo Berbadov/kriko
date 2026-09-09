@@ -40,7 +40,9 @@ _MAX_WORDS = 12
 #: The loop, in the order an agent must run it. Stated once, here, because both
 #: the skill body and the UI's explanation of the protocol come from it.
 STEPS = [
-    ("coverage_gaps", "find subjects this installation knows nothing about"),
+    ("research_agenda", "ask what to research next — ranked by what this"
+                        " installation was actually asked about"),
+    ("coverage_gaps", "list everything still missing, when the agenda runs dry"),
     ("research_brief", "ask the pack what to look for and what counts"),
     ("subject_health", "read back what is already known before adding to it"),
     ("submit_findings", "file what you found, with the quote you found it in"),
@@ -277,8 +279,45 @@ def _pack_section(conn, pack: dict) -> str:
     return out
 
 
-def render(conn) -> str | None:
+_AGENDA_HEADER = """
+## What to research next
+
+This ordering was current when this file was written, and this file lives on
+your disk while the installation changes underneath it. **`research_agenda` is
+the live answer; if the two disagree, the tool is right.** The snapshot is here
+so a first session has somewhere to start without a round trip, not as a
+substitute for asking.
+
+"""
+
+
+def _agenda_section(rows: list[dict]) -> str:
+    """The top of the agenda as prose, or nothing at all.
+
+    Five rows, not twenty: this is a prompt, and the sixth row teaches an agent
+    nothing the fifth did not — the same reason `_MAX_WORDS` caps the
+    vocabulary lists. `kind` and `why` travel with each one, because a row that
+    says only *what* leaves an agent to guess whether it is filling a gap or
+    re-reading a page that moved.
+    """
+    if not rows:
+        return ""
+    lines = []
+    for row in rows[:5]:
+        what = row.get("label") or row.get("identity") or row.get("subject_id") or "?"
+        asked = row.get("asked") or 0
+        seen = f" — asked about {asked}×" if asked else ""
+        lines.append(f"- **{what}** (`{row['kind']}`){seen}. {row['why']}")
+    return _AGENDA_HEADER + "\n".join(lines) + "\n"
+
+
+def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
     """Build the skill from what is installed, or None if nothing is.
+
+    `agenda_rows` is the caller's, because the agenda needs the interface's own
+    database and the analyses log, and this module is handed only the store.
+    Omitting them yields a skill with no snapshot — which is the right answer
+    for a caller that has no business reading a reader's history.
 
     Disabled packs are excluded: a reader who turned a pack off has said its
     knowledge should not be used, and researching *into* it would be the same
@@ -310,6 +349,7 @@ def render(conn) -> str | None:
         when=when,
         loop=loop,
     )
+    body += _agenda_section(agenda_rows or [])
     for pack in packs:
         body += _pack_section(conn, pack)
     return body
