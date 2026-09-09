@@ -29,3 +29,41 @@ describe("Sidebar", () => {
         expect(screen.getByRole("button", { name: "author" })).toBeInTheDocument();
     });
 });
+
+describe("the rail's current row", () => {
+    /** Set the address before render: `route` re-reads the hash on subscribe. */
+    function at(hash: string) {
+        window.location.hash = hash;
+    }
+
+    it("marks the row for the route", () => {
+        at("#/packs?mode=author");
+        render(Sidebar, { mode: "author" });
+        expect(screen.getByRole("link", { name: "Packs" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+    });
+
+    it("marks the row a retired route actually renders", () => {
+        // `#/coverage` is a link the browser extension hands out; it renders
+        // Knowledge's gaps lens. The rail used to compare the raw route name
+        // against its own rows, match nothing, and light no row at all —
+        // arriving from the extension looked like arriving nowhere.
+        at("#/coverage?mode=author");
+        render(Sidebar, { mode: "author" });
+        expect(screen.getByRole("link", { name: "Browse" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+    });
+
+    it("gives every row its name, which is what the marker is measured from", () => {
+        at("#/check");
+        render(Sidebar, { mode: "buyer" });
+        expect(screen.getByRole("link", { name: "New check" })).toHaveAttribute(
+            "data-route",
+            "check",
+        );
+    });
+});
