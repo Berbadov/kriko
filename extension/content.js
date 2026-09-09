@@ -151,163 +151,193 @@ function extractTechnicalDetails() {
 }
 
 
-// ── Sahibinden "Boya & Değişen" silhouette panel ──
-// The page renders a car silhouette where each panel (kapı, çamurluk, tampon,
-// kaput, etc.) carries one of four states: orijinal, boyalı, lokal boyalı,
-// değişen. The DOM has been through a few redesigns; we try the explicit
-// state classes first, then fall back to label-headed paragraphs.
-function extractDamageInfo() {
-  const states = {
-    changed: new Set(),       // değişen — the "remove/insert" parts
-    painted: new Set(),       // boyalı
-    local_painted: new Set(), // lokal boyalı
-    original: new Set(),
-  };
+// ── The reader's own page, read by rules the pack declared ───────────────
+//
+// The damage silhouette and the equipment block are the two things the panel
+// renders from the page itself rather than from the engine's answer, and until
+// now they were the last site knowledge left in this file: the Turkish words
+// that name a damage state, the CSS selectors that find one, the map from a
+// Turkish subheading to an English bucket. Every one of them had the same
+// failure mode the label lists had before Phase 6c — a site redesign, or a
+// second listing site, or a category that is not cars, meant an extension
+// release.
+//
+// They are now `local_panel` in the adapter, and everything below is an
+// interpreter for it: it can count, match declared terms, and read declared
+// selectors, and it cannot do anything a pack did not ask for. A pack ships no
+// code here, which is the boundary `kriko/adapters.py` exists to hold — an
+// installed pack must never be able to run script on a page the extension can
+// see.
 
-  // Sahibinden's current layout: one `.car-damage-info-list` div per state.
-  // Each block's first text node / heading reads "Boyalı Parçalar",
-  // "Değişen Parçalar", "Lokal Boyalı Parçalar", or "Orijinal Parçalar", and
-  // its parts are <li class="selected-damage">PartName</li> below.
-  const STATE_HEADERS = [
-    { state: "changed",       re: /de[ğg]i[şs]en/i },
-    { state: "local_painted", re: /lokal\s*boyal[ıi]/i },
-    { state: "painted",       re: /boyal[ıi]/i },
-    { state: "original",      re: /orijinal/i },
-  ];
-  const damageBlocks = document.querySelectorAll(".car-damage-info-list");
-  for (const block of damageBlocks) {
-    // Read the block's heading. Prefer an explicit <hN>/title element; fall
-    // back to the first non-empty line of textContent — split(/\n/)[0] hits
-    // a blank leading line on the real DOM.
-    const headEl = block.querySelector("h1, h2, h3, h4, h5, .title, .header");
-    let headerText = cleanText(headEl?.textContent) || "";
-    if (!headerText) {
-      for (const line of (block.textContent || "").split(/\n+/)) {
-        const t = line.trim();
-        if (t) { headerText = t; break; }
-      }
-    }
-    let stateKey = null;
-    for (const { state, re } of STATE_HEADERS) {
-      if (re.test(headerText)) { stateKey = state; break; }
-    }
-    if (!stateKey) continue;
-    block.querySelectorAll("li.selected-damage").forEach(li => {
-      const part = cleanText(li.textContent);
-      if (part && part.length < 60) states[stateKey].add(part);
-    });
-  }
-
-  // Legacy fallback: older sahibinden DOMs encoded state in CSS classes on
-  // the silhouette nodes themselves. Only run when the modern selector above
-  // produced nothing.
-  if (
-    states.changed.size === 0 && states.painted.size === 0 &&
-    states.local_painted.size === 0 && states.original.size === 0
-  ) {
-    const CLASS_STATE = [
-      ["changed",       /(^|\s)(bgChanged|degisen|changed|cgEdit)(\s|$)/i],
-      ["local_painted", /(^|\s)(bgLocalPainted|lokal|localPainted|localPaint)(\s|$)/i],
-      ["painted",       /(^|\s)(bgPainted|boyali|painted|cgPaint)(\s|$)/i],
-      ["original",      /(^|\s)(bgOriginal|orijinal|original)(\s|$)/i],
-    ];
-    const panelNodes = document.querySelectorAll(
-      "[class*='damageInfo'] *, [id*='damageInfo'] *, " +
-      "[class*='Damage'] *, [id*='Damage'] *, " +
-      "[class*='Boya'] *, [id*='Boya'] *"
-    );
-    for (const node of panelNodes) {
-      const cls = node.className && typeof node.className === "string" ? node.className : "";
-      if (!cls) continue;
-      let matchedState = null;
-      for (const [state, re] of CLASS_STATE) {
-        if (re.test(cls)) { matchedState = state; break; }
-      }
-      if (!matchedState) continue;
-      const partName = cleanText(
-        node.getAttribute("title") ||
-        node.getAttribute("data-title") ||
-        node.getAttribute("aria-label") ||
-        node.textContent
-      );
-      if (partName && partName.length < 80) {
-        states[matchedState].add(partName);
-      }
-    }
-  }
-
-  // Tramer amount — try labeled field first, then scan the description text.
-  let tramerAmount = null;
-  let tramerCurrency = null;
-  const tramerSources = [];
-  document.querySelectorAll(
-    "[id*='Tramer'], [class*='tramer'], [id*='Hasar'], [class*='hasar']"
-  ).forEach(n => tramerSources.push(cleanText(n.textContent)));
-  const descNode = document.querySelector(
-    "#classifiedDescription, .classifiedDescription, [itemprop='description']"
-  );
-  if (descNode) tramerSources.push(cleanText(descNode.textContent));
-
-  for (const txt of tramerSources) {
-    if (!txt) continue;
-    // "Tramer 9.500 TL" / "Tramer: 12,000 TL" / "Hasar Kaydı 2.000 TL"
-    const m = txt.match(/(?:tramer|hasar\s*kayd[ıi])[\s:]*([\d.,]+)\s*(tl|try|usd|eur|\$|€)/i);
-    if (m) {
-      tramerAmount = Number(m[1].replace(/[.,]/g, ""));
-      tramerCurrency = /tl|try/i.test(m[2]) ? "TRY" : m[2].toUpperCase();
-      break;
-    }
-  }
-
-  const toArr = s => Array.from(s).sort();
-  return {
-    changed: toArr(states.changed),
-    painted: toArr(states.painted),
-    local_painted: toArr(states.local_painted),
-    original: toArr(states.original),
-    tramer_amount: tramerAmount,
-    tramer_currency: tramerCurrency,
-  };
+// Term matching folds both sides so a pack author writes one spelling rather
+// than every spelling: case, accents, and the dotless i all collapse.
+//
+// Deliberately not `foldLabel`, which is one character-class away and must
+// stay that way. `foldLabel` has to agree with the *server's* casefold, and
+// that casefold leaves "ı" alone; a term here is only ever compared against
+// text on the page, both ends folded by this function, so it can be kinder.
+function foldTerm(text) {
+  if (text === null || text === undefined) return "";
+  return String(text)
+    .replace(/ı/g, "i")
+    .replace(/İ/g, "i")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// ── Sahibinden "Donanım" (equipment) block ──
-// Layout: a Donanım section split into subcategories (Güvenlik, İç Donanım,
-// Dış Donanım, Multimedya, Aydınlatma) where included features carry a
-// `selected` (or similar) class. We group features by their nearest preceding
-// subcategory header so the panel can render them in buckets.
-// Patterns match sahibinden's Turkish subheaders ("Güvenlik", "İç Donanım"…)
-// but the key — what gets displayed in the panel — is the English name.
-const EQUIPMENT_CATEGORY_PATTERNS = [
-  { key: "Safety",     re: /g[üu]venlik|safety/i },
-  { key: "Interior",   re: /i[çc]\s*donan[ıi]m|interior/i },
-  { key: "Exterior",   re: /d[ıi][şs]\s*donan[ıi]m|exterior/i },
-  { key: "Multimedia", re: /multimedya|multimedia|info\s*tainment/i },
-  { key: "Lighting",   re: /ayd[ıi]nlatma|lighting/i },
-];
+// A declared term matches when it appears in the folded haystack. Substring
+// rather than word-boundary on purpose: "Motor Kaputu" has to match "kaput",
+// and an agglutinative language's suffixes are exactly what a word boundary
+// would refuse.
+function matchesAnyTerm(haystack, terms) {
+  const folded = foldTerm(haystack);
+  if (!folded) return false;
+  return (terms || []).some((term) => {
+    const needle = foldTerm(term);
+    return needle && folded.includes(needle);
+  });
+}
 
-function _classifyEquipmentHeader(text) {
-  if (!text) return null;
-  for (const { key, re } of EQUIPMENT_CATEGORY_PATTERNS) {
-    if (re.test(text)) return key;
+function _stateOfHeader(headerText, states) {
+  // Array order is precedence, and it has to be: "lokal boyalı" contains
+  // "boyalı", so a narrower heading is only reachable if it is tested first.
+  for (const state of states || []) {
+    if (matchesAnyTerm(headerText, state.header_terms)) return state.key;
   }
   return null;
 }
 
-function _findEquipmentCategory(node) {
+function _headerTextOf(block, headerSelector) {
+  const headEl = headerSelector ? block.querySelector(headerSelector) : null;
+  const explicit = cleanText(headEl?.textContent);
+  if (explicit) return explicit;
+  // Fall back to the first non-empty line of textContent — splitting on the
+  // first newline hits a blank leading line on the real DOM.
+  for (const line of (block.textContent || "").split(/\n+/)) {
+    const trimmed = line.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
+
+function _readMeasures(panel) {
+  const out = {};
+  for (const measure of panel.measures || []) {
+    if (!measure || !measure.key) continue;
+    const sources = [];
+    for (const selector of measure.selectors || []) {
+      document.querySelectorAll(selector).forEach((n) => sources.push(cleanText(n.textContent)));
+    }
+    for (const selector of measure.text_selectors || []) {
+      const node = document.querySelector(selector);
+      if (node) sources.push(cleanText(node.textContent));
+    }
+    const currencies = measure.currencies || {};
+    // Built from the declared table rather than hardcoded, so a pack for a
+    // market that writes its prices differently needs no edit here. The
+    // symbols are escaped because "$" is a declared key and a regex operator.
+    const symbols = Object.keys(currencies)
+      .sort((a, b) => b.length - a.length)
+      .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    const terms = (measure.terms || [])
+      .map((t) => foldTerm(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s*"))
+      .join("|");
+    if (!terms || !symbols) continue;
+    const pattern = new RegExp(`(?:${terms})[\\s:]*([\\d.,]+)\\s*(${symbols})`, "i");
+    for (const text of sources) {
+      if (!text) continue;
+      const hit = foldTerm(text).match(pattern);
+      if (!hit) continue;
+      out[measure.key] = Number(hit[1].replace(/[.,]/g, ""));
+      if (measure.currency_key) {
+        out[measure.currency_key] =
+          currencies[hit[2].toLowerCase()] || measure.default_currency || null;
+      }
+      break;
+    }
+    if (!(measure.key in out)) {
+      out[measure.key] = null;
+      if (measure.currency_key) out[measure.currency_key] = null;
+    }
+  }
+  return out;
+}
+
+function extractDamageInfo(panel) {
+  const spec = panel || {};
+  const states = spec.states || [];
+  if (!states.length) return null;
+
+  const found = {};
+  for (const state of states) found[state.key] = new Set();
+  const limit = spec.max_item_length || 60;
+
+  for (const block of document.querySelectorAll(spec.block_selector || "")) {
+    const stateKey = _stateOfHeader(_headerTextOf(block, spec.header_selector), states);
+    if (!stateKey) continue;
+    block.querySelectorAll(spec.item_selector || "").forEach((node) => {
+      const name = cleanText(node.textContent);
+      if (name && name.length < limit) found[stateKey].add(name);
+    });
+  }
+
+  // Legacy fallback: only when the declared selectors above produced nothing,
+  // because a page that answers the modern markup must not also be read
+  // through a looser one.
+  const legacy = spec.legacy || {};
+  const empty = Object.values(found).every((set) => set.size === 0);
+  if (empty && legacy.node_selector) {
+    const legacyLimit = legacy.max_item_length || limit;
+    for (const node of document.querySelectorAll(legacy.node_selector)) {
+      const cls = node.className && typeof node.className === "string" ? node.className : "";
+      if (!cls) continue;
+      let stateKey = null;
+      for (const state of states) {
+        if (matchesAnyTerm(cls, state.legacy_class_terms)) { stateKey = state.key; break; }
+      }
+      if (!stateKey) continue;
+      let name = null;
+      for (const attribute of legacy.name_attributes || []) {
+        name = cleanText(node.getAttribute(attribute));
+        if (name) break;
+      }
+      if (!name) name = cleanText(node.textContent);
+      if (name && name.length < legacyLimit) found[stateKey].add(name);
+    }
+  }
+
+  const damage = {};
+  for (const state of states) damage[state.key] = Array.from(found[state.key]).sort();
+  return { ...damage, ..._readMeasures(spec) };
+}
+
+function _categoryOfHeader(text, categories) {
+  for (const category of categories || []) {
+    if (matchesAnyTerm(text, category.terms)) return category.key;
+  }
+  return null;
+}
+
+function _findEquipmentCategory(node, spec) {
   // Walk up to the nearest container then back through previous siblings
-  // looking for a header that names a known sahibinden subcategory.
+  // looking for a heading that names one of the declared buckets.
   let walker = node;
   let hops = 0;
   while (walker && hops < 6) {
     let sib = walker.previousElementSibling;
     while (sib) {
       if (/^H[1-6]$/.test(sib.tagName) || /title|head|category|subhead/i.test(sib.className || "")) {
-        const hit = _classifyEquipmentHeader(cleanText(sib.textContent));
+        const hit = _categoryOfHeader(cleanText(sib.textContent), spec.categories);
         if (hit) return hit;
       }
       const inner = sib.querySelector?.("h2, h3, h4, h5, h6, .title, .head, .category");
       if (inner) {
-        const hit = _classifyEquipmentHeader(cleanText(inner.textContent));
+        const hit = _categoryOfHeader(cleanText(inner.textContent), spec.categories);
         if (hit) return hit;
       }
       sib = sib.previousElementSibling;
@@ -318,46 +348,50 @@ function _findEquipmentCategory(node) {
   return null;
 }
 
-function extractEquipment() {
-  const buckets = {};            // { category: Set<feature> }
+function extractEquipment(panel) {
+  const spec = (panel && panel.equipment) || {};
+  if (!spec.block_selector) return {};
+  const damageSpec = panel || {};
+  const buckets = {};
   const ensure = (key) => (buckets[key] = buckets[key] || new Set());
+  const fallback = spec.fallback_category || "Other";
+  const limit = spec.max_item_length || 60;
 
-  const blocks = document.querySelectorAll(
-    "#classifiedProperties, .classifiedProperties, " +
-    "[id*='Donanim'], [class*='Donanim'], " +
-    "[id*='donanim'], [class*='donanim'], " +
-    "[id*='Equipment'], [class*='Equipment']"
-  );
-  for (const block of blocks) {
-    block.querySelectorAll("li, span, div").forEach(node => {
-      // Skip nodes that are actually body-damage entries (sahibinden marks
-      // those with class "selected-damage" inside ".car-damage-info-list" —
-      // they get routed through extractDamageInfo() instead).
-      const cls = (node.className && typeof node.className === "string") ? node.className : "";
-      if (/selected\-damage/i.test(cls)) return;
-      if (node.closest && node.closest(".car-damage-info-list")) return;
-      if (!/selected/i.test(cls)) return;
-      if (/unselected|deselected|not\-selected/i.test(cls)) return;
-      const txt = cleanText(node.textContent);
-      if (!txt || txt.length <= 1 || txt.length >= 60) return;
-      const category = _findEquipmentCategory(node) || "Other";
-      ensure(category).add(txt);
+  const isSelected = (cls) =>
+    matchesAnyTerm(cls, spec.selected_class_terms) &&
+    !matchesAnyTerm(cls, spec.unselected_class_terms);
+
+  for (const block of document.querySelectorAll(spec.block_selector)) {
+    block.querySelectorAll(spec.item_selector || "li").forEach((node) => {
+      // Skip nodes that are actually damage entries — they belong to the
+      // silhouette above and are read there instead.
+      if (damageSpec.item_selector && node.matches?.(damageSpec.item_selector)) return;
+      if (damageSpec.block_selector && node.closest?.(damageSpec.block_selector)) return;
+      const cls = node.className && typeof node.className === "string" ? node.className : "";
+      if (!isSelected(cls)) return;
+      const text = cleanText(node.textContent);
+      if (!text || text.length <= 1 || text.length >= limit) return;
+      ensure(_findEquipmentCategory(node, spec) || fallback).add(text);
     });
   }
 
-  // Fallback: header-walk for pages without [class*='donanim'] containers.
-  if (Object.keys(buckets).length === 0) {
-    const headers = Array.from(document.querySelectorAll("h2, h3, h4, .title")).filter(
-      h => /donan[ıi]m/i.test(h.textContent || "") || _classifyEquipmentHeader(h.textContent || "")
+  // Fallback: header-walk for pages with no recognised container.
+  if (Object.keys(buckets).length === 0 && spec.header_selector) {
+    const headers = Array.from(document.querySelectorAll(spec.header_selector)).filter(
+      (h) =>
+        matchesAnyTerm(h.textContent || "", spec.section_terms) ||
+        _categoryOfHeader(h.textContent || "", spec.categories)
     );
     for (const head of headers) {
-      const category = _classifyEquipmentHeader(head.textContent) || "Other";
+      const category = _categoryOfHeader(cleanText(head.textContent), spec.categories) || fallback;
       let cursor = head.nextElementSibling;
       let hops = 0;
       while (cursor && hops < 4) {
-        cursor.querySelectorAll("li.selected, li[class*='selected']").forEach(li => {
-          const t = cleanText(li.textContent);
-          if (t && t.length < 60) ensure(category).add(t);
+        cursor.querySelectorAll(spec.item_selector || "li").forEach((node) => {
+          const cls = node.className && typeof node.className === "string" ? node.className : "";
+          if (!isSelected(cls)) return;
+          const text = cleanText(node.textContent);
+          if (text && text.length < limit) ensure(category).add(text);
         });
         if (ensure(category).size > 0) break;
         cursor = cursor.nextElementSibling;
@@ -367,8 +401,8 @@ function extractEquipment() {
   }
 
   const grouped = {};
-  for (const [cat, set] of Object.entries(buckets)) {
-    grouped[cat] = Array.from(set).sort();
+  for (const [category, set] of Object.entries(buckets)) {
+    grouped[category] = Array.from(set).sort();
   }
   return grouped;
 }
@@ -386,7 +420,7 @@ const DESCRIPTION_SELECTORS = [
 // no interpretation. `listing` is what stays here — the panel renders the
 // damage and equipment panels locally, and the engine has no rule for them,
 // so there is no reason to send them anywhere.
-function buildScrape(knownLabels) {
+function buildScrape(knownLabels, panel) {
   const infoList = extractInfoList(knownLabels);
   const technical = extractTechnicalDetails();
 
@@ -407,9 +441,44 @@ function buildScrape(knownLabels) {
     description,
     fields,
     listing: {
-      damage_info: extractDamageInfo(),
-      equipment: extractEquipment(),
+      damage_info: extractDamageInfo(panel),
+      equipment: extractEquipment(panel),
+      // The titles, tones, hints and alert rules the panel prints for the two
+      // blocks above. They ride with the data they describe, and `listing` is
+      // the half of the scrape that never goes on the wire — so the pack's
+      // presentation rules reach the renderer without reaching the engine,
+      // which has no rule for any of this and should not acquire one.
+      panel: presentationOf(panel),
     },
+  };
+}
+
+// What the renderer needs and nothing else. Selectors are markup knowledge
+// that has already been spent by the time the scrape returns, and passing them
+// on would invite a second reader of the DOM in the panel.
+function presentationOf(panel) {
+  const spec = panel || {};
+  return {
+    states: (spec.states || []).map((state) => ({
+      key: state.key,
+      title: state.title || null,
+      tone: state.tone || "neutral",
+      hint: state.hint || null,
+    })),
+    measures: (spec.measures || []).map((measure) => ({
+      key: measure.key,
+      currency_key: measure.currency_key || null,
+      default_currency: measure.default_currency || null,
+      title: measure.title || null,
+      tone: measure.tone || "neutral",
+      hint: measure.hint || null,
+    })),
+    sides: spec.sides || [],
+    alerts: spec.alerts || [],
+    // Only the bucket name, not the equipment selectors: the renderer needs a
+    // label for a legacy cached entry that arrived as a bare list, and has no
+    // business reading the page again.
+    equipment: { fallback_category: (spec.equipment || {}).fallback_category || null },
   };
 }
 
@@ -417,7 +486,7 @@ function buildScrape(knownLabels) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_SCRAPE") {
-    sendResponse({ ok: true, payload: buildScrape(request.labels) });
+    sendResponse({ ok: true, payload: buildScrape(request.labels, request.panel) });
     return;
   }
 

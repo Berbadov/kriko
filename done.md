@@ -6,6 +6,67 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The client stops speaking the site's language (B88)
+
+Branch `local-panel` (`97a7c4f`). `extension/hover_lite/hover_lite.js` held
+hardcoded Turkish part-name regexes and alert thresholds; `extension/content.js`
+held the damage-state words and the equipment categories. I had flagged it twice
+without fixing it. It is `_MAKE_MAP` one language further out, in the one part of
+the tree no Python AST gate can read — and no test scanned `extension/` for
+vocabulary at all.
+
+**The words come off the pack now.** `packs/cars/adapters/sahibinden.json`
+declares a `local_panel` block: block/item selectors, the site's own words for
+each damage state, the English titles/tones/hints the panel prints, the
+equipment categories, a `measures` entry with its own currency table, and 11
+alert rules with their thresholds. `kriko.adapters.local_panel()` returns it
+**opaque** — validating its shape in the engine would mean writing that shape
+down in the engine, which is the same mistake as writing the words down in the
+browser — and `GET /api/adapters` carries it to the client, `{}` for an adapter
+that declares none.
+
+**It stays data because a pack shipping code would be a page-wide grant.** No
+`RegExp` is built from a pack-supplied pattern, only from declared *terms* with
+metacharacters escaped (`$` is both a declared currency key and an operator).
+Two format rules earn their keep: array order is precedence, because
+"lokal boyalı" contains "boyalı" and the narrower state must be declared first;
+and `unless: [<rule-id>]` is an else-branch written as data, which bought the
+one bit of control flow the alerts needed without giving the format boolean
+expressions.
+
+**The presentation rides in `listing.panel`** — the half of the scrape that
+`background.js` documents as never going on the wire. So the pack's titles and
+thresholds reach the renderer without reaching the engine, which has no rule
+for any of this and should not acquire one.
+
+**The rewrite passed the pre-existing suite 12/12 after one plumbing fix**, and
+that is the finding. The old test asserted only that `damage_info` was *truthy*
+— which the hardcoded version, the declarative version, and a version reading
+nothing at all all satisfy. `extension/tests/local_panel.test.js` is 15 tests
+that assert values, reading the *shipped* adapter rather than a copy, because a
+test carrying its own copy of the rules cannot notice the shipped ones going
+stale.
+
+**Two gates, so the next one fails the suite.**
+`test_the_extension_speaks_no_sites_own_language` strips comments and lone
+delimited non-ASCII characters (a character fold — both `foldTerm`s need one)
+and flags any remaining non-ASCII *letter*: a character is a fold, a word is
+vocabulary. It is what found the last hardcoded Turkish word, `"Donanım"` as a
+fallback bucket label at `hover_lite.js:142`, which no test had caught.
+`test_the_shipped_panel_declares_what_the_interpreter_reads` derives the
+honoured key set from the interpreter's source via `rule\.(\w+)` and asserts
+set equality both ways — a hand-listed set survived mutation testing, this one
+does not. Its docstring says plainly what it cannot see (a present-but-dead
+branch) and where that is caught instead.
+
+Also fixed here: `docs/INTERNALS.md`'s request-path steps 1, 2 and 6 still
+described `extractSahibindenMetadata()` and `mapTurkishKeys()`, neither of
+which has existed since Phase 6c. A doc that says the Turkish map belongs in
+the client is worse than no doc. Steps 3–5b of that section remain pre-pivot
+and are still wrong; out of scope here.
+
+---
+
 ### 2026-09-09 — Building knowledge, as a system rather than a possibility (B86)
 
 Branch `knowledge-building` (`0ab613d`, `b945408`). The reader looked at 0.5.1

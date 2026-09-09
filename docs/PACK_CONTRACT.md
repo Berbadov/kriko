@@ -79,7 +79,22 @@ mature pack needs; a pack that doesn't need it doesn't carry it.
   none — its data is synthetic, so there's nothing to weigh.
 - **`adapters/`** — site-specific scraping/extraction rules, for a pack whose
   pipeline reads live listings from named sites. Present in
-  `packs/cars/adapters/`; drill has none.
+  `packs/cars/adapters/`; drill has none. An adapter maps the page's own
+  labels onto identity and context keys (`identity`, `context`, `derive`,
+  `ignore_labels`), and may also declare a **`local_panel`**: the selectors,
+  the site's own words, the English titles and hints, and the alert thresholds
+  for blocks the client renders from the page itself rather than from the
+  engine's answer — the cars pack uses it for a body-damage silhouette and an
+  equipment list. `GET /api/adapters` hands it to the client verbatim; the
+  engine never inspects it, and an adapter that declares none gets `{}`.
+
+  **All of it is data, and that is a security boundary.** A pack may not ship
+  JavaScript, a regex, or any other executable string, here or anywhere:
+  installing a pack would then mean granting its author the ability to run
+  code on every page the client can see. The format is a fixed vocabulary of
+  term lists, selectors and numbers, interpreted by `kriko/adapters.py` and by
+  the extension. Anything it cannot express is a reason to extend those two —
+  in review, once — never to open that door.
 - **`build.py`** — a custom builder, when the engine's generic build step
   isn't enough to turn a pack's data into an installable artifact. Present as
   `packs/cars/build.py`; drill relies on the generic path.
