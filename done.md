@@ -46,10 +46,50 @@ bundle before app smoke. Steps guarded to the linux/macos legs are skipped by
 reading their `if:`, never by an allow-list of windows steps — an allow-list
 would drop a new step, which is the drift being checked for.
 
-What this does not do: produce an installer from this machine. It cannot —
-that needs Windows. It removes the *runner* from the critical path, not the OS.
+**Then it was run, and it was wrong three times.** The script was written,
+gated, reviewed and merged without ever executing — and it did not survive
+first contact. This box is WSL2, so the Windows host *is* reachable from here
+(`/mnt/c` plus binfmt interop), which turned "produce an installer from this
+machine" from impossible into four builds. Each defect got the gate that was
+absent, and each gate was confirmed to fail on the code that shipped it:
 
-Gate: pytest 1021 passed / 1 skipped locally; CI unavailable (quota).
+1. **The script would not parse.** Six cascading errors, at lines that were all
+   wrong. Windows PowerShell 5.1 decodes a BOM-less `.ps1` with the system ANSI
+   codepage, not UTF-8; this machine is codepage 1254, so one em-dash in a
+   comment became three bytes, one of them a quote — and the failure surfaced
+   in the *next* string literal. `.ps1` files are now ASCII-only, checked over
+   `git ls-files '*.ps1'` (a worktree glob reaches `.venv/`, which nobody here
+   can fix). A BOM would also work and is invisible in a diff, so the next
+   person writes the same bug; ASCII is visible.
+2. **`--version ""` reached argparse as a bare `--version`,** exit 2, nine
+   minutes into build 2. PowerShell *drops* an empty-string argument on its way
+   to a native command; `pwsh` 7.3+ has `$PSNativeCommandArgumentPassing` and
+   5.1 has nothing. Fixed by expressing "empty" as *absence of the flag*, which
+   both shells agree on — the argument list is built as an array and `--version`
+   is appended only when there is one. `-Repo` is derived from
+   `git remote get-url origin` for the same reason CI passes it: a fork's build
+   should point at the fork's releases. The gate rejects any empty-string
+   argument to a native command, skipping Verb-Noun cmdlets (where the elision
+   does not apply) by PowerShell's own naming convention rather than a name list.
+3. **`[WinError 5] Access is denied`** overwriting `dist/kriko-sidecar.exe` on
+   build 3. `smoke_sidecar.py` ended the sidecar with a bare `terminate()`, and
+   PyInstaller onefile re-execs — the pid you spawn is a bootloader whose
+   *child* holds the `.exe` mapped. The orphan then owns the file the next build
+   must write. `tauri/` has tree-killed since v0.2.x and `smoke_app.py` does
+   too; `smoke_sidecar.py` was the third caller and the one that got it wrong.
+   New `end()` helper does `taskkill /T /F /PID` — by pid tree, never by image
+   name, because `/IM kriko-sidecar.exe` would also kill an installed Kriko the
+   person at the keyboard is using. Gated over every `packaging/*.py` that
+   calls `Popen`.
+
+**Why no gate caught any of these.** A GitHub runner is destroyed after the
+job, so an orphan holding a file has nothing left to break; and a UTF-8-clean
+bash shell hides both PowerShell defects entirely. All three need the build to
+run twice on one machine that a person also uses — which is the entire premise
+of B81, and was the one configuration CI structurally cannot be.
+
+Gate: pytest 1027 passed / 6 skipped locally; CI unavailable (quota). The
+installer itself is the other gate, and it is the one that matters.
 
 ---
 
