@@ -1,7 +1,8 @@
 """The unattended run, and the way back out of one.
 
-Three surfaces, and the third is the reason the other two are allowed to exist:
+Four surfaces, and the third is the reason the first two are allowed to exist:
 
+* `GET /api/research-planes` says which planes exist and what each one costs.
 * `POST /api/agenda/run` walks the agenda without being told what to research.
 * `GET /api/research-runs` says what each run cost and what it added.
 * `DELETE /api/research-runs/{id}` takes a run's claims back out.
@@ -16,10 +17,62 @@ landed before the loop that needs it, and both live here rather than in
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app import keys
 from app.web import state
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["research"])
+
+
+#: What each plane is for, in the reader's terms. The engine's `cost_basis`
+#: is accurate and says nothing — "per_token" is not an answer to "what will
+#: this cost me" — so the sentence lives here, where the interface's words
+#: belong, beside the machine-readable value rather than instead of it.
+PLANE_WORDS = {
+    "agent": (
+        "Your coding agent does the reading, through the MCP server. Costs "
+        "nothing beyond the subscription you already pay for, and needs a "
+        "harness connected on the Wiring tab."
+    ),
+    "api": (
+        "Kriko searches and reads by itself, unattended. Costs money per run, "
+        "capped by a budget you set, and needs both keys below."
+    ),
+}
+
+
+@router.get("/research-planes")
+def list_planes() -> dict:
+    """The two ways knowledge gets built, and whether each one can run now.
+
+    Read off the researcher classes rather than restated in the frontend, for
+    the same reason `/api/pipeline/runs` hands over its stage labels: a second
+    copy of a vocabulary is a second place to forget when it changes. What the
+    interface adds is the sentence and the readiness — `cost_basis` is the
+    engine's word and the reader's question is "can I press this".
+
+    Returns no key and no hint. `/api/keys` is the only surface that describes
+    what is stored, and even that one returns only a masked tail.
+    """
+    from kriko.research import AgentResearcher, ApiResearcher
+
+    ready = keys.ready()
+    planes = []
+    for cls in (AgentResearcher, ApiResearcher):
+        planes.append(
+            {
+                "id": cls.name,
+                "cost_basis": cls.cost_basis,
+                "what": PLANE_WORDS.get(cls.name, ""),
+                # The agent plane's readiness is a *harness* question, which
+                # `/api/agent-targets` already answers and this must not
+                # second-guess; only the paid plane has a prerequisite this
+                # router can see.
+                "ready": ready if cls.name == "api" else True,
+                "needs_keys": cls.name == "api",
+            }
+        )
+    return {"planes": planes}
 
 
 class AgendaRunRequest(BaseModel):

@@ -364,13 +364,19 @@ def test_a_run_with_nothing_left_is_not_offered_an_undo(tmp_path):
         assert body["removed"] == 1
 
 
-def test_the_provenance_row_names_the_model_and_what_it_spent(tmp_path):
-    """"Researched by an LLM" is not a provenance record; a model name is one."""
+def test_the_provenance_row_names_the_llm_and_what_it_spent(tmp_path):
+    """"Researched by an LLM" is not a provenance record; a name is one.
+
+    `llm` on the wire where the column is `model` — see the comment in
+    `state._research_run`: `model` is a car identity key and the frontend gate
+    bans it, so the interface uses the word no pack can claim.
+    """
     _run_with_claims(tmp_path, [("c1", "One")])
     with TestClient(create_app(_settings(tmp_path))) as client:
         run = client.get("/api/research-runs").json()["runs"][0]
     assert run["plane"] == "api"
-    assert run["model"] == "a-model"
+    assert run["llm"] == "a-model"
+    assert "model" not in run, "the column name reached the wire"
     assert run["search_provider"] == "exa"
     assert run["spent_usd"] == 0.11
     assert run["budget_usd"] == 0.2

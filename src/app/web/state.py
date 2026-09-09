@@ -1405,7 +1405,14 @@ def _research_run(row: sqlite3.Row) -> dict:
         "run_id": row["run_id"],
         "job_id": row["job_id"] or "",
         "plane": row["plane"],
-        "model": row["model"],
+        # `llm` on the wire, `model` in the column. Not a whim: `model` is a
+        # car identity key, and `test_ui_contains_no_pack_vocabulary` bans
+        # every pack identity word from `ui/src` — correctly, because a
+        # literal key name in the frontend is the scalability bug in a
+        # language the AST test cannot read. The collision is real rather
+        # than incidental (a car has a model; so does a completion API), so
+        # the interface uses the word no pack can claim.
+        "llm": row["model"],
         "search_provider": row["search_provider"],
         "budget_usd": row["budget_usd"],
         "spent_usd": row["spent_usd"],

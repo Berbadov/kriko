@@ -311,6 +311,16 @@ settings screen that can read a key back is one that can leak it into a
 screenshot or a support log, and replacing a key you cannot see costs one
 paste.
 
+**`GET /api/research-planes`** (`routers/research.py`) — the two ways an
+installation grows its own knowledge, read off `AgentResearcher` and
+`ApiResearcher` rather than restated in the frontend, for the reason
+`/api/pipeline/runs` ships its stage labels: a second copy of a vocabulary is
+a second place to forget when a third plane arrives. It adds two things the
+engine does not own — a sentence in the reader's terms, because `per_token` is
+not an answer to "what will this cost me", and `ready`, which is the paid
+plane's key check and nothing else (the agent plane's readiness is a harness
+question `/api/agent-targets` already answers). Returns no key and no hint.
+
 **`POST /api/agenda/run`, `GET /api/research-runs`,
 `GET|DELETE /api/research-runs/{id}`** (`routers/research.py`) — the
 unattended run and the way back out of it. `agenda_run` walks `/api/agenda`'s
@@ -357,7 +367,7 @@ Every table, and the question it answers:
 | `submissions` | What came in through the agent door and what the gate did with it — the only place a refusal is legible. |
 | `fact_checks` | The last answer to "does the cited page still say this", per (pack, claim). A reader's fetch of someone else's web page: it cannot move a `content_digest`, must not travel to the next install, and a dead link is a signal here rather than a retraction in the pack. |
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
-| `research_runs` | One row per research run: the plane, the model and search provider by name, the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
+| `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
 | `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
