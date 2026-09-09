@@ -6,6 +6,66 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — The engine outlives the window, and the three defects a reader could see (B83, B84, B85)
+
+Branch `agents-and-tray`. Three things the reader reported from a screenshot of
+0.5.1 running, and the one that was architectural came with an approval gate
+before any code.
+
+**B83 — the engine keeps serving after the window closes** (`85c0ced`). Closing
+the window killed the sidecar, so the browser extension was dead in the one
+situation it exists for: the reader is on a listing page, not in the app. The X
+button now hides and a tray icon owns the process. This inverts an invariant
+CLAUDE.md documents and four tests enforced, so the trade is held together by
+twelve gates in `test_the_shell_runs_in_the_tray.py`, all mutation-verified:
+the tray is built in `setup` with `?` (a shell that cannot show one refuses to
+start rather than trapping the reader), it has a Quit, Quit calls `kill_engine`
+*before* `app.exit`, `RunEvent::Exit` still kills, and `installer.nsh` stops
+`Kriko.exe` before `kriko-sidecar.exe` in both hooks. That last file used to be
+a fallback for a rare leak; now that a reader can leave Kriko in the tray for
+days it is the normal path. **Unverified on hardware** — no Rust toolchain
+touches this tree and `desktop.yml` has no credits, so nobody has seen the tray
+yet; that needs a 0.5.2 hand build on the Windows host.
+
+**B84 — the rail marker and the stray scrollbars** (`2f9a995`). The yellow
+active-tab bar was a JS-measured element that re-measured on navigation only,
+and its three real drift sources are not navigations: `font-display: swap`
+means first paint measures fallback metrics, the `max-height: 820px` breakpoint
+changes row height, and `.rail-nav` scrolls independently of routing. jsdom
+sees none of it, which is how 391 tests passed while the bug shipped. The
+mechanism is deleted in favour of `.nav-link.active::before`, laid out by the
+browser's ordinary pass. The white blocks under the gray line were
+*document*-level scrollbars: `.shell` clips its own overflow but nothing told
+`html`/`body` they could not scroll, which a WebView2 that cannot parse `dvh`
+or a DPI rounding difference is enough to expose.
+
+**B85 — "Add the extension" stops asking readers who already did** (`69a1789`).
+The bar keyed off `connected`, a liveness badge that goes stale after a few
+quiet hours; "was this ever set up" is a different question and the router now
+answers it with `ever_connected`. "Not now" also lived in component state, so
+dismissal was forgotten on every launch — it is a row in `app.sqlite` now,
+keyed by step id so declining one suggestion does not silence a later one.
+
+**B87 — the one click opens a listing, not a copy of the app.** The reader:
+"open with extension just opens the app interface in the web browser, exact
+copy of the standalone app. I originally meant the hovering web extension."
+Exactly right — `POST /api/extension/launch` handed the new browser this app's
+own `/#/extension` page as its landing URL, chosen so the check-in
+confirmation would be the first thing they saw. On that page the extension is
+invisible by construction: it matches listing sites, and that is not one. It
+now lands on a site an installed pack can read, taken off the adapter rows so
+the app names no site itself, and the confirmation stays where the reader
+already is — the status card on the Extension screen polls. With no pack
+installed there is no such site and the app screen remains the fallback,
+which is the one case the old behaviour was right for.
+
+The fourth item the reader raised — that they still cannot see how to build
+knowledge with their agents — is a design, not a fix: `81c145a`,
+`docs/superpowers/specs/2026-09-09-knowledge-building-design.md`, unimplemented
+and awaiting their review.
+
+---
+
 ### 2026-09-09 — An installer built with no runner, and two defects in the build's own reporting (B52)
 
 Branch `b52-installer-report`. `Kriko_0.5.1_x64-setup.exe` (22.6 MB) exists,

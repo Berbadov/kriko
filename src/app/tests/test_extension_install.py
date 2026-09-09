@@ -94,6 +94,46 @@ def test_an_extension_origin_is_recorded_as_evidence_it_is_running(tmp_path):
     assert [row["origin"] for row in body["sightings"]] == ["chrome-extension://abcdefg"]
 
 
+def test_a_stale_sighting_still_counts_as_ever_installed(tmp_path):
+    """B85: `connected` is a live badge, not an install record.
+
+    A reader who has not opened a listing in the last FRESH_SECENDS goes
+    stale on the badge — correctly, that badge is about right now. But an
+    onboarding hint keyed on the same field would tell someone whose history
+    is full of extension-sourced answers to go add the extension again.
+    `ever_connected` is the field that must not go false just because nobody
+    has browsed a listing recently: it looks at whether a sighting exists at
+    all, never at its age.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from app.web import state
+    from app.web.routers.extension import FRESH_SECONDS
+
+    client = _client(tmp_path)
+    client.get("/api/health", headers={"origin": "chrome-extension://abcdefg"})
+
+    # Back-date the sighting past the freshness window without touching the
+    # sightings row's existence — the thing `ever_connected` must survive.
+    conn = state.connect(tmp_path / "app.sqlite")
+    old = (
+        datetime.now(timezone.utc) - timedelta(seconds=FRESH_SECONDS + 60)
+    ).isoformat()
+    conn.execute("UPDATE extension_seen SET last_at = ?", (old,))
+    conn.commit()
+    conn.close()
+
+    body = client.get("/api/extension").json()
+    assert body["connected"] is False
+    assert body["ever_connected"] is True
+
+
+def test_never_seen_is_not_ever_connected(tmp_path):
+    """The other half: no sighting at all must still read as never installed,
+    or the onboarding hint would never offer to add the extension."""
+    assert _client(tmp_path).get("/api/extension").json()["ever_connected"] is False
+
+
 def test_two_browser_profiles_are_two_rows(tmp_path):
     """Each install gets its own id, and "which of my browsers is wired up"
     is the question that follows the first one."""

@@ -21,14 +21,33 @@ const SHEETS = import.meta.glob("./**/*.css", {
 }) as Record<string, string>;
 
 const CSS = SHEETS["./components.css"];
+const BASE = SHEETS["./base.css"];
 
-/** The declarations inside the first `selector { ... }` block, flattened. */
-function block(selector: string): string {
-    const at = CSS.indexOf(`\n${selector} {`);
+const COMPONENTS = import.meta.glob("../lib/shell/*.svelte", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+}) as Record<string, string>;
+
+/** The declarations inside the first `selector { ... }` block, flattened.
+ *  Reads `components.css` unless a different sheet is passed in. */
+function block(selector: string, sheet: string = CSS): string {
+    const at = sheet.indexOf(`\n${selector} {`);
     expect(at, `no rule for \`${selector}\` — has it been renamed?`).toBeGreaterThan(-1);
-    const open = CSS.indexOf("{", at);
-    const close = CSS.indexOf("\n}", open);
-    return CSS.slice(open + 1, close);
+    const open = sheet.indexOf("{", at);
+    const close = sheet.indexOf("\n}", open);
+    return sheet.slice(open + 1, close);
+}
+
+/** Same idea, for a rule reached by a multi-selector list (`.a,\n.b {`)
+ *  rather than a single selector `block()` can find by its own opening line —
+ *  found by any substring unique to the rule's selector list instead. */
+function ruleContaining(fragment: string, sheet: string = CSS): string {
+    const at = sheet.indexOf(fragment);
+    expect(at, `no rule containing \`${fragment}\` — has it been renamed?`).toBeGreaterThan(-1);
+    const open = sheet.indexOf("{", at);
+    const close = sheet.indexOf("\n}", open);
+    return sheet.slice(open + 1, close);
 }
 
 describe("the rail", () => {
@@ -66,8 +85,48 @@ describe("the rail", () => {
         const at = CSS.indexOf("prefers-reduced-motion");
         expect(at).toBeGreaterThan(-1);
         const reduced = CSS.slice(at);
-        expect(reduced).toMatch(/\.nav-mark\s*\{\s*transition:\s*none/);
         expect(reduced).toMatch(/\.nav-slot\s*\{\s*animation:\s*none/);
+    });
+});
+
+/* The active-row bar used to be a second element Sidebar.svelte positioned in
+ * JS from a measured DOM rect (`rowFor(...).offsetTop`, applied after
+ * `tick()`). That measurement was only ever retaken on navigation, so it went
+ * stale for every reason a row's on-screen position can change *without* a
+ * navigation — a fallback font swapping in (`font-display: swap` in
+ * fonts.css deliberately does not block first paint), the `(max-height:
+ * 820px)` breakpoint changing `.nav-link` padding, `.rail-nav` scrolling on
+ * its own. None of those are things jsdom's layout-free renderer can see —
+ * which is exactly why the bug survived a full render-test suite — so, as
+ * above, this is asserted against the stylesheet and the component source
+ * rather than a rendered box.
+ *
+ * The fix removes the measurement rather than patching it: `.nav-link.active`
+ * draws its own bar with `::before`, positioned by the row's own box, so the
+ * browser's ordinary layout pass keeps it correct through every case above
+ * with nothing left here to go stale.
+ */
+describe("the active-row indicator", () => {
+    it("is a bar the active row draws for itself, not a rect placed by JS", () => {
+        const rules = block(".nav-link.active::before");
+        expect(rules).toMatch(/position:\s*absolute/);
+        expect(rules).toMatch(/background:\s*var\(--accent\)/);
+        // `.nav-link` has to be the positioning context, or the bar is
+        // absolute against whatever ancestor the cascade hands it instead.
+        expect(block(".nav-link")).toMatch(/position:\s*relative/);
+    });
+
+    it("has nothing left in Sidebar.svelte to re-measure and go stale", () => {
+        const path = Object.keys(COMPONENTS).find((p) => p.endsWith("Sidebar.svelte"));
+        expect(path, "Sidebar.svelte not found by the glob").toBeTruthy();
+        // Block comments stripped first: this file's own history of the bug
+        // names `offsetTop` in prose (see above), and a comment recalling the
+        // mechanism is not the mechanism coming back.
+        const source = COMPONENTS[path as string].replace(/\/\*[\s\S]*?\*\//g, "");
+        // A DOM rect read back into state is exactly the mechanism that
+        // shipped stale — if this reappears, so does the whole class of bug
+        // the CSS-only bar exists to remove.
+        expect(source).not.toMatch(/offsetTop|offsetHeight|getBoundingClientRect/);
     });
 });
 
@@ -91,8 +150,29 @@ describe("the work column", () => {
         // same scrollbar again by another route.
         expect(rules).toMatch(/height:\s*100dvh/);
         expect(rules).not.toMatch(/min-height:\s*100vh/);
+        // But bare `height: 100vh` still has to land *before* the `dvh`
+        // line: it is the fallback for a WebView2 runtime old enough not to
+        // parse `dvh` at all, which drops the whole declaration and keeps
+        // whichever `height` came before it. Without this, that runtime's
+        // `.shell` has no `height` at all — `auto`, sized by its content,
+        // and taller than the window is a document-level scrollbar again.
+        expect(rules).toMatch(/height:\s*100vh;\s*\n\s*height:\s*100dvh/);
         // The belt: nothing outside the two scrollers may ever scroll.
         expect(rules).toMatch(/overflow:\s*clip/);
+    });
+
+    it("cannot show a document scrollbar even if .shell's own height is a hair off", () => {
+        // `.shell` clips its own overflow; it says nothing about `html` or
+        // `body`. A `dvh` that is a fraction of a device pixel taller than
+        // the true client area — plausible from nothing but a display's DPI
+        // scaling — is invisible to `.shell`'s own rule and shows up as the
+        // OS's own scrollbar around the whole window unless the document
+        // itself is also told it may not scroll.
+        expect(BASE?.length ?? 0).toBeGreaterThan(50);
+        const html = block("html", BASE);
+        const body = block("body", BASE);
+        expect(html).toMatch(/overflow:\s*hidden/);
+        expect(body).toMatch(/overflow:\s*hidden/);
     });
 
     it("scrolls the work column itself", () => {
@@ -114,6 +194,20 @@ describe("the work column", () => {
         // window is a scrollbar floating in the middle of the screen.
         expect(block(".work")).not.toMatch(/max-width:\s*1100px/);
         expect(block(".view")).toMatch(/max-width:\s*1100px/);
+    });
+
+    it("gives the work column the design system's own scrollbar, not the OS's", () => {
+        // Both property forms are required, not either: `scrollbar-color` is
+        // what a modern engine reads, `::-webkit-scrollbar-thumb` is what a
+        // Chromium old enough not to support that property reads instead —
+        // and a WebView2 runtime behind on updates is exactly that engine.
+        // Leaving either one out means the "Windows 95" bar is still one
+        // engine version away from coming back.
+        const rules = ruleContaining(".work,\n.log,\n.table-scroll {");
+        expect(rules).toMatch(/scrollbar-width:\s*thin/);
+        expect(rules).toMatch(/scrollbar-color:\s*var\(--line\)/);
+        const thumb = ruleContaining(".work::-webkit-scrollbar-thumb,");
+        expect(thumb).toMatch(/background:\s*var\(--line\)/);
     });
 
     it("undoes both scrollers on paper", () => {

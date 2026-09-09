@@ -894,6 +894,35 @@ user-local rustup and `cargo generate-lockfile` turned out to be the whole
 "needs a Rust toolchain" blocker). `B44` (LICENSE) is its own row under P2.
 
 
+### B83 — Closing the window killed the extension's engine — **Done 2026-09-09**
+Moved to `done.md` (`85c0ced`). The window hides, a tray icon owns the process,
+and `installer.nsh` became the primary way a running engine is stopped before
+an install. **Still unverified on hardware**: no Rust toolchain here and no CI
+credits, so the tray has never been seen. Needs a 0.5.2 hand build.
+
+### B84 — The rail marker drifted and the shell showed document scrollbars — **Done 2026-09-09**
+Moved to `done.md` (`2f9a995`). The measured marker is now pure CSS; `html` and
+`body` are pinned. Both defects were invisible to jsdom, which is the general
+lesson: a layout bug needs a stylesheet assertion, not a DOM test.
+
+### B85 — The install prompt kept asking readers who already installed — **Done 2026-09-09**
+Moved to `done.md` (`69a1789`). `ever_connected` instead of the liveness badge,
+and dismissal persisted per step id in `app.sqlite`.
+
+### B87 — The one click opened a second copy of the app — **Done 2026-09-09**
+Moved to `done.md`. The launched browser lands on a listing site read off the
+adapter rows, so the hover panel is what the reader sees; the app screen stays
+the fallback for an installation with no packs.
+
+### B86 — Building knowledge with an agent is not a system yet — **Open, designed**
+The reader looked at 0.5.1 and could not tell how they would build knowledge
+with their agents. Design committed (`81c145a`,
+`docs/superpowers/specs/2026-09-09-knowledge-building-design.md`): provider
+adapters so an OpenAI + Exa key is an alternative to the agent plane, a keys
+section writing `~/.kriko/env`, `agenda_run` as the unattended door, run
+provenance in `app.sqlite` so a run is reversible, and a product-identity
+skill per pack. Awaiting the reader's review before an implementation plan.
+
 ### B82 — The data pipeline still needs a person to aim it — **Done 2026-09-09**
 Moved to `done.md`. `app/agenda.py` ranks what to research next by what this
 installation was actually asked about, through three doors (`research_agenda`,

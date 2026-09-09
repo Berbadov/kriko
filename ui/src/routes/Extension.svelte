@@ -204,8 +204,9 @@
             <h3>One click</h3>
             <p class="meta">
                 Opens a new Chromium — Chrome, Chromium, Brave or Edge, whichever is on
-                this machine — with the extension already loaded, on this page, so the
-                Status above turns green in front of you.
+                this machine — with the extension already loaded, on a listing site your
+                packs can read. Open a listing there and Kriko's panel appears on the
+                page; the Status above turns green here while you do it.
             </p>
             <p>
                 <button class="primary" disabled={busy === "launch"} onclick={launch}>
@@ -219,9 +220,11 @@
                     <p class="state warn">{launched.error}</p>
                 {:else}
                     <p class="state">
-                        Started {launched.browser}. If the window opened and Status is
-                        still waiting, that browser declined the extension — the steps
-                        below are the install then.
+                        Started {launched.browser}{launched.landing
+                            ? ` on ${launched.landing}`
+                            : ""}. If the window opened and Status is still waiting, that
+                        browser declined the extension — the steps below are the install
+                        then.
                     </p>
                 {/if}
                 <p class="meta">{launched.note}</p>

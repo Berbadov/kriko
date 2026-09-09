@@ -4,8 +4,37 @@
     box-sizing: border-box;
 }
 
+/* The document itself may never scroll — only `.shell`'s own two panes may
+ * (components.css, `.rail-nav` and `.work`).
+ *
+ * `.shell` already asks for this with a `100dvh` frame and `overflow: clip`,
+ * and `chrome.test.ts` holds that declaration to account. But those rules
+ * only clip overflow *inside* `.shell` — they say nothing about `html` or
+ * `body`, and on Windows WebView2 that gap was reachable two ways: a `dvh`
+ * unit a shipped runtime does not parse leaves `height` invalid and `.shell`
+ * falls back to its content's height, taller than the window; or `.shell`'s
+ * computed height lands a fraction of a device pixel past the true client
+ * area, which needs nothing but a display's DPI scaling to happen and is not
+ * a bug `.shell`'s own rule can see. Either way the reader sees a classic,
+ * non-overlay scrollbar — arrows, white track and all — running down the
+ * *document's* edge, outside the app's own chrome entirely, because nothing
+ * before this told the document it was not allowed to have one.
+ *
+ * `height: 100%` plus `overflow: hidden` here is that belt: whatever `.shell`
+ * computes, the document itself has nothing left to scroll with. It is a
+ * backstop, not a fix for `.shell` — `.shell` still owns getting its own
+ * size right; this only guarantees that getting it slightly wrong never
+ * shows up as the OS's own scrollbar.
+ */
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
+    height: 100%;
     margin: 0;
+    overflow: hidden;
     background: var(--bg);
     color: var(--text);
     font: var(--t-base) / var(--lh-base) var(--font-sans);

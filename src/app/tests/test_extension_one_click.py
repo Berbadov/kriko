@@ -24,12 +24,15 @@ Two things make this honest rather than a trick:
   in the automation principle's sense.
 """
 
+import re
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app import extension
+from app.web.routers import extension as ext_router
 from app.web.app import create_app
 from app.web.settings import Settings
 
@@ -128,12 +131,13 @@ def test_the_launch_carries_the_extension_and_a_profile_of_its_own(tmp_path):
     assert "--no-default-browser-check" in argv
 
 
-def test_the_window_opens_on_the_page_that_explains_itself(tmp_path):
+def test_the_window_opens_on_a_page_rather_than_a_blank_tab(tmp_path):
     """A browser that opens on a blank tab has not told the reader anything.
 
-    It lands on this app's own extension screen — served by this process, so
-    it works offline — which is where the "it checked in" confirmation
-    appears. The proof of the install is the first thing they see.
+    This is the mechanism only — the argument reaches the command line.
+    *Which* page it should be is the endpoint's decision and is asserted at
+    the bottom of this file; it used to be this app's own screen, and that was
+    the defect.
     """
     spawned: list[list[str]] = []
     staged = _staged(tmp_path)
@@ -241,3 +245,71 @@ def test_the_browser_outlives_this_process_group(tmp_path):
 
     source = inspect.getsource(extension._spawn)
     assert "start_new_session" in source
+
+
+# ── where the window opens ───────────────────────────────────────────────
+#
+# The reader's report of the first version of this, verbatim: "open with
+# extension just opens the app interface in the web browser, exact copy of the
+# standalone app. I originally meant the hovering web extension." The landing
+# page was this app's own `/#/extension`, chosen so the check-in confirmation
+# would be the first thing they saw — and on that page the extension is, by
+# construction, invisible: it matches listing sites, and this is not one. So a
+# button whose entire purpose is "show me the thing in the browser" opened a
+# browser where the thing does nothing.
+#
+# It now lands on a site an installed pack can read, and the confirmation
+# stays where the reader already is: the status card on this screen polls.
+
+
+def _landed(client, monkeypatch, sites):
+    """The URL a launch put on the browser's command line."""
+    spawned: list[list[str]] = []
+    monkeypatch.setattr(extension, "find_chromium", lambda: "/usr/bin/chrome")
+    monkeypatch.setattr(extension, "_spawn", spawned.append)
+    monkeypatch.setattr(
+        ext_router, "load_adapters", lambda store: [{"site": s} for s in sites]
+    )
+    body = client.post("/api/extension/launch").json()
+    return body, spawned[0]
+
+
+def test_the_window_opens_where_the_extension_has_something_to_do(tmp_path, monkeypatch):
+    client = _client(tmp_path)
+    body, argv = _landed(client, monkeypatch, ["listings.example"])
+
+    assert body["landing"] == "https://listings.example/"
+    assert "https://listings.example/" in argv
+    # The defect itself: a browser opened on a second copy of this app.
+    assert not any("#/extension" in arg for arg in argv)
+
+
+@pytest.mark.parametrize("site", ["listings.example", "second-site.example"])
+def test_the_landing_page_is_pack_data(site, tmp_path, monkeypatch):
+    """Which listing sites exist is a pack's business, not the app's.
+
+    An app that hardcoded one would have to be edited to ship a second
+    category, which is the layering rule this whole codebase is arranged
+    around. So the site is read off the adapter rows, and this asserts both
+    halves: the value follows the data, and the router names no site itself.
+    """
+    body, _ = _landed(_client(tmp_path), monkeypatch, [site])
+    assert body["landing"] == f"https://{site}/"
+
+    source = Path(ext_router.__file__).read_text(encoding="utf-8")
+    assert not re.search(r"https?://[a-z0-9.-]+\.(com|net|org|tr)", source), (
+        "a site named in the router is a category the engine knows about"
+    )
+
+
+def test_with_no_pack_installed_the_app_screen_is_the_fallback(tmp_path, monkeypatch):
+    """There is no listing site to open, and a blank tab explains nothing.
+
+    This is the one case the old behaviour was right for: with no adapter
+    there is nothing for the extension to match anywhere, and the screen that
+    says what to do next is better than a browser's default page.
+    """
+    body, argv = _landed(_client(tmp_path), monkeypatch, [])
+
+    assert body["landing"].endswith("/#/extension")
+    assert any("#/extension" in arg for arg in argv)

@@ -10,7 +10,14 @@ rust-version = "1.77"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# `tray-icon` is not optional here even though it reads like a nicety: the
+# window's X button hides rather than quits (see main.rs rule 3), so the tray
+# menu is the *only* way a reader can stop the engine. Without this feature
+# the tray code does not compile, and nobody in this repository has a Rust
+# toolchain — so a pytest asserts this line exists
+# (test_the_tray_feature_is_enabled), because otherwise the first thing to
+# find out would be a Windows bundle build.
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 # The app's own update path. Signed with a minisign key that is independent of
 # Apple/EV code signing, so auto-update works on the unsigned builds we ship.

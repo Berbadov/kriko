@@ -27,8 +27,12 @@ export type Signals = {
     updatable: number;
     /** Checks this reader has ever run. */
     checks: number;
-    /** Has a browser extension ever reached this app? Null when the build
-     * carries no extension to install, which is not a step to suggest. */
+    /** Has a browser extension *ever* reached this app — not just recently.
+     * Null when the build carries no extension to install, which is not a
+     * step to suggest. Must come from `ExtensionStatus.ever_connected`, not
+     * `.connected`: the latter is a live badge that goes false after a few
+     * quiet hours, and this hint is asking a one-time question ("has this
+     * ever been set up"), not a right-now one. */
     extensionConnected: boolean | null;
 };
 
