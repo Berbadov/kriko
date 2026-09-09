@@ -6,6 +6,50 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — An installer built with no runner, and two defects in the build's own reporting (B52)
+
+Branch `b52-installer-report`. `Kriko_0.5.1_x64-setup.exe` (22.6 MB) exists,
+built by `packaging/build_desktop.ps1 -Version 0.5.1` on the Windows host with
+no CI at all — the v0.5.0 tag's jobs died in three seconds with no runner
+assigned, which is what a spending cap looks like from the inside, so B81's
+hand-run path is now the path rather than the fallback. The bundled shell's
+smoke passed: it stayed up 25s and did not panic. 0.5.1 was cut rather than
+building unstamped, because an unstamped build inherits `0.5.0` and would put a
+second file with that name, containing different code, beside the stale one.
+
+Running it for real found two defects in the script that no test could have
+found from the outside, and each ships the gate that was missing:
+
+**The Done step listed installers it did not build.** `Get-ChildItem` over the
+bundle directory reports whatever is on disk, so a `tauri build` that produced
+nothing at all would still print a success report naming the previous release's
+`.exe`. It now records `$started` before the freeze and lists only files newer
+than that, throws when the set is empty, and — when `-Version` was given —
+throws unless a file from *this* run carries the stamp, which is the only
+end-to-end proof that a requested version reached the bundle's filename.
+`test_the_script_reports_only_what_this_run_produced` and
+`test_the_script_proves_a_requested_stamp_arrived` assert the ordering and the
+filter in the script's source; stashing the fix fails exactly those two.
+
+**Printed text was garbling on the console the script actually runs on.** The
+verification build's own output read `engine spawned: not seen ù the webview
+may not have run`: Windows console codepage 1254, an em-dash, and mojibake in
+the one line a reader would consult. B81's first defect was the same encoding
+in `.ps1` *source*; this is one layer down, in the Python the script calls.
+Four em-dashes in `configure_updater.py`, `smoke_app.py` and `smoke_sidecar.py`
+became `--`, and `test_a_packaging_script_prints_ascii_only` walks each
+packaging script's AST for `print` calls and fails on a non-ASCII literal
+argument. Only *printed* text is checked — Python reads its own source as UTF-8
+regardless of the console's codepage, so comments and docstrings are free.
+
+B52 stays open: nothing is signed, self-update waits on a minisign keypair, and
+the success path is still unconfirmed by a human — the installer is on disk at
+`C:\Users\beraat\kriko-build\tauri\src-tauri\target\release\bundle\nsis\`
+waiting for someone to double-click it. That confirmation is what ends the
+app-first phase, and it is not something a test can do.
+
+---
+
 ### 2026-09-09 — The agent is told what to research next (B82)
 
 Branch `b82-research-agenda`, spec

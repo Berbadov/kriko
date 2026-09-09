@@ -88,7 +88,7 @@ def main() -> None:
     print(
         "updater enabled: " + updated["plugins"]["updater"]["endpoints"][0]
         if "updater" in updated["plugins"]
-        else "updater disabled — TAURI_SIGNING_PUBLIC_KEY is not set, so this "
+        else "updater disabled -- TAURI_SIGNING_PUBLIC_KEY is not set, so this "
         "build ships plain installers"
     )
 
