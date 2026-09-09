@@ -24,6 +24,16 @@
 .PARAMETER Python
     Interpreter to build with. Defaults to `python` on PATH.
 
+.PARAMETER Version
+    Version to stamp into the bundle, e.g. 0.5.0 or v0.5.0. CI passes the tag
+    name here and nothing on a pull request. Omit it and the build is not
+    stamped, which is what an untagged local build is.
+
+.PARAMETER Repo
+    owner/name, for the updater endpoint. Read off `git remote get-url origin`
+    when omitted -- derived rather than hardcoded, so a fork's build points at
+    the fork's releases.
+
 .EXAMPLE
     powershell -File packaging/build_desktop.ps1
     # -> tauri/src-tauri/target/release/bundle/nsis/Kriko_0.5.0_x64-setup.exe
@@ -52,7 +62,9 @@
 [CmdletBinding()]
 param(
     [switch]$SkipUi,
-    [string]$Python = "python"
+    [string]$Python = "python",
+    [string]$Version = "",
+    [string]$Repo = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -143,7 +155,26 @@ try {
     # still produces an installer -- it just cannot update itself, which is the
     # honest state of B63/B64.
     Step "Configure self-update"
-    & $Python packaging/configure_updater.py --repo "Berbadov/kriko" --version ""
+    if (-not $Repo) {
+        $origin = (& git remote get-url origin 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $origin -match "[:/]([^/:]+/[^/]+?)(?:\.git)?\s*$") {
+            $Repo = $Matches[1]
+        } else {
+            throw "could not read owner/name from `git remote get-url origin`; pass -Repo"
+        }
+    }
+    # Built as an array, and `--version` is only present when there is one.
+    # Passing `--version ""` is what the first run of this script did, and
+    # Windows PowerShell *drops* an empty-string argument on its way to a
+    # native command -- so argparse saw a bare `--version`, demanded a value
+    # and exited 2, nine minutes into the build. pwsh 7.3+ has
+    # PSNativeCommandArgumentPassing to fix that; 5.1 does not, and 5.1 is what
+    # is on the box. So the empty case is expressed by *absence*, which both
+    # shells agree on.
+    $updater = @("packaging/configure_updater.py", "--repo", $Repo)
+    if ($Version) { $updater += @("--version", $Version) }
+    Write-Host ($updater -join " ")
+    & $Python $updater
     Assert-LastExitCode "configure_updater.py"
 
     Step "Bundle"

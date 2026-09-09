@@ -260,3 +260,103 @@ def test_a_powershell_script_is_ascii_only(ps1: Path):
         "with the machine's ANSI codepage and will fail to parse it. Use "
         "plain ASCII: -- for an em-dash, ... for an ellipsis."
     )
+
+
+@pytest.mark.parametrize("ps1", _powershell_scripts(), ids=lambda p: p.name)
+def test_a_powershell_script_passes_no_empty_argument(ps1: Path):
+    """Windows PowerShell drops an empty-string argument to a native command.
+
+    The second thing running this script found. It called
+
+        & $Python packaging/configure_updater.py --repo "..." --version ""
+
+    which is what `desktop.yml` does and is correct under bash. Windows
+    PowerShell elides the `""` on the way to the process, so argparse received
+    a bare `--version`, demanded a value, and exited 2 -- nine minutes into the
+    build, after PyInstaller and both npm installs had already run.
+
+    `pwsh` 7.3+ added `$PSNativeCommandArgumentPassing = "Standard"` for
+    exactly this. 5.1 has no such setting and 5.1 is what a stock Windows box
+    has, so the fix is not a shell option: an empty value is expressed by
+    *leaving the flag out*, which both shells agree on.
+
+    The check is textual because the defect is textual, and it is worth having
+    at that price: this cost nine minutes of build to discover, and the failure
+    it produces names argparse rather than the shell that caused it.
+    """
+    offenders = []
+    for n, line in enumerate(ps1.read_text(encoding="utf-8").splitlines(), start=1):
+        code = line.split("#", 1)[0].strip()
+        if '""' not in code:
+            continue
+        # Cmdlets are unaffected -- the elision happens marshalling arguments
+        # to a *process*, and `Write-Host ""` is an in-process call that
+        # legitimately prints a blank line. Discriminated on PowerShell's own
+        # Verb-Noun convention rather than a list of cmdlet names, so
+        # `Write-Host` and a cmdlet nobody has used here yet are both covered.
+        command = code.split(maxsplit=1)[0] if code.split() else ""
+        if re.fullmatch(r"[A-Z][a-zA-Z]*-[A-Z][a-zA-Z]*", command):
+            continue
+        # A comparison or an assignment never reaches a process either.
+        if re.search(r'(-eq|-ne|-like|-match|=)\s+""', code):
+            continue
+        # `""` in argument position: after a flag, or after a bare word.
+        if re.search(r'(?:^|\s)(?:-{1,2}[\w-]+|\$?\w[\w.\\/-]*)\s+""(?:\s|$)', code):
+            offenders.append((n, code))
+    assert offenders == [], (
+        f"{ps1.name} passes an empty string as an argument at {offenders}. "
+        "Windows PowerShell drops it before the process sees it. Omit the "
+        "flag instead, building the argument list as an array."
+    )
+
+
+def _packaging_scripts() -> list[Path]:
+    return sorted((ROOT / "packaging").glob("*.py"))
+
+
+def test_there_are_packaging_scripts_to_check():
+    assert len(_packaging_scripts()) >= 5, [p.name for p in _packaging_scripts()]
+
+
+@pytest.mark.parametrize("script", _packaging_scripts(), ids=lambda p: p.name)
+def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
+    """Nothing in `packaging/` may stop a frozen binary with a bare terminate.
+
+    The third thing running the build found, and the most expensive. PyInstaller
+    onefile re-execs, so the pid we spawn is a bootloader and its child is what
+    holds `kriko-sidecar.exe` mapped. `smoke_sidecar.py` called
+    `process.terminate()` on the bootloader, the child survived, and the *next*
+    build failed at the freeze step:
+
+        PermissionError: [WinError 5] Access is denied: 'dist/kriko-sidecar.exe'
+
+    `tauri/` has tree-killed since v0.2.x and its README explains exactly this;
+    `smoke_app.py` does too, with the same reasoning in a comment beside it. So
+    the knowledge was in the repository twice and the third caller still got it
+    wrong -- which is the definition of something that belongs in a test rather
+    than in a comment.
+
+    Why it survived CI: a GitHub runner is destroyed after the job, so an orphan
+    holding a file has nothing left to break. It only surfaces when the build
+    runs twice on one machine, which is precisely what B81 exists to allow.
+
+    The rule is "ends through a tree-aware helper", not "calls taskkill" --
+    `smoke_app.py` kills by image name because the shell, not it, spawned the
+    sidecar and it has no pid to work from. Both are tree kills; the thing being
+    forbidden is a lone `terminate()` on a bootloader.
+    """
+    text = script.read_text(encoding="utf-8")
+    if "subprocess.Popen" not in text:
+        pytest.skip(f"{script.name} spawns nothing")
+    tree_aware = "/T" in text or "pkill" in text
+    lone_terminate = [
+        n
+        for n, line in enumerate(text.splitlines(), start=1)
+        if re.search(r"\.terminate\(\)", line)
+    ]
+    assert tree_aware, (
+        f"{script.name} spawns a frozen binary and never kills a tree. On "
+        "Windows the pid it spawned is a PyInstaller bootloader; its child "
+        "outlives a terminate() and holds the .exe against the next build. "
+        f"Lone terminate() at lines {lone_terminate}."
+    )
