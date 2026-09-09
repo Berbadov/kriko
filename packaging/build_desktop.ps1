@@ -8,8 +8,8 @@
 
     This exists because the workflow was the *only* path to an installer, and
     that made a reader's copy of Kriko depend on a runner being available. On
-    2026-09-09 one wasn't — every job died in three seconds with no runner
-    assigned — and a tag that produces nothing is not a release. The steps
+    2026-09-09 one wasn't -- every job died in three seconds with no runner
+    assigned -- and a tag that produces nothing is not a release. The steps
     below were never Actions-specific; they were just written down in a place
     only Actions could read.
 
@@ -25,12 +25,28 @@
     Interpreter to build with. Defaults to `python` on PATH.
 
 .EXAMPLE
-    pwsh packaging/build_desktop.ps1
+    powershell -File packaging/build_desktop.ps1
     # -> tauri/src-tauri/target/release/bundle/nsis/Kriko_0.5.0_x64-setup.exe
 
+.EXAMPLE
+    powershell -File packaging/build_desktop.ps1 -Python .venv\Scripts\python.exe
+    # Build against a venv instead of whatever `python` resolves to. Worth
+    # doing: the unqualified interpreter is usually the one the machine's
+    # owner uses for everything else, and this installs into it.
+
 .NOTES
-    Needs, on PATH: python 3.12+, node 20+, and a Rust toolchain (rustup).
-    The bundle is unsigned — SmartScreen will warn on first run, which is a
+    Needs, on PATH: node 20+ and a Rust toolchain (rustup), plus a Python that
+    satisfies pyproject's `requires-python` -- pass -Python if the default
+    `python` is older, which on a machine with several is likely.
+
+    Windows PowerShell 5.1 (`powershell`) is enough; `pwsh` 7 works but is not
+    on a stock Windows box. This file is deliberately **ASCII only** for that
+    reason: 5.1 decodes a BOM-less script with the system ANSI codepage, not
+    UTF-8, so one em-dash in a comment is a parse error on any machine whose
+    codepage is not 1252 -- and it fails in the string *after* it, pointing at
+    the wrong line. `test_the_installer_can_be_built_by_hand.py` holds that.
+
+    The bundle is unsigned -- SmartScreen will warn on first run, which is a
     policy decision (an EV certificate) rather than a build problem.
 #>
 [CmdletBinding()]
@@ -83,7 +99,7 @@ try {
     # The UI before the freeze: the spec refuses to freeze without a built
     # bundle rather than shipping an app that 404s on its own frontend.
     if ($SkipUi) {
-        Step "UI (skipped — using the committed bundle)"
+        Step "UI (skipped -- using the committed bundle)"
     } else {
         Step "Build the UI"
         npm --prefix ui ci --no-audit --no-fund
@@ -124,7 +140,7 @@ try {
 
     # Self-update is a build-time decision, because the key that makes it
     # trustworthy lives in a secret. With no key this is a no-op and the build
-    # still produces an installer — it just cannot update itself, which is the
+    # still produces an installer -- it just cannot update itself, which is the
     # honest state of B63/B64.
     Step "Configure self-update"
     & $Python packaging/configure_updater.py --repo "Berbadov/kriko" --version ""
@@ -137,7 +153,7 @@ try {
     # The installer building is not the app starting. v0.2.4 built green on all
     # three runners and then panicked in `build()` before its first window,
     # because a plugin configured at package time was registered
-    # unconditionally — a failure with nowhere to be seen but a stderr no
+    # unconditionally -- a failure with nowhere to be seen but a stderr no
     # double-click has. So the shell is launched here, before you trust it.
     Step "The bundled shell opens"
     & $Python packaging/smoke_app.py "tauri/src-tauri/target/release/kriko.exe"
