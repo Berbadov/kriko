@@ -18,6 +18,14 @@
  * scrollbar again by another route. Each of the two panes then scrolls its
  * own content, which is what application chrome does.
  *
+ * `height: 100vh` lands first as the fallback for a runtime old enough not
+ * to parse `dvh` at all — a Windows install whose WebView2 has not updated
+ * in a while is exactly that runtime. An engine that does not recognise the
+ * unit drops the whole declaration and keeps whichever came before it, so a
+ * modern engine still ends on the `dvh` line and nothing here costs it
+ * anything; base.css's `overflow: hidden` on `html`/`body` is the belt under
+ * both lines, for the desktop window this never has a toolbar to retract.
+ *
  * Paper undoes both — see print.css. A fixed clipping frame prints as page
  * one of a ten-page report.
  */
@@ -25,6 +33,7 @@
     display: grid;
     grid-template-columns: var(--rail) minmax(0, 1fr);
     grid-template-areas: "rail work";
+    height: 100vh;
     height: 100dvh;
     overflow: clip;
 }
@@ -46,6 +55,48 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-gutter: stable;
+}
+/* A content scroller draws the design system's bar, not the platform's.
+ *
+ * `.rail-nav` below hides its scrollbar outright and signals overflow with
+ * gradients, because it is chrome — a fixed set of rows, not a document. The
+ * panes here are the opposite case: they *are* content, so a bar has to
+ * exist, and the OS default was the "classic", non-overlay one WebView2 falls
+ * back to — thick, square, arrows at both ends, painted white regardless of
+ * theme. `scrollbar-width`/`scrollbar-color` are the standard property pair;
+ * `::-webkit-scrollbar*` repeats the same thumb for a Chromium old enough not
+ * to read them yet, which on the desktop app is exactly the runtime this is
+ * for. Shared by every legitimate content scroller so the fix does not have
+ * to be rediscovered per screen — `.log` is a run's console output, and
+ * `.table-scroll` is a wide comparison table's horizontal scroller.
+ */
+.work,
+.log,
+.table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+}
+.work::-webkit-scrollbar,
+.log::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.work::-webkit-scrollbar-track,
+.log::-webkit-scrollbar-track,
+.table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.work::-webkit-scrollbar-thumb,
+.log::-webkit-scrollbar-thumb,
+.table-scroll::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+}
+.work::-webkit-scrollbar-thumb:hover,
+.log::-webkit-scrollbar-thumb:hover,
+.table-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--dim);
 }
 /* The 1100px measure lives on the content, not on the scroller. A scroller
  * capped at 1100px paints its scrollbar at 1100px — a bar hanging in the
@@ -750,26 +801,6 @@ li.gap {
     }
 }
 
-/* The marker that moves between rows. Positioned against `.rail-nav`, so it
- * travels with the rows if they ever scroll. */
-.nav-mark {
-    position: absolute;
-    left: 0;
-    top: var(--mark-top);
-    width: 3px;
-    height: var(--mark-height);
-    border-radius: 0 2px 2px 0;
-    background: var(--accent);
-    opacity: 0;
-    transition:
-        top var(--dur-slow) var(--ease-out),
-        height var(--dur-slow) var(--ease-out),
-        opacity var(--dur-fast) var(--ease);
-    pointer-events: none;
-}
-.nav-mark.on {
-    opacity: 1;
-}
 .nav-group ul {
     list-style: none;
     margin: 0;
@@ -785,6 +816,7 @@ li.gap {
     color: var(--dim);
 }
 .nav-link {
+    position: relative;
     display: grid;
     grid-template-columns: 18px minmax(0, 1fr);
     align-items: center;
@@ -796,6 +828,24 @@ li.gap {
     transition:
         background var(--dur-fast) ease,
         color var(--dur-fast) ease;
+}
+/* The active-row marker, drawn where it is worn rather than measured and
+ * moved. This used to be a single element this component positioned in JS
+ * from a DOM measurement (see Sidebar.svelte's script for the removed
+ * mechanism and everything wrong with it). A `::before` on the row itself
+ * needs no measurement at all: it is laid out by the same box its row is, so
+ * a font swap, a breakpoint that changes row padding, or the rail scrolling
+ * all move it correctly for free, on the browser's own layout pass, with
+ * nothing here to fall out of sync. */
+.nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
 }
 .nav-link .nav-icon {
     display: block;
@@ -855,11 +905,11 @@ li.gap {
 }
 
 /* Motion is a flourish here, never information: the active row has its own
- * background and `aria-current` regardless. */
+ * background and `aria-current` regardless. The active-row bar has no
+ * transition to disable now that it is a `::before` that appears with its
+ * row instead of sliding to it — only the group entrance stagger is motion
+ * here. */
 @media (prefers-reduced-motion: reduce) {
-    .nav-mark {
-        transition: none;
-    }
     .nav-slot {
         animation: none;
     }
