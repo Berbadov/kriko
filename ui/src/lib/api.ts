@@ -83,6 +83,9 @@ export const api = {
     extension: () => get<T.ExtensionStatus>("/api/extension"),
     stageExtension: () => postJson<T.ExtensionStaged>("/api/extension/stage", {}),
     revealExtension: () => postJson<T.ExtensionRevealed>("/api/extension/reveal", {}),
+    // Stages *and* opens a browser, in one request, because one press by the
+    // reader must not be able to half-succeed. See the router's docstring.
+    launchExtension: () => postJson<T.ExtensionLaunched>("/api/extension/launch", {}),
     identityKeys: (packId: string) =>
         get<T.IdentityKey[]>(`/api/identity-keys/${seg(packId)}`),
     vocabulary: (packId: string) =>

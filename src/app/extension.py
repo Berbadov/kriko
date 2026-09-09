@@ -249,3 +249,155 @@ def home_of(store_path: Path) -> Path:
 def env_override() -> Path | None:
     raw = os.environ.get("KRIKO_EXTENSION_DIR", "").strip()
     return Path(raw) if raw else None
+
+
+# ── the one click that is available ──────────────────────────────────────
+#
+# This module's docstring says no application may install a browser extension,
+# and that stands: nothing below asks a *running* browser to load anything.
+#
+# What it missed is the other door. A Chromium browser *we start ourselves*
+# accepts `--load-extension` on its command line, so the app can hand the
+# reader a window that already has Kriko in it — one click in place of stage,
+# reveal, open the browser, find developer mode, drag the folder in. Four of
+# those five steps were only ever there because nobody had tried the door.
+#
+# Two things keep it honest.
+#
+# **A profile of its own.** `--load-extension` passed to a browser that is
+# already running does nothing whatever: the arguments are forwarded to the
+# existing process, which ignores them, and the button silently accomplishes
+# nothing while looking like it worked. `--user-data-dir` is what makes the
+# launch a *new* browser rather than a no-op. The cost is a second profile
+# with none of the reader's bookmarks or logins, so the response says so and
+# the page says so before the window opens — discovering it afterwards is a
+# bug report.
+#
+# **The check-in is the proof, not this function.** Chrome has restricted this
+# flag before and will again, and a build that ignores it opens a perfectly
+# ordinary window with no extension in it. So nothing here claims success: the
+# extension calling `/api/adapters` is what says it worked (the page already
+# watches for that sighting), and the manual steps stay on screen until it
+# lands. That is the automation principle's "fail open" — offer the shortcut,
+# verify it externally, never assert it.
+
+#: The browsers Chromium ships as, per platform. A closed vocabulary of four
+#: engines rather than a detection: the question is "is there a Chromium on
+#: this machine", the answer is a file that exists, and reading registry keys
+#: per platform to answer it would be a per-platform mechanism to maintain for
+#: no more information. `shutil.which` covers a PATH install and the absolute
+#: paths cover the ordinary Windows and macOS ones, which are not on PATH.
+_LINUX = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+          "brave-browser", "microsoft-edge")
+_MAC = (
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+)
+_WINDOWS = (
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+)
+
+
+def _candidates() -> list[str]:
+    """Names and paths to try, in order of "what the reader probably uses"."""
+    if sys.platform.startswith("win"):
+        return list(_WINDOWS) + ["chrome.exe", "msedge.exe", "brave.exe"]
+    if sys.platform == "darwin":
+        return list(_MAC) + list(_LINUX)
+    return list(_LINUX)
+
+
+def find_chromium() -> str | None:
+    """The first Chromium-family browser on this machine, or None.
+
+    None is a normal answer, not a failure: a Firefox reader has no Chromium
+    and the manual steps work fine for them. The caller offers the shortcut it
+    can and says nothing about the one it cannot.
+    """
+    for candidate in _candidates():
+        if os.sep in candidate or (os.altsep and os.altsep in candidate):
+            if Path(candidate).is_file():
+                return candidate
+            continue
+        found = shutil.which(candidate)
+        if found:
+            return found
+    return None
+
+
+def _spawn(argv: list[str]) -> None:
+    """Start the browser and forget it.
+
+    `start_new_session` is the whole point: a browser in the sidecar's process
+    group dies when the sidecar does, so closing the Kriko window would take
+    the reader's browser with it mid-listing with nothing on screen to explain
+    why. On Windows the same is true of the console group, and there is no
+    session to leave — the shell already kills the sidecar's *tree* on exit
+    (see `tauri/`), which is why the browser must not be in it.
+    """
+    subprocess.Popen(
+        argv,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=not sys.platform.startswith("win"),
+        creationflags=(
+            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+            if sys.platform.startswith("win")
+            else 0
+        ),
+    )
+
+
+def launch_with_extension(
+    browser: str,
+    staged: Path,
+    profile: Path,
+    landing: str = "",
+    spawn=None,
+) -> str:
+    """Open `browser` with the staged extension loaded. Returns "" or a reason.
+
+    `spawn` is injected so the argument list can be asserted without starting
+    a browser in the test suite — the arguments *are* the behaviour here, and
+    a test that started Chrome to check them would be untestable in CI and
+    unbearable locally.
+    """
+    if not (staged / "manifest.json").is_file():
+        return f"nothing staged at {staged} — the files have to be written first"
+
+    argv = [
+        browser,
+        # Without this the arguments reach an already-running browser, which
+        # ignores them. It is the difference between a shortcut and a no-op.
+        f"--user-data-dir={profile}",
+        f"--load-extension={staged}",
+        # A fresh profile otherwise opens on "make me your default browser"
+        # and a sign-in wall: three dialogs between the reader and the thing
+        # they pressed one button for.
+        "--no-first-run",
+        "--no-default-browser-check",
+    ]
+    if landing:
+        argv.append(landing)
+
+    try:
+        (spawn or _spawn)(argv)
+    except OSError as cause:
+        return f"could not start {browser}: {cause}"
+    return ""
+
+
+def profile_dir(home: Path) -> Path:
+    """Beside the store, for the same reason the staged extension is.
+
+    An install directory is replaced wholesale by the next installer, and a
+    browser profile inside it would be discarded on every app update — taking
+    with it the one thing this profile accumulates, which is the loaded
+    extension's own state.
+    """
+    return home / "browser-profile"

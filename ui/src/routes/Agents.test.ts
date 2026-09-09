@@ -14,11 +14,16 @@ function stub() {
             async (path: string) =>
                 new Response(
                     JSON.stringify(
-                        String(path).includes("agent-targets")
-                            ? { targets: [] }
-                            : String(path).includes("agent-skill")
-                              ? { name: "kriko-research", body: "", packs: [] }
-                              : { mcp_json: {}, items: [], packs: [] },
+                        // `/api/packs` answers with an array, and Connect
+                        // filters it — an object here throws inside an effect
+                        // rather than failing a test.
+                        String(path).includes("/api/packs")
+                            ? []
+                            : String(path).includes("agent-targets")
+                              ? { targets: [] }
+                              : String(path).includes("agent-skill")
+                                ? { name: "kriko-research", body: "", packs: [] }
+                                : { mcp_json: {}, items: [], packs: [] },
                     ),
                 ),
         ),
