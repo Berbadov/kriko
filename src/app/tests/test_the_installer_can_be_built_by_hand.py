@@ -26,6 +26,7 @@ list here to remember to update.
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -410,4 +411,40 @@ def test_the_script_proves_a_requested_stamp_arrived(script):
     tail = script[script.index("Get-ChildItem -Recurse") :]
     assert "no installer from this run carries it" in tail, (
         "a requested -Version is never checked against what was produced"
+    )
+
+
+@pytest.mark.parametrize("script", _packaging_scripts(), ids=lambda p: p.name)
+def test_a_packaging_script_prints_ascii_only(script: Path):
+    """Build output is read on a Windows console, which is not UTF-8.
+
+    `test_a_powershell_script_is_ascii_only` holds the same rule one layer up,
+    for the same reason and after the same failure: this box is codepage 1254,
+    and the 0.5.1 verification build reported `engine spawned: not seen u the
+    webview may not have run` -- an em-dash decoded as one byte of nonsense in
+    the middle of the sentence a person reads to decide whether the build is
+    trustworthy.
+
+    Only *printed* text, not docstrings or comments: Python reads its own
+    source as UTF-8 regardless of the console, so a prose em-dash in a
+    docstring is fine and forbidding it would be a rule about nothing. The
+    console is the boundary, so the boundary is what is checked -- which means
+    walking the AST for `print` rather than grepping the bytes.
+    """
+    printed = []
+    for node in ast.walk(ast.parse(script.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "print":
+            printed += [
+                (sub.lineno, sub.value)
+                for sub in ast.walk(node)
+                if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+            ]
+    offenders = [
+        f"line {line}: {text!r}"
+        for line, text in printed
+        if any(ord(char) > 127 for char in text)
+    ]
+    assert not offenders, (
+        f"{script.name} prints non-ASCII, which garbles on a Windows console: "
+        + "; ".join(offenders)
     )

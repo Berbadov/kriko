@@ -257,7 +257,7 @@ def main(argv: list[str]) -> int:
         ) as response:
             page = response.read().decode("utf-8", "replace")
         if "<div id=\"app\"" not in page and "<script" not in page:
-            print("the sidecar served no frontend — check the spec's datas entry")
+            print("the sidecar served no frontend -- check the spec's datas entry")
             return 1
         print("frontend ok")
 
@@ -267,7 +267,7 @@ def main(argv: list[str]) -> int:
         # the spec's `datas` lost it.
         ext = fetch(port, "/api/extension")
         if not ext.get("available"):
-            print("the sidecar carries no browser extension — check the spec's datas")
+            print("the sidecar carries no browser extension -- check the spec's datas")
             return 1
         print(f"extension ok: version {ext.get('version')}")
 

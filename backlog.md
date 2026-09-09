@@ -790,7 +790,14 @@ language rather than an empty title when the requested one is missing.
 
 ### B52 — The standalone app: signing, and a window nobody has opened `[G6]`
 Phases 0–5 landed and **all four installers now build** — see `done.md`
-(2026-09-01). What is left is what CI cannot answer:
+(2026-09-01). **0.5.1 was built by hand on 2026-09-09** —
+`Kriko_0.5.1_x64-setup.exe`, 22.6 MB, from `packaging/build_desktop.ps1` on the
+Windows host with no CI at all (there are no credits), carrying everything
+0.5.0's runner-less tag never shipped. The bundled shell was launched and
+stayed up, and the run found two defects in the script's own reporting (a
+success report naming last release's file, and mojibake on codepage 1254) —
+both fixed and gated, see `done.md`. So the Windows leg of “there is an
+installer” is answered; the rest is what CI could never answer anyway:
 
 - **v0.2.4 on Windows did not open at all, and now the shell's own start is
   checked.** The app panicked in `build().expect(..)` before it drew anything:
