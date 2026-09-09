@@ -1392,3 +1392,35 @@ kbd {
 .skip:focus {
     transform: none;
 }
+
+/* ── the research agenda (app/agenda.py) ──────────────────────────── */
+/* A row is three lines, not a table cell: the kind, the thing, and why it
+   is here. Why gets prose width because it is the half that decides
+   whether the reader agrees with the ordering. */
+.agenda {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--s-2);
+}
+.agenda li {
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid var(--line);
+}
+.agenda li:last-child {
+    border-bottom: 0;
+}
+.agenda-head {
+    display: flex;
+    gap: var(--s-2);
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+.agenda li > p {
+    max-width: var(--measure);
+    margin: var(--s-1) 0 0;
+}
+.agenda li > button.link-ish {
+    margin-top: var(--s-1);
+}

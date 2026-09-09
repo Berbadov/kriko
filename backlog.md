@@ -886,27 +886,12 @@ in this file.
 user-local rustup and `cargo generate-lockfile` turned out to be the whole
 "needs a Rust toolchain" blocker). `B44` (LICENSE) is its own row under P2.
 
-### B82 — The data pipeline still needs a person to aim it — **new 2026-09-09**
-The 0.5.0 usability pass (see `done.md`) closed the shell, rail, install and
-fact-check items of the reader's list. The last one is not a UI change: today
-an agent arriving at the Agents screen is told what the MCP door accepts and
-nothing about *what to research next* — the product range a pack covers, the
-shape of its store, where its coverage is thinnest. `coverage_gaps` and
-`weakest_claims` already answer that over MCP; the reader has to know to ask.
-The row is to make the agent's brief arrive unasked and stay current, which is
-a design question about who computes it and how often. **Spec written
-2026-09-09**: `docs/superpowers/specs/2026-09-09-research-agenda-design.md` —
-`app/agenda.py` computes a ranked agenda on read from four signals kept
-separate (demand out of `lookups`, gaps, thinness, and `fact_checks.missing`),
-delivered as an MCP tool, `GET /api/agenda`, and the generated skill. The two
-findings that made it a design rather than an `ORDER BY`: `coverage_gaps`
-orders alphabetically, and `NOT_MATCHED` — a reader bringing us a product the
-catalog cannot even name — is invisible to every gap surface, because a gap
-list can only name subjects that exist. Its gate is the spec's test 1: "an
-agent given only the brief picks a subject a human would have picked", read as
-*a subject asked for twice this week outranks an alphabetically-earlier gap
-nobody has ever asked about*. Three open questions in the spec's last section;
-implementation rows follow the reader's review of it.
+
+### B82 — The data pipeline still needs a person to aim it — **Done 2026-09-09**
+Moved to `done.md`. `app/agenda.py` ranks what to research next by what this
+installation was actually asked about, through three doors (`research_agenda`,
+`GET /api/agenda`, the generated skill). Spec:
+`docs/superpowers/specs/2026-09-09-research-agenda-design.md`.
 
 ### B81 — Only CI could build an installer — **Done 2026-09-09**
 Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
