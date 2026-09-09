@@ -129,6 +129,17 @@ export const api = {
     settings: () => get<Record<string, unknown>>("/api/settings"),
     putSettings: (values: Record<string, unknown>) =>
         postJson<Record<string, unknown>>("/api/settings", { values }),
+    /** Every re-check this app has done, in one request: a report shows
+     * forty claims, and forty requests to say "not checked yet" is not a
+     * feature. */
+    factChecks: () => get<T.FactChecks>("/api/factcheck"),
+    /** Re-read the pages behind one claim. The quote is never sent — the
+     * server checks the one the installed pack shipped. */
+    checkFacts: (packId: string, claimId: string) =>
+        postJson<T.FactCheck>("/api/factcheck", {
+            pack_id: packId,
+            claim_id: claimId,
+        }),
     /** Both halves of the reader's own marks on one stored answer. */
     triage: (lookupId: string) =>
         get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),

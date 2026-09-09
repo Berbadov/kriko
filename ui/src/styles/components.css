@@ -309,6 +309,26 @@ select:focus {
 .badge.state-succeeded {
     background: var(--low-soft);
 }
+/* What the cited page says now (app/factcheck.py). Three tones, and the
+   quiet one is deliberate: a source that could not be read says nothing
+   about the claim, and colouring it like a fault would blame the pack for
+   somebody else's outage. */
+.badge.fact-ok {
+    background: var(--low-soft);
+    color: var(--low);
+    border-color: var(--low);
+}
+.badge.fact-warn {
+    color: var(--medium);
+    border-color: var(--medium);
+}
+.fact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+    margin: var(--s-2) 0 0;
+}
 
 details {
     margin-top: var(--s-2);

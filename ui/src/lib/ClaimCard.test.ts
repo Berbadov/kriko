@@ -48,3 +48,60 @@ describe("ClaimCard", () => {
         expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     });
 });
+
+describe("checking what the source says now", () => {
+    const CITED: Claim = {
+        ...CLAIM,
+        sources: [
+            {
+                url: "https://d.example/a",
+                domain: "d.example",
+                quote: "q",
+                stance: "supports",
+                tier: "forum",
+            },
+        ],
+    };
+
+    it("offers the check on the card, not inside the sources fold", () => {
+        // "Is this still true" is the question a reader has while reading the
+        // claim. Behind a disclosure triangle it is a button nobody finds.
+        render(ClaimCard, { claim: CITED, onCheckFacts: () => {} });
+        expect(screen.getByRole("button", { name: "Check the source" })).toBeVisible();
+    });
+
+    it("says nothing at all when there is no page to re-read", () => {
+        render(ClaimCard, { claim: CLAIM, onCheckFacts: () => {} });
+        expect(screen.queryByRole("button", { name: /Check the source/ })).toBeNull();
+    });
+
+    it("reports a rewritten page as changed, never as false", () => {
+        const { container } = render(ClaimCard, {
+            claim: CITED,
+            onCheckFacts: () => {},
+            factCheck: {
+                pack_id: "p",
+                claim_id: "c1",
+                verdict: "missing",
+                detail: "the page no longer carries this quote",
+                sources: [],
+                subject_id: "s",
+                title: "A known risk",
+                checked_at: "2026-09-09T10:00:00+00:00",
+            },
+        });
+        expect(screen.getByText("Source has changed")).toBeInTheDocument();
+        // With a date, always: reassurance with no "when" on it ages badly.
+        expect(screen.getByText(/checked 2026-09-09/)).toBeInTheDocument();
+        // Scoped to the badge line: the claim's own body is allowed to use
+        // any word it likes, and this is about what the app asserts.
+        expect(container.querySelector(".fact")?.textContent).not.toMatch(
+            /false|wrong|refut/i,
+        );
+    });
+
+    it("shows the press as taking time, because reading a page does", () => {
+        render(ClaimCard, { claim: CITED, onCheckFacts: () => {}, checkingFacts: true });
+        expect(screen.getByRole("button", { name: /Reading the source/ })).toBeDisabled();
+    });
+});

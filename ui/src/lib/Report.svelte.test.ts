@@ -118,7 +118,11 @@ describe("Report — one payload, two renderings", () => {
         vi.stubGlobal("fetch", fetcher);
         render(Report, { props: { result: RESULT, lookupId: "L1" } });
         expect(await screen.findByDisplayValue("said done")).toBeInTheDocument();
-        expect(fetcher.mock.calls.map((c) => c[0])).toEqual(["/api/lookups/L1/triage"]);
+        // Triage specifically: the report also reads the stored fact-check
+        // verdicts, and that is one request for the whole screen too.
+        expect(
+            fetcher.mock.calls.map((c) => String(c[0])).filter((p) => p.includes("triage")),
+        ).toEqual(["/api/lookups/L1/triage"]);
     });
 
     it("persists what the seller said against the claim", async () => {
@@ -219,5 +223,125 @@ describe("Report — one payload, two renderings", () => {
         const link = await screen.findByRole("link", { name: "Question sheet" });
         expect(link.getAttribute("href")).toContain("questions");
         expect(link.getAttribute("href")).toContain("id=L1");
+    });
+});
+
+describe("Report — what the cited pages say now", () => {
+    const CITED: LookupResult = {
+        ...RESULT,
+        claims: [
+            {
+                ...RESULT.claims[0],
+                sources: [
+                    {
+                        url: "https://forum.test/a",
+                        domain: "forum.test",
+                        quote: "mine went at 300h",
+                        tier: "forum_ugc",
+                        stance: "supports",
+                    },
+                ],
+            },
+            {
+                ...RESULT.claims[0],
+                claim_id: "c2",
+                title: "Brush wear",
+                sources: [
+                    {
+                        url: "https://forum.test/b",
+                        domain: "forum.test",
+                        quote: "brushes at 200h",
+                        tier: "forum_ugc",
+                        stance: "supports",
+                    },
+                ],
+            },
+        ],
+    };
+
+    const check = (over: Record<string, unknown>) => ({
+        pack_id: "tools",
+        claim_id: "c1",
+        verdict: "quoted",
+        detail: "",
+        sources: [],
+        subject_id: "s",
+        title: "Spindle runout",
+        checked_at: "2026-09-08T09:00:00+00:00",
+        ...over,
+    });
+
+    it("reads every stored verdict in one request, not one per card", async () => {
+        // Forty claims is forty requests to be told "not checked yet".
+        const fetch = vi.fn(async (path: string) =>
+            ok(
+                String(path).startsWith("/api/factcheck")
+                    ? { items: [check({})], counts: { quoted: 1 } }
+                    : { checked: [] },
+            ),
+        );
+        vi.stubGlobal("fetch", fetch);
+        render(Report, { props: { result: CITED, mode: "buyer" } });
+        expect(await screen.findByText("Source still says this")).toBeInTheDocument();
+        const calls = fetch.mock.calls.filter((c) =>
+            String(c[0]).startsWith("/api/factcheck"),
+        );
+        expect(calls).toHaveLength(1);
+    });
+
+    it("sweeps the sources one at a time rather than all at once", async () => {
+        /* Forty parallel fetches at forty domains, from the reader's own
+         * address, is a burst that looks like a scraper to every one of them.
+         * The app has no business doing that on their behalf, so the button
+         * walks the list. */
+        let inFlight = 0;
+        let peak = 0;
+        const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+            if (String(path).startsWith("/api/factcheck") && init?.method === "POST") {
+                inFlight += 1;
+                peak = Math.max(peak, inFlight);
+                await new Promise((resolve) => setTimeout(resolve, 5));
+                inFlight -= 1;
+                return ok(check({ claim_id: "c1" }));
+            }
+            return ok(
+                String(path).startsWith("/api/factcheck")
+                    ? { items: [], counts: {} }
+                    : { checked: [] },
+            );
+        });
+        vi.stubGlobal("fetch", fetch);
+        render(Report, { props: { result: CITED, mode: "buyer" } });
+        await fireEvent.click(
+            await screen.findByRole("button", { name: "Check every source" }),
+        );
+        await vi.waitFor(() =>
+            expect(
+                fetch.mock.calls.filter((c) => (c[1] as RequestInit)?.method === "POST"),
+            ).toHaveLength(2),
+        );
+        expect(peak).toBe(1);
+    });
+
+    it("stays quiet when the verdicts cannot be read", async () => {
+        // A supplementary badge on a report that is complete without it. A
+        // banner over someone's answer because a status table would not read
+        // is the tail wagging the dog.
+        const fetch = vi.fn(async (path: string) =>
+            String(path).startsWith("/api/factcheck")
+                ? new Response("boom", { status: 500 })
+                : ok({ checked: [] }),
+        );
+        vi.stubGlobal("fetch", fetch);
+        render(Report, { props: { result: CITED, mode: "buyer" } });
+        expect(await screen.findByText("Spindle runout")).toBeInTheDocument();
+        expect(screen.queryByText(/boom|500/)).toBeNull();
+    });
+
+    it("offers no sweep at all when nothing carries a link", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
+        render(Report, { props: { result: RESULT, mode: "buyer" } });
+        expect(await screen.findByText("Spindle runout")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /Check every source/ })).toBeNull();
     });
 });

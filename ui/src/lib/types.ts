@@ -408,6 +408,23 @@ export type ExtensionLaunched = {
 };
 
 
+/** What the page a claim cites says *now*.
+ *
+ * Four verdicts and only one is bad news — see `src/app/factcheck.py`.
+ * `missing` is a signal, not a refutation: pages get rewritten, and the engine
+ * has no authority to retract a claim. Nothing here changes a ranking. */
+export type FactCheck = {
+    pack_id: string;
+    claim_id: string;
+    verdict: string;
+    detail: string;
+    sources: { url: string; verdict: string; detail: string }[];
+    subject_id: string;
+    title: string;
+    checked_at: string;
+};
+export type FactChecks = { items: FactCheck[]; counts: Record<string, number> };
+
 /** The reader's own marks on one stored answer: what they ticked, and what
  * the seller said. Read together because they render together. */
 export type Triage = {

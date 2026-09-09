@@ -3,6 +3,22 @@
 (function () {
   const { iconSvg } = window.__KrikoPanelIcons;
 
+  /* What a re-check of a claim's sources means, in words.
+   *
+   * The verdicts are a closed vocabulary owned by `src/app/factcheck.py`, and
+   * `test_factcheck.py` fails if this map and that one drift apart — a panel
+   * that silently rendered an unknown verdict as reassurance would be the
+   * worst possible default.
+   *
+   * "missing" says the page changed, never that the claim is false: pages get
+   * rewritten, and Kriko has no authority to retract anything. */
+  const FACT_WORD = {
+    quoted: "Source still says this",
+    missing: "Source has changed",
+    unreadable: "Cannot check automatically",
+    unreachable: "Source unreachable",
+  };
+
   function escapeHtml(s) {
     if (s == null) return "";
     return String(s)
@@ -11,6 +27,16 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  /** Whether this claim can be re-checked: an identity the app can look up,
+   * and a page to re-read. */
+  function canCheck(risk) {
+    return Boolean(
+      risk.claim_id
+        && risk.pack_id
+        && (risk.sources || []).some((source) => source && source.url)
+    );
   }
 
   function renderRiskCard(risk, { open = false, compact = false } = {}) {
@@ -74,6 +100,12 @@
                   ${escapeHtml(risk.inspection_advice)}
                 </div>
               </div>` : ""}
+            ${canCheck(risk) ? `
+              <div class="lite-rc-fact">
+                <button type="button" class="lite-rc-factbtn"
+                        title="Re-read the page this claim cites">Check the source</button>
+                <span class="lite-rc-factverdict" hidden></span>
+              </div>` : ""}
             ${risk.claim_id ? `
               <div class="lite-rc-mark" role="group" aria-label="Was this any use?">
                 <span class="lite-rc-mark-label">Was this any use?</span>
@@ -122,5 +154,41 @@
     });
   }
 
-  window.__KrikoPanelRiskCard = { renderRiskCard, updateRiskCard, markRiskCard };
+  /** Paint what the cited page says now.
+   *
+   * Its own function for the same reason `markRiskCard` is: this arrives from
+   * a round trip to the app, while `open`/`compact` are local state.
+   */
+  function factRiskCard(article, check, busy) {
+    const button = article.querySelector(".lite-rc-factbtn");
+    const label = article.querySelector(".lite-rc-factverdict");
+    if (button) {
+      button.disabled = Boolean(busy);
+      button.textContent = busy
+        ? "Reading the source\u2026"
+        : check ? "Check again" : "Check the source";
+    }
+    if (!label) return;
+    if (!check) {
+      label.hidden = true;
+      label.textContent = "";
+      return;
+    }
+    label.hidden = false;
+    label.dataset.verdict = check.verdict || "";
+    // The date, always: "source still says this" with no when on it is the
+    // kind of reassurance that ages badly.
+    const when = (check.checked_at || "").slice(0, 10);
+    label.textContent = (FACT_WORD[check.verdict] || check.verdict || "")
+      + (when ? ` \u00b7 ${when}` : "");
+  }
+
+  window.__KrikoPanelRiskCard = {
+    renderRiskCard,
+    updateRiskCard,
+    markRiskCard,
+    factRiskCard,
+    canCheck,
+    FACT_WORD,
+  };
 })();

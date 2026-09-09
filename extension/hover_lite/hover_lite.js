@@ -17,7 +17,7 @@
   window.__krikoPanelInstalled = true;
 
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
-  const { renderRiskCard, updateRiskCard, markRiskCard } =
+  const { renderRiskCard, updateRiskCard, markRiskCard, factRiskCard } =
     window.__KrikoPanelRiskCard;
 
   const HOST_TAG = "kriko-panel-host";
@@ -44,6 +44,11 @@
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
     marks: new Map(),
+    // claim_id -> what the cited page said when it was last re-read, and the
+    // set currently being read. Panel-local for the same reason `marks` is:
+    // the app owns the row, this is what to paint until the next analysis.
+    facts: new Map(),
+    checkingFacts: new Set(),
     // subject_id currently being researched, so the button can say so rather
     // than looking unpressed while a job starts.
     researching: null,
@@ -311,6 +316,42 @@
           else state.marks.delete(risk.claim_id);
           if (cardEl) markRiskCard(cardEl, previous);
         }
+      }
+    );
+  }
+
+  /* Does the page this claim cites still say it?
+   *
+   * One press, on the card being read. The app does the reading — this panel
+   * sends an address and nothing else, because a check whose quote came from
+   * a browser would prove nothing at all.
+   *
+   * A `missing` verdict changes no ranking and hides no card. Pages get
+   * rewritten, and Kriko has no authority to retract a claim; what this buys
+   * the reader is knowing which of these sentences they can still go and read
+   * for themselves.
+   */
+  function checkFacts(risk, cardEl) {
+    if (!risk.claim_id || !risk.pack_id) return;
+    if (state.checkingFacts.has(risk.claim_id)) return;
+    state.checkingFacts.add(risk.claim_id);
+    if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), true);
+
+    chrome.runtime.sendMessage(
+      {
+        type: "CHECK_FACTS",
+        payload: { pack_id: risk.pack_id, claim_id: risk.claim_id },
+      },
+      (response) => {
+        state.checkingFacts.delete(risk.claim_id);
+        if (!chrome.runtime.lastError && response && response.ok && response.check) {
+          state.facts.set(risk.claim_id, response.check);
+        }
+        // A failure leaves the card as it was. The claim and its sources are
+        // on screen and the reader can open the link themselves, which is
+        // what they did before this button existed — a panel-wide error over
+        // a supplementary badge would be the tail wagging the dog.
+        if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), false);
       }
     );
   }
@@ -1179,6 +1220,20 @@
         // that disappeared on redraw would read as one that failed to save.
         if (risk.claim_id && state.marks.has(risk.claim_id)) {
           markRiskCard(card, state.marks.get(risk.claim_id));
+        }
+        // Re-asserted on redraw for the same reason a mark is: the list is
+        // rebuilt on every expand-all, and a verdict that vanished would read
+        // as one that failed.
+        if (risk.claim_id && state.facts.has(risk.claim_id)) {
+          factRiskCard(card, state.facts.get(risk.claim_id),
+            state.checkingFacts.has(risk.claim_id));
+        }
+        const factBtn = card.querySelector(".lite-rc-factbtn");
+        if (factBtn) {
+          factBtn.addEventListener("click", (event) => {
+            event.stopPropagation(); // the card header toggles on click
+            checkFacts(risk, card);
+          });
         }
         card.querySelectorAll(".lite-rc-markbtn").forEach((markBtn) => {
           markBtn.addEventListener("click", (event) => {
