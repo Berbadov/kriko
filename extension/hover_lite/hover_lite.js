@@ -137,9 +137,17 @@
     const context = result.context || {};
     const units = result.context_units || {};
 
+    // A cached entry from before the panel was declared holds a bare array
+    // rather than named buckets. It used to be labelled with the site's own
+    // Turkish heading, hardcoded here — the last word of anyone else's
+    // language left in this file. The pack's own fallback bucket is the right
+    // label and the only one this file is entitled to.
     let equipment = {};
+    const buckets = (listing.panel && listing.panel.equipment) || {};
     if (Array.isArray(listing.equipment)) {
-      if (listing.equipment.length) equipment = { "Donanım": listing.equipment };
+      if (listing.equipment.length) {
+        equipment = { [buckets.fallback_category || "Other"]: listing.equipment };
+      }
     } else if (listing.equipment && typeof listing.equipment === "object") {
       equipment = listing.equipment;
     }
@@ -168,64 +176,133 @@
       resolved: Boolean(identityLine),
       damage_info: listing.damage_info || null,
       equipment,
+      // The answering pack's own rules for the two local blocks: what each
+      // damage state is called, which tone it takes, and which combinations
+      // are worth shouting about. Absent for a page no adapter matched, in
+      // which case the panels below render nothing rather than guessing.
+      panel: listing.panel || {},
     };
   }
 
-  // ── Critical alerts: hard-coded rules over damage_info so the buyer can't
-  // miss a heavy-collision red flag while skimming.
-  const PART_RE = {
-    kaput:     /\b(motor\s*kaputu|kaput)\b/i,
-    tavan:     /\btavan\b/i,
-    bagaj:     /\bbagaj(\s*kapa[ğg][ıi])?\b/i,
-    marspiyel: /\bmar[şs]piyel\b/i,
-  };
-  function sideCounts(parts) {
-    return {
-      sol: parts.filter(p => /\bsol\b/i.test(p)).length,
-      sag: parts.filter(p => /\bsa[ğg]\b/i.test(p)).length,
-    };
+  // ── Critical alerts, from rules the pack declared ─────────────────────
+  //
+  // These used to be Turkish part regexes and English advice strings written
+  // out here, which meant the panel could only ever shout about a car sold on
+  // one site: a second listing site, a second market, or a category that is
+  // not cars all needed an edit to this file, and history in this repo says
+  // that edit is the one that gets forgotten.
+  //
+  // What is left is an interpreter. It can match declared terms, count items,
+  // count them per declared side, compare a measure against a threshold, and
+  // stay quiet when a more specific rule already spoke. It cannot do anything
+  // else, and that is the point — a pack ships data into this panel, never
+  // code, because code here would run on every page the extension can see.
+
+  // Both ends folded, so a pack author writes one spelling: case, accents and
+  // the dotless i all collapse. Substring rather than word boundary, because
+  // "Motor Kaputu" has to match "kaput" and a suffixing language is exactly
+  // what a word boundary would refuse.
+  function foldTerm(text) {
+    if (text === null || text === undefined) return "";
+    return String(text)
+      .replace(/ı/g, "i")
+      .replace(/İ/g, "i")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .normalize("NFC")
+      .replace(/\s+/g, " ")
+      .trim();
   }
-  function sameSideCount(parts) {
-    const { sol, sag } = sideCounts(parts);
-    return Math.max(sol, sag);
+
+  function matchesAnyTerm(haystack, terms) {
+    const folded = foldTerm(haystack);
+    if (!folded) return false;
+    return (terms || []).some((term) => {
+      const needle = foldTerm(term);
+      return needle && folded.includes(needle);
+    });
   }
+
+  function sideCounts(items, sides) {
+    const out = {};
+    for (const side of sides || []) {
+      out[side.key] = items.filter((item) => matchesAnyTerm(item, side.terms)).length;
+    }
+    return out;
+  }
+
+  // `{n}` is whatever the rule's own condition counted, which is why it means
+  // the side total in a same-side rule and the list length in the others: the
+  // number a reader wants is the one the rule fired on.
+  function fillSay(template, values) {
+    return String(template || "").replace(/\{(\w+)\}/g, (whole, key) =>
+      Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : whole
+    );
+  }
+
+  function evaluateAlert(rule, damage, panel, fired) {
+    // `unless` is an else-branch written as data: the broad rule stays quiet
+    // when the specific one already spoke. Depends on array order, which the
+    // adapter format documents as precedence.
+    if ((rule.unless || []).some((id) => fired.has(id))) return null;
+
+    if (rule.measure) {
+      const amount = Number(damage[rule.measure] || 0);
+      if (!amount) return null;
+      if (rule.at_least !== undefined && amount < rule.at_least) return null;
+      const declared = (panel.measures || []).find((m) => m.key === rule.measure) || {};
+      const currency =
+        (declared.currency_key ? damage[declared.currency_key] : null) ||
+        declared.default_currency ||
+        "";
+      return fillSay(rule.say, { n: amount, value: amount.toLocaleString(), currency });
+    }
+
+    const items = Array.isArray(damage[rule.state]) ? damage[rule.state] : [];
+    if (!items.length) return null;
+
+    if (rule.terms) {
+      if (!items.some((item) => matchesAnyTerm(item, rule.terms))) return null;
+      // A painted panel that was also replaced says nothing extra: the
+      // replacement rule already fired and is the worse news.
+      if (rule.absent_from) {
+        const others = Array.isArray(damage[rule.absent_from]) ? damage[rule.absent_from] : [];
+        if (others.some((item) => matchesAnyTerm(item, rule.terms))) return null;
+      }
+      return fillSay(rule.say, { n: items.length });
+    }
+
+    const perSide = sideCounts(items, panel.sides);
+    if (rule.same_side_at_least !== undefined) {
+      const worst = Math.max(0, ...Object.values(perSide));
+      if (worst < rule.same_side_at_least) return null;
+      return fillSay(rule.say, { n: worst, ...perSide });
+    }
+    if (rule.each_side_at_least !== undefined) {
+      const values = Object.values(perSide);
+      if (!values.length || values.some((v) => v < rule.each_side_at_least)) return null;
+      return fillSay(rule.say, { n: items.length, ...perSide });
+    }
+    if (rule.at_least !== undefined) {
+      if (items.length < rule.at_least) return null;
+      return fillSay(rule.say, { n: items.length });
+    }
+    return null;
+  }
+
   function buildCriticalAlerts(lm) {
-    const alerts = [];
-    if (!lm) return alerts;
+    if (!lm) return [];
+    const panel = lm.panel || {};
     const damage = lm.damage_info || {};
-    const changed = damage.changed || [];
-    const painted = damage.painted || [];
-    const tramer = Number(damage.tramer_amount || 0);
-    const anyChanged = (re) => changed.some(p => re.test(p));
-    const anyPainted = (re) => painted.some(p => re.test(p));
-
-    if (anyChanged(PART_RE.kaput))
-      alerts.push("Hood replaced: likely severe frontal collision. Have an expert inspect the chassis rails and engine mounts.");
-    if (anyChanged(PART_RE.tavan))
-      alerts.push("Roof replaced: possible rollover or major impact. A-pillars and chassis alignment must be checked.");
-    if (anyChanged(PART_RE.bagaj))
-      alerts.push("Trunk lid replaced: likely serious rear impact. Inspect rear chassis members and the rear floor.");
-    const sameSideChanged = sameSideCount(changed);
-    if (sameSideChanged >= 2)
-      alerts.push(`${sameSideChanged} panels replaced on the same side: likely side-impact collision. Have an expert check pillars and chassis straightness.`);
-    if (changed.length >= 3 && sameSideChanged < 2)
-      alerts.push(`${changed.length} panels replaced overall: significant repair history. Do not buy without a full pre-purchase inspection.`);
-
-    if (anyPainted(PART_RE.tavan) && !anyChanged(PART_RE.tavan))
-      alerts.push("Roof painted: roofs are rarely repainted without a real cause. Check pillars and chassis alignment.");
-    if (anyPainted(PART_RE.kaput) && !anyChanged(PART_RE.kaput))
-      alerts.push("Hood painted: possible front impact or scratch repair. Verify engine mounts, headlight fit and color match.");
-    if (anyPainted(PART_RE.bagaj) && !anyChanged(PART_RE.bagaj))
-      alerts.push("Trunk lid painted: possible rear impact repair. Check rear cross-member and trunk seal alignment.");
-    const paintedSides = sideCounts(painted);
-    if (paintedSides.sol >= 2 && paintedSides.sag >= 2)
-      alerts.push(`Painted panels on both sides (left: ${paintedSides.sol}, right: ${paintedSides.sag}): likely multiple impacts or extensive cosmetic refinishing.`);
-    else if (painted.length >= 4)
-      alerts.push(`${painted.length} panels painted overall: a large portion of the car has been refinished. Inspect for color mismatch, rust, and hidden damage.`);
-
-    if (tramer >= 15000)
-      alerts.push(`High insurance claim recorded (${tramer.toLocaleString()} TRY): significant past damage. Request the full Tramer history report.`);
-
+    const fired = new Set();
+    const alerts = [];
+    for (const rule of panel.alerts || []) {
+      const said = evaluateAlert(rule, damage, panel, fired);
+      if (!said) continue;
+      if (rule.id) fired.add(rule.id);
+      alerts.push(said);
+    }
     return alerts;
   }
 
@@ -1001,14 +1078,41 @@
     const lm = state.listingMeta;
     if (!lm) { slot.innerHTML = ""; lastDetailsListingMeta = null; return; }
     const damage = lm.damage_info || {};
-    const changed = damage.changed || [];
-    const painted = damage.painted || [];
-    const local   = damage.local_painted || [];
-    const tramer  = damage.tramer_amount;
+    const panel = lm.panel || {};
     const equipment = lm.equipment || {};
     const equipmentEntries = Object.entries(equipment).filter(([, items]) => items && items.length);
 
-    if (!changed.length && !painted.length && !local.length && !tramer && !equipmentEntries.length) {
+    // Which local rows exist, what each is called, which tone it takes and
+    // what it warns about are all the answering pack's declarations. This
+    // panel used to name four of them itself, in English, over Turkish keys
+    // — which is how "add a listing site" and "add a category" both became
+    // extension releases. A state the pack declares without a title is
+    // scraped and not shown: an untouched panel is the absence of a finding,
+    // and a row of them would bury the rows that are findings.
+    const declaredRows = [];
+    for (const state of panel.states || []) {
+      if (!state.title) continue;
+      const items = Array.isArray(damage[state.key]) ? damage[state.key] : [];
+      if (!items.length) continue;
+      declaredRows.push({
+        title: state.title, tone: state.tone || "neutral", items, hint: state.hint || "",
+      });
+    }
+    for (const measure of panel.measures || []) {
+      if (!measure.title) continue;
+      const amount = damage[measure.key];
+      if (!amount) continue;
+      const currency =
+        (measure.currency_key ? damage[measure.currency_key] : null) ||
+        measure.default_currency || "";
+      declaredRows.push({
+        title: measure.title, tone: measure.tone || "neutral",
+        items: [`${Number(amount).toLocaleString()}${currency ? ` ${currency}` : ""}`],
+        hint: measure.hint || "",
+      });
+    }
+
+    if (!declaredRows.length && !equipmentEntries.length) {
       slot.innerHTML = "";
       lastDetailsListingMeta = null;
       return;
@@ -1020,32 +1124,12 @@
     if (lm !== lastDetailsListingMeta) {
       lastDetailsListingMeta = lm;
 
-      const rows = [];
-      if (changed.length) rows.push({
-        title: "Replaced", tone: "danger", items: changed,
-        hint: "The panel was removed and a new one installed. Strong signal of serious prior damage; if the hood, roof or trunk lid is here, demand a chassis inspection.",
-      });
-      if (painted.length) rows.push({
-        title: "Painted", tone: "warn", items: painted,
-        hint: "The panel was resprayed. Panels are rarely repainted without a reason — usually an old impact or scratch repair. Check for color mismatch and rust.",
-      });
-      if (local.length) rows.push({
-        title: "Local paint", tone: "warn", items: local,
-        hint: "Only a small area was repainted. Usually a minor scrape or stone-chip touch-up.",
-      });
-      if (tramer) rows.push({
-        title: "Damage claim", tone: "danger",
-        items: [`${Number(tramer).toLocaleString()} ${damage.tramer_currency || "TRY"}`],
-        hint: "Insurance-recorded damage amount. The larger the figure, the more serious the past repair.",
-      });
+      const rows = declaredRows.slice();
       for (const [category, items] of equipmentEntries) {
         rows.push({ title: category, tone: "neutral", items });
       }
 
-      const totalChips =
-        changed.length + painted.length + local.length +
-        (tramer ? 1 : 0) +
-        equipmentEntries.reduce((n, [, items]) => n + items.length, 0);
+      const totalChips = rows.reduce((n, r) => n + r.items.length, 0);
 
       const rowHtml = rows.map((r) => {
         const rowOpen = state.openDetailRows.has(r.title);

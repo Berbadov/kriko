@@ -17,7 +17,7 @@ wrong one silently answers about a different product.
 import json
 
 from kriko.adapters import (adapt, adapter_for, identity_vocabulary,
-                            load_adapters)
+                            load_adapters, local_panel)
 
 SPEC = {
     "id": "demo",
@@ -413,3 +413,56 @@ def test_accent_folding_does_not_merge_letters_turkish_treats_as_distinct():
     spec = {"id": "tr", "subject_kind": "product", "match": ["*"],
             "identity": {"a": {"labels": ["yakıt"]}}}
     assert "a" not in adapt(spec, {"yakit": "x"}).identity
+
+
+def test_the_declared_panel_comes_back_whole_and_uninspected():
+    """The engine passes the panel block through without an opinion on it.
+
+    The block describes markup on someone else's site and words in someone
+    else's language. Validating its shape here would mean writing that shape
+    down in the engine — the same mistake as writing the words down in the
+    browser, one layer further in, and the one `test_core_is_domain_free`
+    exists to catch.
+    """
+    block = {"states": [{"key": "k", "header_terms": ["t"]}], "alerts": [{"id": "a"}]}
+    assert local_panel({"id": "x", "local_panel": block}) == block
+
+
+def test_an_adapter_with_no_panel_gets_an_empty_one_rather_than_none():
+    """A caller must not have to test for two kinds of absent.
+
+    `/api/adapters` puts this on the wire for every installed adapter, and
+    most adapters will never declare a panel. An empty block renders nothing
+    local, which is exactly what a missing one should do.
+    """
+    assert local_panel({"id": "x"}) == {}
+    assert local_panel({"id": "x", "local_panel": "not a block"}) == {}
+
+
+def test_the_cars_panel_declares_a_state_before_it_declares_a_narrower_one():
+    """Precedence in the shipped block is array order, and order is load-bearing.
+
+    "lokal boyalı" contains "boyalı", so a state whose terms are a superstring
+    of another's has to come first or it is unreachable. This is a property of
+    the shipped data rather than of the format, so it is checked here rather
+    than asserted in a docstring nobody executes.
+    """
+    import json
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[3]
+    spec = json.loads(
+        (repo / "packs" / "cars" / "adapters" / "sahibinden.json").read_text("utf-8")
+    )
+    states = spec["local_panel"]["states"]
+    for i, state in enumerate(states):
+        for later in states[i + 1:]:
+            for mine in state["header_terms"]:
+                for theirs in later["header_terms"]:
+                    assert mine not in theirs, (
+                        f"{state['key']}'s term {mine!r} is inside "
+                        f"{later['key']}'s {theirs!r} and is declared first, "
+                        f"so a heading meaning {later['key']} matches "
+                        f"{state['key']} instead and {later['key']} is "
+                        f"unreachable"
+                    )

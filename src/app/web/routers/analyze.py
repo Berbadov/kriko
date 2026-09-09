@@ -22,6 +22,7 @@ from kriko.adapters import (
     declared_labels,
     identity_vocabulary,
     load_adapters,
+    local_panel,
 )
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
@@ -64,6 +65,12 @@ def list_adapters(store=Depends(get_store)):
             "pack_id": a["pack_id"],
             "match": a.get("match", []),
             "labels": declared_labels(a),
+            # The panel the extension draws over the reader's own page. It
+            # rides with the adapter because it is the same kind of thing —
+            # site knowledge the browser interprets and never invents. An
+            # adapter that declares none gets an empty block and the panel
+            # renders nothing local, which is the honest result.
+            "local_panel": local_panel(a),
         }
         for a in load_adapters(store)
     ]

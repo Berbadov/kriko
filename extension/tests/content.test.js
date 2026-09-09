@@ -30,6 +30,20 @@ const PACK_LABELS = [
   "renk", "color", "model", "trim", "kasa tipi", "body type",
 ];
 
+// The `local_panel` block the server hands down beside the labels: the words,
+// selectors and thresholds for the two blocks the panel renders locally.
+//
+// Read off the shipped adapter rather than restated here, on purpose. A test
+// carrying its own copy of the rules cannot notice the shipped ones going
+// stale — and going stale is the exact failure this block exists to prevent.
+const ADAPTER = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname, "..", "..", "packs", "cars", "adapters", "sahibinden.json"),
+    "utf8"
+  )
+);
+const PACK_PANEL = ADAPTER.local_panel;
+
 // ── the page's own labels, uninterpreted ────────────────────────────────
 
 test("classic info list: labels and values are reported exactly as written", () => {
@@ -119,7 +133,7 @@ test("damage and equipment stay local and never enter the posted fields", () => 
   // The panel renders these; the engine has no rule for them. Sending them
   // would put listing-specific personal-ish detail on the wire for nothing.
   const s = loadContentScript(fixture("sahibinden_classic.html"));
-  const scrape = s.buildScrape(PACK_LABELS);
+  const scrape = s.buildScrape(PACK_LABELS, PACK_PANEL);
   assert.ok(scrape.listing);
   assert.ok(scrape.listing.damage_info);
   assert.ok(scrape.listing.equipment);

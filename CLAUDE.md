@@ -114,6 +114,19 @@ not. No `make`, no `engine_code`, no `fuel`. Identity keys, attribute names and 
 vocabulary are pack-declared rows. `src/kriko/tests/test_core_is_domain_free.py` walks
 kriko/'s AST looking for car vocabulary in executable positions.
 
+**And it applies to the client, which is where it hid longest.** `extension/`
+is the one part of the tree no Python AST gate can read, and until 2026-09-10
+it held the site's own Turkish words — damage-state names, part-name regexes,
+alert thresholds — for the two blocks the panel renders from the reader's page
+rather than from the engine's answer. That was `_MAKE_MAP` again, one language
+further out. The words now come off the adapter's `local_panel` block, which
+the client already fetches, and
+`test_the_extension_speaks_no_sites_own_language` in
+`src/app/pipeline/tests/test_repo_invariants.py` fails the suite on any
+non-ASCII *word* in `extension/`. A lone non-ASCII character between
+delimiters is a character fold — the closed-vocabulary exception above — and
+stays legal; a word is vocabulary and does not.
+
 Onboarding a new car model must never require a manual Python dict/list edit in
 `packs/cars/pipeline/stoplists.py` or anywhere else — only new YAML data under `packs/cars/data/`,
 ideally pipeline-generated rather than hand-authored (see `docs/USAGE.md`'s onboarding

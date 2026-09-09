@@ -270,3 +270,17 @@ def adapt(spec: dict, fields: dict, *, url: str = "", title: str = "",
     return Adapted(adapter_id=spec.get("id", "?"),
                    kind=spec.get("subject_kind", "product"),
                    identity=identity, context=context, unmapped=unmapped)
+
+
+def local_panel(spec: dict) -> dict:
+    """The panel this adapter declares for the reader's own page, or nothing.
+
+    Returned opaque on purpose. The block describes markup on someone else's
+    site and words in someone else's language, and this module is not allowed
+    to know either — validating its shape here would mean writing that shape
+    down in the engine, which is the same mistake as writing the words down in
+    the browser. The interpreter is the extension; a block it cannot read
+    renders nothing, which is what an absent block does too.
+    """
+    block = spec.get("local_panel")
+    return block if isinstance(block, dict) else {}

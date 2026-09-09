@@ -41,30 +41,77 @@ budgeting) live in `src/kriko/ledger/`, with each pack injecting its own policy.
 
 ## Serving Plane: Request Path
 
-### 1. Content script extracts listing data
-**`extension/content.js`** — `extractSahibindenMetadata()`
+### 1. Content script reads the page with the pack's own rules
+**`extension/content.js`** — `buildScrape(knownLabels, panel)`
 
-Queries the DOM of a Sahibinden listing page and returns a structured object:
+Two things come off a listing page, and they have different destinations.
+
+The **fields** are raw `label -> value` pairs, exactly as the page wrote them.
+The content script does not interpret them: which label means `fuel` is the
+adapter's job in `kriko/adapters.py`, and `knownLabels` (from
+`GET /api/adapters`) only tells the script which labels are worth digging for
+when the markup it recognises has moved.
+
+The **listing** half never goes on the wire (see step 2) and is what the panel
+draws over the reader's own page: `damage_info` (the body-damage silhouette),
+`equipment`, and `panel` — the presentation rules for both.
+
 ```js
 {
-  make, model, year, fuel_type,  // from classifiedInfoList <ul>
-  transmission, engine_volume_cc, power_hp,  // from #technical-details table
-  trim,          // Sahibinden "Model" field (e.g. "1.5 dCi Joy")
-  damage_info,   // parsed body damage silhouette
-  equipment,     // parsed Donanım checkboxes
-  url, title, ...
+  url, title, description,
+  fields: { "Yakıt": "Benzinli", ... },   // uninterpreted, as printed
+  listing: { damage_info, equipment, panel },
 }
 ```
 
-Key mapping in `mapTurkishKeys()`: Sahibinden uses "Yakıt Tipi"/"Benzinli" etc. The map
-converts Turkish field names → English keys. "Benzinli" → `fuel_type: "Benzinli"`.
+**The `local_panel` block.** Everything the script needs to read those two
+blocks is declared by the adapter, not written in JavaScript: the CSS
+selectors, the site's own words for each damage state, the English titles and
+hints the panel prints, the equipment categories, and the alert thresholds.
+`kriko.adapters.local_panel()` returns it opaque — the engine is not allowed
+to know the shape of someone else's markup any more than it is allowed to know
+their language — and `GET /api/adapters` carries it to the client as
+`local_panel` (`{}` for an adapter that declares none).
 
-### 2. Background script POSTs to /analyze
-**`extension/background.js`** — `requestAnalysis(adMetadata)`
+Until 2026-09-10 this was Turkish regexes and hardcoded thresholds in
+`extension/content.js` and `extension/hover_lite/hover_lite.js`: the same
+failure mode as the pre-pivot `_MAKE_MAP`, in the one part of the tree no
+Python AST gate can read. `test_the_extension_speaks_no_sites_own_language`
+in `src/app/pipeline/tests/test_repo_invariants.py` now fails the suite on any
+non-ASCII *word* in `extension/` (a lone non-ASCII character is a character
+fold, which both `foldTerm`s legitimately need).
 
-Sends `POST http://127.0.0.1:8000/analyze` with the metadata as `ad_metadata`. Tries
-two fallback URLs (`8000`, `8765`). Results are cached in `chrome.storage.session` for
-6 hours by URL+metadata signature hash.
+It stays *data* for the same reason the rest of the adapter does: a pack that
+could ship JavaScript into a content script would, on install, be granted the
+ability to run code on every page the extension can see. So no `RegExp` is
+ever built from a pack-supplied pattern — only from declared *terms*, with
+metacharacters escaped.
+
+Two vocabulary details the format documents:
+
+- **Array order is precedence.** `"lokal boyalı"` contains `"boyalı"`, so the
+  narrower state is declared first or the broader one shadows it.
+  `test_the_cars_panel_declares_a_state_before_it_declares_a_narrower_one`
+  enforces it.
+- **`unless: [<rule-id>]`** is an else-branch written as data — the broad
+  "3 panels replaced" rule stays quiet when "2 on the same side" already
+  spoke. It buys the one bit of control flow the alerts needed without giving
+  the declarative format boolean expressions.
+
+### 2. Background script POSTs to /api/analyze
+**`extension/background.js`** — `_requestScrape(tabId, labels, panel)` then the post
+
+`labels` and `panel` travel per request rather than being cached in the content
+script: the adapter list is refreshed in the service worker, and a scrape
+reading last week's rules would be invisible.
+
+`listing` is **deliberately absent** from the `/api/analyze` body. The engine
+has no schema for a damage silhouette and should not acquire one; the panel
+reads it straight out of the cached entry. That is also why the pack's
+presentation rules ride in `listing.panel` — they reach the renderer without
+reaching the engine.
+
+Results are cached in `chrome.storage.session` by URL.
 
 ### 3. FastAPI /analyze endpoint
 **`src/app/web/app.py`** — `create_app()` and the `/api/analyze` route
@@ -173,12 +220,21 @@ tools (`src/app/mcp_server.py`); the dashboard's Health tab
 ### 6. Response rendering
 **`extension/hover_lite/hover_lite.js`**
 
-Reads `coverage_state`, `risks[]`, `summary`, `disclaimer` from the API response.
-Renders the panel overlay with severity-colored risk cards.
-Risk cards are in `hover_lite/risk_card.js`. Icons in `hover_lite/icons.js`.
-When the response carries `subsystems[]`, groups render per subsystem with the
-Turkish label (`display_tr`) instead of per domain; `why_shown` renders as
-small muted chips under each card title.
+Renders the claims from the API response as severity-coloured risk cards
+(`hover_lite/risk_card.js`; icons in `hover_lite/icons.js`), and renders the
+local blocks from step 1 beneath them.
+
+`buildCriticalAlerts` is an interpreter, not a rule set: it walks
+`listing.panel.alerts` in order, tracking which rule ids fired so `unless` can
+suppress a broader one, and fills each rule's own `say` template. The detail
+rows take their names, tones and hints from `panel.states` and
+`panel.measures` — a state the pack declares with no `title` (an *original*
+panel, which is the absence of a finding) is read and counted but never shown.
+
+`extension/tests/local_panel.test.js` reads the shipped
+`packs/cars/adapters/sahibinden.json` rather than a copy, because a test
+carrying its own copy of the rules cannot notice the shipped ones going stale
+— and going stale is the exact failure this block exists to prevent.
 
 ---
 

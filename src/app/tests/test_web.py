@@ -378,6 +378,24 @@ def test_the_adapters_endpoint_tells_the_client_where_it_is_worth_scraping(clien
     assert rows[0]["match"] == ["*toolshop.invalid/item/*"]
 
 
+def test_the_adapters_endpoint_hands_the_client_its_declared_panel(client):
+    """The rules for the reader's own page ride with the adapter.
+
+    The extension renders two blocks from the page itself rather than from the
+    engine's answer — a damage silhouette and an equipment list on a listing
+    site — and until this shipped, the words, the selectors, the titles and
+    the alert thresholds for them were JavaScript in `extension/`. That is the
+    same failure `_MAKE_MAP` was: a manual edit per site, per market, per
+    category, in the one language none of the repo's AST gates can read.
+
+    A pack that declares none gets an empty block rather than a missing key,
+    so the client has one kind of absent to handle.
+    """
+    rows = client.get("/api/adapters").json()
+    assert all("local_panel" in row for row in rows)
+    assert rows[0]["local_panel"] == {}
+
+
 def test_the_adapters_endpoint_hands_the_client_the_labels_to_look_for(client):
     """The content script keeps no vocabulary of its own.
 

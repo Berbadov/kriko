@@ -781,3 +781,103 @@ def test_no_posix_only_step_runs_unshelled_on_a_windows_runner(workflow: Path):
         "`shell: bash`, so they run under PowerShell on the Windows runner and "
         f"fail there and only there: {offenders}"
     )
+
+
+#: A run of comment, in either JavaScript form. Stripped before the scan below
+#: because prose is allowed to name anything: this gate is about what the code
+#: *matches on*, and a comment explaining a Turkish heading is exactly how the
+#: rule stays legible to the next reader.
+_JS_COMMENTS = (
+    re.compile(r"/\*.*?\*/", re.DOTALL),
+    re.compile(r"//[^\n]*"),
+)
+
+#: A lone non-ASCII character between delimiters: `/ı/`, `"ş"`, `'İ'`. That is
+#: a character fold — the closed-vocabulary exception CLAUDE.md carves out for
+#: fixed engineering categories — and both `foldTerm`s need one. A *word* is
+#: not a fold, and that is the distinction this gate draws.
+_LONE_CHARACTER = re.compile(r"""([/"'])([^\x00-\x7F])\1""")
+
+
+def test_the_extension_speaks_no_sites_own_language():
+    """extension/ matches on terms the pack declared, never on its own.
+
+    Before this gate the panel held four Turkish damage headings, five
+    Turkish-to-English equipment buckets and eleven alert rules with their
+    thresholds and their English advice. Every one of them was a manual edit
+    someone had to remember for a new listing site, a new market, or a
+    category that is not cars — the same failure mode `_MAKE_MAP` and
+    `SIBLING_CODE_FAMILIES` had, in the one language none of the AST gates in
+    this file can read.
+
+    They now live in the adapter's `local_panel` block and reach the browser
+    over `/api/adapters`. A non-ASCII word back in this directory means
+    someone put a site's own vocabulary back into the client, where a pack
+    author cannot reach it.
+
+    Punctuation is not vocabulary: an em dash in a sentence the panel prints
+    is English typography. Only letters count.
+    """
+    ext = REPO / "extension"
+    if not ext.is_dir():
+        pytest.skip("no extension/ in this tree")
+    offenders = []
+    scanned = 0
+    for path in sorted(ext.rglob("*.js")):
+        if "tests" in path.parts or "node_modules" in path.parts:
+            continue
+        scanned += 1
+        source = path.read_text(encoding="utf-8")
+        for pattern in _JS_COMMENTS:
+            source = pattern.sub(lambda m: "\n" * m.group(0).count("\n"), source)
+        source = _LONE_CHARACTER.sub("", source)
+        for n, line in enumerate(source.splitlines(), 1):
+            words = [c for c in line if ord(c) > 127 and c.isalpha()]
+            if words:
+                offenders.append(f"{path.relative_to(REPO)}:{n}: {''.join(words)}")
+    # A gate that found no files to read is a gate that has stopped working.
+    assert scanned >= 4, f"only {scanned} script(s) scanned — is the rglob right?"
+    assert not offenders, (
+        "a site's own vocabulary is back in extension/ — declare it in the "
+        "adapter's `local_panel` block and match it through the interpreter "
+        "instead:\n" + "\n".join(offenders)
+    )
+
+
+def test_the_shipped_panel_declares_what_the_interpreter_reads():
+    """Every rule key the interpreter reads is one a pack actually ships.
+
+    The two halves drift in opposite directions and both are silent. A key the
+    interpreter stopped reading leaves an alert that never fires; a key it
+    reads that nothing ships leaves a branch nothing exercises. Neither shows
+    up as a failure anywhere else.
+
+    The honoured set is read off the source rather than listed here, because a
+    list here would be the very thing this file exists to ban — a hand-kept
+    enumeration that goes stale the first time someone adds a rule form and
+    forgets to come back. `rule.<name>` is how the interpreter reads a key,
+    and there is exactly one interpreter.
+
+    What this cannot see is a branch that is present but dead — `if (false)`
+    around a key still named on the next line reads as honoured here. That is
+    a behaviour question and `extension/tests/local_panel.test.js` is where it
+    is caught; a source gate that claimed otherwise would be lying.
+    """
+    adapter = REPO / "packs" / "cars" / "adapters" / "sahibinden.json"
+    panel = json.loads(adapter.read_text(encoding="utf-8")).get("local_panel")
+    assert panel, "the cars adapter ships no local_panel block"
+
+    source = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text(
+        encoding="utf-8"
+    )
+    honoured = set(re.findall(r"\brule\.(\w+)", source))
+    shipped = {key for rule in panel["alerts"] for key in rule if not key.startswith("_")}
+    assert honoured, "no rule keys found in the panel — has the interpreter moved?"
+    assert shipped - honoured == set(), (
+        f"the shipped rules use keys the interpreter never reads, so they do "
+        f"nothing: {sorted(shipped - honoured)}"
+    )
+    assert honoured - shipped == set(), (
+        f"the interpreter reads keys nothing ships, so no test exercises "
+        f"them: {sorted(honoured - shipped)}"
+    )
