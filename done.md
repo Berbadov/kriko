@@ -8,7 +8,7 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ### 2026-09-10 — The client stops speaking the site's language (B88)
 
-Branch `local-panel` (`97a7c4f`). `extension/hover_lite/hover_lite.js` held
+Branch `local-panel` (`ed3bb15`). `extension/hover_lite/hover_lite.js` held
 hardcoded Turkish part-name regexes and alert thresholds; `extension/content.js`
 held the damage-state words and the equipment categories. I had flagged it twice
 without fixing it. It is `_MAKE_MAP` one language further out, in the one part of
