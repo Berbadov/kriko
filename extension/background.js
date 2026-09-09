@@ -706,8 +706,13 @@ async function _updateBadgeForResult(result, tabId) {
 
 // ── scraping ────────────────────────────────────────────────────────────
 
-async function _requestScrape(tabId, labels) {
-  const ask = { type: "GET_SCRAPE", labels };
+async function _requestScrape(tabId, labels, panel) {
+  // `panel` is the adapter's `local_panel` block: the words, selectors and
+  // rules the content script needs to read the damage and equipment blocks.
+  // It travels per-request rather than being cached in the content script,
+  // because the adapter list is refreshed here and a scrape reading last
+  // week's rules would be invisible.
+  const ask = { type: "GET_SCRAPE", labels, panel };
   try {
     const reply = await chrome.tabs.sendMessage(tabId, ask);
     if (reply && reply.ok) return reply;
@@ -803,7 +808,9 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     }
 
     const scrapeStartedAt = _now();
-    const reply = await _requestScrape(tabId, adapter.labels || []);
+    const reply = await _requestScrape(
+      tabId, adapter.labels || [], adapter.local_panel || {}
+    );
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
       throw new Error("Unable to read this page.");

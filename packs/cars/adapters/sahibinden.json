@@ -2,8 +2,10 @@
   "id": "sahibinden",
   "site": "sahibinden.com",
   "subject_kind": "product",
-  "match": ["*sahibinden.com/ilan/*", "*sahibinden.com/*vasita*"],
-
+  "match": [
+    "*sahibinden.com/ilan/*",
+    "*sahibinden.com/*vasita*"
+  ],
   "_comment": [
     "Declarative on purpose. This file describes WHICH scraped labels mean what;",
     "it contains no code, and it is interpreted server-side rather than in the",
@@ -16,66 +18,119 @@
     "listing site is a JSON file, and a site redesign is a data edit rather than",
     "an extension release."
   ],
-
   "identity": {
-    "make": {"labels": ["marka", "make", "brand"], "from": "title",
-             "vocabulary": "make"},
-    "model": {"labels": ["seri", "series"], "from": "title",
-              "vocabulary": "model"},
+    "make": {
+      "labels": [
+        "marka",
+        "make",
+        "brand"
+      ],
+      "from": "title",
+      "vocabulary": "make"
+    },
+    "model": {
+      "labels": [
+        "seri",
+        "series"
+      ],
+      "from": "title",
+      "vocabulary": "model"
+    },
     "fuel": {
       "_comment": "The technical panel writes 'Gasoline / EURO 6' and, when the fuel row is absent, hides the fuel inside 'Motor Tipi' / 'Engine Type' ('Gasoline / 4 cylinders'). Both are the first segment.",
-      "labels": ["yakıt", "yakit", "yakıt tipi", "yakit tipi", "fuel",
-                 "fuel type", "motor tipi", "engine type"],
+      "labels": [
+        "yakıt",
+        "yakit",
+        "yakıt tipi",
+        "yakit tipi",
+        "fuel",
+        "fuel type",
+        "motor tipi",
+        "engine type"
+      ],
       "segment": "first"
     },
     "transmission": {
       "_comment": "'Şanzıman / Çekiş' reads 'Otomatik / Önden Çekiş'; the English panel reads 'DSG / 7 Gear / Front Wheel Drive'. The gearbox is the first segment in both.",
-      "labels": ["vites", "gear", "şanzıman / çekiş", "sanziman / cekis",
-                 "transmission / drive type", "transmission"],
+      "labels": [
+        "vites",
+        "gear",
+        "şanzıman / çekiş",
+        "sanziman / cekis",
+        "transmission / drive type",
+        "transmission"
+      ],
       "segment": "first"
     },
     "displacement_cc": {
-      "labels": ["motor hacmi", "engine capacity"],
+      "labels": [
+        "motor hacmi",
+        "engine capacity"
+      ],
       "parse": "int_range",
       "min": 500,
       "max": 8000
     },
     "power_min_hp": {
       "_comment": "'Maksimum Güç' reads '110 hp (81 kw) / 4,600 rpm'; the range bound is what makes reading the first number safe — 81 and 4600 are both outside it.",
-      "labels": ["motor gücü", "motor gucu", "beygir gücü", "beygir gucu",
-                 "engine power", "maksimum güç", "maksimum guc",
-                 "maximum power"],
+      "labels": [
+        "motor gücü",
+        "motor gucu",
+        "beygir gücü",
+        "beygir gucu",
+        "engine power",
+        "maksimum güç",
+        "maksimum guc",
+        "maximum power"
+      ],
       "parse": "int_range",
       "min": 30,
       "max": 700
     },
     "build_year": {
       "_comment": "Falls back to the title. The info-list markup here has been redesigned repeatedly and every redesign zeroed every field; the year is the one identity key a title reliably carries.",
-      "labels": ["yıl", "yil", "üretim yılı", "uretim yili", "year"],
+      "labels": [
+        "yıl",
+        "yil",
+        "üretim yılı",
+        "uretim yili",
+        "year"
+      ],
       "from": "title",
       "parse": "int_range",
       "min": 1980,
       "max": 2035
     }
   },
-
   "context": {
     "usage_km": {
-      "labels": ["km", "kilometre", "kilometer", "mileage"],
+      "labels": [
+        "km",
+        "kilometre",
+        "kilometer",
+        "mileage"
+      ],
       "parse": "int_range",
       "min": 0,
       "max": 2000000
     },
     "build_year": {
-      "labels": ["yıl", "yil", "üretim yılı", "uretim yili", "year"],
+      "labels": [
+        "yıl",
+        "yil",
+        "üretim yılı",
+        "uretim yili",
+        "year"
+      ],
       "from": "title",
       "parse": "int_range",
       "min": 1980,
       "max": 2035
     },
-    "free_text": {"from": "description"}
+    "free_text": {
+      "from": "description"
+    }
   },
-
   "derive": [
     {
       "_comment": "Age is arithmetic on the build year, not a scraped field.",
@@ -84,7 +139,301 @@
       "from": "build_year"
     }
   ],
-
+  "local_panel": {
+    "_comment": [
+      "The panel the reader sees over their own page, declared rather than coded.",
+      "",
+      "Everything here used to be JavaScript in extension/: the Turkish words that",
+      "name a damage state, the DOM selectors that find one, the English titles and",
+      "hints the panel prints, and the rules that turn a list of panels into a red",
+      "flag. All of it is site knowledge and category knowledge, and all of it had",
+      "the same failure mode the label lists had before Phase 6c — a site redesign,",
+      "or a second listing site, or a second category, meant an extension release.",
+      "",
+      "It stays data, interpreted by a fixed evaluator, for the same reason the rest",
+      "of this file does: a pack that could ship JavaScript into a content script",
+      "would be a pack that runs code on every page the extension can see. Anything",
+      "this vocabulary cannot express is a reason to extend the evaluator once, in",
+      "review, rather than to open that door.",
+      "",
+      "Term matching is folded on both sides (lowercase, accents stripped, dotless",
+      "i normalised), so 'degisen' here matches 'Değişen' on the page and an author",
+      "need not enumerate spellings."
+    ],
+    "block_selector": ".car-damage-info-list",
+    "item_selector": "li.selected-damage",
+    "header_selector": "h1, h2, h3, h4, h5, .title, .header",
+    "max_item_length": 60,
+    "legacy": {
+      "_comment": "Older sahibinden DOMs encoded the state in CSS classes on the silhouette nodes themselves. Only read when the modern selectors above found nothing.",
+      "node_selector": "[class*='damageInfo'] *, [id*='damageInfo'] *, [class*='Damage'] *, [id*='Damage'] *, [class*='Boya'] *, [id*='Boya'] *",
+      "name_attributes": [
+        "title",
+        "data-title",
+        "aria-label"
+      ],
+      "max_item_length": 80
+    },
+    "states": [
+      {
+        "_comment": "Order is precedence: 'lokal boyalı' contains 'boyalı', so the narrower heading has to be tested first.",
+        "key": "changed",
+        "header_terms": [
+          "degisen"
+        ],
+        "legacy_class_terms": [
+          "bgchanged",
+          "degisen",
+          "changed",
+          "cgedit"
+        ],
+        "title": "Replaced",
+        "tone": "danger",
+        "hint": "The panel was removed and a new one installed. Strong signal of serious prior damage; if the hood, roof or trunk lid is here, demand a chassis inspection."
+      },
+      {
+        "key": "local_painted",
+        "header_terms": [
+          "lokal boyali"
+        ],
+        "legacy_class_terms": [
+          "bglocalpainted",
+          "lokal",
+          "localpainted",
+          "localpaint"
+        ],
+        "title": "Local paint",
+        "tone": "warn",
+        "hint": "Only a small area was repainted. Usually a minor scrape or stone-chip touch-up."
+      },
+      {
+        "key": "painted",
+        "header_terms": [
+          "boyali"
+        ],
+        "legacy_class_terms": [
+          "bgpainted",
+          "boyali",
+          "painted",
+          "cgpaint"
+        ],
+        "title": "Painted",
+        "tone": "warn",
+        "hint": "The panel was resprayed. Panels are rarely repainted without a reason — usually an old impact or scratch repair. Check for colour mismatch and rust."
+      },
+      {
+        "_comment": "Scraped, and deliberately given no title: an original panel is the absence of a finding, and a row of them would bury the three rows that are findings. The alert rules below still read it.",
+        "key": "original",
+        "header_terms": [
+          "orijinal"
+        ],
+        "legacy_class_terms": [
+          "bgoriginal",
+          "orijinal",
+          "original"
+        ]
+      }
+    ],
+    "measures": [
+      {
+        "key": "tramer_amount",
+        "currency_key": "tramer_currency",
+        "default_currency": "TRY",
+        "selectors": [
+          "[id*='Tramer']",
+          "[class*='tramer']",
+          "[id*='Hasar']",
+          "[class*='hasar']"
+        ],
+        "text_selectors": [
+          "#classifiedDescription",
+          ".classifiedDescription",
+          "[itemprop='description']"
+        ],
+        "terms": [
+          "tramer",
+          "hasar kaydi"
+        ],
+        "currencies": {
+          "tl": "TRY",
+          "try": "TRY",
+          "usd": "USD",
+          "eur": "EUR",
+          "$": "USD",
+          "€": "EUR"
+        },
+        "title": "Damage claim",
+        "tone": "danger",
+        "hint": "Insurance-recorded damage amount. The larger the figure, the more serious the past repair."
+      }
+    ],
+    "sides": [
+      {
+        "key": "left",
+        "terms": [
+          "sol"
+        ]
+      },
+      {
+        "key": "right",
+        "terms": [
+          "sag"
+        ]
+      }
+    ],
+    "alerts": [
+      {
+        "id": "hood-changed",
+        "state": "changed",
+        "terms": [
+          "motor kaputu",
+          "kaput"
+        ],
+        "say": "Hood replaced: likely severe frontal collision. Have an expert inspect the chassis rails and engine mounts."
+      },
+      {
+        "id": "roof-changed",
+        "state": "changed",
+        "terms": [
+          "tavan"
+        ],
+        "say": "Roof replaced: possible rollover or major impact. A-pillars and chassis alignment must be checked."
+      },
+      {
+        "id": "trunk-changed",
+        "state": "changed",
+        "terms": [
+          "bagaj kapagi",
+          "bagaj"
+        ],
+        "say": "Trunk lid replaced: likely serious rear impact. Inspect rear chassis members and the rear floor."
+      },
+      {
+        "id": "same-side-changed",
+        "state": "changed",
+        "same_side_at_least": 2,
+        "say": "{n} panels replaced on the same side: likely side-impact collision. Have an expert check pillars and chassis straightness."
+      },
+      {
+        "_comment": "`unless` is how an else-branch is written without giving the format a control flow: the broad rule stays quiet when the specific one already spoke.",
+        "id": "many-changed",
+        "state": "changed",
+        "at_least": 3,
+        "unless": [
+          "same-side-changed"
+        ],
+        "say": "{n} panels replaced overall: significant repair history. Do not buy without a full pre-purchase inspection."
+      },
+      {
+        "_comment": "A painted panel that was also replaced says nothing extra — the replacement alert already fired and is the worse news.",
+        "id": "roof-painted",
+        "state": "painted",
+        "terms": [
+          "tavan"
+        ],
+        "absent_from": "changed",
+        "say": "Roof painted: roofs are rarely repainted without a real cause. Check pillars and chassis alignment."
+      },
+      {
+        "id": "hood-painted",
+        "state": "painted",
+        "terms": [
+          "motor kaputu",
+          "kaput"
+        ],
+        "absent_from": "changed",
+        "say": "Hood painted: possible front impact or scratch repair. Verify engine mounts, headlight fit and colour match."
+      },
+      {
+        "id": "trunk-painted",
+        "state": "painted",
+        "terms": [
+          "bagaj kapagi",
+          "bagaj"
+        ],
+        "absent_from": "changed",
+        "say": "Trunk lid painted: possible rear impact repair. Check rear cross-member and trunk seal alignment."
+      },
+      {
+        "id": "both-sides-painted",
+        "state": "painted",
+        "each_side_at_least": 2,
+        "say": "Painted panels on both sides (left: {left}, right: {right}): likely multiple impacts or extensive cosmetic refinishing."
+      },
+      {
+        "id": "many-painted",
+        "state": "painted",
+        "at_least": 4,
+        "unless": [
+          "both-sides-painted"
+        ],
+        "say": "{n} panels painted overall: a large portion of the car has been refinished. Inspect for colour mismatch, rust, and hidden damage."
+      },
+      {
+        "id": "high-claim",
+        "measure": "tramer_amount",
+        "at_least": 15000,
+        "say": "High insurance claim recorded ({value} {currency}): significant past damage. Request the full Tramer history report."
+      }
+    ],
+    "equipment": {
+      "block_selector": "#classifiedProperties, .classifiedProperties, [id*='Donanim'], [class*='Donanim'], [id*='donanim'], [class*='donanim'], [id*='Equipment'], [class*='Equipment']",
+      "item_selector": "li, span, div",
+      "selected_class_terms": [
+        "selected"
+      ],
+      "unselected_class_terms": [
+        "unselected",
+        "deselected",
+        "not-selected"
+      ],
+      "header_selector": "h2, h3, h4, .title",
+      "section_terms": [
+        "donanim",
+        "equipment"
+      ],
+      "fallback_category": "Other",
+      "max_item_length": 60,
+      "categories": [
+        {
+          "key": "Safety",
+          "terms": [
+            "guvenlik",
+            "safety"
+          ]
+        },
+        {
+          "key": "Interior",
+          "terms": [
+            "ic donanim",
+            "interior"
+          ]
+        },
+        {
+          "key": "Exterior",
+          "terms": [
+            "dis donanim",
+            "exterior"
+          ]
+        },
+        {
+          "key": "Multimedia",
+          "terms": [
+            "multimedya",
+            "multimedia",
+            "infotainment"
+          ]
+        },
+        {
+          "key": "Lighting",
+          "terms": [
+            "aydinlatma",
+            "lighting"
+          ]
+        }
+      ]
+    }
+  },
   "_ignore_comment": [
     "These labels are not read at all, not merely left out of the coverage",
     "report. Several of them are near-misses for a rule above — 'Yakıt",
@@ -92,16 +441,45 @@
     "extension no longer filters anything client-side, so this list is the",
     "only thing that stops a consumption figure being read as a fuel type."
   ],
-
   "ignore_labels": [
-    "renk", "color", "durum", "durumu", "vehicle status", "garanti", "warranty",
-    "kasa tipi", "body type", "model", "trim", "fiyat", "price", "ilan no",
-    "listing no", "ilan tarihi", "listing date", "kimden", "from",
-    "takasa uygun", "exchange", "plaka", "plate", "ağır hasar kayıtlı",
-    "agir hasar kayitli", "salvage record",
-    "çekiş", "cekis", "wheel drive", "drive type",
-    "yakıt tüketimi", "yakit tuketimi", "fuel consumption",
-    "yakıt deposu", "yakit deposu", "fuel tank", "fuel tank capacity",
-    "ortalama yakıt tüketimi", "ortalama yakit tuketimi"
+    "renk",
+    "color",
+    "durum",
+    "durumu",
+    "vehicle status",
+    "garanti",
+    "warranty",
+    "kasa tipi",
+    "body type",
+    "model",
+    "trim",
+    "fiyat",
+    "price",
+    "ilan no",
+    "listing no",
+    "ilan tarihi",
+    "listing date",
+    "kimden",
+    "from",
+    "takasa uygun",
+    "exchange",
+    "plaka",
+    "plate",
+    "ağır hasar kayıtlı",
+    "agir hasar kayitli",
+    "salvage record",
+    "çekiş",
+    "cekis",
+    "wheel drive",
+    "drive type",
+    "yakıt tüketimi",
+    "yakit tuketimi",
+    "fuel consumption",
+    "yakıt deposu",
+    "yakit deposu",
+    "fuel tank",
+    "fuel tank capacity",
+    "ortalama yakıt tüketimi",
+    "ortalama yakit tuketimi"
   ]
 }
