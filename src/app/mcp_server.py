@@ -28,6 +28,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from app import agenda as _agenda
 from app.findings import accept_findings, log_submission
 from kriko.lookup.tree import health_json, tree_json
 from kriko.lookup.tree import subject_tree as _subject_tree
@@ -54,6 +55,32 @@ def _app_state_path():
     from kriko.store.db import DEFAULT_STORE
 
     return Path(STORE_PATH or DEFAULT_STORE).parent / "app.sqlite"
+
+def _log_path():
+    """Where the analyses log is, derived rather than imported.
+
+    Same reasoning as `_app_state_path`: the log is a sibling of the store by
+    construction, so a test that points STORE_PATH at a temporary directory
+    gets a temporary demand log too. `KRIKO_ANALYSES_LOG` still wins, because
+    that is the variable the app itself honours.
+    """
+    import os
+
+    override = os.environ.get("KRIKO_ANALYSES_LOG")
+    if override:
+        return Path(override)
+    if STORE_PATH:
+        # A test (or an operator) pointing the store somewhere gets the log
+        # from beside it, which is where a real install keeps it.
+        return Path(STORE_PATH).parent / "logs" / "analyses.jsonl"
+    # No override and the default store: ask the app where it *writes* the
+    # log, because in a source checkout that is the repository's `logs/` and
+    # not `~/.kriko` — reading a different file from the one being written is
+    # a demand signal of zero.
+    from app.web.settings import default_analysis_log
+
+    return Path(default_analysis_log())
+
 
 @contextmanager
 def _store():
@@ -235,6 +262,50 @@ def research_brief(subject_id: str, pack_id: str) -> dict:
             "queries": list(task.rendered_queries()),
             "brief": get_researcher().brief(task),
         }
+
+
+@mcp.tool()
+def research_agenda(pack_id: str = "", limit: int = 20) -> dict:
+    """**Call this first.** What to research next, in the order it is worth it.
+
+    `coverage_gaps` answers "what is missing" alphabetically, which is not an
+    ordering — an agent taking its first ten rows researches ten subjects
+    beginning with A while the product someone actually looked up twice this
+    week waits. This ranks by demand: how often this installation was asked
+    about a subject, out of the analyses log.
+
+    Four row kinds, and the `why` on each says what it is asking for:
+
+      `empty_subject`   nothing known — the normal research task
+      `stale_claim`     a cited page no longer carries its quote; re-read it
+      `thin_subject`    supported by too little; find an independent source
+      `unknown_subject` **not a task for you.** A product this installation
+                        was asked about that no subject exists for. It has no
+                        `subject_id`, so nothing can be filed against it — it
+                        is demand for catalog coverage, and reporting it to
+                        the reader is the whole of what it is for.
+
+    The signals ride on every row (`asked`, `independent_sources`,
+    `refuted_by`, `checked_at`) rather than being fused into a score, because
+    "nobody has ever researched this" and "the source moved" call for
+    different searches, and a single number cannot tell them apart.
+    """
+    with _store() as conn:
+        app_state = None
+        try:
+            from app.web import state as _state
+
+            app_state = _state.connect(_app_state_path())
+        except Exception:
+            app_state = None
+        try:
+            return _agenda.compute(
+                conn, app_state=app_state, log_path=_log_path(),
+                pack_id=pack_id, limit=limit,
+            )
+        finally:
+            if app_state is not None:
+                app_state.close()
 
 
 @mcp.tool()

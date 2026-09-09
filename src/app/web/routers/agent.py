@@ -14,13 +14,18 @@ both cases — an agent writing to a different SQLite file than the window reads
 is the single failure that would look exactly like success.
 """
 
+import logging
 import sys
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app import agenda as agenda_mod
 from app import agentconfig, agentskill
+from app.web import state
 from app.web.deps import get_store
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["agent"])
 
@@ -116,14 +121,38 @@ def agent_targets(request: Request):
     }
 
 
+def _agenda_rows(request: Request, store) -> list[dict]:
+    """The agenda, or nothing, for the skill's snapshot.
+
+    Best-effort on purpose: the skill is the protocol and the snapshot is a
+    convenience on top of it, so a log that cannot be read or a missing
+    `app.sqlite` must cost the reader a head start and never the document.
+    """
+    try:
+        settings = request.app.state.settings
+        app_state = state.connect(settings.app_state_path)
+        try:
+            return agenda_mod.compute(
+                store,
+                app_state=app_state,
+                log_path=settings.analysis_log_path,
+                limit=5,
+            )["rows"]
+        finally:
+            app_state.close()
+    except Exception:
+        log.warning("could not compute the agenda for the skill", exc_info=True)
+        return []
+
+
 @router.get("/agent-skill")
-def agent_skill(store=Depends(get_store)):
+def agent_skill(request: Request, store=Depends(get_store)):
     """The protocol, assembled from the packs that are installed right now.
 
     Served as well as written so a reader on an unsupported harness can still
     read it, and so the UI can show what Connect is about to put on disk.
     """
-    body = agentskill.render(store)
+    body = agentskill.render(store, _agenda_rows(request, store))
     return {
         "name": agentskill.SKILL_NAME,
         "steps": [{"tool": tool, "why": why} for tool, why in agentskill.STEPS],
@@ -155,7 +184,7 @@ def connect_target(target_id: str, request: Request, store=Depends(get_store)):
     # Best-effort, and after the config: the connection is the thing the reader
     # asked for, and a harness with nowhere to put a skill still gets one.
     skill_written = None
-    body = agentskill.render(store)
+    body = agentskill.render(store, _agenda_rows(request, store))
     if body:
         try:
             skill_written = agentconfig.write_skill(target, agentskill.SKILL_NAME, body)
