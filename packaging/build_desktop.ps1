@@ -74,6 +74,15 @@ Set-StrictMode -Version Latest
 $repo = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 Push-Location $repo
 
+# When this run started, so the report at the end can tell what this run
+# produced from what was already lying in the output directory.
+# `target/release/bundle` is never cleaned between builds, so the recursive
+# listing that used to end this script reported every installer any earlier
+# build had left there. On 2026-09-09 that meant printing a 0.5.0 setup.exe
+# from four hours and three commits earlier, in green, beside the one this
+# run had just made -- and the reader is handed a path out of that list.
+$started = Get-Date
+
 function Step {
     param([string]$Name)
     Write-Host ""
@@ -192,9 +201,20 @@ try {
 
     Step "Done"
     $installers = Get-ChildItem -Recurse -Path "tauri/src-tauri/target/release/bundle" `
-        -Include *.exe, *.msi -ErrorAction SilentlyContinue
+        -Include *.exe, *.msi -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $started }
     if (-not $installers) {
-        throw "tauri build reported success and produced no installer"
+        throw "tauri build reported success and produced no installer from this run"
+    }
+    # A stamp that did not take is otherwise invisible: the build is green, the
+    # installer is real, and its version is whatever the tree happened to be
+    # committed at. Tauri names the bundle from the version configure_updater
+    # wrote, so the filename is the evidence that the stamp arrived.
+    if ($Version) {
+        $stamp = $Version -replace '^v', ''
+        if (-not ($installers | Where-Object { $_.Name -like "*$stamp*" })) {
+            throw "asked to stamp $stamp and no installer from this run carries it"
+        }
     }
     $installers | ForEach-Object {
         Write-Host ("{0}  {1:N1} MB" -f $_.FullName, ($_.Length / 1MB)) -ForegroundColor Green
