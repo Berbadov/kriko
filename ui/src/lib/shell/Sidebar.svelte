@@ -1,8 +1,6 @@
 <script lang="ts">
-    import { tick } from "svelte";
     import { MODES, setMode, type Mode } from "../mode";
     import { hashWith, route } from "../router";
-    import { rowFor } from "./mark";
     import NavGroup from "./NavGroup.svelte";
     import { groupsFor, resolve } from "./nav";
 
@@ -13,9 +11,9 @@
     /* The rail highlights the screen that is *rendered*, which is not always
      * the screen that was asked for. `#/coverage` renders Knowledge's gaps
      * lens — App.svelte resolves that, and until this line the rail did not,
-     * so arriving from the browser extension's link lit no row at all and the
-     * marker switched off. One resolve, read by the rows and the marker
-     * alike. */
+     * so arriving from the browser extension's link lit no row at all. One
+     * resolve, read by every row's `.active` class, is what keeps them
+     * agreeing with what is actually on screen. */
     const current = $derived(resolve($route.name).name);
 
     // Every rail link carries the mode, and it comes from the prop rather than
@@ -24,68 +22,43 @@
     // switching modes on its own.
     const href = (name: string) => hashWith({ mode }, name);
 
-    /* One marker that moves, rather than a border that appears.
+    /* The active row used to carry a second, *measured* indicator — a bar
+     * this component positioned in JS from `rowFor(...).offsetTop` after
+     * `tick()` (see the deleted `lib/shell/mark.ts`). That fixed the bug it
+     * was built for — a stale `.active` class read from a not-yet-updated
+     * child — and then grew a second class of bug nothing here ever tested
+     * for, because every failure mode was a layout timing problem and jsdom
+     * has no layout:
      *
-     * Fourteen links each growing their own left border on activation reads
-     * as fourteen things blinking; a single bar sliding from the old row to
-     * the new one reads as one object moving, which is what actually
-     * happened. It is measured rather than declared because the rows are not
-     * a fixed height — a group heading appears between some of them.
+     *   - first paint measured the fallback font's metrics, because
+     *     `fonts.css` uses `font-display: swap` on purpose (text beats no
+     *     text) — the bar landed at the fallback-font offset and never
+     *     moved again until the next navigation retriggered the effect;
+     *   - the effect's dependencies were the route and the group list, not
+     *     the window, so crossing the `(max-height: 820px)` breakpoint —
+     *     which changes `.nav-link` padding and therefore every row's
+     *     height — left the bar sized for the padding that was current when
+     *     the reader last navigated, not the padding now on screen;
+     *   - `.rail-nav` itself scrolls, so a measurement taken once and never
+     *     refreshed drifted the moment the rail's own scroll position moved
+     *     it independently of any navigation.
      *
-     * Additive on purpose: `.nav-link.active` keeps its own background, so if
-     * measurement returns zero (a headless render, a font that has not landed
-     * yet) the active row is still obviously the active row and only the
-     * flourish is missing.
+     * None of that is a bug in *this* component's logic — `rowFor` still
+     * finds the right element every time. It is a bug in re-measuring only
+     * on navigation when the row's on-screen position can also change for
+     * reasons that are not a navigation. A DOM measurement kept in sync with
+     * layout needs a `ResizeObserver` and a scroll listener on top of the
+     * route effect, which is a lot of moving parts to keep a 3px bar in
+     * place next to a background colour that was already correct.
+     *
+     * So the bar is gone, and `.nav-link.active::before` (components.css)
+     * draws it instead: pure CSS, positioned by the row's own box, updated by
+     * the browser's normal layout pass for free on every one of the cases
+     * above. There is nothing left to measure and nothing left to go stale.
+     * `.nav-link.active`'s background is unchanged — the design intent this
+     * replaces (the active row is obviously active on its own, flourish or
+     * not) did not depend on the flourish being JS in the first place.
      */
-    let navEl = $state<HTMLElement | undefined>();
-    let markTop = $state(0);
-    let markHeight = $state(0);
-    let marked = $state(false);
-
-    /* Measured after the flush, against the route rather than against a class.
-     *
-     * Both halves were bugs. `querySelector(".nav-link.active")` asked a
-     * *child* component's markup a question at a moment when Svelte had not
-     * yet updated it — parent effects run before child template updates — so
-     * the row measured was the one the reader had just left, and the marker
-     * lived one navigation behind the app. `rowFor` takes the route instead,
-     * which is the value we already hold and which cannot be stale
-     * (lib/shell/mark.ts).
-     *
-     * `tick()` covers the other half: a mode switch adds and removes whole
-     * groups, so the row for the new route may not have mounted yet. After
-     * the tick, every child's markup has landed and `offsetTop` means
-     * something. The `live` flag drops a measurement whose navigation has
-     * already been superseded — two fast clicks must not race.
-     */
-    $effect(() => {
-        // Tracked: the resolved route, and the group list — switching mode
-        // adds and removes whole groups, which moves every row below them.
-        const target = current;
-        void groups;
-        const nav = navEl;
-        if (!nav) {
-            marked = false;
-            return;
-        }
-        let live = true;
-        void tick().then(() => {
-            if (!live) return;
-            const el = rowFor(nav, target);
-            if (!el) {
-                marked = false;
-                return;
-            }
-            // offsetTop against `.rail-nav`, which is the positioned ancestor —
-            // so the marker scrolls with the rows if the rail ever does.
-            markTop = el.offsetTop;
-            markHeight = el.offsetHeight;
-            marked = markHeight > 0;
-        });
-        return () => {
-            live = false;
-        };
-    });
 </script>
 
 <aside class="rail">
@@ -105,13 +78,7 @@
         </span>
     </a>
 
-    <nav class="rail-nav" bind:this={navEl}>
-        <span
-            class="nav-mark"
-            class:on={marked}
-            style="--mark-top: {markTop}px; --mark-height: {markHeight}px"
-            aria-hidden="true"
-        ></span>
+    <nav class="rail-nav">
         {#each groups as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
                 <NavGroup {group} {current} {href} />

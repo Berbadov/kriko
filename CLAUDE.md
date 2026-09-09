@@ -230,14 +230,20 @@ binds an OS-chosen port and prints `KRIKO_PORT <n>` as its first line of
 stdout — the child picks the port because a parent that finds a free one has
 already lost it by the time the child binds. `tauri/` reads that line, polls
 `/api/health`, and only then shows the window; on failure it renders the
-captured stderr, because a blank window is a bug. It kills the sidecar on
-window close *and* on app exit, and on Windows kills the *tree* — PyInstaller
-onefile re-execs, so the pid we spawned is a bootloader and its child is what
-holds the image. The sidecar also ends itself when its stdin closes
+captured stderr, because a blank window is a bug. **Nothing outlives *Quit*
+— but the window is not Quit.** Closing it hides it and leaves the engine
+serving, because the extension talks to `EXTENSION_PORT` precisely when the
+reader is on a listing page rather than in the app; a tray icon (Open, Quit)
+is what ends the process, and on Windows the kill is a *tree* kill —
+PyInstaller onefile re-execs, so the pid we spawned is a bootloader and its
+child is what holds the image. The sidecar also ends itself when its stdin closes
 (`--exit-with-parent`), which is the only belt that covers a crashed shell. An
 orphan does not merely hold the store's WAL lock: on Windows it keeps its own
 `.exe` mapped, and the next *installer* fails with "Error opening file for
-writing: kriko-sidecar.exe" — hence `tauri/src-tauri/installer.nsh` as well.
+writing: kriko-sidecar.exe" — and since the engine now survives the window,
+`tauri/src-tauri/installer.nsh` is the normal path rather than a fallback: it
+stops `Kriko.exe` first (whose exit closes the sidecar's stdin, the designed
+way out) and `kriko-sidecar.exe` second.
 The sidecar serves two sockets, the announced one and the fixed
 `EXTENSION_PORT`, because a browser extension cannot be told a random port.
 Pytest guards keep all of this honest with no Rust toolchain installed: the
@@ -286,6 +292,7 @@ original reasoning.
 | `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — all phases landed; installers unbuilt (B52) |
 | `docs/superpowers/specs/2026-09-03-app-design-and-ia.md` | The app design system, IA and four features | current |
 | `docs/superpowers/specs/2026-09-09-research-agenda-design.md` | B82: what an agent should research next, and where that ordering comes from | current — implemented 2026-09-09 (`app/agenda.py`, `2a9d82c`) |
+| `docs/superpowers/specs/2026-09-09-knowledge-building-design.md` | How an installation grows its own packs: the two research planes, keys, the agenda run, provenance + undo, and the product-identity skill | current — design only, unimplemented |
 | `tauri/README.md` | The desktop shell: launch sequence, failure surface, local build | current — never built on a machine with a Rust toolchain |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |
