@@ -14,7 +14,12 @@ describe("Sidebar", () => {
         render(Sidebar, { mode: "author" });
         expect(screen.getByText("Knowledge")).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Runs" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Activity" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Agents" })).toBeInTheDocument();
+        // The five rows those two replaced are gone from the rail — the point
+        // of the merge was the rail, not the screens.
+        expect(screen.queryByRole("link", { name: "Runs" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Console" })).toBeNull();
     });
 
     it("carries the mode into every link, so a click does not silently switch it", () => {

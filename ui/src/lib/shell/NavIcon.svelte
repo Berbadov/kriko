@@ -46,6 +46,16 @@
         pipeline: ["M4 5h16l-6 7v6l-4 2v-8z", "M17.5 17.5v.01", "M20.5 20.5v.01"],
         // an inbox tray: what came in through the door
         submissions: ["M3.5 13.5 6 5h12l2.5 8.5v5h-17z", "M3.5 13.5h4l1.5 2.5h6l1.5-2.5h4"],
+        // a pulse trace: what this installation has been doing
+        activity: ["M3 12h4l2.5-6 4 12 2.5-6h5"],
+        // two nodes joined, with the second doubled: an agent on the other
+        // end, and the console you drive it from
+        agents: [
+            "M6.5 9a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0",
+            "M14 15a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0",
+            "M11 10.5 14.5 13.5",
+            "M4 19h5",
+        ],
         // a prompt caret
         console: ["M3.5 5h17v14h-17z", "M7 10l2.5 2L7 14", "M12.5 14.5h4"],
         // two nodes joined: an agent on the other end
