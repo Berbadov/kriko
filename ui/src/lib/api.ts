@@ -183,6 +183,32 @@ export const api = {
     job: (jobId: string) => get<T.Job>(`/api/jobs/${seg(jobId)}`),
     research: (body: T.ResearchRequest) =>
         postJson<{ job_id: string; kind: string }>("/api/research", body),
+    /** Which planes exist and what each costs. Server-side vocabulary — see
+     *  the router's docstring for why it is not restated here. */
+    researchPlanes: () => get<{ planes: T.ResearchPlane[] }>("/api/research-planes"),
+    /** Walk the agenda unattended. One job for the whole run: `agenda_run`
+     *  calls the research path inline, because the job runner has a single
+     *  worker and a job that submits jobs deadlocks. */
+    runAgenda: (body: T.AgendaRunRequest) =>
+        postJson<{ job_id: string; kind: string }>("/api/agenda/run", body),
+    researchRuns: (limit = 50) =>
+        get<{ runs: T.ResearchRun[] }>(`/api/research-runs?limit=${limit}`),
+    researchRun: (runId: string) =>
+        get<T.ResearchRunDetail>(`/api/research-runs/${seg(runId)}`),
+    /** Take a run's claims back out. A job, because it writes once per claim. */
+    undoResearchRun: (runId: string) =>
+        del<{ job_id: string; kind: string }>(`/api/research-runs/${seg(runId)}`),
+    /** What is stored, masked. This never returns a key — `app/keys.py`'s
+     *  `require` is the only function that reads one and it is in-process. */
+    keys: () => get<T.ApiKeys>("/api/keys"),
+    putKeys: (values: Record<string, string>) =>
+        request<T.ApiKeys>("/api/keys", {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ values }),
+        }),
+    forgetKey: (providerId: string) =>
+        del<T.ApiKeys>(`/api/keys/${seg(providerId)}`),
     buildPack: (root: string, install = true) =>
         postJson<{ job_id: string; kind: string }>("/api/packs/build", { root, install }),
     cancelJob: (jobId: string) =>

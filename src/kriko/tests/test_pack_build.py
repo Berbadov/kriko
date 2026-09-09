@@ -269,6 +269,36 @@ def test_built_pack_installs_and_answers(tmp_path):
     store.close()
 
 
+def test_a_pack_with_a_research_dir_ships_its_skill_as_an_asset(tmp_path):
+    """`research/skill.md` is the product-identity skill for this category —
+    how to resolve a subject's identity before searching for it. It must land
+    in `pack_assets` exactly like `principle.md` and `templates.yaml` do, or a
+    generated agent skill has queries (from templates.yaml) with no method for
+    aiming them (docs/superpowers/specs/2026-09-09-knowledge-building-design.md
+    §5)."""
+    root = _write(tmp_path)
+    (root / "research").mkdir()
+    (root / "research" / "principle.md").write_text(
+        "Keep only what a shop inspection would miss.", encoding="utf-8"
+    )
+    (root / "research" / "templates.yaml").write_text(
+        '- "{alias} common faults"\n', encoding="utf-8"
+    )
+    (root / "research" / "skill.md").write_text(
+        "Search the battery platform, not the model line.", encoding="utf-8"
+    )
+    out = build.build(root, tmp_path / "drill.kpack")
+    store = connect(tmp_path / "store.sqlite")
+    packstore.install(store, out)
+
+    (content,) = store.execute(
+        "SELECT content FROM pack_assets WHERE pack_id = ? AND name = ?",
+        ("org.kriko.drill", "research/skill.md"),
+    ).fetchone()
+    assert "battery platform" in content
+    store.close()
+
+
 GATES_YAML = """
 covered:
   - {pattern: brake pad, note: the inspector measures pad thickness}
