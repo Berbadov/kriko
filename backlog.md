@@ -894,10 +894,19 @@ nothing about *what to research next* — the product range a pack covers, the
 shape of its store, where its coverage is thinnest. `coverage_gaps` and
 `weakest_claims` already answer that over MCP; the reader has to know to ask.
 The row is to make the agent's brief arrive unasked and stay current, which is
-a design question about who computes it and how often — spec first, under
-`docs/superpowers/specs/`, then rows. Its gate must include "an agent given
-only the brief picks a subject a human would have picked", or the brief is
-prose nobody acts on.
+a design question about who computes it and how often. **Spec written
+2026-09-09**: `docs/superpowers/specs/2026-09-09-research-agenda-design.md` —
+`app/agenda.py` computes a ranked agenda on read from four signals kept
+separate (demand out of `lookups`, gaps, thinness, and `fact_checks.missing`),
+delivered as an MCP tool, `GET /api/agenda`, and the generated skill. The two
+findings that made it a design rather than an `ORDER BY`: `coverage_gaps`
+orders alphabetically, and `NOT_MATCHED` — a reader bringing us a product the
+catalog cannot even name — is invisible to every gap surface, because a gap
+list can only name subjects that exist. Its gate is the spec's test 1: "an
+agent given only the brief picks a subject a human would have picked", read as
+*a subject asked for twice this week outranks an alphabetically-earlier gap
+nobody has ever asked about*. Three open questions in the spec's last section;
+implementation rows follow the reader's review of it.
 
 ### B81 — Only CI could build an installer — **Done 2026-09-09**
 Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
