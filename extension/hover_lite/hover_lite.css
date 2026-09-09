@@ -270,6 +270,46 @@
    reader can give back, and it is only cheap to ask while they are looking at
    the car. Kept quiet (faint until hover) so it never competes with the
    claim itself for attention. */
+/* What the cited page says now (app/factcheck.py). One button and one line;
+   the tones are the same three the app uses, and "unreachable" is
+   deliberately quiet — a site being down says nothing about the claim, and
+   colouring it as a fault would blame the pack for someone else's outage. */
+.lite-rc-fact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.lite-rc-factbtn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+}
+.lite-rc-factbtn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--border);
+  background: var(--bg-surface);
+}
+.lite-rc-factbtn:disabled { cursor: default; opacity: 0.7; }
+.lite-rc-factbtn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+.lite-rc-factverdict {
+  font-size: 10px;
+  color: var(--fg-faint);
+}
+.lite-rc-factverdict[data-verdict="quoted"] { color: var(--low-ink); }
+.lite-rc-factverdict[data-verdict="missing"] { color: var(--med-ink); }
+
 .lite-rc-mark {
   display: flex;
   align-items: center;

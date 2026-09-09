@@ -17,6 +17,7 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app import factcheck
 from kriko.store.db import schema_stamp
 
 SCHEMA = """
@@ -149,6 +150,32 @@ CREATE INDEX IF NOT EXISTS claim_marks_updated ON claim_marks (updated_at DESC);
 -- It is also why `door` is recorded — MCP and the in-app research job share
 -- one acceptance path, and the first question about a bad batch is which of
 -- them produced it.
+-- The last time a claim's evidence was re-read, and what the page said then.
+--
+-- `app/factcheck.py` holds the reasoning; the reason the row is *here* is the
+-- one at the top of this file. A re-check is an observation this interface
+-- made about a page on the open web — not something a pack wrote, and not
+-- something a ranker may read. If it lived in the engine's store, a dead link
+-- would change a `content_digest`, and one reader's fetch failure would
+-- travel to everyone who installs the pack next.
+--
+-- One row per claim, replaced: "what does the source say now" has exactly one
+-- current answer, and a log of every press is a table nobody reads. `title`
+-- and `subject_id` are snapshots for the same reason `claim_marks` snapshots
+-- them — the pack that carried the claim can be updated or removed.
+CREATE TABLE IF NOT EXISTS fact_checks (
+    pack_id    TEXT NOT NULL,
+    claim_id   TEXT NOT NULL,
+    verdict    TEXT NOT NULL,
+    detail     TEXT NOT NULL DEFAULT '',
+    sources_json TEXT NOT NULL DEFAULT '[]',
+    subject_id TEXT NOT NULL DEFAULT '',
+    title      TEXT NOT NULL DEFAULT '',
+    checked_at TEXT NOT NULL,
+    PRIMARY KEY (pack_id, claim_id)
+);
+CREATE INDEX IF NOT EXISTS fact_checks_checked ON fact_checks (checked_at DESC);
+
 CREATE TABLE IF NOT EXISTS submissions (
     submission_id TEXT PRIMARY KEY,
     created_at    TEXT NOT NULL,
@@ -1156,3 +1183,91 @@ def forget_unmapped(conn: sqlite3.Connection, adapter_id: str, label: str) -> bo
     )
     conn.commit()
     return cur.rowcount > 0
+
+
+# ── fact checks — what the cited page says now ────────────────────────────
+
+
+def record_fact_check(
+    conn: sqlite3.Connection,
+    *,
+    pack_id: str,
+    claim_id: str,
+    verdict: str,
+    detail: str = "",
+    sources: list[dict] | None = None,
+    subject_id: str = "",
+    title: str = "",
+) -> dict:
+    """Store the result of one re-check, replacing any earlier one."""
+    if verdict not in factcheck.VERDICTS:
+        raise ValueError(f"unknown verdict {verdict!r}")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    conn.execute(
+        "INSERT INTO fact_checks"
+        " (pack_id, claim_id, verdict, detail, sources_json, subject_id,"
+        "  title, checked_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT (pack_id, claim_id) DO UPDATE SET"
+        "   verdict = excluded.verdict, detail = excluded.detail,"
+        "   sources_json = excluded.sources_json,"
+        "   subject_id = excluded.subject_id, title = excluded.title,"
+        "   checked_at = excluded.checked_at",
+        (
+            pack_id,
+            claim_id,
+            verdict,
+            detail,
+            json.dumps(sources or []),
+            subject_id,
+            title,
+            now,
+        ),
+    )
+    conn.commit()
+    return get_fact_check(conn, pack_id, claim_id) or {}
+
+
+def _fact_check(row: sqlite3.Row) -> dict:
+    out = dict(row)
+    out["sources"] = json.loads(out.pop("sources_json") or "[]")
+    return out
+
+
+def get_fact_check(
+    conn: sqlite3.Connection, pack_id: str, claim_id: str
+) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM fact_checks WHERE pack_id = ? AND claim_id = ?",
+        (pack_id, claim_id),
+    ).fetchone()
+    return _fact_check(row) if row else None
+
+
+def fact_checks(
+    conn: sqlite3.Connection, *, verdict: str | None = None, limit: int = 200
+) -> list[dict]:
+    """Every re-check, newest first — the queue a research pass wants.
+
+    A `missing` verdict names a claim whose source has moved on, which is the
+    highest-signal thing this app can hand an automated pass: the claim is not
+    wrong, it is unsupported, and that is a re-research target rather than a
+    deletion.
+    """
+    clause, args = "", []
+    if verdict:
+        clause, args = " WHERE verdict = ?", [verdict]
+    return [
+        _fact_check(row)
+        for row in conn.execute(
+            f"SELECT * FROM fact_checks{clause} ORDER BY checked_at DESC LIMIT ?",
+            (*args, limit),
+        )
+    ]
+
+
+def fact_check_counts(conn: sqlite3.Connection) -> dict:
+    rows = conn.execute(
+        "SELECT verdict, COUNT(*) AS n FROM fact_checks GROUP BY verdict"
+    ).fetchall()
+    return {row["verdict"]: row["n"] for row in rows}

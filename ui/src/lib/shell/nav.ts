@@ -1,6 +1,17 @@
 import type { Mode } from "../mode";
 
-export type NavItem = { name: string; label: string };
+/** A destination, and the words a reader might reach for that are not its
+ *  label.
+ *
+ * `also` exists because merging screens loses vocabulary. "Console" was a rail
+ * entry for six versions; it is a lens on Agents now, and someone who reaches
+ * for the palette and types `console` must still land on it. Without this the
+ * reorganisation makes the app *harder* to search than it was — the reader is
+ * punished for remembering the old name, which is exactly backwards.
+ *
+ * Search-only. It never renders, and it is not a route: an address is
+ * `ALIASES`' job. */
+export type NavItem = { name: string; label: string; also?: string[] };
 export type NavGroupSpec = { title: string; items: NavItem[]; authorOnly: boolean };
 
 /** The destinations, grouped by verb.
@@ -56,20 +67,22 @@ export const NAV: NavGroupSpec[] = [
         authorOnly: true,
         items: [
             { name: "packs", label: "Packs" },
-            { name: "jobs", label: "Runs" },
-            // Beside Runs, not inside it: a job says whether long work is
-            // going and what it printed; the pipeline says what it *did* —
-            // sources read, findings kept, refusals and why. A run that
-            // gathered nothing and a run that lost everything at the
-            // grounding check look identical in a job log.
-            { name: "pipeline", label: "Knowledge pipeline" },
-            // What came in through the agent door and what the gate did with
-            // it. In System rather than Knowledge because it is about the
-            // door, not about what is known — and it is the only place a
-            // refusal is legible at all.
-            { name: "submissions", label: "What researchers sent" },
-            { name: "console", label: "Console" },
-            { name: "connect", label: "Connect an agent" },
+            // Three entries where there were three screens — Runs, Knowledge
+            // pipeline, What researchers sent — and the same mistake Subjects
+            // / Coverage / Health made. They are not three places: they are
+            // one question, "what has this installation been doing", asked at
+            // three depths. A run says whether long work is going and what it
+            // printed; the pipeline says what it *did*, sources read and
+            // findings refused; submissions say what arrived through the agent
+            // door. A reader chasing "did my research actually land" had to
+            // visit all three and hold the answer in their head.
+            { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log"] },
+            // Console and Connect were always halves of one thing. Connect
+            // wires a harness up and tells you whether it answers; the console
+            // is where you drive the same API by hand when it does not. Two
+            // rail entries for "the agent side of this app" made the reader
+            // choose between them before knowing which they needed.
+            { name: "agents", label: "Agents", also: ["console", "connect", "mcp", "harness", "claude", "terminal"] },
         ],
     },
     {
@@ -115,6 +128,15 @@ export const ALIASES: Record<string, { name: string; lens: string }> = {
     coverage: { name: "knowledge", lens: "gaps" },
     health: { name: "knowledge", lens: "weak" },
     marks: { name: "knowledge", lens: "marked" },
+    // The five names the System group used to spell out. Every one of them is
+    // a link something already hands out — `#/jobs` is what a POST's own
+    // response points at, `#/connect` is in the first-run hints — so they
+    // resolve to the lens that absorbed them rather than to "No such view".
+    jobs: { name: "activity", lens: "runs" },
+    pipeline: { name: "activity", lens: "pipeline" },
+    submissions: { name: "activity", lens: "submissions" },
+    console: { name: "agents", lens: "console" },
+    connect: { name: "agents", lens: "connect" },
 };
 
 /** The route a name actually renders, following one alias hop. */
@@ -134,7 +156,7 @@ export const isAuthorOnly = (name: string): boolean =>
  */
 export const destinationsFor = (
     mode: Mode,
-): { name: string; label: string; group: string }[] =>
+): { name: string; label: string; group: string; also?: string[] }[] =>
     groupsFor(mode).flatMap((group) =>
         group.items.map((item) => ({ ...item, group: group.title })),
     );

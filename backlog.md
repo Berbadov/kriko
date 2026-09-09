@@ -886,6 +886,19 @@ in this file.
 user-local rustup and `cargo generate-lockfile` turned out to be the whole
 "needs a Rust toolchain" blocker). `B44` (LICENSE) is its own row under P2.
 
+### B82 — The data pipeline still needs a person to aim it — **new 2026-09-09**
+The 0.5.0 usability pass (see `done.md`) closed the shell, rail, install and
+fact-check items of the reader's list. The last one is not a UI change: today
+an agent arriving at the Agents screen is told what the MCP door accepts and
+nothing about *what to research next* — the product range a pack covers, the
+shape of its store, where its coverage is thinnest. `coverage_gaps` and
+`weakest_claims` already answer that over MCP; the reader has to know to ask.
+The row is to make the agent's brief arrive unasked and stay current, which is
+a design question about who computes it and how often — spec first, under
+`docs/superpowers/specs/`, then rows. Its gate must include "an agent given
+only the brief picks a subject a human would have picked", or the brief is
+prose nobody acts on.
+
 ### B81 — Only CI could build an installer — **Done 2026-09-09**
 Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
 assigned, and `desktop.yml` was the sole path to a bundle.

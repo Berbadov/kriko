@@ -70,3 +70,61 @@ describe("the rail", () => {
         expect(reduced).toMatch(/\.nav-slot\s*\{\s*animation:\s*none/);
     });
 });
+
+/* The other half of the same rule, and the half that shipped broken.
+ *
+ * The rail was taught not to scroll like a document; the work column never
+ * was. `.shell` was `min-height: 100vh` with a `100vh` sticky rail, so the
+ * *document* grew past the viewport and the browser ran its own scrollbar
+ * down the right-hand edge of the window — the one piece of visible browser
+ * chrome in an app that is otherwise a window, and the first thing a reader
+ * notices is wrong about it.
+ *
+ * Asserted against the declarations for the same reason as the rules above:
+ * jsdom has no layout, so a render test cannot see a scrollbar at any effort.
+ */
+describe("the work column", () => {
+    it("gives the shell a viewport-sized frame, not a minimum", () => {
+        const rules = block(".shell");
+        // `dvh`, not `vh`: on a phone or a narrow window with a retracting
+        // toolbar, `100vh` is taller than what you can see, which is the
+        // same scrollbar again by another route.
+        expect(rules).toMatch(/height:\s*100dvh/);
+        expect(rules).not.toMatch(/min-height:\s*100vh/);
+        // The belt: nothing outside the two scrollers may ever scroll.
+        expect(rules).toMatch(/overflow:\s*clip/);
+    });
+
+    it("scrolls the work column itself", () => {
+        const rules = block(".work");
+        expect(rules).toMatch(/overflow-y:\s*auto/);
+        // A grid track's automatic minimum is its content — without this the
+        // column refuses to shrink and pushes the overflow back out to the
+        // document, which is the bug being fixed.
+        expect(rules).toMatch(/min-height:\s*0/);
+        // Reserved, so arriving at a long page does not shove the whole
+        // layout 15px left. The gutter is the fix for the jump; hiding the
+        // bar is not, because this is content and content may scroll.
+        expect(rules).toMatch(/scrollbar-gutter:\s*stable/);
+    });
+
+    it("keeps the scrollbar at the window edge, not mid-page", () => {
+        // The 1100px cap moved off the scroller and onto the content: a
+        // scroller capped at 1100px paints its bar at 1100px, which on a wide
+        // window is a scrollbar floating in the middle of the screen.
+        expect(block(".work")).not.toMatch(/max-width:\s*1100px/);
+        expect(block(".view")).toMatch(/max-width:\s*1100px/);
+    });
+
+    it("undoes both scrollers on paper", () => {
+        // A fixed-height clipping frame prints as one page of a ten-page
+        // report. The screen rules and the print rules are one change.
+        const PRINT = SHEETS["./print.css"];
+        expect(PRINT?.length ?? 0).toBeGreaterThan(200);
+        const at = PRINT.indexOf("@media print");
+        const printed = PRINT.slice(at);
+        expect(printed).toMatch(/\.shell\s*\{[^}]*height:\s*auto/);
+        expect(printed).toMatch(/\.shell\s*\{[^}]*overflow:\s*visible/);
+        expect(printed).toMatch(/\.work\s*\{[^}]*overflow:\s*visible/);
+    });
+});
