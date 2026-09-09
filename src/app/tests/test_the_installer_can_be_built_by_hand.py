@@ -26,6 +26,7 @@ list here to remember to update.
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -359,4 +360,91 @@ def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
         "Windows the pid it spawned is a PyInstaller bootloader; its child "
         "outlives a terminate() and holds the .exe against the next build. "
         f"Lone terminate() at lines {lone_terminate}."
+    )
+
+
+def test_the_script_reports_only_what_this_run_produced(script):
+    """A green line naming a stale installer is worse than no line at all.
+
+    `target/release/bundle` is not cleaned between builds, so the recursive
+    listing that ends the script sees every installer any earlier run left
+    behind. On 2026-09-09 the 0.5.1 build finished by printing a 0.5.0
+    setup.exe from four hours and three commits earlier alongside its own, in
+    the same colour, with no way to tell them apart but a filename that only
+    differs because that build happened to be stamped. A reader is handed a
+    path out of that list, and CI never sees this because a runner is
+    destroyed after the job -- the same reason none of B81's three defects
+    were caught before the build ran twice on one machine.
+
+    The fix is a timestamp taken before the build and compared after it, so
+    both halves are asserted: the variable is set before anything is built,
+    and the listing actually filters on it.
+    """
+    lines = script.splitlines()
+    started = min(
+        (i for i, line in enumerate(lines) if re.search(r"^\$\w+ = Get-Date", line)),
+        default=None,
+    )
+    assert started is not None, "nothing records when the build started"
+    name = re.match(r"^\$(\w+) = Get-Date", lines[started]).group(1)
+
+    bundle = min(i for i, line in enumerate(lines) if "tauri run tauri build" in line)
+    assert started < bundle, "the start time is taken after the build it dates"
+
+    listing = script[script.index("Get-ChildItem -Recurse") :]
+    assert re.search(rf"LastWriteTime -ge \${name}\b", listing), (
+        "the installer listing does not filter on ${} -- it will report "
+        "whatever an earlier build left in bundle/".format(name)
+    )
+
+
+def test_the_script_proves_a_requested_stamp_arrived(script):
+    """A version that did not take is a green build and a mislabelled file.
+
+    `configure_updater.py` stamps `tauri.conf.json`, Tauri names the bundle
+    from it, and nothing between them fails loudly: a stamp that silently did
+    not apply produces an installer carrying whatever version the tree was
+    committed at. The filename is the only evidence either way, so the script
+    checks it rather than trusting the step that wrote it.
+    """
+    assert re.search(r"\$Version\b", script), "the script takes no -Version"
+    tail = script[script.index("Get-ChildItem -Recurse") :]
+    assert "no installer from this run carries it" in tail, (
+        "a requested -Version is never checked against what was produced"
+    )
+
+
+@pytest.mark.parametrize("script", _packaging_scripts(), ids=lambda p: p.name)
+def test_a_packaging_script_prints_ascii_only(script: Path):
+    """Build output is read on a Windows console, which is not UTF-8.
+
+    `test_a_powershell_script_is_ascii_only` holds the same rule one layer up,
+    for the same reason and after the same failure: this box is codepage 1254,
+    and the 0.5.1 verification build reported `engine spawned: not seen u the
+    webview may not have run` -- an em-dash decoded as one byte of nonsense in
+    the middle of the sentence a person reads to decide whether the build is
+    trustworthy.
+
+    Only *printed* text, not docstrings or comments: Python reads its own
+    source as UTF-8 regardless of the console, so a prose em-dash in a
+    docstring is fine and forbidding it would be a rule about nothing. The
+    console is the boundary, so the boundary is what is checked -- which means
+    walking the AST for `print` rather than grepping the bytes.
+    """
+    printed = []
+    for node in ast.walk(ast.parse(script.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "print":
+            printed += [
+                (sub.lineno, sub.value)
+                for sub in ast.walk(node)
+                if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+            ]
+    offenders = [
+        f"line {line}: {text!r}"
+        for line, text in printed
+        if any(ord(char) > 127 for char in text)
+    ]
+    assert not offenders, (
+        f"{script.name} prints non-ASCII, which garbles on a Windows console: "
+        + "; ".join(offenders)
     )

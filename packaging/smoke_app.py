@@ -111,7 +111,7 @@ def main(argv: list[str]) -> int:
         print(
             "engine spawned: yes"
             if sidecar_running()
-            else "engine spawned: not seen — the webview may not have run "
+            else "engine spawned: not seen -- the webview may not have run "
             "(not a failure here; smoke_sidecar.py covers the engine)"
         )
         if output.strip():
