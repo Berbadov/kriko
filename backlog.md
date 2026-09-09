@@ -891,7 +891,11 @@ Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
 assigned, and `desktop.yml` was the sole path to a bundle.
 `packaging/build_desktop.ps1` runs that job on a Windows box, and
 `src/app/tests/test_the_installer_can_be_built_by_hand.py` reads the workflow
-to fail the script when the two drift. Does not remove the *OS* from the
+to fail the script when the two drift. Then it was actually run, on the Windows
+host WSL2 exposes at `/mnt/c`, and it was wrong three times — a codepage parse
+error, an elided empty argument, and a PyInstaller orphan holding its own
+`.exe` — none of which any runner-based gate could have seen. All three shipped
+with a gate; `done.md` has the detail. Does not remove the *OS* from the
 critical path — PyInstaller cannot cross-compile — only the runner.
 
 What stays open here is the two rows nobody can write code for:
