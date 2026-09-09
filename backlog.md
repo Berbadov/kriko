@@ -887,6 +887,12 @@ user-local rustup and `cargo generate-lockfile` turned out to be the whole
 "needs a Rust toolchain" blocker). `B44` (LICENSE) is its own row under P2.
 
 
+### B82 — The data pipeline still needs a person to aim it — **Done 2026-09-09**
+Moved to `done.md`. `app/agenda.py` ranks what to research next by what this
+installation was actually asked about, through three doors (`research_agenda`,
+`GET /api/agenda`, the generated skill). Spec:
+`docs/superpowers/specs/2026-09-09-research-agenda-design.md`.
+
 ### B81 — Only CI could build an installer — **Done 2026-09-09**
 Moved to `done.md`. The v0.5.0 tag produced nothing: no runner was ever
 assigned, and `desktop.yml` was the sole path to a bundle.
