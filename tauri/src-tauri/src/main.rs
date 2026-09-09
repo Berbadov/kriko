@@ -10,10 +10,17 @@
 // 2. **A failure is shown, not swallowed.** If the sidecar dies or never gets
 //    healthy, its captured stderr goes to the boot screen. A blank window is
 //    the one outcome that is not allowed.
-// 3. **Nothing outlives the app.** The child is killed when the window closes
-//    and when the process exits, because an orphaned uvicorn holding the WAL
-//    lock makes the *next* launch fail for a reason nobody can see. Three
-//    belts, because one was not enough: `--exit-with-parent` makes the sidecar
+// 3. **Nothing outlives *Quit*.** It used to be "nothing outlives the app",
+//    with the window's close button as the thing that ended the engine. That
+//    made the browser extension unusable the moment the reader put the window
+//    away: the extension talks to the fixed EXTENSION_PORT, and there was
+//    nothing listening on it. So closing the window now *hides* it, the tray
+//    icon holds the engine's life, and Quit is the only thing that ends it.
+//    The hazard this moved rather than removed: a reader who thinks they
+//    closed Kriko still has a live sidecar, and a live sidecar breaks the next
+//    installer — which is why `installer.nsh` stopped being a fallback for
+//    leaked orphans and became the normal path. Three belts, because one was
+//    not enough: `--exit-with-parent` makes the sidecar
 //    end itself when this process's stdin pipe closes (covering a *crash*,
 //    which no handler here would run for), `kill_engine` ends it on both exit
 //    paths, and on Windows the kill takes the whole tree — PyInstaller onefile
@@ -27,6 +34,8 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -50,10 +59,20 @@ const HEALTH_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Default)]
 struct Engine {
-    /// Kept so the child can be killed from the window-close handler. A
-    /// `Mutex<Option<..>>` rather than a channel: killing is idempotent here
-    /// and both exit paths reach for the same handle.
+    /// Kept so the child can be killed from the tray's Quit item and from
+    /// process exit. A `Mutex<Option<..>>` rather than a channel: killing is
+    /// idempotent here and every exit path reaches for the same handle.
     child: Mutex<Option<CommandChild>>,
+    /// Whether the "it is still running" notice has been shown this run.
+    ///
+    /// Once per process, and deliberately not persisted. A reader who presses
+    /// X expecting the app to close needs telling that it did not — a hidden
+    /// window with a live engine is otherwise indistinguishable from a crash,
+    /// which is the same "a blank window is a bug" reasoning as rule 2. It is
+    /// not remembered across launches because the alternatives are worse: a
+    /// flag file would be a third piece of state beside the two SQLite files,
+    /// and asking the engine would put an interface decision in Rust.
+    hinted: Mutex<bool>,
 }
 
 fn emit_failure(app: &AppHandle, title: &str, detail: &str) {
@@ -66,9 +85,85 @@ fn emit_failure(app: &AppHandle, title: &str, detail: &str) {
 
 fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
+        // Unminimize before show: since the close button hides the window
+        // rather than destroying it, the window the tray and the extension's
+        // KRIKO_FOCUS have to raise can be hidden *and* minimized, and `show`
+        // on a minimized window leaves it in the taskbar.
+        let _ = window.unminimize();
         let _ = window.show();
         let _ = window.set_focus();
     }
+}
+
+/// Say once per run that closing the window did not close Kriko.
+fn hint_still_running(app: &AppHandle) {
+    let Some(engine) = app.try_state::<Engine>() else { return };
+    let mut hinted = engine.hinted.lock().unwrap();
+    if *hinted {
+        return;
+    }
+    *hinted = true;
+    // Non-blocking on purpose. This runs inside a window-event handler, and
+    // `blocking_show` there waits for a dialog on the same thread that would
+    // have to pump it.
+    app.dialog()
+        .message(
+            "Kriko is still running so the browser extension can reach it. "
+            "Use the Kriko icon near the clock to open it again, or "
+            "Quit Kriko to stop it.",
+        )
+        .title("Kriko is still running")
+        .show(|_| {});
+}
+
+/// The tray icon, which owns the engine's life now that closing the window
+/// does not.
+///
+/// Built in `setup` rather than declared in `tauri.conf.json` because the menu
+/// is behaviour, not configuration: Quit must kill the engine *before* it
+/// exits, and that ordering is the whole point of this file.
+fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let open = MenuItem::with_id(app, "open", "Open Kriko", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Kriko", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &quit])?;
+
+    let mut tray = TrayIconBuilder::new()
+        .tooltip("Kriko — engine running")
+        .menu(&menu)
+        // Left click opens; the menu is the right-click gesture. A left click
+        // that opens a menu instead of the app is the wrong default for a tray
+        // whose main job is "give me my window back".
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_window(app),
+            // kill_engine *then* exit, and never the other way round: on exit
+            // the sidecar's stdin closes and `--exit-with-parent` would get
+            // there eventually, but "eventually" is long enough for the next
+            // installer to fail on a mapped kriko-sidecar.exe.
+            "quit" => {
+                kill_engine(app);
+                app.exit(0);
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_window(tray.app_handle());
+            }
+        });
+
+    // The bundled app icon, so the tray never renders as a blank square. A
+    // tray with no visible icon is a process the reader cannot stop.
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
 }
 
 /// Poll `/api/health` until it answers. Blocking on purpose — this runs on a
@@ -318,6 +413,12 @@ fn main() {
                 .handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())
                 .is_ok();
+            // Before the update offer: if the tray cannot be built the reader
+            // has no way to reopen or quit the app, and they should find that
+            // out from a failure to start rather than the first time they
+            // press X. Rule 3 depends on this existing.
+            build_tray(app.handle())?;
+
             if updatable {
                 // After setup, not before: the engine's startup is what the
                 // reader is waiting on, and an update prompt in front of a
@@ -328,17 +429,28 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![start_engine])
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::Destroyed = event {
-                kill_engine(window.app_handle());
+        .on_window_event(|window, event| match event {
+            // Hide, do not close. The engine has to stay reachable on
+            // EXTENSION_PORT while the reader is on a listing page, and the
+            // window is not what they were using at that moment.
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                let _ = window.hide();
+                hint_still_running(window.app_handle());
             }
+            // Kept even though nothing destroys the window any more: if
+            // something ever does, the engine must not outlive it.
+            tauri::WindowEvent::Destroyed => kill_engine(window.app_handle()),
+            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("failed to start Kriko")
         .run(|app, event| {
-            // Also on Exit, not only on window close: a quit from the dock or
-            // the tray never destroys a window, and the orphan it would leave
-            // holds the store's WAL lock into the next launch.
+            // The backstop for every exit that is not the tray's Quit item —
+            // a dock quit, a session logout, `app.restart()` after an update.
+            // None of them destroys a window, and the orphan they would leave
+            // holds the store's WAL lock into the next launch and keeps its
+            // own .exe mapped against the next install.
             if let tauri::RunEvent::Exit = event {
                 kill_engine(app);
             }

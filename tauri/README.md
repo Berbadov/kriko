@@ -24,9 +24,10 @@ tauri/
    FastAPI exactly as it is in a browser.
 5. If the sidecar dies or never gets healthy, Rust emits `kriko://failed` with
    the captured stderr and the window shows it. **A blank window is a bug.**
-6. On window close and on app exit, the child is killed. An orphaned uvicorn
-   holds `~/.kriko/knowledge.sqlite`'s WAL lock and breaks the *next* launch,
-   which is the worst kind of failure: invisible and later.
+6. Closing the window **hides** it; the engine keeps serving. *Quit Kriko* in
+   the tray, or any other app exit, kills the child. An orphaned uvicorn holds
+   `~/.kriko/knowledge.sqlite`'s WAL lock and breaks the *next* launch, which
+   is the worst kind of failure: invisible and later.
 
 ## Building locally
 
@@ -69,16 +70,30 @@ it builds, because cargo will otherwise rewrite a stale lock mid-build and ship
 a graph nobody reviewed — v0.2.4 is what that looks like from the outside
 (`src/app/tests/test_shell_is_locked.py` holds the rest of the invariant).
 
-## Nothing outlives the app
+## Nothing outlives *Quit*
 
-Three belts, because one was not enough:
+Until 0.5.1 the rule was "nothing outlives the app", and the X button killed
+the engine. That made the browser extension unusable in the situation it
+exists for: the reader is looking at a listing, not at Kriko, and the window
+they closed an hour ago was holding the port the extension calls. So the
+window hides, and the tray icon owns the process — left click reopens, the
+right-click menu has *Open Kriko* and *Quit Kriko*, and Quit is the only thing
+that stops the engine. An engine with no visible way to stop it would be
+malware-shaped, which is why the tray is built in `setup` with `?`: a shell
+that cannot show one refuses to start.
+
+That inversion moved the hazard below rather than removing it, so all three
+belts still matter, and the third one matters *more*:
 
 1. **`--exit-with-parent`.** The sidecar watches its own stdin, whose write end
    lives in the shell. The shell going away — cleanly, killed, or crashed — is
    an EOF, and the engine stops itself. This is the only one that covers a
    crash, where no handler in `main.rs` runs at all.
-2. **`kill_engine`** on window close *and* on `RunEvent::Exit`, since a quit
-   from the dock destroys no window.
+2. **`kill_engine`** from the tray's *Quit* (before `app.exit`, not after —
+   `--exit-with-parent` would get there eventually, and eventually is long
+   enough for the next installer to fail) *and* on `RunEvent::Exit`, since a
+   quit from the dock, a session logout or a post-update restart destroys no
+   window. The `Destroyed` handler is kept for the same reason.
 3. **A tree kill on Windows.** The sidecar is a PyInstaller *onefile* binary:
    the process we spawned is a bootloader that re-execs, and the child is what
    holds the extracted image. `child.kill()` alone leaves it running, so
@@ -93,8 +108,13 @@ C:\Users\<you>\AppData\Local\Kriko\kriko-sidecar.exe
 
 A live sidecar keeps its own `.exe` mapped, so NSIS cannot overwrite it and
 offers Abort/Retry/Ignore — and Ignore leaves the old engine beside a new shell.
-`src-tauri/installer.nsh` therefore kills the engine in `NSIS_HOOK_PREINSTALL`
-too, which is the belt for a machine where one leaked *before* this version.
+`src-tauri/installer.nsh` therefore stops both binaries in
+`NSIS_HOOK_PREINSTALL` and `NSIS_HOOK_PREUNINSTALL` — `Kriko.exe` first,
+because its exit closes the sidecar's stdin and that is the engine's own way
+out, then `kriko-sidecar.exe` as the belt. It used to be for the rare machine
+where one leaked; now that a reader can leave Kriko running in the tray for
+days, it is the normal case, and `test_the_shell_runs_in_the_tray.py` pins the
+ordering.
 
 If you hit that dialog on an older build: close Kriko, run
 `taskkill /F /T /IM kriko-sidecar.exe` in a terminal, then run the installer
