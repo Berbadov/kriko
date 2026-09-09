@@ -68,4 +68,75 @@ describe("the next step bar", () => {
         (await screen.findByText("Not now")).click();
         await vi.waitFor(() => expect(container.querySelector(".nextstep")).toBeNull());
     });
+
+    it("does not re-offer the extension to a reader it has already seen, just because it has been quiet a while", async () => {
+        // B85: the live badge on the Extension page (`connected`) goes stale
+        // after a few quiet hours on purpose — this bar must not share that
+        // clock. A stale-but-ever-seen extension should fall through to
+        // whatever the *next* real gap is, not repeat an install that already
+        // happened.
+        stubFetch({
+            ...ROUTES,
+            "/api/extension": {
+                available: true,
+                connected: false,
+                ever_connected: true,
+            },
+        });
+        render(NextStep);
+        expect(await screen.findByText(/No agent can reach this store/)).toBeTruthy();
+        expect(screen.queryByText(/not on your listing pages yet/)).toBeNull();
+    });
+
+    it("still offers the extension when it has truly never been seen", async () => {
+        stubFetch({
+            ...ROUTES,
+            "/api/extension": {
+                available: true,
+                connected: false,
+                ever_connected: false,
+            },
+        });
+        render(NextStep);
+        expect(
+            await screen.findByText(/Kriko is not on your listing pages yet/),
+        ).toBeTruthy();
+    });
+
+    it("stays dismissed across a reload because the choice was saved, not just held in memory", async () => {
+        // A `$state(false)` reset on every mount is indistinguishable, from
+        // the reader's side, from "Not now" doing nothing: the same bar they
+        // just declined greets them again the moment the app restarts.
+        stubFetch({
+            ...ROUTES,
+            "/api/settings": { nextstep_dismissed_id: "connect-agent" },
+        });
+        const { container } = render(NextStep);
+        await vi.waitFor(() =>
+            expect(container.querySelector(".nextstep")).toBeNull(),
+        );
+        expect(screen.queryByText(/No agent can reach this store/)).toBeNull();
+    });
+
+    it("saves the dismissal so it survives the next launch", async () => {
+        stubFetch(ROUTES);
+        render(NextStep);
+        (await screen.findByText("Not now")).click();
+        const calls = () =>
+            (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock
+                .calls;
+        await vi.waitFor(() =>
+            expect(
+                calls().some((call) => String(call[0]) === "/api/settings"),
+            ).toBe(true),
+        );
+        const [, init] = calls().find(
+            (call) =>
+                String(call[0]) === "/api/settings" &&
+                (call[1] as RequestInit | undefined)?.method === "POST",
+        ) as [string, RequestInit];
+        expect(JSON.parse(String(init.body)).values).toEqual({
+            nextstep_dismissed_id: "connect-agent",
+        });
+    });
 });

@@ -75,6 +75,15 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         "browsers": extension.browsers(),
         "sightings": sightings,
         "connected": fresh is not None and fresh < FRESH_SECONDS,
+        # `connected` answers "is it live right now", which is right for the
+        # badge on this page — a reader watching it wants to know the extension
+        # is talking *today*. It is the wrong question for "has this reader
+        # ever added the extension at all": a sighting older than FRESH_SECONDS
+        # made that badge go stale, and a caller that reused it for onboarding
+        # (B85) told someone whose extension has worked for weeks to go and
+        # install it again the moment they left the app alone for six hours.
+        # `sightings` is never pruned, so its presence is permanent evidence.
+        "ever_connected": bool(sightings),
         "seconds_since_seen": fresh,
         # ── which extension is actually loaded ────────────────────────
         #

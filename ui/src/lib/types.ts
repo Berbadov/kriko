@@ -418,6 +418,12 @@ export type ExtensionStatus = {
     browsers: ExtensionBrowser[];
     sightings: ExtensionSighting[];
     connected: boolean;
+    /** Has a sighting *ever* landed, regardless of age. `connected` is a live
+     * badge — it goes false after FRESH_SECONDS of quiet — and reusing it to
+     * decide whether to *suggest installing* the extension (B85) told a
+     * reader whose history was full of extension-sourced answers to go add
+     * it again the moment they left the app alone for a few hours. */
+    ever_connected: boolean;
     seconds_since_seen: number | null;
     compatibility: ExtensionCompatibility;
 };
