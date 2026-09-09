@@ -137,3 +137,78 @@ def reveal(request: Request) -> dict:
     if not target.is_dir():
         raise HTTPException(status_code=409, detail="nothing staged yet — add it first")
     return {"path": str(target), "error": extension.reveal(target)}
+
+
+@router.post("/launch")
+def launch(request: Request) -> dict:
+    """Stage the extension and open a browser that already has it loaded.
+
+    The one click. One request rather than two because a reader's single press
+    must not be able to half-succeed: `/stage` then `/launch` can leave files
+    written and no window opened, which reads as "the button did nothing".
+
+    Never an error status. Both ways this can fall short — no Chromium on the
+    machine, or a browser that refuses to start — are things to *tell* the
+    reader on a page that already carries the manual steps, and a 500 would
+    replace those steps with a red banner. The files are staged either way,
+    because that is what the manual path needs and this reader has already
+    asked for the extension.
+
+    Success is not claimed here. A Chrome build that ignores `--load-extension`
+    opens an ordinary window and says nothing; the extension's own call to
+    `/api/adapters` is the only proof, the status endpoint above already
+    reports it, and the page keeps watching until it lands.
+    """
+    source = extension.source_dir()
+    if source is None:
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                "this build does not carry the browser extension — it is added "
+                "to the bundle by packaging/kriko-sidecar.spec"
+            ),
+        )
+
+    target = _target(request)
+    try:
+        extension.stage(source, target)
+    except OSError as cause:
+        raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
+
+    home = extension.home_of(request.app.state.settings.store_path)
+    profile = extension.profile_dir(home)
+    note = (
+        "The window is a separate browser profile — it has to be, because a "
+        "browser that is already running ignores an extension handed to it on "
+        "the command line. Your bookmarks and logins are not in it."
+    )
+
+    browser = extension.find_chromium()
+    if browser is None:
+        return {
+            "launched": False,
+            "browser": "",
+            "path": str(target),
+            "profile": str(profile),
+            "note": note,
+            "error": (
+                "No Chrome, Chromium, Brave or Edge found on this machine. "
+                "Firefox cannot be handed an extension this way — the steps "
+                "below are the install for it."
+            ),
+        }
+
+    # This app's own extension page, served by this process, so it works with
+    # no network: the browser opens on the screen where the check-in
+    # confirmation appears. The proof of the install is the first thing the
+    # reader sees rather than something they have to come back to.
+    landing = f"{str(request.base_url).rstrip('/')}/#/extension"
+    error = extension.launch_with_extension(browser, target, profile, landing=landing)
+    return {
+        "launched": not error,
+        "browser": browser,
+        "path": str(target),
+        "profile": str(profile),
+        "note": note,
+        "error": error,
+    }

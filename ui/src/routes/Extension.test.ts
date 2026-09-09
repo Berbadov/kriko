@@ -222,3 +222,60 @@ describe("adding the browser extension", () => {
         ).toBeInTheDocument();
     });
 });
+
+describe("the one click", () => {
+    // The whole point of the button: one press, and the page can say what
+    // happened without the reader having pasted anything anywhere.
+    it("opens a browser and names the one it started", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/launch": {
+                launched: true,
+                browser: "/usr/bin/chromium",
+                path: "/home/reader/.kriko/extension",
+                profile: "/home/reader/.kriko/browser-profile",
+                note: "The window is a separate browser profile.",
+                error: "",
+            },
+        });
+        render(Extension);
+        fireEvent.click(
+            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+        );
+        expect(await screen.findByText(/Started \/usr\/bin\/chromium/)).toBeTruthy();
+        // Said before the reader wonders why none of their logins are there.
+        expect(screen.getByText(/separate browser profile/)).toBeTruthy();
+    });
+
+    // No Chromium is a 200 with prose, not a failure: the manual steps are
+    // still the install, and a red banner would read as "this is broken".
+    it("says why nothing opened and leaves the manual steps standing", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/launch": {
+                launched: false,
+                browser: "",
+                path: "/home/reader/.kriko/extension",
+                profile: "/home/reader/.kriko/browser-profile",
+                note: "The window is a separate browser profile.",
+                error: "No Chrome, Chromium, Brave or Edge found on this machine.",
+            },
+        });
+        render(Extension);
+        fireEvent.click(
+            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+        );
+        expect(await screen.findByText(/No Chrome, Chromium, Brave or Edge/)).toBeTruthy();
+        expect(screen.getByText(/Developer mode/)).toBeTruthy();
+    });
+
+    // The button stages as part of the same request, so it has to be offered
+    // before anything is on disk — that is what makes it one click.
+    it("is offered before the files are staged", async () => {
+        stubFetch({ "/api/extension": status() });
+        render(Extension);
+        expect(
+            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+        ).toBeTruthy();
+    });
+});

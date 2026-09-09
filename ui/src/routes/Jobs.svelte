@@ -163,7 +163,11 @@
         String(job.params?.subject_id ?? job.params?.root ?? "");
 </script>
 
-<h2>Jobs</h2>
+<!-- "Runs", which is what the rail has always called it. The heading said
+     "Jobs" — an implementation word for the row in `app.sqlite` — and now that
+     this is a lens under Activity the mismatch is visible in one glance
+     instead of across a navigation. -->
+<h2>Runs</h2>
 <p class="lede">
     Research and pack builds run here, not in a terminal. A job keeps its log and
     its result, so a restart or a closed tab loses nothing.

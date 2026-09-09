@@ -187,4 +187,10 @@ BACK_THEN = {
     "submissions.verdicts_json", "unmapped_labels.adapter_id",
     "unmapped_labels.first_at", "unmapped_labels.label",
     "unmapped_labels.last_at",
+    # 2026-09-09, and the same rationale as the rest: `fact_checks` arrived as
+    # a whole table, so `CREATE TABLE IF NOT EXISTS` gives an older reader all
+    # four at once and no `ALTER` is ever asked for. A *fifth* column added to
+    # this table later would not have that excuse.
+    "fact_checks.pack_id", "fact_checks.claim_id", "fact_checks.verdict",
+    "fact_checks.checked_at",
 }

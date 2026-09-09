@@ -32,16 +32,30 @@ describe("Palette", () => {
         expect(screen.getByRole("option", { name: /New check/ })).toBeInTheDocument();
         // An author screen is not reachable by name from buyer mode either —
         // the palette is a shortcut through the rail, not a way around it.
-        expect(screen.queryByRole("option", { name: /Console/ })).toBeNull();
+        expect(screen.queryByRole("option", { name: /Agents/ })).toBeNull();
     });
 
     it("filters on the group as well as the label", async () => {
         render(Palette, { mode: "author" });
         await press("?");
         const input = screen.getByRole("combobox") as HTMLInputElement;
-        await fireEvent.input(input, { target: { value: "console" } });
-        expect(screen.getByRole("option", { name: /Console/ })).toBeInTheDocument();
+        await fireEvent.input(input, { target: { value: "packs" } });
+        expect(screen.getByRole("option", { name: /Packs/ })).toBeInTheDocument();
         expect(screen.queryByRole("option", { name: /New check/ })).toBeNull();
+    });
+
+    it("finds a merged screen by the name it absorbed", async () => {
+        // "Console" was a rail entry for six versions and is a lens on Agents
+        // now. Someone who types the word they remember must land on it —
+        // otherwise the reorganisation made the app harder to search than it
+        // was, and the reader is punished for having learnt it. See
+        // `NavItem.also`.
+        render(Palette, { mode: "author" });
+        await press("?");
+        await fireEvent.input(screen.getByRole("combobox"), {
+            target: { value: "console" },
+        });
+        expect(screen.getByRole("option", { name: /Agents/ })).toBeInTheDocument();
     });
 
     it("says so when nothing matches, and says where the rest went", async () => {
@@ -58,7 +72,9 @@ describe("Palette", () => {
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), { target: { value: "runs" } });
         await press("Enter");
-        expect(window.location.hash).toContain("jobs");
+        // The destination, not the retired name it was found by: `runs` is a
+        // lens on Activity, and the address is the screen.
+        expect(window.location.hash).toContain("activity");
         expect(screen.queryByRole("dialog")).toBeNull();
     });
 

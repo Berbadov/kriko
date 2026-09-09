@@ -5,13 +5,14 @@
     import {
         absenceNote,
         asMarkdown,
+        canCheckFacts,
         claimKey,
         contextLines,
         groupByDomain,
         severityWord,
     } from "./report";
     import { hashWith, route } from "./router";
-    import type { LookupResult } from "./types";
+    import type { FactCheck, LookupResult } from "./types";
     import Verdict from "./Verdict.svelte";
 
     let {
@@ -68,6 +69,73 @@
         }
     }
 
+    /* What the cited pages say now.
+     *
+     * Read once for the whole report rather than per card: forty claims is
+     * forty requests to be told "not checked yet", and the answers are
+     * already stored. Keyed by pack *and* claim, because a claim id is only
+     * unique inside its pack.
+     *
+     * A failure is silence. This is a supplementary badge on a report that is
+     * complete without it, and a red banner over someone's answer because a
+     * status table could not be read would be the tail wagging the dog.
+     */
+    let facts = $state<Record<string, FactCheck>>({});
+    let checking = $state<Record<string, boolean>>({});
+    const factKey = (claim: { pack_id?: string; claim_id?: string }) =>
+        `${claim.pack_id ?? ""}\u0000${claim.claim_id ?? ""}`;
+
+    $effect(() => {
+        api.factChecks()
+            .then((payload) => {
+                const next: Record<string, FactCheck> = {};
+                for (const item of payload.items ?? []) next[factKey(item)] = item;
+                facts = next;
+            })
+            .catch(() => {});
+    });
+
+    async function checkFacts(claim: (typeof result.claims)[number]) {
+        const key = factKey(claim);
+        checking = { ...checking, [key]: true };
+        try {
+            facts = { ...facts, [key]: await api.checkFacts(claim.pack_id!, claim.claim_id!) };
+        } catch {
+            // Same tolerance as the read above: the claim and its sources are
+            // on screen, and the reader can open the link themselves — which
+            // is what they had to do before this button existed.
+        } finally {
+            checking = { ...checking, [key]: false };
+        }
+    }
+
+    /* One press for the whole report.
+     *
+     * Sequential on purpose. Firing forty fetches at forty domains at once
+     * from a reader's own address is a burst that looks like a scraper to
+     * every one of them, and the app has no business doing that on their
+     * behalf. `stop` is read between claims so leaving the screen ends it —
+     * the effect above is what re-reads the results on the way back.
+     */
+    let sweeping = $state(false);
+    let swept = $state(0);
+    let stop = false;
+    $effect(() => () => {
+        stop = true;
+    });
+
+    async function checkEverything() {
+        const targets = result.claims.filter(canCheckFacts);
+        sweeping = true;
+        swept = 0;
+        for (const claim of targets) {
+            if (stop) break;
+            await checkFacts(claim);
+            swept += 1;
+        }
+        sweeping = false;
+    }
+
     // Handing the report to someone who does not have Kriko. Clipboard first
     // because the destination is a message; the textarea is the fallback,
     // since a webview can refuse clipboard access and a button that silently
@@ -113,6 +181,14 @@
                 href={hashWith({ mode: $route.query.mode, id: lookupId }, "questions")}
                 >Question sheet</a
             >
+        {/if}
+        <!-- Above Print, because it changes what gets printed. -->
+        {#if result.claims.some(canCheckFacts)}
+            <button class="ghost" disabled={sweeping} onclick={checkEverything}>
+                {sweeping
+                    ? `Reading the sources… ${swept} of ${result.claims.filter(canCheckFacts).length}`
+                    : "Check every source"}
+            </button>
         {/if}
         <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
         <button class="ghost" onclick={handOver}>Copy for a mechanic</button>
@@ -160,6 +236,9 @@
                         note={notes[claimKey(claim)] ?? ""}
                         onCheck={(next) => check(claimKey(claim), next)}
                         onNote={(text) => saveNote(claimKey(claim), text)}
+                        factCheck={facts[factKey(claim)] ?? null}
+                        checkingFacts={checking[factKey(claim)] ?? false}
+                        onCheckFacts={() => checkFacts(claim)}
                     />
                 {/each}
             </section>

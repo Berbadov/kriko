@@ -37,7 +37,11 @@
     const hits = $derived(
         q.trim()
             ? all.filter((d) =>
-                  `${d.label} ${d.group} ${d.name}`
+                  // `d.also` is the vocabulary a merged screen absorbed —
+                  // "console", "jobs", "submissions". Searching without it
+                  // would mean the reorganisation made the app harder to
+                  // search than before it, which is the wrong direction.
+                  `${d.label} ${d.group} ${d.name} ${(d.also ?? []).join(" ")}`
                       .toLowerCase()
                       .includes(q.trim().toLowerCase()),
               )

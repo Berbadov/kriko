@@ -1,7 +1,15 @@
 <script lang="ts">
     import type { Mode } from "./mode";
-    import { askLine, rankingNote, severityWord, sourceSummary } from "./report";
-    import type { Claim } from "./types";
+    import {
+        askLine,
+        canCheckFacts,
+        factTone,
+        factWord,
+        rankingNote,
+        severityWord,
+        sourceSummary,
+    } from "./report";
+    import type { Claim, FactCheck } from "./types";
 
     let {
         claim,
@@ -10,6 +18,9 @@
         note = "",
         onCheck,
         onNote,
+        factCheck = null,
+        checkingFacts = false,
+        onCheckFacts,
     }: {
         claim: Claim;
         mode?: Mode;
@@ -17,7 +28,15 @@
         note?: string;
         onCheck?: (checked: boolean) => void;
         onNote?: (note: string) => void;
+        factCheck?: FactCheck | null;
+        checkingFacts?: boolean;
+        onCheckFacts?: () => void;
     } = $props();
+
+    // Offered on the card rather than only in the sources fold: "is this
+    // still true" is the question a reader has *while reading the claim*, and
+    // a button behind a disclosure triangle is a button they never find.
+    const checkable = $derived(Boolean(onCheckFacts) && canCheckFacts(claim));
 
     const author = $derived(mode === "author");
 
@@ -88,6 +107,32 @@
     {/if}
 
     <p class="meta">{claim.subject} · {sourceSummary(claim)}</p>
+
+    {#if checkable || factCheck}
+        <p class="fact no-print">
+            {#if factCheck}
+                <span class="badge fact-{factTone(factCheck.verdict)}"
+                    >{factWord(factCheck.verdict)}</span
+                >
+                <!-- The date, always. A re-check is an observation with a
+                     time on it, and "source still says this" with no when is
+                     the kind of reassurance that ages badly. -->
+                <span class="meta">checked {factCheck.checked_at.slice(0, 10)}</span>
+                {#if factCheck.detail}<span class="meta">{factCheck.detail}</span>{/if}
+            {/if}
+            {#if checkable}
+                <button type="button" class="link-ish" disabled={checkingFacts}
+                    onclick={onCheckFacts}
+                >
+                    {checkingFacts
+                        ? "Reading the source…"
+                        : factCheck
+                          ? "Check again"
+                          : "Check the source"}
+                </button>
+            {/if}
+        </p>
+    {/if}
 
     {#if author}
         <details class="provenance">

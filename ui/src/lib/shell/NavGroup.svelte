@@ -22,9 +22,14 @@
     <ul>
         {#each group.items as item (item.name)}
             <li>
+                <!-- `data-route` carries the row's own name so the rail's
+                     marker can be *told* which row to sit on, rather than
+                     hunting for an `.active` class this component may not
+                     have applied yet. See lib/shell/mark.ts. -->
                 <a
                     class="nav-link"
                     class:active={current === item.name}
+                    data-route={item.name}
                     aria-current={current === item.name ? "page" : undefined}
                     href={href(item.name)}
                 >

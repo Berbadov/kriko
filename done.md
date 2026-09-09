@@ -6,6 +6,59 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — The 0.5.0 usability pass: shell, rail, one-click install, fact check
+
+Branch `ui-0.5.0-shell-and-agents`, four commits. All from one reading of the
+app by the reader: a browser scrollbar down the right edge of a desktop window,
+a yellow marker sitting next to the wrong rail entry, fifteen rail entries, an
+extension you install by following six numbered steps, and no way to ask
+whether a cited page still says what the pack quotes.
+
+**The window stops being a web page** (`c2121d3`). The rail was already told
+not to scroll the document; the *view* was not, so a long report grew the body
+and Chromium drew its own scrollbar over the shell's chrome. The marker lagged
+because it animated from the entry that was active *before* navigation.
+
+**Fifteen rail entries become twelve** (`94b8651`). Five System entries were one
+question asked at three depths — the Subjects/Coverage/Health mistake again.
+Runs, the knowledge pipeline and what researchers sent became three lenses of
+**Activity**; Console and Connect became two of **Agents**. Every retired
+route still resolves through `ALIASES`, because `#/coverage` is a link the
+extension and this app's own older hints hand out.
+
+**One click opens a browser with Kriko loaded** (`363b768`). No browser lets an
+application install an extension into a browser that is already running, so
+the honest version is starting a fresh Chromium with `--load-extension` and its
+own profile. `POST /api/extension/launch` stages *and* opens in one request,
+because one press must not be able to half-succeed — and `launched` never
+means "installed": the extension's own call to `/api/adapters` remains the only
+proof, both shortfalls answer 200 with prose, and the manual steps stay on
+screen.
+
+**One press asks whether the cited page still says it** (`2d2ee08`).
+`app/factcheck.py` fetches a claim's cited page and looks for the pack's own
+quote: `quoted / missing / unreadable / unreachable`. Deterministic, so there
+is no judgement for anyone to review; `missing` is inert — it ranks nothing,
+hides nothing, and says the page changed rather than that the claim is false;
+and the verdict lives in `app.sqlite`, so one reader's dead link cannot move a
+`content_digest` or travel to the next install. The matching is loose where
+`findings.py` is strict, because re-reading shipped evidence is not the same
+question as accepting new evidence. In the report as a per-claim badge with a
+sequential, three-sources-a-claim sweep; in the panel as a per-card button that
+sends only `(pack_id, claim_id)` — a door that took a quote from the caller
+would be a fetch oracle for any page that can script the extension.
+
+**The gates each one was missing**, per the 1.0.0 audit's rule: `.view`'s
+overflow and the marker's source-of-truth are asserted in the shell tests; the
+rail's ALIASES have a test that every retired name still resolves; the launch
+route is tested for "never claims success"; and the verdict vocabulary has a
+drift test in `src/app/tests/test_factcheck.py` that reads the wording maps out
+of `risk_card.js` and `report.ts` and fails if either forgets a verdict —
+a panel rendering an unknown verdict as reassurance would be the worst
+available default. 377 UI tests, 108 extension tests, full pytest green.
+
+---
+
 ### 2026-09-09 — B81: the installer stops needing GitHub's permission
 
 `main`. The v0.5.0 tag produced nothing. Every job in both workflows exited in

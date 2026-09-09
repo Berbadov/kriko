@@ -7,8 +7,15 @@
    it for that reason: paper has no theme, so a custom property that resolves
    against the screen's palette is the wrong value here by construction. */
 @media print {
+    /* The screen's two scrollers are undone here, not just re-laid-out. On
+       screen `.shell` is a `100dvh` clipping frame and `.work` scrolls inside
+       it; printed as-is that is page one of a ten-page report with the rest
+       clipped away. Height and overflow have to come back with the display
+       change — they are one rule in two places. */
     .shell {
         display: block;
+        height: auto;
+        overflow: visible;
     }
     .rail,
     .no-print,
@@ -19,6 +26,12 @@
     }
     .work {
         padding: 0;
+        max-width: none;
+        height: auto;
+        overflow: visible;
+    }
+    .view,
+    .with-history {
         max-width: none;
     }
     .report-body {

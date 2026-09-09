@@ -230,7 +230,7 @@ absent or the stream dies mid-job.
 
 ## The other API surfaces
 
-Six doors that the planes above do not open. Listed here because a surface
+Seven doors that the planes above do not open. Listed here because a surface
 nobody wrote down is a surface the next change treats as private —
 `test_docs_match_the_code.py` fails until each one names an endpoint.
 
@@ -267,6 +267,18 @@ a job log, which is why this is a second surface rather than a column on the
 first. The stream is SSE over a poll of the rows, for the same reason the job
 stream is.
 
+**`GET|POST /api/factcheck`** (`routers/factcheck.py`) — one press: does the
+page a claim cites still contain the quote the pack shipped? The `POST` takes a
+`(pack_id, claim_id)` and nothing else, because the quote is read out of the
+store rather than taken from the caller — the browser extension can reach this
+surface, and a door that accepted "does this URL contain this string" would be
+an open fetch oracle. Four verdicts, `quoted / missing / unreadable /
+unreachable`, and `missing` says the page changed, never that the claim is
+false: pages get rewritten and Kriko has no authority to retract anything, so
+the verdict ranks nothing, hides nothing, and lives in `app.sqlite`'s
+`fact_checks`. The `GET` returns the whole screen's verdicts in one request,
+which is what keeps a report of forty claims from opening forty requests.
+
 **`GET /api/submissions`** (`routers/submissions.py`) — what came in through
 the agent door and what the gate did with it. The only place a *refusal* is
 legible: `app/findings.py` rejects on grounding, and without this the rejection
@@ -302,6 +314,7 @@ Every table, and the question it answers:
 | `jobs` | The row that outlives the request. See the Jobs Plane above. |
 | `pipeline_runs`, `pipeline_stages`, `pipeline_events` | The event spine: what a knowledge run *did*, stage by stage, with sources read, findings kept, and refusals with a reason. A job log says whether work happened; this says what came of it. |
 | `submissions` | What came in through the agent door and what the gate did with it — the only place a refusal is legible. |
+| `fact_checks` | The last answer to "does the cited page still say this", per (pack, claim). A reader's fetch of someone else's web page: it cannot move a `content_digest`, must not travel to the next install, and a dead link is a signal here rather than a retraction in the pack. |
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 

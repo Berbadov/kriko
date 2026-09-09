@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
     absenceNote,
     asMarkdown,
+    canCheckFacts,
     claimKey,
     confidenceNote,
     contextLines,
     emptyReason,
+    factTone,
+    factWord,
     groupByDomain,
     handledNote,
     orderClaims,
@@ -239,5 +242,64 @@ describe("absenceNote", () => {
     it("defers to the empty-state reason when there is nothing at all", () => {
         const empty = { method: "exact", coverage: "NO_RISKS", claims: [] };
         expect(absenceNote(empty)).toBe(emptyReason(empty));
+    });
+});
+
+describe("what a re-check of the sources says", () => {
+    // The load-bearing sentence in this feature. A page that was rewritten is
+    // a reason to go and look, not a verdict on the claim — and Kriko has no
+    // authority to retract one. Overstating it once teaches the reader to
+    // distrust every other badge on the card.
+    it("never says a claim is false", () => {
+        for (const verdict of ["quoted", "missing", "unreadable", "unreachable"]) {
+            const word = factWord(verdict).toLowerCase();
+            expect(word).not.toMatch(/false|wrong|refut|debunk/);
+        }
+        expect(factWord("missing")).toMatch(/changed/i);
+    });
+
+    // A site being down is not the pack's fault, and a red badge would say it
+    // was.
+    it("keeps an unreachable source neutral and a rewritten page warm", () => {
+        expect(factTone("unreachable")).toBe("meta");
+        expect(factTone("missing")).toBe("warn");
+        expect(factTone("quoted")).toBe("ok");
+    });
+
+    it("passes an unknown verdict through rather than inventing one", () => {
+        // The vocabulary lives in app/factcheck.py; a UI that mapped an
+        // unseen value to "fine" would be the worst possible default.
+        expect(factWord("something-new")).toBe("something-new");
+        expect(factTone("something-new")).toBe("meta");
+    });
+
+    it("offers the check only where there is a page to re-read", () => {
+        const base = {
+            title: "t",
+            body: "b",
+            severity: "high",
+            subject: "s",
+            relevance: 1,
+        };
+        expect(canCheckFacts({ ...base, claim_id: "c", pack_id: "p", sources: [] })).toBe(
+            false,
+        );
+        // /api/analyze answers with no claim_id, so there is nothing for the
+        // server to look the quote up by.
+        expect(
+            canCheckFacts({
+                ...base,
+                pack_id: "p",
+                sources: [{ url: "https://x", domain: "x", quote: "q", stance: "supports", tier: "" }],
+            }),
+        ).toBe(false);
+        expect(
+            canCheckFacts({
+                ...base,
+                claim_id: "c",
+                pack_id: "p",
+                sources: [{ url: "https://x", domain: "x", quote: "q", stance: "supports", tier: "" }],
+            }),
+        ).toBe(true);
     });
 });

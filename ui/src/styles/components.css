@@ -4,17 +4,56 @@
  * are one rule plus a `.center` modifier. */
 
 /* ── page chrome ──────────────────────────────────────────────────── */
+/* Two scrollers, and the document is neither of them.
+ *
+ * The rail was taught this first (see `.rail` below); the work column was
+ * not, and the result was a window with a browser scrollbar running down its
+ * right-hand edge — the app announcing itself as a web page. `min-height`
+ * was the whole bug: it let the grid grow past the viewport, and the only
+ * thing left to scroll it was the document.
+ *
+ * A fixed `100dvh` frame with `overflow: clip` says the window is the window.
+ * `dvh` rather than `vh` because on a narrow window with a retracting
+ * toolbar `100vh` is *taller* than the visible area, which is the same
+ * scrollbar again by another route. Each of the two panes then scrolls its
+ * own content, which is what application chrome does.
+ *
+ * Paper undoes both — see print.css. A fixed clipping frame prints as page
+ * one of a ten-page report.
+ */
 .shell {
     display: grid;
     grid-template-columns: var(--rail) minmax(0, 1fr);
     grid-template-areas: "rail work";
-    min-height: 100vh;
+    height: 100dvh;
+    overflow: clip;
 }
+/* The work column scrolls *as content*, unlike the rail, which hides its bar
+ * and conveys overflow with gradients. The difference is deliberate: chrome
+ * is a fixed set of rows a reader can see all of, a report is arbitrarily
+ * long, and a long document with no scrollbar is a document with no position
+ * indicator. What it does not do is jump: `scrollbar-gutter: stable` reserves
+ * the space, so navigating from a short screen to a long one no longer shoves
+ * the entire layout 15px to the left.
+ */
 .work {
     grid-area: work;
     padding: var(--s-5) var(--s-6);
-    max-width: 1100px;
     width: 100%;
+    /* A grid track's automatic minimum is its content, so without this the
+     * column refuses to shrink and hands the overflow straight back to the
+     * document. Same one-line reason as `.rail`'s `minmax(0, 1fr)`. */
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+/* The 1100px measure lives on the content, not on the scroller. A scroller
+ * capped at 1100px paints its scrollbar at 1100px — a bar hanging in the
+ * middle of a wide window, which looks more broken than the one we removed.
+ * `.with-history` carries the same cap because there it *is* the content
+ * column: a two-column grid of view plus history rail. */
+.view {
+    max-width: 1100px;
 }
 
 /* ── controls ─────────────────────────────────────────────────────── */
@@ -270,6 +309,26 @@ select:focus {
 .badge.state-succeeded {
     background: var(--low-soft);
 }
+/* What the cited page says now (app/factcheck.py). Three tones, and the
+   quiet one is deliberate: a source that could not be read says nothing
+   about the claim, and colouring it like a fault would blame the pack for
+   somebody else's outage. */
+.badge.fact-ok {
+    background: var(--low-soft);
+    color: var(--low);
+    border-color: var(--low);
+}
+.badge.fact-warn {
+    color: var(--medium);
+    border-color: var(--medium);
+}
+.fact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2);
+    margin: var(--s-2) 0 0;
+}
 
 details {
     margin-top: var(--s-2);
@@ -453,6 +512,9 @@ pre {
     grid-template-columns: minmax(0, 1fr) 16rem;
     gap: var(--s-5);
     align-items: start;
+    /* The content cap, for the same reason `.view` carries it — here the
+     * grid *is* the content, and the view inside it is one of two columns. */
+    max-width: 1100px;
 }
 .history {
     /* was a raw #e5e5e5: invisible in dark, and the reason this rule is the
@@ -597,9 +659,10 @@ li.gap {
     padding: var(--s-4) var(--s-3);
     border-right: 1px solid var(--line);
     background: var(--n-1);
-    height: 100vh;
-    position: sticky;
-    top: 0;
+    /* `100%` of a frame that is now exactly the viewport. It used to be
+     * `100vh` plus `position: sticky`, which is what you need when the
+     * document scrolls underneath you — and the document no longer does. */
+    height: 100%;
     overflow: clip;
 }
 .brand {

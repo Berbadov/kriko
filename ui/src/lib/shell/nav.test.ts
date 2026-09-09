@@ -6,6 +6,7 @@ import {
     groupsFor,
     isAuthorOnly,
     labelOf,
+    resolve,
 } from "./nav";
 
 describe("the route table", () => {
@@ -67,16 +68,60 @@ describe("the route table", () => {
             "overview",
             "knowledge",
             "packs",
-            "jobs",
-            "pipeline",
-            "submissions",
-            "console",
-            "connect",
+            // Runs, Knowledge pipeline and What researchers sent became three
+            // lenses on one screen; Console and Connect became two on
+            // another. Five rail entries, two destinations — the names they
+            // retired still resolve, asserted below.
+            "activity",
+            "agents",
             "settings",
             "about",
         ]);
         expect(new Set(ALL_ROUTES).size).toBe(ALL_ROUTES.length);
         expect(NAV.length).toBe(4);
+    });
+
+    it("keeps the rail short enough to read at a glance", () => {
+        // Not an arbitrary number: this is the ratchet on the thing that
+        // actually went wrong here twice. Nine screens became a rail of
+        // fifteen entries because every new capability got a row, and a rail
+        // nobody can scan is a rail whose grouping stopped paying for itself.
+        // A new destination is welcome; a fourteenth is a design conversation.
+        expect(ALL_ROUTES.length).toBeLessThanOrEqual(13);
+    });
+
+    it("still resolves every name the rail used to spell out", () => {
+        // Each of these is a link something already hands out: `#/jobs` is
+        // where a job-starting POST's own response points, `#/connect` is in
+        // the first-run hints, `#/coverage` is in the browser extension.
+        // Turning any of them into "No such view" is the reorganisation
+        // breaking the reader's bookmarks to prove a point.
+        expect(resolve("jobs")).toEqual({ name: "activity", lens: "runs" });
+        expect(resolve("pipeline")).toEqual({ name: "activity", lens: "pipeline" });
+        expect(resolve("submissions")).toEqual({
+            name: "activity",
+            lens: "submissions",
+        });
+        expect(resolve("console")).toEqual({ name: "agents", lens: "console" });
+        expect(resolve("connect")).toEqual({ name: "agents", lens: "connect" });
+        // And they keep the author gate they had, because the screen that
+        // absorbed them has one.
+        for (const name of ["jobs", "pipeline", "submissions", "console", "connect"]) {
+            expect(isAuthorOnly(name)).toBe(true);
+        }
+    });
+
+    it("keeps the words a merged screen absorbed searchable", () => {
+        // The palette searches these. A reader who remembers "console" — a
+        // rail entry for six versions — must not be told there is no such
+        // thing because it is a lens now.
+        const flat = destinationsFor("author");
+        const agents = flat.find((d) => d.name === "agents");
+        expect(agents?.also).toContain("console");
+        expect(agents?.also).toContain("connect");
+        const activity = flat.find((d) => d.name === "activity");
+        expect(activity?.also).toContain("jobs");
+        expect(activity?.also).toContain("submissions");
     });
 
     // The palette renders this. Derived from the same table as the rail, so a

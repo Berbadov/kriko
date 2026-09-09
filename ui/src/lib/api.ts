@@ -83,6 +83,9 @@ export const api = {
     extension: () => get<T.ExtensionStatus>("/api/extension"),
     stageExtension: () => postJson<T.ExtensionStaged>("/api/extension/stage", {}),
     revealExtension: () => postJson<T.ExtensionRevealed>("/api/extension/reveal", {}),
+    // Stages *and* opens a browser, in one request, because one press by the
+    // reader must not be able to half-succeed. See the router's docstring.
+    launchExtension: () => postJson<T.ExtensionLaunched>("/api/extension/launch", {}),
     identityKeys: (packId: string) =>
         get<T.IdentityKey[]>(`/api/identity-keys/${seg(packId)}`),
     vocabulary: (packId: string) =>
@@ -126,6 +129,17 @@ export const api = {
     settings: () => get<Record<string, unknown>>("/api/settings"),
     putSettings: (values: Record<string, unknown>) =>
         postJson<Record<string, unknown>>("/api/settings", { values }),
+    /** Every re-check this app has done, in one request: a report shows
+     * forty claims, and forty requests to say "not checked yet" is not a
+     * feature. */
+    factChecks: () => get<T.FactChecks>("/api/factcheck"),
+    /** Re-read the pages behind one claim. The quote is never sent — the
+     * server checks the one the installed pack shipped. */
+    checkFacts: (packId: string, claimId: string) =>
+        postJson<T.FactCheck>("/api/factcheck", {
+            pack_id: packId,
+            claim_id: claimId,
+        }),
     /** Both halves of the reader's own marks on one stored answer. */
     triage: (lookupId: string) =>
         get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),

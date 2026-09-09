@@ -2,7 +2,7 @@
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
     import Failure from "../lib/Failure.svelte";
-    import type { Adapter, ExtensionStatus } from "../lib/types";
+    import type { Adapter, ExtensionLaunched, ExtensionStatus } from "../lib/types";
 
     let status = $state<ExtensionStatus | null>(null);
     // Which sites the installed packs can read. It belongs on this screen
@@ -41,6 +41,25 @@
         actionError = null;
         try {
             await api.stageExtension();
+            await refresh();
+        } catch (cause) {
+            actionError = cause;
+        } finally {
+            busy = "";
+        }
+    }
+
+    // The one click. `launched` is deliberately not treated as success: the
+    // window opening is all this app can observe, and a Chrome build that has
+    // stopped honouring --load-extension opens an ordinary one. So the button
+    // hands over to the same polling that proves every other install.
+    let launched = $state<ExtensionLaunched | null>(null);
+
+    async function launch() {
+        busy = "launch";
+        actionError = null;
+        try {
+            launched = await api.launchExtension();
             await refresh();
         } catch (cause) {
             actionError = cause;
@@ -99,10 +118,10 @@
         only to <code>127.0.0.1:{status?.port ?? 8787}</code>; nothing leaves your machine.
     </p>
     <p class="meta">
-        No browser lets an application install an extension — that is a deliberate rule,
-        not a gap, and it is why the last three steps below are yours. This page does
-        everything on this side of it: puts the files somewhere stable, opens the folder,
-        and tells you the moment the extension actually reaches the app.
+        No browser lets an application install an extension into a browser that is
+        already running — that is a deliberate rule, not a gap. What it can do is start
+        a fresh Chromium with the extension already loaded, which is the button below.
+        The numbered steps stay for the browser you already have open, and for Firefox.
     </p>
 </article>
 
@@ -173,6 +192,41 @@
                     class:warn={status.compatibility.state === "behind"}
                 >
                     {status.compatibility.detail}
+                </p>
+            {/if}
+        </article>
+
+        <!-- The one click, above the numbered steps rather than instead of
+             them: this cannot report success (see `launch` above), and a
+             browser that quietly ignored the extension has to leave the
+             reader somewhere other than a dead end. -->
+        <article class="card">
+            <h3>One click</h3>
+            <p class="meta">
+                Opens a new Chromium — Chrome, Chromium, Brave or Edge, whichever is on
+                this machine — with the extension already loaded, on this page, so the
+                Status above turns green in front of you.
+            </p>
+            <p>
+                <button class="primary" disabled={busy === "launch"} onclick={launch}>
+                    {busy === "launch"
+                        ? "Opening a browser…"
+                        : "Open a browser with Kriko loaded"}
+                </button>
+            </p>
+            {#if launched}
+                {#if launched.error}
+                    <p class="state warn">{launched.error}</p>
+                {:else}
+                    <p class="state">
+                        Started {launched.browser}. If the window opened and Status is
+                        still waiting, that browser declined the extension — the steps
+                        below are the install then.
+                    </p>
+                {/if}
+                <p class="meta">{launched.note}</p>
+                <p class="meta">
+                    Its profile: <code class="path">{launched.profile}</code>
                 </p>
             {/if}
         </article>
