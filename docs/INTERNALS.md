@@ -298,6 +298,43 @@ the agent door and what the gate did with it. The only place a *refusal* is
 legible: `app/findings.py` rejects on grounding, and without this the rejection
 is a log line nobody reads.
 
+**`GET|PUT /api/keys`, `DELETE /api/keys/{provider}`** (`routers/keys.py`) —
+the door to `~/.kriko/env`, which `app/sidecar.py` loads into `os.environ`
+before anything can read a key. Two providers only (`app/keys.py`'s
+`PROVIDERS`), because an endpoint that wrote any `KEY=value` into a file this
+process later loads into its own environment would be a localhost-reachable
+way to set `PATH` for the next launch. **No response body from this router may
+contain a key** — presence, source (`environment` beats `file`, because `load`
+never overwrites) and the last four characters is the whole shape any
+interface gets, and `test_api_keys.py` asserts it over the error paths too. A
+settings screen that can read a key back is one that can leak it into a
+screenshot or a support log, and replacing a key you cannot see costs one
+paste.
+
+**`GET /api/research-planes`** (`routers/research.py`) — the two ways an
+installation grows its own knowledge, read off `AgentResearcher` and
+`ApiResearcher` rather than restated in the frontend, for the reason
+`/api/pipeline/runs` ships its stage labels: a second copy of a vocabulary is
+a second place to forget when a third plane arrives. It adds two things the
+engine does not own — a sentence in the reader's terms, because `per_token` is
+not an answer to "what will this cost me", and `ready`, which is the paid
+plane's key check and nothing else (the agent plane's readiness is a harness
+question `/api/agent-targets` already answers). Returns no key and no hint.
+
+**`POST /api/agenda/run`, `GET /api/research-runs`,
+`GET|DELETE /api/research-runs/{id}`** (`routers/research.py`) — the
+unattended run and the way back out of it. `agenda_run` walks `/api/agenda`'s
+ordering and researches each row's subject **inline**, reusing `_research`'s
+stages: `app/web/jobs.py` has a single worker, so a job that submits jobs and
+waits deadlocks silently. `unknown_subject` rows are skipped and counted, never
+researched — B82 ships them with no `subject_id` on purpose. The ceiling is
+shared across the whole run, not per row. The `DELETE` starts a
+`research_undo` job that retracts the run's claims through
+`app/findings.py::retract_claim` and tolerates already-absent ones ("removed 4
+of 6; 2 were already absent") — an unattended multi-row run that could not be
+reversed would be a liability rather than a feature, which is why the undo
+landed before the loop that needs it.
+
 **`GET /api/extension`, `POST /api/extension/stage`,
 `POST /api/extension/reveal`** (`routers/extension.py`) — where the unpacked
 extension is on disk, staged into a stable directory the reader can point
@@ -330,6 +367,8 @@ Every table, and the question it answers:
 | `submissions` | What came in through the agent door and what the gate did with it — the only place a refusal is legible. |
 | `fact_checks` | The last answer to "does the cited page still say this", per (pack, claim). A reader's fetch of someone else's web page: it cannot move a `content_digest`, must not travel to the next install, and a dead link is a signal here rather than a retraction in the pack. |
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
+| `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
+| `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
 **Schema changes reach an existing file.** `connect()` stamps `PRAGMA

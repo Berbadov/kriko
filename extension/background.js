@@ -890,6 +890,27 @@ async function _postApp(path, body) {
   return response.json();
 }
 
+/** Read something from the app. No body, and never used to change anything —
+ * `_postApp` is the write door, this is the read one, and keeping them
+ * separate means a caller cannot accidentally fire a mutation while asking a
+ * question (RESEARCH_PLANE and JOB_STATUS below are both look-only).
+ */
+async function _getApp(path) {
+  const response = await _fetchApp(`${await apiBase()}${path}`, { method: "GET" });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      detail = (await response.json()).detail || detail;
+    } catch (_) {
+      // A body that is not JSON tells us nothing the status has not.
+    }
+    const refusal = new Error(`Kriko refused that (${detail}).`);
+    refusal.status = response.status;
+    throw refusal;
+  }
+  return response.json();
+}
+
 /** Bring the desktop app to the front, on the given route.
  *
  * A page cannot raise a native window, so this posts the route and lets the
@@ -1040,20 +1061,58 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.type === "RESEARCH_SUBJECT") {
-    const { subject_id, pack_id } = request.payload || {};
+    const { subject_id, pack_id, backend, budget_usd } = request.payload || {};
     if (!subject_id) {
       sendResponse({ ok: false, error: "Missing subject" });
       return false;
     }
     // Research is a job, not a request — it outlives this service worker,
-    // which Chrome may stop at any moment. So the worker starts it and hands
-    // the reader off to the app's own Runs screen, where the log and the
-    // brief survive both the worker and the browser.
-    _postApp("/api/research", { subject_id, pack_id, backend: "agent" })
-      .then(async (job) => {
-        await openInApp("jobs").catch(() => {});
-        sendResponse({ ok: true, job });
-      })
+    // which Chrome may stop at any moment. `backend` and `budget_usd` come
+    // from the panel, which read them off RESEARCH_PLANE first: naming the
+    // cost happens before this message is ever sent, not here.
+    //
+    // Unlike the old behaviour, this does not raise the desktop app. The
+    // panel polls the returned job with JOB_STATUS and shows progress in
+    // place — a button that fires a job and then jumps the reader to a
+    // different window is not "inline", it is a navigation with extra
+    // steps.
+    _postApp("/api/research", {
+      subject_id,
+      pack_id,
+      backend: backend || "agent",
+      budget_usd: budget_usd || 0,
+    })
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  // What plane this installation is configured for, and what it costs — read
+  // before RESEARCH_SUBJECT is ever sent, so the panel can name the cost
+  // before it spends it (agent: nothing; api: the enforced cap). Never a key:
+  // `/api/extension/research-plane` answers with the same discipline as
+  // `/api/keys` — a plane name and a number, nothing that could be replayed
+  // as a credential.
+  if (request.type === "RESEARCH_PLANE") {
+    _getApp("/api/extension/research-plane")
+      .then((plane) => sendResponse({ ok: true, plane }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  // Progress on one job, polled from the panel rather than pushed — the
+  // service worker can be stopped and restarted by Chrome mid-run, and a job
+  // id is enough to pick the poll back up with no state lost.
+  if (request.type === "JOB_STATUS") {
+    const jobId = request.payload?.job_id;
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    _getApp(`/api/jobs/${encodeURIComponent(jobId)}`)
+      .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async

@@ -914,14 +914,11 @@ Moved to `done.md`. The launched browser lands on a listing site read off the
 adapter rows, so the hover panel is what the reader sees; the app screen stays
 the fallback for an installation with no packs.
 
-### B86 — Building knowledge with an agent is not a system yet — **Open, designed**
-The reader looked at 0.5.1 and could not tell how they would build knowledge
-with their agents. Design committed (`81c145a`,
-`docs/superpowers/specs/2026-09-09-knowledge-building-design.md`): provider
-adapters so an OpenAI + Exa key is an alternative to the agent plane, a keys
-section writing `~/.kriko/env`, `agenda_run` as the unattended door, run
-provenance in `app.sqlite` so a run is reversible, and a product-identity
-skill per pack. Awaiting the reader's review before an implementation plan.
+### B86 — Building knowledge with an agent is not a system yet — **Done 2026-09-09**
+Moved to `done.md` (`0ab613d`, `b945408`). Two research planes side by side, a
+key store, an unattended agenda run under one shared ceiling, provenance that
+makes every run reversible, and a per-pack product-identity skill. Spec:
+`docs/superpowers/specs/2026-09-09-knowledge-building-design.md`.
 
 ### B82 — The data pipeline still needs a person to aim it — **Done 2026-09-09**
 Moved to `done.md`. `app/agenda.py` ranks what to research next by what this

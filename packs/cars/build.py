@@ -754,6 +754,7 @@ def _emit_research_assets(conn, pack_id: str, row_ids: list, stats: Counter) -> 
     for name, kind in (
         ("research/principle.md", "principle"),
         ("research/templates.yaml", "templates"),
+        ("research/skill.md", "skill"),
     ):
         path = PACK_ROOT / name
         if path.exists():

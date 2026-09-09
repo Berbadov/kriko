@@ -200,6 +200,21 @@ def main(argv=None) -> int:
 
     logs.configure()
 
+    # Before the store, before the routers, before anything that could read a
+    # key: `~/.kriko/env` into this process's environment. The provider
+    # adapters in `app/providers/` read `os.environ` — the same way they did
+    # when a shell was the only way to set a key — so this one call is what
+    # makes a double-clicked app able to use the paid research plane at all.
+    # It never overwrites, so an exported variable still wins; see app/keys.py.
+    from app import keys as keyfile
+
+    loaded = keyfile.load()
+    if loaded:
+        # The count, never the names' values. A log line is the last place a
+        # key should be able to reach.
+        print(f"loaded {len(loaded)} API key(s) from {keyfile.env_path()}",
+              file=sys.stderr, flush=True)
+
     store = None
     if args.store:
         from pathlib import Path

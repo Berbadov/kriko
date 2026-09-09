@@ -6,6 +6,92 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-09 — Building knowledge, as a system rather than a possibility (B86)
+
+Branch `knowledge-building` (`0ab613d`, `b945408`). The reader looked at 0.5.1
+and said they still could not tell how they would build knowledge with their
+agents — with the agenda, the research plane, the acceptance path and the MCP
+tools all already shipped. So this is two things at once: the second plane the
+system was missing, and the screens that admit any of it exists.
+
+**Two planes, one acceptance path.** `kriko/research/` had the abstraction and
+one implementation. `ApiResearcher` is now real: three injected callables
+(search, fetch, complete) supplied by `src/app/providers/` over stdlib
+`urllib`, because `exa-py` and `openai` live in the `pipeline` extra and the
+frozen desktop binary carries neither — three JSON requests should not become
+two core dependencies for every reader who never sets a key. Whatever either
+plane finds goes through the same grounding check (`quote not in
+document.text` → dropped) and the same `app/findings.py`, tagged with the
+plane. A pack's claims must not depend on which door they came in.
+
+**The budget is a hard stop.** All accounting stays in `_charge`, held by two
+gates: a behaviour test that overshoots a 15¢ ceiling and asserts the *second*
+query never ran, and an AST gate requiring every `except BudgetExceeded` in
+`src/app/` to reach a `raise`, `break` or `return`. `_budget` also floors a
+paid run nobody budgeted, because `_charge` reads zero as unlimited — the
+"unattended run with no ceiling" trap, closed on the api plane only so the
+agent plane keeps its honest zero.
+
+**Keys are a file, not a keychain.** `~/.kriko/env` at mode 0600, loaded into
+`os.environ` at sidecar startup so precedence falls out for free.
+`GET|PUT /api/keys` is write-only by construction: `keys.require` is the only
+function that returns a key and never leaves the process, and a test drives
+six requests through the router asserting the fixture appears in no response
+body. Two declared providers only, so a localhost-reachable endpoint cannot
+become an arbitrary way to set `PATH` for the next launch.
+
+**Provenance in `app.sqlite`, never the engine store.** `research_runs` and
+`research_run_claims` record plane, completion API, search provider, budget,
+spend and which claims a run wrote. In the engine schema they would make a
+pack's `content_digest` depend on who grew it, and pack-update refusal is
+built on two installations computing the same digest for the same version.
+Claim counts are subqueries rather than a stored total that undo would
+falsify.
+
+**The unattended run is inline, on purpose.** `app/web/jobs.py` has a single
+worker, so a job that submits jobs waits behind itself forever — a queue that
+never drains and rows spinning, which reads as slowness rather than as a bug.
+`agenda_run` calls the research path directly, shares one ceiling across rows
+(ten rows at $0.40 each is a $4.00 run wearing a $0.40 label), de-duplicates
+by subject, and counts `unknown_subject` rows out loud rather than dropping
+them silently.
+
+**Undo landed before the loop that needs it.** `retract_claim` removes a claim
+and its evidence and leaves `sources` alone, because a source row is shared
+between claims and a dangling `source_id` is worse than an unreferenced row.
+Already-absent is reported, not failed.
+
+**Each pack now ships `research/skill.md`** — its own method for identifying a
+subject before searching for it. The reader's point: products are not just
+names, they have attributes, and which ones pin a product down is a property
+of the category. So it is pack data, composed into the generated agent skill.
+
+**The screens.** Agents → Wiring shows both planes under the agenda they work
+down, the paid one inert-but-explained without keys. Settings → Research keys
+is write-only because no endpoint returns a key, and prints what each provider
+receives beside the box asking for it. Activity → Runs lists what wrote which
+claims and offers *Undo this run* only while there is something to undo.
+
+Four defects the tests found, all of the same kind — a rule stated correctly
+in a comment and contradicted three lines away:
+
+* `open_research_run` inserted `spent_usd` as `0.0`, so the agent plane's
+  deliberate NULL — "nobody counted", as distinct from "cost nothing" — never
+  survived, and `close`'s COALESCE preserved the false zero.
+* The budget-stop source gate matched with a regex whose body-end lookahead
+  read the *next* `except` clause, so `agenda_run`'s neighbouring
+  `except Cancelled: raise` satisfied it and a `continue` mutation passed
+  green. Rewritten over `ast.ExceptHandler`.
+* The adapters' "keep no running total" gate could be broken by the word
+  "budget" in a comment, so it now reads AST-stripped source: prose should
+  neither satisfy a rule about behaviour nor break one.
+* All three new components flattened an exception into state, which B79's gate
+  exists to catch; and the runs list printed a `model` name, which
+  `test_ui_contains_no_pack_vocabulary` bans because `model` is a car identity
+  key. The collision is real rather than incidental — a car has a model, so
+  does a completion API — so the column keeps its name and the wire says
+  `llm`.
+
 ### 2026-09-09 — The engine outlives the window, and the three defects a reader could see (B83, B84, B85)
 
 Branch `agents-and-tray`. Three things the reader reported from a screenshot of

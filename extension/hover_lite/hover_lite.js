@@ -52,6 +52,12 @@
     // subject_id currently being researched, so the button can say so rather
     // than looking unpressed while a job starts.
     researching: null,
+    // Which research plane this installation is configured for, and what it
+    // costs — fetched once, lazily, the first time a gap is rendered. `null`
+    // means "not asked yet", not "free": the cost line stays hidden rather
+    // than guessing until the app has actually answered.
+    researchPlane: null,
+    researchPlaneRequested: false,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -382,6 +388,46 @@
     );
   }
 
+  // Which plane this installation is configured for, and what it costs.
+  // Asked once, lazily — a gap that is never shown never needs an answer —
+  // and cached, since the plane cannot change mid-session without a restart
+  // this panel would also lose its mount on.
+  function requestResearchPlane() {
+    if (state.researchPlaneRequested) return;
+    state.researchPlaneRequested = true;
+    chrome.runtime.sendMessage({ type: "RESEARCH_PLANE" }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.ok) {
+        // Left null. The cost line stays hidden rather than asserting a
+        // plane the app never confirmed — silence here is honest, a guess is
+        // not.
+        return;
+      }
+      state.researchPlane = response.plane || null;
+      // Skip the redraw while a run is in flight: renderGaps rebuilds the gap
+      // card from scratch, and rebuilding out from under an active poll would
+      // orphan the button pollResearchJob is updating by direct reference.
+      // The cost line was already correct when that run started; there is
+      // nothing here worth losing progress text for.
+      if (!state.researching) renderGaps();
+    });
+  }
+
+  // The sentence a reader sees before the button does anything at all. Named
+  // *before* the click, not after: the whole point of asking the plane first
+  // is that "this spends money" cannot be information the reader gets from
+  // the bill.
+  function costLine() {
+    const plane = state.researchPlane;
+    if (!plane) return "";
+    if (plane.backend === "api") {
+      const cap = Number(plane.budget_usd || 0);
+      return cap > 0
+        ? `Costs money — this run is capped at $${cap.toFixed(2)} of your API keys.`
+        : "Costs money — spent through your configured API keys.";
+    }
+    return "Costs nothing — runs through your coding agent.";
+  }
+
   // Nothing known about a subject the packs *do* recognise. That is the one
   // emptiness worth a button: the gap is identified, so filling it is a job
   // the app can start rather than a shrug.
@@ -391,19 +437,81 @@
       buttonEl.disabled = true;
       buttonEl.textContent = "Starting…";
     }
+    const plane = state.researchPlane;
+    const backend = plane && plane.backend === "api" ? "api" : "agent";
+    const budget_usd = backend === "api" ? Number(plane.budget_usd || 0) : 0;
     chrome.runtime.sendMessage(
       {
         type: "RESEARCH_SUBJECT",
-        payload: { subject_id: subject.subject_id, pack_id: subject.pack_id },
+        payload: {
+          subject_id: subject.subject_id,
+          pack_id: subject.pack_id,
+          backend,
+          budget_usd,
+        },
       },
       (response) => {
-        state.researching = null;
-        if (!buttonEl) return;
         const failed = chrome.runtime.lastError || (response && !response.ok);
-        buttonEl.disabled = false;
-        buttonEl.textContent = failed ? "Could not start — retry" : "Running in Kriko";
+        if (failed) {
+          state.researching = null;
+          if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.textContent = "Could not start — retry";
+          }
+          return;
+        }
+        const jobId = response.job && response.job.job_id;
+        if (!jobId) {
+          state.researching = null;
+          if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.textContent = "Running in Kriko";
+          }
+          return;
+        }
+        if (buttonEl) buttonEl.textContent = "Researching…";
+        pollResearchJob(jobId, buttonEl);
       }
     );
+  }
+
+  // Progress shown in the gap card itself — the panel stays put, and the
+  // reader watches the run land without ever leaving the listing they were
+  // reading. Polled rather than pushed: the panel has no open connection to
+  // the app, and a job id is cheap to ask about again.
+  function pollResearchJob(jobId, buttonEl) {
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
+      const failed = chrome.runtime.lastError || !response || !response.ok || !response.job;
+      if (failed) {
+        state.researching = null;
+        if (buttonEl) {
+          buttonEl.disabled = false;
+          buttonEl.textContent = "Could not check progress — retry";
+        }
+        return;
+      }
+      const job = response.job;
+      if (!job.done) {
+        if (buttonEl) {
+          const pct = Math.round((job.progress || 0) * 100);
+          buttonEl.textContent = job.message ? job.message : `Researching… ${pct}%`;
+        }
+        setTimeout(() => pollResearchJob(jobId, buttonEl), 1000);
+        return;
+      }
+      state.researching = null;
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent =
+          job.state === "succeeded" ? "Done — refreshing…" : "Research failed — retry";
+      }
+      if (job.state === "succeeded") {
+        // The subject just gained claims (or didn't — a run can land with
+        // nothing found). Either way the only honest next step is to ask the
+        // app again rather than have this panel guess at what changed.
+        requestCached();
+      }
+    });
   }
 
   function triggerAnalyze() {
@@ -1270,17 +1378,34 @@
    */
   function renderGaps() {
     if (!risksListEl || !state.result) return;
+    // Never on NOT_MATCHED: a page nothing adapted has no `subjects` at all
+    // (the backend only resolves subject_ids when something matched), so this
+    // filter already excludes it — there is no separate check to remember or
+    // forget here.
     const gaps = (state.result.subjects || []).filter((s) => !s.claims);
     if (!gaps.length) return;
+
+    // Ask what this would cost before drawing a single button — the sentence
+    // has to be on screen the first time a reader sees "Research it", not
+    // after they've already clicked it once.
+    requestResearchPlane();
+    const cost = costLine();
+
+    // Re-render (rather than append) each time so a plane answer that arrives
+    // after the first paint, or a poll updating one card's progress text,
+    // does not leave stale duplicate cards behind.
+    risksListEl.querySelectorAll(".lite-gap").forEach((el) => el.remove());
 
     for (const subject of gaps) {
       const card = document.createElement("div");
       card.className = "lite-gap";
       card.innerHTML = `
         <div class="lite-gap-body">
-          <div class="lite-gap-title">Nothing known about ${escapeHtml(subject.label)}</div>
+          <div class="lite-gap-title">Couldn't find the knowledge on
+            ${escapeHtml(subject.label)} — research it with your agent?</div>
           <div class="lite-gap-note">This is in the catalogue, but no claim has been
             researched for it yet.</div>
+          ${cost ? `<div class="lite-gap-cost">${escapeHtml(cost)}</div>` : ""}
         </div>
         <button type="button" class="lite-gap-btn">Research it</button>
       `;

@@ -38,10 +38,12 @@ from app.web.routers import (
     health,
     history,
     jobs,
+    keys,
     marks,
     packs,
     pipeline as pipeline_router,
     query,
+    research,
     subjects,
     submissions,
 )
@@ -131,6 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         packs.router,
         pipeline_router.router,
         query.router,
+        research.router,
         subjects.router,
         analyze.router,
         control.router,
@@ -140,6 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         health.router,
         history.router,
         jobs.router,
+        keys.router,
         marks.router,
         submissions.router,
     ):

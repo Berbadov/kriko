@@ -1,5 +1,6 @@
 <script lang="ts">
     import Agenda from "../lib/Agenda.svelte";
+    import Planes from "../lib/Planes.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
@@ -177,6 +178,9 @@
          reader's questions arrive in: what will it do, then how does it
          know how. -->
     <Agenda />
+
+    <!-- Directly under the agenda, because it works down those exact rows. -->
+    <Planes />
 
     <article class="card">
         <h3>What the agent is told</h3>

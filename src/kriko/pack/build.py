@@ -407,6 +407,7 @@ def _emit_pack_assets(conn, pack_id, root, row_ids: list[str]) -> None:
     for name, kind in (
         ("research/principle.md", "principle"),
         ("research/templates.yaml", "templates"),
+        ("research/skill.md", "skill"),
     ):
         path = root / name
         if path.exists():

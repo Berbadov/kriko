@@ -1,5 +1,6 @@
 <script lang="ts">
     import Jobs from "./Jobs.svelte";
+    import ResearchRuns from "../lib/ResearchRuns.svelte";
     import Pipeline from "./Pipeline.svelte";
     import Submissions from "./Submissions.svelte";
 
@@ -61,6 +62,10 @@
 {#key lens}
     {#if lens === "runs"}
         <Jobs />
+        <!-- Under the jobs, not a lens of its own: a run and the job that ran
+             it are two views of one thing, and a reader chasing "did that
+             research land, and can I undo it" needed both. -->
+        <ResearchRuns />
     {:else if lens === "pipeline"}
         <Pipeline />
     {:else}

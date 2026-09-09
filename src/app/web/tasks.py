@@ -18,11 +18,11 @@ from pathlib import Path
 
 from app import packsource
 
-from app.findings import accept_findings, log_submission
-from app.web import pipeline
+from app.findings import accept_findings, log_submission, retract_claim
+from app.web import pipeline, state
 from app.web.jobs import Cancelled, Progress
 from kriko.pack import updates
-from kriko.research import get_researcher, plan_task
+from kriko.research import BudgetExceeded, get_researcher, plan_task
 from kriko.store import packstore
 from kriko.store.db import connect
 
@@ -38,6 +38,150 @@ def _subject_pack(conn, subject_id: str) -> str:
     if row is None:
         raise KeyError(f"no subject {subject_id} is installed")
     return row["pack_id"]
+
+
+#: What one paid call is assumed to cost, when nobody says otherwise.
+#:
+#: A deliberate over-estimate. `ApiResearcher._charge` adds this per search and
+#: per completion and stops the run when the total passes the ceiling, so the
+#: number's only job is to make the ceiling arrive *early* rather than late.
+#: Guessing low means a budget that is exceeded before it triggers, which is
+#: the failure this whole mechanism exists to prevent; guessing high means a
+#: run that stops with money left, which the reader can simply raise.
+DEFAULT_PRICE_PER_CALL = 0.01
+
+#: The ceiling a paid single-subject run gets when the caller names none.
+#:
+#: Not zero. `ApiResearcher._charge` treats `budget_usd = 0` as *unlimited* —
+#: correct for the agent plane, whose marginal cost really is zero, and exactly
+#: wrong for this one. A paid run with no ceiling is the $40 bill.
+DEFAULT_BUDGET_USD = 0.20
+
+
+def _researcher(params: dict):
+    """The plane this run asked for, wired to whatever it needs.
+
+    The `agent` plane needs nothing, which is why it is the default and why it
+    is the one that works on a machine with no keys. The `api` plane needs
+    three callables, and `app/providers/` is where the sockets live — the
+    engine owns none, so `kriko.research` could never have built this itself.
+    """
+    backend = str(params.get("backend") or "agent").lower()
+    if backend != "api":
+        return get_researcher({"backend": backend})
+    from app.providers import api_researcher
+
+    price = float(params.get("price_per_call") or DEFAULT_PRICE_PER_CALL)
+    return api_researcher(price_per_call=price)
+
+
+def _budget(params: dict) -> float:
+    """The ceiling, with the paid plane's floor applied.
+
+    A caller may raise it or lower it; a caller may not leave the paid plane
+    uncapped by omission.
+    """
+    named = float(params.get("budget_usd") or 0.0)
+    if str(params.get("backend") or "agent").lower() != "api":
+        return named
+    return named if named > 0 else DEFAULT_BUDGET_USD
+
+
+def _describe_plane(researcher) -> dict:
+    """What a provenance row can honestly say about this plane.
+
+    Duck-typed, like `tokens_used` in `_research`: a plane that knows its model
+    reports one, and the agent plane leaves both columns empty rather than
+    inventing a name for whatever harness the reader happened to be using.
+    """
+    return {
+        "plane": researcher.name,
+        "model": str(getattr(researcher, "model", "") or ""),
+        "search_provider": str(getattr(researcher, "search_provider", "") or ""),
+    }
+
+
+class _Provenance:
+    """The `research_runs` row, kept open across a run's stages.
+
+    A small object rather than three loose calls because the row has to be
+    opened before the first request and closed on every path out — including
+    the two that are not failures — and threading a connection through
+    `_research`'s stages to do that by hand is how one of those paths gets
+    forgotten.
+
+    Its connection is `app.sqlite`. Provenance is interface state: see the
+    comment on `research_runs` in `app/web/state.py` for why putting it in the
+    engine store would make a pack's `content_digest` depend on who grew it.
+    """
+
+    def __init__(self, settings, run_id: str, job_id: str, params: dict):
+        self._path = getattr(settings, "app_state_path", None)
+        self.run_id = run_id
+        self._job_id = job_id or ""
+        self._budget = _budget(params)
+        self._opened = False
+        self._researcher = None
+
+    def _connect(self):
+        if self._path is None:
+            return None
+        return state.connect(self._path)
+
+    def open(self, researcher) -> None:
+        """Once the plane exists, so the row can name the model rather than
+        the intention.
+
+        The researcher is kept so that `close` can read the spend on *every*
+        path out, including the ones that raise. A budget stop that recorded no
+        spend would be the one run whose cost is unrecoverable.
+        """
+        self._researcher = researcher
+        conn = self._connect()
+        if conn is None:
+            return
+        try:
+            state.open_research_run(
+                conn,
+                self.run_id,
+                job_id=self._job_id,
+                budget_usd=self._budget or None,
+                **_describe_plane(researcher),
+            )
+            self._opened = True
+        finally:
+            conn.close()
+
+    def claims(self, pack_id: str, subject_id: str, accepted: list) -> None:
+        conn = self._connect()
+        if conn is None:
+            return
+        try:
+            state.record_run_claims(conn, self.run_id, pack_id, subject_id, accepted)
+        finally:
+            conn.close()
+
+    def close(self, outcome: str) -> None:
+        """The one exit. Called on every path, including the two that raise."""
+        if not self._opened:
+            return  # nothing was opened, so there is nothing to contradict
+        conn = self._connect()
+        if conn is None:
+            return
+        try:
+            state.close_research_run(conn, self.run_id, outcome, self.spent())
+        finally:
+            conn.close()
+
+    def spent(self) -> float | None:
+        """What the plane says it spent, and nothing inferred.
+
+        `ApiResearcher` counts; `AgentResearcher` has no such field and gets
+        NULL rather than 0.0, because "cost nothing" and "nobody counted" are
+        different answers and the column has to keep them apart.
+        """
+        value = getattr(self._researcher, "spent", None)
+        return float(value) if isinstance(value, (int, float)) else None
 
 
 def research(settings, params: dict, progress: Progress) -> dict:
@@ -67,22 +211,37 @@ def research(settings, params: dict, progress: Progress) -> dict:
         job_id=progress.job_id,
     )
     emit.begin(subject_id=params.get("subject_id") or "")
+    # Opened before anything can spend, and closed on every path out. A run
+    # that hit its ceiling, was cancelled, or crashed is exactly the run whose
+    # provenance a reader needs — and a row written only on success is a row
+    # that never exists for any of them.
+    provenance = _Provenance(settings, emit.run_id, progress.job_id, params)
     try:
-        result = _research(settings, params, progress, emit)
+        result = _research(settings, params, progress, emit, provenance)
     except Cancelled:
         # Cancelled is not failed. The reader stopped it, and a view that
         # colours a deliberate stop the same as a crash trains the reader to
         # ignore the colour.
         emit.finish("cancelled", "stopped by the reader")
+        provenance.close("cancelled")
+        raise
+    except BudgetExceeded as stop:
+        # Nor is this. The ceiling working as designed is the feature, so it
+        # gets its own outcome rather than being coloured as a crash — and it
+        # is re-raised, because nothing may catch this and go on spending.
+        emit.finish("budget", str(stop))
+        provenance.close("budget")
         raise
     except Exception as error:
         emit.finish("failed", f"{type(error).__name__}: {error}")
+        provenance.close("failed")
         raise
     emit.finish("done")
+    provenance.close("done")
     return result
 
 
-def _research(settings, params: dict, progress: Progress, emit) -> dict:
+def _research(settings, params: dict, progress: Progress, emit, provenance=None) -> dict:
     """The run itself, with the four stages named.
 
     The default plane is `agent`, whose `gather` returns nothing by design —
@@ -107,7 +266,7 @@ def _research(settings, params: dict, progress: Progress, emit) -> dict:
             conn,
             subject_id,
             pack_id,
-            budget_usd=float(params.get("budget_usd") or 0.0),
+            budget_usd=_budget(params),
             max_documents=int(params.get("max_documents") or 5),
         )
         progress.set(0.1, f"planning {task.subject_label}")
@@ -116,7 +275,9 @@ def _research(settings, params: dict, progress: Progress, emit) -> dict:
             progress.log(f"query: {query}")
             emit.event(f"query: {query}", detail_kind="query")
 
-        researcher = get_researcher({"backend": params.get("backend") or "agent"})
+        researcher = _researcher(params)
+        if provenance is not None:
+            provenance.open(researcher)
         brief = researcher.brief(task)
         progress.set(0.2, f"{researcher.name} plane ({researcher.cost_basis})")
         emit.describe(plane=researcher.name)
@@ -205,6 +366,11 @@ def _research(settings, params: dict, progress: Progress, emit) -> dict:
             progress.set(0.85, f"checking {len(findings)} finding(s)")
             verdicts = accept_findings(conn, subject_id, pack_id, findings)
             conn.commit()
+            # Written down as soon as the claims exist, not at the end of the
+            # run: an undo has to be possible for a run that was cancelled
+            # after acceptance, which is precisely when a reader wants it.
+            if provenance is not None:
+                provenance.claims(pack_id, subject_id, verdicts.get("accepted", []))
             emit.count(
                 accepted=len(verdicts.get("accepted", [])),
                 refused=len(verdicts.get("rejected", [])),
@@ -249,11 +415,16 @@ def _research(settings, params: dict, progress: Progress, emit) -> dict:
             emit.close_stage()
 
         progress.set(1.0, f"{len(verdicts.get('accepted', []))} claim(s) kept")
+        # Not closed here: `research` closes the row on every path out,
+        # which is the only way the failing paths get one too.
+        spent = provenance.spent() if provenance is not None else None
         return {
             "run_id": emit.run_id,
+            "spent_usd": spent,
+            "budget_usd": task.budget_usd or None,
             "subject": task.subject_label,
             "pack_id": pack_id,
-            "plane": researcher.name,
+            **_describe_plane(researcher),
             "cost_basis": researcher.cost_basis,
             "queries": list(task.rendered_queries()),
             "brief": brief,
@@ -262,6 +433,214 @@ def _research(settings, params: dict, progress: Progress, emit) -> dict:
         }
     finally:
         conn.close()
+
+
+#: How many agenda rows one unattended run will work through by default, and
+#: what it may spend doing it. Both deliberately modest: this is the button
+#: that runs without anybody watching, and the first time a reader presses it
+#: they should be able to read the whole result.
+DEFAULT_AGENDA_ROWS = 10
+DEFAULT_AGENDA_BUDGET_USD = 0.40
+
+
+def agenda_run(settings, params: dict, progress: Progress) -> dict:
+    """Work down the agenda, one subject at a time, under one shared ceiling.
+
+    This is the answer to "how do I build knowledge with my agents" for someone
+    who does not want to pick subjects by hand: `app/agenda.py` already knows
+    what is worth researching next, and this walks that list.
+
+    **It calls `_research` inline rather than submitting a job per row.**
+    `app/web/jobs.py` has a single worker — a job that submits jobs and waits
+    for them deadlocks, and it deadlocks silently, with a queue that never
+    drains and a UI that shows two rows spinning forever. Every stage, every
+    emitter and every acceptance check is the same code the single-subject door
+    runs; only the loop is new.
+
+    **The ceiling is shared, not per row.** Each row is given whatever is left,
+    and what it spent is taken off the total. Ten rows with a $0.40 budget each
+    would be a $4.00 run wearing a $0.40 label.
+
+    **`unknown_subject` rows are skipped, loudly.** B82 ships them with no
+    `subject_id` on purpose: they are identities readers asked about that no
+    pack claims, which is a message to whoever grows the catalog, not a task an
+    agent can act on. Researching "some car nobody has modelled" is not a
+    thing. So they are counted and reported — *"3 rows need a subject before
+    anyone can research them"* — rather than silently dropped, which would make
+    a run of 10 rows quietly do 7 and look complete.
+    """
+    from app import agenda as agenda_module
+
+    limit = max(1, int(params.get("rows") or DEFAULT_AGENDA_ROWS))
+    backend = str(params.get("backend") or "agent").lower()
+    ceiling = float(params.get("budget_usd") or 0.0)
+    if backend == "api" and ceiling <= 0:
+        ceiling = DEFAULT_AGENDA_BUDGET_USD
+
+    store = connect(settings.store_path)
+    app_state = state.connect(settings.app_state_path)
+    try:
+        plan = agenda_module.compute(
+            store,
+            app_state=app_state,
+            log_path=getattr(settings, "analysis_log_path", None),
+            pack_id=str(params.get("pack_id") or ""),
+            limit=limit,
+        )
+    finally:
+        store.close()
+        app_state.close()
+
+    rows = plan.get("rows") or []
+    # De-duplicated by subject: the agenda ranks *claims* as well as subjects,
+    # so two thin-claim rows on one car are two rows and one research run. Not
+    # de-duplicating would spend the budget twice on the same queries.
+    subjects: list[dict] = []
+    seen: set[str] = set()
+    needs_a_subject = 0
+    for row in rows:
+        if row.get("kind") == "unknown_subject" or not row.get("subject_id"):
+            needs_a_subject += 1
+            continue
+        if row["subject_id"] in seen:
+            continue
+        seen.add(row["subject_id"])
+        subjects.append(row)
+
+    if needs_a_subject:
+        progress.log(
+            f"{needs_a_subject} row(s) need a subject before anyone can "
+            f"research them — they are identities no installed pack claims"
+        )
+
+    done: list[dict] = []
+    spent_total = 0.0
+    stopped = ""
+    for index, row in enumerate(subjects, start=1):
+        progress.check()
+        remaining = ceiling - spent_total if ceiling else 0.0
+        if ceiling and remaining <= 0:
+            stopped = "budget"
+            break
+        progress.set(
+            index / (len(subjects) + 1),
+            f"{row.get('label') or row['subject_id']} ({index} of {len(subjects)})",
+        )
+        row_params = {
+            **params,
+            "subject_id": row["subject_id"],
+            "pack_id": row.get("pack_id") or "",
+            "budget_usd": remaining,
+        }
+        try:
+            result = research(settings, row_params, progress)
+        except BudgetExceeded as stop:
+            # Not caught to carry on — caught to stop. The next line breaks,
+            # and nothing after it spends. `research` has already closed this
+            # row's provenance with the `budget` outcome.
+            progress.log(f"stopped: {stop}")
+            stopped = "budget"
+            break
+        except Cancelled:
+            # Re-raised: the job runner is what marks the row cancelled, and
+            # swallowing it here would report a stopped run as a finished one.
+            raise
+        except Exception as error:  # noqa: BLE001
+            # One subject that cannot be researched must not end the run. A
+            # missing subject, an adapter with no templates, a provider that
+            # refuses one query — each is a row's problem, not the agenda's.
+            progress.log(f"{row['subject_id']}: {type(error).__name__}: {error}")
+            done.append({"subject_id": row["subject_id"], "error": str(error)})
+            continue
+        spent_total += float(result.get("spent_usd") or 0.0)
+        done.append(
+            {
+                "subject_id": row["subject_id"],
+                "subject": result.get("subject") or "",
+                "run_id": result.get("run_id") or "",
+                "kept": len(result.get("accepted") or []),
+                "refused": len(result.get("rejected") or []),
+                "spent_usd": result.get("spent_usd"),
+            }
+        )
+
+    kept = sum(item.get("kept") or 0 for item in done)
+    progress.set(1.0, f"{kept} claim(s) kept across {len(done)} subject(s)")
+    return {
+        "rows": done,
+        "subjects": len(subjects),
+        "needs_a_subject": needs_a_subject,
+        "kept": kept,
+        "plane": backend,
+        "budget_usd": ceiling or None,
+        "spent_usd": spent_total if backend == "api" else None,
+        "stopped": stopped,
+        "note": plan.get("note") or "",
+    }
+
+
+def research_undo(settings, params: dict, progress: Progress) -> dict:
+    """Take a research run's claims back out of the store.
+
+    A job rather than a request because it writes to the engine store once per
+    claim and a reader who undoes a forty-claim run should watch it happen
+    rather than watch a spinner.
+
+    **Already-absent is reported, not failed.** A claim may have been deleted
+    by hand, superseded by a later run, or lost with a pack reinstall — all
+    ordinary, and a run that 500s on any of them is an undo nobody trusts. The
+    result says *"removed 4 of 6; 2 were already absent"*.
+    """
+    run_id = str(params.get("run_id") or "")
+    if not run_id:
+        raise ValueError("run_id is required")
+
+    app_state = state.connect(settings.app_state_path)
+    try:
+        run = state.get_research_run(app_state, run_id)
+        if run is None:
+            raise KeyError(f"no research run {run_id}")
+        claims = [
+            item for item in state.run_claims(app_state, run_id) if not item["removed_at"]
+        ]
+        if not claims:
+            progress.set(1.0, "nothing left to remove")
+            return {"run_id": run_id, "removed": 0, "absent": 0, "total": 0,
+                    "note": "this run's claims have already been taken out"}
+
+        store = connect(settings.store_path)
+        removed = absent = 0
+        try:
+            for index, claim in enumerate(claims, start=1):
+                progress.check()
+                progress.set(index / len(claims), f"removing {claim['title'] or claim['claim_id']}")
+                if retract_claim(store, claim["pack_id"], claim["claim_id"]):
+                    removed += 1
+                else:
+                    absent += 1
+                    progress.log(f"{claim['claim_id']} was already absent")
+                state.mark_claim_removed(
+                    app_state, run_id, claim["pack_id"], claim["claim_id"]
+                )
+            store.commit()
+            app_state.commit()
+        finally:
+            store.close()
+    finally:
+        app_state.close()
+
+    progress.set(1.0, f"removed {removed} of {len(claims)}")
+    return {
+        "run_id": run_id,
+        "removed": removed,
+        "absent": absent,
+        "total": len(claims),
+        "note": (
+            f"removed {removed} of {len(claims)}; {absent} were already absent"
+            if absent
+            else f"removed {removed} claim(s)"
+        ),
+    }
 
 
 def pack_build(settings, params: dict, progress: Progress) -> dict:
@@ -522,6 +901,8 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
 
 HANDLERS = {
     "research": research,
+    "agenda_run": agenda_run,
+    "research_undo": research_undo,
     "pack_build": pack_build,
     "pack_update": pack_update,
 }
