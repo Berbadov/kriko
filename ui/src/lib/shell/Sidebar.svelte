@@ -1,12 +1,22 @@
 <script lang="ts">
+    import { tick } from "svelte";
     import { MODES, setMode, type Mode } from "../mode";
     import { hashWith, route } from "../router";
+    import { rowFor } from "./mark";
     import NavGroup from "./NavGroup.svelte";
-    import { groupsFor } from "./nav";
+    import { groupsFor, resolve } from "./nav";
 
     let { mode }: { mode: Mode } = $props();
 
     const groups = $derived(groupsFor(mode));
+
+    /* The rail highlights the screen that is *rendered*, which is not always
+     * the screen that was asked for. `#/coverage` renders Knowledge's gaps
+     * lens — App.svelte resolves that, and until this line the rail did not,
+     * so arriving from the browser extension's link lit no row at all and the
+     * marker switched off. One resolve, read by the rows and the marker
+     * alike. */
+    const current = $derived(resolve($route.name).name);
 
     // Every rail link carries the mode, and it comes from the prop rather than
     // from the URL: the URL may legitimately omit it — a first visit reads the
@@ -32,26 +42,49 @@
     let markHeight = $state(0);
     let marked = $state(false);
 
+    /* Measured after the flush, against the route rather than against a class.
+     *
+     * Both halves were bugs. `querySelector(".nav-link.active")` asked a
+     * *child* component's markup a question at a moment when Svelte had not
+     * yet updated it — parent effects run before child template updates — so
+     * the row measured was the one the reader had just left, and the marker
+     * lived one navigation behind the app. `rowFor` takes the route instead,
+     * which is the value we already hold and which cannot be stale
+     * (lib/shell/mark.ts).
+     *
+     * `tick()` covers the other half: a mode switch adds and removes whole
+     * groups, so the row for the new route may not have mounted yet. After
+     * the tick, every child's markup has landed and `offsetTop` means
+     * something. The `live` flag drops a measurement whose navigation has
+     * already been superseded — two fast clicks must not race.
+     */
     $effect(() => {
-        // Tracked: the route, and the group list — switching mode adds and
-        // removes whole groups, which moves every row below them.
-        const current = $route.name;
+        // Tracked: the resolved route, and the group list — switching mode
+        // adds and removes whole groups, which moves every row below them.
+        const target = current;
         void groups;
-        if (!navEl) {
+        const nav = navEl;
+        if (!nav) {
             marked = false;
             return;
         }
-        const el = navEl.querySelector<HTMLElement>(".nav-link.active");
-        if (!el) {
-            marked = false;
-            return;
-        }
-        // offsetTop against `.rail-nav`, which is the positioned ancestor —
-        // so the marker scrolls with the rows if the rail ever does.
-        markTop = el.offsetTop;
-        markHeight = el.offsetHeight;
-        marked = markHeight > 0;
-        void current;
+        let live = true;
+        void tick().then(() => {
+            if (!live) return;
+            const el = rowFor(nav, target);
+            if (!el) {
+                marked = false;
+                return;
+            }
+            // offsetTop against `.rail-nav`, which is the positioned ancestor —
+            // so the marker scrolls with the rows if the rail ever does.
+            markTop = el.offsetTop;
+            markHeight = el.offsetHeight;
+            marked = markHeight > 0;
+        });
+        return () => {
+            live = false;
+        };
     });
 </script>
 
@@ -81,7 +114,7 @@
         ></span>
         {#each groups as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
-                <NavGroup {group} current={$route.name} {href} />
+                <NavGroup {group} {current} {href} />
             </div>
         {/each}
     </nav>

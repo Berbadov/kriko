@@ -17,6 +17,40 @@ export const severityRank = (severity: string): number =>
 export const severityWord = (severity: string): string =>
     SEVERITY_WORD[severity] ?? severity;
 
+/* What a re-check of a claim's sources means, in words a reader can act on.
+ *
+ * The verdict vocabulary is closed and owned by `src/app/factcheck.py`; what
+ * lives here is the sentence, and the sentences are the whole point. "missing"
+ * must never read as "this claim is false" — the page was rewritten, which is
+ * a reason to look rather than a refutation, and the engine has no authority
+ * to retract anything (see the marks table). Overstating it once would teach
+ * the reader to distrust every other badge on the card.
+ */
+const FACT_WORD: Record<string, string> = {
+    quoted: "Source still says this",
+    missing: "Source has changed",
+    unreadable: "Cannot check automatically",
+    unreachable: "Source unreachable",
+};
+const FACT_TONE: Record<string, string> = {
+    quoted: "ok",
+    missing: "warn",
+    unreadable: "meta",
+    unreachable: "meta",
+};
+
+export const factWord = (verdict: string): string => FACT_WORD[verdict] ?? verdict;
+
+/** The badge's tone. `unreachable` is deliberately neutral: a site that is
+ * down says nothing at all about a claim, and colouring it like a problem
+ * would put the blame on the pack. */
+export const factTone = (verdict: string): string => FACT_TONE[verdict] ?? "meta";
+
+/** Whether a claim can be re-checked at all: it needs an identity the server
+ * can look up, and a page to re-read. */
+export const canCheckFacts = (claim: Claim): boolean =>
+    Boolean(claim.claim_id && claim.pack_id && claim.sources?.some((s) => s.url));
+
 /** A stable per-claim identity for the reader's own notes.
  *
  * `/api/lookup` returns `claim_id`; `/api/analyze` does not, and a checkmark

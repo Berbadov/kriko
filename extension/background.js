@@ -1021,6 +1021,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
+  // Does the page this claim cites still say it? One press, on the card the
+  // reader is looking at — which is the same question the app's report button
+  // asks, through the same endpoint. The check is the app's: nothing about
+  // the quote is sent from here, because a check whose input came from a
+  // browser would prove nothing.
+  if (request.type === "CHECK_FACTS") {
+    const { pack_id, claim_id } = request.payload || {};
+    if (!pack_id || !claim_id) {
+      sendResponse({ ok: false, error: "Missing claim" });
+      return false;
+    }
+    _postApp("/api/factcheck", { pack_id, claim_id })
+      .then((check) => sendResponse({ ok: true, check }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
   if (request.type === "RESEARCH_SUBJECT") {
     const { subject_id, pack_id } = request.payload || {};
     if (!subject_id) {

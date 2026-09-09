@@ -367,3 +367,78 @@ test("a subject that already has claims is not offered as a gap", () => {
 
   assert.equal(p.shadow().querySelector(".lite-gap"), null);
 });
+
+/* Re-checking what a cited page says now.
+ *
+ * The button is a supplement to a card that is already useful, so every test
+ * here is also asserting what does *not* happen: no panel-wide error, no card
+ * that empties itself, nothing that reads as a retraction.
+ */
+const CITED = { ...RISK, sources: [{ url: "https://example.test/thread", title: "Owners' thread" }] };
+const CHECK = { pack_id: "org.kriko.cars", claim_id: "c1", verdict: "quoted",
+                detail: "", sources: [], checked_at: "2026-09-09T10:00:00" };
+
+test("pressing the check asks the app about this claim, by id", () => {
+  const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+
+  p.click(".lite-rc-factbtn");
+
+  const asks = p.sent.filter((m) => m.type === "CHECK_FACTS");
+  assert.equal(asks.length, 1);
+  // The quote is never sent: the app reads it out of the pack, so a page
+  // scripting this message cannot ask "does that URL contain this string".
+  assert.deepEqual(asks[0].payload, { pack_id: "org.kriko.cars", claim_id: "c1" });
+});
+
+test("the verdict lands on the card with the date it was checked", () => {
+  const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+
+  p.click(".lite-rc-factbtn");
+
+  const label = p.shadow().querySelector(".lite-rc-factverdict");
+  assert.equal(label.hidden, false);
+  assert.equal(label.dataset.verdict, "quoted");
+  assert.match(label.textContent, /Source still says this · 2026-09-09/);
+});
+
+test("a claim with nothing to re-read offers no button", () => {
+  // RISK carries no sources. Offering a check that can only ever answer
+  // "unreachable" would be a control that exists to disappoint.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+
+  assert.equal(p.shadow().querySelector(".lite-rc-factbtn"), null);
+});
+
+test("a check the app refuses leaves the card as it was", () => {
+  const p = loadPanel({ workerResponse: { ok: false, error: "no engine" } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+
+  const button = p.click(".lite-rc-factbtn");
+
+  assert.equal(p.shadow().querySelector(".lite-rc-factverdict").hidden, true);
+  // And pressable again — a button stuck on "Reading the source…" is worse
+  // than no answer, because it looks like the answer is still coming.
+  assert.equal(button.disabled, false);
+  assert.equal(p.errorText(), null);
+});
+
+test("a verdict already held survives the list being rebuilt", () => {
+  const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.click(".lite-rc-factbtn");
+
+  // A fresh analysis of the same page redraws every card from scratch.
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+
+  const label = p.shadow().querySelector(".lite-rc-factverdict");
+  assert.equal(label.hidden, false);
+  assert.equal(label.dataset.verdict, "quoted");
+});

@@ -12,19 +12,16 @@
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
-    import Connect from "./routes/Connect.svelte";
     import Extension from "./routes/Extension.svelte";
-    import Console from "./routes/Console.svelte";
+    import Activity from "./routes/Activity.svelte";
+    import Agents from "./routes/Agents.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
     import About from "./routes/About.svelte";
-    import Jobs from "./routes/Jobs.svelte";
-    import Pipeline from "./routes/Pipeline.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
     import Result from "./routes/Result.svelte";
     import Settings from "./routes/Settings.svelte";
-    import Submissions from "./routes/Submissions.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -203,8 +200,6 @@
                                 lookupId={$route.params[0] ?? $route.query.id ?? ""}
                             />
                         {/key}
-                    {:else if $route.name === "connect"}
-                        <Connect />
                     {:else if $route.name === "extension"}
                         <Extension />
                     {:else if $route.name === "packs"}
@@ -213,14 +208,16 @@
                         <Settings />
                     {:else if $route.name === "about"}
                         <About />
-                    {:else if $route.name === "jobs"}
-                        <Jobs />
-                    {:else if $route.name === "pipeline"}
-                        <Pipeline />
-                    {:else if $route.name === "submissions"}
-                        <Submissions />
-                    {:else if $route.name === "console"}
-                        <Console />
+                    {:else if view.name === "activity"}
+                        <!-- Runs, the pipeline and what researchers sent, as
+                             three lenses on one screen. `#/jobs`,
+                             `#/pipeline` and `#/submissions` are links this
+                             app's own responses and hints hand out, so they
+                             resolve here rather than to "No such view" — same
+                             contract as the Knowledge lenses above. -->
+                        <Activity lens={view.lens ?? $route.query.lens ?? "runs"} />
+                    {:else if view.name === "agents"}
+                        <Agents lens={view.lens ?? $route.query.lens ?? "connect"} />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->
