@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kriko"
-version = "0.5.1"
+version = "0.5.2"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
 requires-python = ">=3.14"
