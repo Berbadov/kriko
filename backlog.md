@@ -905,6 +905,15 @@ Moved to `done.md` (`2f9a995`). The measured marker is now pure CSS; `html` and
 `body` are pinned. Both defects were invisible to jsdom, which is the general
 lesson: a layout bug needs a stylesheet assertion, not a DOM test.
 
+### B88 — The extension spoke the site's language — **Done 2026-09-10**
+Moved to `done.md` (`ed3bb15`). The Turkish damage-state words, part-name
+regexes and alert thresholds moved out of `extension/` and into the adapter's
+`local_panel` block, which the client already fetches. Two gates: no non-ASCII
+*word* anywhere in `extension/` (a lone character is a fold and stays legal),
+and the shipped alert keys must equal the keys the interpreter reads, derived
+from its own source. The rewrite passed the old suite 12/12 first try, because
+the old test only asserted `damage_info` was truthy.
+
 ### B85 — The install prompt kept asking readers who already installed — **Done 2026-09-09**
 Moved to `done.md` (`69a1789`). `ever_connected` instead of the liveness badge,
 and dismissal persisted per step id in `app.sqlite`.
