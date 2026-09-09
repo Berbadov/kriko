@@ -46,6 +46,19 @@ answers it with `ever_connected`. "Not now" also lived in component state, so
 dismissal was forgotten on every launch — it is a row in `app.sqlite` now,
 keyed by step id so declining one suggestion does not silence a later one.
 
+**B87 — the one click opens a listing, not a copy of the app.** The reader:
+"open with extension just opens the app interface in the web browser, exact
+copy of the standalone app. I originally meant the hovering web extension."
+Exactly right — `POST /api/extension/launch` handed the new browser this app's
+own `/#/extension` page as its landing URL, chosen so the check-in
+confirmation would be the first thing they saw. On that page the extension is
+invisible by construction: it matches listing sites, and that is not one. It
+now lands on a site an installed pack can read, taken off the adapter rows so
+the app names no site itself, and the confirmation stays where the reader
+already is — the status card on the Extension screen polls. With no pack
+installed there is no such site and the app screen remains the fallback,
+which is the one case the old behaviour was right for.
+
 The fourth item the reader raised — that they still cannot see how to build
 knowledge with their agents — is a design, not a fix: `81c145a`,
 `docs/superpowers/specs/2026-09-09-knowledge-building-design.md`, unimplemented

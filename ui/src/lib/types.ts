@@ -439,6 +439,11 @@ export type ExtensionLaunched = {
     browser: string;
     path: string;
     profile: string;
+    /** The page the browser was opened on: a listing site an installed pack
+     * can read, so the extension has something to do the moment the window
+     * appears. Empty when no browser was started. Rendered, never named
+     * here — which sites exist is pack data. */
+    landing: string;
     note: string;
     error: string;
 };

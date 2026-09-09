@@ -909,6 +909,11 @@ lesson: a layout bug needs a stylesheet assertion, not a DOM test.
 Moved to `done.md` (`69a1789`). `ever_connected` instead of the liveness badge,
 and dismissal persisted per step id in `app.sqlite`.
 
+### B87 — The one click opened a second copy of the app — **Done 2026-09-09**
+Moved to `done.md`. The launched browser lands on a listing site read off the
+adapter rows, so the hover panel is what the reader sees; the app screen stays
+the fallback for an installation with no packs.
+
 ### B86 — Building knowledge with an agent is not a system yet — **Open, designed**
 The reader looked at 0.5.1 and could not tell how they would build knowledge
 with their agents. Design committed (`81c145a`,
