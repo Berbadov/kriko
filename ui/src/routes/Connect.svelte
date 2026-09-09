@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Agenda from "../lib/Agenda.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
@@ -171,6 +172,11 @@
             <pre>{verdict.detail}</pre>
         {/if}
     </article>
+
+    <!-- Above "what the agent is told", because that is the order the
+         reader's questions arrive in: what will it do, then how does it
+         know how. -->
+    <Agenda />
 
     <article class="card">
         <h3>What the agent is told</h3>

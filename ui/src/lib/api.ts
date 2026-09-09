@@ -77,6 +77,8 @@ export const api = {
     agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
     agentTargets: () => get<T.AgentTargets>("/api/agent-targets"),
     agentSkill: () => get<T.AgentSkill>("/api/agent-skill"),
+    // What to research next. A GET with no job behind it — see routers/agenda.py.
+    agenda: () => get<T.Agenda>("/api/agenda"),
     verifyAgent: () => postJson<T.AgentVerify>("/api/agent-verify", {}),
     connectAgent: (targetId: string) =>
         postJson<T.AgentTarget>(`/api/agent-targets/${seg(targetId)}/connect`, {}),

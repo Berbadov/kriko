@@ -230,7 +230,7 @@ absent or the stream dies mid-job.
 
 ## The other API surfaces
 
-Seven doors that the planes above do not open. Listed here because a surface
+Eight doors that the planes above do not open. Listed here because a surface
 nobody wrote down is a surface the next change treats as private —
 `test_docs_match_the_code.py` fails until each one names an endpoint.
 
@@ -266,6 +266,20 @@ nothing and a run that lost everything at the grounding check look identical in
 a job log, which is why this is a second surface rather than a column on the
 first. The stream is SSE over a poll of the rows, for the same reason the job
 stream is.
+
+**`GET /api/agenda`** (`routers/agenda.py`) — what to research next, ranked.
+`app/agenda.py` computes it on read from four signals kept separate: demand
+(how often the analyses log was asked about a subject), gaps, thinness, and a
+`fact_checks` verdict of `missing`. No table and no clock, because an agenda
+that recommended a subject researched an hour ago would be worse than none.
+Demand comes from the JSONL log rather than from `lookups` — the log is the
+demand corpus and survives a reader clearing their history, which is why
+`routers/analyze.py` writes both. One of its four row kinds is not an agent
+task: `unknown_subject` is a product this installation was asked about that no
+subject exists for, so it has no `subject_id`, nothing can be filed against it,
+and it is demand for *catalog* coverage. The MCP tool `research_agenda` is the
+same computation through the other door, and the generated skill embeds the
+top five with the sentence that the tool, not the file, is authoritative.
 
 **`GET|POST /api/factcheck`** (`routers/factcheck.py`) — one press: does the
 page a claim cites still contain the quote the pack shipped? The `POST` takes a

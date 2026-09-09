@@ -73,6 +73,36 @@ export type AgentSkill = {
     body: string | null;
 };
 
+/** One row of what to research next. The signals ride along rather than being
+ * fused into a score: "nobody has researched this" and "the source moved" want
+ * different work, and a single number cannot tell them apart. */
+export type AgendaRow = {
+    kind: "empty_subject" | "stale_claim" | "thin_subject" | "unknown_subject";
+    subject_id: string;
+    pack_id: string;
+    label: string;
+    why: string;
+    asked: number;
+    /** Only on `unknown_subject`: the identity, as the pack's adapter produced
+     * it. There is no subject to name, which is the content of the row. */
+    identity?: string;
+    claim_id?: string;
+    title?: string;
+    checked_at?: string;
+    independent_sources?: number;
+    refuted_by?: number;
+    subject_kind?: string;
+};
+
+export type Agenda = {
+    rows: AgendaRow[];
+    /** Why the ordering may be worse than usual — a missing or unreadable log.
+     * Empty when nothing is wrong. */
+    note: string;
+    window: number;
+    counts: Record<string, number>;
+};
+
 export type AgentVerify = { ok: boolean; server?: string; detail?: string };
 
 export type Kind = { kind: string; pack_id: string };

@@ -28,6 +28,7 @@ from app import extension as ext, logs
 from app.web import origins, pipeline
 from app.web.jobs import JobRunner
 from app.web.routers import (
+    agenda,
     agent,
     analyze,
     control,
@@ -125,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.analysis_log_problem = why
 
     for router in (
+        agenda.router,
         agent.router,
         packs.router,
         pipeline_router.router,

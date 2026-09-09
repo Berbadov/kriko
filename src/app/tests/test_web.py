@@ -703,7 +703,10 @@ def test_the_skill_says_what_this_installation_considers_worth_keeping(client):
 
 def test_the_skill_names_the_loop_in_order(client):
     payload = client.get("/api/agent-skill").json()
-    assert [s["tool"] for s in payload["steps"]][0] == "coverage_gaps"
+    # The agenda leads: `coverage_gaps` is alphabetical, so an agent that
+    # starts there researches subjects beginning with A while the product
+    # someone actually looked up waits. See app/agenda.py.
+    assert [s["tool"] for s in payload["steps"]][0] == "research_agenda"
     assert [s["tool"] for s in payload["steps"]][-1] == "submit_findings"
     # The quote rule is the one thing an agent must not learn by trial and
     # error: `submit_findings` rejects a paraphrase, and an agent that finds
