@@ -27,6 +27,7 @@ list here to remember to update.
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -196,3 +197,166 @@ def test_the_script_smoke_tests_what_it_produced(script):
     )
     app = min(i for i, line in enumerate(lines) if "smoke_app.py" in line)
     assert sidecar < bundle < app, (sidecar, bundle, app)
+
+
+def _powershell_scripts() -> list[Path]:
+    """Tracked `.ps1` files -- the ones this repository is responsible for.
+
+    `ROOT.glob("**/*.ps1")` was the first version and it reached
+    `.venv/bin/activate.ps1`, which virtualenv wrote and nobody here can fix.
+    Worse, that set changes with whether a virtualenv happens to be sitting in
+    the checkout, so the gate would have been machine-dependent. `git ls-files`
+    is the honest answer to "what did we author", and is how
+    `test_repo_invariants.py` asks the same question.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z", "*.ps1"],
+        cwd=ROOT,
+        capture_output=True,
+        check=True,
+    ).stdout.split(b"\0")
+    return sorted(ROOT / raw.decode() for raw in tracked if raw)
+
+
+def test_there_are_powershell_scripts_to_check():
+    """A listing that matches nothing passes every check under it."""
+    assert _powershell_scripts(), "no tracked .ps1 files found"
+
+
+@pytest.mark.parametrize("ps1", _powershell_scripts(), ids=lambda p: p.name)
+def test_a_powershell_script_is_ascii_only(ps1: Path):
+    """Windows PowerShell 5.1 decodes a BOM-less .ps1 as ANSI, not UTF-8.
+
+    Found by running the thing. `build_desktop.ps1` was written with em-dashes
+    in its comments, which is fine in every editor and fine under `pwsh` 7 --
+    and a parse error under `powershell` 5.1, which is what a stock Windows box
+    actually has. 5.1 reads a script with no BOM using the system codepage
+    (1254 on the machine this first ran on), so each em-dash became three
+    mojibake bytes, one of them a quote character, and the *next* string
+    literal was the thing that failed. Six cascading parse errors pointing at
+    lines 62, 85, 86, 88 and 157, none of them the line with the em-dash on it.
+
+    ASCII rather than a BOM: a BOM fixes 5.1 and is invisible in a diff, so the
+    next person writes the same bug and the file quietly needs re-saving in the
+    right encoding forever. ASCII fails here instead, in a test naming the
+    character.
+
+    Not a style rule -- a build script that cannot be parsed produces no
+    installer, and B81 exists because the alternative path to one was down.
+    """
+    raw = ps1.read_bytes()
+    assert not raw.startswith(b"\xef\xbb\xbf"), (
+        f"{ps1.name} starts with a UTF-8 BOM. Keep it ASCII instead so the "
+        "constraint is visible in a diff."
+    )
+    offenders = [
+        (n, line)
+        for n, line in enumerate(raw.decode("utf-8").splitlines(), start=1)
+        if any(ord(ch) > 127 for ch in line)
+    ]
+    assert offenders == [], (
+        f"{ps1.name} has non-ASCII characters at lines "
+        f"{[n for n, _ in offenders]}. Windows PowerShell 5.1 reads this file "
+        "with the machine's ANSI codepage and will fail to parse it. Use "
+        "plain ASCII: -- for an em-dash, ... for an ellipsis."
+    )
+
+
+@pytest.mark.parametrize("ps1", _powershell_scripts(), ids=lambda p: p.name)
+def test_a_powershell_script_passes_no_empty_argument(ps1: Path):
+    """Windows PowerShell drops an empty-string argument to a native command.
+
+    The second thing running this script found. It called
+
+        & $Python packaging/configure_updater.py --repo "..." --version ""
+
+    which is what `desktop.yml` does and is correct under bash. Windows
+    PowerShell elides the `""` on the way to the process, so argparse received
+    a bare `--version`, demanded a value, and exited 2 -- nine minutes into the
+    build, after PyInstaller and both npm installs had already run.
+
+    `pwsh` 7.3+ added `$PSNativeCommandArgumentPassing = "Standard"` for
+    exactly this. 5.1 has no such setting and 5.1 is what a stock Windows box
+    has, so the fix is not a shell option: an empty value is expressed by
+    *leaving the flag out*, which both shells agree on.
+
+    The check is textual because the defect is textual, and it is worth having
+    at that price: this cost nine minutes of build to discover, and the failure
+    it produces names argparse rather than the shell that caused it.
+    """
+    offenders = []
+    for n, line in enumerate(ps1.read_text(encoding="utf-8").splitlines(), start=1):
+        code = line.split("#", 1)[0].strip()
+        if '""' not in code:
+            continue
+        # Cmdlets are unaffected -- the elision happens marshalling arguments
+        # to a *process*, and `Write-Host ""` is an in-process call that
+        # legitimately prints a blank line. Discriminated on PowerShell's own
+        # Verb-Noun convention rather than a list of cmdlet names, so
+        # `Write-Host` and a cmdlet nobody has used here yet are both covered.
+        command = code.split(maxsplit=1)[0] if code.split() else ""
+        if re.fullmatch(r"[A-Z][a-zA-Z]*-[A-Z][a-zA-Z]*", command):
+            continue
+        # A comparison or an assignment never reaches a process either.
+        if re.search(r'(-eq|-ne|-like|-match|=)\s+""', code):
+            continue
+        # `""` in argument position: after a flag, or after a bare word.
+        if re.search(r'(?:^|\s)(?:-{1,2}[\w-]+|\$?\w[\w.\\/-]*)\s+""(?:\s|$)', code):
+            offenders.append((n, code))
+    assert offenders == [], (
+        f"{ps1.name} passes an empty string as an argument at {offenders}. "
+        "Windows PowerShell drops it before the process sees it. Omit the "
+        "flag instead, building the argument list as an array."
+    )
+
+
+def _packaging_scripts() -> list[Path]:
+    return sorted((ROOT / "packaging").glob("*.py"))
+
+
+def test_there_are_packaging_scripts_to_check():
+    assert len(_packaging_scripts()) >= 5, [p.name for p in _packaging_scripts()]
+
+
+@pytest.mark.parametrize("script", _packaging_scripts(), ids=lambda p: p.name)
+def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
+    """Nothing in `packaging/` may stop a frozen binary with a bare terminate.
+
+    The third thing running the build found, and the most expensive. PyInstaller
+    onefile re-execs, so the pid we spawn is a bootloader and its child is what
+    holds `kriko-sidecar.exe` mapped. `smoke_sidecar.py` called
+    `process.terminate()` on the bootloader, the child survived, and the *next*
+    build failed at the freeze step:
+
+        PermissionError: [WinError 5] Access is denied: 'dist/kriko-sidecar.exe'
+
+    `tauri/` has tree-killed since v0.2.x and its README explains exactly this;
+    `smoke_app.py` does too, with the same reasoning in a comment beside it. So
+    the knowledge was in the repository twice and the third caller still got it
+    wrong -- which is the definition of something that belongs in a test rather
+    than in a comment.
+
+    Why it survived CI: a GitHub runner is destroyed after the job, so an orphan
+    holding a file has nothing left to break. It only surfaces when the build
+    runs twice on one machine, which is precisely what B81 exists to allow.
+
+    The rule is "ends through a tree-aware helper", not "calls taskkill" --
+    `smoke_app.py` kills by image name because the shell, not it, spawned the
+    sidecar and it has no pid to work from. Both are tree kills; the thing being
+    forbidden is a lone `terminate()` on a bootloader.
+    """
+    text = script.read_text(encoding="utf-8")
+    if "subprocess.Popen" not in text:
+        pytest.skip(f"{script.name} spawns nothing")
+    tree_aware = "/T" in text or "pkill" in text
+    lone_terminate = [
+        n
+        for n, line in enumerate(text.splitlines(), start=1)
+        if re.search(r"\.terminate\(\)", line)
+    ]
+    assert tree_aware, (
+        f"{script.name} spawns a frozen binary and never kills a tree. On "
+        "Windows the pid it spawned is a PyInstaller bootloader; its child "
+        "outlives a terminate() and holds the .exe against the next build. "
+        f"Lone terminate() at lines {lone_terminate}."
+    )

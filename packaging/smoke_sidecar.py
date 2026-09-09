@@ -25,6 +25,44 @@ PORT_LINE = "KRIKO_PORT"
 TIMEOUT = 60
 
 
+def end(process: subprocess.Popen, *, timeout: float = 15) -> None:
+    """Stop a frozen sidecar, including the child that actually holds the image.
+
+    `process.terminate()` is not enough on Windows, and the reason is
+    PyInstaller: a onefile binary unpacks itself and re-execs, so the pid we
+    spawned is the bootloader and its *child* is the Python process holding
+    `kriko-sidecar.exe` mapped. Kill the parent and the child keeps running --
+    an orphan that owns the store's WAL lock and, worse, owns the file the next
+    build has to overwrite.
+
+    Not hypothetical. The second local run of `packaging/build_desktop.ps1`
+    died at the freeze step with
+
+        PermissionError: [WinError 5] Access is denied: 'dist\\kriko-sidecar.exe'
+
+    because the *previous* run's smoke test had left one behind. `tauri/` has
+    tree-killed since v0.2.x for exactly this reason and its README says so;
+    these smoke tests did not, and on a CI runner that is deleted afterwards
+    nobody ever noticed. The moment the build ran twice on one machine -- which
+    is the whole point of `build_desktop.ps1` -- it mattered.
+
+    By pid rather than by image name: `taskkill /IM kriko-sidecar.exe` would
+    also kill an installed Kriko the person at the keyboard is using.
+    """
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+            capture_output=True,
+            check=False,
+        )
+    else:
+        process.terminate()
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+
+
 def fetch(port: int, path: str) -> dict:
     with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=10) as r:
         return json.load(r)
@@ -99,10 +137,7 @@ def mcp_speaks(binary: Path, environment: dict) -> bool:
             process.stdin.close()
         except OSError:
             pass
-        try:
-            process.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        end(process)
 
 
 def main(argv: list[str]) -> int:
@@ -164,11 +199,7 @@ def main(argv: list[str]) -> int:
             # port it never served" with no traceback under it cost a whole
             # CI round-trip to diagnose.
             print("the sidecar announced a port it never served")
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
+            end(process, timeout=10)
             print(process.stderr.read() or "(the sidecar wrote nothing to stderr)")
             return 1
 
@@ -284,11 +315,7 @@ def main(argv: list[str]) -> int:
             return 1
         return 0
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        end(process)
         scratch.cleanup()
 
 
