@@ -61,6 +61,13 @@ const postJson = <R>(path: string, body: unknown) =>
         body: JSON.stringify(body),
     });
 
+const putJson = <R>(path: string, body: unknown) =>
+    request<R>(path, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+    });
+
 const del = <R>(path: string) => request<R>(path, { method: "DELETE" });
 
 const seg = encodeURIComponent;
@@ -123,6 +130,16 @@ export const api = {
     /** Write a new pack's skeleton to disk. Installs nothing — building is a job. */
     scaffoldPack: (body: T.NewPack) =>
         postJson<{ root: string; files: string[] }>("/api/packs/scaffold", body),
+    // Packs an agent drafted. It writes files and installs nothing, so the
+    // install below is the only way one of these reaches the store.
+    packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
+    installPackDraft: (slug: string) =>
+        postJson<{ slug: string; pack_id: string }>(
+            `/api/packs/drafts/${seg(slug)}/install`,
+            {},
+        ),
+    discardPackDraft: (slug: string) =>
+        del<{ slug: string }>(`/api/packs/drafts/${seg(slug)}`),
     lookup: (body: T.LookupRequest) => postJson<T.LookupResult>("/api/lookup", body),
     analyze: (body: T.AnalyzeRequest) => postJson<T.AnalyzeResult>("/api/analyze", body),
     history: (limit = 20) =>
@@ -191,6 +208,17 @@ export const api = {
      *  worker and a job that submits jobs deadlocks. */
     runAgenda: (body: T.AgendaRunRequest) =>
         postJson<{ job_id: string; kind: string }>("/api/agenda/run", body),
+    /** The sums. Two halves — what writing claims in cost, and how much
+     *  reading them back out this installation has actually done. */
+    usage: () => get<T.Usage>("/api/usage"),
+    /** The unattended loop: what it is set to, and what it last decided. */
+    schedule: () => get<T.Schedule>("/api/schedule"),
+    /** A partial save. Every field is optional on the wire so that saving the
+     *  one control the reader touched cannot reset the other five. */
+    saveSchedule: (body: T.ScheduleRequest) => putJson<T.Schedule>("/api/schedule", body),
+    /** One tick, now. The answer is the sentence the loop would have recorded
+     *  — refusals included, which are the ones worth reading. */
+    checkSchedule: () => postJson<T.ScheduleCheck>("/api/schedule/check", {}),
     researchRuns: (limit = 50) =>
         get<{ runs: T.ResearchRun[] }>(`/api/research-runs?limit=${limit}`),
     researchRun: (runId: string) =>

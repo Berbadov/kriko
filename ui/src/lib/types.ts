@@ -494,6 +494,8 @@ export type Submission = {
         rejected?: { title: string; reason: string }[];
         error?: string;
     };
+    /** The searches this batch actually came from. Empty on an older row. */
+    queries?: string[];
 };
 
 export type Submissions = {
@@ -501,6 +503,8 @@ export type Submissions = {
     accepted: number;
     refused: number;
     reasons: { reason: string; count: number }[];
+    /** Which searches earn their place, best first. See `state.query_shapes`. */
+    shapes: { query: string; batches: number; accepted: number; refused: number }[];
 };
 
 // ── the knowledge pipeline ───────────────────────────────────────────────
@@ -601,9 +605,15 @@ export type ResearchPlane = {
     id: string;
     cost_basis: string;
     what: string;
-    /** Whether it can run *now*. False on the paid plane with no keys set. */
+    /** Whether it can run *now*. False on the paid plane with no keys set,
+     *  and on the harness plane with no coding-agent CLI installed. */
     ready: boolean;
     needs_keys: boolean;
+    /** The harness plane only: which coding-agent CLIs were found here. */
+    harnesses?: { id: string; label: string; command: string }[];
+    /** The harness plane only: the commands that were looked for, so a card
+     *  that cannot run names the thing to install. */
+    looked_for?: string[];
 };
 
 /** What `/api/keys` says about one provider — never the key itself.
@@ -644,6 +654,10 @@ export type ResearchRun = {
     search_provider: string;
     budget_usd: number | null;
     spent_usd: number | null;
+    /** Tokens, when the plane can count them. `null` is "this plane cannot
+     *  count", never "this cost nothing" — see `state.usage_totals`. Only
+     *  ever rendered when it is a number. */
+    tokens_used: number | null;
     started_at: string;
     ended_at: string;
     outcome: string;
@@ -672,4 +686,103 @@ export type AgendaRunRequest = {
     backend?: string;
     budget_usd?: number;
     max_documents?: number;
+};
+
+/* A pack an agent wrote, waiting for the reader to install or throw away.
+ *
+ * An agent's write surface used to stop at claims: it could add to a pack that
+ * already declared the subject, and it could not start a pack for a category
+ * nobody had modelled. It can now, into `~/.kriko/drafts` — data files only,
+ * no code, and nothing reaches the store without the press below. `error` is
+ * set when the draft no longer loads, which is worth showing rather than
+ * hiding: installing it will fail, and whoever wrote it needs to know which
+ * edit broke it.
+ */
+export type PackDraft = {
+    slug: string;
+    root: string;
+    files: string[];
+    artifact: string | null;
+    pack_id: string;
+    name: string;
+    version: string;
+    error: string;
+};
+
+/* What this installation has spent, and what it was asked. (B97)
+ *
+ * A per-run row could always say what one run cost. The only question a
+ * reader actually has — what has this cost me so far, and is it worth it —
+ * is a sum, and there was nowhere to read a sum from.
+ *
+ * Every metered field is nullable on purpose, and `metered_runs` travels
+ * with the totals so a figure can be read against how many of the runs
+ * behind it were counted at all.
+ */
+export type UsageTotals = {
+    runs: number;
+    metered_runs: number;
+    counted_runs: number;
+    spent_usd: number | null;
+    tokens_used: number | null;
+    claims: number;
+    cost_per_claim: number | null;
+    planes: {
+        plane: string;
+        runs: number;
+        metered_runs: number;
+        spent_usd: number | null;
+        tokens_used: number | null;
+    }[];
+};
+
+/** What the analyses log holds. No timestamps: the records carry none. */
+export type UsageAnalyses = {
+    analyses: number;
+    malformed: number;
+    claims_shown: number;
+    answered_nothing: number;
+    subjects: number;
+    adapters: string[];
+};
+
+export type Usage = { research: UsageTotals; analyses: UsageAnalyses };
+
+/* B98 — the agenda, walked with nobody watching.
+ *
+ * `last` is the record of the most recent tick, and it is deliberately
+ * separate from the setting: a tick that declined still wrote a reason, and
+ * that reason is the only output an unattended feature has on the days it
+ * does nothing. It is `{}` on an installation where no tick has ever run.
+ */
+export type ScheduleLast = {
+    checked_at?: string;
+    reason?: string;
+    due_at?: string;
+    run_at?: string;
+    job_id?: string;
+    runs?: number;
+};
+
+export type Schedule = {
+    enabled: boolean;
+    every_hours: number;
+    rows: number;
+    plane: string;
+    budget_usd: number;
+    max_documents: number;
+    last: ScheduleLast;
+    /** Queued plus running. The loop will not add to this. */
+    in_flight: number;
+};
+
+/** Partial by design — see `api.saveSchedule`. */
+export type ScheduleRequest = Partial<
+    Pick<Schedule, "enabled" | "every_hours" | "rows" | "plane" | "budget_usd" | "max_documents">
+>;
+
+export type ScheduleCheck = Schedule & {
+    ran: boolean;
+    reason: string;
+    due_at: string;
 };

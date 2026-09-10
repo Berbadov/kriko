@@ -35,4 +35,8 @@ def list_submissions(
         "accepted": sum(item["accepted"] for item in items),
         "refused": sum(item["refused"] for item in items),
         "reasons": state.refusal_reasons(conn),
+        # What was searched for, not what the pack suggested searching for: the
+        # brief hands an agent seeds to adapt, so this is the only place an
+        # author can see which shapes are being used and what they return.
+        "shapes": state.query_shapes(conn),
     }

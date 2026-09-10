@@ -156,8 +156,9 @@ def agent_skill(request: Request, store=Depends(get_store)):
     return {
         "name": agentskill.SKILL_NAME,
         "steps": [{"tool": tool, "why": why} for tool, why in agentskill.STEPS],
-        # None, not "", when nothing is installed: there is no protocol for a
-        # store with no knowledge in it, and an empty string reads as a bug.
+        # Always a body now. An empty installation gets the authoring half of
+        # the skill rather than nothing: the job for an agent connected to a
+        # store with no packs is to write the first one (B96).
         "body": body,
     }
 

@@ -19,6 +19,12 @@
      *   provenance record; a named completion API via a named search provider
      *   is one. A reader deciding whether to trust forty claims needs to know
      *   what wrote them, and which one.
+     * * **What it used.** Tokens where the plane could count them (the
+     *   harness reads the CLI's own usage envelope), dollars where it
+     *   charges — two measurements rather than one, because the plane that
+     *   knows its tokens spends none of Kriko's money and the one that
+     *   knows its dollars may never see a token. The sums are in `Usage`
+     *   below; this is the per-run half.
      * * **What it spent.** Blank when nobody counted — the agent plane never
      *   does — which is deliberately not shown as $0.00. "Cost nothing" and
      *   "nobody measured" are different answers.
@@ -105,6 +111,13 @@
                                     {run.claims} claim{run.claims === 1 ? "" : "s"} still in
                                     {#if run.removed}
                                         · {run.removed} taken back out
+                                    {/if}
+                                    <!-- `typeof`, not `!== null`: a payload
+                                         from an older engine has no such
+                                         field at all, and `undefined` must
+                                         read as "not counted" too. -->
+                                    {#if typeof run.tokens_used === "number"}
+                                        · {run.tokens_used.toLocaleString()} tokens
                                     {/if}
                                     {#if run.spent_usd !== null}
                                         · spent ${run.spent_usd.toFixed(4)}{#if run.budget_usd}

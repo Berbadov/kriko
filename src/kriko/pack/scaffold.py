@@ -35,6 +35,15 @@ id = "{pack_id}"
 name = "{name}"
 version = "{version}"
 
+# The languages this pack's text and seed queries are written in, primary
+# first, and the markets its claims are about. Declared rather than guessed
+# because a pack that ships `research/templates.yaml` must name the language
+# those queries are in — an undeclared one is how a brief ends up asking an
+# agent to search in half of two languages at once. Change `en` to whatever
+# you are actually writing in before you rewrite the templates file.
+languages = ["en"]
+markets = []
+
 # What makes a subject distinct, per kind. This is the most consequential
 # declaration in the file: it decides which of these rows can ever merge with
 # another pack's. Too few keys and unrelated things collide into one subject;
