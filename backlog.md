@@ -905,6 +905,21 @@ Moved to `done.md` (`2f9a995`). The measured marker is now pure CSS; `html` and
 `body` are pinned. Both defects were invisible to jsdom, which is the general
 lesson: a layout bug needs a stylesheet assertion, not a DOM test.
 
+### B90 — The research brief named MCP tools that do not exist — **Done 2026-09-10**
+Moved to `done.md`. The $0 plane's only output is the brief, and it told agents
+to call `add_document` and `add_evidence` — gone since the MCP surface
+consolidated on `submit_findings`, and confirmed absent from the reader's own
+installed binary. `app/agentskill.py` was correct throughout; nothing compared
+the two, so `test_agent_instructions_name_real_tools.py` now checks every
+agent-facing document against the tools the server registers, deriving the
+legitimate non-tool vocabulary rather than listing it. `kriko pack scaffold`
+also never wrote `research/templates.yaml`, so every new pack rendered zero
+searches; it does now, and the brief states the absence when a pack ships none.
+
+**Follow-up, unrowed:** `docs/USAGE.md` Step 4e documents a nineteen-tool
+pipeline MCP server that no longer exists. The inventory is marked stale; the
+section still needs rewriting, and it is where the phantom names came from.
+
 ### B89 — The desktop shell had not compiled since B83 — **Done 2026-09-10**
 Moved to `done.md`. Three adjacent string literals with no `concat!` in
 `main.rs` — a parse error that shipped in `a062b86` and that all twelve tray
