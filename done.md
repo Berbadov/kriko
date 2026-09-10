@@ -6,6 +6,64 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The shell had not compiled since B83 (B89)
+
+Branch `shell-parses-as-rust`. The reader asked why the installer needed their
+machine. It did not — `done.md` already recorded that this box reaches the
+Windows host through `/mnt/c` plus binfmt interop, and I repeated a stale
+handover line instead of the repo's own record. `powershell.exe` is simply not
+on `$PATH` here, which reads as "no interop" if you stop at `which`.
+
+**So the build ran, and it failed.** `tauri/src-tauri/src/main.rs:110` held
+three adjacent string literals with no `concat!` and no commas. Rust does not
+join adjacent literals the way C does, so that is a parse error — three rustc
+errors from one cause. It shipped in `a062b86` (B83), survived the
+`release: 0.5.2` commit, and was found by the first `cargo` that ever read it,
+nine minutes in, after PyInstaller had already frozen a sidecar. Nothing
+reached a reader: `v0.5.2` was never tagged and no installer was ever built
+from it.
+
+**The twelve tray tests passed on it, and that is the finding.** Every guard
+over `tauri/` reads `main.rs` as text and asserts that some string is present
+— and code that does not compile still contains its strings. Confirmed by
+restoring the shipped file: the new gate RED, `test_the_shell_runs_in_the_tray.py`
+GREEN.
+
+**The premise was written in their own docstring.** "There is no Rust toolchain
+on any machine that touches this tree" — taken as settled rather than
+re-checked, and false: there is a `rustc` in this WSL and a full toolchain on
+the host. Twelve careful tests were written *around* an assumption instead of
+testing it. Corrected there, in CLAUDE.md's shell section, and in the doc
+map's `tauri/README.md` row.
+
+**The mechanism.** `test_the_shell_is_valid_rust.py` parses every `.rs` with
+`rustc` alone. A real `cargo check` wants the crate's dependencies and, on
+Linux, `webkit2gtk`, which is absent — it would fail on system libraries and
+say nothing about the code. Parsing needs neither, because rustc reports
+syntax errors *before* it resolves an `extern crate`: a parse error is an
+`error:` with **no** code, an unresolved name is an `error[E0432]`, and that
+discrimination is the whole gate. Edition read off `Cargo.toml` rather than
+written down. It skips where there is no `rustc` and never passes silently.
+0.12s, and it would have caught this on the commit that introduced it.
+
+It does not see type errors and does not claim to; `desktop.yml`'s Windows leg
+and `packaging/build_desktop.ps1` remain the only things that compile the crate
+for real.
+
+**Then the installer built.** `Kriko_0.5.2_x64-setup.exe`, 22.8 MB, every stage
+green including both smoke steps — the frozen sidecar answers and the bundled
+shell opens. Unsigned (B64).
+
+Still open: `581e76d` bumped both version files to 0.5.2 and never tagged, so
+`desktop.yml` — which builds on tags — never ran on the tree that could not
+compile. A version bump with no tag is the process gap that kept this alive for
+two releases' worth of commits.
+
+Gate: `.venv/bin/python -m pytest -q` green; the new gate mutation-verified
+against the exact code that shipped.
+
+---
+
 ### 2026-09-10 — The client stops speaking the site's language (B88)
 
 Branch `local-panel` (`ed3bb15`). `extension/hover_lite/hover_lite.js` held

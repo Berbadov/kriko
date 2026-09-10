@@ -27,10 +27,20 @@ be safe, and each is a test below:
   closes the sidecar's stdin, which is the engine's own designed exit; the
   second `taskkill` is for a sidecar that did not take it.
 
-None of this can be compiled here — there is no Rust toolchain on any machine
-that touches this tree, and the first thing to find out would be a Windows
-bundle build. So these read the source, the same way `test_desktop_update.py`
-and `test_shell_is_locked.py` already do.
+None of this can be *type*-checked here: a real `cargo check` wants the
+crate's dependencies and, on Linux, `webkit2gtk`, which is not installed. So
+these read the source, the same way `test_desktop_update.py` and
+`test_shell_is_locked.py` already do.
+
+Until 2026-09-10 this paragraph claimed something stronger and false — that no
+machine touching this tree had a Rust toolchain at all. It was taken as
+settled rather than re-checked, and the cost was exact: `main.rs` shipped in
+B83 with three adjacent string literals and no `concat!`, which is a parse
+error, and all twelve tests below went green on it because each one only asks
+whether a *string* is present. Code that does not compile still contains its
+strings. `test_the_shell_is_valid_rust.py` now parses every `.rs` with
+`rustc`, which needs no dependencies and no system libraries, and skips only
+where there is genuinely no `rustc` to run.
 """
 
 from __future__ import annotations
