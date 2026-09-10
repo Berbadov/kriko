@@ -6,6 +6,43 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The docs the phantom names came from (B91)
+
+Branch `docs-name-real-symbols`. B90 fixed the brief; this fixes where the
+brief was written from. `docs/USAGE.md` Step 4e held a second written copy of
+the MCP surface — nineteen tools, `ledger_status`, `submit_trims`,
+`add_document`, `add_evidence`, `run_pipeline_pass` and the rest, none of them
+defined anywhere in the tree. `AgentResearcher.brief` had been written against
+that list, so the cost of the stale paragraph landed on a reader pressing
+Research, not on whoever wrote the sentence.
+
+Step 4e now names the single source for each thing it describes rather than
+restating it: `render.MCP_TOOLS` for the granted tools,
+`research_brief(subject_id, pack_id)` and `submit_findings(subject_id,
+pack_id, findings)` with their real signatures, §2b for the wiring, and the
+retired nineteen kept in a blockquote as history. `docs/INTERNALS.md`'s
+"Variant matcher" section was the same defect one layer down — it documented
+`normalize_fuel`, `normalize_make`, `normalize_model` and
+`normalize_transmission`, four functions that could not come back, since
+`kriko/` may not hold a car-shaped anything. Rewritten around what
+`lookup/match.py` actually exports: `load_terms`, `alias_map`,
+`value_alias_map`, `normalize_identity`, `resolve`, `expand`, and
+`Resolution`'s four fields.
+
+The mechanism is `src/app/tests/test_docs_name_real_symbols.py`. A backticked
+*call* in a current doc must resolve to something that exists — a registered
+MCP tool, or any `def`/`function`/`const` in the tracked tree. The vocabulary
+is scraped (~2,970 symbols), never listed, because a hand-kept list is the
+exact failure being closed and enumerating one would reproduce it a layer out.
+That distinction is what makes the gate usable: `create_app()` and
+`declared_columns()` are real and docs are right to name them, while
+`finish_model()` is not anything. Out of scope by rule: `docs/historical/`
+(being stale is its content), `docs/superpowers/specs/` (dated records — a
+spec describes the tree on the day it was written), and blockquoted lines,
+which is how this repo already marks a superseded passage. Mutation-verified
+both directions: `finish_model()` on a plain line fails, the same text quoted
+passes. Five real offenders on first run, all genuine, all fixed.
+
 ### 2026-09-10 — The research brief pointed agents at tools that do not exist (B90)
 
 Branch `agents-are-actually-reachable`. The reader installed 0.5.2, it opened,

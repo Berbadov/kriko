@@ -124,30 +124,53 @@ match  = match_variant(meta, db)       # → MatchResult
 claims = resolve_claims(match, db)     # → list[Claim]
 ```
 
-### 4. Variant matcher
+### 4. Identity resolver
 **`src/kriko/lookup/match.py`** — generic identity and attribute matching
 
-Normalizes raw metadata → canonical values:
-- `normalize_fuel("Benzinli")` → "petrol" (pack-declared vocabulary and adapter normalization)
-- `normalize_make("Renault")` → `"renault"`
-- `normalize_model("Megane")` → `"megane"`
-- `normalize_transmission("Otomatik")` → `"automatic"`
+Pre-pivot this section described a *variant* matcher that normalized
+`make`/`model`/`fuel` and hard-filtered on them. Those four `normalize_*`
+functions are gone, and could not come back: `kriko/` may not contain a
+car-shaped anything (`test_core_is_domain_free.py`). What replaced them takes
+the same three steps with the category supplied as data.
 
-Hard filter: DB query on `(make, model, fuel, year_from ≤ year ≤ year_to)`.
-Narrowing (never eliminates all): by cc tolerance ±100, hp ±10, transmission exact.
+Everything about one category — which attributes are required, which match
+within a numeric tolerance, which must match exactly — arrives as
+`terms.match_json` rows the pack ships. The engine reads them:
 
-Returns `MatchResult(variant_ids, method, notes)` where method is:
-- `"exact"` — single match
-- `"ambiguous"` — multiple matches (all returned, all their claims served)
-- `"no_match"` — missing required field or nothing found
-- `"inconsistent_listing"` — cc/hp don't match any real variant
+- `load_terms(conn, pack_ids)` → the pack's `Term` rows, the match rules themselves.
+- `alias_map(conn, pack_ids)` and `value_alias_map(conn, pack_ids)` → key and
+  value aliases, per pack. Never merged across packs: the cars pack calls a key
+  `make` and accepts `brand` as an alias, drill does the exact opposite, and one
+  merged table makes those two fight until whichever pack loses is unreachable.
+- `normalize_identity(identity, aliases, values)` → caller-supplied keys and
+  values resolved onto the pack's own vocabulary. This is where "Benzinli" →
+  "petrol" happens now, off adapter and pack rows rather than a Python dict.
+- `resolve(conn, query, pack_ids)` → `Resolution`. Each pack resolves in its own
+  words and the engine unions the answers, so ambiguity stays a within-pack
+  question — two packs each confidently answering is not ambiguity.
+- `expand(conn, subject_ids, pack_ids, max_hops=2)` → related subjects, bounded.
 
-Missing required fields check (line 25):
-```python
-if not make or not model or not fuel or not year:
-    missing = [k for k, v in [...] if not v]
-    return MatchResult([], "no_match", f"Missing required fields: {missing}")
-```
+Two rules are easy to get wrong and are stated in the module's own docstring:
+
+**Matching is on attribute overlap, never on `subject_id` equality.** Two packs
+whose authors disagreed about identity keys hash the same product to different
+ids; keying lookup on the hash would mean their claims never meet, and the
+pivot's premise — install several packs, get the union — would quietly fail.
+
+**Narrowing is soft.** A hint matching no candidate must never turn a real match
+into `no_match`. A listing whose stated configuration contradicts the catalog
+keeps the subject and flags the contradiction, because dropping it tells the
+reader nothing while keeping it surfaces a coverage gap.
+
+`Resolution` (`src/kriko/lookup/query.py`) carries `subject_ids`, `method`,
+`notes` and `flags`, where `method` is:
+
+- `"exact"` — one subject
+- `"ambiguous"` — several, all returned, all their claims served
+- `"no_match"` — no pack recognised this
+- and `flags` holds the soft-narrowing steps that could not be applied — a
+  stated power that matched nothing, for instance. Never silently dropped;
+  it is the coverage signal.
 
 ### 5. Claim resolver
 **`src/kriko/lookup/__init__.py`** — `lookup(query, conn)`

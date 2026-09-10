@@ -916,9 +916,17 @@ legitimate non-tool vocabulary rather than listing it. `kriko pack scaffold`
 also never wrote `research/templates.yaml`, so every new pack rendered zero
 searches; it does now, and the brief states the absence when a pack ships none.
 
-**Follow-up, unrowed:** `docs/USAGE.md` Step 4e documents a nineteen-tool
-pipeline MCP server that no longer exists. The inventory is marked stale; the
-section still needs rewriting, and it is where the phantom names came from.
+**Follow-up:** rowed and closed as B91 below.
+
+### B91 — The docs where B90's phantom names came from — **Done 2026-09-10**
+Moved to `done.md`. `docs/USAGE.md` Step 4e documented a nineteen-tool
+pipeline MCP server that no longer exists, and `docs/INTERNALS.md` documented
+four `normalize_*` functions deleted with the pivot. Both rewritten from what
+the tree exports. The mechanism is `test_docs_name_real_symbols.py`: a
+backticked call in a current doc must resolve to a registered MCP tool or a
+`def`/`function` in the tree, with `docs/historical/`, dated design specs and
+blockquoted passages out of scope. Resolution against ~2,970 scraped symbols,
+not a whitelist — a maintained list is the failure this closes.
 
 ### B89 — The desktop shell had not compiled since B83 — **Done 2026-09-10**
 Moved to `done.md`. Three adjacent string literals with no `concat!` in
