@@ -446,38 +446,44 @@ still has one run slot, so starting an agent stops any active pipeline run.
 
 **Step 4e — LLM-driven control: the kriko MCP server + kriko_research agent**
 
-The pipeline as tools for a subscription LLM — new-model research at $0 flat
-rate instead of API tokens:
+The engine as tools for a subscription LLM — research at $0 flat rate instead
+of API tokens. The wiring, the states a harness can be in, and the generated
+skill are §2b; this step is the pipeline-side view of the same server.
 
-> **This tool inventory is pre-pivot and gone.** It described a
-> pipeline-specific MCP server under `packs/cars/`, and none of the nineteen
-> tools it named — `ledger_status`, `submit_trims`, `add_document`,
-> `add_evidence`, `run_pipeline_pass` and the rest — exists anywhere in the
-> tree. The surviving server is `app/mcp_server.py`, whose tools are listed
-> under *Connecting an agent* rather than repeated here: a second written copy
-> of a tool list is the thing that goes stale, and this one did. It cost
-> something — `AgentResearcher.brief` was written against these names, so
-> every research brief this app produced until 2026-09-10 told agents to call
-> `add_document` and `add_evidence`, and rewriting the rest of this step is an
-> open follow-up rather than a claim that it is current.
+> **What used to be here was pre-pivot and is gone.** It described a
+> pipeline-specific MCP server under `packs/cars/` with nineteen tools —
+> `ledger_status`, `submit_trims`, `add_document`, `add_evidence`,
+> `run_pipeline_pass` and the rest. Not one of them is defined anywhere in the
+> tree. The cost was not the stale paragraph: `AgentResearcher.brief` had been
+> written against the same list, so every research brief the app produced until
+> 2026-09-10 told agents to call two tools that did not exist, and a reader saw
+> a Research button whose output nothing could act on (B90). A second written
+> copy of a tool list is the thing that goes stale. This step now names the
+> single source for each thing it describes instead of restating it.
 
-Two of those shape the agent's *method* rather than its output:
+The tools an agent is granted are one tuple, `render.MCP_TOOLS` in
+`packs/cars/pipeline/agent/render.py`, and
+`test_every_tool_the_contract_grants_exists_on_the_server` fails the suite if
+any of them is not callable on `app/mcp_server.py`. Two of them shape the
+agent's *method* rather than its output:
 
-- **`research_brief(part_id)`** — called before any web search. It returns what
-  this subsystem can fail at (from `packs/cars/pipeline/catalog/components.yaml`), which
-  chronics are already on file, how much of the 5-document budget is left, and
-  which source tiers count (`packs/cars/pipeline/catalog/source_tiers.yaml`). "Do web
-  research" left a cheap model to invent its own checklist per part, so
-  coverage depended on what it happened to think of; the brief is derived from
-  the catalog, so it is current without a prompt edit.
-- **`finish_model(make, model, notes)`** — closes a pass: the $0 pipeline pass
-  plus a recorded outcome in `logs/agent_runs.jsonl` (what closed, what is
-  still zero-claim, which rows stayed draft and which figure each is missing).
-  The result outlives the session; the hub's **Agent results** table reads it. Write tools are deterministic or import-only —
-nothing in agent-land can spend API tokens; the pass is logged at
-`model=agent, usd=0` so the panel stays honest. Agent evidence
-(extractor_version=1) flows through the same deterministic verdict path as
-imported legacy research (`⊆ {0,1}`), so onboarding a new part is ~$0.00.
+- **`research_brief(subject_id, pack_id)`** — called before any web search. It
+  returns the pack's own value principle and its rendered query templates
+  (`packs/<pack>/research/principle.md` and `research/templates.yaml`), so the
+  same agent researching a car and a power drill is told two different things
+  about what is worth keeping, without a line of `app/` knowing either. "Do web
+  research" left a cheap model to invent its own checklist per subject, so
+  coverage depended on what it happened to think of; the brief comes off pack
+  data, so it is current without a prompt edit. A pack shipping no
+  `templates.yaml` renders zero queries and the brief says so — see
+  `docs/PACK_CONTRACT.md`.
+- **`submit_findings(subject_id, pack_id, findings)`** — the whole write
+  surface, and the only one. It answers with a verdict per finding, so an agent
+  learns in the same call which of its work did not survive. Findings arrive as
+  drafts through `app/findings.py`, which refuses a quote it cannot find in the
+  document it cites; the web UI and the CLI enter through that same function, so
+  a claim's provenance does not depend on which door it came in. Nothing in
+  agent-land can spend API tokens.
 
 The server is **harness-agnostic** — validation lives in the server, so any
 client is interchangeable and none of them can bypass the gates. Wiring, by
@@ -490,6 +496,10 @@ opencode            # then: use the kriko_research agent
 # Claude Code — committed: .mcp.json (approve it on first run)
 claude              # then: use the kriko_research agent
 ```
+
+For an *installed* app rather than a checkout, use **System → Connect an
+agent** (§2b) — it writes the same key, naming that window's store, and
+*Verify* completes a real handshake with what it wrote.
 
 Codex and Cline configs live outside the repo. Codex — add to `~/.codex/config.toml`:
 
@@ -528,8 +538,9 @@ which rules the agent had been told about; `test_agent_contract.py` now fails
 if a checked-in file is stale, or if the contract grants a tool the server does
 not expose. For Codex/Cline, paste the canonical file's body as the system
 prompt.
-Tool names are prefixed per host (`kriko_onboard_model` in opencode,
-`mcp__kriko__onboard_model` in Claude Code) — the prompt says so.
+
+Tool names are prefixed per host — `kriko_submit_findings` in opencode,
+`mcp__kriko__submit_findings` in Claude Code — and the prompt says so.
 
 **Step 5 — Build and install the pack**
 
