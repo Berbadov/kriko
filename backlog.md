@@ -905,6 +905,19 @@ Moved to `done.md` (`2f9a995`). The measured marker is now pure CSS; `html` and
 `body` are pinned. Both defects were invisible to jsdom, which is the general
 lesson: a layout bug needs a stylesheet assertion, not a DOM test.
 
+### B89 — The desktop shell had not compiled since B83 — **Done 2026-09-10**
+Moved to `done.md`. Three adjacent string literals with no `concat!` in
+`main.rs` — a parse error that shipped in `a062b86` and that all twelve tray
+guards passed, because each only asserts a string is present.
+`test_the_shell_is_valid_rust.py` parses every `.rs` with bare `rustc`, which
+needs no dependencies and no `webkit2gtk`, and skips rather than passes where
+there is no toolchain. `Kriko_0.5.2_x64-setup.exe` then built, 22.8 MB, both
+smoke steps green.
+
+**Follow-up, unrowed:** `581e76d` bumped both version files to 0.5.2 and never
+tagged. `desktop.yml` builds on tags, so nothing ever compiled the tree. A
+version bump with no tag needs a gate.
+
 ### B88 — The extension spoke the site's language — **Done 2026-09-10**
 Moved to `done.md` (`ed3bb15`). The Turkish damage-state words, part-name
 regexes and alert thresholds moved out of `extension/` and into the adapter's

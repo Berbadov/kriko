@@ -259,12 +259,23 @@ stops `Kriko.exe` first (whose exit closes the sidecar's stdin, the designed
 way out) and `kriko-sidecar.exe` second.
 The sidecar serves two sockets, the announced one and the fixed
 `EXTENSION_PORT`, because a browser extension cannot be told a random port.
-Pytest guards keep all of this honest with no Rust toolchain installed: the
+Pytest guards keep all of this honest without building the crate: the
 handshake string and the flag must match on both sides, the extension's
 hardcoded port must match the server's constant, every failure path in
 `start_engine` must reach `emit_failure` (a window created hidden cannot show
 an error it was only *returned*), the NSIS hook must kill the binary Tauri
-actually ships, and engine vocabulary in Rust fails the suite. See
+actually ships, and engine vocabulary in Rust fails the suite.
+
+**A guard that reads source can only prove a string is present.** Every one of
+those is a text assertion, and on 2026-09-10 all twelve tray tests passed on a
+`main.rs` that could not be parsed — three adjacent string literals with no
+`concat!`, shipped in B83 and found by the first `cargo` that ever read it,
+nine minutes into a hand build. `test_the_shell_is_valid_rust.py` closes the
+cheap half: `rustc` on each file alone reports syntax errors before it resolves
+an `extern crate`, so a parse error is an `error:` with no code while an
+unresolved name is an `error[E0432]`, and the gate needs neither the crate's
+dependencies nor `webkit2gtk`. It skips where there is no `rustc`, never
+passes. Type errors still need the real Windows build. See
 `tauri/README.md`.
 
 **Two SQLite files, on purpose.** `~/.kriko/knowledge.sqlite` is the engine's
@@ -306,7 +317,7 @@ original reasoning.
 | `docs/superpowers/specs/2026-09-03-app-design-and-ia.md` | The app design system, IA and four features | current |
 | `docs/superpowers/specs/2026-09-09-research-agenda-design.md` | B82: what an agent should research next, and where that ordering comes from | current — implemented 2026-09-09 (`app/agenda.py`, `2a9d82c`) |
 | `docs/superpowers/specs/2026-09-09-knowledge-building-design.md` | How an installation grows its own packs: the two research planes, keys, the agenda run, provenance + undo, and the product-identity skill | current — implemented 2026-09-09 (`0ab613d`, `b945408`) |
-| `tauri/README.md` | The desktop shell: launch sequence, failure surface, local build | current — never built on a machine with a Rust toolchain |
+| `tauri/README.md` | The desktop shell: launch sequence, failure surface, local build | current — built by hand on the Windows host `/mnt/c` exposes (0.5.0, 0.5.1, 0.5.2) |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |
 | `~/.claude/plans/let-s-go-with-the-eager-torvalds.md` | The G6 pivot design + phase plan | current — Phase 6 in progress |
 | `docs/historical/` | Pre-part-centric era (`handover.md`, `SCAFFOLD.md`) + superseded 2026-07 designs/plans (`thoughts/`) + pre-pivot claim-quality roadmap/specs and pipeline history (`overhaul_plan.md`, `claim_relevance_plan.md`, `pipeline_postmortem.md`) | historical — do not follow |
