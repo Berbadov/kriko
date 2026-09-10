@@ -107,11 +107,11 @@ fn hint_still_running(app: &AppHandle) {
     // `blocking_show` there waits for a dialog on the same thread that would
     // have to pump it.
     app.dialog()
-        .message(
-            "Kriko is still running so the browser extension can reach it. "
-            "Use the Kriko icon near the clock to open it again, or "
+        .message(concat!(
+            "Kriko is still running so the browser extension can reach it. ",
+            "Use the Kriko icon near the clock to open it again, or ",
             "Quit Kriko to stop it.",
-        )
+        ))
         .title("Kriko is still running")
         .show(|_| {});
 }
