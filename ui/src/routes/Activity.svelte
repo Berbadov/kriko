@@ -1,6 +1,7 @@
 <script lang="ts">
     import Jobs from "./Jobs.svelte";
     import ResearchRuns from "../lib/ResearchRuns.svelte";
+    import Usage from "../lib/Usage.svelte";
     import Pipeline from "./Pipeline.svelte";
     import Submissions from "./Submissions.svelte";
 
@@ -66,6 +67,9 @@
              it are two views of one thing, and a reader chasing "did that
              research land, and can I undo it" needed both. -->
         <ResearchRuns />
+        <!-- And the sums, last: the reader arrives here for a run and leaves
+             with the only question a list of runs cannot answer. -->
+        <Usage />
     {:else if lens === "pipeline"}
         <Pipeline />
     {:else}

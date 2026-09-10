@@ -44,6 +44,27 @@ class ApiResearcher:
         self._price = price_per_call
         self.spent = 0.0
 
+    @property
+    def tokens_used(self) -> int | None:
+        """What the completion socket says it spent, or None when it cannot say.
+
+        Read off the injected callable rather than counted here. `complete` is
+        "prompt in, text out" by design (see the module docstring), and the
+        token count lives in the part of the reply that contract throws away —
+        so the only honest place to keep the total is the adapter that saw the
+        envelope. A socket that counts exposes a `tokens_used` total; one that
+        does not leaves this None, and the provenance row then records "nobody
+        counted" rather than a measured zero.
+
+        Not folded into `spent`: dollars and tokens are two different
+        measurements, and a plane priced per call can know one without the
+        other.
+        """
+        value = getattr(self._complete, "tokens_used", None)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return int(value)
+
     def _charge(self, task: ResearchTask) -> None:
         self.spent += self._price
         if task.budget_usd and self.spent > task.budget_usd:

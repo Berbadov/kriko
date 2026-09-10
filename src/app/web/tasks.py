@@ -262,7 +262,9 @@ class _Provenance:
         if conn is None:
             return
         try:
-            state.close_research_run(conn, self.run_id, outcome, self.spent())
+            state.close_research_run(
+                conn, self.run_id, outcome, self.spent(), self.tokens()
+            )
         finally:
             conn.close()
 
@@ -275,6 +277,24 @@ class _Provenance:
         """
         value = getattr(self._researcher, "spent", None)
         return float(value) if isinstance(value, (int, float)) else None
+
+    def tokens(self) -> int | None:
+        """What the plane says it read and wrote, and nothing inferred.
+
+        The sibling of `spent`, and separate from it because the two planes
+        that can count count *different* things: the harness reports its
+        tokens and spends none of Kriko's money, and a per-call price knows
+        its dollars without ever seeing a token. A single "cost" column would
+        have had to pick one and silently drop the other.
+
+        Read on every path out for the same reason as `spent`: a run that
+        stopped at its budget is exactly the run whose usage a reader wants,
+        and it is the one that raises.
+        """
+        value = getattr(self._researcher, "tokens_used", None)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return int(value)
 
 
 def research(settings, params: dict, progress: Progress) -> dict:
@@ -524,6 +544,9 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         return {
             "run_id": emit.run_id,
             "spent_usd": spent,
+            # Returned as well as stored, so the panel that just watched the
+            # run can say what it used without re-reading the runs table.
+            "tokens_used": provenance.tokens() if provenance is not None else None,
             "budget_usd": task.budget_usd or None,
             "subject": task.subject_label,
             "pack_id": pack_id,
@@ -622,6 +645,7 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
 
     done: list[dict] = []
     spent_total = 0.0
+    tokens_counted: list[int] = []
     stopped = ""
     for index, row in enumerate(subjects, start=1):
         progress.check()
@@ -660,6 +684,12 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
             done.append({"subject_id": row["subject_id"], "error": str(error)})
             continue
         spent_total += float(result.get("spent_usd") or 0.0)
+        used = result.get("tokens_used")
+        if isinstance(used, int):
+            # Accumulated in a list rather than a running int so that "no row
+            # could count" stays distinguishable from "every row counted zero"
+            # — the same distinction the column keeps, one level up.
+            tokens_counted.append(used)
         done.append(
             {
                 "subject_id": row["subject_id"],
@@ -668,6 +698,7 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
                 "kept": len(result.get("accepted") or []),
                 "refused": len(result.get("rejected") or []),
                 "spent_usd": result.get("spent_usd"),
+                "tokens_used": used,
             }
         )
 
@@ -699,6 +730,10 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
         "plane": backend,
         "budget_usd": ceiling or None,
         "spent_usd": spent_total if backend == "api" else None,
+        # The plane decides, not the loop: a total is reported when at least
+        # one row could be counted, and stays None when none could.
+        "tokens_used": sum(tokens_counted) if tokens_counted else None,
+        "rows_counted": len(tokens_counted),
         "stopped": stopped,
         "outcome": summary,
         "note": plan.get("note") or "",

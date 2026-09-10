@@ -347,6 +347,14 @@ CREATE TABLE IF NOT EXISTS research_runs (
     -- ceiling and a run that finished under it look identical without the pair.
     budget_usd      REAL,
     spent_usd       REAL,
+    -- Tokens, when the plane can count them, and NULL when it cannot — the
+    -- same distinction `spent_usd` keeps, for the same reason. Dollars and
+    -- tokens are separate measurements rather than one derived from the
+    -- other: the harness plane knows its tokens and costs the reader nothing
+    -- beyond a subscription, and a per-call price knows its dollars without
+    -- ever seeing a token. Added after the table existed, so it has no NOT
+    -- NULL and no default: see `add_missing_columns`.
+    tokens_used     INTEGER,
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     -- done | cancelled | budget | failed. `budget` is deliberately not
@@ -1414,12 +1422,23 @@ def open_research_run(
 
 
 def close_research_run(
-    conn: sqlite3.Connection, run_id: str, outcome: str, spent_usd: float | None = None
+    conn: sqlite3.Connection,
+    run_id: str,
+    outcome: str,
+    spent_usd: float | None = None,
+    tokens_used: int | None = None,
 ) -> None:
+    """What it cost, on the way out — both currencies, both optional.
+
+    `COALESCE` on each, so a caller that knows one and not the other cannot
+    erase the one already written. A plane that counts neither leaves both
+    NULL for the row's whole life, which is the truthful record of a run
+    nobody metered.
+    """
     conn.execute(
         "UPDATE research_runs SET outcome = ?, spent_usd = COALESCE(?, spent_usd),"
-        " ended_at = ? WHERE run_id = ?",
-        (outcome, spent_usd, _now(), run_id),
+        " tokens_used = COALESCE(?, tokens_used), ended_at = ? WHERE run_id = ?",
+        (outcome, spent_usd, tokens_used, _now(), run_id),
     )
     conn.commit()
 
@@ -1458,6 +1477,7 @@ def _research_run(row: sqlite3.Row) -> dict:
         "search_provider": row["search_provider"],
         "budget_usd": row["budget_usd"],
         "spent_usd": row["spent_usd"],
+        "tokens_used": row["tokens_used"],
         "started_at": row["started_at"],
         "ended_at": row["ended_at"] or "",
         "outcome": row["outcome"],
@@ -1485,6 +1505,78 @@ def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
             (limit,),
         )
     ]
+
+
+#: The columns a run can be metered in, and the plain-language answer to
+#: "why is this one empty". Kept beside the aggregate rather than in the
+#: interface, because whether a column *can* be filled is a fact about the
+#: plane and not a rendering choice — a screen that invented the sentence
+#: would drift from the schema the first time a plane learned to count.
+METERED = ("spent_usd", "tokens_used")
+
+
+def usage_totals(conn: sqlite3.Connection) -> dict:
+    """What every run has cost, together, and what that buys per claim.
+
+    The per-run rows have always said what one run spent. Nobody could ask the
+    only question a reader actually has — *what has this cost me so far, and
+    is it worth it* — because that answer is a sum, and there was nowhere to
+    read a sum from.
+
+    Two habits from the per-run column carry over, and both are about the
+    difference between zero and unknown:
+
+    * `runs` and `metered_runs` are both reported. A total of $0.14 over two
+      hundred runs means something very different depending on whether two of
+      them were counted or all two hundred were, and a lone total cannot say
+      which.
+    * `cost_per_claim` is None rather than 0.0 whenever the numerator is
+      unmeasured or the denominator is zero. A cost-per-claim of "$0.00" on an
+      installation that has never metered anything is a lie with a decimal
+      point on it, and it is the number a reader would quote.
+
+    `claims` counts what the runs still own — an undone run has given its
+    claims back, and the cost of a run whose claims are gone is a sunk cost
+    rather than a cheaper claim.
+    """
+    row = conn.execute(
+        "SELECT COUNT(*) AS runs,"
+        " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
+        " SUM(CASE WHEN tokens_used IS NOT NULL THEN 1 ELSE 0 END) AS counted_runs,"
+        " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
+        " FROM research_runs"
+    ).fetchone()
+    claims = conn.execute(
+        "SELECT COUNT(*) FROM research_run_claims WHERE removed_at IS NULL"
+    ).fetchone()[0]
+    spent = row["spent_usd"]
+    planes = [
+        {
+            "plane": item["plane"] or "",
+            "runs": item["runs"],
+            "metered_runs": item["metered_runs"],
+            "spent_usd": item["spent_usd"],
+            "tokens_used": item["tokens_used"],
+        }
+        for item in conn.execute(
+            "SELECT plane, COUNT(*) AS runs,"
+            " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
+            " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
+            " FROM research_runs GROUP BY plane ORDER BY runs DESC, plane"
+        )
+    ]
+    return {
+        "runs": row["runs"] or 0,
+        "metered_runs": row["metered_runs"] or 0,
+        "counted_runs": row["counted_runs"] or 0,
+        "spent_usd": spent,
+        "tokens_used": row["tokens_used"],
+        "claims": claims,
+        "cost_per_claim": (
+            float(spent) / claims if spent is not None and claims else None
+        ),
+        "planes": planes,
+    }
 
 
 def get_research_run(conn: sqlite3.Connection, run_id: str) -> dict | None:

@@ -654,6 +654,10 @@ export type ResearchRun = {
     search_provider: string;
     budget_usd: number | null;
     spent_usd: number | null;
+    /** Tokens, when the plane can count them. `null` is "this plane cannot
+     *  count", never "this cost nothing" — see `state.usage_totals`. Only
+     *  ever rendered when it is a number. */
+    tokens_used: number | null;
     started_at: string;
     ended_at: string;
     outcome: string;
@@ -704,3 +708,42 @@ export type PackDraft = {
     version: string;
     error: string;
 };
+
+/* What this installation has spent, and what it was asked. (B97)
+ *
+ * A per-run row could always say what one run cost. The only question a
+ * reader actually has — what has this cost me so far, and is it worth it —
+ * is a sum, and there was nowhere to read a sum from.
+ *
+ * Every metered field is nullable on purpose, and `metered_runs` travels
+ * with the totals so a figure can be read against how many of the runs
+ * behind it were counted at all.
+ */
+export type UsageTotals = {
+    runs: number;
+    metered_runs: number;
+    counted_runs: number;
+    spent_usd: number | null;
+    tokens_used: number | null;
+    claims: number;
+    cost_per_claim: number | null;
+    planes: {
+        plane: string;
+        runs: number;
+        metered_runs: number;
+        spent_usd: number | null;
+        tokens_used: number | null;
+    }[];
+};
+
+/** What the analyses log holds. No timestamps: the records carry none. */
+export type UsageAnalyses = {
+    analyses: number;
+    malformed: number;
+    claims_shown: number;
+    answered_nothing: number;
+    subjects: number;
+    adapters: string[];
+};
+
+export type Usage = { research: UsageTotals; analyses: UsageAnalyses };

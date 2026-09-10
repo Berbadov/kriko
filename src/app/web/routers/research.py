@@ -5,6 +5,7 @@ Four surfaces, and the third is the reason the first two are allowed to exist:
 * `GET /api/research-planes` says which planes exist and what each one costs.
 * `POST /api/agenda/run` walks the agenda without being told what to research.
 * `GET /api/research-runs` says what each run cost and what it added.
+* `GET /api/usage` adds the sums up, which no per-run row can answer.
 * `DELETE /api/research-runs/{id}` takes a run's claims back out.
 
 The order matters. An unattended multi-row run that could not be reversed would
@@ -14,11 +15,11 @@ landed before the loop that needs it, and both live here rather than in
 `routers/jobs.py` because they are one story.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app import keys
-from app.web import state
+from app.web import observability, state
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["research"])
@@ -127,6 +128,31 @@ def list_runs(
     as zero here instead of still advertising what it once added.
     """
     return {"runs": state.research_runs(app_state, limit)}
+
+
+@router.get("/usage")
+def read_usage(request: Request, app_state=Depends(get_app_state)) -> dict:
+    """Everything this installation has spent, and everything it was asked.
+
+    Two halves, because a reader asking "what has this cost me" is asking
+    about both and neither half can answer alone. `research` sums the runs
+    that wrote claims *in*; `analyses` counts the lookups that read them back
+    *out*, off the JSONL log whose contents nothing reachable has ever read.
+    Together they are the only place the ratio is visible: a hundred analyses
+    served by four runs is a very different installation from four analyses
+    served by a hundred.
+
+    Nothing here is computed from a guess. A plane that cannot count leaves
+    its column null all the way to the wire, and `metered_runs` says how many
+    of the runs behind a total were counted at all — see
+    `state.usage_totals`.
+    """
+    return {
+        "research": state.usage_totals(app_state),
+        "analyses": observability.summarise(
+            request.app.state.settings.analysis_log_path
+        ),
+    }
 
 
 @router.get("/research-runs/{run_id}")

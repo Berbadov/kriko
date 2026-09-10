@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
+import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import ResearchRuns from "./ResearchRuns.svelte";
 import { stubFetch, stubFetchFailing } from "./stub-fetch";
@@ -11,6 +11,7 @@ const run = (over: Record<string, unknown> = {}) => ({
     search_provider: "a-provider",
     budget_usd: 0.2,
     spent_usd: 0.1134,
+    tokens_used: null,
     started_at: "2026-09-09T20:15:00",
     ended_at: "2026-09-09T20:16:00",
     outcome: "done",
@@ -44,6 +45,18 @@ describe("the research runs list", () => {
         expect(await screen.findByText("your agent")).toBeTruthy();
         expect(container.textContent).not.toContain("spent $");
         expect(container.textContent).not.toContain("0.00");
+    });
+
+    it("shows the tokens a plane could count, and nothing for one that could not", async () => {
+        // Two currencies, not one: the harness plane knows its tokens and
+        // spends none of Kriko's money, so a run can have a count and no
+        // price. A missing count reads as absent rather than as zero.
+        stubFetch(runs(run({ tokens_used: 12345, spent_usd: null })));
+        render(ResearchRuns);
+        await waitFor(() =>
+            expect(screen.getByText(/12,345 tokens/)).toBeInTheDocument(),
+        );
+        expect(screen.queryByText(/spent \$/)).not.toBeInTheDocument();
     });
 
     it("says a budget stop was a stop, not a completed run", async () => {

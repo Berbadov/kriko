@@ -201,6 +201,9 @@ export const api = {
      *  worker and a job that submits jobs deadlocks. */
     runAgenda: (body: T.AgendaRunRequest) =>
         postJson<{ job_id: string; kind: string }>("/api/agenda/run", body),
+    /** The sums. Two halves — what writing claims in cost, and how much
+     *  reading them back out this installation has actually done. */
+    usage: () => get<T.Usage>("/api/usage"),
     researchRuns: (limit = 50) =>
         get<{ runs: T.ResearchRun[] }>(`/api/research-runs?limit=${limit}`),
     researchRun: (runId: string) =>
