@@ -11,6 +11,7 @@
         MarkQueueItem,
         Marks,
         Pack,
+        PackDraft,
         MarkSignals,
         Status,
         Subject,
@@ -48,6 +49,13 @@
 
     let status = $state<Status | null>(null);
     let packs = $state<Pack[]>([]);
+    // Packs an agent drafted, and whichever one the reader is acting on.
+    let drafts = $state<PackDraft[]>([]);
+    let draftBusy = $state("");
+    // The exception itself, not a sentence squeezed out of it: `Failure.svelte`
+    // is the one place that decides what a failure means to the reader, and a
+    // view that writes its own copy ships worse copy than the rest.
+    let draftError = $state<unknown>(null);
     let subjects = $state<Subject[]>([]);
     let gaps = $state<Gap[]>([]);
     let error = $state<unknown>(null);
@@ -95,12 +103,16 @@
     }
 
     async function loadFrame() {
-        const [s, p] = await Promise.all([
+        const [s, p, d] = await Promise.all([
             api.status().catch(() => null),
             api.packs().catch(() => [] as Pack[]),
+            // Best effort: a reader with no drafts is the common case, and a
+            // failure here must not cost them the screen.
+            api.packDrafts().then((r) => r.items).catch(() => [] as PackDraft[]),
         ]);
         status = s;
         packs = p;
+        drafts = d;
         // Gaps are per pack, and a disabled pack still reports them — a gap is
         // a fact about the pack's own contents, not about whether the reader
         // has it switched on.
@@ -207,6 +219,33 @@
         ),
     );
 
+    async function installDraft(draft: PackDraft) {
+        draftBusy = draft.slug;
+        draftError = null;
+        try {
+            await api.installPackDraft(draft.slug);
+            await loadFrame();
+            await loadList();
+        } catch (thrown) {
+            draftError = thrown;
+        } finally {
+            draftBusy = "";
+        }
+    }
+
+    async function discardDraft(draft: PackDraft) {
+        draftBusy = draft.slug;
+        draftError = null;
+        try {
+            await api.discardPackDraft(draft.slug);
+            await loadFrame();
+        } catch (thrown) {
+            draftError = thrown;
+        } finally {
+            draftBusy = "";
+        }
+    }
+
     async function enable(pack: Pack) {
         await api.setEnabled(pack.pack_id, true);
         await Promise.all([loadList(), loadFrame()]);
@@ -245,6 +284,41 @@
         <button onclick={() => enable(pack)}>Switch it on</button>
     </article>
 {/each}
+
+<!-- Drafts an agent wrote. Above the lenses because a pack waiting to be
+     installed changes what every list below can possibly contain, and because
+     an agent's proposal that nobody ever sees is the same as no proposal. -->
+{#each drafts as draft (draft.slug)}
+    <article class="card notice">
+        <div>
+            <strong>{draft.name || draft.slug} was drafted for you</strong>
+            <span class="meta">
+                {#if draft.error}
+                    It does not load yet: {draft.error}. Tell the agent that, and it
+                    can fix the file it wrote.
+                {:else}
+                    {draft.pack_id} {draft.version} · {draft.files.length} file(s) in
+                    {draft.root}. Nothing of it is in your store until you install it,
+                    and nothing in it can run — a drafted pack is data only.
+                {/if}
+            </span>
+        </div>
+        <span class="row">
+            <button
+                onclick={() => installDraft(draft)}
+                disabled={draftBusy === draft.slug || !!draft.error}>Install it</button
+            >
+            <button
+                class="quiet"
+                onclick={() => discardDraft(draft)}
+                disabled={draftBusy === draft.slug}>Throw it away</button
+            >
+        </span>
+    </article>
+{/each}
+{#if draftError}
+    <Failure error={draftError} />
+{/if}
 
 <div class="lenses" role="tablist" aria-label="Lens">
     <button

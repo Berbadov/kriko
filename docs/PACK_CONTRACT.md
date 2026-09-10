@@ -20,7 +20,22 @@ not the test.
    - `version` — a version string.
 
    `publisher`, `license`, and `origin` are read if present but are not
-   enforced.
+   enforced. So are two declarations a pack needs the moment it ships
+   searches:
+
+   - `languages` — the language codes this pack's text and queries are written
+     in, most important first (e.g. `languages = ["en", "tr"]`). The first is
+     the pack's primary language, and it is what a query with no `lang` of its
+     own is assumed to be in. Defaults to `["en"]` if the pack never says.
+   - `markets` — the markets its claims are about (e.g. `markets = ["TR", "EU"]`).
+     Free-form codes; the engine passes them into the research brief and never
+     interprets them.
+
+   Both reach an agent through the brief, which is why they matter: a pack
+   whose seed queries are half in one language and half in another, with
+   nothing declaring either, produces exactly the mixed-language searches that
+   return nothing. **A pack that ships `research/templates.yaml` must declare
+   `languages`** — that half *is* enforced (see Enforcement below).
 
 2. **A non-empty `[identity]` table.** It maps each subject kind your pack
    deals in (e.g. `product`, `part`, `battery_platform`) to the list of
@@ -77,8 +92,21 @@ mature pack needs; a pack that doesn't need it doesn't carry it.
     a reader could get more cheaply elsewhere. It is quoted verbatim into every
     research brief and into the generated agent skill, so it is the pack's own
     bar rather than the engine's.
-  - `templates.yaml` — the searches to run, one query per line, with `{label}`,
-    `{alias}` and any of the pack's identity keys substituted in. **Effectively
+  - `templates.yaml` — the searches to run, with `{label}`, `{alias}` and any
+    of the pack's identity keys substituted in. Two shapes are legal per entry,
+    and they may be mixed in one file:
+
+    ```yaml
+    - "{alias} common problems"          # in the pack's primary language
+    - query: "{alias} arıza şikayet"     # in a language the manifest declares
+      lang: tr
+    ```
+
+    A `lang` the manifest does not name is a contract failure, and so is a
+    query containing a non-ASCII *word* in a single-language pack — the same
+    rule the client is held to, for the same reason: an undeclared language is
+    a query nobody types. The brief groups the rendered queries by language and
+    tells the agent they are seeds to adapt, not a script to run. **Effectively
     required.** A pack that omits it renders *zero* queries, and its brief then
     says what to keep without ever saying what to look for — which is what a
     reader experiences as a Research button that does nothing. `kriko pack
@@ -134,5 +162,7 @@ four items in "The required minimum" are.
 
 `src/kriko/tests/test_pack_contract.py` is the authority. It is parametrized over
 every pack the repo ships and checks each against the required minimum above,
-plus a guard that the repo ships more than one pack. If this document and
-that test ever disagree, the test is right and this document needs fixing.
+plus a guard that the repo ships more than one pack, that a pack shipping
+queries declares the language they are in, and that no query is written in a
+language the manifest does not name. If this document and that test ever
+disagree, the test is right and this document needs fixing.

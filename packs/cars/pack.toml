@@ -6,6 +6,19 @@ license = "CC-BY-SA-4.0"
 publisher = "kriko"
 origin = "https://github.com/kriko/kriko"
 
+# The languages this pack's own text is written in, primary first, and the
+# markets its claims are about.
+#
+# Not decoration. `research/templates.yaml` has shipped queries in two
+# languages since the pivot and nothing declared it, so a brief handed an
+# agent seven searches — five English, two Turkish — as one numbered list and
+# told it neither which market it was researching nor which language a given
+# query belonged to. A reader read the result as a defect: "the researches
+# making turkish-english queries". The queries were fine; the declaration was
+# missing (backlog B94).
+languages = ["en", "tr"]
+markets = ["TR", "EU"]
+
 # What makes a car variant distinct. This is the pack's most consequential
 # declaration — it decides which of its rows can ever merge with another
 # contributor's cars pack.

@@ -36,6 +36,13 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
     An empty string on any failure, because `extract` already treats a reply it
     cannot parse as "this document supports no claim" — a provider outage
     should cost a document, not a run.
+
+    It also carries the running token total as an attribute on itself
+    (`complete.tokens_used`), which `ApiResearcher.tokens_used` reads and the
+    provenance row records. This is the only place in the stack that sees a
+    response envelope, so it is the only place that *can* count; the attribute
+    opens at None rather than 0 so a provider that reports no `usage` block
+    ends up recorded as "cannot count" instead of as a free run.
     """
     key = api_key or require("openai")
     endpoint = (base_url or _env("LLM_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
@@ -55,6 +62,15 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
             },
             {"authorization": f"Bearer {key}"},
         )
+        # Before the early returns below: a reply we could not parse still
+        # cost tokens, and a total that only counts the usable answers would
+        # make a run of unparseable replies look free.
+        usage = body.get("usage")
+        if isinstance(usage, dict):
+            total = usage.get("total_tokens")
+            if isinstance(total, int) and not isinstance(total, bool):
+                complete.tokens_used = (complete.tokens_used or 0) + total
+
         choices = body.get("choices")
         if not isinstance(choices, list) or not choices:
             return ""
@@ -62,6 +78,9 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
         content = (message or {}).get("content") if isinstance(message, dict) else ""
         return _unfence(str(content or ""))
 
+    #: None, not 0 — see the docstring. Set after the definition because the
+    #: closure increments it by name.
+    complete.tokens_used = None
     return complete
 
 

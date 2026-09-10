@@ -121,6 +121,55 @@ unsure of is better filed with its weak source than dropped.
 """
 
 
+_AUTHORING = """\
+## Authoring a pack
+
+A category Kriko does not model yet has no principle, no vocabulary and no
+searches, so there is nothing to research *into*. Write the pack first. You can:
+
+- `draft_pack(pack_id, name, identity)` — start a draft. `identity` is the
+  consequential argument: it maps each subject kind to the attribute keys that
+  make one of them distinct. Too few and unrelated things collide into one
+  subject; too many and one real thing splits across subjects that never see
+  each other's claims. Neither failure raises.
+- `write_draft_file(draft, path, text)` — fill it in. Data files only; a pack
+  an agent wrote may not contain code. The two that matter most are
+  `research/principle.md`, which is quoted verbatim into every future brief and
+  is this category's own bar, and `research/templates.yaml`, the seed searches
+  — whose language `pack.toml` must declare in `[pack] languages`.
+- `build_draft(draft)` — find out whether the rows load. A build that fails
+  names the row that broke it.
+- `list_pack_drafts()` — what is already drafted here.
+
+Installing is the reader's press, on the Knowledge screen. Draft it, build it,
+tell them what it covers and what it deliberately leaves out; do not install it
+for them.
+
+"""
+
+
+_EMPTY_HEADER = """\
+---
+name: {name}
+description: {description}
+---
+
+# Authoring for an empty Kriko installation
+
+Kriko answers "what is known to go wrong with *this specific one*" from
+installed knowledge packs. **This installation has none.** So the loop this
+skill normally carries — ask the agenda, read the brief, submit findings — has
+nothing to run against yet, and your job is the one before it: write the pack that says what this
+category is, what counts as worth surfacing in it, and what to search for.
+
+Ask the reader what they want covered, then use the authoring tools below. Once
+a pack is installed, ask for this skill again: it is rebuilt from what is
+installed, and it will then carry that pack's own principle, vocabulary and
+research loop.
+
+"""
+
+
 def _when(packs: list[dict]) -> str:
     """The description's trigger, in the reader's own installed terms.
 
@@ -320,7 +369,15 @@ def _agenda_section(rows: list[dict]) -> str:
 
 
 def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
-    """Build the skill from what is installed, or None if nothing is.
+    """Build the skill from what is installed. Never None any more.
+
+    An empty installation used to get nothing, on the reasoning that there is
+    no protocol for a store with no knowledge in it. That was true about
+    *researching* and wrong about the reader: "no agents guideline for brand
+    new packages" is how they put it, and an agent connected to an empty Kriko
+    was told nothing at all when the obvious job was to author the first pack
+    (B96). It now gets the authoring half of the skill and nothing else, since
+    a research loop with no principle behind it has no bar to hold anything to.
 
     `agenda_rows` is the caller's, because the agenda needs the interface's own
     database and the analyses log, and this module is handed only the store.
@@ -345,7 +402,14 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
         )
     ]
     if not packs:
-        return None
+        empty = (
+            "This installation has no packs. Author the first one with "
+            "`draft_pack`, then ask for this skill again."
+        )
+        return (
+            _EMPTY_HEADER.format(name=SKILL_NAME, description=empty)
+            + _AUTHORING
+        )
 
     when = _when(packs)
     loop = "\n".join(
@@ -359,6 +423,9 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
         loop=loop,
     )
     body += _agenda_section(agenda_rows or [])
+    # After the loop and before the packs: an agent holding a full store still
+    # needs this the moment the reader names a category nobody has modelled.
+    body += _AUTHORING
     for pack in packs:
         body += _pack_section(conn, pack)
     return body

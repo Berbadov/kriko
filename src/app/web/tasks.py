@@ -67,6 +67,16 @@ def _researcher(params: dict):
     engine owns none, so `kriko.research` could never have built this itself.
     """
     backend = str(params.get("backend") or "agent").lower()
+    if backend == "harness":
+        # Same reason as the paid plane below, one layer out: this one spawns a
+        # process, and `kriko/` owns no subprocesses any more than it owns
+        # sockets. So it is not a `get_researcher` backend and never will be.
+        from app.providers import harness_researcher
+
+        return harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            timeout=float(params.get("timeout_seconds") or 0.0),
+        )
     if backend != "api":
         return get_researcher({"backend": backend})
     from app.providers import api_researcher
@@ -85,6 +95,89 @@ def _budget(params: dict) -> float:
     if str(params.get("backend") or "agent").lower() != "api":
         return named
     return named if named > 0 else DEFAULT_BUDGET_USD
+
+
+#: What each plane does *instead of* fetching, and what the reader does next.
+#:
+#: A run that gathers nothing is not a failure on two of the three planes — it
+#: is the design — but "succeeded / 0 claim(s) kept" is indistinguishable from
+#: a broken button, and that is precisely what a reader reported on 0.5.3. The
+#: log is the one place they looked, so the log has to answer it. Keyed by
+#: plane so a new plane cannot be added without deciding what its empty run
+#: means.
+EMPTY_RUN = {
+    "agent": (
+        "this plane fetches nothing itself — the brief above IS the output. "
+        "Nothing can be kept until an agent reads it: press “Run my agent on "
+        "this” to have Kriko run your installed agent headlessly, hand the "
+        "brief to a connected agent yourself, or wire one up in Agents → "
+        "Connect."
+    ),
+    "harness": (
+        "your agent ran and came back with nothing usable. That is a coverage "
+        "answer, not an error: either the sources it can reach say nothing "
+        "specific about this subject, or everything they say was too generic "
+        "to keep. The queries it was seeded with are above."
+    ),
+    "api": (
+        "the searches returned nothing this plane could read. Check the "
+        "queries above, and Settings → Research for the search key."
+    ),
+}
+
+
+def _empty_run_note(researcher) -> str:
+    """Why this run has no documents, in the plane's own terms.
+
+    A plane may override the sentence by setting `note` — the harness plane
+    does, because "the CLI answered without a findings list" and "the CLI found
+    nothing" are different problems with different fixes, and only the plane
+    knows which happened.
+    """
+    own = str(getattr(researcher, "note", "") or "").strip()
+    general = EMPTY_RUN.get(researcher.name, "")
+    if own and general:
+        return f"{own} — {general}"
+    return own or general or (
+        f"the {researcher.name} plane gathered nothing and said nothing about why"
+    )
+
+
+def _queries_run(researcher, task) -> list[str]:
+    """What was actually searched for, preferring the researcher's own account.
+
+    A plane that drives an agent hands it seeds and expects them to be adapted
+    (B95), so its `queries_run` is the truth and the pack's rendered templates
+    are only what it was offered. A plane that runs the templates literally
+    reports nothing, and then the templates *are* what ran.
+    """
+    reported = [
+        str(query).strip()
+        for query in (getattr(researcher, "queries_run", None) or ())
+        if str(query).strip()
+    ]
+    return reported or list(task.rendered_queries())
+
+
+def _outcome(researcher, documents: int, verdicts: dict) -> str:
+    """The one line the jobs list shows for a finished run.
+
+    `0 claim(s) kept` was true and useless. Three different runs produced it —
+    a plane that never fetches, a plane that fetched and found nothing, and a
+    plane whose findings were all refused — and a reader cannot act on any of
+    them without knowing which.
+    """
+    kept = len(verdicts.get("accepted", []))
+    refused = len(verdicts.get("rejected", []))
+    if kept:
+        return f"{kept} claim(s) kept" + (f", {refused} refused" if refused else "")
+    if refused:
+        return f"nothing kept — all {refused} finding(s) refused, see the log"
+    if not documents:
+        if researcher.name == "agent":
+            return "brief ready — hand it to an agent, nothing is kept until one reads it"
+        return f"nothing found — the {researcher.name} plane read no source"
+    return f"read {documents} source(s), none of them said anything keepable"
 
 
 def _describe_plane(researcher) -> dict:
@@ -169,7 +262,9 @@ class _Provenance:
         if conn is None:
             return
         try:
-            state.close_research_run(conn, self.run_id, outcome, self.spent())
+            state.close_research_run(
+                conn, self.run_id, outcome, self.spent(), self.tokens()
+            )
         finally:
             conn.close()
 
@@ -182,6 +277,24 @@ class _Provenance:
         """
         value = getattr(self._researcher, "spent", None)
         return float(value) if isinstance(value, (int, float)) else None
+
+    def tokens(self) -> int | None:
+        """What the plane says it read and wrote, and nothing inferred.
+
+        The sibling of `spent`, and separate from it because the two planes
+        that can count count *different* things: the harness reports its
+        tokens and spends none of Kriko's money, and a per-call price knows
+        its dollars without ever seeing a token. A single "cost" column would
+        have had to pick one and silently drop the other.
+
+        Read on every path out for the same reason as `spent`: a run that
+        stopped at its budget is exactly the run whose usage a reader wants,
+        and it is the one that raises.
+        """
+        value = getattr(self._researcher, "tokens_used", None)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return int(value)
 
 
 def research(settings, params: dict, progress: Progress) -> dict:
@@ -286,6 +399,10 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
 
         documents = researcher.gather(task)
         progress.log(f"gathered {len(documents)} document(s)")
+        if not documents:
+            # Said in the log, not only in the stage list: the log is what the
+            # reader expands, and on 0.5.3 it ended at this line.
+            progress.log(_empty_run_note(researcher))
         emit.count(sources=len(documents))
         for document in documents:
             emit.event(
@@ -299,10 +416,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # ── Extraction ───────────────────────────────────────────────────
         findings: list[dict] = []
         if not documents:
-            emit.skip_stage(
-                "extraction",
-                f"the {researcher.name} plane fetches nothing itself — the brief is the output",
-            )
+            emit.skip_stage("extraction", _empty_run_note(researcher))
         else:
             emit.open_stage("extraction", f"reading {len(documents)} source(s)")
         for index, document in enumerate(documents, start=1):
@@ -391,6 +505,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 subject_id=subject_id,
                 pack_id=pack_id,
                 verdicts=verdicts,
+                queries=_queries_run(researcher, task),
             )
         else:
             emit.skip_stage("ingestion", "no findings to check")
@@ -414,13 +529,24 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         if findings:
             emit.close_stage()
 
-        progress.set(1.0, f"{len(verdicts.get('accepted', []))} claim(s) kept")
+        outcome = _outcome(researcher, len(documents), verdicts)
+        # Last line on purpose. The reader who expanded this log did it to find
+        # out what happened; the brief is the artifact and it is worth nothing
+        # if they cannot find it again.
+        progress.log(
+            f"brief: {len(brief)} characters, kept with this run — reopen it from "
+            f"this subject's Research panel, or Activity → Runs"
+        )
+        progress.set(1.0, outcome)
         # Not closed here: `research` closes the row on every path out,
         # which is the only way the failing paths get one too.
         spent = provenance.spent() if provenance is not None else None
         return {
             "run_id": emit.run_id,
             "spent_usd": spent,
+            # Returned as well as stored, so the panel that just watched the
+            # run can say what it used without re-reading the runs table.
+            "tokens_used": provenance.tokens() if provenance is not None else None,
             "budget_usd": task.budget_usd or None,
             "subject": task.subject_label,
             "pack_id": pack_id,
@@ -429,6 +555,10 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             "queries": list(task.rendered_queries()),
             "brief": brief,
             "documents": len(documents),
+            "outcome": outcome,
+            # Why nothing came back, when nothing did. Returned as well as
+            # logged so the brief panel can say it without parsing the log.
+            "note": _empty_run_note(researcher) if not documents else "",
             **verdicts,
         }
     finally:
@@ -515,6 +645,7 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
 
     done: list[dict] = []
     spent_total = 0.0
+    tokens_counted: list[int] = []
     stopped = ""
     for index, row in enumerate(subjects, start=1):
         progress.check()
@@ -553,6 +684,12 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
             done.append({"subject_id": row["subject_id"], "error": str(error)})
             continue
         spent_total += float(result.get("spent_usd") or 0.0)
+        used = result.get("tokens_used")
+        if isinstance(used, int):
+            # Accumulated in a list rather than a running int so that "no row
+            # could count" stays distinguishable from "every row counted zero"
+            # — the same distinction the column keeps, one level up.
+            tokens_counted.append(used)
         done.append(
             {
                 "subject_id": row["subject_id"],
@@ -561,11 +698,30 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
                 "kept": len(result.get("accepted") or []),
                 "refused": len(result.get("rejected") or []),
                 "spent_usd": result.get("spent_usd"),
+                "tokens_used": used,
             }
         )
 
     kept = sum(item.get("kept") or 0 for item in done)
-    progress.set(1.0, f"{kept} claim(s) kept across {len(done)} subject(s)")
+    # Same reason as `_outcome`: a bulk run that kept nothing is the shape a
+    # reader is most likely to see first, and "0 claim(s) kept across 5
+    # subject(s)" tells them nothing about which of the four possible causes
+    # it was.
+    if kept:
+        summary = f"{kept} claim(s) kept across {len(done)} subject(s)"
+    elif not done:
+        summary = "nothing to research — the agenda came back empty"
+    elif backend == "agent":
+        summary = (
+            f"{len(done)} brief(s) ready, nothing kept — the agent plane does not "
+            f"read; run the harness plane or hand the briefs to an agent"
+        )
+    else:
+        summary = (
+            f"nothing kept across {len(done)} subject(s) — open a run below for "
+            f"the log that says why"
+        )
+    progress.set(1.0, summary)
     return {
         "rows": done,
         "subjects": len(subjects),
@@ -574,7 +730,12 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
         "plane": backend,
         "budget_usd": ceiling or None,
         "spent_usd": spent_total if backend == "api" else None,
+        # The plane decides, not the loop: a total is reported when at least
+        # one row could be counted, and stays None when none could.
+        "tokens_used": sum(tokens_counted) if tokens_counted else None,
+        "rows_counted": len(tokens_counted),
         "stopped": stopped,
+        "outcome": summary,
         "note": plan.get("note") or "",
     }
 
