@@ -129,6 +129,14 @@ try {
         Assert-LastExitCode "npm run build (ui)"
     }
 
+    # The knowledge before the freeze, for the same reason as the UI: the spec
+    # refuses to freeze without artifacts rather than shipping a knowledge
+    # engine with no knowledge in it. Which packs get built is discovered from
+    # packs/, so a third one ships by existing.
+    Step "Build the packs"
+    & $Python packaging/build_packs.py
+    Assert-LastExitCode "build_packs.py"
+
     Step "Freeze the sidecar"
     & $Python -m PyInstaller --noconfirm packaging/kriko-sidecar.spec
     Assert-LastExitCode "pyinstaller"

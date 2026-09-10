@@ -50,15 +50,15 @@ class AgentResearcher:
         if task.languages:
             lines.append(f"- pack languages: {', '.join(task.languages)}")
 
-        # Whose bar this is, said rather than implied. (D5) The reader read
-        # the cars pack's four bullets — "this engine code, this gearbox
-        # type" — as Kriko's own taste and reported the section as "still car
-        # fixated". It is not the engine's: `research/principle.md` is pack
-        # data, quoted verbatim, and a pack for a different category ships a
-        # different bar (`packs/drill/` does, and the scaffold's placeholder
-        # is generic). But a heading that names no owner invites exactly that
-        # reading, and the fix is one line here rather than an explanation
-        # nobody will be given at the moment they need it.
+        # Whose bar this is, said rather than implied. (D5) A reader read one
+        # pack's bullets as Kriko's own taste and reported the section as
+        # fixated on that pack's category. It is not the engine's:
+        # `research/principle.md` is pack data, quoted verbatim, and a pack
+        # for another category ships a different bar — the two in this
+        # repository state very different ones, and the scaffold's
+        # placeholder states none. But a heading that names no owner invites
+        # exactly that reading, and the fix is one line here rather than an
+        # explanation nobody will be given at the moment they need it.
         lines += [
             "",
             f"## What makes a claim worth keeping — the `{task.pack_id}` pack's bar",
