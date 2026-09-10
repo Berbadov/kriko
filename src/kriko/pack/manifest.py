@@ -23,7 +23,24 @@ class Manifest:
     # the pack's most consequential declaration: it decides what counts as "the
     # same product" and therefore which rows merge with another pack's.
     identity_keys: dict[str, list[str]] = field(default_factory=dict)
+    # Which languages this pack's own text is written in, primary first, as
+    # BCP-47 codes. Not decoration: `research/templates.yaml` ships queries in
+    # the language the sources are written in, and until 2026-09-10 nothing
+    # anywhere declared what that was — so a brief handed an agent seven
+    # queries in two languages and told it neither. Empty means the pack never
+    # said, which is treated as `("en",)` and reported by the contract test
+    # rather than guessed at.
+    languages: tuple[str, ...] = ()
+    # Which markets its claims are about, as region codes. A pack may serve a
+    # market whose language it does not ship queries in, and vice versa —
+    # "recalls in the EU" is not the same fact as "forums in German".
+    markets: tuple[str, ...] = ()
     raw: dict = field(default_factory=dict)
+
+    @property
+    def primary_language(self) -> str:
+        """The language a template that names none is written in."""
+        return self.languages[0] if self.languages else "en"
 
     @property
     def vocabulary_dir(self) -> Path:
@@ -32,6 +49,32 @@ class Manifest:
     @property
     def data_dir(self) -> Path:
         return self.root / "data"
+
+
+def _codes(value, path: Path, key: str) -> tuple[str, ...]:
+    """A list of short codes, from either a list or a single string.
+
+    Tolerant of `market = "TR"` as well as `markets = ["TR", "EU"]` because
+    both are what an author writes, and rejecting one of them would be a
+    contract that fails on a typo rather than on a mistake. Order is kept: the
+    first language is the primary one.
+    """
+    if value is None or value == "":
+        return ()
+    items = [value] if isinstance(value, str) else list(value)
+    out: list[str] = []
+    for item in items:
+        code = str(item).strip()
+        if not code:
+            continue
+        if len(code) > 16 or not code.replace("-", "").replace("_", "").isalnum():
+            raise ValueError(
+                f"{path}: [pack] {key} must be short codes like \"en\" or "
+                f"\"pt-BR\", not {code!r}"
+            )
+        if code not in out:
+            out.append(code)
+    return tuple(out)
 
 
 def load(root) -> Manifest:
@@ -55,6 +98,9 @@ def load(root) -> Manifest:
             "would hash to the same id"
         )
 
+    languages = _codes(pack.get("languages"), path, "languages")
+    markets = _codes(pack.get("markets") or pack.get("market"), path, "markets")
+
     return Manifest(
         root=root,
         pack_id=pack["id"],
@@ -64,5 +110,7 @@ def load(root) -> Manifest:
         license=pack.get("license", ""),
         origin_url=pack.get("origin", ""),
         identity_keys=identity,
+        languages=languages,
+        markets=markets,
         raw=raw,
     )

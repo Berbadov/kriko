@@ -45,16 +45,60 @@ class AgentResearcher:
             lines.append(f"- known: {known}")
         if task.attribution_aliases:
             lines.append(f"- also called: {', '.join(task.attribution_aliases)}")
+        if task.markets:
+            lines.append(f"- market: {', '.join(task.markets)}")
+        if task.languages:
+            lines.append(f"- pack languages: {', '.join(task.languages)}")
 
         lines += ["", "## What makes a claim worth keeping", ""]
         lines.append(task.value_principle.strip() or
                      "(this pack ships no value principle — keep only claims "
                      "specific to this subject and predictable without inspecting it)")
 
-        queries = task.rendered_queries()
+        plan = task.rendered_plan()
         lines += ["", "## Searches to run", ""]
-        if queries:
-            lines += [f"{n}. {q}" for n, q in enumerate(queries, 1)]
+        if plan:
+            # **Seeds, not a script**, and said in the brief rather than left
+            # to be inferred. The pack's templates are one author's guess at
+            # the query shapes that work for this category; the agent is
+            # holding the subject, and it is the only party that can see that
+            # a query returned a sibling engine or a different market. B95:
+            # the reader's words were "agent should decide the queries".
+            lines += [
+                "These are the pack's seed queries, not a script. Run the ones "
+                "that are worth running, drop the ones that clearly do not fit "
+                "this subject, and write better ones — the search that finds "
+                "the finding is the one you should report.",
+                "",
+            ]
+            # Grouped by language, because a pack that serves a market
+            # searches in that market's language and an ungrouped list makes
+            # that look like a mistake. Order is the pack's, primary first.
+            order: list[str] = []
+            for _, lang in plan:
+                if lang not in order:
+                    order.append(lang)
+            number = 0
+            for lang in order:
+                if len(order) > 1 or lang:
+                    lines.append(f"**In {lang or 'the pack\'s language'}:**")
+                for query, query_lang in plan:
+                    if query_lang != lang:
+                        continue
+                    number += 1
+                    lines.append(f"{number}. {query}")
+                lines.append("")
+            if task.languages:
+                lines.append(
+                    f"Search in the language a source is written in, not in a "
+                    f"mixture: this pack ships text in "
+                    f"{', '.join(task.languages)}"
+                    + (f" and its claims are about "
+                       f"{', '.join(task.markets)}" if task.markets else "")
+                    + ". A part name, a symptom and a model name written in "
+                      "three languages at once is a query nobody types, and "
+                      "it is the one thing that reliably returns nothing."
+                )
         else:
             # Said, not omitted. A pack with no `research/templates.yaml`
             # renders zero queries, and a brief that simply skips the section
@@ -76,7 +120,15 @@ class AgentResearcher:
             f"At most {task.max_documents} documents. File them in one call:",
             "",
             f"    submit_findings(subject_id=\"{task.subject_id}\", "
-            f"pack_id=\"{task.pack_id}\", findings=[...])",
+            f"pack_id=\"{task.pack_id}\", findings=[...], queries=[...])",
+            "",
+            # The other half of the latitude granted above. Telling an agent
+            # to write its own queries and then not asking which ones it wrote
+            # means the pack can never learn anything from having asked.
+            "`queries` is the searches you actually ran — the seeds you kept, "
+            "the ones you rewrote, and the ones that returned nothing. It has "
+            "no effect on whether a finding is kept; it is how the pack finds "
+            "out which shapes were worth shipping.",
             "",
             "Each finding is an object, and these six fields are not optional:",
             "",

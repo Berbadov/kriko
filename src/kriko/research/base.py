@@ -60,22 +60,57 @@ class ResearchTask:
     queries: tuple[str, ...] = ()
     value_principle: str = ""
     domains: tuple[str, ...] = ()
+    #: The languages the pack's own text is written in, primary first, and the
+    #: markets its claims are about. Both are pack declarations rather than
+    #: engine knowledge — `[pack] languages` / `[pack] markets` in `pack.toml`.
+    #:
+    #: They exist because until 2026-09-10 nothing anywhere said what language
+    #: a query was in. `packs/cars` shipped five English templates and two
+    #: Turkish ones and the brief presented all seven as one numbered list, so
+    #: an agent could not tell a market convention from a typo. A reader
+    #: reported it as "the researches making turkish-english queries".
+    languages: tuple[str, ...] = ()
+    markets: tuple[str, ...] = ()
+    #: One language code per entry in `queries`, same order. Parallel rather
+    #: than a tuple of pairs so `queries` keeps the shape every existing caller
+    #: reads; a template that declared none carries the pack's primary.
+    query_languages: tuple[str, ...] = ()
     budget_usd: float = 0.0
     max_documents: int = 5
 
-    def rendered_queries(self) -> tuple[str, ...]:
-        """Templates with this subject's own words substituted in."""
-        out = []
-        for template in self.queries:
+    def language_of(self, query_index: int) -> str:
+        """The language template `n` is written in, or the pack's primary."""
+        if query_index < len(self.query_languages):
+            return self.query_languages[query_index]
+        return self.languages[0] if self.languages else ""
+
+    def rendered_plan(self) -> tuple[tuple[str, str], ...]:
+        """Each rendered query with the language it is written in.
+
+        The brief groups by this. Presenting a Turkish query and an English one
+        as items 3 and 5 of one numbered list is what made a pack's market
+        conventions look like a defect — and left the agent nothing to adapt
+        *to*, since nothing said which market either belonged to.
+        """
+        out: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for index, template in enumerate(self.queries):
+            lang = self.language_of(index)
             for alias in (self.subject_label, *self.search_aliases) or ("",):
                 try:
                     rendered = template.format(
                         label=self.subject_label, alias=alias, **self.identity)
                 except (KeyError, IndexError):
                     continue
-                if rendered not in out:
-                    out.append(rendered)
+                if rendered in seen:
+                    continue
+                seen.add(rendered)
+                out.append((rendered, lang))
         return tuple(out)
+
+    def rendered_queries(self) -> tuple[str, ...]:
+        """The queries, without their languages. One implementation, above."""
+        return tuple(query for query, _ in self.rendered_plan())
 
 
 @dataclass(frozen=True)

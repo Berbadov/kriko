@@ -29,10 +29,16 @@ router = APIRouter(prefix="/api", tags=["research"])
 #: this cost me" — so the sentence lives here, where the interface's words
 #: belong, beside the machine-readable value rather than instead of it.
 PLANE_WORDS = {
+    "harness": (
+        "Kriko runs your coding agent for you, headlessly, and files what it "
+        "finds. Costs nothing beyond the subscription you already pay for, "
+        "and needs the agent's command-line tool installed."
+    ),
     "agent": (
-        "Your coding agent does the reading, through the MCP server. Costs "
-        "nothing beyond the subscription you already pay for, and needs a "
-        "harness connected on the Wiring tab."
+        "You do the run yourself: Kriko writes the brief, your agent reads it "
+        "through the MCP server and files the findings back. Costs nothing "
+        "beyond your subscription, and needs a harness connected on the "
+        "Wiring tab."
     ),
     "api": (
         "Kriko searches and reads by itself, unattended. Costs money per run, "
@@ -54,24 +60,37 @@ def list_planes() -> dict:
     Returns no key and no hint. `/api/keys` is the only surface that describes
     what is stored, and even that one returns only a masked tail.
     """
+    from app.providers import harness as harness_mod
+    from app.providers.harness import HarnessResearcher
     from kriko.research import AgentResearcher, ApiResearcher
 
     ready = keys.ready()
+    installed = harness_mod.available()
     planes = []
-    for cls in (AgentResearcher, ApiResearcher):
-        planes.append(
-            {
-                "id": cls.name,
-                "cost_basis": cls.cost_basis,
-                "what": PLANE_WORDS.get(cls.name, ""),
-                # The agent plane's readiness is a *harness* question, which
-                # `/api/agent-targets` already answers and this must not
-                # second-guess; only the paid plane has a prerequisite this
-                # router can see.
-                "ready": ready if cls.name == "api" else True,
-                "needs_keys": cls.name == "api",
-            }
-        )
+    for cls in (HarnessResearcher, AgentResearcher, ApiResearcher):
+        row = {
+            "id": cls.name,
+            "cost_basis": cls.cost_basis,
+            "what": PLANE_WORDS.get(cls.name, ""),
+            # The `agent` plane's readiness is a *harness config* question,
+            # which `/api/agent-targets` already answers and this must not
+            # second-guess. The other two have a prerequisite this router can
+            # see: a key, or an executable on PATH.
+            "ready": True,
+            "needs_keys": cls.name == "api",
+        }
+        if cls.name == "api":
+            row["ready"] = ready
+        if cls.name == "harness":
+            row["ready"] = bool(installed)
+            # Named, not counted. "no coding-agent CLI found" is answerable
+            # only if the reader knows which names were looked for.
+            row["harnesses"] = [
+                {"id": h.id, "label": h.label, "command": h.executable}
+                for h in installed
+            ]
+            row["looked_for"] = [h.executable for h in harness_mod.KNOWN]
+        planes.append(row)
     return {"planes": planes}
 
 

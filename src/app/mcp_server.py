@@ -369,7 +369,12 @@ def weakest_claims(pack_id: str = "", limit: int = 20) -> list[dict]:
 
 
 @mcp.tool()
-def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict:
+def submit_findings(
+    subject_id: str,
+    pack_id: str,
+    findings: list[dict],
+    queries: list[str] | None = None,
+) -> dict:
     """Store what the agent read. Ungrounded and low-value findings are refused.
 
     Each finding needs: title, domain, severity, quote, source_url, and the
@@ -387,6 +392,12 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
     figure), or it is refused for having nothing to anchor it to a
     configuration.
 
+    Pass `queries` — the searches you actually ran to find this batch. The
+    brief's search list is a set of seeds you are expected to adapt to this
+    subject, its market and its language, so the pack can only learn which
+    shapes are worth seeding if you report the ones you chose. It changes
+    nothing about whether a finding is kept.
+
     Returns a per-finding verdict so the agent learns which of its quotes or
     claims did not survive, rather than discovering later that half its work
     vanished.
@@ -402,6 +413,7 @@ def submit_findings(subject_id: str, pack_id: str, findings: list[dict]) -> dict
         subject_id=subject_id,
         pack_id=pack_id,
         verdicts=verdicts,
+        queries=queries,
     )
     return verdicts
 

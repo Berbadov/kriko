@@ -52,6 +52,18 @@
 
     const costWord = (plane: ResearchPlane) =>
         plane.cost_basis === "subscription" ? "no marginal cost" : "costs per token";
+
+    /* Three planes now, and the names are the reader's question rather than
+     * the engine's word: "who does the reading". `harness` is the one that
+     * closes the loop — Kriko starts the agent itself — and it is first
+     * because it is the only free plane that produces claims without the
+     * reader going to a terminal. */
+    const NAMES: Record<string, string> = {
+        harness: "Run my agent",
+        agent: "I'll run it myself",
+        api: "Kriko itself",
+    };
+    const nameOf = (plane: ResearchPlane) => NAMES[plane.id] ?? plane.id;
 </script>
 
 <article class="card">
@@ -69,7 +81,7 @@
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
                         <div class="plane-head">
-                            <strong>{plane.id === "agent" ? "Your agent" : "Kriko itself"}</strong>
+                            <strong>{nameOf(plane)}</strong>
                             <!-- The engine's own word, printed as well as
                                  translated: `per_token` is what the code says
                                  and a reader who greps for it should find it
@@ -77,6 +89,13 @@
                             <span class="badge" title={plane.cost_basis}>{costWord(plane)}</span>
                         </div>
                         <p class="meta">{plane.what}</p>
+
+                        {#each (plane.harnesses ?? []).slice(0, 1) as found (found.id)}
+                            <p class="meta">
+                                Using <strong>{found.label}</strong>
+                                (<code>{found.command}</code>).
+                            </p>
+                        {/each}
 
                         {#if plane.ready}
                             <form
@@ -113,6 +132,16 @@
                                     moment the next request would go past it.
                                 </p>
                             {/if}
+                        {:else if plane.id === "harness"}
+                            <!-- The names, not a count: "no agent found" is
+                                 only actionable if the reader can see which
+                                 commands were looked for. -->
+                            <p class="meta">
+                                No coding-agent command line found on this
+                                machine. Looked for
+                                <code>{(plane.looked_for ?? []).join(", ")}</code>.
+                                Install one and this card turns on.
+                            </p>
                         {:else}
                             <p class="meta">
                                 Needs both keys before it can run.

@@ -494,6 +494,8 @@ export type Submission = {
         rejected?: { title: string; reason: string }[];
         error?: string;
     };
+    /** The searches this batch actually came from. Empty on an older row. */
+    queries?: string[];
 };
 
 export type Submissions = {
@@ -501,6 +503,8 @@ export type Submissions = {
     accepted: number;
     refused: number;
     reasons: { reason: string; count: number }[];
+    /** Which searches earn their place, best first. See `state.query_shapes`. */
+    shapes: { query: string; batches: number; accepted: number; refused: number }[];
 };
 
 // ── the knowledge pipeline ───────────────────────────────────────────────
@@ -601,9 +605,15 @@ export type ResearchPlane = {
     id: string;
     cost_basis: string;
     what: string;
-    /** Whether it can run *now*. False on the paid plane with no keys set. */
+    /** Whether it can run *now*. False on the paid plane with no keys set,
+     *  and on the harness plane with no coding-agent CLI installed. */
     ready: boolean;
     needs_keys: boolean;
+    /** The harness plane only: which coding-agent CLIs were found here. */
+    harnesses?: { id: string; label: string; command: string }[];
+    /** The harness plane only: the commands that were looked for, so a card
+     *  that cannot run names the thing to install. */
+    looked_for?: string[];
 };
 
 /** What `/api/keys` says about one provider — never the key itself.

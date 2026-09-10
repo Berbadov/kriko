@@ -6,6 +6,12 @@ license = "CC0-1.0"
 publisher = "kriko"
 origin = "https://github.com/kriko/kriko"
 
+# One language, said out loud. A pack that serves a single language still has
+# to declare it: "the pack never said" and "the pack says English" are
+# different facts, and only the second one lets an agent be told what to
+# search in. See backlog B94.
+languages = ["en"]
+
 # Every quote in this pack is synthetic and every URL points at the reserved
 # example.invalid domain. See README.md — this exists to falsify the pack
 # format, not to inform anyone about drills.

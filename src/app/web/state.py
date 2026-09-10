@@ -14,6 +14,7 @@ import json
 import re
 import secrets
 import sqlite3
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -184,7 +185,13 @@ CREATE TABLE IF NOT EXISTS submissions (
     pack_id       TEXT NOT NULL,
     accepted      INTEGER NOT NULL DEFAULT 0,
     refused       INTEGER NOT NULL DEFAULT 0,
-    verdicts_json TEXT NOT NULL
+    verdicts_json TEXT NOT NULL,
+    -- The searches that actually produced this batch (B95). Defaulted rather
+    -- than required because the column arrived after the table did, and
+    -- `add_missing_columns` can only add a column that has a default: an
+    -- older installation's rows stay readable and simply say nothing about
+    -- which queries they came from, which is the truth about them.
+    queries_json  TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
 
@@ -914,6 +921,7 @@ def record_submission(
     subject_id: str,
     pack_id: str,
     verdicts: dict,
+    queries: Sequence[str] | None = None,
 ) -> str:
     """Store one batch's outcome. Returns the row id.
 
@@ -927,7 +935,8 @@ def record_submission(
     submission_id = secrets.token_hex(8)
     conn.execute(
         "INSERT INTO submissions (submission_id, created_at, door, subject_id,"
-        " pack_id, accepted, refused, verdicts_json) VALUES (?,?,?,?,?,?,?,?)",
+        " pack_id, accepted, refused, verdicts_json, queries_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?)",
         (
             submission_id,
             _now(),
@@ -937,6 +946,7 @@ def record_submission(
             len(accepted),
             len(refused),
             json.dumps(verdicts, default=str),
+            json.dumps([str(query) for query in (queries or ())]),
         ),
     )
     conn.commit()
@@ -946,6 +956,7 @@ def record_submission(
 def _submission(row: sqlite3.Row) -> dict:
     out = dict(row)
     out["verdicts"] = json.loads(out.pop("verdicts_json") or "{}")
+    out["queries"] = json.loads(out.pop("queries_json", None) or "[]")
     return out
 
 
@@ -981,6 +992,37 @@ def refusal_reasons(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
     return [
         {"reason": reason, "count": count}
         for reason, count in sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
+def query_shapes(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
+    """Which searches produced kept findings, best first.
+
+    The pack's `research/templates.yaml` is a set of *seeds* an agent adapts
+    per subject and market, so the question an author actually has is not "what
+    did I write" but "what did searching that way get me". A batch's queries
+    are credited with everything that batch kept and everything it lost, which
+    is coarse — a run rarely ties one claim to one search — but it is the
+    honest granularity of what the submission door can know, and it is enough
+    to tell a shape that keeps nothing from one that keeps most of what it
+    finds.
+    """
+    tally: dict[str, list[int]] = {}
+    for row in conn.execute(
+        "SELECT queries_json, accepted, refused FROM submissions"
+        " ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (max(0, limit),),
+    ):
+        for query in json.loads(row["queries_json"] or "[]"):
+            seen = tally.setdefault(str(query), [0, 0, 0])
+            seen[0] += 1
+            seen[1] += int(row["accepted"] or 0)
+            seen[2] += int(row["refused"] or 0)
+    return [
+        {"query": query, "batches": runs, "accepted": kept, "refused": lost}
+        for query, (runs, kept, lost) in sorted(
+            tally.items(), key=lambda kv: (-kv[1][1], -kv[1][0], kv[0])
+        )
     ]
 
 
