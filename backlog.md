@@ -873,6 +873,178 @@ obvious, which is the product principle's open work (B36), not this item's.
 
 ---
 
+## P0 — the 0.5.3 reader audit *(2026-09-10)*
+
+The reader installed 0.5.3, pressed Research, and reported: *"research does
+nothing unfortunately. it says done but logs return nothing. plus the
+researches making turkish-english queries, agent should decide the queries,
+it's fixated on the car still. plus the pack building must be guided with
+agents. I see no token info, no usage info etc."*
+
+**The headline finding, kept here because it outlives the rows. Nothing on
+this machine can run an agent.** Kriko has exactly two research planes —
+`agent`, which gathers nothing by design (`kriko/research/agent.py:116`), and
+`api`, which spends money. `app/agentconfig.py` writes MCP config *into*
+harnesses so a harness can call Kriko; nothing anywhere calls a harness. So
+pressing Research can only ever render a brief and stop, and the job reports
+`succeeded / 0 claim(s) kept` for a run that structurally cannot do anything.
+That single missing direction is B92, and it is the cause of the reader's
+first, second and fifth complaints at once. Reproduced 2026-09-10 against a
+copy of the reader's own store: `state: succeeded`, `message: "0 claim(s)
+kept"`, log = seven `query:` lines and `gathered 0 document(s)`.
+
+Every row below names the gate that was absent, per the 1.0.0 audit's rule.
+
+### B92 — Nothing can run an agent, so Research is a no-op that reports success `[G5][G6]` — **P0**
+`kriko/research/__init__.py:24-29` offers `agent` and `api`. The default plane's
+`gather()` and `extract()` return `[]` (`kriko/research/agent.py:116,120`), so
+`app/web/tasks.py:288` logs `gathered 0 document(s)`, the extraction loop is
+skipped, and the accepted/refused log lines at `tasks.py:400,407` are never
+reached. `agenda_run` — documented at `tasks.py:449` as *"the answer to how do
+I build knowledge with my agents"* — calls `_research` inline per row, so the
+bulk button is a bulk no-op wearing a success badge.
+
+**The fix is a third plane that drives the harness the reader already pays
+for.** Verified feasible 2026-09-10: `claude -p` accepts `--mcp-config`,
+`--allowedTools` and `--output-format json`, which is a complete headless
+research loop — Kriko hands over the brief, the harness searches and calls
+`mcp__kriko__submit_findings` against this window's store, and the JSON reply
+carries usage and `total_cost_usd`. `opencode run` is the second target.
+Marginal cost stays zero because it is the reader's own subscription.
+
+**Proven end to end, 2026-09-10, against a copy of the reader's store.** One
+`claude -p "<the brief>" --mcp-config … --allowedTools "WebSearch,WebFetch,
+mcp__kriko__submit_findings,…" --output-format json` call, no human in it:
+6.4s, one turn, three findings submitted and all three accepted — a timing
+chain kit unobtainable in Turkey at 85,000 km, a GPF fault in cold weather, an
+emissions fault with power loss — store went from 699 claims to 702. The reply
+carried `usage` (input, output, cache) and `total_cost_usd`, which is B97's
+missing number arriving for free.
+
+Two things that run also settled. The agent **chose its own queries**: it
+reported using a Turkish complaint site and said the English sources conflated
+H4D with the turbo H4Dt, which is B95's inversion happening whether or not the
+brief permits it. And it applied the pack's principle unprompted — it dropped
+generic dashboard-light complaints, citing the rule. So the missing piece is
+the *plumbing*, not the judgement.
+
+Design constraints this must respect: the plane belongs in `app/` and not
+`kriko/`, because the engine owns no sockets and no subprocesses — same reason
+`app/providers/` exists for the paid plane. Discovery reuses
+`app/agentconfig.py`, which already knows which harnesses are on the machine.
+`--allowedTools` must be an explicit allowlist, because handing a coding agent
+`Bash` to research a car is a remote-code path with extra steps.
+
+**Absent gate:** nothing asserts that a plane which reports `succeeded` did
+something. A test should require that a research run ending in `succeeded`
+either accepted a finding, refused one, or logged why it could do neither —
+`0 claim(s) kept` with an empty document list is the state to fail on.
+
+### B93 — A run that gathers nothing must say what to do next `[G6]` — **P0**
+Independent of B92, and cheaper. On the agent plane the job log is seven query
+lines and `gathered 0 document(s)`; nothing tells the reader that this plane
+does not gather, that the brief is the output, where the brief is, or that
+*Agents → Connect* is the next step. `ui/src/routes/Jobs.svelte:275` renders
+the log only when the row is expanded, and an unexpanded succeeded row is
+indistinguishable from work having happened. `message` should name the plane's
+contract, the log should end with the brief's location and the next action, and
+a research job should link to its own brief.
+
+**Absent gate:** no test reads a completed job's log as the reader sees it.
+
+### B94 — Queries are half Turkish, and nothing declares a language `[G3][G6]` — **P0**
+`packs/cars/research/templates.yaml:7-8` hardcode `"{alias} arıza şikayet"` and
+`"{alias} yaygın arızalar"`. Substitution makes them worse than either language
+alone: `{alias}` renders the catalog's English label, so the query the reader
+saw was `Renault Clio V H4D 75 hp arıza şikayet` — not how anyone writes
+either language. `packs/drill/research/templates.yaml` is all English, so this
+is the cars pack's data, not the engine's.
+
+There is no language anywhere to fix it *with*: no `language` or `market` key in
+`pack.toml` or in `docs/PACK_CONTRACT.md`, none in `app/web/settings.py`, none
+in `plan_task` (`kriko/research/__init__.py:45`), none in the research request
+(`app/web/routers/jobs.py:32-40`). `kriko/lookup/query.py` already carries
+`lang: str = "en"` and `/analyze` passes it — research never does. So the
+market a pack serves is a fact stated only in `packs/cars/README.md:1`.
+
+**Absent gate:** the engine's domain-free test walks `kriko/` for car
+vocabulary; nothing walks a pack's `templates.yaml` for a language it never
+declared. A pack shipping queries in a language its manifest does not name
+should fail the pack contract test.
+
+### B95 — The agent is handed queries and given no authority over them `[G5][G6]` — **P1**
+The brief's section is *"Searches to run"* (`kriko/research/agent.py:55`) and
+the contract says *"Use the queries in the brief"*
+(`packs/cars/pipeline/agent/kriko_research.md:53`). There is no tool to add,
+replace or refine a query; `research_brief` returns them pre-rendered
+(`app/mcp_server.py:262`) and `ui/src/lib/Brief.svelte:122-144` is read-only.
+
+The reader's phrasing — *"agent should decide the queries"* — is the right
+inversion. A pack's templates are worth keeping as *seeds*: they encode what a
+category's failures are called, which is pack knowledge an agent does not have.
+What they should not be is the whole list. The brief should present them as a
+starting point, require the agent to adapt them to this subject and this
+market, and `submit_findings` should accept the queries actually run so a pack
+can learn which shapes produce findings and which return nothing.
+
+**Absent gate:** nothing asserts the brief permits what the contract permits;
+the two documents can disagree about the agent's latitude the same way they
+disagreed about tool names in B90.
+
+### B96 — An agent cannot author or grow a pack `[G5][G6]` — **P1**
+Scaffolding is reachable by a reader (`POST /api/packs/scaffold`,
+`ui/src/routes/Jobs.svelte:176`) and produces seven files
+(`kriko/pack/scaffold.py:221-269`). No MCP tool creates a pack, adds a subject,
+adds a claim, or edits vocabulary, principle or templates — the write surface
+is `submit_findings`, `install_pack`, `set_pack_enabled`. `app/agentskill.py`'s
+five steps are all research (`agentskill.py:46-53`), and
+`docs/superpowers/specs/2026-09-09-knowledge-building-design.md` never designed
+agent-guided authoring.
+
+So a new category still needs a person writing YAML, which the automation
+principle forbids in the data path, and the reader's *"pack building must be
+guided with agents"* is the same observation. The shape to design: an agent can
+propose a pack — identity keys, vocabulary, principle, seed templates and the
+first subjects — as a *draft* pack the reader installs or discards, with the
+pack contract test as the acceptance gate rather than a review step.
+
+**Absent gate:** nothing asserts that everything a reader can do to a pack, an
+agent can also do, or that the skill covers every write tool the server
+exposes.
+
+### B97 — The plane everyone uses reports no usage at all `[G2][G6]` — **P1**
+`research_runs` stores `budget_usd` and `spent_usd` (`app/web/state.py:325-349`)
+and `ResearchRuns.svelte:109-111` displays them — but only when `spent_usd` is
+not NULL, and the agent plane never sets it. `pipeline_runs.tokens` is the same
+shape (`state.py:211-237`): `tasks.py:357-359` reads `researcher.tokens_used`,
+which `AgentResearcher` does not have and `ApiResearcher` never sets, since it
+derives cost from tokens without storing them. So the paid plane reports money
+and no tokens, and the free plane reports neither.
+
+Missing beyond that: any aggregate — no total spend, no cost per claim, no
+forecast before a run. And `~/.kriko/logs/analyses.jsonl` is written on every
+analysis, its *path* shown in About (`About.svelte:78-86`), its contents never
+read by anything the reader can reach.
+
+B92 supplies the numbers for free: a harness run returns usage and
+`total_cost_usd`, so the $0 plane becomes the plane with the *best* accounting
+— what the subscription did on the reader's behalf, in tokens, at no marginal
+cost. `ApiResearcher` should store `tokens_used` alongside `spent`.
+
+**Absent gate:** no test asserts a completed run reports something in every
+metered column it can, or that a NULL means "this plane cannot count" rather
+than "this run was free".
+
+### B98 — Nothing runs unattended `[G5]` — **P2**
+`app/agenda.py` computes what is worth researching next and `agenda_run` walks
+it, but every run is a button press: no scheduler, no startup pass, no
+periodic agenda work anywhere in `src/app/`. G5 says Kriko runs unattended and
+today it runs when watched. Sequenced after B92 — a scheduler driving a no-op
+is worse than no scheduler, because it would fill the runs table with
+successful nothing.
+
+**Absent gate:** none possible until there is something to schedule.
+
 ## P0 — the 1.0.0 release audit *(2026-09-08)*
 
 The full assessment, with the finding-by-finding reasoning, the seven-phase
