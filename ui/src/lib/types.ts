@@ -614,6 +614,10 @@ export type ResearchPlane = {
     /** The harness plane only: the commands that were looked for, so a card
      *  that cannot run names the thing to install. */
     looked_for?: string[];
+    /** Found on this machine and deliberately not driven, each with the
+     *  reason. "My agent is installed, why isn't Kriko using it" is a fair
+     *  question, and silence is not an answer to it. */
+    unusable?: { id: string; label: string; command: string; why: string }[];
 };
 
 /** What `/api/keys` says about one provider — never the key itself.

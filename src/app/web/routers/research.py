@@ -92,8 +92,22 @@ def list_planes() -> dict:
                 for h in installed
             ]
             row["looked_for"] = [h.executable for h in harness_mod.KNOWN]
+            # Installed, found, and deliberately not driven — with the reason.
+            # "My opencode is installed, why isn't Kriko using it" is a fair
+            # question and silence is not an answer to it: `opencode run` has
+            # no flag that restricts which tools the agent may use, and the
+            # allowlist is the reason this plane is allowed to exist.
+            row["unusable"] = [
+                {"id": h.id, "label": h.label, "command": h.executable,
+                 "why": h.unusable}
+                for h in harness_mod.found_but_unusable()
+            ]
         planes.append(row)
-    return {"planes": planes}
+    # The plane an unnamed run resolves to on this machine, so the screen can
+    # mark it rather than making the reader guess which button is the default.
+    from app.web.tasks import default_backend
+
+    return {"planes": planes, "default": default_backend()}
 
 
 class AgendaRunRequest(BaseModel):
@@ -101,9 +115,13 @@ class AgendaRunRequest(BaseModel):
     #: pressed by somebody who is not watching.
     rows: int = Field(10, ge=1, le=100)
     pack_id: str | None = None
-    #: `agent` again, and for the third time in this codebase deliberately: the
-    #: unattended door is the *last* place a default should start spending.
-    backend: str = "agent"
+    #: Empty means "the best free plane that can actually gather" —
+    #: `tasks.default_backend()`, resolved at run time rather than frozen
+    #: here, because whether a coding-agent CLI is installed is a fact about
+    #: the machine and can change between two presses of the button. The
+    #: unattended door is still the last place a default should start
+    #: *spending*: `api` is never chosen by omission.
+    backend: str = ""
     #: The ceiling for the whole run, not per row. Zero on the `api` plane is
     #: replaced by `tasks.DEFAULT_AGENDA_BUDGET_USD` rather than meaning
     #: unlimited — see the note there.

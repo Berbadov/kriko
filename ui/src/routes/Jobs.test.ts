@@ -128,62 +128,60 @@ describe("Jobs", () => {
         expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     });
 
-    it("starts a pack from nothing and hands the directory to the builder", async () => {
+    it("starts a whole pack from a category and one press", async () => {
         const fetchMock = stub({
             "/api/jobs": { items: [] },
-            "/api/packs/scaffold": { root: "packs/mine", files: ["packs/mine/pack.toml"] },
+            "/api/packs/author": { job_id: "j3", kind: "pack_author" },
+            "/api/jobs/j3": {
+                ...JOB,
+                job_id: "j3",
+                kind: "pack_author",
+                params: { category: "cordless drills" },
+                state: "running",
+                done: false,
+                message: "Claude Code is reading up on cordless drills",
+            },
         });
         render(Jobs);
-        await fireEvent.click(await screen.findByText("Start a new pack"));
-        await fireEvent.input(screen.getByLabelText("Directory to create it in"), {
-            target: { value: "packs/mine" },
+        await screen.findByText("No runs yet");
+        await fireEvent.click(screen.getByText("Start a new pack"));
+        await fireEvent.input(screen.getByLabelText("What is the category?"), {
+            target: { value: "cordless drills" },
         });
-        await fireEvent.input(screen.getByLabelText("Pack id"), {
-            target: { value: "org.example.mine" },
-        });
-        await fireEvent.input(screen.getByLabelText("Name"), {
-            target: { value: "Mine" },
-        });
-        await fireEvent.input(
-            screen.getByLabelText(/Identity keys/),
-            { target: { value: "product: brand, series" } },
+        await fireEvent.click(
+            screen.getByRole("button", { name: "Have my agent write it" }),
         );
-        await fireEvent.click(screen.getByRole("button", { name: "Write the skeleton" }));
         await waitFor(() => {
             const call = fetchMock.mock.calls.find(([path]) =>
-                String(path).includes("/api/packs/scaffold"),
+                String(path).includes("/api/packs/author"),
             );
             expect(call).toBeTruthy();
-            // The identity table travels as the author's own shape — kind to
-            // keys — because a fixed set of fields here would be the app
-            // deciding what things are like.
-            expect(JSON.parse(String(call![1]?.body)).identity).toEqual({
-                product: ["brand", "series"],
+            // One field on the wire. Everything the old form asked for — an
+            // id, a name, an identity table — is category knowledge the agent
+            // decides, and a reader who has not read the category cannot.
+            expect(JSON.parse(String(call![1]?.body))).toEqual({
+                category: "cordless drills",
             });
         });
-        // And the path is already in the build field: retyping what they just
-        // gave us would be the app forgetting on purpose.
+        // The row is on screen and named as what it is, not as a build: this
+        // run installs nothing.
+        expect(await screen.findByText("New pack")).toBeInTheDocument();
+        expect(screen.getByText("cordless drills")).toBeInTheDocument();
         expect(
-            screen.getByLabelText("Build a pack from a directory"),
-        ).toHaveValue("packs/mine");
+            await screen.findByText(/reading up on cordless drills/),
+        ).toBeInTheDocument();
     });
 
-    it("will not write a skeleton with no identity keys", async () => {
+    it("will not start an agent with no category to read about", async () => {
         stub({ "/api/jobs": { items: [] } });
         render(Jobs);
         await fireEvent.click(await screen.findByText("Start a new pack"));
-        await fireEvent.input(screen.getByLabelText("Directory to create it in"), {
-            target: { value: "packs/mine" },
-        });
-        await fireEvent.input(screen.getByLabelText("Pack id"), {
-            target: { value: "org.example.mine" },
-        });
-        await fireEvent.input(screen.getByLabelText("Name"), {
-            target: { value: "Mine" },
-        });
-        // The contract refuses it too, much later — better to refuse the press
-        // than to write a directory that cannot install.
-        expect(screen.getByRole("button", { name: "Write the skeleton" })).toBeDisabled();
+        // The one thing the reader does have to say. The handler refuses it
+        // too, but a press that starts a job in order to fail it is worse
+        // than a button that waits.
+        expect(
+            screen.getByRole("button", { name: "Have my agent write it" }),
+        ).toBeDisabled();
     });
 
     it("explains an empty run list, and points at where runs come from", async () => {

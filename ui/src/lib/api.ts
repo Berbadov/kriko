@@ -130,6 +130,16 @@ export const api = {
     /** Write a new pack's skeleton to disk. Installs nothing — building is a job. */
     scaffoldPack: (body: T.NewPack) =>
         postJson<{ root: string; files: string[] }>("/api/packs/scaffold", body),
+    /** Have the reader's own coding agent write a whole pack from a category.
+     *
+     * One argument, because the rest — the id, the name, the identity table,
+     * the bar, the searches — is category knowledge, and an agent that has
+     * read the category decides it better than a reader who has not. A job
+     * rather than a request: it spawns an agent that searches for minutes, and
+     * the reply is worth outliving the page. Installs nothing.
+     */
+    authorPack: (category: string) =>
+        postJson<{ job_id: string; kind: string }>("/api/packs/author", { category }),
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
@@ -202,7 +212,14 @@ export const api = {
         postJson<{ job_id: string; kind: string }>("/api/research", body),
     /** Which planes exist and what each costs. Server-side vocabulary — see
      *  the router's docstring for why it is not restated here. */
-    researchPlanes: () => get<{ planes: T.ResearchPlane[] }>("/api/research-planes"),
+    /** The planes, plus which one an unnamed run resolves to on this machine.
+     *
+     * `default` is resolved server-side at request time rather than assumed
+     * here: whether a coding-agent CLI is installed is a fact about the
+     * machine, and a frontend that guessed it would eventually mark the wrong
+     * card. */
+    researchPlanes: () =>
+        get<{ planes: T.ResearchPlane[]; default?: string }>("/api/research-planes"),
     /** Walk the agenda unattended. One job for the whole run: `agenda_run`
      *  calls the research path inline, because the job runner has a single
      *  worker and a job that submits jobs deadlocks. */

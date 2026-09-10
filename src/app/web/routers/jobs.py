@@ -32,10 +32,17 @@ POLL_SECONDS = 0.5
 class ResearchRequest(BaseModel):
     subject_id: str
     pack_id: str | None = None
-    #: `agent` is the $0 plane and stays the default here for the same reason
-    #: it is the default in `kriko.research.get_researcher`: a button that
-    #: quietly starts spending money is a button people stop pressing.
-    backend: str = "agent"
+    #: Empty means `tasks.default_backend()`: the best plane that is free
+    #: *and* can actually gather. It was `agent`, which gathers nothing by
+    #: design, so on a machine with a coding-agent CLI installed the Research
+    #: button rendered a brief and reported success — the reader's "run
+    #: nothing again". Resolved at run time, because whether a CLI is
+    #: installed is a fact about the machine, not about this schema.
+    #:
+    #: The rule that survives unchanged: a button that quietly starts
+    #: *spending money* is a button people stop pressing. `api` is still
+    #: never chosen by omission.
+    backend: str = ""
     budget_usd: float = 0.0
     max_documents: int = Field(5, ge=1, le=50)
 
@@ -45,6 +52,22 @@ class UpdateRequest(BaseModel):
     #: pack is the exception, not the shape of the operation.
     pack_id: str | None = None
     index_url: str | None = None
+
+
+class AuthorRequest(BaseModel):
+    """One field, on purpose. (D4)
+
+    The screen this replaces asked for a directory, a pack id, a name and an
+    identity table. Three of those four are things an agent that has read the
+    category can decide better than a reader who has not, and the fourth — the
+    directory — is derived from the pack id rather than accepted, because an
+    agent that could name a directory would eventually name one `../../`.
+    """
+    category: str = Field(min_length=2, max_length=200)
+    #: Which installed CLI, when there is more than one. Empty means the first
+    #: one Kriko can both start and sandbox.
+    harness: str = ""
+    timeout_seconds: float = 0.0
 
 
 class BuildRequest(BaseModel):
@@ -64,6 +87,17 @@ def _submit(runner, kind: str, params: dict) -> dict:
 @router.post("/research")
 def start_research(body: ResearchRequest, runner=Depends(get_jobs)):
     return _submit(runner, "research", body.model_dump())
+
+
+@router.post("/packs/author")
+def start_author(body: AuthorRequest, runner=Depends(get_jobs)):
+    """Have the reader's own coding agent write a whole pack. Installs nothing.
+
+    A job rather than a request because it spawns an agent that will search the
+    web for a few minutes, and because the reply is worth outliving the page:
+    the log holds what the agent said even when what it said was not a pack.
+    """
+    return _submit(runner, "pack_author", body.model_dump())
 
 
 @router.post("/packs/build")

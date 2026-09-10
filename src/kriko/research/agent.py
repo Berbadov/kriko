@@ -50,7 +50,24 @@ class AgentResearcher:
         if task.languages:
             lines.append(f"- pack languages: {', '.join(task.languages)}")
 
-        lines += ["", "## What makes a claim worth keeping", ""]
+        # Whose bar this is, said rather than implied. (D5) The reader read
+        # the cars pack's four bullets — "this engine code, this gearbox
+        # type" — as Kriko's own taste and reported the section as "still car
+        # fixated". It is not the engine's: `research/principle.md` is pack
+        # data, quoted verbatim, and a pack for a different category ships a
+        # different bar (`packs/drill/` does, and the scaffold's placeholder
+        # is generic). But a heading that names no owner invites exactly that
+        # reading, and the fix is one line here rather than an explanation
+        # nobody will be given at the moment they need it.
+        lines += [
+            "",
+            f"## What makes a claim worth keeping — the `{task.pack_id}` pack's bar",
+            "",
+            f"Set by the pack, not by Kriko: this is `{task.pack_id}`'s own "
+            "`research/principle.md`, quoted as written. Another category's "
+            "pack states a different bar, and it is the pack's to change.",
+            "",
+        ]
         lines.append(task.value_principle.strip() or
                      "(this pack ships no value principle — keep only claims "
                      "specific to this subject and predictable without inspecting it)")
@@ -158,12 +175,13 @@ class AgentResearcher:
             "a coverage finding; a plausible-looking invented one is a defect "
             "that will outlive you in the pack.",
         ]
-        if task.search_aliases:
+        widening = tuple(task.search_aliases) + tuple(task.search_names)
+        if widening:
             lines += ["",
                       "Aliases below may be used to WIDEN a search. They must "
                       "never be used to attribute a claim, because they are "
                       "shared with sibling products: "
-                      + ", ".join(task.search_aliases)]
+                      + ", ".join(widening)]
         return "\n".join(lines)
 
     def gather(self, task: ResearchTask) -> list[Document]:

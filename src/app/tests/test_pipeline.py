@@ -486,7 +486,12 @@ def test_a_real_research_run_writes_its_four_stages(client, tmp_path):
     conn.commit()
     conn.close()
 
-    job_id = client.post("/api/research", json={"subject_id": "s1"}).json()["job_id"]
+    # `backend` named rather than left to the default: an unnamed plane now
+    # resolves to whichever one this machine can gather with, and this test is
+    # about what the $0 plane records.
+    job_id = client.post(
+        "/api/research", json={"subject_id": "s1", "backend": "agent"}
+    ).json()["job_id"]
     row = _wait(client, job_id)
     assert row["state"] == "succeeded", row
 

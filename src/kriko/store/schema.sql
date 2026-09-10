@@ -98,12 +98,24 @@ CREATE INDEX IF NOT EXISTS idx_subjects_kind ON subjects(kind);
 -- Tiered aliases: `attribution_safe` may be used to attribute evidence to this
 -- subject; `search_only` may only widen a search query. Collapsing the two tiers
 -- was design-flaw 3 — a search alias was allowed to attribute a claim.
+--
+-- `search_name` is the third tier and the narrowest: a complete phrase somebody
+-- would type into a search box for exactly this subject. It attributes nothing
+-- either, and it differs from `search_only` in being a whole name rather than a
+-- fragment — `Volkswagen Golf 1.5 TSI` against `LXT`. Query templates render
+-- these where a pack ships them and the display label where it does not,
+-- because a display label carries whatever tells two rows apart in a list and
+-- that is not the same string as one a person types: this pack's produced
+-- `Volkswagen Golf 1.5_TSI 150 hp common problems`, which nobody has searched
+-- for. A fragment must not become a query subject on its own (`LXT common
+-- problems` is a worse search than the label), which is why this is a tier and
+-- not a reuse of the one next to it.
 CREATE TABLE IF NOT EXISTS subject_aliases (
   subject_id TEXT NOT NULL,
   pack_id    TEXT NOT NULL,
   alias      TEXT NOT NULL,
   lang       TEXT NOT NULL DEFAULT '',
-  tier       TEXT NOT NULL DEFAULT 'attribution_safe',  -- attribution_safe|search_only
+  tier       TEXT NOT NULL DEFAULT 'attribution_safe',  -- attribution_safe|search_only|search_name
   PRIMARY KEY (subject_id, pack_id, alias, lang)
 );
 

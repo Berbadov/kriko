@@ -873,6 +873,30 @@ obvious, which is the product principle's open work (B36), not this item's.
 
 ---
 
+## The 0.6.0 reader report *(2026-09-10)* — **all five closed, 0.7.0**
+
+The reader installed 0.6.0 and reported: *"run nothing again… did nothing
+again, am i doing simething wrong, package bulding still expects user raw input
+to create which i said many times, its gotta be automated with agents man…
+this section is still car fixated. bro please fix this completely and make
+agent usage very easy and fast I beg… queries are still fucked up."*
+
+- **B99** — the harness never received the prompt (`--allowedTools` is
+  variadic and ate the brief). Closed: stdin. → `done.md`
+- **B100** — Research defaulted to the plane that fetches nothing. Closed:
+  `default_backend()` resolves to `harness`, and the screen marks it. → `done.md`
+- **B101** — queries were display labels, not searches. Closed: the
+  `search_name` alias tier, narrowest-first, capped. → `done.md`
+- **B102** — pack authoring still asked for raw input. Closed:
+  `app/packauthor.py`, one category field. → `done.md`
+- **B103** — the claim bar did not say whose bar it was. Closed: the brief's
+  heading names the pack. → `done.md`
+
+Verified against the reader's own `claude`: three documents, five
+config-specific claims on a Golf VII EA211 DQ200.
+
+---
+
 ## The 0.5.3 reader audit *(2026-09-10)* — **all seven closed, 0.6.0**
 
 The reader installed 0.5.3, pressed Research, and reported: *"research does

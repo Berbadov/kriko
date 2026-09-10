@@ -58,6 +58,31 @@ DEFAULT_PRICE_PER_CALL = 0.01
 DEFAULT_BUDGET_USD = 0.20
 
 
+def default_backend() -> str:
+    """The plane a run gets when the caller names none.
+
+    It used to be `agent` unconditionally, and `agent` fetches nothing by
+    design — it writes a brief for somebody else to read. On a machine with a
+    coding-agent CLI installed that made pressing **Research** produce a brief
+    and a `succeeded / 0 claim(s) kept`, which is the second time the reader
+    reported the same experience: "run nothing again".
+
+    So: the best plane that is free *and* can actually gather. `harness` when
+    a CLI is on PATH, `agent` otherwise. `api` is still never chosen by
+    omission — a tool that starts spending money because a key happened to be
+    in the environment is a tool people stop trusting, and that reasoning was
+    always about the paid plane rather than about defaulting to a no-op.
+    """
+    try:
+        from app.providers import harness
+
+        if harness.available():
+            return "harness"
+    except Exception:  # noqa: BLE001 - a missing CLI must never fail a run
+        pass
+    return "agent"
+
+
 def _researcher(params: dict):
     """The plane this run asked for, wired to whatever it needs.
 
@@ -66,7 +91,7 @@ def _researcher(params: dict):
     three callables, and `app/providers/` is where the sockets live — the
     engine owns none, so `kriko.research` could never have built this itself.
     """
-    backend = str(params.get("backend") or "agent").lower()
+    backend = str(params.get("backend") or default_backend()).lower()
     if backend == "harness":
         # Same reason as the paid plane below, one layer out: this one spawns a
         # process, and `kriko/` owns no subprocesses any more than it owns
@@ -92,7 +117,7 @@ def _budget(params: dict) -> float:
     uncapped by omission.
     """
     named = float(params.get("budget_usd") or 0.0)
-    if str(params.get("backend") or "agent").lower() != "api":
+    if str(params.get("backend") or default_backend()).lower() != "api":
         return named
     return named if named > 0 else DEFAULT_BUDGET_USD
 
@@ -602,7 +627,7 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
     from app import agenda as agenda_module
 
     limit = max(1, int(params.get("rows") or DEFAULT_AGENDA_ROWS))
-    backend = str(params.get("backend") or "agent").lower()
+    backend = str(params.get("backend") or default_backend()).lower()
     ceiling = float(params.get("budget_usd") or 0.0)
     if backend == "api" and ceiling <= 0:
         ceiling = DEFAULT_AGENDA_BUDGET_USD
@@ -1060,10 +1085,87 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
     return {"index_url": index_url, "updated": updated, "skipped": len(rows) - len(updated)}
 
 
+def pack_author(settings, params: dict, progress: Progress) -> dict:
+    """Author a whole pack from a category named in plain words. (D4)
+
+    The reader has asked for this three times, most recently as "package
+    bulding still expects user raw input to create which i said many times,
+    its gotta be automated with agents man". They were describing
+    `POST /api/packs/scaffold`, which asked for a directory, a pack id, a name
+    and an identity table before it would write anything — and the identity
+    table is a decision nobody can make about a category they have not read.
+
+    So this is one field and one press. Everything that makes it safe is
+    already built: the spawn is the research plane's (`app/providers/
+    harness.py` — same allowlist, neutral working directory, no
+    `--mcp-config`), and every file is written through `app/packdraft.py`,
+    which confines the directory, fixes the set of names, refuses anything
+    executable and caps the sizes. The agent proposes data; Kriko writes it;
+    the reader installs it. Three steps, three different authorities.
+
+    Nothing is installed here. `POST /api/packs/drafts/{slug}/install` is the
+    reader's press, on a screen that lists what the agent wrote.
+    """
+    from app import packauthor
+    from app.providers import harness, harness_researcher
+
+    category = str(params.get("category") or "").strip()
+    if not category:
+        raise ValueError(
+            "name the category in a few words — 'cordless drills', 'espresso "
+            "machines'. It is the only thing an agent cannot infer")
+
+    if not harness.available():
+        # Said in full rather than as "no harness": a reader whose opencode is
+        # installed deserves to know why it is not being driven, and a reader
+        # with neither deserves the other door rather than a dead end.
+        blocked = "; ".join(one.unusable for one in harness.found_but_unusable())
+        raise ValueError(
+            "no coding-agent CLI on PATH, so Kriko cannot author a pack by "
+            "itself. Install Claude Code, or hand the brief to your own agent "
+            "through the MCP server (Agents → Connect) and let it use "
+            "`draft_pack`."
+            + (f" Found but not usable: {blocked}." if blocked else ""))
+
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        timeout=float(params.get("timeout_seconds") or 0.0),
+    )
+    progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
+    progress.log(f"category: {category}")
+
+    reply = researcher.ask(packauthor.brief(category))
+    progress.set(0.7, "writing the draft")
+    # The reply is kept in the log whatever happens next: an agent that read
+    # the category well and printed a malformed object has produced work worth
+    # seeing, and a refusal that throws the text away is a refusal nobody can
+    # act on.
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+
+    try:
+        written = packauthor.author(settings.store_path, reply, category=category)
+    except packauthor.PackRefused as exc:
+        raise ValueError(f"the agent did not produce a usable pack: {exc}") from exc
+
+    for name in written["files"]:
+        progress.log(f"wrote {name}")
+    if written["notes"]:
+        progress.log(f"the author noted: {written['notes']}")
+    progress.set(
+        1.0,
+        f"drafted {written['pack_id']} — {written['subjects']} subject(s), "
+        f"{written['claims']} claim(s). Nothing is installed yet: read it on "
+        f"Knowledge and press Install."
+    )
+    written["category"] = category
+    return written
+
+
 HANDLERS = {
     "research": research,
     "agenda_run": agenda_run,
     "research_undo": research_undo,
     "pack_build": pack_build,
+    "pack_author": pack_author,
     "pack_update": pack_update,
 }

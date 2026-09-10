@@ -264,8 +264,15 @@ def test_the_unattended_door_defaults_to_the_plane_that_costs_nothing():
     """Third time in this codebase, deliberately: the door pressed by somebody
     who is not watching is the last place a default should start spending."""
     from app.web.routers.research import AgendaRunRequest
+    from app.web.tasks import default_backend
 
-    assert AgendaRunRequest().backend == "agent"
+    # Empty, not "agent": whether a coding-agent CLI is on PATH is a fact about
+    # the machine at run time, not one this schema can freeze. What the door
+    # must guarantee is that the resolved plane never *spends* — and the reason
+    # it no longer resolves to `agent` by default is that `agent` gathers
+    # nothing itself, which the reader met twice as "run nothing again".
+    assert AgendaRunRequest().backend == ""
+    assert default_backend() in {"harness", "agent"}
     assert AgendaRunRequest().budget_usd == 0.0
 
 
@@ -396,7 +403,13 @@ def test_a_real_agenda_run_ends_up_in_the_run_list(tmp_path):
     """
     _seed(tmp_path, subjects=("s1", "s2"))
     with TestClient(create_app(_settings(tmp_path))) as client:
-        job_id = client.post("/api/agenda/run", json={"rows": 2}).json()["job_id"]
+        job_id = client.post(
+                "/api/agenda/run",
+                # Named, not defaulted: an unnamed plane now resolves to
+                # whichever one this machine can actually gather with, and this
+                # test is about the loop rather than about a gatherer.
+                json={"rows": 2, "backend": "agent"},
+            ).json()["job_id"]
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             row = client.get(f"/api/jobs/{job_id}").json()
