@@ -293,6 +293,16 @@ itself through Tauri's minisign-signed updater, configured at build time by
 `packaging/configure_updater.py` so a tree with no signing key still builds.
 Checking is a request; installing is a job.
 
+**And the installer carries the first-party packs**, because until 0.7.1 it
+carried none: a fresh install opened onto an empty engine, and — worse — a
+defect whose fix lives in a pack's *rows* could not be delivered by any release
+at all. `app/bundledpacks.py` seeds at startup under three rules (missing gets
+installed; newer gets installed and older never does; a failure here is never
+why the app will not start), reading each artifact's identity out of the
+`.kpack`'s own `packs` row rather than from its file name. Which packs the build
+carries is discovered from `packs/*/pack.toml` by
+`packaging/build_packs.py`, so a third one ships by existing.
+
 If a module needs something from the layer above, it is in the wrong layer — move
 the module, don't add the import. New pipeline drivers belong in `app/pipeline/`; new
 interfaces in `app/`; anything category-specific in `packs/<category>/`. See
