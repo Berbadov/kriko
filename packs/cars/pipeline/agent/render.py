@@ -44,10 +44,21 @@ MCP_TOOLS = (
     "get_subject",
     "lookup",
     "research_brief",
+    "research_agenda",
+    "subject_health",
+    "weakest_claims",
     "coverage_gaps",
     "submit_findings",
     "install_pack",
     "set_pack_enabled",
+    # Authoring (B96). A category nobody has modelled has no principle and no
+    # searches, so there is nothing to research into until a pack exists —
+    # and an agent that can only submit findings cannot get one started.
+    # Data-only and installs nothing; the boundary is app/packdraft.py.
+    "draft_pack",
+    "write_draft_file",
+    "build_draft",
+    "list_pack_drafts",
 )
 
 

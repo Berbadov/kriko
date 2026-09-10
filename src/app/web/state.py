@@ -14,6 +14,7 @@ import json
 import re
 import secrets
 import sqlite3
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -184,7 +185,13 @@ CREATE TABLE IF NOT EXISTS submissions (
     pack_id       TEXT NOT NULL,
     accepted      INTEGER NOT NULL DEFAULT 0,
     refused       INTEGER NOT NULL DEFAULT 0,
-    verdicts_json TEXT NOT NULL
+    verdicts_json TEXT NOT NULL,
+    -- The searches that actually produced this batch (B95). Defaulted rather
+    -- than required because the column arrived after the table did, and
+    -- `add_missing_columns` can only add a column that has a default: an
+    -- older installation's rows stay readable and simply say nothing about
+    -- which queries they came from, which is the truth about them.
+    queries_json  TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS submissions_created ON submissions (created_at DESC);
 
@@ -340,6 +347,14 @@ CREATE TABLE IF NOT EXISTS research_runs (
     -- ceiling and a run that finished under it look identical without the pair.
     budget_usd      REAL,
     spent_usd       REAL,
+    -- Tokens, when the plane can count them, and NULL when it cannot — the
+    -- same distinction `spent_usd` keeps, for the same reason. Dollars and
+    -- tokens are separate measurements rather than one derived from the
+    -- other: the harness plane knows its tokens and costs the reader nothing
+    -- beyond a subscription, and a per-call price knows its dollars without
+    -- ever seeing a token. Added after the table existed, so it has no NOT
+    -- NULL and no default: see `add_missing_columns`.
+    tokens_used     INTEGER,
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     -- done | cancelled | budget | failed. `budget` is deliberately not
@@ -914,6 +929,7 @@ def record_submission(
     subject_id: str,
     pack_id: str,
     verdicts: dict,
+    queries: Sequence[str] | None = None,
 ) -> str:
     """Store one batch's outcome. Returns the row id.
 
@@ -927,7 +943,8 @@ def record_submission(
     submission_id = secrets.token_hex(8)
     conn.execute(
         "INSERT INTO submissions (submission_id, created_at, door, subject_id,"
-        " pack_id, accepted, refused, verdicts_json) VALUES (?,?,?,?,?,?,?,?)",
+        " pack_id, accepted, refused, verdicts_json, queries_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?)",
         (
             submission_id,
             _now(),
@@ -937,6 +954,7 @@ def record_submission(
             len(accepted),
             len(refused),
             json.dumps(verdicts, default=str),
+            json.dumps([str(query) for query in (queries or ())]),
         ),
     )
     conn.commit()
@@ -946,6 +964,7 @@ def record_submission(
 def _submission(row: sqlite3.Row) -> dict:
     out = dict(row)
     out["verdicts"] = json.loads(out.pop("verdicts_json") or "{}")
+    out["queries"] = json.loads(out.pop("queries_json", None) or "[]")
     return out
 
 
@@ -981,6 +1000,37 @@ def refusal_reasons(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
     return [
         {"reason": reason, "count": count}
         for reason, count in sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
+def query_shapes(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
+    """Which searches produced kept findings, best first.
+
+    The pack's `research/templates.yaml` is a set of *seeds* an agent adapts
+    per subject and market, so the question an author actually has is not "what
+    did I write" but "what did searching that way get me". A batch's queries
+    are credited with everything that batch kept and everything it lost, which
+    is coarse — a run rarely ties one claim to one search — but it is the
+    honest granularity of what the submission door can know, and it is enough
+    to tell a shape that keeps nothing from one that keeps most of what it
+    finds.
+    """
+    tally: dict[str, list[int]] = {}
+    for row in conn.execute(
+        "SELECT queries_json, accepted, refused FROM submissions"
+        " ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (max(0, limit),),
+    ):
+        for query in json.loads(row["queries_json"] or "[]"):
+            seen = tally.setdefault(str(query), [0, 0, 0])
+            seen[0] += 1
+            seen[1] += int(row["accepted"] or 0)
+            seen[2] += int(row["refused"] or 0)
+    return [
+        {"query": query, "batches": runs, "accepted": kept, "refused": lost}
+        for query, (runs, kept, lost) in sorted(
+            tally.items(), key=lambda kv: (-kv[1][1], -kv[1][0], kv[0])
+        )
     ]
 
 
@@ -1129,6 +1179,20 @@ def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
         (max(0, limit),),
     ).fetchall()
     return [_job(row) for row in rows]
+
+
+def work_in_flight(conn: sqlite3.Connection) -> int:
+    """How many jobs are queued or running right now.
+
+    Exists for the scheduler (B98). The job runner has a single worker, so an
+    unattended tick that submitted while something was already in flight would
+    not run in parallel — it would *queue behind it*, and a timer that queues
+    faster than the worker drains builds a backlog nobody asked for. The tick
+    therefore asks first and skips.
+    """
+    return conn.execute(
+        "SELECT COUNT(*) FROM jobs WHERE state IN (?, ?)", (QUEUED, RUNNING)
+    ).fetchone()[0]
 
 
 def interrupt_running(conn: sqlite3.Connection) -> int:
@@ -1372,12 +1436,23 @@ def open_research_run(
 
 
 def close_research_run(
-    conn: sqlite3.Connection, run_id: str, outcome: str, spent_usd: float | None = None
+    conn: sqlite3.Connection,
+    run_id: str,
+    outcome: str,
+    spent_usd: float | None = None,
+    tokens_used: int | None = None,
 ) -> None:
+    """What it cost, on the way out — both currencies, both optional.
+
+    `COALESCE` on each, so a caller that knows one and not the other cannot
+    erase the one already written. A plane that counts neither leaves both
+    NULL for the row's whole life, which is the truthful record of a run
+    nobody metered.
+    """
     conn.execute(
         "UPDATE research_runs SET outcome = ?, spent_usd = COALESCE(?, spent_usd),"
-        " ended_at = ? WHERE run_id = ?",
-        (outcome, spent_usd, _now(), run_id),
+        " tokens_used = COALESCE(?, tokens_used), ended_at = ? WHERE run_id = ?",
+        (outcome, spent_usd, tokens_used, _now(), run_id),
     )
     conn.commit()
 
@@ -1416,6 +1491,7 @@ def _research_run(row: sqlite3.Row) -> dict:
         "search_provider": row["search_provider"],
         "budget_usd": row["budget_usd"],
         "spent_usd": row["spent_usd"],
+        "tokens_used": row["tokens_used"],
         "started_at": row["started_at"],
         "ended_at": row["ended_at"] or "",
         "outcome": row["outcome"],
@@ -1443,6 +1519,78 @@ def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
             (limit,),
         )
     ]
+
+
+#: The columns a run can be metered in, and the plain-language answer to
+#: "why is this one empty". Kept beside the aggregate rather than in the
+#: interface, because whether a column *can* be filled is a fact about the
+#: plane and not a rendering choice — a screen that invented the sentence
+#: would drift from the schema the first time a plane learned to count.
+METERED = ("spent_usd", "tokens_used")
+
+
+def usage_totals(conn: sqlite3.Connection) -> dict:
+    """What every run has cost, together, and what that buys per claim.
+
+    The per-run rows have always said what one run spent. Nobody could ask the
+    only question a reader actually has — *what has this cost me so far, and
+    is it worth it* — because that answer is a sum, and there was nowhere to
+    read a sum from.
+
+    Two habits from the per-run column carry over, and both are about the
+    difference between zero and unknown:
+
+    * `runs` and `metered_runs` are both reported. A total of $0.14 over two
+      hundred runs means something very different depending on whether two of
+      them were counted or all two hundred were, and a lone total cannot say
+      which.
+    * `cost_per_claim` is None rather than 0.0 whenever the numerator is
+      unmeasured or the denominator is zero. A cost-per-claim of "$0.00" on an
+      installation that has never metered anything is a lie with a decimal
+      point on it, and it is the number a reader would quote.
+
+    `claims` counts what the runs still own — an undone run has given its
+    claims back, and the cost of a run whose claims are gone is a sunk cost
+    rather than a cheaper claim.
+    """
+    row = conn.execute(
+        "SELECT COUNT(*) AS runs,"
+        " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
+        " SUM(CASE WHEN tokens_used IS NOT NULL THEN 1 ELSE 0 END) AS counted_runs,"
+        " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
+        " FROM research_runs"
+    ).fetchone()
+    claims = conn.execute(
+        "SELECT COUNT(*) FROM research_run_claims WHERE removed_at IS NULL"
+    ).fetchone()[0]
+    spent = row["spent_usd"]
+    planes = [
+        {
+            "plane": item["plane"] or "",
+            "runs": item["runs"],
+            "metered_runs": item["metered_runs"],
+            "spent_usd": item["spent_usd"],
+            "tokens_used": item["tokens_used"],
+        }
+        for item in conn.execute(
+            "SELECT plane, COUNT(*) AS runs,"
+            " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
+            " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
+            " FROM research_runs GROUP BY plane ORDER BY runs DESC, plane"
+        )
+    ]
+    return {
+        "runs": row["runs"] or 0,
+        "metered_runs": row["metered_runs"] or 0,
+        "counted_runs": row["counted_runs"] or 0,
+        "spent_usd": spent,
+        "tokens_used": row["tokens_used"],
+        "claims": claims,
+        "cost_per_claim": (
+            float(spent) / claims if spent is not None and claims else None
+        ),
+        "planes": planes,
+    }
 
 
 def get_research_run(conn: sqlite3.Connection, run_id: str) -> dict | None:

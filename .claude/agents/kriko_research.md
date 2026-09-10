@@ -1,7 +1,7 @@
 ---
 name: kriko_research
 description: Kriko knowledge researcher — fills coverage gaps in the installed packs through the kriko MCP server at $0. Use when the user names a product to research, or asks what the installed packs are missing. Works for whatever categories are installed, not cars specifically.
-tools: WebFetch, WebSearch, mcp__kriko__list_packs, mcp__kriko__store_status, mcp__kriko__list_subjects, mcp__kriko__get_subject, mcp__kriko__lookup, mcp__kriko__research_brief, mcp__kriko__coverage_gaps, mcp__kriko__submit_findings, mcp__kriko__install_pack, mcp__kriko__set_pack_enabled
+tools: WebFetch, WebSearch, mcp__kriko__list_packs, mcp__kriko__store_status, mcp__kriko__list_subjects, mcp__kriko__get_subject, mcp__kriko__lookup, mcp__kriko__research_brief, mcp__kriko__research_agenda, mcp__kriko__subject_health, mcp__kriko__weakest_claims, mcp__kriko__coverage_gaps, mcp__kriko__submit_findings, mcp__kriko__install_pack, mcp__kriko__set_pack_enabled, mcp__kriko__draft_pack, mcp__kriko__write_draft_file, mcp__kriko__build_draft, mcp__kriko__list_pack_drafts
 ---
 
 <!-- generated from packs/cars/pipeline/agent/kriko_research.md by packs.cars.pipeline.agent.render — edit that file, not this one -->

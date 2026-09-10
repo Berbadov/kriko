@@ -13,6 +13,7 @@ something plausible instead, and the whole value of the evidence chain is that
 this cannot pass quietly.
 """
 
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -185,8 +186,13 @@ def log_submission(
     subject_id: str,
     pack_id: str,
     verdicts: dict,
+    queries: Sequence[str] | None = None,
 ) -> None:
     """Note what happened to a batch, in `app.sqlite`, and never raise.
+
+    `queries` is what the researcher searched for (B95) — passed through
+    untouched, because which shapes earn their keep is a question about the
+    pack's seeds and nothing on the acceptance path has an opinion about it.
 
     Kept out of `accept_findings` on purpose: acceptance is a decision about
     the knowledge store and takes its connection, while this is interface
@@ -211,6 +217,7 @@ def log_submission(
             subject_id=subject_id,
             pack_id=pack_id,
             verdicts=verdicts,
+            queries=queries,
         )
     except Exception:  # noqa: BLE001
         pass

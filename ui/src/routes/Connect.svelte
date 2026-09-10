@@ -1,6 +1,7 @@
 <script lang="ts">
     import Agenda from "../lib/Agenda.svelte";
     import Planes from "../lib/Planes.svelte";
+    import Schedule from "../lib/Schedule.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
@@ -181,6 +182,11 @@
 
     <!-- Directly under the agenda, because it works down those exact rows. -->
     <Planes />
+
+    <!-- After the planes, because the schedule is a choice about which of
+         them runs unattended, and that question only makes sense once the
+         reader can see which ones can run at all. -->
+    <Schedule />
 
     <article class="card">
         <h3>What the agent is told</h3>

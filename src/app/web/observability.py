@@ -84,6 +84,43 @@ def read_recent(limit: int = 20, model: str | None = None, path: Path | None = N
     return matched[:limit]
 
 
+def summarise(path: Path | None = None) -> dict:
+    """What the log holds, as numbers a reader can act on.
+
+    The log has existed since the first lookup and nothing the reader can
+    reach has ever read it: `About` shows its *path*, which tells them where
+    the file is and nothing about what is in it. That was the whole of the
+    "no usage info" complaint on this side — the demand signal was being
+    written for the agenda's benefit and for nobody else's.
+
+    `answered_nothing` is the number that matters and the reason this is not
+    just a line count: a lookup that resolved a subject and returned no claims
+    is a coverage gap the reader personally hit, and it is the honest measure
+    of how much of their own use this installation is actually serving.
+
+    No timestamps, because the records carry none — see
+    `routers/analyze.log_analysis_jsonl`. A count with no clock is what the
+    file can support, and inventing a date from the mtime would date every
+    record by the last one.
+    """
+    records, malformed = load_records(path or DEFAULT_LOG_PATH)
+    subjects = {
+        str(subject)
+        for rec in records
+        for subject in (rec.get("subjects") or [])
+    }
+    return {
+        "analyses": len(records),
+        "malformed": malformed,
+        "claims_shown": sum(len(rec.get("claim_titles") or []) for rec in records),
+        "answered_nothing": sum(
+            1 for rec in records if not (rec.get("claim_titles") or [])
+        ),
+        "subjects": len(subjects),
+        "adapters": sorted({str(rec.get("adapter") or "") for rec in records} - {""}),
+    }
+
+
 def read_by_id(analysis_id: str, path: Path | None = None) -> dict | None:
     path = path or DEFAULT_LOG_PATH
     records, _ = load_records(path)

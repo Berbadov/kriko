@@ -6,6 +6,89 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The 0.5.3 reader audit, closed end to end (B92–B98)
+
+Seven rows, four commits, shipped as 0.6.0. The reader had installed 0.5.3,
+pressed Research and got *"research does nothing… it says done but logs return
+nothing. plus the researches making turkish-english queries, agent should
+decide the queries… plus the pack building must be guided with agents. I see no
+token info, no usage info etc."* Every complaint was accurate and four of the
+five had the same cause.
+
+**B92 — no plane drove a harness** (`e9f6eb9`). The headline finding. Kriko had
+two research planes: `agent`, whose `gather()` and `extract()` returned `[]` by
+design, and `api`, which spends money. `app/agentconfig.py` wrote MCP config
+*into* coding-agent harnesses so a harness could call Kriko — and nothing
+anywhere called a harness. So Research could only render a brief and stop,
+while the job reported `succeeded / 0 claim(s) kept` for a run that
+structurally could not do anything. `app/providers/harness.py` is the missing
+direction: it finds a coding-agent CLI on PATH and drives it. The security
+constraint is that `--allowedTools` is an explicit allowlist — the research
+harness never gets Bash, Edit or Write — and the spawned agent gets no
+`--mcp-config` at all.
+
+**B93 — a run that gathers nothing now says what to do next** (`e9f6eb9`). The
+old sentence stopped at the diagnosis. It now has a second half: the reader can
+have Kriko start the agent, or hand the brief over themselves.
+
+**B94 — queries were half Turkish and nothing declared a language**
+(`e9f6eb9`). The cars pack shipped seed queries in two languages with no
+`languages` declaration anywhere, which is how a search returns nothing. A pack
+that ships `research/templates.yaml` must now declare `languages`; a `lang` the
+manifest does not name is a contract failure, and so is a non-ASCII *word* in a
+single-language pack — the same rule the client is held to, one layer in.
+
+**B95 — the agent had no authority over its queries** (`e9f6eb9`). The brief
+handed down a script. It now groups rendered queries by language and says they
+are seeds to adapt. What the agent actually ran is stored per run
+(`queries_json`), so the record is what happened rather than what was
+suggested.
+
+**B96 — an agent could not author or grow a pack** (`7de3699`). "The pack
+building must be guided with agents" was the reader's third complaint and the
+answer is a set of tools that write a draft under `~/.kriko/drafts/<slug>/`.
+Test-enforced: a pack an agent writes is **data only** — no Python, no path
+escaping the draft directory, nothing installed without the reader's press, and
+no agent tool that can delete a draft.
+
+**B97 — the plane everyone uses reported no usage** (`ff807c6`). Tokens now
+travel the whole way: provider socket → `complete.tokens_used` on the callable
+→ `ApiResearcher`/`HarnessResearcher` → `_Provenance.tokens()` →
+`research_runs.tokens_used` → `/api/usage` → `Usage.svelte`. And
+`analyses.jsonl`, the record of every lookup this installation has ever
+answered, finally has a reader (`observability.summarise`).
+
+Two rules hold the panel up. **NULL is not zero** — a plane that cannot count
+writes NULL and the screen says "not counted", because "$0.00" is the figure a
+reader would quote back and it would be wrong in the direction that flatters
+us. **Every total carries its denominator** — `metered_runs of runs` sits
+beside the spend, so a small total over many runs cannot read as a cheap
+installation. Two currencies, not one: the harness plane knows its tokens and
+spends none of Kriko's money, the api plane knows its dollars and may never see
+a token, so `close_research_run` COALESCEs each column separately and a caller
+who knows one cannot erase the other.
+
+**B98 — nothing ran unattended** (`2b4ed8e`). Sequenced last on purpose: "a
+scheduler driving a no-op is worse than no scheduler, because it would fill the
+runs table with successful nothing." `app/web/schedule.py` is a pure `decide()`
+plus a thread that sleeps and calls it, so every rule is an assertion rather
+than a wait. It is off until the reader turns it on; it refuses the `agent`
+plane by name (unattended, its brief is never read), refuses `harness` with no
+CLI and `api` with no keys *with the sentence saying what is missing*, skips
+while work is in flight, and waives its startup grace only for a reader
+pressing "check now". Next-due comes from the stored timestamp, so a machine
+off for a week runs once rather than seven times. Every tick records what it
+decided, refusals included — on a quiet day that sentence is the feature's only
+output.
+
+Two defects found on the way, both the class B96 hit: `Usage.svelte` threw on
+`.research.planes.length` and `Schedule.svelte` on `.last.reason` when a field
+was absent, which is exactly what an older engine's payload looks like. They
+surfaced as unhandled rejections in *passing* route tests — worth reading
+vitest's "Errors" line, not just its "Tests" line.
+
+---
+
 ### 2026-09-10 — The docs the phantom names came from (B91)
 
 Branch `docs-name-real-symbols`. B90 fixed the brief; this fixes where the

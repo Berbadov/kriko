@@ -42,6 +42,66 @@ def pack_asset(conn, pack_id: str, name: str) -> str:
     return row["content"] if row else ""
 
 
+def _pack_languages(conn, pack_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """What `[pack] languages` and `[pack] markets` say, off the installed row.
+
+    Read from `packs.manifest_json` rather than from a new column: the whole
+    `pack.toml` is already carried there verbatim, and a schema migration to
+    hold a declaration the manifest already states would be a second answer to
+    the same question.
+    """
+    row = conn.execute(
+        "SELECT manifest_json FROM packs WHERE pack_id = ?", (pack_id,)
+    ).fetchone()
+    if row is None:
+        return (), ()
+    try:
+        manifest = yaml.safe_load(row["manifest_json"]) or {}
+    except yaml.YAMLError:
+        return (), ()
+    pack = manifest.get("pack") if isinstance(manifest, dict) else None
+    if not isinstance(pack, dict):
+        return (), ()
+
+    def codes(value) -> tuple[str, ...]:
+        if not value:
+            return ()
+        items = [value] if isinstance(value, str) else list(value)
+        return tuple(str(item).strip() for item in items if str(item).strip())
+
+    return codes(pack.get("languages")), codes(
+        pack.get("markets") or pack.get("market")
+    )
+
+
+def _templates(raw, primary: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Split `research/templates.yaml` into queries and their languages.
+
+    Two shapes, because a pack that serves one language should not have to say
+    so on every line:
+
+        - "{alias} common problems"                      # the pack's primary
+        - {query: "{alias} arıza şikayet", lang: "tr"}   # this one is Turkish
+
+    A mapping with no `query` key is skipped rather than raised on: a pack is
+    data from a third party, and one malformed line must not take the other
+    six queries down with it.
+    """
+    queries: list[str] = []
+    langs: list[str] = []
+    for entry in raw or []:
+        if isinstance(entry, str):
+            queries.append(entry)
+            langs.append(primary)
+        elif isinstance(entry, dict):
+            query = entry.get("query") or entry.get("q") or ""
+            if not query:
+                continue
+            queries.append(str(query))
+            langs.append(str(entry.get("lang") or entry.get("language") or primary))
+    return tuple(queries), tuple(langs)
+
+
 def plan_task(conn, subject_id: str, pack_id: str, *,
               budget_usd: float = 0.0, max_documents: int = 5) -> ResearchTask:
     """Assemble everything the pack knows about how to research this subject.
@@ -69,7 +129,11 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
             (subject_id, pack_id)):
         aliases.setdefault(row["tier"], []).append(row["alias"])
 
-    templates = yaml.safe_load(pack_asset(conn, pack_id, "research/templates.yaml")) or []
+    languages, markets = _pack_languages(conn, pack_id)
+    raw_templates = yaml.safe_load(
+        pack_asset(conn, pack_id, "research/templates.yaml")) or []
+    templates, template_langs = _templates(
+        raw_templates, languages[0] if languages else "")
     domains = [row["term_id"] for row in conn.execute(
         "SELECT term_id FROM terms WHERE pack_id = ? AND role = 'domain'"
         " ORDER BY term_id", (pack_id,))]
@@ -82,7 +146,10 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         identity=identity,
         search_aliases=tuple(aliases.get("search_only") or ()),
         attribution_aliases=tuple(aliases.get("attribution_safe") or ()),
-        queries=tuple(templates),
+        queries=templates,
+        query_languages=template_langs,
+        languages=languages,
+        markets=markets,
         value_principle=pack_asset(conn, pack_id, "research/principle.md"),
         domains=tuple(domains),
         budget_usd=budget_usd,

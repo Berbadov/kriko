@@ -25,6 +25,20 @@ const DONE = {
 function serve(job: unknown) {
     stubFetch({
         "/api/research": { job_id: "j1" },
+        // Longer prefix, so it must be stubbed separately: "/api/research"
+        // would otherwise answer the planes call with a job id, and the card
+        // asks for the planes to decide whether it can offer to run one.
+        "/api/research-planes": {
+            planes: [
+                {
+                    id: "harness",
+                    cost_basis: "subscription",
+                    what: "Kriko starts the coding agent you already pay for.",
+                    ready: true,
+                    needs_keys: false,
+                },
+            ],
+        },
         "/api/jobs/j1": job,
     });
 }
@@ -56,7 +70,12 @@ describe("Brief", () => {
         await waitFor(() =>
             expect(screen.getByText(/Kriko searched nothing/)).toBeInTheDocument(),
         );
-        expect(screen.getByText(/does not/)).toBeInTheDocument();
+        // And what to do about it. B92 gave the sentence a second half — the
+        // reader can have Kriko start the agent, or hand the brief over — so
+        // the assertion tracks the instruction rather than the old wording.
+        expect(
+            screen.getByText(/hand it the brief yourself/),
+        ).toBeInTheDocument();
     });
 
     it("offers the brief as something to hand off, with the queries counted", async () => {

@@ -85,6 +85,31 @@
                 </section>
             {/if}
 
+            {#if (data.shapes ?? []).length}
+                <section class="reasons">
+                    <h3>What was actually searched for</h3>
+                    <p class="meta">
+                        The pack ships seeds, not a script — an agent adapts them to the
+                        subject and the market. These are the searches that came back, and
+                        what each one's batches kept. A shape that keeps nothing is a seed
+                        worth rewriting.
+                    </p>
+                    <ul class="klist">
+                        {#each (data.shapes ?? []).slice(0, 12) as shape (shape.query)}
+                            <li class="krow">
+                                <div class="kmain">
+                                    <span class="klabel">{shape.query}</span>
+                                </div>
+                                <span class="meta"
+                                    >{shape.accepted} kept · {shape.refused} refused ·
+                                    {shape.batches} batch{shape.batches === 1 ? "" : "es"}</span
+                                >
+                            </li>
+                        {/each}
+                    </ul>
+                </section>
+            {/if}
+
             <section class="batches">
                 <h3>Batches</h3>
                 {#each data.items as item (item.submission_id)}
@@ -102,6 +127,11 @@
                             {item.created_at.slice(0, 16).replace("T", " ")} ·
                             {item.accepted} accepted · {item.refused} refused
                         </p>
+                        {#if item.queries?.length}
+                            <p class="meta">
+                                searched: {item.queries.slice(0, 4).join(" · ")}
+                            </p>
+                        {/if}
                         {#if item.verdicts.error}
                             <p class="state error">{item.verdicts.error}</p>
                         {/if}

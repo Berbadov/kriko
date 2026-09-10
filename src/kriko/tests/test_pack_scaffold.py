@@ -95,3 +95,25 @@ def test_it_carries_no_category_of_its_own(tmp_path):
     ).lower()
     for banned in ("engine_code", "mileage", "odometer", "gearbox", "fuel"):
         assert banned not in text
+
+
+def test_a_scaffolded_pack_declares_the_language_its_queries_are_in(tmp_path):
+    """The scaffold writes templates, so it owes the contract a language.
+
+    `test_pack_contract.py` fails any pack that ships `research/templates.yaml`
+    without `[pack] languages` (B94). That test is parametrized over the packs
+    in this repo, so a scaffold that skipped the declaration would hand every
+    third-party author a directory that fails the contract it advertises as
+    already passing.
+    """
+    root = tmp_path / "newpack"
+    scaffold(
+        root,
+        pack_id="org.example.thing",
+        name="Things",
+        identity={"product": ["brand", "series"]},
+    )
+    assert (root / "research" / "templates.yaml").exists()
+    manifest = load(root)
+    assert manifest.languages == ("en",)
+    assert manifest.primary_language == "en"

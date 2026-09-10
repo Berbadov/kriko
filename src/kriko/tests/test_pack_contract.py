@@ -5,6 +5,7 @@ it becoming fiction. Both shipped packs are checked, because a contract with
 one example is indistinguishable from that example.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -59,3 +60,93 @@ def test_a_pack_with_search_queries_also_ships_how_to_aim_them(root):
     assert (root / "research" / "skill.md").is_file(), (
         f"{root.name} ships research templates but no research/skill.md"
     )
+
+
+# ── the language a query is written in (B94) ─────────────────────────────────
+#
+# A pack ships searches. Until 2026-09-10 nothing said what language they were
+# in, and `packs/cars` shipped five English templates beside two Turkish ones
+# — legitimately, because that is where its claims come from. But the brief
+# rendered all seven as one numbered list, so an agent handed it could not
+# tell a market convention from a typo, and a reader read the result as the
+# defect it looked like: "the researches making turkish-english queries".
+#
+# The gate is a *mechanism*, not a language classifier. A non-ASCII word in a
+# query is a query not written in English, which is detectable without knowing
+# which language it IS — the same test `test_the_extension_speaks_no_sites_own_
+# language` uses one layer out. A pack that ships one must declare it.
+
+
+def _templates(root: Path):
+    """Every template entry, in either legal shape, or [] if the pack ships none."""
+    import yaml
+
+    path = root / "research" / "templates.yaml"
+    if not path.is_file():
+        return []
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or []
+
+
+def _query_and_lang(entry, primary: str) -> tuple[str, str]:
+    if isinstance(entry, str):
+        return entry, primary
+    if isinstance(entry, dict):
+        return str(entry.get("query") or ""), str(entry.get("lang") or primary)
+    return "", primary
+
+
+_NON_ASCII_WORD = re.compile(r"[^\W\d_]*[^\x00-\x7f][^\W\d_]*", re.UNICODE)
+
+
+@pytest.mark.parametrize("root", PACKS, ids=lambda p: p.name)
+def test_a_pack_that_ships_queries_declares_the_language_they_are_in(root):
+    """`[pack] languages` is required of any pack with search templates.
+
+    Not of a pack with none: `packs/drill` would still be at the floor if it
+    shipped no `research/` at all. What is forbidden is telling an agent to go
+    searching without telling it what to search in.
+    """
+    manifest = load(root)
+    if not _templates(root):
+        return
+    assert manifest.languages, (
+        f"{root.name} ships research/templates.yaml but [pack] declares no "
+        "languages — a brief cannot tell an agent what language to search in, "
+        "and the agent will mix them (backlog B94)"
+    )
+
+
+@pytest.mark.parametrize("root", PACKS, ids=lambda p: p.name)
+def test_no_query_is_written_in_a_language_the_manifest_does_not_name(root):
+    """The gate that would have caught the cars pack before a reader did.
+
+    Two ways to fail it, and both are the same mistake: a template carrying a
+    `lang` the manifest never declared, and a template with a non-ASCII word
+    in a pack that declares only one language. The second is the one that was
+    actually shipping.
+    """
+    manifest = load(root)
+    declared = set(manifest.languages)
+    primary = manifest.primary_language
+    for entry in _templates(root):
+        query, lang = _query_and_lang(entry, primary)
+        if not query:
+            continue
+        assert lang in declared or not declared, (
+            f"{root.name}: template {query!r} declares lang {lang!r}, which "
+            f"[pack] languages does not name ({sorted(declared)})"
+        )
+        words = _NON_ASCII_WORD.findall(query)
+        if not words:
+            continue
+        # A non-ASCII *word* is vocabulary. A lone folded character between
+        # delimiters is a spelling variant and stays legal — the same
+        # closed-vocabulary exception CLAUDE.md makes for the extension.
+        if all(len(word) <= 1 for word in words):
+            continue
+        assert lang != primary or len(declared) > 1, (
+            f"{root.name}: template {query!r} is not written in English but "
+            f"the pack declares only {sorted(declared)}. Either declare the "
+            f"language on the entry (`- {{query: ..., lang: tr}}`) or add it "
+            f"to [pack] languages"
+        )

@@ -25,8 +25,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import extension as ext, logs
-from app.web import origins, pipeline
+from app.web import origins, pipeline, schedule
 from app.web.jobs import JobRunner
+from app.web.schedule import Scheduler
 from app.web.routers import (
     agenda,
     agent,
@@ -90,7 +91,27 @@ async def lifespan(app: FastAPI):
             log.warning("marked %d stranded pipeline run(s) interrupted", stranded)
     except Exception:
         log.warning("could not reconcile pipeline runs at startup", exc_info=True)
+    # The unattended loop, last: it submits into the runner, so it must not
+    # be able to tick before `recover()` has cleared the rows a dead process
+    # left behind. Started only if the reader turned it on, and asked again
+    # rather than trusted — the setting lives in their own app.sqlite, and an
+    # app that started a loop nobody enabled would be the defect this feature
+    # is most likely to introduce.
+    try:
+        conn = state.connect(app.state.settings.app_state_path)
+        try:
+            wanted = schedule.settings_for(conn)["enabled"]
+        finally:
+            conn.close()
+        if wanted:
+            app.state.schedule.start()
+            log.info("unattended research loop is on")
+    except Exception:
+        log.warning("could not read the unattended schedule", exc_info=True)
     yield
+    # Before the pool, so a tick in flight cannot submit into a runner that is
+    # shutting down.
+    app.state.schedule.stop(wait=2.0)
     app.state.jobs.shutdown()
 
 
@@ -152,6 +173,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
     app.state.jobs = JobRunner(app.state.settings, HANDLERS)
+    # And the timer that presses the agenda button when nobody is here (B98).
+    # Constructed for every app and *started* by the lifespan only when the
+    # reader has turned it on — a test client, which enters the lifespan, must
+    # not acquire a background thread by existing.
+    app.state.schedule = Scheduler(app.state.settings, app.state.jobs)
 
     # ── the extension announces itself by calling ────────────────────────
     #

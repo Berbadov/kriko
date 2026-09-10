@@ -2,10 +2,29 @@
 #
 # This replaces knowledge/parts/search_templates.py — 300 lines of Python whose
 # query shapes were car-specific but whose machinery was not.
+#
+# **Each entry states the language it is written in**, or inherits the pack's
+# primary from `[pack] languages` in pack.toml. Two shapes are legal: a bare
+# string is the primary language, and a mapping declares its own. Before
+# 2026-09-10 the Turkish lines below were bare strings like the English ones,
+# so the brief presented all seven as one list and an agent could not tell a
+# market convention from a mistake — which is exactly how a reader read it
+# (backlog B94). The queries were never the problem; the missing declaration
+# was.
+#
+# These are seeds. `research/principle.md` decides what is worth keeping and
+# the agent decides what is worth searching — a template that returns nothing
+# for a given subject is meant to be dropped, not dutifully run.
 - "{alias} common problems"
 - "{alias} known issues high mileage"
-- "{alias} arıza şikayet"
-- "{alias} yaygın arızalar"
 - "{label} failure symptoms"
 - "{alias} reliability problems forum"
 - "{alias} technical service bulletin"
+
+# Turkish-market sources, which is where this pack's claims mostly come from:
+# the parts-availability and cost-of-repair facts a TR buyer needs are not on
+# English forums at all.
+- query: "{alias} arıza şikayet"
+  lang: tr
+- query: "{alias} yaygın arızalar"
+  lang: tr

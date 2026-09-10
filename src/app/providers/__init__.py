@@ -26,9 +26,15 @@ kept its own running total would be a second answer to "how much did this
 cost". These functions make one request and return its result.
 """
 
-from app.providers import exa, fetch, llm
+from app.providers import exa, fetch, harness, llm
 
-__all__ = ["exa", "fetch", "llm", "api_researcher", "MissingKey"]
+__all__ = [
+    "exa", "fetch", "harness", "llm",
+    "api_researcher", "harness_researcher",
+    "MissingKey", "NoHarness",
+]
+
+NoHarness = harness.NoHarness
 
 
 class MissingKey(RuntimeError):
@@ -63,4 +69,25 @@ def api_researcher(*, price_per_call: float = 0.0):
     # already reads `tokens_used`.
     researcher.model = model
     researcher.search_provider = "exa"
+    return researcher
+
+
+def harness_researcher(*, preferred: str = "", timeout: float = 0.0):
+    """The $0 plane that actually runs, wired to whichever CLI is installed.
+
+    The sibling of `api_researcher` in shape and its opposite in cost: this one
+    spends nothing of Kriko's because the subscription is the reader's own. It
+    raises `NoHarness` rather than returning a researcher that would fail on
+    its first subject, for the same reason the paid plane raises `MissingKey` —
+    "no agent installed" is a screen with an answer on it, not a failed run.
+    """
+    found = harness.chosen(preferred)
+    if found is None:
+        names = ", ".join(h.executable for h in harness.KNOWN)
+        raise harness.NoHarness(
+            f"no coding-agent CLI on PATH (looked for: {names})"
+        )
+    researcher = harness.HarnessResearcher(
+        found, timeout=timeout or harness.TIMEOUT_SECONDS
+    )
     return researcher

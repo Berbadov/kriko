@@ -39,7 +39,20 @@ BUDGET = {".js": 280_000, ".css": 60_000}
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
-TOTAL_BUDGET = 420_000
+#:
+#: Raised from 420,000 on 2026-09-10, and the reason is that it was firing for
+#: the wrong thing. B92–B98 added six components (planes, usage, the schedule)
+#: and the JS reached 229 KB — comfortably inside its own 280 KB budget, and
+#: over a total that had been set when the JS was 197 KB. So the total was
+#: red while the number it was watching was fine.
+#:
+#: It is now derived from the per-kind budgets plus the fixed weight of what
+#: is *not* built: the seven committed `fonts/*.woff2` (~160 KB) and
+#: `mark.svg`. That keeps it doing the one job its message claims — catching
+#: an asset that is "neither JS nor CSS — a font, an image, a source map" —
+#: instead of double-counting growth the per-kind budgets already police.
+UNBUILT_ASSETS = 165_000
+TOTAL_BUDGET = sum(BUDGET.values()) + UNBUILT_ASSETS
 
 STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
 

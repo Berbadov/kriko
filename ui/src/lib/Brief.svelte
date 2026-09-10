@@ -3,7 +3,7 @@
     import Failure from "./Failure.svelte";
     import { follow, stateWord } from "./jobs";
     import { hashWith } from "./router";
-    import type { Job } from "./types";
+    import type { Job, ResearchPlane } from "./types";
 
     /* The half of Research that was computed and thrown away.
      *
@@ -35,6 +35,11 @@
     let job = $state<Job | null>(null);
     let error = $state<unknown>(null);
     let copied = $state("");
+    /* Which planes this machine can run, so the button that starts one is only
+     * offered when it would work. Best-effort: a planes call that fails costs
+     * the reader the button and never the brief. */
+    let planes = $state<ResearchPlane[]>([]);
+    const harnessPlane = $derived(planes.find((p) => p.id === "harness"));
 
     // Result fields, read defensively: the job's result is a plain dict from
     // the handler and a version skew must degrade to "no brief yet", never to
@@ -51,13 +56,14 @@
     const kept = $derived(Array.isArray(result.accepted) ? result.accepted.length : 0);
     const refused = $derived(Array.isArray(result.rejected) ? result.rejected.length : 0);
 
-    async function start() {
+    async function start(backend = "agent") {
         error = "";
         job = null;
         try {
             const { job_id } = await api.research({
                 subject_id: subjectId,
                 pack_id: packId,
+                backend,
             });
             job = await api.job(job_id);
             follow(job_id, (update) => (job = update));
@@ -68,6 +74,15 @@
         }
     }
     void start();
+    // After the brief, never before it: the brief is instant and free, and a
+    // reader looking at this screen wants it on the page rather than after a
+    // second request that only decides which buttons to draw.
+    api.researchPlanes()
+        // `?? []` because a payload without the field is a payload from an
+        // older engine, and a derived that reads `.find` off undefined takes
+        // the whole card down with it.
+        .then((data) => (planes = data.planes ?? []))
+        .catch(() => (planes = []));
 
     async function copy(what: string, text: string) {
         try {
@@ -104,18 +119,36 @@
              moment is "so did it find anything?", and the honest answer is
              "nothing was searched — that is what the brief is for". Burying
              that under a scroll is how the button came to look broken. -->
-        <p class="meta">
-            Kriko searched nothing.
-            {#if documents === 0}
-                The <code>{plane || "agent"}</code> plane costs $0 precisely because it
-                does not: a coding agent you already pay for does the reading.
-            {/if}
-            Hand this brief to a connected agent — it can submit findings back through
-            the same checked acceptance path — or paste it into any agent session
-            yourself.
-        </p>
+        {#if documents === 0}
+            <p class="meta">
+                Kriko searched nothing on the <code>{plane || "agent"}</code> plane —
+                that is what makes it cost $0: an agent you already pay for does the
+                reading. Either let Kriko start that agent for you with the button
+                below, or hand it the brief yourself. Both end at the same checked
+                acceptance path.
+            </p>
+        {:else}
+            <p class="meta">
+                Read {documents} source(s) on the <code>{plane}</code> plane. Every
+                finding went through the same grounding check as one an agent
+                submits by hand, and the whole run can be taken back out from
+                <strong>Activity → Runs</strong>.
+            </p>
+        {/if}
         <div class="brief-do">
-            <button onclick={() => copy("brief", brief)}>
+            <!-- The one button that closes the loop without the reader
+                 leaving the app. Offered only when a CLI was actually found:
+                 a button whose failure message is "install something" is a
+                 worse answer than the sentence under the disabled card. -->
+            {#if harnessPlane?.ready}
+                <button
+                    disabled={!!job && !job.done}
+                    onclick={() => start("harness")}
+                >
+                    {job && !job.done ? "Running…" : "Run my agent on this"}
+                </button>
+            {/if}
+            <button class="ghost" onclick={() => copy("brief", brief)}>
                 {copied === "brief" ? "Copied" : "Copy the brief"}
             </button>
             <a class="tab" href={hashWith({}, "connect")}>Connect an agent</a>
