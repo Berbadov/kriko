@@ -271,6 +271,21 @@ def main(argv: list[str]) -> int:
             return 1
         print(f"extension ok: version {ext.get('version')}")
 
+        # The knowledge, on a store this run created two seconds ago. Empty
+        # here means one of three things went wrong and every one of them
+        # ships as a knowledge engine with no knowledge: the spec's datas lost
+        # the artifacts, the build never made them, or the seeder in
+        # `app/bundledpacks.py` did not run at startup. A reader cannot tell
+        # those apart from an app that opens onto nothing, so the build does.
+        packs = fetch(port, "/api/packs")
+        carried = packs.get("items") if isinstance(packs, dict) else packs
+        if not carried:
+            print("the sidecar installed no bundled packs into a fresh store "
+                  "-- check the spec's datas entry and build_packs.py")
+            return 1
+        print("packs ok: " + ", ".join(
+            f"{row.get('pack_id')} {row.get('version')}" for row in carried))
+
         # Beyond liveness. Each of these fails *only* when freezing dropped
         # something, and each drops a different module graph:
         #   lookup   -> kriko.lookup + the store

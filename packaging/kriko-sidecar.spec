@@ -22,13 +22,14 @@
 # has already been wrong once — collecting all of `mcp` pulls in `mcp.cli`,
 # which raises "typer is required" and fails the freeze on every runner.
 #
-# `datas` — two things in this repo are read from disk rather than imported, and
-# both are invisible to PyInstaller's import graph: the built frontend
-# (src/app/web/static/, or the app 404s on its own UI) and the store's DDL
-# (src/kriko/store/schema.sql, or every query raises FileNotFoundError). The
-# second one was found by running this build, not by reading the code — see
+# `datas` — four things in this repo are read from disk rather than imported,
+# and every one is invisible to PyInstaller's import graph: the built frontend
+# (src/app/web/static/, or the app 404s on its own UI), the store's DDL
+# (src/kriko/store/schema.sql, or every query raises FileNotFoundError), the
+# browser extension, and the first-party packs. The DDL was found by running
+# this build, not by reading the code — see
 # test_every_data_file_under_src_is_declared_as_package_data, which now fails
-# if a third one appears.
+# if another one appears under src/.
 
 import sys
 from pathlib import Path
@@ -47,6 +48,25 @@ STATIC = ROOT / "src" / "app" / "web" / "static"
 # `colors_and_type.css` are excluded by app.extension.SHIPPED, which this
 # mirrors by copying the directory and letting the staging step filter.
 EXTENSION = ROOT / "extension"
+
+# The first-party knowledge travels inside the sidecar too, unpacked to
+# `app/packs_bundled` where `app/bundledpacks.py` looks for it, and startup
+# installs whatever the store is missing or behind on. Until 0.7.1 the
+# installer carried none, so a fresh install opened onto an empty store — and,
+# worse, a defect whose fix lives in a pack's rows could not be delivered by
+# any release at all: B101's new alias tier shipped its engine half while the
+# reader's installed cars 0.1.1 kept producing the searches that found nothing.
+# Every file is listed rather than globbed because PyInstaller's `datas` takes
+# paths, not patterns.
+PACKS = sorted((ROOT / "dist").glob("*.kpack"))
+
+if not PACKS:
+    raise SystemExit(
+        "dist/ carries no .kpack — the app ships its first-party knowledge and "
+        "an install with none opens onto an empty store. Build them first:\n"
+        "  python -m app.cli build packs/cars  --out dist/cars.kpack\n"
+        "  python -m app.cli build packs/drill --out dist/drill.kpack"
+    )
 
 if not (EXTENSION / "manifest.json").exists():
     raise SystemExit(
@@ -68,6 +88,7 @@ a = Analysis(
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
         (str(EXTENSION), "app/extension_src"),
+        *((str(pack), "app/packs_bundled") for pack in PACKS),
     ],
     hiddenimports=[
         "uvicorn.logging",

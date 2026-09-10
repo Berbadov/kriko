@@ -873,7 +873,7 @@ obvious, which is the product principle's open work (B36), not this item's.
 
 ---
 
-## The 0.6.0 reader report *(2026-09-10)* — **all five closed, 0.7.0**
+## The 0.6.0 reader report *(2026-09-10)* — **all five closed, 0.7.0; delivery closed in 0.7.1**
 
 The reader installed 0.6.0 and reported: *"run nothing again… did nothing
 again, am i doing simething wrong, package bulding still expects user raw input
@@ -894,6 +894,14 @@ agent usage very easy and fast I beg… queries are still fucked up."*
 
 Verified against the reader's own `claude`: three documents, five
 config-specific claims on a Golf VII EA211 DQ200.
+
+- **B104** — *and none of B101 could reach them.* Closed as 0.7.1: the
+  installer carried no pack at all, so the reader's store kept cars 0.1.1 with
+  zero `search_name` rows and a fix living in pack rows was undeliverable by
+  any release. `app/bundledpacks.py` seeds at startup,
+  `packaging/build_packs.py` builds every pack directory that has a
+  `pack.toml`, and `smoke_sidecar.py` fails a build whose frozen binary
+  installs nothing into a fresh store. → `done.md`
 
 ---
 

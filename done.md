@@ -6,6 +6,53 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The installer carries its own knowledge, as 0.7.1 (B104)
+
+Found while checking that B101's queries fix had actually reached the reader.
+It had not, and could not: their `~/.kriko/knowledge.sqlite` held
+`org.kriko.cars 0.1.1` with 68 `attribution_safe` aliases and **zero**
+`search_name` rows, because `packaging/kriko-sidecar.spec` carried the frontend,
+the store's DDL and the browser extension — and no pack at all. The only two
+ways a pack had ever reached a store were a file the reader found themselves and
+an update index that answers 404 while this repository is private (B63). So a
+defect whose fix lives in a pack's *rows* could not be delivered by any release,
+and a fresh install opened onto an empty engine.
+
+`src/app/bundledpacks.py`, three rules and nothing else: missing gets installed;
+newer gets installed and older never does; a failure here is never why the app
+will not start. A `.kpack` is a SQLite database, so each carried artifact's
+identity is read out of its own `packs` row rather than from its file name —
+trusting the name is how a renamed file installs as something it is not. Version
+ordering is borrowed from `kriko/pack/updates.py` rather than written a second
+time, and a store holding something *newer* is left alone: an app upgrade that
+walked a hand-installed 0.9.0 back to the 0.2.0 it happened to carry would be
+destroying the reader's own work to deliver ours.
+
+`source_dir()` is deliberately narrower than `extension.source_dir()`, which
+falls back to the checkout. This one writes into a store, and both reasons not
+to do that from a checkout are real: a developer's `dist/` holds whatever they
+last built — the first run of this module found a `drill.kpack` frozen before
+`gate_terms` existed in the schema, which rule 3 logged and skipped — and the 28
+tests that start a lifespan would each have a 2 MB cars pack installed into their
+temp store by the act of starting the app. So it reads what the installer
+unpacked, or what `KRIKO_BUNDLED_PACKS` names.
+
+`packaging/build_packs.py` builds every pack directory that has a `pack.toml`,
+*discovered* rather than listed, so a third first-party pack ships by existing —
+the scalability principle applied to the build. Both build paths call it before
+freezing (`build_desktop.ps1`, `desktop.yml`), the spec refuses to freeze with
+no artifacts the way it already refuses with no frontend, and
+`smoke_sidecar.py` now fails a build whose frozen binary installs no pack into
+a store two seconds old. That check catches all three ways this can silently
+regress: the datas entry, the build step, and the seeder itself.
+
+Tests: `src/app/tests/test_the_installer_carries_knowledge.py`, 11 of them,
+including that a hand-installed newer pack survives, that an uncomparable
+version (`nightly`) is left alone, that a truncated artifact is skipped while
+its neighbour installs, that a renamed file installs as what it says it is, and
+that the store is not left holding a WAL lock — the lock that turns into
+"Error opening file for writing: kriko-sidecar.exe" on the next Windows install.
+
 ### 2026-09-10 — The 0.6.0 reader report: five defects, shipped as 0.7.0 (B99–B103)
 
 The reader installed 0.6.0, pressed Research on a Golf, and got seven queries

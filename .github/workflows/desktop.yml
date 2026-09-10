@@ -122,6 +122,13 @@ jobs:
                   npm --prefix ui ci --no-audit --no-fund
                   npm --prefix ui run build
 
+            # And the knowledge, for the same reason: the spec refuses to
+            # freeze without artifacts rather than shipping a knowledge engine
+            # with no knowledge in it. Which packs get built is discovered
+            # from packs/, so a third one ships by existing.
+            - name: Build the packs
+              run: python packaging/build_packs.py
+
             - name: Freeze the sidecar
               run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
 
