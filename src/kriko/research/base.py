@@ -24,8 +24,41 @@ What the *pack* supplies, and the engine never hard-codes:
   * the vocabulary the extractor must express its answer in
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
+
+#: A catalog spells identifiers with underscores; a search box takes words.
+#: Only between characters, so a template that deliberately writes `__` as a
+#: placeholder keeps it.
+_CATALOG_SPELLING = re.compile(r"(?<=\w)_(?=\w)")
+
+
+#: How many of a subject's search names a brief renders every template with.
+#: Two, because the product is a cross product: `packs/cars` ships three names
+#: and seven templates, and rendering all of them gave a brief 21 searches
+#: where the reader had previously been shown 7 — near-duplicates that bury
+#: the ones worth running. The names are narrowest-first (see `query_names`),
+#: so the one dropped is always the broadest, which is the one an agent would
+#: reach for by itself anyway: it is told the searches are seeds and to write
+#: better ones, and widening is the easy direction to go.
+MAX_QUERY_NAMES = 2
+
+
+def searchable(query: str) -> str:
+    """A rendered template, as text somebody could actually type.
+
+    The last step before a query is shown to an agent, and it is here rather
+    than in a pack because it is a property of *queries*, not of any category:
+    an identifier's punctuation is a storage detail, and a substitution that
+    resolved to nothing leaves a hole where a word was.
+
+    Deliberately three rules and no more. This is not a place to be clever
+    about a category's spelling — a pack that needs its own conventions ships
+    `search_name` aliases, which is taste, and taste is pack data. Rewriting
+    terms here would be `_MAKE_MAP` again, one layer further in.
+    """
+    return " ".join(_CATALOG_SPELLING.sub(" ", query).split())
 
 
 @dataclass(frozen=True)
@@ -56,6 +89,11 @@ class ResearchTask:
     # query but may never attribute a claim. Collapsing that distinction was
     # design-flaw 3.
     search_aliases: tuple[str, ...] = ()
+    #: `search_name` rows: whole phrases a person would type for exactly this
+    #: subject. These become the queries where a pack ships them; a
+    #: `search_only` fragment above never does, because `LXT common problems`
+    #: is a worse search than the label it would have replaced.
+    search_names: tuple[str, ...] = ()
     attribution_aliases: tuple[str, ...] = ()
     queries: tuple[str, ...] = ()
     value_principle: str = ""
@@ -84,6 +122,42 @@ class ResearchTask:
             return self.query_languages[query_index]
         return self.languages[0] if self.languages else ""
 
+    @property
+    def query_names(self) -> tuple[str, ...]:
+        """What `{label}` and `{alias}` become, best first.
+
+        A pack's `search_name` rows win over its display label, and the reason
+        is that they are different kinds of string. A display label exists to
+        tell two rows apart in a list, so it carries whatever disambiguates —
+        and fed to a search engine, this pack's produced
+
+            Volkswagen Golf 1.5_TSI 150 hp common problems
+
+        a phrase nobody has typed. The reader called it "queries are still
+        fucked up" and was right.
+
+        The label stays as the fallback, because a pack that ships no search
+        names (`packs/drill/`) must still render queries — and because its
+        `search_only` aliases are deliberately *not* used here: those are
+        widening fragments, and a fragment standing in for a whole name turns
+        `Makita DHP484 common problems` into `DHP 484 common problems`.
+
+        **Narrowest first**, and by length, which needs a word. The store has
+        no ordinal for an alias, so `plan_task` reads them back in alphabetical
+        order — which put `Volkswagen Golf` ahead of `Volkswagen Golf EA211`
+        and made the least specific search the first one in the brief. Sorting
+        by length is a *shape* rule and belongs here: a name that contains
+        another name is the narrower of the two, in any category, because it
+        says everything the shorter one says and one thing more. The tie-break
+        is alphabetical so the order is stable across two runs of the same
+        subject — a brief that reshuffles itself is a brief nobody can diff.
+        """
+        ordered = tuple(
+            sorted(self.search_names, key=lambda name: (-len(name), name))
+        )[:MAX_QUERY_NAMES]
+        return ordered or (
+            (self.subject_label,) if self.subject_label else ())
+
     def rendered_plan(self) -> tuple[tuple[str, str], ...]:
         """Each rendered query with the language it is written in.
 
@@ -96,13 +170,14 @@ class ResearchTask:
         seen: set[str] = set()
         for index, template in enumerate(self.queries):
             lang = self.language_of(index)
-            for alias in (self.subject_label, *self.search_aliases) or ("",):
+            for alias in self.query_names or ("",):
                 try:
                     rendered = template.format(
-                        label=self.subject_label, alias=alias, **self.identity)
+                        label=alias, alias=alias, **self.identity)
                 except (KeyError, IndexError):
                     continue
-                if rendered in seen:
+                rendered = searchable(rendered)
+                if not rendered or rendered in seen:
                     continue
                 seen.add(rendered)
                 out.append((rendered, lang))

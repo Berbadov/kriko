@@ -6,6 +6,93 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The 0.6.0 reader report: five defects, shipped as 0.7.0 (B99–B103)
+
+The reader installed 0.6.0, pressed Research on a Golf, and got seven queries
+that found nothing, then a crash. Their words: *"run nothing again… did nothing
+again, am i doing simething wrong, package bulding still expects user raw input
+to create which i said many times, its gotta be automated with agents man…
+this section is still car fixated. bro please fix this completely and make
+agent usage very easy and fast I beg… queries are still fucked up."*
+
+Five defects. Three were why nothing ran; two were the reader asking for the
+feature to exist at all.
+
+**B99 — the harness never received the prompt.** `claude --help` declares
+`--allowedTools, --allowed-tools <tools...>`, *variadic*. A vector ending
+`--allowedTools WebSearch,WebFetch <prompt>` handed the brief to the allowlist,
+and the CLI's complaint was the reader's traceback: `Input must be provided
+either through stdin or as a prompt argument when using --print`. The prompt
+now goes over stdin, which removes the class rather than the instance. The gate
+is free and deterministic: with an *empty* prompt, `claude -p` refuses before
+any API call and its only complaint is that one — so "the only complaint was
+the empty prompt" proves everything else in the vector is accepted, at zero
+cost.
+
+**B100 — Research defaulted to the plane that fetches nothing.** `backend` was
+`agent` by omission, and `agent.gather()` returns `[]` by design: it writes a
+brief for somebody else to run. On a machine with a coding-agent CLI installed
+this rendered a brief and reported success. `tasks.default_backend()` now
+resolves an unnamed plane to `harness` when a CLI is on PATH, and
+`/api/research-planes` returns which plane that is so a screen can mark it.
+`api` is still never chosen by omission — a button that quietly starts spending
+is a button people stop pressing.
+
+**B101 — queries were catalog spellings, not searches.** The queries the reader
+watched find nothing were `Volkswagen Golf 1.5_TSI 150 hp common problems` — a
+phrase nobody has typed. One string was doing two jobs: a *display label*
+carries whatever tells two rows apart in a list, and that is not what a person
+types into a search box. So `subject_aliases` gained a third tier,
+`search_name`: a complete phrase somebody would type for exactly this subject.
+It attributes nothing (that is `attribution_safe`) and it is a whole name rather
+than a widening fragment (that is `search_only` — `LXT common problems` is a
+worse search than the label it would replace). Collapsing those tiers was
+design-flaw 3, and a first attempt at this fix collapsed two of them again;
+`packs/drill`'s test caught it.
+
+The taste ships as pack data (`packs/cars/build.py` decides what people type);
+the mechanism is the engine's (prefer `search_name`, fall back to the label,
+narrowest first, cap at `MAX_QUERY_NAMES`). Verified against the reader's own
+`claude`: `Volkswagen Golf EA211 common problems` → three real documents → five
+config-specific claims, including the DQ200 mechatronic pressure loss and the
+EA211 water-pump housing. `packs/cars` is 0.1.2 because the tier is in the
+artifact, not only in the code.
+
+**B102 — a pack an agent writes, from a category in plain words.** The reader
+said "its gotta be automated with agents man" more than once, and the screen
+still asked for a directory, a pack id, a name and an identity table before it
+would write anything. Three of those four are decisions somebody who has read
+the category takes well and somebody who has not cannot take at all — and the
+identity table is the sharp one: too few keys and unrelated rows collide into
+one subject, too many and one thing splits across subjects that never see each
+other's claims, and *neither failure raises*. `app/packauthor.py` is one field
+and one press: the agent decides taste, Kriko decides shape, the reader decides
+installation. Nothing about the agent's reach widened — it prints one JSON
+object, gets no `--mcp-config`, and `app/packdraft.py` writes the files, so a
+draft is data only and installs nothing until the reader presses Install.
+
+**B103 — the claim bar now says whose bar it is.** The four bullets the reader
+called "still car fixated" are `packs/cars/research/principle.md`, quoted
+verbatim, and that is the design: what counts as worth surfacing is a property
+of the category, so it ships as pack data (`packs/drill/` states a different
+bar, and `pack/scaffold.py`'s placeholder is generic — a new pack inherits
+nothing car-shaped). Nothing was wrong with the layering. What was wrong was a
+heading that named no owner, leaving the engine as the only candidate to blame.
+The brief now says `## What makes a claim worth keeping — the
+\`org.kriko.cars\` pack's bar`, and says in a sentence that it is the pack's
+and the pack's to change.
+
+**And a guard, because a test billed the developer.**
+`test_a_real_agenda_run_ends_up_in_the_run_list` resolved to `harness` by
+omission and spent fifteen seconds driving the reader's real `claude` against
+their subscription — and passed on CI, where no CLI is installed. That
+asymmetry needed a mechanism: `no_test_starts_a_real_coding_agent` in
+`src/app/tests/conftest.py` refuses any spawn whose executable is one of
+`harness.KNOWN`, and shuts the door on *which* process rather than on the call,
+because a harness test should still exercise the spawn against a fake CLI.
+
+---
+
 ### 2026-09-10 — The 0.5.3 reader audit, closed end to end (B92–B98)
 
 Seven rows, four commits, shipped as 0.6.0. The reader had installed 0.5.3,

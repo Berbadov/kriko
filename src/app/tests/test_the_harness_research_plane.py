@@ -25,6 +25,9 @@ arrive by a door the job that started it cannot see.
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -73,6 +76,103 @@ def test_every_known_harness_passes_that_allowlist_on_the_command_line():
         if "--allowedTools" in one.args:
             index = one.args.index("--allowedTools")
             assert one.args[index + 1] == ",".join(harness_mod.SEARCH_TOOLS)
+
+
+def test_no_harness_puts_the_prompt_on_the_command_line():
+    """The defect that made B92 ship a plane that could not run at all.
+
+    `claude --help` declares `--allowedTools <tools...>` — a *variadic*
+    option, which consumes every argument that follows it. The vector ended
+    `--allowedTools WebSearch,WebFetch <prompt>`, so the brief was read as two
+    more tool names and the CLI was left with no prompt. The reader waited out
+    a run and got:
+
+        Claude Code exited 1: Error: Input must be provided either through
+        stdin or as a prompt argument when using --print
+
+    Asserted as an invariant of the table rather than of one entry, because
+    the bug is not "this flag is variadic" — it is "an argument vector has an
+    order and a prompt has no place in one". Stdin has no order.
+    """
+    for one in harness_mod.KNOWN:
+        for arg in one.args:
+            assert "{" not in arg and "prompt" not in arg.lower(), (
+                f"{one.id} looks like it interpolates the prompt into its "
+                "arguments; it goes on stdin"
+            )
+
+
+def test_the_code_that_starts_a_harness_writes_the_prompt_to_stdin():
+    """Read off the source, because the call site is the whole claim.
+
+    A table with no prompt in it proves nothing on its own: `_run` could still
+    append one. This is a text assertion and it knows it — the test below runs
+    the real CLI, which is what actually holds.
+    """
+    source = Path(harness_mod.__file__).read_text(encoding="utf-8")
+    assert "input=prompt" in source
+    assert "*self.harness.args, prompt]" not in source
+
+
+@pytest.mark.skipif(
+    not shutil.which("claude"), reason="no Claude Code on this machine"
+)
+def test_the_harness_command_line_is_one_the_cli_accepts():
+    """Run the real CLI, for free, and let it judge the vector.
+
+    Every other gate in this file asserts the *shape* of `args`. None of them
+    asserted the CLI would accept them, which is how a plane that could not
+    start passed a full suite — the same mistake as the twelve tray tests that
+    passed on a `main.rs` that could not be parsed (B89).
+
+    The trick that makes this free: with an empty prompt, `claude -p` refuses
+    before it makes any API call, and its complaint is *specifically* about the
+    missing prompt. A malformed vector fails differently and earlier —
+    `unknown option '--allowedToolz'`, or `argument 'jsonx' is invalid`. So
+    "the only thing it objected to was the empty prompt" is exactly the
+    assertion "everything else in this vector is accepted", at no cost and
+    with no network.
+
+    It skips where the CLI is absent and never passes there.
+    """
+    one = harness_mod.chosen("claude-code")
+    assert one is not None
+    done = subprocess.run(  # noqa: S603 - fixed executable, no shell
+        [one.executable, *one.args],
+        input="",
+        capture_output=True,
+        text=True,
+        timeout=120,
+        cwd=os.path.expanduser("~"),
+    )
+    said = (done.stderr or "") + (done.stdout or "")
+    assert "unknown option" not in said, said[:400]
+    assert "is invalid" not in said, said[:400]
+    # And the one complaint it is allowed to have, which is the one this
+    # command deliberately provoked.
+    assert "Input must be provided" in said, said[:400]
+
+
+def test_a_harness_we_cannot_hold_to_search_and_fetch_is_not_offered():
+    """opencode is installed on some machines and Kriko will not drive it.
+
+    Its command line has no tool grant — `--agent` names a profile, which is
+    trusting a configuration rather than granting a set — and the allowlist is
+    not a preference here, it is the reason this plane is allowed to exist.
+    One fewer plane beats a plane that can run `bash` on the reader's machine.
+
+    Reported rather than hidden: `found_but_unusable` exists so the screen can
+    answer "my opencode is installed, why isn't it used".
+    """
+    for one in harness_mod.KNOWN:
+        has_grant = "--allowedTools" in one.args or "--allowed-tools" in one.args
+        assert has_grant or one.unusable, (
+            f"{one.id} is offered with no way to restrict its tools"
+        )
+    assert all(one.unusable == "" for one in harness_mod.available())
+    opencode = next(one for one in harness_mod.KNOWN if one.id == "opencode")
+    assert opencode.unusable
+    assert opencode not in harness_mod.available()
 
 
 def test_the_spawned_agent_is_handed_no_mcp_config():
@@ -432,7 +532,7 @@ class _Recorder:
 
 
 def test_a_run_that_succeeds_kept_something_refused_something_or_said_why(tmp_path):
-    """The gate B92 names, on the plane a reader actually gets by default.
+    """The gate B92 names, on the plane that gathers nothing.
 
     This is the assertion whose absence let 0.5.3 ship: every automated check
     passed on a research run that produced a `succeeded` row, an empty log and
@@ -442,7 +542,12 @@ def test_a_run_that_succeeds_kept_something_refused_something_or_said_why(tmp_pa
     """
     _seed(tmp_path)
     progress = _Recorder()
-    result = tasks.research(_settings(tmp_path), {"subject_id": "s1"}, progress)
+    # `agent` named rather than defaulted. It is no longer what an unnamed run
+    # resolves to — that was the whole of D2, since `agent` fetches nothing —
+    # but it is still what a machine with no coding-agent CLI gets, and it is
+    # the plane most likely to end a run having kept nothing.
+    result = tasks.research(
+        _settings(tmp_path), {"subject_id": "s1", "backend": "agent"}, progress)
 
     text = progress.log_text
     said_why = tasks.EMPTY_RUN["agent"] in text
@@ -463,7 +568,8 @@ def test_the_agenda_run_says_which_kind_of_nothing_it_did(tmp_path):
     likely to keep nothing on the free plane."""
     _seed(tmp_path)
     progress = _Recorder()
-    tasks.agenda_run(_settings(tmp_path), {"rows": 3}, progress)
+    tasks.agenda_run(
+        _settings(tmp_path), {"rows": 3, "backend": "agent"}, progress)
     last = progress.lines[-1]
     assert "brief(s) ready" in last or "nothing to research" in last
 
