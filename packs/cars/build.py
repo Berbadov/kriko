@@ -93,6 +93,55 @@ def _identity_of(variant: dict, keys: list[str]) -> dict:
     return {k: variant.get(k, "") for k in keys}
 
 
+def _search_names(variant: dict) -> list[str]:
+    """What a person would type into a search box for this car.
+
+    `_label` below is a *display* string: it carries the power floor and the
+    raw engine code precisely so two variants can be told apart in a list. Fed
+    to a search engine it produced
+
+        Volkswagen Golf 1.5_TSI 150 hp common problems
+
+    which is not a phrase anybody has ever typed, and the reader read the
+    result as the engine being broken: "queries are still fucked up". They
+    were right, and the fault was one string doing two jobs.
+
+    So this emits `search_name` aliases instead — whole phrases a person would
+    type, which attribute nothing (a claim about "Volkswagen Golf" would pin
+    onto every variant, and that collapse was design-flaw 3). Two shapes,
+    because forums use both: the engine code spelled as a person spells it, and
+    the plain make-and-model that finds the generation-wide threads.
+
+    Category taste, in pack data, where taste belongs. The engine's part is
+    only to prefer these over the display label, and to know nothing about
+    what a TSI is.
+    """
+    make = str(variant.get("make", "")).title()
+    model = str(variant.get("model", "")).title()
+    if not make or not model:
+        return []
+
+    # Underscores are a catalog spelling, not a word. `1.5_TSI` -> `1.5 TSI`.
+    code = str(variant.get("engine_code", "")).replace("_", " ").strip()
+    generation = str(variant.get("generation", "")).strip()
+
+    names = []
+    if code:
+        names.append(f"{make} {model} {code}")
+    if generation:
+        names.append(f"{make} {model} {generation}")
+    # Always, and last: the widest phrase that still names the right car. A
+    # variant-specific search that finds nothing is the failure this catches.
+    names.append(f"{make} {model}")
+
+    seen: list[str] = []
+    for name in names:
+        tidy = " ".join(name.split())
+        if tidy and tidy not in seen:
+            seen.append(tidy)
+    return seen
+
+
 def _label(variant: dict) -> str:
     bits = [str(variant.get("make", "")).title(), str(variant.get("model", "")).title()]
     if variant.get("generation"):
@@ -472,6 +521,19 @@ def _emit_variants(
             )
             row_ids.append(subject_id)
             stats["variants"] += 1
+
+            # `search_name`, never `attribution_safe`: "Volkswagen Golf" must
+            # be allowed to carry a search and must never be allowed to pin a
+            # claim onto this variant. That distinction was design-flaw 3. And
+            # not `search_only` either — that tier is widening *fragments*, and
+            # these are whole names, which is what makes them safe to render
+            # into a query on their own.
+            for alias in _search_names(variant):
+                conn.execute(
+                    "INSERT OR IGNORE INTO subject_aliases VALUES (?,?,?,?,?)",
+                    (subject_id, pack_id, alias, "", "search_name"),
+                )
+                row_ids.append(f"subject_alias:{subject_id}:{alias}")
 
             _emit_variant_attributes(
                 conn, pack_id, subject_id, variant, identity_keys, row_ids

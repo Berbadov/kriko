@@ -87,6 +87,18 @@
                                  and a reader who greps for it should find it
                                  on the screen too. -->
                             <span class="badge" title={plane.cost_basis}>{costWord(plane)}</span>
+                            <!-- Which card a button elsewhere in the app will
+                                 use when nobody named a plane. The reader met
+                                 the cost of not knowing this twice: the
+                                 default was the plane that fetches nothing,
+                                 and Research reported success having gathered
+                                 nothing. Marking it is cheaper than
+                                 explaining it. -->
+                            {#if plane.id === data.default}
+                                <span class="badge" title="what Research uses unless told otherwise"
+                                    >default</span
+                                >
+                            {/if}
                         </div>
                         <p class="meta">{plane.what}</p>
 
@@ -94,6 +106,17 @@
                             <p class="meta">
                                 Using <strong>{found.label}</strong>
                                 (<code>{found.command}</code>).
+                            </p>
+                        {/each}
+
+                        <!-- Installed, found, and skipped on purpose. Left
+                             unsaid, this reads as Kriko failing to notice a
+                             tool the reader can see on their own PATH; said,
+                             it is a sentence about what the plane requires. -->
+                        {#each plane.unusable ?? [] as skipped (skipped.id)}
+                            <p class="meta">
+                                Not using <strong>{skipped.label}</strong>
+                                (<code>{skipped.command}</code>) — {skipped.why}
                             </p>
                         {/each}
 

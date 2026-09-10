@@ -50,60 +50,38 @@
         };
     });
 
-    // ── starting a pack, not only building one ───────────────────────────
+    // ── starting a pack: one field, and an agent does the rest ──────────
     //
-    // The app could build a directory and install the artifact, but the
-    // directory itself had to be created by hand from a document — so
-    // authoring a category, the thing this whole platform is for, was the one
-    // task with no door in the app. The scaffold writes a skeleton that
-    // already passes the contract; the reader then edits rows and presses
-    // Build below, which is why the two forms sit together.
-    let newRoot = $state("");
-    let newId = $state("");
-    let newName = $state("");
-    // One kind per line, `kind: key, key`. Free-form because an identity
-    // table's shape belongs to the author's category: a fixed set of fields
-    // here would be this app deciding what things are like.
-    let newIdentity = $state("");
-    let scaffolded = $state("");
+    // What was here asked for a directory, an id, a name and an identity
+    // table before it would write anything, and the reader's verdict on that
+    // was "it's gotta be automated with agents". They were right, and not
+    // only about the typing: three of those four are decisions somebody who
+    // has read the category can take well and somebody who has not cannot
+    // take at all. The identity table is the sharp one — too few keys and
+    // unrelated rows collide into one subject, too many and one thing splits
+    // across subjects that never see each other's claims, and neither failure
+    // raises anything. Asking for it first was asking for the one answer the
+    // reader was least equipped to give.
+    //
+    // So: a category in plain words, one press. The agent proposes the data,
+    // the engine writes the files, and the reader installs from Knowledge —
+    // three steps and three different authorities, which is why nothing here
+    // reaches the store.
+    let category = $state("");
 
-    function parseIdentity(text: string): Record<string, string[]> {
-        const out: Record<string, string[]> = {};
-        for (const line of text.split("\n")) {
-            const [kind, keys = ""] = line.split(":");
-            const cleanKind = kind.trim();
-            const cleanKeys = keys
-                .split(",")
-                .map((key) => key.trim())
-                .filter(Boolean);
-            if (cleanKind && cleanKeys.length) out[cleanKind] = cleanKeys;
-        }
-        return out;
-    }
-
-    const identityPreview = $derived(parseIdentity(newIdentity));
-    const canScaffold = $derived(
-        Boolean(newRoot.trim() && newId.trim() && newName.trim()) &&
-            Object.keys(identityPreview).length > 0,
-    );
-
-    async function startPack() {
-        if (!canScaffold) return;
+    async function authorPack() {
+        if (!category.trim()) return;
         busy = true;
         error = null;
-        scaffolded = "";
         try {
-            const made = await api.scaffoldPack({
-                root: newRoot.trim(),
-                pack_id: newId.trim(),
-                name: newName.trim(),
-                identity: identityPreview,
-            });
-            scaffolded = made.root;
-            // Hand the directory straight to the build form: the next thing
-            // the reader wants is to see it install, and retyping the path
-            // they just gave us would be the app forgetting on purpose.
-            root = made.root;
+            const { job_id } = await api.authorPack(category.trim());
+            const job = await api.job(job_id);
+            replace(job);
+            watch(job);
+            // Opened straight away, because this run is worth watching: it is
+            // several minutes of an agent reading, and the log is where the
+            // reader sees that it is reading rather than hung.
+            open = job_id;
         } catch (cause) {
             error = cause;
         } finally {
@@ -160,7 +138,23 @@
 
     const percent = (job: Job) => Math.round((job.progress ?? 0) * 100);
     const subjectOf = (job: Job) =>
-        String(job.params?.subject_id ?? job.params?.root ?? "");
+        String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
+
+    /** What kind of work a row was, in the reader's words.
+     *
+     * A map rather than a ternary because there are now three kinds and the
+     * third one — an agent writing a whole pack — read as "Build", which is
+     * the one thing it deliberately does not do.
+     */
+    const KINDS: Record<string, string> = {
+        research: "Research",
+        agenda_run: "Research",
+        research_undo: "Undo",
+        pack_author: "New pack",
+        pack_build: "Build",
+        pack_update: "Update",
+    };
+    const kindWord = (job: Job) => KINDS[job.kind] ?? job.kind;
 </script>
 
 <!-- "Runs", which is what the rail has always called it. The heading said
@@ -176,45 +170,32 @@
 <details class="authoring">
     <summary>Start a new pack</summary>
     <p class="meta">
-        Writes a skeleton that already passes the pack contract — a manifest, a
-        vocabulary, one placeholder subject and one placeholder claim — then hands
-        the directory to the builder below. It installs nothing on its own.
+        Name a category in a few words and your own coding agent writes the whole
+        pack — what tells two of these apart, the bar a claim has to clear, what
+        to search for, and a first honest row. It lands as a draft you can read
+        on Knowledge; nothing is installed until you press Install there.
     </p>
-    <form class="ask stack" onsubmit={(event) => (event.preventDefault(), startPack())}>
-        <label class="field">
-            <span>Directory to create it in</span>
-            <input bind:value={newRoot} placeholder="packs/mine" />
+    <form
+        class="ask"
+        onsubmit={(event) => (event.preventDefault(), authorPack())}
+    >
+        <label class="field grow">
+            <span>What is the category?</span>
+            <input
+                bind:value={category}
+                placeholder="cordless drills, espresso machines, e-bikes"
+            />
         </label>
-        <label class="field">
-            <span>Pack id</span>
-            <input bind:value={newId} placeholder="org.example.mine" />
-        </label>
-        <label class="field">
-            <span>Name</span>
-            <input bind:value={newName} placeholder="What it covers, in a few words" />
-        </label>
-        <label class="field">
-            <span>Identity keys — one kind per line, as <code>kind: key, key</code></span>
-            <textarea
-                bind:value={newIdentity}
-                rows="3"
-                placeholder={"product: brand, series\nplatform: brand, family"}
-            ></textarea>
-            <span class="meta">
-                What makes two of these the same thing. It decides which rows can ever
-                merge with another pack's, and getting it wrong fails silently rather
-                than loudly — too few keys and unrelated things collide, too many and one
-                thing splits across subjects that never see each other's claims.
-            </span>
-        </label>
-        <button type="submit" disabled={busy || !canScaffold}>Write the skeleton</button>
+        <button type="submit" disabled={busy || !category.trim()}>
+            Have my agent write it
+        </button>
     </form>
-    {#if scaffolded}
-        <p class="meta">
-            Written to <code>{scaffolded}</code>. Edit the rows under
-            <code>data/</code>, then build it below — the path is already filled in.
-        </p>
-    {/if}
+    <p class="meta">
+        Needs a coding-agent command-line tool installed — the same one the
+        Research plane uses, and it costs nothing beyond the subscription you
+        already pay for. Without one, connect your agent under Agents and let it
+        use <code>draft_pack</code> instead.
+    </p>
 </details>
 
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
@@ -243,7 +224,7 @@
 {#each jobs as job (job.job_id)}
     <article class="card job" class:live={isLive(job)}>
         <h3>
-            {job.kind === "research" ? "Research" : "Build"}
+            {kindWord(job)}
             <span class="meta">{subjectOf(job)}</span>
             <span class="badge state-{job.state}">
                 <!-- Only on a job that is still moving. A badge that reads

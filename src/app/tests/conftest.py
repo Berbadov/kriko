@@ -51,3 +51,43 @@ def no_writes_to_the_readers_home(monkeypatch):
 
     monkeypatch.setattr(state, "connect", guarded)
     yield
+
+
+@pytest.fixture(autouse=True)
+def no_test_starts_a_real_coding_agent(monkeypatch):
+    """A test may not spawn the reader's actual agent CLI.
+
+    The sibling of the guard above, found the same way. `tasks.default_backend()`
+    resolves an unnamed plane to `harness` whenever a coding-agent CLI is on
+    PATH — which is right for the app and a trap for the suite: on a developer's
+    machine `test_a_real_agenda_run_ends_up_in_the_run_list` posted no backend,
+    got `harness`, and spent fifteen seconds driving a real `claude` against the
+    reader's subscription before the deadline killed it. On CI, where no CLI is
+    installed, it passed. That asymmetry is how a test ends up billing somebody.
+
+    So the door is shut at the one place a harness plane actually starts a
+    process — and shut on *which* process rather than on the call, because
+    `test_the_harness_research_plane.py` drives the real `_run` on purpose
+    against a fake CLI it writes into `tmp_path`. That is the distinction worth
+    encoding: a harness test should exercise the spawn, and no test should
+    exercise the reader's own agent.
+
+    The line is `harness.KNOWN` — the executables Kriko would really drive. A
+    fixture names `sys.executable` and a script it just wrote, so it passes;
+    `claude` never does, whether it is installed here or not.
+    """
+    from app.providers import harness
+
+    real = harness.HarnessResearcher._run
+    theirs = {h.executable for h in harness.KNOWN}
+
+    def guarded(self, prompt):
+        executable = str(getattr(self.harness, "executable", ""))
+        if Path(executable).name in theirs:
+            raise AssertionError(
+                f"a test tried to start {executable!r}, the reader's own coding "
+                "agent. Name a plane (`backend: 'agent'`), or point the harness "
+                "at a fake CLI as `_fake_cli` does.")
+        return real(self, prompt)
+
+    monkeypatch.setattr(harness.HarnessResearcher, "_run", guarded)
