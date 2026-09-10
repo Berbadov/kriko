@@ -806,8 +806,17 @@ def test_the_skill_generator_types_no_category_words(client):
         assert f"'{word}'" not in source
 
 
-def test_a_store_with_no_packs_gets_no_skill(tmp_path):
-    """Nothing to research, and nothing to say what would count."""
+def test_a_store_with_no_packs_gets_the_authoring_skill(tmp_path):
+    """Nothing to research is not nothing to do (B96).
+
+    This test used to assert the opposite — no packs, no skill — on the
+    reasoning that a store with no knowledge has no research protocol. True,
+    and it left an agent connected to a fresh install with no instructions at
+    all, which is what the reader hit: "no agents guideline for brand new
+    packages". The job on an empty installation is to author the first pack,
+    so that is what the skill says, and it says nothing about a research loop
+    it has no principle to hold anything to.
+    """
     app_ = create_app(
         Settings(
             store_path=tmp_path / "empty.sqlite",
@@ -816,7 +825,12 @@ def test_a_store_with_no_packs_gets_no_skill(tmp_path):
         )
     )
     with TestClient(app_) as empty:
-        assert empty.get("/api/agent-skill").json()["body"] is None
+        body = empty.get("/api/agent-skill").json()["body"]
+    assert "draft_pack" in body
+    assert "This installation has no packs" in body
+    # And not the research loop: an agenda over nothing is a prompt spent on
+    # instructions the agent cannot follow.
+    assert "## The loop" not in body
 
 
 def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monkeypatch):

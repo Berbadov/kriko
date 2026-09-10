@@ -4,9 +4,11 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from fastapi import Header
 from pydantic import BaseModel, Field
 
+from app import packdraft
 from app.web.deps import get_store
 from kriko.pack.scaffold import scaffold
 from kriko.store import packstore
@@ -228,3 +230,78 @@ def scaffold_pack(body: NewPack):
     except OSError as exc:
         raise HTTPException(400, f"could not write to {root}: {exc}") from exc
     return {"root": str(root), "files": [str(path) for path in written]}
+
+
+# ── drafts an agent wrote ────────────────────────────────────────────────
+#
+# `app/packdraft.py` is the boundary; this is the reader's side of it. An agent
+# can author a pack and build it, and nothing it writes reaches the store — so
+# the store's side of that door has to exist somewhere the reader can see, and
+# a directory under `~/.kriko/drafts` that nothing lists is a directory nobody
+# installs.
+
+
+@router.get("/packs/drafts")
+def list_pack_drafts(request: Request):
+    """Every drafted pack, whether it loads, and whether it has been built."""
+    return {"items": packdraft.listing(request.app.state.settings.store_path)}
+
+
+@router.post("/packs/drafts/{slug}/build")
+def build_pack_draft(slug: str, request: Request):
+    """Build a draft into an artifact without installing it."""
+    try:
+        out = packdraft.build_artifact(request.app.state.settings.store_path, slug)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        # The draft's own rows are wrong, which is a 400 about the draft rather
+        # than a 500 about this app: the answer is an edit, and the agent that
+        # wrote it is the one who makes it.
+        raise HTTPException(400, f"this draft does not build: {exc}") from exc
+    return {"slug": slug, "artifact": str(out)}
+
+
+@router.post("/packs/drafts/{slug}/install")
+def install_pack_draft(slug: str, request: Request, store=Depends(get_store)):
+    """Build the draft if needed, then install it. The reader's press.
+
+    Built here rather than requiring a separate build first, because "install
+    this" is one decision and a reader who has read the draft should not have
+    to learn the artifact's lifecycle to act on it.
+    """
+    settings = request.app.state.settings
+    try:
+        artifact = packdraft.build_artifact(settings.store_path, slug)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, f"this draft does not build: {exc}") from exc
+    try:
+        pack_id = packstore.install(store, artifact)
+    except (ValueError, sqlite3.Error) as exc:
+        raise HTTPException(400, f"invalid pack artifact: {exc}") from exc
+    return {"slug": slug, "pack_id": pack_id}
+
+
+@router.delete("/packs/drafts/{slug}")
+def discard_pack_draft(slug: str, request: Request):
+    """Throw a draft away. Only ever the reader's call.
+
+    Nothing in the agent surface can delete a draft: an agent that wrote the
+    wrong thing rewrites the file, and an agent that could remove the evidence
+    of what it wrote would be worse than one that cannot. Installed packs are
+    untouched — this deletes the directory and the artifact beside it, both of
+    which only ever held what an agent proposed.
+    """
+    import shutil
+
+    try:
+        draft = packdraft.open_draft(request.app.state.settings.store_path, slug)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+    artifact = draft.artifact()
+    shutil.rmtree(draft.root, ignore_errors=True)
+    if artifact:
+        Path(artifact).unlink(missing_ok=True)
+    return {"slug": draft.slug, "discarded": True}

@@ -78,7 +78,10 @@
     // reader looking at this screen wants it on the page rather than after a
     // second request that only decides which buttons to draw.
     api.researchPlanes()
-        .then((data) => (planes = data.planes))
+        // `?? []` because a payload without the field is a payload from an
+        // older engine, and a derived that reads `.find` off undefined takes
+        // the whole card down with it.
+        .then((data) => (planes = data.planes ?? []))
         .catch(() => (planes = []));
 
     async function copy(what: string, text: string) {

@@ -43,6 +43,18 @@ mcp = FastMCP("kriko")
 STORE_PATH = None
 
 
+def _store_path():
+    """The store file this process is working against.
+
+    `STORE_PATH` when a test set it, the real default otherwise. Named
+    separately from `_store()` because the authoring tools want the *path* —
+    a draft directory is its sibling — and never open the store at all.
+    """
+    from kriko.store.db import DEFAULT_STORE
+
+    return Path(STORE_PATH or DEFAULT_STORE)
+
+
 def _app_state_path():
     """Where the interface's own database is, derived from the store's own
     directory rather than imported from `app.web.settings`.
@@ -416,6 +428,87 @@ def submit_findings(
         queries=queries,
     )
     return verdicts
+
+
+# ── writes: authoring a pack, in a directory the reader owns ─────────────
+#
+# Everything below writes files and installs nothing. The boundary — one
+# directory, a fixed set of data-only filenames, no Python, nothing reaching
+# the store without the reader — is `app/packdraft.py`'s module docstring, and
+# it is worth reading before adding a tool here.
+
+
+@mcp.tool()
+def draft_pack(
+    pack_id: str, name: str, identity: dict, version: str = "0.1.0"
+) -> dict:
+    """Start a new pack as a draft the reader can review, then install.
+
+    Use this when the reader wants a category Kriko does not model yet. You
+    are authoring the pack, not the claims: `identity` is the consequential
+    argument and it maps each subject kind to the attribute keys that make one
+    of them distinct — `{"product": ["brand", "model"]}`. Too few keys and
+    unrelated products collide into one subject; too many and one real product
+    splits across subjects that never see each other's claims. Neither failure
+    raises, so think about it before calling.
+
+    Returns the draft's slug and the files written. The draft starts at the
+    contract's floor and already loads; fill it in with `write_draft_file`,
+    check it with `build_draft`, and leave installing to the reader.
+    """
+    from app import packdraft
+
+    draft = packdraft.create(
+        _store_path(),
+        pack_id=pack_id,
+        name=name,
+        identity=identity or {},
+        version=version,
+    )
+    return {"draft": draft.slug, "root": str(draft.root), "files": draft.files()}
+
+
+@mcp.tool()
+def write_draft_file(draft: str, path: str, text: str) -> dict:
+    """Replace one file in a drafted pack. Data files only.
+
+    `path` is relative to the draft: `pack.toml`, `README.md`,
+    `research/principle.md`, `research/templates.yaml`, `research/skill.md`, or
+    a `.yaml` file under `data/`, `vocabulary/`, `trust/` or `adapters/`.
+    Anything else is refused, including any form of Python — a pack an agent
+    wrote must be data, because installing it must not mean running code the
+    reader never read.
+
+    The two files worth your attention are `research/principle.md` (what this
+    category considers worth surfacing, quoted verbatim into every future
+    brief) and `research/templates.yaml` (the seed searches, whose language the
+    manifest must declare).
+    """
+    from app import packdraft
+
+    written = packdraft.write(_store_path(), slug=draft, path=path, text=text)
+    return {"draft": draft, "written": written}
+
+
+@mcp.tool()
+def list_pack_drafts() -> list[dict]:
+    """The drafted packs on this machine, and whether each one still loads."""
+    from app import packdraft
+
+    return packdraft.listing(_store_path())
+
+
+@mcp.tool()
+def build_draft(draft: str) -> dict:
+    """Build a drafted pack into an artifact. Does not install it.
+
+    This is how you find out whether your rows load: a build that fails names
+    the row that broke it. The reader installs from the Knowledge screen, which
+    lists every draft — a pack reaching their store is their press, not yours.
+    """
+    from app import packdraft
+
+    return {"draft": draft, "artifact": str(packdraft.build_artifact(_store_path(), draft))}
 
 
 @mcp.tool()

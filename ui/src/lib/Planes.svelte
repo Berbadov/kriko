@@ -69,7 +69,7 @@
 <article class="card">
     <h3>Build knowledge</h3>
     <p class="meta">
-        Two planes, the same claims at the end of both: whatever either one finds
+        Three planes, the same claims at the end of all of them: whatever either one finds
         goes through the same grounding check and the same acceptance path, tagged
         with which plane found it, and any run can be taken back out from
         <strong>Activity → Runs</strong>.

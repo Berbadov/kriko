@@ -683,3 +683,24 @@ export type AgendaRunRequest = {
     budget_usd?: number;
     max_documents?: number;
 };
+
+/* A pack an agent wrote, waiting for the reader to install or throw away.
+ *
+ * An agent's write surface used to stop at claims: it could add to a pack that
+ * already declared the subject, and it could not start a pack for a category
+ * nobody had modelled. It can now, into `~/.kriko/drafts` — data files only,
+ * no code, and nothing reaches the store without the press below. `error` is
+ * set when the draft no longer loads, which is worth showing rather than
+ * hiding: installing it will fail, and whoever wrote it needs to know which
+ * edit broke it.
+ */
+export type PackDraft = {
+    slug: string;
+    root: string;
+    files: string[];
+    artifact: string | null;
+    pack_id: string;
+    name: string;
+    version: string;
+    error: string;
+};

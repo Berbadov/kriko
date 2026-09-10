@@ -123,6 +123,16 @@ export const api = {
     /** Write a new pack's skeleton to disk. Installs nothing — building is a job. */
     scaffoldPack: (body: T.NewPack) =>
         postJson<{ root: string; files: string[] }>("/api/packs/scaffold", body),
+    // Packs an agent drafted. It writes files and installs nothing, so the
+    // install below is the only way one of these reaches the store.
+    packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
+    installPackDraft: (slug: string) =>
+        postJson<{ slug: string; pack_id: string }>(
+            `/api/packs/drafts/${seg(slug)}/install`,
+            {},
+        ),
+    discardPackDraft: (slug: string) =>
+        del<{ slug: string }>(`/api/packs/drafts/${seg(slug)}`),
     lookup: (body: T.LookupRequest) => postJson<T.LookupResult>("/api/lookup", body),
     analyze: (body: T.AnalyzeRequest) => postJson<T.AnalyzeResult>("/api/analyze", body),
     history: (limit = 20) =>

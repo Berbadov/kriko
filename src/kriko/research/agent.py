@@ -95,8 +95,9 @@ class AgentResearcher:
                     f"{', '.join(task.languages)}"
                     + (f" and its claims are about "
                        f"{', '.join(task.markets)}" if task.markets else "")
-                    + ". A part name, a symptom and a model name written in "
-                      "three languages at once is a query nobody types, and "
+                    + ". A part name, a symptom and a subject's own name "
+                      "written in three languages at once is a query nobody "
+                      "types, and "
                       "it is the one thing that reliably returns nothing."
                 )
         else:
