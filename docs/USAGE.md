@@ -204,8 +204,8 @@ trim-shaped VW Golf 8 lineup got written and reported as a success:
 - **No guessed figures.** A trim whose power or displacement the agent could not
   source is written `draft: true`; the pack build skips it and the coverage
   report raises `draft_variant`. A visible gap, never a plausible invention.
-- **No fabricated citations.** `add_evidence` rejects any quote that is not
-  literally present in the document the agent submitted (whitespace- and
+- **No fabricated citations.** `submit_findings` rejects any quote that is not
+  literally present in the `document_text` the agent submitted (whitespace- and
   case-insensitive). An agent cannot cite a source it did not read.
 - **No trim-shaped lineups.** A row is a *powertrain*: two rows a listing could
   never tell apart are merged or refused, and an id must name the engine, not
@@ -449,12 +449,17 @@ still has one run slot, so starting an agent stops any active pipeline run.
 The pipeline as tools for a subscription LLM — new-model research at $0 flat
 rate instead of API tokens:
 
-The server registers 19 tools: read (`ledger_status`, `spend_summary`,
-`pending_extract`, `pending_verdicts`, `list_parts`, `get_part`,
-`list_documents`, `get_document`, `coverage_report`, `onboard_model`,
-`list_generations`, `research_brief`) and $0 write (`submit_trims`,
-`submit_generations`, `add_document`, `add_evidence`, `run_pipeline_pass`,
-`finish_model`, `run_remediate_import_only`).
+> **This tool inventory is pre-pivot and gone.** It described a
+> pipeline-specific MCP server under `packs/cars/`, and none of the nineteen
+> tools it named — `ledger_status`, `submit_trims`, `add_document`,
+> `add_evidence`, `run_pipeline_pass` and the rest — exists anywhere in the
+> tree. The surviving server is `app/mcp_server.py`, whose tools are listed
+> under *Connecting an agent* rather than repeated here: a second written copy
+> of a tool list is the thing that goes stale, and this one did. It cost
+> something — `AgentResearcher.brief` was written against these names, so
+> every research brief this app produced until 2026-09-10 told agents to call
+> `add_document` and `add_evidence`, and rewriting the rest of this step is an
+> open follow-up rather than a claim that it is current.
 
 Two of those shape the agent's *method* rather than its output:
 

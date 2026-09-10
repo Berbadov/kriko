@@ -67,6 +67,14 @@ State it in `research/principle.md`: what is worth surfacing about this
 category, and what a reader could get more cheaply elsewhere. The ranking is
 the platform's job; the bar is yours, and it is category-specific, which is
 exactly why it ships as pack data.
+
+## What to search for
+
+`research/templates.yaml` holds the queries. It was scaffolded from the
+identity keys above and knows nothing about this category, so rewrite it in the
+words people actually use — and in the language they use them in. Every research
+brief prints these as "Searches to run"; a pack that empties this file has a
+Research button that says what to keep and never says what to look for.
 """
 
 
@@ -85,6 +93,49 @@ A useful bar names both halves:
 The test for a candidate row is one question: *would this reader have learned
 it anyway?* If yes, it is noise, however true it is.
 """
+
+
+#: The searches a pack names for its own subjects, and why a new pack must
+#: ship some.
+#:
+#: `kriko.research.plan_task` reads this file and renders each line with the
+#: subject's label, its aliases and its identity keys; `AgentResearcher.brief`
+#: prints the result as "Searches to run". A pack with no templates file
+#: renders **zero** queries, so its brief tells an agent what to keep and never
+#: says what to look for — and until 2026-09-10 the scaffold wrote
+#: `principle.md` and not this, which meant every pack authored through it had
+#: a Research button that produced half a document.
+#:
+#: The lines below are derived from the identity keys the author just declared,
+#: not from a category this module knows about. Two of them are shaped for
+#: whatever `{kind}` and keys came in, which is the difference between a
+#: starting point and a guess about the domain.
+def _templates(identity: dict) -> str:
+    """Query templates keyed off the identity this pack just declared."""
+    keys = sorted({key for keys in identity.values() for key in keys})
+    lines = [
+        "# Search templates for this pack. One query per line.",
+        "#",
+        "# `{label}` is the subject's own name, `{alias}` is each of its aliases",
+        "# in turn (one query is rendered per alias), and any identity key this",
+        "# pack declares may be used by name. A template naming a key a subject",
+        "# does not carry is skipped for that subject rather than failing, so a",
+        "# more specific line costs nothing.",
+        "#",
+        "# These are a starting point, not a finished set: they were generated",
+        "# from the identity keys above and know nothing about what this pack",
+        "# covers. Rewrite them in the words people actually use — including",
+        "# the language they use them in, if that is not English. The searches",
+        "# a category needs are pack knowledge, which is why they live here",
+        "# rather than anywhere in Kriko's core.",
+        '- "{alias} common problems"',
+        '- "{alias} known issues"',
+        '- "{label} failure symptoms"',
+        '- "{alias} reliability forum"',
+    ]
+    for key in keys[:2]:
+        lines.append(f'- "{{alias}} {{{key}}} problems"')
+    return "\n".join(lines) + "\n"
 
 
 def _terms(identity: dict) -> str:
@@ -204,6 +255,7 @@ def scaffold(
         root / "pack.toml": _pack_toml(pack_id, name, version, cleaned),
         root / "README.md": _readme(name, pack_id, cleaned),
         root / "research" / "principle.md": _PRINCIPLE,
+        root / "research" / "templates.yaml": _templates(cleaned),
         root / "vocabulary" / "terms.yaml": _terms(cleaned),
         root / "data" / "subjects.yaml": _subjects(cleaned),
         root / "data" / "claims.yaml": _claims(cleaned),

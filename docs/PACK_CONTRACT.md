@@ -71,9 +71,26 @@ mature pack needs; a pack that doesn't need it doesn't carry it.
   ranking/gating logic reads as pack-declared rows instead of hardcoded
   Python. Present in both `packs/drill/vocabulary/` and
   `packs/cars/vocabulary/`.
-- **`research/`** — the category's own product principle (what's worth
-  surfacing for *this* kind of product) and any claim/finding templates.
-  Present in both `packs/drill/research/` and `packs/cars/research/`.
+- **`research/`** — everything an agent needs to research *this* category,
+  and the three files are read by name:
+  - `principle.md` — what is worth surfacing for this kind of product, and what
+    a reader could get more cheaply elsewhere. It is quoted verbatim into every
+    research brief and into the generated agent skill, so it is the pack's own
+    bar rather than the engine's.
+  - `templates.yaml` — the searches to run, one query per line, with `{label}`,
+    `{alias}` and any of the pack's identity keys substituted in. **Effectively
+    required.** A pack that omits it renders *zero* queries, and its brief then
+    says what to keep without ever saying what to look for — which is what a
+    reader experiences as a Research button that does nothing. `kriko pack
+    scaffold` writes a starting set derived from the identity keys declared.
+  - `skill.md` — optional: how to resolve a subject's *identity* before
+    searching for it, since "the make and model" is a guess and the
+    discriminating attribute is a method. Where present it becomes a section of
+    the generated agent skill.
+
+  `kriko/pack/build.py` is the list that decides which of these ship; a file
+  not named there is not carried into the `.kpack`. Present in both
+  `packs/drill/research/` and `packs/cars/research/`.
 - **`trust/`** — source trust tiers, for a pack whose pipeline ingests from
   sources of varying reliability. Present in `packs/cars/trust/`; drill has
   none — its data is synthetic, so there's nothing to weigh.

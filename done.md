@@ -6,6 +6,81 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-10 — The research brief pointed agents at tools that do not exist (B90)
+
+Branch `agents-are-actually-reachable`. The reader installed 0.5.2, it opened,
+and the report was: *"research buttons do nothing, no connection with the
+agents and no agents guidline for brand new packages. furthermore, agents seem
+to not integrated."* Three separate defects, all confirmed against a copy of
+their own store, and one of them is the answer to the other two.
+
+**The brief named `add_document` and `add_evidence`.** Neither has existed for
+months. `app/mcp_server.py` registers thirteen tools and the one that files a
+finding is `submit_findings` — confirmed by asking the reader's *installed*
+binary directly: `kriko-sidecar.exe --mcp` completes a real handshake and lists
+all thirteen, and those two are not among them. This matters more than a
+wrong name because of what the $0 plane is: `AgentResearcher.gather()` returns
+nothing on purpose, so the **brief is the plane's entire output** and every
+tool name in it is a call an agent will actually attempt. An agent handed it
+followed it and failed. The brief now names `submit_findings`, gives the real
+six required fields, and shows the call filled in with the subject's own id.
+
+**Where the names came from, which is the more useful finding.**
+`docs/USAGE.md`'s Step 4e documents a pipeline MCP server under `packs/cars/`
+with nineteen tools, `add_document` and `add_evidence` among them. That server
+is gone — not one of the nineteen exists anywhere in the tree. The brief was
+written against a stale second copy of a tool list. The inventory is now marked
+as pre-pivot and gone rather than left readable as current; rewriting the rest
+of Step 4e is an unrowed follow-up.
+
+**`app/agentskill.py` had it right the whole time**, and that is why nothing
+caught it. Two documents instruct agents, they disagreed, and nothing compared
+them — to each other or to the server. `test_agent_instructions_name_real_tools.py`
+is that comparison: it reads the tools the server actually registers and fails
+if any agent-facing document names one it does not. Five documents are in
+scope — the brief, the generated skill, `app/agenda.py`'s row actions,
+`ui/src/lib/agenda.ts`, and every pack's own `research/skill.md` and agent
+prose, globbed so a second category is held to the first's rule.
+
+The hard part is telling a tool name from a field name; both are snake_case in
+backticks and the documents are full of both. Nothing is enumerated. The
+legitimate non-tool words are derived — the fields `accept_findings` actually
+reads off its own source, every tool's parameter names off their signatures,
+`agenda.KINDS`, and the alias tiers `plan_task` sorts into. A new field needs
+no edit here; a retired tool cannot hide behind one. Host prefixes pass by
+rule, not by list: `mcp__kriko__submit_findings` ends in a real tool's name.
+
+It reads **only the text that reaches an agent** — for a Python module its
+string literals and not its docstrings, via `ast`. That distinction is load
+bearing in this very repo: the retired names are now discussed three times in
+a docstring one function above the brief they were removed from, and a coarser
+check would have to choose between failing on its own history and not reading
+the brief at all. Mutation-verified both ways: RED with `add_evidence` back in
+a literal, GREEN with it only in prose.
+
+**And the scaffold never wrote `research/templates.yaml`.** `plan_task` renders
+a brief's searches from that file, so every pack authored through
+`kriko pack scaffold` rendered **zero** queries — a brief that says what to
+keep and never says what to look for. That is "Research does nothing" as a
+literal description, and it is the "no guidline for brand new packages" half of
+the report. The scaffold now writes one, derived from the identity keys the
+author just declared rather than from a category it cannot know, and the brief
+states the absence instead of omitting the section when a pack still ships
+none. Verified end to end: scaffold a `bikes` pack, build it, install it, ask
+for a brief — five queries and a `submit_findings` call carrying the real
+subject id. `docs/PACK_CONTRACT.md` now documents all three `research/` files
+by name, which of them is required in effect, and that `kriko/pack/build.py`
+is the list that decides what ships.
+
+**What was not broken:** the wiring. `/api/agent-config` advertises the frozen
+binary with `--mcp`, `mcp` is deliberately in the PyInstaller spec's hidden
+imports, `packaging/smoke_sidecar.py` smoke-tests the handshake, and the
+installed binary answered thirteen tools when asked. "No connection with the
+agents" was an unwired install plus a brief no agent could act on, not a broken
+address.
+
+---
+
 ### 2026-09-10 — The shell had not compiled since B83 (B89)
 
 Branch `shell-parses-as-rust`. The reader asked why the installer needed their
