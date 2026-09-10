@@ -74,7 +74,7 @@ class Harness:
     id: str
     label: str
     executable: str
-    #: Argument vector, minus the prompt, which is appended last.
+    #: Argument vector. The prompt is **not** in it — see `_run`.
     args: tuple[str, ...] = ()
     #: True when the CLI answers with one JSON object carrying `result` and
     #: `usage`. A CLI that only prints prose still works — it just cannot
@@ -82,6 +82,11 @@ class Harness:
     #: being filled with a guess.
     structured: bool = True
     env: dict = field(default_factory=dict)
+    #: Why this CLI cannot be used, if it cannot. Non-empty means `available()`
+    #: will not offer it, while `/api/research-planes` still reports that it
+    #: was found — "your opencode is installed and Kriko will not use it, and
+    #: here is why" is an answer; silently ignoring it is not.
+    unusable: str = ""
 
 
 def _claude_args() -> tuple[str, ...]:
@@ -92,19 +97,40 @@ def _claude_args() -> tuple[str, ...]:
     )
 
 
-#: In preference order. The first one found on PATH is the one used, and
-#: `/api/research-planes` reports which.
+#: In preference order. The first *usable* one found on PATH is the one used,
+#: and `/api/research-planes` reports which.
 KNOWN = (
     Harness("claude-code", "Claude Code", "claude", _claude_args()),
-    # `opencode run` prints the assistant's last message and nothing else, so
-    # there is no usage to read. It is still a working plane.
-    Harness("opencode", "opencode", "opencode", ("run",), structured=False),
+    # Found, reported, and not driven. `opencode run` has no flag that
+    # restricts which tools the agent may use — `--help` offers `--agent`, and
+    # naming an agent is trusting a profile rather than granting a set. The
+    # allowlist is not a preference here; it is the reason this plane is
+    # allowed to exist at all, and a research plane that can run `bash` on the
+    # reader's machine is a remote-code path with extra steps. Ship one fewer
+    # plane instead. Re-enable the moment the CLI grows a tool grant.
+    Harness(
+        "opencode",
+        "opencode",
+        "opencode",
+        ("run",),
+        structured=False,
+        unusable=(
+            "opencode's command line has no way to restrict which tools the "
+            "agent may use, and Kriko will not start a research agent it "
+            "cannot hold to search and fetch"
+        ),
+    ),
 )
 
 
 def available() -> list[Harness]:
-    """Which harness CLIs this machine can actually start."""
-    return [h for h in KNOWN if shutil.which(h.executable)]
+    """Which harness CLIs this machine can actually start *and* sandbox."""
+    return [h for h in KNOWN if not h.unusable and shutil.which(h.executable)]
+
+
+def found_but_unusable() -> list[Harness]:
+    """Installed, and deliberately not driven. For the screen to explain."""
+    return [h for h in KNOWN if h.unusable and shutil.which(h.executable)]
 
 
 def chosen(preferred: str = "") -> Harness | None:
@@ -316,13 +342,50 @@ class HarnessResearcher(AgentResearcher):
         """What `gather` already parsed, per document. No second model call."""
         return list(self._by_url.get(document.url, ()))
 
+    def ask(self, prompt: str) -> str:
+        """One prompt, one reply, for a job that is not research.
+
+        Public because `tasks.pack_author` is a second caller with the same
+        need and no interest in findings: it hands the agent a brief about a
+        category and reads back a proposed pack. The plane's value is the
+        *sandboxed spawn* — the allowlist, the neutral working directory, the
+        absent `--mcp-config` — and that is worth reusing rather than
+        reimplementing next to it.
+        """
+        return self._run(prompt)
+
     # ── the subprocess ───────────────────────────────────────────────────────
 
     def _run(self, prompt: str) -> str:
-        command = [self.harness.executable, *self.harness.args, prompt]
+        """The prompt goes in on **stdin**, never as an argument.
+
+        This is the defect that made B92 ship a plane that could not run at
+        all. `claude --help` declares `--allowedTools <tools...>`: a *variadic*
+        option, which swallows every following argument. So a vector ending
+        `--allowedTools WebSearch,WebFetch <prompt>` handed the brief to the
+        allowlist and left the CLI with no prompt, and the reader got
+
+            Claude Code exited 1: Error: Input must be provided either
+            through stdin or as a prompt argument when using --print
+
+        after waiting out a run. Stdin is not a workaround for that one flag —
+        it removes the whole class: no argument order can consume it, no
+        quoting can mangle it, and a 4 KB brief cannot run into a command-line
+        length limit (Windows caps a process's at 32,767 characters, and a
+        brief plus a contract plus a pack's principle is on the same order).
+
+        `test_the_harness_command_line_is_one_the_cli_accepts` runs the real
+        CLI with an empty prompt and asserts its only complaint is the empty
+        prompt, which is free and needs no API call. Every previous gate here
+        asserted the *shape* of `args` and none asserted the CLI would take
+        them — the same mistake as the twelve tray tests that passed on a
+        `main.rs` which could not parse (B89).
+        """
+        command = [self.harness.executable, *self.harness.args]
         try:
             done = subprocess.run(  # noqa: S603 - fixed executable, no shell
                 command,
+                input=prompt,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
@@ -331,7 +394,6 @@ class HarnessResearcher(AgentResearcher):
                 # config and its own tools. Home is neutral and is where a
                 # reader's own subscription config lives.
                 cwd=os.path.expanduser("~"),
-                stdin=subprocess.DEVNULL,
             )
         except FileNotFoundError as exc:
             raise NoHarness(

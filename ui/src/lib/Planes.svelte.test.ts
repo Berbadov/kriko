@@ -16,6 +16,14 @@ const planes = (apiReady: boolean) => ({
                     { id: "claude-code", label: "Claude Code", command: "claude" },
                 ],
                 looked_for: ["claude", "opencode"],
+                unusable: [
+                    {
+                        id: "opencode",
+                        label: "opencode",
+                        command: "opencode",
+                        why: "no flag restricts which tools the agent may use",
+                    },
+                ],
             },
             {
                 id: "agent",
@@ -32,6 +40,9 @@ const planes = (apiReady: boolean) => ({
                 needs_keys: true,
             },
         ],
+        // What an unnamed run resolves to here. The reader met the cost of not
+        // knowing this: the default was the plane that fetches nothing.
+        default: "harness",
     },
     "/api/agenda/run": { job_id: "j1", kind: "agenda_run" },
     "/api/jobs/j1": {
@@ -157,5 +168,25 @@ describe("the three research planes", () => {
         render(Planes);
         expect(await screen.findByText("Build knowledge")).toBeTruthy();
         expect(await screen.findByRole("button", { name: /again|retry/i })).toBeTruthy();
+    });
+
+    it("marks the plane an unnamed run will actually use", async () => {
+        stubFetch(planes(true));
+        render(Planes);
+        // Not decoration. Research reported success having gathered nothing
+        // because the default was the plane that fetches nothing by design,
+        // and no screen said which plane that was.
+        expect(await screen.findByText("default")).toBeInTheDocument();
+    });
+
+    it("says why an installed agent is not being used", async () => {
+        stubFetch(planes(true));
+        render(Planes);
+        // "My opencode is installed, why isn't Kriko using it" is a fair
+        // question, and silence reads as Kriko failing to notice a tool the
+        // reader can see on their own PATH.
+        expect(
+            await screen.findByText(/no flag restricts which tools/),
+        ).toBeInTheDocument();
     });
 });

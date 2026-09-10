@@ -122,7 +122,7 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
             (subject_id, pack_id))
     }
 
-    aliases = {"attribution_safe": [], "search_only": []}
+    aliases = {"attribution_safe": [], "search_only": [], "search_name": []}
     for row in conn.execute(
             "SELECT alias, tier FROM subject_aliases"
             " WHERE subject_id = ? AND pack_id = ? ORDER BY alias",
@@ -145,6 +145,7 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         pack_id=pack_id,
         identity=identity,
         search_aliases=tuple(aliases.get("search_only") or ()),
+        search_names=tuple(aliases.get("search_name") or ()),
         attribution_aliases=tuple(aliases.get("attribution_safe") or ()),
         queries=templates,
         query_languages=template_langs,

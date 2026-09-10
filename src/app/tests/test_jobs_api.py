@@ -259,7 +259,10 @@ def test_the_agent_plane_still_produces_a_brief(client, settings):
     conn.commit()
     conn.close()
 
-    started = client.post("/api/research", json={"subject_id": "s1"})
+    # Named: `default_backend()` resolves an unnamed plane to the harness where
+    # a coding-agent CLI is installed, and this test is about the other one.
+    started = client.post(
+        "/api/research", json={"subject_id": "s1", "backend": "agent"})
     job_id = started.json()["job_id"]
     for _ in range(500):
         row = client.get(f"/api/jobs/{job_id}").json()

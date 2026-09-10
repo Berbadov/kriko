@@ -60,6 +60,47 @@ def test_the_brief_renders_the_packs_query_templates():
     assert "Makita DHP484 failure symptoms" in brief
 
 
+def test_a_search_name_becomes_the_query_and_the_display_label_steps_aside():
+    """The third alias tier, and the reason it is a tier of its own.
+
+    A display label carries whatever tells two rows apart in a list. Fed to a
+    search engine, `packs/cars`' produced `Volkswagen Golf 1.5_TSI 150 hp
+    common problems` — seven queries a reader watched find nothing, twice. A
+    pack that knows what people type says so in `search_name` rows, and those
+    win.
+    """
+    task = _task(search_names=("Makita 18V hammer drill",))
+    assert task.query_names == ("Makita 18V hammer drill",)
+    queries = task.rendered_queries()
+    assert "Makita 18V hammer drill common problems" in queries
+    assert not any("Makita DHP484" in query for query in queries)
+
+
+def test_a_widening_fragment_never_becomes_a_query_on_its_own():
+    """Why `search_only` could not just be reused for the above.
+
+    `packs/drill` ships `LXT` and `DHP 484` — fragments whose job is to widen a
+    search that already names the thing. Promoting one to the subject of a
+    query turns `Makita DHP484 common problems` into `DHP 484 common problems`,
+    which is a worse search than the label it replaced.
+    """
+    task = _task()
+    assert task.search_aliases == ("DHP 484",)
+    assert task.query_names == ("Makita DHP484",)
+    assert all("DHP 484 " not in query for query in task.rendered_queries())
+
+
+def test_a_query_never_carries_a_catalog_spelling_through_to_a_search_box():
+    """The safety net under the tier, for a pack that ships no search names.
+
+    An identifier's punctuation is a storage detail. This is deliberately the
+    only rewriting the engine does — a category's own conventions are pack
+    data, and a `_MAKE_MAP` one layer further in is still a `_MAKE_MAP`.
+    """
+    task = _task(subject_label="Makita DHP_484_Z", search_aliases=())
+    assert "Makita DHP 484 Z common problems" in task.rendered_queries()
+
+
 def test_the_brief_names_the_packs_domain_vocabulary():
     assert "mechanical, battery" in AgentResearcher().brief(_task())
 
@@ -203,3 +244,61 @@ def test_plan_task_rejects_an_unknown_subject(tmp_path):
     with pytest.raises(KeyError):
         plan_task(store, "nope", "nope")
     store.close()
+
+
+def test_the_brief_says_whose_bar_it_is_quoting():
+    """The claim bar is the pack's taste, and the brief must say so. (D5)
+
+    The reader read the cars pack's four bullets — engine code, gearbox type,
+    cam belt — as Kriko's own opinion about what is worth surfacing, and
+    reported it as the engine being "still car fixated". It is not: the text is
+    `research/principle.md`, pack data, quoted verbatim, and that is the design
+    (`docs/PACK_CONTRACT.md`) precisely so that what counts as worth surfacing
+    stays a property of the category rather than of the engine.
+
+    Nothing needed fixing in the layering. What needed fixing was a heading
+    that named no owner, because a reader who cannot see whose bar it is has
+    only one candidate to blame.
+    """
+    task = _task()
+    brief = AgentResearcher().brief(task)
+
+    assert task.pack_id in brief
+    assert f"the `{task.pack_id}` pack's bar" in brief
+    # And the sentence, not only the heading: a heading is skimmed past.
+    assert "not by Kriko" in brief
+
+
+def test_the_narrowest_search_name_leads_and_the_broadest_is_dropped():
+    """Order and count, both of which the store cannot express.
+
+    An alias table has no ordinal, so `plan_task` reads names back
+    alphabetically — which put `Volkswagen Golf` ahead of `Volkswagen Golf
+    EA211` and made the broadest search the first thing in the brief. And the
+    render is a cross product: three names against `packs/cars`' seven
+    templates is 21 searches where the reader had been shown 7, most of them
+    near-duplicates of each other.
+
+    Both are shape rules, so both live in the engine: a name containing another
+    name is the narrower of the two in any category, and the one dropped by the
+    cap is always the broadest — the direction an agent widens toward on its
+    own when a narrow search finds nothing.
+    """
+    task = _task(search_names=(
+        "Volkswagen Golf", "Volkswagen Golf VII", "Volkswagen Golf EA211"))
+    assert task.query_names == ("Volkswagen Golf EA211", "Volkswagen Golf VII")
+    queries = task.rendered_queries()
+    assert len(queries) == len(task.queries) * 2
+    assert not any(query.startswith("Volkswagen Golf common") for query in queries)
+
+
+def test_the_order_of_a_briefs_searches_does_not_move_between_runs():
+    """A brief that reshuffles itself is a brief nobody can diff.
+
+    Two names of equal length are ordered alphabetically rather than by
+    whatever order the rows came back in, so the same subject researched twice
+    produces the same brief.
+    """
+    names = ("Bosch GSB 18", "Bosch GSR 18")
+    assert _task(search_names=names).query_names == names
+    assert _task(search_names=tuple(reversed(names))).query_names == names
