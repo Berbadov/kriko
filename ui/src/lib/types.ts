@@ -747,3 +747,42 @@ export type UsageAnalyses = {
 };
 
 export type Usage = { research: UsageTotals; analyses: UsageAnalyses };
+
+/* B98 — the agenda, walked with nobody watching.
+ *
+ * `last` is the record of the most recent tick, and it is deliberately
+ * separate from the setting: a tick that declined still wrote a reason, and
+ * that reason is the only output an unattended feature has on the days it
+ * does nothing. It is `{}` on an installation where no tick has ever run.
+ */
+export type ScheduleLast = {
+    checked_at?: string;
+    reason?: string;
+    due_at?: string;
+    run_at?: string;
+    job_id?: string;
+    runs?: number;
+};
+
+export type Schedule = {
+    enabled: boolean;
+    every_hours: number;
+    rows: number;
+    plane: string;
+    budget_usd: number;
+    max_documents: number;
+    last: ScheduleLast;
+    /** Queued plus running. The loop will not add to this. */
+    in_flight: number;
+};
+
+/** Partial by design — see `api.saveSchedule`. */
+export type ScheduleRequest = Partial<
+    Pick<Schedule, "enabled" | "every_hours" | "rows" | "plane" | "budget_usd" | "max_documents">
+>;
+
+export type ScheduleCheck = Schedule & {
+    ran: boolean;
+    reason: string;
+    due_at: string;
+};

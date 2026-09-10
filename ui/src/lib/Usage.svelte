@@ -23,6 +23,36 @@
      *   for a cheap installation.
      */
 
+    /* Nulls, not zeros, for the metered columns: an absent half of the
+     * payload is unmeasured, and this panel's first rule is that unmeasured
+     * does not render as a measured zero. */
+    const EMPTY: Usage = {
+        research: {
+            runs: 0,
+            metered_runs: 0,
+            counted_runs: 0,
+            spent_usd: null,
+            tokens_used: null,
+            claims: 0,
+            cost_per_claim: null,
+            planes: [],
+        },
+        analyses: {
+            analyses: 0,
+            malformed: 0,
+            claims_shown: 0,
+            answered_nothing: 0,
+            subjects: 0,
+            adapters: [],
+        },
+    };
+
+    /** Every field this card reads, present whatever arrived. */
+    const shape = (raw: Partial<Usage> | undefined): Usage => ({
+        research: { ...EMPTY.research, ...(raw?.research ?? {}) },
+        analyses: { ...EMPTY.analyses, ...(raw?.analyses ?? {}) },
+    });
+
     let promise = $state(api.usage());
     const refresh = () => (promise = api.usage());
 
@@ -59,7 +89,13 @@
     </p>
 
     <Async {promise} loading="Adding it up…" retry={refresh}>
-        {#snippet children(data: Usage)}
+        {#snippet children(raw: Usage)}
+            <!-- Filled in rather than trusted. A payload missing a half is a
+                 payload from an older engine, and a template that reads
+                 `.planes.length` off an absent half takes the whole card
+                 down — which is a worse answer to "what did this cost" than
+                 four dashes. -->
+            {@const data = shape(raw)}
             <dl class="totals">
                 <div>
                     <dt>Spent</dt>

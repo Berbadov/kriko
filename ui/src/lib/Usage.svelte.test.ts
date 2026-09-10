@@ -160,4 +160,14 @@ describe("what this installation has used", () => {
             expect(screen.getByRole("button", { name: /again/i })).toBeInTheDocument(),
         );
     });
+
+    it("survives a payload with a half missing rather than taking the card down", async () => {
+        // An older engine answers `/api/usage` without the `analyses` half.
+        // Reading `.planes.length` off an absent `research` threw, which is a
+        // worse answer to "what did this cost" than a row of dashes.
+        stubFetch({ "/api/usage": {} });
+        render(Usage);
+        expect(await screen.findByText("What this has used")).toBeInTheDocument();
+        expect(screen.getAllByText("not counted").length).toBeGreaterThan(0);
+    });
 });

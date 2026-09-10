@@ -1181,6 +1181,20 @@ def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     return [_job(row) for row in rows]
 
 
+def work_in_flight(conn: sqlite3.Connection) -> int:
+    """How many jobs are queued or running right now.
+
+    Exists for the scheduler (B98). The job runner has a single worker, so an
+    unattended tick that submitted while something was already in flight would
+    not run in parallel — it would *queue behind it*, and a timer that queues
+    faster than the worker drains builds a backlog nobody asked for. The tick
+    therefore asks first and skips.
+    """
+    return conn.execute(
+        "SELECT COUNT(*) FROM jobs WHERE state IN (?, ?)", (QUEUED, RUNNING)
+    ).fetchone()[0]
+
+
 def interrupt_running(conn: sqlite3.Connection) -> int:
     """Called at startup. Anything still `running` belongs to a dead process."""
     cursor = conn.execute(

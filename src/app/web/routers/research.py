@@ -6,6 +6,7 @@ Four surfaces, and the third is the reason the first two are allowed to exist:
 * `POST /api/agenda/run` walks the agenda without being told what to research.
 * `GET /api/research-runs` says what each run cost and what it added.
 * `GET /api/usage` adds the sums up, which no per-run row can answer.
+* `GET|PUT /api/schedule` is the unattended loop, off until it is turned on.
 * `DELETE /api/research-runs/{id}` takes a run's claims back out.
 
 The order matters. An unattended multi-row run that could not be reversed would
@@ -19,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app import keys
-from app.web import observability, state
+from app.web import observability, schedule, state
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["research"])
@@ -115,6 +116,86 @@ def start_agenda_run(body: AgendaRunRequest, runner=Depends(get_jobs)) -> dict:
     return {
         "job_id": runner.submit("agenda_run", body.model_dump()),
         "kind": "agenda_run",
+    }
+
+
+class ScheduleRequest(BaseModel):
+    """The unattended loop, as the reader sets it.
+
+    Every field optional: the screen saves the one control the reader touched,
+    and a PUT that had to carry all six would make a partial save silently
+    reset the rest.
+    """
+
+    enabled: bool | None = None
+    every_hours: float | None = Field(None, ge=schedule.MIN_HOURS, le=24 * 30)
+    rows: int | None = Field(None, ge=1, le=100)
+    #: Not validated against a list here — `schedule.decide` refuses an
+    #: unknown plane by name, and one place to refuse is better than two that
+    #: can disagree.
+    plane: str | None = None
+    budget_usd: float | None = Field(None, ge=0.0, le=100.0)
+    max_documents: int | None = Field(None, ge=1, le=50)
+
+
+@router.get("/schedule")
+def read_schedule(app_state=Depends(get_app_state)) -> dict:
+    """What the loop is set to, and what it last did.
+
+    The history is returned even when the loop is off, because "it ran four
+    times and the last one kept nothing" is precisely what a reader wants to
+    see *after* switching it off.
+    """
+    return schedule.status(app_state)
+
+
+@router.put("/schedule")
+def write_schedule(
+    body: ScheduleRequest, request: Request, app_state=Depends(get_app_state)
+) -> dict:
+    """Save it, and start or stop the thread to match.
+
+    Applied to the running process rather than only stored, because a setting
+    that needs a restart to take effect is a setting a reader will conclude is
+    broken. Turning it off stops the thread; turning it on starts one, and
+    the first tick still waits out the startup grace.
+    """
+    stored = {
+        key: value
+        for key, value in body.model_dump().items()
+        if value is not None
+    }
+    merged = {**schedule.settings_for(app_state), **stored}
+    state.put_settings(app_state, {schedule.KEY: merged})
+
+    loop = getattr(request.app.state, "schedule", None)
+    if loop is not None:
+        if schedule.settings_for(app_state)["enabled"]:
+            loop.start()
+        else:
+            loop.stop()
+    return schedule.status(app_state)
+
+
+@router.post("/schedule/check")
+def check_schedule(request: Request, app_state=Depends(get_app_state)) -> dict:
+    """Run one tick now, and say what it decided.
+
+    The manual half of an automatic feature, and the reason it exists is
+    trust: a reader who turns on a loop that will next act in twenty-four
+    hours has no way to find out whether it *would* act. This returns the same
+    sentence the loop would have recorded — including the refusals, which are
+    the answers worth having.
+    """
+    loop = getattr(request.app.state, "schedule", None)
+    if loop is None:
+        raise HTTPException(503, "this process has no scheduler")
+    decision = loop.tick(from_timer=False)
+    return {
+        "ran": decision.run,
+        "reason": decision.reason,
+        "due_at": decision.due_at,
+        **schedule.status(app_state),
     }
 
 

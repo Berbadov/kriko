@@ -61,6 +61,13 @@ const postJson = <R>(path: string, body: unknown) =>
         body: JSON.stringify(body),
     });
 
+const putJson = <R>(path: string, body: unknown) =>
+    request<R>(path, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+    });
+
 const del = <R>(path: string) => request<R>(path, { method: "DELETE" });
 
 const seg = encodeURIComponent;
@@ -204,6 +211,14 @@ export const api = {
     /** The sums. Two halves — what writing claims in cost, and how much
      *  reading them back out this installation has actually done. */
     usage: () => get<T.Usage>("/api/usage"),
+    /** The unattended loop: what it is set to, and what it last decided. */
+    schedule: () => get<T.Schedule>("/api/schedule"),
+    /** A partial save. Every field is optional on the wire so that saving the
+     *  one control the reader touched cannot reset the other five. */
+    saveSchedule: (body: T.ScheduleRequest) => putJson<T.Schedule>("/api/schedule", body),
+    /** One tick, now. The answer is the sentence the loop would have recorded
+     *  — refusals included, which are the ones worth reading. */
+    checkSchedule: () => postJson<T.ScheduleCheck>("/api/schedule/check", {}),
     researchRuns: (limit = 50) =>
         get<{ runs: T.ResearchRun[] }>(`/api/research-runs?limit=${limit}`),
     researchRun: (runId: string) =>
