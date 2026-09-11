@@ -41,6 +41,32 @@ def test_the_socket_refuses_an_extension_origin(tmp_path):
             pass
 
 
+def test_a_session_start_failure_is_reported_on_the_socket(tmp_path, monkeypatch):
+    """B109: a crash in `SESSION.start()` must not be a bare disconnect.
+
+    Before this, the reader's only way to learn *why* the terminal panel
+    said "disconnected" was `app.log` — itself unreachable until the 0.7.6
+    `log_config` fix. The handler now catches the failure, still logs it
+    (`test_an_unhandled_exception_in_a_route_reaches_the_app_log` in
+    `test_sidecar.py` covers that half end-to-end), and reports it as a
+    frame on the socket the reader is already looking at.
+    """
+    from app.providers import termpty
+
+    def _raise(*_a, **_k):
+        raise OSError("no such shell")
+
+    monkeypatch.setattr(termpty.SESSION, "start", _raise)
+
+    client = _client(tmp_path)
+    with client.websocket_connect(
+        "/api/terminal/ws", headers={"origin": "tauri://localhost"}
+    ) as ws:
+        frame = json.loads(ws.receive_text())
+        assert frame["type"] == "error"
+        assert "no such shell" in frame["message"]
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="posix pty only here")
 def test_the_socket_runs_a_real_shell_round_trip(tmp_path):
     from app.providers.termpty import SESSION
