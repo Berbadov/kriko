@@ -51,7 +51,9 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from kriko.research.agent import AgentResearcher
 from kriko.research.base import Document, Finding, ResearchTask
@@ -136,26 +138,35 @@ KNOWN = (
         # spawn already claimed to be.
         preferred=("--strict-mcp-config", "--safe-mode"),
     ),
-    # Found, reported, and not driven. `opencode run` has no flag that
-    # restricts which tools the agent may use — `--help` offers `--agent`, and
-    # naming an agent is trusting a profile rather than granting a set. The
-    # allowlist is not a preference here; it is the reason this plane is
-    # allowed to exist at all, and a research plane that can run `bash` on the
-    # reader's machine is a remote-code path with extra steps. Ship one fewer
-    # plane instead. Re-enable the moment the CLI grows a tool grant.
     Harness(
         "opencode",
         "opencode",
         "opencode",
-        ("run",),
+        ("run", "--agent", "kriko-harness"),
         structured=False,
-        unusable=(
-            "opencode's command line has no way to restrict which tools the "
-            "agent may use, and Kriko will not start a research agent it "
-            "cannot hold to search and fetch"
-        ),
     ),
 )
+
+_OPENCODE_AGENT_PATH = Path.home() / ".opencode" / "agents" / "kriko-harness.md"
+
+_OPENCODE_AGENT_BODY = """---
+description: Kriko harness research: search and fetch only
+mode: subagent
+permission:
+  bash: deny
+  edit: deny
+  webfetch: allow
+  websearch: allow
+---
+
+Research the subject in the prompt below and report findings as instructed.
+"""
+
+
+def _ensure_opencode_agent() -> None:
+    if not _OPENCODE_AGENT_PATH.exists():
+        _OPENCODE_AGENT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _OPENCODE_AGENT_PATH.write_text(_OPENCODE_AGENT_BODY, encoding="utf-8")
 
 
 def available() -> list[Harness]:
@@ -582,29 +593,35 @@ class HarnessResearcher(AgentResearcher):
         them — the same mistake as the twelve tray tests that passed on a
         `main.rs` which could not parse (B89).
         """
+        if self.harness.id == "opencode":
+            _ensure_opencode_agent()
         command = command_for(self.harness)
+        fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
         try:
-            done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-                command,
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                env={**os.environ, **self.harness.env},
-                # A harness started in the repo would find its own project
-                # config and its own tools. Home is neutral and is where a
-                # reader's own subscription config lives.
-                cwd=os.path.expanduser("~"),
-            )
-        except FileNotFoundError as exc:
-            raise NoHarness(
-                f"{self.harness.label} is not on PATH ({self.harness.executable})"
-            ) from exc
-        except subprocess.TimeoutExpired as exc:
-            raise TimeoutError(
-                f"{self.harness.label} did not finish within "
-                f"{int(self.timeout)}s"
-            ) from exc
+            with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
+                stdin_write.write(prompt)
+            with open(stdin_path, "r", encoding="utf-8") as stdin_read:
+                try:
+                    done = subprocess.run(  # noqa: S603 - fixed executable, no shell
+                        command,
+                        stdin=stdin_read,
+                        capture_output=True,
+                        text=True,
+                        timeout=self.timeout,
+                        env={**os.environ, **self.harness.env},
+                        cwd=os.path.expanduser("~"),
+                    )
+                except FileNotFoundError as exc:
+                    raise NoHarness(
+                        f"{self.harness.label} is not on PATH ({self.harness.executable})"
+                    ) from exc
+                except subprocess.TimeoutExpired as exc:
+                    raise TimeoutError(
+                        f"{self.harness.label} did not finish within "
+                        f"{int(self.timeout)}s"
+                    ) from exc
+        finally:
+            os.remove(stdin_path)
 
         if done.returncode != 0:
             envelope = _envelope(done.stdout or "") if self.harness.structured else {}

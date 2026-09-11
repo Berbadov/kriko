@@ -515,7 +515,7 @@
       buttonEl.textContent = "Starting…";
     }
     const plane = state.researchPlane;
-    const backend = plane && plane.backend === "api" ? "api" : "agent";
+    const backend = plane ? plane.backend : "agent";
     const budget_usd = backend === "api" ? Number(plane.budget_usd || 0) : 0;
     chrome.runtime.sendMessage(
       {
