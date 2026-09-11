@@ -905,6 +905,44 @@ config-specific claims on a Golf VII EA211 DQ200.
 
 ---
 
+## The 0.7.1 pack-authoring failure *(2026-09-11)* — **closed, 0.7.2**
+
+The reader pressed **Author a pack** on 0.7.1, typed `Gaming Monitors`, and got
+
+```
+RuntimeError: Claude Code exited 1: [{"type":"system","subtype":"init",
+"cwd":"C:\\Users\\beraat","session_id":"01275c13-...","tools":["Task","Bash",
+...],"mcp_servers":[{"name":"kriko","status":"failed"}],...
+```
+
+- **B105** — the failure said everything except why. Closed as 0.7.2, in four
+  parts:
+  1. **The detail was the front of the output.** `_run` reported
+     `(stderr or stdout)[:2000]`, and on a CLI that prints its whole message
+     stream the first 2000 characters are the tool list and the session id.
+     `_why()` reads the CLI's own `subtype` and `errors` out of the result
+     message and falls back to the *tail*.
+  2. **The output shape was one Kriko never saw here.** The reader's build
+     prints a JSON *array* of stream messages under `--output-format json`;
+     this machine's prints the result object alone. `_envelope()` reads one
+     object, an array, or one object per line.
+  3. **"No `--mcp-config`" was not "no MCP servers".** Their own failed
+     `kriko` server is in that banner, loaded from their global config because
+     the spawn's working directory is their home — and the same door hands over
+     their `CLAUDE.md`, hooks, skills and output style. The vector now asks for
+     `--strict-mcp-config` and `--safe-mode`, feature-detected from the
+     installed CLI's own `--help` so an older build keeps the plane.
+  4. **Authoring had the research ceiling.** `TIMEOUT_SECONDS` is sized for
+     three searches; a real `packauthor.brief` run against the real CLI goes
+     past ten minutes, so a healthy run was being killed and reported as a
+     hang. `AUTHOR_TIMEOUT_SECONDS`. → `done.md`
+
+  A recognised failure also names the next action now (`HINTS`): a usage
+  limit, a login, a billing stop and a lost CLI each read as something to do
+  rather than as a stack trace.
+
+---
+
 ## The 0.5.3 reader audit *(2026-09-10)* — **all seven closed, 0.6.0**
 
 The reader installed 0.5.3, pressed Research, and reported: *"research does

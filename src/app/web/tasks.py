@@ -1129,7 +1129,13 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
 
     researcher = harness_researcher(
         preferred=str(params.get("harness") or ""),
-        timeout=float(params.get("timeout_seconds") or 0.0),
+        # Not the research ceiling. Authoring a pack is a category read from
+        # scratch plus two or three subjects researched before the first line
+        # is printed, and the real CLI runs past ten minutes doing it -- so
+        # `TIMEOUT_SECONDS` would have killed a healthy run and reported a
+        # hang. (B105)
+        timeout=float(
+            params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
     progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")

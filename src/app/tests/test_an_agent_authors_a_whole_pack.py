@@ -17,6 +17,7 @@ the feature is allowed to exist at all:
   costs a run rather than a store row.
 """
 
+import contextlib
 import json
 
 import pytest
@@ -337,6 +338,45 @@ class _Recorder:
     @property
     def cancelled(self):
         return False
+
+
+def test_authoring_a_pack_is_given_longer_than_one_subjects_research(
+    tmp_path, monkeypatch
+):
+    """The ceilings are different because the jobs are. (B105)
+
+    `TIMEOUT_SECONDS` is sized for three searches and four pages. Authoring a
+    pack is a category read from scratch, four decisions made from what was
+    read, and two or three subjects researched before the first character is
+    printed -- measured past ten minutes against the real CLI. Handing that
+    the research ceiling kills healthy runs and reports them as hangs, which
+    is the least debuggable failure this feature could have.
+    """
+    from app.providers import harness as harness_mod
+    from app.web import tasks
+
+    fake = _fake_cli(tmp_path, _reply(PACK))
+    asked = {}
+    monkeypatch.setattr(harness_mod, "available", lambda: [fake])
+
+    def factory(**kwargs):
+        asked.update(kwargs)
+        return harness_mod.HarnessResearcher(fake, timeout=60)
+
+    monkeypatch.setattr("app.providers.harness_researcher", factory)
+    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    tasks.pack_author(settings, {"category": "cordless drills"}, _Recorder())
+
+    assert asked["timeout"] == harness_mod.AUTHOR_TIMEOUT_SECONDS
+    assert harness_mod.AUTHOR_TIMEOUT_SECONDS > harness_mod.TIMEOUT_SECONDS
+    # And a reader who names one still gets theirs. Suppressed because the
+    # draft this fake writes already exists by now, which happens after the
+    # researcher has been asked for -- and the ask is the whole assertion.
+    with contextlib.suppress(Exception):
+        tasks.pack_author(
+            settings, {"category": "espresso machines", "timeout_seconds": 90},
+            _Recorder())
+    assert asked["timeout"] == 90.0
 
 
 def test_one_press_ends_with_a_draft_and_a_message_naming_it(tmp_path, monkeypatch):
