@@ -6,6 +6,66 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11 — A real terminal, one keystroke away, as 0.7.4 (B107)
+
+B106 fixed one CLI's stdin race; the class of problem underneath it is that a
+harness sometimes needs a one-time *interactive* step — `claude login` after
+an OAuth session expires, `opencode auth login`, an npm 2FA prompt — that no
+API call can do on the app's behalf, and until now the only way to run one was
+to leave the app for the OS's own terminal, find the right working directory,
+and come back. That is exactly the friction Kriko exists to remove.
+
+**The Console is gone.** It was a safe, API-only prompt that dispatched a
+fixed command set through the same endpoints the UI already called — never a
+real shell, on purpose, back when nothing the app did needed one. `login` is
+the thing that needed one. `ui/src/routes/Console.svelte` and its command
+table (`ui/src/lib/console/commands.ts`) are deleted; `Agents.svelte` (78
+lines, two lenses) collapses to a 17-line delegate to `Connect.svelte` alone.
+
+**A real, always-reachable terminal replaced it**, backed by an actual PTY —
+`src/app/providers/termpty.py` spawns the reader's own shell
+(`$SHELL`/`ComSpec`) and holds one session for the process's life, the same
+"one shell per app session" choice `sidecar.py` already makes for the engine
+itself. `POST /api/terminal/ws` (`src/app/web/routers/terminal.py`) is a
+WebSocket, not a REST verb — a shell is a duplex byte stream, not a
+request/response pair — framed as `{"type":"data"|"resize", ...}` JSON, and checked by a new
+`origins.terminal_origin_is_allowed()` — the same loopback/shell-origin rule
+`origins.py` already enforced elsewhere, minus the extension schemes that
+rule allows: a shell is not something a browser extension gets to open. The
+socket also rejects any connection whose server-side port is
+`EXTENSION_PORT`, so the fixed port a browser extension is hardcoded to talk
+to can never be the one serving a shell.
+
+**The frontend is `@xterm/xterm` + `@xterm/addon-fit`**, mounted once by
+`ui/src/lib/shell/TerminalPanel.svelte` on first open and never torn down —
+closing the panel only sets `hidden`, the same lazy-mount-then-keep pattern
+`Agents.svelte` used for the old Console, for the same reason: an unmounted
+terminal is a cleared one. Open state lives in `lib/shell/terminal.ts`, a
+plain `writable` shared between the rail's toggle button (`Sidebar.svelte`)
+and the panel itself (`App.svelte`, mounted as a root-level sibling, not a
+routed view) — closed by default, and reachable from anywhere with
+`Ctrl+``/`Cmd+``` or the rail button, never by navigating.
+
+**Mounted outside `.view` on purpose.** `App.svelte`'s `focusTheView()`
+existed because a navigation `viewEl.focus()` once stole focus from the
+Console's autofocused prompt (the bug `App.focus.test.ts` guards). The new
+terminal cannot hit that bug structurally — it isn't a route the focus effect
+ever runs against — which is why that test's Console-specific case is gone
+and its fallback-focus case stays, still real infrastructure for the next
+route that autofocuses something.
+
+Gate: full `pytest -q` green (added `applies_here()` to `tools/relock.py` so
+a platform-gated root like `pywinpty` reads as inapplicable rather than
+unlocked, and documented `/api/terminal/ws` as the ninth door in
+`docs/INTERNALS.md`); full `npm run test`/`npm run check` green, including a
+new `TerminalPanel.test.ts` that polyfills the two things jsdom lacks for
+`@xterm/xterm` to mount at all (`matchMedia`, `ResizeObserver`) and replaces
+the network with a `FakeWebSocket`. The committed bundle grew past its
+280 KB `.js` budget from `@xterm/xterm`'s DOM renderer; raised to 720 KB in
+`test_bundle_budget.py` rather than silently widened.
+
+---
+
 ### 2026-09-11 — The extension's own button, and a Windows stdin race, as 0.7.3 (B106)
 
 The reader's report: pressing Research in the extension went straight to

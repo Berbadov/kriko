@@ -35,7 +35,13 @@ import pytest
 #: Headroom over today's figures (197 KB JS, 36 KB CSS), which is about a
 #: third. Enough that ordinary feature work never touches it; small enough
 #: that one accidental library does.
-BUDGET = {".js": 280_000, ".css": 60_000}
+#:
+#: Raised .js from 280,000 to 720,000 on 2026-09-11: the embedded terminal
+#: (`lib/shell/TerminalPanel.svelte`) brought in `@xterm/xterm` and
+#: `@xterm/addon-fit`, a real terminal emulator and its DOM renderer, pushing
+#: the built bundle to 551,840 bytes. That is the one library this budget
+#: exists to make someone say out loud rather than let drift — said here.
+BUDGET = {".js": 720_000, ".css": 60_000}
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
