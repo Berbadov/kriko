@@ -6,6 +6,45 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11 — The extension's own button, and a Windows stdin race, as 0.7.3 (B106)
+
+The reader's report: pressing Research in the extension went straight to
+"done" with nothing found, and their pasted job log showed the *real* harness
+run failing underneath it — `Claude Code exited 1: Warning: no stdin data
+received in 3s...`. Two independent bugs, both closed here.
+
+**The extension asked the wrong question.** `tasks.default_backend()` already
+preferred `harness` when a CLI was on PATH; `GET /api/extension/research-plane`
+did not — it checked only the paid `api` plane's keys and otherwise always
+answered `agent`, the plane that writes a brief and returns nothing by
+design. `hover_lite.js` compounded it: even when the server did say
+`harness`, `researchSubject()` hardcoded `"agent"` as the fallback for
+anything that wasn't `"api"`. Both now pass the real answer through.
+
+**Claude Code's own stdin, from a Windows spawn, lost the race.**
+`HarnessResearcher._run()` wrote the prompt with `subprocess.run(...,
+input=prompt)` — a pipe the child reads once it starts polling, and a
+Windows named pipe's readiness timing is not POSIX's. The prompt now goes
+into a temp file opened for read and handed to `subprocess.run(...,
+stdin=stdin_read)`, which removes the race by removing the pipe.
+
+**opencode is back as a harness, on a leash.** It was excluded from
+`available()` because `opencode run` had no flag restricting which tools the
+agent could use — the same allowlist requirement every other harness meets.
+`opencode agent create --tools/--permissions` (present since 1.18) closes
+that gap: `_ensure_opencode_agent()` now writes a restricted
+`~/.opencode/agents/kriko-harness.md` profile (`bash: deny`, `edit: deny`,
+`webfetch: allow`, `websearch: allow`) the first time opencode is chosen, and
+`opencode run --agent kriko-harness` is bound to it. Codex stays out —
+no tool-restriction mechanism found for it yet.
+
+Gate: `pytest -q` full suite green; extension's `node --test` suite green.
+The stdin fix is not yet confirmed against a real Windows failure — it
+closes the only race the pasted log is consistent with, but the reader's own
+machine is the actual gate.
+
+---
+
 ### 2026-09-11 — A failure a reader can act on, and a spawn that is actually sandboxed (B105)
 
 The reader pressed **Author a pack**, typed `Gaming Monitors`, and got two
