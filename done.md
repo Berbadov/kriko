@@ -63,6 +63,23 @@ Nine tests in `test_the_harness_research_plane.py` and one in
 a fixture with an assertion that its session id never reaches an error message
 again.
 
+Verified against the real CLI with the reader's own input: `Gaming Monitors` ->
+`display.gaming.monitors`, 280s, five subjects and seven claims, and a 266 KB
+`.kpack` from `app.cli build`. Shipped as `Kriko_0.7.2_x64-setup.exe`, built on
+the Windows host and copied to the Desktop.
+
+**A note on how that installer was built**, because the build script itself
+would not run to completion twice over: npm printed one deprecation warning
+about a transitive package, and PowerShell -- capturing the native stderr into
+its own pipeline because the invocation piped it to `Out-File` -- raised it as a
+terminating `NativeCommandError` three lines into `=== Build the UI`.
+`$ErrorActionPreference = 'Continue'` does not touch it; the error comes from
+the pipeline, not the preference. Redirecting in `cmd` instead hands the child
+an OS file handle and a warning stays a warning. The working invocation is now
+an `.EXAMPLE` in `build_desktop.ps1` with the reason attached, since the failing
+one looks more idiomatic and produces a log that silently omits every
+`Write-Host` step marker as well.
+
 ---
 
 ### 2026-09-10 — The installer carries its own knowledge, as 0.7.1 (B104)

@@ -44,6 +44,20 @@
     # doing: the unqualified interpreter is usually the one the machine's
     # owner uses for everything else, and this installs into it.
 
+.EXAMPLE
+    cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build_desktop.ps1 > build.log 2>&1"
+    # How to keep a log. Do NOT reach for `... 2>&1 | Out-File` or `*> build.log`
+    # instead: those capture the *native* stderr into PowerShell's own pipeline,
+    # which turns any tool's ordinary warning into a terminating
+    # NativeCommandError. On 2026-09-11 the 0.7.2 build died three lines into
+    # `=== Build the UI` because npm printed one deprecation notice about a
+    # transitive package -- nothing to do with this repository, and
+    # `$ErrorActionPreference = 'Continue'` does not help, because the error is
+    # raised by the pipeline rather than by a preference. Redirecting in `cmd`
+    # hands the child an OS file handle, so a warning stays a warning. It also
+    # catches `Write-Host`, which is the information stream and is missing from
+    # any log made by piping.
+
 .NOTES
     Needs, on PATH: node 20+ and a Rust toolchain (rustup), plus a Python that
     satisfies pyproject's `requires-python` -- pass -Python if the default
