@@ -77,12 +77,13 @@ export const NAV: NavGroupSpec[] = [
             // door. A reader chasing "did my research actually land" had to
             // visit all three and hold the answer in their head.
             { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log"] },
-            // Console and Connect were always halves of one thing. Connect
-            // wires a harness up and tells you whether it answers; the console
-            // is where you drive the same API by hand when it does not. Two
-            // rail entries for "the agent side of this app" made the reader
-            // choose between them before knowing which they needed.
-            { name: "agents", label: "Agents", also: ["console", "connect", "mcp", "harness", "claude", "terminal"] },
+            // Console used to be a lens here, driving the same API a harness
+            // does by hand. It is a real terminal now (`lib/shell/
+            // TerminalPanel.svelte`), reachable from the rail directly rather
+            // than through this screen, so "console" and "terminal" are not
+            // searchable synonyms for Agents any more — see nav.ts's own
+            // history in git for why they once were.
+            { name: "agents", label: "Agents", also: ["connect", "mcp", "harness", "claude"] },
         ],
     },
     {
@@ -123,7 +124,7 @@ const AUTHOR_ROUTES = new Set(
  * and they keep the author gate they had, which is why this is read *through*
  * `isAuthorOnly` rather than beside it.
  */
-export const ALIASES: Record<string, { name: string; lens: string }> = {
+export const ALIASES: Record<string, { name: string; lens?: string }> = {
     subjects: { name: "knowledge", lens: "all" },
     coverage: { name: "knowledge", lens: "gaps" },
     health: { name: "knowledge", lens: "weak" },
@@ -135,8 +136,9 @@ export const ALIASES: Record<string, { name: string; lens: string }> = {
     jobs: { name: "activity", lens: "runs" },
     pipeline: { name: "activity", lens: "pipeline" },
     submissions: { name: "activity", lens: "submissions" },
-    console: { name: "agents", lens: "console" },
-    connect: { name: "agents", lens: "connect" },
+    // Agents has one lens now — Connect — so neither name needs one.
+    console: { name: "agents" },
+    connect: { name: "agents" },
 };
 
 /** The route a name actually renders, following one alias hop. */
