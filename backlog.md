@@ -222,6 +222,28 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ## P0
 
+### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
+Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
+CLI (not opencode) failed with
+
+    RuntimeError: Claude Code exited 1: Warning: no stdin data received in 3s,
+    proceeding without it. ... Error: Input must be provided either through
+    stdin or as a prompt argument when using --print
+
+which is exactly the failure `_run`'s own docstring in `src/app/providers/harness.py`
+describes fixing for B92/B106 — the prompt is written to a temp file and handed to
+the subprocess as `stdin=`, not as an argument, specifically so no CLI flag or
+quoting can eat it. It happened anyway, on the reader's own Windows machine, so
+either the fix does not cover the `claude` executable's path (npm ships it as a
+`.cmd` shim wrapping `node`; B106's fix, per its done.md entry, was demonstrated
+against opencode) or the CLI's own stdin-readiness heuristic treats a real file
+handle differently from a pipe on Windows specifically. `_hint()` has no entry
+for this reason string, so the reader saw the raw exception with no next step.
+Needs reproduction on Windows (this session had no `powershell.exe`/shell access
+to the reader's machine to test `claude.cmd` invocation directly) before a fix —
+guessing at subprocess plumbing without seeing it fail is how B92 shipped broken
+the first time.
+
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
 The ledger export (knowledge/ledger_export/, 568 claims) is acceptance-ready per the
 parity report; the serving-gate schema gap is closed. Remaining:
