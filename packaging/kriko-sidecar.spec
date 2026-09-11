@@ -30,6 +30,22 @@
 # this build, not by reading the code — see
 # test_every_data_file_under_src_is_declared_as_package_data, which now fails
 # if another one appears under src/.
+#
+# `winpty-agent.exe` — the same class of gap, one layer further: not source
+# and not read by `import`, it is spawned by `winpty.dll` via `CreateProcess`
+# at a path relative to itself. PyInstaller's binary walker (`pefile`) reads
+# `_winpty.cp314-win_amd64.pyd`'s import table and correctly follows *that*
+# to `winpty.dll` and `conpty.dll` with no help from this file — but a
+# `CreateProcess` target is not a DLL import, so the walker has no path to
+# it and 0.7.4 shipped without it. The terminal opened, connected, and never
+# printed a shell prompt: `SESSION.start()` raised inside the websocket
+# handler the instant `winpty.dll` looked for the agent beside itself and
+# found nothing, closing the socket before a single byte reached the reader
+# — a black rectangle with a blinking cursor, no error visible anywhere in
+# the UI. Found by running the frozen exe through
+# `pyi-archive_viewer -l`, which lists `winpty\\winpty.dll` and
+# `winpty\\conpty.dll` but not `winpty\\winpty-agent.exe`; not caught by any
+# test, because none of them run the frozen binary's PTY on Windows.
 
 import sys
 from pathlib import Path
@@ -80,10 +96,29 @@ if not (STATIC / "index.html").exists():
         "`npm --prefix ui run build` before freezing, or the app ships with no UI"
     )
 
+# See the `winpty-agent.exe` note above `datas` for why this is a `binaries`
+# entry rather than something PyInstaller finds on its own. Only Windows
+# installs `pywinpty` at all (pyproject.toml's `sys_platform == 'win32'`
+# marker), so this is empty and inert on the other two runners in the
+# desktop.yml matrix.
+WINPTY_BINARIES: list[tuple[str, str]] = []
+if sys.platform == "win32":
+    import winpty
+
+    winpty_dir = Path(winpty.__file__).parent
+    agent = winpty_dir / "winpty-agent.exe"
+    if not agent.exists():
+        raise SystemExit(
+            f"{agent} is missing from the installed pywinpty — the terminal "
+            "would freeze without a way to spawn its shell. Reinstall "
+            "pywinpty and check its version still ships this file."
+        )
+    WINPTY_BINARIES = [(str(agent), "winpty")]
+
 a = Analysis(
     [str(ROOT / "src" / "app" / "sidecar.py")],
     pathex=[str(ROOT / "src")],
-    binaries=[],
+    binaries=WINPTY_BINARIES,
     datas=[
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
