@@ -6,6 +6,65 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11 — A failure a reader can act on, and a spawn that is actually sandboxed (B105)
+
+The reader pressed **Author a pack**, typed `Gaming Monitors`, and got two
+thousand characters of the CLI's init banner: its tool list, its session id, its
+model, and no reason. `RuntimeError: Claude Code exited 1: [{"type":"system",
+"subtype":"init",...`. Four things were wrong and the first one is why the other
+three took a release to find.
+
+**The detail was the front of the output.** `_run` reported
+`(done.stderr or done.stdout)[:2000]`, which is the right instinct for a CLI
+that fails on stderr and exactly wrong for one that prints a message stream on
+stdout: the reason a run stopped is always the *last* message. `_why()` now
+reads the result message's own `subtype` and `errors` — `error_max_turns`,
+`error_during_execution`, whatever the CLI called it — then its text, then
+stderr, and only then falls back to the tail rather than the head.
+
+**The shape was one this machine never prints.** Their build emits a JSON
+*array* of stream messages under `--output-format json`; the one here emits the
+result object alone. Both are that version's documented format, so `_envelope()`
+reads either, plus the line-delimited form — and it is shared with the failure
+path, so the two can no longer disagree about what the CLI said.
+
+**"The spawned agent gets no MCP config" turned out not to mean "no MCP
+servers".** Their banner says `"mcp_servers":[{"name":"kriko","status":
+"failed"}]` — their own global configuration, loaded because B92 deliberately
+put the working directory in their home. The same door hands over their
+`CLAUDE.md`, their hooks, their skills and their output style, none of which
+were written for a prompt whose entire contract is "print one JSON object and
+nothing after it". The vector now asks for `--strict-mcp-config` (with no
+`--mcp-config`, that is zero servers) and `--safe-mode`. Both are
+**feature-detected** from the installed CLI's own `--help` and cached per
+executable: the report came from `claude_code_version 2.1.261`, versions are
+not ordered the way flag support is, and a reader on an older build must not
+lose the plane over a flag it never heard of. `command_for()` is a named
+function so the free gate that runs the real CLI judges the vector that
+actually runs — the shape-only assertions are what let B92 ship a plane that
+could not start.
+
+**And authoring had been given one subject's research ceiling.** 600s is sized
+for three searches and four pages. Authoring a pack is a category read from
+scratch, four decisions made from what was read, and two or three subjects
+researched before a single character is printed; measured against the real CLI
+it runs past ten minutes. So `TIMEOUT_SECONDS` was killing healthy runs and
+calling them hangs — the least debuggable failure this feature could have.
+`AUTHOR_TIMEOUT_SECONDS`.
+
+Last, a reason with no action attached is half an answer. `HINTS` is a closed
+vocabulary of CLI failure classes — usage limit, not logged in, billing, out of
+turns, cannot start — and a recognised one appends what to do: wait, log in,
+switch plane, send the log. A class we do not recognise is reported in the
+CLI's own words with no guess bolted on.
+
+Nine tests in `test_the_harness_research_plane.py` and one in
+`test_an_agent_authors_a_whole_pack.py`, including the reader's exact banner as
+a fixture with an assertion that its session id never reaches an error message
+again.
+
+---
+
 ### 2026-09-10 — The installer carries its own knowledge, as 0.7.1 (B104)
 
 Found while checking that B101's queries fix had actually reached the reader.
