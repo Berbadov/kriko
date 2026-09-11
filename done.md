@@ -64,6 +64,11 @@ the network with a `FakeWebSocket`. The committed bundle grew past its
 280 KB `.js` budget from `@xterm/xterm`'s DOM renderer; raised to 720 KB in
 `test_bundle_budget.py` rather than silently widened.
 
+Shipped as `Kriko_0.7.4_x64-setup.exe` (24.7 MB), built on the Windows host
+with `packaging/build_desktop.ps1`, its own smoke step confirming the
+bundled shell stayed up 25s with no panic and the engine spawned — sent to
+the reader.
+
 ---
 
 ### 2026-09-11 — The extension's own button, and a Windows stdin race, as 0.7.3 (B106)
