@@ -357,9 +357,12 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
     why.
 
     `SHELL` pointed at a binary that does not exist is a reliable way to make
-    `TermSession.start()` raise without mocking anything: the terminal
-    websocket handler runs it with no try/except, exactly as it did the day
-    this went unlogged.
+    `TermSession.start()` raise without mocking anything. The handler now
+    catches this (B109 — the reader should not have to find `app.log` to
+    learn why the panel says "disconnected") and reports it on the socket
+    itself before closing, but it must still reach `app.log` too: a reader
+    who never opens the terminal, or whose report omits the message, still
+    needs the exception on record.
     """
     log_path = tmp_path / "app.log"
     env = _env(tmp_path)
@@ -380,19 +383,20 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
 
         from websockets.sync.client import connect
 
-        with pytest.raises(Exception):
-            with connect(f"ws://127.0.0.1:{port}/api/terminal/ws") as ws:
-                ws.recv(timeout=5)
+        with connect(f"ws://127.0.0.1:{port}/api/terminal/ws") as ws:
+            frame = json.loads(ws.recv(timeout=5))
+            assert frame["type"] == "error"
+            assert "no-such-shell" in frame["message"] or frame["message"]
 
         deadline = time.time() + 10
         text = ""
         while time.time() < deadline:
             if log_path.exists():
                 text = log_path.read_text()
-                if "uvicorn.error" in text:
+                if "terminal session failed to start" in text:
                     break
             time.sleep(0.1)
-        assert "Exception in ASGI application" in text, (
+        assert "terminal session failed to start" in text and "Traceback" in text, (
             f"the route's exception never reached app.log: {text!r}"
         )
     finally:

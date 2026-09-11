@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -8,6 +9,8 @@ from app.web import origins
 from app.web.settings import EXTENSION_PORT
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.websocket("/ws")
@@ -21,7 +24,23 @@ async def terminal_ws(websocket: WebSocket) -> None:
         return
 
     await websocket.accept()
-    SESSION.start()
+    try:
+        SESSION.start()
+    except Exception as exc:
+        # B109: the reader saw a bare "disconnected" with the reason only in
+        # app.log (itself unreachable before the 0.7.6 log_config fix) — a
+        # crash here is common (a missing shell, a packaging gap like
+        # 0.7.4's winpty-agent.exe) and the one person who can act on it is
+        # looking at the terminal panel, not a log file. Log it (so it is
+        # still in app.log for a report) and say why on the socket itself,
+        # in the same frame shape `pump_output` already uses, before closing
+        # — no new protocol for the client to learn.
+        logger.exception("terminal session failed to start")
+        await websocket.send_text(
+            json.dumps({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
+        )
+        await websocket.close(code=1011)
+        return
 
     async def pump_output():
         while True:
