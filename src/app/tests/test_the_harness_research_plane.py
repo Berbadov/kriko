@@ -17,6 +17,17 @@ nothing, and a plane whose every finding was refused — and none of them is
 actionable without knowing which. `EMPTY_RUN` keys the sentence by plane so a
 fourth plane cannot be added without deciding what its empty run means.
 
+**B105.** Then the reader pressed the pack-authoring button on 0.7.1 and got
+`RuntimeError: Claude Code exited 1: [{"type":"system","subtype":"init",...`
+— two thousand characters of tool list, session id and model, and not one word
+about why. Two things were wrong. The detail was the *front* of the CLI's
+output when the reason is always at the back; and their build prints the whole
+message stream as a JSON array under `--output-format json` while this one
+prints the result object alone, so `_unwrap` was reading a shape that never
+arrives on their machine. Their init banner also said
+`"mcp_servers":[{"name":"kriko","status":"failed"}]`, which is how "the
+spawned agent gets no MCP config" was found to mean "gets the reader's own".
+
 The security gate is the one worth reading twice. The spawned agent is granted
 `WebSearch` and `WebFetch` and nothing else, and it is handed no MCP config at
 all: a research plane that can write files or run shell commands is not a
@@ -125,6 +136,10 @@ def test_the_harness_command_line_is_one_the_cli_accepts():
     start passed a full suite — the same mistake as the twelve tray tests that
     passed on a `main.rs` that could not be parsed (B89).
 
+    `command_for` rather than `one.args`, since B105: the hygiene flags are
+    resolved against this machine's `--help`, and a vector the test never sees
+    is a vector nothing judges.
+
     The trick that makes this free: with an empty prompt, `claude -p` refuses
     before it makes any API call, and its complaint is *specifically* about the
     missing prompt. A malformed vector fails differently and earlier —
@@ -138,7 +153,7 @@ def test_the_harness_command_line_is_one_the_cli_accepts():
     one = harness_mod.chosen("claude-code")
     assert one is not None
     done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-        [one.executable, *one.args],
+        harness_mod.command_for(one),
         input="",
         capture_output=True,
         text=True,
@@ -347,6 +362,225 @@ def test_an_error_reply_fails_the_run_even_with_a_zero_exit(tmp_path):
     )
     with pytest.raises(RuntimeError, match="credit balance"):
         HarnessResearcher(fake, timeout=60).gather(_task())
+
+
+# ── B105: the failure a reader can read, and the shape they got ─────────────
+
+
+def _fake_stream(tmp_path: Path, messages: list, *, exit_code: int = 0):
+    """A CLI that answers the way the reader's build does: a JSON array.
+
+    `[{"type":"system","subtype":"init",...}, ..., {"type":"result",...}]`,
+    printed whole under `--output-format json`. Written as a real subprocess
+    for the same reason `_fake_cli` is: the shape of the output is the thing
+    under test and a patched `subprocess.run` would test neither.
+    """
+    reply = tmp_path / f"stream-{exit_code}-{len(str(messages))}.json"
+    reply.write_text(json.dumps(messages), encoding="utf-8")
+    script = tmp_path / "fake_stream.py"
+    script.write_text(
+        "import pathlib, sys\n"
+        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text())\n"
+        f"sys.exit({exit_code})\n",
+        encoding="utf-8",
+    )
+    return harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True
+    )
+
+
+#: The reader's init banner, abbreviated but the same shape and the same
+#: leading position. Two thousand characters of this is what they were shown
+#: instead of a reason.
+BANNER = {
+    "type": "system",
+    "subtype": "init",
+    "cwd": "C:\\Users\\beraat",
+    "session_id": "01275c13-0919-4642-9a96-62235ac7911f",
+    "tools": ["Task", "Bash", "Edit", "Read", "WebFetch", "WebSearch", "Write"],
+    "mcp_servers": [{"name": "kriko", "status": "failed"}],
+    "model": "claude-sonnet-5",
+    "padding": "x" * 3000,
+}
+
+
+def test_the_reason_a_run_failed_is_what_the_reader_is_shown(tmp_path):
+    """Not the init banner. This is B105 in one assertion.
+
+    The old detail was `(stderr or stdout)[:2000]`, and on a CLI that prints
+    its whole message stream that is the front of the stream — the tool list
+    and the session id. The reason the run stopped is the last message, every
+    time.
+    """
+    fake = _fake_stream(
+        tmp_path,
+        [
+            BANNER,
+            {"type": "result", "is_error": True, "subtype": "error_during_execution",
+             "errors": ["the model refused to continue"], "result": ""},
+        ],
+        exit_code=1,
+    )
+    with pytest.raises(RuntimeError) as raised:
+        HarnessResearcher(fake, timeout=60).gather(_task())
+
+    said = str(raised.value)
+    assert "error_during_execution" in said
+    assert "the model refused to continue" in said
+    # And the thing the reader actually got, which must not be back.
+    assert "session_id" not in said, said[:300]
+    assert "01275c13" not in said, said[:300]
+
+
+def test_a_reply_that_arrives_as_a_stream_is_still_read(tmp_path):
+    """The other half. A findings object at the end of an array is findings.
+
+    Their build prints the array; this machine's prints the result object
+    alone. Both are the documented `--output-format json` for their version,
+    so the plane reads either rather than betting on one.
+    """
+    fake = _fake_stream(
+        tmp_path,
+        [BANNER, {"type": "assistant", "message": {"content": "working"}},
+         _reply([{"title": "Chain kit", "domain": "engine", "severity": "high",
+                  "quote": QUOTE, "document_text": PAGE,
+                  "source_url": "https://forum.example/1"}])],
+    )
+    researcher = HarnessResearcher(fake, timeout=60)
+    documents = researcher.gather(_task())
+
+    assert [doc.url for doc in documents] == ["https://forum.example/1"]
+    # The `result` element is also the one carrying `usage`, which is why it
+    # is the element `_envelope` reaches for rather than the last one.
+    assert researcher.tokens_used == 10540
+
+
+def test_a_run_that_failed_still_reports_what_it_spent(tmp_path):
+    """A run that died on its fourth search paid for three.
+
+    Metered before the raise, or the plane's cost column tells the reader
+    their failed runs were free.
+    """
+    fake = _fake_stream(
+        tmp_path,
+        [BANNER, {"type": "result", "is_error": True, "subtype": "error_max_turns",
+                  "usage": {"input_tokens": 900, "output_tokens": 100},
+                  "total_cost_usd": 0.42}],
+        exit_code=1,
+    )
+    researcher = HarnessResearcher(fake, timeout=60)
+    with pytest.raises(RuntimeError, match="error_max_turns"):
+        researcher.gather(_task())
+
+    assert researcher.tokens_used == 1000
+    assert researcher.cost_usd == 0.42
+
+
+def test_a_cli_that_prints_nothing_at_all_still_says_something(tmp_path):
+    """`no output` beats an empty string after a colon."""
+    fake = _fake_stream(tmp_path, [], exit_code=2)
+    with pytest.raises(RuntimeError, match="exited 2"):
+        HarnessResearcher(fake, timeout=60).gather(_task())
+
+
+def test_a_failure_kriko_recognises_names_the_next_action(tmp_path):
+    """A reason without an action is half an answer.
+
+    "exited 1: usage limit reached" tells a reader what happened and not
+    whether to wait, log in, or report it -- and this button has now failed on
+    them in two releases.
+    """
+    fake = _fake_stream(
+        tmp_path,
+        [BANNER, {"type": "result", "is_error": True, "subtype": "error",
+                  "errors": ["Claude usage limit reached, resets 3pm"]}],
+        exit_code=1,
+    )
+    with pytest.raises(RuntimeError) as raised:
+        HarnessResearcher(fake, timeout=60).gather(_task())
+
+    said = str(raised.value)
+    assert "usage limit reached" in said
+    assert "no headroom" in said
+
+
+def test_a_failure_we_do_not_recognise_is_reported_without_a_guess(tmp_path):
+    """No hint beats a wrong hint. The CLI's own words still get through."""
+    fake = _fake_stream(
+        tmp_path,
+        [BANNER, {"type": "result", "is_error": True,
+                  "errors": ["the tessellator declined"]}],
+        exit_code=1,
+    )
+    with pytest.raises(RuntimeError) as raised:
+        HarnessResearcher(fake, timeout=60).gather(_task())
+
+    said = str(raised.value)
+    assert "the tessellator declined" in said
+    assert " -- " not in said.split("exited 1: ", 1)[1]
+
+
+def test_every_recognised_failure_class_has_an_action_in_it():
+    """The table is the mechanism; this is the gate on adding to it.
+
+    A hint that only restates the error would be worse than none -- it costs
+    the reader a sentence and gives them nothing -- so each one has to name
+    something to do or somewhere to send it.
+    """
+    for needles, hint in harness_mod.HINTS:
+        assert needles and all(needle == needle.lower() for needle in needles)
+        assert any(
+            word in hint.lower()
+            for word in ("run", "wait", "switch", "press", "send", "reinstall",
+                         "check", "cannot pay")
+        ), hint
+
+
+def test_the_spawn_asks_for_the_readers_own_configuration_to_be_left_out(
+    monkeypatch,
+):
+    """`--strict-mcp-config` and `--safe-mode`, where the CLI has them.
+
+    The reader's init banner named their own failed `kriko` MCP server, so
+    passing no `--mcp-config` was never the same as running with no MCP
+    servers — and the same door hands over their `CLAUDE.md`, hooks, skills
+    and output style, none of which were written for a prompt whose contract
+    is one JSON object.
+    """
+    one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    assert one.preferred == ("--strict-mcp-config", "--safe-mode")
+
+    monkeypatch.setitem(
+        harness_mod._DECLARED, one.executable,
+        frozenset({"--strict-mcp-config", "--safe-mode", "--output-format"}),
+    )
+    assert harness_mod.command_for(one)[-2:] == [
+        "--strict-mcp-config", "--safe-mode"]
+
+
+def test_a_flag_this_machines_cli_never_heard_of_is_not_passed(monkeypatch):
+    """Hygiene must not cost a reader the plane.
+
+    The defect report came from `claude_code_version 2.1.261` and this machine
+    is on another; versions are not ordered the way flag support is. So the
+    vector is built from the CLI's own `--help` and an older build simply gets
+    the base vector, which still runs.
+    """
+    one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    monkeypatch.setitem(harness_mod._DECLARED, one.executable, frozenset())
+
+    assert harness_mod.command_for(one) == [one.executable, *one.args]
+
+
+def test_asking_what_the_cli_declares_never_raises(monkeypatch):
+    """A `--help` that cannot run is "declares nothing extra", not a failure.
+
+    `_run` already answers a missing CLI with `NoHarness`; a feature probe
+    that raised something else on the way there would replace a sentence a
+    reader can act on with a stack trace.
+    """
+    harness_mod._DECLARED.pop("kriko-no-such-command-exists", None)
+    assert harness_mod.declared("kriko-no-such-command-exists") == frozenset()
 
 
 def test_a_missing_executable_says_so_rather_than_raising_oserror():
