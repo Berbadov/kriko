@@ -121,7 +121,7 @@ def test_the_code_that_starts_a_harness_writes_the_prompt_to_stdin():
     the real CLI, which is what actually holds.
     """
     source = Path(harness_mod.__file__).read_text(encoding="utf-8")
-    assert "input=prompt" in source
+    assert "stdin=stdin_read" in source
     assert "*self.harness.args, prompt]" not in source
 
 
@@ -168,26 +168,36 @@ def test_the_harness_command_line_is_one_the_cli_accepts():
     assert "Input must be provided" in said, said[:400]
 
 
-def test_a_harness_we_cannot_hold_to_search_and_fetch_is_not_offered():
-    """opencode is installed on some machines and Kriko will not drive it.
+def test_every_offered_harness_has_a_tool_grant():
+    """Every entry in `KNOWN` either restricts its tools or is `unusable`.
 
-    Its command line has no tool grant — `--agent` names a profile, which is
-    trusting a configuration rather than granting a set — and the allowlist is
-    not a preference here, it is the reason this plane is allowed to exist.
-    One fewer plane beats a plane that can run `bash` on the reader's machine.
-
-    Reported rather than hidden: `found_but_unusable` exists so the screen can
-    answer "my opencode is installed, why isn't it used".
+    `claude` restricts via `--allowedTools`. `opencode` restricts via
+    `--agent`, naming a profile (`_ensure_opencode_agent`) whose own
+    `permission:` block denies `bash`/`edit` and allows only
+    `webfetch`/`websearch` — the same shape as `.opencode/agents/
+    kriko_research.md` already ships in this repo.
     """
     for one in harness_mod.KNOWN:
-        has_grant = "--allowedTools" in one.args or "--allowed-tools" in one.args
+        has_grant = (
+            "--allowedTools" in one.args
+            or "--allowed-tools" in one.args
+            or "--agent" in one.args
+        )
         assert has_grant or one.unusable, (
             f"{one.id} is offered with no way to restrict its tools"
         )
     assert all(one.unusable == "" for one in harness_mod.available())
-    opencode = next(one for one in harness_mod.KNOWN if one.id == "opencode")
-    assert opencode.unusable
-    assert opencode not in harness_mod.available()
+
+
+def test_the_opencode_agent_profile_denies_bash_and_edit(tmp_path, monkeypatch):
+    target = tmp_path / "kriko-harness.md"
+    monkeypatch.setattr(harness_mod, "_OPENCODE_AGENT_PATH", target)
+    harness_mod._ensure_opencode_agent()
+    body = target.read_text(encoding="utf-8")
+    assert "bash: deny" in body
+    assert "edit: deny" in body
+    assert "webfetch: allow" in body
+    assert "websearch: allow" in body
 
 
 def test_the_spawned_agent_is_handed_no_mcp_config():

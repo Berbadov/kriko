@@ -110,10 +110,26 @@ def test_the_panel_asks_the_app_which_plane_is_configured_before_naming_a_cost()
     assert "/api/extension/research-plane" in worker
 
 
-def test_the_research_plane_endpoint_reports_free_by_default(tmp_path):
+def test_the_research_plane_endpoint_reports_free_by_default(tmp_path, monkeypatch):
+    from app.providers import harness as harness_mod
+
+    monkeypatch.setattr(harness_mod, "available", lambda: [])
     client = _client(tmp_path)
     body = client.get("/api/extension/research-plane").json()
     assert body["backend"] == "agent"
+    assert body["cost_basis"] == "subscription"
+    assert body["budget_usd"] == 0.0
+
+
+def test_the_research_plane_endpoint_prefers_harness_when_one_is_on_path(
+    tmp_path, monkeypatch
+):
+    from app.providers import harness as harness_mod
+
+    monkeypatch.setattr(harness_mod, "available", lambda: [harness_mod.KNOWN[0]])
+    client = _client(tmp_path)
+    body = client.get("/api/extension/research-plane").json()
+    assert body["backend"] == "harness"
     assert body["cost_basis"] == "subscription"
     assert body["budget_usd"] == 0.0
 
