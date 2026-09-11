@@ -6,6 +6,57 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11 — The terminal's own shell, missing from the 0.7.4 it shipped in, as 0.7.5 (B107 hotfix)
+
+0.7.4 opened onto a black rectangle with a blinking cursor and nothing else —
+reported by the reader within the hour, on the same machine the installer was
+built on. `winpty.PtyProcess.spawn()` on Windows loads `winpty.dll`, and that
+DLL launches `winpty-agent.exe` — a separate binary, found beside itself — to
+actually own the pseudo-console. `winpty.dll` (and its own dependency
+`conpty.dll`) rode into `kriko-sidecar.exe` for free: PyInstaller's binary
+walker reads `_winpty.cp314-win_amd64.pyd`'s import table and follows both
+automatically, the same mechanism that has quietly done the right thing for
+every other native extension in this build. `winpty-agent.exe` is invisible to
+that walker on purpose — nothing imports it, `winpty.dll` finds it with
+`CreateProcess` at a runtime-relative path — so it shipped for zero of the
+three DLLs, one of the four files a working PTY needs, and everything above it
+looked fine: the socket opened, `websocket.accept()` ran, and only then did
+`SESSION.start()` raise inside the handler and close the connection before a
+single byte reached the reader. `packaging/kriko-sidecar.spec` now stages it
+explicitly into `binaries=` next to the two DLLs the walker already finds,
+resolved off the installed `winpty` package's own `__file__` rather than a
+hardcoded path, so a future pywinpty upgrade that moves the file breaks the
+build loudly instead of shipping quietly broken again.
+
+**Found by running the frozen exe, not by reading the spec.**
+`pyi-archive_viewer -l dist/kriko-sidecar.exe` listed `winpty.dll` and
+`conpty.dll` and not the agent — the same kind of evidence
+`test_the_shell_is_valid_rust.py`'s docstring argues for elsewhere in this
+codebase: a guard that reads source can only prove a string is present, and
+this file was never a string anyone checked for.
+
+**`packaging/smoke_sidecar.py` gained the check that would have caught this
+before it ever reached the reader.** Every existing check in that file
+confirms the frozen binary *starts* something (a handshake, a health line, an
+MCP `initialize`); none of them opened the terminal socket, so 0.7.4 passed
+every one. `terminal_ws_ok()` connects to `/api/terminal/ws` and asserts a
+`data` frame arrives unprompted — only a live shell prints its own prompt with
+nobody sending it anything — which is a bar 0.7.4's build would have failed
+here, in CI, rather than on the reader's desktop.
+
+**A separate, still-open finding from the same report**: running a task
+through the `claude` harness (not opencode) failed with the exact stdin-race
+error B106's `_run` fix was written to close. Not touched here — it needs a
+Windows repro this session did not have a way to run — and tracked as B108.
+
+Gate: full `pytest -q` green (the spec and smoke-script edits are pure
+addition, no test asserted the literal `binaries=[]` they replaced); the new
+`terminal_ws_ok()` verified against the source tree's own sidecar (not the
+frozen one, which only Windows can build) before trusting it for a rebuild.
+Shipped as `Kriko_0.7.5_x64-setup.exe`.
+
+---
+
 ### 2026-09-11 — A real terminal, one keystroke away, as 0.7.4 (B107)
 
 B106 fixed one CLI's stdin race; the class of problem underneath it is that a
