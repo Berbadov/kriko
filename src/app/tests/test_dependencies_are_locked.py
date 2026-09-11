@@ -76,8 +76,15 @@ def test_the_lock_exists_and_is_pins(locked):
 
 
 def test_every_runtime_root_is_locked(locked):
-    """Read off `pyproject.toml`, so a new dependency cannot skip the lock."""
-    roots = [relock.name_of(dep) for dep in relock.runtime_roots()]
+    """Read off `pyproject.toml`, so a new dependency cannot skip the lock.
+
+    A root marked for the other platform (`pywinpty`, on this Linux machine)
+    is filtered the same way `closure()` filters it out of the pins — it is
+    not missing, it just does not apply here.
+    """
+    roots = [
+        relock.name_of(dep) for dep in relock.runtime_roots() if relock.applies_here(dep)
+    ]
     assert roots, "pyproject declares no runtime dependencies"
     assert [root for root in roots if root not in locked] == []
 

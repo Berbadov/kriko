@@ -309,7 +309,7 @@ absent or the stream dies mid-job.
 
 ## The other API surfaces
 
-Eight doors that the planes above do not open. Listed here because a surface
+Nine doors that the planes above do not open. Listed here because a surface
 nobody wrote down is a surface the next change treats as private —
 `test_docs_match_the_code.py` fails until each one names an endpoint.
 
@@ -421,6 +421,25 @@ Chrome at, plus the version compatibility verdict described below. `reveal`
 opens the staged folder in the file manager — a convenience with a fallback,
 never a requirement: the response carries the path either way, because if the
 open fails the reader's next action is pasting it.
+
+**`WS /api/terminal/ws`** (`routers/terminal.py`) — a real shell, run inside
+the app, because a harness (Claude Code, opencode) that needs a one-time
+`login` cannot do it from inside a sandboxed subprocess spawn, and sending the
+reader out to their OS's own terminal for that is exactly the friction the app
+exists to remove. One PTY per app session (`app/providers/termpty.py`'s
+module-level `SESSION`), started on first connect and read/written as JSON
+text frames (`{"type": "data", ...}`, `{"type": "resize", ...}`) rather than
+raw bytes, because a WebSocket frame boundary is not a line boundary and the
+frontend's xterm.js speaks frames either way. This is the one surface
+`origins.py`'s general `origin_is_allowed` does not guard: `Origin` and `Host`
+checks are HTTP middleware, and Starlette never runs HTTP middleware on a
+WebSocket upgrade, so the handler carries its own — `terminal_origin_is_allowed`,
+which is stricter than the general check by one exclusion. It leaves
+`EXTENSION_SCHEMES` out on purpose: every other surface trusts the browser
+extension exactly as much as a page the reader chose to install, but hostile
+JavaScript reaching a real shell is a different order of consequence than
+reaching `/api/analyze`, so the endpoint also refuses any connection that
+arrived on `EXTENSION_PORT` rather than the app's own port, belt and braces.
 
 ---
 

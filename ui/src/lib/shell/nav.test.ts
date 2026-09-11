@@ -102,8 +102,9 @@ describe("the route table", () => {
             name: "activity",
             lens: "submissions",
         });
-        expect(resolve("console")).toEqual({ name: "agents", lens: "console" });
-        expect(resolve("connect")).toEqual({ name: "agents", lens: "connect" });
+        // Agents has one lens now — Connect — so neither name carries one.
+        expect(resolve("console")).toEqual({ name: "agents" });
+        expect(resolve("connect")).toEqual({ name: "agents" });
         // And they keep the author gate they had, because the screen that
         // absorbed them has one.
         for (const name of ["jobs", "pipeline", "submissions", "console", "connect"]) {
@@ -112,13 +113,15 @@ describe("the route table", () => {
     });
 
     it("keeps the words a merged screen absorbed searchable", () => {
-        // The palette searches these. A reader who remembers "console" — a
-        // rail entry for six versions — must not be told there is no such
-        // thing because it is a lens now.
+        // The palette searches these. "console" is deliberately not one any
+        // more — it named an API-only prompt that a real terminal (reachable
+        // from the rail, not through Agents) replaced, and searching it into
+        // Agents now would send the reader to the wrong feature.
         const flat = destinationsFor("author");
         const agents = flat.find((d) => d.name === "agents");
-        expect(agents?.also).toContain("console");
         expect(agents?.also).toContain("connect");
+        expect(agents?.also).not.toContain("console");
+        expect(agents?.also).not.toContain("terminal");
         const activity = flat.find((d) => d.name === "activity");
         expect(activity?.also).toContain("jobs");
         expect(activity?.also).toContain("submissions");

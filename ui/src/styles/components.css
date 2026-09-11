@@ -884,6 +884,14 @@ li.gap {
 .rail-foot {
     padding-top: var(--s-3);
     border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+.rail-foot .terminal-toggle {
+    font-size: var(--t-xs);
+    padding: var(--s-1) var(--s-2);
 }
 
 /* Tighten before scrolling. On a laptop the rows fit with less air between
