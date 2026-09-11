@@ -274,7 +274,7 @@ def main(argv=None) -> int:
         # of its own, and the exception reaches app.log like everything
         # else's. `log_level` still applies: it sets these loggers' level
         # independently of `log_config`, so `warning` is unchanged.
-        log_config=uvicorn.Config.__init__.__defaults__ and None or None,  # TEMP_REVERT_MARK
+        log_config=None,
     )
     server = uvicorn.Server(config)
     if args.exit_with_parent:
