@@ -9,6 +9,7 @@
     import { hashWith, route } from "./lib/router";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
+    import TerminalPanel from "./lib/shell/TerminalPanel.svelte";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
@@ -101,6 +102,13 @@
      * acts on, and it means "this is the element the reader wants", which is
      * exactly the question being asked here. Reading it beats both a
      * hardcoded list of route names and a `document.activeElement` race.
+     *
+     * The Console is gone (a real terminal replaced it — see
+     * `lib/shell/TerminalPanel.svelte`, mounted outside `.view` and so outside
+     * this effect's reach entirely), which leaves no current route claiming
+     * `[autofocus]`. The check stays anyway: it costs one `querySelector` per
+     * navigation, and the alternative is deleting the one thing standing
+     * between the next typing-first route and the exact regression above.
      */
     function focusTheView() {
         if (!viewEl) return;
@@ -137,6 +145,7 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
+    <TerminalPanel />
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement
@@ -217,7 +226,7 @@
                              contract as the Knowledge lenses above. -->
                         <Activity lens={view.lens ?? $route.query.lens ?? "runs"} />
                     {:else if view.name === "agents"}
-                        <Agents lens={view.lens ?? $route.query.lens ?? "connect"} />
+                        <Agents />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->

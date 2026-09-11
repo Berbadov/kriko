@@ -47,6 +47,7 @@ from app.web.routers import (
     research,
     subjects,
     submissions,
+    terminal,
 )
 from app.web import state
 from app.version import app_version, installed_versions
@@ -182,6 +183,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         keys.router,
         marks.router,
         submissions.router,
+        terminal.router,
     ):
         app.include_router(router)
 
