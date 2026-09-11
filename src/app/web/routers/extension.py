@@ -139,6 +139,14 @@ def research_plane(request: Request) -> dict:
             "cost_basis": ApiResearcher.cost_basis,
             "budget_usd": EXTENSION_RESEARCH_BUDGET_USD,
         }
+    from app.providers import harness
+
+    if harness.available():
+        return {
+            "backend": "harness",
+            "cost_basis": "subscription",
+            "budget_usd": 0.0,
+        }
     return {
         "backend": AgentResearcher.name,
         "cost_basis": AgentResearcher.cost_basis,
