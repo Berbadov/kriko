@@ -6,6 +6,42 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11 — A route's own exception, invisible in app.log until now (B109, in progress)
+
+The 0.7.5 hotfix below fixed a real, confirmed bug, and the reader still saw
+the terminal fail — now as an explicit "disconnected" state instead of a bare
+black screen, but still broken. Their `app.log` after reproducing had nothing
+in it: no exception, no traceback, not even a line from the terminal router.
+
+The cause was `app.sidecar`'s `uvicorn.Config(...)` call, not the terminal
+itself. Its default `log_config` runs `logging.config.dictConfig`, which gives
+`"uvicorn"` its own stderr handler and `propagate=False`. An unhandled
+exception in *any* route logs through the child logger `"uvicorn.error"`,
+which — with no handler of its own — climbs to `"uvicorn"` and stops: it never
+reaches the root logger `app.logs.configure()` attaches to
+`~/.kriko/logs/app.log`. It still printed to stderr, but nothing has read this
+app's stderr since the window opened (see `src/app/sidecar.py`'s module
+docstring), so every route crash past startup was silently unrecorded — not
+just the terminal's, any of them.
+
+Fixed by passing `log_config=None` to `uvicorn.Config` in `src/app/sidecar.py`
+— this skips the `dictConfig` call entirely, so `"uvicorn.error"` keeps its
+default `propagate=True` and no handler of its own, and its records reach root
+like everything else's. `log_level="warning"` still applies: `uvicorn.Config`
+sets it on these loggers independently of `log_config`. Verified two ways:
+confirmed the swallow with a minimal repro (a raising websocket route + the
+same `uvicorn.Config` kwargs, in and out of `.venv`) before touching the real
+file, then added `test_an_unhandled_exception_in_a_route_reaches_the_app_log`
+to `src/app/tests/test_sidecar.py` — a real subprocess, `SHELL` pointed at a
+binary that does not exist so `TermSession.start()` raises for real, and the
+traceback is asserted present in a `KRIKO_LOG`-redirected file. Confirmed the
+test fails on the pre-fix code and passes on the post-fix code before trusting
+it.
+
+This closes the diagnostic gap but not the reader's actual bug — B109 in
+backlog.md tracks the still-open "why does the terminal disconnect" question,
+now waiting on a re-test that will finally have a real traceback in it.
+
 ### 2026-09-11 — The terminal's own shell, missing from the 0.7.4 it shipped in, as 0.7.5 (B107 hotfix)
 
 0.7.4 opened onto a black rectangle with a blinking cursor and nothing else —

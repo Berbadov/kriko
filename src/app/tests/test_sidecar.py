@@ -343,6 +343,63 @@ def test_the_same_binary_serves_mcp_over_stdio(tmp_path):
             process.wait(timeout=10)
 
 
+def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
+    """The gap that hid the real 0.7.5 terminal bug report from app.log.
+
+    `uvicorn.Config`'s default `log_config` calls `logging.config.dictConfig`,
+    which gives "uvicorn" its own stderr handler and `propagate=False`. An
+    unhandled exception in any route is logged through the child logger
+    "uvicorn.error", which — with no handler of its own — climbs to "uvicorn"
+    and stops there, never reaching the root logger `app.logs.configure()`
+    attached to `KRIKO_LOG`. It still prints to stderr, but nothing reads
+    stderr once the shell's window has opened, so a reader's own report of a
+    broken terminal came back with an `app.log` that had nothing in it about
+    why.
+
+    `SHELL` pointed at a binary that does not exist is a reliable way to make
+    `TermSession.start()` raise without mocking anything: the terminal
+    websocket handler runs it with no try/except, exactly as it did the day
+    this went unlogged.
+    """
+    log_path = tmp_path / "app.log"
+    env = _env(tmp_path)
+    env["KRIKO_LOG"] = str(log_path)
+    env["SHELL"] = str(tmp_path / "no-such-shell")
+    process = subprocess.Popen(
+        [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    try:
+        line = process.stdout.readline().strip()
+        assert line.startswith(PORT_LINE), line
+        port = int(line.split()[1])
+        assert _health(port) is not None, "the sidecar announced a port it never served"
+
+        from websockets.sync.client import connect
+
+        with pytest.raises(Exception):
+            with connect(f"ws://127.0.0.1:{port}/api/terminal/ws") as ws:
+                ws.recv(timeout=5)
+
+        deadline = time.time() + 10
+        text = ""
+        while time.time() < deadline:
+            if log_path.exists():
+                text = log_path.read_text()
+                if "uvicorn.error" in text:
+                    break
+            time.sleep(0.1)
+        assert "Exception in ASGI application" in text, (
+            f"the route's exception never reached app.log: {text!r}"
+        )
+    finally:
+        process.terminate()
+        process.wait(timeout=15)
+
+
 def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
     """stdout is the transport in MCP mode, so nothing else may write to it."""
     source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()

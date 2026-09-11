@@ -222,6 +222,42 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ## P0
 
+### B109 — Terminal (B107): still shows "disconnected" on 0.7.5, cause unknown
+Reported live 2026-09-11, right after the 0.7.5 hotfix (which fixed a confirmed,
+verified bug — `winpty-agent.exe` missing from the frozen sidecar, see done.md).
+The reader installed 0.7.5, and the terminal panel now shows an explicit
+"disconnected" state (`ui/src/lib/shell/TerminalPanel.svelte`'s `ws.onclose`
+path) rather than a bare black screen — progress, but the terminal still does
+not work, and the *reason* is not yet known.
+
+The reader's `app.log` after reproducing showed nothing at all about it — no
+exception, no traceback, not even a log line from `app.web.routers.terminal` —
+which turned out to be a second, real, independently-fixed bug: `app.sidecar`'s
+`uvicorn.Config(...)` used the default `log_config`, which calls
+`logging.config.dictConfig` and gives "uvicorn" its own stderr handler with
+`propagate=False`. Any unhandled exception in *any* route (logged through the
+child logger "uvicorn.error") stopped there and never reached the root logger
+`app.logs.configure()` attached to `~/.kriko/logs/app.log` — visible on stderr
+only, and nothing reads this app's stderr once the shell's window has opened.
+Fixed by passing `log_config=None` (skips the `dictConfig` call; `log_level`
+still applies independently) — verified with a real subprocess + real
+exception in `test_an_unhandled_exception_in_a_route_reaches_the_app_log`
+(`src/app/tests/test_sidecar.py`), which fails without the fix and passes with
+it. This closes a real, systemic diagnostic gap (any route's crash was
+invisible past the first few minutes, not just the terminal's) but it is a
+visibility fix, not a fix for *why the terminal disconnects* — that is still
+open.
+
+Next step: ship the visibility fix, ask the reader to reproduce again and send
+the new `app.log`, which should now actually name the exception. Leading
+guesses not yet confirmed: `SESSION.start()` raising again for a different
+reason than the agent gap (`winpty.PtyProcess.spawn` failing on the specific
+shell resolved from `COMSPEC`), or an antivirus/SmartScreen action against the
+newly-added, unsigned `winpty-agent.exe` on the reader's real (Program Files)
+install path — plausible because the build machine's own smoke test spawns the
+exe from a temp/build directory, not Program Files, and running unsigned for
+the first time there is untested. Do not guess further without the log.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
