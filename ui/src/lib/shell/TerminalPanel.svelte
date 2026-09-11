@@ -29,6 +29,7 @@
     let term: Terminal | undefined;
     let fit: FitAddon | undefined;
     let socket: WebSocket | undefined;
+    let sawError = false;
 
     function wsUrl(): string {
         const scheme = location.protocol === "https:" ? "wss:" : "ws:";
@@ -36,6 +37,7 @@
     }
 
     function connect() {
+        sawError = false;
         const ws = new WebSocket(wsUrl());
         socket = ws;
         ws.onopen = () => {
@@ -47,9 +49,17 @@
                 const msg = JSON.parse(event.data as string) as {
                     type: string;
                     data?: string;
+                    message?: string;
                 };
                 if (msg.type === "data" && typeof msg.data === "string") {
                     term?.write(msg.data);
+                } else if (msg.type === "error" && typeof msg.message === "string") {
+                    // B109: the shell failed to start (missing binary, a
+                    // packaging gap, ...) — say why, in the panel itself,
+                    // instead of a bare "disconnected" that sends the
+                    // reader hunting for app.log.
+                    sawError = true;
+                    term?.write(`\r\n\x1b[31m[terminal error] ${msg.message}\x1b[0m\r\n`);
                 }
             } catch {
                 // A frame that is not JSON is not this protocol's; drop it
@@ -58,7 +68,9 @@
         };
         ws.onclose = () => {
             status = "closed";
-            term?.write("\r\n\x1b[2m[disconnected]\x1b[0m\r\n");
+            if (!sawError) {
+                term?.write("\r\n\x1b[2m[disconnected]\x1b[0m\r\n");
+            }
         };
         ws.onerror = () => {
             status = "closed";

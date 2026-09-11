@@ -207,6 +207,28 @@ describe("TerminalPanel", () => {
         await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
     });
 
+    it("writes the reason into the terminal and skips the bare disconnect banner on an error frame", async () => {
+        // B109: a `TermSession.start()` failure now arrives as an
+        // `{type: "error"}` frame right before the close — the reader should
+        // see *why*, not the old undifferentiated "[disconnected]".
+        const xterm = await import("@xterm/xterm");
+        const writeSpy = vi.spyOn(xterm.Terminal.prototype, "write");
+        render(TerminalPanel);
+        toggleTerminal();
+        await screen.findByRole("complementary", { name: "Terminal" });
+        const ws = FakeWebSocket.instances[0];
+        ws.open();
+
+        ws.receive({ type: "error", message: "OSError: no such shell" });
+        ws.close();
+        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
+
+        const written = writeSpy.mock.calls.map((call) => call[0]).join("");
+        expect(written).toContain("no such shell");
+        expect(written).not.toContain("[disconnected]");
+        writeSpy.mockRestore();
+    });
+
     it("toggles on Ctrl+` from anywhere in the window", async () => {
         render(TerminalPanel);
         expect(screen.queryByRole("complementary", { name: "Terminal" })).toBeNull();
