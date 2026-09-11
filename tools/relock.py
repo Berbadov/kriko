@@ -52,6 +52,30 @@ def name_of(requirement: str) -> str:
     return re.split(r"[\[<>=!;\s]", requirement.strip())[0].lower().replace("_", "-")
 
 
+_MARKER = re.compile(r"sys_platform\s*(==|!=)\s*['\"]([^'\"]+)['\"]$")
+
+
+def applies_here(requirement: str) -> bool:
+    """Does this requirement's marker match the machine relock runs on?
+
+    `pywinpty`/`ptyprocess` are marked with `sys_platform`, the only marker
+    this project uses. A root that does not apply here cannot appear in a
+    Linux-resolved lock any more than a platform-only transitive dependency
+    like colorama or pywin32 can — `closure()` already drops those for the
+    same reason. Without this, a root gated to the other platform reads as a
+    missing pin instead of an inapplicable one.
+    """
+    _, _, marker = requirement.partition(";")
+    marker = marker.strip()
+    if not marker:
+        return True
+    match = _MARKER.match(marker)
+    if not match:
+        return True
+    op, value = match.groups()
+    return (sys.platform == value) if op == "==" else (sys.platform != value)
+
+
 def closure(roots: list[str]) -> dict[str, str | None]:
     """Every distribution the roots reach, and the version installed here."""
     found: dict[str, str | None] = {}

@@ -109,6 +109,20 @@ def origin_is_allowed(header: str | None) -> bool:
     return False
 
 
+def terminal_origin_is_allowed(header: str | None) -> bool:
+    if not header:
+        return True
+    origin = header.strip().lower()
+    if origin == "null":
+        return False
+    parts = urlsplit(origin)
+    if parts.scheme in SHELL_SCHEMES:
+        return True
+    if parts.scheme in ("http", "https"):
+        return _bare_host(parts.netloc) in LOOPBACK_HOSTS
+    return False
+
+
 def refuse(origin: str | None, host: str | None) -> str | None:
     """The reason to refuse this request, or ``None`` to serve it."""
     if not origin_is_allowed(origin):
