@@ -258,6 +258,28 @@ install path — plausible because the build machine's own smoke test spawns the
 exe from a temp/build directory, not Program Files, and running unsigned for
 the first time there is untested. Do not guess further without the log.
 
+**Second gap found while chasing this one, closed 2026-09-11**: `app.log` was
+never the *only* way to learn the reason — the terminal websocket handler ran
+`SESSION.start()` with no `try`/`except`, so a crash there just dropped the
+connection and the panel printed the same bare `[disconnected]` regardless of
+cause. The reader watching the panel had no way to see the exception at all,
+log fix or not. `terminal_ws` now catches the failure, still logs it via
+`logger.exception` (so a report's `app.log` names it), and sends
+`{"type": "error", "message": "..."}` on the socket itself before closing
+(code 1011); `TerminalPanel.svelte` writes that message into the terminal in
+red and skips the generic disconnect line when it saw one. Verified with
+`test_a_session_start_failure_is_reported_on_the_socket`
+(`src/app/tests/test_terminal_ws.py`, in-process, `SESSION.start` monkeypatched
+to raise) and a matching vitest case in `TerminalPanel.test.ts`;
+`test_an_unhandled_exception_in_a_route_reaches_the_app_log` updated to match
+(the socket now closes cleanly with a reason frame instead of raising on
+`recv`, and the log line to look for is the route's own `logger.exception`,
+not uvicorn's "Exception in ASGI application"). This still does not name *why*
+`SESSION.start()` fails on the reader's machine — no Windows access this
+session, and `/mnt/c` here has no `pywinpty`/`claude` CLI to reproduce
+against — but the reader no longer needs to find `app.log` at all: the next
+report can just be a screenshot of the terminal panel.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
@@ -279,6 +301,18 @@ Needs reproduction on Windows (this session had no `powershell.exe`/shell access
 to the reader's machine to test `claude.cmd` invocation directly) before a fix —
 guessing at subprocess plumbing without seeing it fail is how B92 shipped broken
 the first time.
+
+**Checked 2026-09-11, still needs a real repro**: this session's WSL2 host
+exposes a real Windows filesystem at `/mnt/c`, so it was checked for a shim to
+test against — no `claude`/`claude.cmd` anywhere on that machine (no
+`@anthropic-ai/claude-code` under its npm global `node_modules`, nothing named
+`claude.cmd` on the whole drive) and no `powershell.exe`/`cmd.exe` interop
+available from this shell either, so there is still no way to run the real CLI
+through Python's `subprocess` on Windows from here. Deliberately not
+guess-patching `_run`'s subprocess call over unverified theories about `.cmd`
+shims — the next thing this needs is the reader's own repro (does `claude -p`
+with a piped/redirected stdin, run by hand in their own terminal, show the same
+warning outside of Kriko entirely?), not another blind fix attempt.
 
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
 The ledger export (knowledge/ledger_export/, 568 claims) is acceptance-ready per the
