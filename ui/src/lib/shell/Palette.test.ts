@@ -45,7 +45,7 @@ describe("Palette", () => {
     });
 
     it("finds a merged screen by the name it absorbed", async () => {
-        // "Console" was a rail entry for six versions and is a lens on Agents
+        // "Connect" was a rail entry of its own and is a synonym for Agents
         // now. Someone who types the word they remember must land on it —
         // otherwise the reorganisation made the app harder to search than it
         // was, and the reader is punished for having learnt it. See
@@ -53,7 +53,7 @@ describe("Palette", () => {
         render(Palette, { mode: "author" });
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), {
-            target: { value: "console" },
+            target: { value: "connect" },
         });
         expect(screen.getByRole("option", { name: /Agents/ })).toBeInTheDocument();
     });
@@ -88,7 +88,7 @@ describe("Palette", () => {
         expect(last.getAttribute("aria-selected")).toBe("true");
     });
 
-    // Without this, `?` typed into the Console's request body would open the
+    // Without this, `?` typed into any note or search box would open the
     // palette over what the reader was writing.
     it("ignores a shortcut key aimed at a text field", async () => {
         render(Palette, { mode: "author" });

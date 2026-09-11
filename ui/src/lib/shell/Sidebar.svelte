@@ -3,6 +3,7 @@
     import { hashWith, route } from "../router";
     import NavGroup from "./NavGroup.svelte";
     import { groupsFor, resolve } from "./nav";
+    import { terminalOpen, toggleTerminal } from "./terminal";
 
     let { mode }: { mode: Mode } = $props();
 
@@ -87,6 +88,16 @@
     </nav>
 
     <div class="rail-foot">
+        <button
+            type="button"
+            class="tab terminal-toggle"
+            class:active={$terminalOpen}
+            aria-pressed={$terminalOpen}
+            onclick={toggleTerminal}
+            title="Terminal (Ctrl+`)"
+        >
+            Terminal
+        </button>
         <span class="modes" role="group" aria-label="Mode">
             {#each MODES as candidate (candidate)}
                 <button
