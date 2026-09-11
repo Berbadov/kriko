@@ -259,6 +259,22 @@ def main(argv=None) -> int:
         create_app(Settings.from_env(**overrides)),
         log_level="warning",
         access_log=False,
+        # uvicorn's default `log_config` calls `logging.config.dictConfig`,
+        # which gives its own "uvicorn"/"uvicorn.error"/"uvicorn.access"
+        # loggers their own stderr handler and sets "uvicorn" to
+        # `propagate=False` — so an unhandled exception in any route (an
+        # ASGI-level "Exception in ASGI application" traceback, logged
+        # through "uvicorn.error") stops at that handler and never reaches
+        # the root logger `app.logs.configure()` set up above, which is the
+        # only thing writing to `~/.kriko/logs/app.log`. It still prints to
+        # stderr, but nothing reads stderr once the shell's window has
+        # opened (see the module docstring), so the traceback is not lost —
+        # it is gone. `None` here skips that dictConfig call entirely, so
+        # "uvicorn.error" keeps its default `propagate=True` and no handler
+        # of its own, and the exception reaches app.log like everything
+        # else's. `log_level` still applies: it sets these loggers' level
+        # independently of `log_config`, so `warning` is unchanged.
+        log_config=uvicorn.Config.__init__.__defaults__ and None or None,  # TEMP_REVERT_MARK
     )
     server = uvicorn.Server(config)
     if args.exit_with_parent:
