@@ -46,8 +46,22 @@ async def terminal_ws(websocket: WebSocket) -> None:
         while True:
             try:
                 chunk = await asyncio.to_thread(SESSION.read)
-            except (EOFError, OSError):
-                break
+            except (EOFError, OSError) as exc:
+                # B109, second half: `start()` can return with no exception
+                # and the spawned process still be dead moments later (an AV
+                # killing a freshly-written winpty-agent.exe, a bad COMSPEC,
+                # the shell exiting on its own) -- this used to be a silent
+                # `break`, so the reader saw the exact same bare
+                # "disconnected" the start()-side fix above was for, just one
+                # step later in the same handler.
+                logger.exception("terminal session ended unexpectedly")
+                await websocket.send_text(
+                    json.dumps(
+                        {"type": "error", "message": f"{type(exc).__name__}: {exc}"}
+                    )
+                )
+                await websocket.close(code=1011)
+                return
             if not chunk:
                 break
             await websocket.send_text(json.dumps({"type": "data", "data": chunk}))

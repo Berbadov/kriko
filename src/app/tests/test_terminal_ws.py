@@ -67,6 +67,35 @@ def test_a_session_start_failure_is_reported_on_the_socket(tmp_path, monkeypatch
         assert "no such shell" in frame["message"]
 
 
+def test_a_read_failure_after_a_successful_start_is_also_reported(tmp_path, monkeypatch):
+    """B109, second half: `SESSION.start()` can succeed with no exception and
+    the spawned process still be dead a moment later -- an antivirus killing
+    the freshly-written `winpty-agent.exe`, a bad `COMSPEC`, the shell exiting
+    immediately. Before this, that path never touched the `except Exception`
+    around `start()` at all: `pump_output`'s read loop just got `EOFError`/
+    `OSError` and silently `break`, leaving the reader with the exact same
+    bare "disconnected" the first half of B109 was about -- just one step
+    later. The reader's own 0.7.7 report showed precisely this: no red text,
+    only "disconnected", on a build that already had the start()-side fix.
+    """
+    from app.providers import termpty
+
+    monkeypatch.setattr(termpty.SESSION, "start", lambda *_a, **_k: None)
+
+    def _raise(*_a, **_k):
+        raise OSError("shell exited immediately")
+
+    monkeypatch.setattr(termpty.SESSION, "read", _raise)
+
+    client = _client(tmp_path)
+    with client.websocket_connect(
+        "/api/terminal/ws", headers={"origin": "tauri://localhost"}
+    ) as ws:
+        frame = json.loads(ws.receive_text())
+        assert frame["type"] == "error"
+        assert "shell exited immediately" in frame["message"]
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="posix pty only here")
 def test_the_socket_runs_a_real_shell_round_trip(tmp_path):
     from app.providers.termpty import SESSION
