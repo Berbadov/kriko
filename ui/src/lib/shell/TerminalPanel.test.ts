@@ -31,7 +31,6 @@ class FakeWebSocket {
     sent: string[] = [];
     onopen: (() => void) | null = null;
     onmessage: ((event: { data: string }) => void) | null = null;
-    onclose: (() => void) | null = null;
     onerror: (() => void) | null = null;
 
     constructor(public url: string) {
@@ -51,9 +50,11 @@ class FakeWebSocket {
         this.onmessage?.({ data: JSON.stringify(payload) });
     }
 
-    close() {
+    onclose: ((event: { code?: number; reason?: string }) => void) | null = null;
+
+    close(code?: number, reason?: string) {
         this.readyState = FakeWebSocket.CLOSED;
-        this.onclose?.();
+        this.onclose?.({ code, reason });
     }
 }
 
@@ -205,6 +206,29 @@ describe("TerminalPanel", () => {
 
         ws.close();
         await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
+    });
+
+    it("writes the close code into the disconnect banner when the socket never sent an error frame", async () => {
+        // B109, fourth gap: 0.7.7-0.7.9 each closed a path that could reach
+        // the bare "[disconnected]" line with no error frame, and the
+        // reader still saw exactly that after all three shipped -- meaning
+        // the socket never finished connecting in the first place. Code
+        // 1006 ("abnormal closure") is what the browser reports for exactly
+        // that case, with no server-sent frame required, so it belongs in
+        // the banner every time, not just when a frame told us why.
+        const xterm = await import("@xterm/xterm");
+        const writeSpy = vi.spyOn(xterm.Terminal.prototype, "write");
+        render(TerminalPanel);
+        toggleTerminal();
+        await screen.findByRole("complementary", { name: "Terminal" });
+        const ws = FakeWebSocket.instances[0];
+
+        ws.close(1006, "");
+        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
+
+        const written = writeSpy.mock.calls.map((call) => call[0]).join("");
+        expect(written).toContain("1006");
+        writeSpy.mockRestore();
     });
 
     it("writes the reason into the terminal and skips the bare disconnect banner on an error frame", async () => {
