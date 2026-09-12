@@ -34,11 +34,27 @@ def test_terminal_origin_allows_the_shell_and_loopback_only():
 
 def test_the_socket_refuses_an_extension_origin(tmp_path):
     client = _client(tmp_path)
-    with pytest.raises(Exception):
-        with client.websocket_connect(
-            "/api/terminal/ws", headers={"origin": "chrome-extension://abc"}
-        ):
-            pass
+    with client.websocket_connect(
+        "/api/terminal/ws", headers={"origin": "chrome-extension://abc"}
+    ) as ws:
+        frame = json.loads(ws.receive_text())
+        assert frame["type"] == "error"
+
+
+def test_a_rejected_origin_is_reported_on_the_socket_before_closing(tmp_path):
+    """B109, third half: both of `terminal_ws`'s pre-accept rejections used to
+    `close(1008)` with no frame at all -- no `onmessage` ever fires on the
+    client, so `sawError` never flips and the reader sees the exact same bare
+    "[disconnected]" the crash-side fixes were for, just from a rejection
+    instead of a crash. `accept()` now runs first so a reason can be said.
+    """
+    client = _client(tmp_path)
+    with client.websocket_connect(
+        "/api/terminal/ws", headers={"origin": "https://evil.example"}
+    ) as ws:
+        frame = json.loads(ws.receive_text())
+        assert frame["type"] == "error"
+        assert "evil.example" in frame["message"]
 
 
 def test_a_session_start_failure_is_reported_on_the_socket(tmp_path, monkeypatch):
