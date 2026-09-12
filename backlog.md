@@ -328,6 +328,37 @@ silent; if the reader's next build still shows bare "[disconnected]" the
 failure is upstream of this handler entirely (the socket never reaching the
 FastAPI app at all), which is a different, network-level question.
 
+**Fifth entry, 2026-09-12 — the predicted "upstream of the handler" case
+confirmed, and the frozen backend proven innocent**: 0.7.9 shipped the fourth
+gap's fix and the reader still saw bare "[disconnected]", no text at all —
+exactly the case the fourth gap's note predicted. Rather than patch a fifth
+path inside `terminal_ws` (three "fix a path inside this handler" attempts
+had now each failed to be the reader's actual cause — the
+systematic-debugging trigger for "question whether this is even the right
+component"), the frozen `kriko-sidecar.exe` from the 0.7.9 build tree was run
+directly on the Windows host and probed with a raw socket handshake
+(`GET /api/terminal/ws` + `Upgrade: websocket`, `Origin: tauri://localhost`)
+— no browser, no webview, nothing this handler doesn't already control. The
+server replied `101 Switching Protocols` and immediately streamed real PTY
+output (`\x1b[?9001h\x1b[?1004h`, a real PowerShell prompt sequence). The
+backend, the websocket upgrade, and `winpty` all work correctly in the exact
+binary the reader is running — the failure is entirely in how the real
+webview reaches this endpoint, not in anything `terminal_ws` or `TermSession`
+does. This rules out every remaining hypothesis inside this file and moves
+the search to `TerminalPanel.svelte`'s `connect()`/`wsUrl()` and how Tauri's
+webview navigates to the sidecar's URL.
+
+Shipped as a diagnostic rather than a guessed fix: `ws.onclose`'s
+`CloseEvent.code` (1006 = "abnormal closure", the browser's own signal for
+"never finished connecting", available with **no server-sent frame
+required**) now goes into the disconnect banner every time, not only when a
+server frame already explained it. This is the one piece of evidence that
+distinguishes "the socket never opened" (code 1006) from every other case
+already covered — verified with a new vitest case
+(`ui/src/lib/shell/TerminalPanel.test.ts`) asserting the code appears in the
+written banner. Next reproduction should return a code, which is the next
+concrete lead rather than another guess.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
