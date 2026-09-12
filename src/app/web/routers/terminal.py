@@ -15,11 +15,38 @@ logger = logging.getLogger(__name__)
 
 @router.websocket("/ws")
 async def terminal_ws(websocket: WebSocket) -> None:
+    # B109, third half: both of these used to `close(1008)` before `accept()`
+    # ever ran, which means no text frame is possible on this socket at all --
+    # the client's `onclose` fires with no `onmessage` first, `sawError` never
+    # flips, and the reader gets the exact same bare "[disconnected]" the
+    # first two halves of B109 were about, just from a rejection instead of a
+    # crash. `accept()` first so a reason can actually be said.
     server = websocket.scope.get("server")
     if server is not None and server[1] == EXTENSION_PORT:
+        await websocket.accept()
+        logger.warning("terminal ws rejected: reached on the extension port")
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": "This terminal cannot be reached on the extension port.",
+                }
+            )
+        )
         await websocket.close(code=1008)
         return
-    if not origins.terminal_origin_is_allowed(websocket.headers.get("origin")):
+    origin = websocket.headers.get("origin")
+    if not origins.terminal_origin_is_allowed(origin):
+        await websocket.accept()
+        logger.warning("terminal ws rejected: origin %r not allowed", origin)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": f"Origin {origin!r} is not allowed to open this terminal.",
+                }
+            )
+        )
         await websocket.close(code=1008)
         return
 
