@@ -359,6 +359,22 @@ already covered — verified with a new vitest case
 written banner. Next reproduction should return a code, which is the next
 concrete lead rather than another guess.
 
+**Sixth entry, 2026-09-12 — 1006 confirmed, and the next fact identified**: the
+reader's 0.7.10 report came back exactly `1006` — abnormal closure, confirmed,
+not the origin-reject path (that one closes `1008`, with a frame, gated behind
+`sawError`). This is real signal: the socket never completes its opening
+handshake at all, at a layer below anything `terminal_ws` controls, even
+though the raw probe proved that same handler works when dialed directly.
+1006 alone doesn't say *what URL* the failing socket dialed — `wsUrl()`
+derives it from `location.host` at connect time, and if the real webview's
+`location.host` disagrees with what the announced sidecar port actually is
+(stale, wrong port, wrong scheme), the two would silently never meet. `ws.url`
+is the browser's own resolved record of that, so it now goes into the banner
+alongside the code — verified with an updated vitest case
+(`ui/src/lib/shell/TerminalPanel.test.ts`) asserting the URL appears in the
+written banner. The next reproduction's banner is the concrete next lead:
+whatever host/port it names is where the real mismatch lives.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
