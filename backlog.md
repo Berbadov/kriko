@@ -303,6 +303,31 @@ the diagnostic-visibility half of B109 completely (every path out of
 the reader's actual crash is still open pending their next reproduction on a
 build with *this* fix.
 
+**Fourth gap, found from the reader's own 0.7.8 report ("still says
+[disconnected]"), closed 2026-09-12**: the third gap's fix shipped in 0.7.8
+and the reader still saw the bare, dim "[disconnected]" line with no red
+text at all — the tell that `sawError` never flipped on the client, meaning
+no `{"type": "error"}` frame ever arrived, meaning the connection never even
+reached the two fixes above. Root cause: `terminal_ws`'s two *pre-accept*
+rejections (the extension-port check, the origin check) both called
+`websocket.close(code=1008)` before `websocket.accept()` ever ran — and a
+socket that was never accepted cannot carry a text frame at all, so
+`onclose` fires with no `onmessage` first and the client falls straight to
+its generic disconnect line. This is the same bare "[disconnected]" as the
+first three gaps, just from a rejection instead of a crash, and it is the
+one path the first three fixes structurally could not have touched (they
+all live inside the `try` after `accept()`). Fixed by moving `accept()`
+before both checks, logging the reason, and sending an error frame in the
+same shape as the other three before closing. Verified with
+`test_a_rejected_origin_is_reported_on_the_socket_before_closing`
+(`src/app/tests/test_terminal_ws.py`); the existing
+`test_the_socket_refuses_an_extension_origin` updated to match (it used to
+assert the connection raised on handshake — it now asserts an error frame
+instead). This is the last close path in `terminal_ws` that could still be
+silent; if the reader's next build still shows bare "[disconnected]" the
+failure is upstream of this handler entirely (the socket never reaching the
+FastAPI app at all), which is a different, network-level question.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
