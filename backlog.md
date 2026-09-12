@@ -288,6 +288,21 @@ below — checked as part of that repro. Still true: no `pywinpty` in this
 Linux `.venv`. Root cause of the original crash remains unconfirmed until a
 build carrying this fix reaches the reader and they reproduce again.
 
+**Third gap, found from the reader's own 0.7.7 report, closed 2026-09-12**:
+0.7.7 shipped the start()-side fix above; the reader reproduced and still saw
+only "disconnected", no red text. Root cause: `start()` can return with *no*
+exception and the spawned process still be dead a moment later (an AV killing
+a freshly-written `winpty-agent.exe`, a bad `COMSPEC`, the shell exiting on
+its own) — `pump_output`'s read loop hit `EOFError`/`OSError` there and
+silently `break`, which is the exact same bare "disconnected" one step later
+in the same handler. Now reports an error frame there too, same shape, same
+`logger.exception` call. Verified with
+`test_a_read_failure_after_a_successful_start_is_also_reported`. This closes
+the diagnostic-visibility half of B109 completely (every path out of
+`terminal_ws` that isn't a clean shutdown now reports why) — root cause of
+the reader's actual crash is still open pending their next reproduction on a
+build with *this* fix.
+
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
