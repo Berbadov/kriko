@@ -66,10 +66,23 @@
                 // rather than dump raw bytes into a terminal reading it.
             }
         };
-        ws.onclose = () => {
+        ws.onclose = (event) => {
             status = "closed";
             if (!sawError) {
-                term?.write("\r\n\x1b[2m[disconnected]\x1b[0m\r\n");
+                // B109, fourth gap: three straight fixes (0.7.7-0.7.9) each
+                // closed a path that could reach this bare line with no
+                // error frame, and the reader still saw only
+                // "[disconnected]" after all three shipped -- meaning the
+                // failure is upstream of every one of them: the socket
+                // never finished connecting at all. `CloseEvent.code` is the
+                // one thing the browser tells us in that exact case (1006,
+                // "abnormal closure") without needing a server-sent frame,
+                // so it goes in every time now instead of only when we
+                // already know the reason.
+                const detail = event?.code
+                    ? ` (code ${event.code}${event.reason ? `: ${event.reason}` : ""})`
+                    : "";
+                term?.write(`\r\n\x1b[2m[disconnected${detail}]\x1b[0m\r\n`);
             }
         };
         ws.onerror = () => {
