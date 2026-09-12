@@ -228,6 +228,11 @@ describe("TerminalPanel", () => {
 
         const written = writeSpy.mock.calls.map((call) => call[0]).join("");
         expect(written).toContain("1006");
+        // The reader's 0.7.10 report came back exactly 1006 -- confirmed
+        // abnormal closure -- but that alone doesn't say whether the socket
+        // even dialed the right place. `ws.url` is the one fact 1006 can't
+        // carry on its own.
+        expect(written).toContain(ws.url);
         writeSpy.mockRestore();
     });
 

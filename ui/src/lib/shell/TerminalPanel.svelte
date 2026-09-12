@@ -79,8 +79,19 @@
                 // "abnormal closure") without needing a server-sent frame,
                 // so it goes in every time now instead of only when we
                 // already know the reason.
+                //
+                // 0.7.10 shipped and the reader's report came back exactly
+                // 1006 -- confirmed abnormal closure, not the origin-reject
+                // path (that one closes 1008, with a frame, via `sawError`).
+                // The one fact 1006 alone doesn't carry is *what URL* the
+                // socket actually dialed -- `wsUrl()` derives it from
+                // `location.host` at connect time, and if that's wrong (a
+                // stale host, the wrong port) the reader's real webview and
+                // this component would silently disagree on where the
+                // server even is. `ws.url` is the browser's own resolved
+                // record of that, so it goes in the banner too.
                 const detail = event?.code
-                    ? ` (code ${event.code}${event.reason ? `: ${event.reason}` : ""})`
+                    ? ` (code ${event.code}${event.reason ? `: ${event.reason}` : ""}, url=${ws.url})`
                     : "";
                 term?.write(`\r\n\x1b[2m[disconnected${detail}]\x1b[0m\r\n`);
             }
