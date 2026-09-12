@@ -275,10 +275,18 @@ to raise) and a matching vitest case in `TerminalPanel.test.ts`;
 (the socket now closes cleanly with a reason frame instead of raising on
 `recv`, and the log line to look for is the route's own `logger.exception`,
 not uvicorn's "Exception in ASGI application"). This still does not name *why*
-`SESSION.start()` fails on the reader's machine — no Windows access this
-session, and `/mnt/c` here has no `pywinpty`/`claude` CLI to reproduce
-against — but the reader no longer needs to find `app.log` at all: the next
-report can just be a screenshot of the terminal panel.
+`SESSION.start()` fails on the reader's machine — but the reader no longer
+needs to find `app.log` at all: the next report can just be a screenshot of
+the terminal panel.
+
+**Correction, 2026-09-11**: the "no Windows access" claim above was wrong —
+this WSL2 host's `/mnt/c` *is* real Windows interop (`cmd.exe`/`powershell.exe`
+run fine by full path; they were just absent from the WSL `$PATH`, which is
+what the earlier `which` checks actually tested), and a real `claude.exe`
+exists at `C:\Users\beraat\.local\bin\claude.exe`. See B108's correction
+below — checked as part of that repro. Still true: no `pywinpty` in this
+Linux `.venv`. Root cause of the original crash remains unconfirmed until a
+build carrying this fix reaches the reader and they reproduce again.
 
 ### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
@@ -313,6 +321,41 @@ guess-patching `_run`'s subprocess call over unverified theories about `.cmd`
 shims — the next thing this needs is the reader's own repro (does `claude -p`
 with a piped/redirected stdin, run by hand in their own terminal, show the same
 warning outside of Kriko entirely?), not another blind fix attempt.
+
+**Correction and real repro, 2026-09-11 (same day)**: the paragraph above was
+wrong on both counts. `cmd.exe`/`powershell.exe` interop from this WSL2 shell
+does work by full path (`/mnt/c/Windows/System32/cmd.exe /c ...`) — the
+earlier `which`/`where` checks failed only because Windows System32 isn't on
+the WSL PATH, which says nothing about whether the binaries are reachable.
+And a real, native `claude.exe` (not an npm `.cmd` shim) exists at
+`C:\Users\beraat\.local\bin\claude.exe`, found via `where claude` run
+through `cmd.exe`. Real Windows Python is also present
+(`C:\Users\beraat\AppData\Local\Programs\Python\Python314\python.exe`).
+
+With all three confirmed, `harness.py`'s exact `_run()` subprocess pattern
+(prompt written to a temp file, opened and passed as `stdin=`, same
+`subprocess.run(..., capture_output=True, text=True, timeout=..., env=os.environ.copy(), cwd=home)`
+call) was reproduced directly against the real `claude.exe`, run through real
+Windows Python, invoked through real `cmd.exe` — the same process family the
+packaged sidecar itself would use. Result: **no stdin race, no "no stdin data
+received" warning, at all.** The subprocess ran cleanly to completion and
+returned `RETURNCODE 1` with a full valid JSON stream ending in
+`{"type": "result", "is_error": true, "result": "Failed to authenticate: OAuth
+session expired and could not be refreshed"}` — an expired CLI login, not a
+stdin-plumbing bug, and a case `_hint()`/`HINTS` in `harness.py` already
+handles correctly (the reader's second live traceback the same day showed
+exactly this error text and hint).
+
+This does not prove B108 is closed — an expired login was never ruled out as
+the actual cause of the *original* report, and this repro used a directly
+invoked `python.exe`, not a frozen PyInstaller sidecar, so a
+packaging-specific stdin difference is still conceivable. But it is now the
+leading explanation over a stdin race: no evidence of the race has been
+produced on the real CLI, on the real OS, using the real subprocess pattern,
+in two independent attempts. Next step if it recurs: get a repro where the
+reader is confirmed logged in (`claude` runs with no auth error by hand) and
+still sees the stdin warning through Kriko specifically — that isolates
+packaging/frozen-binary stdin handling as the one remaining suspect.
 
 ### B16 — Catalog swap: serve the ledger export instead of legacy part YAMLs `[G1][G2]`
 The ledger export (knowledge/ledger_export/, 568 claims) is acceptance-ready per the
