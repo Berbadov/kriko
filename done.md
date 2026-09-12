@@ -6,6 +6,53 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-11/12 — Kriko_0.7.7_x64-setup.exe: the terminal-error-visibility fix, actually in the reader's hands (B109)
+
+The reader's second live report the same day was a screenshot still showing a
+bare `[disconnected]` and a pasted traceback (`OAuth session expired and could
+not be refreshed`). Both were explained rather than re-fixed:
+
+**The screenshot was 0.7.6, not a failed fix.** The terminal-error-visibility
+work below (B109) had only ever been merged (`ab47091`) — never built into an
+installer. CLAUDE.md's app-first-phase rule 4 ("ship to the reader, not to
+the branch") was still unmet. So it was shipped: version bumped to 0.7.7,
+full suite green, and `packaging/build_desktop.ps1 -Version 0.7.7` run by hand
+on the Windows host this WSL2 box exposes via `/mnt/c` — the same path
+`done.md`'s 0.5.0-0.5.2 entries used.
+
+**The traceback was not B108.** `harness.py`'s `_run()` subprocess pattern
+(prompt on `stdin=`, never an argv arg) was reproduced directly against the
+real `claude.exe` found on that same Windows host
+(`C:\Users\beraat\.local\bin\claude.exe`) — no stdin race, in two independent
+attempts. The subprocess ran cleanly and returned the same
+`Failed to authenticate: OAuth session expired` the reader saw, which
+`_hint()`/`HINTS` in `harness.py` already turns into "run `claude` once in a
+terminal, log in, and press this again." Not a new bug — an expired login,
+correctly explained, blocked only by the terminal not working yet to run that
+login. `backlog.md`'s B108 and B109 entries corrected: an earlier "no Windows
+access" claim in both was wrong (the WSL `$PATH` lacking `cmd.exe`/`powershell.exe`
+is not the same as those binaries being unreachable by full path — they are).
+
+**The hand build itself found three real bugs in building from the WSL-mounted
+path, none in the app**: `ui/node_modules` held POSIX symlinks a Windows
+`npm ci` can't `rmdir` over the `\\wsl.localhost` 9p mount (fixed: delete and
+let Windows reinstall); `npm ci`'s internal `cmd.exe` shim cannot use a UNC
+path as its working directory at all, silently defaulting to `C:\Windows`
+(worked around with `pushd`, which auto-maps a drive letter); and
+`build_packs.py` hit `sqlite3.OperationalError: database is locked` on
+`PRAGMA journal_mode` — SQLite's WAL mode doesn't work reliably over a
+network/9p-backed filesystem. Three failures from the same underlying cause
+(building over a network mount) is the "question the architecture" signal, so
+the whole tree was `robocopy /MIR`'d to a real local path
+(`C:\tmp\kriko-build`) and built from there instead of patching around the
+mount a fourth time. Built clean: `Kriko_0.7.7_x64-setup.exe`, 25.2 MB, smoke
+passed (shell stayed up 25s, no panic). Unsigned (B64).
+
+Still open: whether the reader's original terminal-startup crash and B108's
+original stdin-race report reproduce again once they're actually running
+0.7.7 — the visibility fix and the repro's negative result are evidence, not
+closure, for either backlog item.
+
 ### 2026-09-11 — A route's own exception, invisible in app.log until now (B109, in progress)
 
 The 0.7.5 hotfix below fixed a real, confirmed bug, and the reader still saw
