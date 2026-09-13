@@ -577,9 +577,13 @@ def test_a_flag_this_machines_cli_never_heard_of_is_not_passed(monkeypatch):
     the base vector, which still runs.
     """
     one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
-    monkeypatch.setitem(harness_mod._DECLARED, one.executable, frozenset())
+    # Keyed by the *resolved* path: `locate` is what `command_for` actually
+    # runs, because a reader whose PATH does not carry `claude` still has one
+    # on disk and a bare name would not start it.
+    found = harness_mod.locate(one) or one.executable
+    monkeypatch.setitem(harness_mod._DECLARED, found, frozenset())
 
-    assert harness_mod.command_for(one) == [one.executable, *one.args]
+    assert harness_mod.command_for(one) == [found, *one.args]
 
 
 def test_asking_what_the_cli_declares_never_raises(monkeypatch):
