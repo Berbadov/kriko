@@ -6,6 +6,75 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-13 — 0.8.0: `kriko tui`, the operator console — and `ci.yml` deleted
+
+**The TUI (`src/app/tui/`).** A fourth interface beside `cli`, `web` and `mcp`,
+and the first one whose audience is not the reader of a car listing. Agent
+operations were invisible: "research does nothing", "the terminal says
+disconnected" and "it reported success and kept nothing" were three symptoms of
+one condition — the operator plane had no instruments, and through six releases
+of B107/B109 the reader had no working surface of any kind, because the surface
+itself was the broken thing.
+
+It is a **second client on the same HTTP API**, not a second implementation.
+Every keystroke is an endpoint the dashboard already calls, so it costs almost
+nothing, cannot drift from the web UI's behaviour, and is a standing test of
+whether that API is complete — anything the console cannot do without a new
+endpoint is something the API was not really exposing. It also needs no
+webview, no WebView2, no Rust shell and no bundled JavaScript, which is what
+makes it work in exactly the conditions that produced those three reports.
+
+* **Zero new dependencies.** `textual` was already declared (unused) in the
+  `pipeline` extra, and putting a rendering framework into the *runtime* deps
+  would put it in the installer a reader double-clicks, to draw four lists.
+  `curses` is not an option — absent on Windows, which is where the reader and
+  the harness problems are. So: ANSI, stdlib `urllib`, and ~700 lines.
+* **Efficiency is the frame differ.** `term.diff` rewrites only the rows that
+  changed, cursor-addressed, so an idle console writes nothing at all and a
+  ticking job log writes one line. That is what lets the loop check for keys
+  twenty times a second for free.
+* **Discovery attaches before it starts.** `--url`, then `KRIKO_URL`, then the
+  fixed `EXTENSION_PORT` — a running desktop app is always serving there, so
+  `kriko tui` with the app open shares its engine, store, jobs and shell. Only
+  if nothing answers does it start one in-process, which is what makes it
+  usable on a machine where the shell will not open at all.
+* **Three tabs and a shell.** *Planes* names the harness binary `locate()`
+  found, with its path — and where it looked when it found none, which is the
+  B108 diagnosis on screen. *Agenda* starts research on the selected subject.
+  *Jobs* tails the followed job's log. `s` drops the alternate screen and hands
+  the real terminal to the PTY until Ctrl-], because drawing a shell means
+  writing a terminal emulator and there is already one running: the operator's.
+
+Tested where it can be (34 cases, `src/app/tests/test_tui.py`): key decoding and
+the frame differ are pure; `screen.render` is a pure function of state, so every
+layout decision is a unit test rather than a screenshot; `Tui.act` is keystroke →
+API call against a fake engine. One case runs the real client against a real
+`create_app` over a real socket, so a renamed route fails here rather than on the
+operator's machine. Driven end to end by hand as well: a keystroke started a real
+job, the log tailed live, and the shell echoed through the same client.
+
+**`ci.yml` deleted, and this is the uncomfortable half.** The 1.0.0 audit found
+four reported defects that every automated gate passed, and the answer was more
+gates running more often — which is why the workflow was un-paused on
+2026-09-08. It then **never executed once**. Every run since, on branches and on
+`main`, failed in under fifteen seconds with `runner_id: 0`, no steps, and no
+logs: this account has no Actions minutes, so no job was ever allocated a
+runner. A signal that is always red carries no information, and this one was
+teaching everyone to scroll past a red build.
+
+So the three jobs moved into `tools/gate.sh` verbatim — pytest, both JS suites,
+`svelte-check`, and the stale-bundle rebuild — and the obligation moved with
+them: run it before pushing. `CLAUDE.md`'s app-first rule 1 now names the gate
+rather than pytest alone. Restoring the workflow is a `git revert` plus a
+billing change, in that order, and is worth doing the day either is possible:
+the audit's finding has not been answered, only relocated. `desktop.yml` is
+untouched and untrimmed; it cannot get a runner either, which is why every
+installer since 0.5.0 was built by hand.
+
+Two `test_there_are_workflows_to_check` guards dropped from `>= 2` to `>= 1`
+rather than being deleted — the failure they exist for is a glob that silently
+matches nothing, and that is exactly what a second deletion would produce.
+
 ### 2026-09-13 — 0.7.12: the terminal stops being a WebSocket, and the harness stops depending on PATH (B109, B108)
 
 **B109 — the transport was the bug.** Six releases (0.7.4–0.7.11) closed six

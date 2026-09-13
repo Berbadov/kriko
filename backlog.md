@@ -413,13 +413,20 @@ not a per-machine patch — but it is not a confirmed fix for the original
 report either, and the leading explanation for *that* remains an expired CLI
 login (see the 2026-09-11 repro below).
 
-**Still open, and the thing to build next:** a harness run is a captured
-subprocess with a 600s (or 2400s) ceiling and no output until it ends, so every
-one of its failure modes reaches the reader as "succeeded / 0 claim(s) kept" or
-a raw traceback. Now that `termpty.TermSession` is a general "process with a
-resumable transcript", a harness run should be one too — streamed into the same
-panel, answerable when the CLI asks for a login. That turns the whole class
-from "diagnose by report" into "watch it happen".
+**2026-09-13 — the plane has instruments now.** `kriko tui` (`src/app/tui/`,
+see `done.md`) puts the harness binary's resolved path on screen, and where
+`locate()` looked when it found none. The commonest form of "agent operations
+do nothing" is now a sentence the operator can read rather than a silence.
+
+**Still open, and the thing to build next:** a harness run is still a *captured*
+subprocess with a 600s (or 2400s) ceiling and no output until it ends, so its
+remaining failure modes still reach the reader as "succeeded / 0 claim(s) kept"
+or a raw traceback — the TUI can only tail what the job writes to its log row.
+Now that `termpty.TermSession` is a general "process with a resumable
+transcript", a harness run should be one too: streamed into the jobs tab and the
+web panel alike, and *answerable* when the CLI asks for a login. That is the
+step that turns the class from "diagnose by report" into "watch it happen", and
+it reuses the mechanism 0.7.12 already shipped.
 
 #### Original entry — `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
