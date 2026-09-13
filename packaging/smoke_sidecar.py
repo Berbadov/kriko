@@ -21,7 +21,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from websockets.sync.client import connect as ws_connect
 
 PORT_LINE = "KRIKO_PORT"
 TIMEOUT = 60
@@ -84,43 +83,41 @@ def post(port: int, path: str, body: dict) -> dict:
         return {"error": error.read().decode("utf-8", "replace"), "status": error.code}
 
 
-def terminal_ws_ok(port: int) -> bool:
-    """Does the shell actually speak, not just accept a connection?
+def terminal_ok(port: int) -> bool:
+    """Does the shell actually speak, not just answer?
 
     0.7.4 shipped `kriko-sidecar.exe` without `winpty-agent.exe`:
     `winpty.dll` loads fine (PyInstaller's binary walker follows its `.pyd`'s
     import table there automatically), but the agent it launches via
     `CreateProcess` is invisible to that walker, so it was left behind. The
-    socket still opened -- `websocket.accept()` runs before the PTY spawn
-    does -- and only then did `SESSION.start()` raise, closing the connection
-    before a single byte reached the reader: a black rectangle with a
-    blinking cursor, no error visible anywhere in the UI. Every other check
-    in this file passed because none of them ever opened a shell.
+    connection still opened and only then did `SESSION.start()` raise: a black
+    rectangle with a blinking cursor, no error visible anywhere in the UI.
+    Every other check in this file passed because none of them ever opened a
+    shell.
 
-    So the bar here is not "the socket connects", which 0.7.4 also cleared --
-    it is a real `data` frame, which only a live PTY on the other end can
-    produce. Nothing is sent from this end; a freshly spawned shell prints
-    its own prompt unprompted.
+    So the bar here is not "the endpoint answers" -- it is real PTY bytes,
+    which only a live shell can produce. Nothing is sent from this end; a
+    freshly spawned shell prints its own prompt unprompted.
+
+    This spoke WebSocket until 0.7.12 and the reader never once saw a shell
+    through it (B109). It is ordinary HTTP now, which is also why this check
+    no longer needs a websocket client to run.
     """
-    with ws_connect(f"ws://127.0.0.1:{port}/api/terminal/ws", open_timeout=10) as ws:
-        deadline = time.time() + 10
-        while time.time() < deadline:
-            try:
-                raw = ws.recv(timeout=max(0.1, deadline - time.time()))
-            except TimeoutError:
-                break
-            try:
-                msg = json.loads(raw)
-            except ValueError:
-                continue
-            if msg.get("type") == "data" and msg.get("data"):
-                print("terminal ok: the shell said something back")
-                return True
-        print("the terminal socket connected and never sent a data frame -- "
-              "the shell behind it never spoke. Check the frozen binary "
-              "actually carries what its PTY library needs to spawn one "
-              "(see this function's docstring).")
-        return False
+    deadline = time.time() + 15
+    offset = 0
+    while time.time() < deadline:
+        body = fetch(port, f"/api/terminal/state?offset={offset}")
+        if body.get("failure"):
+            print(f"the shell would not start: {body['failure']}")
+            return False
+        offset = body.get("offset", offset)
+        if body.get("data"):
+            print("terminal ok: the shell said something back")
+            return True
+        time.sleep(0.2)
+    print("the terminal answered and the shell behind it never spoke. "
+          "Check the frozen binary for a missing PTY helper.")
+    return False
 
 
 def mcp_speaks(binary: Path, environment: dict) -> bool:
@@ -370,7 +367,7 @@ def main(argv: list[str]) -> int:
         if not mcp_speaks(binary, environment):
             return 1
 
-        if not terminal_ws_ok(port):
+        if not terminal_ok(port):
             return 1
         return 0
     finally:

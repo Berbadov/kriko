@@ -222,7 +222,31 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ## P0
 
-### B109 — Terminal (B107): still shows "disconnected" on 0.7.5, cause unknown
+### B109 — Terminal: CLOSED 2026-09-13 by dropping the WebSocket (0.7.12)
+
+**Resolved.** Six entries below chased a cause inside `terminal_ws`; the
+seventh answer was that the handler was never the component at fault. The
+socket's own evidence said so: the fifth entry's raw probe got `101` and real
+PTY bytes out of the frozen binary on the reader's machine, and the sixth
+entry's banner came back `1006` — the handshake never finished, at a layer
+below anything this app controls. The terminal was also the only WebSocket in
+the tree, next to a `/api/jobs/{id}/stream` that works in the same install.
+
+So it is SSE + `POST` now (`docs/INTERNALS.md`, and the 2026-09-13 entry in
+`done.md`), with a polling fallback under that and a relative URL that cannot
+disagree about the port. The transcript lives on the session, so a failure is a
+field one GET can read rather than a frame someone had to be connected for.
+
+**What is left is verification, not cause-hunting**: 0.7.12 has to reach the
+reader in an installer (app-first rule 4) and open a shell. If it does not, the
+next fact to get is `GET /api/terminal/state` — which answers with the reason
+whether or not anything is connected, and which the reader can reach from a
+browser.
+
+The six-entry history below is kept verbatim; it is the record of how a
+component-level assumption survives six correct fixes.
+
+#### Original entry — Terminal (B107): still shows "disconnected" on 0.7.5, cause unknown
 Reported live 2026-09-11, right after the 0.7.5 hotfix (which fixed a confirmed,
 verified bug — `winpty-agent.exe` missing from the frozen sidecar, see done.md).
 The reader installed 0.7.5, and the terminal panel now shows an explicit
@@ -375,7 +399,29 @@ alongside the code — verified with an updated vitest case
 written banner. The next reproduction's banner is the concrete next lead:
 whatever host/port it names is where the real mismatch lives.
 
-### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
+### B108 — Agents/Connect: `claude` runs fail, cause not yet confirmed
+
+**2026-09-13 — one silent failure mode removed (0.7.12).** `available()` was
+`shutil.which()` and nothing else, and the sidecar's `PATH` is whatever the
+file manager handed the desktop shell *at login*. A reader who installs Claude
+Code and comes back to Kriko without logging out has the binary on disk and no
+harness plane, with no error anywhere, because nothing in the process knew a
+CLI existed. `harness.locate()` now searches `PATH`, `$KRIKO_HARNESS_DIRS`, and
+the directories these CLIs install into, `command_for` runs the resolved path,
+and `/api/research-planes` reports which binary was found. This is a mechanism,
+not a per-machine patch — but it is not a confirmed fix for the original
+report either, and the leading explanation for *that* remains an expired CLI
+login (see the 2026-09-11 repro below).
+
+**Still open, and the thing to build next:** a harness run is a captured
+subprocess with a 600s (or 2400s) ceiling and no output until it ends, so every
+one of its failure modes reaches the reader as "succeeded / 0 claim(s) kept" or
+a raw traceback. Now that `termpty.TermSession` is a general "process with a
+resumable transcript", a harness run should be one too — streamed into the same
+panel, answerable when the CLI asks for a login. That turns the whole class
+from "diagnose by report" into "watch it happen".
+
+#### Original entry — `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
 
