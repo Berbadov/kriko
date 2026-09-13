@@ -42,12 +42,15 @@ The gate moved, it did not disappear:
    not permission to push a broken tree; it is the reason the gate is yours.
 2. **Don't block on a CI run.** Push, tag, and keep working; read the run when
    it lands. `gh run watch` in the foreground is the habit being cut.
-3. **`desktop.yml` is untouched and untrimmed** — on tags, on hand-dispatch,
-   and on packaging PRs. It is the only written record of how an installer is
+3. **`desktop.yml` is untrimmed, and hand-run only** (2026-09-13). Every step
+   of the recipe stands — it is the only written record of how an installer is
    built, and its smoke steps are the checks that would have caught v0.2.4. Do
-   not trim them for speed. It cannot get a runner either, which is why every
-   installer since 0.5.0 was built by hand on the Windows host; that is a
-   billing problem, not a reason to cut the recipe.
+   not trim them for speed. What was removed is its *triggers*: with no Actions
+   minutes it could not get a runner on a tag or a packaging PR either, so
+   those fired only to paint a false red on commits nothing had tested. Put the
+   `push` and `pull_request` blocks back the day minutes return. Until then the
+   recipe is run by hand on the Windows host, as every installer since 0.5.0
+   has been — a billing problem, not a reason to cut the recipe.
 4. **Ship to the reader, not to the branch.** A fix that is not in an installer
    they can double-click is not a fix yet.
 

@@ -162,11 +162,16 @@ a `git revert` and a billing change, in that order.
 There is no docker-build job, and there will not be one: Kriko is a standalone
 app, not a deployment. `test_the_app_stays_standalone` fails if a Dockerfile, a
 compose file, a `deploy/` directory, or a Postgres driver returns — so this
-paragraph cannot go stale without the suite going red. The `desktop` workflow
-still builds the actual shipping artifact (four installers on three runners) and
-runs `packaging/smoke_sidecar.py` against the frozen binary before bundling it —
-it needs minutes too, which is why every installer since 0.5.0 has been built by
-hand on a Windows host.
+paragraph cannot go stale without the suite going red.
+
+The `desktop` workflow still builds the actual shipping artifact (four
+installers on three runners) and runs `packaging/smoke_sidecar.py` against the
+frozen binary before bundling it. Every step of it stands; on 2026-09-13 its
+*triggers* were narrowed to `workflow_dispatch` only, because it needs minutes
+too and firing on tags and packaging PRs only painted a false red. Run it by
+hand from the Actions tab (`platforms: all` for the Linux and macOS legs), or
+follow `tauri/README.md` to build on a Windows host — which is how every
+installer since 0.5.0 was made.
 
 The gate runs with no secrets. `npm test` at the root uses `npm install` rather
 than `npm ci`, because the root `package-lock.json` is gitignored. The `ui` gate
