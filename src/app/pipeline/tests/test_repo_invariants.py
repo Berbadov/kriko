@@ -746,7 +746,17 @@ def _multi_os_jobs(text: str) -> bool:
 
 
 def test_there_are_workflows_to_check():
-    assert len(WORKFLOWS) >= 2, [p.name for p in WORKFLOWS]
+    """A glob that matches nothing passes every check under it.
+
+    Was `>= 2` until 2026-09-13, when `ci.yml` was deleted: this account has no
+    Actions minutes, so every run since the workflow was un-paused failed within
+    seconds without ever being allocated a runner, and its jobs moved into
+    `tools/gate.sh`. `desktop.yml` remains, and it is the one the Windows-shell
+    check below was written for. The floor stays above zero rather than going
+    with the workflow, because the failure this guards is a glob that silently
+    matches nothing.
+    """
+    assert len(WORKFLOWS) >= 1, [p.name for p in WORKFLOWS]
 
 
 @pytest.mark.parametrize("workflow", WORKFLOWS, ids=lambda p: p.name)

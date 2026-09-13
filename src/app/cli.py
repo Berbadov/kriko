@@ -176,6 +176,19 @@ def cmd_lookup(args, store) -> int:
     return 0
 
 
+def cmd_tui(args, store) -> int:
+    """The operator console. Imported here, not at module scope.
+
+    `kriko lookup` must not pay for a terminal UI it will never draw, and
+    `app.tui` reaches `app.web` (to start an engine when none is running),
+    which is a whole FastAPI app's import cost on a command that answers a
+    question about a car in milliseconds.
+    """
+    from app.tui import main as run_tui
+
+    return run_tui(url=args.url, allow_start=not args.no_start)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="kriko", description=__doc__.split("\n")[0])
     parser.add_argument("--store", default=None,
@@ -215,19 +228,31 @@ def build_parser() -> argparse.ArgumentParser:
                    help="show why each claim ranked where it did, and its sources")
     p.set_defaults(fn=cmd_lookup)
 
+    p = sub.add_parser("tui", help="operator console: planes, agenda, jobs, shell")
+    p.add_argument("--url", default="",
+                   help="engine to attach to (default: a running app, else start one)")
+    p.add_argument("--no-start", action="store_true",
+                   help="attach only — fail rather than starting an engine")
+    # The one command here that talks to an engine over HTTP rather than
+    # opening the store: whichever engine it attaches to owns that file, and a
+    # second writer on it would be this process fighting the app it just
+    # attached to.
+    p.set_defaults(fn=cmd_tui, needs_store=False)
+
     return parser
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
-    store = connect(args.store)
+    store = connect(args.store) if getattr(args, "needs_store", True) else None
     try:
         return args.fn(args, store)
     except (KeyError, ValueError, FileNotFoundError) as exc:
         print(f"kriko: {exc}", file=sys.stderr)
         return 1
     finally:
-        store.close()
+        if store is not None:
+            store.close()
 
 
 if __name__ == "__main__":

@@ -168,6 +168,9 @@ describe("what this installation has used", () => {
         stubFetch({ "/api/usage": {} });
         render(Usage);
         expect(await screen.findByText("What this has used")).toBeInTheDocument();
-        expect(screen.getAllByText("not counted").length).toBeGreaterThan(0);
+        // `findAll`, not `getAll`. The heading is outside `<Async>` and renders
+        // before the fetch resolves, so waiting for it proves nothing about the
+        // body — this assertion used to race the promise and lose.
+        expect((await screen.findAllByText("not counted")).length).toBeGreaterThan(0);
     });
 });

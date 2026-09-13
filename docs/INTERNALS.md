@@ -530,6 +530,60 @@ than saying nothing. `behind` still works.
 
 ---
 
+## Operator Console: `kriko tui`
+
+`src/app/tui/` is a fourth interface beside `cli`, `web` and `mcp`, and the only
+one whose audience is not the reader of a car listing. It drives **the same HTTP
+API the dashboard drives** — every keystroke below is an endpoint already
+documented above — from a terminal, with no webview anywhere in the path.
+
+**Why it exists.** Agent operations were invisible. "Research does nothing",
+"the terminal says disconnected" and "it reported success and kept nothing" were
+three symptoms of one condition: the operator plane had no instruments, and for
+six releases of B107/B109 the reader had no working surface of any kind because
+the surface itself was the broken thing. A second client on the same API costs
+almost nothing and cannot be taken out by whatever takes out a webview.
+
+It is also a standing test of the API: anything the console cannot do without a
+new endpoint is something the API was not really exposing.
+
+```
+kriko tui                 # attach to a running app, or start an engine
+kriko tui --url http://127.0.0.1:8787
+kriko tui --no-start      # attach only; fail if nothing is serving
+```
+
+| Module | What it owns |
+|---|---|
+| `client.py` | engine discovery, and the calls. Stdlib `urllib` — a terminal client that only ever dials 127.0.0.1 does not justify a dependency in the reader's installer |
+| `term.py` | raw mode, the alternate screen, key decoding, the frame differ |
+| `screen.py` | the frame, as a **pure function** of state. No terminal in the file, which is why every layout decision is a unit test |
+| `app.py` | the loop: a poller thread owns snapshots, the UI thread renders and reads keys |
+
+**Discovery order**, chosen so the least surprising thing happens: an explicit
+`--url`, then `KRIKO_URL`, then the fixed `EXTENSION_PORT` — a running desktop
+app is *always* serving there, so `kriko tui` with the app open attaches to the
+app's own engine, same store, same jobs, same shell. Only if nothing answers
+does it start an engine in-process on an OS-chosen port, which is what makes the
+console usable on a machine where the desktop shell will not open at all.
+
+**Three tabs and a shell.** *Planes* answers "why do agent operations do
+nothing" by naming the harness binary `harness.locate()` found, with its path —
+and, when it found none, where it looked. *Agenda* is `/api/agenda`, with Enter
+starting research on the selected subject. *Jobs* is `/api/jobs`, with the
+followed job's log tailing in the detail band. `s` drops the alternate screen
+and hands the real terminal to the PTY until Ctrl-] — a pass-through rather than
+an embedded emulator, because drawing a shell means writing a terminal emulator
+and there is already one running: the operator's. That is the surface a
+`claude` login needs.
+
+**Efficiency is the frame differ.** `term.diff` rewrites only the rows that
+changed, cursor-addressed, so an idle console writes nothing at all and a
+ticking job log writes one line. That is what lets the loop poll for keys twenty
+times a second without cost.
+
+---
+
 ## Desktop Shell: one store, two front doors
 
 **`src/app/sidecar.py`** — the server as a child process. It binds port 0,

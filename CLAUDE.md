@@ -15,11 +15,20 @@ history, pre-pivot — historical only).
 Until a Windows install opens, runs an analysis, and the reader says so, the
 loop is the *app*, not the suite.
 
-**Half of this ended 2026-09-08.** `ci.yml` runs on push and pull_request
-again, because the 1.0.0 audit found four reported defects that every
+**Half of this ended 2026-09-08, and was undone on 2026-09-13.** `ci.yml` was
+un-paused for 1.0.0 because the audit found four reported defects that every
 automated gate passed — and the answer to that is more gates running more
-often. The pause was never wrong about *why* v0.2.4 failed; it was aimed at a
-suite that was not the problem, and a release needs it back anyway.
+often. That reasoning still holds. What did not hold is the runner: this
+account has no Actions minutes, so from the day it was un-paused **every CI
+run failed in under fifteen seconds without ever being allocated one** — no
+logs, no steps, a red tick on a commit nothing had tested. On `main` too. A
+gate that is always red is not a gate; it is a thing people learn to scroll
+past, which is worse than having none.
+
+So `ci.yml` is deleted and its three jobs live in `tools/gate.sh`, verbatim,
+run locally. Restoring the workflow is a `git revert` plus a billing change,
+in that order — and worth doing the day either is possible, because the
+audit's finding has not been answered, only relocated.
 
 The other half stands, and it is the half with the reader in it: the phase
 ends when an install they can double-click opens and works, and that has not
@@ -28,19 +37,24 @@ happened yet. Rules 1, 3 and 4 below are unchanged. Rule 2 is now about
 
 The gate moved, it did not disappear:
 
-1. **Run `pytest` locally before every push.** `.venv/bin/python -m pytest -q`.
-   A paused workflow is not permission to push a broken tree.
+1. **Run the gate locally before every push.** `tools/gate.sh` — pytest, both
+   JS suites, types, and the stale-bundle check. A workflow that cannot run is
+   not permission to push a broken tree; it is the reason the gate is yours.
 2. **Don't block on a CI run.** Push, tag, and keep working; read the run when
    it lands. `gh run watch` in the foreground is the habit being cut.
-3. **`desktop.yml` still runs** — on tags, on hand-dispatch, and on packaging
-   PRs. It is the only thing that produces an installer, and its smoke steps
-   are the checks that would have caught v0.2.4. Do not trim them for speed.
+3. **`desktop.yml` is untouched and untrimmed** — on tags, on hand-dispatch,
+   and on packaging PRs. It is the only written record of how an installer is
+   built, and its smoke steps are the checks that would have caught v0.2.4. Do
+   not trim them for speed. It cannot get a runner either, which is why every
+   installer since 0.5.0 was built by hand on the Windows host; that is a
+   billing problem, not a reason to cut the recipe.
 4. **Ship to the reader, not to the branch.** A fix that is not in an installer
    they can double-click is not a fix yet.
 
 **Ending this phase** = the reader confirms a double-clicked install opens and
-runs an analysis, then delete this section. Restoring `ci.yml` was the other
-half and is done (2026-09-08). Nothing else was changed to get here.
+runs an analysis, then delete this section. `ci.yml` was restored (2026-09-08)
+and then deleted (2026-09-13), once it was clear it had never once executed;
+its checks are `tools/gate.sh` now. Nothing else was changed to get here.
 
 ## Task tracking
 
@@ -179,7 +193,8 @@ ui/        the frontend — Svelte + Vite source, built into src/app/web/static/
            vocabulary (enforced by test_repo_invariants.py).
    |
    v
-app/       interfaces — cli, web dashboard, mcp server.
+app/       interfaces — cli, web dashboard, mcp server, operator TUI
+           (`app/tui/`, a second client on the same HTTP API — no webview).
    |
    v
 kriko/      the engine — pack store, generic lookup, ranking, research
