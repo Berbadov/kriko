@@ -2,7 +2,7 @@
 
 The principles that govern *what* Kriko does live in [`CLAUDE.md`](CLAUDE.md) and
 are not repeated here. This file covers the mechanics: branches, commits, tests,
-and what CI checks.
+and the gate they run behind.
 
 ## Before you start
 
@@ -53,8 +53,8 @@ directories by hand is how the suite quietly shrank to 576 of 761 tests when
 `app/pipeline/` was added, skipping every test in `app/pipeline/tests` without failing.
 
 The suite must pass with **no API keys and no `.env`**. A test that needs a key is
-reaching the network and belongs behind a marker — CI runs with no secrets, on
-purpose.
+reaching the network and belongs behind a marker — the gate runs with no secrets,
+on purpose.
 
 If you move a module used by the serving path, also run the import and pack checks:
 
@@ -81,8 +81,8 @@ npm --prefix ui run build      # rewrites src/app/web/static/
 git add ui src/app/web/static
 ```
 
-CI rebuilds and fails on a dirty diff, so a forgotten rebuild is caught rather than
-shipped. `ui/package-lock.json` is committed (overriding the repo-wide ignore) because
+`tools/gate.sh ui` rebuilds and fails on a dirty diff, so a forgotten rebuild is
+caught rather than shipped. `ui/package-lock.json` is committed (overriding the repo-wide ignore) because
 that check needs the same dependency versions to produce the same asset hashes.
 
 `ui/src/` must contain **no pack vocabulary** — no `make`, `model`, `fuel` and so on.
@@ -129,25 +129,47 @@ just a startup-cost decision, and fine.
 `src/app/pipeline/tests/test_repo_invariants.py` enforces this, so a violation fails
 the suite rather than waiting to be noticed in review.
 
-## What CI checks
+## The gate
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml), on every PR:
+```bash
+tools/gate.sh            # everything, in one command
+tools/gate.sh py         # just the Python suite
+tools/gate.sh ui         # just vitest, types, and the stale-bundle check
+```
 
-| Job | What it catches |
+| Gate | What it catches |
 |---|---|
-| `python` | the full suite, plus the layering and testpaths invariants |
-| `extension` | scraper and hub-console tests under jsdom |
-| `ui` | Svelte component tests, and a rebuild that fails if the committed bundle is stale |
+| `pytest` | the full suite, plus the layering and testpaths invariants |
+| `npm test` | scraper and extension-panel tests under jsdom |
+| `npm --prefix ui test` | Svelte component tests |
+| `svelte-check` | type errors, at `--threshold error` |
+| rebuild + `git diff` | a committed bundle that no longer matches `ui/src/` |
+
+**It runs on your machine, and that is a deliberate retreat.** These were the
+three jobs in `.github/workflows/ci.yml`, deleted on 2026-09-13. The checks did
+not stop mattering — the 1.0.0 audit's finding was that four reported defects had
+passed every automated gate, and the answer to that was more gates, not fewer.
+What stopped working was the runner: with the account's Actions minutes gone,
+every job since 2026-09-08 failed in under fifteen seconds without ever being
+allocated one, produced no logs, and left a red tick on a commit nothing had
+tested. A signal that is always red carries no information, and this one was
+teaching people to ignore a red build.
+
+So the jobs moved into `tools/gate.sh` verbatim rather than being dropped, and
+the obligation moved with them: run it before you push. Restoring the workflow is
+a `git revert` and a billing change, in that order.
 
 There is no docker-build job, and there will not be one: Kriko is a standalone
 app, not a deployment. `test_the_app_stays_standalone` fails if a Dockerfile, a
 compose file, a `deploy/` directory, or a Postgres driver returns — so this
 paragraph cannot go stale without the suite going red. The `desktop` workflow
-builds the actual shipping artifact (four installers on three runners) and runs
-`packaging/smoke_sidecar.py` against the frozen binary before bundling it.
+still builds the actual shipping artifact (four installers on three runners) and
+runs `packaging/smoke_sidecar.py` against the frozen binary before bundling it —
+it needs minutes too, which is why every installer since 0.5.0 has been built by
+hand on a Windows host.
 
-CI runs with no secrets. The `extension` job uses `npm install` rather than `npm ci`,
-because the root `package-lock.json` is gitignored. The `ui` job uses `npm ci`: its
-lockfile *is* committed, because the stale-bundle check compares a fresh build against
-the committed one and a floating dependency version would change an asset hash and fail
-the build for no reason.
+The gate runs with no secrets. `npm test` at the root uses `npm install` rather
+than `npm ci`, because the root `package-lock.json` is gitignored. The `ui` gate
+uses `npm ci`: its lockfile *is* committed, because the stale-bundle check
+compares a fresh build against the committed one and a floating dependency
+version would change an asset hash and fail for no reason.
