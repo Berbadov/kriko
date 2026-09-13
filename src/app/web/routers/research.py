@@ -87,8 +87,18 @@ def list_planes() -> dict:
             row["ready"] = bool(installed)
             # Named, not counted. "no coding-agent CLI found" is answerable
             # only if the reader knows which names were looked for.
+            # The resolved path, not just the name. A reader whose PATH does
+            # not carry `claude` still has one on disk, and `locate` finds it
+            # (see its docstring) — but "Kriko found a harness" and "Kriko
+            # found *this* binary" are different sentences, and only the
+            # second one can be checked against what they installed.
             row["harnesses"] = [
-                {"id": h.id, "label": h.label, "command": h.executable}
+                {
+                    "id": h.id,
+                    "label": h.label,
+                    "command": h.executable,
+                    "path": harness_mod.locate(h),
+                }
                 for h in installed
             ]
             row["looked_for"] = [h.executable for h in harness_mod.KNOWN]
@@ -99,7 +109,7 @@ def list_planes() -> dict:
             # allowlist is the reason this plane is allowed to exist.
             row["unusable"] = [
                 {"id": h.id, "label": h.label, "command": h.executable,
-                 "why": h.unusable}
+                 "path": harness_mod.locate(h), "why": h.unusable}
                 for h in harness_mod.found_but_unusable()
             ]
         planes.append(row)

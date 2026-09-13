@@ -6,6 +6,65 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-13 — 0.7.12: the terminal stops being a WebSocket, and the harness stops depending on PATH (B109, B108)
+
+**B109 — the transport was the bug.** Six releases (0.7.4–0.7.11) closed six
+real paths inside `terminal_ws`, and after each one the reader reproduced and
+saw the same bare `[disconnected]`. 0.7.10's banner finally carried the
+deciding fact — close code **1006**, "the opening handshake never finished" —
+while the fifth backlog entry's raw-socket probe had already proved the *same
+frozen binary on the same machine* answers a hand-made `Upgrade: websocket`
+with `101` and real PTY bytes. The upgrade is refused above the application, so
+no seventh fix inside the handler could have worked either.
+
+The WebSocket is gone. It was also the only one in the tree: everything else
+live in this app (`/api/jobs/{id}/stream`) is Server-Sent Events over ordinary
+HTTP with a polling fallback, and that transport demonstrably works in the
+reader's install — it is how they watch a research job run.
+
+* `app/providers/termpty.py` — the PTY now owns its output. A reader thread
+  drains it into a bounded transcript (256 KB) whether or not anyone is
+  connected, and consumers ask *what came after byte N?*. `close()` kills the
+  child before releasing the fd, because closing it under a thread parked in
+  `read()` deadlocks (found by the new suite, not in production).
+* `app/web/routers/terminal.py` — `GET /state`, `GET /stream` (SSE, resumable
+  from `?offset=`), `POST /input`, `POST /resize`. The socket's two hand-written
+  guards are one `Depends` shared by all four.
+* `ui/src/lib/shell/TerminalPanel.svelte` — `EventSource` + `fetch`, dialing a
+  **relative** URL. `wsUrl()` rebuilt an absolute one from `location.host`,
+  which was a second chance to disagree about where the server is. Three stream
+  failures fall back to polling `/state`, so a machine hostile to streaming
+  still gets a shell.
+
+Three properties the socket could not have: a dropped connection now loses
+latency rather than output (a reader who opens the panel after the shell died
+sees its dying words); a failure is a *field*, readable by one GET, not a frame
+someone had to be connected to receive; and there is one live transport in this
+app instead of two.
+
+`test_terminal_ws.py` is replaced by `test_terminal_http.py` (9 tests,
+including a real PTY end-to-end over HTTP — the transport-level test whose
+absence let B107/B109 run for six releases). `packaging/smoke_sidecar.py`'s
+shell check and `test_sidecar.py`'s app.log check now speak HTTP; neither needs
+a websocket client any more.
+
+**B108 — `PATH` is why "agent operations do nothing" can happen silently.**
+`available()` was `shutil.which(...)` and nothing else. The sidecar's `PATH` is
+the one the file manager handed the desktop shell *at login*, so a reader who
+installs Claude Code and comes straight back to Kriko has `claude.exe` on disk
+(`%USERPROFILE%/.local/bin`, where its own installer puts it) and no harness
+plane at all — with nothing in the UI able to say why, because nothing in the
+process knew there was anything to say. `harness.locate()` now tries `PATH`,
+then `$KRIKO_HARNESS_DIRS`, then the directories these CLIs install themselves
+into, and `command_for` runs the resolved path rather than a bare name that
+`subprocess` could not resolve either. `/api/research-planes` reports *which
+binary* was found, not just that one was. Four tests in
+`test_harness_discovery.py`.
+
+This does not close B108 — an expired CLI login is still the leading
+explanation for the original traceback — but it removes the failure mode that
+produces no error anywhere.
+
 ### 2026-09-11/12 — Kriko_0.7.7_x64-setup.exe: the terminal-error-visibility fix, actually in the reader's hands (B109)
 
 The reader's second live report the same day was a screenshot still showing a

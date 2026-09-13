@@ -3,6 +3,7 @@
     import { Terminal } from "@xterm/xterm";
     import { FitAddon } from "@xterm/addon-fit";
     import { terminalOpen, toggleTerminal } from "./terminal";
+    import { remedyFor } from "../failure";
 
     /* A real shell, always one keystroke away.
      *
@@ -12,14 +13,38 @@
      * terminal for that is exactly the friction this app exists to remove,
      * so this is a real shell, not the old Console's API-only prompt.
      *
-     * One connection for the app's whole session, made on first open and
-     * never torn down after — closing the panel only hides it (`hidden`,
-     * the same choice Agents made for the old Console, and for the same
-     * reason: an unmounted terminal is a cleared one, and a reader who
-     * flips to another screen mid-command expects to come back to it).
-     * The backend mirrors this on its own side: `termpty.SESSION` is one
-     * PTY for the process's life, not one per connection.
+     * **No WebSocket.** This panel spoke one for six releases and the reader
+     * never once saw a shell: 0.7.10's banner came back `1006`, the browser's
+     * "the opening handshake never finished", while a raw socket against the
+     * same frozen sidecar on the same machine got `101` and real PTY bytes.
+     * The upgrade is refused above this code, so no amount of fixing inside it
+     * could work. It now speaks what the rest of this app already speaks and
+     * what demonstrably works in the reader's install — Server-Sent Events for
+     * output, `POST` for input — with a plain polling fallback under that.
+     *
+     * Three things fall out, and all three were impossible on the socket:
+     *
+     * - **The URL cannot be wrong.** `/api/terminal/stream` is relative, so it
+     *   resolves against the document. `wsUrl()` built an absolute one out of
+     *   `location.host`, which is a second chance to disagree about where the
+     *   server is.
+     * - **A dropped connection loses nothing.** The transcript lives on the
+     *   session, addressed by byte offset, so a reconnect resumes at `offset`
+     *   instead of starting a blank screen.
+     * - **It degrades instead of dying.** If SSE fails too, `poll()` reads the
+     *   same bytes from `GET /state`. Chunkier, still a shell.
+     *
+     * One session for the app's whole life, made on first open and never torn
+     * down — closing the panel only hides it (`hidden`), and the backend
+     * mirrors that: `termpty.SESSION` is one PTY for the process's life.
      */
+
+    /** How often the fallback re-reads the transcript when SSE is unavailable. */
+    const POLL_MS = 350;
+    /** How long to wait before re-opening a stream that dropped. */
+    const RETRY_MS = 700;
+    /** Consecutive stream failures before giving up on SSE and polling. */
+    const GIVE_UP_AFTER = 3;
 
     let open = $derived($terminalOpen);
     let everOpened = $state(false);
@@ -28,84 +53,154 @@
 
     let term: Terminal | undefined;
     let fit: FitAddon | undefined;
-    let socket: WebSocket | undefined;
-    let sawError = false;
 
-    function wsUrl(): string {
-        const scheme = location.protocol === "https:" ? "wss:" : "ws:";
-        return `${scheme}//${location.host}/api/terminal/ws`;
+    /** Bytes of transcript already written to the screen. The resume cursor. */
+    let offset = 0;
+    let source: EventSource | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+    let polling = false;
+    let stopped = false;
+
+    /** Keystrokes waiting on the in-flight POST, so a paste is one request. */
+    let pending = "";
+    let sending = false;
+
+    function handle(msg: { type?: string; data?: string; message?: string; offset?: number }) {
+        if (msg.type === "data" && typeof msg.data === "string") {
+            term?.write(msg.data);
+            if (typeof msg.offset === "number") offset = msg.offset;
+        } else if (msg.type === "error" && typeof msg.message === "string") {
+            // The shell failed to start, or died, or something scrolled out
+            // of the buffer. Say it in the panel: the one person who can act
+            // on it is looking at this, not at app.log.
+            term?.write(`\r\n\x1b[31m[terminal] ${msg.message}\x1b[0m\r\n`);
+        } else if (msg.type === "ended") {
+            status = "closed";
+            term?.write("\r\n\x1b[2m[the shell exited]\x1b[0m\r\n");
+            stopped = true;
+        }
+    }
+
+    async function poll() {
+        if (stopped) return;
+        try {
+            const response = await fetch(
+                `/api/terminal/state?offset=${offset}`,
+                { headers: { accept: "application/json" } },
+            );
+            if (!response.ok) throw new Error(`${response.status}`);
+            const body = await response.json();
+            status = "open";
+            if (body.dropped) {
+                handle({ type: "error", message: "Some output scrolled out of the buffer." });
+            }
+            if (body.data) handle({ type: "data", data: body.data, offset: body.offset });
+            else if (typeof body.offset === "number") offset = body.offset;
+            if (body.failure) handle({ type: "error", message: body.failure });
+            if (body.ended) return handle({ type: "ended" });
+        } catch (cause) {
+            // `remedyFor` rather than the exception: the reader of a local app
+            // has no terminal to check and nobody to page, so whatever this
+            // line says is the whole of the help available to them. (It is
+            // also the rule `failure.test.ts` enforces across every view.)
+            status = "closed";
+            const remedy = remedyFor(cause);
+            term?.write(
+                `\r\n\x1b[31m[terminal] ${remedy.headline}. ${remedy.next}\x1b[0m\r\n`,
+            );
+        }
+        timer = setTimeout(poll, POLL_MS);
     }
 
     function connect() {
-        sawError = false;
-        const ws = new WebSocket(wsUrl());
-        socket = ws;
-        ws.onopen = () => {
+        if (stopped) return;
+        if (typeof EventSource === "undefined" || polling) {
+            polling = true;
+            void poll();
+            return;
+        }
+        const cols = term?.cols ?? 80;
+        const rows = term?.rows ?? 24;
+        const stream = new EventSource(
+            `/api/terminal/stream?offset=${offset}&cols=${cols}&rows=${rows}`,
+        );
+        source = stream;
+        stream.onopen = () => {
             status = "open";
-            sendResize();
+            failures = 0;
         };
-        ws.onmessage = (event) => {
+        stream.onmessage = (event) => {
             try {
-                const msg = JSON.parse(event.data as string) as {
-                    type: string;
-                    data?: string;
-                    message?: string;
-                };
-                if (msg.type === "data" && typeof msg.data === "string") {
-                    term?.write(msg.data);
-                } else if (msg.type === "error" && typeof msg.message === "string") {
-                    // B109: the shell failed to start (missing binary, a
-                    // packaging gap, ...) — say why, in the panel itself,
-                    // instead of a bare "disconnected" that sends the
-                    // reader hunting for app.log.
-                    sawError = true;
-                    term?.write(`\r\n\x1b[31m[terminal error] ${msg.message}\x1b[0m\r\n`);
-                }
+                handle(JSON.parse(event.data as string));
             } catch {
-                // A frame that is not JSON is not this protocol's; drop it
-                // rather than dump raw bytes into a terminal reading it.
+                // Not this protocol's frame. Dropping it beats dumping raw
+                // bytes into a terminal that would try to render them.
             }
         };
-        ws.onclose = (event) => {
+        stream.onerror = () => {
+            // EventSource retries on its own, but it would re-ask for the
+            // offset this URL was built with — reconnecting by hand is how the
+            // cursor moves forward across a drop.
+            stream.close();
+            if (source === stream) source = undefined;
+            if (stopped) return;
             status = "closed";
-            if (!sawError) {
-                // B109, fourth gap: three straight fixes (0.7.7-0.7.9) each
-                // closed a path that could reach this bare line with no
-                // error frame, and the reader still saw only
-                // "[disconnected]" after all three shipped -- meaning the
-                // failure is upstream of every one of them: the socket
-                // never finished connecting at all. `CloseEvent.code` is the
-                // one thing the browser tells us in that exact case (1006,
-                // "abnormal closure") without needing a server-sent frame,
-                // so it goes in every time now instead of only when we
-                // already know the reason.
-                //
-                // 0.7.10 shipped and the reader's report came back exactly
-                // 1006 -- confirmed abnormal closure, not the origin-reject
-                // path (that one closes 1008, with a frame, via `sawError`).
-                // The one fact 1006 alone doesn't carry is *what URL* the
-                // socket actually dialed -- `wsUrl()` derives it from
-                // `location.host` at connect time, and if that's wrong (a
-                // stale host, the wrong port) the reader's real webview and
-                // this component would silently disagree on where the
-                // server even is. `ws.url` is the browser's own resolved
-                // record of that, so it goes in the banner too.
-                const detail = event?.code
-                    ? ` (code ${event.code}${event.reason ? `: ${event.reason}` : ""}, url=${ws.url})`
-                    : "";
-                term?.write(`\r\n\x1b[2m[disconnected${detail}]\x1b[0m\r\n`);
+            failures += 1;
+            if (failures >= GIVE_UP_AFTER) {
+                // Whatever is refusing the stream here refused the WebSocket
+                // too, in the reader's install. Polling is the floor this
+                // panel is not allowed to fall through.
+                polling = true;
+                term?.write(
+                    "\r\n\x1b[2m[live stream unavailable — falling back to polling]\x1b[0m\r\n",
+                );
+                void poll();
+                return;
             }
-        };
-        ws.onerror = () => {
-            status = "closed";
+            timer = setTimeout(connect, RETRY_MS);
         };
     }
 
+    async function flush() {
+        if (sending || !pending) return;
+        sending = true;
+        const data = pending;
+        pending = "";
+        try {
+            const response = await fetch("/api/terminal/input", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ data }),
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                handle({ type: "error", message: body?.detail ?? `input failed (${response.status})` });
+            }
+        } catch (cause) {
+            const remedy = remedyFor(cause);
+            handle({ type: "error", message: `${remedy.headline}. ${remedy.next}` });
+        } finally {
+            sending = false;
+            if (pending) void flush();
+        }
+    }
+
+    function send(data: string) {
+        pending += data;
+        void flush();
+    }
+
     function sendResize() {
-        if (!term || !socket || socket.readyState !== WebSocket.OPEN) return;
-        socket.send(
-            JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
-        );
+        if (!term) return;
+        void fetch("/api/terminal/resize", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ cols: term.cols, rows: term.rows }),
+        }).catch(() => {
+            // A geometry that did not land is a cosmetic loss; the next
+            // resize or reconnect carries it. Never a reason to shout.
+        });
     }
 
     /* Mounted once, on the first open — never after. `container` only exists
@@ -123,14 +218,11 @@
         t.loadAddon(f);
         t.open(container);
         f.fit();
-        t.onData((data) => {
-            if (socket?.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: "data", data }));
-            }
-        });
+        t.onData(send);
         term = t;
         fit = f;
         connect();
+        sendResize();
 
         const observer = new ResizeObserver(() => {
             fit?.fit();
@@ -138,7 +230,12 @@
         });
         observer.observe(container);
 
-        return () => observer.disconnect();
+        return () => {
+            observer.disconnect();
+            stopped = true;
+            source?.close();
+            if (timer) clearTimeout(timer);
+        };
     });
 
     $effect(() => {

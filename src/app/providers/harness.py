@@ -113,6 +113,16 @@ class Harness:
     #: was found — "your opencode is installed and Kriko will not use it, and
     #: here is why" is an answer; silently ignoring it is not.
     unusable: str = ""
+    #: Where this CLI installs itself, relative to the reader's home, for when
+    #: `PATH` does not carry it. See `locate`.
+    homes: tuple[str, ...] = (
+        ".local/bin",
+        "AppData/Local/Programs",
+        "AppData/Roaming/npm",
+        ".npm-global/bin",
+        "node_modules/.bin",
+        "bin",
+    )
 
 
 def _claude_args() -> tuple[str, ...]:
@@ -169,14 +179,62 @@ def _ensure_opencode_agent() -> None:
         _OPENCODE_AGENT_PATH.write_text(_OPENCODE_AGENT_BODY, encoding="utf-8")
 
 
+#: Extra directories to search, `os.pathsep`-separated. The escape hatch for a
+#: reader whose CLI is somewhere none of the rules below predict — one
+#: environment variable beats a support thread.
+DIRS_ENV = "KRIKO_HARNESS_DIRS"
+
+#: Executable suffixes to try on Windows, where `claude` is `claude.exe` and an
+#: npm-installed one is `claude.cmd`. Empty string first: a bare name is right
+#: everywhere else, and on Windows `shutil.which` has already handled PATHEXT.
+_SUFFIXES = (("", ".exe", ".cmd", ".bat") if os.name == "nt" else ("",))
+
+
+def locate(one: Harness) -> str:
+    """The full path to this CLI, or `""`.
+
+    **`PATH` is not enough, and that is not a theory.** The sidecar is launched
+    by a desktop shell, which is launched by the OS's file manager, which hands
+    down the `PATH` that existed *at login*. A reader who installs Claude Code
+    and comes straight back to Kriko has a `claude.exe` on disk
+    (`%USERPROFILE%/.local/bin` is where its own installer puts it) and a
+    `shutil.which("claude")` that returns `None` — so `available()` is empty,
+    the harness plane reports itself not ready, and every agent operation in
+    the app quietly does nothing. Nothing in the UI can say why, because
+    nothing in the app knows there is anything to say.
+
+    So: `PATH` first (it is right whenever it is populated), then `DIRS_ENV`,
+    then the handful of directories these CLIs actually install themselves
+    into. That list is allowed to be a constant for the same reason `KNOWN` is
+    — coding-agent CLIs are a closed engineering category, not data that grows
+    with pack coverage — and it is a *fallback*, so a wrong guess in it costs
+    nothing.
+    """
+    found = shutil.which(one.executable)
+    if found:
+        return found
+    home = Path.home()
+    roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
+    roots += [home / part for part in one.homes]
+    for root in roots:
+        for suffix in _SUFFIXES:
+            candidate = root / f"{one.executable}{suffix}"
+            try:
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return str(candidate)
+            except OSError:
+                continue
+    return ""
+
+
 def available() -> list[Harness]:
     """Which harness CLIs this machine can actually start *and* sandbox."""
-    return [h for h in KNOWN if not h.unusable and shutil.which(h.executable)]
+    return [h for h in KNOWN if not h.unusable and locate(h)]
 
 
 def found_but_unusable() -> list[Harness]:
     """Installed, and deliberately not driven. For the screen to explain."""
-    return [h for h in KNOWN if h.unusable and shutil.which(h.executable)]
+    return [h for h in KNOWN if h.unusable and locate(h)]
 
 
 def chosen(preferred: str = "") -> Harness | None:
@@ -227,8 +285,9 @@ def command_for(one: Harness) -> list[str]:
     B92 shipped a plane that could not start at all. A test can only judge the
     vector if the vector has a name.
     """
-    supported = declared(one.executable)
-    return [one.executable, *one.args, *(f for f in one.preferred if f in supported)]
+    executable = locate(one) or one.executable
+    supported = declared(executable)
+    return [executable, *one.args, *(f for f in one.preferred if f in supported)]
 
 
 # ── The output contract ──────────────────────────────────────────────────────

@@ -422,24 +422,61 @@ opens the staged folder in the file manager — a convenience with a fallback,
 never a requirement: the response carries the path either way, because if the
 open fails the reader's next action is pasting it.
 
-**`WS /api/terminal/ws`** (`routers/terminal.py`) — a real shell, run inside
-the app, because a harness (Claude Code, opencode) that needs a one-time
-`login` cannot do it from inside a sandboxed subprocess spawn, and sending the
-reader out to their OS's own terminal for that is exactly the friction the app
-exists to remove. One PTY per app session (`app/providers/termpty.py`'s
-module-level `SESSION`), started on first connect and read/written as JSON
-text frames (`{"type": "data", ...}`, `{"type": "resize", ...}`) rather than
-raw bytes, because a WebSocket frame boundary is not a line boundary and the
-frontend's xterm.js speaks frames either way. This is the one surface
-`origins.py`'s general `origin_is_allowed` does not guard: `Origin` and `Host`
-checks are HTTP middleware, and Starlette never runs HTTP middleware on a
-WebSocket upgrade, so the handler carries its own — `terminal_origin_is_allowed`,
-which is stricter than the general check by one exclusion. It leaves
-`EXTENSION_SCHEMES` out on purpose: every other surface trusts the browser
+**`GET /api/terminal/state`, `GET /api/terminal/stream`,
+`POST /api/terminal/input`, `POST /api/terminal/resize`**
+(`routers/terminal.py`) — a real shell, run inside the app, because a harness
+(Claude Code, opencode) that needs a one-time `login` cannot do it from inside
+a sandboxed subprocess spawn, and sending the reader out to their OS's own
+terminal for that is exactly the friction the app exists to remove. One PTY per
+app session (`app/providers/termpty.py`'s module-level `SESSION`), started on
+the first request that needs it.
+
+**This was a WebSocket until 0.7.12, and the WebSocket is why it never
+worked.** B107/B109 spent six releases closing real paths inside that handler —
+a missing `winpty-agent.exe`, a log that never reached `app.log`, an unreported
+`start()` crash, an unreported read failure, two rejections that closed before
+`accept()` — and after every one the reader reproduced and saw the same bare
+`[disconnected]`. 0.7.10's banner finally carried the fact that settled it:
+close code **1006**, the browser's "the opening handshake never finished",
+while a hand-made `Upgrade: websocket` against the *same frozen binary on the
+same machine* got `101` and real PTY bytes. The upgrade is refused above the
+application, so no fix inside it could ever have worked.
+
+The PTY now owns its own output. `TermSession` runs a reader thread that drains
+the pty into a bounded transcript (`SCROLLBACK`, 256 KB) whether or not anyone
+is connected, and every consumer asks the same question — *what came after byte
+N?* — over whatever transport it likes:
+
+* `GET /stream` is Server-Sent Events, resumable from `?offset=`. It is the
+  same transport `/api/jobs/{id}/stream` already uses, which is the transport
+  demonstrably working in the reader's install.
+* `GET /state` answers the identical fields in one request, which is both the
+  no-`EventSource` fallback and the first thing worth asking for in a bug
+  report.
+* `POST /input` and `POST /resize` carry keystrokes and geometry.
+
+Three properties follow that a socket could not give:
+
+1. **A transport failure loses latency, not output.** A reconnect resumes at
+   its offset; a reader who opens the panel after the shell died still sees its
+   dying words.
+2. **Reporting a failure needs nobody connected.** `failure` is a field on the
+   session, not a frame someone had to be listening for.
+3. **The client cannot dial the wrong place.** `/api/terminal/stream` is
+   relative, so it resolves against the document. The old `wsUrl()` rebuilt an
+   absolute URL out of `location.host`, which was a second chance to disagree
+   about where the server was.
+
+The guards survive the change and are now a `Depends` shared by all four
+endpoints rather than two hand-written blocks: `terminal_origin_is_allowed` is
+stricter than the general `origin_is_allowed` by one exclusion, leaving
+`EXTENSION_SCHEMES` out on purpose — every other surface trusts the browser
 extension exactly as much as a page the reader chose to install, but hostile
 JavaScript reaching a real shell is a different order of consequence than
-reaching `/api/analyze`, so the endpoint also refuses any connection that
+reaching `/api/analyze` — and the endpoints also refuse any request that
 arrived on `EXTENSION_PORT` rather than the app's own port, belt and braces.
+(The general `Origin`/`Host` middleware does run on these, since they are
+ordinary HTTP now; it is simply not strict enough on its own.)
 
 ---
 
