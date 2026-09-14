@@ -35,6 +35,21 @@ def test_the_committed_config_ships_no_updater():
     assert "createUpdaterArtifacts" not in (CONFIG.get("bundle") or {})
 
 
+def _locked_version() -> str:
+    """The crate's own version as `Cargo.lock` records it.
+
+    Read with a regex rather than a TOML parse of the whole lock: the file is
+    two thousand lines of dependencies and the only entry that matters is the
+    one whose `name` is this crate's.
+    """
+    import re
+
+    text = (REPO / "tauri" / "src-tauri" / "Cargo.lock").read_text(encoding="utf-8")
+    match = re.search(r'name = "kriko"\nversion = "([^"]+)"', text)
+    assert match, "Cargo.lock has no entry for the kriko crate"
+    return match.group(1)
+
+
 def test_the_four_version_strings_agree():
     """One release, one number — in four files nothing links together.
 
@@ -56,6 +71,15 @@ def test_the_four_version_strings_agree():
         "tauri/package.json": json.loads(
             (REPO / "tauri" / "package.json").read_text(encoding="utf-8")
         )["version"],
+        # The fifth file, added 2026-09-14, and the one that does not merely
+        # disagree — it *fails the build*. `desktop.yml` runs
+        # `cargo metadata --locked` precisely so a lock that has fallen behind
+        # Cargo.toml is a red job rather than a silent rewrite, and on
+        # 2026-09-14 the committed lock still said 0.7.6 against a tree at
+        # 0.8.0: four bumps stale, exit 101, and the only reason nobody had
+        # seen it is that the workflow has never been allocated a runner.
+        # A hand build on Windows would have died at that step.
+        "src-tauri/Cargo.lock": _locked_version(),
     }
     assert len(set(versions.values())) == 1, (
         "these files disagree about which version this is: "
