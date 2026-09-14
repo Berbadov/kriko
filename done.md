@@ -6,6 +6,53 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — nine ideas filed (B111-B119), one of them a bug with a root cause
+
+Written down the evening before the 0.8.1 install was tried. Filed rather than
+built, with two exceptions.
+
+**B114 — "Open with web extension" opens a browser with no extension.** Root
+cause found and fixed the same day. Chrome disabled `--load-extension` by
+default as an anti-malware measure: the
+`DisableLoadExtensionCommandLineSwitch` feature turns the flag into a silent
+no-op, so the window opens, the landing page loads, and the extension is
+absent — every visible step having worked, which is the worst shape a failure
+can take.
+
+Measured rather than recalled. Chromium 141 (the one this container ships) was
+launched with `--remote-debugging-port` and its target list counted: **0**
+`chrome-extension://` targets without
+`--disable-features=DisableLoadExtensionCommandLineSwitch`, **2** with it. The
+flag is now in `launch_with_extension`'s argv with the measurement in the test.
+
+It is a stopgap and is filed as one — a switch re-enabling a switch, itself on
+the way out. The reader's own instinct is the durable answer, and it is a
+**HUMAN DECISION #9**: publish to the Chrome Web Store, or keep load-unpacked
+as the only install. It costs money, exposes a developer identity, and submits
+this code to someone else's review; it also interacts with B18, since a listed
+extension that reads one named site is a more visible artefact than a local one.
+
+**B119 — `docs/GLOSSARY.md`.** One line per word, the module that owns it, and
+the two that already mean more than one thing in this repository's own prose:
+*agent* (the by-hand plane, the CLI Kriko starts, and a coding agent working on
+this source) and *shell* (the Tauri one and the PTY one — `installer.nsh` has
+to stop both). Plus four naming rules, the last of which already has tests
+behind it.
+
+The other seven are filed with the machinery they would build on named, because
+the expensive mistake in each case is building a second copy of something that
+exists: B111 (a benchmark — `runs` already meters, what is missing is fixed
+cases and a cost-per-*accepted*-claim number), B112 (enforce the research
+protocol the way `findings.py` already enforces the quote rule, starting with
+the `queries` list that is collected and ignored), B113 (extension/app harmony —
+algorithmically close already, visually two design systems), B115 (agent-authored
+adapters — adapters are *already* pack data, so the work is the self-check and
+never generated JavaScript), B116 (research-this-page — the door and the budget
+constant exist, the path from `NOT_MATCHED` to a job does not), B117 (a stored
+preferred plane, with `api` still never chosen by omission), B118 (cost on the
+`jobs` row, not just on `runs` — and the precondition for showing B116's cap
+before the press).
+
 ### 2026-09-14 — 0.8.1: three defects from the first real 0.8.0 install
 
 The installer built, installed and opened. Three things were wrong, and the
