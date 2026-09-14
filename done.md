@@ -6,6 +6,48 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — the Windows build, pre-flighted from Linux (and a stale lock that would have stopped it)
+
+The installer still has to be built on Windows — PyInstaller cannot
+cross-compile — but most of what *breaks* a Windows build is not
+Windows-specific. All of that is now checked from Linux, and written down in
+`tauri/README.md` under "Pre-flight, from a machine that is not Windows". Every
+step below passed on this branch:
+
+* `packaging/freeze.sh` — the frozen sidecar and all ten smoke checks, including
+  `terminal ok` (B109's HTTP terminal in a frozen binary) and `mcp ok`.
+* `cargo check` on the shell — clean. And `cargo check --target
+  x86_64-pc-windows-gnu`, which is the one worth having: `kill_tree` is
+  `#[cfg(windows)]`, so a Linux check never reads it, and B89 is the case for
+  caring — twelve tray tests passed on a `main.rs` that could not be parsed,
+  found nine minutes into a hand build by the first `cargo` that ever read it.
+  `-gnu` needs only `mingw-w64`, and `cfg(windows)` is true for both.
+* `npm --prefix tauri run tauri build` — a real `Kriko_0.8.0_amd64.deb` and
+  `.AppImage`.
+* `packaging/smoke_app.py` under `xvfb` — the bundled shell opens, stays up 25
+  seconds without panicking, and spawns its engine. That is the v0.2.4 class of
+  failure (built green on three runners, then would not open) ruled out on
+  Linux.
+
+**And it caught one that would have stopped the build.** `desktop.yml` runs
+`cargo metadata --locked` so that a lock which has fallen behind `Cargo.toml` is
+a red job rather than a silent rewrite. The committed `Cargo.lock` still said
+`kriko 0.7.6` against a tree at 0.8.0 — stale since 0.7.7, four bumps — and that
+command exits 101. A hand build on Windows would have died at that step, and the
+only reason nobody had hit it is that the workflow has never once been allocated
+a runner.
+
+Fixed as a mechanism rather than a lock edit: `tools/bump.py` now writes
+`Cargo.lock` too (anchored on the crate's own entry, so none of the two thousand
+dependency versions are touched — verified by a round trip to 9.9.9 and back),
+and `test_the_four_version_strings_agree` counts it as the fifth file. The
+docstring said "five places"; it was six.
+
+**Still unproven, and only a Windows box can:** PyInstaller against `pywinpty`
+(whether `winpty-agent.exe` comes along — the 0.7.4 defect), NSIS bundling, the
+**Kriko Console** shortcut `installer.nsh` writes, the tray's tree-kill, and
+whether WebView2 renders anything.
+
 ### 2026-09-14 — the frozen console, actually run (two bugs)
 
 `packaging/freeze.sh` on this branch, then the frozen `kriko-sidecar --tui`
