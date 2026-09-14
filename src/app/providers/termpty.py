@@ -36,9 +36,27 @@ WINDOWS = sys.platform == "win32"
 SCROLLBACK = 256 * 1024
 
 #: How long the reader waits when the shell is alive and has said nothing.
-#: Only Windows ever gets here (see `_pump`); short enough to feel instant,
-#: long enough that an idle prompt is not a busy loop.
-IDLE_SECONDS = 0.02
+#: Only Windows ever gets here (see `_pump`), because `ptyprocess.read()`
+#: blocks and never comes back empty.
+#:
+#: Two numbers rather than one, because a single one is wrong at both ends. At
+#: 20ms a shell sitting at its prompt costs fifty wake-ups a second for as long
+#: as the app is open; at 200ms a keystroke's echo could be a fifth of a second
+#: late, which is exactly the lag that makes a terminal feel broken. So: fast
+#: while anything is happening, backing off to slow when nothing is — and
+#: `write` puts it back to fast, because a keystroke is the strongest possible
+#: signal that a byte is about to arrive.
+IDLE_FAST = 0.02
+IDLE_SLOW = 0.2
+
+#: How long a quiet shell stays on the fast interval before backing off.
+IDLE_PATIENCE = 2.0
+
+#: A dead pty is confirmed, not assumed. `isalive()` is sampled twice with a
+#: gap, because one sample deciding a terminal is over is a weak basis for a
+#: verdict the reader cannot argue with — and a shell that has genuinely gone
+#: is reported one interval later, which costs nothing.
+DEATH_CONFIRM = 0.05
 
 
 class TermSession:
@@ -64,6 +82,9 @@ class TermSession:
         #: Which shell was spawned, for the failure message. "EOFError: Pty is
         #: closed" does not say whether COMSPEC resolved to something sane.
         self.shell: str = ""
+        #: When the shell last had something to say, or was last typed at.
+        #: Read by the reader thread to decide how hard to poll.
+        self._busy = 0.0
         #: Held across the whole of `start`. The check-and-spawn was not atomic,
         #: and the panel calls `/stream` and `/resize` at the same moment on
         #: mount — two threads could both find no process and both spawn one,
@@ -211,14 +232,24 @@ class TermSession:
                 if isinstance(chunk, bytes):
                     chunk = chunk.decode("utf-8", "replace")
                 self._append(chunk, generation)
+                self._busy = time.monotonic()
                 continue
             if not self._still_alive(proc):
-                self._finish(proc, generation, "")
-                return
-            # Alive and quiet. Sleeping here rather than spinning: this is a
-            # background thread for the life of the process, and a busy loop
-            # would cost a core for a shell sitting at its prompt.
-            time.sleep(IDLE_SECONDS)
+                # Twice, with a gap. A single `isalive()` sample right after a
+                # spawn is the weakest possible evidence for the strongest
+                # possible verdict, and the failure it would produce —
+                # "exited without producing any output" — is indistinguishable
+                # from the real thing. If it is genuinely gone it is still
+                # gone in 50ms.
+                time.sleep(DEATH_CONFIRM)
+                if not self._still_alive(proc):
+                    self._finish(proc, generation, "")
+                    return
+            # Alive and quiet. Sleeping rather than spinning: this thread lives
+            # as long as the app does, and a busy loop would cost a core for a
+            # shell sitting at its prompt.
+            quiet_for = time.monotonic() - self._busy
+            time.sleep(IDLE_FAST if quiet_for < IDLE_PATIENCE else IDLE_SLOW)
 
     @staticmethod
     def _still_alive(proc) -> bool:
@@ -240,7 +271,8 @@ class TermSession:
                 return
             spoke = self._produced > 0
             status = getattr(proc, "exitstatus", None)
-        detail = f"{self.shell or 'the shell'}"
+            shell = self.shell
+        detail = f"{shell or 'the shell'}"
         if status is not None:
             detail += f" exited with status {status}"
         else:
@@ -304,6 +336,11 @@ class TermSession:
     def write(self, data: str) -> None:
         if self.proc is None:
             raise RuntimeError("terminal is not running")
+        # Back to the fast interval before the byte goes anywhere. A keystroke
+        # is the strongest signal that output is imminent, and an echo that
+        # arrives a fifth of a second late is what makes a terminal feel
+        # broken even when it is working perfectly.
+        self._busy = time.monotonic()
         self.proc.write(data if WINDOWS else data.encode("utf-8"))
 
     def resize(self, cols: int, rows: int) -> None:
