@@ -128,6 +128,15 @@ def test_the_launch_carries_the_extension_and_a_profile_of_its_own(tmp_path):
     # sign-in wall, which is three dialogs between the reader and the thing
     # they pressed a button for.
     assert "--no-first-run" in argv
+    # The third argument that makes it work, added 2026-09-14. Chrome turned
+    # `--load-extension` off by default as an anti-malware measure, so without
+    # this the flag above is a silent no-op: the window opens, the landing page
+    # loads, the extension is absent, and every visible thing worked. That was
+    # the 0.8.0 report.
+    #
+    # Measured on Chromium 141 by launching with `--remote-debugging-port` and
+    # counting `chrome-extension://` targets: 0 without this flag, 2 with it.
+    assert "--disable-features=DisableLoadExtensionCommandLineSwitch" in argv
     assert "--no-default-browser-check" in argv
 
 

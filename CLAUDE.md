@@ -341,6 +341,7 @@ original reasoning.
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
+| `docs/GLOSSARY.md` | The words, one line each — and the two that mean more than one thing | current |
 | `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — all phases landed; installers unbuilt (B52) |
 | `docs/superpowers/specs/2026-09-03-app-design-and-ia.md` | The app design system, IA and four features | current |
 | `docs/superpowers/specs/2026-09-09-research-agenda-design.md` | B82: what an agent should research next, and where that ordering comes from | current — implemented 2026-09-09 (`app/agenda.py`, `2a9d82c`) |
