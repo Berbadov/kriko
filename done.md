@@ -6,6 +6,55 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — 0.8.1: three defects from the first real 0.8.0 install
+
+The installer built, installed and opened. Three things were wrong, and the
+first two had gates that could not see them.
+
+**The panel never hid.** "I cannot close the terminal and it invades the rest
+of the app" — and it is one CSS rule. `hidden`'s `display: none` comes from the
+user-agent stylesheet; `.terminal-panel { display: flex }` is an author rule,
+so the author rule wins and a fixed, full-height panel stayed over the whole
+app with a close button that visibly did nothing. The existing test asserted
+`toHaveAttribute("hidden")`, which was true the entire time. Fixed with
+`.terminal-panel[hidden] { display: none }`, and the new test asserts
+*computed* display — behind a canary (`position` must be `fixed`) so that if
+jsdom ever stops applying the component's styles the file fails loudly instead
+of passing for the wrong reason.
+
+**`EOFError: Pty is closed`, and it was an empty read.** `ptyprocess.read()`
+blocks until there is something and raises `EOFError` at the end, so an empty
+return never happens on POSIX and `_pump` treated one as end-of-file. `pywinpty`
+does not work that way: it returns `''` the moment there is nothing *yet*,
+which on a freshly spawned `cmd.exe` is immediately. The pump ended the session
+before the shell had written a byte, and the next read raised the error the
+reader saw. Windows only, having worked under a real pty on Linux — which is
+exactly the split reported.
+
+An empty read now asks `isalive()` instead. `_WindowsLikePty` in
+`test_terminal_http.py` answers the way `pywinpty` does, and the test fails
+against the old pump (`assert ''` — the shell spoke and nothing recorded it).
+
+**A shell that exits was a dead end.** Typing `exit` is ordinary; on that
+Windows install the shell died on its own at every open. Either way the session
+stayed `ended` for the life of the app, `/stream` returned at once, and the
+panel had nothing to offer. Now: `POST /api/terminal/restart` (new shell, clean
+transcript), a **Restart** button, and a keystroke into a dead shell asking for
+a live one rather than posting input to a pty that is not there. `_ensure` no
+longer resurrects an ended session implicitly — the polling client asks twice a
+second, so a deliberate `exit` would have come straight back and the signal
+would never have survived to be rendered.
+
+A failure also says which shell and how it went: `cmd.exe exited with status 1
+without producing any output` rather than `EOFError: Pty is closed`, and a
+clean exit after the shell has spoken is not reported as a failure at all.
+
+**The OAuth hint now names the way out.** It said "run `claude` once in a
+terminal" — accurate, and it predates the app having one. It now names the
+panel (Ctrl+`), the `/login` step, and Kriko Console for doing it without the
+app. The `enoent` hint names `KRIKO_HARNESS_DIRS` and the Agents screen, which
+is where `locate()` prints the binary it found.
+
 ### 2026-09-14 — the build script's first stage, and the gate that should have read it
 
 The first real hand build of 0.8.0 died at `=== Tools` with
