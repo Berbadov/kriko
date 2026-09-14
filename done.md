@@ -6,6 +6,39 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — the frozen console, actually run (two bugs)
+
+`packaging/freeze.sh` on this branch, then the frozen `kriko-sidecar --tui`
+driven under a real pty: draw a frame, press `q`, read what came out. The smoke
+suite passed all ten checks — including `terminal ok: the shell said something
+back`, which is B109's HTTP terminal working in a frozen binary for the first
+time. `--tui` survived the freeze, which was the open packaging risk: `app.tui`
+is imported inside a function in `sidecar.py`, the exact shape PyInstaller's
+analysis can miss, and a miss there is the 0.7.4 `winpty-agent.exe` failure
+again — every test in the tree passing while the shipped binary lacks the code.
+
+It also found two bugs that no test in the tree could have:
+
+**A log line printed over the console.** The frozen binary's first line of
+output was `INFO root: logging to …`. `app.tui.main` calls `silence_stderr()`,
+but from `app.sidecar` that is too late — `logs.configure()` has already
+attached the handler *and* already logged that line. Silencing now happens
+before configuring, and the key-count banner (a bare `print`, which no handler
+could have suppressed) is skipped in console mode.
+
+**The header broke on a narrow terminal.** A pty that reports no window size
+clamps to 20 columns, and `pad` then sliced with a negative width — which
+slices from the *end* — so a 17-character title rendered as its first
+character and the header was a bare URL. `pad` refuses non-positive widths;
+the header drops the address before the name; and the tab bar, the one row
+with no padding to absorb an overflow, falls back to bare numbers and then
+truncates. Verified at 100×30 and at 20×12 on the frozen binary: title kept,
+URL dropped, nothing over-runs.
+
+Four tests added. Neither bug was reachable from pytest — one needed a frozen
+binary, the other a terminal that lies about its size — which is the argument
+for running the thing rather than only testing it.
+
 ### 2026-09-14 — the floor drops to 3.13 (B110), and the console becomes one click
 
 **B110 resolved by lowering `requires-python` to `>=3.13`.** The `>=3.14` floor
