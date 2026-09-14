@@ -62,6 +62,52 @@ def searchable(query: str) -> str:
 
 
 @dataclass(frozen=True)
+class Spend:
+    """How one operation should spend one model. A *protocol* (B123).
+
+    The two failures are on opposite sides and the middle is narrow. Too little
+    batching burns tokens re-sending the same brief for every document. Too
+    much piles context until the model stops quoting and starts composing —
+    and this codebase catches that at the grounding gate, which means the batch
+    is *refused* and the tokens are spent anyway. So the settings that decide
+    it are worth naming, recording and choosing from measurements rather than
+    leaving as two literals in the middle of a prompt.
+
+    **The shape lives in the engine; the choosing does not.** `kriko/` may not
+    import `app/`, and picking a protocol means reading this installation's own
+    benchmark rows — which are interface state. So the engine defines what a
+    protocol *is* and takes one as an argument; `app/protocols.py` decides
+    which. That is the same split `app/providers/` already makes for sockets.
+
+    Nothing here is category-shaped, pack-shaped or provider-shaped: it is
+    three numbers about how much text a model is handed at once.
+    """
+
+    #: A name, so a measurement can be attributed to it. Two runs of the same
+    #: model with different settings are two measurements, and a benchmark
+    #: table that recorded only the model would average them into nothing.
+    name: str = "standard"
+    #: How much of one document is sent. The literal that used to be `[:12000]`
+    #: inside a prompt.
+    context_chars: int = 12000
+    #: How many documents go into one completion call. 1 is a call per
+    #: document — the safest for grounding and the most expensive in tokens.
+    batch_size: int = 1
+
+    @property
+    def context_budget(self) -> int:
+        """Roughly how much text one call will carry. The ratio's denominator."""
+        return self.context_chars * max(1, self.batch_size)
+
+
+#: What a plane uses when nobody has measured anything yet. Deliberately the
+#: behaviour that existed before protocols did — one document per call, 12k of
+#: it — so introducing the mechanism changes no output until a measurement
+#: says something better exists.
+STANDARD = Spend()
+
+
+@dataclass(frozen=True)
 class Document:
     """A fetched source, before anything has been extracted from it."""
     url: str

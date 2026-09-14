@@ -46,21 +46,37 @@ class MissingKey(RuntimeError):
     """
 
 
-def api_researcher(*, price_per_call: float = 0.0):
+def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=None):
     """The per-token plane, wired to the keys this installation actually has.
 
     Raises `MissingKey` rather than building a researcher that would fail on
     its first request. The default plane is still `agent`; nothing calls this
     unless a reader chose the paid one.
+
+    `spend` is the protocol — how much context per call and how many documents
+    per call (B123). Named explicitly by the benchmark, which is measuring one;
+    chosen from this installation's own measurements otherwise, and `STANDARD`
+    when there are none. The picking is here rather than in `kriko/` for the
+    layering reason `app/protocols.py` opens with: choosing means reading
+    interface state, and the engine may not.
     """
     from kriko.research import ApiResearcher
 
     model = llm.model_name()
+    if spend is None:
+        from app import protocols
+
+        spend = (
+            protocols.spend_for(app_state_path, model)
+            if app_state_path is not None
+            else None
+        )
     researcher = ApiResearcher(
         exa.searcher(),
         fetch.reader(),
         llm.completer(model=model),
         price_per_call=price_per_call,
+        spend=spend,
     )
     # Stamped on the instance rather than passed to the constructor: the engine
     # has no field for either, and it should not — "which vendor" is a fact
@@ -69,6 +85,10 @@ def api_researcher(*, price_per_call: float = 0.0):
     # already reads `tokens_used`.
     researcher.model = model
     researcher.search_provider = "exa"
+    # Stamped like `model` and for the same reason: `app/web/tasks.py` reads it
+    # duck-typed, and a measurement whose settings were not recorded cannot be
+    # compared with the next one.
+    researcher.protocol = researcher.spend.name
     return researcher
 
 
