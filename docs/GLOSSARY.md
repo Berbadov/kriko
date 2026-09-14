@@ -18,11 +18,12 @@ it is **not**.
 | **pack** | One product category as data: subjects, claims, vocabulary, trust tiers, adapters, and its own bar for what is worth surfacing. The thing a third party authors. Never code that runs inside the engine. | `packs/<name>/`, `docs/PACK_CONTRACT.md` |
 | **subject** | One specific manufactured thing the store can answer about — a variant, an engine, a part. What a lookup resolves *to*. | `kriko/store/` |
 | **claim** | One thing known to go wrong, attached to a subject, with evidence behind it. | `kriko/store/` |
-| **evidence** | The verbatim quote a claim rests on, and the source it came from. A claim whose quote cannot be found in its document is refused — but the document itself is **not** kept today, so that check cannot be repeated (B120). | `app/findings.py` |
+| **evidence** | The verbatim quote a claim rests on, and the source it came from. A claim whose quote cannot be found in its document is refused, and the document is kept in `app.sqlite` so that check can be made again offline (`regrounded`). | `app/findings.py`, `app/web/state.py` |
 | **identity** | The `key=value` pairs that name a product (`make=volkswagen model=golf`). Pack-declared — the engine never knows which keys exist. | `kriko/lookup/match.py` |
 | **adapter** | How to read one website: selectors, label mappings, and the `local_panel` block the extension draws from the reader's own page. **Pack data, not code** — a pack that could ship JavaScript would be granted the right to run it on every page the extension sees. | `kriko/adapters.py` |
 | **agenda** | What to research next, computed on read from four signals. A list of rows, not a queue. | `app/agenda.py` |
 | **store** | `~/.kriko/knowledge.sqlite` — the engine's database. Uninstalling a pack drops its rows. | `kriko/store/db.py` |
+| **document** | The page text a quote was proved against, kept per install in `app.sqlite` — never in the store, or a page one reader happened to read would change a pack's `content_digest`. | `app/web/state.py` |
 
 ## The machinery
 

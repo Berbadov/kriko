@@ -228,98 +228,16 @@ day. Several already have most of their machinery in the tree; where that is
 true it is said, because the expensive mistake here is building a second copy
 of something that exists.
 
-### B120 — The document that proved the quote is thrown away `[G2]`
-*"Are we skipping document making?"* — yes. Traced 2026-09-14.
+### B120 / B121 — **DONE 2026-09-14** (0.8.3)
 
-An agent submits `document_text` with each finding. `app/findings.py` uses it
-for exactly one thing — `is_grounded(document, quote)` — and then **discards
-it**. What reaches the store is `sources` (url, domain, title, `retrieved_at`)
-and `evidence` (quote, source_id, stance). There is no `documents` table in
-`src/kriko/store/schema.sql`.
-
-`src/kriko/ledger/db.py` *does* have one. The live research path never writes
-to it. The stage the job log calls **"ledgering"** writes verdicts to
-`app.sqlite` through `log_submission` — a different database and a different
-thing. (That word now means two things; `docs/GLOSSARY.md` says so.)
-
-**Why this matters more than it looks.** The evidence chain is the product's
-one hard guarantee: a quote that is not in the document does not become
-evidence. That check is mechanical, it works, and it happens **once** — against
-text nobody kept. So:
-
-* **It can never be repeated.** If the page changes or dies, nothing can
-  re-verify a claim that is still being shown to a reader as evidenced.
-* **B112's second enforcement is currently impossible.** It says "a
-  `source_url` that was never fetched is a fabrication with a plausible shape —
-  the ledger knows which documents were fetched". For this path the ledger
-  knows nothing. That sentence should be read as a requirement, not a
-  description.
-* **Two findings from one page cannot be cross-checked**, because neither kept
-  the page.
-* **B39 is the same gap from the other side**: the brief still instructs agents
-  to call `add_document`, a tool that does not exist. The protocol describes a
-  document-making step the implementation dropped, and nobody reconciled the
-  two.
-
-**No decision is recorded anywhere for dropping it.** In a codebase that
-documents its choices this thoroughly, that absence is itself evidence that it
-was not a choice.
-
-Three places it could live, and the trade is real:
-
-1. **The serving store.** Truest to the evidence model, and wrong by the
-   two-SQLite rule: a document is how *this install* acquired a claim, not part
-   of the knowledge a pack ships, and it would land in the pack's
-   `content_digest`.
-2. **`app.sqlite`.** Interface state, per-install, no digest effect, survives
-   for re-verification. Cheapest and rule-abiding. A published pack still
-   carries quote + URL, which is what a downstream consumer can re-check for
-   themselves.
-3. **`kriko/ledger/`.** What it is *for*, and it already has the schema — but
-   it is build-time machinery today and wiring the serving path into it is the
-   larger change.
-
-Recommendation: **(2)**, with the row keyed by `source_id` so two findings from
-one page share it, and a retention bound so a year of research is not a year of
-raw HTML. That makes re-verification possible and B112 implementable without
-touching what a pack ships.
-
-### B121 — An agent run is invisible while it runs `[G5]`
-*"That shell supposed to show agents actions right, and the directives of
-them."* — it is not, and nothing currently does.
-
-Three surfaces, and the confusion is fair because two of them nearly do this:
-
-* **The terminal panel** is a raw PTY (`cmd.exe` / `$SHELL`). It exists for the
-  one thing no API call can do on an agent's behalf: an interactive `claude`
-  login. It shows *your* actions.
-* **The job log** is where an agent's run is reported: the Jobs tab in
-  `kriko tui`, the Jobs view in the app.
-* **What that log actually contains** is the planned queries, `gathered N
-  document(s)`, and then the verdicts — `kept "…"` / `refused "…": reason`.
-
-The gap is in the middle. `harness.py` runs the CLI with
-`subprocess.run(capture_output=True, timeout=600)` — nothing is streamed. So
-between "harness plane (subscription)" and the verdicts there is up to ten
-minutes (forty, for a pack author) of **nothing**, and the agent's own
-actions — which searches it really ran, which pages it fetched, what it decided
-— are invisible while they happen and mostly gone afterwards. `queries` is the
-one part that survives, and B112 notes it is collected and ignored.
-
-**The mechanism now exists.** `app/providers/termpty.py` is a supervised
-process with a bounded, resumable transcript, addressed by byte offset, with a
-reader thread that drains it whether or not anyone is watching. That is exactly
-what a harness run needs. The work is to run the CLI *through* that rather than
-through `subprocess.run`, and to stream its transcript into the job's own view.
-
-What it buys, in order: the reader watches instead of waiting; a CLI that stops
-to ask something can be *answered* rather than timing out; and every failure
-mode becomes visible by construction instead of needing another round of
-diagnostics. It also makes B111's benchmark honest, because wall-clock and
-what-it-actually-did stop being inferred from a summary.
-
-Filed separately from B108 (which is about a run that fails) because this is
-about a run that *works* and still tells nobody anything.
+The document that proved the quote is kept (`app.sqlite`'s `documents`, keyed by
+`source_id`, bounded), and the check can be made again offline through
+`findings.regrounded`. The harness run streams: `--output-format stream-json`,
+read line by line, narrated into the job log both clients already show. What is
+*not* done, and is worth its own row when someone wants it: a run that stops to
+ask a question still cannot be answered — the prompt goes in on stdin and the
+transcript comes out, so this is a window rather than a conversation. See
+`done.md`, and `git show` for the entry that stated both defects in full.
 
 ### B111 — A benchmark for the planes: fixed cases, real costs `[G2][G5]`
 *"Some very specific cases and cost measurements to understand how different
