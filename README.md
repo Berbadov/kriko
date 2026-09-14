@@ -93,7 +93,7 @@ Both leave `~/.kriko` alone.
 
 ## Install and run from source
 
-Requires Python 3.14+. Same two SQLite files as the app above — a pack installed
+Requires Python 3.13+. Same two SQLite files as the app above — a pack installed
 by the CLI is visible in the desktop app and the other way round.
 
 ```bash
@@ -159,9 +159,11 @@ Locally, `packaging/freeze.sh` builds and smoke-tests the sidecar alone, which
 needs no Rust toolchain.
 
 The frozen sidecar is also the operator console: `kriko-sidecar --tui` runs the
-same TUI as `kriko tui`, with no Python, no Node and no webview involved. That
-is deliberate — a console whose reason for existing is a window that would not
-open should not itself require a working toolchain.
+same TUI as `kriko tui`, with no Python, no Node and no webview involved. On
+Windows the installer puts **Kriko Console** in the Start menu pointing at
+exactly that, so it is one click — no terminal to find, no flag to remember.
+That is deliberate: a console whose reason for existing is a window that would
+not open should not itself require a working toolchain.
 
 ---
 

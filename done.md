@@ -6,6 +6,43 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — the floor drops to 3.13 (B110), and the console becomes one click
+
+**B110 resolved by lowering `requires-python` to `>=3.13`.** The `>=3.14` floor
+was unsatisfiable in practice: 3.13 was refused by the line itself, and
+3.14.0rc2 — the only 3.14 many platforms can fetch — raises on `import fastapi`
+because the pinned `pydantic==2.13.4` cannot run on its `typing._eval_type`.
+So there was no interpreter on which a clean `tools/setup.sh` succeeded, and the
+only way round that is a hand-built environment nobody else can reproduce.
+
+Nothing was relaxed on a hunch. The whole of `tools/gate.sh` — pytest, both JS
+suites, svelte-check, the stale-bundle check — passes on 3.13, so the floor was
+not load-bearing for anything the tests cover. `pyproject.toml` says why, in
+place, so the next person to raise it has to state a reason a test can hold.
+
+**`desktop.yml` moved with it, and that one is not cosmetic.** Its three
+`setup-python` steps pinned `"3.14"`, which resolves to whatever is newest in
+that line — including a release candidate the pinned pydantic dies on. PyInstaller
+would freeze it happily and the reader would get a sidecar that fails on its
+first request. The interpreter the binary carries should be the one the suite
+actually ran on.
+
+**The console is a thing you double-click.** `installer.nsh` gained
+`NSIS_HOOK_POSTINSTALL`, which writes a **Kriko Console** shortcut into the
+Start menu pointing at `$INSTDIR\kriko-sidecar.exe --tui`, and
+`NSIS_HOOK_POSTUNINSTALL`, which removes it. No second artifact ships: that
+binary is the `externalBin` Tauri installs anyway, and `app/tui/` is already
+frozen inside it. A console window appears and that is the point — the sidecar
+is built `console=True`, Tauri suppresses the window with `CREATE_NO_WINDOW`
+when *it* spawns the engine, and nothing suppresses it here because here the
+terminal is the UI.
+
+Three tests (`test_the_shell_runs_in_the_tray.py`) hold it: the shortcut exists,
+carries `--tui`, and is deleted under the same name it was created with. They
+strip `;` comments first — `_code` above them only strips `//`, so without that
+every assertion would have been satisfiable by the paragraph explaining it,
+which is this file's own stated failure mode one comment syntax over.
+
 ### 2026-09-14 — the console goes standalone, and the loop gets three commands
 
 **`kriko tui` is a command now, and so is `kriko-sidecar --tui`.** The console

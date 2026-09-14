@@ -222,37 +222,6 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ## P0
 
-### B110 — `requires-python = ">=3.14"` cannot be satisfied today `[dev]`
-Found 2026-09-13 while writing `tools/setup.sh`. There is currently no
-interpreter on which a clean setup of this tree succeeds:
-
-* **Python 3.13** — `uv pip install -e .` refuses: *"only kriko==0.8.0 is
-  available and the current Python version (3.13.12) does not satisfy
-  Python>=3.14"*.
-* **Python 3.14.0rc2** (the only 3.14 uv can fetch) — installs cleanly and then
-  `import fastapi` raises `AssertionError` inside `pydantic/_internal/
-  _typing_extra.py`: the pinned `pydantic==2.13.4` cannot run on that
-  pre-release's `typing._eval_type` signature.
-
-`tools/setup.sh` now refuses loudly in both cases rather than reporting
-"ready" on a tree that cannot import its own app — which is what its first
-version did, and exactly the failure a setup script exists to prevent.
-
-**The evidence worth weighing:** the full suite, both JS suites, svelte-check
-and the stale-bundle check all pass on **3.13** (`tools/gate.sh`, green on this
-branch). So the `>=3.14` floor is not load-bearing for anything the tests
-cover; it is currently only blocking setup.
-
-**Decision needed** (a policy call, not a mechanism): relax the floor to
-`>=3.13`, or keep `>=3.14` and wait for a stable release. Keeping it is
-defensible — `desktop.yml` pins `python-version: "3.14"` and the frozen sidecar
-ships whatever it was built with — but while no stable 3.14 exists for a given
-platform, a contributor there cannot set the tree up at all except by the kind
-of hand-rolled workaround that produces an environment nobody else can
-reproduce. Do not change it without deciding; a floor that moves by accident is
-worse than either answer.
-
-
 ### B109 — Terminal: CLOSED 2026-09-13 by dropping the WebSocket (0.7.12)
 
 **Resolved.** Six entries below chased a cause inside `terminal_ws`; the
