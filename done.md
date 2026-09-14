@@ -6,6 +6,65 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — 0.8.3: the document is kept, and the run is watchable (B120, B121)
+
+Two questions, one shape: the thing that happened was not kept.
+
+**B120 — the document that proved the quote.** An agent submits `document_text`;
+`app/findings.py` used it for exactly one thing, `is_grounded(document, quote)`,
+and then dropped it. So the product's one hard guarantee — a quote that is not
+in the document does not become evidence — was checked once, against text nobody
+kept, and could never be checked again. It is now kept: a `documents` table in
+`app.sqlite`, keyed by `source_id` so two findings from one page share a row,
+bounded at 5000 rows, written from `log_submission` — which already runs on both
+doors, so a document is kept on the same terms whether the finding arrived
+through MCP or through an in-app job, and acceptance still never opens the
+interface's database. `findings.regrounded()` re-runs the check offline and
+answers one of three things per quote: `grounded`, `ungrounded`, or `not_kept`.
+
+The last of those is B112's second enforcement becoming possible at all: "a
+`source_url` that was never fetched is a fabrication with a plausible shape"
+needs something that knows which documents were fetched, and nothing did.
+`not_kept` is deliberately not `ungrounded` — absence of the page is not
+evidence against the quote. A page too large to keep is recorded as fetched and
+not kept rather than truncated, because half a page would re-check as
+`ungrounded` for a quote that was genuinely in the other half, and one confident
+wrong answer is worse than an honest absence.
+
+`app.sqlite` and not the store, which is the load-bearing half: a page one
+installation happened to read must not enter a pack's `content_digest`, or two
+readers who researched the same subject would disagree about whether the next
+update is a republish.
+
+**B121 — an agent run that tells nobody anything.** `harness.py` ran the CLI
+with `subprocess.run(capture_output=True, timeout=600)`, which is a decision to
+learn nothing until the process is over. Between "harness plane (subscription)"
+and the verdicts there were up to ten minutes — forty for a pack author — of
+silence, and what the agent actually did was invisible while it happened and
+gone afterwards. The reader's question, *"that shell is supposed to show the
+agent's actions"*, had the answer: no, and nothing did.
+
+The vector now asks for `--output-format stream-json` (with `--verbose`, which
+the CLI refuses to start without), and the output is read line by line as it is
+produced: stdout in the calling thread so a line reaches the log the moment it
+is written, stderr on its own thread so a full pipe cannot deadlock a run, and
+the ceiling as a timer that kills rather than an argument to `run`. `narrate()`
+turns each event into one line a reader can follow — `searched "…"`,
+`fetched …`, the model's own sentences, a tool call that failed — and the
+transport is the job log, which already streams to the app and to `kriko tui`.
+The actions needed a sender, not a second channel. Narration is capped at 400
+lines, never fatal (a log that cannot be written must not destroy a completed
+run of real research), and the transcript is bounded at 512 KB.
+
+The test that matters is `test_a_line_arrives_before_the_run_is_over`: the fake
+CLI will not finish until the narration callback has created a file, so a
+buffered implementation deadlocks there. Every other assertion would have passed
+on the bug wearing the fix's clothes.
+
+**Not done, and named rather than implied:** a run that stops to ask a question
+still cannot be answered. The prompt goes in on stdin and the transcript comes
+out — this is a window, not a conversation.
+
 ### 2026-09-14 — 0.8.2: a second read of the terminal, before it is tested again
 
 The 0.8.1 install could not be tested properly, so the terminal path was read

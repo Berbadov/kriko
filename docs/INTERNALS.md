@@ -504,6 +504,7 @@ Every table, and the question it answers:
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
 | `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
 | `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
+| `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
 **Schema changes reach an existing file.** `connect()` stamps `PRAGMA
@@ -594,6 +595,18 @@ app is *always* serving there, so `kriko tui` with the app open attaches to the
 app's own engine, same store, same jobs, same shell. Only if nothing answers
 does it start an engine in-process on an OS-chosen port, which is what makes the
 console usable on a machine where the desktop shell will not open at all.
+
+**A harness run is read as it happens.** `app/providers/harness.py` asks the
+CLI for `--output-format stream-json` (which the CLI refuses to start without
+`--verbose`) and reads its stdout line by line in the calling thread, draining
+stderr on its own so a full pipe cannot deadlock a run, with the timeout as a
+timer that kills rather than an argument to `subprocess.run`. `narrate()` turns
+each event into one line — `searched "…"`, `fetched …`, a tool call that
+failed — and `on_action`, set duck-typed by `app/web/tasks.py` to the job's
+`progress.log`, is where they go. So the actions appear in the job log both
+clients already show, live, rather than in a second transport; the transcript
+is bounded and the narration capped, because an agent in a tool loop must not
+be able to grow either without end.
 
 **Three tabs and a shell.** *Planes* answers "why do agent operations do
 nothing" by naming the harness binary `harness.locate()` found, with its path —

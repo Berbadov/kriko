@@ -52,6 +52,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -126,9 +128,28 @@ class Harness:
 
 
 def _claude_args() -> tuple[str, ...]:
+    """Headless, streaming, and allowed to search and nothing else.
+
+    **`stream-json` rather than `json`, since B121.** Under `json` the CLI
+    prints one object when it is finished, so a ten-minute run says nothing
+    for ten minutes and the reader watching the job log cannot tell a run that
+    is searching from one that is hung. `stream-json` prints one JSON object
+    per event as it happens — the tool calls, the pages fetched, the model's
+    own narration — which `narrate` turns into the lines the log shows. The
+    reply is unchanged: the last event is the same `result` object, carrying
+    the same `result`, `usage` and `total_cost_usd`, and `_envelope` already
+    read line-delimited output.
+
+    `--verbose` is not decoration: `claude -p --output-format stream-json`
+    refuses to start without it ("requires --verbose"), before any API call.
+    It is in `args` rather than in `preferred` for exactly that reason — a
+    machine whose CLI does not take it has no working vector here anyway, and
+    a silently dropped flag would turn a hard error into a mystery.
+    """
     return (
         "-p",
-        "--output-format", "json",
+        "--output-format", "stream-json",
+        "--verbose",
         "--allowedTools", ",".join(SEARCH_TOOLS),
     )
 
@@ -421,14 +442,22 @@ def _envelope(stdout: str) -> dict:
         if results:
             return results[-1]
         return objects[-1] if objects else {}
+    last = {}
     for line in reversed(text.splitlines()):
         try:
             one = json.loads(line)
         except ValueError:
             continue
-        if isinstance(one, dict):
+        if not isinstance(one, dict):
+            continue
+        # The `result` event by preference, not merely the last object: under
+        # `--output-format stream-json` the result is followed by nothing
+        # today and by whatever a future CLI adds tomorrow, and it is the one
+        # event carrying `result`, `usage`, `total_cost_usd` and `is_error`.
+        if one.get("type") == "result":
             return one
-    return {}
+        last = last or one
+    return last
 
 
 def _why(envelope: dict, stdout: str, stderr: str) -> str:
@@ -467,6 +496,109 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
     # sentence twice, and a reader reading a defect report should not have to
     # wonder whether that means two things went wrong.
     return " -- ".join(dict.fromkeys(parts))[:2000] or "no output"
+
+
+# ── what the run is doing, while it does it ──────────────────────────────────
+
+#: How much of a run's raw output is kept in memory. The reply is parsed from
+#: this, so it has to hold the last `result` event — which is the last line —
+#: and it is bounded for the reason `termpty.SCROLLBACK` is: a process that
+#: will not stop talking must cost a fixed amount of memory, not all of it.
+TRANSCRIPT_TAIL = 512 * 1024
+
+#: The most lines one run may narrate. A ceiling rather than a rate limit: the
+#: job log is a column in `app.sqlite` that every reader of the job re-reads,
+#: and an agent stuck in a tool loop must not be able to grow it without end.
+#: A real research run narrates a few dozen.
+MAX_NARRATED = 400
+
+#: Events that are machinery rather than actions — session bookkeeping, the
+#: partial-token frames, the command list. Named rather than filtered by
+#: "anything I do not recognise", so a *new* event type shows up as a line
+#: nobody wrote a translation for instead of silently disappearing.
+QUIET_EVENTS = frozenset(
+    {"stream_event", "active_goal", "autocompact_state", "rate_limit_event"}
+)
+
+
+def _short(text: str, limit: int = 160) -> str:
+    """One line, trimmed. A log line that wraps four times is not a log line."""
+    flat = " ".join(str(text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
+
+def _tool_line(name: str, args: dict) -> str:
+    """What one tool call was, in the reader's words rather than the API's.
+
+    `SEARCH_TOOLS` is the whole grant, so there are two shapes worth naming
+    and a general one for anything a future grant adds. It reads the argument
+    the tool is *about* — the query, the URL — because "WebSearch" on its own
+    tells a reader watching the log nothing they did not already assume.
+    """
+    args = args if isinstance(args, dict) else {}
+    query = args.get("query") or args.get("q")
+    url = args.get("url")
+    if name == "WebSearch" and query:
+        return f'searched "{_short(query, 120)}"'
+    if name == "WebFetch" and url:
+        return f"fetched {_short(url, 120)}"
+    detail = query or url or ""
+    return f"{name} {_short(detail, 100)}".strip()
+
+
+def narrate(event: dict) -> str:
+    """One stream event, as a line for the job log — or `""` for machinery.
+
+    This is the whole of B121's answer to *"that shell is supposed to show the
+    agent's actions"*. It was not, and nothing was: between "harness plane" and
+    the verdicts there were up to ten minutes of silence, and what the agent
+    actually did was invisible while it happened and gone afterwards. The
+    transport is the job log, which already streams to both the app and
+    `kriko tui` — a run's actions do not need a second channel, they needed a
+    sender.
+    """
+    if not isinstance(event, dict):
+        return ""
+    kind = event.get("type")
+    if kind in QUIET_EVENTS:
+        return ""
+    if kind == "system":
+        if event.get("subtype") != "init":
+            return ""
+        model = str(event.get("model") or "").strip()
+        return f"started {model}".strip() if model else "started"
+    if kind == "assistant":
+        message = event.get("message")
+        blocks = message.get("content") if isinstance(message, dict) else None
+        lines = []
+        for block in blocks if isinstance(blocks, list) else ():
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                lines.append(_tool_line(str(block.get("name") or ""), block.get("input")))
+            elif block.get("type") == "text" and str(block.get("text") or "").strip():
+                lines.append(_short(block["text"]))
+        return "; ".join(one for one in lines if one)
+    if kind == "user":
+        # Only the failures. A tool result is the page the agent just read,
+        # and repeating it into the log would bury the run in its own sources
+        # — but a search that errored is the thing a reader most needs to see.
+        message = event.get("message")
+        blocks = message.get("content") if isinstance(message, dict) else None
+        for block in blocks if isinstance(blocks, list) else ():
+            if isinstance(block, dict) and block.get("is_error"):
+                return "a tool call failed: " + _short(str(block.get("content") or ""), 120)
+        return ""
+    if kind == "result":
+        turns = event.get("num_turns")
+        cost = event.get("total_cost_usd")
+        said = "finished"
+        if isinstance(turns, int):
+            said += f" after {turns} turn(s)"
+        if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost:
+            said += f", ${cost:.4f} on the subscription's account"
+        return said
+    return ""
 
 
 #: What a harness failure means, and what to do about it. A closed
@@ -539,6 +671,19 @@ class HarnessResearcher(AgentResearcher):
         #: written to the submission row (B95) — the brief hands out seeds, so
         #: the shapes that actually get used are only knowable from here.
         self.queries_run: list[str] = []
+        #: Where a line goes when the agent does something (B121). Set
+        #: duck-typed by `app/web/tasks.py` to the job's own `progress.log`,
+        #: exactly as `tokens_used` is read back duck-typed — the engine has
+        #: no field for "somewhere to narrate to" and should not grow one.
+        #: `None` means nobody is watching, which is the CLI's case and costs
+        #: the run nothing.
+        self.on_action: Callable[[str], None] | None = None
+        #: The run's raw output, bounded. The reply is parsed out of this, and
+        #: it is what a failure quotes its tail of.
+        self.transcript = ""
+        #: The lines this run narrated, in order. Kept so a caller that was not
+        #: watching live can still ask what happened.
+        self.actions: list[str] = []
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -631,7 +776,7 @@ class HarnessResearcher(AgentResearcher):
 
     # ── the subprocess ───────────────────────────────────────────────────────
 
-    def _run(self, prompt: str) -> str:
+    def _run(self, prompt: str, on_line: Callable[[str], None] | None = None) -> str:
         """The prompt goes in on **stdin**, never as an argument.
 
         This is the defect that made B92 ship a plane that could not run at
@@ -655,52 +800,166 @@ class HarnessResearcher(AgentResearcher):
         asserted the *shape* of `args` and none asserted the CLI would take
         them — the same mistake as the twelve tray tests that passed on a
         `main.rs` which could not parse (B89).
+
+        **And the output is read as it arrives, since B121.** It used to be
+        `subprocess.run(capture_output=True)`, which is a decision to learn
+        nothing until the process is over; `on_line` (or `self.on_action`) now
+        receives one line per action the agent takes, while it takes it.
         """
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
         command = command_for(self.harness)
+        say = on_line if on_line is not None else self.on_action
         fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
                 stdin_write.write(prompt)
             with open(stdin_path, "r", encoding="utf-8") as stdin_read:
-                try:
-                    done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-                        command,
-                        stdin=stdin_read,
-                        capture_output=True,
-                        text=True,
-                        timeout=self.timeout,
-                        env={**os.environ, **self.harness.env},
-                        cwd=os.path.expanduser("~"),
-                    )
-                except FileNotFoundError as exc:
-                    raise NoHarness(
-                        f"{self.harness.label} is not on PATH ({self.harness.executable})"
-                    ) from exc
-                except subprocess.TimeoutExpired as exc:
-                    raise TimeoutError(
-                        f"{self.harness.label} did not finish within "
-                        f"{int(self.timeout)}s"
-                    ) from exc
+                code, stdout, stderr = self._stream(command, stdin_read, say)
         finally:
             os.remove(stdin_path)
 
-        if done.returncode != 0:
-            envelope = _envelope(done.stdout or "") if self.harness.structured else {}
+        if code != 0:
+            envelope = _envelope(stdout) if self.harness.structured else {}
             # Metered before raising. A run that failed on its fourth search
             # still spent the reader's subscription on three, and a plane that
             # only counts what succeeded is a plane whose cost column lies.
             self._meter(envelope)
-            reason = _why(envelope, done.stdout or "", done.stderr or "")
+            reason = _why(envelope, stdout, stderr)
             hint = _hint(reason)
             raise RuntimeError(
-                f"{self.harness.label} exited {done.returncode}: {reason}"
+                f"{self.harness.label} exited {code}: {reason}"
                 + (f" -- {hint}" if hint else "")
             )
         if not self.harness.structured:
-            return done.stdout or ""
-        return self._unwrap(done.stdout or "")
+            return stdout
+        return self._unwrap(stdout)
+
+    def _stream(self, command, stdin_read, say) -> tuple[int, str, str]:
+        """Run the CLI, reading its output line by line as it is produced.
+
+        Three threads' worth of care for one subprocess, and each one is
+        answering a failure this file has already had:
+
+        * **stdout is read in this thread**, so a reader watching the job log
+          sees a line the moment the CLI writes it rather than when the pipe's
+          buffer happens to flush. It is also why nothing here calls
+          `communicate()`.
+        * **stderr is drained by its own thread.** A CLI that fills the stderr
+          pipe while nobody is reading it blocks forever, and "the harness
+          plane hangs on some machines and not others" is the worst possible
+          shape for that bug.
+        * **The timeout is a timer that kills**, rather than an argument to
+          `run`. A `TimeoutExpired` from `run` gives back what was captured; a
+          streamed run has already reported everything it saw, so the kill only
+          needs to end the process — and the reader has the transcript of what
+          it was doing when it stopped, which is the thing the old timeout
+          never produced.
+
+        Narration is capped (`MAX_NARRATED`) and never fatal: a log line that
+        cannot be written is a worse log, and losing a completed run of real
+        research to it would be absurd.
+        """
+        self.transcript = ""
+        try:
+            proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+                command,
+                stdin=stdin_read,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+                env={**os.environ, **self.harness.env},
+                cwd=os.path.expanduser("~"),
+            )
+        except FileNotFoundError as exc:
+            raise NoHarness(
+                f"{self.harness.label} is not on PATH ({self.harness.executable})"
+            ) from exc
+
+        said: list[str] = []
+        errors: list[str] = []
+        drain = threading.Thread(
+            target=self._drain, args=(proc.stderr, errors), daemon=True
+        )
+        drain.start()
+
+        expired = threading.Event()
+
+        def _give_up() -> None:
+            expired.set()
+            try:
+                proc.kill()
+            except Exception:  # noqa: BLE001 — already gone is the good case
+                pass
+
+        timer = threading.Timer(self.timeout, _give_up)
+        timer.start()
+        narrated = 0
+        try:
+            for line in proc.stdout:
+                self._keep(line)
+                if say is None or narrated >= MAX_NARRATED:
+                    continue
+                spoken = self._narrate(line)
+                if not spoken:
+                    continue
+                narrated += 1
+                said.append(spoken)
+                try:
+                    say(spoken)
+                except Exception:  # noqa: BLE001 — see the docstring
+                    say = None
+            proc.wait()
+        finally:
+            timer.cancel()
+            drain.join(timeout=5.0)
+            for pipe in (proc.stdout, proc.stderr):
+                try:
+                    pipe.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        self.actions = said
+        if expired.is_set():
+            raise TimeoutError(
+                f"{self.harness.label} did not finish within {int(self.timeout)}s"
+            )
+        return proc.returncode or 0, self.transcript, "".join(errors)
+
+    @staticmethod
+    def _drain(pipe, into: list) -> None:
+        try:
+            for line in pipe:
+                into.append(line)
+                if len(into) > 400:
+                    del into[: len(into) - 400]
+        except Exception:  # noqa: BLE001 — a closed pipe is how this ends
+            pass
+
+    def _keep(self, line: str) -> None:
+        """Append to the bounded transcript the reply is parsed out of."""
+        self.transcript += line
+        if len(self.transcript) > TRANSCRIPT_TAIL:
+            self.transcript = self.transcript[-TRANSCRIPT_TAIL:]
+
+    def _narrate(self, line: str) -> str:
+        """One output line, as something worth logging — or nothing.
+
+        A CLI that answers in prose (`structured=False`) has no events to
+        translate, so its own words are the narration. One that answers in
+        JSON is translated by `narrate`, and a line that is neither is
+        machinery: partial frames, blank lines, a banner.
+        """
+        if not self.harness.structured:
+            return _short(line, 200)
+        try:
+            event = json.loads(line)
+        except ValueError:
+            return ""
+        return narrate(event) if isinstance(event, dict) else ""
 
     def _meter(self, envelope: dict) -> None:
         """Stamp what the reply admits to spending. Read duck-typed by

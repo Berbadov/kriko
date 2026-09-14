@@ -382,7 +382,62 @@ CREATE TABLE IF NOT EXISTS research_run_claims (
 );
 CREATE INDEX IF NOT EXISTS research_run_claims_claim
     ON research_run_claims (pack_id, claim_id);
+
+-- ── the text a quote was proved against ──────────────────────────────────
+--
+-- The evidence chain is this product's one hard guarantee: a quote that is
+-- not in the document does not become evidence. `app/findings.py` makes that
+-- check mechanically, once — and until this table it made it against text
+-- nobody kept. So the guarantee was true at acceptance and unrepeatable
+-- afterwards: a page that changes or dies takes the only copy with it, two
+-- findings from one page cannot be cross-checked against each other, and
+-- "was this source ever actually fetched" — which B112 needs in order to
+-- recognise a fabricated `source_url` — had no answer at all.
+--
+-- **Here rather than in the engine's store**, by the rule at the top of this
+-- file. A document is how *this installation* came to believe a claim, not
+-- part of the knowledge a pack ships: a published pack carries the quote and
+-- the URL, which is what a downstream consumer re-checks. Putting the page
+-- text in `knowledge.sqlite` would put it inside a pack's `content_digest`,
+-- so two readers who researched the same subject would compute different
+-- digests for the same version and every pack update would look like a
+-- republish.
+--
+-- Keyed by `source_id`, which is what `evidence` already points at, so a
+-- claim reaches its document through the row it already has. One row per
+-- source, replaced: two findings quoting one page submit the same text
+-- twice, and a second copy answers no question the first cannot.
+CREATE TABLE IF NOT EXISTS documents (
+    source_id   TEXT PRIMARY KEY,
+    pack_id     TEXT NOT NULL DEFAULT '',
+    url         TEXT NOT NULL DEFAULT '',
+    -- The text itself, or empty when the page was larger than
+    -- MAX_DOCUMENT_CHARS. Empty text with a non-zero `chars` is therefore a
+    -- third answer — "this source was fetched and is not kept" — and it is
+    -- deliberately not a truncation: half a page would re-check as
+    -- `ungrounded` for a quote that was genuinely in the other half, which is
+    -- the one wrong answer this table must never produce.
+    text        TEXT NOT NULL DEFAULT '',
+    chars       INTEGER NOT NULL DEFAULT 0,
+    -- Defaulted, though this writer always supplies it: every column in this
+    -- file carries one so that `add_missing_columns` can always do its job,
+    -- and a column that is only addable while its table is new is a trap for
+    -- whoever adds the next one.
+    retained_at TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS documents_retained ON documents (retained_at DESC);
 """
+
+#: The most documents one installation keeps, newest first. A bound rather
+#: than a sweep by age: what makes this table safe is that it cannot grow
+#: without limit, and "the last N pages I accepted evidence from" is the set a
+#: re-check actually reaches for. Roughly 10 MB at the sizes an agent submits.
+DOCUMENTS_KEPT = 5000
+
+#: And the most one document may be. Past this the row records that the source
+#: was fetched and says the text is not kept — see the column comment.
+MAX_DOCUMENT_CHARS = 200_000
+
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
 #: the reason CLAUDE.md's scalability rule carves out: this does not grow with
@@ -959,6 +1014,75 @@ def record_submission(
     )
     conn.commit()
     return submission_id
+
+
+def retain_documents(conn: sqlite3.Connection, documents: Sequence[dict]) -> int:
+    """Keep the text each accepted quote was proved against. Returns rows kept.
+
+    Called from `app.findings.log_submission`, which is the one place both
+    doors already meet — so a document is kept on the same terms whether the
+    finding arrived through MCP or through an in-app job, and acceptance
+    itself still never touches this file (see that function's docstring for
+    why the two connections stay apart).
+
+    Replaces rather than ignores: a second submission quoting the same page is
+    the more recent read of it, and a stale copy is the one thing worth less
+    than no copy.
+    """
+    kept = 0
+    for one in documents or ():
+        source_id = str(one.get("source_id") or "").strip()
+        if not source_id:
+            continue
+        text = str(one.get("text") or "")
+        conn.execute(
+            "INSERT OR REPLACE INTO documents (source_id, pack_id, url, text,"
+            " chars, retained_at) VALUES (?,?,?,?,?,?)",
+            (
+                source_id,
+                str(one.get("pack_id") or ""),
+                str(one.get("url") or ""),
+                text if len(text) <= MAX_DOCUMENT_CHARS else "",
+                len(text),
+                _now(),
+            ),
+        )
+        kept += 1
+    if kept:
+        # Pruned here rather than on a timer: this is the only writer, so it
+        # is the only moment the bound can be exceeded.
+        conn.execute(
+            "DELETE FROM documents WHERE source_id NOT IN ("
+            " SELECT source_id FROM documents"
+            " ORDER BY retained_at DESC, source_id DESC LIMIT ?)",
+            (DOCUMENTS_KEPT,),
+        )
+        conn.commit()
+    return kept
+
+
+def document_for(conn: sqlite3.Connection, source_id: str) -> dict | None:
+    """The kept page for one source, or `None` if this install never saw it.
+
+    `None` is the answer B112 needs: a `source_url` no run ever fetched is a
+    fabrication with a plausible shape, and until this table nothing could
+    tell the two apart.
+    """
+    row = conn.execute(
+        "SELECT source_id, pack_id, url, text, chars, retained_at"
+        " FROM documents WHERE source_id = ?",
+        (source_id,),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def documents_kept(conn: sqlite3.Connection) -> dict:
+    """How much of the evidence is re-checkable offline. For the status view."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS rows, COALESCE(SUM(LENGTH(text)), 0) AS chars"
+        " FROM documents"
+    ).fetchone()
+    return {"documents": row["rows"], "chars": row["chars"]}
 
 
 def _submission(row: sqlite3.Row) -> dict:

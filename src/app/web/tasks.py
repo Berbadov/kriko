@@ -414,6 +414,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             emit.event(f"query: {query}", detail_kind="query")
 
         researcher = _researcher(params)
+        # What the plane does while it does it (B121). Duck-typed, like
+        # `tokens_used` below: a plane that can narrate gets somewhere to
+        # narrate to, and one that cannot is unaffected. The job log is the
+        # channel because it already streams to the app and to `kriko tui` —
+        # the actions needed a sender, not a second transport.
+        if hasattr(researcher, "on_action"):
+            researcher.on_action = progress.log
         if provenance is not None:
             provenance.open(researcher)
         brief = researcher.brief(task)
@@ -500,10 +507,15 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # ── Ingestion ────────────────────────────────────────────────────
         progress.check()
         verdicts = {"accepted": [], "rejected": []}
+        #: The text each accepted quote was proved against, kept by
+        #: `log_submission` so the proof can be repeated (B120).
+        retained: list[dict] = []
         if findings:
             emit.open_stage("ingestion", f"checking {len(findings)} finding(s)")
             progress.set(0.85, f"checking {len(findings)} finding(s)")
-            verdicts = accept_findings(conn, subject_id, pack_id, findings)
+            verdicts = accept_findings(
+                conn, subject_id, pack_id, findings, retain=retained
+            )
             conn.commit()
             # Written down as soon as the claims exist, not at the end of the
             # run: an undo has to be possible for a run that was cancelled
@@ -531,7 +543,16 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 pack_id=pack_id,
                 verdicts=verdicts,
                 queries=_queries_run(researcher, task),
+                documents=retained,
             )
+            if retained:
+                # Said out loud because it is the reader's proof that the
+                # evidence can be re-checked later without the page: a run
+                # that kept nothing and one that kept everything used to look
+                # identical here.
+                progress.log(
+                    f"kept {len(retained)} document(s) the quotes were checked against"
+                )
         else:
             emit.skip_stage("ingestion", "no findings to check")
             emit.skip_stage("ledgering", "nothing to write down")
@@ -1137,6 +1158,10 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         timeout=float(
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
+    # The forty-minute silence this job used to be (B121). A pack author is
+    # the longest-running thing in the app and the one whose log most needed
+    # to say something before it finished.
+    researcher.on_action = progress.log
     progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
