@@ -448,3 +448,41 @@ def test_a_packaging_script_prints_ascii_only(script: Path):
         f"{script.name} prints non-ASCII, which garbles on a Windows console: "
         + "; ".join(offenders)
     )
+
+
+def test_every_powershell_script_parses():
+    """The other half of the B89 lesson, for the other language in the build.
+
+    `test_a_powershell_script_is_ascii_only` above exists because 5.1 could not
+    *decode* this file. This one is about whether it can be *parsed* — and the
+    two are not the same check. Every other assertion in this module reads the
+    script as text, which can only ever prove a string is present; twelve tray
+    tests once passed on a `main.rs` that could not be parsed, found nine
+    minutes into a hand build by the first `cargo` that ever read it. The same
+    hole was open here, on a script whose whole job is to produce the installer.
+
+    PowerShell's own parser, via `pwsh`, which needs nothing from the script and
+    does not run a line of it. Skips where there is no `pwsh` — a gate that
+    cannot run must not pass silently, but neither may it fail a Linux checkout
+    that never installed one. `tauri/README.md` names it in the pre-flight.
+    """
+    import shutil
+    import subprocess
+
+    pwsh = shutil.which("pwsh") or shutil.which("powershell") or "/opt/pwsh/pwsh"
+    if not Path(pwsh).exists() and not shutil.which(pwsh):
+        pytest.skip("no pwsh on this machine")
+
+    for script in _powershell_scripts():
+        done = subprocess.run(
+            [pwsh, "-NoProfile", "-Command",
+             "$e = $null;"
+             f"$null = [System.Management.Automation.Language.Parser]::ParseFile('{script}',"
+             " [ref]$null, [ref]$e);"
+             "if ($e) { $e | ForEach-Object {"
+             " \"line $($_.Extent.StartLineNumber): $($_.Message)\" }; exit 1 }"],
+            capture_output=True, text=True, timeout=120,
+        )
+        assert done.returncode == 0, (
+            f"{script.name} does not parse:\n{done.stdout}{done.stderr}"
+        )
