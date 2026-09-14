@@ -335,7 +335,7 @@ original reasoning.
 | `README.md` | Project overview, quickstart, supported cars | current |
 | `packs/<name>/README.md` | What that pack covers, and its own product principle | current |
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
-| `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks | current |
+| `CONTRIBUTING.md` | The loop (setup/gate/bump), branches, commits, the gate | current |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |

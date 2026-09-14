@@ -394,3 +394,91 @@ def test_an_explicit_url_that_does_not_answer_is_an_error_not_a_new_engine(monke
     monkeypatch.setattr(client, "reachable", lambda url: False)
     with pytest.raises(client.EngineError, match="nothing is serving"):
         client.connect("http://127.0.0.1:9", allow_start=True)
+
+
+# ── standalone: no Python, no webview, no checkout ──────────────────────
+
+def test_the_frozen_binary_runs_the_console_without_binding_a_port(monkeypatch):
+    """`kriko-sidecar.exe --tui` is the console, standalone.
+
+    `app/tui/` is already in the wheel and therefore already inside the frozen
+    binary the installer ships, so this flag costs one branch and no build
+    artifact — and it is the whole of what "standalone" means here: a machine
+    with no Python, no Node and no working WebView2 can still drive research,
+    watch a job and open a shell.
+
+    It must return *before* `reserve`: the console attaches to a running app if
+    there is one and otherwise starts an engine in-process, so a sidecar that
+    bound a port first would be a second engine nobody asked for.
+    """
+    from app import sidecar
+
+    called = {}
+
+    def fake_tui(**kwargs):
+        called.update(kwargs)
+        return 0
+
+    def never(*args, **kwargs):
+        raise AssertionError("--tui bound a port before handing over to the console")
+
+    monkeypatch.setattr("app.tui.main", fake_tui)
+    monkeypatch.setattr(sidecar, "reserve", never)
+    assert sidecar.main(["--tui"]) == 0
+    assert called == {"settings": None}
+
+
+def test_the_console_passes_an_explicit_store_through(monkeypatch, tmp_path):
+    from app import sidecar
+
+    seen = {}
+    monkeypatch.setattr("app.tui.main", lambda **kw: seen.update(kw) or 0)
+    monkeypatch.setattr(sidecar, "reserve", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
+    sidecar.main(["--tui", "--store", str(tmp_path / "other.sqlite")])
+    assert seen["settings"].store_path == tmp_path / "other.sqlite"
+
+
+def test_the_console_stops_log_lines_reaching_the_screen():
+    """The bug this would have shipped with.
+
+    When nothing is serving, the console starts an engine in-process — and
+    `create_app` calls `logs.configure()`, whose stderr handler writes straight
+    onto the alternate screen, underneath a frame differ that will not know to
+    repaint over it. The stray line then stays until something else happens to
+    redraw that row.
+
+    The file handler must survive: losing the terminal is the reason to keep
+    `app.log`, not a reason to stop.
+    """
+    import logging
+    import sys
+
+    from app import logs
+
+    root = logging.getLogger()
+    saved, saved_flag = list(root.handlers), logs._no_stream
+    try:
+        root.handlers = []
+        stream = logging.StreamHandler(sys.stderr)
+        root.addHandler(stream)
+        logs.silence_stderr()
+        assert stream not in root.handlers
+
+        # And `configure` must not put one back afterwards.
+        logs.configure(path=None)
+        assert not any(getattr(h, "stream", None) is sys.stderr for h in root.handlers)
+    finally:
+        root.handlers = saved
+        logs._no_stream = saved_flag
+
+
+def test_kriko_is_a_command_rather_than_an_incantation():
+    """Every document written for someone who installed the wheel says
+    `kriko tui`. Without this entry point that is a lie, and the true form
+    (`python -m app.cli tui`) only works from a checkout."""
+    import tomllib
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    assert data["project"]["scripts"]["kriko"] == "app.cli:main"

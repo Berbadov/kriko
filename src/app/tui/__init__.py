@@ -7,6 +7,7 @@ is what makes it usable in exactly the conditions that produced B107/B109,
 where the desktop shell's window was the thing that did not work.
 
     kriko tui                 # attach to a running app, or start an engine
+    kriko-sidecar.exe --tui   # the same console out of the frozen binary
     kriko tui --url http://127.0.0.1:8787
     kriko tui --no-start      # attach only; fail if nothing is serving
 

@@ -549,9 +549,27 @@ new endpoint is something the API was not really exposing.
 
 ```
 kriko tui                 # attach to a running app, or start an engine
+kriko-sidecar --tui       # the same console, out of the frozen binary
 kriko tui --url http://127.0.0.1:8787
 kriko tui --no-start      # attach only; fail if nothing is serving
 ```
+
+**It is standalone, and that is the point.** `app/tui/` is already in the wheel
+and therefore already inside the sidecar the installer ships, so `--tui` costs
+one branch in `sidecar.py` and adds no build artifact — and it means a machine
+with no Python, no Node and no working WebView2 can still drive research, watch
+a job and open a shell. A console whose reason for existing is a window that
+would not open should not itself require a source checkout. The flag returns
+before `reserve`, because the console attaches to a running app or starts its
+own engine in-process; a sidecar that bound a port first would be a second
+engine nobody asked for.
+
+`main()` calls `logs.silence_stderr()` before anything else. When nothing is
+serving, the console starts an engine in this process and `create_app` calls
+`logs.configure()` — whose stderr handler writes straight onto the alternate
+screen, underneath a frame differ with no idea it needs to repaint that row. The
+file handler is left alone: losing the terminal is the reason to keep `app.log`,
+not a reason to stop.
 
 | Module | What it owns |
 |---|---|
