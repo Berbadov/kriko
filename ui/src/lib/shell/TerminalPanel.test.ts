@@ -249,6 +249,52 @@ describe("TerminalPanel", () => {
         await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
     });
 
+    it("offers a way back when the shell exits", async () => {
+        // `exit` is an ordinary thing to type, and on the 0.8.0 Windows install
+        // the shell died on its own at every open. Either way the panel used to
+        // say so and offer nothing, for the life of the app.
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        const restart = await screen.findByRole("button", { name: "Restart" });
+
+        await fireEvent.click(restart);
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/restart")).toBe(true),
+        );
+        // And it re-reads from the start: the transcript went with the old
+        // shell, so a cursor still pointing at byte 400 of it waits forever.
+        await waitFor(() =>
+            expect(
+                FakeEventSource.instances[FakeEventSource.instances.length - 1].url,
+            ).toContain("offset=0"),
+        );
+    });
+
+    it("treats a keystroke into a dead shell as asking for a live one", async () => {
+        const xterm = await import("@xterm/xterm");
+        let onData: ((data: string) => void) | undefined;
+        const prototype = xterm.Terminal.prototype as unknown as Record<string, unknown>;
+        const spy = vi
+            .spyOn(prototype, "onData", "get")
+            .mockImplementation(() => (callback: (data: string) => void) => {
+                onData = callback;
+                return { dispose() {} };
+            });
+
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        await screen.findByRole("button", { name: "Restart" });
+        calls.length = 0;
+
+        onData?.("\r");
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/restart")).toBe(true),
+        );
+        // And not as input, which would go to a pty that is not there.
+        expect(calls.some((call) => call.url === "/api/terminal/input")).toBe(false);
+        spy.mockRestore();
+    });
+
     it("toggles on Ctrl+` from anywhere in the window", async () => {
         render(TerminalPanel);
         expect(screen.queryByRole("complementary", { name: "Terminal" })).toBeNull();
@@ -263,5 +309,26 @@ describe("TerminalPanel", () => {
         const panel = await openPanel();
         await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
         await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+    });
+
+    it("actually disappears when closed, not just in the attribute", async () => {
+        // The bug this exists for: `hidden`'s `display: none` comes from the
+        // user-agent stylesheet and `.terminal-panel { display: flex }` is an
+        // author rule, so the author rule won and the panel stayed on screen —
+        // fixed, full-height, over the whole app, with a close button that
+        // visibly did nothing. Reported from the 0.8.0 install.
+        //
+        // The test above asserted the *attribute*, which was true the entire
+        // time. Only computed style can tell these apart.
+        const panel = await openPanel();
+
+        // Canary first. If jsdom is not applying this component's <style> at
+        // all, every assertion below passes for the wrong reason and this file
+        // silently stops testing the thing it is named after.
+        expect(getComputedStyle(panel).position).toBe("fixed");
+        expect(getComputedStyle(panel).display).toBe("flex");
+
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(getComputedStyle(panel).display).toBe("none"));
     });
 });
