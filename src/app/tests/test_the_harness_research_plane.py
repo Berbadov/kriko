@@ -1094,8 +1094,10 @@ def test_the_transcript_is_bounded(tmp_path, monkeypatch):
     assert researcher.note
 
 
-def test_narration_is_capped(tmp_path, monkeypatch):
-    """An agent stuck in a tool loop cannot grow the job log without end."""
+def test_narration_is_capped_and_says_that_it_stopped(tmp_path, monkeypatch):
+    """An agent stuck in a tool loop cannot grow the job log without end — and
+    the reader is told, because a cap that stops quietly leaves them looking at
+    exactly the silence B121 fixed."""
     monkeypatch.setattr(harness_mod, "MAX_NARRATED", 5)
     one = _streaming_cli(
         tmp_path, [_search_event(f"query {index}") for index in range(40)] + [_reply([])]
@@ -1104,4 +1106,32 @@ def test_narration_is_capped(tmp_path, monkeypatch):
     researcher = HarnessResearcher(one, timeout=30)
     researcher.on_action = seen.append
     researcher.gather(_task())
-    assert len(seen) == 5
+    assert len(seen) == 6
+    assert "not shown" in seen[-1]
+
+
+def test_a_cli_that_cannot_stream_still_runs(monkeypatch):
+    """Visibility is the thing worth losing; the plane is not.
+
+    The reader's CLI is not this machine's, and a build whose
+    `--output-format` never listed `stream-json` would refuse the streaming
+    vector outright — the same dead plane, with the same "Claude Code exited
+    1", that took two releases to get out of. So the format is chosen against
+    what `--help` actually lists."""
+    one = harness_mod.KNOWN[0]
+    monkeypatch.setattr(harness_mod, "locate", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(harness_mod, "declared", lambda _: frozenset())
+    monkeypatch.setattr(
+        harness_mod, "helptext",
+        lambda _: "--output-format <format>  (choices: \"text\", \"json\")",
+    )
+    vector = harness_mod.command_for(one)
+    assert "stream-json" not in vector
+    assert "json" in vector
+    assert "--allowedTools" in vector, "the grant is not optional"
+
+    monkeypatch.setattr(
+        harness_mod, "helptext",
+        lambda _: "--output-format <format>  (choices: \"json\", \"stream-json\")",
+    )
+    assert "stream-json" in harness_mod.command_for(one)
