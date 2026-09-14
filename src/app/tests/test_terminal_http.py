@@ -314,3 +314,58 @@ def test_an_ended_session_is_not_silently_resurrected(monkeypatch, tmp_path, _fr
     _fresh_session._end()
     body = client.get("/api/terminal/state").json()
     assert body["ended"] is True
+
+
+def test_a_momentarily_unresponsive_pty_is_not_declared_dead(_fresh_session):
+    """One `isalive()` sample is weak evidence for a strong verdict.
+
+    The failure it produces — "exited without producing any output" — is
+    indistinguishable from the real thing, so a pty that answers `False` once
+    just after spawning would end the terminal for a reason nobody could
+    argue with. It is sampled twice with a gap instead.
+    """
+    session = _fresh_session
+
+    class _FlickeringPty(_WindowsLikePty):
+        def __init__(self):
+            super().__init__(quiet_reads=99)
+            self.alive_calls = 0
+
+        def isalive(self):
+            self.alive_calls += 1
+            # Dead on the first ask, alive ever after — a spawn that had not
+            # finished settling.
+            return self.alive_calls != 1
+
+    pty = _FlickeringPty()
+    _install(session, pty)
+    deadline = time.time() + 5
+    while time.time() < deadline and pty.alive_calls < 2:
+        time.sleep(0.02)
+    time.sleep(0.2)
+
+    state = session.state()
+    assert state["ended"] is False, f"one bad sample ended the session: {state}"
+    assert state["failure"] == ""
+
+
+def test_an_idle_shell_backs_off_and_a_keystroke_brings_it_back(_fresh_session):
+    """The efficiency half, and the reason it cannot simply be a slow poll.
+
+    A shell at its prompt must not cost fifty wake-ups a second for as long as
+    the app is open; a keystroke's echo must not arrive a fifth of a second
+    late. `write` resets the clock, so typing is always on the fast interval.
+    """
+    session = _fresh_session
+    session._busy = time.monotonic() - (termpty.IDLE_PATIENCE + 1)
+    assert time.monotonic() - session._busy > termpty.IDLE_PATIENCE
+
+    class _Quiet:
+        def write(self, data):
+            pass
+
+    session.proc = _Quiet()
+    session.write("x")
+    assert time.monotonic() - session._busy < termpty.IDLE_PATIENCE, (
+        "a keystroke left the reader on the slow interval"
+    )

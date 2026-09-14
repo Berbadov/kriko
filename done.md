@@ -6,6 +6,37 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — 0.8.2: a second read of the terminal, before it is tested again
+
+The 0.8.1 install could not be tested properly, so the terminal path was read
+again rather than waited on. Two weaknesses, neither of them the reported bug,
+both of the kind that would have made the *next* report ambiguous.
+
+**One `isalive()` sample decided the session was over.** `_pump` concluded on a
+single empty-read-plus-not-alive, and the verdict it produced — "exited without
+producing any output" — is indistinguishable from a genuinely dead shell. A pty
+that answers `False` once while a spawn settles would therefore end the
+terminal for a reason nobody could argue with, on exactly the platform where
+the evidence is thinnest. It is now sampled twice with a 50ms gap: a shell that
+has really gone is reported one interval later, which costs nothing, and a
+flicker costs nothing at all. Tested with a pty that is dead on the first ask
+and alive after.
+
+**A fixed 20ms poll, forever.** Fifty wake-ups a second for a shell sitting at
+its prompt, for as long as the app is open. But a simple slow poll is wrong at
+the other end — a keystroke's echo arriving a fifth of a second late is what
+makes a terminal feel broken when it is working perfectly. So: fast (20ms)
+while anything is happening, backing off to 200ms after two quiet seconds, and
+**`write` resets the clock**, because a keystroke is the strongest available
+signal that a byte is about to arrive. Typing is therefore always on the fast
+interval.
+
+Neither changes POSIX at all: `ptyprocess.read()` blocks and never returns
+empty, so the branch these live in is never taken there. Re-verified against a
+real shell anyway — echo, clean `exit` reported as no failure, restart, close.
+
+Also: `_finish` read `self.shell` outside the lock it had just released.
+
 ### 2026-09-14 — nine ideas filed (B111-B119), one of them a bug with a root cause
 
 Written down the evening before the 0.8.1 install was tried. Filed rather than
