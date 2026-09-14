@@ -1,5 +1,6 @@
 <script lang="ts">
     import Jobs from "./Jobs.svelte";
+    import Operations from "./Operations.svelte";
     import ResearchRuns from "../lib/ResearchRuns.svelte";
     import Usage from "../lib/Usage.svelte";
     import Pipeline from "./Pipeline.svelte";
@@ -28,8 +29,14 @@
      * word "Activity" sitting above it twice.
      */
 
-    type Lens = "runs" | "pipeline" | "submissions";
+    type Lens = "live" | "runs" | "pipeline" | "submissions";
     const LENSES: { id: Lens; label: string }[] = [
+        // First, and the default: the other three answer "what happened",
+        // which is only the interesting question once something has. This one
+        // answers "what is happening", including the operations this app did
+        // not start — an agent working through the MCP server was invisible
+        // here entirely (B122).
+        { id: "live", label: "Live" },
         { id: "runs", label: "Runs" },
         { id: "pipeline", label: "What the pipeline did" },
         { id: "submissions", label: "What researchers sent" },
@@ -38,9 +45,9 @@
     // The lens arrives from the route: `#/jobs` is the address a job-starting
     // POST's own response points at, and `#/submissions` is in this app's
     // hints. A bookmark must land on the lens it named (see nav.ts ALIASES).
-    let { lens: initial = "runs" }: { lens?: string } = $props();
+    let { lens: initial = "live" }: { lens?: string } = $props();
     let lens = $state<Lens>(
-        (LENSES.some((l) => l.id === initial) ? initial : "runs") as Lens,
+        (LENSES.some((l) => l.id === initial) ? initial : "live") as Lens,
     );
 </script>
 
@@ -61,7 +68,9 @@
      would show the previous lens's rows under the new lens's heading for as
      long as the request takes. -->
 {#key lens}
-    {#if lens === "runs"}
+    {#if lens === "live"}
+        <Operations />
+    {:else if lens === "runs"}
         <Jobs />
         <!-- Under the jobs, not a lens of its own: a run and the job that ran
              it are two views of one thing, and a reader chasing "did that

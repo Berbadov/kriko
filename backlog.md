@@ -239,26 +239,18 @@ ask a question still cannot be answered — the prompt goes in on stdin and the
 transcript comes out, so this is a window rather than a conversation. See
 `done.md`, and `git show` for the entry that stated both defects in full.
 
-### B122 — Operations are invisible while they happen, whichever door they came in `[G5]`
-*"We still need to see those MCP operations in the app itself in real time,
-what's coming what's going, see the details."*
+### B122 — **DONE 2026-09-14** (0.8.4): the operations feed
 
-B121 fixed this for the *harness* plane only: a run Kriko starts now narrates
-itself into the job log. An operation that arrives through MCP — the reader's
-own Claude Code, in Kriko's terminal or anywhere else — is still visible only
-afterwards, as a `submissions` row.
+`app/operations.py` records one row per operation — opened before the work,
+closed after it — and the recorder wraps every MCP tool, every job the runner
+starts and every `/api/analyze`. `GET /api/operations` + `/stream`, and
+**Activity → Live** is the default lens. A tool call from the reader's own
+agent is now visible while it runs, which was the whole gap.
 
-That is the door the reader actually prefers, and the reasoning is sound: the
-terminal is for the person, the app is for the operations, and keeping them
-separate keeps a workflow harmonic instead of reimplementing Claude Code inside
-a panel. So the live view is not a harness feature. It is a *server* feature:
-every MCP call in, every answer out, every refusal with its reason, streaming,
-with the payload readable.
-
-Where it plugs in: `app/mcp_server.py` is the one place every tool call passes
-through, and `app/web/jobs.py` already owns an SSE stream both clients read.
-Needs the operation vocabulary in `docs/AGENT_OPERATIONS.md` §1 so a feed row
-says what kind of thing it is.
+Left open on purpose: `kriko tui` has no Live tab yet (it polls the same
+endpoint; the work is a fourth tab in `app/tui/screen.py`), and the feed cannot
+*cancel* an operation it is watching — an MCP call belongs to the process that
+made it.
 
 ### B123 — Protocols: how an operation spends a model, chosen from measurements `[G2][G5]`
 *"We need algorithms to pick the best api protocol/technique … qwen3.5 27b

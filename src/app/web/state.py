@@ -426,7 +426,61 @@ CREATE TABLE IF NOT EXISTS documents (
     retained_at TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS documents_retained ON documents (retained_at DESC);
+
+-- ── operations: what an agent is doing, whichever door it came in ────────
+--
+-- An *operation* is one unit of agent-driven work on the knowledge (see
+-- `docs/AGENT_OPERATIONS.md`). B121 made a run Kriko *starts* visible while it
+-- runs; this is the other half, and the bigger one — the door the reader
+-- actually prefers is their own coding agent talking to the MCP server, and
+-- that door was visible only afterwards, as a `submissions` row, and only when
+-- the operation happened to be a submission. A `lookup`, a `research_brief`, a
+-- `draft_pack` left no trace at all.
+--
+-- One row per call, opened when it starts and closed when it ends, so a call
+-- that is *still running* is a row rather than an absence: that is the whole
+-- difference between a feed and a log.
+--
+-- Interface state, for the reason at the top of this file: what an agent asked
+-- this installation is not pack content and must never reach a
+-- `content_digest`.
+--
+-- `request_json` and `response_json` are **summaries, not payloads**. A
+-- `submit_findings` call carries whole pages of `document_text`; storing them
+-- here would duplicate the `documents` table and make this the largest thing
+-- in the file. `app/operations.py` elides them and says how many characters it
+-- dropped.
+CREATE TABLE IF NOT EXISTS operations (
+    op_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- mcp | job | http | cli. Which door, because "who did this" is the first
+    -- question about anything surprising in this table.
+    door         TEXT NOT NULL DEFAULT '',
+    -- The operation vocabulary: research | agenda | author | recheck | read |
+    -- write. Coarser than `name` on purpose — a feed filtered by kind answers
+    -- "is anything growing the knowledge right now", which a list of nineteen
+    -- tool names does not.
+    kind         TEXT NOT NULL DEFAULT '',
+    -- The tool or endpoint as it is actually called, e.g. `submit_findings`.
+    name         TEXT NOT NULL DEFAULT '',
+    subject_id   TEXT NOT NULL DEFAULT '',
+    pack_id      TEXT NOT NULL DEFAULT '',
+    state        TEXT NOT NULL DEFAULT 'running',   -- running | ok | failed
+    request_json  TEXT NOT NULL DEFAULT '',
+    response_json TEXT NOT NULL DEFAULT '',
+    error        TEXT NOT NULL DEFAULT '',
+    ms           INTEGER,
+    started_at   TEXT NOT NULL DEFAULT '',
+    ended_at     TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS operations_started ON operations (op_id DESC);
 """
+
+#: The most operations one installation keeps. A feed, not an archive: the
+#: durable record of what research *produced* is `submissions`, `pipeline_runs`
+#: and `research_runs`, all of which outlive this. Rows here answer "what is
+#: happening" and "what just happened", and both questions have a short reach.
+OPERATIONS_KEPT = 2000
+
 
 #: The most documents one installation keeps, newest first. A bound rather
 #: than a sweep by age: what makes this table safe is that it cannot grow
@@ -1059,6 +1113,100 @@ def retain_documents(conn: sqlite3.Connection, documents: Sequence[dict]) -> int
         )
         conn.commit()
     return kept
+
+
+def open_operation(
+    conn: sqlite3.Connection,
+    *,
+    door: str,
+    kind: str,
+    name: str,
+    subject_id: str = "",
+    pack_id: str = "",
+    request: str = "",
+) -> int:
+    """Start an operation row. Returns its id.
+
+    Opened *before* the work rather than written after it, because a call that
+    is still running is the row a live feed most needs — and a call that never
+    returns leaves a `running` row that says so, which is the one thing a
+    write-on-completion log can never do.
+    """
+    cursor = conn.execute(
+        "INSERT INTO operations (door, kind, name, subject_id, pack_id, state,"
+        " request_json, started_at) VALUES (?,?,?,?,?,'running',?,?)",
+        (door, kind, name, subject_id, pack_id, request, _now()),
+    )
+    conn.commit()
+    return int(cursor.lastrowid)
+
+
+def close_operation(
+    conn: sqlite3.Connection,
+    op_id: int,
+    *,
+    state: str = "ok",
+    response: str = "",
+    error: str = "",
+    ms: int | None = None,
+) -> None:
+    conn.execute(
+        "UPDATE operations SET state = ?, response_json = ?, error = ?,"
+        " ms = ?, ended_at = ? WHERE op_id = ?",
+        (state, response, error, ms, _now(), op_id),
+    )
+    conn.execute(
+        "DELETE FROM operations WHERE op_id NOT IN ("
+        " SELECT op_id FROM operations ORDER BY op_id DESC LIMIT ?)",
+        (OPERATIONS_KEPT,),
+    )
+    conn.commit()
+
+
+def operations(
+    conn: sqlite3.Connection, *, limit: int = 50, after_id: int = 0
+) -> list[dict]:
+    """The newest operations, or everything since `after_id`.
+
+    Two shapes from one function because a feed needs both: a page on open,
+    then the tail on every poll. `after_id` returns *ascending* ids so a
+    consumer can append and remember the last one.
+    """
+    if after_id:
+        rows = conn.execute(
+            "SELECT * FROM operations WHERE op_id > ? ORDER BY op_id LIMIT ?",
+            (after_id, max(1, min(limit, 500))),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM operations ORDER BY op_id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def running_operations(conn: sqlite3.Connection) -> int:
+    """How many are open right now. The feed's one summary number."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM operations WHERE state = 'running'"
+    ).fetchone()
+    return int(row["n"])
+
+
+def interrupt_running_operations(conn: sqlite3.Connection) -> int:
+    """At startup, an operation still `running` belongs to a dead process.
+
+    The same rule the jobs table follows, for the same reason: a row that spins
+    forever after a restart is worse than no row, because it is the one thing a
+    reader cannot tell from work in progress.
+    """
+    done = conn.execute(
+        "UPDATE operations SET state = 'failed', error = 'interrupted',"
+        " ended_at = ? WHERE state = 'running'",
+        (_now(),),
+    )
+    conn.commit()
+    return done.rowcount or 0
 
 
 def document_for(conn: sqlite3.Connection, source_id: str) -> dict | None:
