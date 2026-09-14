@@ -7,7 +7,18 @@ name = "kriko"
 version = "0.8.0"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
-requires-python = ">=3.14"
+# Lowered from ">=3.14" on 2026-09-14 (B110). The floor was unsatisfiable in
+# practice: 3.13 was refused by this line, and 3.14.0rc2 — the only 3.14 many
+# platforms can fetch today — breaks the `pydantic` pinned in
+# `requirements.lock` on import. So a contributor had no interpreter on which a
+# clean `tools/setup.sh` could succeed, and the workaround for that is always a
+# hand-built environment nobody else can reproduce.
+#
+# Nothing was relaxed on a hunch: the whole of `tools/gate.sh` — pytest, both JS
+# suites, svelte-check and the stale-bundle check — passes on 3.13. The floor
+# was not load-bearing for anything the tests cover. Raise it again when there
+# is a reason a test can state, not because a newer version exists.
+requires-python = ">=3.13"
 
 dependencies = [
     "fastapi>=0.110",

@@ -5,8 +5,9 @@
 #     tools/setup.sh
 #
 # **Why this exists.** Getting a checkout to the point where `pytest` tells the
-# truth took, on 2026-09-13, six separate discoveries: that the tree needs
-# Python 3.14 and the machine had 3.13; that `requirements.lock` is the closure
+# truth took, on 2026-09-13, six separate discoveries: that the declared Python
+# floor was one the machine could not satisfy (B110); that `requirements.lock`
+# is the closure
 # the installer freezes and installing anything else makes the suite's central
 # claim false; that `-e .` is needed for `app.version` to report the tree's
 # version rather than a stale one; that the `pipeline` extra is not optional for
@@ -71,11 +72,9 @@ sys.exit(0 if sys.version_info[:len(want)] >= want else 1)
     bad "Delete it and re-run, once you have an interpreter that new:"
     bad "    uv python install $WANT && rm -rf $VENV && tools/setup.sh"
     bad ""
-    bad "Note that a *pre-release* $WANT is not enough either: the pydantic"
-    bad "pinned in requirements.lock cannot run on 3.14.0rc2. If no stable"
-    bad "$WANT exists yet for your platform, this tree cannot be set up as"
-    bad "declared — say so rather than working around it, because the"
-    bad "workaround is what makes an environment nobody else can reproduce."
+    bad "Note that a *pre-release* is not enough either: the pydantic pinned"
+    bad "in requirements.lock raises on import under 3.14.0rc2, which is why"
+    bad "the floor is 3.13 rather than 3.14 (B110, resolved 2026-09-14)."
     exit 1
 fi
 
@@ -139,7 +138,7 @@ if ! "$PY" -c "import fastapi, uvicorn, app.web.app, kriko.lookup, app.tui" 2>/t
     bad "If that traceback ends inside pydantic, this is the known pre-release"
     bad "problem: $("$PY" -V) is probably an rc, and requirements.lock pins a"
     bad "pydantic that cannot run on it. Install a stable interpreter and re-run:"
-    bad "    uv python install 3.14 && rm -rf $VENV && tools/setup.sh"
+    bad "    uv python install $WANT && rm -rf $VENV && tools/setup.sh"
     exit 1
 fi
 rm -f /tmp/kriko-import.$$

@@ -554,6 +554,16 @@ kriko tui --url http://127.0.0.1:8787
 kriko tui --no-start      # attach only; fail if nothing is serving
 ```
 
+**One click, on Windows.** `tauri/src-tauri/installer.nsh`'s
+`NSIS_HOOK_POSTINSTALL` writes a **Kriko Console** shortcut into the Start menu
+aimed at `$INSTDIR\kriko-sidecar.exe --tui`, and `NSIS_HOOK_POSTUNINSTALL`
+removes it. No second artifact ships: that binary is the `externalBin` Tauri
+installs anyway. A console window appears, which is the point rather than an
+oversight — the sidecar is built `console=True` (see
+`packaging/kriko-sidecar.spec` for why), Tauri suppresses the window with
+`CREATE_NO_WINDOW` when *it* spawns the engine, and nothing suppresses it here
+because here the terminal is the UI.
+
 **It is standalone, and that is the point.** `app/tui/` is already in the wheel
 and therefore already inside the sidecar the installer ships, so `--tui` costs
 one branch in `sidecar.py` and adds no build artifact — and it means a machine
