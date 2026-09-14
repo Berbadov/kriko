@@ -482,3 +482,60 @@ def test_kriko_is_a_command_rather_than_an_incantation():
     root = Path(__file__).resolve().parents[3]
     data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     assert data["project"]["scripts"]["kriko"] == "app.cli:main"
+
+
+# ── what running the frozen binary found ────────────────────────────────
+
+def test_a_narrow_terminal_still_gets_a_readable_header():
+    """Found under a pty that reported no window size, which clamps to 20
+    columns. `pad` sliced with a negative width — which slices from the *end* —
+    so a 17-character title rendered as its first character, and the header was
+    a bare URL. A terminal that reports nothing is exactly the case nobody
+    tests by looking at it."""
+    state = _state()
+    state.engine_label = "http://127.0.0.1:40201 (own engine)"
+    lines = screen.render(state, 20, 10)
+    text = _plain(lines)
+    assert "kriko" in text, "the name is the first thing to keep, not the URL"
+    assert all(len(_plain([line])) <= 20 for line in lines)
+
+
+def test_pad_never_slices_backwards():
+    assert screen.pad("a title", 0) == ""
+    assert screen.pad("a title", -16) == ""
+    assert screen.pad("a title", 1) == "a"
+    assert screen.pad("a title", 4) == "a t…"
+    assert screen.pad("ab", 5) == "ab   "
+
+
+def test_the_console_mode_silences_logging_before_it_can_print(monkeypatch):
+    """The frozen binary's first line of output was a log line.
+
+    `app.tui.main` calls `silence_stderr()`, but from `app.sidecar` that is too
+    late: `logs.configure()` has already attached the handler *and* already
+    logged "logging to …". So the sidecar has to silence it before configuring,
+    and the order is what this holds.
+    """
+    from app import sidecar
+
+    order = []
+    monkeypatch.setattr("app.logs.silence_stderr", lambda: order.append("silence"))
+    monkeypatch.setattr("app.logs.configure", lambda *a, **k: order.append("configure"))
+    monkeypatch.setattr("app.tui.main", lambda **kw: 0)
+    monkeypatch.setattr(sidecar, "reserve", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
+    sidecar.main(["--tui"])
+    assert order == ["silence", "configure"]
+
+
+def test_the_key_banner_is_not_printed_over_the_console(monkeypatch, capsys):
+    """A bare `print` to stderr, which no logging handler can suppress. It
+    would land on the reader's terminal a moment before the console draws."""
+    from app import sidecar
+
+    monkeypatch.setattr("app.logs.silence_stderr", lambda: None)
+    monkeypatch.setattr("app.logs.configure", lambda *a, **k: None)
+    monkeypatch.setattr("app.keys.load", lambda: {"EXA_API_KEY": "x"})
+    monkeypatch.setattr("app.tui.main", lambda **kw: 0)
+    monkeypatch.setattr(sidecar, "reserve", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
+    sidecar.main(["--tui"])
+    assert "API key(s)" not in capsys.readouterr().err
