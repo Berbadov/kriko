@@ -12,6 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app import operations
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for  # noqa: F401
@@ -167,6 +168,28 @@ def _packs_behind(store, claims) -> list[dict]:
     return [{"pack_id": r["pack_id"], "version": r["version"]} for r in rows]
 
 
+def _record_analysis(request, body, mapped, result) -> None:
+    """One row in the operations feed for one analysis. Never raises."""
+    try:
+        with operations.record(
+            request.app.state.settings.app_state_path,
+            door="extension" if body.origin == "extension" else "app",
+            kind="lookup",
+            name="analyze",
+            arguments={"url": body.url, "identity": mapped.identity},
+        ) as outcome:
+            outcome["response"] = operations.summarise(
+                {
+                    "subjects": list(result.resolution.subject_ids),
+                    "claims": len(result.claims),
+                    "coverage": result.coverage,
+                    "method": result.resolution.method,
+                }
+            )
+    except Exception:  # noqa: BLE001 — see the call site
+        pass
+
+
 @router.post("/analyze")
 def analyze(
     request: Request,
@@ -296,6 +319,14 @@ def analyze(
     # log is the parity corpus and the demand signal, this is the reader's
     # history. Collapsing them would make clearing your history delete
     # research data.
+    # And the feed (B122). An analysis is an operation too — it is the one the
+    # reader's browser makes, so a feed that showed only agent work would go
+    # silent exactly while the product is being used. Written after the answer
+    # rather than around it: the work is a local lookup measured in
+    # milliseconds, so a `running` row would never be seen, and a recorder that
+    # can raise must not stand between a page and its claims.
+    _record_analysis(request, body, mapped, result)
+
     payload["lookup_id"] = state.record_lookup(
         app_state,
         source=_SOURCE_FOR_ORIGIN[body.origin],

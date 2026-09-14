@@ -41,6 +41,7 @@ from app.web.routers import (
     jobs,
     keys,
     marks,
+    operations,
     packs,
     pipeline as pipeline_router,
     query,
@@ -101,6 +102,11 @@ async def lifespan(app: FastAPI):
         conn = state.connect(app.state.settings.app_state_path)
         try:
             stranded = pipeline.mark_interrupted(conn)
+            # And the operations feed, for the same reason and with one extra:
+            # these rows are written by the *MCP process*, which this one does
+            # not supervise. A tool call that died with that process would
+            # otherwise read as still running for the life of this install.
+            state.interrupt_running_operations(conn)
         finally:
             conn.close()
         if stranded:
@@ -182,6 +188,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         jobs.router,
         keys.router,
         marks.router,
+        operations.router,
         submissions.router,
         terminal.router,
     ):
