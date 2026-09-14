@@ -44,6 +44,37 @@
   Sleep 500
 !macroend
 
+; ── the console, as a thing you double-click ─────────────────────────────
+;
+; `kriko-sidecar.exe --tui` is the operator console (src/app/tui/). It is the
+; same binary Tauri already installs beside Kriko.exe as an externalBin, so this
+; ships no second artifact -- it is a shortcut with an argument.
+;
+; It exists because the console's whole reason for existing is a window that
+; would not open, and an entry point of "find a terminal, find the install
+; directory, type a flag" is not an answer to that. Start menu, one click, a
+; real console window.
+;
+; A console window does appear, and that is the point rather than an oversight:
+; the sidecar is built `console=True` (see packaging/kriko-sidecar.spec, which
+; explains why -- windowed mode leaves sys.stdout as None and the port handshake
+; would raise). Tauri's shell plugin suppresses it with CREATE_NO_WINDOW when it
+; spawns the engine; nothing suppresses it here, because here the terminal *is*
+; the UI.
+;
+; Attaching or starting is the console's own decision: with the app running it
+; finds the engine on EXTENSION_PORT and shares its store and jobs; with nothing
+; running it starts an engine in-process. Either way one click is the whole
+; interaction.
+!macro NSIS_HOOK_POSTINSTALL
+  DetailPrint "Adding the Kriko Console shortcut..."
+  CreateShortcut "$SMPROGRAMS\Kriko Console.lnk" "$INSTDIR\kriko-sidecar.exe" "--tui" "$INSTDIR\Kriko.exe" 0
+!macroend
+
+!macro NSIS_HOOK_POSTUNINSTALL
+  Delete "$SMPROGRAMS\Kriko Console.lnk"
+!macroend
+
 !macro NSIS_HOOK_PREUNINSTALL
   DetailPrint "Stopping any running Kriko..."
   ; The shell first: its exit closes the sidecar's stdin, which is the engine's
