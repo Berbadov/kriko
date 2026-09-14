@@ -479,16 +479,20 @@ HINTS = (
      "the message names, or switch to another plane on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",
       "invalid api key", "oauth"),
-     "the CLI is not logged in. Run `claude` once in a terminal, log in, and "
-     "press this again."),
+     "the CLI is not logged in, and only you can log it in -- no API call can "
+     "do it on its behalf. Open the terminal in this app (Ctrl+`), run "
+     "`claude`, and follow the login prompt (or type `/login`). Then press "
+     "this again. Kriko Console in your Start menu opens the same shell "
+     "without the app."),
     (("credit balance", "billing", "payment"),
      "the account behind the CLI cannot pay for this run."),
     (("error_max_turns",),
      "the agent ran out of turns before it reported. This is Kriko's to fix, "
      "not yours -- please send the log."),
     (("enoent", "not recognized", "cannot find the path"),
-     "the CLI could not start. Reinstall Claude Code, or check that `claude` "
-     "runs in a terminal."),
+     "the CLI could not start. Check that `claude` runs in the terminal in "
+     "this app; if it is installed somewhere unusual, set KRIKO_HARNESS_DIRS "
+     "to its folder. The Agents screen names the binary Kriko found."),
 )
 
 

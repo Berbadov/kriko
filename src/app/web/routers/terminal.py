@@ -109,7 +109,16 @@ def _ensure(cols: int = 80, rows: int = 24) -> str:
     Returns rather than raises because every caller wants to answer *with* the
     reason — the reader is looking at the panel, and "could not start: ..." in
     it is the whole point of B109.
+
+    A session that has *ended* is left ended. Respawning here would be a
+    surprise rather than a kindness: the polling client asks for state twice a
+    second, so a shell someone deliberately `exit`ed would come straight back,
+    and the one signal saying it is gone would never survive long enough to be
+    rendered. Starting a new one is `restart`, and it is a thing the reader
+    asks for.
     """
+    if SESSION.state()["ended"]:
+        return ""
     try:
         SESSION.start(cols=cols, rows=rows)
     except Exception as exc:
@@ -149,6 +158,22 @@ def terminal_input(body: Input) -> dict:
         logger.exception("terminal write failed")
         raise HTTPException(503, f"{type(exc).__name__}: {exc}") from exc
     return {"ok": True}
+
+
+@router.post("/restart", dependencies=[guard])
+def terminal_restart(body: Size) -> dict:
+    """A new shell, and a clean transcript.
+
+    `exit` is an ordinary thing to type, and before this the terminal had no
+    way back from it for the life of the app. So is a shell that dies on its
+    own, which is the state the 0.8.0 Windows install landed in permanently.
+    """
+    try:
+        SESSION.restart(cols=body.cols, rows=body.rows)
+    except Exception as exc:
+        logger.exception("terminal session failed to restart")
+        raise HTTPException(503, f"{type(exc).__name__}: {exc}") from exc
+    return SESSION.state()
 
 
 @router.post("/resize", dependencies=[guard])

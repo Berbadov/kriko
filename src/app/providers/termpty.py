@@ -26,6 +26,7 @@ is told so rather than silently skipped.
 import os
 import sys
 import threading
+import time
 
 WINDOWS = sys.platform == "win32"
 
@@ -33,6 +34,11 @@ WINDOWS = sys.platform == "win32"
 #: after a command finished still sees it; small enough that a runaway writer
 #: costs a bounded amount of memory.
 SCROLLBACK = 256 * 1024
+
+#: How long the reader waits when the shell is alive and has said nothing.
+#: Only Windows ever gets here (see `_pump`); short enough to feel instant,
+#: long enough that an idle prompt is not a busy loop.
+IDLE_SECONDS = 0.02
 
 
 class TermSession:
@@ -55,6 +61,14 @@ class TermSession:
         self._generation = 0
         self.failure: str = ""
         self.ended = False
+        #: Which shell was spawned, for the failure message. "EOFError: Pty is
+        #: closed" does not say whether COMSPEC resolved to something sane.
+        self.shell: str = ""
+        #: Held across the whole of `start`. The check-and-spawn was not atomic,
+        #: and the panel calls `/stream` and `/resize` at the same moment on
+        #: mount — two threads could both find no process and both spawn one,
+        #: leaving an orphaned shell nobody reads and nobody kills.
+        self._spawning = threading.Lock()
 
     # ── lifetime ────────────────────────────────────────────────────────
 
@@ -65,6 +79,10 @@ class TermSession:
         that can answer with it, and a consumer who connects a second later
         gets the same reason from `state()` rather than an empty screen.
         """
+        with self._spawning:
+            self._start_locked(cols, rows)
+
+    def _start_locked(self, cols: int, rows: int) -> None:
         if self.proc is not None and self.alive():
             return
         home = os.path.expanduser("~")
@@ -88,6 +106,7 @@ class TermSession:
             raise
         with self._lock:
             self.proc = proc
+            self.shell = shell
             self.failure = ""
             self.ended = False
             self._generation += 1
@@ -131,6 +150,27 @@ class TermSession:
         except Exception:
             pass
 
+    def restart(self, cols: int = 80, rows: int = 24) -> None:
+        """Throw away the shell and its transcript, and start again.
+
+        Typing `exit` is an ordinary thing to do, and until this existed it
+        ended the terminal for the life of the app: the session stayed
+        `ended`, `/stream` returned at once, and the panel had nothing to
+        offer but the message. A shell you cannot restart is not a shell.
+
+        The transcript goes with it, deliberately. Keeping the old one would
+        mean the new shell's first prompt arrives below a dead one's output
+        with nothing marking the join, and the client's byte offset would be
+        pointing into a session that no longer exists.
+        """
+        self.close()
+        with self._lock:
+            self._buffer = ""
+            self._produced = 0
+            self.failure = ""
+            self.ended = False
+        self.start(cols=cols, rows=rows)
+
     # ── the reader thread ───────────────────────────────────────────────
 
     def _pump(self, proc, generation: int) -> None:
@@ -139,22 +179,77 @@ class TermSession:
         Runs whether or not anyone is watching — that is the whole point. The
         `generation` check keeps a thread belonging to a previous, restarted
         session from writing into the current one's transcript.
+
+        **An empty read is not end-of-file, and assuming it was is what broke
+        Windows.** `ptyprocess.read()` blocks until there is something and
+        raises `EOFError` at the end, so on POSIX an empty return never happens
+        and treating it as the end is harmless. `pywinpty` does not work that
+        way: its `read()` comes back with `''` the moment there is nothing to
+        say yet, which on a freshly spawned shell is immediately — before
+        `cmd.exe` has written its first byte. This loop then called `_end()`,
+        the session was marked finished, and the next read raised
+        `EOFError: Pty is closed`, which is exactly the report from the 0.8.0
+        install: a terminal that ends before it starts, on Windows only, having
+        worked under a real pty on Linux.
+
+        So the question an empty read asks is `isalive()`, not "are we done".
+        One loop serves both platforms, because on POSIX the branch is simply
+        never taken.
         """
         while True:
             try:
                 chunk = proc.read(65536)
             except (EOFError, OSError) as exc:
-                self._fail(f"{type(exc).__name__}: {exc}", generation)
+                # The shell going away is ordinary — someone typed `exit`. It
+                # is only a *failure* if it never lived long enough to speak.
+                self._finish(proc, generation, f"{type(exc).__name__}: {exc}")
                 return
             except Exception as exc:  # pragma: no cover - defensive
                 self._fail(f"{type(exc).__name__}: {exc}", generation)
                 return
-            if not chunk:
-                self._end(generation)
+            if chunk:
+                if isinstance(chunk, bytes):
+                    chunk = chunk.decode("utf-8", "replace")
+                self._append(chunk, generation)
+                continue
+            if not self._still_alive(proc):
+                self._finish(proc, generation, "")
                 return
-            if isinstance(chunk, bytes):
-                chunk = chunk.decode("utf-8", "replace")
-            self._append(chunk, generation)
+            # Alive and quiet. Sleeping here rather than spinning: this is a
+            # background thread for the life of the process, and a busy loop
+            # would cost a core for a shell sitting at its prompt.
+            time.sleep(IDLE_SECONDS)
+
+    @staticmethod
+    def _still_alive(proc) -> bool:
+        try:
+            return bool(proc.isalive())
+        except Exception:  # pragma: no cover - a closed pty answers by raising
+            return False
+
+    def _finish(self, proc, generation: int, raised: str) -> None:
+        """Record how the shell ended, and whether that counts as a failure.
+
+        A shell that ran and then exited is not an error — it is `exit`. A shell
+        that never produced a byte is, and the difference is the whole of what
+        the reader needs to know. `EOFError: Pty is closed` on its own said
+        neither, which is why the first Windows report could not be acted on.
+        """
+        with self._lock:
+            if generation != self._generation:
+                return
+            spoke = self._produced > 0
+            status = getattr(proc, "exitstatus", None)
+        detail = f"{self.shell or 'the shell'}"
+        if status is not None:
+            detail += f" exited with status {status}"
+        else:
+            detail += " ended"
+        if spoke:
+            self._end(generation)
+            return
+        self._fail(f"{detail} without producing any output"
+                   + (f" ({raised})" if raised else ""), generation)
 
     def _append(self, text: str, generation: int | None = None) -> None:
         with self._lock:
