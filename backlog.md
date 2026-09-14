@@ -239,6 +239,65 @@ ask a question still cannot be answered — the prompt goes in on stdin and the
 transcript comes out, so this is a window rather than a conversation. See
 `done.md`, and `git show` for the entry that stated both defects in full.
 
+### B122 — Operations are invisible while they happen, whichever door they came in `[G5]`
+*"We still need to see those MCP operations in the app itself in real time,
+what's coming what's going, see the details."*
+
+B121 fixed this for the *harness* plane only: a run Kriko starts now narrates
+itself into the job log. An operation that arrives through MCP — the reader's
+own Claude Code, in Kriko's terminal or anywhere else — is still visible only
+afterwards, as a `submissions` row.
+
+That is the door the reader actually prefers, and the reasoning is sound: the
+terminal is for the person, the app is for the operations, and keeping them
+separate keeps a workflow harmonic instead of reimplementing Claude Code inside
+a panel. So the live view is not a harness feature. It is a *server* feature:
+every MCP call in, every answer out, every refusal with its reason, streaming,
+with the payload readable.
+
+Where it plugs in: `app/mcp_server.py` is the one place every tool call passes
+through, and `app/web/jobs.py` already owns an SSE stream both clients read.
+Needs the operation vocabulary in `docs/AGENT_OPERATIONS.md` §1 so a feed row
+says what kind of thing it is.
+
+### B123 — Protocols: how an operation spends a model, chosen from measurements `[G2][G5]`
+*"We need algorithms to pick the best api protocol/technique … qwen3.5 27b
+performs well under 80k tokens at this batch size but opus 4.6 can handle Z —
+which signals a ratio."*
+
+A **protocol** is context window per call, batch size, what is re-sent, what is
+summarised, when to stop. The failure is two-sided: too little batching burns
+tokens re-sending context, too much piles context until the model composes
+instead of quoting — and this codebase catches the second at the grounding gate,
+which means the batch is refused *and* the tokens are still spent.
+
+The protocol is a property of the model, not of the operation, so it is a table
+keyed by model with a picker on top. The table cannot be guessed: it is the
+output of B111, which is why that row is a dependency rather than a companion.
+Search providers belong here too — Exa is wired, Tavily and the rest are not,
+and the choice is the protocol's rather than a call site's.
+
+See `docs/AGENT_OPERATIONS.md` §3.
+
+### B124 — Test whether a coding-agent harness can be a function at all `[G5]`
+*"I'm suspecting that code agent harnesses do not like to be used as functions;
+otherwise we would fix it easily."*
+
+Worth taking seriously rather than fixing around. A coding-agent CLI is built
+for a person in a loop: it wants a terminal, it carries the reader's whole
+configuration, it decides when it is done, it answers in prose it was free to
+shape. Kriko asks it to be a function. Every defect this plane has had is that
+mismatch — the variadic `--allowedTools` eating the prompt, the reader's own MCP
+servers loading from their home directory, an envelope shape that differed
+between builds, OAuth only a human can complete, a run that cannot be asked a
+question.
+
+The test is the same one B111 needs: one brief, N runs, harness plane against
+API plane, comparing refusal rate, tokens and wall-clock. If the harness plane
+is structurally worse rather than occasionally unlucky, the conclusion is that
+the harness is a door for a person (B122) and the unattended path belongs to
+the API plane with a protocol (B123).
+
 ### B111 — A benchmark for the planes: fixed cases, real costs `[G2][G5]`
 *"Some very specific cases and cost measurements to understand how different
 agents perform."*

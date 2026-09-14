@@ -105,6 +105,16 @@ class Harness:
     #: being filled with a guess.
     structured: bool = True
     env: dict = field(default_factory=dict)
+    #: What to run instead of `args` when this machine's CLI does not list
+    #: `needs_in_help` among the things it can do. The streaming vector is the
+    #: one this plane wants (see `_claude_args`); this is the one that still
+    #: works on a build that has never heard of it. Empty means there is no
+    #: fallback and `args` is the only vector.
+    plain_args: tuple[str, ...] = ()
+    #: The word that must appear in `--help` for `args` to be usable at all.
+    #: Not an option name — `declared` already covers those — but a *value*,
+    #: which is the part of a CLI's contract that has no flag to probe.
+    needs_in_help: str = ""
     #: Flags to add **only if this machine's CLI declares them**. Hygiene
     #: rather than function: a reader on an older build must not lose the
     #: plane over a flag their `claude` has never heard of, and `--help` is
@@ -168,6 +178,19 @@ KNOWN = (
         # auth, the built-in tools and permissions alone. Both are what this
         # spawn already claimed to be.
         preferred=("--strict-mcp-config", "--safe-mode"),
+        # The reader's Windows CLI is not this machine's. A build whose
+        # `--output-format` never listed `stream-json` would refuse the
+        # streaming vector outright and the plane would be dead again, with
+        # the same "Claude Code exited 1" it took two releases to get out of.
+        # So: watch the run where the CLI can stream, and fall back to the
+        # single-object reply where it cannot. Visibility is the thing worth
+        # losing; the plane is not.
+        needs_in_help="stream-json",
+        plain_args=(
+            "-p",
+            "--output-format", "json",
+            "--allowedTools", ",".join(SEARCH_TOOLS),
+        ),
     ),
     Harness(
         "opencode",
@@ -269,8 +292,32 @@ def chosen(preferred: str = "") -> Harness | None:
 #: once per subject in an agenda run and spawning a second process to ask a
 #: question whose answer cannot change mid-run is waste.
 _DECLARED: dict[str, frozenset[str]] = {}
+_HELP: dict[str, str] = {}
 
 _OPTION = re.compile(r"--[a-z][a-z0-9-]+")
+
+
+def helptext(executable: str) -> str:
+    """What `--help` printed, cached. `""` on any failure.
+
+    The raw text as well as the option names, because not every capability is
+    an option: `--output-format` exists on every build of the CLI and the
+    *values* it accepts are what changed. A vector that asks for a format this
+    machine's CLI does not list is a plane that cannot start, which is B92's
+    failure with a different flag.
+    """
+    if executable in _HELP:
+        return _HELP[executable]
+    try:
+        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
+            [executable, "--help"], capture_output=True, text=True, timeout=30
+        )
+        text = (done.stdout or "") + (done.stderr or "")
+    except Exception:  # noqa: BLE001 — see `declared`
+        text = ""
+    _HELP[executable] = text
+    _DECLARED[executable] = frozenset(_OPTION.findall(text))
+    return text
 
 
 def declared(executable: str) -> frozenset[str]:
@@ -284,17 +331,9 @@ def declared(executable: str) -> frozenset[str]:
     costs the reader nothing but the hygiene flags — a missing CLI is already
     `NoHarness`, and a `--help` that hangs must not become a plane that hangs.
     """
-    if executable in _DECLARED:
-        return _DECLARED[executable]
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "--help"], capture_output=True, text=True, timeout=30
-        )
-        found = frozenset(_OPTION.findall((done.stdout or "") + (done.stderr or "")))
-    except Exception:
-        found = frozenset()
-    _DECLARED[executable] = found
-    return found
+    if executable not in _DECLARED:
+        helptext(executable)
+    return _DECLARED.get(executable, frozenset())
 
 
 def command_for(one: Harness) -> list[str]:
@@ -308,7 +347,11 @@ def command_for(one: Harness) -> list[str]:
     """
     executable = locate(one) or one.executable
     supported = declared(executable)
-    return [executable, *one.args, *(f for f in one.preferred if f in supported)]
+    args = one.args
+    if one.needs_in_help and one.plain_args:
+        if one.needs_in_help not in helptext(executable):
+            args = one.plain_args
+    return [executable, *args, *(f for f in one.preferred if f in supported)]
 
 
 # ── The output contract ──────────────────────────────────────────────────────
@@ -901,7 +944,21 @@ class HarnessResearcher(AgentResearcher):
         try:
             for line in proc.stdout:
                 self._keep(line)
-                if say is None or narrated >= MAX_NARRATED:
+                if say is None:
+                    continue
+                if narrated >= MAX_NARRATED:
+                    # Said once, then silence. A cap that stops quietly leaves
+                    # the reader looking at exactly what B121 fixed — a run
+                    # that went silent — with no way to tell the two apart.
+                    if narrated == MAX_NARRATED:
+                        narrated += 1
+                        try:
+                            say(
+                                f"(still running; the next actions are not "
+                                f"shown — {MAX_NARRATED}-line cap)"
+                            )
+                        except Exception:  # noqa: BLE001
+                            say = None
                     continue
                 spoken = self._narrate(line)
                 if not spoken:
