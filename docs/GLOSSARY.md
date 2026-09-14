@@ -18,7 +18,7 @@ it is **not**.
 | **pack** | One product category as data: subjects, claims, vocabulary, trust tiers, adapters, and its own bar for what is worth surfacing. The thing a third party authors. Never code that runs inside the engine. | `packs/<name>/`, `docs/PACK_CONTRACT.md` |
 | **subject** | One specific manufactured thing the store can answer about — a variant, an engine, a part. What a lookup resolves *to*. | `kriko/store/` |
 | **claim** | One thing known to go wrong, attached to a subject, with evidence behind it. | `kriko/store/` |
-| **evidence** | The document and the verbatim quote a claim rests on. A claim whose quote cannot be found in its document is refused. | `app/findings.py` |
+| **evidence** | The verbatim quote a claim rests on, and the source it came from. A claim whose quote cannot be found in its document is refused — but the document itself is **not** kept today, so that check cannot be repeated (B120). | `app/findings.py` |
 | **identity** | The `key=value` pairs that name a product (`make=volkswagen model=golf`). Pack-declared — the engine never knows which keys exist. | `kriko/lookup/match.py` |
 | **adapter** | How to read one website: selectors, label mappings, and the `local_panel` block the extension draws from the reader's own page. **Pack data, not code** — a pack that could ship JavaScript would be granted the right to run it on every page the extension sees. | `kriko/adapters.py` |
 | **agenda** | What to research next, computed on read from four signals. A list of rows, not a queue. | `app/agenda.py` |
@@ -47,8 +47,7 @@ what it costs, and that is the whole reason they are named separately.
 
 ## Words that mean more than one thing
 
-These are the two that actually cause confusion, including in this repository's
-own prose.
+Four, all of which already cause confusion in this repository's own prose.
 
 **"agent" means three things.** Disambiguate every time:
 
@@ -70,6 +69,13 @@ meant.
 then the engine" is about the desktop one and reads oddly otherwise. Prefer
 "the desktop shell" and "the terminal's shell".
 
+**"ledger" means two things, and one of them is a job-log label.** The
+*evidence ledger* is `src/kriko/ledger/` — documents, chunks, extractions,
+clusters, verdicts — and it is build-time machinery. The research job's
+**"ledgering"** stage is not it: that writes verdicts to `app.sqlite` through
+`log_submission`, a different database doing interface bookkeeping. Prefer "the
+evidence ledger" and "the submissions log" (B120 found this one).
+
 **"extension" is singular but lives in two directories.** `extension/` is the
 browser client that ships; `extension_ui/` holds its manifest. Both are the one
 extension.
@@ -85,7 +91,7 @@ reader has no terminal", that is why.
 1. **Name it for what it is to the person using it**, not for its mechanism.
    `agenda` rather than `priority_queue`; `plane` rather than `backend`.
 2. **One word, one meaning.** If a word already means something here, pick
-   another — the two entries above cost more than a longer name would have.
+   another — the entries above cost more than a longer name would have.
 3. **A word that appears in the UI belongs here**, because that is the word the
    reader will use when they report something.
 4. **Pack vocabulary is never an identifier in the engine or the client.** No
