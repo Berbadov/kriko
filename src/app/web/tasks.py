@@ -13,6 +13,7 @@ the whole point of the jobs layer.
 """
 
 import importlib
+import secrets
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -107,7 +108,19 @@ def _researcher(params: dict):
     from app.providers import api_researcher
 
     price = float(params.get("price_per_call") or DEFAULT_PRICE_PER_CALL)
-    return api_researcher(price_per_call=price)
+    # The protocol: named by the caller when something is deliberately
+    # measuring one (the benchmark), and otherwise chosen from this
+    # installation's own measurements. `settings` is not in scope here, so the
+    # path comes through params — the same way every other per-run decision
+    # reaches this function.
+    from app import protocols
+
+    named = str(params.get("protocol") or "")
+    return api_researcher(
+        price_per_call=price,
+        app_state_path=params.get("app_state_path"),
+        spend=protocols.BY_NAME.get(named) if named else None,
+    )
 
 
 def _budget(params: dict) -> float:
@@ -413,7 +426,9 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             progress.log(f"query: {query}")
             emit.event(f"query: {query}", detail_kind="query")
 
-        researcher = _researcher(params)
+        # The interface's own database, so the plane can read what this
+        # installation has measured about the model it is about to use.
+        researcher = _researcher({**params, "app_state_path": settings.app_state_path})
         # What the plane does while it does it (B121). Duck-typed, like
         # `tokens_used` below: a plane that can narrate gets somewhere to
         # narrate to, and one that cannot is unaffected. The job log is the
@@ -1192,8 +1207,111 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     return written
 
 
+def bench(settings, params: dict, progress: Progress) -> dict:
+    """Run the fixed cases across the planes, and measure (B111).
+
+    A job rather than a request for the ordinary reason — three cases on two
+    planes is minutes of work — and for one more: it spends money on the paid
+    plane, so it has to be cancellable and its budget has to be visible in the
+    row that started it.
+
+    The planes are asked for explicitly or discovered. The `agent` plane is
+    never included: its `gather` returns nothing by design, so benchmarking it
+    would measure the brief writer and report zero of everything.
+    """
+    from app import bench as bench_mod
+
+    conn = connect(settings.store_path)
+    try:
+        chosen = [
+            one.strip()
+            for one in str(params.get("planes") or "").split(",")
+            if one.strip()
+        ] or bench_mod.planes_available(settings)
+        if not chosen:
+            raise ValueError(
+                "no plane can run here: install a coding-agent CLI for the "
+                "harness plane, or add the API keys for the paid one"
+            )
+        found = bench_mod.cases(
+            conn,
+            pack_id=str(params.get("pack_id") or ""),
+            limit=int(params.get("cases") or bench_mod.DEFAULT_CASES),
+        )
+        if not found:
+            raise ValueError("no subjects installed, so there is nothing to measure")
+    finally:
+        conn.close()
+
+    # Which protocols to sweep. Empty string means "whatever the plane would
+    # choose for itself", which is the honest default: a benchmark that always
+    # swept every protocol would multiply a reader's bill by three to answer a
+    # question they did not ask. Naming them is how B123's table gets filled.
+    protocols_asked = [
+        one.strip() for one in str(params.get("protocols") or "").split(",") if one.strip()
+    ] or [""]
+
+    batch_id = secrets.token_hex(8)
+    app_conn = state.connect(settings.app_state_path)
+    rows = []
+    try:
+        total = len(found) * len(chosen) * len(protocols_asked)
+        done = 0
+        for case in found:
+            for plane in chosen:
+                for protocol in protocols_asked:
+                    progress.check()
+                    progress.set(
+                        done / max(1, total),
+                        f"{plane}: {case.get('label') or case['subject_id']}",
+                    )
+                    row = bench_mod.run_case(
+                        settings,
+                        case,
+                        plane=plane,
+                        protocol=protocol,
+                        max_documents=int(params.get("max_documents") or 3),
+                        budget_usd=float(
+                            params.get("budget_usd") or bench_mod.DEFAULT_BUDGET_USD
+                        ),
+                        batch_id=batch_id,
+                    )
+                    state.record_bench(app_conn, row)
+                    rows.append(row)
+                    done += 1
+                    # One line per measurement, so the reader watching the job
+                    # sees the comparison build rather than a number at the end.
+                    progress.log(
+                        f"{plane}{' · ' + protocol if protocol else ''} · "
+                        f"{row['subject']}: "
+                        + (
+                            f"failed — {row['error']}"
+                            if row.get("error")
+                            else f"{row.get('accepted', 0)} kept, "
+                            f"{row.get('refused', 0)} refused, "
+                            f"{row.get('documents', 0)} source(s), "
+                            f"{(row.get('ms') or 0) / 1000:.1f}s"
+                            + (f", {row['tokens']} tokens" if row.get("tokens") else "")
+                        )
+                    )
+        summary = state.bench_summary(app_conn)
+    finally:
+        app_conn.close()
+
+    progress.set(1.0, f"{len(rows)} measurement(s) across {len(chosen)} plane(s)")
+    return {
+        "batch_id": batch_id,
+        "cases": [case["subject_id"] for case in found],
+        "planes": chosen,
+        "protocols": protocols_asked,
+        "rows": rows,
+        "summary": summary,
+    }
+
+
 HANDLERS = {
     "research": research,
+    "bench": bench,
     "agenda_run": agenda_run,
     "research_undo": research_undo,
     "pack_build": pack_build,

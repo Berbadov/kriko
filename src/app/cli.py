@@ -189,6 +189,104 @@ def cmd_tui(args, store) -> int:
     return run_tui(url=args.url, allow_start=not args.no_start)
 
 
+def cmd_bench(args, store) -> int:
+    """Measure the planes against the same cases (B111).
+
+    In the terminal as well as in the app, because this is the command whose
+    output is an *argument* — "the harness plane refuses four findings in five
+    and the API plane one in three" is a sentence somebody has to be able to
+    paste. It runs in this process rather than submitting a job: a benchmark
+    watched by nobody is a benchmark nobody trusts, and the reader running it
+    from a terminal is already watching.
+    """
+    from app import bench as bench_mod
+    from app.web import state
+    from app.web.settings import Settings
+
+    # The app's own database as a *sibling of the store*, the way
+    # `mcp_server._app_state_path` derives it. That is what makes `--store`
+    # self-contained: a measurement against a store somewhere else must not
+    # land in the reader's real history, and a benchmark is exactly the thing
+    # someone runs against a copy.
+    store_path = Path(args.store) if args.store else None
+    settings = (
+        Settings(
+            store_path=store_path,
+            app_state_path=store_path.parent / "app.sqlite",
+            analysis_log_path=store_path.parent / "analyses.jsonl",
+        )
+        if store_path
+        else Settings()
+    )
+    planes = [one for one in (args.plane or []) if one] or bench_mod.planes_available(
+        settings
+    )
+    if not planes:
+        print("no plane can run here: install a coding-agent CLI, or add API keys")
+        return 1
+    found = bench_mod.cases(store, pack_id=args.pack or "", limit=args.cases)
+    if not found:
+        print("no subjects installed, so there is nothing to measure")
+        return 1
+
+    conn = state.connect(settings.app_state_path)
+    try:
+        for case in found:
+            for plane in planes:
+                for protocol in (args.protocol or [""]):
+                    row = bench_mod.run_case(
+                        settings,
+                        case,
+                        plane=plane,
+                        protocol=protocol,
+                        max_documents=args.documents,
+                        budget_usd=args.budget,
+                    )
+                    state.record_bench(conn, row)
+                    label = f"{plane}/{protocol}" if protocol else plane
+                    if row.get("error"):
+                        print(f"{label:14} {row['subject'][:32]:32} "
+                              f"failed: {row['error'][:50]}")
+                    else:
+                        print(
+                            f"{label:14} {row['subject'][:32]:32} "
+                            f"{row.get('accepted', 0):>3} kept "
+                            f"{row.get('refused', 0):>3} refused "
+                            f"{(row.get('ms') or 0) / 1000:>6.1f}s "
+                            + (f"{row['tokens']:>8} tok" if row.get("tokens") else "")
+                        )
+        print()
+        # How each plane failed, not only how often (B124): a plane that fails
+        # the same way every time is being mis-used, not having bad luck.
+        for line in bench_mod.verdict(state.bench_runs(conn))["planes"]:
+            if not line["failed"]:
+                continue
+            classes = ", ".join(
+                f"{name} x{count}" for name, count in sorted(line["classes"].items())
+            )
+            print(
+                f"{line['plane']:8} {line['failed']}/{line['runs']} failed: {classes}"
+                + (
+                    f"  — all the same way, which is a mis-use rather than bad luck"
+                    if line["dominant_failure"]
+                    else ""
+                )
+            )
+        print()
+        for line in state.bench_summary(conn):
+            rate = "—" if line["acceptance"] is None else f"{line['acceptance']:.0%}"
+            print(
+                f"{line['plane']:8} {(line['model'] or '')[:20]:20} "
+                f"{(line['protocol'] or '—'):9} "
+                f"{line['runs']:>3} run(s)  {rate:>5} kept  "
+                f"{(line['ms'] or 0) / 1000:>6.1f}s avg  "
+                f"{line['failures']} failed"
+            )
+    finally:
+        conn.close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="kriko", description=__doc__.split("\n")[0])
     parser.add_argument("--store", default=None,
@@ -227,6 +325,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-v", "--verbose", action="store_true",
                    help="show why each claim ranked where it did, and its sources")
     p.set_defaults(fn=cmd_lookup)
+
+    p = sub.add_parser("bench", help="measure the research planes on the same cases")
+    p.add_argument("--plane", action="append", default=[],
+                   help="harness | api (repeatable; default: whatever runs here)")
+    p.add_argument("--cases", type=int, default=3, help="how many subjects")
+    p.add_argument("--pack", default="", help="only subjects from this pack")
+    p.add_argument("--documents", type=int, default=3,
+                   help="max sources per case")
+    p.add_argument("--budget", type=float, default=0.20,
+                   help="USD ceiling per case on the paid plane")
+    p.add_argument("--protocol", action="append", default=[],
+                   help="narrow | standard | wide (repeatable; default: whatever "
+                        "the plane would choose from past measurements)")
+    p.set_defaults(fn=cmd_bench)
 
     p = sub.add_parser("tui", help="operator console: planes, agenda, jobs, shell")
     p.add_argument("--url", default="",

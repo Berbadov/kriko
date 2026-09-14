@@ -290,38 +290,29 @@ is structurally worse rather than occasionally unlucky, the conclusion is that
 the harness is a door for a person (B122) and the unattended path belongs to
 the API plane with a protocol (B123).
 
-### B111 — A benchmark for the planes: fixed cases, real costs `[G2][G5]`
-*"Some very specific cases and cost measurements to understand how different
-agents perform."*
+### B111 / B123 / B124 — **DONE 2026-09-14** (0.8.5)
 
-`runs` already carries `model`, `usd` and tokens per research run, and
-`app/findings.py` already decides what is *accepted*. So the missing piece is
-not measurement, it is a **fixed set of subjects** and a harness that runs the
-same one across every available plane.
+**B111, the benchmark.** `app/bench.py` + `kriko bench` + `POST /api/bench`.
+Cases are derived from the installed store (a fixed list in Python would be the
+hardcoded-car-data bug in benchmark clothing); every case runs against a
+throwaway copy of the knowledge, so a benchmark cannot grow the pack it
+measures; a failed case is recorded as a measurement rather than raised.
 
-The honest thing to measure is where the design bites. There is no ground truth
-for "what goes wrong with this car" — that is the thing the project is building
-— so a benchmark that scores correctness would be scoring an opinion. What is
-measurable today, and worth knowing:
+**B123, protocols.** `kriko.research.Spend` is the shape — name, characters per
+document, documents per call — and `app/protocols.py` is the picker, reading
+`bench_runs`. A protocol is never promoted on fewer than two runs and is always
+compared against the default *measured on the same model*. The paid plane
+batches, and checks each quote against the text of the URL the model named.
 
-* **Cost per accepted claim.** `usd / claims that survived acceptance`. The one
-  number that compares a subscription plane against a per-token one.
-* **Acceptance rate.** Findings submitted vs kept. A plane that writes ten
-  claims and loses nine to the quote check is not cheaper than one that writes
-  two and keeps two.
-* **Overlap.** Run the same subject on two planes and compare claims by
-  component. Agreement between independent planes is the closest thing to
-  ground truth available without a mechanic.
-* **Wall clock**, because a plane nobody will wait for is not a plane.
+**B124, the harness-as-a-function question.** The instrument: `bench.verdict()`
+classifies each failure as `auth`, `start`, `shape`, `timeout`, `limit` or
+`other`, and says whether one class dominates. **The experiment is unrun** — it
+needs a real CLI on a real subscription.
 
-Deliberately *not* a pass/fail gate: a benchmark that fails a build teaches
-people to make it pass. It is a report, run on demand, printed like the
-coverage report.
-
-First step: `tools/bench.py` over a `benchmarks/subjects.yaml` of ~10 subjects
-spanning the cases that differ (a well-covered car, a thin one, a
-`unknown_subject`, one from `packs/drill/`), writing a table and a JSON row per
-run so results accumulate rather than being re-read off a terminal.
+Still open, and small: no benchmark screen in the app; `narrow`/`wide` are two
+settings of one dial and a third needs a measurement to justify it; the search
+provider (Exa, and Tavily which is not implemented) is still a call site's
+choice rather than the protocol's.
 
 ### B112 — Make the research protocol enforced rather than advised `[G2]`
 *"Regulation of agents; protocols that force them to do arbitrary actions =>

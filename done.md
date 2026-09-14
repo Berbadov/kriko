@@ -6,6 +6,65 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — 0.8.5: measure first, then choose (B111, B123, B124)
+
+Three rows, and they are one argument: *how an operation should spend a model
+is a ratio, and a ratio is a measurement or it is a guess.*
+
+**B111 — the benchmark.** `kriko bench`, `POST /api/bench`, `app/bench.py`. The
+same cases across every plane this machine can run, recording wall-clock,
+tokens, dollars, sources, findings kept and findings refused with the gate's own
+reasons. Two decisions carry it:
+
+* **The cases are derived, never enumerated.** A fixed list of subjects in
+  Python would name cars, go stale the week a pack changed, and mean nothing for
+  any pack that is not `cars` — the scalability rule, one layer out. They come
+  off the installed store ordered by `subject_id`, so they are stable across
+  runs and identical on two machines with the same pack.
+* **Nothing is written to the knowledge.** Each case runs against a *copy* of
+  the store in a temporary directory, thrown away with its claims. A benchmark
+  that grew the pack it measured would make its second run incomparable with its
+  first, and would fill a reader's store with runs they never asked to keep.
+
+A failed case is a measurement, not an exception: "the harness plane failed four
+of five" is the finding, and it only exists if a failure is a row.
+
+**B123 — protocols.** A *protocol* is how much of a document goes into one call
+and how many documents go into one call. The failure is two-sided and the middle
+is narrow: too little batching re-sends the brief for every document and pays for
+the same paragraph repeatedly; too much piles context until the model stops
+quoting and starts composing — which the grounding gate catches, so the batch is
+refused *and* the tokens are spent.
+
+The shape is `kriko.research.Spend` (three numbers, in the engine) and the
+choosing is `app/protocols.py` (which reads this installation's `bench_runs`),
+because choosing means reading interface state and `kriko/` may not. Same split
+`app/providers/` makes for sockets. Two rules keep the picker honest: nothing is
+promoted on fewer than two runs, and a candidate is compared against the
+*default measured on the same model* — without that, one mediocre measurement of
+one protocol promotes it, which is how a benchmark comes to recommend the only
+thing anybody bothered to run. With no measurements the answer is `STANDARD`,
+which is exactly the behaviour that existed before protocols did.
+
+`ApiResearcher` now batches: `extract` reads the next few documents in one call
+and caches the rest by URL — the per-document interface is right and stays, what
+changes is how many times money is spent to fill it. A batched extraction checks
+each quote against the text of the URL *the model named*, which catches the
+attribution slip a batch makes possible: a real quote filed against the wrong
+page.
+
+**B124 — can a coding-agent CLI be driven as a function at all?** The reader's
+hypothesis, and it deserves a test rather than an argument. `bench.verdict()`
+classifies every failure by what the CLI did *instead of answering* — `auth`,
+`start`, `shape`, `timeout`, `limit`, `other` — and reports whether one class
+dominates. Failures spread across classes mean bad luck. Failures concentrated
+in one mean the plane is being mis-used, which would make the harness a door for
+a person and the unattended path the API plane's.
+
+**The experiment is unrun**, and that is stated in `docs/AGENT_OPERATIONS.md`
+rather than implied: it needs a real CLI on a real subscription and a machine the
+reader owns. What shipped is the instrument.
+
 ### 2026-09-14 — 0.8.4: the operations feed (B122)
 
 *"We still need to see those MCP operations in the app itself in real time,
