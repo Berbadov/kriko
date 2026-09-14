@@ -76,7 +76,7 @@ export const NAV: NavGroupSpec[] = [
             // findings refused; submissions say what arrived through the agent
             // door. A reader chasing "did my research actually land" had to
             // visit all three and hold the answer in their head.
-            { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log"] },
+            { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log", "live", "operations", "feed", "mcp"] },
             // Console used to be a lens here, driving the same API a harness
             // does by hand. It is a real terminal now (`lib/shell/
             // TerminalPanel.svelte`), reachable from the rail directly rather
@@ -136,6 +136,10 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     jobs: { name: "activity", lens: "runs" },
     pipeline: { name: "activity", lens: "pipeline" },
     submissions: { name: "activity", lens: "submissions" },
+    // The feed's own names. "What is my agent doing" is the question people
+    // will type, and neither word is a route (B122).
+    operations: { name: "activity", lens: "live" },
+    live: { name: "activity", lens: "live" },
     // Agents has one lens now — Connect — so neither name needs one.
     console: { name: "agents" },
     connect: { name: "agents" },

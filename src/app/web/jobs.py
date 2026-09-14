@@ -29,6 +29,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
+from app import operations
 from app.web import state
 
 
@@ -115,7 +116,19 @@ class JobRunner:
             if row is None or row["state"] != state.QUEUED:
                 return
             state.start_job(conn, job_id)
-            result = self.handlers[kind](self.settings, params, progress)
+            # The same row the MCP door writes (B122), so the feed is "what is
+            # this installation doing", not "what did the agent ask". A job and
+            # a tool call are both operations; that they are started by
+            # different things is exactly what `door` records.
+            with operations.record(
+                self.settings.app_state_path,
+                door="job",
+                name=kind,
+                kind=operations.kind_of(kind),
+                arguments=params,
+            ) as outcome:
+                result = self.handlers[kind](self.settings, params, progress)
+                outcome["response"] = operations.summarise(result)
             # No message, so `finish_job`'s COALESCE keeps the handler's own
             # last word. Every handler ends with a `progress.set(1.0, ...)`
             # that says what actually happened — "0 claim(s) kept", "cars

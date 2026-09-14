@@ -372,6 +372,22 @@ the verdict ranks nothing, hides nothing, and lives in `app.sqlite`'s
 `fact_checks`. The `GET` returns the whole screen's verdicts in one request,
 which is what keeps a report of forty claims from opening forty requests.
 
+**`GET /api/operations`, `GET /api/operations/stream`**
+(`routers/operations.py`) — the live feed of *operations*: one row per unit of
+agent-driven work, whichever door it came in by (`docs/AGENT_OPERATIONS.md`
+holds the vocabulary). `app/operations.py` records them, and the recorder is
+wrapped around every MCP tool, every job the runner starts and every
+`/api/analyze` — so a reader's own coding agent working through the MCP server
+is visible *while it works*, which it never was: that door showed up only
+afterwards, only as a `submissions` row, and only when the operation happened
+to be a submission. The row opens before the work and closes after it, so a
+call in flight reads `running` and a call that died with its process is marked
+`interrupted` at startup, exactly as a job row is. Payloads are summarised, not
+stored: a page of `document_text` is elided to its own measurement, because the
+page itself already has a table. `/stream` polls the table rather than being
+pushed to, because the MCP server is a different process writing the same
+`app.sqlite`.
+
 **`GET /api/submissions`** (`routers/submissions.py`) — what came in through
 the agent door and what the gate did with it. The only place a *refusal* is
 legible: `app/findings.py` rejects on grounding, and without this the rejection
@@ -504,6 +520,7 @@ Every table, and the question it answers:
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
 | `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
 | `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
+| `operations` | One row per unit of agent-driven work, opened before the work and closed after it. What makes "is my agent doing anything right now" answerable — including through the MCP door, which this app does not start and cannot otherwise see. A feed, bounded at 2000 rows: what a run *produced* lives in `submissions`, `pipeline_runs` and `research_runs`, all of which outlive it. |
 | `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
