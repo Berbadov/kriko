@@ -97,21 +97,25 @@ Requires Python 3.14+. Same two SQLite files as the app above — a pack install
 by the CLI is visible in the desktop app and the other way round.
 
 ```bash
-pip install -e ".[dev,pipeline]"            # editable install; pipeline extra is
-                                             # only needed to research, never to serve;
-                                             # dev extra is needed to run the tests below
+tools/setup.sh                   # one command: the venv, the locked deps, the
+                                 # extras, both npm trees, and a check that the
+                                 # installed version matches the tree
 
-python -m app.cli build packs/cars          # → dist/cars.kpack
-python -m app.cli install dist/cars.kpack
-python -m app.cli packs                     # what is installed, and its trust weight
+kriko build packs/cars           # → dist/cars.kpack
+kriko install dist/cars.kpack
+kriko packs                      # what is installed, and its trust weight
 
-python -m app.cli lookup make=volkswagen model=golf year=2015 fuel=diesel \
+kriko lookup make=volkswagen model=golf year=2015 fuel=diesel \
     transmission=automatic --ctx usage_km=190000 -v
 
-python -m app.web                           # dashboard + /analyze on 127.0.0.1:8787
-                                             # dashboard's Health tab shows the
-                                             # weakest-sourced claims, worst first
+kriko tui                        # the operator console: planes, agenda, jobs, shell
+python -m app.web                # dashboard + /analyze on 127.0.0.1:8787
+                                 # its Health tab shows the weakest-sourced
+                                 # claims, worst first
 ```
+
+`kriko` is on PATH after the install above; from a checkout without one,
+`python -m app.cli` is the same command.
 
 The dashboard is not a read-only view: researching a subject and building a pack
 both run from it as **jobs** with a live log, a durable result and a cancel
@@ -129,7 +133,11 @@ Developer mode → Load unpacked → select `extension/`.
 Only *running the research pipeline* needs API keys (`MISTRAL_API_KEY`, `EXA_API_KEY` in a
 repo-root `.env`) — never serving a lookup.
 
-Run the tests with `python -m pytest` (no arguments — `testpaths` is set in `pytest.ini`).
+Run `tools/gate.sh` before pushing — pytest, both JS suites, types, and a check
+that the committed frontend bundle still matches its source. It is what
+`.github/workflows/ci.yml` used to run, moved here on 2026-09-13 when it became
+clear the workflow had never once been allocated a runner. `CONTRIBUTING.md`
+has the reasoning and the rest of the development loop.
 
 ### As a desktop app
 
@@ -139,16 +147,21 @@ gets, from the identical `~/.kriko/` store, so a pack installed in the app is
 visible to `python -m app.cli`. Building it needs a Rust toolchain and Node;
 neither the wheel nor the test suite does. See `tauri/README.md`.
 
-Installers are built by `.github/workflows/desktop.yml`: on every pull request
-that touches the packaging, to prove the bundle still builds, and on a `v*` tag,
-where the four installers are attached to a GitHub release. To cut one:
-
-```bash
-git tag v0.1.0 && git push origin v0.1.0
-```
+Installers are built by `.github/workflows/desktop.yml`, which is **hand-run
+only** as of 2026-09-13 — it needs Actions minutes this account does not have,
+and a trigger that can only ever report a false failure is worse than none. Run
+it from the Actions tab (`platforms: all` for the Linux and macOS legs), or
+build on a Windows host with `pwsh packaging/build_desktop.ps1`, which is how
+every installer since 0.5.0 was made. Nothing in the recipe was trimmed; putting
+the `push` and `pull_request` triggers back is all that restoring it takes.
 
 Locally, `packaging/freeze.sh` builds and smoke-tests the sidecar alone, which
 needs no Rust toolchain.
+
+The frozen sidecar is also the operator console: `kriko-sidecar --tui` runs the
+same TUI as `kriko tui`, with no Python, no Node and no webview involved. That
+is deliberate — a console whose reason for existing is a window that would not
+open should not itself require a working toolchain.
 
 ---
 

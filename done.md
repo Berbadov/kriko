@@ -6,6 +6,67 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — the console goes standalone, and the loop gets three commands
+
+**`kriko tui` is a command now, and so is `kriko-sidecar --tui`.** The console
+landed in 0.8.0 reachable only as `python -m app.cli tui` — from a source
+checkout, with a working Python. For a tool whose whole reason for existing is
+that a *window would not open on the reader's machine*, that was close to a
+joke. Two changes fix it:
+
+* `[project.scripts] kriko = "app.cli:main"` — every document written for
+  someone who installed the wheel said `kriko tui`, and without this that was
+  simply false.
+* `--tui` on `app.sidecar`. `app/tui/` is already in the wheel and therefore
+  already inside the frozen binary the installer ships, so this is one branch
+  and no new build artifact: a machine with no Python, no Node and no working
+  WebView2 runs the same .exe with one argument and gets the console. It
+  returns before `reserve`, because the console attaches to a running app or
+  starts its own engine — a sidecar that bound a port first would be a second
+  engine nobody asked for.
+
+**A bug the console would have shipped with**, found writing the test rather
+than in the field: with nothing serving, it starts an engine in-process, and
+`create_app` calls `logs.configure()` — whose stderr handler writes straight
+onto the alternate screen, under a frame differ with no idea it must repaint
+that row. `logs.silence_stderr()` detaches it and stops `configure` putting one
+back; the *file* handler stays, because losing the terminal is the reason to
+keep `app.log` rather than a reason to stop.
+
+**The development loop is three commands** (`CONTRIBUTING.md`, "The loop"):
+
+* `tools/setup.sh` — the venv, the locked closure, the extras, both npm trees,
+  and two checks. It exists because getting a fresh checkout to where `pytest`
+  tells the truth had cost six separate discoveries, none of them interesting.
+* `tools/gate.sh` — unchanged, from the day before.
+* `tools/bump.py` — the version, in the five places it lives. Four committed
+  files plus the *installed* distribution's metadata, which is what
+  `/api/health` reports and which a `sed` could never have reached; `--show`
+  prints all five and exits non-zero if they disagree. It does not commit and
+  does not tag.
+
+`.mcp.json` pointed at `/home/beraat/kriko/.venv/bin/python` — one
+contributor's absolute home directory, so the MCP server failed to connect in
+every other checkout, including every Claude session in this repository. It is
+now `.venv/bin/python -m app.sidecar --mcp`, relative, and verified by an
+`initialize` handshake.
+
+**`tools/setup.sh` caught itself.** Its first version reported "ready" on a
+venv where `import fastapi` raised — every check it had passed, because the
+interpreter was new enough and the lock installed cleanly. It now ends by
+importing the app, and refuses loudly with the traceback when that fails.
+That check immediately produced **B110**: there is no interpreter today on
+which a clean setup of this tree succeeds — 3.13 is refused by
+`requires-python = ">=3.14"`, and 3.14.0rc2 breaks the pinned pydantic. The
+whole gate passes on 3.13, so the floor is not load-bearing for anything the
+tests cover; whether to relax it is a policy call and is filed rather than
+taken.
+
+Docs brought in line: `README.md` (quickstart is `tools/setup.sh` and `kriko`,
+and the installer paragraph no longer claims a CI that cannot run),
+`CONTRIBUTING.md` (the loop), `docs/INTERNALS.md` (`--tui` and the stderr
+rule), `docs/ARCHITECTURE.md`, `tauri/README.md`, and the `CLAUDE.md` doc map.
+
 ### 2026-09-13 — 0.8.0: `kriko tui`, the operator console — and `ci.yml` deleted
 
 **The TUI (`src/app/tui/`).** A fourth interface beside `cli`, `web` and `mcp`,
