@@ -220,6 +220,259 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ---
 
+## Ideas from the reader, 2026-09-14 (B111-B119)
+
+Nine, written down the evening before the 0.8.1 install was tried. Filed rather
+than built, except B114's launch bug, which was reproduced and fixed the same
+day. Several already have most of their machinery in the tree; where that is
+true it is said, because the expensive mistake here is building a second copy
+of something that exists.
+
+### B111 — A benchmark for the planes: fixed cases, real costs `[G2][G5]`
+*"Some very specific cases and cost measurements to understand how different
+agents perform."*
+
+`runs` already carries `model`, `usd` and tokens per research run, and
+`app/findings.py` already decides what is *accepted*. So the missing piece is
+not measurement, it is a **fixed set of subjects** and a harness that runs the
+same one across every available plane.
+
+The honest thing to measure is where the design bites. There is no ground truth
+for "what goes wrong with this car" — that is the thing the project is building
+— so a benchmark that scores correctness would be scoring an opinion. What is
+measurable today, and worth knowing:
+
+* **Cost per accepted claim.** `usd / claims that survived acceptance`. The one
+  number that compares a subscription plane against a per-token one.
+* **Acceptance rate.** Findings submitted vs kept. A plane that writes ten
+  claims and loses nine to the quote check is not cheaper than one that writes
+  two and keeps two.
+* **Overlap.** Run the same subject on two planes and compare claims by
+  component. Agreement between independent planes is the closest thing to
+  ground truth available without a mechanic.
+* **Wall clock**, because a plane nobody will wait for is not a plane.
+
+Deliberately *not* a pass/fail gate: a benchmark that fails a build teaches
+people to make it pass. It is a report, run on demand, printed like the
+coverage report.
+
+First step: `tools/bench.py` over a `benchmarks/subjects.yaml` of ~10 subjects
+spanning the cases that differ (a well-covered car, a thin one, a
+`unknown_subject`, one from `packs/drill/`), writing a table and a JSON row per
+run so results accumulate rather than being re-read off a terminal.
+
+### B112 — Make the research protocol enforced rather than advised `[G2]`
+*"Regulation of agents; protocols that force them to do arbitrary actions =>
+MCP guidances and skills."*
+
+Partly done, and the done part is the model for the rest. `app/findings.py`
+already *enforces* the one rule that matters most: a claim whose quote cannot
+be found verbatim in the document is refused, not trusted. That is a protocol
+with teeth, and it works because the check is mechanical.
+
+The rest is still advice: `harness.py`'s `CONTRACT`, the brief from
+`kriko/research/agent.py`, `app/agentskill.py`. An agent that ignores them
+fails quietly and reports success with nothing kept — the original "research
+does nothing".
+
+What can be made mechanical, in order of value:
+
+1. **Did it search at all?** `queries` is already collected and already
+   ignored. A run reporting findings with an empty `queries` list did not do
+   what it was asked; a run with queries and no findings did.
+2. **Are the sources real?** A `source_url` that was never fetched is a
+   fabrication with a plausible shape. The ledger knows which documents were
+   fetched.
+3. **Is the claim about the subject asked for?** Mis-attribution is the
+   failure that quietly poisons a pack.
+
+Each of those is a refusal in `findings.py` with a logged reason, not a
+paragraph in a prompt. The prompt stays — it is how an agent succeeds — but it
+stops being the only thing standing between the store and a bad claim.
+
+### B113 — Extension and app: one system, visually and algorithmically `[G4]`
+*"Harmony and compatibility between the web extension and the app. Both
+visually and algorithmically. This is very important."*
+
+Agreed, and the algorithmic half is further along than the visual one.
+
+**Algorithmically** they already share the engine: the extension POSTs to
+`/api/analyze` and the app reads the same store. The divergence is the
+`local_panel` block — the two blocks the panel draws from the reader's *own*
+page (damage silhouette, equipment) never reach the engine at all. That is
+deliberate and should stay, but it means the extension renders things the app
+has no view of, and a reader comparing the two sees different information about
+the same car.
+
+**Visually** they are two design systems. `ui/src/styles/tokens.css` is the
+app's; the extension has its own CSS and its own idea of a card, a severity,
+and a claim. Same claim, two appearances.
+
+The shape of the fix is the same as every other one here: make the shared thing
+*data*. The tokens are already a file; the extension could be served them from
+the engine the way it is already served `local_panel`. Then "the app changed
+its severity colour" is one edit rather than two, and a third client would
+inherit both.
+
+Needs a design doc before code — this is the seam between the two things a
+reader actually touches, and getting it wrong is expensive in a way the
+engine's internals are not.
+
+### B114 — "Open with web extension" opens a browser with no extension `[G4]`
+*"It does open a chrome page with sahibinden but kriko isn't loaded."*
+
+**Root cause found and fixed 2026-09-14.** Chrome disabled `--load-extension`
+by default as an anti-malware measure: the `DisableLoadExtensionCommandLineSwitch`
+feature turns the flag into a silent no-op. The window opens, the landing page
+loads, the extension is absent, and every visible step appears to have worked —
+the worst shape a failure can take.
+
+Measured rather than assumed. Chromium 141 was launched with
+`--remote-debugging-port` and its target list counted: **0**
+`chrome-extension://` targets without `--disable-features=DisableLoadExtensionCommandLineSwitch`,
+**2** with it. The flag is now in `launch_with_extension`'s argv, with a test.
+
+**Still open, and it is a policy decision, not a fix.** The counter-flag is a
+stopgap — a switch that re-enables a switch, and itself on the way out. The
+reader's own instinct is the durable answer: *"I would prefer an installation
+to my own chrome browser but I guess we need kriko web extension on the chrome
+web market?"* Yes. A Web Store listing is a one-off developer fee, a review,
+and then an ordinary install into the profile the reader actually uses, with
+auto-updates — which also retires the separate-profile explanation the launch
+button currently has to make.
+
+**HUMAN DECISION #9:** publish to the Chrome Web Store, or keep the
+load-unpacked path as the only install. It costs money, exposes a developer
+identity, and submits this code to someone else's review — none of which is a
+thing code can decide. It also interacts with B18 (source licensing/ToS): a
+publicly listed extension that reads a specific site is a more visible artefact
+than a local one.
+
+### B115 — Agents author the site adapters, and adapters ship like packs `[G6]`
+*"General site compatibility must be figured out by the agents themselves due
+to complexity of the web pages... MediaMarkt uses different HTML sections than
+Tesco. Agents should figure out the general rule for identification and store
+this algorithm to share like the packs."*
+
+This is the right idea and it is already most of the way built, which is worth
+saying before anyone starts from scratch: **adapters are already pack data.**
+`kriko/adapters.py` reads them off installed packs; the content script is
+handed selectors, labels and the `local_panel` block at runtime and interprets
+none of it itself. Nothing about the current design needs a code change to
+support a second site — only a row.
+
+So the work is not "make adapters data". It is:
+
+1. **An agent-authored adapter.** `app/packdraft.py` and `draft_pack` already
+   let an agent write a pack draft and build it. An adapter draft is the same
+   motion with a different schema: give it the page, let it propose selectors
+   and label mappings, and let it *check its own work* by running the proposed
+   adapter against the page and seeing whether the fields come out.
+2. **That self-check is the whole difficulty.** A selector that matches
+   nothing is obvious; a selector that matches the wrong thing is not. The
+   automation principle forbids a human sign-off step, so the adapter has to
+   fail open: an adapter whose extraction disagrees with itself across two
+   pages of the same site emits nothing and reports a gap.
+3. **Never generated JavaScript.** `docs/INTERNALS.md` is explicit and it must
+   stay true: a pack that could ship JS into a content script would, on
+   install, be granted the right to run code on every page the extension sees.
+   An agent-authored adapter is *terms and selectors*, escaped, never patterns
+   compiled from pack text.
+
+Related: `extension_ui/manifest.json` still hardcodes `*.sahibinden.com` in
+`content_scripts.matches` (filed under Phase 6c). Agent-authored adapters are
+pointless until that is `chrome.scripting.registerContentScripts` over the
+adapters' own `site` values — which needs `optional_host_permissions` and a
+reader grant, and lands naturally with B114's Web Store decision.
+
+### B116 — "Research the product I am looking at, now" `[G2][G5]`
+*"Assume the web page isn't registered in kriko or that specific product hasn't
+been added to the db. Users might want to know it, so this feature does the
+research and saves it in real time. All handled in the web extension."*
+
+The door exists: `POST /api/extension/research-plane` and
+`EXTENSION_RESEARCH_BUDGET_USD = 0.20` were built for exactly this, and
+`/api/analyze` already knows when it has nothing (`coverage_state`,
+`NOT_MATCHED`). What is missing is the path from *that* answer to a job, and
+the panel showing the job running.
+
+Three things to get right, and they are all about cost and consent:
+
+* **It spends money, so it is never automatic.** A panel that researched every
+  page a reader scrolled past would be a bill. The button appears on a miss;
+  the reader presses it.
+* **The cap is per press and visible before the press.** The 0.20 constant is
+  currently a number in a file with a comment admitting it is not an estimate.
+  Making it one is B118's work.
+* **An unknown *site* is not an unknown *product*.** On a site with no adapter,
+  there is no identity to research — that is B115, not this. This feature is
+  for a known site and an unknown product, and the panel should say which of
+  the two it is looking at rather than offering a button that cannot work.
+
+### B117 — A preferred agent, when several are configured `[G5]`
+*"I register 5 agents via api or subscription, one must be my preferred one to
+handle tasks."*
+
+Two thirds of this exists and the missing third is small.
+`/api/research-planes` lists what is available, `harness.chosen(preferred)`
+already takes a preference, and `tasks.default_backend()` resolves what an
+unnamed run uses. What there is no such thing as is a *stored* preference: the
+choice is made per request or derived per machine.
+
+The shape: a row in `app.sqlite` settings (interface state, not the engine's —
+which plane you like is not a property of the knowledge), read by
+`default_backend()`, written from the Agents screen, and reported by
+`/api/research-planes` so the screen can mark it.
+
+One rule must survive: **`api` is never chosen by omission.** A preference the
+reader set explicitly is different from a default that quietly starts spending,
+and the code that enforces that today should keep enforcing it.
+
+### B118 — Every operation carries what it cost `[G5]`
+*"API agent usage system needs identificators; price, token usage etc. Actually
+this is needed for every operation."*
+
+The `runs` table has `model`, `usd` and tokens for *research*. The `jobs` table
+has none of it, and a job is what the reader actually watches. So the app can
+tell you what a research run cost and cannot tell you what the thing you just
+pressed cost.
+
+The fix is to make cost a property of the **job**, not of the plane that
+happened to report one: `usd`, `tokens`, `model` columns on `jobs`, written by
+whatever handler ran, `NULL` where genuinely unmetered rather than `0` — the
+Usage card already draws that distinction correctly ("no marginal cost" vs "not
+counted") and the jobs list should inherit it.
+
+Also the precondition for B116's "show the cap before the press": an estimate
+needs a history of what similar runs actually cost, and that history is exactly
+these columns.
+
+### B119 — A glossary, because the words are load-bearing `[G6]`
+*"Naming things, I believe we need better naming system to achieve better
+communication, which requires more documentation."*
+
+There is a vocabulary and it is mostly consistent — pack, subject, claim,
+evidence, plane, harness, adapter, agenda, store, sidecar, shell. The problem
+is that it is defined *in situ*: you learn what a plane is by reading the
+module that has three of them, and what a subject is by reading the schema.
+Nothing lists them, so a new session (human or agent) infers them, and
+inference drifts.
+
+Two specific confusions already live in the tree and are worth fixing by name:
+
+* **"agent" means three things.** The `agent` research plane (you run it
+  yourself), the `harness` plane (Kriko runs your CLI), and the coding agent
+  writing this code. The reader's own notes above use it in all three senses
+  in one paragraph, which is not their fault.
+* **"shell" means two.** The desktop shell (`tauri/`) and the PTY shell in the
+  terminal panel. `installer.nsh` has to stop both, and says "the shell first,
+  then the engine" about the one that is not a shell in the other sense.
+
+`docs/GLOSSARY.md`: one line each, the module that owns it, and the words it is
+*not*. Cheap, and the thing that makes every other doc shorter.
+
+---
+
 ## P0
 
 ### B109 — Terminal: CLOSED 2026-09-13 by dropping the WebSocket (0.7.12)
