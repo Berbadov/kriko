@@ -42,10 +42,21 @@ def style(text: str, *codes: str) -> str:
 
 
 def pad(text: str, width: int) -> str:
-    """Exactly `width` visible characters, truncating with an ellipsis."""
+    """Exactly `width` visible characters, truncating with an ellipsis.
+
+    `width` can arrive non-positive, and the arithmetic here used to go wrong
+    in a way that looked like corruption rather than a bug: `text[:width - 1]`
+    with a negative width slices *from the end*, so a 17-character title in a
+    width of -16 rendered as its first character. Found running the frozen
+    console under a pty that reported no window size, which clamps to 20
+    columns — and a terminal that reports nothing is exactly the case nobody
+    tests interactively.
+    """
+    if width <= 0:
+        return ""
     text = text.replace("\t", " ")
     if len(text) > width:
-        return text[: max(0, width - 1)] + "…" if width > 1 else text[:width]
+        return text[: width - 1] + "…" if width > 1 else text[:width]
     return text + " " * (width - len(text))
 
 
@@ -192,15 +203,31 @@ def wrap(text: str, width: int) -> list[str]:
 
 
 def header(state, width: int) -> list[str]:
+    # The address goes before the name does. `engine_label` is a URL and can
+    # easily be wider than a narrow terminal on its own, and a header that
+    # spends every column on "http://127.0.0.1:40201 (own engine)" has told the
+    # reader nothing about what they are looking at.
     where = state.engine_label
-    tabs = []
-    for index, name in enumerate(TABS, start=1):
-        label = f" {index} {name} "
-        tabs.append(style(label, REVERSE) if name == state.tab else style(label, DIM))
-    title = pad("kriko · agent ops", max(0, width - len(where) - 1))
+    if len(where) + len("kriko · agent ops") + 1 > width:
+        where = ""
+    # The tab bar is the one row with no padding to absorb an overflow — three
+    # named tabs are 30 columns and will not fit an 80-column terminal's
+    # narrower cousins. Names first, numbers alone when they do not fit, and
+    # `pad` on the whole thing as the floor.
+    labels = [f" {index} {name} " for index, name in enumerate(TABS, start=1)]
+    if sum(len(label) for label in labels) > width:
+        labels = [f" {index} " for index in range(1, len(TABS) + 1)]
+    tabs, used = [], 0
+    for label, name in zip(labels, TABS):
+        if used + len(label) > width:
+            break
+        used += len(label)
+        tabs.append(style(label, REVERSE if name == state.tab else DIM))
+    bar = "".join(tabs) + " " * (width - used)
+    title = pad("kriko · agent ops", max(0, width - len(where)))
     return [
         style(title, BOLD) + style(where, DIM),
-        "".join(tabs),
+        bar,
         rule(width),
     ]
 

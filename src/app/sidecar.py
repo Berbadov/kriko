@@ -212,6 +212,15 @@ def main(argv=None) -> int:
     # file is what matters and it is configured the same way.
     from app import logs
 
+    # In console mode, *before* `configure` rather than inside the TUI. The
+    # TUI's own `silence_stderr()` runs too late from here: `configure` has
+    # already attached the handler and already logged "logging to …", so the
+    # frozen binary's first line of output was a log line printed over the
+    # reader's terminal. Found by running the frozen console under a pty, which
+    # is the only place it could have been found — every test passes either way.
+    if args.tui:
+        logs.silence_stderr()
+
     logs.configure()
 
     # Before the store, before the routers, before anything that could read a
@@ -223,9 +232,14 @@ def main(argv=None) -> int:
     from app import keys as keyfile
 
     loaded = keyfile.load()
-    if loaded:
+    if loaded and not args.tui:
         # The count, never the names' values. A log line is the last place a
         # key should be able to reach.
+        #
+        # Not in console mode: this is a bare `print`, so no logging handler
+        # can suppress it, and it would land on the reader's terminal a moment
+        # before the console draws over it. The console has a Planes tab that
+        # says what is configured; it does not need a banner.
         print(f"loaded {len(loaded)} API key(s) from {keyfile.env_path()}",
               file=sys.stderr, flush=True)
 
