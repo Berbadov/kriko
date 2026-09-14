@@ -876,3 +876,232 @@ def test_the_planes_endpoint_offers_the_third_plane(tmp_path):
     # the commands that were looked for.
     assert row["looked_for"]
     assert row["ready"] is bool(row["harnesses"])
+
+
+# ── B121: what the run is doing, while it does it ────────────────────────────
+#
+# "That shell supposed to show agents actions right, and the directives of
+# them." It was not, and nothing was. `subprocess.run(capture_output=True)` is
+# a decision to learn nothing until the process is over, so between "harness
+# plane (subscription)" and the verdicts there were up to ten minutes — forty
+# for a pack author — of silence, and what the agent actually did was
+# invisible while it happened and gone afterwards.
+#
+# The gate that matters here is `test_a_line_arrives_before_the_run_is_over`:
+# every other assertion below would still pass on a buffered run that narrated
+# everything at the end, which is the bug wearing the fix's clothes.
+
+
+def test_the_streaming_format_is_asked_for_with_the_flag_it_requires():
+    """`--output-format stream-json` without `--verbose` does not start.
+
+    The CLI refuses the combination outright ("requires --verbose"), before
+    any API call — so this is the one flag in the vector that may not be
+    hygiene resolved against `--help`. It is in `args` for that reason, and
+    this says so in a place a future edit will trip over.
+    """
+    args = harness_mod.KNOWN[0].args
+    assert "stream-json" in args
+    assert "--verbose" in args
+
+
+def _streaming_cli(tmp_path: Path, lines: list, *, wait_for: Path | None = None):
+    """A CLI that prints one JSON event per line, as `stream-json` does.
+
+    Optionally it waits for a file to appear partway through, which is how a
+    test can prove the reader saw a line *before* the process ended: nothing
+    creates that file except the narration callback.
+    """
+    script = tmp_path / f"streamer-{len(lines)}-{bool(wait_for)}.py"
+    script.write_text(
+        "import json, pathlib, sys, time\n"
+        f"lines = {json.dumps([json.dumps(one) for one in lines])}\n"
+        f"wait = {str(wait_for) if wait_for is None else repr(str(wait_for))}\n"
+        "for index, line in enumerate(lines):\n"
+        "    sys.stdout.write(line + '\\n')\n"
+        "    sys.stdout.flush()\n"
+        "    if wait and index == 0:\n"
+        "        deadline = time.time() + 20\n"
+        "        while time.time() < deadline and not pathlib.Path(wait).exists():\n"
+        "            time.sleep(0.02)\n"
+        "        if not pathlib.Path(wait).exists():\n"
+        "            sys.exit(3)\n",
+        encoding="utf-8",
+    )
+    return harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True
+    )
+
+
+def _search_event(query: str) -> dict:
+    return {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {"type": "tool_use", "name": "WebSearch", "input": {"query": query}}
+            ]
+        },
+    }
+
+
+def test_a_line_arrives_before_the_run_is_over(tmp_path):
+    """The whole of B121 in one assertion, and the only one that can fail on a
+    buffered implementation.
+
+    The fake CLI prints its first event and then refuses to finish until the
+    narration callback has created a file. A run that reads its child's output
+    only after the child exits deadlocks here and fails on the timeout, which
+    is exactly the behaviour being ruled out.
+    """
+    sentinel = tmp_path / "the-reader-saw-it"
+    one = _streaming_cli(
+        tmp_path,
+        [_search_event("timing chain"), _reply([])],
+        wait_for=sentinel,
+    )
+    seen: list[str] = []
+
+    def watching(line: str) -> None:
+        seen.append(line)
+        sentinel.write_text("yes", encoding="utf-8")
+
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = watching
+    researcher.gather(_task())
+    assert seen, "nothing was narrated at all"
+    assert 'searched "timing chain"' in seen[0]
+
+
+def test_what_the_agent_did_is_said_in_the_readers_words(tmp_path):
+    """One line per action, and nothing for the machinery around them."""
+    one = _streaming_cli(
+        tmp_path,
+        [
+            {"type": "system", "subtype": "init", "model": "claude-x"},
+            {"type": "stream_event", "event": {"delta": "ignored"}},
+            _search_event("golf 1.4 tsi chain"),
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "WebFetch",
+                            "input": {"url": "https://example.test/page"},
+                        }
+                    ]
+                },
+            },
+            _reply([]),
+        ],
+    )
+    seen: list[str] = []
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = seen.append
+    researcher.gather(_task())
+    said = "\n".join(seen)
+    assert "claude-x" in said
+    assert 'searched "golf 1.4 tsi chain"' in said
+    assert "fetched https://example.test/page" in said
+    assert "ignored" not in said, "a partial-token frame is not an action"
+    assert researcher.actions == seen
+
+
+def test_streaming_does_not_change_what_comes_back(tmp_path):
+    """The reply is still the reply, and the meter still reads.
+
+    `--output-format stream-json` ends with the same `result` object `json`
+    prints alone, so a plane that narrates must parse exactly what a plane
+    that did not parsed — otherwise B121 would have bought visibility with
+    findings.
+    """
+    one = _streaming_cli(
+        tmp_path,
+        [
+            {"type": "system", "subtype": "init", "model": "claude-x"},
+            _search_event("anything"),
+            _reply([
+                {
+                    "title": "Timing chain kit unobtainable",
+                    "domain": "engine",
+                    "severity": "high",
+                    "quote": QUOTE,
+                    "document_text": PAGE,
+                    "source_url": "https://example.test/thread",
+                    "component": "timing chain",
+                }
+            ]),
+        ],
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    documents = researcher.gather(_task())
+    assert [document.url for document in documents] == ["https://example.test/thread"]
+    assert researcher.extract(_task(), documents[0])[0].title == (
+        "Timing chain kit unobtainable"
+    )
+    assert researcher.tokens_used == 1200 + 340 + 9000
+
+
+def test_a_log_line_that_cannot_be_written_does_not_fail_the_run(tmp_path):
+    """Narration is a nicety; the research is the job.
+
+    A `progress.log` writing to a database that has gone away must not destroy
+    a completed run of real research — so a callback that raises stops being
+    called and nothing else changes.
+    """
+    one = _streaming_cli(tmp_path, [_search_event("anything"), _reply([])])
+
+    def broken(line: str) -> None:
+        raise RuntimeError("the log is gone")
+
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = broken
+    assert researcher.gather(_task()) == []
+    assert researcher.note
+
+
+def test_a_cli_that_never_finishes_is_killed_and_said_so(tmp_path):
+    """The ceiling still holds, now that nothing waits on `subprocess.run`."""
+    script = tmp_path / "hangs.py"
+    script.write_text("import time\ntime.sleep(120)\n", encoding="utf-8")
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=1.0)
+    with pytest.raises(TimeoutError) as raised:
+        researcher.gather(_task())
+    assert "within 1s" in str(raised.value)
+
+
+def test_the_transcript_is_bounded(tmp_path, monkeypatch):
+    """A CLI that will not stop talking costs a fixed amount of memory."""
+    monkeypatch.setattr(harness_mod, "TRANSCRIPT_TAIL", 2048)
+    script = tmp_path / "chatty.py"
+    script.write_text(
+        "import sys\n"
+        "for _ in range(400):\n"
+        "    sys.stdout.write('x' * 200 + '\\n')\n"
+        "sys.stdout.write('{\"type\": \"result\", \"result\": \"done\"}\\n')\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.gather(_task())
+    assert len(researcher.transcript) <= 2048
+    # And the reply survived the bound, because the result is the last line.
+    assert researcher.note
+
+
+def test_narration_is_capped(tmp_path, monkeypatch):
+    """An agent stuck in a tool loop cannot grow the job log without end."""
+    monkeypatch.setattr(harness_mod, "MAX_NARRATED", 5)
+    one = _streaming_cli(
+        tmp_path, [_search_event(f"query {index}") for index in range(40)] + [_reply([])]
+    )
+    seen: list[str] = []
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = seen.append
+    researcher.gather(_task())
+    assert len(seen) == 5

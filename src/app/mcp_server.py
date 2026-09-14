@@ -414,8 +414,9 @@ def submit_findings(
     claims did not survive, rather than discovering later that half its work
     vanished.
     """
+    kept: list[dict] = []
     with _store() as conn:
-        verdicts = accept_findings(conn, subject_id, pack_id, findings)
+        verdicts = accept_findings(conn, subject_id, pack_id, findings, retain=kept)
     # Logged after the store connection closes, and to a different file: the
     # refusals in this payload are what an author tunes the skill against, and
     # they were previously returned to the agent and then lost.
@@ -426,6 +427,7 @@ def submit_findings(
         pack_id=pack_id,
         verdicts=verdicts,
         queries=queries,
+        documents=kept,
     )
     return verdicts
 
