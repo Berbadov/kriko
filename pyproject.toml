@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kriko"
-version = "0.8.4"
+version = "0.8.5"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
 # Lowered from ">=3.14" on 2026-09-14 (B110). The floor was unsatisfiable in

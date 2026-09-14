@@ -57,10 +57,20 @@ of *the model*, not of the operation — "qwen3.5 27b holds together under ~80k
 at this batch size; opus 4.6 takes Z at that one" is a ratio, and the ratio is
 what a picker needs.
 
-So: **an algorithm that picks the protocol from measured ratios**, per model,
-per operation. Which is why the benchmark (B111) is not a nice-to-have — it is
-the input the picker has no way to invent. Filed as **B123**, and it depends on
-B111.
+So: **an algorithm that picks the protocol from measured ratios**, per model.
+Built (B123, 0.8.5) as `kriko.research.Spend` — the shape, in the engine, three
+numbers: a name, characters of a document per call, documents per call — and
+`app/protocols.py`, the picker, which reads this installation's own `bench_runs`
+and returns `STANDARD` whenever it cannot justify anything else. Two rules keep
+it honest: a protocol is never promoted on fewer than two runs, and it is
+compared against the *default measured on the same model*, never against
+nothing. The paid plane batches accordingly, and a batched extraction checks
+each quote against the text of the URL the model named — the attribution slip a
+batch makes possible.
+
+The benchmark (B111, 0.8.5) is the input the picker cannot invent: `kriko bench`,
+`POST /api/bench`, cases derived from the installed store rather than
+enumerated, every run against a throwaway copy of the knowledge.
 
 Search providers are the same shape: Exa is implemented, Tavily and the others
 are not, and the choice between them belongs to the protocol rather than to a
@@ -80,17 +90,31 @@ is that mismatch: the variadic `--allowedTools` swallowing the prompt, the
 reader's own MCP servers loading from their home directory, an envelope shape
 that differed between builds, OAuth that only a human can complete.
 
-What would settle it: run the same brief N times through the harness plane and
-through the API plane and compare refusal rate, tokens and wall-clock. If the
-harness plane is *structurally* worse rather than occasionally unlucky, the
-honest conclusion is that the harness is a door for a person (§2) and the
-unattended path belongs to the API plane with a protocol (§3). Filed as
-**B124**, and it is the same measurement B111 already needs.
+The instrument is built (B124, 0.8.5) and **the experiment has not been run** —
+it needs a real CLI, a real subscription and a machine the reader owns.
+`bench.verdict()` reports, per plane, how many runs failed and *how*: `auth`
+(only a human can log in), `start` (not where a launcher's PATH says), `shape`
+(answered in prose the caller could not read), `timeout` (kept working past a
+ceiling a function needs), `limit`, `other`.
 
-## 5. Known compromises, carried from 0.8.3
+How to read it: failures spread across classes mean the plane was unlucky.
+Failures concentrated in one class mean the plane is being **mis-used**, and
+that is the hypothesis confirmed — the harness is a door for a person (§2) and
+the unattended path belongs to the API plane with a protocol (§3).
+
+Run it with `kriko bench --cases 5`, or from the app.
+
+## 5. Known compromises
 
 * Documents are kept but nothing surfaces them (`regrounded()` has no caller).
 * The retention bound is 5000 rows, not bytes.
 * Refused findings keep no document — the cases most worth inspecting.
-* The harness plane has never been run end-to-end against a real `claude`; the
-  gates use fake CLIs plus one free flag check.
+* **The harness plane has never been run end-to-end against a real `claude`.**
+  The gates use fake CLIs plus one free flag check, and §4's experiment is
+  unrun. Everything this file says about the harness plane's behaviour is
+  therefore a hypothesis with an instrument attached, not a finding.
+* The benchmark has no screen in the app; it is `kriko bench` and
+  `GET /api/bench`.
+* `narrow` and `wide` are two settings of one dial. A model whose real limit is
+  somewhere else needs a third row in `protocols.CATALOGUE` — and the evidence
+  for adding it is a measurement, not a preference.

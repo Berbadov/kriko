@@ -4,11 +4,18 @@ import yaml
 
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher, BudgetExceeded
-from kriko.research.base import Document, Finding, Researcher, ResearchTask
+from kriko.research.base import (
+    STANDARD,
+    Document,
+    Finding,
+    Researcher,
+    ResearchTask,
+    Spend,
+)
 
 __all__ = [
     "AgentResearcher", "ApiResearcher", "BudgetExceeded",
-    "Document", "Finding", "Researcher", "ResearchTask",
+    "Document", "Finding", "Researcher", "ResearchTask", "Spend", "STANDARD",
     "get_researcher", "pack_asset", "plan_task",
 ]
 

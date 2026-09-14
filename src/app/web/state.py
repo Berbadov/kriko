@@ -473,7 +473,59 @@ CREATE TABLE IF NOT EXISTS operations (
     ended_at     TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS operations_started ON operations (op_id DESC);
+
+-- ── the benchmark: the same case, every plane, measured ──────────────────
+--
+-- B111, and it is the input B123 cannot invent. Choosing how an operation
+-- should spend a model — how much context per call, how many documents per
+-- batch — is a question about *ratios* ("this model holds together under N
+-- tokens at this batch size; that one takes more"), and a ratio is a
+-- measurement or it is a guess. This table is where the measurements live.
+--
+-- One row per (case, plane, protocol) attempt. `protocol`, `context_chars` and
+-- `batch_size` are recorded from the first day even though only one protocol
+-- exists yet: a measurement whose settings were not written down cannot be
+-- compared with the next one, which is how benchmark tables become folklore.
+--
+-- Interface state, and emphatically so: a benchmark writes claims into a
+-- *copy* of the store and throws it away (`app/bench.py`), so nothing here
+-- has touched the knowledge at all.
+CREATE TABLE IF NOT EXISTS bench_runs (
+    bench_id      TEXT PRIMARY KEY,
+    batch_id      TEXT NOT NULL DEFAULT '',   -- one press, many rows
+    at            TEXT NOT NULL DEFAULT '',
+    subject_id    TEXT NOT NULL DEFAULT '',
+    subject       TEXT NOT NULL DEFAULT '',
+    pack_id       TEXT NOT NULL DEFAULT '',
+    plane         TEXT NOT NULL DEFAULT '',
+    -- Which model or harness actually answered. The plane is the *how*; this
+    -- is the *what*, and a ratio keyed by plane alone would average two
+    -- different models into one meaningless number.
+    model         TEXT NOT NULL DEFAULT '',
+    protocol      TEXT NOT NULL DEFAULT '',
+    context_chars INTEGER,
+    batch_size    INTEGER,
+    ms            INTEGER,
+    -- NULL where nobody counted, never 0. The same distinction `research_runs`
+    -- keeps: the harness plane costs the reader nothing beyond a subscription
+    -- and still knows its tokens; a per-call price knows its dollars without
+    -- ever seeing a token.
+    tokens        INTEGER,
+    usd           REAL,
+    documents     INTEGER NOT NULL DEFAULT 0,
+    findings      INTEGER NOT NULL DEFAULT 0,
+    accepted      INTEGER NOT NULL DEFAULT 0,
+    refused       INTEGER NOT NULL DEFAULT 0,
+    -- The gate's own sentences, the top few. A plane that gathers plenty and
+    -- loses it all at the grounding check is the interesting failure, and a
+    -- count cannot show it.
+    reasons_json  TEXT NOT NULL DEFAULT '[]',
+    error         TEXT NOT NULL DEFAULT '',
+    note          TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
 """
+
 
 #: The most operations one installation keeps. A feed, not an archive: the
 #: durable record of what research *produced* is `submissions`, `pipeline_runs`
@@ -1113,6 +1165,85 @@ def retain_documents(conn: sqlite3.Connection, documents: Sequence[dict]) -> int
         )
         conn.commit()
     return kept
+
+
+def record_bench(conn: sqlite3.Connection, row: dict) -> str:
+    """One measured attempt. Returns its id."""
+    bench_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO bench_runs (bench_id, batch_id, at, subject_id, subject,"
+        " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
+        " tokens, usd, documents, findings, accepted, refused, reasons_json,"
+        " error, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            bench_id,
+            str(row.get("batch_id") or ""),
+            _now(),
+            str(row.get("subject_id") or ""),
+            str(row.get("subject") or ""),
+            str(row.get("pack_id") or ""),
+            str(row.get("plane") or ""),
+            str(row.get("model") or ""),
+            str(row.get("protocol") or ""),
+            row.get("context_chars"),
+            row.get("batch_size"),
+            row.get("ms"),
+            row.get("tokens"),
+            row.get("usd"),
+            int(row.get("documents") or 0),
+            int(row.get("findings") or 0),
+            int(row.get("accepted") or 0),
+            int(row.get("refused") or 0),
+            json.dumps(list(row.get("reasons") or [])),
+            str(row.get("error") or "")[:2000],
+            str(row.get("note") or "")[:2000],
+        ),
+    )
+    conn.commit()
+    return bench_id
+
+
+def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
+    rows = conn.execute(
+        "SELECT * FROM bench_runs ORDER BY at DESC, rowid DESC LIMIT ?",
+        (max(1, min(limit, 1000)),),
+    ).fetchall()
+    out = []
+    for row in rows:
+        one = dict(row)
+        try:
+            one["reasons"] = json.loads(one.pop("reasons_json") or "[]")
+        except ValueError:
+            one["reasons"] = []
+        out.append(one)
+    return out
+
+
+def bench_summary(conn: sqlite3.Connection) -> list[dict]:
+    """Per (plane, model, protocol): what it costs and what survives.
+
+    The acceptance *rate* rather than a count, because that is the number the
+    comparison turns on — a plane that returns thirty findings and keeps two
+    is worse than one that returns four and keeps three, and only the rate says
+    so. Grouped by protocol as well as by model, since that is the whole point
+    of B123: the same model under two protocols is two measurements.
+    """
+    rows = conn.execute(
+        "SELECT plane, model, protocol, COUNT(*) AS runs,"
+        " AVG(ms) AS ms, SUM(tokens) AS tokens, SUM(usd) AS usd,"
+        " SUM(documents) AS documents, SUM(findings) AS findings,"
+        " SUM(accepted) AS accepted, SUM(refused) AS refused,"
+        " SUM(CASE WHEN error <> '' THEN 1 ELSE 0 END) AS failures"
+        " FROM bench_runs GROUP BY plane, model, protocol"
+        " ORDER BY plane, model, protocol"
+    ).fetchall()
+    out = []
+    for row in rows:
+        one = dict(row)
+        kept = (one["accepted"] or 0) + (one["refused"] or 0)
+        one["acceptance"] = round((one["accepted"] or 0) / kept, 3) if kept else None
+        out.append(one)
+    return out
 
 
 def open_operation(
