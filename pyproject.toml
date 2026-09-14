@@ -20,6 +20,13 @@ dependencies = [
     "pywinpty>=2.0; sys_platform == 'win32'",
 ]
 
+# `kriko` on PATH after an install. It was `python -m app.cli` everywhere, which
+# is fine in a checkout and wrong in every document written for someone who
+# installed the wheel — and `kriko tui` in particular should be a command, not
+# an incantation.
+[project.scripts]
+kriko = "app.cli:main"
+
 [project.optional-dependencies]
 # Building knowledge, not reading it. None of this is needed to install a
 # pack and answer a question; all of it is needed to research one.

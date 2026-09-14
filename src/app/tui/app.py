@@ -324,11 +324,19 @@ class _EnterShell(Exception):
     """`act` asking the loop for the terminal, which only the loop can give."""
 
 
-def main(url: str = "", allow_start: bool = True) -> int:
+def main(url: str = "", allow_start: bool = True, settings=None) -> int:
+    from app import logs
     from app.tui.client import connect
 
+    # Before anything that might log. When no engine is running this starts one
+    # in-process, and `create_app` calls `logs.configure()` — whose stderr
+    # handler writes straight onto the alternate screen this is about to draw,
+    # under a frame differ that will not know to repaint over it. The file
+    # handler stays: losing the terminal is the reason to keep `app.log`, not a
+    # reason to stop.
+    logs.silence_stderr()
     try:
-        engine = connect(url, allow_start=allow_start)
+        engine = connect(url, allow_start=allow_start, settings=settings)
     except EngineError as error:
         print(f"kriko tui: {error}")
         return 1

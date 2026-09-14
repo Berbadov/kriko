@@ -98,6 +98,34 @@ def resolve_writable(preferred: Path, fallback: Path) -> tuple[Path, str | None]
     return preferred, f"{why} (and fallback {fallback}: {also})"
 
 
+#: Set by `silence_stderr`. A module flag rather than a `configure` argument
+#: because the caller who needs it is never the caller who configures: the TUI
+#: owns the terminal, and the `configure` call that would smear log lines across
+#: its screen happens later and deeper, inside `create_app`.
+_no_stream = False
+
+
+def silence_stderr() -> None:
+    """Detach stderr logging, and stop `configure` re-attaching it.
+
+    For a caller that owns the terminal. The TUI draws an alternate screen and
+    diffs frames against what it believes is there; one `INFO root: logging to
+    …` written underneath corrupts both halves of that — the display, and the
+    differ's model of it — and the next keystroke repaints only the row it
+    thinks changed, so the stray line stays until something else happens to
+    redraw over it.
+
+    The file handler is untouched. Losing the terminal is not a reason to stop
+    writing `app.log`; it is the reason to.
+    """
+    global _no_stream
+    _no_stream = True
+    root = logging.getLogger()
+    for handler in list(root.handlers):
+        if getattr(handler, "stream", None) is sys.stderr:
+            root.removeHandler(handler)
+
+
 def configure(path: Path | None = None, level: int = logging.INFO) -> Path | None:
     """Attach a rotating file handler and a stderr handler to the root logger.
 
@@ -115,10 +143,11 @@ def configure(path: Path | None = None, level: int = logging.INFO) -> Path | Non
     if any(getattr(h, "_kriko", False) for h in root.handlers):
         return _active
 
-    stream = logging.StreamHandler(sys.stderr)
-    stream.setFormatter(logging.Formatter(_FORMAT))
-    stream._kriko = True  # type: ignore[attr-defined]
-    root.addHandler(stream)
+    if not _no_stream:
+        stream = logging.StreamHandler(sys.stderr)
+        stream.setFormatter(logging.Formatter(_FORMAT))
+        stream._kriko = True  # type: ignore[attr-defined]
+        root.addHandler(stream)
 
     wanted = path or default_log_path()
     why = probe(wanted)

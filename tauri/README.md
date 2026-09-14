@@ -44,8 +44,11 @@ cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$(rustc -Vv | sed 
 npm --prefix tauri install && npm --prefix tauri run tauri build
 ```
 
-CI does exactly this on macOS, Windows and Linux
-(`.github/workflows/desktop.yml`). Bundles are **unsigned**; signing is a
+`.github/workflows/desktop.yml` does exactly this on macOS, Windows and Linux —
+**by hand only** since 2026-09-13, when its `push` and `pull_request` triggers
+were removed: this account has no Actions minutes, so those fired only to leave
+a red tick on commits nothing had tested. The recipe is untrimmed and the
+triggers go back the day minutes return. Bundles are **unsigned**; signing is a
 policy decision, not an engineering one, and is deferred.
 
 On Windows, `pwsh packaging/build_desktop.ps1` runs that whole job — install
