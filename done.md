@@ -6,6 +6,40 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — the build script's first stage, and the gate that should have read it
+
+The first real hand build of 0.8.0 died at `=== Tools` with
+
+    .venv\Scripts\python.exe is not on PATH.
+
+which is the wrong sentence for the right problem. `-Python` is normally a
+*path*, and it was being checked in the same loop as `node` and `rustc`, which
+are names — so a path that does not exist reported itself as a PATH problem and
+sent the reader to look at their PATH. The actual cause: the venv was made
+inside WSL, so the tree has `.venv/bin/python` and no `Scripts/python.exe` at
+all — and a WSL interpreter would have produced a *Linux* sidecar anyway, since
+PyInstaller cannot cross-compile.
+
+The interpreter is now resolved separately, and a missing one says where it
+looked and what to do (`py -3.13 -m venv .venv`, or name a Windows
+interpreter). Two checks were added beside it, because the interpreter is
+frozen into the sidecar and is therefore the *reader's*, not just this build's:
+it must satisfy pyproject's floor, and it must be a final release — a
+pre-release passes every visible step and then ships a sidecar that raises on
+import (B110), which PyInstaller would freeze without complaint.
+
+**And the gate that should have caught this class.** Every other assertion
+about this script reads it as *text*, which can only prove a string is present
+— the exact hole B89 went through, where twelve tray tests passed on a
+`main.rs` that could not be parsed. `test_every_powershell_script_parses` now
+runs PowerShell's own parser over every `.ps1` (skipping where there is no
+`pwsh`, never passing). Verified by breaking the script on purpose: it fails
+with `line 301: The string is missing the terminator`.
+
+The new stage was also *run*, not just parsed — under `pwsh` on Linux, against
+a missing path, a 3.13 final interpreter and a bare name, so all three branches
+are known to behave rather than assumed to.
+
 ### 2026-09-14 — the Windows build, pre-flighted from Linux (and a stale lock that would have stopped it)
 
 The installer still has to be built on Windows — PyInstaller cannot

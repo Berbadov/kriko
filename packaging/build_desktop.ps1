@@ -112,14 +112,64 @@ function Assert-LastExitCode {
 
 try {
     Step "Tools"
-    foreach ($tool in @($Python, "node", "npm", "rustc", "cargo")) {
+
+    # The interpreter is checked apart from the rest, because it is the one
+    # "tool" that is usually a *path* rather than a name. Lumping it in with
+    # node and rustc meant a -Python that does not exist was reported as "not
+    # on PATH", which sends you to look at your PATH -- and on 2026-09-14 the
+    # real cause was a .venv built inside WSL, so the tree had .venv/bin/python
+    # and no .venv/Scripts/python.exe at all. Right diagnosis, wrong sentence,
+    # and the sentence is what someone acts on.
+    if ($Python -match '[\\/]') {
+        $resolved = Resolve-Path -LiteralPath $Python -ErrorAction SilentlyContinue
+        if (-not $resolved) {
+            throw ("No interpreter at '$Python' (looked in " + (Get-Location).Path + ").`n" +
+                   "  A venv made inside WSL has bin/python, not Scripts/python.exe -- and it" +
+                   " is a Linux build in any case, since PyInstaller cannot cross-compile.`n" +
+                   "  Make a Windows one:  py -3.13 -m venv .venv`n" +
+                   "  Or name a Windows interpreter:  -Python C:\path\to\python.exe")
+        }
+        $Python = $resolved.Path
+    }
+    elseif (-not (Get-Command $Python -ErrorAction SilentlyContinue)) {
+        throw "$Python is not on PATH. See the .NOTES block in this script."
+    }
+
+    foreach ($tool in @("node", "npm", "rustc", "cargo")) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
             throw "$tool is not on PATH. See the .NOTES block in this script."
         }
     }
+
     & $Python --version
+    Assert-LastExitCode "python --version"
     node --version
     rustc --version
+
+    # The interpreter is frozen into the sidecar, so its version is the
+    # reader's and not just this build's. Two ways that goes wrong, neither of
+    # which announces itself until much later:
+    #
+    #   * Too old for pyproject's floor -- pip fails several steps from here
+    #     with a resolver message about the tree rather than about your choice.
+    #   * A pre-release. requirements.lock pins a pydantic that raises on
+    #     import under 3.14.0rc2 (B110), and PyInstaller freezes that happily:
+    #     the build goes green and the reader's sidecar dies on its first
+    #     request. The suite runs on 3.13, which is what this should be.
+    $floor = (Select-String -Path pyproject.toml -Pattern '^requires-python\s*=\s*"([^"]+)"'
+             ).Matches[0].Groups[1].Value -replace '[>=\s"]', ''
+    $report = & $Python -c ("import sys;print('.'.join(map(str,sys.version_info[:3])), " +
+                            "sys.version_info.releaselevel)")
+    $parts = $report.Trim().Split(' ')
+    $have = [version]$parts[0]
+    if ($have -lt [version]$floor) {
+        throw "$Python is $have, and pyproject.toml requires $floor or newer."
+    }
+    if ($parts[1] -ne 'final') {
+        throw ("$Python is a pre-release ($report). requirements.lock pins a pydantic that" +
+               " raises on import there, and a frozen sidecar built on it fails on its first" +
+               " request. Use a final release; the suite runs on 3.13.")
+    }
 
     # -r first, and it is the point rather than tidiness: the lock is what a
     # reader's sidecar contains, and a floating resolve here is how two builds
