@@ -294,29 +294,35 @@ stops being the only thing standing between the store and a bad claim.
 *"Harmony and compatibility between the web extension and the app. Both
 visually and algorithmically. This is very important."*
 
-Agreed, and the algorithmic half is further along than the visual one.
+**Design written 2026-09-14:**
+`docs/superpowers/specs/2026-09-14-extension-and-app-harmony-design.md`.
+Reading the code changed the thesis, so the summary filed here earlier is
+superseded by it. Four findings worth carrying:
 
-**Algorithmically** they already share the engine: the extension POSTs to
-`/api/analyze` and the app reads the same store. The divergence is the
-`local_panel` block — the two blocks the panel draws from the reader's *own*
-page (damage silhouette, equipment) never reach the engine at all. That is
-deliberate and should stay, but it means the extension renders things the app
-has no view of, and a reader comparing the two sees different information about
-the same car.
+1. **The visual convergence already happened — by copy.**
+   `ui/src/styles/themes/panel.css` says in its own opening comment that it was
+   ported from `extension/hover_lite/hover_lite.css`. The app's default theme
+   *is* the extension's look.
+2. **Two vocabularies, two shared names.** 38 tokens one side, 28 the other,
+   and exactly two names in both (`--accent`, `--font-mono`). The translation
+   between them is written in a *comment* (`--n-0: #0a0b0d; /* --bg-base */`)
+   that nothing reads.
+3. **Nothing has drifted yet.** All ten mapped greys still agree exactly,
+   checked pair by pair. So this is not a divergence to repair — it is a fork
+   with no mechanism, caught before it moved, which makes the first
+   generated output provably a no-op. That check is available exactly once.
+4. **One real algorithmic split:** `extension/background.js` renames the
+   engine's `claims` to `risks` at its own boundary, for nothing.
 
-**Visually** they are two design systems. `ui/src/styles/tokens.css` is the
-app's; the extension has its own CSS and its own idea of a card, a severity,
-and a claim. Same claim, two appearances.
+Phases: subtract (delete the dead `colors_and_type.css`, undo the `risks`
+rename) → generate the extension's tokens from the app theme, gated for
+staleness the way the frontend bundle already is → derive severity surfaces
+from one ink → say in the app which two blocks only the panel can draw.
 
-The shape of the fix is the same as every other one here: make the shared thing
-*data*. The tokens are already a file; the extension could be served them from
-the engine the way it is already served `local_panel`. Then "the app changed
-its severity colour" is one edit rather than two, and a third client would
-inherit both.
-
-Needs a design doc before code — this is the seam between the two things a
-reader actually touches, and getting it wrong is expensive in a way the
-engine's internals are not.
+**Open decision, and the design names it rather than taking it:** which side
+owns the palette. The design argues for the app; the argument for the
+extension (it is the live stylesheet, and the original) is real. One line in
+the generator either way, and worth settling before it is written.
 
 ### B114 — "Open with web extension" opens a browser with no extension `[G4]`
 *"It does open a chrome page with sahibinden but kriko isn't loaded."*
