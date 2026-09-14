@@ -65,6 +65,7 @@
     /** Keystrokes waiting on the in-flight POST, so a paste is one request. */
     let pending = "";
     let sending = false;
+    let restarting = false;
 
     function handle(msg: { type?: string; data?: string; message?: string; offset?: number }) {
         if (msg.type === "data" && typeof msg.data === "string") {
@@ -76,8 +77,15 @@
             // on it is looking at this, not at app.log.
             term?.write(`\r\n\x1b[31m[terminal] ${msg.message}\x1b[0m\r\n`);
         } else if (msg.type === "ended") {
+            // Not a dead end. Typing `exit` is ordinary, and a shell that dies
+            // on its own is what the 0.8.0 Windows install did on every open —
+            // which left a panel saying so and offering nothing, for the life
+            // of the app.
             status = "closed";
-            term?.write("\r\n\x1b[2m[the shell exited]\x1b[0m\r\n");
+            term?.write(
+                "\r\n\x1b[2m[the shell exited — press Enter, or Restart above, " +
+                    "to start a new one]\x1b[0m\r\n",
+            );
             stopped = true;
         }
     }
@@ -162,6 +170,41 @@
         };
     }
 
+    async function restart() {
+        if (restarting) return;
+        restarting = true;
+        source?.close();
+        source = undefined;
+        if (timer) clearTimeout(timer);
+        try {
+            const response = await fetch("/api/terminal/restart", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ cols: term?.cols ?? 80, rows: term?.rows ?? 24 }),
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                handle({ type: "error", message: body?.detail ?? `restart failed (${response.status})` });
+                return;
+            }
+        } catch (cause) {
+            const remedy = remedyFor(cause);
+            handle({ type: "error", message: `${remedy.headline}. ${remedy.next}` });
+            return;
+        } finally {
+            restarting = false;
+        }
+        // The transcript went with the old shell, so the cursor goes back to
+        // the start with it — asking for byte 4000 of a session that no longer
+        // exists returns nothing, forever.
+        offset = 0;
+        term?.clear();
+        stopped = false;
+        failures = 0;
+        status = "connecting";
+        connect();
+    }
+
     async function flush() {
         if (sending || !pending) return;
         sending = true;
@@ -187,6 +230,13 @@
     }
 
     function send(data: string) {
+        // A keystroke into a shell that is gone means "give me one that is
+        // not" — which is what a reader tries first, before they look for a
+        // button.
+        if (stopped) {
+            void restart();
+            return;
+        }
         pending += data;
         void flush();
     }
@@ -262,6 +312,9 @@
             <span class="title">Terminal</span>
             {#if status === "closed"}
                 <span class="state">disconnected</span>
+                <button type="button" class="restart" onclick={restart} disabled={restarting}>
+                    Restart
+                </button>
             {/if}
             <button type="button" class="close" onclick={toggleTerminal} aria-label="Close terminal">
                 ×
@@ -285,6 +338,19 @@
         border-inline-start: 1px solid var(--line);
         box-shadow: var(--shadow-2);
     }
+    /* `hidden` alone does not hide this. The attribute's `display: none` comes
+       from the user-agent stylesheet, and the `display: flex` above is an
+       author rule, so the author rule wins and the panel stays on screen —
+       fixed, full-height, over everything, with a close button that visibly
+       does nothing. Reported from the 0.8.0 install as "I cannot close the
+       terminal and it invades the rest of the app".
+
+       The attribute-qualified selector below is more specific than both, so it
+       wins. `hidden` stays as the state carrier because it is also what tells
+       assistive technology the panel is gone. */
+    .terminal-panel[hidden] {
+        display: none;
+    }
     .head {
         display: flex;
         align-items: center;
@@ -302,6 +368,16 @@
         font-size: var(--t-xs);
         line-height: var(--lh-xs);
         color: var(--dim);
+    }
+    .restart {
+        font-size: var(--t-xs);
+        line-height: var(--lh-xs);
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        color: inherit;
+        padding: 0 var(--s-2);
+        cursor: pointer;
     }
     .close {
         margin-inline-start: auto;

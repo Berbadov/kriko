@@ -1,6 +1,6 @@
 [package]
 name = "kriko"
-version = "0.8.0"
+version = "0.8.1"
 description = "Kriko — local product knowledge"
 authors = ["Kriko contributors"]
 edition = "2021"

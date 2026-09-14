@@ -164,3 +164,153 @@ def test_a_consumer_that_fell_behind_is_told_so(_fresh_session):
     assert dropped is True
     assert len(chunk) == 16
     assert offset == 64
+
+
+# ── what the 0.8.0 Windows install reported ─────────────────────────────
+
+class _WindowsLikePty:
+    """A pty that answers the way `pywinpty` does, not the way `ptyprocess` does.
+
+    The whole of the 0.8.0 Windows terminal bug is this difference.
+    `ptyprocess.read()` blocks until there is something and raises `EOFError`
+    at the end, so an empty return never happens. `pywinpty.read()` comes back
+    with `''` the moment there is nothing *yet* — which on a freshly spawned
+    `cmd.exe` is immediately, before it has written its banner.
+    """
+
+    def __init__(self, quiet_reads: int = 3):
+        self.quiet_reads = quiet_reads
+        self.reads = 0
+        self.alive = True
+        self.exitstatus = None
+        self.written: list[str] = []
+
+    def read(self, size=1024):
+        self.reads += 1
+        if not self.alive:
+            raise EOFError("Pty is closed")
+        if self.reads <= self.quiet_reads:
+            return ""  # nothing to say *yet*
+        return "C:\\Users\\reader>"
+
+    def isalive(self):
+        return self.alive
+
+    def write(self, data):
+        self.written.append(data)
+
+    def setwinsize(self, rows, cols):
+        pass
+
+    def terminate(self, force=False):
+        self.alive = False
+
+    def close(self, force=False):
+        self.alive = False
+
+
+def test_a_quiet_pty_is_not_a_closed_one(monkeypatch, _fresh_session):
+    """The Windows bug, as a test.
+
+    An empty read was treated as end-of-file, so the reader thread ended the
+    session before the shell had said anything — and the next read then raised
+    the `EOFError: Pty is closed` the reader actually saw. The session must
+    survive a shell that is merely quiet.
+    """
+    session = _fresh_session
+    pty = _WindowsLikePty(quiet_reads=3)
+    monkeypatch.setattr(termpty.TermSession, "_spawn", lambda self, c, r: pty, raising=False)
+    session._start_locked = lambda cols=80, rows=24: _install(session, pty)
+    _install(session, pty)
+
+    deadline = time.time() + 5
+    while time.time() < deadline and not session.since(0)[0]:
+        time.sleep(0.05)
+
+    state = session.state()
+    assert session.since(0)[0], "the shell spoke and nothing recorded it"
+    assert state["ended"] is False, "a quiet pty was mistaken for a closed one"
+    assert state["failure"] == ""
+
+
+def _install(session, pty):
+    """Attach a fake pty to a session the way `start` would."""
+    import threading
+
+    with session._lock:
+        session.proc = pty
+        session.shell = "cmd.exe"
+        session.failure = ""
+        session.ended = False
+        session._generation += 1
+        generation = session._generation
+    thread = threading.Thread(
+        target=session._pump, args=(pty, generation), daemon=True
+    )
+    thread.start()
+    session._reader = thread
+
+
+def test_a_shell_that_exits_after_speaking_is_not_an_error(_fresh_session):
+    """`exit` is an ordinary thing to type. It must not read as a fault."""
+    session = _fresh_session
+    pty = _WindowsLikePty(quiet_reads=0)
+    _install(session, pty)
+    deadline = time.time() + 5
+    while time.time() < deadline and not session.since(0)[0]:
+        time.sleep(0.05)
+    pty.alive = False
+    pty.exitstatus = 0
+
+    deadline = time.time() + 5
+    while time.time() < deadline and not session.state()["ended"]:
+        time.sleep(0.05)
+    state = session.state()
+    assert state["ended"] is True
+    assert state["failure"] == "", f"a clean exit reported as a failure: {state['failure']}"
+
+
+def test_a_shell_that_dies_without_speaking_says_which_shell_and_how(_fresh_session):
+    """`EOFError: Pty is closed` names neither the shell nor its exit status,
+    which is why the first Windows report could not be acted on."""
+    session = _fresh_session
+    pty = _WindowsLikePty(quiet_reads=0)
+    pty.alive = False
+    pty.exitstatus = 1
+    _install(session, pty)
+
+    deadline = time.time() + 5
+    while time.time() < deadline and not session.state()["failure"]:
+        time.sleep(0.05)
+    failure = session.state()["failure"]
+    assert "cmd.exe" in failure, failure
+    assert "status 1" in failure, failure
+    assert "without producing any output" in failure, failure
+
+
+def test_restart_gives_a_new_shell_and_a_clean_transcript(tmp_path, _fresh_session):
+    pytest.importorskip("ptyprocess")
+    client = _client(tmp_path)
+    assert client.get("/api/terminal/state").json()["running"] is True
+
+    deadline = time.time() + 10
+    while time.time() < deadline and not _fresh_session.since(0)[0]:
+        time.sleep(0.05)
+    assert _fresh_session.state()["offset"] > 0
+
+    body = client.post("/api/terminal/restart", json={"cols": 80, "rows": 24}).json()
+    assert body["ended"] is False
+    assert body["failure"] == ""
+    # The transcript went with the old shell: a client still holding byte 400
+    # of a session that no longer exists would wait forever.
+    assert body["offset"] < 400
+
+
+def test_an_ended_session_is_not_silently_resurrected(monkeypatch, tmp_path, _fresh_session):
+    """The polling client asks twice a second. If `/state` restarted the shell,
+    a deliberate `exit` would come straight back and the one signal saying it
+    is gone would never live long enough to be rendered."""
+    client = _client(tmp_path)
+    _fresh_session._end()
+    body = client.get("/api/terminal/state").json()
+    assert body["ended"] is True
