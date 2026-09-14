@@ -4,6 +4,42 @@ The principles that govern *what* Kriko does live in [`CLAUDE.md`](CLAUDE.md) an
 are not repeated here. This file covers the mechanics: branches, commits, tests,
 and the gate they run behind.
 
+## The loop
+
+Three commands. Everything else is detail.
+
+```bash
+tools/setup.sh           # get a working tree (idempotent — run it whenever something feels wrong)
+tools/gate.sh            # everything the branch used to be checked for
+python tools/bump.py X.Y.Z   # set the version, in all five places it lives
+```
+
+**`tools/setup.sh`** is the one that did not exist until 2026-09-13, and its
+absence cost a fresh session six separate discoveries before `pytest` told the
+truth: that the tree needs Python 3.14; that `requirements.lock` is the closure
+the installer freezes and installing anything else makes the suite's central
+claim false; that `-e .` is what makes `app.version` report the tree's version;
+that the `pipeline` extra is optional for *serving* and not for the *suite*
+(without it six modules will not import); that `ui/` and the repo root have
+separate `node_modules`; and that `src/*.egg-info` goes stale and fails a
+version test for a reason that is about your directory rather than your change.
+None of that is interesting, so it lives in the script.
+
+It never touches `~/.kriko`. Your store, history and keys are not development
+environment, and a setup script that resets them is one people are afraid to run.
+
+**`python tools/bump.py --show`** prints the version from all five places and
+exits non-zero if they disagree — four committed files plus the *installed*
+distribution's metadata, which is what `/api/health` actually reports. The fifth
+is why a `sed` never finished the job: a tree at 0.8.1 with a 0.8.0 editable
+install serves 0.8.0. It does not commit and does not tag; a tool that tags as a
+side effect of an edit cuts releases by accident.
+
+**The MCP server** (`.mcp.json`) runs `.venv/bin/python -m app.sidecar --mcp`,
+relative to the repository root, so it works in any checkout `tools/setup.sh`
+has been run in. It used to name one contributor's absolute home directory and
+failed to connect everywhere else.
+
 ## Before you start
 
 Read [`backlog.md`](backlog.md). It and [`done.md`](done.md) are the single source
@@ -109,7 +145,7 @@ Dependencies flow one way. Each layer may import from the layers below it, never
 from the layers above:
 
 ```
-src/app/             CLI, local web dashboard, MCP server
+src/app/             CLI, local web dashboard, MCP server, operator TUI
 src/app/pipeline/    ledger and remediation orchestration
 src/kriko/           generic store, ledger/extract, lookup, ranking, research
 packs/                category data, builders, vocabulary, coverage and pack pipelines

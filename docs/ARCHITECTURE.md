@@ -147,8 +147,8 @@ Every `python -m` target in the tree:
 
 | Command | What it does |
 |---|---|
-| `python -m app.cli` | CLI — pack install/build/list, lookup queries |
-| `python -m app.cli tui` | Operator console — planes, agenda, jobs, shell (see `docs/INTERNALS.md`) |
+| `kriko` (`python -m app.cli`) | CLI — pack install/build/list, lookup queries |
+| `kriko tui` / `kriko-sidecar --tui` | Operator console — planes, agenda, jobs, shell (see `docs/INTERNALS.md`) |
 | `python -m app.mcp_server` | MCP server for research agents (`submit_findings`, `lookup`, …) |
 | `python -m app.pipeline.ledger_run` | Ledger pipeline: acquire, extract, cluster, verdict, remediate, report |
 | `python -m app.pipeline.panel` | Ledger review/inspection panel |

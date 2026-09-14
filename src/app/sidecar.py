@@ -164,6 +164,20 @@ def main(argv=None) -> int:
         action="store_true",
         help="run the MCP stdio server instead of the HTTP one, on the same store",
     )
+    # The operator console, out of the binary the installer already ships.
+    #
+    # `app/tui/` is in the wheel and therefore already frozen into this
+    # executable, so this flag costs one branch and adds no build artifact —
+    # and it is what makes the console *standalone*: a reader with no Python,
+    # no Node and no working WebView2 can still drive research, watch a job and
+    # open a shell, by running the same .exe with one argument. Given that a
+    # webview which would not open is the reason this console exists, having
+    # its only entry point require a source checkout would have been a joke.
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="run the operator console in this terminal, on the same store",
+    )
     # Off by default: `python -m app.sidecar < /dev/null` in a terminal would
     # otherwise read EOF at once and exit. The desktop shell always passes it.
     parser.add_argument(
@@ -225,6 +239,17 @@ def main(argv=None) -> int:
     # its own on it. A stray handshake line here would be a protocol error.
     if args.mcp:
         return serve_mcp(store)
+
+    # And the console owns the *terminal*, which is the same rule one layer up:
+    # it attaches to a running app on EXTENSION_PORT if there is one — sharing
+    # its engine, store and jobs — and otherwise starts an engine of its own in
+    # this process. Either way nothing here should bind a port first, so this
+    # returns before `reserve`.
+    if args.tui:
+        from app.tui import main as run_tui
+
+        settings = Settings(store_path=store) if store is not None else None
+        return run_tui(settings=settings)
 
     overrides = {}
     if store is not None:
