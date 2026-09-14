@@ -6,6 +6,52 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-14 — 0.8.4: the operations feed (B122)
+
+*"We still need to see those MCP operations in the app itself in real time,
+what's coming what's going, see the details."*
+
+B121 made a run **Kriko starts** visible while it runs. This is the other half,
+and the bigger one: the door the reader prefers is their own coding agent
+talking to the MCP server — the terminal is for the person, the app is for the
+operations — and that door was visible only afterwards, only as a `submissions`
+row, and only when the operation happened to *be* a submission. A `lookup`, a
+`research_brief`, a `draft_pack` left nothing at all.
+
+An **operation** is now a row (`docs/AGENT_OPERATIONS.md` §1 named it):
+`app/operations.py` opens it before the work and closes it after, so a call in
+flight reads `running` and a hung one says so. Three doors write it — every MCP
+tool through one wrapper in `app/mcp_server.py`, every job through
+`JobRunner._run`, every `/api/analyze` — because "what is this installation
+doing" is one question and `door` is the answer to "who asked".
+
+Three decisions worth keeping:
+
+* **Every tool, not the three that write.** A run looking things up and a run
+  that is stuck are indistinguishable if only submissions are recorded.
+* **Payloads are summarised, never stored.** `submit_findings` carries whole
+  pages; `digest()` replaces any long string with its own measurement. The page
+  already has a table (B120) and this one must not become the largest thing in
+  `app.sqlite`.
+* **Recording can never change the outcome.** Every failure in the recorder is
+  swallowed, the same rule `log_submission` follows — a reader losing a feed row
+  is a worse feed; a researcher losing a finding to the feed is a defect.
+
+`GET /api/operations` pages by id and `/stream` is SSE polling the table, for
+the reason the jobs stream polls: the MCP server is a *different process*
+writing the same `app.sqlite`, so there is no in-process queue to subscribe to.
+A row still `running` at startup is marked interrupted, exactly as a job row is,
+because that process is not supervised by this one.
+
+In the app it is **Activity → Live**, and it is the default lens: the other
+three answer "what happened", which is only the interesting question once
+something has.
+
+Also: three gates matched `@mcp.tool()` with a regex over the module's own
+source, which would have gone quietly green when the decorator was wrapped.
+They ask `mcp_server.registered_tools()` now — the registry, which can only be
+empty if the server is.
+
 ### 2026-09-14 — 0.8.3: the document is kept, and the run is watchable (B120, B121)
 
 Two questions, one shape: the thing that happened was not kept.

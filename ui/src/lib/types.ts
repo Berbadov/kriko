@@ -480,6 +480,37 @@ export type Triage = {
  * data in the system for improving the agent skill, and previously returned
  * to the agent and then discarded.
  */
+/** One unit of agent-driven work on the knowledge, as the feed sees it.
+ *
+ * `request`/`response` are summaries the server made — a page of
+ * `document_text` is elided there rather than carried here. See
+ * `app/operations.py`. */
+export type Operation = {
+    op_id: number;
+    /** mcp | job | extension | app | cli — which door it came in. */
+    door: string;
+    /** research | agenda | author | recheck | lookup | read | write. */
+    kind: string;
+    /** The tool or job as it is actually called. */
+    name: string;
+    subject_id: string;
+    pack_id: string;
+    /** running | ok | failed. */
+    state: string;
+    request_json: string;
+    response_json: string;
+    error: string;
+    ms: number | null;
+    started_at: string;
+    ended_at: string;
+};
+
+export type Operations = {
+    items: Operation[];
+    running: number;
+    last_id: number;
+};
+
 export type Submission = {
     submission_id: string;
     created_at: string;

@@ -177,6 +177,10 @@ export const api = {
             `/api/lookups/${seg(lookupId)}/notes`,
             { claim_key: claimKey, note },
         ),
+    /** The operations feed. `after` is an id: 0 means "the newest page",
+     *  anything else means "everything since". See `lib/operations.ts`. */
+    operations: (limit = 50, after = 0) =>
+        get<T.Operations>(`/api/operations?limit=${limit}&after_id=${after}`),
     submissions: (limit = 30) =>
         get<T.Submissions>(`/api/submissions?limit=${limit}`),
     retryJob: (jobId: string) =>
