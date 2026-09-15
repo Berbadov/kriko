@@ -143,6 +143,19 @@ export const api = {
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
+    /** What a draft holds and what of its own line-up it does not cover. */
+    packDraft: (slug: string) =>
+        get<T.DraftState>(`/api/packs/drafts/${seg(slug)}`),
+    /** Ask an agent for what this draft is missing. Adds; never rewrites. */
+    amendPackDraft: (slug: string, note: string) =>
+        postJson<{ job_id: string; kind: string }>(
+            `/api/packs/drafts/${seg(slug)}/amend`,
+            { note },
+        ),
+    /** Re-read the sources behind everything on this screen. A job: forty
+     *  claims at three fetches each is minutes, not a press. */
+    verify: (body: { pack_id?: string; subject_id?: string; limit?: number }) =>
+        postJson<{ job_id: string; kind: string }>("/api/verify", body),
     installPackDraft: (slug: string) =>
         postJson<{ slug: string; pack_id: string }>(
             `/api/packs/drafts/${seg(slug)}/install`,

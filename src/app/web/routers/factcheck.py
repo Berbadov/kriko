@@ -17,7 +17,7 @@ one the installed pack shipped: a check whose input came from the page being
 checked would prove nothing at all.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app import factcheck
 from app.web import state
@@ -25,6 +25,12 @@ from app.web.deps import get_app_state, get_store
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/factcheck", tags=["factcheck"])
+
+#: The whole-screen verb lives at `/api/verify`, not under
+#: `/api/factcheck`: one claim is a fact check, and "verify the
+#: knowledge here" is an *operation* with a job behind it. Two nouns
+#: would have been one endpoint doing two jobs.
+verify_router = APIRouter(prefix="/api", tags=["verify"])
 
 
 class CheckRequest(BaseModel):
@@ -91,3 +97,33 @@ def check(
         subject_id=claim["subject_id"],
         title=claim["title"],
     )
+
+
+class VerifyRequest(BaseModel):
+    """Everything on this screen, re-read. B128.
+
+    One claim is the POST above — a request, because the reader is standing
+    there. A pack is a *job*: forty claims at three fetches each with an
+    eight-second ceiling is minutes, and minutes belong in a row that outlives
+    the request.
+    """
+
+    pack_id: str = Field("", max_length=200)
+    subject_id: str = Field("", max_length=200)
+    limit: int = Field(50, ge=1, le=500)
+
+
+@verify_router.post("/verify")
+def verify(body: VerifyRequest, request: Request) -> dict:
+    """Verify the knowledge here — as an operation rather than a press.
+
+    No model and no agent: the question is "does the quote still appear on the
+    page", which a substring test answers honestly and an LLM would answer
+    confidently. Free, so it needs no budget; reporting, so it retracts
+    nothing.
+    """
+    runner = request.app.state.jobs
+    return {
+        "job_id": runner.submit("verify", body.model_dump()),
+        "kind": "verify",
+    }

@@ -1204,7 +1204,180 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         f"Knowledge and press Install."
     )
     written["category"] = category
+    if written.get("uncovered"):
+        # Said in the job's own last line, because a partial pack the reader
+        # knows about is a next step and one they do not is a wrong answer
+        # waiting. B127's button acts on exactly this list.
+        progress.log(
+            f"{len(written['uncovered'])} product(s) named and not covered: "
+            + ", ".join(written["uncovered"][:12])
+            + ("…" if len(written["uncovered"]) > 12 else "")
+            + " — press “Cover the gaps” on the draft to ask for them"
+        )
     return written
+
+
+def pack_amend(settings, params: dict, progress: Progress) -> dict:
+    """Extend a draft that is nearly right, rather than authoring it again (B127).
+
+    *"This pack seems very solid but it includes 19 products and lacks the
+    20th. I don't want to rebuild the whole thing."* Re-authoring re-spends the
+    whole run and can come back worse — the reader's second attempt returned
+    nothing at all. This hands the agent what the draft already holds plus what
+    it is missing, and merges the additions.
+
+    Nothing existing is rewritten, and a refused amendment leaves the draft
+    exactly as it was: the property that makes this safe to press on a pack you
+    like.
+    """
+    from app import packauthor
+    from app.providers import harness, harness_researcher
+
+    slug = str(params.get("slug") or "").strip()
+    if not slug:
+        raise ValueError("which draft? `slug` is required")
+    note = str(params.get("note") or "").strip()
+
+    state_of = packauthor.draft_state(settings.store_path, slug)
+    if not harness.available():
+        raise ValueError(
+            "no coding-agent CLI on PATH, so Kriko cannot extend this draft by "
+            "itself. Hand the brief to your own agent through the MCP server "
+            "(Agents → Connect) — `amend_draft` gives you the same brief."
+        )
+
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        timeout=float(
+            params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
+    )
+    researcher.on_action = progress.log
+    progress.set(0.1, f"extending {state_of.get('name') or slug}")
+    progress.log(
+        f"{len(state_of.get('subjects') or [])} subject(s) already; "
+        f"{len(state_of.get('uncovered') or [])} named and uncovered"
+    )
+    if note:
+        progress.log(f"asked for: {note}")
+
+    reply = researcher.ask(packauthor.amend_brief(state_of, note))
+    progress.set(0.7, "merging the additions")
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+    try:
+        result = packauthor.amend(settings.store_path, slug, reply)
+    except packauthor.PackRefused as exc:
+        raise ValueError(f"the draft is unchanged: {exc}") from exc
+
+    for name in result["files"]:
+        progress.log(f"wrote {name}")
+    progress.set(
+        1.0,
+        f"added {result['subjects_added']} subject(s) and "
+        f"{result['claims_added']} claim(s) to {result['pack_id'] or slug}"
+        + (f"; {len(result['uncovered'])} still uncovered"
+           if result["uncovered"] else "; the line-up is now covered")
+    )
+    return result
+
+
+def verify(settings, params: dict, progress: Progress) -> dict:
+    """Re-read the sources behind claims that are already installed (B128).
+
+    *"As well as the button: verify the knowledge here — again an agent
+    operation."* Half of it existed: `app/factcheck.py` re-reads the page behind
+    **one** claim on a reader's press. What did not exist is the *operation* —
+    the whole screen at once, as a job, with a row in the feed and a result that
+    outlives the request.
+
+    No model and no agent: the question is "does the quote still appear on the
+    page", which a substring test answers honestly and an LLM would answer
+    confidently. That is also why it is free and why it can run over hundreds of
+    claims without a budget.
+
+    It reports and never retracts. A `missing` verdict is a signal beside the
+    reader's own marks, not a deletion — pages get rewritten, and the engine has
+    no authority to remove a pack's claim on the strength of a fetch.
+    """
+    from app import factcheck
+
+    conn = connect(settings.store_path)
+    try:
+        pack_id = str(params.get("pack_id") or "")
+        subject_id = str(params.get("subject_id") or "")
+        limit = max(1, min(int(params.get("limit") or 50), 500))
+        sql = (
+            "SELECT c.claim_id, c.pack_id, c.subject_id, t.title"
+            " FROM claims c LEFT JOIN claim_text t"
+            "   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id"
+            " WHERE 1 = 1"
+        )
+        args: list = []
+        if pack_id:
+            sql += " AND c.pack_id = ?"
+            args.append(pack_id)
+        if subject_id:
+            sql += " AND c.subject_id = ?"
+            args.append(subject_id)
+        sql += " ORDER BY c.claim_id LIMIT ?"
+        args.append(limit)
+        rows = conn.execute(sql, args).fetchall()
+        if not rows:
+            raise ValueError(
+                "no installed claims match that. Verify runs over what is in "
+                "the store, not over a draft"
+            )
+
+        app_conn = state.connect(settings.app_state_path)
+        verdicts: dict[str, int] = {}
+        checked = []
+        try:
+            for index, row in enumerate(rows, start=1):
+                progress.check()
+                progress.set(index / max(1, len(rows)), f"re-reading {index}/{len(rows)}")
+                sources = [
+                    dict(one)
+                    for one in conn.execute(
+                        "SELECT s.url, e.quote FROM evidence e"
+                        # `USING (source_id, pack_id)`, like the single-claim
+                        # router: a source id is unique within a pack and two
+                        # packs may carry the same page.
+                        " JOIN sources s USING (source_id, pack_id)"
+                        " WHERE e.claim_id = ? AND e.pack_id = ?"
+                        " ORDER BY CASE e.stance WHEN 'supports' THEN 0 ELSE 1 END",
+                        (row["claim_id"], row["pack_id"]),
+                    ).fetchall()
+                ]
+                answer = factcheck.check_claim(sources)
+                verdicts[answer["verdict"]] = verdicts.get(answer["verdict"], 0) + 1
+                state.record_fact_check(
+                    app_conn,
+                    pack_id=row["pack_id"],
+                    claim_id=row["claim_id"],
+                    verdict=answer["verdict"],
+                    detail=answer.get("detail", ""),
+                    sources=answer.get("sources", []),
+                    subject_id=row["subject_id"] or "",
+                    title=row["title"] or "",
+                )
+                checked.append(
+                    {"claim_id": row["claim_id"], "title": row["title"] or "",
+                     "verdict": answer["verdict"]}
+                )
+                if answer["verdict"] != factcheck.QUOTED:
+                    progress.log(
+                        f"{answer['verdict']}: “{row['title'] or row['claim_id']}”"
+                    )
+        finally:
+            app_conn.close()
+    finally:
+        conn.close()
+
+    progress.set(
+        1.0,
+        ", ".join(f"{count} {name}" for name, count in sorted(verdicts.items()))
+        or "nothing to check",
+    )
+    return {"checked": len(checked), "verdicts": verdicts, "claims": checked}
 
 
 def bench(settings, params: dict, progress: Progress) -> dict:
@@ -1316,5 +1489,7 @@ HANDLERS = {
     "research_undo": research_undo,
     "pack_build": pack_build,
     "pack_author": pack_author,
+    "pack_amend": pack_amend,
+    "verify": verify,
     "pack_update": pack_update,
 }

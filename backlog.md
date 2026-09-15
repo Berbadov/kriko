@@ -309,7 +309,7 @@ reads that instead of a flat 5% margin.
 
 Step 1 is `gold.yaml` and its loader; everything else is downstream of it.
 
-### B127 — "It is nearly right — cover the gaps" `[G2][G5]`
+### B127 — **DONE 2026-09-15** (0.9.0): cover the gaps
 *"This pack seems very solid but it includes 19 products and lacks the 20th. I
 don't want to rebuild the whole thing — what about I tell the agent it lacks
 some products and it covers those gaps."*
@@ -325,7 +325,7 @@ Not a new plane and not a new acceptance path — the same brief, the same gate,
 with the existing draft as context. It is the difference between a generator and
 a tool.
 
-### B128 — "Verify the knowledge here" `[G2]`
+### B128 — **DONE 2026-09-15** (0.9.0): verify the knowledge here
 *"As well as the button: verify the knowledge here — again an agent operation."*
 
 `app/factcheck.py` already re-reads the page behind one claim and answers
@@ -335,13 +335,13 @@ everything on this screen, as a job, with its own row in the feed. It is the
 third operation kind in `docs/AGENT_OPERATIONS.md` §1 (`recheck`) and the one
 already half-built.
 
-### B129 — A draft that has been installed still says it is a draft `[G4]`
+### B129 — **DONE 2026-09-15** (0.9.0): an installed draft says so
 The reader installed the Samsung draft, saw the pack appear in Knowledge, and
 the "…was drafted for you" card stayed. The drafts list is not refreshed after
 an install and nothing marks a draft as consumed. Small, and exactly the kind of
 thing that makes a working feature feel broken.
 
-### B130 — The agent authored a pack with a watch in it, and named it badly `[G3]`
+### B130 — **DONE 2026-09-15** (0.9.0): scope and naming are enforced
 *"The output lacks many headphones but also includes a Samsung watch; and the
 pack itself is named very poorly."*
 

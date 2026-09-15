@@ -117,6 +117,35 @@ and each is worth reading as instruction rather than as an error:
 Findings arrive as drafts. Submitting is not publishing, so a finding you are
 unsure of is better filed with its weak source than dropped.
 
+## Finish the subject
+
+The failure this installation actually sees is not a wrong finding. It is a run
+that **stops early and says nothing about stopping**: three findings filed for a
+subject with eleven known problems, or four products covered in a category with
+twenty. Nothing errors, the reader is told "done", and the gap is invisible
+because an absence looks identical to a subject with nothing wrong with it.
+
+So, per subject:
+
+* **Run the brief's searches, not one of them.** The brief hands you seeds in
+  the pack's own language and expects you to adapt them. A single query
+  answered is a sample, not research.
+* **Two independent sources beat one good one.** A claim only one page makes is
+  worth filing and worth saying so — `stance` and a second source are what turn
+  "somebody said" into evidence.
+* **Report what you could not establish.** `submit_findings` takes `queries`;
+  use the run's last message to say plainly which searches returned nothing and
+  what you would need to go further. A gap somebody wrote down gets filled; one
+  that is only implied by an absence does not.
+* **Do not stop at the first page that agrees with you.** The pack's principle
+  is a bar, not a target — clearing it three times when ten would clear it is
+  the same run costing the reader ten times over.
+
+And across subjects: when you were asked to research *a category* rather than
+one thing, `coverage_gaps` is the list to work through, and finishing it is the
+job. Working three of its rows and reporting success is the behaviour this
+paragraph exists to name.
+
 ## What is installed here
 """
 
@@ -140,6 +169,36 @@ searches, so there is nothing to research *into*. Write the pack first. You can:
 - `build_draft(draft)` — find out whether the rows load. A build that fails
   names the row that broke it.
 - `list_pack_drafts()` — what is already drafted here.
+
+- `amend_draft(draft, note)` — **add to a draft that is nearly right.** The
+  correction verb: the reader says "it has nineteen products and lacks the
+  twentieth", and this asks for the twentieth without touching the nineteen.
+  Nothing existing is rewritten and a refused amendment leaves the draft
+  exactly as it was, so this is the tool to reach for rather than authoring the
+  category again — re-authoring re-spends the whole run and can come back
+  worse.
+
+### Cover the category, not a corner of it
+
+Before writing claims, **enumerate the line-up**: every product in the category
+a buyer could plausibly be looking at, current and recently resold. That list
+goes in the draft as `lineup`, and Kriko subtracts the subjects you actually
+wrote to record what is still uncovered.
+
+A pack covering three of twenty is worse than useless — it is *confidently*
+incomplete: the reader who looks up the fourth gets "nothing known" and
+concludes there is nothing to know. Naming is cheap and research is expensive,
+so name everything and cover what you can; the remainder is written down as a
+gap and `amend_draft` fills it later.
+
+Two rules that are enforced rather than requested, so getting them wrong costs
+you the run:
+
+* **Stay inside the category.** Every subject must be an instance of the thing
+  you were asked about. A neighbouring product from the same brand goes under
+  `coverage.out_of_scope`, not into `subjects`.
+* **The pack's `name` is a name**, at most six words, and never "common
+  problems" / "issues" / "known faults" — every pack here is about those.
 
 Installing is the reader's press, on the Knowledge screen. Draft it, build it,
 tell them what it covers and what it deliberately leaves out; do not install it

@@ -568,6 +568,37 @@ def build_draft(draft: str) -> dict:
 
 
 @tool()
+def amend_draft(draft: str, note: str = "") -> dict:
+    """Add to a drafted pack that is nearly right, without rewriting it.
+
+    The correction verb (B127). A reader looks at a draft and says "it has
+    nineteen products and lacks the twentieth" — this asks for the twentieth
+    and leaves the nineteen alone. Re-authoring the category instead re-spends
+    the whole run and can come back worse.
+
+    Returns the brief to work from: what the draft already holds, its identity
+    keys, its own bar for a claim, and the line-up entries nothing covers yet.
+    Do the research, then call `write_draft_file` for `data/subjects.yaml` and
+    `data/claims.yaml` — or hand the additions back as the JSON object the
+    brief describes and let the app merge them.
+
+    `note` is what is missing, in the reader's words. Empty means "whatever the
+    draft's own coverage file says is uncovered".
+    """
+    from app import packauthor
+
+    state = packauthor.draft_state(_store_path(), draft)
+    return {
+        "draft": state.get("slug", draft),
+        "pack_id": state.get("pack_id", ""),
+        "name": state.get("name", ""),
+        "subjects": state.get("subjects", []),
+        "uncovered": state.get("uncovered", []),
+        "brief": packauthor.amend_brief(state, note),
+    }
+
+
+@tool()
 def install_pack(path: str) -> dict:
     """Install a pack file that is already on disk."""
     with _store() as conn:
