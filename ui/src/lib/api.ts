@@ -209,6 +209,12 @@ export const api = {
             checked,
         }),
     adapters: () => get<T.Adapter[]>("/api/adapters"),
+    /** Rewrite one harness's skill from the packs installed right now. */
+    refreshAgentSkill: (targetId: string) =>
+        postJson<{ target: string; skill: string | null }>(
+            `/api/agent-targets/${seg(targetId)}/skill`,
+            {},
+        ),
     /** Which sites can be read here, and which were asked for. */
     sites: () => get<T.Sites>("/api/sites"),
     registerSite: (host: string, url = "") =>

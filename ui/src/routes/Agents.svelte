@@ -1,5 +1,6 @@
 <script lang="ts">
     import Connect from "./Connect.svelte";
+    import PlanePrefs from "../lib/Planes.prefs.svelte";
 
     /* The agent side of this app.
      *
@@ -15,5 +16,12 @@
      * Wiring is the one thing left, so it is the only thing rendered.
      */
 </script>
+
+<!-- Which agent, before how it is wired.
+     "No preferred agent thingy" was a fair reading of this screen: the choice
+     existed, in Settings, which is not where anyone goes to think about
+     agents. A preference about agents belongs on the agents screen; it is the
+     same panel rendered in both places rather than two that can disagree. -->
+<PlanePrefs />
 
 <Connect />

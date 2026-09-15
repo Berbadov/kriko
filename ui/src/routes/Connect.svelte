@@ -53,6 +53,18 @@
     // and nothing else.
     let rowError = $state<Record<string, unknown>>({});
 
+    async function refreshSkill(target: { id: string }) {
+        busy = target.id;
+        try {
+            await api.refreshAgentSkill(target.id);
+            await refresh();
+        } catch (thrown) {
+            rowError[target.id] = thrown;
+        } finally {
+            busy = "";
+        }
+    }
+
     async function connect(target: AgentTarget) {
         busy = target.id;
         rowError = { ...rowError, [target.id]: null };
@@ -142,6 +154,28 @@
                         </button>
                     {/if}
                     {#if target.detail}<span class="meta">{target.detail}</span>{/if}
+                    <!-- Whether the *protocol* on disk is the current one,
+                         which is a different question from whether the harness
+                         is wired. The skill is generated from the packs and
+                         from this app's code and used to be written exactly
+                         once, at Connect — so an updated pack or an overhauled
+                         protocol reached the app and never the agent. It is
+                         refreshed at startup now; this row is what says so, and
+                         the button is for the copy that could not be. -->
+                    {#if target.skill?.present}
+                        {#if target.skill.stale}
+                            <span class="meta warn">
+                                the skill on disk is older than this install
+                            </span>
+                            <button
+                                class="quiet"
+                                disabled={busy === target.id}
+                                onclick={() => refreshSkill(target)}>Update the skill</button
+                            >
+                        {:else}
+                            <span class="meta">skill up to date</span>
+                        {/if}
+                    {/if}
                     {#if rowError[target.id]}
                         <span class="state error"
                             >{remedyFor(rowError[target.id]).headline}</span
