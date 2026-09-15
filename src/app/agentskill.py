@@ -36,6 +36,46 @@ from kriko.research import pack_asset
 
 SKILL_NAME = "kriko-research"
 
+#: The line the generated file carries so a copy on disk can be compared with
+#: the one this build would write *without* re-reading every pack twice.
+#:
+#: This is the whole answer to "you did not change the skill text": the skill
+#: is written once, when the reader presses Connect, and then never again — so
+#: an overhauled protocol, a new tool, or an updated pack reached the code and
+#: not the agent. A stamp makes staleness visible; `agentconfig.skill_status`
+#: reads it and the app refreshes it at startup.
+STAMP = "kriko-skill-digest:"
+
+
+def digest(body: str) -> str:
+    """A short content hash of a rendered skill, minus its own stamp line."""
+    import hashlib
+
+    # Trailing whitespace is normalised as well as the stamp line removed, so
+    # `digest(body) == digest(stamped(body))`. Without that the stamp a file
+    # carries could never equal the digest of the file it is in, and every copy
+    # would report itself stale forever — a staleness check that is always true
+    # is the same as not having one.
+    stripped = "\n".join(
+        line for line in (body or "").splitlines() if STAMP not in line
+    ).rstrip()
+    return hashlib.sha256(stripped.encode("utf-8")).hexdigest()[:12]
+
+
+def stamped(body: str) -> str:
+    """The body, carrying its own digest as a trailing comment."""
+    if not body:
+        return body
+    return f"{body.rstrip()}\n\n<!-- {STAMP}{digest(body)} -->\n"
+
+
+def digest_of_file(text: str) -> str:
+    """The digest a file on disk claims, or `""`."""
+    for line in (text or "").splitlines():
+        if STAMP in line:
+            return line.split(STAMP, 1)[1].strip().rstrip("->").strip()
+    return ""
+
 #: How many of a pack's declared words to name before the list stops earning
 #: its space. A skill is a prompt: the twentieth domain teaches nothing the
 #: fifth did not, and the agent can call `research_brief` for the rest.
@@ -117,6 +157,34 @@ and each is worth reading as instruction rather than as an error:
 Findings arrive as drafts. Submitting is not publishing, so a finding you are
 unsure of is better filed with its weak source than dropped.
 
+## The operations you can run here
+
+Kriko calls one unit of agent-driven work an **operation**
+(`docs/AGENT_OPERATIONS.md`). Naming them matters because the app shows them
+back to the reader under these names, live, while they run — what you do here
+appears on their Activity screen as it happens, labelled with the door it came
+in by.
+
+| Operation | What it is | The tools |
+|---|---|---|
+| `research` | grow one subject's claims from sources | `research_brief`, `submit_findings` |
+| `agenda` | work through what is weakest, in order | `research_agenda`, `coverage_gaps` |
+| `author` | write a pack for a category nobody has modelled | `draft_pack`, `write_draft_file`, `build_draft` |
+| `author` (amend) | add to a draft that is nearly right | `amend_draft` |
+| `recheck` | ask whether a cited page still says it | the reader's **Verify** button |
+| `lookup` | answer about one product | `lookup`, `get_subject` |
+
+Two of these are worth knowing about even though you do not call them:
+
+* **Verify** re-reads the pages behind stored claims and records `quoted`,
+  `missing`, `unreadable` or `unreachable`. It is mechanical, free, and
+  retracts nothing — so a `missing` verdict is a signal to research the subject
+  again, not evidence the claim was wrong.
+* **Sites.** The reader's browser extension can only read a listing page a site
+  *adapter* covers. When they open one nothing covers, it lands on their Sites
+  screen and an agent is asked to write the adapter. If you are ever handed
+  that job: the identity keys are the pack's, not yours to invent.
+
 ## Finish the subject
 
 The failure this installation actually sees is not a wrong finding. It is a run
@@ -140,6 +208,18 @@ So, per subject:
 * **Do not stop at the first page that agrees with you.** The pack's principle
   is a bar, not a target — clearing it three times when ten would clear it is
   the same run costing the reader ten times over.
+* **A subject with nothing wrong with it is a finding too.** Say so in the run
+  rather than leaving silence: an absence and an unresearched subject look
+  identical afterwards, and only one of them is finished.
+
+### If the pack ships a gold set
+
+`research/gold.yaml` is a pack's own ground truth — what a competent run should
+find, and what it must never claim. It exists to score *benchmarks*, and it is
+not a checklist to copy from: a finding submitted because it appears there,
+rather than because you read it on a page, is a fabrication with a quote
+attached and the grounding check is the only thing standing between it and the
+reader. Research the subject; the gold set will agree with you or it will not.
 
 And across subjects: when you were asked to research *a category* rather than
 one thing, `coverage_gaps` is the list to work through, and finishing it is the
@@ -465,9 +545,8 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
             "This installation has no packs. Author the first one with "
             "`draft_pack`, then ask for this skill again."
         )
-        return (
-            _EMPTY_HEADER.format(name=SKILL_NAME, description=empty)
-            + _AUTHORING
+        return stamped(
+            _EMPTY_HEADER.format(name=SKILL_NAME, description=empty) + _AUTHORING
         )
 
     when = _when(packs)
@@ -487,4 +566,7 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
     body += _AUTHORING
     for pack in packs:
         body += _pack_section(conn, pack)
-    return body
+    # Stamped last, over the finished document: the digest has to cover the
+    # packs' own sections too, or an updated pack would leave a skill that
+    # reports itself current while describing knowledge that has moved.
+    return stamped(body)
