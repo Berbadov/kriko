@@ -6,6 +6,64 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-15 — the bulk pass: sites, choices, costs, ground truth (B115/B117/B118/B126/B132/B133)
+
+Six rows, built rather than filed.
+
+**Sites — "I cannot open the web extension on the pages that aren't
+registered".** The panel was never missing; the *site* was. An adapter says how
+to read one website, packs ship them, and the only way to add one was to author
+a whole pack — a disproportionate answer to "this listing site also sells cars".
+
+So an installation can learn a site by itself. `app/sites.py` merges a **local
+adapter** behind the engine's own lookup: kept in `app.sqlite` by the two-file
+rule (a site this reader taught their copy about is not pack content, must not
+enter a `content_digest`, and must not travel to anyone else's install as though
+an author had reviewed it), and a pack's adapter for the same host always wins.
+Validated before it is stored, because `site` becomes a host permission and an
+injection target in a browser: a bare hostname, no wildcard, no path, no scheme.
+
+The extension's toolbar button now does something everywhere. On a page with no
+panel it reports the page — under `activeTab`, so the click is the grant — and
+the app answers whether it can read the site. It cannot, so the host lands on
+**Sites** with a count and one sample page, and a button asks an agent to work
+out the adapter (`site_register`). `/api/adapters` carries learned sites too,
+which is what makes the browser actually inject on them: the seam that "it only
+opens on sahibinden" was describing.
+
+**Three choices that were facts (B117).** The harness plane took the first CLI
+it found, the paid plane took whatever `LLM_MODEL` said, and search meant Exa
+because Exa was the only provider with code. `app/prefs.py` makes each a
+decision, defaulting to exactly the old behaviour. **Tavily** is wired beside
+Exa, and `keys.ready()` now accepts *either* search key — requiring both would
+have made adding a provider a way to break an installation that was working.
+
+**What it costs (B118).** Measured spend by plane, and an estimate from this
+installation's own runs — not a vendor price list, which goes stale and cannot
+know the reader's model. `None` under two runs, because an estimate from one is
+a guess with a decimal point. Runs that counted nothing are counted as runs
+rather than as zeros: "six runs, two of which reported a cost" is the truth.
+
+And there is **no credit balance**, deliberately: no completion or search vendor
+exposes one to an API key, and a number invented for it would be the most
+dangerous thing on the screen. The panel says where the balance actually lives.
+
+**Ground truth (B126, steps 1-3).** `app/gold.py` reads a pack's
+`research/gold.yaml` — `must_find`, `must_not_find`, `known_absent` — and judges
+produced claims against it mechanically, cheapest test first, deliberately not
+with an LLM: a model scoring another model's output agrees with it far too
+often, and independence is the one thing this has to have. Recall, precision and
+hallucination are three numbers rather than one, because the remedies differ,
+and `unlisted` is its own bucket so a genuinely new find is not punished — a gold
+set is a floor, not a ceiling. `--reps` repeats each measurement and `scored()`
+reports Wilson intervals, because n=3 is an anecdote.
+
+**The terminal stops covering the page (B133).** It was `position: fixed` over
+the work area: the page stayed full width underneath an opaque panel, headings
+wrapped under it, buttons could not be reached. It is a column in the shell's
+grid now, so the page reflows; under 60rem it still covers, with a shadow that
+says so.
+
 ### 2026-09-15 — 0.9.0: the authoring loop gets its missing verbs (B127-B130)
 
 *"Agents are avoiding some work."* They were, and the instructions told them to.

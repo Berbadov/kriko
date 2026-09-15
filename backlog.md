@@ -292,7 +292,17 @@ extension. It changes nothing on Windows and changing it is not free — the
 identifier is what an installed app is *keyed* by, so a new one is a new app to
 the OS.
 
-### B126 — Benchmarks against ground truth `[G2][G5]`
+### B126 — Benchmarks against ground truth `[G2][G5]` **(STEPS 1-3 DONE 2026-09-15)**
+
+`app/gold.py` loads a pack's `research/gold.yaml`, judges produced claims against
+it (domain+word, phrase-in-title, phrase-in-quote — never an LLM scoring another
+LLM), and reports recall, precision, hallucination and `unlisted` separately.
+`bench` takes `--reps`, records `gold_json` and `rep` per row, and `scored()`
+aggregates with Wilson intervals. Still open: `bulk` and `validation` case kinds,
+`Spend.preamble` as a sweep axis, and `protocols.choose` reading the intervals
+instead of a flat margin.
+
+Original entry:
 *"Benchmarks should be done against ground truth … measuring cost and
 hallucination at arbitrary rates, using statistical methods … output the optimal
 batch sizes and api calls as well as the precontext query."*
@@ -360,7 +370,16 @@ the advertised command by running it and completing an `initialize` — so the
 next step is the reader pressing that and sending what it says, rather than a
 guess. Filed so the verify path is what answers it.
 
-### B132 — "Open a browser with Kriko loaded" is still not the easy path `[G4]`
+### B132 — **PARTLY DONE 2026-09-15**: the extension does something everywhere
+
+The deeper half of the reader's report was not the launcher: *"I cannot open the
+web extension on the pages that aren't registered, so basically it opens on
+sahibinden only."* That is now answered — the toolbar button reports any page,
+an unreadable site becomes a row on **Sites**, and an agent can be asked to
+learn it (`site_register`). What remains of B132 proper is the launcher flag and
+the Web Store route.
+
+Original entry:
 B114 found the cause (Chrome disables `--load-extension` by default) and the fix
 launches with `--disable-features=DisableLoadExtensionCommandLineSwitch`. The
 reader reports it still does not do the trick. Two honest options: find what
@@ -368,7 +387,15 @@ their browser does with that flag (measurable, as B114 was), or stop fighting it
 and ship through the Web Store (B114's other half), which is a one-click install
 that needs no flags at all.
 
-### B133 — UI margins `[G4]`
+### B133 — **DONE 2026-09-15**: the terminal takes a column, not a sheet
+
+The panel was `position: fixed` over the work area, so the page stayed full
+width underneath it — headings wrapped under the panel and buttons could not be
+reached. It is a grid column now (`.shell.with-terminal`), so the page reflows;
+below 60rem it still covers, because there is no room for two columns and a
+shadow says it is on top of something.
+
+Original entry:
 *"UI has several margin problems."* Reported against the Browser extension
 screen with the terminal open; the panel and the page fight for width. Needs the
 screenshots rather than a guess.
@@ -466,7 +493,15 @@ thing code can decide. It also interacts with B18 (source licensing/ToS): a
 publicly listed extension that reads a specific site is a more visible artefact
 than a local one.
 
-### B115 — Agents author the site adapters, and adapters ship like packs `[G6]`
+### B115 — **PARTLY DONE 2026-09-15**: an agent authors the adapter, into `app.sqlite`
+
+The agent half is built (`site_register` + `app/sites.py`'s brief and checks).
+What is deliberately *not* done is the second half of the title — adapters do
+not ship like packs yet. A learned adapter is interface state: it stays on the
+installation that learned it, always loses to a pack's, and travels nowhere.
+Making one publishable is a pack-authoring question and is still open.
+
+Original entry:
 *"General site compatibility must be figured out by the agents themselves due
 to complexity of the web pages... MediaMarkt uses different HTML sections than
 Tesco. Agents should figure out the general rule for identification and store
@@ -527,7 +562,15 @@ Three things to get right, and they are all about cost and consent:
   for a known site and an unknown product, and the panel should say which of
   the two it is looking at rather than offering a button that cannot work.
 
-### B117 — A preferred agent, when several are configured `[G5]`
+### B117 — **DONE 2026-09-15**: preferred agent, LLM and search provider
+
+`app/prefs.py` + `GET|PUT /api/prefs` + the Settings panel. All three fall back
+to the previous behaviour when unset, so an installation that never opens the
+screen is unaffected. Tavily is wired beside Exa (`app/providers/tavily.py`),
+and `keys.ready()` now takes *either* search key rather than both — requiring
+both would have made adding a provider a way to break a working install.
+
+Original entry:
 *"I register 5 agents via api or subscription, one must be my preferred one to
 handle tasks."*
 
@@ -546,7 +589,16 @@ One rule must survive: **`api` is never chosen by omission.** A preference the
 reader set explicitly is different from a default that quietly starts spending,
 and the code that enforces that today should keep enforcing it.
 
-### B118 — Every operation carries what it cost `[G5]`
+### B118 — **PARTLY DONE 2026-09-15**: what it cost, and what the next one will
+
+`app/costs.py` + `GET /api/costs` + the Settings panel: measured spend by plane,
+an estimate from *this installation's* own runs (never a vendor price list, and
+`None` under two runs), and the honest note that **no provider exposes a credit
+balance to an API key** — so the screen says where the balance lives instead of
+inventing one. Runs that counted nothing are counted as runs, not as zeros.
+Still open: a per-operation cost stamped on every row in the feed.
+
+Original entry:
 *"API agent usage system needs identificators; price, token usage etc. Actually
 this is needed for every operation."*
 

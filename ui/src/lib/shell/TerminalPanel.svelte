@@ -325,18 +325,31 @@
 {/if}
 
 <style>
+    /* A column in the shell's grid, not a sheet over it (see
+       `components.css`'s `.shell.with-terminal`). The page reflows to what is
+       left instead of continuing underneath an opaque panel, which is what
+       "it invades the rest of the app" was describing. The column's width is
+       `--terminal-w` in `tokens.css`, read by the grid and by this. */
     .terminal-panel {
-        position: fixed;
-        inset-block: 0;
-        inset-inline-end: 0;
+        grid-area: term;
         z-index: 40;
-        width: min(38rem, 42vw);
-        min-width: 22rem;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         background: var(--panel);
         border-inline-start: 1px solid var(--line);
-        box-shadow: var(--shadow-2);
+    }
+    /* Narrow windows have no room for two columns, so there the panel does
+       cover the page — deliberately, and with the shadow that says it is on
+       top of something. */
+    @media (max-width: 60rem) {
+        .terminal-panel {
+            position: fixed;
+            inset-block: 0;
+            inset-inline-end: 0;
+            width: min(30rem, 92vw);
+            box-shadow: var(--shadow-2);
+        }
     }
     /* `hidden` alone does not hide this. The attribute's `display: none` comes
        from the user-agent stylesheet, and the `display: flex` above is an
