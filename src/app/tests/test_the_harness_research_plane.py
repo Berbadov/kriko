@@ -113,16 +113,62 @@ def test_no_harness_puts_the_prompt_on_the_command_line():
             )
 
 
-def test_the_code_that_starts_a_harness_writes_the_prompt_to_stdin():
-    """Read off the source, because the call site is the whole claim.
+def test_the_prompt_is_handed_over_after_a_double_dash(tmp_path):
+    """B125, and it is the reader's own failure.
 
-    A table with no prompt in it proves nothing on its own: `_run` could still
-    append one. This is a text assertion and it knows it — the test below runs
-    the real CLI, which is what actually holds.
+    Stdin fixed B92 and introduced a pipe, and on Windows that pipe crosses a
+    `claude.cmd` shim into node. When it does not arrive the CLI waits three
+    seconds, proceeds *without a prompt*, and fails with B92's own message —
+    which is what the reader pasted, on a run that had worked minutes before.
+
+    `--` ends option parsing, so the variadic `--allowedTools` cannot eat the
+    prompt and nothing has to survive a shim. This runs a real subprocess and
+    reads back what it was actually given.
     """
-    source = Path(harness_mod.__file__).read_text(encoding="utf-8")
-    assert "stdin=stdin_read" in source
-    assert "*self.harness.args, prompt]" not in source
+    script = tmp_path / "echo_argv.py"
+    script.write_text(
+        "import json, sys\n"
+        "print(json.dumps({'type': 'result', 'result': ' '.join(sys.argv[1:])}))\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    assert "the whole brief" in researcher.ask("the whole brief")
+
+
+def test_a_prompt_too_long_for_a_command_line_still_goes_on_stdin(tmp_path, monkeypatch):
+    """Windows caps a command line at 32,767 characters, and a brief that
+    exceeded it would be a plane that cannot start — so the pipe stays as the
+    fallback, with its risk accepted because the alternative is not running."""
+    monkeypatch.setattr(harness_mod, "MAX_PROMPT_ARGUMENT", 10)
+    script = tmp_path / "echo_stdin.py"
+    script.write_text(
+        "import json, sys\n"
+        "print(json.dumps({'type': 'result', 'result': sys.stdin.read()}))\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    assert researcher.ask("a prompt that is longer than ten characters").strip() == (
+        "a prompt that is longer than ten characters"
+    )
+
+
+def test_no_harness_interpolates_the_prompt_into_its_arguments():
+    """The B92 invariant, still: a prompt has no place *inside* a vector.
+
+    After `--` is not inside — nothing can be parsed past that point, which is
+    the whole reason it is safe."""
+    for one in harness_mod.KNOWN:
+        for arg in one.args:
+            assert "{" not in arg and "prompt" not in arg.lower(), (
+                f"{one.id} looks like it interpolates the prompt into its "
+                "arguments; it goes after `--`"
+            )
 
 
 @pytest.mark.skipif(
@@ -153,7 +199,10 @@ def test_the_harness_command_line_is_one_the_cli_accepts():
     one = harness_mod.chosen("claude-code")
     assert one is not None
     done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-        harness_mod.command_for(one),
+        # The vector as `_run` actually builds it, `--` and all (B125): a gate
+        # that tested a shape the code no longer sends is a gate that has
+        # stopped watching.
+        [*harness_mod.command_for(one), "--", ""],
         input="",
         capture_output=True,
         text=True,

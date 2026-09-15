@@ -125,6 +125,18 @@ class Harness:
     #: was found — "your opencode is installed and Kriko will not use it, and
     #: here is why" is an answer; silently ignoring it is not.
     unusable: str = ""
+    #: True when the prompt may be handed over as an argument after `--`.
+    #:
+    #: **This is the reader's "no stdin data received in 3s".** Stdin was
+    #: chosen (B92) because `--allowedTools` is variadic and swallowed a
+    #: trailing prompt — but `--` ends option parsing, which solves the same
+    #: problem without a pipe. And a pipe is the part that turned out to be
+    #: fragile on Windows: the CLI is often a `claude.cmd` shim, so the handle
+    #: crosses `cmd.exe` into node, and when it does not arrive the CLI waits
+    #: three seconds and then runs *with no prompt at all* — which is exactly
+    #: the failure the reader pasted, on a run that had worked minutes before.
+    #: An argument cannot be lost in transit.
+    prompt_argument: bool = True
     #: Where this CLI installs itself, relative to the reader's home, for when
     #: `PATH` does not carry it. See `locate`.
     homes: tuple[str, ...] = (
@@ -543,6 +555,14 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
 
 # ── what the run is doing, while it does it ──────────────────────────────────
 
+#: The longest prompt that goes on the command line rather than through a
+#: pipe. Windows caps a process's whole command line at 32,767 characters and
+#: the vector itself takes some of that, so this leaves a wide margin — a
+#: research brief is a few thousand characters and a pack-authoring brief is
+#: under ten thousand. Past it, stdin is the only option and its risk (see
+#: `_run`) is accepted because the alternative is not running at all.
+MAX_PROMPT_ARGUMENT = 24000
+
 #: How much of a run's raw output is kept in memory. The reply is parsed from
 #: this, so it has to hold the last `result` event — which is the last line —
 #: and it is bounded for the reason `termpty.SCROLLBACK` is: a process that
@@ -820,22 +840,31 @@ class HarnessResearcher(AgentResearcher):
     # ── the subprocess ───────────────────────────────────────────────────────
 
     def _run(self, prompt: str, on_line: Callable[[str], None] | None = None) -> str:
-        """The prompt goes in on **stdin**, never as an argument.
+        """The prompt goes in **after `--`**, and on stdin only when it is huge.
 
-        This is the defect that made B92 ship a plane that could not run at
-        all. `claude --help` declares `--allowedTools <tools...>`: a *variadic*
-        option, which swallows every following argument. So a vector ending
-        `--allowedTools WebSearch,WebFetch <prompt>` handed the brief to the
-        allowlist and left the CLI with no prompt, and the reader got
+        Two defects, one line apart in history.
 
-            Claude Code exited 1: Error: Input must be provided either
-            through stdin or as a prompt argument when using --print
+        **B92**: `claude --help` declares `--allowedTools <tools...>`, a
+        *variadic* option, which swallows every following argument — so a
+        vector ending `--allowedTools WebSearch,WebFetch <prompt>` handed the
+        brief to the allowlist and the CLI answered
 
-        after waiting out a run. Stdin is not a workaround for that one flag —
-        it removes the whole class: no argument order can consume it, no
-        quoting can mangle it, and a 4 KB brief cannot run into a command-line
-        length limit (Windows caps a process's at 32,767 characters, and a
-        brief plus a contract plus a pack's principle is on the same order).
+            Error: Input must be provided either through stdin or as a
+            prompt argument when using --print
+
+        after the reader had waited out a run. That was fixed by moving the
+        prompt to stdin.
+
+        **B125**: stdin is a *pipe*, and on Windows the pipe crosses a
+        `claude.cmd` shim into node. When it does not arrive, the CLI says
+        "Warning: no stdin data received in 3s, proceeding without it" and then
+        fails with B92's own message — on a machine where the same code path
+        had worked minutes earlier. The reader pasted exactly that.
+
+        `--` ends option parsing, which solves B92 without a pipe: no argument
+        order can consume the prompt, and nothing has to survive a shim. The
+        stdin path stays for a prompt longer than `MAX_PROMPT_ARGUMENT`, since
+        Windows caps a command line at 32,767 characters.
 
         `test_the_harness_command_line_is_one_the_cli_accepts` runs the real
         CLI with an empty prompt and asserts its only complaint is the empty
@@ -853,14 +882,22 @@ class HarnessResearcher(AgentResearcher):
             _ensure_opencode_agent()
         command = command_for(self.harness)
         say = on_line if on_line is not None else self.on_action
-        fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
-                stdin_write.write(prompt)
-            with open(stdin_path, "r", encoding="utf-8") as stdin_read:
-                code, stdout, stderr = self._stream(command, stdin_read, say)
-        finally:
-            os.remove(stdin_path)
+
+        if self.harness.prompt_argument and len(prompt) <= MAX_PROMPT_ARGUMENT:
+            # `--` first: it ends option parsing, so a variadic option cannot
+            # eat the prompt and the prompt cannot be read as an option.
+            code, stdout, stderr = self._stream(
+                [*command, "--", prompt], subprocess.DEVNULL, say
+            )
+        else:
+            fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
+                    stdin_write.write(prompt)
+                with open(stdin_path, "r", encoding="utf-8") as stdin_read:
+                    code, stdout, stderr = self._stream(command, stdin_read, say)
+            finally:
+                os.remove(stdin_path)
 
         if code != 0:
             envelope = _envelope(stdout) if self.harness.structured else {}

@@ -6,6 +6,36 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-15 — 0.8.6: the prompt stops going through a pipe (B125)
+
+The reader's run failed with
+
+    Warning: no stdin data received in 3s, proceeding without it
+    Error: Input must be provided either through stdin or as a prompt argument
+
+on a machine where a pack-authoring run had worked minutes earlier.
+
+Stdin was chosen in B92 because `--allowedTools` is variadic and ate a trailing
+prompt. It fixed that and introduced a pipe — and on Windows the pipe crosses a
+`claude.cmd` shim into node. When it does not arrive the CLI waits three
+seconds, proceeds **with no prompt at all**, and then fails with B92's own
+message, which is why this reads as a regression of a fix that is still in
+place.
+
+`--` ends option parsing, so the prompt goes back on the command line without
+B92's defect: no argument order can consume it, nothing has to survive a shim,
+and an argument cannot arrive three seconds late. Verified against the real CLI,
+and the free empty-prompt gate now runs the vector `_run` actually builds, `--`
+included — the previous gate tested a shape the code was no longer sending.
+
+Stdin stays for a prompt over 24,000 characters: Windows caps a command line at
+32,767, and a plane that cannot start is worse than a pipe that is usually fine.
+
+Also filed, from the same session's report: B126 (benchmarks against pack-authored
+ground truth — the design), B127 (amend a draft rather than re-author it), B128
+(verify the knowledge as an operation), B129–B133 (the draft card, pack scope and
+naming, MCP on Windows, the extension button, UI margins).
+
 ### 2026-09-14 — 0.8.5: measure first, then choose (B111, B123, B124)
 
 Three rows, and they are one argument: *how an operation should spend a model

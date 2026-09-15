@@ -252,67 +252,107 @@ endpoint; the work is a fourth tab in `app/tui/screen.py`), and the feed cannot
 *cancel* an operation it is watching — an MCP call belongs to the process that
 made it.
 
-### B123 — Protocols: how an operation spends a model, chosen from measurements `[G2][G5]`
-*"We need algorithms to pick the best api protocol/technique … qwen3.5 27b
-performs well under 80k tokens at this batch size but opus 4.6 can handle Z —
-which signals a ratio."*
+### B123 / B124 — **DONE 2026-09-14** (0.8.5)
 
-A **protocol** is context window per call, batch size, what is re-sent, what is
-summarised, when to stop. The failure is two-sided: too little batching burns
-tokens re-sending context, too much piles context until the model composes
-instead of quoting — and this codebase catches the second at the grounding gate,
-which means the batch is refused *and* the tokens are still spent.
+Protocols (`kriko.research.Spend` + `app/protocols.py`, the paid plane batching)
+and the harness-as-a-function instrument (`bench.verdict`'s failure classes).
+See the B111 entry above and `done.md`. **B124's experiment is unrun**: it needs
+a real CLI on a real subscription. B126 is what turns both into measurements of
+correctness rather than of discipline.
 
-The protocol is a property of the model, not of the operation, so it is a table
-keyed by model with a picker on top. The table cannot be guessed: it is the
-output of B111, which is why that row is a dependency rather than a companion.
-Search providers belong here too — Exa is wired, Tavily and the rest are not,
-and the choice is the protocol's rather than a call site's.
+### B125 — **DONE 2026-09-15** (0.8.6): the prompt no longer goes through a pipe
 
-See `docs/AGENT_OPERATIONS.md` §3.
+*"RuntimeError: Claude Code exited 1: Warning: no stdin data received in 3s …
+Error: Input must be provided either through stdin or as a prompt argument."*
 
-### B124 — Test whether a coding-agent harness can be a function at all `[G5]`
-*"I'm suspecting that code agent harnesses do not like to be used as functions;
-otherwise we would fix it easily."*
+Stdin fixed B92 and introduced a pipe. On Windows that pipe crosses a
+`claude.cmd` shim into node, and when it does not arrive the CLI waits three
+seconds, proceeds **with no prompt**, and fails with B92's own message — on a
+machine where the same path had worked minutes earlier. The prompt now goes
+after `--`, which ends option parsing (so the variadic `--allowedTools` still
+cannot eat it) and cannot be lost in transit. Stdin remains for a prompt over
+24,000 characters, because Windows caps a command line at 32,767.
 
-Worth taking seriously rather than fixing around. A coding-agent CLI is built
-for a person in a loop: it wants a terminal, it carries the reader's whole
-configuration, it decides when it is done, it answers in prose it was free to
-shape. Kriko asks it to be a function. Every defect this plane has had is that
-mismatch — the variadic `--allowedTools` eating the prompt, the reader's own MCP
-servers loading from their home directory, an envelope shape that differed
-between builds, OAuth only a human can complete, a run that cannot be asked a
-question.
+### B126 — Benchmarks against ground truth `[G2][G5]`
+*"Benchmarks should be done against ground truth … measuring cost and
+hallucination at arbitrary rates, using statistical methods … output the optimal
+batch sizes and api calls as well as the precontext query."*
 
-The test is the same one B111 needs: one brief, N runs, harness plane against
-API plane, comparing refusal rate, tokens and wall-clock. If the harness plane
-is structurally worse rather than occasionally unlucky, the conclusion is that
-the harness is a door for a person (B122) and the unattended path belongs to
-the API plane with a protocol (B123).
+B111 measures discipline (what share of what a plane returned survived the gate)
+and cannot measure correctness, recall, or whether a difference is real. Design:
+`docs/superpowers/specs/2026-09-15-ground-truth-benchmark-design.md` — a
+pack-authored `research/gold.yaml` (a one-time authoring decision, never a
+per-datum review, so the automation principle holds), three case kinds
+(`specific`, `bulk`, `validation`), precision/recall/hallucination as separate
+numbers with Wilson intervals over repetitions, and a sweep whose axes are batch
+size, context, **the preamble** and the search provider. `protocols.choose`
+reads that instead of a flat 5% margin.
 
-### B111 / B123 / B124 — **DONE 2026-09-14** (0.8.5)
+Step 1 is `gold.yaml` and its loader; everything else is downstream of it.
 
-**B111, the benchmark.** `app/bench.py` + `kriko bench` + `POST /api/bench`.
-Cases are derived from the installed store (a fixed list in Python would be the
-hardcoded-car-data bug in benchmark clothing); every case runs against a
-throwaway copy of the knowledge, so a benchmark cannot grow the pack it
-measures; a failed case is recorded as a measurement rather than raised.
+### B127 — "It is nearly right — cover the gaps" `[G2][G5]`
+*"This pack seems very solid but it includes 19 products and lacks the 20th. I
+don't want to rebuild the whole thing — what about I tell the agent it lacks
+some products and it covers those gaps."*
 
-**B123, protocols.** `kriko.research.Spend` is the shape — name, characters per
-document, documents per call — and `app/protocols.py` is the picker, reading
-`bench_runs`. A protocol is never promoted on fewer than two runs and is always
-compared against the default *measured on the same model*. The paid plane
-batches, and checks each quote against the text of the URL the model named.
+Pack authoring is all-or-nothing: `pack_author` writes a draft from a category
+and the only way to change it is to run it again from scratch, which re-spends
+the whole run and can come back *worse* (the reader's second attempt returned
+nothing at all). What is missing is an **amend** operation: hand the agent the
+draft it already wrote plus a sentence about what is absent, and let it add
+subjects or claims to that draft.
 
-**B124, the harness-as-a-function question.** The instrument: `bench.verdict()`
-classifies each failure as `auth`, `start`, `shape`, `timeout`, `limit` or
-`other`, and says whether one class dominates. **The experiment is unrun** — it
-needs a real CLI on a real subscription.
+Not a new plane and not a new acceptance path — the same brief, the same gate,
+with the existing draft as context. It is the difference between a generator and
+a tool.
 
-Still open, and small: no benchmark screen in the app; `narrow`/`wide` are two
-settings of one dial and a third needs a measurement to justify it; the search
-provider (Exa, and Tavily which is not implemented) is still a call site's
-choice rather than the protocol's.
+### B128 — "Verify the knowledge here" `[G2]`
+*"As well as the button: verify the knowledge here — again an agent operation."*
+
+`app/factcheck.py` already re-reads the page behind one claim and answers
+`quoted | missing | unreadable | unreachable`, and B120 kept the document so the
+check can also be made offline. What does not exist is the *operation*: verify
+everything on this screen, as a job, with its own row in the feed. It is the
+third operation kind in `docs/AGENT_OPERATIONS.md` §1 (`recheck`) and the one
+already half-built.
+
+### B129 — A draft that has been installed still says it is a draft `[G4]`
+The reader installed the Samsung draft, saw the pack appear in Knowledge, and
+the "…was drafted for you" card stayed. The drafts list is not refreshed after
+an install and nothing marks a draft as consumed. Small, and exactly the kind of
+thing that makes a working feature feel broken.
+
+### B130 — The agent authored a pack with a watch in it, and named it badly `[G3]`
+*"The output lacks many headphones but also includes a Samsung watch; and the
+pack itself is named very poorly."*
+
+Two scope failures in one run: the category was "samsung headphones" and the
+draft contains a wearable, and the name is a sentence ("Samsung Galaxy Buds and
+wireless headphones common problems") rather than a name. `packauthor` validates
+*structure* and not *scope*, and the brief asks for a name without saying what a
+name is. Both are checkable mechanically: a subject whose identity does not
+share the category's own vocabulary is a scope escape, and a name over N words
+or containing "common problems" is a description.
+
+### B131 — MCP: "cannot connect to the server: kriko" on Windows `[G5]`
+The reader's Claude desktop app cannot reach the installed server. `/api/agent-config`
+advertises the frozen binary with `--mcp` and `app/agentconfig.py` can *verify*
+the advertised command by running it and completing an `initialize` — so the
+next step is the reader pressing that and sending what it says, rather than a
+guess. Filed so the verify path is what answers it.
+
+### B132 — "Open a browser with Kriko loaded" is still not the easy path `[G4]`
+B114 found the cause (Chrome disables `--load-extension` by default) and the fix
+launches with `--disable-features=DisableLoadExtensionCommandLineSwitch`. The
+reader reports it still does not do the trick. Two honest options: find what
+their browser does with that flag (measurable, as B114 was), or stop fighting it
+and ship through the Web Store (B114's other half), which is a one-click install
+that needs no flags at all.
+
+### B133 — UI margins `[G4]`
+*"UI has several margin problems."* Reported against the Browser extension
+screen with the terminal open; the panel and the page fight for width. Needs the
+screenshots rather than a guess.
 
 ### B112 — Make the research protocol enforced rather than advised `[G2]`
 *"Regulation of agents; protocols that force them to do arbitrary actions =>
