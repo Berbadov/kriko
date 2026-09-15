@@ -146,6 +146,35 @@ try {
     node --version
     rustc --version
 
+    # -Version must be the version this checkout actually is.
+    #
+    # The stamp only reaches tauri.conf.json, which is what names the bundle.
+    # Cargo.toml, pyproject.toml and the frozen sidecar's own metadata all come
+    # from the tree. So `-Version 0.8.5` on a checkout at 0.8.0 produced
+    # `Kriko_0.8.5_x64-setup.exe` containing 0.8.0 of everything -- the build
+    # log said "Compiling kriko v0.8.0" one line above the bundle it named
+    # 0.8.5, and the reader installed it, found the fixes missing, and reported
+    # that the version number had not been updated. It had: the label had, and
+    # nothing else.
+    #
+    # An installer whose name is not its contents is worse than a failed build,
+    # because it is the evidence anyone would reach for. So the two have to
+    # agree, and the fix when they do not is `git pull` or
+    # `python tools/bump.py <version>` -- both of which move the tree, which is
+    # the thing being shipped.
+    if ($Version) {
+        $want = $Version -replace '^v', ''
+        $tree = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"'
+                ).Matches[0].Groups[1].Value
+        if ($want -ne $tree) {
+            throw ("asked to stamp $want and this checkout is $tree. The stamp only" +
+                   " names the bundle; Cargo.toml, pyproject and the frozen sidecar" +
+                   " come from the tree, so the installer would carry $tree under a" +
+                   " $want name. Run ``git pull``, or ``$Python tools/bump.py $want``" +
+                   " to move the tree, then build again.")
+        }
+    }
+
     # The interpreter is frozen into the sidecar, so its version is the
     # reader's and not just this build's. Two ways that goes wrong, neither of
     # which announces itself until much later:
