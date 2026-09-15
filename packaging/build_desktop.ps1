@@ -210,6 +210,23 @@ try {
     & $Python -m pip install -r requirements.lock -e "." pyinstaller
     Assert-LastExitCode "pip install"
 
+    # And the install has to be *this* tree. `app_version()` reads the
+    # installed distribution's metadata, which is what /api/health reports and
+    # what PyInstaller freezes -- so an editable install pointing at another
+    # checkout (easy to have: one clone on the Desktop, one elsewhere) would
+    # freeze that other checkout's code under this one's name, which is B134
+    # again one layer in and with no log line to notice it by.
+    $installed = & $Python -c "from app.version import app_version; print(app_version())"
+    Assert-LastExitCode "read the installed version"
+    $tree = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"'
+            ).Matches[0].Groups[1].Value
+    if ($installed.Trim() -ne $tree) {
+        throw ("the install reports $($installed.Trim()) and this tree is $tree." +
+               " The sidecar is frozen from the installed distribution, so it would" +
+               " carry the wrong code. Check that $Python's environment has no other" +
+               " checkout installed, then re-run.")
+    }
+
     # The UI before the freeze: the spec refuses to freeze without a built
     # bundle rather than shipping an app that 404s on its own frontend.
     if ($SkipUi) {
