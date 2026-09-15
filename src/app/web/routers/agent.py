@@ -107,17 +107,63 @@ def agent_targets(request: Request):
     work the app can simply do.
     """
     settings = request.app.state.settings
+    # Rendered once for the whole list: the skill is the same document for
+    # every harness, and rendering it per row would read every pack four times
+    # to answer one question.
+    from kriko.store.db import connect
+
+    store = connect(settings.store_path)
+    try:
+        body = agentskill.render(store, _agenda_rows(request, store)) or ""
+    except Exception:  # noqa: BLE001 — a skill that will not render must not
+        # take the screen that would have told the reader why.
+        body = ""
+    finally:
+        store.close()
     return {
         "server_name": SERVER_NAME,
         "store": str(settings.store_path),
         "targets": [
-            agentconfig.status_of(
-                target,
-                server_name=SERVER_NAME,
-                store_path=Path(settings.store_path),
-            )
+            {
+                **agentconfig.status_of(
+                    target,
+                    server_name=SERVER_NAME,
+                    store_path=Path(settings.store_path),
+                ),
+                # Whether the *protocol* on disk is the current one, which is a
+                # different question from whether the harness is wired — and
+                # the one nobody could ask before.
+                "skill": agentconfig.skill_status(
+                    target, agentskill.SKILL_NAME, body
+                ),
+            }
             for target in agentconfig.targets()
         ],
+    }
+
+
+@router.post("/agent-targets/{target_id}/skill")
+def refresh_target_skill(target_id: str, request: Request, store=Depends(get_store)):
+    """Rewrite one harness's skill from what is installed right now.
+
+    Separate from Connect because they are separate decisions: Connect points a
+    harness at this store, and this updates the protocol it was given. A reader
+    whose pack updated yesterday wants the second without redoing the first.
+    """
+    target = agentconfig.by_id(target_id)
+    if target is None:
+        raise HTTPException(404, f"unknown harness: {target_id}")
+    body = agentskill.render(store, _agenda_rows(request, store)) or ""
+    if not body:
+        raise HTTPException(409, "there is no skill to write yet")
+    try:
+        written = agentconfig.write_skill(target, agentskill.SKILL_NAME, body)
+    except OSError as exc:
+        raise HTTPException(500, f"could not write the skill: {exc}") from exc
+    return {
+        "target": target_id,
+        "skill": written,
+        "status": agentconfig.skill_status(target, agentskill.SKILL_NAME, body),
     }
 
 
