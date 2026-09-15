@@ -209,6 +209,21 @@ export const api = {
             checked,
         }),
     adapters: () => get<T.Adapter[]>("/api/adapters"),
+    /** Which sites can be read here, and which were asked for. */
+    sites: () => get<T.Sites>("/api/sites"),
+    registerSite: (host: string, url = "") =>
+        postJson<{ job_id: string; host: string }>(
+            `/api/sites/${seg(host)}/register`,
+            { url },
+        ),
+    forgetSite: (host: string) =>
+        del<{ host: string; forgotten: boolean }>(`/api/sites/${seg(host)}`),
+    /** What the reader chose: which agent, which LLM, which search. */
+    prefs: () => get<T.Prefs>("/api/prefs"),
+    savePrefs: (values: Partial<Record<string, string>>) =>
+        putJson<T.Prefs>("/api/prefs", values),
+    /** What it has cost, and what the next run is likely to. */
+    costs: () => get<T.Costs>("/api/costs"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),

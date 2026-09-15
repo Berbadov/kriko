@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import operations
+from app import operations, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for  # noqa: F401
@@ -54,7 +54,7 @@ _SOURCE_FOR_ORIGIN = {"app": "analyze", "extension": "extension"}
 
 
 @router.get("/adapters")
-def list_adapters(store=Depends(get_store)):
+def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
     """Which sites the installed packs can read, and what they match on.
 
     The extension uses this to know where it is worth scraping at all.
@@ -74,6 +74,21 @@ def list_adapters(store=Depends(get_store)):
             "local_panel": local_panel(a),
         }
         for a in load_adapters(store)
+    ] + [
+        # Sites this installation learned by itself. Listed here because this
+        # endpoint is what the extension reads to decide where to inject: a
+        # site the reader registered is useless if the browser never runs on
+        # it, and that seam is exactly what "it only opens on sahibinden" was.
+        {
+            "id": (row.get("spec") or {}).get("id", f"local.{row['host']}"),
+            "site": row["host"],
+            "pack_id": row.get("pack_id", ""),
+            "match": (row.get("spec") or {}).get("match", []),
+            "labels": declared_labels(row.get("spec") or {}),
+            "local_panel": local_panel(row.get("spec") or {}),
+            "local": True,
+        }
+        for row in state.local_adapters(app_state)
     ]
 
 
@@ -197,7 +212,10 @@ def analyze(
     store=Depends(get_store),
     app_state=Depends(get_app_state),
 ):
-    spec = adapter_for(store, body.url)
+    # The packs' adapters first, then whatever this installation has learned
+    # about a site nobody shipped one for (`app/sites.py`). The order is the
+    # design: a published adapter always wins over a local guess.
+    spec = sites.adapter_for(store, app_state, body.url)
     if spec is None:
         raise HTTPException(404, f"no installed pack has an adapter for {body.url}")
 

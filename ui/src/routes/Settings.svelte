@@ -1,6 +1,7 @@
 <script lang="ts">
     import Async from "../lib/Async.svelte";
     import Keys from "../lib/Keys.svelte";
+    import PlanePrefs from "../lib/Planes.prefs.svelte";
     import { api } from "../lib/api";
     import { MODES, mode, setMode } from "../lib/mode";
     import { THEMES, THEME_LABELS, setTheme, theme } from "../lib/theme";
@@ -104,6 +105,11 @@
 <!-- Before "what is remembered", because it is the one thing on this page
      that is *not* in app.sqlite, and the section below says so. -->
 <Keys />
+
+<!-- Which agent, which LLM, which search provider — and what the runs have
+     actually cost. Under the keys because a choice between providers only
+     means something once a key exists for one of them. -->
+<PlanePrefs />
 
 <section>
     <h3>What is remembered</h3>

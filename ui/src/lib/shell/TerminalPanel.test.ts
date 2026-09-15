@@ -325,7 +325,11 @@ describe("TerminalPanel", () => {
         // Canary first. If jsdom is not applying this component's <style> at
         // all, every assertion below passes for the wrong reason and this file
         // silently stops testing the thing it is named after.
-        expect(getComputedStyle(panel).position).toBe("fixed");
+        //
+        // `display: flex` rather than `position: fixed` since the panel became
+        // a column in the shell's grid rather than a sheet over it — the page
+        // now reflows around it instead of continuing underneath, which was the
+        // other half of the same report.
         expect(getComputedStyle(panel).display).toBe("flex");
 
         await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));

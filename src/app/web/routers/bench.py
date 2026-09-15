@@ -33,6 +33,10 @@ class BenchRequest(BaseModel):
     #: the plane would choose". Sweeping every protocol by default would
     #: multiply the bill by three to answer a question nobody asked.
     protocols: str = ""
+    #: How many times each measurement is repeated (B126). One run of a case
+    #: is a sample reported as a constant, and two protocols cannot be compared
+    #: from one observation each.
+    reps: int = Field(1, ge=1, le=10)
 
 
 @router.get("/bench")
@@ -58,6 +62,9 @@ def read_bench(
         # harness runs failed, all of them `auth`" is actionable; "four of five
         # failed" is not.
         "verdict": bench.verdict(rows),
+        # Recall, precision and hallucination with Wilson intervals, for the
+        # rows whose cases carried ground truth (B126).
+        "scored": bench.scored(rows),
         "summary": state.bench_summary(conn),
         "cases": bench.cases(store),
         # What the measurements currently *decide*, which is the point of

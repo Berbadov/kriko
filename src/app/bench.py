@@ -44,6 +44,31 @@ DEFAULT_CASES = 3
 DEFAULT_BUDGET_USD = 0.20
 
 
+def gold_cases(conn, *, pack_id: str = "", limit: int = DEFAULT_CASES) -> list[dict]:
+    """The pack-authored ground-truth cases, when there are any (B126).
+
+    Preferred over derived cases wherever a pack ships them: a derived case
+    measures discipline (what share of what came back survived the gate) and a
+    gold case measures *correctness* — what a competent run should have found,
+    and what it must not claim. The first is a floor the benchmark had from day
+    one; the second is the reason the benchmark exists.
+    """
+    from app import gold
+
+    found = gold.all_cases(conn)
+    if pack_id:
+        found = [case for case in found if case["pack_id"] == pack_id]
+    labels = {
+        row["subject_id"]: row["label"]
+        for row in conn.execute("SELECT subject_id, label FROM subjects").fetchall()
+    }
+    return [
+        {**case, "label": labels.get(case["subject_id"], case["subject_id"])}
+        for case in found
+        if case["subject_id"] in labels
+    ][: max(1, min(limit, 50))]
+
+
 def cases(conn, *, pack_id: str = "", limit: int = DEFAULT_CASES) -> list[dict]:
     """The fixed set, derived from the installed store.
 
@@ -144,6 +169,20 @@ def run_case(
             return row
         row["ms"] = int((time.perf_counter() - started) * 1000)
 
+    # Judged against ground truth where the case carries any (B126). The
+    # claims are read back out of the verdicts rather than re-derived, so what
+    # is scored is exactly what the gate let through — which is what a reader
+    # would have seen.
+    if case.get("must_find") or case.get("must_not_find") or case.get("known_absent"):
+        from app import gold
+
+        produced = [
+            {"title": one.get("title", ""), "domain": one.get("domain", ""),
+             "quote": one.get("quote", "")}
+            for one in (result.get("accepted") or [])
+        ]
+        row["gold"] = gold.judge(case, produced)
+
     row["model"] = result.get("llm") or result.get("model") or plane
     row["tokens"] = result.get("tokens_used")
     row["usd"] = result.get("spent_usd")
@@ -219,6 +258,54 @@ def failure_class(error: str) -> str:
         if any(needle in low for needle in needles):
             return name
     return "other"
+
+
+def scored(rows: list[dict]) -> dict:
+    """Recall, precision and hallucination across graded rows, with intervals.
+
+    Aggregated per (plane, model, protocol) rather than per case, because the
+    question is which *way of running* is better and a per-case table answers a
+    different one. Every rate carries a Wilson interval: 60% from five findings
+    and 60% from two hundred are different facts, and printing them identically
+    is how a benchmark starts being quoted as though it had settled something.
+    """
+    from app import gold
+
+    groups: dict[tuple, dict] = {}
+    for row in rows:
+        judged = row.get("gold")
+        if not judged:
+            continue
+        key = (row.get("plane", ""), row.get("model", ""), row.get("protocol", ""))
+        seen = groups.setdefault(key, {
+            "plane": key[0], "model": key[1], "protocol": key[2],
+            "runs": 0, "found": 0, "wanted": 0, "produced": 0, "hallucinated": 0,
+        })
+        seen["runs"] += 1
+        seen["found"] += len(judged.get("found") or [])
+        seen["wanted"] += len(judged.get("found") or []) + len(judged.get("missed") or [])
+        seen["produced"] += (
+            len(judged.get("found") or [])
+            + len(judged.get("unlisted") or [])
+            + len(judged.get("hallucinated") or [])
+        )
+        seen["hallucinated"] += len(judged.get("hallucinated") or [])
+
+    out = []
+    for seen in groups.values():
+        seen["recall"] = (
+            round(seen["found"] / seen["wanted"], 3) if seen["wanted"] else None
+        )
+        seen["recall_interval"] = gold.wilson(seen["found"], seen["wanted"])
+        seen["hallucination_rate"] = (
+            round(seen["hallucinated"] / seen["produced"], 3)
+            if seen["produced"] else None
+        )
+        seen["hallucination_interval"] = gold.wilson(
+            seen["hallucinated"], seen["produced"]
+        )
+        out.append(seen)
+    return {"groups": sorted(out, key=lambda one: (one["plane"], one["model"]))}
 
 
 def verdict(rows: list[dict]) -> dict:

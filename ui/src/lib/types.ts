@@ -499,6 +499,78 @@ export type DraftState = {
     lineup: string[];
 };
 
+/** A site this installation can read, and where the adapter came from. */
+export type Site = {
+    site: string;
+    id: string;
+    pack_id: string;
+    match: string[];
+    /** pack | local — a pack author's, or one this copy learned. */
+    source: string;
+    superseded?: boolean;
+};
+
+export type SiteRequest = {
+    host: string;
+    asks: number;
+    sample_url: string;
+    title: string;
+    /** open | working | done | refused. */
+    state: string;
+    detail: string;
+    first_at: string;
+    last_at: string;
+};
+
+export type Sites = { registered: Site[]; requested: SiteRequest[] };
+
+/** Which agent, which LLM, which search provider — and what could be chosen. */
+export type Prefs = {
+    chosen: { preferred_harness: string; llm_model: string; search_provider: string };
+    harnesses: { id: string; label: string; path: string }[];
+    unusable: { id: string; label: string; why: string }[];
+    search_providers: { id: string; label: string; ready: boolean }[];
+    models: { current: string; default: string; note: string };
+};
+
+/** What has been spent, and what the next run is likely to cost.
+ *
+ * `usd: null` means nobody counted — never zero. And there is no balance:
+ * no provider exposes one to an API key, so the screen says where it lives
+ * instead of inventing a number. */
+export type Costs = {
+    spent: {
+        days: number;
+        usd: number;
+        tokens: number;
+        runs: number;
+        planes: {
+            plane: string;
+            /** Which LLM answered. Spelled `llm` here and in the payload: the
+             *  client may not contain a pack's identity key. */
+            llm: string;
+            runs: number;
+            priced: number;
+            usd: number;
+            tokens: number;
+            usd_per_run: number | null;
+        }[];
+    };
+    estimates: Record<
+        string,
+        {
+            plane: string;
+            subjects: number;
+            usd: number | null;
+            tokens: number | null;
+            basis: number;
+            note: string;
+        }
+    >;
+    keys: { id: string; label: string; present: boolean; purpose: string }[];
+    balance: { known: boolean; note: string };
+};
+
 export type Operation = {
     op_id: number;
     /** mcp | job | extension | app | cli — which door it came in. */

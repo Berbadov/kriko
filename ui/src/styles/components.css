@@ -37,6 +37,30 @@
     height: 100dvh;
     overflow: clip;
 }
+/* The terminal takes a column rather than covering one.
+ *
+ * It was `position: fixed` over the work area, which is why the reader
+ * reported the panel "invading the rest of the app": the page was still
+ * there, full width, with a third of it underneath an opaque panel — so
+ * headings wrapped under it and buttons could not be reached. Closing it
+ * revealed a layout that had never reflowed.
+ *
+ * A grid column reflows by construction. The panel keeps its own width and
+ * the work area gets what is left, which is also what makes the terminal
+ * usable *while reading a screen* rather than instead of one.
+ *
+ * Below the split point there is not enough width for both, and there the
+ * panel covering the page is the right answer — see TerminalPanel.svelte. */
+.shell.with-terminal {
+    grid-template-columns: var(--rail) minmax(0, 1fr) var(--terminal-w);
+    grid-template-areas: "rail work term";
+}
+@media (max-width: 60rem) {
+    .shell.with-terminal {
+        grid-template-columns: var(--rail) minmax(0, 1fr);
+        grid-template-areas: "rail work";
+    }
+}
 /* The work column scrolls *as content*, unlike the rail, which hides its bar
  * and conveys overflow with gradients. The difference is deliberate: chrome
  * is a fixed set of rows a reader can see all of, a report is arbitrarily

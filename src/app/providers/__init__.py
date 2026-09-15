@@ -46,7 +46,46 @@ class MissingKey(RuntimeError):
     """
 
 
-def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=None):
+def _searcher(app_state_path, preferred: str = ""):
+    """The search provider this installation should use, and why that one.
+
+    Order: what the reader chose, then what has a key, then Exa — and the
+    reason the choice comes first is that a provider with a key is not
+    necessarily the one they want their queries going to. `MissingKey` if
+    neither is configured, because a paid plane that cannot search is not a
+    degraded plane, it is a run that fails on its first query.
+    """
+    from app import keys
+
+    wanted = preferred
+    if not wanted and app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        conn = state.connect(app_state_path)
+        try:
+            wanted = prefs.read(conn).get(prefs.SEARCH, "")
+        finally:
+            conn.close()
+    have = keys.search_providers()
+    if wanted and wanted in have:
+        picked = wanted
+    elif have:
+        picked = have[0]
+    else:
+        raise MissingKey(
+            "no search key is set. The paid plane searches and reads: add an "
+            "Exa or Tavily key in Settings → Research."
+        )
+    if picked == "tavily":
+        from app.providers import tavily
+
+        return tavily.searcher(), "tavily"
+    return exa.searcher(), "exa"
+
+
+def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=None,
+                   model: str = "", search: str = ""):
     """The per-token plane, wired to the keys this installation actually has.
 
     Raises `MissingKey` rather than building a researcher that would fail on
@@ -62,7 +101,7 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     """
     from kriko.research import ApiResearcher
 
-    model = llm.model_name()
+    model = llm.model_name(model or _preferred_model(app_state_path))
     if spend is None:
         from app import protocols
 
@@ -71,8 +110,9 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
             if app_state_path is not None
             else None
         )
+    found, provider = _searcher(app_state_path, search)
     researcher = ApiResearcher(
-        exa.searcher(),
+        found,
         fetch.reader(),
         llm.completer(model=model),
         price_per_call=price_per_call,
@@ -84,7 +124,7 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     # tasks.py` reads them duck-typed for the provenance row, exactly as it
     # already reads `tokens_used`.
     researcher.model = model
-    researcher.search_provider = "exa"
+    researcher.search_provider = provider
     # Stamped like `model` and for the same reason: `app/web/tasks.py` reads it
     # duck-typed, and a measurement whose settings were not recorded cannot be
     # compared with the next one.
@@ -92,7 +132,25 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     return researcher
 
 
-def harness_researcher(*, preferred: str = "", timeout: float = 0.0):
+def _preferred_model(app_state_path) -> str:
+    """The model the reader chose, or `""` for the environment's own."""
+    if app_state_path is None:
+        return ""
+    from app import prefs
+    from app.web import state
+
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 — a preference is never why a run fails
+        return ""
+    try:
+        return prefs.read(conn).get(prefs.MODEL, "")
+    finally:
+        conn.close()
+
+
+def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
+                       app_state_path=None):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
 
     The sibling of `api_researcher` in shape and its opposite in cost: this one
@@ -101,6 +159,19 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0):
     its first subject, for the same reason the paid plane raises `MissingKey` —
     "no agent installed" is a screen with an answer on it, not a failed run.
     """
+    if not preferred and app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        try:
+            conn = state.connect(app_state_path)
+        except Exception:  # noqa: BLE001 — see `_preferred_model`
+            conn = None
+        if conn is not None:
+            try:
+                preferred = prefs.read(conn).get(prefs.HARNESS, "")
+            finally:
+                conn.close()
     found = harness.chosen(preferred)
     if found is None:
         names = ", ".join(h.executable for h in harness.KNOWN)
