@@ -233,6 +233,42 @@
         }
     }
 
+    // "It has nineteen products and lacks the twentieth." Amending asks for the
+    // twentieth and leaves the nineteen alone — nothing existing is rewritten,
+    // and a refused amendment leaves the draft as it was, which is what makes
+    // this safe to press on a pack you already like.
+    let amending = $state<string | null>(null);
+    let amendNote = $state("");
+    let amendJob = $state("");
+
+    async function amendDraft(draft: PackDraft) {
+        draftBusy = draft.slug;
+        draftError = null;
+        try {
+            const started = await api.amendPackDraft(draft.slug, amendNote.trim());
+            amendJob = started.job_id;
+            amending = null;
+            amendNote = "";
+        } catch (thrown) {
+            draftError = thrown;
+        } finally {
+            draftBusy = "";
+        }
+    }
+
+    // Re-read the pages behind what is installed. Nothing generative is
+    // involved: the question is "does the quote still appear", which a
+    // substring test answers honestly and an LLM would answer confidently.
+    let verifyJob = $state("");
+    async function verifyPack(packId: string) {
+        draftError = null;
+        try {
+            verifyJob = (await api.verify({ pack_id: packId })).job_id;
+        } catch (thrown) {
+            draftError = thrown;
+        }
+    }
+
     async function discardDraft(draft: PackDraft) {
         draftBusy = draft.slug;
         draftError = null;
@@ -291,22 +327,41 @@
 {#each drafts as draft (draft.slug)}
     <article class="card notice">
         <div>
-            <strong>{draft.name || draft.slug} was drafted for you</strong>
+            <strong>
+                {draft.name || draft.slug}
+                {draft.installed_as ? "is installed" : "was drafted for you"}
+            </strong>
             <span class="meta">
                 {#if draft.error}
                     It does not load yet: {draft.error}. Tell the agent that, and it
                     can fix the file it wrote.
                 {:else}
                     {draft.pack_id} {draft.version} · {draft.files.length} file(s) in
-                    {draft.root}. Nothing of it is in your store until you install it,
-                    and nothing in it can run — a drafted pack is data only.
+                    {draft.root}.
+                    {#if draft.installed_as}
+                        It is in your store — the draft is kept so you can cover
+                        its gaps and install it again.
+                    {:else}
+                        Nothing of it is in your store until you install it, and
+                        nothing in it can run — a drafted pack is data only.
+                    {/if}
                 {/if}
             </span>
         </div>
         <span class="row">
             <button
                 onclick={() => installDraft(draft)}
-                disabled={draftBusy === draft.slug || !!draft.error}>Install it</button
+                disabled={draftBusy === draft.slug || !!draft.error}
+                >{draft.installed_as ? "Install it again" : "Install it"}</button
+            >
+            <!-- The correction verb. A generator you cannot correct is a slot
+                 machine; a tool you can is worth keeping. -->
+            <button
+                class="quiet"
+                onclick={() =>
+                    (amending = amending === draft.slug ? null : draft.slug)}
+                aria-expanded={amending === draft.slug}
+                disabled={draftBusy === draft.slug}>Cover the gaps</button
             >
             <button
                 class="quiet"
@@ -314,8 +369,42 @@
                 disabled={draftBusy === draft.slug}>Throw it away</button
             >
         </span>
+        {#if amending === draft.slug}
+            <div class="amend">
+                <label for="amend-{draft.slug}">
+                    What is it missing? Leave this empty and the draft's own list
+                    of uncovered products is the request.
+                </label>
+                <textarea
+                    id="amend-{draft.slug}"
+                    bind:value={amendNote}
+                    rows="3"
+                    placeholder="It has the Buds Pro and Buds2 Pro but not the Buds3, Buds3 Pro or Buds FE."
+                ></textarea>
+                <p class="meta">
+                    Nothing already in the draft is changed. If the agent comes back
+                    with nothing usable, the draft stays exactly as it is.
+                </p>
+                <button
+                    onclick={() => amendDraft(draft)}
+                    disabled={draftBusy === draft.slug}>Ask an agent</button
+                >
+            </div>
+        {/if}
     </article>
 {/each}
+{#if amendJob}
+    <p class="state">
+        Extending the draft — <a href="#/activity">watch it on Activity</a>. The
+        draft updates when it finishes.
+    </p>
+{/if}
+{#if verifyJob}
+    <p class="state">
+        Re-reading the sources — <a href="#/activity">watch it on Activity</a>.
+        Verdicts land beside each claim.
+    </p>
+{/if}
 {#if draftError}
     <Failure error={draftError} />
 {/if}
@@ -375,6 +464,17 @@
                 </select>
             </div>
         {/if}
+        <!-- The third operation kind (docs/AGENT_OPERATIONS.md §1): re-read
+             the pages behind what is installed here. Free, and it retracts
+             nothing — a `missing` verdict is a signal beside the reader's own
+             marks, because pages get rewritten and the engine has no authority
+             to remove a claim on the strength of one fetch. -->
+        <div class="field">
+            <label for="k-verify">Evidence</label>
+            <button id="k-verify" class="quiet" onclick={() => verifyPack(packFilter)}>
+                Verify the knowledge here
+            </button>
+        </div>
     </div>
 {/if}
 

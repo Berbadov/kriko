@@ -6,6 +6,69 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-15 — 0.9.0: the authoring loop gets its missing verbs (B127-B130)
+
+*"Agents are avoiding some work."* They were, and the instructions told them to.
+Decision 4 of the authoring brief opened with **"Two or three real subjects"** —
+so a category with twenty products came back with three, and nothing anywhere
+recorded the other seventeen. That is not a model being lazy; it is a
+specification being obeyed.
+
+**The line-up is now data (B130).** The brief asks for `lineup` — every product
+in the category the agent can name, covered or not — *before* any claim is
+written, because naming is cheap and research is what is expensive. Kriko
+subtracts the subjects it actually wrote and writes the remainder into the draft
+as `research/coverage.yaml`. A pack covering three of twenty is worse than
+useless: it is confidently incomplete, and the reader who looks up the fourth
+gets "nothing known" and concludes there is nothing to know. Now the job's last
+line names what is missing and the draft carries the list.
+
+Two more things the same run got wrong are enforced rather than requested: a
+subject must be an instance of the category (the reader's headphones pack
+contained a watch; neighbours go under `coverage.out_of_scope`), and the pack's
+`name` is a **name** — six words at most, no "common problems". "Samsung Galaxy
+Buds and wireless headphones common problems" is a sentence about a pack, and in
+a list of packs it is the row nobody can scan. Refused rather than trimmed: a
+refusal tells the agent what to do differently, a silent trim produces a name
+nobody chose.
+
+**Amending, which is the verb that was missing (B127).** *"It includes 19
+products and lacks the 20th. I don't want to rebuild the whole thing."* Exactly
+right, and re-authoring was the only option — which re-spends the run and can
+come back worse; the reader's second attempt returned nothing at all. A
+generator you cannot correct is a slot machine.
+
+`pack_amend` hands the agent what the draft already holds — its identity keys,
+its own bar for a claim, the subjects it covers, the line-up entries it does not
+— and merges what comes back. Additions only: nothing existing is rewritten,
+duplicates cost nothing (the brief shows the agent a list, and a model reading a
+list will sometimes echo it), and **a refused amendment leaves the draft exactly
+as it was**. That last property is what makes it safe to press on a pack you
+already like. Reachable as a button ("Cover the gaps"), an endpoint, and an MCP
+tool (`amend_draft`) so the reader's own agent can do it too.
+
+**Verify the knowledge here (B128).** Half of it existed: one claim, on a press.
+The screenful did not. `verify` is a job over a pack or a subject, recording a
+verdict per claim, free and generative-free — the question is "does the quote
+still appear on the page", which a substring test answers honestly and an LLM
+would answer confidently. It reports and never retracts: pages get rewritten,
+and nothing here has the authority to remove a claim on the strength of one
+fetch.
+
+**An installed draft says so (B129).** The reader installed the Samsung draft,
+saw the pack in Knowledge, and the "…was drafted for you" card stayed — which
+reads as an install that did not take. Marked rather than deleted: the directory
+is the only copy of what the agent proposed, and covering its gaps has to keep
+working afterwards.
+
+**And the skill says all of it (the overhaul).** Two new sections, both aimed at
+the same failure: *Finish the subject* — run the brief's searches rather than
+one of them, prefer two independent sources, report what you could not
+establish, and do not stop at the first page that agrees with you — and *Cover
+the category, not a corner of it*, which states the line-up rule and the two
+enforced refusals so an agent learns them from the skill rather than from a
+failed run.
+
 ### 2026-09-15 — 0.8.7: the installer may not be named for a version it does not contain (B134)
 
 From the reader's own build log:
