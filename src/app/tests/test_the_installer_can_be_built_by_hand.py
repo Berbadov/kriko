@@ -506,3 +506,13 @@ def test_the_stamp_has_to_be_the_version_the_tree_actually_is():
     assert "asked to stamp" in script
     assert "pyproject.toml" in script
     assert "bump.py" in script and "git pull" in script
+
+
+def test_the_freeze_refuses_an_install_that_is_a_different_checkout():
+    """`app_version()` reads the installed distribution's metadata, which is
+    what PyInstaller freezes and what /api/health reports. An editable install
+    pointing at another clone — easy to have — would freeze that clone's code
+    under this one's name, which is B134 with no log line to notice it by."""
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "app_version" in script
+    assert "the install reports" in script
