@@ -183,6 +183,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         control.router,
         extension.router,
         factcheck.router,
+        factcheck.verify_router,
         focus.router,
         health.router,
         history.router,
