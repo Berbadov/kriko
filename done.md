@@ -6,6 +6,31 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-15 — 0.8.7: the installer may not be named for a version it does not contain (B134)
+
+From the reader's own build log:
+
+    Compiling kriko v0.8.0 (C:\Users\beraat\Desktop\kriko\tauri\src-tauri)
+    ...
+    Running makensis to produce ...\Kriko_0.8.5_x64-setup.exe
+
+`-Version` is stamped into `tauri.conf.json`, and that is what names the bundle.
+Everything else — the crate, pyproject, the frozen sidecar's own metadata — comes
+from the tree. So a stamp on a checkout that had not been pulled produced an
+installer *called* 0.8.5 containing 0.8.0 of everything.
+
+That is the whole explanation for a session's worth of confusing reports: the
+terminal fixes were missing because they were not in it, and "you forgot to
+update the version number" was the app honestly reporting the version it was
+built from. The label was the only thing that moved.
+
+The script now refuses the mismatch before compiling anything and names the two
+moves that resolve it — `git pull`, or `tools/bump.py <version>` — because which
+one is right depends on whether the tree or the intention is behind, and the
+build cannot know.
+
+A build is the one artefact nobody re-derives. Its name has to be true.
+
 ### 2026-09-15 — 0.8.6: the prompt stops going through a pipe (B125)
 
 The reader's run failed with

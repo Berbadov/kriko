@@ -486,3 +486,23 @@ def test_every_powershell_script_parses():
         assert done.returncode == 0, (
             f"{script.name} does not parse:\n{done.stdout}{done.stderr}"
         )
+
+
+def test_the_stamp_has_to_be_the_version_the_tree_actually_is():
+    """An installer whose name is not its contents is worse than a failed build.
+
+    2026-09-15: `-Version 0.8.5` on a checkout at 0.8.0 produced
+    `Kriko_0.8.5_x64-setup.exe` containing 0.8.0 of everything — the log said
+    "Compiling kriko v0.8.0" one line above the bundle it named 0.8.5. The
+    reader installed it, found the fixes missing, and reported that the version
+    number had not been updated. It had: the *label* had.
+
+    The stamp only reaches `tauri.conf.json`, which is what names the bundle;
+    Cargo.toml, pyproject and the frozen sidecar's own metadata all come from
+    the tree. So the script has to refuse the mismatch, and say which of the
+    two moves (`git pull`, `tools/bump.py`) fixes it.
+    """
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "asked to stamp" in script
+    assert "pyproject.toml" in script
+    assert "bump.py" in script and "git pull" in script
