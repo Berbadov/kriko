@@ -292,6 +292,27 @@ extension. It changes nothing on Windows and changing it is not free — the
 identifier is what an installed app is *keyed* by, so a new one is a new app to
 the OS.
 
+### B135 — **DONE 2026-09-15**: the skill on disk follows the code
+
+*"I believe you did not make any changes to skill text?"* — correct about the
+reader's machine, and the reason is the bug. The skill is generated from the
+installed packs and from this app's code, and it was written exactly **once**:
+when Connect was pressed. An overhauled protocol, a tool that did not exist last
+month and a pack that updated yesterday all reached the app and none of them
+reached the agent.
+
+`agentskill.stamped()` puts a content digest in the file, `agentconfig.skill_status`
+compares it, `/api/agent-targets` reports `present` / `stale` per harness, and
+**startup refreshes every wired copy that has fallen behind** — because a
+protocol that needs the reader to remember a button is a protocol that drifts.
+A harness that was never connected is still left alone: writing into the config
+directory of a CLI nobody wired would be installing something they did not ask
+for.
+
+Also: the preferred-agent choice was in Settings, which is not where anyone goes
+to think about agents. The same panel now renders on the Agents screen — one
+component in both places rather than two that can disagree.
+
 ### B126 — Benchmarks against ground truth `[G2][G5]` **(STEPS 1-3 DONE 2026-09-15)**
 
 `app/gold.py` loads a pack's `research/gold.yaml`, judges produced claims against

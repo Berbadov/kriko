@@ -6,6 +6,44 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-15 — the skill on disk follows the code, and the agent choice is where agents are (B135)
+
+Two corrections, both of which the reader was right about from where they were
+standing.
+
+**"You did not make any changes to skill text."** The text changed; their copy
+did not. The skill is *generated* — from the installed packs and from this app's
+code — and it was written exactly once, when Connect was pressed. So every
+overhaul since, every new tool, and every pack update reached the app and never
+reached the agent. From the machine's side nothing had changed, and nothing ever
+would have.
+
+`agentskill.stamped()` now writes a content digest into the file;
+`agentconfig.skill_status` compares what is on disk with what this build would
+write; `/api/agent-targets` reports it per harness; and **startup rewrites every
+wired copy that has fallen behind**. A harness nobody connected is still left
+alone — writing into the config directory of a CLI the reader never wired would
+be installing something they did not ask for — and every failure is swallowed,
+because a read-only home directory is a row on a screen and not a reason the app
+will not start.
+
+The digest normalises trailing whitespace as well as removing its own line, so
+an unchanged file compares equal. Without that every copy reports itself stale
+forever, which is the same as having no check.
+
+**"No preferred agent thingy."** It existed, in Settings — which is not where
+anyone goes to think about agents. The same panel renders on the Agents screen
+now: one component in two places rather than two that can disagree.
+
+**And the skill says what the app now does.** A new section names the operation
+vocabulary the reader sees on their own Activity screen — `research`, `agenda`,
+`author`, `recheck`, `lookup` — with the tools under each, `amend_draft` for a
+draft that is nearly right, and the two operations an agent does not call but
+has to know exist (Verify, and Sites). Plus one warning that is worth the space:
+a pack's `gold.yaml` is ground truth for *benchmarks*, not a checklist to copy
+from — a finding submitted because it appears there is a fabrication with a
+quote attached.
+
 ### 2026-09-15 — the bulk pass: sites, choices, costs, ground truth (B115/B117/B118/B126/B132/B133)
 
 Six rows, built rather than filed.

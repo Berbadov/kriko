@@ -62,6 +62,14 @@ export type AgentTarget = {
     exists: boolean;
     state: "connected" | "stale" | "absent" | "unreadable";
     detail?: string;
+    /** Whether the protocol on disk is the one this build would write.
+     *  A harness can be wired and carrying a skill from three versions ago. */
+    skill?: {
+        supported: boolean;
+        path: string | null;
+        present: boolean;
+        stale: boolean;
+    };
 };
 
 export type AgentTargets = { server_name: string; store: string; targets: AgentTarget[] };

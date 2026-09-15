@@ -195,6 +195,72 @@ def write_skill(target: Target, name: str, body: str) -> str | None:
     return str(path)
 
 
+def skill_status(target: Target, name: str, body: str) -> dict:
+    """Whether this harness has the *current* skill on disk.
+
+    Three answers, and they are three different situations: `unsupported` (this
+    harness has nowhere to put a skill), `missing` (it has somewhere and there
+    is nothing there), `stale` (there is something there and it is not what
+    this build would write).
+
+    Stale is the one that matters and the one nothing could see before. The
+    skill is generated from the installed packs and from this app's own code,
+    and it was written exactly once — when the reader pressed Connect. So an
+    overhauled protocol, a tool that did not exist last month, or a pack that
+    updated yesterday all reached the code and never reached the agent, and
+    from the reader's side the answer to "did the skill change" was correctly
+    *no*.
+    """
+    path = skill_path(target, name)
+    if path is None:
+        return {"supported": False, "path": None, "present": False, "stale": False}
+    from app import agentskill
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    present = bool(text.strip())
+    return {
+        "supported": True,
+        "path": str(path),
+        "present": present,
+        "stale": present and agentskill.digest_of_file(text) != agentskill.digest(body),
+    }
+
+
+def refresh_skills(name: str, body: str) -> list[dict]:
+    """Rewrite the skill wherever a stale or missing copy is already wired.
+
+    Called at startup. Only for harnesses this installation is *already*
+    connected to: writing into the config directory of a CLI the reader never
+    wired would be installing something they did not ask for, and the check
+    for "already wired" is the file being there, not a preference somewhere.
+
+    Silent per target, because a read-only home directory or a CLI that moved
+    is not a reason the app fails to start — it is a row on the Agents screen
+    saying the copy on disk is old.
+    """
+    written = []
+    if not body:
+        return written
+    for target in targets():
+        status = skill_status(target, name, body)
+        if not status["supported"] or not status["present"]:
+            # Nothing there is not staleness: a harness the reader never
+            # connected gets nothing until they press Connect.
+            continue
+        if not status["stale"]:
+            continue
+        try:
+            path = write_skill(target, name, body)
+        except OSError:
+            continue
+        if path:
+            written.append({"target": target.id, "path": path})
+    return written
+
+
 def by_id(target_id: str) -> Target | None:
     return next((t for t in targets() if t.id == target_id), None)
 
