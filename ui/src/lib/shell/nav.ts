@@ -67,6 +67,11 @@ export const NAV: NavGroupSpec[] = [
         authorOnly: true,
         items: [
             { name: "packs", label: "Packs" },
+            // Sites, next to Packs, because they are the same kind of thing
+            // from the reader's side: what this installation can read. The
+            // words somebody would type for it are all about the browser.
+            { name: "sites", label: "Sites",
+              also: ["adapter", "adapters", "website", "extension site", "register"] },
             // Three entries where there were three screens — Runs, Knowledge
             // pipeline, What researchers sent — and the same mistake Subjects
             // / Coverage / Health made. They are not three places: they are

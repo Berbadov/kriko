@@ -102,6 +102,9 @@ def _researcher(params: dict):
         return harness_researcher(
             preferred=str(params.get("harness") or ""),
             timeout=float(params.get("timeout_seconds") or 0.0),
+            # So "which agent" is the reader's standing choice rather than
+            # whichever CLI happened to be found first (B117).
+            app_state_path=params.get("app_state_path"),
         )
     if backend != "api":
         return get_researcher({"backend": backend})
@@ -1165,6 +1168,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
 
     researcher = harness_researcher(
         preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
         # Not the research ceiling. Authoring a pack is a category read from
         # scratch plus two or three subjects researched before the first line
         # is printed, and the real CLI runs past ten minutes doing it -- so
@@ -1248,6 +1252,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
 
     researcher = harness_researcher(
         preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
         timeout=float(
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
@@ -1278,6 +1283,110 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
            if result["uncovered"] else "; the line-up is now covered")
     )
     return result
+
+
+def site_register(settings, params: dict, progress: Progress) -> dict:
+    """Teach this installation to read a website (B115, and the reader's own
+    "I cannot open the extension on pages that aren't registered").
+
+    An agent reads the page and writes the adapter; `app/sites.py` checks it
+    and `app.sqlite` keeps it. Nothing reaches the store: a site this copy
+    learned is not pack content, and a pack that later ships an adapter for the
+    same host wins over it.
+    """
+    from app import sites
+    from app.providers import harness, harness_researcher
+
+    host = sites.host_of(params.get("host") or "")
+    if not host:
+        raise ValueError("which site? `host` is required")
+    url = str(params.get("url") or f"https://{host}/")
+
+    conn = connect(settings.store_path)
+    try:
+        keys = identity_keys_text(conn)
+    finally:
+        conn.close()
+
+    if not harness.available():
+        raise ValueError(
+            "no coding-agent CLI on PATH, so Kriko cannot read the site by "
+            "itself. Hand the brief to your own agent through the MCP server "
+            "and post the adapter back, or write it yourself on the Sites "
+            "screen."
+        )
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
+        timeout=float(params.get("timeout_seconds") or harness.TIMEOUT_SECONDS),
+    )
+    researcher.on_action = progress.log
+    progress.set(0.1, f"reading {host}")
+    progress.log(f"site: {host} — {url}")
+
+    reply = researcher.ask(sites.BRIEF.format(site=host, url=url, keys=keys))
+    progress.set(0.7, "checking the adapter")
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+
+    from app.packauthor import _payload  # the same fence reader every door uses
+
+    spec = _payload(reply)
+    app_conn = state.connect(settings.app_state_path)
+    try:
+        if not spec:
+            state.set_site_request(
+                app_conn, host, state="refused",
+                detail="the agent printed no JSON object")
+            raise ValueError(
+                "the agent printed no adapter. Nothing was stored — the run's "
+                "log holds what it did say"
+            )
+        try:
+            checked = sites.check(spec, host=host)
+        except sites.SiteRefused as exc:
+            state.set_site_request(app_conn, host, state="refused", detail=str(exc))
+            raise ValueError(f"the adapter was refused: {exc}") from exc
+        state.save_local_adapter(
+            app_conn, host=host, spec=checked, source="agent",
+            pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),
+        )
+        state.set_site_request(app_conn, host, state="done",
+                               detail=f"{len(checked.get('fields') or {})} field(s)")
+    finally:
+        app_conn.close()
+
+    progress.set(
+        1.0,
+        f"{host} can be read now — {len(checked.get('fields') or {})} field(s). "
+        f"Open a listing there and press the extension button."
+    )
+    return {"host": host, "adapter": checked, "url": url}
+
+
+def identity_keys_text(conn) -> str:
+    """The identity keys the installed packs declare, for a brief.
+
+    Read off the store rather than named here, for the reason every list in
+    this file is: the engine knows no category, and a key an agent invented
+    would map a page into a lookup that resolves to nothing. `is_identity` is
+    the pack's own mark — the same rows `identity_vocabulary` reads.
+    """
+    rows = conn.execute(
+        "SELECT DISTINCT s.pack_id, s.kind, a.key FROM attributes a"
+        " JOIN subjects s USING (subject_id, pack_id)"
+        " JOIN packs p ON p.pack_id = s.pack_id"
+        " WHERE a.is_identity = 1 AND p.enabled = 1"
+        " ORDER BY s.pack_id, s.kind, a.key"
+    ).fetchall()
+    if not rows:
+        return "(no packs are installed, so there are no keys to map into yet)"
+    by_pack: dict[tuple, list[str]] = {}
+    for row in rows:
+        by_pack.setdefault((row["pack_id"], row["kind"]), []).append(row["key"])
+    return "\n".join(
+        f"* `{pack}` / `{kind}`: " + ", ".join(f"`{key}`" for key in sorted(set(keys)))
+        for (pack, kind), keys in by_pack.items()
+    )
 
 
 def verify(settings, params: dict, progress: Progress) -> dict:
@@ -1406,11 +1515,17 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                 "no plane can run here: install a coding-agent CLI for the "
                 "harness plane, or add the API keys for the paid one"
             )
-        found = bench_mod.cases(
-            conn,
-            pack_id=str(params.get("pack_id") or ""),
-            limit=int(params.get("cases") or bench_mod.DEFAULT_CASES),
-        )
+        limit = int(params.get("cases") or bench_mod.DEFAULT_CASES)
+        pack_id = str(params.get("pack_id") or "")
+        # Ground truth where a pack ships it (B126), derived cases otherwise.
+        # A gold case measures correctness — what a competent run should have
+        # found and what it must not claim — and a derived one measures
+        # discipline. Preferring the first whenever it exists is the whole
+        # point of having authored it.
+        found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
+        graded = bool(found)
+        if not found:
+            found = bench_mod.cases(conn, pack_id=pack_id, limit=limit)
         if not found:
             raise ValueError("no subjects installed, so there is nothing to measure")
     finally:
@@ -1424,15 +1539,24 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         one.strip() for one in str(params.get("protocols") or "").split(",") if one.strip()
     ] or [""]
 
+    # How many times each measurement is repeated. Language models are
+    # stochastic, so one run of a case is a sample reported as a constant —
+    # and two protocols cannot be compared from one observation each.
+    reps = max(1, min(int(params.get("reps") or 1), 10))
+
     batch_id = secrets.token_hex(8)
     app_conn = state.connect(settings.app_state_path)
     rows = []
     try:
-        total = len(found) * len(chosen) * len(protocols_asked)
+        total = len(found) * len(chosen) * len(protocols_asked) * reps
         done = 0
         for case in found:
             for plane in chosen:
-                for protocol in protocols_asked:
+                for protocol, rep in [
+                    (one, index)
+                    for one in protocols_asked
+                    for index in range(1, reps + 1)
+                ]:
                     progress.check()
                     progress.set(
                         done / max(1, total),
@@ -1449,6 +1573,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         ),
                         batch_id=batch_id,
                     )
+                    row["rep"] = rep
                     state.record_bench(app_conn, row)
                     rows.append(row)
                     done += 1
@@ -1468,6 +1593,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         )
                     )
         summary = state.bench_summary(app_conn)
+        scored = bench_mod.scored(rows)
     finally:
         app_conn.close()
 
@@ -1479,6 +1605,12 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         "protocols": protocols_asked,
         "rows": rows,
         "summary": summary,
+        "graded": graded,
+        # Recall, precision and hallucination with their intervals, when the
+        # cases carried ground truth. Absent rather than zeroed when they did
+        # not: "nothing was graded" and "it scored zero" are opposite facts.
+        "scored": scored,
+        "reps": reps,
     }
 
 
@@ -1491,5 +1623,6 @@ HANDLERS = {
     "pack_author": pack_author,
     "pack_amend": pack_amend,
     "verify": verify,
+    "site_register": site_register,
     "pack_update": pack_update,
 }

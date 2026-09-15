@@ -10,6 +10,7 @@
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import TerminalPanel from "./lib/shell/TerminalPanel.svelte";
+    import { terminalOpen } from "./lib/shell/terminal";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
@@ -23,6 +24,7 @@
     import Questions from "./routes/Questions.svelte";
     import Result from "./routes/Result.svelte";
     import Settings from "./routes/Settings.svelte";
+    import Sites from "./routes/Sites.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -127,7 +129,7 @@
     });
 </script>
 
-<div class="shell">
+<div class="shell" class:with-terminal={$terminalOpen}>
     <!-- A button, not `<a href="#main">`: the app is hash-routed, so a URL
          fragment is an address here. `#main` would parse as the route `main`
          and the skip link would navigate to "No such view" — the one place
@@ -213,6 +215,11 @@
                         <Extension />
                     {:else if $route.name === "packs"}
                         <Packs />
+                    {:else if $route.name === "sites"}
+                        <!-- Which listing sites can be read here, and the one
+                             button that turns "the extension does nothing on
+                             this page" into a site Kriko knows. -->
+                        <Sites />
                     {:else if $route.name === "settings"}
                         <Settings />
                     {:else if $route.name === "about"}

@@ -255,6 +255,23 @@ def cmd_bench(args, store) -> int:
                             f"{(row.get('ms') or 0) / 1000:>6.1f}s "
                             + (f"{row['tokens']:>8} tok" if row.get("tokens") else "")
                         )
+        graded = bench_mod.scored(state.bench_runs(conn))["groups"]
+        if graded:
+            print()
+            print("against the pack's ground truth:")
+            for line in graded:
+                recall = "-" if line["recall"] is None else f"{line['recall']:.0%}"
+                halluc = (
+                    "-" if line["hallucination_rate"] is None
+                    else f"{line['hallucination_rate']:.0%}"
+                )
+                interval = line["recall_interval"]
+                print(
+                    f"{line['plane']:8} {(line['model'] or '')[:20]:20} "
+                    f"recall {recall:>5}"
+                    + (f" ({interval[0]:.0%}-{interval[1]:.0%})" if interval else "")
+                    + f"  hallucinated {halluc:>5}  over {line['runs']} run(s)"
+                )
         print()
         # How each plane failed, not only how often (B124): a plane that fails
         # the same way every time is being mis-used, not having bad luck.

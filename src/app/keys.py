@@ -53,6 +53,11 @@ class Provider:
     label: str
     env: str
     purpose: str
+    #: True when the paid plane runs without it. `ready()` is "can the paid
+    #: plane run at all", and a *second* search provider is a choice rather
+    #: than a requirement — demanding both keys would make adding a provider a
+    #: way to break an installation that was working.
+    optional: bool = False
 
 
 #: The providers this app knows how to spend at. A list, not a free-form
@@ -70,6 +75,16 @@ PROVIDERS = (
         "listing URL.",
     ),
     Provider(
+        id="tavily",
+        label="Tavily",
+        env="TAVILY_API_KEY",
+        purpose="The other search provider. Receives the same queries Exa "
+        "would — words built from a subject's own attributes. Never a page you "
+        "visited and never a listing URL. Set either one; Settings picks which "
+        "is used.",
+        optional=True,
+    ),
+    Provider(
         id="openai",
         label="OpenAI (or any OpenAI-compatible endpoint)",
         env="OPENAI_API_KEY",
@@ -79,6 +94,11 @@ PROVIDERS = (
 )
 
 BY_ID = {provider.id: provider for provider in PROVIDERS}
+
+#: The providers that answer "search the web", in the order preferred when the
+#: reader has not chosen. A closed engineering vocabulary — these are integrations
+#: this app has code for, not data that grows with pack coverage.
+SEARCH_PROVIDERS = ("exa", "tavily")
 
 
 def env_path(home: Path | None = None) -> Path:
@@ -186,11 +206,38 @@ def status(path: Path | None = None, environ: dict | None = None) -> list[dict]:
 def ready(path: Path | None = None, environ: dict | None = None) -> bool:
     """Can the paid plane run at all?
 
-    Both keys, not either: the plane searches *and* reads. Half-configured is
-    not a degraded mode, it is a run that fails on its first document, so the
-    API card stays inert until both are there.
+    It searches *and* reads, so it needs a search key **and** a completion key.
+    Half-configured is not a degraded mode, it is a run that fails on its first
+    document, and the API card stays inert until both are there.
+
+    "A search key" is now a choice rather than a name: Exa or Tavily, either
+    one. Requiring both would have made adding a second provider a way to break
+    an installation that was working — which is the opposite of what a choice
+    is for.
     """
-    return all(item["present"] for item in status(path, environ))
+    rows = {item["id"]: item["present"] for item in status(path, environ)}
+    searchers = [
+        rows.get(provider.id, False)
+        for provider in PROVIDERS
+        if provider.id in SEARCH_PROVIDERS
+    ]
+    required = [
+        rows.get(provider.id, False)
+        for provider in PROVIDERS
+        if provider.id not in SEARCH_PROVIDERS and not provider.optional
+    ]
+    return any(searchers) and all(required)
+
+
+def search_providers(path: Path | None = None, environ: dict | None = None) -> list[str]:
+    """Which search providers this installation could actually use, in order.
+
+    Preference is the reader's (`app.sqlite` settings, read by
+    `app/providers/__init__.py`); this is only what is *possible*, which is a
+    question about keys.
+    """
+    rows = {item["id"]: item["present"] for item in status(path, environ)}
+    return [one for one in SEARCH_PROVIDERS if rows.get(one)]
 
 
 def save(values: dict, path: Path | None = None) -> list[str]:

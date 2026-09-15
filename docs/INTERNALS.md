@@ -372,6 +372,25 @@ the verdict ranks nothing, hides nothing, and lives in `app.sqlite`'s
 `fact_checks`. The `GET` returns the whole screen's verdicts in one request,
 which is what keeps a report of forty claims from opening forty requests.
 
+**`GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`,
+`DELETE /api/sites/{host}`** (`routers/sites.py`) — which sites can be read
+here, and how one more is learned. Packs ship adapters; an installation may
+also learn one, and `app/sites.py` merges the two with the pack's always
+winning. `seen` is the extension reporting a page it could not read — the click
+is the grant, under `activeTab`, and the answer distinguishes "this site works,
+the panel should be there" from "nothing here reads this site". `register`
+starts an agent job that reads the page and writes the adapter, which is
+checked before it is stored because an adapter's `site` becomes a host
+permission in a browser.
+
+**`GET|PUT /api/prefs`, `GET /api/costs`** (`routers/prefs.py`) — which agent,
+which model, which search provider (`app/prefs.py`), and what it has cost
+(`app/costs.py`). Together because at the moment of choosing a plane they are
+one decision. Every choice falls back to the previous behaviour when unset, and
+**there is no credit balance**: no vendor exposes one to an API key, so the
+screen shows measured spend and says where the balance actually lives rather
+than inventing a number.
+
 **`GET /api/operations`, `GET /api/operations/stream`**
 (`routers/operations.py`) — the live feed of *operations*: one row per unit of
 agent-driven work, whichever door it came in by (`docs/AGENT_OPERATIONS.md`
@@ -521,6 +540,8 @@ Every table, and the question it answers:
 | `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
 | `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
 | `operations` | One row per unit of agent-driven work, opened before the work and closed after it. What makes "is my agent doing anything right now" answerable — including through the MCP door, which this app does not start and cannot otherwise see. A feed, bounded at 2000 rows: what a run *produced* lives in `submissions`, `pipeline_runs` and `research_runs`, all of which outlive it. |
+| `local_adapters` | How to read a site this installation learned by itself, kept out of the store by the same rule everything else here is: a site the reader taught their own copy about is not pack content, must not enter a `content_digest`, and must not travel to anyone else's install as though an author had reviewed it. Always loses to a pack's adapter for the same host. |
+| `site_requests` | Sites somebody stood on and pressed the button, that nothing here can read. One row per host with a count and one sample page — the demand signal, and the only honest input to "which site should Kriko learn next". |
 | `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
