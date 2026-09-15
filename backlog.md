@@ -273,6 +273,25 @@ after `--`, which ends option parsing (so the variadic `--allowedTools` still
 cannot eat it) and cannot be lost in transit. Stdin remains for a prompt over
 24,000 characters, because Windows caps a command line at 32,767.
 
+### B134 — **DONE 2026-09-15** (0.8.7): an installer named for a version it does not contain
+
+The reader's build log: `Compiling kriko v0.8.0`, one line above
+`Kriko_0.8.5_x64-setup.exe`. `-Version` only reaches `tauri.conf.json`, which
+names the bundle; Cargo.toml, pyproject and the frozen sidecar's metadata come
+from the *tree*. So a stamp on a checkout that has not been pulled produces an
+installer labelled with fixes it does not carry — which is what "you forgot to
+update the version number" actually was, and it cost a full build plus a round
+of misattributed bug reports.
+
+`build_desktop.ps1` now refuses the mismatch before anything is compiled, and
+names the two moves that fix it: `git pull`, or `tools/bump.py <version>`.
+
+Also from that log, unfixed and cosmetic: Tauri warns that the bundle
+identifier `org.kriko.app` ends in `.app`, which collides with the macOS bundle
+extension. It changes nothing on Windows and changing it is not free — the
+identifier is what an installed app is *keyed* by, so a new one is a new app to
+the OS.
+
 ### B126 — Benchmarks against ground truth `[G2][G5]`
 *"Benchmarks should be done against ground truth … measuring cost and
 hallucination at arbitrary rates, using statistical methods … output the optimal
