@@ -65,6 +65,10 @@
     --stagger: 55ms;
 
     --rail: 15rem;
+    /* The terminal column, when it is open. Here rather than in the panel so
+       the shell's grid and the panel itself read one number — `components.css`
+       sizes the column with it and `TerminalPanel.svelte` fills it. */
+    --terminal-w: min(38rem, 40vw);
 
     /* A stagger index, and 0 means "first", which is the right answer for an
      * element rendered without one. (`--mark-top`/`--mark-height` used to

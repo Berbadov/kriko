@@ -521,10 +521,73 @@ CREATE TABLE IF NOT EXISTS bench_runs (
     -- count cannot show it.
     reasons_json  TEXT NOT NULL DEFAULT '[]',
     error         TEXT NOT NULL DEFAULT '',
-    note          TEXT NOT NULL DEFAULT ''
+    note          TEXT NOT NULL DEFAULT '',
+    -- The ground-truth score, when the case carried any (B126): recall,
+    -- precision and hallucination rate, with the entries behind each. JSON
+    -- because it is read as a whole and never queried by field — and because
+    -- a schema for it would be this table's third attempt at one.
+    gold_json     TEXT NOT NULL DEFAULT '',
+    -- Which repetition of the same (case, plane, protocol) this was. Language
+    -- models are stochastic: a benchmark that runs once measures a sample and
+    -- reports it as a constant.
+    rep           INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
+
+-- ── sites this installation knows how to read ────────────────────────────
+--
+-- An adapter says how to read one website: which selectors hold the fields,
+-- what its labels mean. Packs ship them, which is right — an adapter is
+-- knowledge about a site, and a pack is how knowledge travels.
+--
+-- But it left the reader with nothing to do on a site no pack covers, which is
+-- every site except the one. "I cannot open the extension on pages that aren't
+-- registered" is that, exactly: the panel is not missing, the *site* is, and
+-- until now the only way to add one was to author a pack.
+--
+-- So a **local adapter**: one this installation learned, kept here rather than
+-- in the store. That is not a convenience, it is the two-SQLite rule again — a
+-- site the reader taught their own copy about is not pack content, must not
+-- enter a `content_digest`, and must survive the pack being updated or
+-- uninstalled. `app/sites.py` merges them behind the engine's own lookup, so
+-- a pack that later ships an adapter for the same host wins and the local one
+-- becomes redundant rather than conflicting.
+CREATE TABLE IF NOT EXISTS local_adapters (
+    host       TEXT PRIMARY KEY,
+    -- The adapter document, as JSON, in the same shape a pack ships.
+    spec_json  TEXT NOT NULL DEFAULT '{}',
+    -- agent | reader. Who wrote it, because "an agent proposed this" and "I
+    -- wrote this myself" carry different weight when it reads a page wrong.
+    source     TEXT NOT NULL DEFAULT 'agent',
+    -- Which pack's identity keys it maps into. An adapter that maps to keys no
+    -- installed pack declares produces a lookup that resolves to nothing.
+    pack_id    TEXT NOT NULL DEFAULT '',
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+
+-- Sites the reader opened that nothing here can read yet.
+--
+-- The demand signal, and the only honest input to "which site should Kriko
+-- learn next": a list of hosts somebody actually stood on and pressed the
+-- button. Not browsing history — one row per host, a count, and the last page
+-- they were on when they asked, which is what an agent needs to write the
+-- adapter.
+CREATE TABLE IF NOT EXISTS site_requests (
+    host       TEXT PRIMARY KEY,
+    asks       INTEGER NOT NULL DEFAULT 0,
+    sample_url TEXT NOT NULL DEFAULT '',
+    title      TEXT NOT NULL DEFAULT '',
+    -- open | working | done | refused. `done` when an adapter exists for it.
+    state      TEXT NOT NULL DEFAULT 'open',
+    detail     TEXT NOT NULL DEFAULT '',
+    first_at   TEXT NOT NULL DEFAULT '',
+    last_at    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS site_requests_last ON site_requests (last_at DESC);
 """
+
 
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -1167,6 +1230,93 @@ def retain_documents(conn: sqlite3.Connection, documents: Sequence[dict]) -> int
     return kept
 
 
+def local_adapters(conn: sqlite3.Connection, *, enabled_only: bool = True) -> list[dict]:
+    sql = "SELECT * FROM local_adapters"
+    if enabled_only:
+        sql += " WHERE enabled = 1"
+    out = []
+    for row in conn.execute(sql + " ORDER BY host").fetchall():
+        one = dict(row)
+        try:
+            one["spec"] = json.loads(one.pop("spec_json") or "{}")
+        except ValueError:
+            one["spec"] = {}
+        out.append(one)
+    return out
+
+
+def save_local_adapter(
+    conn: sqlite3.Connection,
+    *,
+    host: str,
+    spec: dict,
+    source: str = "agent",
+    pack_id: str = "",
+) -> dict:
+    now = _now()
+    conn.execute(
+        "INSERT INTO local_adapters (host, spec_json, source, pack_id, enabled,"
+        " created_at, updated_at) VALUES (?,?,?,?,1,?,?)"
+        " ON CONFLICT (host) DO UPDATE SET spec_json = excluded.spec_json,"
+        " source = excluded.source, pack_id = excluded.pack_id,"
+        " enabled = 1, updated_at = excluded.updated_at",
+        (host, json.dumps(spec), source, pack_id, now, now),
+    )
+    conn.commit()
+    return {"host": host, "source": source, "pack_id": pack_id}
+
+
+def forget_local_adapter(conn: sqlite3.Connection, host: str) -> bool:
+    done = conn.execute("DELETE FROM local_adapters WHERE host = ?", (host,))
+    conn.commit()
+    return bool(done.rowcount)
+
+
+def record_site_request(
+    conn: sqlite3.Connection, *, host: str, url: str = "", title: str = ""
+) -> dict:
+    """One more ask for a site nothing can read yet. Accumulated, not appended.
+
+    A count and a sample, because the question it answers is "which site should
+    Kriko learn next" and that is about distinct hosts, not about how much
+    somebody browsed.
+    """
+    now = _now()
+    conn.execute(
+        "INSERT INTO site_requests (host, asks, sample_url, title, first_at, last_at)"
+        " VALUES (?,1,?,?,?,?)"
+        " ON CONFLICT (host) DO UPDATE SET asks = asks + 1,"
+        " sample_url = CASE WHEN excluded.sample_url <> '' THEN excluded.sample_url"
+        "                   ELSE site_requests.sample_url END,"
+        " title = CASE WHEN excluded.title <> '' THEN excluded.title"
+        "              ELSE site_requests.title END,"
+        " last_at = excluded.last_at",
+        (host, url, title, now, now),
+    )
+    conn.commit()
+    return site_requests(conn, host=host)[0]
+
+
+def set_site_request(conn: sqlite3.Connection, host: str, *, state: str,
+                     detail: str = "") -> None:
+    conn.execute(
+        "UPDATE site_requests SET state = ?, detail = ?, last_at = ?"
+        " WHERE host = ?",
+        (state, detail, _now(), host),
+    )
+    conn.commit()
+
+
+def site_requests(conn: sqlite3.Connection, *, host: str = "") -> list[dict]:
+    sql = "SELECT * FROM site_requests"
+    args: list = []
+    if host:
+        sql += " WHERE host = ?"
+        args.append(host)
+    sql += " ORDER BY asks DESC, last_at DESC"
+    return [dict(row) for row in conn.execute(sql, args).fetchall()]
+
+
 def record_bench(conn: sqlite3.Connection, row: dict) -> str:
     """One measured attempt. Returns its id."""
     bench_id = secrets.token_hex(8)
@@ -1174,7 +1324,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
         "INSERT INTO bench_runs (bench_id, batch_id, at, subject_id, subject,"
         " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
         " tokens, usd, documents, findings, accepted, refused, reasons_json,"
-        " error, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        " error, note, gold_json, rep)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             bench_id,
             str(row.get("batch_id") or ""),
@@ -1197,6 +1348,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
             json.dumps(list(row.get("reasons") or [])),
             str(row.get("error") or "")[:2000],
             str(row.get("note") or "")[:2000],
+            json.dumps(row.get("gold")) if row.get("gold") else "",
+            int(row.get("rep") or 1),
         ),
     )
     conn.commit()
@@ -1215,6 +1368,10 @@ def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
             one["reasons"] = json.loads(one.pop("reasons_json") or "[]")
         except ValueError:
             one["reasons"] = []
+        try:
+            one["gold"] = json.loads(one.pop("gold_json") or "null")
+        except ValueError:
+            one["gold"] = None
         out.append(one)
     return out
 

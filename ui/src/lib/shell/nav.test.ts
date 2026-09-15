@@ -68,6 +68,9 @@ describe("the route table", () => {
             "overview",
             "knowledge",
             "packs",
+            // Which listing sites can be read here, and the button that
+            // teaches this installation one more.
+            "sites",
             // Runs, Knowledge pipeline and What researchers sent became three
             // lenses on one screen; Console and Connect became two on
             // another. Five rail entries, two destinations — the names they
