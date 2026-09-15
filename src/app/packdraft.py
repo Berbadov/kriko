@@ -36,10 +36,11 @@ belongs to the interface that exposes the tools.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from kriko.pack.build import build
-from kriko.pack.manifest import load
+from kriko.pack.manifest import load as _load_manifest
 from kriko.pack.scaffold import scaffold
 
 #: What a drafted pack may contain. Suffix-checked as well as name-checked:
@@ -51,6 +52,12 @@ WRITABLE_FILES = (
     "research/principle.md",
     "research/templates.yaml",
     "research/skill.md",
+    # What the category contains and what this draft does not cover yet.
+    # Data, like everything else here: a list of names the author could
+    # enumerate but did not research, which `pack_amend` reads to know what to
+    # ask for next. An open gap that is written down gets filled; one that is
+    # only implied by an absence does not.
+    "research/coverage.yaml",
 )
 
 #: Directories a draft may add files to, and the only suffix allowed in them.
@@ -214,11 +221,16 @@ def listing(store_path) -> list[dict]:
             "name": "",
             "version": "",
             "error": "",
+            # Whether the reader has already taken this into the store (B129).
+            # A draft that has been installed is still a draft — it can be
+            # amended and installed again — but a card that cannot say so
+            # reads as an install that did not work.
+            "installed_as": installed_as(child),
         }
         artifact = Draft(child.name, child).artifact()
         row["artifact"] = str(artifact) if artifact else None
         try:
-            manifest = load(child)
+            manifest = _load_manifest(child)
         except Exception as exc:  # noqa: BLE001 — reported, not raised
             row["error"] = str(exc)
         else:
@@ -227,6 +239,50 @@ def listing(store_path) -> list[dict]:
             row["version"] = manifest.version
         out.append(row)
     return out
+
+
+def load(root):
+    """The manifest of a draft directory. Re-exported so `packauthor` reads a
+    draft through this module rather than reaching into `kriko.pack` itself —
+    the file boundary is this module's, and so is every way through it."""
+    return _load_manifest(root)
+
+
+#: Written beside a draft when the reader installs it. Not a column anywhere:
+#: a draft is a directory, and the one thing that must survive a restart about
+#: it is whether it has already been taken into the store.
+INSTALLED_MARKER = ".installed"
+
+
+def mark_installed(store_path, slug: str, pack_id: str) -> None:
+    """Record that this draft is now in the store (B129).
+
+    A marker file rather than a deletion. The reader installed a draft, saw the
+    pack in Knowledge, and the "…was drafted for you" card stayed — which reads
+    as an install that did not take. Deleting the directory would have fixed
+    the card and thrown away the only copy of what the agent proposed, and
+    "cover the gaps" has to keep working afterwards: amend, rebuild, install
+    again.
+    """
+    try:
+        draft = open_draft(store_path, slug)
+    except DraftRefused:
+        return
+    (draft.root / INSTALLED_MARKER).write_text(
+        f"{pack_id}\n{datetime.now(UTC).isoformat(timespec='seconds')}\n",
+        encoding="utf-8",
+    )
+
+
+def installed_as(draft_root: Path) -> str:
+    """The pack id this draft was installed as, or `""`."""
+    marker = Path(draft_root) / INSTALLED_MARKER
+    if not marker.exists():
+        return ""
+    try:
+        return marker.read_text(encoding="utf-8").splitlines()[0].strip()
+    except OSError:
+        return ""
 
 
 def build_artifact(store_path, slug: str) -> Path:

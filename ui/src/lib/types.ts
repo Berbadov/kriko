@@ -485,6 +485,20 @@ export type Triage = {
  * `request`/`response` are summaries the server made — a page of
  * `document_text` is elided there rather than carried here. See
  * `app/operations.py`. */
+/** What a draft currently holds, and what of its line-up it does not cover. */
+export type DraftState = {
+    slug: string;
+    pack_id: string;
+    name: string;
+    version: string;
+    identity: Record<string, string[]>;
+    principle: string;
+    subjects: string[];
+    claims: number;
+    uncovered: string[];
+    lineup: string[];
+};
+
 export type Operation = {
     op_id: number;
     /** mcp | job | extension | app | cli — which door it came in. */
@@ -742,6 +756,10 @@ export type PackDraft = {
     name: string;
     version: string;
     error: string;
+    /** The pack id this draft was installed as, or "". A draft that has been
+     *  installed is still a draft — it can be amended and installed again —
+     *  but a card that cannot say so reads as an install that did not work. */
+    installed_as: string;
 };
 
 /* What this installation has spent, and what it was asked. (B97)
