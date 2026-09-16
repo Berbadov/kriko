@@ -68,6 +68,16 @@ class AuthorRequest(BaseModel):
     #: one Kriko can both start and sandbox.
     harness: str = ""
     timeout_seconds: float = 0.0
+    #: Answers to the questions a previous run asked, keyed by their id.
+    #:
+    #: Supplied at the *start* of a run rather than during one, and that is the
+    #: whole design rather than a shortcut. The identification pass is
+    #: non-blocking — it states its assumptions and carries on — so an answer
+    #: arriving mid-run would have nothing left to change. What it does instead
+    #: is make the next run exact, which is why the questions are written to
+    #: the job row where a client can offer them back alongside "run it again".
+    #: A run nobody answers is still a run; see `app/disambiguate.py`.
+    answers: dict[str, str] = Field(default_factory=dict)
 
 
 class BuildRequest(BaseModel):
