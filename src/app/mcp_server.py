@@ -530,7 +530,8 @@ def write_draft_file(draft: str, path: str, text: str) -> dict:
 
     `path` is relative to the draft: `pack.toml`, `README.md`,
     `research/principle.md`, `research/templates.yaml`, `research/skill.md`, or
-    a `.yaml` file under `data/`, `vocabulary/`, `trust/` or `adapters/`.
+    a `.yaml` file under `data/`, `vocabulary/` or `trust/`, or a `.json`
+    file under `adapters/` -- the suffix the pack builder reads in each.
     Anything else is refused, including any form of Python — a pack an agent
     wrote must be data, because installing it must not mean running code the
     reader never read.
