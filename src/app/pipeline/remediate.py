@@ -99,7 +99,7 @@ def ingest_lost_sources(conn, export_dir: Path, data_dir: Path) -> int:
     dedup), the claim is imported against that copy — the claim is the
     knowledge, the fetch is only provenance."""
     from packs.cars.pipeline.ledger import ingest
-    from packs.cars.pipeline.ledger.acquire import _fetch_page_text
+    from packs.cars.pipeline.ledger.acquire import _fetch_page
     from packs.cars.pipeline.sources.base import Document
     from kriko.ledger.db import insert_evidence
 
@@ -112,10 +112,11 @@ def ingest_lost_sources(conn, export_dir: Path, data_dir: Path) -> int:
     for url, hint, claim in lost_source_urls(conn, export_dir, data_dir):
         # parity normalizes URLs (strips scheme/www) — re-prefix for fetching.
         fetch_url = url if url.startswith(("http://", "https://")) else f"https://{url}"
-        text = _fetch_page_text(fetch_url)
+        text, published_at = _fetch_page(fetch_url)
         doc_id = None
         if text:
-            doc = Document(text=text, url=fetch_url, site_or_channel="")
+            doc = Document(text=text, url=fetch_url, site_or_channel="",
+                            published_at=published_at)
             doc_id = ingest.ingest_document(conn, doc, "page", hint)
         if not doc_id:
             row = _existing_doc(fetch_url)

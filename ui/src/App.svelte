@@ -12,7 +12,19 @@
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import { terminalOpen } from "./lib/shell/terminal";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
+    import About from "./routes/About.svelte";
+    import Activity from "./routes/Activity.svelte";
+    import Agents from "./routes/Agents.svelte";
+    import Bench from "./routes/Bench.svelte";
     import Check from "./routes/Check.svelte";
+    import Compare from "./routes/Compare.svelte";
+    import Extension from "./routes/Extension.svelte";
+    import Knowledge from "./routes/Knowledge.svelte";
+    import Overview from "./routes/Overview.svelte";
+    import Packs from "./routes/Packs.svelte";
+    import Questions from "./routes/Questions.svelte";
+    import Settings from "./routes/Settings.svelte";
+    import Sites from "./routes/Sites.svelte";
     import Result from "./routes/Result.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
@@ -182,17 +194,16 @@
                     {:else if $route.name === "check"}
                         <Check mode={$mode} />
                     {:else if $route.name === "overview"}
-                        <Lazy loader={() => import("./routes/Overview.svelte")} />
+                        <Overview />
                     {:else if view.name === "knowledge"}
-                        <Lazy
-                            loader={() => import("./routes/Knowledge.svelte")}
-                            props={{ lens: view.lens ?? $route.query.lens ?? "all" }}
+                        <Knowledge
+                            lens={view.lens ?? $route.query.lens ?? "all"}
                         />
                     {:else if $route.name === "history"}
                         <h2>History</h2>
                         <History page />
                     {:else if $route.name === "compare"}
-                        <Lazy loader={() => import("./routes/Compare.svelte")} />
+                        <Compare />
                     {:else if $route.name === "questions"}
                         <!-- The id rides in the query rather than the path so
                              the rail's own entry (no id at all) is the same
@@ -206,24 +217,23 @@
                              `questions/<id>` is the same destination spelled
                              in the alphabet that handoff allows. -->
                         {#key $route.params[0] ?? $route.query.id ?? ""}
-                            <Lazy
-                                loader={() => import("./routes/Questions.svelte")}
-                                props={{ lookupId: $route.params[0] ?? $route.query.id ?? "" }}
+                            <Questions
+                                lookupId={$route.params[0] ?? $route.query.id ?? ""}
                             />
                         {/key}
                     {:else if $route.name === "extension"}
-                        <Lazy loader={() => import("./routes/Extension.svelte")} />
+                        <Extension />
                     {:else if $route.name === "packs"}
-                        <Lazy loader={() => import("./routes/Packs.svelte")} />
+                        <Packs />
                     {:else if $route.name === "sites"}
                         <!-- Which listing sites can be read here, and the one
                              button that turns "the extension does nothing on
                              this page" into a site Kriko knows. -->
-                        <Lazy loader={() => import("./routes/Sites.svelte")} />
+                        <Sites />
                     {:else if $route.name === "settings"}
-                        <Lazy loader={() => import("./routes/Settings.svelte")} />
+                        <Settings />
                     {:else if $route.name === "about"}
-                        <Lazy loader={() => import("./routes/About.svelte")} />
+                        <About />
                     {:else if view.name === "activity"}
                         <!-- Runs, the pipeline and what researchers sent, as
                              three lenses on one screen. `#/jobs`,
@@ -231,14 +241,13 @@
                              app's own responses and hints hand out, so they
                              resolve here rather than to "No such view" — same
                              contract as the Knowledge lenses above. -->
-                        <Lazy
-                            loader={() => import("./routes/Activity.svelte")}
-                            props={{ lens: view.lens ?? $route.query.lens ?? "runs" }}
+                        <Activity
+                            lens={view.lens ?? $route.query.lens ?? "runs"}
                         />
                     {:else if view.name === "agents"}
-                        <Lazy loader={() => import("./routes/Agents.svelte")} />
+                        <Agents />
                     {:else if $route.name === "bench"}
-                        <Lazy loader={() => import("./routes/Bench.svelte")} />
+                        <Bench />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->

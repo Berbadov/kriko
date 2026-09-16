@@ -29,6 +29,7 @@ def ingest_document(conn, doc, source_type: str, target_hint: str) -> int:
         raw_text=doc.text,
         site_or_channel=doc.site_or_channel,
         target_hint=target_hint,
+        published_at=getattr(doc, "published_at", "") or "",
     )
 
 

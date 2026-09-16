@@ -382,6 +382,12 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         sources = []
         for s in conn.execute(
                 "SELECT d.url, d.site_or_channel, MAX(d.fetched_at) AS fetched_at,"
+                # MAX over TEXT is lexical, and an empty string sorts before
+                # any real ISO date, so this naturally prefers a fetch that
+                # found a publish date over one that did not -- same trick as
+                # fetched_at, just for a fact that should not change between
+                # refetches of the same page anyway.
+                " MAX(d.published_at) AS published_at,"
                 " e.quote"
                 " FROM cluster_members m JOIN evidence e ON e.id=m.evidence_id"
                 " JOIN documents d ON d.id=e.doc_id WHERE m.cluster_id=?"
@@ -411,6 +417,10 @@ def export_all(conn, out_dir: Path) -> list[Path]:
                 # When we last actually saw the page. Feeds sources.retrieved_at
                 # and, through it, the staleness signal in kriko.lookup.tree.
                 "retrieved_at": s["fetched_at"] or "",
+                # When the WORLD published it, if discoverable — a different
+                # fact from retrieved_at above. Reported only; rank.py does
+                # not read this column (see backlog B136).
+                "published_at": s["published_at"] or "",
                 "quote": s["quote"], "independent": independent,
                 "stance": stance,
             })

@@ -53,7 +53,7 @@ pipeline = [
     "anthropic",
     "python-dotenv",
 ]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 
 # The built frontend. ui/ is the source and is not packaged; this bundle is,
 # so `pip install kriko` serves a working UI with no Node toolchain.
@@ -69,3 +69,117 @@ dev = ["pytest>=8.0.0"]
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["kriko*", "app*"]
+
+# B138: static analysis for the Python side, wired into `tools/gate.sh` as its
+# own step before pytest. Curated on purpose — this is a ~20k-line codebase
+# that had never been linted, and turning on every rule ruff ships would
+# produce hundreds of findings on day one, which is exactly the always-red
+# gate `CLAUDE.md`'s TEMPORARY section warns is worse than no gate. The rule
+# set below is the subset that catches real defects (it already found one —
+# `packs/cars/pipeline/claims/dedup.py`'s `.lstrip("www.")`, a character-strip
+# where a prefix-strip was meant) rather than the purely stylistic majority.
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes — undefined names, unused imports/variables, an
+             # f-string with no placeholder, a bare `except:` not last in its
+             # `try`, and friends. The core, uncontroversial set.
+    "E711",  # `== None` instead of `is None`
+    "E712",  # `== True`/`== False` instead of a truthiness check
+    "E713",  # `not x in y` instead of `x not in y`
+    "E714",  # `not x is y` instead of `x is not y`
+    "E722",  # bare `except:` — swallows `SystemExit`/`KeyboardInterrupt` too
+    "B005",  # `.strip("www.")`-shaped calls: `str.strip`/`lstrip`/`rstrip`
+             # treat their argument as a set of characters, not a prefix —
+             # the exact defect this pass found and fixed in dedup.py
+    "B006",  # a mutable default argument, shared across every call
+    "B023",  # a function defined in a loop closing over the loop variable by
+             # reference rather than value
+    "A002",  # a function argument shadows a builtin
+]
+
+# Every ignore here is narrow (one file, one already-understood reason), not a
+# blanket rule disable. Nothing is ignored repo-wide.
+[tool.ruff.lint.per-file-ignores]
+# `run`/`run_part` both raise unconditionally, in their first statement, ever
+# since the B16 catalog swap (2026-08-03; see docs/USAGE.md) retired the
+# judge/promote pipeline. Everything below each raise — including the calls to
+# `promote`/`write_promoted_claims`/`write_promoted_part_claims`, which no
+# longer exist anywhere in the tree — is permanently unreachable. Ruff has no
+# way to know a `raise` makes the rest of a function dead; a human does.
+"src/app/pipeline/process.py" = ["F821"]
+# `write_pack_row`'s `license` keyword names the pack.toml field it writes —
+# nothing in the function calls the `license()` builtin, so the shadow costs
+# nothing at the one call site that matters. It is also public API: many
+# tests and `kriko/pack/manifest.py`'s own `license=` field call it by this
+# name already, so renaming it is a repo-wide edit for no behavioural gain.
+"src/kriko/store/packstore.py" = ["A002"]
+
+# B138 (continued): mypy. Whole-repo strict on a codebase with no prior type
+# checking is a wall, not a gate, so the tiers below start where it pays.
+#
+# `kriko/` (the engine) and `packs/` (the data + build layer) get the
+# strictest setting this tree currently supports cleanly: default mode plus
+# `check_untyped_defs`, which also type-checks the *bodies* of functions that
+# carry no annotations, without demanding every signature be annotated first.
+# Both passed clean at that setting after four real gaps were annotated (see
+# the handover notes) — `kriko/` is where a wrong type becomes wrong
+# knowledge, so it is the one place this project cannot afford to skip.
+#
+# `app/` (the interface layer) follows at the same default-mode setting minus
+# `check_untyped_defs` — still real type checking, just not reaching into
+# unannotated function bodies — with a short, named list of per-module
+# overrides for the specific patterns that are false positives here, each
+# with its reason below. `ui/`, `tauri/` and every `tests/` package are out of
+# scope: `ui/` is Svelte/TypeScript (checked by `svelte-check`, not mypy),
+# `tauri/` is Rust, and a test suite proving a false-positive-shaped pattern
+# on purpose (mocks, duck-typed doubles) is not the code this gate is for.
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+exclude = ["/tests/"]
+
+[[tool.mypy.overrides]]
+module = ["kriko.*", "packs.*"]
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# `msvcrt` (Windows-only stdlib) and the Windows-only `subprocess` process-
+# creation flags are both real, but typeshed only declares them under
+# `sys.platform == "win32"`; checking this repo from a non-Windows host — the
+# only way this gate ever runs, per CLAUDE.md — sees an empty stub. Both call
+# sites are already behind `sys.platform`/`if platform == "win32"` guards at
+# runtime.
+module = ["app.tui.term", "app.extension"]
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+# Both modules stamp extra attributes onto an object at runtime by design —
+# `complete.tokens_used` in `llm.py`'s own docstring, and `researcher.model` /
+# `.search_provider` / `.protocol` in `providers/__init__.py`'s, both read
+# back duck-typed by `app/web/tasks.py`'s provenance row. The engine has no
+# field for either because `kriko/` may not know what a "model" or a "search
+# provider" is (the layering principle); giving these a real static shape
+# would mean a `Protocol` per call site, which is real work this pass did not
+# do — reported, not silenced blindly.
+module = ["app.providers.llm", "app.providers"]
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+# `_run_bulk`/`_run_validation` build their result row as one large
+# heterogeneous dict (str, int, float, list, nested dict) mutated across a
+# long function rather than a `TypedDict`, and `_Silent` is a documented
+# duck-typed stand-in for `Progress` (see its own docstring) rather than a
+# `Protocol`-typed one. Both are real gaps — a `TypedDict` for the row and a
+# `Progress` `Protocol` for what `tasks.research` actually calls — too large
+# to do safely inside this pass; reported, not silenced blindly.
+module = "app.bench"
+disable_error_code = ["arg-type", "assignment", "operator"]
+
+[[tool.mypy.overrides]]
+# `run`/`run_part` are permanently unreachable past their first statement —
+# see the matching ruff per-file-ignore above for why.
+module = "app.pipeline.process"
+disable_error_code = ["name-defined"]
