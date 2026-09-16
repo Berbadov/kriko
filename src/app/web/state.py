@@ -470,7 +470,16 @@ CREATE TABLE IF NOT EXISTS operations (
     error        TEXT NOT NULL DEFAULT '',
     ms           INTEGER,
     started_at   TEXT NOT NULL DEFAULT '',
-    ended_at     TEXT NOT NULL DEFAULT ''
+    ended_at     TEXT NOT NULL DEFAULT '',
+    -- What this one call spent, when it spent anything (B118). NULL where
+    -- nobody counted, never 0 — the same distinction `research_runs` and
+    -- `bench_runs` keep, for the same reason: an MCP `lookup` costs nothing
+    -- and a `research` operation on the paid plane knows a real number, and
+    -- averaging the first in as free would understate every estimate built on
+    -- the second. Added after the table existed, hence no default beyond
+    -- NULL (see `add_missing_columns`).
+    usd          REAL,
+    tokens       INTEGER
 );
 CREATE INDEX IF NOT EXISTS operations_started ON operations (op_id DESC);
 
@@ -530,7 +539,17 @@ CREATE TABLE IF NOT EXISTS bench_runs (
     -- Which repetition of the same (case, plane, protocol) this was. Language
     -- models are stochastic: a benchmark that runs once measures a sample and
     -- reports it as a constant.
-    rep           INTEGER NOT NULL DEFAULT 1
+    rep           INTEGER NOT NULL DEFAULT 1,
+    -- `exa` | `tavily` | ''. B126 §8: which search provider fed this run its
+    -- documents is a sweep axis, not a fact hidden inside `note` — the same
+    -- model under the same protocol with two different searchers is two
+    -- measurements, exactly as two protocols are. Added after the table
+    -- existed, hence the empty default (see `add_missing_columns`).
+    search_provider TEXT NOT NULL DEFAULT '',
+    -- The case kind this row measured: specific | bulk | validation (B126
+    -- §3). Each answers a different question and none of them should be
+    -- averaged into the others without saying so.
+    kind          TEXT NOT NULL DEFAULT 'specific'
 );
 CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
 
@@ -1324,8 +1343,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
         "INSERT INTO bench_runs (bench_id, batch_id, at, subject_id, subject,"
         " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
         " tokens, usd, documents, findings, accepted, refused, reasons_json,"
-        " error, note, gold_json, rep)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        " error, note, gold_json, rep, search_provider, kind)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             bench_id,
             str(row.get("batch_id") or ""),
@@ -1350,6 +1369,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
             str(row.get("note") or "")[:2000],
             json.dumps(row.get("gold")) if row.get("gold") else "",
             int(row.get("rep") or 1),
+            str(row.get("search_provider") or ""),
+            str(row.get("kind") or "specific"),
         ),
     )
     conn.commit()
@@ -1437,11 +1458,16 @@ def close_operation(
     response: str = "",
     error: str = "",
     ms: int | None = None,
+    usd: float | None = None,
+    tokens: int | None = None,
 ) -> None:
+    """Close an operation row. `usd`/`tokens` are `None` unless a caller
+    actually counted one (B118) — see the column's own note on why that must
+    never be papered over as a measured zero."""
     conn.execute(
         "UPDATE operations SET state = ?, response_json = ?, error = ?,"
-        " ms = ?, ended_at = ? WHERE op_id = ?",
-        (state, response, error, ms, _now(), op_id),
+        " ms = ?, ended_at = ?, usd = ?, tokens = ? WHERE op_id = ?",
+        (state, response, error, ms, _now(), usd, tokens, op_id),
     )
     conn.execute(
         "DELETE FROM operations WHERE op_id NOT IN ("

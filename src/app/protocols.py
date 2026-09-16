@@ -32,19 +32,29 @@ protocols did. A mechanism for going faster must never make a fresh install
 slower or wronger than it was.
 """
 
-from kriko.research.base import STANDARD, Spend
+from kriko.research.base import PREAMBLES, STANDARD, Spend
 
-#: The named protocols, narrowest first. A closed engineering vocabulary — the
-#: rule against hand-enumerated lists is about data that grows with pack
-#: coverage, and this is three settings of one dial.
+#: The named protocols. A closed engineering vocabulary — the rule against
+#: hand-enumerated lists is about data that grows with pack coverage, and this
+#: is two dials (context/batch, and now the preamble) crossed a few times, not
+#: catalog data.
 #:
 #: `narrow` exists for a model that cannot hold a batch at all; `wide` is worth
-#: four times fewer calls when a model can take it. Nothing picks either
-#: without evidence.
+#: four times fewer calls when a model can take it. The `-principled` and
+#: `-worked-example` variants are the same geometry under the other named
+#: preamble (B126 §7) — the axis "nobody can guess", so it has to be a real
+#: named row a benchmark can pick, not a constant baked into the prompt.
+#: Nothing picks any of them without evidence.
 CATALOGUE = (
     Spend(name="narrow", context_chars=6000, batch_size=1),
     STANDARD,
     Spend(name="wide", context_chars=10000, batch_size=4),
+    Spend(name="standard-principled", context_chars=12000, batch_size=1,
+          preamble="principled"),
+    Spend(name="wide-principled", context_chars=10000, batch_size=4,
+          preamble="principled"),
+    Spend(name="standard-worked-example", context_chars=12000, batch_size=1,
+          preamble="worked-example"),
 )
 
 BY_NAME = {one.name: one for one in CATALOGUE}
@@ -55,63 +65,88 @@ BY_NAME = {one.name: one for one in CATALOGUE}
 #: protocol for good — is how a benchmark starts lying.
 MIN_RUNS = 2
 
-#: And how much better it has to be. A protocol that keeps the same proportion
-#: of findings for fewer calls is a win; one that keeps three percent more is
-#: noise, and swapping on noise makes every later measurement harder to read.
-MIN_MARGIN = 0.05
 
+def _wilson(hits: int, total: int) -> tuple[float, float] | None:
+    """Delegates to `app.gold.wilson` — the one interval this codebase has.
 
-def score(row: dict) -> float | None:
-    """What a measured protocol was worth, or `None` if it cannot be judged.
-
-    The acceptance rate, not the finding count: a run that returns thirty
-    findings and keeps two is worse than one that returns four and keeps three,
-    and this is the number that says so. A protocol whose runs mostly *failed*
-    scores nothing at all — a plane that cannot finish is not a cheap plane.
+    Imported at call time rather than at module load: `app/gold.py` is the
+    module that knows what a rate *means* here (B126), and importing it up top
+    would make every caller of `app/protocols.py` — including the ordinary
+    research path — pull in the gold-set loader for no reason.
     """
-    runs = int(row.get("runs") or 0)
-    if runs < MIN_RUNS:
-        return None
-    if int(row.get("failures") or 0) * 2 > runs:
-        return None
-    rate = row.get("acceptance")
-    return float(rate) if isinstance(rate, (int, float)) else None
+    from app import gold
+
+    return gold.wilson(hits, total)
 
 
 def choose(summary: list[dict], model: str) -> Spend:
     """The protocol to use for `model`, given this installation's measurements.
 
-    Two rules, and the second is the one that keeps this honest:
+    Replaces a flat `MIN_MARGIN` with a Wilson score interval on each
+    protocol's acceptance rate (B126 §5/§9): "kept 60% of 5" and "kept 60% of
+    200" are different facts, and a fixed 5% margin could not tell them apart
+    — a decision from two runs must be able to say *not yet measured* rather
+    than pretending a coin flip settled anything.
 
-    * **The default has to have been measured too.** A candidate is compared
-      against `STANDARD`'s own score on the same model, never against nothing.
-      Without that rule a single mediocre measurement of one protocol would
-      promote it — the reasoning being "it is the only one we have", which is
-      how a benchmark comes to recommend the only thing anybody bothered to
-      run.
-    * **Ties and near-ties go to the cheaper protocol** — the one with the
-      larger batch. When two settings keep the same proportion of findings, the
-      one making fewer calls is strictly better, and the margin has already
-      decided the difference is not real.
+    Two rules:
+
+    * **The default has to have been measured too.** A candidate is judged
+      against `STANDARD`'s own interval on the same model, never against
+      nothing — without that rule a single measurement of one protocol would
+      promote it, "it is the only one we have" being how a benchmark comes to
+      recommend the only thing anybody bothered to run.
+    * **A protocol is only excluded when it is *provably* worse** — its
+      interval's upper bound below some other protocol's lower bound, meaning
+      the two do not overlap and the other one is genuinely ahead. Among
+      whatever survives that filter, the cheaper or bigger-batch protocol
+      wins: an interval that merely looks a little lower is exactly the
+      "three percent more is noise" case the old margin existed to catch, and
+      an overlapping interval says so honestly instead of by a guessed
+      threshold.
     """
     if not model:
         return STANDARD
-    judged = {}
+    judged: dict[str, tuple[tuple[float, float], Spend]] = {}
     for row in summary:
         if (row.get("model") or "") != model:
             continue
         spend = BY_NAME.get(row.get("protocol") or "")
-        value = score(row)
-        if spend is None or value is None:
+        if spend is None:
             continue
-        judged[spend.name] = (value, spend)
+        runs = int(row.get("runs") or 0)
+        if runs < MIN_RUNS:
+            continue
+        if int(row.get("failures") or 0) * 2 > runs:
+            continue
+        accepted = int(row.get("accepted") or 0)
+        refused = int(row.get("refused") or 0)
+        kept = accepted + refused
+        interval = _wilson(accepted, kept) if kept else None
+        if interval is None:
+            continue
+        judged[spend.name] = (interval, spend)
+
     baseline = judged.get(STANDARD.name)
     if baseline is None:
+        # Not yet measured, honestly: `STANDARD` is the answer with no
+        # evidence *for it specifically*, exactly as it was before any
+        # protocol existed.
         return STANDARD
-    contenders = [
-        spend for value, spend in judged.values() if value >= baseline[0] - MIN_MARGIN
-    ]
-    return max(contenders, key=lambda spend: (spend.batch_size, spend.context_chars))
+
+    survivors = []
+    for name, (interval, spend) in judged.items():
+        lo, hi = interval
+        beaten = any(
+            other_lo > hi
+            for other_name, (other_interval, _) in judged.items()
+            if other_name != name
+            for other_lo, _other_hi in [other_interval]
+        )
+        if not beaten:
+            survivors.append(spend)
+    # `STANDARD` is always in `judged` here (the baseline check above), so
+    # `survivors` can never be empty.
+    return max(survivors, key=lambda spend: (spend.batch_size, spend.context_chars))
 
 
 def spend_for(app_state_path, model: str) -> Spend:
@@ -131,3 +166,67 @@ def spend_for(app_state_path, model: str) -> Spend:
             conn.close()
     except Exception:  # noqa: BLE001 — see the docstring
         return STANDARD
+
+
+def readout(raw_rows: list[dict], summary: list[dict]) -> list[dict]:
+    """What the sweep is *for*, one row per model (B126 §7/§2 of the design).
+
+    "batch size, context, preamble" is not a screen a reader can act on
+    without the two numbers that decide whether to act on it at all: what it
+    costs and how often it lies. So this joins the chosen protocol's own
+    shape against the gold-graded rows for the same model — `raw_rows` is
+    `state.bench_runs()`'s output, which carries each row's `gold` verdict and
+    `usd`; `summary` is `state.bench_summary()`, which `choose` already reads.
+
+    One row per model that has *any* measurement, chosen or not: a model with
+    fewer than `MIN_RUNS` still belongs on the screen, with `spend` reported
+    as `STANDARD` and `note` saying why — "not yet measured" has to be a row a
+    reader sees, not a silent gap.
+    """
+    models = sorted({row.get("model") or "" for row in raw_rows if row.get("model")})
+    out = []
+    for model in models:
+        spend = choose(summary, model)
+        mine = [row for row in raw_rows if (row.get("model") or "") == model
+                and (row.get("protocol") or STANDARD.name) == spend.name]
+        graded = [row for row in mine if row.get("gold")]
+        accepted = sum(int(row.get("accepted") or 0) for row in mine)
+        hallucinated = sum(
+            len((row.get("gold") or {}).get("hallucinated") or []) for row in graded
+        )
+        priced = [row for row in mine if row.get("usd") is not None]
+        usd_total = sum(float(row["usd"]) for row in priced)
+        searches = [row.get("search_provider") or "" for row in mine
+                    if row.get("search_provider")]
+        measured = any(
+            (row.get("model") or "") == model
+            and (row.get("protocol") or "") == STANDARD.name
+            for row in summary
+        )
+        out.append({
+            "model": model,
+            "protocol": spend.name,
+            "batch_size": spend.batch_size,
+            "context_chars": spend.context_chars,
+            "preamble": spend.preamble,
+            "search_provider": max(set(searches), key=searches.count) if searches else "",
+            # A price only when at least two runs actually counted one — one
+            # priced run is an anecdote wearing a decimal point, the same rule
+            # `app/costs.py` applies to a spend estimate.
+            "usd_per_accepted_claim": (
+                round(usd_total / accepted, 4)
+                if len(priced) >= MIN_RUNS and accepted else None
+            ),
+            "hallucination_rate": (
+                round(hallucinated / accepted, 3) if accepted else None
+            ),
+            "hallucination_interval": (
+                _wilson(hallucinated, accepted) if accepted else None
+            ),
+            "runs": len(mine),
+            "note": "" if measured else (
+                "fewer than 2 runs measured for this model — showing the "
+                "known-good default, not a chosen protocol"
+            ),
+        })
+    return out

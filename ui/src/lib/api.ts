@@ -182,6 +182,16 @@ export const api = {
             pack_id: packId,
             claim_id: claimId,
         }),
+    /** Per-evidence grounded/ungrounded/not_kept for one claim, offline — no
+     *  network and no re-fetch, unlike `checkFacts` above. */
+    grounding: (packId: string, claimId: string) =>
+        get<T.Grounding>(
+            `/api/factcheck/grounding?pack_id=${seg(packId)}&claim_id=${seg(claimId)}`,
+        ),
+    /** The retained page text behind one piece of evidence. 404 when this
+     *  install never kept a copy of that source. */
+    document: (sourceId: string) =>
+        get<T.RetainedDocument>(`/api/factcheck/document?source_id=${seg(sourceId)}`),
     /** Both halves of the reader's own marks on one stored answer. */
     triage: (lookupId: string) =>
         get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),
