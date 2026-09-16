@@ -109,11 +109,39 @@ async function reportUnreadableSite(tab) {
       body: JSON.stringify({ url, title: (tab && tab.title) || "" }),
     });
     const answer = response && response.ok ? await response.json() : null;
-    // A site the app *can* read, with no panel on it, is a different bug: the
-    // dynamic registration has not caught up, so ask it to.
+    // A site the app *can* read, with no panel on it, is a different bug —
+    // and for six versions this branch guessed at which one and guessed
+    // wrong. It said "reloading the page should show the panel", the reader
+    // reloaded, nothing happened, and the message came back unchanged, because
+    // the actual blocker was a host permission Chrome will only grant from a
+    // gesture inside this extension. No number of reloads can supply that.
+    //
+    // So: re-sync, then read what the sync actually concluded about *this*
+    // host, and say that. A reload is only offered where a reload is genuinely
+    // what is missing.
     if (answer && answer.readable) {
-      await syncSites({ fresh: true });
-      await notify(tab, "Kriko knows this site — reloading the page should show the panel.");
+      const record = await syncSites({ fresh: true });
+      const host = _hostOf(url);
+      const row = (record.sites || []).find((one) => one.site === host);
+      if (row && row.state === "pending") {
+        await notify(
+          tab,
+          "Kriko reads this site, but your browser has not granted it "
+          + "permission yet. Open Kriko's extension options and press Grant — "
+          + "only the extension can ask.",
+        );
+        if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
+        return true;
+      }
+      if (row && row.state === "refused") {
+        await notify(tab, `Kriko cannot register this site: ${row.detail || "the browser refused it"}`);
+        return true;
+      }
+      // Registered and permitted. A content script only starts on a load, so
+      // here — and only here — a reload really is the missing step, and we do
+      // it rather than asking for it.
+      await notify(tab, "Kriko reads this site. Reloading to show the panel…");
+      if (chrome.tabs && chrome.tabs.reload) await chrome.tabs.reload(tab.id);
       return true;
     }
     await notify(
@@ -397,6 +425,14 @@ const SITE_SCRIPTS = [
 // than a permission prompt for the whole web.
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
+function _hostOf(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch (_) {
+    return "";
+  }
+}
+
 function siteToPattern(site) {
   const host = String(site || "").trim().toLowerCase();
   if (!HOSTNAME.test(host)) return null;
@@ -569,7 +605,39 @@ async function syncSites({ fresh = false } = {}) {
     code: "",
   };
   await _writeSiteStatus(record);
+  await _reportActivation(sites);
   return record;
+}
+
+// Tell the app what the browser made of its sites.
+//
+// The app can see that an adapter exists. Only this worker can see whether
+// Chrome ever granted the host permission that turns one into an injected
+// content script, and until it said so the Sites screen showed "readable" for
+// a site the panel would never appear on. The reader registered a site, was
+// told Kriko recognised it, reloaded, and nothing happened — with the screen
+// insisting nothing was wrong.
+//
+// Best effort, and silent on failure: the app being closed is the ordinary
+// state of a browser, and a status nobody could deliver is not a reason to
+// undo a registration that succeeded.
+async function _reportActivation(sites) {
+  try {
+    await _fetchApp(`${await apiBase()}/api/sites/activation`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sites: sites.map((one) => ({
+          site: one.site,
+          state: one.state || "",
+          detail: one.detail || "",
+          pattern: one.pattern || "",
+        })),
+      }),
+    });
+  } catch (_) {
+    // The app is not running. It will ask again on its next sync.
+  }
 }
 
 // Four triggers, one function, because the sync is convergent — none of these

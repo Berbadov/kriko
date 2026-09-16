@@ -126,6 +126,89 @@ def adapter_for(store, app_conn, url: str):
     return None
 
 
+#: What the two lists on the Sites screen mean, and the rule that keeps a host
+#: out of both at once.
+#:
+#: **Readable here** — an adapter exists for this host, pack-shipped or learned.
+#: It is a fact about *this installation*.
+#:
+#: **Asked for** — somebody stood on a page here and pressed the button, and
+#: nothing could read it. It is a fact about *demand*, and it is only true
+#: while it is still unmet.
+#:
+#: They were both true of the same host at once, which is what the reader saw:
+#: registering a site left its ask behind as a `done` row that nothing ever
+#: cleared, so the screen said "Kriko reads this" and "somebody wants Kriko to
+#: read this" about one hostname on one page. `requested` below derives the
+#: second from the first rather than trusting a stored state word, so the
+#: invariant holds by construction — and a reader who later forgets an adapter
+#: gets their ask back, which a delete-on-success would have lost.
+TWO_LISTS = "readable here | asked for"
+
+
+def requested(store, app_conn) -> list[dict]:
+    """Sites somebody asked for that still cannot be read. Derived, not flagged.
+
+    A `state` column said `done` and the row stayed in the list. State words go
+    stale; the adapter table cannot.
+    """
+    if app_conn is None:
+        return []
+    from app.web import state
+
+    readable = {one["site"] for one in registered(store, app_conn)
+                if not one.get("superseded")}
+    return [row for row in state.site_requests(app_conn)
+            if row["host"] not in readable]
+
+
+def activation(store, app_conn, host: str) -> dict:
+    """Will the panel actually appear on this host, and if not, what is stopping it.
+
+    Four answers, and the reader met the gap between the first two as "I
+    registered the site and nothing happened":
+
+    * `no_adapter` — nothing here reads it yet.
+    * `needs_permission` — an adapter exists, and Chrome has not been asked for
+      the host. **The app cannot ask.** `permissions.request` must come from a
+      user gesture inside the extension, so registering a site here can never
+      be sufficient, and a screen that implied otherwise was lying by omission.
+    * `active` — the extension reports a registered content script.
+    * `invalid` — the adapter names something that is not a registrable
+      hostname, so the extension refused it.
+
+    `unknown` is the fifth and it is honest too: an app that has never heard
+    from the extension knows an adapter exists and nothing about any browser.
+    """
+    from app.web import state
+
+    wanted = host_of(host) or str(host or "").strip().lower()
+    known = {one["site"] for one in registered(store, app_conn)}
+    if wanted not in known:
+        return {"host": wanted, "state": "no_adapter",
+                "detail": "nothing installed here reads this site"}
+    if app_conn is None:
+        return {"host": wanted, "state": "unknown", "detail": ""}
+    row = state.activations(app_conn).get(wanted)
+    if row is None:
+        return {"host": wanted, "state": "unknown",
+                "detail": "the extension has not reported on this site yet"}
+    reported = row.get("state") or ""
+    if reported == "active":
+        return {"host": wanted, "state": "active", "detail": "",
+                "pattern": row.get("pattern", "")}
+    if reported == "pending":
+        return {
+            "host": wanted, "state": "needs_permission",
+            "pattern": row.get("pattern", ""),
+            "detail": "the browser has not granted Kriko permission to read "
+                      "this site. Only the extension can ask for it — open its "
+                      "options page and press Grant.",
+        }
+    return {"host": wanted, "state": "invalid",
+            "detail": row.get("detail") or "the browser refused this site"}
+
+
 def registered(store, app_conn) -> list[dict]:
     """Every site this installation can read, and where each one came from.
 

@@ -345,3 +345,87 @@ test("the panel's stylesheet can reach a site added at runtime", () => {
   // session: without this, any page could probe for the extension's id.
   assert.equal(css.use_dynamic_url, true);
 });
+
+// ── what the toolbar button says when nothing appears ───────────────────
+//
+// The reader's sentence: *"bottom-left says kriko recognizes this site please
+// reload. I reload. Nothing happens. The message persists."* Nothing was
+// broken except the message. The site was registered, the app could read it,
+// and the host permission had never been granted — which Chrome will only
+// accept from a gesture inside this extension, so no number of reloads could
+// ever have supplied it.
+
+const PENDING_SITE = "yedekparca.example";
+
+function clickedOn(harness, url) {
+  return harness.clickListeners[0]({ id: 7, url });
+}
+
+test("a site waiting on a permission is never answered with 'reload'", async () => {
+  const harness = loadBackground({
+    routes: {
+      [ADAPTERS]: [adapter(PENDING_SITE)],
+      "/api/sites/seen": { host: PENDING_SITE, readable: true },
+    },
+    // No grantedOrigins and no tabResponses: no content script is running, so
+    // the toggle finds nobody. That *is* the reader's state — the click falls
+    // through to reporting the page, which is where the message comes from.
+  });
+  await clickedOn(harness, `https://${PENDING_SITE}/ilan/1`);
+  await settle();
+
+  const said = harness.state.notified.join(" ");
+  assert.match(said, /permission/i, "the real blocker has to be the one named");
+  assert.doesNotMatch(said, /reload/i, "a reload cannot grant a permission");
+  assert.equal(harness.state.tabsReloaded.length, 0);
+  assert.ok(harness.state.optionsOpened > 0,
+    "the one place the grant can be asked for should be opened");
+});
+
+test("a site that is registered and permitted is reloaded rather than asked about", async () => {
+  const harness = loadBackground({
+    routes: {
+      [ADAPTERS]: [adapter(PENDING_SITE)],
+      "/api/sites/seen": { host: PENDING_SITE, readable: true },
+    },
+    grantedOrigins: [`https://*.${PENDING_SITE}/*`],
+  });
+  await clickedOn(harness, `https://${PENDING_SITE}/ilan/1`);
+  await settle();
+
+  assert.deepEqual(harness.state.tabsReloaded, [7],
+    "where a reload really is the missing step, do it rather than ask");
+});
+
+// ── the app is told what the browser concluded ──────────────────────────
+
+test("a sync reports each site's real state back to the app", async () => {
+  const harness = loadBackground({
+    routes: { [ADAPTERS]: [adapter(PENDING_SITE), adapter("izinli.example")] },
+    grantedOrigins: ["https://*.izinli.example/*"],
+  });
+  await sync(harness);
+  await settle();
+
+  const posted = harness.state.requests.find(
+    (r) => r.url.includes("/api/sites/activation"));
+  assert.ok(posted, "the app cannot see a permission; only this worker can");
+  const byHost = Object.fromEntries(
+    posted.body.sites.map((one) => [one.site, one.state]));
+  assert.equal(byHost[PENDING_SITE], "pending");
+  assert.equal(byHost["izinli.example"], "active");
+});
+
+test("a report the app never receives does not undo a registration", async () => {
+  const harness = loadBackground({
+    routes: { [ADAPTERS]: [adapter(PENDING_SITE)] },
+    grantedOrigins: [`https://*.${PENDING_SITE}/*`],
+    statuses: { "/api/sites/activation": 500 },
+  });
+  await sync(harness);
+  await settle();
+  assert.ok(
+    harness.state.registered.some((one) => one.id === `kriko-site-${PENDING_SITE}`),
+    "the app being closed is the ordinary state of a browser",
+  );
+});
