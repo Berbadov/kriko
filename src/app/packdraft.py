@@ -65,7 +65,7 @@ WRITABLE_DIRS = (
     ("data", ".yaml"),
     ("vocabulary", ".yaml"),
     ("trust", ".yaml"),
-    ("adapters", ".yaml"),
+    ("adapters", ".json"),
 )
 
 #: One file, and one draft. Generous for prose, ruinous for nothing.

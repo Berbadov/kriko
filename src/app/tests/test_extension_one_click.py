@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app import extension
+from app import extension, sites
 from app.web.routers import extension as ext_router
 from app.web.app import create_app
 from app.web.settings import Settings
@@ -271,13 +271,17 @@ def test_the_browser_outlives_this_process_group(tmp_path):
 # stays where the reader already is: the status card on this screen polls.
 
 
-def _landed(client, monkeypatch, sites):
+def _landed(client, monkeypatch, site_names):
     """The URL a launch put on the browser's command line."""
     spawned: list[list[str]] = []
     monkeypatch.setattr(extension, "find_chromium", lambda: "/usr/bin/chrome")
     monkeypatch.setattr(extension, "_spawn", spawned.append)
     monkeypatch.setattr(
-        ext_router, "load_adapters", lambda store: [{"site": s} for s in sites]
+        sites,
+        "registered",
+        lambda store, app_conn: [
+            {"site": s, "source": "pack", "superseded": False} for s in site_names
+        ],
     )
     body = client.post("/api/extension/launch").json()
     return body, spawned[0]
@@ -309,6 +313,56 @@ def test_the_landing_page_is_pack_data(site, tmp_path, monkeypatch):
     assert not re.search(r"https?://[a-z0-9.-]+\.(com|net|org|tr)", source), (
         "a site named in the router is a category the engine knows about"
     )
+
+
+def test_a_site_the_reader_taught_this_install_is_a_landing_page_too(
+    tmp_path, monkeypatch
+):
+    """A locally-learned site (`app/sites.py`) is not a pack's, but it is
+    readable, and the launch button's whole job is "open somewhere the
+    extension has something to do". Before this, `_landing` read `load_adapters`
+    directly — the packs' rows only — so a reader whose one readable site was
+    one they registered themselves (no pack ships an adapter for it) still fell
+    back to `#/extension`, the exact failure this button exists to fix.
+    """
+    client = _client(tmp_path)
+    spawned: list[list[str]] = []
+    monkeypatch.setattr(extension, "find_chromium", lambda: "/usr/bin/chrome")
+    monkeypatch.setattr(extension, "_spawn", spawned.append)
+    monkeypatch.setattr(
+        sites,
+        "registered",
+        lambda store, app_conn: [
+            {"site": "arabam.example", "source": "local", "superseded": False}
+        ],
+    )
+    body = client.post("/api/extension/launch").json()
+    assert body["landing"] == "https://arabam.example/"
+    assert "https://arabam.example/" in spawned[0]
+
+
+def test_a_superseded_local_site_is_skipped_for_the_pack_row_that_replaced_it(
+    tmp_path, monkeypatch
+):
+    """A pack that now ships an adapter for a host the reader taught locally
+    makes the local row `superseded` (`app/sites.py`); landing on it would
+    open the same host twice for no reason, so it is skipped in favour of the
+    pack's own row.
+    """
+    client = _client(tmp_path)
+    spawned: list[list[str]] = []
+    monkeypatch.setattr(extension, "find_chromium", lambda: "/usr/bin/chrome")
+    monkeypatch.setattr(extension, "_spawn", spawned.append)
+    monkeypatch.setattr(
+        sites,
+        "registered",
+        lambda store, app_conn: [
+            {"site": "arabam.example", "source": "local", "superseded": True},
+            {"site": "arabam.example", "source": "pack", "superseded": False},
+        ],
+    )
+    body = client.post("/api/extension/launch").json()
+    assert body["landing"] == "https://arabam.example/"
 
 
 def test_with_no_pack_installed_the_app_screen_is_the_fallback(tmp_path, monkeypatch):

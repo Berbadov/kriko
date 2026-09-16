@@ -311,6 +311,53 @@ def _insert_document_fetched_at(conn, *, url, raw_text, target_hint, fetched_at)
     return cur.lastrowid
 
 
+def test_refuted_by_index_marks_that_source_as_refuting(populated, tmp_path):
+    """B47: the model's own `refuted_by` (1-based indices into
+    `payload["evidence"]`, the same numbering `verdict.build_prompt` gave it)
+    was never read — every source shipped `stance='supports'` regardless, so
+    nothing could ever surface `stance='refutes'` downstream. `populated`'s
+    two evidence rows are ordered by `e.id`, so index 2 is the b.test row."""
+    _add_verdict(populated, _verdict(refuted_by=[2]))
+    paths = export.export_all(populated, tmp_path / "out")
+    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    by_domain = {s["source_domain"]: s for s in sources}
+    assert by_domain["a.test"]["stance"] == "supports"
+    assert by_domain["b.test"]["stance"] == "refutes"
+
+
+def test_two_pages_on_the_same_domain_are_not_both_independent(tmp_path):
+    """B46: `evidence.independent` was hardcoded `True` on every emitted
+    source, so a claim resting on two pages of the SAME site (one quoting or
+    echoing the other, in the common case) reported as doubly corroborated.
+    Two distinct URLs on `a.test` must yield one independent source and one
+    non-independent one, using the same origin rule as
+    `independent_source_count` (netloc, or site_or_channel with no URL)."""
+    conn = db.connect(tmp_path / "l.db")
+    for i, url in enumerate(["https://a.test/one", "https://a.test/two"]):
+        doc_id = db.insert_document(conn, url=url, source_type="page",
+                                    raw_text=f"text {i}", target_hint="dq381")
+        ev_id = db.insert_evidence(conn, doc_id=doc_id, claim={
+            "title": "DQ381 mechatronic solenoid wear", "domain": "transmission",
+            "severity": "medium", "rationale": "r", "inspection_advice": "i",
+            "quote": f"quote {i}", "engine_or_variant_hint": "DQ381",
+            "quote_grounded": True}, span_start=None, span_end=None,
+            extractor_version=2)
+        conn.execute("INSERT INTO resolutions VALUES (?,?,?,?)",
+                     (ev_id, "dq381", "alias", 1))
+    conn.execute("INSERT INTO clusters (component_id, domain, cluster_version)"
+                 " VALUES ('dq381','transmission',1)")
+    conn.execute("INSERT INTO cluster_members VALUES (1,1)")
+    conn.execute("INSERT INTO cluster_members VALUES (1,2)")
+    conn.commit()
+    _add_verdict(conn, _verdict())
+
+    paths = export.export_all(conn, tmp_path / "out")
+    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    assert len(sources) == 2
+    flags = sorted(s["independent"] for s in sources)
+    assert flags == [False, True]
+
+
 def test_two_fetches_of_the_same_url_collapse_to_one_source(tmp_path):
     """A page refetched later (documents.url is not unique — only text_hash
     is) must still count as ONE independent source, with retrieved_at set to
