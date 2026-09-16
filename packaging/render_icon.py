@@ -89,11 +89,21 @@ def png(pixels: list[list[tuple[int, int, int, int]]], scale: int) -> bytes:
 
 
 
-#: The extension's toolbar icon — the same mark, rendered by whoever drew it,
-#: at 32px. Not an input to the render: an *invariant* the render is checked
-#: against, so the tile in a browser toolbar and the tile in a taskbar cannot
-#: quietly become two different letters. See `src/app/tests/test_brand_icon.py`.
-EXTENSION_ICON = REPO / "extension" / "assets" / "icons" / "icon-32.png"
+#: The extension's toolbar icons, and the scale each is rendered at. Every
+#: size Chrome asks for is a whole multiple of the 16-cell grid, which is why
+#: this list is these four numbers and not any four numbers.
+#:
+#: **These were hand-drawn until 0.10.0, and that is the thing that changed.**
+#: A rasterised glyph beside a grid of rects is two people drawing one letter,
+#: and `test_the_app_and_the_extension_show_the_same_letter` existed to catch
+#: them diverging. Deriving both from one source does not catch divergence —
+#: it makes it unrepresentable, which is the better half of that bargain. What
+#: the test now guards is that somebody re-ran this after editing the mark.
+EXTENSION_ICONS = {16: 1, 32: 2, 48: 3, 128: 8}
+EXTENSION_DIR = REPO / "extension" / "assets" / "icons"
+#: The one the role check reads back. 32 because that is the size a toolbar
+#: actually shows, so it is the rendering a mistake would be visible in.
+EXTENSION_ICON = EXTENSION_DIR / "icon-32.png"
 
 
 def decode(data: bytes) -> tuple[int, int, bytes]:
@@ -203,6 +213,13 @@ def main() -> None:
     WEB_TARGET.write_text(svg, encoding="utf-8")
     print(f"{SOURCE.name} ({side}x{side}) -> {TARGET} ({side * SCALE}px)")
     print(f"{SOURCE.name} -> {WEB_TARGET}")
+    EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
+    for size, scale in sorted(EXTENSION_ICONS.items()):
+        if side * scale != size:
+            raise ValueError(f"{size}px is not {side} cells at {scale}x")
+        (EXTENSION_DIR / f"icon-{size}.png").write_bytes(png(pixels, scale))
+    print(f"{SOURCE.name} -> {EXTENSION_DIR}/icon-"
+          f"{{{','.join(str(one) for one in sorted(EXTENSION_ICONS))}}}.png")
 
 
 if __name__ == "__main__":

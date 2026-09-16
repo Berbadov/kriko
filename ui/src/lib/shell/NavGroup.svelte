@@ -1,15 +1,22 @@
 <script lang="ts">
     import NavIcon from "./NavIcon.svelte";
+    import Sparkline from "./Sparkline.svelte";
+    import type { Figure } from "./figures";
     import type { NavGroupSpec } from "./nav";
 
     let {
         group,
         current,
         href,
+        figures = {},
     }: {
         group: NavGroupSpec;
         current: string;
         href: (name: string) => string;
+        /* Keyed by route name, and absent for most of them. A row with no
+         * entry renders exactly what it rendered before this existed — which
+         * is what keeps a failed poll from reshaping the rail. */
+        figures?: Record<string, Figure>;
     } = $props();
 </script>
 
@@ -35,6 +42,21 @@
                 >
                     <NavIcon name={item.name} />
                     <span class="nav-label">{item.label}</span>
+                    {#if figures[item.name]}
+                        {@const figure = figures[item.name]}
+                        <span class="nav-figure" class:live={figure.live}>
+                            {#if figure.trail}
+                                <Sparkline values={figure.trail} label={figure.title} />
+                            {/if}
+                            <!-- The title is on the text rather than the row:
+                                 a tooltip covering the whole link would fire
+                                 wherever the reader aims, including on the way
+                                 to somewhere else. -->
+                            <span class="nav-figure-text" title={figure.title}
+                                >{figure.text}</span
+                            >
+                        </span>
+                    {/if}
                 </a>
             </li>
         {/each}

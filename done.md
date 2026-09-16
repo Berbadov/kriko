@@ -6,6 +6,76 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the 0.10.0 work order (§3.2, §3.3, §3.4)
+
+**§3.4 — the logo.** The mark is a slab K on the 16-cell grid
+`packaging/render_icon.py` already rasterised, and its upper arm is the whole
+accent rather than a joint: an earlier draft put the amber on one terminal
+block and below about 48px it read as a detached square, because a corner touch
+is not a join. Taking the arm gives the letter a stroke that rises out of it
+the way a step chart does, which is the product in a glyph.
+
+Three things came out of drawing it that were not about drawing:
+
+*The extension's four toolbar PNGs are now rendered rather than hand-drawn.*
+They were a rasterised glyph beside a grid of rects — two people drawing one
+letter — and `test_the_app_and_the_extension_show_the_same_letter` existed to
+catch them diverging. Derivation makes divergence unrepresentable instead, and
+what that test now guards is that somebody re-ran the render. Stated in its
+docstring, because it is a weaker claim than the one it used to make.
+
+*The lockup is generated too* (`packaging/render_lockup.py`), and it reads the
+mark out of `logo-mark.svg` rather than repeating its coordinates — a copy
+would be the same two-drawings failure one file along. The wordmark is drawn on
+the same grid at the same cap height and stroke rather than set in a typeface:
+it renders with no font file on an app whose premise is working offline, and it
+cannot drift when the display face changes. `logo-wordmark.svg` and
+`logo-mark-textbox.svg` are gone — both still carried the "Lemonaide" identity
+this product stopped being in 0.3.1, and nothing referenced either.
+
+*And a defect worth the entry on its own.* The first mark shipped with `--n-2`
+inside its XML comment. Two hyphens cannot appear in an XML comment, so the
+file was invalid, every browser drew a broken-image glyph in the rail, and all
+eleven brand tests passed — `render_icon.py` reads the file with a regular
+expression, not a parser. Found by taking a screenshot. `test_every_brand_asset
+_actually_parses` closes it, verified by putting the bug back; it is the same
+lesson as `test_the_shell_is_valid_rust`, arrived at the same way.
+
+**§3.2 — the rail.** `sites` and `bench` had no glyph, and `NavIcon.svelte`
+renders nothing for an unknown name by design, so two rows had been shipping
+with an empty icon column and no test could see it. Both drawn in the existing
+idiom.
+
+Three rows now carry a number — claims on Browse, running jobs on Activity,
+spend on Agents, with a sparkline where there is a series to draw. Off
+`/api/status`, `/api/jobs` and `/api/usage`, which were all already served; a
+rail with its own endpoint is a rail that goes stale the day a claim changes
+shape. `Promise.allSettled`, because a rail that blanks two good figures over
+one dead endpoint reads as "you have nothing", and a 30-second clock, because
+these are ambient readings and the screen actually watching a job polls it.
+
+Three deliberate silences: nothing at all before the first read lands, no job
+count when nothing is running (a steady "0" trains the reader to stop looking),
+and no spend figure when nothing could be priced — an unpriced model meters
+tokens and reports no cost, and "$0.00" over a paid run is the error that
+compounds.
+
+*Not done:* one spacing and type scale across the rail. The existing rows
+already use the shared `--s-*` and `--t-*` tokens; rewriting them for
+tidiness would be churn in a diff that is already visual, and I would rather
+do it against the extension rebuild where both surfaces move together.
+
+**§3.3 — the primary action.** "Start a new pack" is out of the list and above
+it: filled accent, near-black ink (white on this gold is 1.7:1), and a hard
+flat offset shadow it presses into — a soft drop shadow reads as depth and this
+is a stamp. Author mode only; a primary action opening a screen the reader
+cannot use is worse than none.
+
+Verified by hand, in a browser, against a running server: the rail on a fresh
+install with one pack and no claims (the zero state, where Browse reads 0 and
+Agents reads nothing), and again with 1,620 claims, two running jobs and $4.17
+spent across four planes.
+
 ### 2026-09-16 — the 0.10.0 work order (§2.5, §2.6, §2.10 engine, §3.5 part)
 
 **§2.5 — live runs.** Most of it existed: four named stages with `waiting`
