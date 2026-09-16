@@ -440,6 +440,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         from app import scale as scaling
 
         depth = scaling.applied(str(params.get("scale") or ""), params)
+        # Live, per stage and per model, while the run spends — rather than
+        # one number on the way out, which arrives too late to act on and
+        # cannot say where the money went.
+        from app.meter import Meter
+        from app.web.settings import KRIKO_HOME
+
+        meter = Meter(home=KRIKO_HOME, cap_usd=_budget(params))
         task = plan_task(
             conn,
             subject_id,
@@ -510,12 +517,31 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 f"reading {document.site_or_channel or document.url}",
             )
             emit.count(chars=len(document.text or ""))
+            # Both meters, per document: the partial is what survives a
+            # cancel, the tally is what the screen shows while it runs.
+            complete = getattr(researcher, "_complete", None)
+            if complete is not None:
+                meter.observe("extract", complete)
+                said = meter.crossed()
+                if said:
+                    progress.log(said)
+                    emit.event(said, level="warn")
+                if meter.over_cap():
+                    # Cleanly, keeping everything gathered so far. A cap that
+                    # truncates silently or crashes teaches the reader the
+                    # number does nothing.
+                    progress.log(
+                        f"stopping at this run's ${meter.cap_usd:.2f} cap — "
+                        f"{len(documents) - index} source(s) not read")
+                    emit.close_stage(detail="stopped at the cost cap")
+                    break
             # Per document, because a run stopped halfway through ten sources
             # has read the first five and that is worth keeping.
             progress.partial({
                 "subject_id": subject_id, "pack_id": pack_id,
                 "documents": index - 1, "findings": len(findings),
                 "stopped_at": "extraction",
+                "spend": meter.snapshot(),
             })
             found = 0
             for finding in researcher.extract(task, document):
@@ -561,6 +587,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             "subject_id": subject_id, "pack_id": pack_id,
             "documents": len(documents), "findings": len(findings),
             "stopped_at": "extraction",
+            "spend": meter.snapshot(),
         })
 
         # Whatever the plane knows about its own spend, and nothing invented.
