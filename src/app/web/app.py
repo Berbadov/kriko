@@ -25,6 +25,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import agentconfig, agentskill, bundledpacks, extension as ext, logs
+from app import modelcatalogue
+from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline, schedule
 from app.web.jobs import JobRunner
 from app.web.schedule import Scheduler
@@ -92,6 +94,15 @@ async def lifespan(app: FastAPI):
     except Exception:
         app.state.seeded = []
         log.warning("could not install the bundled packs", exc_info=True)
+
+    # The reader's own price list, put where they can edit it. Copied once and
+    # never again, so a correction they made survives every update — and
+    # guarded like everything else here: a missing price costs a cost report,
+    # never a startup.
+    try:
+        modelcatalogue.install_default(KRIKO_HOME)
+    except OSError:
+        log.warning("could not write the model catalogue", exc_info=True)
     # A job that was running when the process died is not running now. Saying
     # so at startup is the difference between durable status and a row that
     # lies forever.
