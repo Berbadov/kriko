@@ -1812,21 +1812,32 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         if one.strip()
     ] or [""]
 
+    # Which models answered. The axis §2.6 asks for first, and swept on the
+    # same terms as every other one here: only when named. A benchmark that
+    # swept the catalogue by default would multiply the bill by however many
+    # models the reader happens to have priced.
+    models_asked = [
+        one.strip()
+        for one in str(params.get("models") or params.get("model") or "").split(",")
+        if one.strip()
+    ] or [""]
+
     batch_id = secrets.token_hex(8)
     app_conn = state.connect(settings.app_state_path)
     rows = []
     try:
         total = (
             len(found) * len(chosen) * len(protocols_asked)
-            * len(searches_asked) * reps
+            * len(searches_asked) * len(models_asked) * reps
         )
         done = 0
         for case in found:
             for plane in chosen:
-                for protocol, search, rep in [
-                    (one, engine, index)
+                for protocol, search, model, rep in [
+                    (one, engine, which, index)
                     for one in protocols_asked
                     for engine in searches_asked
+                    for which in models_asked
                     for index in range(1, reps + 1)
                 ]:
                     progress.check()
@@ -1845,6 +1856,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         ),
                         batch_id=batch_id,
                         search=search,
+                        model=model,
                     )
                     row["rep"] = rep
                     state.record_bench(app_conn, row)

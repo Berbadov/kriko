@@ -8,7 +8,7 @@ minutes of work and, on the paid plane, real money — both of which are reasons
 long work is a row here rather than a request that hangs.
 """
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.web import state
@@ -37,6 +37,16 @@ class BenchRequest(BaseModel):
     #: is a sample reported as a constant, and two protocols cannot be compared
     #: from one observation each.
     reps: int = Field(1, ge=1, le=10)
+    #: Comma-separated model ids to sweep, or empty for "whichever this
+    #: installation would pick". The axis §2.6 names first, and swept on the
+    #: same terms as the others: only when asked for. Sweeping the whole
+    #: catalogue by default would multiply the bill by however many models the
+    #: reader happens to have priced.
+    models: str = ""
+    #: Comma-separated search providers to sweep. Already honoured by the job;
+    #: it was simply not reachable from here, so "which providers" could not
+    #: be scoped from the screen that runs the benchmark.
+    searches: str = ""
 
 
 @router.get("/bench")
@@ -114,6 +124,82 @@ def _served(row: dict) -> dict:
     pack silently never reached the reader.
     """
     return {SERVED_AS.get(key, key): value for key, value in row.items()}
+
+
+@router.post("/bench/estimate")
+def estimate_bench(
+    body: BenchRequest, conn=Depends(get_app_state), store=Depends(get_store),
+) -> dict:
+    """What this grid would run and roughly what it would cost. Runs nothing.
+
+    "Benchmarking everything costs a lot. I need to scope it." Scoping without
+    a number is still guessing: every axis multiplies, so three cases, two
+    planes and three protocols at two reps is thirty-six runs — and nothing
+    said so before pressing.
+
+    A separate endpoint rather than a flag on the POST, so that asking what
+    something costs can never start it.
+    """
+    from app import bench
+
+    params = body.model_dump()
+    found = bench.cases(store, pack_id=params.get("pack_id") or "",
+                        limit=int(params.get("cases") or bench.DEFAULT_CASES))
+    return bench.estimate(conn, params, len(found))
+
+
+#: Where saved grids live. One settings key holding a JSON object rather than a
+#: table: these are a handful of named requests, they are interface state like
+#: every other preference, and a table would be a migration for something a
+#: reader will have three of.
+SAVED_KEY = "bench_configs"
+MAX_SAVED = 20
+
+
+@router.get("/bench/configs")
+def read_configs(conn=Depends(get_app_state)) -> dict:
+    """Grids the reader named, so a comparison can be repeated.
+
+    Results are only comparable across runs if the *config* was the same, and
+    a config reconstructed from memory next month is a different experiment
+    wearing the same name.
+    """
+    import json
+
+    raw = state.all_settings(conn).get(SAVED_KEY) or "{}"
+    try:
+        saved = json.loads(raw)
+    except ValueError:
+        saved = {}
+    return {"configs": saved if isinstance(saved, dict) else {}}
+
+
+class SaveConfig(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    config: BenchRequest
+
+
+@router.put("/bench/configs")
+def save_config(body: SaveConfig, conn=Depends(get_app_state)) -> dict:
+    import json
+
+    saved = read_configs(conn)["configs"]
+    if body.name not in saved and len(saved) >= MAX_SAVED:
+        raise HTTPException(
+            400, f"{MAX_SAVED} saved grids is the limit — delete one first")
+    saved[body.name] = body.config.model_dump()
+    state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
+    return {"configs": saved}
+
+
+@router.delete("/bench/configs/{name}")
+def forget_config(name: str, conn=Depends(get_app_state)) -> dict:
+    import json
+
+    saved = read_configs(conn)["configs"]
+    saved.pop(name, None)
+    state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
+    return {"configs": saved}
 
 
 @router.post("/bench")
