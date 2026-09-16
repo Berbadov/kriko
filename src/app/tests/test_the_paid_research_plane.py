@@ -23,7 +23,6 @@ hold the four things that make that safe rather than reckless:
 
 import ast
 import inspect
-import re
 from pathlib import Path
 
 import pytest
@@ -153,8 +152,10 @@ def test_a_non_http_url_is_never_fetched():
     """`fetch` is handed URLs a search provider returned. urllib is perfectly
     happy to read `file:///etc/passwd`, which makes the scheme check a
     boundary rather than a nicety."""
-    assert fetch.reader()("file:///etc/passwd") == ""
-    assert fetch.reader()("ftp://example.com/x") == ""
+    for refused in ("file:///etc/passwd", "ftp://example.com/x"):
+        got = fetch.reader()(refused)
+        assert got.text == ""
+        assert got.published_at == ""
 
 
 def test_the_adapters_keep_no_running_total():

@@ -235,6 +235,16 @@ weight nobody can justify. Two deliberate asymmetries:
   comment ("when WE last saw the page") is exactly true for the ledger path
   and only approximately true for the other two.
 
+`stance` is not read-only: `app/findings.py::accept_findings` writes it from
+whatever an MCP submission or job result declares (`item.get("stance",
+"supports")`), so a claim's rebuttal evidence — `stance='refutes'` — reaches
+the store at acceptance time rather than only ever being read back by
+`tree.py`'s health check. `lang` is a row attribute threaded the same way
+everywhere the engine builds a subject tree — `subject_tree()`,
+`weakest_claims()`, `Query.lang` (`kriko/lookup/query.py`) and the `/api/query`
+door all default it to `"en"` for a caller that does not know better, and pass
+it through rather than hardcoding a language anywhere in `kriko/`.
+
 Served read-only via `GET /api/health/weakest` and `GET /api/health/subject/{id}`
 (`src/app/web/routers/health.py`) and the `subject_health`/`weakest_claims` MCP
 tools (`src/app/mcp_server.py`); the dashboard's Health tab
@@ -309,7 +319,7 @@ absent or the stream dies mid-job.
 
 ## The other API surfaces
 
-Nine doors that the planes above do not open. Listed here because a surface
+The doors that the planes above do not open. Listed here because a surface
 nobody wrote down is a surface the next change treats as private —
 `test_docs_match_the_code.py` fails until each one names an endpoint.
 
@@ -360,17 +370,99 @@ and it is demand for *catalog* coverage. The MCP tool `research_agenda` is the
 same computation through the other door, and the generated skill embeds the
 top five with the sentence that the tool, not the file, is authoritative.
 
-**`GET|POST /api/factcheck`** (`routers/factcheck.py`) — one press: does the
-page a claim cites still contain the quote the pack shipped? The `POST` takes a
-`(pack_id, claim_id)` and nothing else, because the quote is read out of the
-store rather than taken from the caller — the browser extension can reach this
-surface, and a door that accepted "does this URL contain this string" would be
-an open fetch oracle. Four verdicts, `quoted / missing / unreadable /
-unreachable`, and `missing` says the page changed, never that the claim is
-false: pages get rewritten and Kriko has no authority to retract anything, so
-the verdict ranks nothing, hides nothing, and lives in `app.sqlite`'s
-`fact_checks`. The `GET` returns the whole screen's verdicts in one request,
-which is what keeps a report of forty claims from opening forty requests.
+**`GET|POST /api/factcheck`, `GET /api/factcheck/grounding`,
+`GET /api/factcheck/document`, `POST /api/verify`** (`routers/factcheck.py`) —
+one press: does the page a claim cites still contain the quote the pack
+shipped? The `POST /api/factcheck` takes a `(pack_id, claim_id)` and nothing
+else, because the quote is read out of the store rather than taken from the
+caller — the browser extension can reach this surface, and a door that
+accepted "does this URL contain this string" would be an open fetch oracle.
+Four verdicts, `quoted / missing / unreadable / unreachable`, and `missing`
+says the page changed, never that the claim is false: pages get rewritten and
+Kriko has no authority to retract anything, so the verdict ranks nothing,
+hides nothing, and lives in `app.sqlite`'s `fact_checks`. The `GET` returns the
+whole screen's verdicts in one request, which is what keeps a report of forty
+claims from opening forty requests.
+
+`GET /api/factcheck/grounding` is the offline half (B120/B128): per-evidence
+`grounded` / `ungrounded` / `not_kept` for one claim, against the page text
+kept in `app.sqlite` at acceptance time rather than a fresh fetch — it needs no
+network, and it is the only one of the four that can say "nothing was ever
+kept to check against" rather than confusing that with "the page still
+agrees". `GET /api/factcheck/document` returns the kept page text for one
+`source_id`, 404 as `not_kept` when this installation never retained one.
+`POST /api/verify` (`app/web/routers/factcheck.py`'s `verify_router`, mounted
+at `/api`, not under `/api/factcheck` — a whole-screen re-check is an
+*operation*, one claim is a fact check) starts a `verify` job over
+`(pack_id, subject_id, limit)`: no model, no agent, a substring test against
+every claim's evidence, because "does the quote still appear" is a question a
+model would answer confidently and a substring test answers honestly.
+
+**`GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`,
+`DELETE /api/sites/{host}`** (`routers/sites.py`) — which sites can be read
+here, and how one more is learned. Packs ship adapters; an installation may
+also learn one, and `app/sites.py` merges the two with the pack's always
+winning. `seen` is the extension reporting a page it could not read — the click
+is the grant, under `activeTab`, and the answer distinguishes "this site works,
+the panel should be there" from "nothing here reads this site". `register`
+starts an agent job that reads the page and writes the adapter, which is
+checked before it is stored because an adapter's `site` becomes a host
+permission in a browser.
+
+**`GET|PUT /api/prefs`, `GET /api/costs`** (`routers/prefs.py`) — which agent,
+which model, which search provider (`app/prefs.py`), and what it has cost
+(`app/costs.py`). Together because at the moment of choosing a plane they are
+one decision. Every choice falls back to the previous behaviour when unset, and
+**there is no credit balance**: no vendor exposes one to an API key, so the
+screen shows measured spend and says where the balance actually lives rather
+than inventing a number.
+
+**`GET /api/operations`, `GET /api/operations/stream`**
+(`routers/operations.py`) — the live feed of *operations*: one row per unit of
+agent-driven work, whichever door it came in by (`docs/AGENT_OPERATIONS.md`
+holds the vocabulary). `app/operations.py` records them, and the recorder is
+wrapped around every MCP tool, every job the runner starts and every
+`/api/analyze` — so a reader's own coding agent working through the MCP server
+is visible *while it works*, which it never was: that door showed up only
+afterwards, only as a `submissions` row, and only when the operation happened
+to be a submission. The row opens before the work and closes after it, so a
+call in flight reads `running` and a call that died with its process is marked
+`interrupted` at startup, exactly as a job row is. Payloads are summarised, not
+stored: a page of `document_text` is elided to its own measurement, because the
+page itself already has a table. `/stream` polls the table rather than being
+pushed to, because the MCP server is a different process writing the same
+`app.sqlite`.
+
+**`POST /api/packs/scaffold`, `GET /api/packs/drafts`,
+`GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`,
+`POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`,
+`DELETE /api/packs/drafts/{slug}`** (`routers/packs.py`, backed by
+`app/packauthor.py` and `app/packdraft.py`) — a pack an agent authored,
+before it is anything the store can hold. `scaffold` writes a contract-passing
+skeleton to disk and installs nothing, so a mistake here costs a directory,
+never a store row. A draft under `~/.kriko/drafts/<slug>/` is a small tree of
+JSON/YAML files (`packdraft.FILES`), of which **the adapter is `adapters/*.json`,
+not `.yaml`** — the suffix `kriko.pack.build` actually reads; a draft that
+wrote it as `.yaml` built and installed cheerfully with an adapter no listing
+page could ever reach, invisibly, until this was fixed.
+
+`packauthor.draft_state` refuses a draft outright when it has no `principle`
+or **no `lineup`** — a pack that names no line-up cannot be told apart from
+one that named every product in its category, and the coverage gap the pack
+should be reporting would silently read as zero instead. Every proposed
+subject is checked against that line-up (`_in_scope`, fuzzy substring match on
+normalised text) and against the pack's own `coverage.out_of_scope`; a subject
+neither names is **quarantined** rather than shipped or silently dropped — set
+aside with a reason ("not named anywhere in this pack's own line-up — likely a
+different category"), recorded in the draft's `research/coverage.yaml`, and
+surfaced back to the reader and to the amending agent, because refusing the
+whole draft for one stray subject would throw away the rest of the research,
+and shipping it would ship the mis-categorised row. `amend` (B127) asks an
+agent to cover what the line-up still lacks; nothing already in the draft is
+rewritten, so a refused amendment leaves it exactly as it was. `install`
+builds if needed and installs in one press, then marks the draft installed
+rather than deleting it — an installed draft still supports **Cover the
+gaps**: amend, rebuild, install again.
 
 **`GET /api/submissions`** (`routers/submissions.py`) — what came in through
 the agent door and what the gate did with it. The only place a *refusal* is
@@ -390,6 +482,31 @@ settings screen that can read a key back is one that can leak it into a
 screenshot or a support log, and replacing a key you cannot see costs one
 paste.
 
+**`GET /api/agent-config`, `GET /api/agent-targets`,
+`POST /api/agent-targets/{id}/skill`, `GET /api/agent-skill`,
+`POST /api/agent-targets/{id}/connect`, `POST /api/agent-verify`**
+(`routers/agent.py`, backed by `app/agentconfig.py`) — wiring a coding-agent
+harness to this installation's MCP server. `agent-config` answers *which
+command* — the exact `command`/`args`/`env` block to paste into `.mcp.json`,
+never the resolved venv interpreter (it dies off-machine with `No module
+named 'fastapi'`) — and `agent-targets` answers *where it goes*: which
+harnesses this machine has and whether each already has it. `env` carries
+`agentconfig.platform_env()`, which is non-empty **on Windows only** — a
+harness that spawns the advertised command merges its own environment with
+what this supplies, and a bare Python subprocess on Windows with no
+`SYSTEMROOT` on its path cannot resolve DNS at all, so the launched MCP server
+would look "connected" and answer every tool call with a socket error. `Connect`
+(`/connect`) writes the config into that harness's own file, and
+`/agent-verify` is the diagnostic the reader actually needs after pasting one
+in: it starts the exact advertised command, completes a real MCP `initialize`
+handshake and a `tools/list`, and reports failure with whatever the process
+said on stderr — because "the file was written" and "the agent can talk to
+it" are different facts, and a harness that starts, exits, and leaves an agent
+silently answering nothing has no other way to be caught. `agent-skill` and
+`{id}/skill` push Kriko's product-identity skill to a harness that supports
+one, versioned so a skill on disk that predates the current one is reported as
+`stale` rather than `present`.
+
 **`GET /api/research-planes`** (`routers/research.py`) — the two ways an
 installation grows its own knowledge, read off `AgentResearcher` and
 `ApiResearcher` rather than restated in the frontend, for the reason
@@ -399,6 +516,16 @@ engine does not own — a sentence in the reader's terms, because `per_token` is
 not an answer to "what will this cost me", and `ready`, which is the paid
 plane's key check and nothing else (the agent plane's readiness is a harness
 question `/api/agent-targets` already answers). Returns no key and no hint.
+
+**Cancelling a running harness researcher actually stops the process tree.**
+`AgentResearcher.check_cancelled` (`app/providers/harness.py`) is a hook the
+job runner wires to `Progress.check` (`app/web/tasks.py`, three call sites) and
+the drain loop calls it on every line of the CLI's stdout — checked before
+narration, so a run the coding agent has gone quiet on is still interruptible.
+Left to propagate rather than caught: whatever it raises reaches the `finally`
+that calls `_kill_tree(proc)`, so `POST /api/jobs/{id}/cancel` on a harness
+run reads as cancelled, not as a crash, and does not leave an orphaned CLI
+subprocess behind.
 
 **`POST /api/agenda/run`, `GET /api/research-runs`,
 `GET|DELETE /api/research-runs/{id}`** (`routers/research.py`) — the
@@ -414,6 +541,31 @@ of 6; 2 were already absent") — an unattended multi-row run that could not be
 reversed would be a liability rather than a feature, which is why the undo
 landed before the loop that needs it.
 
+**`GET|POST /api/bench`** (`routers/bench.py`, backed by `app/bench.py` and
+`app/protocols.py`) — B111/B126: measure the research planes against the same
+cases, derived from the installed store rather than enumerated (a fixed list
+of subjects in Python would be the hardcoded-car-data bug in benchmark
+clothing). `POST` starts a job — real minutes of work and, on the paid plane,
+real money — sweeping `planes`, `protocols` and (B126 §8) a search provider,
+`reps` times each, against a throwaway copy of the store that is discarded
+with whatever it wrote, so a benchmark never grows the pack it measures.
+Three case kinds (B126 §3/§9), each scored differently: `specific` (one
+subject, the default), `bulk` (many subjects in one call, B126 §2) and
+`validation` (re-fetches a source and checks it against a known answer, no
+model involved). `GET /api/bench` returns the runs, `bench.verdict()` (how
+each plane *failed*, not only how often — "four of five harness runs failed,
+all of them `auth`" is actionable), `bench.scored()` (recall, precision and
+hallucination with Wilson intervals, for cases carrying ground truth),
+`protocols.choose()` (which protocol a model's own measured history picks),
+and the **readout** (`protocols.readout()`): one row per model with the batch
+size, context budget, preamble and search provider it would run with right
+now, its measured cost per accepted claim, and its hallucination rate with
+interval — a model with fewer than two measured runs still gets a row, with
+`note` saying why it is showing the known-good default rather than a chosen
+protocol. `kriko bench` (`app/cli.py`) runs the same sweep in the terminal
+rather than as a job — a benchmark watched by nobody is a benchmark nobody
+trusts — and prints this same readout table.
+
 **`GET /api/extension`, `POST /api/extension/stage`,
 `POST /api/extension/reveal`** (`routers/extension.py`) — where the unpacked
 extension is on disk, staged into a stable directory the reader can point
@@ -422,24 +574,67 @@ opens the staged folder in the file manager — a convenience with a fallback,
 never a requirement: the response carries the path either way, because if the
 open fails the reader's next action is pasting it.
 
-**`WS /api/terminal/ws`** (`routers/terminal.py`) — a real shell, run inside
-the app, because a harness (Claude Code, opencode) that needs a one-time
-`login` cannot do it from inside a sandboxed subprocess spawn, and sending the
-reader out to their OS's own terminal for that is exactly the friction the app
-exists to remove. One PTY per app session (`app/providers/termpty.py`'s
-module-level `SESSION`), started on first connect and read/written as JSON
-text frames (`{"type": "data", ...}`, `{"type": "resize", ...}`) rather than
-raw bytes, because a WebSocket frame boundary is not a line boundary and the
-frontend's xterm.js speaks frames either way. This is the one surface
-`origins.py`'s general `origin_is_allowed` does not guard: `Origin` and `Host`
-checks are HTTP middleware, and Starlette never runs HTTP middleware on a
-WebSocket upgrade, so the handler carries its own — `terminal_origin_is_allowed`,
-which is stricter than the general check by one exclusion. It leaves
-`EXTENSION_SCHEMES` out on purpose: every other surface trusts the browser
+**`GET /api/terminal/state`, `GET /api/terminal/stream`,
+`POST /api/terminal/input`, `POST /api/terminal/resize`,
+`POST /api/terminal/close`** (`routers/terminal.py`) — a real shell, run
+inside the app, because a harness
+(Claude Code, opencode) that needs a one-time `login` cannot do it from inside
+a sandboxed subprocess spawn, and sending the reader out to their OS's own
+terminal for that is exactly the friction the app exists to remove. One PTY per
+app session (`app/providers/termpty.py`'s module-level `SESSION`), started on
+the first request that needs it.
+
+**This was a WebSocket until 0.7.12, and the WebSocket is why it never
+worked.** B107/B109 spent six releases closing real paths inside that handler —
+a missing `winpty-agent.exe`, a log that never reached `app.log`, an unreported
+`start()` crash, an unreported read failure, two rejections that closed before
+`accept()` — and after every one the reader reproduced and saw the same bare
+`[disconnected]`. 0.7.10's banner finally carried the fact that settled it:
+close code **1006**, the browser's "the opening handshake never finished",
+while a hand-made `Upgrade: websocket` against the *same frozen binary on the
+same machine* got `101` and real PTY bytes. The upgrade is refused above the
+application, so no fix inside it could ever have worked.
+
+The PTY now owns its own output. `TermSession` runs a reader thread that drains
+the pty into a bounded transcript (`SCROLLBACK`, 256 KB) whether or not anyone
+is connected, and every consumer asks the same question — *what came after byte
+N?* — over whatever transport it likes:
+
+* `GET /stream` is Server-Sent Events, resumable from `?offset=`. It is the
+  same transport `/api/jobs/{id}/stream` already uses, which is the transport
+  demonstrably working in the reader's install.
+* `GET /state` answers the identical fields in one request, which is both the
+  no-`EventSource` fallback and the first thing worth asking for in a bug
+  report.
+* `POST /input` and `POST /resize` carry keystrokes and geometry.
+* `POST /close` ends the shell and leaves it ended — a different event from
+  typing `exit`: it frees the child process and its pty, and `_ensure()`
+  never restarts a session this endpoint ended, so a client that keeps
+  polling `/state` sees a stable `ended: true` rather than a shell that
+  silently respawns underneath it.
+
+Three properties follow that a socket could not give:
+
+1. **A transport failure loses latency, not output.** A reconnect resumes at
+   its offset; a reader who opens the panel after the shell died still sees its
+   dying words.
+2. **Reporting a failure needs nobody connected.** `failure` is a field on the
+   session, not a frame someone had to be listening for.
+3. **The client cannot dial the wrong place.** `/api/terminal/stream` is
+   relative, so it resolves against the document. The old `wsUrl()` rebuilt an
+   absolute URL out of `location.host`, which was a second chance to disagree
+   about where the server was.
+
+The guards survive the change and are now a `Depends` shared by all four
+endpoints rather than two hand-written blocks: `terminal_origin_is_allowed` is
+stricter than the general `origin_is_allowed` by one exclusion, leaving
+`EXTENSION_SCHEMES` out on purpose — every other surface trusts the browser
 extension exactly as much as a page the reader chose to install, but hostile
 JavaScript reaching a real shell is a different order of consequence than
-reaching `/api/analyze`, so the endpoint also refuses any connection that
+reaching `/api/analyze` — and the endpoints also refuse any request that
 arrived on `EXTENSION_PORT` rather than the app's own port, belt and braces.
+(The general `Origin`/`Host` middleware does run on these, since they are
+ordinary HTTP now; it is simply not strict enough on its own.)
 
 ---
 
@@ -467,6 +662,10 @@ Every table, and the question it answers:
 | `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
 | `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
 | `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
+| `operations` | One row per unit of agent-driven work, opened before the work and closed after it. What makes "is my agent doing anything right now" answerable — including through the MCP door, which this app does not start and cannot otherwise see. A feed, bounded at 2000 rows: what a run *produced* lives in `submissions`, `pipeline_runs` and `research_runs`, all of which outlive it. |
+| `local_adapters` | How to read a site this installation learned by itself, kept out of the store by the same rule everything else here is: a site the reader taught their own copy about is not pack content, must not enter a `content_digest`, and must not travel to anyone else's install as though an author had reviewed it. Always loses to a pack's adapter for the same host. |
+| `site_requests` | Sites somebody stood on and pressed the button, that nothing here can read. One row per host with a count and one sample page — the demand signal, and the only honest input to "which site should Kriko learn next". |
+| `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 
 **Schema changes reach an existing file.** `connect()` stamps `PRAGMA
@@ -490,6 +689,145 @@ number in one place, `app.extension.MINIMUM_VERSION`. Four states, because
 `unknown` (nothing has ever called) has to be separate from `too_old`: telling
 a reader who never installed the extension that theirs is out of date is worse
 than saying nothing. `behind` still works.
+
+---
+
+## The plain CLI: `kriko`
+
+**`src/app/cli.py`.** Two shapes, deliberately.
+
+`packs`, `install`, `uninstall`, `enable`, `build` and `lookup` open the store
+directly (`kriko.store.db.connect`) and touch no app state — the reader's
+whole loop with no server, no network and no second process, exactly the
+docstring at the top of the file says.
+
+`prefs`, `costs`, `sites`, `verify`, `drafts`, `operations`, `bench` and `tui`
+need `app.sqlite` (preferences, spend, site adapters, fact checks, pack
+drafts, the operations feed) or a job runner, and go through
+`app.tui.client.Engine` — the same client the operator console uses, over
+HTTP — rather than opening `app.sqlite` a second time. That is not a style
+choice: `app/tui/client.py` documents why a second process opening the store
+directly would be a second writer fighting whatever app is already running,
+and the same argument applies to `app.sqlite`. Each of these subcommands
+attaches to a running engine when one answers on `EXTENSION_PORT`, or starts
+one of its own in-process (`--no-start` refuses that and fails instead), the
+same discovery order `kriko tui` uses. `bench` is the one exception among
+these: it measures in-process against its own copy of `app.sqlite`
+(`app/bench.py` — see the Benchmark section below), because a measurement is
+supposed to be watched by the terminal that started it, not handed to a job.
+
+Every one of these commands turns a failed attach or a failed call
+(`app.tui.client.EngineError`) into one line on stderr and a non-zero exit —
+`_with_engine` in `cli.py` is the one place that happens, so a reader never
+sees a Python traceback for "the engine is not running" or "that draft does
+not exist".
+
+```
+kriko prefs [--harness ID] [--model NAME] [--search ID]
+kriko costs
+kriko sites [list|register HOST|forget HOST]
+kriko verify [--list] [--pack ID] [--subject ID]
+kriko drafts [list|show|amend|build|install|discard SLUG]
+kriko operations [--limit N]
+kriko bench [--plane ...] [--cases N] [--protocol ...]
+```
+
+---
+
+## Operator Console: `kriko tui`
+
+`src/app/tui/` is a fourth interface beside `cli`, `web` and `mcp`, and the only
+one whose audience is not the reader of a car listing. It drives **the same HTTP
+API the dashboard drives** — every keystroke below is an endpoint already
+documented above — from a terminal, with no webview anywhere in the path.
+
+**Why it exists.** Agent operations were invisible. "Research does nothing",
+"the terminal says disconnected" and "it reported success and kept nothing" were
+three symptoms of one condition: the operator plane had no instruments, and for
+six releases of B107/B109 the reader had no working surface of any kind because
+the surface itself was the broken thing. A second client on the same API costs
+almost nothing and cannot be taken out by whatever takes out a webview.
+
+It is also a standing test of the API: anything the console cannot do without a
+new endpoint is something the API was not really exposing.
+
+```
+kriko tui                 # attach to a running app, or start an engine
+kriko-sidecar --tui       # the same console, out of the frozen binary
+kriko tui --url http://127.0.0.1:8787
+kriko tui --no-start      # attach only; fail if nothing is serving
+```
+
+**One click, on Windows.** `tauri/src-tauri/installer.nsh`'s
+`NSIS_HOOK_POSTINSTALL` writes a **Kriko Console** shortcut into the Start menu
+aimed at `$INSTDIR\kriko-sidecar.exe --tui`, and `NSIS_HOOK_POSTUNINSTALL`
+removes it. No second artifact ships: that binary is the `externalBin` Tauri
+installs anyway. A console window appears, which is the point rather than an
+oversight — the sidecar is built `console=True` (see
+`packaging/kriko-sidecar.spec` for why), Tauri suppresses the window with
+`CREATE_NO_WINDOW` when *it* spawns the engine, and nothing suppresses it here
+because here the terminal is the UI.
+
+**It is standalone, and that is the point.** `app/tui/` is already in the wheel
+and therefore already inside the sidecar the installer ships, so `--tui` costs
+one branch in `sidecar.py` and adds no build artifact — and it means a machine
+with no Python, no Node and no working WebView2 can still drive research, watch
+a job and open a shell. A console whose reason for existing is a window that
+would not open should not itself require a source checkout. The flag returns
+before `reserve`, because the console attaches to a running app or starts its
+own engine in-process; a sidecar that bound a port first would be a second
+engine nobody asked for.
+
+`main()` calls `logs.silence_stderr()` before anything else. When nothing is
+serving, the console starts an engine in this process and `create_app` calls
+`logs.configure()` — whose stderr handler writes straight onto the alternate
+screen, underneath a frame differ with no idea it needs to repaint that row. The
+file handler is left alone: losing the terminal is the reason to keep `app.log`,
+not a reason to stop.
+
+| Module | What it owns |
+|---|---|
+| `client.py` | engine discovery, and the calls. Stdlib `urllib` — a terminal client that only ever dials 127.0.0.1 does not justify a dependency in the reader's installer |
+| `term.py` | raw mode, the alternate screen, key decoding, the frame differ |
+| `screen.py` | the frame, as a **pure function** of state. No terminal in the file, which is why every layout decision is a unit test |
+| `app.py` | the loop: a poller thread owns snapshots, the UI thread renders and reads keys |
+
+**Discovery order**, chosen so the least surprising thing happens: an explicit
+`--url`, then `KRIKO_URL`, then the fixed `EXTENSION_PORT` — a running desktop
+app is *always* serving there, so `kriko tui` with the app open attaches to the
+app's own engine, same store, same jobs, same shell. Only if nothing answers
+does it start an engine in-process on an OS-chosen port, which is what makes the
+console usable on a machine where the desktop shell will not open at all.
+
+**A harness run is read as it happens.** `app/providers/harness.py` asks the
+CLI for `--output-format stream-json` (which the CLI refuses to start without
+`--verbose`) and reads its stdout line by line in the calling thread, draining
+stderr on its own so a full pipe cannot deadlock a run, with the timeout as a
+timer that kills rather than an argument to `subprocess.run`. `narrate()` turns
+each event into one line — `searched "…"`, `fetched …`, a tool call that
+failed — and `on_action`, set duck-typed by `app/web/tasks.py` to the job's
+`progress.log`, is where they go. So the actions appear in the job log both
+clients already show, live, rather than in a second transport; the transcript
+is bounded and the narration capped, because an agent in a tool loop must not
+be able to grow either without end.
+
+**Four tabs and a shell.** *Planes* answers "why do agent operations do
+nothing" by naming the harness binary `harness.locate()` found, with its path —
+and, when it found none, where it looked. *Agenda* is `/api/agenda`, with Enter
+starting research on the selected subject. *Jobs* is `/api/jobs`, with the
+followed job's log tailing in the detail band. *Ops* is `/api/operations` —
+the live feed described below, one row per unit of agent-driven work
+regardless of which door it came in by, so an operator can see an MCP-door
+`submit_findings` in flight without switching to the dashboard. `s` drops the
+alternate screen and hands the real terminal to the PTY until Ctrl-] — a
+pass-through rather than an embedded emulator, because drawing a shell means
+writing a terminal emulator and there is already one running: the operator's.
+That is the surface a `claude` login needs.
+
+**Efficiency is the frame differ.** `term.diff` rewrites only the rows that
+changed, cursor-addressed, so an idle console writes nothing at all and a
+ticking job log writes one line. That is what lets the loop poll for keys twenty
+times a second without cost.
 
 ---
 

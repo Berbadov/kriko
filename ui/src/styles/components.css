@@ -37,6 +37,40 @@
     height: 100dvh;
     overflow: clip;
 }
+/* The terminal takes a column rather than covering one — at every width.
+ *
+ * It was `position: fixed` over the work area, which is why the reader
+ * reported the panel "invading the rest of the app": the page was still
+ * there, full width, with a third of it underneath an opaque panel — so
+ * headings wrapped under it and buttons could not be reached. Closing it
+ * revealed a layout that had never reflowed.
+ *
+ * A grid column reflows by construction. The panel keeps its own width and
+ * the work area gets what is left, which is also what makes the terminal
+ * usable *while reading a screen* rather than instead of one.
+ *
+ * Below the split point there is not enough width for a third column, so the
+ * grid changes shape instead of the panel changing tactics: `term` moves to
+ * its own row, under `work`, still sharing `rail`'s column top to bottom
+ * (naming the same area in two rows merges them into one cell — no separate
+ * rule needed to keep the rail whole). Both rows get `minmax(0, ...)` for the
+ * same reason `.work` does above: a grid track's automatic minimum is its
+ * content, and without this neither row can shrink below its own terminal
+ * output, which is exactly the overlap this replaces. Nothing here ever
+ * covers `work` — the two are never in the same cell, at any width. */
+.shell.with-terminal {
+    grid-template-columns: var(--rail) minmax(0, 1fr) var(--terminal-w);
+    grid-template-areas: "rail work term";
+}
+@media (max-width: 60rem) {
+    .shell.with-terminal {
+        grid-template-columns: var(--rail) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
+        grid-template-areas:
+            "rail work"
+            "rail term";
+    }
+}
 /* The work column scrolls *as content*, unlike the rail, which hides its bar
  * and conveys overflow with gradients. The difference is deliberate: chrome
  * is a fixed set of rows a reader can see all of, a report is arbitrarily

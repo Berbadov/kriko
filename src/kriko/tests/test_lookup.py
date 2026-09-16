@@ -98,6 +98,14 @@ ALPHA_CLAIMS = """
   text: {en: {title: Trim rattle, body: b, advice: a}}
   evidence:
     - {url: "https://forum.example.org/t/9", quote: Mine rattles over bumps.}
+- subject: {kind: product, identity: {brand: acme, model: w100}}
+  kind: known_issue
+  domain: mech
+  severity: medium
+  text: {en: {title: Repeated quote item, body: b, advice: a}}
+  evidence:
+    - {url: "https://maker.example.com/tsb/2", quote: First quote from the page.}
+    - {url: "https://maker.example.com/tsb/2", quote: Second quote, same page.}
 """
 
 
@@ -264,6 +272,21 @@ def test_source_tier_lifts_an_authoritative_claim_over_a_forum_one(store):
                                  context={"usage_km": 200_000}))
     by_title = {c.title: c for c in result.claims}
     assert by_title["Chain tensioner fails"].trust > by_title["Trim rattle"].trust
+
+
+def test_two_quotes_off_one_page_are_one_source_not_two(store):
+    """B49: rank.py used to count independent EVIDENCE ROWS, not distinct
+    SOURCES, so two quotes pulled off the same page inflated corroboration —
+    disagreeing with `kriko.lookup.tree`, which has always deduped by source.
+    One page, however many quotes it contributes, must not out-rank a claim
+    resting on genuinely one source any more than a claim resting on two.
+    """
+    result = lookup(store, Query(kind="product",
+                                 identity={"brand": "acme", "model": "w100"}))
+    by_title = {c.title: c for c in result.claims}
+    repeated = by_title["Repeated quote item"]
+    assert len(repeated.sources) == 2
+    assert repeated.trust == pytest.approx(1.0)
 
 
 def test_the_result_is_capped(store):

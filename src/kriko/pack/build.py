@@ -285,7 +285,7 @@ def _emit_claim_row(conn, pack_id, entry, man, known, row_ids: list[str]) -> str
         )
 
     texts = entry.get("text") or {}
-    primary = texts.get("en") or next(iter(texts.values()), {})
+    primary: dict = texts.get("en") or next(iter(texts.values()), {})
     claim_id = ids.claim_id(
         subject_id, entry["kind"], entry["domain"], primary.get("title", "")
     )
@@ -353,7 +353,7 @@ def _emit_claim_conditions(conn, pack_id, claim_id, entry, row_ids: list[str]) -
 
 def _emit_claim_evidence(conn, pack_id, claim_id, entry, row_ids: list[str]) -> None:
     for ev in entry.get("evidence", []) or []:
-        url = ev.get("url", "")
+        url = ev.get("url") or ev.get("source_url") or ""
         source_id = ids.source_id(url=url, text=ev.get("quote", ""))
         conn.execute(
             "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"

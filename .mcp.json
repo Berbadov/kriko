@@ -2,10 +2,10 @@
   "mcpServers": {
     "kriko": {
       "type": "stdio",
-      "command": "/home/beraat/kriko/.venv/bin/python",
-      "args": ["-m", "app.mcp_server"],
+      "command": ".venv/bin/python",
+      "args": ["-m", "app.sidecar", "--mcp"],
       "env": {
-        "PYTHONPATH": "/home/beraat/kriko"
+        "PYTHONPATH": "src"
       }
     }
   }

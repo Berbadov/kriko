@@ -22,7 +22,7 @@ ui/        the frontend — Svelte + Vite source, built into src/app/web/static/
            vocabulary (enforced by test_repo_invariants.py).
    |
    v
-app/       interfaces — cli, web dashboard, mcp server.
+app/       interfaces — cli, web dashboard, mcp server, operator TUI.
    |
    v
 kriko/      the engine — pack store, generic lookup, ranking, research
@@ -44,7 +44,7 @@ app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
 | Package | Owns | File to read first |
 |---|---|---|
 | `ui/` | The app's Svelte source; `npm --prefix ui run build` writes the committed bundle in `src/app/web/static/` | `ui/src/lib/shell/nav.ts` (the route table both the rail and the router read) |
-| `src/app/` | Interfaces: CLI, FastAPI web dashboard, MCP server for research agents | `src/app/cli.py` |
+| `src/app/` | Interfaces: CLI, FastAPI web dashboard, MCP server for research agents, operator TUI | `src/app/cli.py` |
 | `src/app/pipeline/` | Pipeline drivers that orchestrate the ledger and packs/cars pipeline | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `src/kriko/store/packstore.py` |
 | `packs/` | One directory per product category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
@@ -147,7 +147,8 @@ Every `python -m` target in the tree:
 
 | Command | What it does |
 |---|---|
-| `python -m app.cli` | CLI — pack install/build/list, lookup queries |
+| `kriko` (`python -m app.cli`) | CLI — pack install/build/list, lookup queries |
+| `kriko tui` / `kriko-sidecar --tui` | Operator console — planes, agenda, jobs, shell (see `docs/INTERNALS.md`) |
 | `python -m app.mcp_server` | MCP server for research agents (`submit_findings`, `lookup`, …) |
 | `python -m app.pipeline.ledger_run` | Ledger pipeline: acquire, extract, cluster, verdict, remediate, report |
 | `python -m app.pipeline.panel` | Ledger review/inspection panel |

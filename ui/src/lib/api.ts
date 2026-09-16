@@ -143,6 +143,19 @@ export const api = {
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
+    /** What a draft holds and what of its own line-up it does not cover. */
+    packDraft: (slug: string) =>
+        get<T.DraftState>(`/api/packs/drafts/${seg(slug)}`),
+    /** Ask an agent for what this draft is missing. Adds; never rewrites. */
+    amendPackDraft: (slug: string, note: string) =>
+        postJson<{ job_id: string; kind: string }>(
+            `/api/packs/drafts/${seg(slug)}/amend`,
+            { note },
+        ),
+    /** Re-read the sources behind everything on this screen. A job: forty
+     *  claims at three fetches each is minutes, not a press. */
+    verify: (body: { pack_id?: string; subject_id?: string; limit?: number }) =>
+        postJson<{ job_id: string; kind: string }>("/api/verify", body),
     installPackDraft: (slug: string) =>
         postJson<{ slug: string; pack_id: string }>(
             `/api/packs/drafts/${seg(slug)}/install`,
@@ -169,6 +182,16 @@ export const api = {
             pack_id: packId,
             claim_id: claimId,
         }),
+    /** Per-evidence grounded/ungrounded/not_kept for one claim, offline — no
+     *  network and no re-fetch, unlike `checkFacts` above. */
+    grounding: (packId: string, claimId: string) =>
+        get<T.Grounding>(
+            `/api/factcheck/grounding?pack_id=${seg(packId)}&claim_id=${seg(claimId)}`,
+        ),
+    /** The retained page text behind one piece of evidence. 404 when this
+     *  install never kept a copy of that source. */
+    document: (sourceId: string) =>
+        get<T.RetainedDocument>(`/api/factcheck/document?source_id=${seg(sourceId)}`),
     /** Both halves of the reader's own marks on one stored answer. */
     triage: (lookupId: string) =>
         get<T.Triage>(`/api/lookups/${seg(lookupId)}/triage`),
@@ -177,6 +200,10 @@ export const api = {
             `/api/lookups/${seg(lookupId)}/notes`,
             { claim_key: claimKey, note },
         ),
+    /** The operations feed. `after` is an id: 0 means "the newest page",
+     *  anything else means "everything since". See `lib/operations.ts`. */
+    operations: (limit = 50, after = 0) =>
+        get<T.Operations>(`/api/operations?limit=${limit}&after_id=${after}`),
     submissions: (limit = 30) =>
         get<T.Submissions>(`/api/submissions?limit=${limit}`),
     retryJob: (jobId: string) =>
@@ -192,6 +219,27 @@ export const api = {
             checked,
         }),
     adapters: () => get<T.Adapter[]>("/api/adapters"),
+    /** Rewrite one harness's skill from the packs installed right now. */
+    refreshAgentSkill: (targetId: string) =>
+        postJson<{ target: string; skill: string | null }>(
+            `/api/agent-targets/${seg(targetId)}/skill`,
+            {},
+        ),
+    /** Which sites can be read here, and which were asked for. */
+    sites: () => get<T.Sites>("/api/sites"),
+    registerSite: (host: string, url = "") =>
+        postJson<{ job_id: string; host: string }>(
+            `/api/sites/${seg(host)}/register`,
+            { url },
+        ),
+    forgetSite: (host: string) =>
+        del<{ host: string; forgotten: boolean }>(`/api/sites/${seg(host)}`),
+    /** What the reader chose: which agent, which LLM, which search. */
+    prefs: () => get<T.Prefs>("/api/prefs"),
+    savePrefs: (values: Partial<Record<string, string>>) =>
+        putJson<T.Prefs>("/api/prefs", values),
+    /** What it has cost, and what the next run is likely to. */
+    costs: () => get<T.Costs>("/api/costs"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
@@ -284,4 +332,7 @@ export const api = {
             headers: { "X-Filename": file.name },
             body: file,
         }),
+    bench: () => get<T.Bench>("/api/bench"),
+    startBench: (body: T.BenchRequest = {}) =>
+        postJson<{ job_id: string; kind: string }>("/api/bench", body),
 };

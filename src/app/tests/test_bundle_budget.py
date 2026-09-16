@@ -5,14 +5,25 @@ no code splitting — *fine for a local app*, and noted only so that it is a
 decision somebody made rather than a number nobody looked at. This file is
 what turns it into the former.
 
-**Why there is no code splitting, and why that is right here.** Splitting
-trades one download for several. That trade pays on a website, where the second
-chunk arrives over the network and most visitors never reach the screen it
-holds. This bundle is read off the local disk by a window the shell only shows
-*after* `/api/health` answers, and every reader has every route: the rail
-offers all of them, and the Console can reach any of them by name. A lazy route
-here would buy nothing and add a loading state to a screen that currently has
-none.
+**Why the routes are not split, and why one leaf is.** Splitting trades one
+download for several. That trade pays on a website, where the second chunk
+arrives over the network and most visitors never reach the screen it holds.
+This bundle is read off the local disk by a window the shell only shows *after*
+`/api/health` answers, and every reader has every route: the rail offers all of
+them, and the Console can reach any of them by name. A lazy route here buys
+nothing and adds a loading state to a screen that currently has none. That
+reasoning was tested on 2026-09-16 by splitting every route and then putting
+them back, which cost a first paint 126 KB smaller and thirteen new loading
+states nobody had asked for.
+
+The same reasoning points the other way exactly once. `@xterm/xterm` is 335 KB
+-- more than half of everything shipped -- for a panel behind a keystroke that
+most readers never press, and it is not a screen the rail lists or the Console
+reaches. "Most readers never open it" is the website case arriving inside a
+local app, so the terminal is deferred to first open and everything else is
+eager. `DEFERRED` below names it, because a second entry appearing there is the
+argument this file exists to force: the next one has to make the same case out
+loud.
 
 So the size is not something to optimise — it is something to *watch*. The
 failure mode this guards is not a slow app, it is the quiet arrival of a
@@ -42,6 +53,16 @@ import pytest
 #: the built bundle to 551,840 bytes. That is the one library this budget
 #: exists to make someone say out loud rather than let drift — said here.
 BUDGET = {".js": 720_000, ".css": 60_000}
+
+#: Chunks deliberately kept out of the first paint, by the stem Vite names
+#: them with. One entry, and it has to stay hard to add a second: see the
+#: docstring for the argument the terminal had to make.
+DEFERRED = ("TerminalPanel",)
+
+#: What a reader waits on before the window can render — the entry chunk and
+#: its CSS, with every deferred leaf above excluded. 253 KB of JS and 42 KB of
+#: CSS today, against 574 KB before the terminal was deferred.
+FIRST_PAINT_BUDGET = 380_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
@@ -109,16 +130,44 @@ def test_no_source_maps_ship():
 def test_the_page_asks_for_the_files_that_are_there():
     """The split decision, stated as a check.
 
-    One JS chunk and one CSS file is the *choice* documented above, so a
-    second chunk appearing is worth a conversation rather than a silent pass.
-    This also catches an `index.html` left pointing at a bundle that has been
-    rebuilt under a new hash — the stale-bundle failure, from the other end.
+    One entry chunk plus the named deferred leaves is the *choice* documented
+    above, so an unnamed chunk appearing is worth a conversation rather than a
+    silent pass. This also catches an `index.html` left pointing at a bundle
+    that has been rebuilt under a new hash — the stale-bundle failure, from
+    the other end.
     """
     index = (STATIC / "index.html").read_text(encoding="utf-8")
     referenced = set(re.findall(r"assets/([\w.-]+\.(?:js|css))", index))
     present = {p.name for p in _assets() if p.suffix in BUDGET}
-    assert referenced == present, (
+    deferred = {
+        name
+        for name in present
+        if any(name.startswith(one + "-") for one in DEFERRED)
+    }
+    assert referenced == present - deferred, (
         f"index.html asks for {sorted(referenced)} and the build holds "
-        f"{sorted(present)}. Either the bundle is stale or a second chunk "
-        "arrived — see this file's docstring on why there is one."
+        f"{sorted(present)}, of which {sorted(deferred)} are deferred on "
+        "purpose. Either the bundle is stale or a chunk arrived that nobody "
+        "named — see this file's docstring, and add it to DEFERRED only with "
+        "the argument for why it is not in the first paint."
+    )
+
+
+def test_the_first_paint_carries_only_what_it_needs():
+    """What the window reads before it can show anything.
+
+    The per-kind budgets police the whole build; this one polices the part a
+    reader waits on. Without it, deferring the terminal would have looked
+    identical to never having shipped it — the same total, and no record that
+    the expensive half now arrives only if it is asked for.
+    """
+    index = (STATIC / "index.html").read_text(encoding="utf-8")
+    referenced = set(re.findall(r"assets/([\w.-]+\.(?:js|css))", index))
+    eager = sum(
+        p.stat().st_size for p in _assets() if p.name in referenced
+    )
+    assert eager <= FIRST_PAINT_BUDGET, (
+        f"the first paint is {eager:,} bytes against {FIRST_PAINT_BUDGET:,}. "
+        "Something large became eager, or a deferred leaf was pulled back "
+        "into the entry chunk by a stray static import."
     )

@@ -220,9 +220,560 @@ pack-supplied seam for future categories without making the core car-aware.
 
 ---
 
+## Ideas from the reader, 2026-09-14 (B111-B119)
+
+Nine, written down the evening before the 0.8.1 install was tried. Filed rather
+than built, except B114's launch bug, which was reproduced and fixed the same
+day. Several already have most of their machinery in the tree; where that is
+true it is said, because the expensive mistake here is building a second copy
+of something that exists.
+
+### B120 / B121 — **DONE 2026-09-14** (0.8.3)
+
+The document that proved the quote is kept (`app.sqlite`'s `documents`, keyed by
+`source_id`, bounded), and the check can be made again offline through
+`findings.regrounded`. The harness run streams: `--output-format stream-json`,
+read line by line, narrated into the job log both clients already show. What is
+*not* done, and is worth its own row when someone wants it: a run that stops to
+ask a question still cannot be answered — the prompt goes in on stdin and the
+transcript comes out, so this is a window rather than a conversation. See
+`done.md`, and `git show` for the entry that stated both defects in full.
+
+### B122 — **DONE 2026-09-14** (0.8.4): the operations feed
+
+`app/operations.py` records one row per operation — opened before the work,
+closed after it — and the recorder wraps every MCP tool, every job the runner
+starts and every `/api/analyze`. `GET /api/operations` + `/stream`, and
+**Activity → Live** is the default lens. A tool call from the reader's own
+agent is now visible while it runs, which was the whole gap.
+
+Left open on purpose: `kriko tui` has no Live tab yet (it polls the same
+endpoint; the work is a fourth tab in `app/tui/screen.py`), and the feed cannot
+*cancel* an operation it is watching — an MCP call belongs to the process that
+made it.
+
+### B123 / B124 — **DONE 2026-09-14** (0.8.5)
+
+Protocols (`kriko.research.Spend` + `app/protocols.py`, the paid plane batching)
+and the harness-as-a-function instrument (`bench.verdict`'s failure classes).
+See the B111 entry above and `done.md`. **B124's experiment is unrun**: it needs
+a real CLI on a real subscription. B126 is what turns both into measurements of
+correctness rather than of discipline.
+
+### B125 — **DONE 2026-09-15** (0.8.6): the prompt no longer goes through a pipe
+
+*"RuntimeError: Claude Code exited 1: Warning: no stdin data received in 3s …
+Error: Input must be provided either through stdin or as a prompt argument."*
+
+Stdin fixed B92 and introduced a pipe. On Windows that pipe crosses a
+`claude.cmd` shim into node, and when it does not arrive the CLI waits three
+seconds, proceeds **with no prompt**, and fails with B92's own message — on a
+machine where the same path had worked minutes earlier. The prompt now goes
+after `--`, which ends option parsing (so the variadic `--allowedTools` still
+cannot eat it) and cannot be lost in transit. Stdin remains for a prompt over
+24,000 characters, because Windows caps a command line at 32,767.
+
+### B134 — **DONE 2026-09-15** (0.8.7): an installer named for a version it does not contain
+
+The reader's build log: `Compiling kriko v0.8.0`, one line above
+`Kriko_0.8.5_x64-setup.exe`. `-Version` only reaches `tauri.conf.json`, which
+names the bundle; Cargo.toml, pyproject and the frozen sidecar's metadata come
+from the *tree*. So a stamp on a checkout that has not been pulled produces an
+installer labelled with fixes it does not carry — which is what "you forgot to
+update the version number" actually was, and it cost a full build plus a round
+of misattributed bug reports.
+
+`build_desktop.ps1` now refuses the mismatch before anything is compiled, and
+names the two moves that fix it: `git pull`, or `tools/bump.py <version>`.
+
+Also from that log, unfixed and cosmetic: Tauri warns that the bundle
+identifier `org.kriko.app` ends in `.app`, which collides with the macOS bundle
+extension. It changes nothing on Windows and changing it is not free — the
+identifier is what an installed app is *keyed* by, so a new one is a new app to
+the OS.
+
+### B135 — **DONE 2026-09-15**: the skill on disk follows the code
+
+*"I believe you did not make any changes to skill text?"* — correct about the
+reader's machine, and the reason is the bug. The skill is generated from the
+installed packs and from this app's code, and it was written exactly **once**:
+when Connect was pressed. An overhauled protocol, a tool that did not exist last
+month and a pack that updated yesterday all reached the app and none of them
+reached the agent.
+
+`agentskill.stamped()` puts a content digest in the file, `agentconfig.skill_status`
+compares it, `/api/agent-targets` reports `present` / `stale` per harness, and
+**startup refreshes every wired copy that has fallen behind** — because a
+protocol that needs the reader to remember a button is a protocol that drifts.
+A harness that was never connected is still left alone: writing into the config
+directory of a CLI nobody wired would be installing something they did not ask
+for.
+
+Also: the preferred-agent choice was in Settings, which is not where anyone goes
+to think about agents. The same panel now renders on the Agents screen — one
+component in both places rather than two that can disagree.
+
+### B126 — Benchmarks against ground truth `[G2][G5]` **(DONE 2026-09-16, 0.10.0)**
+
+`app/gold.py` loads a pack's `research/gold.yaml`, judges produced claims against
+it (domain+word, phrase-in-title, phrase-in-quote — never an LLM scoring another
+LLM), and reports recall, precision, hallucination and `unlisted` separately.
+`bench` takes `--reps`, records `gold_json` and `rep` per row, and `scored()`
+aggregates with Wilson intervals. Still open: `bulk` and `validation` case kinds,
+`Spend.preamble` as a sweep axis, and `protocols.choose` reading the intervals
+instead of a flat margin.
+
+Original entry:
+*"Benchmarks should be done against ground truth … measuring cost and
+hallucination at arbitrary rates, using statistical methods … output the optimal
+batch sizes and api calls as well as the precontext query."*
+
+B111 measures discipline (what share of what a plane returned survived the gate)
+and cannot measure correctness, recall, or whether a difference is real. Design:
+`docs/superpowers/specs/2026-09-15-ground-truth-benchmark-design.md` — a
+pack-authored `research/gold.yaml` (a one-time authoring decision, never a
+per-datum review, so the automation principle holds), three case kinds
+(`specific`, `bulk`, `validation`), precision/recall/hallucination as separate
+numbers with Wilson intervals over repetitions, and a sweep whose axes are batch
+size, context, **the preamble** and the search provider. `protocols.choose`
+reads that instead of a flat 5% margin.
+
+Step 1 is `gold.yaml` and its loader; everything else is downstream of it.
+
+### B127 — **DONE 2026-09-15** (0.9.0): cover the gaps
+*"This pack seems very solid but it includes 19 products and lacks the 20th. I
+don't want to rebuild the whole thing — what about I tell the agent it lacks
+some products and it covers those gaps."*
+
+Pack authoring is all-or-nothing: `pack_author` writes a draft from a category
+and the only way to change it is to run it again from scratch, which re-spends
+the whole run and can come back *worse* (the reader's second attempt returned
+nothing at all). What is missing is an **amend** operation: hand the agent the
+draft it already wrote plus a sentence about what is absent, and let it add
+subjects or claims to that draft.
+
+Not a new plane and not a new acceptance path — the same brief, the same gate,
+with the existing draft as context. It is the difference between a generator and
+a tool.
+
+### B128 — **DONE 2026-09-15** (0.9.0): verify the knowledge here
+*"As well as the button: verify the knowledge here — again an agent operation."*
+
+`app/factcheck.py` already re-reads the page behind one claim and answers
+`quoted | missing | unreadable | unreachable`, and B120 kept the document so the
+check can also be made offline. What does not exist is the *operation*: verify
+everything on this screen, as a job, with its own row in the feed. It is the
+third operation kind in `docs/AGENT_OPERATIONS.md` §1 (`recheck`) and the one
+already half-built.
+
+### B129 — **DONE 2026-09-15** (0.9.0): an installed draft says so
+The reader installed the Samsung draft, saw the pack appear in Knowledge, and
+the "…was drafted for you" card stayed. The drafts list is not refreshed after
+an install and nothing marks a draft as consumed. Small, and exactly the kind of
+thing that makes a working feature feel broken.
+
+### B130 — **DONE 2026-09-15** (0.9.0): scope and naming are enforced
+*"The output lacks many headphones but also includes a Samsung watch; and the
+pack itself is named very poorly."*
+
+Two scope failures in one run: the category was "samsung headphones" and the
+draft contains a wearable, and the name is a sentence ("Samsung Galaxy Buds and
+wireless headphones common problems") rather than a name. `packauthor` validates
+*structure* and not *scope*, and the brief asks for a name without saying what a
+name is. Both are checkable mechanically: a subject whose identity does not
+share the category's own vocabulary is a scope escape, and a name over N words
+or containing "common problems" is a description.
+
+### B131 — **DONE 2026-09-16** (0.10.0): the config Windows could not start
+The reader's Claude desktop app cannot reach the installed server. `/api/agent-config`
+advertises the frozen binary with `--mcp` and `app/agentconfig.py` can *verify*
+the advertised command by running it and completing an `initialize` — so the
+next step is the reader pressing that and sending what it says, rather than a
+guess. Filed so the verify path is what answers it.
+
+### B132 — **DONE 2026-09-16** (0.10.0): the extension does something everywhere
+
+The deeper half of the reader's report was not the launcher: *"I cannot open the
+web extension on the pages that aren't registered, so basically it opens on
+sahibinden only."* That is now answered — the toolbar button reports any page,
+an unreadable site becomes a row on **Sites**, and an agent can be asked to
+learn it (`site_register`). What remains of B132 proper is the launcher flag and
+the Web Store route.
+
+Original entry:
+B114 found the cause (Chrome disables `--load-extension` by default) and the fix
+launches with `--disable-features=DisableLoadExtensionCommandLineSwitch`. The
+reader reports it still does not do the trick. Two honest options: find what
+their browser does with that flag (measurable, as B114 was), or stop fighting it
+and ship through the Web Store (B114's other half), which is a one-click install
+that needs no flags at all.
+
+### B133 — **DONE 2026-09-15**: the terminal takes a column, not a sheet
+
+The panel was `position: fixed` over the work area, so the page stayed full
+width underneath it — headings wrapped under the panel and buttons could not be
+reached. It is a grid column now (`.shell.with-terminal`), so the page reflows;
+below 60rem it still covers, because there is no room for two columns and a
+shadow says it is on top of something.
+
+Original entry:
+*"UI has several margin problems."* Reported against the Browser extension
+screen with the terminal open; the panel and the page fight for width. Needs the
+screenshots rather than a guess.
+
+### B136 — **DONE 2026-09-16**: when a source was published
+
+Closed on both doors. The scraping pipeline reads a date at acquisition (page
+metadata via trafilatura, a video's upload date via yt-dlp), bounded to
+1995..today because a date in the future or before the web existed is a parser
+that has misread something rather than an antique page; an older ledger gets
+the column with an honest empty default. The research plane an agent drives
+had the same date available for about one function call — the reader downloads
+markup and hands back prose, and by then the metadata is gone with it — so the
+date is read where the markup still exists, and a reader may now answer with
+text *and* a date. Optional, so every existing reader still returns a bare
+string.
+
+Nothing fills it in with the fetch time, which is the whole point: a fetch
+date standing in for a publication date makes every source look current, and
+that is worse than an empty column because it cannot be told from an answer.
+Nothing ranks on it; it is there to be shown.
+
+### B137 — **MOSTLY DONE 2026-09-16**: the gate compiles the shell now `[G5]`
+
+`cargo` turned out to be available, and `cargo check` never reaches the link
+phase — so it needs neither a Windows box nor `webkit2gtk` linking. The gate
+gained a `tauri` step: `cargo check --locked --offline` native *and*
+cross-compiled for `x86_64-pc-windows-gnu`, plus clippy. Sub-second warm, ~2
+minutes from a cold `target/`, and it skips with a printed remedy rather than
+failing where the toolchain, a rustup target, or a warm registry is missing —
+a gate that cannot run is worse than no gate.
+
+Measured, not assumed: a deliberately injected type error fails it with
+`error[E0308]`, and a `Cargo.toml` naming a feature the crate does not have is
+refused before anything compiles — exactly the class the per-file `rustc` gate
+could never see.
+
+Drift found while there: `desktop.yml` verifies the crate lock is the one that
+was committed as its first step, and `build_desktop.ps1` — the hand-run
+equivalent, and the one that actually builds every installer — never did. The
+existing drift test could not have caught it, because it only matches file
+references and npm/tauri subcommands, not a bare `cargo` call.
+
+**The honest remainder**, narrower than the entry it replaces: a green gate now
+catches Rust compile-time and crate-graph defects locally; it still cannot see
+a **link-time, bundling or runtime** defect — whether the crate links on
+Windows, whether NSIS bundles a binary the build actually produced, whether
+`tauri.conf.json` matches the schema the pinned CLI expects, whether
+PyInstaller freezes `pywinpty` correctly, or whether WebView2 renders anything.
+Only a Windows build proves those, which is what `desktop.yml`'s hand-run leg
+and `build_desktop.ps1`'s smoke steps are for.
+
+### B138 — **DONE 2026-09-16**: ruff and mypy run before the tests
+
+Curated rather than maximal, deliberately: a 20k-line codebase linted for the
+first time at full strength produces hundreds of findings, gets ignored, and
+becomes the always-red gate this project already learned is worse than none.
+No mass reformat either — whitespace across 20k lines would bury every real
+change in this branch.
+
+What it caught on the first run, which is the argument for having it:
+`urlparse(url).netloc.lstrip("www.")` — `lstrip` strips a *set of characters*,
+so `webflow.io` became `ebflow.io`, corrupting the domain used to decide
+whether two sources are independent. A lambda closing over a loop variable in
+the pack-update path. A `None`-safety guarantee silently defeated because a
+parameter was annotated `dict` when it was always a `Mapping`, so the narrowing
+gave up. And a stale `_fetch_page_text` reference in the remediation path — a
+runtime `ImportError` that pytest could never see, because that call is
+monkeypatched in its own test.
+
+Two orphans surfaced and were left, deliberately, as their own question: the
+body of `app/pipeline/process.py` below its two unconditional `raise`s, and
+`dedup.py`'s `merge_candidates`/`is_independent`/`same_claim`, imported from
+nowhere. Both are remnants of the judge/promote pipeline retired 2026-08-03,
+and deleting dead code is a decision, not a lint fix.
+
+### B139 — Delete the two orphans the linter found `[G5]`
+
+`src/app/pipeline/process.py`'s ~350 lines below the `raise` in `run`/`run_part`
+reference names that exist nowhere in the tree; `packs/cars/pipeline/claims/
+dedup.py`'s `merge_candidates`/`is_independent`/`same_claim` are imported by
+nothing. Both were retired with the judge/promote pipeline on 2026-08-03 and
+kept compiling ever since. They are currently held out of the lint gate by a
+named per-module ignore, which is the honest interim state: the gate says what
+it is not looking at. Deleting them is a small, separate change that wants its
+own diff rather than riding inside a lint pass.
+
+### B112 — Make the research protocol enforced rather than advised `[G2]`
+*"Regulation of agents; protocols that force them to do arbitrary actions =>
+MCP guidances and skills."*
+
+Partly done, and the done part is the model for the rest. `app/findings.py`
+already *enforces* the one rule that matters most: a claim whose quote cannot
+be found verbatim in the document is refused, not trusted. That is a protocol
+with teeth, and it works because the check is mechanical.
+
+The rest is still advice: `harness.py`'s `CONTRACT`, the brief from
+`kriko/research/agent.py`, `app/agentskill.py`. An agent that ignores them
+fails quietly and reports success with nothing kept — the original "research
+does nothing".
+
+What can be made mechanical, in order of value:
+
+1. **Did it search at all?** `queries` is already collected and already
+   ignored. A run reporting findings with an empty `queries` list did not do
+   what it was asked; a run with queries and no findings did.
+2. **Are the sources real?** A `source_url` that was never fetched is a
+   fabrication with a plausible shape. The ledger knows which documents were
+   fetched.
+3. **Is the claim about the subject asked for?** Mis-attribution is the
+   failure that quietly poisons a pack.
+
+Each of those is a refusal in `findings.py` with a logged reason, not a
+paragraph in a prompt. The prompt stays — it is how an agent succeeds — but it
+stops being the only thing standing between the store and a bad claim.
+
+### B113 — Extension and app: one system, visually and algorithmically `[G4]`
+*"Harmony and compatibility between the web extension and the app. Both
+visually and algorithmically. This is very important."*
+
+**Design written 2026-09-14:**
+`docs/superpowers/specs/2026-09-14-extension-and-app-harmony-design.md`.
+Reading the code changed the thesis, so the summary filed here earlier is
+superseded by it. Four findings worth carrying:
+
+1. **The visual convergence already happened — by copy.**
+   `ui/src/styles/themes/panel.css` says in its own opening comment that it was
+   ported from `extension/hover_lite/hover_lite.css`. The app's default theme
+   *is* the extension's look.
+2. **Two vocabularies, two shared names.** 38 tokens one side, 28 the other,
+   and exactly two names in both (`--accent`, `--font-mono`). The translation
+   between them is written in a *comment* (`--n-0: #0a0b0d; /* --bg-base */`)
+   that nothing reads.
+3. **Nothing has drifted yet.** All ten mapped greys still agree exactly,
+   checked pair by pair. So this is not a divergence to repair — it is a fork
+   with no mechanism, caught before it moved, which makes the first
+   generated output provably a no-op. That check is available exactly once.
+4. **One real algorithmic split:** `extension/background.js` renames the
+   engine's `claims` to `risks` at its own boundary, for nothing.
+
+Phases: subtract (delete the dead `colors_and_type.css`, undo the `risks`
+rename) → generate the extension's tokens from the app theme, gated for
+staleness the way the frontend bundle already is → derive severity surfaces
+from one ink → say in the app which two blocks only the panel can draw.
+
+**Open decision, and the design names it rather than taking it:** which side
+owns the palette. The design argues for the app; the argument for the
+extension (it is the live stylesheet, and the original) is real. One line in
+the generator either way, and worth settling before it is written.
+
+### B114 — **DONE 2026-09-16** (0.10.0)
+*"It does open a chrome page with sahibinden but kriko isn't loaded."*
+
+**Root cause found and fixed 2026-09-14.** Chrome disabled `--load-extension`
+by default as an anti-malware measure: the `DisableLoadExtensionCommandLineSwitch`
+feature turns the flag into a silent no-op. The window opens, the landing page
+loads, the extension is absent, and every visible step appears to have worked —
+the worst shape a failure can take.
+
+Measured rather than assumed. Chromium 141 was launched with
+`--remote-debugging-port` and its target list counted: **0**
+`chrome-extension://` targets without `--disable-features=DisableLoadExtensionCommandLineSwitch`,
+**2** with it. The flag is now in `launch_with_extension`'s argv, with a test.
+
+**Still open, and it is a policy decision, not a fix.** The counter-flag is a
+stopgap — a switch that re-enables a switch, and itself on the way out. The
+reader's own instinct is the durable answer: *"I would prefer an installation
+to my own chrome browser but I guess we need kriko web extension on the chrome
+web market?"* Yes. A Web Store listing is a one-off developer fee, a review,
+and then an ordinary install into the profile the reader actually uses, with
+auto-updates — which also retires the separate-profile explanation the launch
+button currently has to make.
+
+**HUMAN DECISION #9:** publish to the Chrome Web Store, or keep the
+load-unpacked path as the only install. It costs money, exposes a developer
+identity, and submits this code to someone else's review — none of which is a
+thing code can decide. It also interacts with B18 (source licensing/ToS): a
+publicly listed extension that reads a specific site is a more visible artefact
+than a local one.
+
+### B115 — **PARTLY DONE 2026-09-15**: an agent authors the adapter, into `app.sqlite`
+
+The agent half is built (`site_register` + `app/sites.py`'s brief and checks).
+What is deliberately *not* done is the second half of the title — adapters do
+not ship like packs yet. A learned adapter is interface state: it stays on the
+installation that learned it, always loses to a pack's, and travels nowhere.
+Making one publishable is a pack-authoring question and is still open.
+
+Original entry:
+*"General site compatibility must be figured out by the agents themselves due
+to complexity of the web pages... MediaMarkt uses different HTML sections than
+Tesco. Agents should figure out the general rule for identification and store
+this algorithm to share like the packs."*
+
+This is the right idea and it is already most of the way built, which is worth
+saying before anyone starts from scratch: **adapters are already pack data.**
+`kriko/adapters.py` reads them off installed packs; the content script is
+handed selectors, labels and the `local_panel` block at runtime and interprets
+none of it itself. Nothing about the current design needs a code change to
+support a second site — only a row.
+
+So the work is not "make adapters data". It is:
+
+1. **An agent-authored adapter.** `app/packdraft.py` and `draft_pack` already
+   let an agent write a pack draft and build it. An adapter draft is the same
+   motion with a different schema: give it the page, let it propose selectors
+   and label mappings, and let it *check its own work* by running the proposed
+   adapter against the page and seeing whether the fields come out.
+2. **That self-check is the whole difficulty.** A selector that matches
+   nothing is obvious; a selector that matches the wrong thing is not. The
+   automation principle forbids a human sign-off step, so the adapter has to
+   fail open: an adapter whose extraction disagrees with itself across two
+   pages of the same site emits nothing and reports a gap.
+3. **Never generated JavaScript.** `docs/INTERNALS.md` is explicit and it must
+   stay true: a pack that could ship JS into a content script would, on
+   install, be granted the right to run code on every page the extension sees.
+   An agent-authored adapter is *terms and selectors*, escaped, never patterns
+   compiled from pack text.
+
+Related: `extension_ui/manifest.json` still hardcodes `*.sahibinden.com` in
+`content_scripts.matches` (filed under Phase 6c). Agent-authored adapters are
+pointless until that is `chrome.scripting.registerContentScripts` over the
+adapters' own `site` values — which needs `optional_host_permissions` and a
+reader grant, and lands naturally with B114's Web Store decision.
+
+### B116 — **DONE 2026-09-16** (0.10.0)
+*"Assume the web page isn't registered in kriko or that specific product hasn't
+been added to the db. Users might want to know it, so this feature does the
+research and saves it in real time. All handled in the web extension."*
+
+The door exists: `POST /api/extension/research-plane` and
+`EXTENSION_RESEARCH_BUDGET_USD = 0.20` were built for exactly this, and
+`/api/analyze` already knows when it has nothing (`coverage_state`,
+`NOT_MATCHED`). What is missing is the path from *that* answer to a job, and
+the panel showing the job running.
+
+Three things to get right, and they are all about cost and consent:
+
+* **It spends money, so it is never automatic.** A panel that researched every
+  page a reader scrolled past would be a bill. The button appears on a miss;
+  the reader presses it.
+* **The cap is per press and visible before the press.** The 0.20 constant is
+  currently a number in a file with a comment admitting it is not an estimate.
+  Making it one is B118's work.
+* **An unknown *site* is not an unknown *product*.** On a site with no adapter,
+  there is no identity to research — that is B115, not this. This feature is
+  for a known site and an unknown product, and the panel should say which of
+  the two it is looking at rather than offering a button that cannot work.
+
+### B117 — **DONE 2026-09-15**: preferred agent, LLM and search provider
+
+`app/prefs.py` + `GET|PUT /api/prefs` + the Settings panel. All three fall back
+to the previous behaviour when unset, so an installation that never opens the
+screen is unaffected. Tavily is wired beside Exa (`app/providers/tavily.py`),
+and `keys.ready()` now takes *either* search key rather than both — requiring
+both would have made adding a provider a way to break a working install.
+
+Original entry:
+*"I register 5 agents via api or subscription, one must be my preferred one to
+handle tasks."*
+
+Two thirds of this exists and the missing third is small.
+`/api/research-planes` lists what is available, `harness.chosen(preferred)`
+already takes a preference, and `tasks.default_backend()` resolves what an
+unnamed run uses. What there is no such thing as is a *stored* preference: the
+choice is made per request or derived per machine.
+
+The shape: a row in `app.sqlite` settings (interface state, not the engine's —
+which plane you like is not a property of the knowledge), read by
+`default_backend()`, written from the Agents screen, and reported by
+`/api/research-planes` so the screen can mark it.
+
+One rule must survive: **`api` is never chosen by omission.** A preference the
+reader set explicitly is different from a default that quietly starts spending,
+and the code that enforces that today should keep enforcing it.
+
+### B118 — **DONE 2026-09-16** (0.10.0)
+
+`app/costs.py` + `GET /api/costs` + the Settings panel: measured spend by plane,
+an estimate from *this installation's* own runs (never a vendor price list, and
+`None` under two runs), and the honest note that **no provider exposes a credit
+balance to an API key** — so the screen says where the balance lives instead of
+inventing one. Runs that counted nothing are counted as runs, not as zeros.
+Still open: a per-operation cost stamped on every row in the feed.
+
+Original entry:
+*"API agent usage system needs identificators; price, token usage etc. Actually
+this is needed for every operation."*
+
+The `runs` table has `model`, `usd` and tokens for *research*. The `jobs` table
+has none of it, and a job is what the reader actually watches. So the app can
+tell you what a research run cost and cannot tell you what the thing you just
+pressed cost.
+
+The fix is to make cost a property of the **job**, not of the plane that
+happened to report one: `usd`, `tokens`, `model` columns on `jobs`, written by
+whatever handler ran, `NULL` where genuinely unmetered rather than `0` — the
+Usage card already draws that distinction correctly ("no marginal cost" vs "not
+counted") and the jobs list should inherit it.
+
+Also the precondition for B116's "show the cap before the press": an estimate
+needs a history of what similar runs actually cost, and that history is exactly
+these columns.
+
+### B119 — A glossary, because the words are load-bearing `[G6]`
+*"Naming things, I believe we need better naming system to achieve better
+communication, which requires more documentation."*
+
+There is a vocabulary and it is mostly consistent — pack, subject, claim,
+evidence, plane, harness, adapter, agenda, store, sidecar, shell. The problem
+is that it is defined *in situ*: you learn what a plane is by reading the
+module that has three of them, and what a subject is by reading the schema.
+Nothing lists them, so a new session (human or agent) infers them, and
+inference drifts.
+
+Two specific confusions already live in the tree and are worth fixing by name:
+
+* **"agent" means three things.** The `agent` research plane (you run it
+  yourself), the `harness` plane (Kriko runs your CLI), and the coding agent
+  writing this code. The reader's own notes above use it in all three senses
+  in one paragraph, which is not their fault.
+* **"shell" means two.** The desktop shell (`tauri/`) and the PTY shell in the
+  terminal panel. `installer.nsh` has to stop both, and says "the shell first,
+  then the engine" about the one that is not a shell in the other sense.
+
+`docs/GLOSSARY.md`: one line each, the module that owns it, and the words it is
+*not*. Cheap, and the thing that makes every other doc shorter.
+
+---
+
 ## P0
 
-### B109 — Terminal (B107): still shows "disconnected" on 0.7.5, cause unknown
+### B109 — Terminal: CLOSED 2026-09-13 by dropping the WebSocket (0.7.12)
+
+**Resolved.** Six entries below chased a cause inside `terminal_ws`; the
+seventh answer was that the handler was never the component at fault. The
+socket's own evidence said so: the fifth entry's raw probe got `101` and real
+PTY bytes out of the frozen binary on the reader's machine, and the sixth
+entry's banner came back `1006` — the handshake never finished, at a layer
+below anything this app controls. The terminal was also the only WebSocket in
+the tree, next to a `/api/jobs/{id}/stream` that works in the same install.
+
+So it is SSE + `POST` now (`docs/INTERNALS.md`, and the 2026-09-13 entry in
+`done.md`), with a polling fallback under that and a relative URL that cannot
+disagree about the port. The transcript lives on the session, so a failure is a
+field one GET can read rather than a frame someone had to be connected for.
+
+**What is left is verification, not cause-hunting**: 0.7.12 has to reach the
+reader in an installer (app-first rule 4) and open a shell. If it does not, the
+next fact to get is `GET /api/terminal/state` — which answers with the reason
+whether or not anything is connected, and which the reader can reach from a
+browser.
+
+The six-entry history below is kept verbatim; it is the record of how a
+component-level assumption survives six correct fixes.
+
+#### Original entry — Terminal (B107): still shows "disconnected" on 0.7.5, cause unknown
 Reported live 2026-09-11, right after the 0.7.5 hotfix (which fixed a confirmed,
 verified bug — `winpty-agent.exe` missing from the frozen sidecar, see done.md).
 The reader installed 0.7.5, and the terminal panel now shows an explicit
@@ -375,7 +926,36 @@ alongside the code — verified with an updated vitest case
 written banner. The next reproduction's banner is the concrete next lead:
 whatever host/port it names is where the real mismatch lives.
 
-### B108 — Agents/Connect: `claude` still hits the stdin race B106 was meant to close
+### B108 — Agents/Connect: `claude` runs fail, cause not yet confirmed
+
+**2026-09-13 — one silent failure mode removed (0.7.12).** `available()` was
+`shutil.which()` and nothing else, and the sidecar's `PATH` is whatever the
+file manager handed the desktop shell *at login*. A reader who installs Claude
+Code and comes back to Kriko without logging out has the binary on disk and no
+harness plane, with no error anywhere, because nothing in the process knew a
+CLI existed. `harness.locate()` now searches `PATH`, `$KRIKO_HARNESS_DIRS`, and
+the directories these CLIs install into, `command_for` runs the resolved path,
+and `/api/research-planes` reports which binary was found. This is a mechanism,
+not a per-machine patch — but it is not a confirmed fix for the original
+report either, and the leading explanation for *that* remains an expired CLI
+login (see the 2026-09-11 repro below).
+
+**2026-09-13 — the plane has instruments now.** `kriko tui` (`src/app/tui/`,
+see `done.md`) puts the harness binary's resolved path on screen, and where
+`locate()` looked when it found none. The commonest form of "agent operations
+do nothing" is now a sentence the operator can read rather than a silence.
+
+**Still open, and the thing to build next:** a harness run is still a *captured*
+subprocess with a 600s (or 2400s) ceiling and no output until it ends, so its
+remaining failure modes still reach the reader as "succeeded / 0 claim(s) kept"
+or a raw traceback — the TUI can only tail what the job writes to its log row.
+Now that `termpty.TermSession` is a general "process with a resumable
+transcript", a harness run should be one too: streamed into the jobs tab and the
+web panel alike, and *answerable* when the CLI asks for a login. That is the
+step that turns the class from "diagnose by report" into "watch it happen", and
+it reuses the mechanism 0.7.12 already shipped.
+
+#### Original entry — `claude` still hits the stdin race B106 was meant to close
 Reported live 2026-09-11, on 0.7.4: running a harness task through the `claude`
 CLI (not opencode) failed with
 

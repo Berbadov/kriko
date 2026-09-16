@@ -164,6 +164,20 @@ def main(argv=None) -> int:
         action="store_true",
         help="run the MCP stdio server instead of the HTTP one, on the same store",
     )
+    # The operator console, out of the binary the installer already ships.
+    #
+    # `app/tui/` is in the wheel and therefore already frozen into this
+    # executable, so this flag costs one branch and adds no build artifact —
+    # and it is what makes the console *standalone*: a reader with no Python,
+    # no Node and no working WebView2 can still drive research, watch a job and
+    # open a shell, by running the same .exe with one argument. Given that a
+    # webview which would not open is the reason this console exists, having
+    # its only entry point require a source checkout would have been a joke.
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="run the operator console in this terminal, on the same store",
+    )
     # Off by default: `python -m app.sidecar < /dev/null` in a terminal would
     # otherwise read EOF at once and exit. The desktop shell always passes it.
     parser.add_argument(
@@ -198,6 +212,15 @@ def main(argv=None) -> int:
     # file is what matters and it is configured the same way.
     from app import logs
 
+    # In console mode, *before* `configure` rather than inside the TUI. The
+    # TUI's own `silence_stderr()` runs too late from here: `configure` has
+    # already attached the handler and already logged "logging to …", so the
+    # frozen binary's first line of output was a log line printed over the
+    # reader's terminal. Found by running the frozen console under a pty, which
+    # is the only place it could have been found — every test passes either way.
+    if args.tui:
+        logs.silence_stderr()
+
     logs.configure()
 
     # Before the store, before the routers, before anything that could read a
@@ -209,9 +232,14 @@ def main(argv=None) -> int:
     from app import keys as keyfile
 
     loaded = keyfile.load()
-    if loaded:
+    if loaded and not args.tui:
         # The count, never the names' values. A log line is the last place a
         # key should be able to reach.
+        #
+        # Not in console mode: this is a bare `print`, so no logging handler
+        # can suppress it, and it would land on the reader's terminal a moment
+        # before the console draws over it. The console has a Planes tab that
+        # says what is configured; it does not need a banner.
         print(f"loaded {len(loaded)} API key(s) from {keyfile.env_path()}",
               file=sys.stderr, flush=True)
 
@@ -225,6 +253,17 @@ def main(argv=None) -> int:
     # its own on it. A stray handshake line here would be a protocol error.
     if args.mcp:
         return serve_mcp(store)
+
+    # And the console owns the *terminal*, which is the same rule one layer up:
+    # it attaches to a running app on EXTENSION_PORT if there is one — sharing
+    # its engine, store and jobs — and otherwise starts an engine of its own in
+    # this process. Either way nothing here should bind a port first, so this
+    # returns before `reserve`.
+    if args.tui:
+        from app.tui import main as run_tui
+
+        settings = Settings(store_path=store) if store is not None else None
+        return run_tui(settings=settings)
 
     overrides = {}
     if store is not None:

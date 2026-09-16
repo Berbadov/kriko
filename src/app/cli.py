@@ -13,6 +13,7 @@ earning its place. Everything lives in ~/.kriko unless --store says otherwise.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from kriko.store.db import DEFAULT_STORE, connect
 
 def _kv(pairs: list[str]) -> dict:
     """Parse `key=value` arguments, keeping numbers numeric."""
-    out = {}
+    out: dict[str, int | float | str] = {}
     for pair in pairs:
         if "=" not in pair:
             raise SystemExit(f"expected key=value, got {pair!r}")
@@ -176,6 +177,382 @@ def cmd_lookup(args, store) -> int:
     return 0
 
 
+def cmd_tui(args, store) -> int:
+    """The operator console. Imported here, not at module scope.
+
+    `kriko lookup` must not pay for a terminal UI it will never draw, and
+    `app.tui` reaches `app.web` (to start an engine when none is running),
+    which is a whole FastAPI app's import cost on a command that answers a
+    question about a car in milliseconds.
+    """
+    from app.tui import main as run_tui
+
+    return run_tui(url=args.url, allow_start=not args.no_start)
+
+
+def cmd_bench(args, store) -> int:
+    """Measure the planes against the same cases (B111).
+
+    In the terminal as well as in the app, because this is the command whose
+    output is an *argument* — "the harness plane refuses four findings in five
+    and the API plane one in three" is a sentence somebody has to be able to
+    paste. It runs in this process rather than submitting a job: a benchmark
+    watched by nobody is a benchmark nobody trusts, and the reader running it
+    from a terminal is already watching.
+    """
+    from app import bench as bench_mod
+    from app.web import state
+    from app.web.settings import Settings
+
+    # The app's own database as a *sibling of the store*, the way
+    # `mcp_server._app_state_path` derives it. That is what makes `--store`
+    # self-contained: a measurement against a store somewhere else must not
+    # land in the reader's real history, and a benchmark is exactly the thing
+    # someone runs against a copy.
+    store_path = Path(args.store) if args.store else None
+    settings = (
+        Settings(
+            store_path=store_path,
+            app_state_path=store_path.parent / "app.sqlite",
+            analysis_log_path=store_path.parent / "analyses.jsonl",
+        )
+        if store_path
+        else Settings()
+    )
+    planes = [one for one in (args.plane or []) if one] or bench_mod.planes_available(
+        settings
+    )
+    if not planes:
+        print("no plane can run here: install a coding-agent CLI, or add API keys")
+        return 1
+    found = bench_mod.cases(store, pack_id=args.pack or "", limit=args.cases)
+    if not found:
+        print("no subjects installed, so there is nothing to measure")
+        return 1
+
+    conn = state.connect(settings.app_state_path)
+    try:
+        for case in found:
+            for plane in planes:
+                for protocol in (args.protocol or [""]):
+                    row = bench_mod.run_case(
+                        settings,
+                        case,
+                        plane=plane,
+                        protocol=protocol,
+                        max_documents=args.documents,
+                        budget_usd=args.budget,
+                    )
+                    state.record_bench(conn, row)
+                    label = f"{plane}/{protocol}" if protocol else plane
+                    if row.get("error"):
+                        print(f"{label:14} {row['subject'][:32]:32} "
+                              f"failed: {row['error'][:50]}")
+                    else:
+                        print(
+                            f"{label:14} {row['subject'][:32]:32} "
+                            f"{row.get('accepted', 0):>3} kept "
+                            f"{row.get('refused', 0):>3} refused "
+                            f"{(row.get('ms') or 0) / 1000:>6.1f}s "
+                            + (f"{row['tokens']:>8} tok" if row.get("tokens") else "")
+                        )
+        graded = bench_mod.scored(state.bench_runs(conn))["groups"]
+        if graded:
+            print()
+            print("against the pack's ground truth:")
+            for line in graded:
+                recall = "-" if line["recall"] is None else f"{line['recall']:.0%}"
+                halluc = (
+                    "-" if line["hallucination_rate"] is None
+                    else f"{line['hallucination_rate']:.0%}"
+                )
+                interval = line["recall_interval"]
+                print(
+                    f"{line['plane']:8} {(line['model'] or '')[:20]:20} "
+                    f"recall {recall:>5}"
+                    + (f" ({interval[0]:.0%}-{interval[1]:.0%})" if interval else "")
+                    + f"  hallucinated {halluc:>5}  over {line['runs']} run(s)"
+                )
+        print()
+        # How each plane failed, not only how often (B124): a plane that fails
+        # the same way every time is being mis-used, not having bad luck.
+        for line in bench_mod.verdict(state.bench_runs(conn))["planes"]:
+            if not line["failed"]:
+                continue
+            classes = ", ".join(
+                f"{name} x{count}" for name, count in sorted(line["classes"].items())
+            )
+            print(
+                f"{line['plane']:8} {line['failed']}/{line['runs']} failed: {classes}"
+                + (
+                    "  — all the same way, which is a mis-use rather than bad luck"
+                    if line["dominant_failure"]
+                    else ""
+                )
+            )
+        print()
+        from app import protocols
+
+        readout = protocols.readout(state.bench_runs(conn), state.bench_summary(conn))
+        if readout:
+            print()
+            print("what each model would run with right now:")
+            for line in readout:
+                cost = "-" if line["usd_per_accepted_claim"] is None \
+                    else f"${line['usd_per_accepted_claim']:.4f}"
+                halluc = "—" if line["hallucination_rate"] is None \
+                    else f"{line['hallucination_rate']:.0%}"
+                print(
+                    f"{line['model'][:24]:24} {line['protocol']:10} "
+                    f"batch {line['batch_size']:>3}  ctx {line['context_chars']:>6}  "
+                    f"{line['search_provider'] or '—':10} "
+                    f"cost/claim {cost:>9}  hallucination {halluc}"
+                )
+                if line["note"]:
+                    print(f"  {line['note']}")
+        for line in state.bench_summary(conn):
+            rate = "—" if line["acceptance"] is None else f"{line['acceptance']:.0%}"
+            print(
+                f"{line['plane']:8} {(line['model'] or '')[:20]:20} "
+                f"{(line['protocol'] or '—'):9} "
+                f"{line['runs']:>3} run(s)  {rate:>5} kept  "
+                f"{(line['ms'] or 0) / 1000:>6.1f}s avg  "
+                f"{line['failures']} failed"
+            )
+    finally:
+        conn.close()
+    return 0
+
+
+def _connect_engine(args):
+    """Attach to whichever engine is already serving, or start one of our own.
+
+    Shared by every subcommand below that needs `app.sqlite` state (prefs,
+    costs, sites, verify, drafts, operations) rather than the store alone —
+    the same reasoning `kriko tui` documents in `app/tui/client.py`: a second
+    process opening the store directly would be a second writer fighting
+    whatever app is already running, so these go over HTTP instead, to
+    whichever engine — attached or freshly started — owns that file.
+    """
+    from pathlib import Path
+
+    from app.tui.client import connect
+    from app.web.settings import Settings
+
+    store_path = Path(args.store) if getattr(args, "store", None) else None
+    settings = (
+        Settings(
+            store_path=store_path,
+            app_state_path=store_path.parent / "app.sqlite",
+            analysis_log_path=store_path.parent / "analyses.jsonl",
+        )
+        if store_path
+        else None
+    )
+    return connect(
+        getattr(args, "url", "") or "",
+        allow_start=not getattr(args, "no_start", False),
+        settings=settings,
+    )
+
+
+def _with_engine(args, fn) -> int:
+    """Run `fn(engine)`, turning a failed attach or a failed call into a
+    one-line message on stderr rather than a traceback — this is the door
+    every command that needs a running engine goes through."""
+    from app.tui.client import EngineError
+
+    try:
+        engine = _connect_engine(args)
+    except EngineError as exc:
+        print(f"kriko: {exc}", file=sys.stderr)
+        return 1
+    try:
+        return fn(engine)
+    except EngineError as exc:
+        print(f"kriko: {exc}", file=sys.stderr)
+        return 1
+
+
+def cmd_prefs(args, store) -> int:
+    def run(engine) -> int:
+        if args.harness or args.model or args.search:
+            # Only the flags actually given — sending the other two as `""`
+            # would ask the engine to reset them to "whatever the machine
+            # offers", which is not what `--model x` alone should do to an
+            # already-chosen harness or search provider.
+            fields = {}
+            if args.harness:
+                fields["preferred_harness"] = args.harness
+            if args.model:
+                fields["llm_model"] = args.model
+            if args.search:
+                fields["search_provider"] = args.search
+            result = engine.write_prefs(**fields)
+        else:
+            result = engine.prefs()
+        chosen = result.get("chosen", {})
+        print("chosen now:")
+        for key, value in sorted(chosen.items()):
+            print(f"  {key:20} {value or '(default — whatever this machine offers)'}")
+        print("\navailable harnesses:")
+        for harness in result.get("harnesses", []):
+            print(f"  {harness['id']:16} {harness.get('path', '')}")
+        for harness in result.get("unusable", []):
+            print(f"  {harness['id']:16} unusable: {harness.get('why', '')}")
+        print("\nsearch providers:")
+        for provider in result.get("search_providers", []):
+            print(f"  {provider['id']:10} {'ready' if provider.get('ready') else 'no key set'}")
+        return 0
+
+    return _with_engine(args, run)
+
+
+def cmd_costs(args, store) -> int:
+    def run(engine) -> int:
+        data = engine.costs()
+        spent = data.get("spent", {})
+        print(f"spent in the last {spent.get('days', '?')} day(s): "
+              f"${spent.get('usd', 0):.2f} over {spent.get('runs', 0)} run(s)")
+        for row in spent.get("planes", []):
+            print(f"  {row.get('plane', ''):10} {row.get('llm', '') or '':20} "
+                  f"{row.get('runs', 0):>4} run(s)  ${row.get('usd', 0) or 0:.2f}")
+        print("\nestimate for one more subject, by plane:")
+        for plane, est in data.get("estimates", {}).items():
+            usd = est.get("usd")
+            print(f"  {plane:10} " + (f"${usd:.2f}" if usd is not None else "not enough history yet"))
+        print("\nkeys:")
+        for key in data.get("keys", []):
+            print(f"  {key['id']:20} {'present' if key['present'] else 'missing':8} "
+                  f"{key['purpose']}")
+        print(f"\n{data.get('balance', {}).get('note', '')}")
+        return 0
+
+    return _with_engine(args, run)
+
+
+def cmd_sites(args, store) -> int:
+    def run(engine) -> int:
+        if args.action == "list" or not args.action:
+            data = engine.sites()
+            registered = data.get("registered", [])
+            requested = data.get("requested", [])
+            if not registered and not requested:
+                print("no sites registered or requested yet")
+                return 0
+            if registered:
+                print("readable now:")
+                for row in registered:
+                    print(f"  {row.get('site', row.get('host', '')):32} "
+                          f"pack={row.get('pack_id', '')}")
+            if requested:
+                print("\nrequested (not yet readable):")
+                for row in requested:
+                    print(f"  {row.get('host', ''):32} state={row.get('state', '')}")
+            return 0
+        if args.action == "register":
+            if not args.host:
+                print("kriko: sites register needs a host, e.g. "
+                      "kriko sites register example.com", file=sys.stderr)
+                return 1
+            result = engine.register_site(args.host, url=args.url_for_site or "",
+                                           pack_id=args.pack or "")
+            print(f"job {result.get('job_id', '')} started: teaching this "
+                  f"installation to read {result.get('host', args.host)}")
+            return 0
+        if args.action == "forget":
+            if not args.host:
+                print("kriko: sites forget needs a host", file=sys.stderr)
+                return 1
+            result = engine.forget_site(args.host)
+            print(f"{args.host}: "
+                  + ("forgotten" if result.get("forgotten") else "was not registered"))
+            return 0
+        print(f"kriko: unknown sites action {args.action!r}", file=sys.stderr)
+        return 1
+
+    return _with_engine(args, run)
+
+
+def cmd_verify(args, store) -> int:
+    def run(engine) -> int:
+        if args.list:
+            data = engine.fact_checks(verdict=args.verdict or "", limit=args.limit)
+            counts = data.get("counts", {})
+            print("counts: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+            for row in data.get("items", []):
+                print(f"  [{row.get('verdict', ''):10}] {row.get('title', '') or row.get('claim_id', '')}")
+            return 0
+        result = engine.verify(pack_id=args.pack or "", subject_id=args.subject or "",
+                                limit=args.limit)
+        print(f"job {result.get('job_id', '')} started: re-reading the sources "
+              "behind every claim on this screen")
+        return 0
+
+    return _with_engine(args, run)
+
+
+def cmd_drafts(args, store) -> int:
+    def run(engine) -> int:
+        if args.action == "list" or not args.action:
+            items = engine.drafts().get("items", [])
+            if not items:
+                print("no pack drafts — an agent has not written one yet")
+                return 0
+            for item in items:
+                print(f"  {item.get('slug', ''):24} "
+                      f"{'built' if item.get('built') else 'unbuilt':8} "
+                      f"{'installed' if item.get('installed') else ''}")
+            return 0
+        if not args.slug:
+            print("kriko: this action needs a draft slug", file=sys.stderr)
+            return 1
+        if args.action == "show":
+            state = engine.draft(args.slug)
+            print(json.dumps(state, indent=2, default=str))
+            return 0
+        if args.action == "amend":
+            result = engine.amend_draft(args.slug, note=args.note or "")
+            print(f"job {result.get('job_id', '')} started: covering what "
+                  f"{args.slug} is missing")
+            return 0
+        if args.action == "build":
+            result = engine.build_draft(args.slug)
+            print(f"built {result.get('artifact', '')}")
+            return 0
+        if args.action == "install":
+            result = engine.install_draft(args.slug)
+            print(f"installed {result.get('pack_id', '')} from draft {args.slug}")
+            return 0
+        if args.action == "discard":
+            engine.discard_draft(args.slug)
+            print(f"discarded draft {args.slug}")
+            return 0
+        print(f"kriko: unknown drafts action {args.action!r}", file=sys.stderr)
+        return 1
+
+    return _with_engine(args, run)
+
+
+def cmd_operations(args, store) -> int:
+    def run(engine) -> int:
+        data = engine.operations(limit=args.limit)
+        items = data.get("items", [])
+        if not items:
+            print("no operations recorded yet")
+            return 0
+        print(f"{data.get('running', 0)} running now")
+        for row in items:
+            cost = f"${row['usd']:.2f}" if row.get("usd") else \
+                (f"{row['tokens']}tok" if row.get("tokens") else "")
+            print(f"  [{row.get('state', ''):8}] {row.get('door', ''):5} "
+                  f"{row.get('kind', ''):10} {row.get('name', ''):24} {cost:>8} "
+                  f"{row.get('subject_id', '')}")
+        return 0
+
+    return _with_engine(args, run)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="kriko", description=__doc__.split("\n")[0])
     parser.add_argument("--store", default=None,
@@ -215,19 +592,106 @@ def build_parser() -> argparse.ArgumentParser:
                    help="show why each claim ranked where it did, and its sources")
     p.set_defaults(fn=cmd_lookup)
 
+    p = sub.add_parser("bench", help="measure the research planes on the same cases")
+    p.add_argument("--plane", action="append", default=[],
+                   help="harness | api (repeatable; default: whatever runs here)")
+    p.add_argument("--cases", type=int, default=3, help="how many subjects")
+    p.add_argument("--pack", default="", help="only subjects from this pack")
+    p.add_argument("--documents", type=int, default=3,
+                   help="max sources per case")
+    p.add_argument("--budget", type=float, default=0.20,
+                   help="USD ceiling per case on the paid plane")
+    p.add_argument("--protocol", action="append", default=[],
+                   help="narrow | standard | wide (repeatable; default: whatever "
+                        "the plane would choose from past measurements)")
+    p.set_defaults(fn=cmd_bench)
+
+    p = sub.add_parser("tui", help="operator console: planes, agenda, jobs, shell")
+    p.add_argument("--url", default="",
+                   help="engine to attach to (default: a running app, else start one)")
+    p.add_argument("--no-start", action="store_true",
+                   help="attach only — fail rather than starting an engine")
+    # The one command here that talks to an engine over HTTP rather than
+    # opening the store: whichever engine it attaches to owns that file, and a
+    # second writer on it would be this process fighting the app it just
+    # attached to.
+    p.set_defaults(fn=cmd_tui, needs_store=False)
+
+    # ── everything below talks HTTP to an engine, same reasoning as `tui`
+    # above: reachable app state (prefs, costs, sites, verify, drafts,
+    # operations) lives behind the app, not the store, so these attach to a
+    # running one or start their own rather than opening app.sqlite directly.
+
+    def _engine_args(subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument(
+            "--url", default="",
+            help="engine to attach to (default: a running app, else start one)")
+        subparser.add_argument(
+            "--no-start", action="store_true",
+            help="attach only — fail rather than starting an engine")
+
+    p = sub.add_parser("prefs", help="show or change which agent/model/search "
+                        "provider is used")
+    p.add_argument("--harness", default="", help="preferred coding-agent harness")
+    p.add_argument("--model", default="", help="preferred LLM model")
+    p.add_argument("--search", default="", help="preferred search provider")
+    _engine_args(p)
+    p.set_defaults(fn=cmd_prefs, needs_store=False)
+
+    p = sub.add_parser("costs", help="what has been spent, and what the next run "
+                        "would likely cost")
+    _engine_args(p)
+    p.set_defaults(fn=cmd_costs, needs_store=False)
+
+    p = sub.add_parser("sites", help="which sites can be read, and teach it a new one")
+    p.add_argument("action", nargs="?", default="list",
+                    choices=("list", "register", "forget"))
+    p.add_argument("host", nargs="?", default="", help="required for register/forget")
+    p.add_argument("--url-for-site", default="",
+                    help="a real page on that site, for register")
+    p.add_argument("--pack", default="", help="which pack's identity keys to map into")
+    _engine_args(p)
+    p.set_defaults(fn=cmd_sites, needs_store=False)
+
+    p = sub.add_parser("verify", help="re-read the sources behind installed claims")
+    p.add_argument("--list", action="store_true",
+                    help="show past checks instead of starting a new one")
+    p.add_argument("--verdict", default="", help="filter --list by verdict")
+    p.add_argument("--pack", default="", help="only this pack")
+    p.add_argument("--subject", default="", help="only this subject")
+    p.add_argument("--limit", type=int, default=50)
+    _engine_args(p)
+    p.set_defaults(fn=cmd_verify, needs_store=False)
+
+    p = sub.add_parser("drafts", help="pack drafts an agent wrote: list, "
+                        "amend, build, install, discard")
+    p.add_argument("action", nargs="?", default="list",
+                    choices=("list", "show", "amend", "build", "install", "discard"))
+    p.add_argument("slug", nargs="?", default="")
+    p.add_argument("--note", default="", help="what a draft is missing, for amend")
+    _engine_args(p)
+    p.set_defaults(fn=cmd_drafts, needs_store=False)
+
+    p = sub.add_parser("operations", help="the live feed of agent-driven work, "
+                        "whichever door it came through")
+    p.add_argument("--limit", type=int, default=50)
+    _engine_args(p)
+    p.set_defaults(fn=cmd_operations, needs_store=False)
+
     return parser
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
-    store = connect(args.store)
+    store = connect(args.store) if getattr(args, "needs_store", True) else None
     try:
         return args.fn(args, store)
     except (KeyError, ValueError, FileNotFoundError) as exc:
         print(f"kriko: {exc}", file=sys.stderr)
         return 1
     finally:
-        store.close()
+        if store is not None:
+            store.close()
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ from fastapi.testclient import TestClient
 from app import agenda
 from app.web import state, tasks
 from app.web.app import create_app
-from app.web.jobs import Cancelled, Progress
+from app.web.jobs import Cancelled
 from app.web.settings import Settings
 from kriko.research import BudgetExceeded
 from kriko.store.db import connect

@@ -118,3 +118,27 @@ def test_a_config_that_cannot_be_parsed_is_refused_rather_than_overwritten(targe
 def test_no_temp_file_survives_a_successful_write(target):
     agentconfig.connect(target, server_name="kriko", server=SERVER)
     assert [p.name for p in target.path.parent.iterdir()] == ["mcp.json"]
+
+
+# ── the environment a config carries for itself (B131) ─────────────────────
+
+def test_off_windows_the_platform_env_is_empty():
+    assert agentconfig.platform_env("linux", {"SystemRoot": "C:\\Windows"}) == {}
+
+
+def test_on_windows_the_process_cannot_start_without_vars_are_carried():
+    env = agentconfig.platform_env("win32", {
+        "SystemRoot": "C:\\Windows", "TEMP": "C:\\Users\\r\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\r\\AppData\\Local\\Temp", "PATH": "C:\\Windows\\System32",
+        "UNRELATED": "keep-out",
+    })
+    assert env["SystemRoot"] == "C:\\Windows"
+    assert env["TEMP"] and env["PATH"]
+    assert "UNRELATED" not in env
+
+
+def test_platform_env_never_writes_a_key_the_environment_did_not_have():
+    """A missing `SystemRoot` must not become the literal string `None` in a
+    harness config — that is worse than omitting the key."""
+    env = agentconfig.platform_env("win32", {})
+    assert env == {}

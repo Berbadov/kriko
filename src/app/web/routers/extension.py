@@ -11,11 +11,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app import extension, keys
+from app import extension, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.settings import EXTENSION_PORT
-from kriko.adapters import load_adapters
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
 
@@ -198,32 +197,42 @@ def reveal(request: Request) -> dict:
     return {"path": str(target), "error": extension.reveal(target)}
 
 
-def _landing(store, base_url: str) -> str:
+def _landing(store, app_conn, base_url: str) -> str:
     """Where the launched browser should open.
 
-    A site an installed pack can actually read, so the extension has something
-    to do the moment the window appears. This used to be *this app's own*
-    extension page, and the reader's report of it was exact: "it just opens
-    the app interface in the web browser, an exact copy of the standalone app.
-    I originally meant the hovering web extension." They were right — the one
-    place the extension is invisible is a page it does not match.
+    A site this installation can actually read, so the extension has
+    something to do the moment the window appears. This used to be *this
+    app's own* extension page, and the reader's report of it was exact: "it
+    just opens the app interface in the web browser, an exact copy of the
+    standalone app. I originally meant the hovering web extension." They were
+    right — the one place the extension is invisible is a page it does not
+    match.
 
-    The site is read off the adapter rows, never named here: which listing
-    sites exist is pack data, and an app that hardcoded one would have to be
-    edited to ship a second category (`test_the_landing_page_is_pack_data`).
-    With no adapter installed there is no such page, and the app's own screen
-    is the honest fallback — it is at least the screen that says what to do
-    next.
+    The site is read off `sites.registered`, never named here: which listing
+    sites exist is pack data plus whatever this reader taught their own copy
+    (`test_the_landing_page_is_pack_data`), and a reader whose only readable
+    site is one they just registered locally deserves the same one-click
+    landing as one who installed a pack that ships an adapter — a launch that
+    only ever knew about pack sites would silently regress the moment
+    `/api/sites/{host}/register` did its job. Superseded local rows are
+    skipped: they duplicate a pack entry that is already in the list.
+    With nothing readable at all there is no such page, and the app's own
+    screen is the honest fallback — it is at least the screen that says what
+    to do next.
     """
-    for spec in load_adapters(store):
-        site = str(spec.get("site") or "").strip().strip("/")
+    for row in sites.registered(store, app_conn):
+        if row.get("superseded"):
+            continue
+        site = str(row.get("site") or "").strip().strip("/")
         if site:
             return site if "://" in site else f"https://{site}/"
     return f"{base_url.rstrip('/')}/#/extension"
 
 
 @router.post("/launch")
-def launch(request: Request, store=Depends(get_store)) -> dict:
+def launch(
+    request: Request, store=Depends(get_store), app_state=Depends(get_app_state)
+) -> dict:
     """Stage the extension and open a browser that already has it loaded.
 
     The one click. One request rather than two because a reader's single press
@@ -287,7 +296,7 @@ def launch(request: Request, store=Depends(get_store)) -> dict:
     # browser to see is on *this* screen too, and this screen is already in
     # front of them: the status card polls, so it turns green here while they
     # are looking at the listing over there.
-    landing = _landing(store, str(request.base_url))
+    landing = _landing(store, app_state, str(request.base_url))
     error = extension.launch_with_extension(browser, target, profile, landing=landing)
     return {
         "launched": not error,

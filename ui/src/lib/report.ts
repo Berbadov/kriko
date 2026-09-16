@@ -46,6 +46,32 @@ export const factWord = (verdict: string): string => FACT_WORD[verdict] ?? verdi
  * would put the blame on the pack. */
 export const factTone = (verdict: string): string => FACT_TONE[verdict] ?? "meta";
 
+/* What an offline grounding check answers, in words. This is a different
+ * question than the fact-check above — no network, no fresh read — so it is
+ * a separate vocabulary rather than a reuse of `FACT_WORD`: `not_kept` is not
+ * "unreadable", it is "nothing to check against", and folding it into the
+ * fact-check words would turn a missing document into what reads like a mild
+ * version of an unreachable one, instead of what it is. Verdicts owned by
+ * `app/findings.py`'s `regrounded`. `not_kept` must never share a tone with
+ * `grounded` — that is the whole reason it is its own verdict.
+ */
+const GROUNDING_WORD: Record<string, string> = {
+    grounded: "Quote found in the retained page",
+    ungrounded: "Quote not found in the retained page",
+    not_kept: "No page was kept to check this against",
+};
+const GROUNDING_TONE: Record<string, string> = {
+    grounded: "ok",
+    ungrounded: "warn",
+    not_kept: "meta",
+};
+
+export const groundingWord = (verdict: string): string =>
+    GROUNDING_WORD[verdict] ?? verdict;
+
+export const groundingTone = (verdict: string): string =>
+    GROUNDING_TONE[verdict] ?? "meta";
+
 /** Whether a claim can be re-checked at all: it needs an identity the server
  * can look up, and a page to re-read. */
 export const canCheckFacts = (claim: Claim): boolean =>

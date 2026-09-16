@@ -4,11 +4,20 @@ import yaml
 
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher, BudgetExceeded
-from kriko.research.base import Document, Finding, Researcher, ResearchTask
+from kriko.research.base import (
+    STANDARD,
+    Document,
+    Fetched,
+    Finding,
+    Researcher,
+    ResearchTask,
+    Spend,
+)
 
 __all__ = [
     "AgentResearcher", "ApiResearcher", "BudgetExceeded",
-    "Document", "Finding", "Researcher", "ResearchTask",
+    "Document",
+    "Fetched", "Finding", "Researcher", "ResearchTask", "Spend", "STANDARD",
     "get_researcher", "pack_asset", "plan_task",
 ]
 
@@ -122,7 +131,9 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
             (subject_id, pack_id))
     }
 
-    aliases = {"attribution_safe": [], "search_only": [], "search_name": []}
+    aliases: dict[str, list[str]] = {
+        "attribution_safe": [], "search_only": [], "search_name": []
+    }
     for row in conn.execute(
             "SELECT alias, tier FROM subject_aliases"
             " WHERE subject_id = ? AND pack_id = ? ORDER BY alias",

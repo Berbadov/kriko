@@ -226,7 +226,7 @@ def install(conn: sqlite3.Connection, pack_path) -> str:
 
         with conn:
             if current and current["content_digest"] == incoming["content_digest"]:
-                revision_id = _save_revision(conn, current)
+                _save_revision(conn, current)
                 conn.execute(
                     "UPDATE packs SET enabled = 1 WHERE pack_id = ?", (pack_id,)
                 )
@@ -247,7 +247,7 @@ def install(conn: sqlite3.Connection, pack_path) -> str:
                 "UPDATE packs SET installed_at = ?, enabled = 1 WHERE pack_id = ?",
                 (_now(), pack_id),
             )
-            revision_id = _save_revision(conn, active, activated=True)
+            _save_revision(conn, active, activated=True)
             action = "update" if current else "install"
             _event(
                 conn,

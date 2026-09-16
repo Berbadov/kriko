@@ -15,11 +15,20 @@ history, pre-pivot — historical only).
 Until a Windows install opens, runs an analysis, and the reader says so, the
 loop is the *app*, not the suite.
 
-**Half of this ended 2026-09-08.** `ci.yml` runs on push and pull_request
-again, because the 1.0.0 audit found four reported defects that every
+**Half of this ended 2026-09-08, and was undone on 2026-09-13.** `ci.yml` was
+un-paused for 1.0.0 because the audit found four reported defects that every
 automated gate passed — and the answer to that is more gates running more
-often. The pause was never wrong about *why* v0.2.4 failed; it was aimed at a
-suite that was not the problem, and a release needs it back anyway.
+often. That reasoning still holds. What did not hold is the runner: this
+account has no Actions minutes, so from the day it was un-paused **every CI
+run failed in under fifteen seconds without ever being allocated one** — no
+logs, no steps, a red tick on a commit nothing had tested. On `main` too. A
+gate that is always red is not a gate; it is a thing people learn to scroll
+past, which is worse than having none.
+
+So `ci.yml` is deleted and its three jobs live in `tools/gate.sh`, verbatim,
+run locally. Restoring the workflow is a `git revert` plus a billing change,
+in that order — and worth doing the day either is possible, because the
+audit's finding has not been answered, only relocated.
 
 The other half stands, and it is the half with the reader in it: the phase
 ends when an install they can double-click opens and works, and that has not
@@ -28,19 +37,27 @@ happened yet. Rules 1, 3 and 4 below are unchanged. Rule 2 is now about
 
 The gate moved, it did not disappear:
 
-1. **Run `pytest` locally before every push.** `.venv/bin/python -m pytest -q`.
-   A paused workflow is not permission to push a broken tree.
+1. **Run the gate locally before every push.** `tools/gate.sh` — pytest, both
+   JS suites, types, and the stale-bundle check. A workflow that cannot run is
+   not permission to push a broken tree; it is the reason the gate is yours.
 2. **Don't block on a CI run.** Push, tag, and keep working; read the run when
    it lands. `gh run watch` in the foreground is the habit being cut.
-3. **`desktop.yml` still runs** — on tags, on hand-dispatch, and on packaging
-   PRs. It is the only thing that produces an installer, and its smoke steps
-   are the checks that would have caught v0.2.4. Do not trim them for speed.
+3. **`desktop.yml` is untrimmed, and hand-run only** (2026-09-13). Every step
+   of the recipe stands — it is the only written record of how an installer is
+   built, and its smoke steps are the checks that would have caught v0.2.4. Do
+   not trim them for speed. What was removed is its *triggers*: with no Actions
+   minutes it could not get a runner on a tag or a packaging PR either, so
+   those fired only to paint a false red on commits nothing had tested. Put the
+   `push` and `pull_request` blocks back the day minutes return. Until then the
+   recipe is run by hand on the Windows host, as every installer since 0.5.0
+   has been — a billing problem, not a reason to cut the recipe.
 4. **Ship to the reader, not to the branch.** A fix that is not in an installer
    they can double-click is not a fix yet.
 
 **Ending this phase** = the reader confirms a double-clicked install opens and
-runs an analysis, then delete this section. Restoring `ci.yml` was the other
-half and is done (2026-09-08). Nothing else was changed to get here.
+runs an analysis, then delete this section. `ci.yml` was restored (2026-09-08)
+and then deleted (2026-09-13), once it was clear it had never once executed;
+its checks are `tools/gate.sh` now. Nothing else was changed to get here.
 
 ## Task tracking
 
@@ -179,7 +196,8 @@ ui/        the frontend — Svelte + Vite source, built into src/app/web/static/
            vocabulary (enforced by test_repo_invariants.py).
    |
    v
-app/       interfaces — cli, web dashboard, mcp server.
+app/       interfaces — cli, web dashboard, mcp server, operator TUI
+           (`app/tui/`, a second client on the same HTTP API — no webview).
    |
    v
 kriko/      the engine — pack store, generic lookup, ranking, research
@@ -317,15 +335,19 @@ original reasoning.
 | `README.md` | Project overview, quickstart, supported cars | current |
 | `packs/<name>/README.md` | What that pack covers, and its own product principle | current |
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
-| `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks | current |
+| `CONTRIBUTING.md` | The loop (setup/gate/bump), branches, commits, the gate | current |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
+| `docs/superpowers/specs/2026-09-15-ground-truth-benchmark-design.md` | B126: benchmarks against pack-authored ground truth — precision/recall/hallucination with intervals, and the sweep that outputs batch size, context and preamble | current — design only |
+| `docs/AGENT_OPERATIONS.md` | The operation vocabulary, the protocol problem, and the open questions about driving a harness as a function | note, not a design — B122/B123/B124 |
+| `docs/GLOSSARY.md` | The words, one line each — and the two that mean more than one thing | current |
 | `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | The UI rewrite + Tauri packaging design; phases 0–5 | current — all phases landed; installers unbuilt (B52) |
 | `docs/superpowers/specs/2026-09-03-app-design-and-ia.md` | The app design system, IA and four features | current |
 | `docs/superpowers/specs/2026-09-09-research-agenda-design.md` | B82: what an agent should research next, and where that ordering comes from | current — implemented 2026-09-09 (`app/agenda.py`, `2a9d82c`) |
+| `docs/superpowers/specs/2026-09-14-extension-and-app-harmony-design.md` | B113: the extension and the app as one system — the palette fork, the `claims`/`risks` rename, and what is correctly different | current — design only, nothing implemented |
 | `docs/superpowers/specs/2026-09-09-knowledge-building-design.md` | How an installation grows its own packs: the two research planes, keys, the agenda run, provenance + undo, and the product-identity skill | current — implemented 2026-09-09 (`0ab613d`, `b945408`) |
 | `tauri/README.md` | The desktop shell: launch sequence, failure surface, local build | current — built by hand on the Windows host `/mnt/c` exposes (0.5.0, 0.5.1, 0.5.2) |
 | `docs/design_flaws.md` | 2026-07-04 audit; Flaws 1–4 fixed, 5–6 → backlog B13 | reference |

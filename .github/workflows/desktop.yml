@@ -1,10 +1,23 @@
 name: desktop
 
-# Not on every push: three OS runners with a Rust build each is minutes nobody
-# needs on a docs commit. Tags, hand-runs, and changes to the packaging itself.
+# Hand-run only, since 2026-09-13. It used to fire on `v*` tags and on pull
+# requests touching tauri/, packaging/ or sidecar.py as well, and it should
+# again the day this account has Actions minutes — put the `push` and
+# `pull_request` blocks back, nothing else here depends on them.
+#
+# What changed is the environment, not the value. With no minutes, each of
+# those triggers produced jobs that were never allocated a runner: failed in
+# under fifteen seconds, `runner_id: 0`, no steps, no logs, and a red tick on a
+# commit nothing had tested. `ci.yml` was deleted the same day for the same
+# reason (its checks are `tools/gate.sh` now). Keeping a trigger that can only
+# ever report a false failure trains everyone to ignore a red desktop build,
+# which is the state you least want to be in on the day one is real.
+#
+# Nothing below is trimmed. This file is the only written record of how an
+# installer is built, and its smoke steps are the checks that would have caught
+# v0.2.4 — CLAUDE.md's app-first rule 3. Until minutes return, the recipe is run
+# by hand on the Windows host, as every installer since 0.5.0 has been.
 on:
-    push:
-        tags: ["v*"]
     workflow_dispatch:
         inputs:
             platforms:
@@ -12,12 +25,6 @@ on:
                 default: windows
                 type: choice
                 options: [windows, all]
-    pull_request:
-        paths:
-            - "tauri/**"
-            - "packaging/**"
-            - "src/app/sidecar.py"
-            - ".github/workflows/desktop.yml"
 
 concurrency:
     group: desktop-${{ github.ref }}
@@ -33,10 +40,12 @@ jobs:
     #
     # Windows only by default, because the reader is: one person opens these
     # installers and they are on Windows, so a .deb and a .dmg nobody
-    # downloads are two more runners' minutes on every tag. A pull request
-    # still builds all three — that check exists to catch an OS-specific
-    # break *before* a release, and narrowing it would hide one until exactly
-    # the wrong moment. `platforms: all` on a hand-run brings them back.
+    # downloads are two more runners' minutes on every tag. `platforms: all`
+    # on a hand-run brings all three back, and is how to catch an OS-specific
+    # break before a release now that there is no pull-request trigger to do
+    # it automatically. The `pull_request` arm of the test below is kept
+    # rather than deleted: it is dead while the trigger is gone, and correct
+    # again the moment the trigger is restored.
     #
     # It is a job rather than a job-level `if` because a matrix leg cannot be
     # switched off that way: `jobs.<id>.if` is evaluated once, before the
@@ -78,7 +87,14 @@ jobs:
 
             - uses: actions/setup-python@v5
               with:
-                  python-version: "3.14"
+                  # 3.13, lowered from 3.14 with the floor on 2026-09-14 (B110),
+                  # and this one is not cosmetic: `"3.14"` resolves to whatever
+                  # setup-python has newest in that line, the pinned pydantic
+                  # raises on import under 3.14.0rc2, and PyInstaller would
+                  # happily freeze that — shipping a sidecar that dies on its
+                  # first request. The interpreter the binary carries should be
+                  # the one the suite actually ran on.
+                  python-version: "3.13"
 
             - uses: actions/setup-node@v4
               with:
@@ -227,7 +243,14 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-python@v5
               with:
-                  python-version: "3.14"
+                  # 3.13, lowered from 3.14 with the floor on 2026-09-14 (B110),
+                  # and this one is not cosmetic: `"3.14"` resolves to whatever
+                  # setup-python has newest in that line, the pinned pydantic
+                  # raises on import under 3.14.0rc2, and PyInstaller would
+                  # happily freeze that — shipping a sidecar that dies on its
+                  # first request. The interpreter the binary carries should be
+                  # the one the suite actually ran on.
+                  python-version: "3.13"
             - name: Install
               run: |
                   python -m pip install --upgrade pip
@@ -273,7 +296,14 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-python@v5
               with:
-                  python-version: "3.14"
+                  # 3.13, lowered from 3.14 with the floor on 2026-09-14 (B110),
+                  # and this one is not cosmetic: `"3.14"` resolves to whatever
+                  # setup-python has newest in that line, the pinned pydantic
+                  # raises on import under 3.14.0rc2, and PyInstaller would
+                  # happily freeze that — shipping a sidecar that dies on its
+                  # first request. The interpreter the binary carries should be
+                  # the one the suite actually ran on.
+                  python-version: "3.13"
             - uses: actions/download-artifact@v4
               with:
                   path: artifacts
