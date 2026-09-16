@@ -285,7 +285,7 @@ def _emit_claim_row(conn, pack_id, entry, man, known, row_ids: list[str]) -> str
         )
 
     texts = entry.get("text") or {}
-    primary = texts.get("en") or next(iter(texts.values()), {})
+    primary: dict = texts.get("en") or next(iter(texts.values()), {})
     claim_id = ids.claim_id(
         subject_id, entry["kind"], entry["domain"], primary.get("title", "")
     )

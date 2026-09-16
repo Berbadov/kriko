@@ -20,7 +20,6 @@ make "add a category" mean "touch the engine", which is G6.
 """
 
 import json
-import sqlite3
 from pathlib import Path
 
 import pytest

@@ -9,7 +9,6 @@ already existed, and the two additions this session makes real: `judge_bulk`
 correctness).
 """
 
-import pytest
 
 from app import gold
 

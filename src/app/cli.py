@@ -25,7 +25,7 @@ from kriko.store.db import DEFAULT_STORE, connect
 
 def _kv(pairs: list[str]) -> dict:
     """Parse `key=value` arguments, keeping numbers numeric."""
-    out = {}
+    out: dict[str, int | float | str] = {}
     for pair in pairs:
         if "=" not in pair:
             raise SystemExit(f"expected key=value, got {pair!r}")
@@ -285,7 +285,7 @@ def cmd_bench(args, store) -> int:
             print(
                 f"{line['plane']:8} {line['failed']}/{line['runs']} failed: {classes}"
                 + (
-                    f"  — all the same way, which is a mis-use rather than bad luck"
+                    "  — all the same way, which is a mis-use rather than bad luck"
                     if line["dominant_failure"]
                     else ""
                 )

@@ -129,7 +129,9 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
             (subject_id, pack_id))
     }
 
-    aliases = {"attribution_safe": [], "search_only": [], "search_name": []}
+    aliases: dict[str, list[str]] = {
+        "attribution_safe": [], "search_only": [], "search_name": []
+    }
     for row in conn.execute(
             "SELECT alias, tier FROM subject_aliases"
             " WHERE subject_id = ? AND pack_id = ? ORDER BY alias",

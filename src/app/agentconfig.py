@@ -27,6 +27,7 @@ engineering category, not data that grows with pack coverage.
 import json
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,7 +46,9 @@ SERVER_KEY = "mcpServers"
 _WINDOWS_ENV_KEYS = ("SystemRoot", "TEMP", "TMP", "ComSpec", "PATH")
 
 
-def platform_env(platform: str | None = None, environ: dict | None = None) -> dict:
+def platform_env(
+    platform: str | None = None, environ: Mapping[str, str] | None = None
+) -> dict:
     """The variables a Windows child cannot start without, or `{}` elsewhere.
 
     Takes `platform`/`environ` rather than reading `sys.platform`/`os.environ`
@@ -143,6 +146,7 @@ def status_of(target: Target, *, server_name: str, store_path: Path) -> dict:
     `stale` is the state worth having: an entry exists, so a reader would call
     it connected, but it does not name the store this window is reading.
     """
+    assert target.path is not None
     row = {
         "id": target.id,
         "label": target.label,
@@ -268,7 +272,7 @@ def refresh_skills(name: str, body: str) -> list[dict]:
     is not a reason the app fails to start — it is a row on the Agents screen
     saying the copy on disk is old.
     """
-    written = []
+    written: list[dict] = []
     if not body:
         return written
     for target in targets():
@@ -343,7 +347,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
     import time
 
     def frame(method: str, params: dict, id_: int | None) -> str:
-        message = {"jsonrpc": "2.0", "method": method, "params": params}
+        message: dict = {"jsonrpc": "2.0", "method": method, "params": params}
         if id_ is not None:
             message["id"] = id_
         return json.dumps(message) + "\n"
@@ -352,6 +356,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
         """The next line that parses as JSON, or `None` if the deadline or
         the process passes first. A server that logs to stdout is noisy, not
         broken, so a line that is not JSON is skipped rather than failed on."""
+        assert process.stdout is not None
         while time.time() < deadline:
             line = process.stdout.readline()
             if not line:
@@ -371,6 +376,9 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}
+    assert process.stdin is not None
+    assert process.stdout is not None
+    assert process.stderr is not None
 
     try:
         deadline = time.time() + timeout
