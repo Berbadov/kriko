@@ -136,7 +136,7 @@ def accept_findings(
                 "",
                 "",
                 item.get("source_type", "page"),
-                "",
+                str(item.get("published_at") or ""),
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
             ),
         )

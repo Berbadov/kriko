@@ -23,6 +23,9 @@ import logging
 import re
 import urllib.error
 import urllib.request
+from datetime import date, datetime, timezone
+
+from kriko.research import Fetched
 
 log = logging.getLogger(__name__)
 
@@ -46,14 +49,58 @@ _SPACE = re.compile(r"[ \t\r\f\v]+")
 _BLANK = re.compile(r"\n{3,}")
 
 
-def reader(timeout: float = TIMEOUT):
-    """`fetch(url) -> plain text, or "" when it cannot be read`."""
+#: Before the public web had the metadata this reads, so a date below it
+#: is a misparse rather than an antique page.
+_EARLIEST = date(1995, 1, 1)
 
-    def fetch(url: str) -> str:
+
+def reader(timeout: float = TIMEOUT):
+    """`fetch(url) -> Fetched(text, published_at)`, empty when unreadable.
+
+    The engine accepts bare text from any reader and this one has the markup
+    in hand, which is the only place a publication date exists: by the time
+    prose comes out of `to_text` the date is gone with the rest of the
+    metadata. Read here or not at all.
+    """
+
+    def fetch(url: str) -> Fetched:
         raw = _download(url, timeout)
-        return to_text(raw) if raw else ""
+        if not raw:
+            return Fetched("")
+        return Fetched(to_text(raw), published_at(raw))
 
     return fetch
+
+
+def published_at(markup: str) -> str:
+    """When the page says it was published, or "" when it does not say.
+
+    Never the fetch time, and never a guess: a reader weighing how old a
+    warning is needs the date the world put it out, and being handed today's
+    date instead would make every source look current. A date outside
+    `_EARLIEST`..today is a parser that has misread something rather than a
+    genuinely antique page, so it is refused like any other absence.
+    """
+    try:
+        import trafilatura  # noqa: PLC0415 — optional, see the module docstring
+    except ImportError:
+        return ""
+    try:
+        found = trafilatura.extract_metadata(markup)
+    except Exception:  # noqa: BLE001 — a date is never worth a failed fetch
+        return ""
+    return _bounded(getattr(found, "date", "") or "")
+
+
+def _bounded(value: str) -> str:
+    stamp = str(value).strip()[:10]
+    try:
+        when = date.fromisoformat(stamp)
+    except ValueError:
+        return ""
+    if when < _EARLIEST or when > datetime.now(timezone.utc).date():
+        return ""
+    return stamp
 
 
 def _download(url: str, timeout: float) -> str:

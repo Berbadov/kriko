@@ -15,6 +15,7 @@
 #     tools/gate.sh          # everything
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh ui       # just vitest, types, and the stale-bundle check
+#     tools/gate.sh tauri    # just the shell's cargo check, native + windows-target
 #
 # Exits non-zero on the first failure, and says which gate failed. Nothing here
 # needs secrets: the suite must pass without an API key, which is the same rule
@@ -91,8 +92,64 @@ if [ "$only" = all ] || [ "$only" = ui ]; then
     fi
 fi
 
+if [ "$only" = all ] || [ "$only" = tauri ]; then
+    ran=1
+    CRATE="tauri/src-tauri"
+    CARGO="$(command -v cargo || true)"
+    if [ -z "$CARGO" ]; then
+        CARGO_BIN="${CARGO_HOME:-$HOME/.cargo}/bin/cargo"
+        [ -x "$CARGO_BIN" ] && CARGO="$CARGO_BIN"
+    fi
+
+    if [ -z "$CARGO" ]; then
+        step "cargo check (tauri/src-tauri)"
+        echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py already parsed every .rs file above; a real compile still needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
+    else
+        export PATH="$(dirname "$CARGO"):$PATH"
+
+        _tauri_cargo_check() {
+            local target_flag="$1" desc="$2" out status
+            out=$(cd "$CRATE" && cargo check --locked --offline $target_flag 2>&1)
+            status=$?
+            printf '%s\n' "$out"
+            [ "$status" = 0 ] && return 0
+            if printf '%s' "$out" | grep -qiE "webkit2gtk.*not found|Package .*was not found|glib-2\.0.*not found|appindicator.*not found"; then
+                echo "skipping $desc — a system dev package pkg-config cannot find is missing (see tauri/README.md's pre-flight apt-get line: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev)"
+                return 2
+            fi
+            if printf '%s' "$out" | grep -qiE "target .* may not be installed|can't find crate for \`core\`"; then
+                echo "skipping $desc — the $target_flag target is not installed (rustup target add x86_64-pc-windows-gnu)"
+                return 2
+            fi
+            if printf '%s' "$out" | grep -qiE "failed to get |spurious network error|unable to get packages from source|offline mode|no matching package named"; then
+                echo "skipping $desc — the cargo registry cache is not warm and this gate runs --offline; run \`cargo fetch --locked\` once in $CRATE (needs network), then re-run"
+                return 2
+            fi
+            return 1
+        }
+
+        step "cargo check (tauri/src-tauri, native)"
+        result=0
+        _tauri_cargo_check "" "the native cargo check" || result=$?
+        [ "$result" = 1 ] && exit 1
+
+        step "cargo check (tauri/src-tauri, windows cross-target)"
+        STUB="$CRATE/binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe"
+        created=0
+        if [ ! -e "$STUB" ]; then
+            mkdir -p "$(dirname "$STUB")"
+            touch "$STUB"
+            created=1
+        fi
+        result=0
+        _tauri_cargo_check "--target x86_64-pc-windows-gnu" "the windows cross-target cargo check" || result=$?
+        [ "$created" = 1 ] && rm -f "$STUB"
+        [ "$result" = 1 ] && exit 1
+    fi
+fi
+
 if [ "$ran" = 0 ]; then
-    echo "unknown gate: $only (expected: all, py, node, ui)" >&2
+    echo "unknown gate: $only (expected: all, py, node, ui, tauri)" >&2
     exit 2
 fi
 
