@@ -102,6 +102,29 @@ def test_a_page_of_document_text_never_reaches_this_table(settings, conn):
     assert len(row["request_json"]) <= operations.MAX_SUMMARY_CHARS + 1
 
 
+def test_an_api_key_never_reaches_the_feed(settings, conn):
+    """This table is not audited by anything that redacts, and it is a
+    reader's whole history kept forever. A tool that ever gets a credential
+    argument must not turn it into a row on disk."""
+    with operations.record(
+        settings.app_state_path,
+        door="mcp",
+        name="whatever",
+        arguments={
+            "api_key": "sk-super-secret-value",
+            "Authorization": "Bearer abc123",
+            "user_token": "t-xyz",
+            "subject_id": "s1",
+        },
+    ):
+        pass
+    (row,) = state.operations(conn)
+    assert "sk-super-secret-value" not in row["request_json"]
+    assert "Bearer abc123" not in row["request_json"]
+    assert "t-xyz" not in row["request_json"]
+    assert "s1" in row["request_json"], "an ordinary argument must still show"
+
+
 def test_the_feed_is_bounded(settings, conn, monkeypatch):
     monkeypatch.setattr(state, "OPERATIONS_KEPT", 5)
     for index in range(12):
@@ -158,6 +181,23 @@ def test_the_wrapper_does_not_change_what_a_tool_returns(tmp_path, monkeypatch):
     monkeypatch.setattr(mcp_server, "_app_state_path", lambda: tmp_path / "app.sqlite")
     assert mcp_server.list_packs() == []
     assert isinstance(mcp_server.store_status(), dict)
+
+
+def test_every_registered_tool_is_wrapped_by_the_recorder(tmp_path):
+    """From the registry FastMCP actually serves, not a regex over the source.
+
+    `registered_tools()`'s own docstring names the failure this replaces: a
+    decorator rename could turn a source-text gate green on a server that no
+    longer wraps anything. `functools.wraps` leaves `__wrapped__` pointing at
+    the original function, which only `tool()`'s own `recorded` closure sets —
+    a tool defined with a bare `@mcp.tool()` would have no such attribute.
+    """
+    from app import mcp_server
+
+    tools = mcp_server.mcp._tool_manager.list_tools()
+    assert tools, "the registry is empty -- this test cannot prove anything"
+    unwrapped = [t.name for t in tools if not hasattr(t.fn, "__wrapped__")]
+    assert unwrapped == [], f"registered without the operations recorder: {unwrapped}"
 
 
 def test_the_tools_are_still_registered_after_wrapping(tmp_path):

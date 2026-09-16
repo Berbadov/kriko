@@ -35,6 +35,7 @@ PACK = {
     "templates": ["{label} common problems", "{label} chuck wobble forum"],
     "domains": [{"id": "mechanical", "label": "Mechanical"}],
     "attributes": [{"id": "voltage_v", "label": "Voltage", "datatype": "number"}],
+    "lineup": ["Makita DHP484", "Bosch GSB 18V-55"],
     "subjects": [
         {"kind": "product", "label": "Makita DHP484",
          "identity": {"brand": "makita", "series": "DHP484"},
@@ -338,6 +339,9 @@ class _Recorder:
     @property
     def cancelled(self):
         return False
+
+    def check(self):
+        pass
 
 
 def test_authoring_a_pack_is_given_longer_than_one_subjects_research(
