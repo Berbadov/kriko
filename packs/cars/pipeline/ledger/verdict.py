@@ -291,7 +291,7 @@ def _store(conn, budget, cid, h, text, tin, tout) -> bool:
         print(f"  cluster {cid}: unparseable verdict skipped ({exc})")
         return False
     conn.execute(
-        "INSERT OR REPLACE INTO verdicts (input_hash, model,"
+        "INSERT OR REPLACE INTO verdicts (input_hash, llm,"
         " verdict_json, tokens_in, tokens_out, usd, created_at)"
         " VALUES (?,?,?,?,?,?, datetime('now'))",
         (h, VERDICT_MODEL, json.dumps(v, ensure_ascii=False), tin, tout, usd),
@@ -311,7 +311,7 @@ def _call(client, payload: dict) -> tuple[str, int, int]:
 
 def _store_import(conn, h: str, v: dict) -> None:
     conn.execute(
-        "INSERT OR REPLACE INTO verdicts (input_hash, model,"
+        "INSERT OR REPLACE INTO verdicts (input_hash, llm,"
         " verdict_json, tokens_in, tokens_out, usd, created_at)"
         " VALUES (?, 'import', ?, 0, 0, 0, datetime('now'))",
         (h, json.dumps(v, ensure_ascii=False)))

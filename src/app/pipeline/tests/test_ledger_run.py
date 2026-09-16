@@ -56,7 +56,7 @@ def test_all_pipeline_offline(tmp_path, monkeypatch):
 def test_report_command(tmp_path, capsys):
     dbp = tmp_path / "l.db"
     conn = db.connect(dbp)
-    conn.execute("INSERT INTO runs (started_at, stage, model, calls, tokens_in,"
+    conn.execute("INSERT INTO runs (started_at, stage, llm, calls, tokens_in,"
                  " tokens_out, usd) VALUES ('t','verdict','m',1,10,5,0.01)")
     conn.commit(); conn.close()
     assert run.main(["report", "--db", str(dbp)]) == 0
