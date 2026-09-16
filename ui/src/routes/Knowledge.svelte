@@ -40,9 +40,12 @@
     // now (see nav.ts's ALIASES). A bookmark must land on the lens it named.
     let { lens: initial = "all" }: { lens?: string } = $props();
 
-    let lens = $state<Lens>((["all", "gaps", "weak", "marked"].includes(initial)
-        ? initial
-        : "all") as Lens);
+    const asLens = (named: string): Lens =>
+        (["all", "gaps", "weak", "marked"].includes(named) ? named : "all") as Lens;
+    let lens = $state<Lens>("all" as Lens);
+    $effect.pre(() => {
+        lens = asLens(initial);
+    });
     let query = $state("");
     let packFilter = $state("");
     let shown = $state(25);

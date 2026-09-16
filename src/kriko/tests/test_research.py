@@ -6,8 +6,9 @@ else is plumbing.
 
 import pytest
 
-from kriko.research import (ApiResearcher, BudgetExceeded, Document, Finding,
-                            ResearchTask, get_researcher, plan_task)
+from kriko.research import (STANDARD, ApiResearcher, BudgetExceeded, Document,
+                            Finding, ResearchTask, Spend, get_researcher,
+                            plan_task)
 from kriko.research.agent import AgentResearcher
 
 
@@ -181,6 +182,81 @@ def test_a_grounded_quote_survives():
     (finding,) = researcher.extract(_task(), document)
     assert isinstance(finding, Finding)
     assert finding.source_url == "https://e.example"
+
+
+def test_a_quote_with_curly_quotes_and_extra_whitespace_still_grounds():
+    """The grounding check is loose about cosmetics and strict about content —
+    a model that reconstructs a sentence from memory still has to fail it."""
+    document = Document(url="https://e.example",
+                        text="The chuck  bearing wears — at high charge cycles.")
+    researcher = ApiResearcher(
+        search=lambda *_: [], fetch=lambda _: "",
+        complete=lambda _: '[{"title":"Chuck bearing wear","domain":"mechanical",'
+                           '"severity":"high","source_url":"https://e.example",'
+                           '"quote":"THE CHUCK BEARING WEARS - AT HIGH CHARGE CYCLES."}]')
+    (finding,) = researcher.extract(_task(), document)
+    assert finding.title == "Chuck bearing wear"
+
+
+def test_a_finding_naming_no_url_in_a_batch_is_rejected_not_defaulted():
+    """Under one document per call, an unnamed source is unambiguous. Under a
+    batch it is not, and defaulting it used to file a source-less quote
+    against whichever document happened to come first — real text on an
+    unrelated page, passed off as evidence for this one."""
+    doc_a = Document(url="https://a.example", text="The chuck bearing wears fast.")
+    doc_b = Document(url="https://b.example", text="Something else entirely.")
+    researcher = ApiResearcher(
+        search=lambda *_: [], fetch=lambda _: "",
+        complete=lambda _: '[{"title":"No source","domain":"mechanical",'
+                           '"severity":"high","quote":"The chuck bearing wears fast."}]',
+        spend=Spend(name="wide", context_chars=8000, batch_size=4))
+    researcher._documents = [doc_a, doc_b]
+    assert researcher.extract(_task(), doc_a) == []
+
+
+def test_a_url_the_model_was_never_shown_is_rejected():
+    """A model citing a page outside the batch resolves to no text at all,
+    never to "the nearest one"."""
+    document = Document(url="https://e.example", text="The chuck bearing wears fast.")
+    researcher = ApiResearcher(
+        search=lambda *_: [], fetch=lambda _: "",
+        complete=lambda _: '[{"title":"Invented source","domain":"mechanical",'
+                           '"severity":"high","source_url":"https://never-shown.example",'
+                           '"quote":"The chuck bearing wears fast."}]')
+    assert researcher.extract(_task(), document) == []
+
+
+def test_the_preamble_reaches_the_prompt():
+    """B126 §7: the instruction axis has to be a real, swept thing, not a
+    field nobody reads."""
+    model = _RecordingModel()
+    researcher = ApiResearcher(
+        search=lambda *_: [], fetch=lambda _: "",
+        complete=model,
+        spend=Spend(name="standard-principled", preamble="principled"))
+    researcher.extract(_task(), Document(url="u", text="t"))
+    assert "value principle" in model.prompts[0]
+
+
+def test_the_terse_preamble_changes_nothing():
+    """The default has to reproduce exactly the prompt that existed before
+    this axis did — a mechanism for choosing must never silently change the
+    fresh-install behaviour."""
+    model = _RecordingModel()
+    researcher = ApiResearcher(
+        search=lambda *_: [], fetch=lambda _: "",
+        complete=model, spend=STANDARD)
+    researcher.extract(_task(), Document(url="u", text="t"))
+    assert model.prompts[0].startswith("#")  # the brief's own heading, no preamble line
+
+
+class _RecordingModel:
+    def __init__(self):
+        self.prompts: list[str] = []
+
+    def __call__(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return "[]"
 
 
 def test_a_malformed_model_reply_yields_nothing_rather_than_crashing():

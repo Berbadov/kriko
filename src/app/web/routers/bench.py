@@ -56,6 +56,7 @@ def read_bench(
     from app import protocols
 
     rows = state.bench_runs(conn, limit=limit)
+    summary = state.bench_summary(conn)
     return {
         "runs": rows,
         # How each plane failed, not only how often (B124). "Four of five
@@ -65,7 +66,7 @@ def read_bench(
         # Recall, precision and hallucination with Wilson intervals, for the
         # rows whose cases carried ground truth (B126).
         "scored": bench.scored(rows),
-        "summary": state.bench_summary(conn),
+        "summary": summary,
         "cases": bench.cases(store),
         # What the measurements currently *decide*, which is the point of
         # having them: a table nobody reads back is folklore with a schema.
@@ -74,16 +75,20 @@ def read_bench(
                 "name": one.name,
                 "context_chars": one.context_chars,
                 "batch_size": one.batch_size,
+                "preamble": one.preamble,
             }
             for one in protocols.CATALOGUE
         ],
         "chosen": {
-            row["model"]: protocols.choose(
-                state.bench_summary(conn), row["model"]
-            ).name
-            for row in state.bench_summary(conn)
+            row["model"]: protocols.choose(summary, row["model"]).name
+            for row in summary
             if row.get("model")
         },
+        # The reader's actual ask (B126 §7): per model, the batch size,
+        # context budget, preamble, search provider, measured cost per
+        # accepted claim and hallucination rate with its interval — and
+        # whether there was even enough measured to say so.
+        "readout": protocols.readout(rows, summary),
     }
 
 

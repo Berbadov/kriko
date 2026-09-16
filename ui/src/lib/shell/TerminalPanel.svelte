@@ -34,9 +34,13 @@
      * - **It degrades instead of dying.** If SSE fails too, `poll()` reads the
      *   same bytes from `GET /state`. Chunkier, still a shell.
      *
-     * One session for the app's whole life, made on first open and never torn
-     * down — closing the panel only hides it (`hidden`), and the backend
-     * mirrors that: `termpty.SESSION` is one PTY for the process's life.
+     * One session for the app's whole life while the panel stays open — the
+     * hide-and-reopen a reader does to glance at another screen resumes the
+     * same shell rather than losing the transcript. Pressing **Close**, unlike
+     * hiding on Ctrl+` or navigating away, ends it: `POST /api/terminal/close`
+     * kills the pty so a shell a reader is done with does not keep running,
+     * and reopening the panel afterwards starts fresh, exactly like typing
+     * `exit` did before it.
      */
 
     /** How often the fallback re-reads the transcript when SSE is unavailable. */
@@ -65,7 +69,11 @@
     /** Keystrokes waiting on the in-flight POST, so a paste is one request. */
     let pending = "";
     let sending = false;
-    let restarting = false;
+    /** `$state`, not a plain `let`: `disabled={restarting}` on the Restart
+     *  button is the whole double-click guard, and a plain variable's writes
+     *  never reach that binding — the button stayed clickable through its own
+     *  in-flight request the entire time this file has existed. */
+    let restarting = $state(false);
 
     function handle(msg: { type?: string; data?: string; message?: string; offset?: number }) {
         if (msg.type === "data" && typeof msg.data === "string") {
@@ -296,6 +304,36 @@
         }
     });
 
+    let closing = $state(false);
+
+    /** The panel's own close button: unlike hiding on Ctrl+` or navigating
+     *  away, this ends the shell. `toggleTerminal()` runs unconditionally —
+     *  closable in every state, including a session that already exited or a
+     *  backend the fetch below cannot reach — because the reader pressed the
+     *  one button whose entire job is getting this off the screen, and a
+     *  network hiccup is not a reason to trap them behind an unresponsive
+     *  panel. */
+    function closePanel() {
+        if (!closing) {
+            closing = true;
+            stopped = true;
+            source?.close();
+            source = undefined;
+            if (timer) clearTimeout(timer);
+            void fetch("/api/terminal/close", { method: "POST" })
+                .then(() => handle({ type: "ended" }))
+                .catch(() => {
+                    // Best-effort: the panel closes either way, and a shell
+                    // this fetch failed to reach is caught the same as any
+                    // other dead session the next time the panel opens.
+                })
+                .finally(() => {
+                    closing = false;
+                });
+        }
+        toggleTerminal();
+    }
+
     function onKeydown(event: KeyboardEvent) {
         if ((event.metaKey || event.ctrlKey) && event.key === "`") {
             event.preventDefault();
@@ -316,7 +354,7 @@
                     Restart
                 </button>
             {/if}
-            <button type="button" class="close" onclick={toggleTerminal} aria-label="Close terminal">
+            <button type="button" class="close" onclick={closePanel} aria-label="Close terminal">
                 ×
             </button>
         </div>
@@ -334,21 +372,20 @@
         grid-area: term;
         z-index: 40;
         min-width: 0;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         background: var(--panel);
         border-inline-start: 1px solid var(--line);
     }
-    /* Narrow windows have no room for two columns, so there the panel does
-       cover the page — deliberately, and with the shadow that says it is on
-       top of something. */
+    /* Narrow windows move the panel to its own row instead of its own column
+       (see `.shell.with-terminal` in components.css) — never `position:
+       fixed`, so there is no width at which this can end up on top of `work`
+       rather than beside or below it. */
     @media (max-width: 60rem) {
         .terminal-panel {
-            position: fixed;
-            inset-block: 0;
-            inset-inline-end: 0;
-            width: min(30rem, 92vw);
-            box-shadow: var(--shadow-2);
+            border-inline-start: 0;
+            border-block-start: 1px solid var(--line);
         }
     }
     /* `hidden` alone does not hide this. The attribute's `display: none` comes

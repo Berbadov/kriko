@@ -39,6 +39,13 @@ body {
     color: var(--text);
     font: var(--t-base) / var(--lh-base) var(--font-sans);
     font-variant-numeric: tabular-nums;
+    /* Inherited, so every screen gets it without a per-component rule: a
+     * listing title, a raw URL or a long source domain has no spaces for the
+     * normal wrap algorithm to break on, and one of those in a card narrower
+     * than its own text is exactly how "nothing overflowing horizontally"
+     * gets broken one screen at a time. `.nav-label`'s own `overflow-wrap:
+     * anywhere` (components.css) predates this and stays consistent with it. */
+    overflow-wrap: anywhere;
 }
 
 h1,

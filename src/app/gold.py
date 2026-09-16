@@ -72,12 +72,24 @@ def load(conn, pack_id: str) -> list[dict]:
     cases = parsed.get("cases") if isinstance(parsed, dict) else parsed
     out = []
     for case in cases if isinstance(cases, list) else []:
-        if not isinstance(case, dict) or not case.get("subject_id"):
+        if not isinstance(case, dict):
+            continue
+        # `bulk` names a group (`subject_ids`); every other kind names one
+        # subject. A case satisfying neither is not a case a benchmark can run
+        # against anything, and is dropped the same way a malformed file is —
+        # loudly, in the coverage sense: it simply produces no measurement,
+        # never a crash.
+        subject_ids = [
+            str(one) for one in (case.get("subject_ids") or []) if str(one).strip()
+        ]
+        subject_id = str(case.get("subject_id") or (subject_ids[0] if subject_ids else ""))
+        if not subject_id and not subject_ids:
             continue
         out.append({
-            "id": str(case.get("id") or case["subject_id"]),
+            "id": str(case.get("id") or subject_id or subject_ids[0]),
             "pack_id": pack_id,
-            "subject_id": str(case["subject_id"]),
+            "subject_id": subject_id or (subject_ids[0] if subject_ids else ""),
+            "subject_ids": tuple(subject_ids or ([subject_id] if subject_id else ())),
             "kind": str(case.get("kind") or "specific"),
             "must_find": [one for one in (case.get("must_find") or [])
                           if isinstance(one, dict)],
@@ -200,6 +212,100 @@ def judge(case: dict, produced: list[dict]) -> dict:
             round(len(hallucinated) / produced_count, 3) if produced_count else None
         ),
     }
+
+
+def judge_bulk(case: dict, judged_by_subject: dict[str, dict]) -> dict:
+    """Score a `bulk` case: the same recall/hallucination question as
+    `judge`, plus the one thing a single-subject case cannot show — whether
+    quality *degrades with volume* (B126 §3).
+
+    `judged_by_subject` is `{subject_id: judge(case, produced_for_that_subject)}`
+    — every subject in the sweep judged against this case's *own*
+    `must_find`/`must_not_find`/`known_absent`, which is the right comparison
+    when a `bulk` case names siblings expected to share a known issue. A
+    subject that failed or was skipped is simply absent from this dict, and is
+    reported as `measured` rather than folded silently into the denominator.
+
+    **`degrades` is the signal this kind exists for.** It compares the first
+    half of the (seed-ordered) run against the second half: a plane whose
+    recall holds steady across twenty subjects and one whose recall collapses
+    after the fifth look identical on a single-case average, and only this
+    split tells them apart.
+    """
+    subject_ids = [one for one in (case.get("subject_ids") or ()) if one in judged_by_subject]
+    per_subject = [judged_by_subject[one] for one in subject_ids]
+    found = sum(len(one.get("found") or []) for one in per_subject)
+    wanted = found + sum(len(one.get("missed") or []) for one in per_subject)
+    hallucinated = sum(len(one.get("hallucinated") or []) for one in per_subject)
+    produced = (
+        found + hallucinated + sum(len(one.get("unlisted") or []) for one in per_subject)
+    )
+    recalls = [one["recall"] for one in per_subject if one.get("recall") is not None]
+    half = max(1, len(recalls) // 2)
+    first_half, second_half = recalls[:half], recalls[half:]
+
+    def _mean(values: list[float]) -> float | None:
+        return round(sum(values) / len(values), 3) if values else None
+
+    return {
+        "case": case.get("id", ""),
+        "kind": "bulk",
+        "measured": len(per_subject),
+        "requested": len(case.get("subject_ids") or ()),
+        "recall": round(found / wanted, 3) if wanted else None,
+        "hallucination_rate": round(hallucinated / produced, 3) if produced else None,
+        # `None` rather than a false "no degradation" whenever there are too
+        # few subjects to split meaningfully — one or two subjects cannot show
+        # a trend, and a mechanism that always printed a number would teach a
+        # reader to trust noise.
+        "recall_first_half": _mean(first_half) if len(recalls) >= 2 else None,
+        "recall_second_half": _mean(second_half) if len(recalls) >= 2 else None,
+        "degrades": (
+            _mean(first_half) is not None and _mean(second_half) is not None
+            and _mean(second_half) < _mean(first_half) - 0.15
+            if len(recalls) >= 2 else None
+        ),
+    }
+
+
+def judge_validation(case: dict, rechecked: list[dict]) -> dict:
+    """Score a `validation` case: drift, not correctness (B126 §3).
+
+    `rechecked` is one dict per stored claim — `{title, domain, verdict}` from
+    `app/factcheck.py`'s mechanical re-check. This asks two different
+    questions of it, both answerable with no LLM and no human:
+
+    * **Recall of `must_find`** — the claims the pack author expects this
+      subject to still carry, matched against what is *currently stored*
+      (not against the fresh fetch): a `must_find` entry that never made it
+      into the store at all is exactly the gap a validation run should catch.
+    * **Hallucination via `must_not_find`/`known_absent`** — a stored claim
+      matching one of those entries is not evidence rot, it is evidence the
+      original run should never have accepted, and it counts the same way
+      `judge`'s does.
+
+    `drift` — of the *matched* `must_find` claims, how many the fresh fetch
+    could no longer confirm (`missing`) — is reported separately from both:
+    a page being rewritten is not the plane's fault and must never be scored
+    as a fabrication.
+    """
+    stored = [{"title": one.get("title", ""), "domain": one.get("domain", ""),
+               "quote": ""} for one in rechecked]
+    base = judge(case, stored)
+    drifted = [
+        one.get("title", "")
+        for entry in (case.get("must_find") or [])
+        for one in rechecked
+        if matches(entry, one.get("title", ""), one.get("domain", ""))
+        and one.get("verdict") == "missing"
+    ]
+    base.update({
+        "kind": "validation",
+        "checked": len(rechecked),
+        "drifted": drifted,
+        "drift_rate": round(len(drifted) / len(base["found"]), 3) if base["found"] else None,
+    })
+    return base
 
 
 def wilson(hits: int, total: int, z: float = 1.96) -> tuple[float, float] | None:

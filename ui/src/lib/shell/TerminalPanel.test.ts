@@ -270,6 +270,41 @@ describe("TerminalPanel", () => {
         );
     });
 
+    it("disables Restart while its own request is in flight", async () => {
+        // `restarting` was a plain variable, not `$state` — its writes never
+        // reached the `disabled` binding, so a reader double-clicking Restart
+        // (rule: assume they always do) fired the request twice.
+        let resolveRestart: (() => void) | undefined;
+        vi.stubGlobal("fetch", async (url: string) => {
+            calls.push({ url, body: undefined });
+            if (String(url).includes("/api/terminal/state")) {
+                return { ok: true, status: 200, json: async () => stateBody } as Response;
+            }
+            if (String(url) === "/api/terminal/restart") {
+                await new Promise<void>((resolve) => {
+                    resolveRestart = resolve;
+                });
+            }
+            return { ok: true, status: 200, json: async () => ({ ok: true }) } as Response;
+        });
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        const restart = await screen.findByRole("button", { name: "Restart" });
+
+        await fireEvent.click(restart);
+        expect(restart).toBeDisabled();
+        // The double-click the reader always does: a second press while the
+        // first request is still in flight must not fire a second one.
+        await fireEvent.click(restart);
+        resolveRestart?.();
+        await waitFor(
+            () =>
+                expect(
+                    calls.filter((call) => call.url === "/api/terminal/restart").length,
+                ).toBe(1),
+        );
+    });
+
     it("treats a keystroke into a dead shell as asking for a live one", async () => {
         const xterm = await import("@xterm/xterm");
         let onData: ((data: string) => void) | undefined;
@@ -309,6 +344,49 @@ describe("TerminalPanel", () => {
         const panel = await openPanel();
         await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
         await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+    });
+
+    it("ends the session on close, not only hides it", async () => {
+        // Hiding on Ctrl+` resumes the same shell; the panel's own close
+        // button is the one action that should free it, via the endpoint
+        // B131 added for exactly this.
+        await openPanel();
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/close")).toBe(true),
+        );
+    });
+
+    it("closes even when the close request itself fails", async () => {
+        // A reader pressing the one button meant to make this go away must
+        // never be told "no" by a network hiccup — the panel hides regardless,
+        // and a shell this call failed to reach is caught the same way any
+        // other dead session is, next time the panel opens.
+        const panel = await openPanel();
+        vi.stubGlobal("fetch", async () => {
+            throw new Error("offline");
+        });
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+    });
+
+    it("is closable from a dead session too, and reopening shows the restart offer rather than a traceback", async () => {
+        const panel = await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        await screen.findByRole("button", { name: "Restart" });
+
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/close")).toBe(true),
+        );
+
+        toggleTerminal();
+        await waitFor(() => expect(panel).not.toHaveAttribute("hidden"));
+        // Still a clean, readable dead state — never a stack trace — with the
+        // one action that gets a reader out of it.
+        expect(screen.getByText("disconnected")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Restart" })).toBeInTheDocument();
     });
 
     it("actually disappears when closed, not just in the attribute", async () => {
