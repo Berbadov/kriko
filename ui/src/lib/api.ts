@@ -332,4 +332,7 @@ export const api = {
             headers: { "X-Filename": file.name },
             body: file,
         }),
+    bench: () => get<T.Bench>("/api/bench"),
+    startBench: (body: T.BenchRequest = {}) =>
+        postJson<{ job_id: string; kind: string }>("/api/bench", body),
 };

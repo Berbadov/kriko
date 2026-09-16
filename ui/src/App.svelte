@@ -2,6 +2,7 @@
     import EmptyState from "./lib/EmptyState.svelte";
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
+    import Lazy from "./lib/Lazy.svelte";
     import { initMode, mode } from "./lib/mode";
     import NextStep from "./lib/NextStep.svelte";
     import { initTheme } from "./lib/theme";
@@ -9,22 +10,10 @@
     import { hashWith, route } from "./lib/router";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import TerminalPanel from "./lib/shell/TerminalPanel.svelte";
     import { terminalOpen } from "./lib/shell/terminal";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import Check from "./routes/Check.svelte";
-    import Compare from "./routes/Compare.svelte";
-    import Extension from "./routes/Extension.svelte";
-    import Activity from "./routes/Activity.svelte";
-    import Agents from "./routes/Agents.svelte";
-    import Knowledge from "./routes/Knowledge.svelte";
-    import About from "./routes/About.svelte";
-    import Overview from "./routes/Overview.svelte";
-    import Packs from "./routes/Packs.svelte";
-    import Questions from "./routes/Questions.svelte";
     import Result from "./routes/Result.svelte";
-    import Settings from "./routes/Settings.svelte";
-    import Sites from "./routes/Sites.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -68,6 +57,11 @@
     // screen — a watcher living in one route could only ever hand off to
     // itself. See lib/focus.ts.
     $effect(() => watchFocus());
+
+    let terminalEverOpened = $state(false);
+    $effect(() => {
+        if ($terminalOpen) terminalEverOpened = true;
+    });
 
     /* Saying that the page changed, and putting focus where it changed.
      *
@@ -147,7 +141,9 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
-    <TerminalPanel />
+    {#if terminalEverOpened}
+        <Lazy loader={() => import("./lib/shell/TerminalPanel.svelte")} />
+    {/if}
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement
@@ -186,14 +182,17 @@
                     {:else if $route.name === "check"}
                         <Check mode={$mode} />
                     {:else if $route.name === "overview"}
-                        <Overview />
+                        <Lazy loader={() => import("./routes/Overview.svelte")} />
                     {:else if view.name === "knowledge"}
-                        <Knowledge lens={view.lens ?? $route.query.lens ?? "all"} />
+                        <Lazy
+                            loader={() => import("./routes/Knowledge.svelte")}
+                            props={{ lens: view.lens ?? $route.query.lens ?? "all" }}
+                        />
                     {:else if $route.name === "history"}
                         <h2>History</h2>
                         <History page />
                     {:else if $route.name === "compare"}
-                        <Compare />
+                        <Lazy loader={() => import("./routes/Compare.svelte")} />
                     {:else if $route.name === "questions"}
                         <!-- The id rides in the query rather than the path so
                              the rail's own entry (no id at all) is the same
@@ -207,23 +206,24 @@
                              `questions/<id>` is the same destination spelled
                              in the alphabet that handoff allows. -->
                         {#key $route.params[0] ?? $route.query.id ?? ""}
-                            <Questions
-                                lookupId={$route.params[0] ?? $route.query.id ?? ""}
+                            <Lazy
+                                loader={() => import("./routes/Questions.svelte")}
+                                props={{ lookupId: $route.params[0] ?? $route.query.id ?? "" }}
                             />
                         {/key}
                     {:else if $route.name === "extension"}
-                        <Extension />
+                        <Lazy loader={() => import("./routes/Extension.svelte")} />
                     {:else if $route.name === "packs"}
-                        <Packs />
+                        <Lazy loader={() => import("./routes/Packs.svelte")} />
                     {:else if $route.name === "sites"}
                         <!-- Which listing sites can be read here, and the one
                              button that turns "the extension does nothing on
                              this page" into a site Kriko knows. -->
-                        <Sites />
+                        <Lazy loader={() => import("./routes/Sites.svelte")} />
                     {:else if $route.name === "settings"}
-                        <Settings />
+                        <Lazy loader={() => import("./routes/Settings.svelte")} />
                     {:else if $route.name === "about"}
-                        <About />
+                        <Lazy loader={() => import("./routes/About.svelte")} />
                     {:else if view.name === "activity"}
                         <!-- Runs, the pipeline and what researchers sent, as
                              three lenses on one screen. `#/jobs`,
@@ -231,9 +231,14 @@
                              app's own responses and hints hand out, so they
                              resolve here rather than to "No such view" — same
                              contract as the Knowledge lenses above. -->
-                        <Activity lens={view.lens ?? $route.query.lens ?? "runs"} />
+                        <Lazy
+                            loader={() => import("./routes/Activity.svelte")}
+                            props={{ lens: view.lens ?? $route.query.lens ?? "runs" }}
+                        />
                     {:else if view.name === "agents"}
-                        <Agents />
+                        <Lazy loader={() => import("./routes/Agents.svelte")} />
+                    {:else if $route.name === "bench"}
+                        <Lazy loader={() => import("./routes/Bench.svelte")} />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->
