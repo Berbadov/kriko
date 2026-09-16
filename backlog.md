@@ -747,7 +747,7 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
-## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.6 + §2.9 closed, §2.10/§3.5 part-done, 7 open
+## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.6 + §2.9 + §3.2–§3.4 closed, §2.10/§3.5 part-done, 4 open
 
 A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
 `done.md`. What is left, in the reader's own numbering:
@@ -806,13 +806,15 @@ variants are distinguishable. The manual fallback when recognition misses.
 tokens. §1.1's `verdict` / `considered` / `next_step` fields and §1.4's
 activation states are what it renders.
 
-**§3.2/§3.3 — left panel and design system.** Complete the icon set
-(`NavIcon.svelte` renders nothing for an unknown route, so gaps are silent),
-live numbers, sparklines, one spacing and type scale, and "Start a new pack"
-sized like the primary action it is. Two or three directions to the reader
-first.
+**~~§3.2/§3.3 — left panel and design system.~~ MOSTLY DONE — see `done.md`.**
+Icon set complete, live numbers and a sparkline on three rows, and the primary
+action out of the list. What is left is the *one spacing and type scale* — the
+rail already uses the shared tokens, and the rewrite is better done against the
+extension rebuild (§3.1), where both surfaces move together.
 
-**§3.4 — new logo.** Red Bull / Arte / Brutalist brief. Directions first.
+**~~§3.4 — new logo.~~ DONE — see `done.md`.** Slab K, accent upper arm, drawn
+on the grid the icon renderer already read. The extension's four PNGs and the
+lockup are now generated from it rather than maintained beside it.
 
 **§3.5 — documentation rewrite.** House style as rules, ruthless cuts, and
 text-format diagrams — the pack lifecycle, page-to-pack matching, the adapter

@@ -14,11 +14,14 @@ longest half-life here: nobody files a bug about an icon, they just stop
 recognising the thing.
 """
 
+import json
 import struct
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "packaging"))
+
+import pytest  # noqa: E402
 
 import render_icon  # noqa: E402
 
@@ -46,22 +49,63 @@ def test_the_frontend_serves_the_same_mark():
 
 
 def test_the_app_and_the_extension_show_the_same_letter():
-    """The ratchet. One mark, two renderings, checked as the same letter.
+    """The ratchet, and what it guards changed in 0.10.0.
 
-    Byte equality is impossible and would be the wrong test: the extension's
-    icon is a rasterised glyph with an antialiased fringe, and the mark is
-    hand-placed rects on a 16x16 grid. So both are reduced to one *role* per
-    cell — ground, letter, joint — which is a claim about the shape rather than
-    about anybody's hex values.
+    It used to compare two *drawings*: a rasterised glyph somebody made for
+    the toolbar, against hand-placed rects on a 16x16 grid. Both were reduced
+    to one *role* per cell — ground, letter, joint — because byte equality
+    across an antialiased fringe is impossible and would have been the wrong
+    question anyway. That caught them diverging.
 
-    It fails in either direction, which is what makes it worth having: restyle
-    the extension's icon and the app's mark is now wrong; redraw the mark and
-    the extension's is. Neither is a change somebody should be able to land
-    without noticing the other half.
+    The extension's icons are now rendered from the same grid
+    (`render_icon.EXTENSION_ICONS`), so they cannot diverge — there is one
+    drawing. What this catches instead is somebody editing the mark and
+    committing it without re-running the render, which is the same failure
+    arriving through the other door, and the only one still open.
+
+    The role reduction stays rather than a byte comparison, because it is the
+    assertion worth making out loud: whatever the renderer does, the thing in
+    the toolbar is the same *letter* as the thing in the taskbar.
     """
     assert render_icon.roles_from_svg(
         render_icon.SOURCE.read_text(encoding="utf-8")
     ) == render_icon.roles_from_png(render_icon.EXTENSION_ICON.read_bytes(), 16)
+
+
+@pytest.mark.parametrize("size", sorted(render_icon.EXTENSION_ICONS))
+def test_every_size_the_manifest_ships_is_what_the_grid_renders(size: int):
+    """All four, byte for byte — the 32px one is not a special case.
+
+    Chrome picks a size by display density and by where it is drawing, so a
+    reader on a high-DPI machine may never see the one size a spot check
+    happened to cover.
+    """
+    _, pixels = render_icon.grid(
+        render_icon.SOURCE.read_text(encoding="utf-8")
+    )
+    icon = render_icon.EXTENSION_DIR / f"icon-{size}.png"
+    assert icon.read_bytes() == render_icon.png(
+        pixels, render_icon.EXTENSION_ICONS[size]
+    )
+
+
+def test_the_manifest_asks_for_no_size_the_render_does_not_make():
+    """The list of sizes lives in two files and they have to agree.
+
+    `manifest.json` names the icons Chrome loads; `EXTENSION_ICONS` names the
+    ones the render writes. A size in the manifest and not in the render is a
+    broken image in a toolbar, which is the kind of thing nobody files.
+    """
+    manifest = json.loads(
+        (Path(__file__).resolve().parents[3] / "extension/manifest.json")
+        .read_text(encoding="utf-8")
+    )
+    asked = {int(one) for one in manifest["icons"]}
+    asked |= {int(one) for one in manifest["action"]["default_icon"]}
+    assert asked <= set(render_icon.EXTENSION_ICONS), (
+        f"the manifest asks for {sorted(asked - set(render_icon.EXTENSION_ICONS))} "
+        "and render_icon.py does not render it"
+    )
 
 
 def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
@@ -102,3 +146,36 @@ def test_the_scale_keeps_the_grid_whole():
     side, _ = render_icon.grid(render_icon.SOURCE.read_text(encoding="utf-8"))
     assert render_icon.SCALE * side == 1024
     assert 1024 % side == 0
+
+
+def test_every_brand_asset_actually_parses():
+    """The one thing a test that greps for strings can never tell you.
+
+    All of the above read the file for colours, sizes and shapes, and every one
+    of them passed on a mark that browsers refused to draw: the comment
+    explaining which theme tokens it uses wrote them as `--n-2`, and two
+    hyphens cannot appear inside an XML comment. The SVG was invalid, the rail
+    showed a broken-image glyph, the icon renderer — which reads the file with
+    a regular expression rather than a parser — saw nothing wrong, and the
+    whole suite was green.
+
+    So: parse them. It is the same lesson as `test_the_shell_is_valid_rust` and
+    it arrived the same way, through a build somebody looked at.
+    """
+    import xml.etree.ElementTree as ElementTree
+
+    root = Path(__file__).resolve().parents[3]
+    assets = sorted(
+        {render_icon.SOURCE, render_icon.WEB_TARGET}
+        | set((root / "extension" / "assets").glob("*.svg"))
+        | set((root / "ui" / "public").glob("*.svg"))
+    )
+    assert assets, "no brand SVGs found; the glob is wrong"
+    for asset in assets:
+        try:
+            ElementTree.parse(asset)
+        except ElementTree.ParseError as why:
+            raise AssertionError(
+                f"{asset.relative_to(root)} is not well-formed XML, so no "
+                f"browser will draw it: {why}"
+            ) from why

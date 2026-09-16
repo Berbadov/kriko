@@ -64,6 +64,11 @@
         settings: ["M4 8h9", "M17 8h3", "M4 16h4", "M12 16h8", "M15 8a2 2 0 1 0-4 0a2 2 0 1 0 4 0", "M10 16a2 2 0 1 0-4 0a2 2 0 1 0 4 0"],
         // an i in a ring
         about: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M12 11v6", "M12 8v.01"],
+        // a globe with a horizon: the sites out there this install can read
+        sites: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M3.5 10h17", "M3.5 14.5h17", "M12 3c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9", "M12 3C9.5 5.4 8.2 8.4 8.2 12s1.3 6.6 3.8 9"],
+        // a ruler with a measured span under it: the benchmark measures, it
+        // does not run — a stopwatch would promise the wrong thing
+        bench: ["M3 6h18v5H3z", "M7 6v2.5", "M11 6v3.5", "M15 6v2.5", "M19 6v3.5", "M4 15.5h16", "M4 14v3", "M20 14v3"],
         // a lifebuoy-ish first-run marker
         welcome: ["M12 3 14.4 9.1 21 9.6l-5 4.2 1.6 6.4L12 16.8 6.4 20.2 8 13.8l-5-4.2 6.6-.5z"],
     };
