@@ -6,6 +6,112 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the overhaul: seven planes, and the silences between them (0.10.0)
+
+The reader's brief was "the bugs are everywhere, features aren't working well;
+agent ops do something but web extension cannot match them. everything seems
+fucked." Seven planes were audited at once, each owning a disjoint slice of the
+tree. What follows is what was actually wrong, because almost none of it was a
+crash: this was a release held together by things that failed without saying so.
+
+**An agent-authored pack could never be read from a listing page (the reader's
+first complaint, and the worst defect found).** The draft contract accepted a
+site adapter only as `.yaml`; the pack builder read `adapters/*.json` and
+nothing else. Two constants, in two files, disagreeing without a word. So the
+one file that teaches the extension how to read a site was the one file an
+agent could write, watch be written, build into a pack, and install -- with no
+`pack_assets` row, no `/api/adapters` entry, no content script, and therefore
+no page anywhere from which the product it had just researched could be found.
+`packs/cars` worked because its adapter is hand-written JSON. Every agent-
+authored pack was dead on arrival. The suffix is now the one the builder reads,
+and the test builds and installs a real pack rather than comparing the two
+constants, because a contract and its reader agreeing about a string proves
+much less than one file making it all the way through.
+
+**Windows could not start the MCP server, for two independent reasons.** The
+advertised config carried an empty `env`, on the assumption that every harness
+overlays it onto an inherited one; Windows needs `SystemRoot` to load a process
+at all, and a frozen one-file build needs `TEMP` to unpack itself. Lose either
+and the server dies before parsing an argument, silently, which a stdio client
+reports as "cannot connect". Separately, verify stopped at `initialize`, so a
+server with zero registered tools still answered ok. It now completes the
+handshake and asks for the tool list.
+
+**Cancel was decorative.** Three of the longest-running handlers had no
+checkpoint at all, and nothing could reach the subprocess. The first fix put
+the tree-kill after the drain-thread join and cancel still waited out the full
+timeout -- closing a pipe takes the same lock the blocked reader holds, so the
+teardown was waiting on the very process it was abandoning. Kill first, then
+join. That ordering was latent in the timeout path too, and only became
+visible when a synchronous exception needed the main thread to do the killing.
+
+**`claude.cmd` could never have been spawned.** `CreateProcess` needs a PE
+image, and npm's global install produces exactly that shim -- so the code that
+carefully *finds* it on Windows handed it to a call that cannot start it.
+
+**Authoring passed quietly.** A pack with no line-up reported `0 of 0` covered,
+which reads as complete: not "the agent skipped work" but "nothing could
+notice". A subject the line-up never named is now quarantined with its reason
+recorded -- neither shipped nor silently dropped, which is how a watch got into
+a headphones pack. The payload reader accepts an object followed by prose, and
+closes a reply cut off by a token ceiling at its last legal boundary.
+
+**"Independent" had two definitions.** Ranking counted evidence rows; the
+health view counted URLs. Two quotes off one page earned a claim the
+corroboration bonus of two sources in the one place a reader feels it, while
+the view that would have exposed the double-count said one. 22 golden cases
+moved, and the drift is the point: on a high-mileage Golf 7 TDI a rear-seal
+water leak lost the last slot to an EGR valve gear breakage -- config-specific,
+high-consequence, predictable from the ad, which is the product principle's own
+bar, reached by fixing a counting bug rather than tuning taste. A source with
+no URL used to count as no source at all.
+
+**Nothing had ever read `refuted_by`.** The verdict model has been naming
+refuted sources by index all along, exactly as its prompt asked; every source
+shipped as supporting, so the sharpest signal in the health view had zero live
+hits.
+
+**The domain-freedom gate had been walked past deliberately.** It reads one
+string literal at a time, so a banned word spelled in halves is invisible to
+it -- and a storage column here was built as two fragments, with a comment
+explaining why. The gate folds concatenations, f-strings and joins now, and has
+a test that assembles a banned word out of innocent halves. The column holds an
+LLM's name, so it is called that, and an older ledger is carried across on
+connect by finding the retired column as the one that is not accounted for.
+
+**Closing the terminal only hid it.** The shell kept running, invisibly, for as
+long as the app did, and the panel's own comment said that was deliberate. At
+narrow widths the panel was a fixed overlay by design, which is the one thing
+it may not be. Restart was disabled by a plain variable rather than reactive
+state, so the button never greyed out.
+
+**Nothing in the UI called the two endpoints that answer "is this quote still
+in the page it came from".** Every claim card could list its sources and never
+show what was kept of them. `not_kept` now has its own word and its own tone: a
+page nobody kept is not a page that checked out.
+
+**The benchmark declared three kinds of case and ran one.** Bulk and validation
+are real now, the instruction slot and the search provider are swept axes
+rather than constants, and the chooser reads Wilson intervals instead of a
+fixed margin -- two runs may answer "not yet measured" rather than pick. The
+sweep's answer is the table the reader asked for, per LLM, and the chosen
+protocol now reaches a real run. Two defects surfaced while wiring it: the
+sandbox was copied without its write-ahead log, so a case could report a
+subject missing while the reader looked at it; and a finding naming no source
+defaulted to the first document in the batch -- harmless at batch size one,
+a grounding bypass above it, which is exactly the axis now being swept.
+
+**And the gate could not see a version lie.** `--show` compared the four files
+and printed the installed distribution without ever failing on it, which is how
+a 0.8.7 checkout reported itself as 0.7.11 for days. It fails on that now, and
+the check runs on every push rather than at build time on the Windows host.
+
+B40, B46, B47, B49, B50, B51, B114 (landing page), B116, B118, B126 §4-6, B131
+and B132 closed. B45 consciously left: `published_at` is honestly always empty
+and nothing ranks on it, and deriving it needs page-metadata extraction at
+fetch time -- scope, not a blind change.
+
+
 ### 2026-09-15 — the skill on disk follows the code, and the agent choice is where agents are (B135)
 
 Two corrections, both of which the reader was right about from where they were

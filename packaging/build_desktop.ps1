@@ -146,6 +146,28 @@ try {
     node --version
     rustc --version
 
+    # The five committed version strings, before anything else: NSIS names the
+    # bundle from tauri.conf.json (by way of Cargo.toml), and nothing above
+    # checks that file against pyproject.toml at all -- the -Version guard
+    # below only ever compares the *tag* to pyproject, and the installed-
+    # distribution check further down only ever compares the *install* to
+    # pyproject. A tree where pyproject was bumped by hand and
+    # tauri.conf.json was not would sail through both of those and come out
+    # the other end as an installer whose name is one version and whose
+    # `cargo tauri build` compiled another -- the exact failure `tools/bump.py`
+    # exists to make impossible to leave behind, and this is the one place
+    # that failure would otherwise go unnoticed until a reader reports it.
+    # `tools/bump.py --show` is the same check `test_the_four_version_strings_agree`
+    # makes, and it is cheap enough to run before rustc has compiled anything.
+    & $Python tools/bump.py --show
+    if ($LASTEXITCODE -ne 0) {
+        throw ("the version strings in pyproject.toml, tauri.conf.json, Cargo.toml," +
+               " package.json and Cargo.lock disagree (see the table above)." +
+               " `python tools/bump.py <version>` sets all of them at once --" +
+               " an installer built while they disagree is an installer whose" +
+               " name is not its contents.")
+    }
+
     # -Version must be the version this checkout actually is.
     #
     # The stamp only reaches tauri.conf.json, which is what names the bundle.

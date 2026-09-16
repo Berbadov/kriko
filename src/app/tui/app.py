@@ -77,6 +77,7 @@ class Tui:
             "planes": self.engine.planes,
             "agenda": self.engine.agenda,
             "jobs": self.engine.jobs,
+            "ops": self.engine.operations,
         }
         # The current tab always, the others only when they are cheap to miss —
         # `/api/agenda` does real work, and re-running it every second while
@@ -133,7 +134,7 @@ class Tui:
         if key in ("q", "ctrl-c"):
             state.running = False
             return
-        if key in ("1", "2", "3"):
+        if key in ("1", "2", "3", "4"):
             state.tab = screen.TABS[int(key) - 1]
             self.refresh_now.set()
             return

@@ -516,3 +516,26 @@ def test_the_freeze_refuses_an_install_that_is_a_different_checkout():
     script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
     assert "app_version" in script
     assert "the install reports" in script
+
+
+def test_the_script_refuses_to_build_from_a_tree_whose_own_files_disagree():
+    """The gap the two checks above leave open.
+
+    `-Version` vs pyproject, and the installed distribution vs pyproject, are
+    both checked — but neither ever looks at `tauri.conf.json`, which is the
+    file NSIS actually names the bundle from. A tree where `pyproject.toml`
+    was bumped by hand and `tauri.conf.json` was not would pass both existing
+    checks and come out the other end as an installer whose filename is one
+    version and whose compiled code is another — the same failure
+    `test_the_stamp_has_to_be_the_version_the_tree_actually_is` documents,
+    one file over. `tools/bump.py --show` already makes exactly this
+    comparison and exits non-zero on a disagreement (it is
+    `test_the_four_version_strings_agree` as a command); the build script has
+    to call it before doing any of the expensive work below.
+    """
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "bump.py" in script and "--show" in script
+    assert "tauri.conf.json" in script
+    # Before the Python side is even installed, not after — a mismatch here
+    # is cheap to catch before rustc or npm have done any work.
+    assert script.index("bump.py") < script.index("Install the Python side")
