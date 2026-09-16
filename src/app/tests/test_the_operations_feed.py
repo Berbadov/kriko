@@ -238,3 +238,21 @@ def test_a_job_is_an_operation_too(settings):
     assert rows[0]["name"] == "research"
     assert rows[0]["door"] == "job"
     assert rows[0]["kind"] == "research"
+
+
+def test_what_a_run_spent_reaches_the_row_and_nothing_else_becomes_a_zero():
+    """A free run and an unpriced run are different facts.
+
+    The column exists so the feed can answer "what did that cost"; it earns
+    nothing if a handler that never counted is recorded as having counted
+    nought, because that is the one answer the reader cannot tell apart from
+    a genuinely free plane.
+    """
+    from app import operations
+
+    assert operations.metered({"spent_usd": 0.42, "tokens": 1200}) == (0.42, 1200)
+    assert operations.metered({"spent_usd": None, "tokens": None}) == (None, None)
+    assert operations.metered({}) == (None, None)
+    assert operations.metered(None) == (None, None)
+    assert operations.metered({"spent_usd": "nonsense"}) == (None, None)
+    assert operations.metered({"spent_usd": 0.0, "tokens": 0}) == (0.0, 0)

@@ -37,6 +37,32 @@ def store(settings):
     return conn
 
 
+# ── the WAL bug: a copy that actually has the data in it ─────────────────────
+
+def test_the_sandbox_copy_sees_data_still_sitting_in_the_wal(settings, store):
+    """`kriko.store.db.connect` puts every store in WAL mode, so a write that
+    was just committed lives in `<name>-wal` until something checkpoints it.
+    A plain `shutil.copy` of the main file alone would silently drop it — a
+    subject that plainly exists in the real store would not exist in the
+    benchmark's copy, and `plan_task` would refuse to research it."""
+    import tempfile
+    from pathlib import Path
+
+    from app import bench as bench_mod
+
+    with tempfile.TemporaryDirectory() as scratch:
+        dest = Path(scratch) / "copy.sqlite"
+        bench_mod._copy_store(settings.store_path, dest)
+        copy_conn = connect(dest)
+        try:
+            count = copy_conn.execute(
+                "SELECT COUNT(*) FROM subjects WHERE subject_id = 'sa'"
+            ).fetchone()[0]
+        finally:
+            copy_conn.close()
+    assert count == 1
+
+
 # ── the dispatcher ───────────────────────────────────────────────────────────
 
 def test_a_specific_case_still_goes_through_the_ordinary_path(settings, store, monkeypatch):
@@ -55,6 +81,26 @@ def test_a_specific_case_still_goes_through_the_ordinary_path(settings, store, m
     )
     assert row["kind"] == "specific"
     assert len(calls) == 1
+
+
+def test_the_search_axis_reaches_the_research_call(settings, store, monkeypatch):
+    """B126 §8: `search` is a real sweep axis at `bench.run_case`'s boundary,
+    even though `tasks.bench`'s job loop does not sweep it yet (see the design
+    doc's "Known gaps" section) — this is the part of the wiring this plane's
+    files own."""
+    from app.web import tasks
+
+    calls = []
+    monkeypatch.setattr(
+        tasks, "research",
+        lambda measured_settings, params, progress: calls.append(params) or
+        {"documents": 0, "accepted": [], "rejected": [], "llm": "x"},
+    )
+    bench.run_case(
+        settings, {"subject_id": "sa", "pack_id": "probe", "kind": "specific"},
+        plane="api", search="tavily",
+    )
+    assert calls[0]["search"] == "tavily"
 
 
 def test_an_unknown_kind_falls_back_to_specific_rather_than_crashing(settings, store, monkeypatch):
@@ -99,7 +145,9 @@ def test_bulk_runs_every_named_subject_and_aggregates(settings, store, monkeypat
     assert row["refused"] == 3
     assert row["documents"] == 6
     assert row["usd"] == pytest.approx(0.03)
-    assert row["claims_per_minute"] is not None
+    # A zero-denominator (an unmeasurably fast fake run) must never fake a
+    # rate rather than admit it has none.
+    assert row["claims_per_minute"] is None or row["claims_per_minute"] > 0
     assert row["missing_subjects"] == []
 
 
@@ -169,9 +217,13 @@ def test_bulk_writes_nothing_to_the_real_store(settings, store, monkeypatch):
 def stored_claim(store):
     store.execute(
         "INSERT INTO claims (claim_id, pack_id, subject_id, kind, domain,"
-        " severity, author_confidence, created_at, title)"
+        " severity, author_confidence, created_at)"
         " VALUES ('c1', 'probe', 'sa', 'known_issue', 'transmission', 'high',"
-        " 0.6, datetime('now'), 'DSG mechatronics unit fails')"
+        " 0.6, datetime('now'))"
+    )
+    store.execute(
+        "INSERT INTO claim_text (claim_id, pack_id, lang, title)"
+        " VALUES ('c1', 'probe', 'en', 'DSG mechatronics unit fails')"
     )
     store.execute(
         "INSERT INTO sources (source_id, pack_id, url)"

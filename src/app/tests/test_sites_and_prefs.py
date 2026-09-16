@@ -264,6 +264,41 @@ def test_a_chosen_provider_with_no_key_falls_back_rather_than_failing(
     assert providers._searcher(settings.app_state_path)[1] == "exa"
 
 
+def test_an_uninstalled_preferred_harness_falls_back_rather_than_crashing(monkeypatch):
+    """The same rule as the search provider's, one plane over: an unknown or
+    uninstalled choice must fall back visibly, never crash a run outright when
+    a different, perfectly usable CLI is right there."""
+    from app.providers import harness
+
+    class _Fake:
+        id = "opencode"
+        executable = "opencode"
+        label = "opencode"
+
+    monkeypatch.setattr(harness, "available", lambda: [_Fake()])
+    from app import providers
+
+    researcher = providers.harness_researcher(preferred="claude-code")
+    assert researcher.harness.id == "opencode"
+    assert "claude-code" in researcher.note
+    assert "opencode" in researcher.note
+
+
+def test_a_preference_that_is_the_only_one_installed_gets_no_fallback_note(monkeypatch):
+    from app.providers import harness
+
+    class _Fake:
+        id = "claude-code"
+        executable = "claude"
+        label = "Claude Code"
+
+    monkeypatch.setattr(harness, "available", lambda: [_Fake()])
+    from app import providers
+
+    researcher = providers.harness_researcher(preferred="claude-code")
+    assert researcher.note == ""
+
+
 def test_no_search_key_at_all_says_so(settings, monkeypatch):
     from app import providers
 

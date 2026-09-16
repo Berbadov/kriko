@@ -173,6 +173,21 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
             finally:
                 conn.close()
     found = harness.chosen(preferred)
+    note = ""
+    if found is None and preferred:
+        # The reader's preference names a CLI that is not installed here —
+        # `harness.chosen(preferred)` says so by returning `None` rather than
+        # silently substituting anything, which is correct for *it*. But a
+        # run failing outright when a different, perfectly usable CLI is
+        # sitting right there is the crash this function exists to avoid: an
+        # unknown or uninstalled choice must fall back visibly, not refuse.
+        fallback = harness.chosen("")
+        if fallback is not None:
+            found = fallback
+            note = (
+                f"preferred harness {preferred!r} is not installed here — "
+                f"used {fallback.id} instead"
+            )
     if found is None:
         names = ", ".join(h.executable for h in harness.KNOWN)
         raise harness.NoHarness(
@@ -181,4 +196,10 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS
     )
+    if note:
+        # Duck-typed, read by `app/web/tasks.py` when the run gathers nothing
+        # to say *why* — the same slot `_empty_run_note` already reads. Not
+        # every run reaches that message (one that gathers real documents
+        # never mentions it), which is a known gap: see the final report.
+        researcher.note = note
     return researcher

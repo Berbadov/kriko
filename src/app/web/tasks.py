@@ -123,6 +123,8 @@ def _researcher(params: dict):
         price_per_call=price,
         app_state_path=params.get("app_state_path"),
         spend=protocols.BY_NAME.get(named) if named else None,
+        model=str(params.get("model") or ""),
+        search=str(params.get("search") or ""),
     )
 
 
@@ -1569,17 +1571,31 @@ def bench(settings, params: dict, progress: Progress) -> dict:
     # and two protocols cannot be compared from one observation each.
     reps = max(1, min(int(params.get("reps") or 1), 10))
 
+    # Which search provider answered. Swept only when the reader names more
+    # than one, for the same reason the protocols are: measuring an axis
+    # nobody asked about multiplies the bill to answer a question nobody
+    # asked. Empty string means whichever one this installation would pick.
+    searches_asked = [
+        one.strip()
+        for one in str(params.get("searches") or params.get("search") or "").split(",")
+        if one.strip()
+    ] or [""]
+
     batch_id = secrets.token_hex(8)
     app_conn = state.connect(settings.app_state_path)
     rows = []
     try:
-        total = len(found) * len(chosen) * len(protocols_asked) * reps
+        total = (
+            len(found) * len(chosen) * len(protocols_asked)
+            * len(searches_asked) * reps
+        )
         done = 0
         for case in found:
             for plane in chosen:
-                for protocol, rep in [
-                    (one, index)
+                for protocol, search, rep in [
+                    (one, engine, index)
                     for one in protocols_asked
+                    for engine in searches_asked
                     for index in range(1, reps + 1)
                 ]:
                     progress.check()
@@ -1597,6 +1613,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                             params.get("budget_usd") or bench_mod.DEFAULT_BUDGET_USD
                         ),
                         batch_id=batch_id,
+                        search=search,
                     )
                     row["rep"] = rep
                     state.record_bench(app_conn, row)
@@ -1605,7 +1622,8 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                     # One line per measurement, so the reader watching the job
                     # sees the comparison build rather than a number at the end.
                     progress.log(
-                        f"{plane}{' · ' + protocol if protocol else ''} · "
+                        f"{plane}{' · ' + protocol if protocol else ''}"
+                        f"{' · ' + search if search else ''} · "
                         f"{row['subject']}: "
                         + (
                             f"failed — {row['error']}"

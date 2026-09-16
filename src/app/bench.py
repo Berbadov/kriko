@@ -44,6 +44,29 @@ DEFAULT_CASES = 3
 DEFAULT_BUDGET_USD = 0.20
 
 
+def _copy_store(source_path, dest_path) -> None:
+    """A throwaway copy that actually has the data in it.
+
+    `kriko.store.db.connect` puts every store in WAL mode (see its own
+    module), which means a normal write sits in `<name>-wal` until something
+    checkpoints it — a plain `shutil.copy` of the main file alone silently
+    drops everything not yet checkpointed. For a fresh subject or a claim
+    accepted seconds before the button was pressed, that is *most* writes:
+    the copy would open, `plan_task` would raise "no subject" for a subject
+    that plainly exists, or worse, a `validation` case would silently see zero
+    stored claims and report "nothing to validate" for a subject with plenty.
+    Checkpointing the source before the copy is the fix; `TRUNCATE` also
+    leaves the source's own WAL file empty, which is a courtesy to the next
+    reader of `settings.store_path`, not a requirement of this function.
+    """
+    checkpoint = connect(source_path)
+    try:
+        checkpoint.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    finally:
+        checkpoint.close()
+    shutil.copy(source_path, dest_path)
+
+
 def gold_cases(conn, *, pack_id: str = "", limit: int = DEFAULT_CASES) -> list[dict]:
     """The pack-authored ground-truth cases, when there are any (B126).
 
@@ -197,7 +220,7 @@ def _run_specific(
     row.update(columns)
     with tempfile.TemporaryDirectory(prefix="kriko-bench-") as scratch:
         sandbox = Path(scratch)
-        shutil.copy(settings.store_path, sandbox / "knowledge.sqlite")
+        _copy_store(settings.store_path, sandbox / "knowledge.sqlite")
         measured = replace(
             settings,
             store_path=sandbox / "knowledge.sqlite",
@@ -389,15 +412,21 @@ def _run_validation(
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="kriko-bench-") as scratch:
         sandbox = Path(scratch) / "knowledge.sqlite"
-        shutil.copy(settings.store_path, sandbox)
+        _copy_store(settings.store_path, sandbox)
         conn = connect(sandbox)
         try:
             claims = conn.execute(
-                "SELECT c.claim_id, c.title, c.domain, e.quote, s.url"
+                # `title` is language-carrying (`claim_text`), not a column
+                # on `claims` itself. `GROUP BY` picks one language per
+                # (claim, quote) pair deterministically rather than
+                # duplicating the row once per translation.
+                "SELECT c.claim_id, ct.title, c.domain, e.quote, s.url"
                 " FROM claims c"
+                " JOIN claim_text ct ON ct.claim_id = c.claim_id AND ct.pack_id = c.pack_id"
                 " JOIN evidence e ON e.claim_id = c.claim_id AND e.pack_id = c.pack_id"
                 " JOIN sources s ON s.source_id = e.source_id AND s.pack_id = c.pack_id"
-                " WHERE c.subject_id = ? AND c.pack_id = ?",
+                " WHERE c.subject_id = ? AND c.pack_id = ?"
+                " GROUP BY c.claim_id, e.evidence_id",
                 (case["subject_id"], case.get("pack_id") or ""),
             ).fetchall()
         except Exception as exc:  # noqa: BLE001 — a bad copy is a measurement too
