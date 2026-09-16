@@ -6,6 +6,998 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the three that were parked, and a decision reversed (B136, B137, B138)
+
+The overhaul's own report left three things open as "real scope, not a blind
+change". Two of them turned out to be cheaper than that once measured rather
+than estimated, which is its own lesson about parking work on an estimate.
+
+**`cargo` was available all along.** B137 had been filed as needing a Windows
+host, and `cargo check` never reaches the link phase — so the gate now compiles
+the shell natively *and* cross-compiled for Windows, sub-second warm. Proven by
+injecting a type error (caught, `error[E0308]`) and a `Cargo.toml` feature the
+crate does not have (refused before anything compiled) — the exact class the
+per-file `rustc` gate could never see. It skips with a printed remedy where a
+toolchain is missing, because a gate that cannot run is worse than none.
+
+**trafilatura was already a dependency.** B136 had been filed as needing new
+page-metadata extraction; the library that does it was installed, and the
+research plane an agent drives had the date available for about one function
+call before throwing it away with the rest of the markup. Both doors now read
+it, bounded, and neither substitutes the fetch time — which is the whole reason
+the column is worth having.
+
+**The linter's first run paid for itself.** `.lstrip("www.")` strips a set of
+characters, not a prefix, so `webflow.io` became `ebflow.io` in the domain
+comparison that decides whether two sources are independent — a corroboration
+bug, found by a tool, in the same week another corroboration bug was found by
+hand. Also a stale function reference that would have been a runtime
+`ImportError`, invisible to pytest because that call is monkeypatched in its
+own test.
+
+**And one decision was reversed rather than overridden.** Splitting every route
+out of the bundle failed `test_bundle_budget.py`, which is not a size test so
+much as a gate that forces an argument when a second chunk appears. The
+argument, having had it: the reasoning against splitting holds for routes —
+local disk, no network, every reader has every route — and fails for exactly
+one leaf, xterm at 335 KB behind a keystroke most readers never press. Routes
+went back to eager, the terminal stayed deferred, first paint went 574 KB →
+253 KB, and the file now budgets the first paint separately, because otherwise
+a deferred chunk and a chunk nobody wrote weigh the same.
+
+Also found: the benchmark screen would have rendered empty against a live
+server, because `/api/bench` said `model` and `ui/` is forbidden that word by
+the vocabulary gate. Same shape as the adapter suffix — a producer and its
+reader disagreeing across a boundary — so the serving layer renames and a test
+pins it.
+
+
+### 2026-09-16 — the overhaul: seven planes, and the silences between them (0.10.0)
+
+The reader's brief was "the bugs are everywhere, features aren't working well;
+agent ops do something but web extension cannot match them. everything seems
+fucked." Seven planes were audited at once, each owning a disjoint slice of the
+tree. What follows is what was actually wrong, because almost none of it was a
+crash: this was a release held together by things that failed without saying so.
+
+**An agent-authored pack could never be read from a listing page (the reader's
+first complaint, and the worst defect found).** The draft contract accepted a
+site adapter only as `.yaml`; the pack builder read `adapters/*.json` and
+nothing else. Two constants, in two files, disagreeing without a word. So the
+one file that teaches the extension how to read a site was the one file an
+agent could write, watch be written, build into a pack, and install -- with no
+`pack_assets` row, no `/api/adapters` entry, no content script, and therefore
+no page anywhere from which the product it had just researched could be found.
+`packs/cars` worked because its adapter is hand-written JSON. Every agent-
+authored pack was dead on arrival. The suffix is now the one the builder reads,
+and the test builds and installs a real pack rather than comparing the two
+constants, because a contract and its reader agreeing about a string proves
+much less than one file making it all the way through.
+
+**Windows could not start the MCP server, for two independent reasons.** The
+advertised config carried an empty `env`, on the assumption that every harness
+overlays it onto an inherited one; Windows needs `SystemRoot` to load a process
+at all, and a frozen one-file build needs `TEMP` to unpack itself. Lose either
+and the server dies before parsing an argument, silently, which a stdio client
+reports as "cannot connect". Separately, verify stopped at `initialize`, so a
+server with zero registered tools still answered ok. It now completes the
+handshake and asks for the tool list.
+
+**Cancel was decorative.** Three of the longest-running handlers had no
+checkpoint at all, and nothing could reach the subprocess. The first fix put
+the tree-kill after the drain-thread join and cancel still waited out the full
+timeout -- closing a pipe takes the same lock the blocked reader holds, so the
+teardown was waiting on the very process it was abandoning. Kill first, then
+join. That ordering was latent in the timeout path too, and only became
+visible when a synchronous exception needed the main thread to do the killing.
+
+**`claude.cmd` could never have been spawned.** `CreateProcess` needs a PE
+image, and npm's global install produces exactly that shim -- so the code that
+carefully *finds* it on Windows handed it to a call that cannot start it.
+
+**Authoring passed quietly.** A pack with no line-up reported `0 of 0` covered,
+which reads as complete: not "the agent skipped work" but "nothing could
+notice". A subject the line-up never named is now quarantined with its reason
+recorded -- neither shipped nor silently dropped, which is how a watch got into
+a headphones pack. The payload reader accepts an object followed by prose, and
+closes a reply cut off by a token ceiling at its last legal boundary.
+
+**"Independent" had two definitions.** Ranking counted evidence rows; the
+health view counted URLs. Two quotes off one page earned a claim the
+corroboration bonus of two sources in the one place a reader feels it, while
+the view that would have exposed the double-count said one. 22 golden cases
+moved, and the drift is the point: on a high-mileage Golf 7 TDI a rear-seal
+water leak lost the last slot to an EGR valve gear breakage -- config-specific,
+high-consequence, predictable from the ad, which is the product principle's own
+bar, reached by fixing a counting bug rather than tuning taste. A source with
+no URL used to count as no source at all.
+
+**Nothing had ever read `refuted_by`.** The verdict model has been naming
+refuted sources by index all along, exactly as its prompt asked; every source
+shipped as supporting, so the sharpest signal in the health view had zero live
+hits.
+
+**The domain-freedom gate had been walked past deliberately.** It reads one
+string literal at a time, so a banned word spelled in halves is invisible to
+it -- and a storage column here was built as two fragments, with a comment
+explaining why. The gate folds concatenations, f-strings and joins now, and has
+a test that assembles a banned word out of innocent halves. The column holds an
+LLM's name, so it is called that, and an older ledger is carried across on
+connect by finding the retired column as the one that is not accounted for.
+
+**Closing the terminal only hid it.** The shell kept running, invisibly, for as
+long as the app did, and the panel's own comment said that was deliberate. At
+narrow widths the panel was a fixed overlay by design, which is the one thing
+it may not be. Restart was disabled by a plain variable rather than reactive
+state, so the button never greyed out.
+
+**Nothing in the UI called the two endpoints that answer "is this quote still
+in the page it came from".** Every claim card could list its sources and never
+show what was kept of them. `not_kept` now has its own word and its own tone: a
+page nobody kept is not a page that checked out.
+
+**The benchmark declared three kinds of case and ran one.** Bulk and validation
+are real now, the instruction slot and the search provider are swept axes
+rather than constants, and the chooser reads Wilson intervals instead of a
+fixed margin -- two runs may answer "not yet measured" rather than pick. The
+sweep's answer is the table the reader asked for, per LLM, and the chosen
+protocol now reaches a real run. Two defects surfaced while wiring it: the
+sandbox was copied without its write-ahead log, so a case could report a
+subject missing while the reader looked at it; and a finding naming no source
+defaulted to the first document in the batch -- harmless at batch size one,
+a grounding bypass above it, which is exactly the axis now being swept.
+
+**And the gate could not see a version lie.** `--show` compared the four files
+and printed the installed distribution without ever failing on it, which is how
+a 0.8.7 checkout reported itself as 0.7.11 for days. It fails on that now, and
+the check runs on every push rather than at build time on the Windows host.
+
+B40, B46, B47, B49, B50, B51, B114 (landing page), B116, B118, B126 §4-6, B131
+and B132 closed. B45 consciously left: `published_at` is honestly always empty
+and nothing ranks on it, and deriving it needs page-metadata extraction at
+fetch time -- scope, not a blind change.
+
+
+### 2026-09-15 — the skill on disk follows the code, and the agent choice is where agents are (B135)
+
+Two corrections, both of which the reader was right about from where they were
+standing.
+
+**"You did not make any changes to skill text."** The text changed; their copy
+did not. The skill is *generated* — from the installed packs and from this app's
+code — and it was written exactly once, when Connect was pressed. So every
+overhaul since, every new tool, and every pack update reached the app and never
+reached the agent. From the machine's side nothing had changed, and nothing ever
+would have.
+
+`agentskill.stamped()` now writes a content digest into the file;
+`agentconfig.skill_status` compares what is on disk with what this build would
+write; `/api/agent-targets` reports it per harness; and **startup rewrites every
+wired copy that has fallen behind**. A harness nobody connected is still left
+alone — writing into the config directory of a CLI the reader never wired would
+be installing something they did not ask for — and every failure is swallowed,
+because a read-only home directory is a row on a screen and not a reason the app
+will not start.
+
+The digest normalises trailing whitespace as well as removing its own line, so
+an unchanged file compares equal. Without that every copy reports itself stale
+forever, which is the same as having no check.
+
+**"No preferred agent thingy."** It existed, in Settings — which is not where
+anyone goes to think about agents. The same panel renders on the Agents screen
+now: one component in two places rather than two that can disagree.
+
+**And the skill says what the app now does.** A new section names the operation
+vocabulary the reader sees on their own Activity screen — `research`, `agenda`,
+`author`, `recheck`, `lookup` — with the tools under each, `amend_draft` for a
+draft that is nearly right, and the two operations an agent does not call but
+has to know exist (Verify, and Sites). Plus one warning that is worth the space:
+a pack's `gold.yaml` is ground truth for *benchmarks*, not a checklist to copy
+from — a finding submitted because it appears there is a fabrication with a
+quote attached.
+
+### 2026-09-15 — the bulk pass: sites, choices, costs, ground truth (B115/B117/B118/B126/B132/B133)
+
+Six rows, built rather than filed.
+
+**Sites — "I cannot open the web extension on the pages that aren't
+registered".** The panel was never missing; the *site* was. An adapter says how
+to read one website, packs ship them, and the only way to add one was to author
+a whole pack — a disproportionate answer to "this listing site also sells cars".
+
+So an installation can learn a site by itself. `app/sites.py` merges a **local
+adapter** behind the engine's own lookup: kept in `app.sqlite` by the two-file
+rule (a site this reader taught their copy about is not pack content, must not
+enter a `content_digest`, and must not travel to anyone else's install as though
+an author had reviewed it), and a pack's adapter for the same host always wins.
+Validated before it is stored, because `site` becomes a host permission and an
+injection target in a browser: a bare hostname, no wildcard, no path, no scheme.
+
+The extension's toolbar button now does something everywhere. On a page with no
+panel it reports the page — under `activeTab`, so the click is the grant — and
+the app answers whether it can read the site. It cannot, so the host lands on
+**Sites** with a count and one sample page, and a button asks an agent to work
+out the adapter (`site_register`). `/api/adapters` carries learned sites too,
+which is what makes the browser actually inject on them: the seam that "it only
+opens on sahibinden" was describing.
+
+**Three choices that were facts (B117).** The harness plane took the first CLI
+it found, the paid plane took whatever `LLM_MODEL` said, and search meant Exa
+because Exa was the only provider with code. `app/prefs.py` makes each a
+decision, defaulting to exactly the old behaviour. **Tavily** is wired beside
+Exa, and `keys.ready()` now accepts *either* search key — requiring both would
+have made adding a provider a way to break an installation that was working.
+
+**What it costs (B118).** Measured spend by plane, and an estimate from this
+installation's own runs — not a vendor price list, which goes stale and cannot
+know the reader's model. `None` under two runs, because an estimate from one is
+a guess with a decimal point. Runs that counted nothing are counted as runs
+rather than as zeros: "six runs, two of which reported a cost" is the truth.
+
+And there is **no credit balance**, deliberately: no completion or search vendor
+exposes one to an API key, and a number invented for it would be the most
+dangerous thing on the screen. The panel says where the balance actually lives.
+
+**Ground truth (B126, steps 1-3).** `app/gold.py` reads a pack's
+`research/gold.yaml` — `must_find`, `must_not_find`, `known_absent` — and judges
+produced claims against it mechanically, cheapest test first, deliberately not
+with an LLM: a model scoring another model's output agrees with it far too
+often, and independence is the one thing this has to have. Recall, precision and
+hallucination are three numbers rather than one, because the remedies differ,
+and `unlisted` is its own bucket so a genuinely new find is not punished — a gold
+set is a floor, not a ceiling. `--reps` repeats each measurement and `scored()`
+reports Wilson intervals, because n=3 is an anecdote.
+
+**The terminal stops covering the page (B133).** It was `position: fixed` over
+the work area: the page stayed full width underneath an opaque panel, headings
+wrapped under it, buttons could not be reached. It is a column in the shell's
+grid now, so the page reflows; under 60rem it still covers, with a shadow that
+says so.
+
+### 2026-09-15 — 0.9.0: the authoring loop gets its missing verbs (B127-B130)
+
+*"Agents are avoiding some work."* They were, and the instructions told them to.
+Decision 4 of the authoring brief opened with **"Two or three real subjects"** —
+so a category with twenty products came back with three, and nothing anywhere
+recorded the other seventeen. That is not a model being lazy; it is a
+specification being obeyed.
+
+**The line-up is now data (B130).** The brief asks for `lineup` — every product
+in the category the agent can name, covered or not — *before* any claim is
+written, because naming is cheap and research is what is expensive. Kriko
+subtracts the subjects it actually wrote and writes the remainder into the draft
+as `research/coverage.yaml`. A pack covering three of twenty is worse than
+useless: it is confidently incomplete, and the reader who looks up the fourth
+gets "nothing known" and concludes there is nothing to know. Now the job's last
+line names what is missing and the draft carries the list.
+
+Two more things the same run got wrong are enforced rather than requested: a
+subject must be an instance of the category (the reader's headphones pack
+contained a watch; neighbours go under `coverage.out_of_scope`), and the pack's
+`name` is a **name** — six words at most, no "common problems". "Samsung Galaxy
+Buds and wireless headphones common problems" is a sentence about a pack, and in
+a list of packs it is the row nobody can scan. Refused rather than trimmed: a
+refusal tells the agent what to do differently, a silent trim produces a name
+nobody chose.
+
+**Amending, which is the verb that was missing (B127).** *"It includes 19
+products and lacks the 20th. I don't want to rebuild the whole thing."* Exactly
+right, and re-authoring was the only option — which re-spends the run and can
+come back worse; the reader's second attempt returned nothing at all. A
+generator you cannot correct is a slot machine.
+
+`pack_amend` hands the agent what the draft already holds — its identity keys,
+its own bar for a claim, the subjects it covers, the line-up entries it does not
+— and merges what comes back. Additions only: nothing existing is rewritten,
+duplicates cost nothing (the brief shows the agent a list, and a model reading a
+list will sometimes echo it), and **a refused amendment leaves the draft exactly
+as it was**. That last property is what makes it safe to press on a pack you
+already like. Reachable as a button ("Cover the gaps"), an endpoint, and an MCP
+tool (`amend_draft`) so the reader's own agent can do it too.
+
+**Verify the knowledge here (B128).** Half of it existed: one claim, on a press.
+The screenful did not. `verify` is a job over a pack or a subject, recording a
+verdict per claim, free and generative-free — the question is "does the quote
+still appear on the page", which a substring test answers honestly and an LLM
+would answer confidently. It reports and never retracts: pages get rewritten,
+and nothing here has the authority to remove a claim on the strength of one
+fetch.
+
+**An installed draft says so (B129).** The reader installed the Samsung draft,
+saw the pack in Knowledge, and the "…was drafted for you" card stayed — which
+reads as an install that did not take. Marked rather than deleted: the directory
+is the only copy of what the agent proposed, and covering its gaps has to keep
+working afterwards.
+
+**And the skill says all of it (the overhaul).** Two new sections, both aimed at
+the same failure: *Finish the subject* — run the brief's searches rather than
+one of them, prefer two independent sources, report what you could not
+establish, and do not stop at the first page that agrees with you — and *Cover
+the category, not a corner of it*, which states the line-up rule and the two
+enforced refusals so an agent learns them from the skill rather than from a
+failed run.
+
+### 2026-09-15 — 0.8.7: the installer may not be named for a version it does not contain (B134)
+
+From the reader's own build log:
+
+    Compiling kriko v0.8.0 (C:\Users\beraat\Desktop\kriko\tauri\src-tauri)
+    ...
+    Running makensis to produce ...\Kriko_0.8.5_x64-setup.exe
+
+`-Version` is stamped into `tauri.conf.json`, and that is what names the bundle.
+Everything else — the crate, pyproject, the frozen sidecar's own metadata — comes
+from the tree. So a stamp on a checkout that had not been pulled produced an
+installer *called* 0.8.5 containing 0.8.0 of everything.
+
+That is the whole explanation for a session's worth of confusing reports: the
+terminal fixes were missing because they were not in it, and "you forgot to
+update the version number" was the app honestly reporting the version it was
+built from. The label was the only thing that moved.
+
+The script now refuses the mismatch before compiling anything and names the two
+moves that resolve it — `git pull`, or `tools/bump.py <version>` — because which
+one is right depends on whether the tree or the intention is behind, and the
+build cannot know.
+
+A build is the one artefact nobody re-derives. Its name has to be true.
+
+### 2026-09-15 — 0.8.6: the prompt stops going through a pipe (B125)
+
+The reader's run failed with
+
+    Warning: no stdin data received in 3s, proceeding without it
+    Error: Input must be provided either through stdin or as a prompt argument
+
+on a machine where a pack-authoring run had worked minutes earlier.
+
+Stdin was chosen in B92 because `--allowedTools` is variadic and ate a trailing
+prompt. It fixed that and introduced a pipe — and on Windows the pipe crosses a
+`claude.cmd` shim into node. When it does not arrive the CLI waits three
+seconds, proceeds **with no prompt at all**, and then fails with B92's own
+message, which is why this reads as a regression of a fix that is still in
+place.
+
+`--` ends option parsing, so the prompt goes back on the command line without
+B92's defect: no argument order can consume it, nothing has to survive a shim,
+and an argument cannot arrive three seconds late. Verified against the real CLI,
+and the free empty-prompt gate now runs the vector `_run` actually builds, `--`
+included — the previous gate tested a shape the code was no longer sending.
+
+Stdin stays for a prompt over 24,000 characters: Windows caps a command line at
+32,767, and a plane that cannot start is worse than a pipe that is usually fine.
+
+Also filed, from the same session's report: B126 (benchmarks against pack-authored
+ground truth — the design), B127 (amend a draft rather than re-author it), B128
+(verify the knowledge as an operation), B129–B133 (the draft card, pack scope and
+naming, MCP on Windows, the extension button, UI margins).
+
+### 2026-09-14 — 0.8.5: measure first, then choose (B111, B123, B124)
+
+Three rows, and they are one argument: *how an operation should spend a model
+is a ratio, and a ratio is a measurement or it is a guess.*
+
+**B111 — the benchmark.** `kriko bench`, `POST /api/bench`, `app/bench.py`. The
+same cases across every plane this machine can run, recording wall-clock,
+tokens, dollars, sources, findings kept and findings refused with the gate's own
+reasons. Two decisions carry it:
+
+* **The cases are derived, never enumerated.** A fixed list of subjects in
+  Python would name cars, go stale the week a pack changed, and mean nothing for
+  any pack that is not `cars` — the scalability rule, one layer out. They come
+  off the installed store ordered by `subject_id`, so they are stable across
+  runs and identical on two machines with the same pack.
+* **Nothing is written to the knowledge.** Each case runs against a *copy* of
+  the store in a temporary directory, thrown away with its claims. A benchmark
+  that grew the pack it measured would make its second run incomparable with its
+  first, and would fill a reader's store with runs they never asked to keep.
+
+A failed case is a measurement, not an exception: "the harness plane failed four
+of five" is the finding, and it only exists if a failure is a row.
+
+**B123 — protocols.** A *protocol* is how much of a document goes into one call
+and how many documents go into one call. The failure is two-sided and the middle
+is narrow: too little batching re-sends the brief for every document and pays for
+the same paragraph repeatedly; too much piles context until the model stops
+quoting and starts composing — which the grounding gate catches, so the batch is
+refused *and* the tokens are spent.
+
+The shape is `kriko.research.Spend` (three numbers, in the engine) and the
+choosing is `app/protocols.py` (which reads this installation's `bench_runs`),
+because choosing means reading interface state and `kriko/` may not. Same split
+`app/providers/` makes for sockets. Two rules keep the picker honest: nothing is
+promoted on fewer than two runs, and a candidate is compared against the
+*default measured on the same model* — without that, one mediocre measurement of
+one protocol promotes it, which is how a benchmark comes to recommend the only
+thing anybody bothered to run. With no measurements the answer is `STANDARD`,
+which is exactly the behaviour that existed before protocols did.
+
+`ApiResearcher` now batches: `extract` reads the next few documents in one call
+and caches the rest by URL — the per-document interface is right and stays, what
+changes is how many times money is spent to fill it. A batched extraction checks
+each quote against the text of the URL *the model named*, which catches the
+attribution slip a batch makes possible: a real quote filed against the wrong
+page.
+
+**B124 — can a coding-agent CLI be driven as a function at all?** The reader's
+hypothesis, and it deserves a test rather than an argument. `bench.verdict()`
+classifies every failure by what the CLI did *instead of answering* — `auth`,
+`start`, `shape`, `timeout`, `limit`, `other` — and reports whether one class
+dominates. Failures spread across classes mean bad luck. Failures concentrated
+in one mean the plane is being mis-used, which would make the harness a door for
+a person and the unattended path the API plane's.
+
+**The experiment is unrun**, and that is stated in `docs/AGENT_OPERATIONS.md`
+rather than implied: it needs a real CLI on a real subscription and a machine the
+reader owns. What shipped is the instrument.
+
+### 2026-09-14 — 0.8.4: the operations feed (B122)
+
+*"We still need to see those MCP operations in the app itself in real time,
+what's coming what's going, see the details."*
+
+B121 made a run **Kriko starts** visible while it runs. This is the other half,
+and the bigger one: the door the reader prefers is their own coding agent
+talking to the MCP server — the terminal is for the person, the app is for the
+operations — and that door was visible only afterwards, only as a `submissions`
+row, and only when the operation happened to *be* a submission. A `lookup`, a
+`research_brief`, a `draft_pack` left nothing at all.
+
+An **operation** is now a row (`docs/AGENT_OPERATIONS.md` §1 named it):
+`app/operations.py` opens it before the work and closes it after, so a call in
+flight reads `running` and a hung one says so. Three doors write it — every MCP
+tool through one wrapper in `app/mcp_server.py`, every job through
+`JobRunner._run`, every `/api/analyze` — because "what is this installation
+doing" is one question and `door` is the answer to "who asked".
+
+Three decisions worth keeping:
+
+* **Every tool, not the three that write.** A run looking things up and a run
+  that is stuck are indistinguishable if only submissions are recorded.
+* **Payloads are summarised, never stored.** `submit_findings` carries whole
+  pages; `digest()` replaces any long string with its own measurement. The page
+  already has a table (B120) and this one must not become the largest thing in
+  `app.sqlite`.
+* **Recording can never change the outcome.** Every failure in the recorder is
+  swallowed, the same rule `log_submission` follows — a reader losing a feed row
+  is a worse feed; a researcher losing a finding to the feed is a defect.
+
+`GET /api/operations` pages by id and `/stream` is SSE polling the table, for
+the reason the jobs stream polls: the MCP server is a *different process*
+writing the same `app.sqlite`, so there is no in-process queue to subscribe to.
+A row still `running` at startup is marked interrupted, exactly as a job row is,
+because that process is not supervised by this one.
+
+In the app it is **Activity → Live**, and it is the default lens: the other
+three answer "what happened", which is only the interesting question once
+something has.
+
+Also: three gates matched `@mcp.tool()` with a regex over the module's own
+source, which would have gone quietly green when the decorator was wrapped.
+They ask `mcp_server.registered_tools()` now — the registry, which can only be
+empty if the server is.
+
+### 2026-09-14 — 0.8.3: the document is kept, and the run is watchable (B120, B121)
+
+Two questions, one shape: the thing that happened was not kept.
+
+**B120 — the document that proved the quote.** An agent submits `document_text`;
+`app/findings.py` used it for exactly one thing, `is_grounded(document, quote)`,
+and then dropped it. So the product's one hard guarantee — a quote that is not
+in the document does not become evidence — was checked once, against text nobody
+kept, and could never be checked again. It is now kept: a `documents` table in
+`app.sqlite`, keyed by `source_id` so two findings from one page share a row,
+bounded at 5000 rows, written from `log_submission` — which already runs on both
+doors, so a document is kept on the same terms whether the finding arrived
+through MCP or through an in-app job, and acceptance still never opens the
+interface's database. `findings.regrounded()` re-runs the check offline and
+answers one of three things per quote: `grounded`, `ungrounded`, or `not_kept`.
+
+The last of those is B112's second enforcement becoming possible at all: "a
+`source_url` that was never fetched is a fabrication with a plausible shape"
+needs something that knows which documents were fetched, and nothing did.
+`not_kept` is deliberately not `ungrounded` — absence of the page is not
+evidence against the quote. A page too large to keep is recorded as fetched and
+not kept rather than truncated, because half a page would re-check as
+`ungrounded` for a quote that was genuinely in the other half, and one confident
+wrong answer is worse than an honest absence.
+
+`app.sqlite` and not the store, which is the load-bearing half: a page one
+installation happened to read must not enter a pack's `content_digest`, or two
+readers who researched the same subject would disagree about whether the next
+update is a republish.
+
+**B121 — an agent run that tells nobody anything.** `harness.py` ran the CLI
+with `subprocess.run(capture_output=True, timeout=600)`, which is a decision to
+learn nothing until the process is over. Between "harness plane (subscription)"
+and the verdicts there were up to ten minutes — forty for a pack author — of
+silence, and what the agent actually did was invisible while it happened and
+gone afterwards. The reader's question, *"that shell is supposed to show the
+agent's actions"*, had the answer: no, and nothing did.
+
+The vector now asks for `--output-format stream-json` (with `--verbose`, which
+the CLI refuses to start without), and the output is read line by line as it is
+produced: stdout in the calling thread so a line reaches the log the moment it
+is written, stderr on its own thread so a full pipe cannot deadlock a run, and
+the ceiling as a timer that kills rather than an argument to `run`. `narrate()`
+turns each event into one line a reader can follow — `searched "…"`,
+`fetched …`, the model's own sentences, a tool call that failed — and the
+transport is the job log, which already streams to the app and to `kriko tui`.
+The actions needed a sender, not a second channel. Narration is capped at 400
+lines, never fatal (a log that cannot be written must not destroy a completed
+run of real research), and the transcript is bounded at 512 KB.
+
+The test that matters is `test_a_line_arrives_before_the_run_is_over`: the fake
+CLI will not finish until the narration callback has created a file, so a
+buffered implementation deadlocks there. Every other assertion would have passed
+on the bug wearing the fix's clothes.
+
+**Not done, and named rather than implied:** a run that stops to ask a question
+still cannot be answered. The prompt goes in on stdin and the transcript comes
+out — this is a window, not a conversation.
+
+### 2026-09-14 — 0.8.2: a second read of the terminal, before it is tested again
+
+The 0.8.1 install could not be tested properly, so the terminal path was read
+again rather than waited on. Two weaknesses, neither of them the reported bug,
+both of the kind that would have made the *next* report ambiguous.
+
+**One `isalive()` sample decided the session was over.** `_pump` concluded on a
+single empty-read-plus-not-alive, and the verdict it produced — "exited without
+producing any output" — is indistinguishable from a genuinely dead shell. A pty
+that answers `False` once while a spawn settles would therefore end the
+terminal for a reason nobody could argue with, on exactly the platform where
+the evidence is thinnest. It is now sampled twice with a 50ms gap: a shell that
+has really gone is reported one interval later, which costs nothing, and a
+flicker costs nothing at all. Tested with a pty that is dead on the first ask
+and alive after.
+
+**A fixed 20ms poll, forever.** Fifty wake-ups a second for a shell sitting at
+its prompt, for as long as the app is open. But a simple slow poll is wrong at
+the other end — a keystroke's echo arriving a fifth of a second late is what
+makes a terminal feel broken when it is working perfectly. So: fast (20ms)
+while anything is happening, backing off to 200ms after two quiet seconds, and
+**`write` resets the clock**, because a keystroke is the strongest available
+signal that a byte is about to arrive. Typing is therefore always on the fast
+interval.
+
+Neither changes POSIX at all: `ptyprocess.read()` blocks and never returns
+empty, so the branch these live in is never taken there. Re-verified against a
+real shell anyway — echo, clean `exit` reported as no failure, restart, close.
+
+Also: `_finish` read `self.shell` outside the lock it had just released.
+
+### 2026-09-14 — nine ideas filed (B111-B119), one of them a bug with a root cause
+
+Written down the evening before the 0.8.1 install was tried. Filed rather than
+built, with two exceptions.
+
+**B114 — "Open with web extension" opens a browser with no extension.** Root
+cause found and fixed the same day. Chrome disabled `--load-extension` by
+default as an anti-malware measure: the
+`DisableLoadExtensionCommandLineSwitch` feature turns the flag into a silent
+no-op, so the window opens, the landing page loads, and the extension is
+absent — every visible step having worked, which is the worst shape a failure
+can take.
+
+Measured rather than recalled. Chromium 141 (the one this container ships) was
+launched with `--remote-debugging-port` and its target list counted: **0**
+`chrome-extension://` targets without
+`--disable-features=DisableLoadExtensionCommandLineSwitch`, **2** with it. The
+flag is now in `launch_with_extension`'s argv with the measurement in the test.
+
+It is a stopgap and is filed as one — a switch re-enabling a switch, itself on
+the way out. The reader's own instinct is the durable answer, and it is a
+**HUMAN DECISION #9**: publish to the Chrome Web Store, or keep load-unpacked
+as the only install. It costs money, exposes a developer identity, and submits
+this code to someone else's review; it also interacts with B18, since a listed
+extension that reads one named site is a more visible artefact than a local one.
+
+**B119 — `docs/GLOSSARY.md`.** One line per word, the module that owns it, and
+the two that already mean more than one thing in this repository's own prose:
+*agent* (the by-hand plane, the CLI Kriko starts, and a coding agent working on
+this source) and *shell* (the Tauri one and the PTY one — `installer.nsh` has
+to stop both). Plus four naming rules, the last of which already has tests
+behind it.
+
+The other seven are filed with the machinery they would build on named, because
+the expensive mistake in each case is building a second copy of something that
+exists: B111 (a benchmark — `runs` already meters, what is missing is fixed
+cases and a cost-per-*accepted*-claim number), B112 (enforce the research
+protocol the way `findings.py` already enforces the quote rule, starting with
+the `queries` list that is collected and ignored), B113 (extension/app harmony —
+algorithmically close already, visually two design systems), B115 (agent-authored
+adapters — adapters are *already* pack data, so the work is the self-check and
+never generated JavaScript), B116 (research-this-page — the door and the budget
+constant exist, the path from `NOT_MATCHED` to a job does not), B117 (a stored
+preferred plane, with `api` still never chosen by omission), B118 (cost on the
+`jobs` row, not just on `runs` — and the precondition for showing B116's cap
+before the press).
+
+### 2026-09-14 — 0.8.1: three defects from the first real 0.8.0 install
+
+The installer built, installed and opened. Three things were wrong, and the
+first two had gates that could not see them.
+
+**The panel never hid.** "I cannot close the terminal and it invades the rest
+of the app" — and it is one CSS rule. `hidden`'s `display: none` comes from the
+user-agent stylesheet; `.terminal-panel { display: flex }` is an author rule,
+so the author rule wins and a fixed, full-height panel stayed over the whole
+app with a close button that visibly did nothing. The existing test asserted
+`toHaveAttribute("hidden")`, which was true the entire time. Fixed with
+`.terminal-panel[hidden] { display: none }`, and the new test asserts
+*computed* display — behind a canary (`position` must be `fixed`) so that if
+jsdom ever stops applying the component's styles the file fails loudly instead
+of passing for the wrong reason.
+
+**`EOFError: Pty is closed`, and it was an empty read.** `ptyprocess.read()`
+blocks until there is something and raises `EOFError` at the end, so an empty
+return never happens on POSIX and `_pump` treated one as end-of-file. `pywinpty`
+does not work that way: it returns `''` the moment there is nothing *yet*,
+which on a freshly spawned `cmd.exe` is immediately. The pump ended the session
+before the shell had written a byte, and the next read raised the error the
+reader saw. Windows only, having worked under a real pty on Linux — which is
+exactly the split reported.
+
+An empty read now asks `isalive()` instead. `_WindowsLikePty` in
+`test_terminal_http.py` answers the way `pywinpty` does, and the test fails
+against the old pump (`assert ''` — the shell spoke and nothing recorded it).
+
+**A shell that exits was a dead end.** Typing `exit` is ordinary; on that
+Windows install the shell died on its own at every open. Either way the session
+stayed `ended` for the life of the app, `/stream` returned at once, and the
+panel had nothing to offer. Now: `POST /api/terminal/restart` (new shell, clean
+transcript), a **Restart** button, and a keystroke into a dead shell asking for
+a live one rather than posting input to a pty that is not there. `_ensure` no
+longer resurrects an ended session implicitly — the polling client asks twice a
+second, so a deliberate `exit` would have come straight back and the signal
+would never have survived to be rendered.
+
+A failure also says which shell and how it went: `cmd.exe exited with status 1
+without producing any output` rather than `EOFError: Pty is closed`, and a
+clean exit after the shell has spoken is not reported as a failure at all.
+
+**The OAuth hint now names the way out.** It said "run `claude` once in a
+terminal" — accurate, and it predates the app having one. It now names the
+panel (Ctrl+`), the `/login` step, and Kriko Console for doing it without the
+app. The `enoent` hint names `KRIKO_HARNESS_DIRS` and the Agents screen, which
+is where `locate()` prints the binary it found.
+
+### 2026-09-14 — the build script's first stage, and the gate that should have read it
+
+The first real hand build of 0.8.0 died at `=== Tools` with
+
+    .venv\Scripts\python.exe is not on PATH.
+
+which is the wrong sentence for the right problem. `-Python` is normally a
+*path*, and it was being checked in the same loop as `node` and `rustc`, which
+are names — so a path that does not exist reported itself as a PATH problem and
+sent the reader to look at their PATH. The actual cause: the venv was made
+inside WSL, so the tree has `.venv/bin/python` and no `Scripts/python.exe` at
+all — and a WSL interpreter would have produced a *Linux* sidecar anyway, since
+PyInstaller cannot cross-compile.
+
+The interpreter is now resolved separately, and a missing one says where it
+looked and what to do (`py -3.13 -m venv .venv`, or name a Windows
+interpreter). Two checks were added beside it, because the interpreter is
+frozen into the sidecar and is therefore the *reader's*, not just this build's:
+it must satisfy pyproject's floor, and it must be a final release — a
+pre-release passes every visible step and then ships a sidecar that raises on
+import (B110), which PyInstaller would freeze without complaint.
+
+**And the gate that should have caught this class.** Every other assertion
+about this script reads it as *text*, which can only prove a string is present
+— the exact hole B89 went through, where twelve tray tests passed on a
+`main.rs` that could not be parsed. `test_every_powershell_script_parses` now
+runs PowerShell's own parser over every `.ps1` (skipping where there is no
+`pwsh`, never passing). Verified by breaking the script on purpose: it fails
+with `line 301: The string is missing the terminator`.
+
+The new stage was also *run*, not just parsed — under `pwsh` on Linux, against
+a missing path, a 3.13 final interpreter and a bare name, so all three branches
+are known to behave rather than assumed to.
+
+### 2026-09-14 — the Windows build, pre-flighted from Linux (and a stale lock that would have stopped it)
+
+The installer still has to be built on Windows — PyInstaller cannot
+cross-compile — but most of what *breaks* a Windows build is not
+Windows-specific. All of that is now checked from Linux, and written down in
+`tauri/README.md` under "Pre-flight, from a machine that is not Windows". Every
+step below passed on this branch:
+
+* `packaging/freeze.sh` — the frozen sidecar and all ten smoke checks, including
+  `terminal ok` (B109's HTTP terminal in a frozen binary) and `mcp ok`.
+* `cargo check` on the shell — clean. And `cargo check --target
+  x86_64-pc-windows-gnu`, which is the one worth having: `kill_tree` is
+  `#[cfg(windows)]`, so a Linux check never reads it, and B89 is the case for
+  caring — twelve tray tests passed on a `main.rs` that could not be parsed,
+  found nine minutes into a hand build by the first `cargo` that ever read it.
+  `-gnu` needs only `mingw-w64`, and `cfg(windows)` is true for both.
+* `npm --prefix tauri run tauri build` — a real `Kriko_0.8.0_amd64.deb` and
+  `.AppImage`.
+* `packaging/smoke_app.py` under `xvfb` — the bundled shell opens, stays up 25
+  seconds without panicking, and spawns its engine. That is the v0.2.4 class of
+  failure (built green on three runners, then would not open) ruled out on
+  Linux.
+
+**And it caught one that would have stopped the build.** `desktop.yml` runs
+`cargo metadata --locked` so that a lock which has fallen behind `Cargo.toml` is
+a red job rather than a silent rewrite. The committed `Cargo.lock` still said
+`kriko 0.7.6` against a tree at 0.8.0 — stale since 0.7.7, four bumps — and that
+command exits 101. A hand build on Windows would have died at that step, and the
+only reason nobody had hit it is that the workflow has never once been allocated
+a runner.
+
+Fixed as a mechanism rather than a lock edit: `tools/bump.py` now writes
+`Cargo.lock` too (anchored on the crate's own entry, so none of the two thousand
+dependency versions are touched — verified by a round trip to 9.9.9 and back),
+and `test_the_four_version_strings_agree` counts it as the fifth file. The
+docstring said "five places"; it was six.
+
+**Still unproven, and only a Windows box can:** PyInstaller against `pywinpty`
+(whether `winpty-agent.exe` comes along — the 0.7.4 defect), NSIS bundling, the
+**Kriko Console** shortcut `installer.nsh` writes, the tray's tree-kill, and
+whether WebView2 renders anything.
+
+### 2026-09-14 — the frozen console, actually run (two bugs)
+
+`packaging/freeze.sh` on this branch, then the frozen `kriko-sidecar --tui`
+driven under a real pty: draw a frame, press `q`, read what came out. The smoke
+suite passed all ten checks — including `terminal ok: the shell said something
+back`, which is B109's HTTP terminal working in a frozen binary for the first
+time. `--tui` survived the freeze, which was the open packaging risk: `app.tui`
+is imported inside a function in `sidecar.py`, the exact shape PyInstaller's
+analysis can miss, and a miss there is the 0.7.4 `winpty-agent.exe` failure
+again — every test in the tree passing while the shipped binary lacks the code.
+
+It also found two bugs that no test in the tree could have:
+
+**A log line printed over the console.** The frozen binary's first line of
+output was `INFO root: logging to …`. `app.tui.main` calls `silence_stderr()`,
+but from `app.sidecar` that is too late — `logs.configure()` has already
+attached the handler *and* already logged that line. Silencing now happens
+before configuring, and the key-count banner (a bare `print`, which no handler
+could have suppressed) is skipped in console mode.
+
+**The header broke on a narrow terminal.** A pty that reports no window size
+clamps to 20 columns, and `pad` then sliced with a negative width — which
+slices from the *end* — so a 17-character title rendered as its first
+character and the header was a bare URL. `pad` refuses non-positive widths;
+the header drops the address before the name; and the tab bar, the one row
+with no padding to absorb an overflow, falls back to bare numbers and then
+truncates. Verified at 100×30 and at 20×12 on the frozen binary: title kept,
+URL dropped, nothing over-runs.
+
+Four tests added. Neither bug was reachable from pytest — one needed a frozen
+binary, the other a terminal that lies about its size — which is the argument
+for running the thing rather than only testing it.
+
+### 2026-09-14 — the floor drops to 3.13 (B110), and the console becomes one click
+
+**B110 resolved by lowering `requires-python` to `>=3.13`.** The `>=3.14` floor
+was unsatisfiable in practice: 3.13 was refused by the line itself, and
+3.14.0rc2 — the only 3.14 many platforms can fetch — raises on `import fastapi`
+because the pinned `pydantic==2.13.4` cannot run on its `typing._eval_type`.
+So there was no interpreter on which a clean `tools/setup.sh` succeeded, and the
+only way round that is a hand-built environment nobody else can reproduce.
+
+Nothing was relaxed on a hunch. The whole of `tools/gate.sh` — pytest, both JS
+suites, svelte-check, the stale-bundle check — passes on 3.13, so the floor was
+not load-bearing for anything the tests cover. `pyproject.toml` says why, in
+place, so the next person to raise it has to state a reason a test can hold.
+
+**`desktop.yml` moved with it, and that one is not cosmetic.** Its three
+`setup-python` steps pinned `"3.14"`, which resolves to whatever is newest in
+that line — including a release candidate the pinned pydantic dies on. PyInstaller
+would freeze it happily and the reader would get a sidecar that fails on its
+first request. The interpreter the binary carries should be the one the suite
+actually ran on.
+
+**The console is a thing you double-click.** `installer.nsh` gained
+`NSIS_HOOK_POSTINSTALL`, which writes a **Kriko Console** shortcut into the
+Start menu pointing at `$INSTDIR\kriko-sidecar.exe --tui`, and
+`NSIS_HOOK_POSTUNINSTALL`, which removes it. No second artifact ships: that
+binary is the `externalBin` Tauri installs anyway, and `app/tui/` is already
+frozen inside it. A console window appears and that is the point — the sidecar
+is built `console=True`, Tauri suppresses the window with `CREATE_NO_WINDOW`
+when *it* spawns the engine, and nothing suppresses it here because here the
+terminal is the UI.
+
+Three tests (`test_the_shell_runs_in_the_tray.py`) hold it: the shortcut exists,
+carries `--tui`, and is deleted under the same name it was created with. They
+strip `;` comments first — `_code` above them only strips `//`, so without that
+every assertion would have been satisfiable by the paragraph explaining it,
+which is this file's own stated failure mode one comment syntax over.
+
+### 2026-09-14 — the console goes standalone, and the loop gets three commands
+
+**`kriko tui` is a command now, and so is `kriko-sidecar --tui`.** The console
+landed in 0.8.0 reachable only as `python -m app.cli tui` — from a source
+checkout, with a working Python. For a tool whose whole reason for existing is
+that a *window would not open on the reader's machine*, that was close to a
+joke. Two changes fix it:
+
+* `[project.scripts] kriko = "app.cli:main"` — every document written for
+  someone who installed the wheel said `kriko tui`, and without this that was
+  simply false.
+* `--tui` on `app.sidecar`. `app/tui/` is already in the wheel and therefore
+  already inside the frozen binary the installer ships, so this is one branch
+  and no new build artifact: a machine with no Python, no Node and no working
+  WebView2 runs the same .exe with one argument and gets the console. It
+  returns before `reserve`, because the console attaches to a running app or
+  starts its own engine — a sidecar that bound a port first would be a second
+  engine nobody asked for.
+
+**A bug the console would have shipped with**, found writing the test rather
+than in the field: with nothing serving, it starts an engine in-process, and
+`create_app` calls `logs.configure()` — whose stderr handler writes straight
+onto the alternate screen, under a frame differ with no idea it must repaint
+that row. `logs.silence_stderr()` detaches it and stops `configure` putting one
+back; the *file* handler stays, because losing the terminal is the reason to
+keep `app.log` rather than a reason to stop.
+
+**The development loop is three commands** (`CONTRIBUTING.md`, "The loop"):
+
+* `tools/setup.sh` — the venv, the locked closure, the extras, both npm trees,
+  and two checks. It exists because getting a fresh checkout to where `pytest`
+  tells the truth had cost six separate discoveries, none of them interesting.
+* `tools/gate.sh` — unchanged, from the day before.
+* `tools/bump.py` — the version, in the five places it lives. Four committed
+  files plus the *installed* distribution's metadata, which is what
+  `/api/health` reports and which a `sed` could never have reached; `--show`
+  prints all five and exits non-zero if they disagree. It does not commit and
+  does not tag.
+
+`.mcp.json` pointed at `/home/beraat/kriko/.venv/bin/python` — one
+contributor's absolute home directory, so the MCP server failed to connect in
+every other checkout, including every Claude session in this repository. It is
+now `.venv/bin/python -m app.sidecar --mcp`, relative, and verified by an
+`initialize` handshake.
+
+**`tools/setup.sh` caught itself.** Its first version reported "ready" on a
+venv where `import fastapi` raised — every check it had passed, because the
+interpreter was new enough and the lock installed cleanly. It now ends by
+importing the app, and refuses loudly with the traceback when that fails.
+That check immediately produced **B110**: there is no interpreter today on
+which a clean setup of this tree succeeds — 3.13 is refused by
+`requires-python = ">=3.14"`, and 3.14.0rc2 breaks the pinned pydantic. The
+whole gate passes on 3.13, so the floor is not load-bearing for anything the
+tests cover; whether to relax it is a policy call and is filed rather than
+taken.
+
+Docs brought in line: `README.md` (quickstart is `tools/setup.sh` and `kriko`,
+and the installer paragraph no longer claims a CI that cannot run),
+`CONTRIBUTING.md` (the loop), `docs/INTERNALS.md` (`--tui` and the stderr
+rule), `docs/ARCHITECTURE.md`, `tauri/README.md`, and the `CLAUDE.md` doc map.
+
+### 2026-09-13 — 0.8.0: `kriko tui`, the operator console — and `ci.yml` deleted
+
+**The TUI (`src/app/tui/`).** A fourth interface beside `cli`, `web` and `mcp`,
+and the first one whose audience is not the reader of a car listing. Agent
+operations were invisible: "research does nothing", "the terminal says
+disconnected" and "it reported success and kept nothing" were three symptoms of
+one condition — the operator plane had no instruments, and through six releases
+of B107/B109 the reader had no working surface of any kind, because the surface
+itself was the broken thing.
+
+It is a **second client on the same HTTP API**, not a second implementation.
+Every keystroke is an endpoint the dashboard already calls, so it costs almost
+nothing, cannot drift from the web UI's behaviour, and is a standing test of
+whether that API is complete — anything the console cannot do without a new
+endpoint is something the API was not really exposing. It also needs no
+webview, no WebView2, no Rust shell and no bundled JavaScript, which is what
+makes it work in exactly the conditions that produced those three reports.
+
+* **Zero new dependencies.** `textual` was already declared (unused) in the
+  `pipeline` extra, and putting a rendering framework into the *runtime* deps
+  would put it in the installer a reader double-clicks, to draw four lists.
+  `curses` is not an option — absent on Windows, which is where the reader and
+  the harness problems are. So: ANSI, stdlib `urllib`, and ~700 lines.
+* **Efficiency is the frame differ.** `term.diff` rewrites only the rows that
+  changed, cursor-addressed, so an idle console writes nothing at all and a
+  ticking job log writes one line. That is what lets the loop check for keys
+  twenty times a second for free.
+* **Discovery attaches before it starts.** `--url`, then `KRIKO_URL`, then the
+  fixed `EXTENSION_PORT` — a running desktop app is always serving there, so
+  `kriko tui` with the app open shares its engine, store, jobs and shell. Only
+  if nothing answers does it start one in-process, which is what makes it
+  usable on a machine where the shell will not open at all.
+* **Three tabs and a shell.** *Planes* names the harness binary `locate()`
+  found, with its path — and where it looked when it found none, which is the
+  B108 diagnosis on screen. *Agenda* starts research on the selected subject.
+  *Jobs* tails the followed job's log. `s` drops the alternate screen and hands
+  the real terminal to the PTY until Ctrl-], because drawing a shell means
+  writing a terminal emulator and there is already one running: the operator's.
+
+Tested where it can be (34 cases, `src/app/tests/test_tui.py`): key decoding and
+the frame differ are pure; `screen.render` is a pure function of state, so every
+layout decision is a unit test rather than a screenshot; `Tui.act` is keystroke →
+API call against a fake engine. One case runs the real client against a real
+`create_app` over a real socket, so a renamed route fails here rather than on the
+operator's machine. Driven end to end by hand as well: a keystroke started a real
+job, the log tailed live, and the shell echoed through the same client.
+
+**`ci.yml` deleted, and this is the uncomfortable half.** The 1.0.0 audit found
+four reported defects that every automated gate passed, and the answer was more
+gates running more often — which is why the workflow was un-paused on
+2026-09-08. It then **never executed once**. Every run since, on branches and on
+`main`, failed in under fifteen seconds with `runner_id: 0`, no steps, and no
+logs: this account has no Actions minutes, so no job was ever allocated a
+runner. A signal that is always red carries no information, and this one was
+teaching everyone to scroll past a red build.
+
+So the three jobs moved into `tools/gate.sh` verbatim — pytest, both JS suites,
+`svelte-check`, and the stale-bundle rebuild — and the obligation moved with
+them: run it before pushing. `CLAUDE.md`'s app-first rule 1 now names the gate
+rather than pytest alone. Restoring the workflow is a `git revert` plus a
+billing change, in that order, and is worth doing the day either is possible:
+the audit's finding has not been answered, only relocated. `desktop.yml` is
+untouched and untrimmed; it cannot get a runner either, which is why every
+installer since 0.5.0 was built by hand.
+
+Two `test_there_are_workflows_to_check` guards dropped from `>= 2` to `>= 1`
+rather than being deleted — the failure they exist for is a glob that silently
+matches nothing, and that is exactly what a second deletion would produce.
+
+### 2026-09-13 — 0.7.12: the terminal stops being a WebSocket, and the harness stops depending on PATH (B109, B108)
+
+**B109 — the transport was the bug.** Six releases (0.7.4–0.7.11) closed six
+real paths inside `terminal_ws`, and after each one the reader reproduced and
+saw the same bare `[disconnected]`. 0.7.10's banner finally carried the
+deciding fact — close code **1006**, "the opening handshake never finished" —
+while the fifth backlog entry's raw-socket probe had already proved the *same
+frozen binary on the same machine* answers a hand-made `Upgrade: websocket`
+with `101` and real PTY bytes. The upgrade is refused above the application, so
+no seventh fix inside the handler could have worked either.
+
+The WebSocket is gone. It was also the only one in the tree: everything else
+live in this app (`/api/jobs/{id}/stream`) is Server-Sent Events over ordinary
+HTTP with a polling fallback, and that transport demonstrably works in the
+reader's install — it is how they watch a research job run.
+
+* `app/providers/termpty.py` — the PTY now owns its output. A reader thread
+  drains it into a bounded transcript (256 KB) whether or not anyone is
+  connected, and consumers ask *what came after byte N?*. `close()` kills the
+  child before releasing the fd, because closing it under a thread parked in
+  `read()` deadlocks (found by the new suite, not in production).
+* `app/web/routers/terminal.py` — `GET /state`, `GET /stream` (SSE, resumable
+  from `?offset=`), `POST /input`, `POST /resize`. The socket's two hand-written
+  guards are one `Depends` shared by all four.
+* `ui/src/lib/shell/TerminalPanel.svelte` — `EventSource` + `fetch`, dialing a
+  **relative** URL. `wsUrl()` rebuilt an absolute one from `location.host`,
+  which was a second chance to disagree about where the server is. Three stream
+  failures fall back to polling `/state`, so a machine hostile to streaming
+  still gets a shell.
+
+Three properties the socket could not have: a dropped connection now loses
+latency rather than output (a reader who opens the panel after the shell died
+sees its dying words); a failure is a *field*, readable by one GET, not a frame
+someone had to be connected to receive; and there is one live transport in this
+app instead of two.
+
+`test_terminal_ws.py` is replaced by `test_terminal_http.py` (9 tests,
+including a real PTY end-to-end over HTTP — the transport-level test whose
+absence let B107/B109 run for six releases). `packaging/smoke_sidecar.py`'s
+shell check and `test_sidecar.py`'s app.log check now speak HTTP; neither needs
+a websocket client any more.
+
+**B108 — `PATH` is why "agent operations do nothing" can happen silently.**
+`available()` was `shutil.which(...)` and nothing else. The sidecar's `PATH` is
+the one the file manager handed the desktop shell *at login*, so a reader who
+installs Claude Code and comes straight back to Kriko has `claude.exe` on disk
+(`%USERPROFILE%/.local/bin`, where its own installer puts it) and no harness
+plane at all — with nothing in the UI able to say why, because nothing in the
+process knew there was anything to say. `harness.locate()` now tries `PATH`,
+then `$KRIKO_HARNESS_DIRS`, then the directories these CLIs install themselves
+into, and `command_for` runs the resolved path rather than a bare name that
+`subprocess` could not resolve either. `/api/research-planes` reports *which
+binary* was found, not just that one was. Four tests in
+`test_harness_discovery.py`.
+
+This does not close B108 — an expired CLI login is still the leading
+explanation for the original traceback — but it removes the failure mode that
+produces no error anywhere.
+
 ### 2026-09-11/12 — Kriko_0.7.7_x64-setup.exe: the terminal-error-visibility fix, actually in the reader's hands (B109)
 
 The reader's second live report the same day was a screenshot still showing a

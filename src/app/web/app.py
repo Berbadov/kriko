@@ -24,7 +24,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import bundledpacks, extension as ext, logs
+from app import agentconfig, agentskill, bundledpacks, extension as ext, logs
 from app.web import origins, pipeline, schedule
 from app.web.jobs import JobRunner
 from app.web.schedule import Scheduler
@@ -32,6 +32,7 @@ from app.web.routers import (
     agenda,
     agent,
     analyze,
+    bench,
     control,
     extension,
     factcheck,
@@ -41,10 +42,13 @@ from app.web.routers import (
     jobs,
     keys,
     marks,
+    operations,
     packs,
     pipeline as pipeline_router,
+    prefs as prefs_router,
     query,
     research,
+    sites,
     subjects,
     submissions,
     terminal,
@@ -53,7 +57,7 @@ from app.web import state
 from app.version import app_version, installed_versions
 from app.web.settings import EXTENSION_PORT, Settings
 from app.web.tasks import HANDLERS
-from kriko.store.db import SCHEMA_VERSION
+from kriko.store.db import SCHEMA_VERSION, connect
 
 log = logging.getLogger(__name__)
 
@@ -101,12 +105,48 @@ async def lifespan(app: FastAPI):
         conn = state.connect(app.state.settings.app_state_path)
         try:
             stranded = pipeline.mark_interrupted(conn)
+            # And the operations feed, for the same reason and with one extra:
+            # these rows are written by the *MCP process*, which this one does
+            # not supervise. A tool call that died with that process would
+            # otherwise read as still running for the life of this install.
+            state.interrupt_running_operations(conn)
         finally:
             conn.close()
         if stranded:
             log.warning("marked %d stranded pipeline run(s) interrupted", stranded)
     except Exception:
         log.warning("could not reconcile pipeline runs at startup", exc_info=True)
+    # The protocol an agent reads has to follow the code and the packs.
+    #
+    # The skill is generated from both and was written exactly once — when the
+    # reader pressed Connect. So an overhauled protocol, a tool that did not
+    # exist last month, or a pack that updated yesterday reached the app and
+    # never reached the agent, and "you did not change the skill text" was a
+    # correct observation about the reader's own machine.
+    #
+    # Only harnesses already wired are touched (a file that is there and out of
+    # date), and every failure is swallowed: a read-only home directory is a
+    # row on the Agents screen, never a reason the app will not start.
+    try:
+        # Only if there is a store to read. Opening one *creates* it, and an
+        # app that conjures an empty knowledge database on every start is an
+        # app that has made a fact out of a side effect — `test_marks.py` holds
+        # that line for the interface as a whole.
+        if not Path(app.state.settings.store_path).exists():
+            raise FileNotFoundError(app.state.settings.store_path)
+        store = connect(app.state.settings.store_path)
+        try:
+            body = agentskill.render(store) or ""
+        finally:
+            store.close()
+        refreshed = agentconfig.refresh_skills(agentskill.SKILL_NAME, body)
+        if refreshed:
+            log.info("refreshed %d stale agent skill(s)", len(refreshed))
+    except FileNotFoundError:
+        pass
+    except Exception:
+        log.warning("could not refresh the agent skills", exc_info=True)
+
     # The unattended loop, last: it submits into the runner, so it must not
     # be able to tick before `recover()` has cleared the rows a dead process
     # left behind. Started only if the reader turned it on, and asked again
@@ -168,6 +208,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         agenda.router,
         agent.router,
         packs.router,
+        prefs_router.router,
         pipeline_router.router,
         query.router,
         research.router,
@@ -176,12 +217,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         control.router,
         extension.router,
         factcheck.router,
+        factcheck.verify_router,
         focus.router,
         health.router,
         history.router,
         jobs.router,
         keys.router,
+        bench.router,
         marks.router,
+        operations.router,
+        sites.router,
         submissions.router,
         terminal.router,
     ):

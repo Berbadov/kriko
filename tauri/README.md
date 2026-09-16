@@ -44,8 +44,11 @@ cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$(rustc -Vv | sed 
 npm --prefix tauri install && npm --prefix tauri run tauri build
 ```
 
-CI does exactly this on macOS, Windows and Linux
-(`.github/workflows/desktop.yml`). Bundles are **unsigned**; signing is a
+`.github/workflows/desktop.yml` does exactly this on macOS, Windows and Linux —
+**by hand only** since 2026-09-13, when its `push` and `pull_request` triggers
+were removed: this account has no Actions minutes, so those fired only to leave
+a red tick on commits nothing had tested. The recipe is untrimmed and the
+triggers go back the day minutes return. Bundles are **unsigned**; signing is a
 policy decision, not an engineering one, and is deferred.
 
 On Windows, `pwsh packaging/build_desktop.ps1` runs that whole job — install
@@ -69,6 +72,60 @@ something someone can read and revert. CI runs `cargo metadata --locked` before
 it builds, because cargo will otherwise rewrite a stale lock mid-build and ship
 a graph nobody reviewed — v0.2.4 is what that looks like from the outside
 (`src/app/tests/test_shell_is_locked.py` holds the rest of the invariant).
+
+## Pre-flight, from a machine that is not Windows
+
+PyInstaller cannot cross-compile, so the Windows installer has to be built on
+Windows. Most of what *breaks* a Windows build is not Windows-specific, though,
+and all of it can be checked from Linux before anyone spends nine minutes on a
+build that was going to fail. This was run on 2026-09-14 for 0.8.0, and every
+step passed:
+
+```bash
+tools/setup.sh                                   # the tree itself
+sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+    librsvg2-dev patchelf libssl-dev xvfb mingw-w64
+
+python -m app.cli build packs/cars  --out dist/cars.kpack   # the bundle needs packs
+python -m app.cli build packs/drill --out dist/drill.kpack
+packaging/freeze.sh                              # freeze + ten smoke checks
+
+triple=$(rustc -Vv | sed -n 's/host: //p')       # Tauri wants the triple suffix
+cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$triple"
+npm --prefix tauri ci && npm --prefix tauri run tauri icon src-tauri/icons/icon.png
+git checkout -- tauri/src-tauri/icons/icon.png   # `tauri icon` rewrites its own source
+
+cd tauri/src-tauri
+cargo metadata --locked --format-version 1 >/dev/null   # the lock is the pin
+cargo check                                             # the shell type-checks
+rustup target add x86_64-pc-windows-gnu
+touch binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe  # the build script only checks it exists
+cargo check --target x86_64-pc-windows-gnu              # …including `#[cfg(windows)]`
+cd ../..
+
+python packaging/configure_updater.py --repo <owner/name> --version ""
+npm --prefix tauri run tauri build               # a real .deb and .AppImage
+xvfb-run -a python packaging/smoke_app.py tauri/src-tauri/target/release/kriko
+```
+
+The Windows-target `cargo check` is the one worth explaining. `kill_tree` is
+`#[cfg(windows)]`, so a Linux check never reads it — and B89 is the case for
+caring: twelve tray tests passed on a `main.rs` that could not be parsed, found
+by the first `cargo` that ever read it, nine minutes into a hand build. `-gnu`
+rather than `-msvc` because it needs only `mingw-w64`; `cfg(windows)` is true
+for both, which is all this is for.
+
+`cargo metadata --locked` is the other one. On 2026-09-14 the committed
+`Cargo.lock` still said `kriko 0.7.6` against a tree at 0.8.0 — four bumps
+stale — and that step exits 101, so a hand build would have died there.
+`tools/bump.py` now writes the lock too, and
+`test_the_four_version_strings_agree` counts it.
+
+**What none of this proves**, and what only a Windows box can: PyInstaller
+freezing against `pywinpty` (including whether `winpty-agent.exe` comes along —
+the 0.7.4 defect), NSIS bundling, the **Kriko Console** shortcut
+`installer.nsh` writes, the tray and its tree-kill, and WebView2 rendering
+anything at all.
 
 ## Nothing outlives *Quit*
 

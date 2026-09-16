@@ -113,16 +113,62 @@ def test_no_harness_puts_the_prompt_on_the_command_line():
             )
 
 
-def test_the_code_that_starts_a_harness_writes_the_prompt_to_stdin():
-    """Read off the source, because the call site is the whole claim.
+def test_the_prompt_is_handed_over_after_a_double_dash(tmp_path):
+    """B125, and it is the reader's own failure.
 
-    A table with no prompt in it proves nothing on its own: `_run` could still
-    append one. This is a text assertion and it knows it — the test below runs
-    the real CLI, which is what actually holds.
+    Stdin fixed B92 and introduced a pipe, and on Windows that pipe crosses a
+    `claude.cmd` shim into node. When it does not arrive the CLI waits three
+    seconds, proceeds *without a prompt*, and fails with B92's own message —
+    which is what the reader pasted, on a run that had worked minutes before.
+
+    `--` ends option parsing, so the variadic `--allowedTools` cannot eat the
+    prompt and nothing has to survive a shim. This runs a real subprocess and
+    reads back what it was actually given.
     """
-    source = Path(harness_mod.__file__).read_text(encoding="utf-8")
-    assert "stdin=stdin_read" in source
-    assert "*self.harness.args, prompt]" not in source
+    script = tmp_path / "echo_argv.py"
+    script.write_text(
+        "import json, sys\n"
+        "print(json.dumps({'type': 'result', 'result': ' '.join(sys.argv[1:])}))\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    assert "the whole brief" in researcher.ask("the whole brief")
+
+
+def test_a_prompt_too_long_for_a_command_line_still_goes_on_stdin(tmp_path, monkeypatch):
+    """Windows caps a command line at 32,767 characters, and a brief that
+    exceeded it would be a plane that cannot start — so the pipe stays as the
+    fallback, with its risk accepted because the alternative is not running."""
+    monkeypatch.setattr(harness_mod, "MAX_PROMPT_ARGUMENT", 10)
+    script = tmp_path / "echo_stdin.py"
+    script.write_text(
+        "import json, sys\n"
+        "print(json.dumps({'type': 'result', 'result': sys.stdin.read()}))\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    assert researcher.ask("a prompt that is longer than ten characters").strip() == (
+        "a prompt that is longer than ten characters"
+    )
+
+
+def test_no_harness_interpolates_the_prompt_into_its_arguments():
+    """The B92 invariant, still: a prompt has no place *inside* a vector.
+
+    After `--` is not inside — nothing can be parsed past that point, which is
+    the whole reason it is safe."""
+    for one in harness_mod.KNOWN:
+        for arg in one.args:
+            assert "{" not in arg and "prompt" not in arg.lower(), (
+                f"{one.id} looks like it interpolates the prompt into its "
+                "arguments; it goes after `--`"
+            )
 
 
 @pytest.mark.skipif(
@@ -153,7 +199,10 @@ def test_the_harness_command_line_is_one_the_cli_accepts():
     one = harness_mod.chosen("claude-code")
     assert one is not None
     done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-        harness_mod.command_for(one),
+        # The vector as `_run` actually builds it, `--` and all (B125): a gate
+        # that tested a shape the code no longer sends is a gate that has
+        # stopped watching.
+        [*harness_mod.command_for(one), "--", ""],
         input="",
         capture_output=True,
         text=True,
@@ -577,9 +626,13 @@ def test_a_flag_this_machines_cli_never_heard_of_is_not_passed(monkeypatch):
     the base vector, which still runs.
     """
     one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
-    monkeypatch.setitem(harness_mod._DECLARED, one.executable, frozenset())
+    # Keyed by the *resolved* path: `locate` is what `command_for` actually
+    # runs, because a reader whose PATH does not carry `claude` still has one
+    # on disk and a bare name would not start it.
+    found = harness_mod.locate(one) or one.executable
+    monkeypatch.setitem(harness_mod._DECLARED, found, frozenset())
 
-    assert harness_mod.command_for(one) == [one.executable, *one.args]
+    assert harness_mod.command_for(one) == [found, *one.args]
 
 
 def test_asking_what_the_cli_declares_never_raises(monkeypatch):
@@ -591,6 +644,63 @@ def test_asking_what_the_cli_declares_never_raises(monkeypatch):
     """
     harness_mod._DECLARED.pop("kriko-no-such-command-exists", None)
     assert harness_mod.declared("kriko-no-such-command-exists") == frozenset()
+
+
+def test_a_cmd_shim_is_only_spawned_through_the_shell_on_windows():
+    """`CreateProcess` cannot start a `.cmd`/`.bat` on its own — Windows needs
+    `cmd.exe` for that — so this is the one branch allowed to differ by
+    platform, and it must not fire anywhere else (`shell=True` on POSIX would
+    run the wrong thing entirely: the first argument as a shell string)."""
+    needs = HarnessResearcher._needs_shell
+    assert needs(["C:\\npm\\claude.cmd", "-p"]) is False, "not on this test's own OS"
+
+
+def test_a_cmd_shim_needs_the_shell_and_an_exe_does_not(monkeypatch):
+    monkeypatch.setattr(harness_mod.os, "name", "nt")
+    needs = HarnessResearcher._needs_shell
+    assert needs(["C:\\npm\\claude.cmd", "-p"]) is True
+    assert needs(["C:\\npm\\claude.CMD", "-p"]) is True, "case-insensitive"
+    assert needs(["C:\\Program Files\\claude.exe", "-p"]) is False
+    assert needs([]) is False
+
+
+def test_the_cmd_shim_is_actually_handed_to_popen_with_shell_true(monkeypatch, tmp_path):
+    """Not just the predicate — the real call site, since B92's own postmortem
+    is a gate that asserted the shape and never ran the thing.
+
+    `_needs_shell` itself is stubbed rather than `os.name`: flipping `os.name`
+    to `"nt"` on this machine also flips which `pathlib` class `Path.home()`
+    builds, which `locate()` calls before `_stream` is ever reached — a
+    platform this test does not otherwise touch."""
+    monkeypatch.setattr(HarnessResearcher, "_needs_shell", staticmethod(lambda command: True))
+    captured = {}
+
+    class _FakeProc:
+        stdout = iter(['{"type": "result", "result": "ok"}\n'])
+        stderr = iter(())
+        returncode = 0
+        pid = 4321
+
+        def wait(self):
+            return None
+
+        def poll(self):
+            return 0
+
+        def kill(self):
+            return None
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["shell"] = kwargs.get("shell")
+        return _FakeProc()
+
+    monkeypatch.setattr(harness_mod.subprocess, "Popen", fake_popen)
+    one = harness_mod.Harness("fake", "Fake CLI", "C:\\npm\\claude.cmd", ("-p",))
+    researcher = HarnessResearcher(one, timeout=5)
+    researcher.gather(_task())
+    assert captured["shell"] is True
+    assert captured["command"][0] == "C:\\npm\\claude.cmd"
 
 
 def test_a_missing_executable_says_so_rather_than_raising_oserror():
@@ -872,3 +982,388 @@ def test_the_planes_endpoint_offers_the_third_plane(tmp_path):
     # the commands that were looked for.
     assert row["looked_for"]
     assert row["ready"] is bool(row["harnesses"])
+
+
+# ── B121: what the run is doing, while it does it ────────────────────────────
+#
+# "That shell supposed to show agents actions right, and the directives of
+# them." It was not, and nothing was. `subprocess.run(capture_output=True)` is
+# a decision to learn nothing until the process is over, so between "harness
+# plane (subscription)" and the verdicts there were up to ten minutes — forty
+# for a pack author — of silence, and what the agent actually did was
+# invisible while it happened and gone afterwards.
+#
+# The gate that matters here is `test_a_line_arrives_before_the_run_is_over`:
+# every other assertion below would still pass on a buffered run that narrated
+# everything at the end, which is the bug wearing the fix's clothes.
+
+
+def test_the_streaming_format_is_asked_for_with_the_flag_it_requires():
+    """`--output-format stream-json` without `--verbose` does not start.
+
+    The CLI refuses the combination outright ("requires --verbose"), before
+    any API call — so this is the one flag in the vector that may not be
+    hygiene resolved against `--help`. It is in `args` for that reason, and
+    this says so in a place a future edit will trip over.
+    """
+    args = harness_mod.KNOWN[0].args
+    assert "stream-json" in args
+    assert "--verbose" in args
+
+
+def _streaming_cli(tmp_path: Path, lines: list, *, wait_for: Path | None = None):
+    """A CLI that prints one JSON event per line, as `stream-json` does.
+
+    Optionally it waits for a file to appear partway through, which is how a
+    test can prove the reader saw a line *before* the process ended: nothing
+    creates that file except the narration callback.
+    """
+    script = tmp_path / f"streamer-{len(lines)}-{bool(wait_for)}.py"
+    script.write_text(
+        "import json, pathlib, sys, time\n"
+        f"lines = {json.dumps([json.dumps(one) for one in lines])}\n"
+        f"wait = {str(wait_for) if wait_for is None else repr(str(wait_for))}\n"
+        "for index, line in enumerate(lines):\n"
+        "    sys.stdout.write(line + '\\n')\n"
+        "    sys.stdout.flush()\n"
+        "    if wait and index == 0:\n"
+        "        deadline = time.time() + 20\n"
+        "        while time.time() < deadline and not pathlib.Path(wait).exists():\n"
+        "            time.sleep(0.02)\n"
+        "        if not pathlib.Path(wait).exists():\n"
+        "            sys.exit(3)\n",
+        encoding="utf-8",
+    )
+    return harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True
+    )
+
+
+def _search_event(query: str) -> dict:
+    return {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {"type": "tool_use", "name": "WebSearch", "input": {"query": query}}
+            ]
+        },
+    }
+
+
+def test_a_line_arrives_before_the_run_is_over(tmp_path):
+    """The whole of B121 in one assertion, and the only one that can fail on a
+    buffered implementation.
+
+    The fake CLI prints its first event and then refuses to finish until the
+    narration callback has created a file. A run that reads its child's output
+    only after the child exits deadlocks here and fails on the timeout, which
+    is exactly the behaviour being ruled out.
+    """
+    sentinel = tmp_path / "the-reader-saw-it"
+    one = _streaming_cli(
+        tmp_path,
+        [_search_event("timing chain"), _reply([])],
+        wait_for=sentinel,
+    )
+    seen: list[str] = []
+
+    def watching(line: str) -> None:
+        seen.append(line)
+        sentinel.write_text("yes", encoding="utf-8")
+
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = watching
+    researcher.gather(_task())
+    assert seen, "nothing was narrated at all"
+    assert 'searched "timing chain"' in seen[0]
+
+
+def test_what_the_agent_did_is_said_in_the_readers_words(tmp_path):
+    """One line per action, and nothing for the machinery around them."""
+    one = _streaming_cli(
+        tmp_path,
+        [
+            {"type": "system", "subtype": "init", "model": "claude-x"},
+            {"type": "stream_event", "event": {"delta": "ignored"}},
+            _search_event("golf 1.4 tsi chain"),
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "WebFetch",
+                            "input": {"url": "https://example.test/page"},
+                        }
+                    ]
+                },
+            },
+            _reply([]),
+        ],
+    )
+    seen: list[str] = []
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = seen.append
+    researcher.gather(_task())
+    said = "\n".join(seen)
+    assert "claude-x" in said
+    assert 'searched "golf 1.4 tsi chain"' in said
+    assert "fetched https://example.test/page" in said
+    assert "ignored" not in said, "a partial-token frame is not an action"
+    assert researcher.actions == seen
+
+
+def test_streaming_does_not_change_what_comes_back(tmp_path):
+    """The reply is still the reply, and the meter still reads.
+
+    `--output-format stream-json` ends with the same `result` object `json`
+    prints alone, so a plane that narrates must parse exactly what a plane
+    that did not parsed — otherwise B121 would have bought visibility with
+    findings.
+    """
+    one = _streaming_cli(
+        tmp_path,
+        [
+            {"type": "system", "subtype": "init", "model": "claude-x"},
+            _search_event("anything"),
+            _reply([
+                {
+                    "title": "Timing chain kit unobtainable",
+                    "domain": "engine",
+                    "severity": "high",
+                    "quote": QUOTE,
+                    "document_text": PAGE,
+                    "source_url": "https://example.test/thread",
+                    "component": "timing chain",
+                }
+            ]),
+        ],
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    documents = researcher.gather(_task())
+    assert [document.url for document in documents] == ["https://example.test/thread"]
+    assert researcher.extract(_task(), documents[0])[0].title == (
+        "Timing chain kit unobtainable"
+    )
+    assert researcher.tokens_used == 1200 + 340 + 9000
+
+
+def test_a_log_line_that_cannot_be_written_does_not_fail_the_run(tmp_path):
+    """Narration is a nicety; the research is the job.
+
+    A `progress.log` writing to a database that has gone away must not destroy
+    a completed run of real research — so a callback that raises stops being
+    called and nothing else changes.
+    """
+    one = _streaming_cli(tmp_path, [_search_event("anything"), _reply([])])
+
+    def broken(line: str) -> None:
+        raise RuntimeError("the log is gone")
+
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = broken
+    assert researcher.gather(_task()) == []
+    assert researcher.note
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX here; taskkill /T covers Windows")
+def test_a_timeout_kills_the_whole_process_tree_not_just_the_shell(tmp_path):
+    """`proc.kill()` alone only ends the direct child. A `.cmd` shim's real
+    work happens one level below that — `cmd.exe` spawning node — and a run
+    declared timed out must not leave that child spending the reader's
+    subscription in the background."""
+    marker = tmp_path / "child-alive"
+    grandchild = tmp_path / "grandchild.py"
+    grandchild.write_text(
+        f"open({str(marker)!r}, 'w').close()\n"
+        "import time\ntime.sleep(60)\n",
+        encoding="utf-8",
+    )
+    parent = tmp_path / "parent.py"
+    parent.write_text(
+        "import subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, {str(grandchild)!r}])\n"
+        "time.sleep(60)\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(parent),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=0.5)
+    with pytest.raises(TimeoutError):
+        researcher.gather(_task())
+
+    assert marker.exists(), "the grandchild never even started -- this test proves nothing"
+
+    import subprocess as sp
+    import time as _time
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline:
+        # `pgrep -f` is the simplest cross-distro way to ask "is anything
+        # still running that was told to sleep 60s from this test's own
+        # temp file" without tracking a pid this test was never given.
+        found = sp.run(
+            ["pgrep", "-f", str(grandchild)], capture_output=True, text=True
+        ).stdout.strip()
+        if not found:
+            break
+        _time.sleep(0.2)
+    else:
+        pytest.fail("the grandchild process was still running after the timeout")
+
+
+class _StopIt(Exception):
+    """Stands in for `app.web.jobs.Cancelled` without harness.py importing it.
+
+    `check_cancelled` is duck-typed exactly like `on_action` — whatever it
+    raises must reach the caller unmodified, so a real `Cancelled` surfaces as
+    cancelled rather than as a crash. This proves the propagation contract
+    with a type harness.py has never heard of, which is the point.
+    """
+
+
+def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path):
+    """The cross-plane defect: `pack_author`/`pack_amend`/`site_register` can
+    ask to stop, but nothing told the subprocess. `check_cancelled` is the
+    checkpoint `_stream` now polls every line, and it must both end the real
+    work (a `.cmd` shim's child included, hence a tree kill) and let the
+    reader's own exception type through rather than reporting a crash."""
+    marker = tmp_path / "grandchild-alive"
+    grandchild = tmp_path / "grandchild.py"
+    grandchild.write_text(
+        f"open({str(marker)!r}, 'w').close()\n"
+        "import time\ntime.sleep(60)\n",
+        encoding="utf-8",
+    )
+    parent = tmp_path / "parent.py"
+    parent.write_text(
+        "import os, subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, {str(grandchild)!r}])\n"
+        f"while not os.path.exists({str(marker)!r}):\n"
+        "    time.sleep(0.01)\n"
+        "print('{\"type\": \"result\", \"result\": \"unused\"}', flush=True)\n"
+        "time.sleep(60)\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(parent),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=60)
+    calls = {"n": 0}
+
+    def check_cancelled():
+        calls["n"] += 1
+        if calls["n"] >= 1:
+            raise _StopIt("the reader asked to stop")
+
+    researcher.check_cancelled = check_cancelled
+
+    import time as _time
+
+    started = _time.time()
+    with pytest.raises(_StopIt):
+        researcher.gather(_task())
+    elapsed = _time.time() - started
+    assert elapsed < 30, (
+        f"took {elapsed:.1f}s -- a cancel must not wait anywhere near the "
+        f"{researcher.timeout}s timeout"
+    )
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline and not marker.exists():
+        _time.sleep(0.05)
+    assert marker.exists(), "the grandchild never even started -- this test proves nothing"
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline and _grandchild_running(grandchild):
+        _time.sleep(0.1)
+    assert not _grandchild_running(grandchild), (
+        "the grandchild was still running after a cancel -- only the read "
+        "loop stopped, not the work"
+    )
+
+
+def _grandchild_running(script: Path) -> bool:
+    import subprocess as sp
+
+    return bool(
+        sp.run(["pgrep", "-f", str(script)], capture_output=True, text=True).stdout.strip()
+    )
+
+
+def test_a_cli_that_never_finishes_is_killed_and_said_so(tmp_path):
+    """The ceiling still holds, now that nothing waits on `subprocess.run`."""
+    script = tmp_path / "hangs.py"
+    script.write_text("import time\ntime.sleep(120)\n", encoding="utf-8")
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=1.0)
+    with pytest.raises(TimeoutError) as raised:
+        researcher.gather(_task())
+    assert "within 1s" in str(raised.value)
+
+
+def test_the_transcript_is_bounded(tmp_path, monkeypatch):
+    """A CLI that will not stop talking costs a fixed amount of memory."""
+    monkeypatch.setattr(harness_mod, "TRANSCRIPT_TAIL", 2048)
+    script = tmp_path / "chatty.py"
+    script.write_text(
+        "import sys\n"
+        "for _ in range(400):\n"
+        "    sys.stdout.write('x' * 200 + '\\n')\n"
+        "sys.stdout.write('{\"type\": \"result\", \"result\": \"done\"}\\n')\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.gather(_task())
+    assert len(researcher.transcript) <= 2048
+    # And the reply survived the bound, because the result is the last line.
+    assert researcher.note
+
+
+def test_narration_is_capped_and_says_that_it_stopped(tmp_path, monkeypatch):
+    """An agent stuck in a tool loop cannot grow the job log without end — and
+    the reader is told, because a cap that stops quietly leaves them looking at
+    exactly the silence B121 fixed."""
+    monkeypatch.setattr(harness_mod, "MAX_NARRATED", 5)
+    one = _streaming_cli(
+        tmp_path, [_search_event(f"query {index}") for index in range(40)] + [_reply([])]
+    )
+    seen: list[str] = []
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = seen.append
+    researcher.gather(_task())
+    assert len(seen) == 6
+    assert "not shown" in seen[-1]
+
+
+def test_a_cli_that_cannot_stream_still_runs(monkeypatch):
+    """Visibility is the thing worth losing; the plane is not.
+
+    The reader's CLI is not this machine's, and a build whose
+    `--output-format` never listed `stream-json` would refuse the streaming
+    vector outright — the same dead plane, with the same "Claude Code exited
+    1", that took two releases to get out of. So the format is chosen against
+    what `--help` actually lists."""
+    one = harness_mod.KNOWN[0]
+    monkeypatch.setattr(harness_mod, "locate", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(harness_mod, "declared", lambda _: frozenset())
+    monkeypatch.setattr(
+        harness_mod, "helptext",
+        lambda _: "--output-format <format>  (choices: \"text\", \"json\")",
+    )
+    vector = harness_mod.command_for(one)
+    assert "stream-json" not in vector
+    assert "json" in vector
+    assert "--allowedTools" in vector, "the grant is not optional"
+
+    monkeypatch.setattr(
+        harness_mod, "helptext",
+        lambda _: "--output-format <format>  (choices: \"json\", \"stream-json\")",
+    )
+    assert "stream-json" in harness_mod.command_for(one)

@@ -207,3 +207,63 @@ def test_the_installer_stops_the_shell_before_the_sidecar(hook, nsh):
         "PyInstaller onefile re-execs, so the pid we spawned is a bootloader "
         "and the child is what holds the image mapped"
     )
+
+
+# ── the console, as a thing you double-click ────────────────────────────
+
+def _nsis_code(text: str) -> str:
+    """`installer.nsh` with its comments removed.
+
+    NSIS comments with `;`, and `_code` above only strips `//` — so every
+    assertion below would otherwise be satisfiable by the paragraph of prose
+    that explains it. That is the exact failure this file's own docstring
+    warns about, one comment syntax over.
+    """
+    return "\n".join(
+        line.split(";", 1)[0] for line in text.splitlines()
+    )
+
+
+def _macro(text: str, name: str) -> str:
+    body = text[text.index(f"!macro {name}") :]
+    return body[: body.index("!macroend")]
+
+
+def test_the_installer_makes_the_console_a_thing_you_double_click(nsh):
+    """One click, from the Start menu, into the operator console.
+
+    The console exists because a window would not open on the reader's machine.
+    An entry point of "find a terminal, find the install directory, remember a
+    flag" is not an answer to that — so the installer puts a shortcut next to
+    the app's own, pointing at the sidecar Tauri already ships, with `--tui`.
+
+    No second artifact: `kriko-sidecar.exe` is the externalBin the bundle
+    installs anyway, and `app/tui/` is already frozen inside it.
+    """
+    code = _nsis_code(nsh)
+    install = _macro(code, "NSIS_HOOK_POSTINSTALL")
+    assert "CreateShortcut" in install, "nothing creates the console shortcut"
+    assert "kriko-sidecar.exe" in install, (
+        "the shortcut must point at the binary the bundle actually installs"
+    )
+    assert '"--tui"' in install, (
+        "without the flag the shortcut starts a headless engine and shows "
+        "the reader a console that says nothing"
+    )
+
+
+def test_uninstalling_takes_the_console_shortcut_with_it(nsh):
+    """A Start-menu entry that outlives its target is a click that does
+    nothing, on a machine whose owner already decided to be rid of us."""
+    code = _nsis_code(nsh)
+    removed = _macro(code, "NSIS_HOOK_POSTUNINSTALL")
+    assert "Delete" in removed and "Kriko Console.lnk" in removed
+
+
+def test_the_console_shortcut_names_the_same_link_both_ways(nsh):
+    """Created and deleted under one name, or the uninstall misses it."""
+    code = _nsis_code(nsh)
+    created = _macro(code, "NSIS_HOOK_POSTINSTALL")
+    removed = _macro(code, "NSIS_HOOK_POSTUNINSTALL")
+    link = "Kriko Console.lnk"
+    assert link in created and link in removed

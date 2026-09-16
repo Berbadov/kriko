@@ -43,7 +43,12 @@ def read(request: Request) -> dict:
     items = keys.status(_path(request))
     return {
         "providers": items,
-        "ready": all(item["present"] for item in items),
+        # Not `all(item["present"] ...)`: that would require *every* search
+        # provider present, including the optional ones, so setting Tavily up
+        # would have made a previously-ready installation report itself not
+        # ready until Exa was added too. `keys.ready()` is the real question —
+        # any one search key, and every non-optional key.
+        "ready": keys.ready(_path(request)),
         "path": str(_path(request)),
     }
 

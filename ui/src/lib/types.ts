@@ -62,6 +62,14 @@ export type AgentTarget = {
     exists: boolean;
     state: "connected" | "stale" | "absent" | "unreadable";
     detail?: string;
+    /** Whether the protocol on disk is the one this build would write.
+     *  A harness can be wired and carrying a skill from three versions ago. */
+    skill?: {
+        supported: boolean;
+        path: string | null;
+        present: boolean;
+        stale: boolean;
+    };
 };
 
 export type AgentTargets = { server_name: string; store: string; targets: AgentTarget[] };
@@ -466,6 +474,36 @@ export type FactCheck = {
 };
 export type FactChecks = { items: FactCheck[]; counts: Record<string, number> };
 
+/** One piece of evidence, checked offline against the page this install
+ * actually kept — never a fresh fetch. `not_kept` means no copy exists to
+ * check against at all, which is a different fact than `ungrounded` and
+ * must never be shown as a pass. See `app/findings.py`'s `regrounded`. */
+export type GroundingEvidence = {
+    evidence_id: string;
+    source_id: string;
+    quote: string;
+    url: string;
+    verdict: string;
+};
+export type Grounding = {
+    claim_id: string;
+    pack_id: string;
+    evidence: GroundingEvidence[];
+    not_kept: number;
+    ungrounded: number;
+};
+
+/** The retained page text behind one piece of evidence — "here is the page
+ * that proved this quote". See `GET /api/factcheck/document`. */
+export type RetainedDocument = {
+    source_id: string;
+    pack_id: string;
+    url: string;
+    text: string;
+    chars: number;
+    retained_at: string;
+};
+
 /** The reader's own marks on one stored answer: what they ticked, and what
  * the seller said. Read together because they render together. */
 export type Triage = {
@@ -480,6 +518,123 @@ export type Triage = {
  * data in the system for improving the agent skill, and previously returned
  * to the agent and then discarded.
  */
+/** One unit of agent-driven work on the knowledge, as the feed sees it.
+ *
+ * `request`/`response` are summaries the server made — a page of
+ * `document_text` is elided there rather than carried here. See
+ * `app/operations.py`. */
+/** What a draft currently holds, and what of its line-up it does not cover. */
+export type DraftState = {
+    slug: string;
+    pack_id: string;
+    name: string;
+    version: string;
+    identity: Record<string, string[]>;
+    principle: string;
+    subjects: string[];
+    claims: number;
+    uncovered: string[];
+    lineup: string[];
+};
+
+/** A site this installation can read, and where the adapter came from. */
+export type Site = {
+    site: string;
+    id: string;
+    pack_id: string;
+    match: string[];
+    /** pack | local — a pack author's, or one this copy learned. */
+    source: string;
+    superseded?: boolean;
+};
+
+export type SiteRequest = {
+    host: string;
+    asks: number;
+    sample_url: string;
+    title: string;
+    /** open | working | done | refused. */
+    state: string;
+    detail: string;
+    first_at: string;
+    last_at: string;
+};
+
+export type Sites = { registered: Site[]; requested: SiteRequest[] };
+
+/** Which agent, which LLM, which search provider — and what could be chosen. */
+export type Prefs = {
+    chosen: { preferred_harness: string; llm_model: string; search_provider: string };
+    harnesses: { id: string; label: string; path: string }[];
+    unusable: { id: string; label: string; why: string }[];
+    search_providers: { id: string; label: string; ready: boolean }[];
+    models: { current: string; default: string; note: string };
+};
+
+/** What has been spent, and what the next run is likely to cost.
+ *
+ * `usd: null` means nobody counted — never zero. And there is no balance:
+ * no provider exposes one to an API key, so the screen says where it lives
+ * instead of inventing a number. */
+export type Costs = {
+    spent: {
+        days: number;
+        usd: number;
+        tokens: number;
+        runs: number;
+        planes: {
+            plane: string;
+            /** Which LLM answered. Spelled `llm` here and in the payload: the
+             *  client may not contain a pack's identity key. */
+            llm: string;
+            runs: number;
+            priced: number;
+            usd: number;
+            tokens: number;
+            usd_per_run: number | null;
+        }[];
+    };
+    estimates: Record<
+        string,
+        {
+            plane: string;
+            subjects: number;
+            usd: number | null;
+            tokens: number | null;
+            basis: number;
+            note: string;
+        }
+    >;
+    keys: { id: string; label: string; present: boolean; purpose: string }[];
+    balance: { known: boolean; note: string };
+};
+
+export type Operation = {
+    op_id: number;
+    /** mcp | job | extension | app | cli — which door it came in. */
+    door: string;
+    /** research | agenda | author | recheck | lookup | read | write. */
+    kind: string;
+    /** The tool or job as it is actually called. */
+    name: string;
+    subject_id: string;
+    pack_id: string;
+    /** running | ok | failed. */
+    state: string;
+    request_json: string;
+    response_json: string;
+    error: string;
+    ms: number | null;
+    started_at: string;
+    ended_at: string;
+};
+
+export type Operations = {
+    items: Operation[];
+    running: number;
+    last_id: number;
+};
+
 export type Submission = {
     submission_id: string;
     created_at: string;
@@ -711,6 +866,10 @@ export type PackDraft = {
     name: string;
     version: string;
     error: string;
+    /** The pack id this draft was installed as, or "". A draft that has been
+     *  installed is still a draft — it can be amended and installed again —
+     *  but a card that cannot say so reads as an install that did not work. */
+    installed_as: string;
 };
 
 /* What this installation has spent, and what it was asked. (B97)
@@ -790,3 +949,96 @@ export type ScheduleCheck = Schedule & {
     reason: string;
     due_at: string;
 };
+
+export type BenchProtocol = {
+    name: string;
+    context_chars: number;
+    batch_size: number;
+    preamble: string;
+};
+
+export type BenchRun = {
+    id?: number;
+    at?: string;
+    plane: string;
+    llm: string;
+    protocol: string;
+    kind: string;
+    search_provider: string;
+    ms?: number | null;
+    tokens?: number | null;
+    usd: number | null;
+    documents?: number | null;
+    findings?: number | null;
+    accepted?: number | null;
+    refused?: number | null;
+    error?: string;
+    reasons: string[];
+    gold: Record<string, unknown> | null;
+};
+
+export type BenchScoredGroup = {
+    plane: string;
+    llm: string;
+    protocol: string;
+    runs: number;
+    found: number;
+    wanted: number;
+    produced: number;
+    hallucinated: number;
+    recall: number | null;
+    recall_interval: [number, number] | null;
+    hallucination_rate: number | null;
+    hallucination_interval: [number, number] | null;
+};
+
+export type BenchSummaryRow = {
+    plane: string;
+    llm: string;
+    protocol: string;
+    runs: number;
+    ms: number | null;
+    tokens: number | null;
+    usd: number | null;
+    documents: number | null;
+    findings: number | null;
+    accepted: number | null;
+    refused: number | null;
+    failures: number;
+    acceptance: number | null;
+};
+
+export type BenchReadoutRow = {
+    llm: string;
+    protocol: string;
+    batch_size: number;
+    context_chars: number;
+    preamble: string;
+    search_provider: string;
+    usd_per_accepted_claim: number | null;
+    hallucination_rate: number | null;
+    hallucination_interval: [number, number] | null;
+    runs: number;
+    note: string;
+};
+
+export type Bench = {
+    runs: BenchRun[];
+    verdict: Record<string, unknown>;
+    scored: { groups: BenchScoredGroup[] };
+    summary: BenchSummaryRow[];
+    cases: Record<string, unknown>[];
+    protocols: BenchProtocol[];
+    chosen: Record<string, string>;
+    readout: BenchReadoutRow[];
+};
+
+export type BenchRequest = Partial<{
+    planes: string;
+    pack_id: string;
+    cases: number;
+    max_documents: number;
+    budget_usd: number;
+    protocols: string;
+    reps: number;
+}>;

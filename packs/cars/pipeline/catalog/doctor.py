@@ -213,7 +213,7 @@ def repair(data_dir: Path | None = None, dry_run: bool = False) -> Repair:
         fitment_path = data_dir / "fitment" / f"{key}.yaml"
         fitment_rows = _load(fitment_path)
         live_ids = {r["id"] for r in final}
-        kept = []
+        kept: list[dict] = []
         for frow in fitment_rows:
             old_id = str(frow.get("variant_id") or "")
             vid = result.renames.get(old_id, old_id)

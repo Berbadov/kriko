@@ -135,6 +135,31 @@ def test_ingest_document_stores_hint_not_attribution(tmp_path):
     assert row["raw_text"] == "DQ200 accumulator fails"
 
 
+def test_ingest_document_threads_published_at(tmp_path):
+    conn = db.connect(tmp_path / "l.db")
+    doc = Document(
+        text="DQ200 accumulator fails",
+        url="https://x.test/dsg2",
+        site_or_channel="x.test",
+        published_at="2021-05-03",
+    )
+    doc_id = ingest.ingest_document(conn, doc, "page", target_hint="dq381")
+    row = conn.execute("SELECT published_at FROM documents WHERE id=?", (doc_id,)).fetchone()
+    assert row["published_at"] == "2021-05-03"
+
+
+def test_ingest_document_defaults_published_at_blank(tmp_path):
+    conn = db.connect(tmp_path / "l.db")
+    doc = Document(
+        text="unrelated text with no date",
+        url="https://x.test/dsg3",
+        site_or_channel="x.test",
+    )
+    doc_id = ingest.ingest_document(conn, doc, "page", target_hint="dq381")
+    row = conn.execute("SELECT published_at FROM documents WHERE id=?", (doc_id,)).fetchone()
+    assert row["published_at"] == ""
+
+
 def test_backfill_cache_dir(tmp_path):
     conn = db.connect(tmp_path / "l.db")
     cache = tmp_path / "cache"

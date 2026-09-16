@@ -382,7 +382,250 @@ CREATE TABLE IF NOT EXISTS research_run_claims (
 );
 CREATE INDEX IF NOT EXISTS research_run_claims_claim
     ON research_run_claims (pack_id, claim_id);
+
+-- ── the text a quote was proved against ──────────────────────────────────
+--
+-- The evidence chain is this product's one hard guarantee: a quote that is
+-- not in the document does not become evidence. `app/findings.py` makes that
+-- check mechanically, once — and until this table it made it against text
+-- nobody kept. So the guarantee was true at acceptance and unrepeatable
+-- afterwards: a page that changes or dies takes the only copy with it, two
+-- findings from one page cannot be cross-checked against each other, and
+-- "was this source ever actually fetched" — which B112 needs in order to
+-- recognise a fabricated `source_url` — had no answer at all.
+--
+-- **Here rather than in the engine's store**, by the rule at the top of this
+-- file. A document is how *this installation* came to believe a claim, not
+-- part of the knowledge a pack ships: a published pack carries the quote and
+-- the URL, which is what a downstream consumer re-checks. Putting the page
+-- text in `knowledge.sqlite` would put it inside a pack's `content_digest`,
+-- so two readers who researched the same subject would compute different
+-- digests for the same version and every pack update would look like a
+-- republish.
+--
+-- Keyed by `source_id`, which is what `evidence` already points at, so a
+-- claim reaches its document through the row it already has. One row per
+-- source, replaced: two findings quoting one page submit the same text
+-- twice, and a second copy answers no question the first cannot.
+CREATE TABLE IF NOT EXISTS documents (
+    source_id   TEXT PRIMARY KEY,
+    pack_id     TEXT NOT NULL DEFAULT '',
+    url         TEXT NOT NULL DEFAULT '',
+    -- The text itself, or empty when the page was larger than
+    -- MAX_DOCUMENT_CHARS. Empty text with a non-zero `chars` is therefore a
+    -- third answer — "this source was fetched and is not kept" — and it is
+    -- deliberately not a truncation: half a page would re-check as
+    -- `ungrounded` for a quote that was genuinely in the other half, which is
+    -- the one wrong answer this table must never produce.
+    text        TEXT NOT NULL DEFAULT '',
+    chars       INTEGER NOT NULL DEFAULT 0,
+    -- Defaulted, though this writer always supplies it: every column in this
+    -- file carries one so that `add_missing_columns` can always do its job,
+    -- and a column that is only addable while its table is new is a trap for
+    -- whoever adds the next one.
+    retained_at TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS documents_retained ON documents (retained_at DESC);
+
+-- ── operations: what an agent is doing, whichever door it came in ────────
+--
+-- An *operation* is one unit of agent-driven work on the knowledge (see
+-- `docs/AGENT_OPERATIONS.md`). B121 made a run Kriko *starts* visible while it
+-- runs; this is the other half, and the bigger one — the door the reader
+-- actually prefers is their own coding agent talking to the MCP server, and
+-- that door was visible only afterwards, as a `submissions` row, and only when
+-- the operation happened to be a submission. A `lookup`, a `research_brief`, a
+-- `draft_pack` left no trace at all.
+--
+-- One row per call, opened when it starts and closed when it ends, so a call
+-- that is *still running* is a row rather than an absence: that is the whole
+-- difference between a feed and a log.
+--
+-- Interface state, for the reason at the top of this file: what an agent asked
+-- this installation is not pack content and must never reach a
+-- `content_digest`.
+--
+-- `request_json` and `response_json` are **summaries, not payloads**. A
+-- `submit_findings` call carries whole pages of `document_text`; storing them
+-- here would duplicate the `documents` table and make this the largest thing
+-- in the file. `app/operations.py` elides them and says how many characters it
+-- dropped.
+CREATE TABLE IF NOT EXISTS operations (
+    op_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- mcp | job | http | cli. Which door, because "who did this" is the first
+    -- question about anything surprising in this table.
+    door         TEXT NOT NULL DEFAULT '',
+    -- The operation vocabulary: research | agenda | author | recheck | read |
+    -- write. Coarser than `name` on purpose — a feed filtered by kind answers
+    -- "is anything growing the knowledge right now", which a list of nineteen
+    -- tool names does not.
+    kind         TEXT NOT NULL DEFAULT '',
+    -- The tool or endpoint as it is actually called, e.g. `submit_findings`.
+    name         TEXT NOT NULL DEFAULT '',
+    subject_id   TEXT NOT NULL DEFAULT '',
+    pack_id      TEXT NOT NULL DEFAULT '',
+    state        TEXT NOT NULL DEFAULT 'running',   -- running | ok | failed
+    request_json  TEXT NOT NULL DEFAULT '',
+    response_json TEXT NOT NULL DEFAULT '',
+    error        TEXT NOT NULL DEFAULT '',
+    ms           INTEGER,
+    started_at   TEXT NOT NULL DEFAULT '',
+    ended_at     TEXT NOT NULL DEFAULT '',
+    -- What this one call spent, when it spent anything (B118). NULL where
+    -- nobody counted, never 0 — the same distinction `research_runs` and
+    -- `bench_runs` keep, for the same reason: an MCP `lookup` costs nothing
+    -- and a `research` operation on the paid plane knows a real number, and
+    -- averaging the first in as free would understate every estimate built on
+    -- the second. Added after the table existed, hence no default beyond
+    -- NULL (see `add_missing_columns`).
+    usd          REAL,
+    tokens       INTEGER
+);
+CREATE INDEX IF NOT EXISTS operations_started ON operations (op_id DESC);
+
+-- ── the benchmark: the same case, every plane, measured ──────────────────
+--
+-- B111, and it is the input B123 cannot invent. Choosing how an operation
+-- should spend a model — how much context per call, how many documents per
+-- batch — is a question about *ratios* ("this model holds together under N
+-- tokens at this batch size; that one takes more"), and a ratio is a
+-- measurement or it is a guess. This table is where the measurements live.
+--
+-- One row per (case, plane, protocol) attempt. `protocol`, `context_chars` and
+-- `batch_size` are recorded from the first day even though only one protocol
+-- exists yet: a measurement whose settings were not written down cannot be
+-- compared with the next one, which is how benchmark tables become folklore.
+--
+-- Interface state, and emphatically so: a benchmark writes claims into a
+-- *copy* of the store and throws it away (`app/bench.py`), so nothing here
+-- has touched the knowledge at all.
+CREATE TABLE IF NOT EXISTS bench_runs (
+    bench_id      TEXT PRIMARY KEY,
+    batch_id      TEXT NOT NULL DEFAULT '',   -- one press, many rows
+    at            TEXT NOT NULL DEFAULT '',
+    subject_id    TEXT NOT NULL DEFAULT '',
+    subject       TEXT NOT NULL DEFAULT '',
+    pack_id       TEXT NOT NULL DEFAULT '',
+    plane         TEXT NOT NULL DEFAULT '',
+    -- Which model or harness actually answered. The plane is the *how*; this
+    -- is the *what*, and a ratio keyed by plane alone would average two
+    -- different models into one meaningless number.
+    model         TEXT NOT NULL DEFAULT '',
+    protocol      TEXT NOT NULL DEFAULT '',
+    context_chars INTEGER,
+    batch_size    INTEGER,
+    ms            INTEGER,
+    -- NULL where nobody counted, never 0. The same distinction `research_runs`
+    -- keeps: the harness plane costs the reader nothing beyond a subscription
+    -- and still knows its tokens; a per-call price knows its dollars without
+    -- ever seeing a token.
+    tokens        INTEGER,
+    usd           REAL,
+    documents     INTEGER NOT NULL DEFAULT 0,
+    findings      INTEGER NOT NULL DEFAULT 0,
+    accepted      INTEGER NOT NULL DEFAULT 0,
+    refused       INTEGER NOT NULL DEFAULT 0,
+    -- The gate's own sentences, the top few. A plane that gathers plenty and
+    -- loses it all at the grounding check is the interesting failure, and a
+    -- count cannot show it.
+    reasons_json  TEXT NOT NULL DEFAULT '[]',
+    error         TEXT NOT NULL DEFAULT '',
+    note          TEXT NOT NULL DEFAULT '',
+    -- The ground-truth score, when the case carried any (B126): recall,
+    -- precision and hallucination rate, with the entries behind each. JSON
+    -- because it is read as a whole and never queried by field — and because
+    -- a schema for it would be this table's third attempt at one.
+    gold_json     TEXT NOT NULL DEFAULT '',
+    -- Which repetition of the same (case, plane, protocol) this was. Language
+    -- models are stochastic: a benchmark that runs once measures a sample and
+    -- reports it as a constant.
+    rep           INTEGER NOT NULL DEFAULT 1,
+    -- `exa` | `tavily` | ''. B126 §8: which search provider fed this run its
+    -- documents is a sweep axis, not a fact hidden inside `note` — the same
+    -- model under the same protocol with two different searchers is two
+    -- measurements, exactly as two protocols are. Added after the table
+    -- existed, hence the empty default (see `add_missing_columns`).
+    search_provider TEXT NOT NULL DEFAULT '',
+    -- The case kind this row measured: specific | bulk | validation (B126
+    -- §3). Each answers a different question and none of them should be
+    -- averaged into the others without saying so.
+    kind          TEXT NOT NULL DEFAULT 'specific'
+);
+CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
+
+-- ── sites this installation knows how to read ────────────────────────────
+--
+-- An adapter says how to read one website: which selectors hold the fields,
+-- what its labels mean. Packs ship them, which is right — an adapter is
+-- knowledge about a site, and a pack is how knowledge travels.
+--
+-- But it left the reader with nothing to do on a site no pack covers, which is
+-- every site except the one. "I cannot open the extension on pages that aren't
+-- registered" is that, exactly: the panel is not missing, the *site* is, and
+-- until now the only way to add one was to author a pack.
+--
+-- So a **local adapter**: one this installation learned, kept here rather than
+-- in the store. That is not a convenience, it is the two-SQLite rule again — a
+-- site the reader taught their own copy about is not pack content, must not
+-- enter a `content_digest`, and must survive the pack being updated or
+-- uninstalled. `app/sites.py` merges them behind the engine's own lookup, so
+-- a pack that later ships an adapter for the same host wins and the local one
+-- becomes redundant rather than conflicting.
+CREATE TABLE IF NOT EXISTS local_adapters (
+    host       TEXT PRIMARY KEY,
+    -- The adapter document, as JSON, in the same shape a pack ships.
+    spec_json  TEXT NOT NULL DEFAULT '{}',
+    -- agent | reader. Who wrote it, because "an agent proposed this" and "I
+    -- wrote this myself" carry different weight when it reads a page wrong.
+    source     TEXT NOT NULL DEFAULT 'agent',
+    -- Which pack's identity keys it maps into. An adapter that maps to keys no
+    -- installed pack declares produces a lookup that resolves to nothing.
+    pack_id    TEXT NOT NULL DEFAULT '',
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+
+-- Sites the reader opened that nothing here can read yet.
+--
+-- The demand signal, and the only honest input to "which site should Kriko
+-- learn next": a list of hosts somebody actually stood on and pressed the
+-- button. Not browsing history — one row per host, a count, and the last page
+-- they were on when they asked, which is what an agent needs to write the
+-- adapter.
+CREATE TABLE IF NOT EXISTS site_requests (
+    host       TEXT PRIMARY KEY,
+    asks       INTEGER NOT NULL DEFAULT 0,
+    sample_url TEXT NOT NULL DEFAULT '',
+    title      TEXT NOT NULL DEFAULT '',
+    -- open | working | done | refused. `done` when an adapter exists for it.
+    state      TEXT NOT NULL DEFAULT 'open',
+    detail     TEXT NOT NULL DEFAULT '',
+    first_at   TEXT NOT NULL DEFAULT '',
+    last_at    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS site_requests_last ON site_requests (last_at DESC);
 """
+
+
+
+#: The most operations one installation keeps. A feed, not an archive: the
+#: durable record of what research *produced* is `submissions`, `pipeline_runs`
+#: and `research_runs`, all of which outlive this. Rows here answer "what is
+#: happening" and "what just happened", and both questions have a short reach.
+OPERATIONS_KEPT = 2000
+
+
+#: The most documents one installation keeps, newest first. A bound rather
+#: than a sweep by age: what makes this table safe is that it cannot grow
+#: without limit, and "the last N pages I accepted evidence from" is the set a
+#: re-check actually reaches for. Roughly 10 MB at the sizes an agent submits.
+DOCUMENTS_KEPT = 5000
+
+#: And the most one document may be. Past this the row records that the source
+#: was fetched and says the text is not kept — see the column comment.
+MAX_DOCUMENT_CHARS = 200_000
+
 
 #: The verdicts a reader may leave. Closed, and allowed to be a constant for
 #: the reason CLAUDE.md's scalability rule carves out: this does not grow with
@@ -961,6 +1204,350 @@ def record_submission(
     return submission_id
 
 
+def retain_documents(conn: sqlite3.Connection, documents: Sequence[dict]) -> int:
+    """Keep the text each accepted quote was proved against. Returns rows kept.
+
+    Called from `app.findings.log_submission`, which is the one place both
+    doors already meet — so a document is kept on the same terms whether the
+    finding arrived through MCP or through an in-app job, and acceptance
+    itself still never touches this file (see that function's docstring for
+    why the two connections stay apart).
+
+    Replaces rather than ignores: a second submission quoting the same page is
+    the more recent read of it, and a stale copy is the one thing worth less
+    than no copy.
+    """
+    kept = 0
+    for one in documents or ():
+        source_id = str(one.get("source_id") or "").strip()
+        if not source_id:
+            continue
+        text = str(one.get("text") or "")
+        conn.execute(
+            "INSERT OR REPLACE INTO documents (source_id, pack_id, url, text,"
+            " chars, retained_at) VALUES (?,?,?,?,?,?)",
+            (
+                source_id,
+                str(one.get("pack_id") or ""),
+                str(one.get("url") or ""),
+                text if len(text) <= MAX_DOCUMENT_CHARS else "",
+                len(text),
+                _now(),
+            ),
+        )
+        kept += 1
+    if kept:
+        # Pruned here rather than on a timer: this is the only writer, so it
+        # is the only moment the bound can be exceeded.
+        conn.execute(
+            "DELETE FROM documents WHERE source_id NOT IN ("
+            " SELECT source_id FROM documents"
+            " ORDER BY retained_at DESC, source_id DESC LIMIT ?)",
+            (DOCUMENTS_KEPT,),
+        )
+        conn.commit()
+    return kept
+
+
+def local_adapters(conn: sqlite3.Connection, *, enabled_only: bool = True) -> list[dict]:
+    sql = "SELECT * FROM local_adapters"
+    if enabled_only:
+        sql += " WHERE enabled = 1"
+    out = []
+    for row in conn.execute(sql + " ORDER BY host").fetchall():
+        one = dict(row)
+        try:
+            one["spec"] = json.loads(one.pop("spec_json") or "{}")
+        except ValueError:
+            one["spec"] = {}
+        out.append(one)
+    return out
+
+
+def save_local_adapter(
+    conn: sqlite3.Connection,
+    *,
+    host: str,
+    spec: dict,
+    source: str = "agent",
+    pack_id: str = "",
+) -> dict:
+    now = _now()
+    conn.execute(
+        "INSERT INTO local_adapters (host, spec_json, source, pack_id, enabled,"
+        " created_at, updated_at) VALUES (?,?,?,?,1,?,?)"
+        " ON CONFLICT (host) DO UPDATE SET spec_json = excluded.spec_json,"
+        " source = excluded.source, pack_id = excluded.pack_id,"
+        " enabled = 1, updated_at = excluded.updated_at",
+        (host, json.dumps(spec), source, pack_id, now, now),
+    )
+    conn.commit()
+    return {"host": host, "source": source, "pack_id": pack_id}
+
+
+def forget_local_adapter(conn: sqlite3.Connection, host: str) -> bool:
+    done = conn.execute("DELETE FROM local_adapters WHERE host = ?", (host,))
+    conn.commit()
+    return bool(done.rowcount)
+
+
+def record_site_request(
+    conn: sqlite3.Connection, *, host: str, url: str = "", title: str = ""
+) -> dict:
+    """One more ask for a site nothing can read yet. Accumulated, not appended.
+
+    A count and a sample, because the question it answers is "which site should
+    Kriko learn next" and that is about distinct hosts, not about how much
+    somebody browsed.
+    """
+    now = _now()
+    conn.execute(
+        "INSERT INTO site_requests (host, asks, sample_url, title, first_at, last_at)"
+        " VALUES (?,1,?,?,?,?)"
+        " ON CONFLICT (host) DO UPDATE SET asks = asks + 1,"
+        " sample_url = CASE WHEN excluded.sample_url <> '' THEN excluded.sample_url"
+        "                   ELSE site_requests.sample_url END,"
+        " title = CASE WHEN excluded.title <> '' THEN excluded.title"
+        "              ELSE site_requests.title END,"
+        " last_at = excluded.last_at",
+        (host, url, title, now, now),
+    )
+    conn.commit()
+    return site_requests(conn, host=host)[0]
+
+
+def set_site_request(conn: sqlite3.Connection, host: str, *, state: str,
+                     detail: str = "") -> None:
+    conn.execute(
+        "UPDATE site_requests SET state = ?, detail = ?, last_at = ?"
+        " WHERE host = ?",
+        (state, detail, _now(), host),
+    )
+    conn.commit()
+
+
+def site_requests(conn: sqlite3.Connection, *, host: str = "") -> list[dict]:
+    sql = "SELECT * FROM site_requests"
+    args: list = []
+    if host:
+        sql += " WHERE host = ?"
+        args.append(host)
+    sql += " ORDER BY asks DESC, last_at DESC"
+    return [dict(row) for row in conn.execute(sql, args).fetchall()]
+
+
+def record_bench(conn: sqlite3.Connection, row: dict) -> str:
+    """One measured attempt. Returns its id."""
+    bench_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO bench_runs (bench_id, batch_id, at, subject_id, subject,"
+        " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
+        " tokens, usd, documents, findings, accepted, refused, reasons_json,"
+        " error, note, gold_json, rep, search_provider, kind)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            bench_id,
+            str(row.get("batch_id") or ""),
+            _now(),
+            str(row.get("subject_id") or ""),
+            str(row.get("subject") or ""),
+            str(row.get("pack_id") or ""),
+            str(row.get("plane") or ""),
+            str(row.get("model") or ""),
+            str(row.get("protocol") or ""),
+            row.get("context_chars"),
+            row.get("batch_size"),
+            row.get("ms"),
+            row.get("tokens"),
+            row.get("usd"),
+            int(row.get("documents") or 0),
+            int(row.get("findings") or 0),
+            int(row.get("accepted") or 0),
+            int(row.get("refused") or 0),
+            json.dumps(list(row.get("reasons") or [])),
+            str(row.get("error") or "")[:2000],
+            str(row.get("note") or "")[:2000],
+            json.dumps(row.get("gold")) if row.get("gold") else "",
+            int(row.get("rep") or 1),
+            str(row.get("search_provider") or ""),
+            str(row.get("kind") or "specific"),
+        ),
+    )
+    conn.commit()
+    return bench_id
+
+
+def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
+    rows = conn.execute(
+        "SELECT * FROM bench_runs ORDER BY at DESC, rowid DESC LIMIT ?",
+        (max(1, min(limit, 1000)),),
+    ).fetchall()
+    out = []
+    for row in rows:
+        one = dict(row)
+        try:
+            one["reasons"] = json.loads(one.pop("reasons_json") or "[]")
+        except ValueError:
+            one["reasons"] = []
+        try:
+            one["gold"] = json.loads(one.pop("gold_json") or "null")
+        except ValueError:
+            one["gold"] = None
+        out.append(one)
+    return out
+
+
+def bench_summary(conn: sqlite3.Connection) -> list[dict]:
+    """Per (plane, model, protocol): what it costs and what survives.
+
+    The acceptance *rate* rather than a count, because that is the number the
+    comparison turns on — a plane that returns thirty findings and keeps two
+    is worse than one that returns four and keeps three, and only the rate says
+    so. Grouped by protocol as well as by model, since that is the whole point
+    of B123: the same model under two protocols is two measurements.
+    """
+    rows = conn.execute(
+        "SELECT plane, model, protocol, COUNT(*) AS runs,"
+        " AVG(ms) AS ms, SUM(tokens) AS tokens, SUM(usd) AS usd,"
+        " SUM(documents) AS documents, SUM(findings) AS findings,"
+        " SUM(accepted) AS accepted, SUM(refused) AS refused,"
+        " SUM(CASE WHEN error <> '' THEN 1 ELSE 0 END) AS failures"
+        " FROM bench_runs GROUP BY plane, model, protocol"
+        " ORDER BY plane, model, protocol"
+    ).fetchall()
+    out = []
+    for row in rows:
+        one = dict(row)
+        kept = (one["accepted"] or 0) + (one["refused"] or 0)
+        one["acceptance"] = round((one["accepted"] or 0) / kept, 3) if kept else None
+        out.append(one)
+    return out
+
+
+def open_operation(
+    conn: sqlite3.Connection,
+    *,
+    door: str,
+    kind: str,
+    name: str,
+    subject_id: str = "",
+    pack_id: str = "",
+    request: str = "",
+) -> int:
+    """Start an operation row. Returns its id.
+
+    Opened *before* the work rather than written after it, because a call that
+    is still running is the row a live feed most needs — and a call that never
+    returns leaves a `running` row that says so, which is the one thing a
+    write-on-completion log can never do.
+    """
+    cursor = conn.execute(
+        "INSERT INTO operations (door, kind, name, subject_id, pack_id, state,"
+        " request_json, started_at) VALUES (?,?,?,?,?,'running',?,?)",
+        (door, kind, name, subject_id, pack_id, request, _now()),
+    )
+    conn.commit()
+    assert cursor.lastrowid is not None
+    return cursor.lastrowid
+
+
+def close_operation(
+    conn: sqlite3.Connection,
+    op_id: int,
+    *,
+    state: str = "ok",
+    response: str = "",
+    error: str = "",
+    ms: int | None = None,
+    usd: float | None = None,
+    tokens: int | None = None,
+) -> None:
+    """Close an operation row. `usd`/`tokens` are `None` unless a caller
+    actually counted one (B118) — see the column's own note on why that must
+    never be papered over as a measured zero."""
+    conn.execute(
+        "UPDATE operations SET state = ?, response_json = ?, error = ?,"
+        " ms = ?, ended_at = ?, usd = ?, tokens = ? WHERE op_id = ?",
+        (state, response, error, ms, _now(), usd, tokens, op_id),
+    )
+    conn.execute(
+        "DELETE FROM operations WHERE op_id NOT IN ("
+        " SELECT op_id FROM operations ORDER BY op_id DESC LIMIT ?)",
+        (OPERATIONS_KEPT,),
+    )
+    conn.commit()
+
+
+def operations(
+    conn: sqlite3.Connection, *, limit: int = 50, after_id: int = 0
+) -> list[dict]:
+    """The newest operations, or everything since `after_id`.
+
+    Two shapes from one function because a feed needs both: a page on open,
+    then the tail on every poll. `after_id` returns *ascending* ids so a
+    consumer can append and remember the last one.
+    """
+    if after_id:
+        rows = conn.execute(
+            "SELECT * FROM operations WHERE op_id > ? ORDER BY op_id LIMIT ?",
+            (after_id, max(1, min(limit, 500))),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM operations ORDER BY op_id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def running_operations(conn: sqlite3.Connection) -> int:
+    """How many are open right now. The feed's one summary number."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM operations WHERE state = 'running'"
+    ).fetchone()
+    return int(row["n"])
+
+
+def interrupt_running_operations(conn: sqlite3.Connection) -> int:
+    """At startup, an operation still `running` belongs to a dead process.
+
+    The same rule the jobs table follows, for the same reason: a row that spins
+    forever after a restart is worse than no row, because it is the one thing a
+    reader cannot tell from work in progress.
+    """
+    done = conn.execute(
+        "UPDATE operations SET state = 'failed', error = 'interrupted',"
+        " ended_at = ? WHERE state = 'running'",
+        (_now(),),
+    )
+    conn.commit()
+    return done.rowcount or 0
+
+
+def document_for(conn: sqlite3.Connection, source_id: str) -> dict | None:
+    """The kept page for one source, or `None` if this install never saw it.
+
+    `None` is the answer B112 needs: a `source_url` no run ever fetched is a
+    fabrication with a plausible shape, and until this table nothing could
+    tell the two apart.
+    """
+    row = conn.execute(
+        "SELECT source_id, pack_id, url, text, chars, retained_at"
+        " FROM documents WHERE source_id = ?",
+        (source_id,),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def documents_kept(conn: sqlite3.Connection) -> dict:
+    """How much of the evidence is re-checkable offline. For the status view."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS rows, COALESCE(SUM(LENGTH(text)), 0) AS chars"
+        " FROM documents"
+    ).fetchone()
+    return {"documents": row["rows"], "chars": row["chars"]}
+
+
 def _submission(row: sqlite3.Row) -> dict:
     out = dict(row)
     out["verdicts"] = json.loads(out.pop("verdicts_json") or "{}")
@@ -1087,7 +1674,8 @@ def update_job(
     The log is appended in SQL rather than read-modify-written in Python so a
     reader polling the row cannot see a line vanish between two writes.
     """
-    sets, args = [], []
+    sets: list[str] = []
+    args: list[float | str | int] = []
     if progress is not None:
         sets.append("progress = ?")
         args.append(max(0.0, min(1.0, progress)))

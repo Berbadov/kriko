@@ -28,6 +28,7 @@ from pathlib import Path
 
 import yaml
 
+from packs.cars.pipeline.sources import dates
 from packs.cars.pipeline.sources.base import Document
 from packs.cars.pipeline.sources.youtube import get_transcript
 from packs.cars.pipeline.stoplists import document_is_foreign_to_part, is_german_text
@@ -103,7 +104,7 @@ class CuratedSource:
 
         if entry["type"] == "youtube":
             video_id = entry["video_id"]
-            text = get_transcript(video_id)
+            text, published_at = get_transcript(video_id)
             if not text:
                 log.warning("No transcript for video_id=%s", video_id)
                 return None
@@ -118,6 +119,7 @@ class CuratedSource:
                 url=f"https://www.youtube.com/watch?v={video_id}",
                 site_or_channel=channel,
                 meta={"make": make, "model": model, "video_id": video_id},
+                published_at=published_at,
             )
 
         if entry["type"] == "page":
@@ -146,6 +148,7 @@ class CuratedSource:
                 url=url,
                 site_or_channel=channel,
                 meta={"make": make, "model": model},
+                published_at=dates.page_published_at(html, source=url),
             )
 
         log.warning("Unknown curated entry type: %s", entry.get("type"))

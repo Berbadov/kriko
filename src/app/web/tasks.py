@@ -13,6 +13,7 @@ the whole point of the jobs layer.
 """
 
 import importlib
+import secrets
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -101,13 +102,30 @@ def _researcher(params: dict):
         return harness_researcher(
             preferred=str(params.get("harness") or ""),
             timeout=float(params.get("timeout_seconds") or 0.0),
+            # So "which agent" is the reader's standing choice rather than
+            # whichever CLI happened to be found first (B117).
+            app_state_path=params.get("app_state_path"),
         )
     if backend != "api":
         return get_researcher({"backend": backend})
     from app.providers import api_researcher
 
     price = float(params.get("price_per_call") or DEFAULT_PRICE_PER_CALL)
-    return api_researcher(price_per_call=price)
+    # The protocol: named by the caller when something is deliberately
+    # measuring one (the benchmark), and otherwise chosen from this
+    # installation's own measurements. `settings` is not in scope here, so the
+    # path comes through params — the same way every other per-run decision
+    # reaches this function.
+    from app import protocols
+
+    named = str(params.get("protocol") or "")
+    return api_researcher(
+        price_per_call=price,
+        app_state_path=params.get("app_state_path"),
+        spend=protocols.BY_NAME.get(named) if named else None,
+        model=str(params.get("model") or ""),
+        search=str(params.get("search") or ""),
+    )
 
 
 def _budget(params: dict) -> float:
@@ -413,7 +431,18 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             progress.log(f"query: {query}")
             emit.event(f"query: {query}", detail_kind="query")
 
-        researcher = _researcher(params)
+        # The interface's own database, so the plane can read what this
+        # installation has measured about the model it is about to use.
+        researcher = _researcher({**params, "app_state_path": settings.app_state_path})
+        # What the plane does while it does it (B121). Duck-typed, like
+        # `tokens_used` below: a plane that can narrate gets somewhere to
+        # narrate to, and one that cannot is unaffected. The job log is the
+        # channel because it already streams to the app and to `kriko tui` —
+        # the actions needed a sender, not a second transport.
+        if hasattr(researcher, "on_action"):
+            researcher.on_action = progress.log
+        if hasattr(researcher, "check_cancelled"):
+            researcher.check_cancelled = progress.check
         if provenance is not None:
             provenance.open(researcher)
         brief = researcher.brief(task)
@@ -465,6 +494,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                         "source_url": finding.source_url,
                         "stance": finding.stance,
                         "component": finding.component,
+                        "published_at": document.published_at,
                         # The document text is what makes the grounding check
                         # possible. Without it every finding is refused, which
                         # is the correct failure — "trust me" is not an
@@ -499,11 +529,16 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
 
         # ── Ingestion ────────────────────────────────────────────────────
         progress.check()
-        verdicts = {"accepted": [], "rejected": []}
+        verdicts: dict[str, list] = {"accepted": [], "rejected": []}
+        #: The text each accepted quote was proved against, kept by
+        #: `log_submission` so the proof can be repeated (B120).
+        retained: list[dict] = []
         if findings:
             emit.open_stage("ingestion", f"checking {len(findings)} finding(s)")
             progress.set(0.85, f"checking {len(findings)} finding(s)")
-            verdicts = accept_findings(conn, subject_id, pack_id, findings)
+            verdicts = accept_findings(
+                conn, subject_id, pack_id, findings, retain=retained
+            )
             conn.commit()
             # Written down as soon as the claims exist, not at the end of the
             # run: an undo has to be possible for a run that was cancelled
@@ -531,7 +566,16 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 pack_id=pack_id,
                 verdicts=verdicts,
                 queries=_queries_run(researcher, task),
+                documents=retained,
             )
+            if retained:
+                # Said out loud because it is the reader's proof that the
+                # evidence can be re-checked later without the page: a run
+                # that kept nothing and one that kept everything used to look
+                # identical here.
+                progress.log(
+                    f"kept {len(retained)} document(s) the quotes were checked against"
+                )
         else:
             emit.skip_stage("ingestion", "no findings to check")
             emit.skip_stage("ledgering", "nothing to write down")
@@ -1052,11 +1096,12 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
         progress.check()
         share = (position - 1) / len(wanted)
         candidate = decision.candidate
+        assert candidate is not None
         progress.set(0.1 + 0.8 * share, f"downloading {candidate.pack_id} {candidate.version}")
         path = packsource.download(
             candidate,
             into,
-            lambda read, total: progress.set(
+            lambda read, total, share=share, candidate=candidate: progress.set(
                 0.1 + 0.8 * (share + (read / total if total else 0) / len(wanted)),
                 f"downloading {candidate.pack_id} {read // 1024} KiB",
             ),
@@ -1129,6 +1174,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
 
     researcher = harness_researcher(
         preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
         # Not the research ceiling. Authoring a pack is a category read from
         # scratch plus two or three subjects researched before the first line
         # is printed, and the real CLI runs past ten minutes doing it -- so
@@ -1137,10 +1183,16 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         timeout=float(
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
+    # The forty-minute silence this job used to be (B121). A pack author is
+    # the longest-running thing in the app and the one whose log most needed
+    # to say something before it finished.
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
     progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
     reply = researcher.ask(packauthor.brief(category))
+    progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
     # the category well and printed a malformed object has produced work worth
@@ -1164,14 +1216,458 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         f"Knowledge and press Install."
     )
     written["category"] = category
+    if written.get("uncovered"):
+        # Said in the job's own last line, because a partial pack the reader
+        # knows about is a next step and one they do not is a wrong answer
+        # waiting. B127's button acts on exactly this list.
+        progress.log(
+            f"{len(written['uncovered'])} product(s) named and not covered: "
+            + ", ".join(written["uncovered"][:12])
+            + ("…" if len(written["uncovered"]) > 12 else "")
+            + " — press “Cover the gaps” on the draft to ask for them"
+        )
     return written
+
+
+def pack_amend(settings, params: dict, progress: Progress) -> dict:
+    """Extend a draft that is nearly right, rather than authoring it again (B127).
+
+    *"This pack seems very solid but it includes 19 products and lacks the
+    20th. I don't want to rebuild the whole thing."* Re-authoring re-spends the
+    whole run and can come back worse — the reader's second attempt returned
+    nothing at all. This hands the agent what the draft already holds plus what
+    it is missing, and merges the additions.
+
+    Nothing existing is rewritten, and a refused amendment leaves the draft
+    exactly as it was: the property that makes this safe to press on a pack you
+    like.
+    """
+    from app import packauthor
+    from app.providers import harness, harness_researcher
+
+    slug = str(params.get("slug") or "").strip()
+    if not slug:
+        raise ValueError("which draft? `slug` is required")
+    note = str(params.get("note") or "").strip()
+
+    state_of = packauthor.draft_state(settings.store_path, slug)
+    if not harness.available():
+        raise ValueError(
+            "no coding-agent CLI on PATH, so Kriko cannot extend this draft by "
+            "itself. Hand the brief to your own agent through the MCP server "
+            "(Agents → Connect) — `amend_draft` gives you the same brief."
+        )
+
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
+        timeout=float(
+            params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
+    )
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+    progress.set(0.1, f"extending {state_of.get('name') or slug}")
+    progress.log(
+        f"{len(state_of.get('subjects') or [])} subject(s) already; "
+        f"{len(state_of.get('uncovered') or [])} named and uncovered"
+    )
+    if note:
+        progress.log(f"asked for: {note}")
+
+    reply = researcher.ask(packauthor.amend_brief(state_of, note))
+    progress.check()
+    progress.set(0.7, "merging the additions")
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+    try:
+        result = packauthor.amend(settings.store_path, slug, reply)
+    except packauthor.PackRefused as exc:
+        raise ValueError(f"the draft is unchanged: {exc}") from exc
+
+    for name in result["files"]:
+        progress.log(f"wrote {name}")
+    progress.set(
+        1.0,
+        f"added {result['subjects_added']} subject(s) and "
+        f"{result['claims_added']} claim(s) to {result['pack_id'] or slug}"
+        + (f"; {len(result['uncovered'])} still uncovered"
+           if result["uncovered"] else "; the line-up is now covered")
+    )
+    return result
+
+
+def site_register(settings, params: dict, progress: Progress) -> dict:
+    """Teach this installation to read a website (B115, and the reader's own
+    "I cannot open the extension on pages that aren't registered").
+
+    An agent reads the page and writes the adapter; `app/sites.py` checks it
+    and `app.sqlite` keeps it. Nothing reaches the store: a site this copy
+    learned is not pack content, and a pack that later ships an adapter for the
+    same host wins over it.
+    """
+    from app import sites
+    from app.providers import harness, harness_researcher
+
+    host = sites.host_of(params.get("host") or "")
+    if not host:
+        raise ValueError("which site? `host` is required")
+    url = str(params.get("url") or f"https://{host}/")
+
+    conn = connect(settings.store_path)
+    try:
+        keys = identity_keys_text(conn)
+    finally:
+        conn.close()
+
+    if not harness.available():
+        raise ValueError(
+            "no coding-agent CLI on PATH, so Kriko cannot read the site by "
+            "itself. Hand the brief to your own agent through the MCP server "
+            "and post the adapter back, or write it yourself on the Sites "
+            "screen."
+        )
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
+        timeout=float(params.get("timeout_seconds") or harness.TIMEOUT_SECONDS),
+    )
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+    progress.set(0.1, f"reading {host}")
+    progress.log(f"site: {host} — {url}")
+
+    reply = researcher.ask(sites.BRIEF.format(site=host, url=url, keys=keys))
+    progress.check()
+    progress.set(0.7, "checking the adapter")
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+
+    from app.packauthor import _payload  # the same fence reader every door uses
+
+    spec = _payload(reply)
+    app_conn = state.connect(settings.app_state_path)
+    try:
+        if not spec:
+            state.set_site_request(
+                app_conn, host, state="refused",
+                detail="the agent printed no JSON object")
+            raise ValueError(
+                "the agent printed no adapter. Nothing was stored — the run's "
+                "log holds what it did say"
+            )
+        try:
+            checked = sites.check(spec, host=host)
+        except sites.SiteRefused as exc:
+            state.set_site_request(app_conn, host, state="refused", detail=str(exc))
+            raise ValueError(f"the adapter was refused: {exc}") from exc
+        state.save_local_adapter(
+            app_conn, host=host, spec=checked, source="agent",
+            pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),
+        )
+        state.set_site_request(app_conn, host, state="done",
+                               detail=f"{len(checked.get('fields') or {})} field(s)")
+    finally:
+        app_conn.close()
+
+    progress.set(
+        1.0,
+        f"{host} can be read now — {len(checked.get('fields') or {})} field(s). "
+        f"Open a listing there and press the extension button."
+    )
+    return {"host": host, "adapter": checked, "url": url}
+
+
+def identity_keys_text(conn) -> str:
+    """The identity keys the installed packs declare, for a brief.
+
+    Read off the store rather than named here, for the reason every list in
+    this file is: the engine knows no category, and a key an agent invented
+    would map a page into a lookup that resolves to nothing. `is_identity` is
+    the pack's own mark — the same rows `identity_vocabulary` reads.
+    """
+    rows = conn.execute(
+        "SELECT DISTINCT s.pack_id, s.kind, a.key FROM attributes a"
+        " JOIN subjects s USING (subject_id, pack_id)"
+        " JOIN packs p ON p.pack_id = s.pack_id"
+        " WHERE a.is_identity = 1 AND p.enabled = 1"
+        " ORDER BY s.pack_id, s.kind, a.key"
+    ).fetchall()
+    if not rows:
+        return "(no packs are installed, so there are no keys to map into yet)"
+    by_pack: dict[tuple, list[str]] = {}
+    for row in rows:
+        by_pack.setdefault((row["pack_id"], row["kind"]), []).append(row["key"])
+    return "\n".join(
+        f"* `{pack}` / `{kind}`: " + ", ".join(f"`{key}`" for key in sorted(set(keys)))
+        for (pack, kind), keys in by_pack.items()
+    )
+
+
+def verify(settings, params: dict, progress: Progress) -> dict:
+    """Re-read the sources behind claims that are already installed (B128).
+
+    *"As well as the button: verify the knowledge here — again an agent
+    operation."* Half of it existed: `app/factcheck.py` re-reads the page behind
+    **one** claim on a reader's press. What did not exist is the *operation* —
+    the whole screen at once, as a job, with a row in the feed and a result that
+    outlives the request.
+
+    No model and no agent: the question is "does the quote still appear on the
+    page", which a substring test answers honestly and an LLM would answer
+    confidently. That is also why it is free and why it can run over hundreds of
+    claims without a budget.
+
+    It reports and never retracts. A `missing` verdict is a signal beside the
+    reader's own marks, not a deletion — pages get rewritten, and the engine has
+    no authority to remove a pack's claim on the strength of a fetch.
+    """
+    from app import factcheck, findings
+
+    conn = connect(settings.store_path)
+    try:
+        pack_id = str(params.get("pack_id") or "")
+        subject_id = str(params.get("subject_id") or "")
+        limit = max(1, min(int(params.get("limit") or 50), 500))
+        sql = (
+            "SELECT c.claim_id, c.pack_id, c.subject_id, t.title"
+            " FROM claims c LEFT JOIN claim_text t"
+            "   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id"
+            " WHERE 1 = 1"
+        )
+        args: list = []
+        if pack_id:
+            sql += " AND c.pack_id = ?"
+            args.append(pack_id)
+        if subject_id:
+            sql += " AND c.subject_id = ?"
+            args.append(subject_id)
+        sql += " ORDER BY c.claim_id LIMIT ?"
+        args.append(limit)
+        rows = conn.execute(sql, args).fetchall()
+        if not rows:
+            raise ValueError(
+                "no installed claims match that. Verify runs over what is in "
+                "the store, not over a draft"
+            )
+
+        app_conn = state.connect(settings.app_state_path)
+        verdicts: dict[str, int] = {}
+        grounding: dict[str, int] = {}
+        checked = []
+        try:
+            for index, row in enumerate(rows, start=1):
+                progress.check()
+                progress.set(index / max(1, len(rows)), f"re-reading {index}/{len(rows)}")
+                sources = [
+                    dict(one)
+                    for one in conn.execute(
+                        "SELECT s.url, e.quote FROM evidence e"
+                        # `USING (source_id, pack_id)`, like the single-claim
+                        # router: a source id is unique within a pack and two
+                        # packs may carry the same page.
+                        " JOIN sources s USING (source_id, pack_id)"
+                        " WHERE e.claim_id = ? AND e.pack_id = ?"
+                        " ORDER BY CASE e.stance WHEN 'supports' THEN 0 ELSE 1 END",
+                        (row["claim_id"], row["pack_id"]),
+                    ).fetchall()
+                ]
+                answer = factcheck.check_claim(sources)
+                verdicts[answer["verdict"]] = verdicts.get(answer["verdict"], 0) + 1
+                state.record_fact_check(
+                    app_conn,
+                    pack_id=row["pack_id"],
+                    claim_id=row["claim_id"],
+                    verdict=answer["verdict"],
+                    detail=answer.get("detail", ""),
+                    sources=answer.get("sources", []),
+                    subject_id=row["subject_id"] or "",
+                    title=row["title"] or "",
+                )
+                per_evidence = findings.regrounded(
+                    conn, settings.app_state_path, row["pack_id"], row["claim_id"]
+                )
+                for one in per_evidence:
+                    grounding[one["verdict"]] = grounding.get(one["verdict"], 0) + 1
+                checked.append(
+                    {"claim_id": row["claim_id"], "title": row["title"] or "",
+                     "verdict": answer["verdict"], "grounding": per_evidence}
+                )
+                if answer["verdict"] != factcheck.QUOTED:
+                    progress.log(
+                        f"{answer['verdict']}: “{row['title'] or row['claim_id']}”"
+                    )
+                if any(one["verdict"] == "ungrounded" for one in per_evidence):
+                    progress.log(
+                        "ungrounded: the page this install kept for "
+                        f"“{row['title'] or row['claim_id']}” no longer "
+                        "carries the quote"
+                    )
+        finally:
+            app_conn.close()
+    finally:
+        conn.close()
+
+    progress.set(
+        1.0,
+        ", ".join(f"{count} {name}" for name, count in sorted(verdicts.items()))
+        or "nothing to check",
+    )
+    return {
+        "checked": len(checked),
+        "verdicts": verdicts,
+        "grounding": grounding,
+        "claims": checked,
+    }
+
+
+def bench(settings, params: dict, progress: Progress) -> dict:
+    """Run the fixed cases across the planes, and measure (B111).
+
+    A job rather than a request for the ordinary reason — three cases on two
+    planes is minutes of work — and for one more: it spends money on the paid
+    plane, so it has to be cancellable and its budget has to be visible in the
+    row that started it.
+
+    The planes are asked for explicitly or discovered. The `agent` plane is
+    never included: its `gather` returns nothing by design, so benchmarking it
+    would measure the brief writer and report zero of everything.
+    """
+    from app import bench as bench_mod
+
+    conn = connect(settings.store_path)
+    try:
+        chosen = [
+            one.strip()
+            for one in str(params.get("planes") or "").split(",")
+            if one.strip()
+        ] or bench_mod.planes_available(settings)
+        if not chosen:
+            raise ValueError(
+                "no plane can run here: install a coding-agent CLI for the "
+                "harness plane, or add the API keys for the paid one"
+            )
+        limit = int(params.get("cases") or bench_mod.DEFAULT_CASES)
+        pack_id = str(params.get("pack_id") or "")
+        # Ground truth where a pack ships it (B126), derived cases otherwise.
+        # A gold case measures correctness — what a competent run should have
+        # found and what it must not claim — and a derived one measures
+        # discipline. Preferring the first whenever it exists is the whole
+        # point of having authored it.
+        found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
+        graded = bool(found)
+        if not found:
+            found = bench_mod.cases(conn, pack_id=pack_id, limit=limit)
+        if not found:
+            raise ValueError("no subjects installed, so there is nothing to measure")
+    finally:
+        conn.close()
+
+    # Which protocols to sweep. Empty string means "whatever the plane would
+    # choose for itself", which is the honest default: a benchmark that always
+    # swept every protocol would multiply a reader's bill by three to answer a
+    # question they did not ask. Naming them is how B123's table gets filled.
+    protocols_asked = [
+        one.strip() for one in str(params.get("protocols") or "").split(",") if one.strip()
+    ] or [""]
+
+    # How many times each measurement is repeated. Language models are
+    # stochastic, so one run of a case is a sample reported as a constant —
+    # and two protocols cannot be compared from one observation each.
+    reps = max(1, min(int(params.get("reps") or 1), 10))
+
+    # Which search provider answered. Swept only when the reader names more
+    # than one, for the same reason the protocols are: measuring an axis
+    # nobody asked about multiplies the bill to answer a question nobody
+    # asked. Empty string means whichever one this installation would pick.
+    searches_asked = [
+        one.strip()
+        for one in str(params.get("searches") or params.get("search") or "").split(",")
+        if one.strip()
+    ] or [""]
+
+    batch_id = secrets.token_hex(8)
+    app_conn = state.connect(settings.app_state_path)
+    rows = []
+    try:
+        total = (
+            len(found) * len(chosen) * len(protocols_asked)
+            * len(searches_asked) * reps
+        )
+        done = 0
+        for case in found:
+            for plane in chosen:
+                for protocol, search, rep in [
+                    (one, engine, index)
+                    for one in protocols_asked
+                    for engine in searches_asked
+                    for index in range(1, reps + 1)
+                ]:
+                    progress.check()
+                    progress.set(
+                        done / max(1, total),
+                        f"{plane}: {case.get('label') or case['subject_id']}",
+                    )
+                    row = bench_mod.run_case(
+                        settings,
+                        case,
+                        plane=plane,
+                        protocol=protocol,
+                        max_documents=int(params.get("max_documents") or 3),
+                        budget_usd=float(
+                            params.get("budget_usd") or bench_mod.DEFAULT_BUDGET_USD
+                        ),
+                        batch_id=batch_id,
+                        search=search,
+                    )
+                    row["rep"] = rep
+                    state.record_bench(app_conn, row)
+                    rows.append(row)
+                    done += 1
+                    # One line per measurement, so the reader watching the job
+                    # sees the comparison build rather than a number at the end.
+                    progress.log(
+                        f"{plane}{' · ' + protocol if protocol else ''}"
+                        f"{' · ' + search if search else ''} · "
+                        f"{row['subject']}: "
+                        + (
+                            f"failed — {row['error']}"
+                            if row.get("error")
+                            else f"{row.get('accepted', 0)} kept, "
+                            f"{row.get('refused', 0)} refused, "
+                            f"{row.get('documents', 0)} source(s), "
+                            f"{(row.get('ms') or 0) / 1000:.1f}s"
+                            + (f", {row['tokens']} tokens" if row.get("tokens") else "")
+                        )
+                    )
+        summary = state.bench_summary(app_conn)
+        scored = bench_mod.scored(rows)
+    finally:
+        app_conn.close()
+
+    progress.set(1.0, f"{len(rows)} measurement(s) across {len(chosen)} plane(s)")
+    return {
+        "batch_id": batch_id,
+        "cases": [case["subject_id"] for case in found],
+        "planes": chosen,
+        "protocols": protocols_asked,
+        "rows": rows,
+        "summary": summary,
+        "graded": graded,
+        # Recall, precision and hallucination with their intervals, when the
+        # cases carried ground truth. Absent rather than zeroed when they did
+        # not: "nothing was graded" and "it scored zero" are opposite facts.
+        "scored": scored,
+        "reps": reps,
+    }
 
 
 HANDLERS = {
     "research": research,
+    "bench": bench,
     "agenda_run": agenda_run,
     "research_undo": research_undo,
     "pack_build": pack_build,
     "pack_author": pack_author,
+    "pack_amend": pack_amend,
+    "verify": verify,
+    "site_register": site_register,
     "pack_update": pack_update,
 }

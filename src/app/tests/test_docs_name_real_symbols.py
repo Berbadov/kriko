@@ -34,7 +34,6 @@ plus `docs/PACK_CONTRACT.md` and the rest at that level. Excluded:
   A quote is a citation, not an instruction.
 """
 
-import inspect
 import re
 import subprocess
 from pathlib import Path
@@ -65,8 +64,7 @@ def _known_symbols() -> set[str]:
     """Everything the tree defines, plus what the MCP server registers."""
     from app import mcp_server
 
-    names = set(re.findall(r"@mcp\.tool\(\)\s*\ndef (\w+)",
-                           inspect.getsource(mcp_server)))
+    names = set(mcp_server.registered_tools())
     names |= set(re.findall(r"^\s*(?:async )?def (\w+)",
                             _tracked("*.py"), re.M))
     names |= set(re.findall(r"(?:function|const|let)\s+(\w+)",
@@ -115,8 +113,7 @@ def test_the_mcp_surface_is_documented_by_reference_not_by_copy():
     usage = (REPO / "docs" / "USAGE.md").read_text(encoding="utf-8")
     from app import mcp_server
 
-    tools = set(re.findall(r"@mcp\.tool\(\)\s*\ndef (\w+)",
-                           inspect.getsource(mcp_server)))
+    tools = set(mcp_server.registered_tools())
     named = {tool for tool in tools if f"`{tool}" in usage}
     assert len(named) < len(tools) / 2, (
         f"USAGE.md names {len(named)} of {len(tools)} MCP tools — that is an "

@@ -23,12 +23,15 @@ text will occasionally produce something plausible instead, and the whole value
 of the evidence chain is that this cannot pass quietly.
 """
 
+import functools
+import inspect
 from contextlib import contextmanager
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 from app import agenda as _agenda
+from app import operations
 from app.findings import accept_findings, log_submission
 from kriko.lookup.tree import health_json, tree_json
 from kriko.lookup.tree import subject_tree as _subject_tree
@@ -38,6 +41,44 @@ from kriko.store import packstore
 from kriko.store.db import connect
 
 mcp = FastMCP("kriko")
+
+
+def tool():
+    """`@mcp.tool()`, plus the operation row that makes the call visible.
+
+    Every tool in this file is wrapped, rather than the three that write:
+    "what is the agent doing right now" is answered by the reads as much as by
+    the writes — a run that is looking things up and a run that is stuck look
+    identical if only submissions are recorded. B122.
+
+    The wrapper is deliberately thin and deliberately silent. It records the
+    call, the arguments (summarised — see `app/operations.py`), the outcome and
+    the duration; it changes no argument, swallows no exception, and any
+    failure of its own is invisible to the caller. A feed that can break a tool
+    call is worse than no feed.
+    """
+
+    def wrap(fn):
+        @functools.wraps(fn)
+        def recorded(*args, **kwargs):
+            # Positional calls are bound to names first, so the feed says
+            # `subject_id=s1` however the client chose to call it.
+            try:
+                bound = inspect.signature(fn).bind_partial(*args, **kwargs)
+                bound.apply_defaults()
+                arguments = dict(bound.arguments)
+            except Exception:  # noqa: BLE001 — never the tool's problem
+                arguments = dict(kwargs)
+            with operations.record(
+                _app_state_path(), door="mcp", name=fn.__name__, arguments=arguments
+            ) as outcome:
+                result = fn(*args, **kwargs)
+                outcome["response"] = operations.summarise(result)
+                return result
+
+        return mcp.tool()(recorded)
+
+    return wrap
 
 #: Overridden by tests so they never touch the real ~/.kriko store.
 STORE_PATH = None
@@ -111,10 +152,23 @@ def _store():
         conn.close()
 
 
+def registered_tools() -> set[str]:
+    """Every tool name this server actually serves.
+
+    Asked of the registry rather than of the source text, because the source
+    text stopped being the answer the moment tools were wrapped (B122): three
+    gates matched `@mcp.tool()` with a regex, and a decorator rename would have
+    turned all three green on a server with nineteen tools they no longer
+    checked. A registry lookup cannot go quiet that way — it is empty only if
+    the server is.
+    """
+    return {tool.name for tool in mcp._tool_manager.list_tools()}
+
+
 # ── reads: what is installed, and what does it know? ─────────────────────
 
 
-@mcp.tool()
+@tool()
 def list_packs() -> list[dict]:
     """Installed packs, their versions and whether they are enabled."""
     with _store() as conn:
@@ -130,7 +184,7 @@ def list_packs() -> list[dict]:
         ]
 
 
-@mcp.tool()
+@tool()
 def store_status() -> dict:
     """Row counts across the installed store — the shape of what is known."""
     tables = (
@@ -148,7 +202,7 @@ def store_status() -> dict:
         }
 
 
-@mcp.tool()
+@tool()
 def list_subjects(pack_id: str = "", kind: str = "", limit: int = 50) -> list[dict]:
     """Subjects, newest packs first. Replaces the old `list_parts`."""
     clauses, args = ["p.enabled = 1"], []
@@ -173,7 +227,7 @@ def list_subjects(pack_id: str = "", kind: str = "", limit: int = 50) -> list[di
         ]
 
 
-@mcp.tool()
+@tool()
 def get_subject(subject_id: str) -> dict:
     """One subject: its attributes, its relations, and its claims."""
     with _store() as conn:
@@ -216,7 +270,7 @@ def get_subject(subject_id: str) -> dict:
         }
 
 
-@mcp.tool()
+@tool()
 def lookup(
     kind: str,
     identity: dict,
@@ -259,7 +313,7 @@ def lookup(
         }
 
 
-@mcp.tool()
+@tool()
 def research_brief(subject_id: str, pack_id: str) -> dict:
     """What to research about this subject, in this pack's own terms.
 
@@ -276,7 +330,7 @@ def research_brief(subject_id: str, pack_id: str) -> dict:
         }
 
 
-@mcp.tool()
+@tool()
 def research_agenda(pack_id: str = "", limit: int = 20) -> dict:
     """**Call this first.** What to research next, in the order it is worth it.
 
@@ -320,7 +374,7 @@ def research_agenda(pack_id: str = "", limit: int = 20) -> dict:
                 app_state.close()
 
 
-@mcp.tool()
+@tool()
 def coverage_gaps(pack_id: str = "", limit: int = 50) -> list[dict]:
     """Subjects with no claims — where research would actually help.
 
@@ -346,7 +400,7 @@ def coverage_gaps(pack_id: str = "", limit: int = 50) -> list[dict]:
         ]
 
 
-@mcp.tool()
+@tool()
 def subject_health(subject_id: str, pack_id: str = "") -> dict:
     """How well supported is everything we know about this subject?
 
@@ -364,7 +418,7 @@ def subject_health(subject_id: str, pack_id: str = "") -> dict:
         return tree_json(_subject_tree(conn, subject_id, packs))
 
 
-@mcp.tool()
+@tool()
 def weakest_claims(pack_id: str = "", limit: int = 20) -> list[dict]:
     """The shipped claims that are least well supported, worst first.
 
@@ -380,7 +434,7 @@ def weakest_claims(pack_id: str = "", limit: int = 20) -> list[dict]:
 # ── writes: all $0, all deterministic ────────────────────────────────────
 
 
-@mcp.tool()
+@tool()
 def submit_findings(
     subject_id: str,
     pack_id: str,
@@ -414,8 +468,9 @@ def submit_findings(
     claims did not survive, rather than discovering later that half its work
     vanished.
     """
+    kept: list[dict] = []
     with _store() as conn:
-        verdicts = accept_findings(conn, subject_id, pack_id, findings)
+        verdicts = accept_findings(conn, subject_id, pack_id, findings, retain=kept)
     # Logged after the store connection closes, and to a different file: the
     # refusals in this payload are what an author tunes the skill against, and
     # they were previously returned to the agent and then lost.
@@ -426,6 +481,7 @@ def submit_findings(
         pack_id=pack_id,
         verdicts=verdicts,
         queries=queries,
+        documents=kept,
     )
     return verdicts
 
@@ -438,7 +494,7 @@ def submit_findings(
 # it is worth reading before adding a tool here.
 
 
-@mcp.tool()
+@tool()
 def draft_pack(
     pack_id: str, name: str, identity: dict, version: str = "0.1.0"
 ) -> dict:
@@ -468,13 +524,14 @@ def draft_pack(
     return {"draft": draft.slug, "root": str(draft.root), "files": draft.files()}
 
 
-@mcp.tool()
+@tool()
 def write_draft_file(draft: str, path: str, text: str) -> dict:
     """Replace one file in a drafted pack. Data files only.
 
     `path` is relative to the draft: `pack.toml`, `README.md`,
     `research/principle.md`, `research/templates.yaml`, `research/skill.md`, or
-    a `.yaml` file under `data/`, `vocabulary/`, `trust/` or `adapters/`.
+    a `.yaml` file under `data/`, `vocabulary/` or `trust/`, or a `.json`
+    file under `adapters/` -- the suffix the pack builder reads in each.
     Anything else is refused, including any form of Python — a pack an agent
     wrote must be data, because installing it must not mean running code the
     reader never read.
@@ -490,7 +547,7 @@ def write_draft_file(draft: str, path: str, text: str) -> dict:
     return {"draft": draft, "written": written}
 
 
-@mcp.tool()
+@tool()
 def list_pack_drafts() -> list[dict]:
     """The drafted packs on this machine, and whether each one still loads."""
     from app import packdraft
@@ -498,7 +555,7 @@ def list_pack_drafts() -> list[dict]:
     return packdraft.listing(_store_path())
 
 
-@mcp.tool()
+@tool()
 def build_draft(draft: str) -> dict:
     """Build a drafted pack into an artifact. Does not install it.
 
@@ -511,14 +568,45 @@ def build_draft(draft: str) -> dict:
     return {"draft": draft, "artifact": str(packdraft.build_artifact(_store_path(), draft))}
 
 
-@mcp.tool()
+@tool()
+def amend_draft(draft: str, note: str = "") -> dict:
+    """Add to a drafted pack that is nearly right, without rewriting it.
+
+    The correction verb (B127). A reader looks at a draft and says "it has
+    nineteen products and lacks the twentieth" — this asks for the twentieth
+    and leaves the nineteen alone. Re-authoring the category instead re-spends
+    the whole run and can come back worse.
+
+    Returns the brief to work from: what the draft already holds, its identity
+    keys, its own bar for a claim, and the line-up entries nothing covers yet.
+    Do the research, then call `write_draft_file` for `data/subjects.yaml` and
+    `data/claims.yaml` — or hand the additions back as the JSON object the
+    brief describes and let the app merge them.
+
+    `note` is what is missing, in the reader's words. Empty means "whatever the
+    draft's own coverage file says is uncovered".
+    """
+    from app import packauthor
+
+    state = packauthor.draft_state(_store_path(), draft)
+    return {
+        "draft": state.get("slug", draft),
+        "pack_id": state.get("pack_id", ""),
+        "name": state.get("name", ""),
+        "subjects": state.get("subjects", []),
+        "uncovered": state.get("uncovered", []),
+        "brief": packauthor.amend_brief(state, note),
+    }
+
+
+@tool()
 def install_pack(path: str) -> dict:
     """Install a pack file that is already on disk."""
     with _store() as conn:
         return {"pack_id": packstore.install(conn, path)}
 
 
-@mcp.tool()
+@tool()
 def set_pack_enabled(pack_id: str, enabled: bool = True) -> dict:
     with _store() as conn:
         packstore.set_enabled(conn, pack_id, enabled)

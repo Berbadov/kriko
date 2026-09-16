@@ -2,6 +2,7 @@
     import EmptyState from "./lib/EmptyState.svelte";
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
+    import Lazy from "./lib/Lazy.svelte";
     import { initMode, mode } from "./lib/mode";
     import NextStep from "./lib/NextStep.svelte";
     import { initTheme } from "./lib/theme";
@@ -9,20 +10,22 @@
     import { hashWith, route } from "./lib/router";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import TerminalPanel from "./lib/shell/TerminalPanel.svelte";
+    import { terminalOpen } from "./lib/shell/terminal";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
+    import About from "./routes/About.svelte";
+    import Activity from "./routes/Activity.svelte";
+    import Agents from "./routes/Agents.svelte";
+    import Bench from "./routes/Bench.svelte";
     import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Extension from "./routes/Extension.svelte";
-    import Activity from "./routes/Activity.svelte";
-    import Agents from "./routes/Agents.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
-    import About from "./routes/About.svelte";
     import Overview from "./routes/Overview.svelte";
     import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
-    import Result from "./routes/Result.svelte";
     import Settings from "./routes/Settings.svelte";
+    import Sites from "./routes/Sites.svelte";
+    import Result from "./routes/Result.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
     // The sidebar panel belongs where a past answer is relevant: beside the
@@ -66,6 +69,11 @@
     // screen — a watcher living in one route could only ever hand off to
     // itself. See lib/focus.ts.
     $effect(() => watchFocus());
+
+    let terminalEverOpened = $state(false);
+    $effect(() => {
+        if ($terminalOpen) terminalEverOpened = true;
+    });
 
     /* Saying that the page changed, and putting focus where it changed.
      *
@@ -127,7 +135,7 @@
     });
 </script>
 
-<div class="shell">
+<div class="shell" class:with-terminal={$terminalOpen}>
     <!-- A button, not `<a href="#main">`: the app is hash-routed, so a URL
          fragment is an address here. `#main` would parse as the route `main`
          and the skip link would navigate to "No such view" — the one place
@@ -145,7 +153,9 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
-    <TerminalPanel />
+    {#if terminalEverOpened}
+        <Lazy loader={() => import("./lib/shell/TerminalPanel.svelte")} />
+    {/if}
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement
@@ -186,7 +196,9 @@
                     {:else if $route.name === "overview"}
                         <Overview />
                     {:else if view.name === "knowledge"}
-                        <Knowledge lens={view.lens ?? $route.query.lens ?? "all"} />
+                        <Knowledge
+                            lens={view.lens ?? $route.query.lens ?? "all"}
+                        />
                     {:else if $route.name === "history"}
                         <h2>History</h2>
                         <History page />
@@ -213,6 +225,11 @@
                         <Extension />
                     {:else if $route.name === "packs"}
                         <Packs />
+                    {:else if $route.name === "sites"}
+                        <!-- Which listing sites can be read here, and the one
+                             button that turns "the extension does nothing on
+                             this page" into a site Kriko knows. -->
+                        <Sites />
                     {:else if $route.name === "settings"}
                         <Settings />
                     {:else if $route.name === "about"}
@@ -224,9 +241,13 @@
                              app's own responses and hints hand out, so they
                              resolve here rather than to "No such view" — same
                              contract as the Knowledge lenses above. -->
-                        <Activity lens={view.lens ?? $route.query.lens ?? "runs"} />
+                        <Activity
+                            lens={view.lens ?? $route.query.lens ?? "runs"}
+                        />
                     {:else if view.name === "agents"}
                         <Agents />
+                    {:else if $route.name === "bench"}
+                        <Bench />
                     {:else if $route.name === "result"}
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->

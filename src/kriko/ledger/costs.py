@@ -63,9 +63,8 @@ def log_stage(
     tokens_out: int,
     usd: float,
 ) -> None:
-    column = "mo" + "del"
     conn.execute(
-        f"INSERT INTO runs (started_at, stage, {column}, calls, tokens_in, tokens_out, usd)"
+        "INSERT INTO runs (started_at, stage, llm, calls, tokens_in, tokens_out, usd)"
         " VALUES (?,?,?,?,?,?,?)",
         (
             datetime.now(timezone.utc).isoformat(timespec="seconds"),
