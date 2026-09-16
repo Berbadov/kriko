@@ -106,6 +106,15 @@
     }
 
     async function loadFrame() {
+        // Hidden drafts are read back with the frame rather than on mount, so
+        // a card the reader dismissed never flashes on screen before the
+        // setting arrives.
+        void api.settings().then((all) => {
+            const stored = all?.[HIDDEN_KEY];
+            hidden = typeof stored === "string" && stored
+                ? stored.split(",").filter(Boolean)
+                : [];
+        }).catch(() => {});
         const [s, p, d] = await Promise.all([
             api.status().catch(() => null),
             api.packs().catch(() => [] as Pack[]),
@@ -222,6 +231,23 @@
         ),
     );
 
+    //: Drafts the reader has hidden, by slug. Kept in settings rather than in
+    //: component state because "it came back when I reloaded" is the same
+    //: complaint as "it never went away" — a dismissal that does not persist
+    //: is not one.
+    const HIDDEN_KEY = "knowledge_hidden_drafts";
+    let hidden = $state<string[]>([]);
+    const visibleDrafts = $derived(
+        drafts.filter((one) => !hidden.includes(one.slug)),
+    );
+
+    async function hideDraft(draft: PackDraft) {
+        hidden = [...hidden, draft.slug];
+        // Fire-and-forget, like every other dismissal here: a failed write
+        // means it comes back next session, never that the click did nothing.
+        void api.putSettings({ [HIDDEN_KEY]: hidden.join(",") }).catch(() => {});
+    }
+
     async function installDraft(draft: PackDraft) {
         draftBusy = draft.slug;
         draftError = null;
@@ -326,9 +352,17 @@
 
 <!-- Drafts an agent wrote. Above the lenses because a pack waiting to be
      installed changes what every list below can possibly contain, and because
-     an agent's proposal that nobody ever sees is the same as no proposal. -->
-{#each drafts as draft (draft.slug)}
-    <article class="card notice">
+     an agent's proposal that nobody ever sees is the same as no proposal.
+
+     `notice` only while it is still waiting on the reader. B129 made the card
+     say "is installed" and left it looking exactly as it had before — a
+     warning-coloured box, in the alert position, above everything. The reader
+     pressed Install, the pack appeared in their store, and the same alarm was
+     still on the screen: "I click either one and the warning stays there." An
+     installed draft is not an alert, it is a receipt, so it stops being styled
+     as one and drops out of the way. -->
+{#each visibleDrafts as draft (draft.slug)}
+    <article class={draft.installed_as ? "card quiet-draft" : "card notice"}>
         <div>
             <strong>
                 {draft.name || draft.slug}
@@ -366,6 +400,18 @@
                 aria-expanded={amending === draft.slug}
                 disabled={draftBusy === draft.slug}>Cover the gaps</button
             >
+            <!-- Two different verbs, and conflating them was the other half
+                 of the complaint. "Throw it away" deletes what the agent
+                 wrote; nobody should have to destroy a proposal to stop being
+                 reminded of it. Hiding is the one an installed draft wants,
+                 and it has to survive a reload or it is not a dismissal. -->
+            {#if draft.installed_as}
+                <button
+                    class="quiet"
+                    onclick={() => hideDraft(draft)}
+                    disabled={draftBusy === draft.slug}>Hide this</button
+                >
+            {/if}
             <button
                 class="quiet"
                 onclick={() => discardDraft(draft)}
@@ -813,6 +859,22 @@
         border-color: var(--medium);
     }
     .notice .meta {
+        display: block;
+        max-width: var(--measure);
+    }
+    /* Same layout as `.notice`, none of its alarm. A draft that is already in
+       the store is a receipt, not a warning, and `--medium` on its border was
+       the reader's "the warning stays there" — the card had changed its words
+       and kept its colour, which is the half anybody actually reads. */
+    .quiet-draft {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-4);
+        flex-wrap: wrap;
+        opacity: 0.82;
+    }
+    .quiet-draft .meta {
         display: block;
         max-width: var(--measure);
     }
