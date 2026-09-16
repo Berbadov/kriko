@@ -159,6 +159,24 @@ class Document:
     source_type: str = "page"       # page | video | structured | manual
     lang: str = ""
     retrieved_at: str = ""
+    #: When the world published it, never when this machine read it. Empty
+    #: when the page did not say, because the two are different facts and a
+    #: reader weighing how old a warning is deserves the first one or none.
+    published_at: str = ""
+
+
+@dataclass(frozen=True)
+class Fetched:
+    """What a reader may return instead of bare text.
+
+    The contract stays `fetch(url) -> str` for every caller that has one --
+    a string is still a complete answer -- and this is the richer reply for a
+    reader that also saw the markup, where a publication date lives. Optional
+    on purpose: the engine defines the shape and owns no sockets, so it cannot
+    require a fetcher to be clever.
+    """
+    text: str
+    published_at: str = ""
 
 
 @dataclass(frozen=True)
