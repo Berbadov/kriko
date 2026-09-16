@@ -747,7 +747,7 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
-## The 0.10.0 work order *(2026-09-16)* — P0 closed, 17 items open
+## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.4 + §2.9 closed, 12 items open
 
 A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
 `done.md`. What is left, in the reader's own numbering:
@@ -758,24 +758,24 @@ app-vs-extension version check. `docs/INSTALL_WINDOWS.md` now documents the
 flow including the permission grant, but the reported *failure* has not been
 reproduced — it needs the reader's Chrome and the error it actually shows.
 
-**§2.1 — the agent must ask follow-up questions.** A cheap disambiguation pass
+**~~§2.1 — the agent must ask follow-up questions.~~ DONE — see `done.md`.** A cheap disambiguation pass
 before the expensive run: 3–5 questions in one batch, each with a proposed
 default, non-blocking, answers written onto the pack as a structured
 product-identity record. The proposed schema is in the session plan; it is the
 same record §1.1's matching wants, so `score.py`'s per-key reasons are the
 thing to build it against.
 
-**§2.2 — choose the model, per run and per role.** `app/prefs.py` already
+**~~§2.2 — choose the model, per run and per role.~~ DONE — see `done.md`.** `app/prefs.py` already
 carries `preferred_harness` / `llm_model` / `search_provider`; what is missing
 is per-role assignment, discovery of what each harness offers rather than a
 hardcoded list, and usable-or-not with the reason. `providers/llm.py` is
 OpenAI-wire only, so Anthropic needs a native adapter.
 
-**§2.3 — scale control.** One dial, named presets mapping to source count,
+**~~§2.3 — scale control.~~ DONE — see `done.md`.** One dial, named presets mapping to source count,
 breadth, depth and ceilings, with an estimate from `app/costs.py`'s measured
 actuals and a hard per-run cap that degrades cleanly into §1.2's partial.
 
-**§2.4 — live token and cost meter.** `providers/llm.py` counts total tokens
+**~~§2.4 — live token and cost meter.~~ DONE — see `done.md`.** `providers/llm.py` counts total tokens
 only; split input/output, thread the same accounting through the harness and
 search providers, per model and per stage, with pricing in editable config.
 
@@ -792,7 +792,7 @@ including every error path, wired into §2.4's accounting.
 
 **§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity.
 
-**§2.9 — remove Terminal.** Confirmed with the reader as the *in-app PTY
+**~~§2.9 — remove Terminal.~~ DONE — see `done.md`.** Confirmed with the reader as the *in-app PTY
 panel* — `ui/src/lib/shell/TerminalPanel.svelte`, `web/routers/terminal.py`,
 `providers/termpty.py`, the rail entry, the `ptyprocess`/`pywinpty`
 dependencies. The operator TUI (`app/tui/`) stays.
