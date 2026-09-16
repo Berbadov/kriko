@@ -402,3 +402,64 @@ def test_a_job_that_died_mid_teardown_is_not_left_spinning(settings):
 
     state.interrupt_running(conn)
     assert state.get_job(conn, job_id)["state"] == state.INTERRUPTED
+
+
+# ── the one thing on the screen worth looking at ───────────────────────
+#
+# "If the agent is waiting on my answer, that must be unmissable." It is not
+# waiting — the identification pass states its defaults and carries on — but a
+# question rendered as another log line is a question nobody answers.
+
+def test_a_run_with_questions_says_so_where_a_screen_will_see_it(settings):
+    def handler(_settings, _params, progress):
+        progress.partial({"questions": [
+            {"id": "market", "ask": "Which market?", "default": "TR"},
+            {"id": "year", "ask": "Which year?", "default": "2018"},
+        ]})
+        return {"questions": [
+            {"id": "market", "ask": "Which market?", "default": "TR"},
+            {"id": "year", "ask": "Which year?", "default": "2018"},
+        ]}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    wait_for_done(conn, job_id)
+    runner.shutdown(wait=True)
+
+    with TestClient(create_app(settings)) as client:
+        row = client.get(f"/api/jobs/{job_id}").json()
+    assert row["attention"]["kind"] == "questions"
+    assert row["attention"]["count"] == 2
+    assert row["attention"]["say"]
+
+
+def test_a_run_with_nothing_to_ask_raises_no_flag(settings):
+    def handler(_settings, _params, _progress):
+        return {"findings": 3}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    wait_for_done(conn, job_id)
+    runner.shutdown(wait=True)
+
+    with TestClient(create_app(settings)) as client:
+        assert client.get(f"/api/jobs/{job_id}").json()["attention"] is None
+
+
+def test_the_flag_survives_the_run_finishing(settings):
+    """The answers make the *next* run exact, so they are worth offering
+    beside "run it again" long after this one ended."""
+    def handler(_settings, _params, _progress):
+        return {"questions": [{"id": "a", "ask": "Which?", "default": "x"}]}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    row = wait_for_done(conn, job_id)
+    runner.shutdown(wait=True)
+    assert row["state"] == state.SUCCEEDED
+
+    with TestClient(create_app(settings)) as client:
+        assert client.get(f"/api/jobs/{job_id}").json()["attention"]["count"] == 1
