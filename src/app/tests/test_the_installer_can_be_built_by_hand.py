@@ -539,3 +539,37 @@ def test_the_script_refuses_to_build_from_a_tree_whose_own_files_disagree():
     # Before the Python side is even installed, not after — a mismatch here
     # is cheap to catch before rustc or npm have done any work.
     assert script.index("bump.py") < script.index("Install the Python side")
+
+
+def test_the_preflight_does_not_refuse_a_build_that_would_fix_the_problem():
+    """Reported from a real 0.10.0 build, on the first machine that ran it.
+
+    The pre-flight compares the five version strings in the tree. It runs
+    *before* the script's own `pip install -e .`, so a stale editable install
+    is a state this build repairs one step later -- and for a while the check
+    failed on it anyway, refusing the build over the very thing the build
+    fixes, under a message naming a cause it had not checked. The five files
+    agreed perfectly.
+
+    So: `--strict` belongs to the gate, where a stale install really does
+    serve the wrong version all day, and never to a pre-flight that precedes
+    the install.
+    """
+    script = SCRIPT.read_text(encoding="utf-8")
+    called = [
+        line.strip()
+        for line in script.splitlines()
+        if "bump.py" in line and not line.strip().startswith("#")
+    ]
+    assert called, "the pre-flight no longer runs the version check at all"
+    for line in called:
+        assert "--strict" not in line, (
+            f"{line!r} would refuse a build whose next step repairs the state "
+            "it is refusing over"
+        )
+
+
+def test_the_gate_checks_the_installed_distribution_even_though_the_build_does_not():
+    """The other half of the same decision, so neither drifts alone."""
+    gate = (ROOT / "tools" / "gate.sh").read_text(encoding="utf-8")
+    assert "bump.py --show --strict" in gate
