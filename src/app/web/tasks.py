@@ -494,6 +494,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                         "source_url": finding.source_url,
                         "stance": finding.stance,
                         "component": finding.component,
+                        "published_at": document.published_at,
                         # The document text is what makes the grounding check
                         # possible. Without it every finding is refused, which
                         # is the correct failure — "trust me" is not an

@@ -21,7 +21,14 @@ import json
 import re
 import unicodedata
 
-from kriko.research.base import STANDARD, Document, Finding, ResearchTask, Spend
+from kriko.research.base import (
+    STANDARD,
+    Document,
+    Fetched,
+    Finding,
+    ResearchTask,
+    Spend,
+)
 
 #: Characters an extractor or a model is free to swap without changing the
 #: sentence. The same rule `app/factcheck.py` applies to a stored quote years
@@ -138,11 +145,14 @@ class ApiResearcher:
                 if not url or url in seen:
                     continue
                 seen.add(url)
-                text = self._fetch(url) or ""
+                got = self._fetch(url)
+                text = got.text if isinstance(got, Fetched) else (got or "")
+                published = got.published_at if isinstance(got, Fetched) else ""
                 if not text.strip():
                     continue        # unreadable is not a failure, just a miss
                 documents.append(Document(
                     url=url, text=text, title=hit.get("title", ""),
+                    published_at=published,
                     site_or_channel=hit.get("site", "")))
                 if len(documents) >= task.max_documents:
                     break

@@ -7,6 +7,7 @@ from kriko.research.api import ApiResearcher, BudgetExceeded
 from kriko.research.base import (
     STANDARD,
     Document,
+    Fetched,
     Finding,
     Researcher,
     ResearchTask,
@@ -15,7 +16,8 @@ from kriko.research.base import (
 
 __all__ = [
     "AgentResearcher", "ApiResearcher", "BudgetExceeded",
-    "Document", "Finding", "Researcher", "ResearchTask", "Spend", "STANDARD",
+    "Document",
+    "Fetched", "Finding", "Researcher", "ResearchTask", "Spend", "STANDARD",
     "get_researcher", "pack_asset", "plan_task",
 ]
 
