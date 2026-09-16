@@ -112,6 +112,30 @@ def digest(value, *, depth: int = 0):
     return digest(str(value), depth=depth)
 
 
+def metered(result) -> tuple[float | None, int | None]:
+    """What a handler's own result says it spent, when it says anything.
+
+    Reads the two keys the research handlers already report rather than
+    threading a meter through every plane: a handler that counted writes them,
+    one that did not leaves them absent, and absent stays absent all the way
+    to the column. A run on the free plane costs nothing and is not the same
+    fact as a run nobody priced, so neither becomes a zero here.
+    """
+    if not isinstance(result, dict):
+        return None, None
+    usd = result.get("spent_usd")
+    tokens = result.get("tokens")
+    try:
+        usd = float(usd) if usd is not None else None
+    except (TypeError, ValueError):
+        usd = None
+    try:
+        tokens = int(tokens) if tokens is not None else None
+    except (TypeError, ValueError):
+        tokens = None
+    return usd, tokens
+
+
 def summarise(value) -> str:
     try:
         text = json.dumps(digest(value), default=str)
@@ -148,7 +172,17 @@ def record(app_state_path, *, door: str, name: str, kind: str = "", arguments=No
     except Exception:  # noqa: BLE001 — see the module docstring
         conn, op_id = None, 0
 
-    outcome = {"state": "ok", "response": "", "error": ""}
+    outcome = {
+        "state": "ok",
+        "response": "",
+        "error": "",
+        # Left as None unless something actually counted one. A plane that
+        # spends no money and a plane whose spend nobody measured are
+        # different facts, and a zero here would merge them -- which is the
+        # shape of lie the cost column exists to avoid.
+        "usd": None,
+        "tokens": None,
+    }
     try:
         yield outcome
     except BaseException as exc:  # noqa: BLE001 — recorded, then re-raised
@@ -165,6 +199,8 @@ def record(app_state_path, *, door: str, name: str, kind: str = "", arguments=No
                     response=outcome["response"],
                     error=outcome["error"],
                     ms=int((time.monotonic() - started) * 1000),
+                    usd=outcome["usd"],
+                    tokens=outcome["tokens"],
                 )
             except Exception:  # noqa: BLE001
                 pass
