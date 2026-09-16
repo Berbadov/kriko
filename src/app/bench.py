@@ -109,8 +109,67 @@ def run_case(
     max_documents: int = 3,
     budget_usd: float = DEFAULT_BUDGET_USD,
     batch_id: str = "",
+    search: str = "",
+    opener=None,
 ) -> dict:
-    """One case on one plane, measured, against a throwaway store.
+    """One case, measured — dispatched on the case's `kind` (B126 §3/§9).
+
+    `specific`, `bulk` and `validation` fail differently and are scored
+    differently, so this is a dispatcher rather than one function with a
+    branch buried in it: each kind gets its own body and its own docstring,
+    and a caller that only ever ran `specific` cases never had to change.
+
+    `search` names the search provider to use on the paid plane (B126 §8),
+    the same way `protocol` names the batch/context/preamble setting — a
+    sweep axis, not a call-site decision. **Not yet wired from the job that
+    drives a sweep** (`app/web/tasks.py:bench`), which loops over `protocol`
+    and `reps` but not this; see this module's own note in the design doc
+    and the final report for the exact two-line change that job needs.
+
+    `opener` is a testing seam for `validation` cases only — the fresh fetch
+    a validation run does needs no network in a test, exactly as
+    `app/factcheck.py` (which this borrows) already allows.
+    """
+    kind = str(case.get("kind") or "specific")
+    if kind == "bulk":
+        return _run_bulk(
+            settings, case, plane=plane, protocol=protocol,
+            max_documents=max_documents, budget_usd=budget_usd,
+            batch_id=batch_id, search=search,
+        )
+    if kind == "validation":
+        return _run_validation(
+            settings, case, plane=plane, protocol=protocol, batch_id=batch_id,
+            opener=opener,
+        )
+    return _run_specific(
+        settings, case, plane=plane, protocol=protocol,
+        max_documents=max_documents, budget_usd=budget_usd,
+        batch_id=batch_id, search=search,
+    )
+
+
+def _spend_columns(protocol: str) -> tuple[dict, str]:
+    """`(context_chars/batch_size, error)` for a named protocol, or `({}, "")`
+    for none. Shared by every kind so an unknown protocol name fails the same
+    way whichever kind asked for it."""
+    if not protocol:
+        return {}, ""
+    from app import protocols
+
+    spend = protocols.BY_NAME.get(protocol)
+    if spend is None:
+        return {}, f"no such protocol: {protocol}"
+    return {"context_chars": spend.context_chars, "batch_size": spend.batch_size}, ""
+
+
+def _run_specific(
+    settings, case: dict, *, plane: str, protocol: str, max_documents: int,
+    budget_usd: float, batch_id: str, search: str = "",
+) -> dict:
+    """One subject, the ordinary research operation — precision/recall per
+    claim (B126 §3). The original shape of this benchmark, before `bulk` and
+    `validation` existed.
 
     Goes through `tasks.research` rather than around it: what is being measured
     is the plane *as the reader runs it*, including the gate that refuses most
@@ -118,7 +177,6 @@ def run_case(
     measure a code path nobody uses and would report an acceptance rate of one.
     """
     from app.web import tasks
-    from app.web.jobs import Progress
 
     row = {
         "batch_id": batch_id,
@@ -129,16 +187,14 @@ def run_case(
         "context_chars": None,
         "batch_size": None,
         "protocol": protocol,
+        "search_provider": search,
+        "kind": "specific",
     }
-    if protocol:
-        from app import protocols
-
-        spend = protocols.BY_NAME.get(protocol)
-        if spend is None:
-            row["error"] = f"no such protocol: {protocol}"
-            return row
-        row["context_chars"] = spend.context_chars
-        row["batch_size"] = spend.batch_size
+    columns, error = _spend_columns(protocol)
+    if error:
+        row["error"] = error
+        return row
+    row.update(columns)
     with tempfile.TemporaryDirectory(prefix="kriko-bench-") as scratch:
         sandbox = Path(scratch)
         shutil.copy(settings.store_path, sandbox / "knowledge.sqlite")
@@ -158,6 +214,7 @@ def run_case(
                     "pack_id": case.get("pack_id") or "",
                     "backend": plane,
                     "protocol": protocol,
+                    "search": search,
                     "max_documents": max_documents,
                     "budget_usd": budget_usd,
                 },
@@ -184,6 +241,7 @@ def run_case(
         row["gold"] = gold.judge(case, produced)
 
     row["model"] = result.get("llm") or result.get("model") or plane
+    row["search_provider"] = result.get("search_provider") or search or row["search_provider"]
     row["tokens"] = result.get("tokens_used")
     row["usd"] = result.get("spent_usd")
     row["documents"] = int(result.get("documents") or 0)
@@ -194,6 +252,188 @@ def run_case(
     row["findings"] = len(accepted) + len(refused)
     row["reasons"] = [one.get("reason", "")[:200] for one in refused[:5]]
     row["note"] = result.get("note") or ""
+    return row
+
+
+def _run_bulk(
+    settings, case: dict, *, plane: str, protocol: str, max_documents: int,
+    budget_usd: float, batch_id: str, search: str = "",
+) -> dict:
+    """An agenda run over N subjects — throughput, and whether quality
+    *degrades with volume* (B126 §3), the failure a single-case benchmark
+    cannot see.
+
+    The subjects are **pack-authored**, not derived or enumerated here: a
+    `bulk` gold case names its own `subject_ids`, exactly as a `specific` case
+    names one `subject_id`. That keeps the scalability rule intact — nothing
+    in this module hand-lists a car, a model or a config — while still letting
+    a pack author decide which group of subjects is worth sweeping together.
+    Subjects no longer installed are skipped and counted, never silently
+    dropped: a case whose subject was uninstalled mid-run is exactly the kind
+    of thing a benchmark exists to notice.
+    """
+    from app import gold
+
+    subject_ids = list(case.get("subject_ids") or [case.get("subject_id")])
+    subject_ids = [one for one in subject_ids if one]
+    row = {
+        "batch_id": batch_id,
+        "subject_id": case.get("subject_id") or (subject_ids[0] if subject_ids else ""),
+        "subject": case.get("label") or "bulk",
+        "pack_id": case.get("pack_id") or "",
+        "plane": plane,
+        "protocol": protocol,
+        "search_provider": search,
+        "kind": "bulk",
+        "context_chars": None,
+        "batch_size": None,
+    }
+    columns, error = _spend_columns(protocol)
+    if error:
+        row["error"] = error
+        return row
+    row.update(columns)
+    if not subject_ids:
+        row["error"] = "bulk case names no subject_ids"
+        row["ms"] = 0
+        return row
+
+    produced_by_subject: dict[str, list[dict]] = {}
+    missing_subjects: list[str] = []
+    accepted_total = refused_total = documents_total = 0
+    tokens_total = 0
+    usd_total = 0.0
+    priced = 0
+    started = time.perf_counter()
+    for subject_id in subject_ids:
+        sub_case = {**case, "subject_id": subject_id, "kind": "specific"}
+        one = _run_specific(
+            settings, sub_case, plane=plane, protocol=protocol,
+            max_documents=max_documents, budget_usd=budget_usd,
+            batch_id=batch_id, search=search,
+        )
+        if one.get("error"):
+            # "A claimed uninstalled" and "the plane failed" look the same
+            # from here — both are `KeyError`/`ValueError` from a missing
+            # subject or a research failure — and either way the subject is
+            # skipped and counted rather than silently dropped from the mean.
+            missing_subjects.append(subject_id)
+            continue
+        produced_by_subject[subject_id] = one.get("gold") or {}
+        accepted_total += int(one.get("accepted") or 0)
+        refused_total += int(one.get("refused") or 0)
+        documents_total += int(one.get("documents") or 0)
+        if one.get("tokens") is not None:
+            tokens_total += int(one["tokens"])
+        if one.get("usd") is not None:
+            usd_total += float(one["usd"])
+            priced += 1
+        row["model"] = one.get("model") or row.get("model")
+
+    row["ms"] = int((time.perf_counter() - started) * 1000)
+    row["accepted"] = accepted_total
+    row["refused"] = refused_total
+    row["findings"] = accepted_total + refused_total
+    row["documents"] = documents_total
+    row["tokens"] = tokens_total or None
+    row["usd"] = round(usd_total, 6) if priced else None
+    row["claims_per_minute"] = (
+        round(accepted_total / (row["ms"] / 60000), 3) if row["ms"] else None
+    )
+    row["missing_subjects"] = missing_subjects
+    if len(missing_subjects) == len(subject_ids):
+        row["error"] = (
+            f"every subject in this bulk case failed or was uninstalled: "
+            f"{', '.join(missing_subjects)}"
+        )
+    if case.get("must_find") or case.get("must_not_find") or case.get("known_absent"):
+        row["gold"] = gold.judge_bulk(case, produced_by_subject)
+    row["note"] = (
+        f"{len(produced_by_subject)}/{len(subject_ids)} subject(s) measured"
+        + (f"; skipped {len(missing_subjects)}" if missing_subjects else "")
+    )
+    return row
+
+
+def _run_validation(
+    settings, case: dict, *, plane: str, protocol: str, batch_id: str, opener=None,
+) -> dict:
+    """Re-check claims already in the store against their retained documents
+    and a fresh fetch (B126 §3) — drift, and whether the plane can say "this
+    no longer holds".
+
+    No plane runs here and no LLM is asked to judge anything: this kind needs
+    neither, which is the point (the automation principle: no human and no
+    self-grading model in the data path). It borrows `app/factcheck.py`'s
+    mechanical re-check — a substring test against a freshly fetched page —
+    and scores it against the case's `must_find`/`must_not_find`/
+    `known_absent` the same way every other kind does: matching the *stored*
+    claim's title against the gold entries, not the fresh page's content.
+    """
+    from app import factcheck, gold
+    from kriko.store.db import connect
+
+    row = {
+        "batch_id": batch_id,
+        "subject_id": case["subject_id"],
+        "subject": case.get("label") or case["subject_id"],
+        "pack_id": case.get("pack_id") or "",
+        "plane": plane,
+        "protocol": protocol,
+        "kind": "validation",
+        "context_chars": None,
+        "batch_size": None,
+        "search_provider": "",
+        "model": "factcheck",
+    }
+    started = time.perf_counter()
+    with tempfile.TemporaryDirectory(prefix="kriko-bench-") as scratch:
+        sandbox = Path(scratch) / "knowledge.sqlite"
+        shutil.copy(settings.store_path, sandbox)
+        conn = connect(sandbox)
+        try:
+            claims = conn.execute(
+                "SELECT c.claim_id, c.title, c.domain, e.quote, s.url"
+                " FROM claims c"
+                " JOIN evidence e ON e.claim_id = c.claim_id AND e.pack_id = c.pack_id"
+                " JOIN sources s ON s.source_id = e.source_id AND s.pack_id = c.pack_id"
+                " WHERE c.subject_id = ? AND c.pack_id = ?",
+                (case["subject_id"], case.get("pack_id") or ""),
+            ).fetchall()
+        except Exception as exc:  # noqa: BLE001 — a bad copy is a measurement too
+            row["ms"] = int((time.perf_counter() - started) * 1000)
+            row["error"] = f"{type(exc).__name__}: {exc}"
+            return row
+        finally:
+            conn.close()
+
+    if not claims:
+        row["ms"] = int((time.perf_counter() - started) * 1000)
+        row["error"] = f"no stored claims for {case['subject_id']} to validate"
+        row["documents"] = 0
+        row["accepted"] = row["refused"] = row["findings"] = 0
+        return row
+
+    rechecked = []
+    for claim in claims:
+        verdict = factcheck.check_source(claim["quote"], claim["url"], opener=opener)
+        rechecked.append({
+            "claim_id": claim["claim_id"], "title": claim["title"],
+            "domain": claim["domain"], "verdict": verdict["verdict"],
+        })
+
+    row["ms"] = int((time.perf_counter() - started) * 1000)
+    row["documents"] = len({c["url"] for c in claims})
+    still_supported = sum(1 for one in rechecked if one["verdict"] == factcheck.QUOTED)
+    row["accepted"] = still_supported
+    row["refused"] = len(rechecked) - still_supported
+    row["findings"] = len(rechecked)
+    row["note"] = (
+        f"{still_supported}/{len(rechecked)} claim(s) still quoted on their "
+        "retained source"
+    )
+    if case.get("must_find") or case.get("must_not_find") or case.get("known_absent"):
+        row["gold"] = gold.judge_validation(case, rechecked)
     return row
 
 

@@ -474,6 +474,36 @@ export type FactCheck = {
 };
 export type FactChecks = { items: FactCheck[]; counts: Record<string, number> };
 
+/** One piece of evidence, checked offline against the page this install
+ * actually kept — never a fresh fetch. `not_kept` means no copy exists to
+ * check against at all, which is a different fact than `ungrounded` and
+ * must never be shown as a pass. See `app/findings.py`'s `regrounded`. */
+export type GroundingEvidence = {
+    evidence_id: string;
+    source_id: string;
+    quote: string;
+    url: string;
+    verdict: string;
+};
+export type Grounding = {
+    claim_id: string;
+    pack_id: string;
+    evidence: GroundingEvidence[];
+    not_kept: number;
+    ungrounded: number;
+};
+
+/** The retained page text behind one piece of evidence — "here is the page
+ * that proved this quote". See `GET /api/factcheck/document`. */
+export type RetainedDocument = {
+    source_id: string;
+    pack_id: string;
+    url: string;
+    text: string;
+    chars: number;
+    retained_at: string;
+};
+
 /** The reader's own marks on one stored answer: what they ticked, and what
  * the seller said. Read together because they render together. */
 export type Triage = {

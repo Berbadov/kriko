@@ -22,10 +22,16 @@ from app import protocols
 from kriko.research import STANDARD, ApiResearcher, Document, ResearchTask, Spend
 
 
-def _summary(**over) -> dict:
+def _summary(*, runs: int = 100, acceptance: float = 0.6, **over) -> dict:
+    """A bench-summary row, with `accepted`/`refused` counts derived from
+    `acceptance` at a fixed sample size — 100 by default, large enough that a
+    Wilson interval is narrow and two rates 30+ points apart do not overlap,
+    which is what most of these tests are checking."""
+    accepted = round(acceptance * runs)
     base = {
-        "plane": "api", "model": "qwen", "protocol": "wide", "runs": 4,
-        "failures": 0, "acceptance": 0.6,
+        "plane": "api", "model": "qwen", "protocol": "wide", "runs": runs,
+        "failures": 0, "accepted": accepted, "refused": runs - accepted,
+        "acceptance": acceptance,
     }
     return {**base, **over}
 
@@ -113,6 +119,109 @@ def test_the_ratio_is_keyed_by_model_not_by_plane():
 
 def test_an_unreadable_benchmark_is_never_why_a_run_does_not_start(tmp_path):
     assert protocols.spend_for(tmp_path / "nope" / "app.sqlite", "qwen") is STANDARD
+
+
+# ── B126 §5/§9: Wilson intervals replace MIN_MARGIN ──────────────────────────
+
+def test_wilson_intervals_let_a_narrow_sample_say_not_yet_measured():
+    """The whole reason for the interval: a 60% acceptance from 5 findings and
+    a 60% from 200 must not print — or decide — identically."""
+    chosen = protocols.choose(
+        [
+            _summary(protocol="wide", runs=5, acceptance=0.8),
+            _summary(protocol="standard", runs=5, acceptance=0.6),
+        ],
+        "qwen",
+    )
+    # Five samples each: the Wilson intervals overlap heavily, so the
+    # difference is not real and the cheaper protocol (bigger batch) wins —
+    # exactly the "not yet measured" honesty a flat margin could not express,
+    # because a flat 5% margin would have called 0.8 vs 0.6 a real win.
+    assert chosen.name == "wide"
+
+
+def test_a_provably_separated_interval_is_not_treated_as_a_tie():
+    """Two hundred samples each, with no overlap: this is not noise."""
+    chosen = protocols.choose(
+        [
+            _summary(protocol="wide", runs=200, acceptance=0.30),
+            _summary(protocol="standard", runs=200, acceptance=0.62),
+        ],
+        "qwen",
+    )
+    assert chosen.name == "standard"
+
+
+def test_zero_kept_findings_is_not_a_measurement():
+    """A protocol whose runs all returned nothing has a zero denominator, not
+    a zero rate — and a zero denominator must never be silently treated as a
+    zero score."""
+    chosen = protocols.choose(
+        [
+            _summary(protocol="wide", runs=4, accepted=0, refused=0, acceptance=0),
+            _summary(protocol="standard", runs=4, accepted=0, refused=0, acceptance=0),
+        ],
+        "qwen",
+    )
+    assert chosen is STANDARD
+
+
+# ── B126 §7: the preamble is a real, named, swept axis ──────────────────────
+
+def test_the_preamble_variants_are_in_the_catalogue():
+    """Not a field nobody reads: at least two genuinely different preambles
+    must actually appear as protocols the sweep can choose between."""
+    preambles = {one.preamble for one in protocols.CATALOGUE}
+    assert "terse" in preambles
+    assert len(preambles) >= 3
+    assert all(one.name in protocols.BY_NAME for one in protocols.CATALOGUE)
+
+
+def test_the_terse_preamble_is_the_known_good_default():
+    assert STANDARD.preamble == "terse"
+    assert STANDARD.preamble_text == ""
+
+
+# ── B126 §7: the sweep's output, per model ──────────────────────────────────
+
+def test_readout_reports_not_yet_measured_rather_than_a_fabricated_number():
+    """A model with fewer than MIN_RUNS still gets a row — with `spend` the
+    known-good default and a note saying why, never a guess dressed as one."""
+    raw = [
+        {"model": "qwen", "protocol": "wide", "accepted": 1, "usd": 0.01},
+    ]
+    rows = protocols.readout(raw, [])
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["protocol"] == STANDARD.name
+    assert row["usd_per_accepted_claim"] is None
+    assert "not yet measured" in row["note"] or "fewer than" in row["note"]
+
+
+def test_readout_reports_cost_only_from_two_or_more_priced_runs():
+    summary = [_summary(protocol="standard", runs=100, acceptance=0.6)]
+    raw = [
+        {"model": "qwen", "protocol": "standard", "accepted": 3, "usd": 0.02, "gold": {}},
+    ]
+    single = protocols.readout(raw, summary)[0]
+    assert single["usd_per_accepted_claim"] is None
+
+    raw_two = raw + [
+        {"model": "qwen", "protocol": "standard", "accepted": 2, "usd": 0.02, "gold": {}},
+    ]
+    priced = protocols.readout(raw_two, summary)[0]
+    assert priced["usd_per_accepted_claim"] == pytest.approx(0.008, abs=0.0001)
+
+
+def test_readout_carries_the_hallucination_rate_and_its_interval():
+    summary = [_summary(protocol="standard", runs=100, acceptance=0.6)]
+    raw = [
+        {"model": "qwen", "protocol": "standard", "accepted": 10,
+         "gold": {"hallucinated": ["a fabricated claim"]}},
+    ]
+    row = protocols.readout(raw, summary)[0]
+    assert row["hallucination_rate"] == pytest.approx(0.1)
+    assert row["hallucination_interval"] is not None
 
 
 def test_the_engine_defines_the_shape_and_never_the_choice():

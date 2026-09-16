@@ -46,9 +46,12 @@
     // POST's own response points at, and `#/submissions` is in this app's
     // hints. A bookmark must land on the lens it named (see nav.ts ALIASES).
     let { lens: initial = "live" }: { lens?: string } = $props();
-    let lens = $state<Lens>(
-        (LENSES.some((l) => l.id === initial) ? initial : "live") as Lens,
-    );
+    const asLens = (named: string): Lens =>
+        (LENSES.some((l) => l.id === named) ? named : "live") as Lens;
+    let lens = $state<Lens>("live" as Lens);
+    $effect.pre(() => {
+        lens = asLens(initial);
+    });
 </script>
 
 <div class="lenses" role="tablist" aria-label="Activity">
