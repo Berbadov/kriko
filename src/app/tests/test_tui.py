@@ -225,6 +225,10 @@ class FakeEngine:
         self._note("retry", job_id)
         return {"job_id": "retry-job"}
 
+    def operations(self, limit=200):
+        self._note("operations")
+        return {"items": []}
+
 
 def _tui() -> Tui:
     return Tui(FakeEngine())
@@ -236,6 +240,37 @@ def test_the_number_keys_switch_tabs():
     assert tui.state.tab == "agenda"
     tui.act("3")
     assert tui.state.tab == "jobs"
+    tui.act("4")
+    assert tui.state.tab == "ops"
+
+
+def test_the_ops_tab_shows_the_live_operations_feed():
+    """The TUI's whole reason to exist now: a second client on the same feed
+    the app dashboard renders (B111/AGENT_OPERATIONS). Before this, the
+    console had no view of agent-driven work at all — the operator could see
+    jobs but not an MCP-door `submit_findings` mid-flight."""
+    state = _state(tab="ops")
+    state.data["ops"] = {"items": [
+        {"op_id": 1, "door": "mcp", "kind": "research", "name": "submit_findings",
+         "state": "running", "subject_id": "s1", "pack_id": "org.kriko.cars",
+         "started_at": "2026-09-16T10:00:00Z", "usd": 0.03, "tokens": None},
+    ]}
+    text = _plain(screen.render(state, 100, 24))
+    assert "submit_findings" in text
+    assert "mcp" in text
+    assert "$0.03" in text
+
+
+def test_an_empty_ops_tab_explains_itself():
+    text = _plain(screen.render(_state(tab="ops"), 80, 24))
+    assert "no operations recorded" in text
+
+
+def test_the_poller_asks_for_operations_on_the_ops_tab():
+    tui = _tui()
+    tui.state.tab = "ops"
+    tui.poll_once()
+    assert ("operations",) in tui.engine.calls
 
 
 def test_q_stops_the_loop():
@@ -371,6 +406,7 @@ def test_the_client_speaks_to_the_app_this_repo_actually_serves(tmp_path):
         assert "planes" in engine.planes()
         assert "rows" in engine.agenda()
         assert "items" in engine.jobs()
+        assert "items" in engine.operations()
         # The screen renders real payloads, not just the shapes invented above.
         state = _state(tab="planes")
         state.data["planes"] = engine.planes()

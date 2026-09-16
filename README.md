@@ -108,7 +108,10 @@ kriko packs                      # what is installed, and its trust weight
 kriko lookup make=volkswagen model=golf year=2015 fuel=diesel \
     transmission=automatic --ctx usage_km=190000 -v
 
-kriko tui                        # the operator console: planes, agenda, jobs, shell
+kriko tui                        # the operator console: planes, agenda, jobs, ops, shell
+kriko prefs                      # or: costs, sites, verify, drafts, operations
+                                 # — everything the dashboard's Settings/Sites/
+                                 # Verify/Knowledge screens do, from a terminal
 python -m app.web                # dashboard + /analyze on 127.0.0.1:8787
                                  # its Health tab shows the weakest-sourced
                                  # claims, worst first
