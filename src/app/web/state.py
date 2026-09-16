@@ -1684,6 +1684,13 @@ def query_shapes(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
 # is visible as a state rather than as a spinner nobody can explain.
 
 QUEUED, RUNNING = "queued", "running"
+#: Asked to stop, still tearing down. A real state rather than a message,
+#: because the reader pressed a button and the two honest answers — "stopping"
+#: and "stopped" — were rendered identically while in-flight work drained. A
+#: run that says `cancelled` while it is still spending is the complaint;
+#: one that still says `running` after the reader stopped it is the same
+#: complaint wearing the other hat.
+CANCELLING = "cancelling"
 SUCCEEDED, FAILED, CANCELLED, INTERRUPTED = (
     "succeeded",
     "failed",
@@ -1691,6 +1698,10 @@ SUCCEEDED, FAILED, CANCELLED, INTERRUPTED = (
     "interrupted",
 )
 TERMINAL = frozenset({SUCCEEDED, FAILED, CANCELLED, INTERRUPTED})
+#: States a job is still alive in. `CANCELLING` is here, not in TERMINAL: the
+#: worker has not finished, and a poller that stopped watching would miss the
+#: partial being written.
+LIVE = frozenset({QUEUED, RUNNING, CANCELLING})
 
 
 def _now() -> str:
@@ -1784,14 +1795,56 @@ def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
     if row["state"] == QUEUED:
         finish_job(conn, job_id, CANCELLED, message="cancelled before it started")
         return CANCELLED
-    if row["state"] == RUNNING:
-        conn.execute(
-            "UPDATE jobs SET cancel_requested = 1, message = ? WHERE job_id = ?",
-            ("cancelling…", job_id),
+    if row["state"] in (RUNNING, CANCELLING):
+        # Idempotent on purpose. A reader who presses a button that appears to
+        # do nothing presses it again, and a second press must not queue a
+        # second teardown or reset the clock on the first.
+        #
+        # The state guard is in the WHERE clause rather than in the `if` above,
+        # because the worker is running while this executes: between reading
+        # the row and writing it, the job can finish. Without it a second press
+        # arriving in that window writes `cancelling` over `cancelled` and the
+        # run is left looking alive forever — a spinner nobody can clear, which
+        # is worse than the unresponsive button it was meant to fix.
+        done = conn.execute(
+            "UPDATE jobs SET cancel_requested = 1, state = ?, message = ?"
+            " WHERE job_id = ? AND state IN (?, ?)",
+            (CANCELLING, "stopping…", job_id, RUNNING, CANCELLING),
         )
         conn.commit()
-        return RUNNING
+        if not done.rowcount:
+            return (get_job(conn, job_id) or {}).get("state") or CANCELLED
+        return CANCELLING
     return row["state"]
+
+
+def save_partial(conn: sqlite3.Connection, job_id: str, result: dict) -> None:
+    """Keep what a running job has finished, before it is asked to stop.
+
+    Written *as the work happens* rather than at the end, which is the whole
+    point: the reader cancelled a run that had already gathered sources and
+    extracted findings, and all of it went in the bin because the only place
+    a result was ever written was the success path. Nothing that reached this
+    row is lost by stopping.
+    """
+    conn.execute(
+        "UPDATE jobs SET result_json = ? WHERE job_id = ?",
+        (json.dumps(result, default=str), job_id),
+    )
+    conn.commit()
+
+
+def partial_of(conn: sqlite3.Connection, job_id: str) -> dict:
+    row = conn.execute(
+        "SELECT result_json FROM jobs WHERE job_id = ?", (job_id,)
+    ).fetchone()
+    if row is None or not row["result_json"]:
+        return {}
+    try:
+        found = json.loads(row["result_json"])
+    except json.JSONDecodeError:
+        return {}
+    return found if isinstance(found, dict) else {}
 
 
 def cancel_requested(conn: sqlite3.Connection, job_id: str) -> bool:
@@ -1840,15 +1893,19 @@ def work_in_flight(conn: sqlite3.Connection) -> int:
 
 def interrupt_running(conn: sqlite3.Connection) -> int:
     """Called at startup. Anything still `running` belongs to a dead process."""
+    # `CANCELLING` belongs in here with the other two. Left out, a job whose
+    # process died mid-teardown is the one row that spins forever after a
+    # restart — exactly what this function exists to prevent.
     cursor = conn.execute(
         "UPDATE jobs SET state = ?, finished_at = ?, message = ?"
-        " WHERE state IN (?, ?)",
+        " WHERE state IN (?, ?, ?)",
         (
             INTERRUPTED,
             _now(),
             "the server stopped while this was running",
             RUNNING,
             QUEUED,
+            CANCELLING,
         ),
     )
     conn.commit()

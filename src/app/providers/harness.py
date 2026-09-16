@@ -81,6 +81,47 @@ TIMEOUT_SECONDS = 600.0
 AUTHOR_TIMEOUT_SECONDS = 2400.0
 
 
+def _lines(stream, tick: float):
+    """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
+
+    A blocking read on a pipe cannot be interrupted, and `for line in stream`
+    is exactly that — which made the cancel check that follows it worth nothing
+    during the only period a run is worth cancelling. So the read happens on
+    its own thread and the caller waits on a queue with a timeout, which it
+    *can* come back from.
+
+    The thread is a daemon and is never joined: the process it is reading from
+    is killed by the caller's `finally`, which closes the pipe and ends the
+    read. Waiting for it would reintroduce the block this removes.
+    """
+    import queue as _queue
+
+    box: _queue.Queue = _queue.Queue(maxsize=256)
+    done = object()
+
+    def _read() -> None:
+        try:
+            for line in stream:
+                box.put(line)
+        except (ValueError, OSError):
+            # The pipe was closed under us, which is what a kill looks like
+            # from this side. Not an error — it is the designed way out.
+            pass
+        finally:
+            box.put(done)
+
+    threading.Thread(target=_read, daemon=True).start()
+    while True:
+        try:
+            item = box.get(timeout=tick)
+        except _queue.Empty:
+            yield None
+            continue
+        if item is done:
+            return
+        yield item
+
+
 class NoHarness(RuntimeError):
     """The harness plane was asked for and no harness CLI is on this machine."""
 
@@ -751,6 +792,12 @@ class HarnessResearcher(AgentResearcher):
         #: which costs the run nothing — the CLI's own case, and every run
         #: before `pack_author`/`pack_amend`/`site_register` were given one.
         self.check_cancelled: Callable[[], None] | None = None
+        #: How often to look up from a silent stream and ask whether the reader
+        #: has stopped this. Half a second: the reader's own measure is "did
+        #: pressing stop stop it", and anything under a second reads as yes,
+        #: while a tick this size costs one queue timeout per half-second of a
+        #: run that is otherwise waiting on a network.
+        self._cancel_tick = 0.5
         #: The run's raw output, bounded. The reply is parsed out of this, and
         #: it is what a failure quotes its tail of.
         self.transcript = ""
@@ -996,7 +1043,18 @@ class HarnessResearcher(AgentResearcher):
         narrated = 0
         assert proc.stdout is not None
         try:
-            for line in proc.stdout:
+            for line in _lines(proc.stdout, self._cancel_tick):
+                if line is None:
+                    # The stream said nothing for a tick. That is not idleness
+                    # — it is the *normal* shape of a long model call, and it
+                    # used to be the shape of an uncancellable one: the loop
+                    # sat inside `for line in proc.stdout` and a reader who
+                    # pressed stop waited for whatever byte came next, which on
+                    # a deep run is minutes of spending they had already said
+                    # no to.
+                    if self.check_cancelled is not None:
+                        self.check_cancelled()
+                    continue
                 self._keep(line)
                 # Checked before narration, every line: a run an agent has
                 # gone quiet on (nothing left to say for `MAX_NARRATED` lines,
