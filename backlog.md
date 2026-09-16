@@ -747,7 +747,7 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
-## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.4 + §2.9 closed, 12 items open
+## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.6 + §2.9 closed, §2.10/§3.5 part-done, 7 open
 
 A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
 `done.md`. What is left, in the reader's own numbering:
