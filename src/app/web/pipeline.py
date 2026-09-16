@@ -340,7 +340,63 @@ def _run(row: sqlite3.Row) -> dict:
     # zero, and an estimate rendered as a measurement is the same class of
     # mistake as claiming a window was raised.
     run["tokens_counted"] = run.get("tokens") is not None
+    run["outcome"] = outcome(run)
     return run
+
+
+#: What a finished run is, in the reader's terms, and what they do next.
+#:
+#: The states were already recorded; what was missing is that a state is not an
+#: instruction. "failed" tells somebody watching a four-minute run that it is
+#: over and nothing else — not whether to press it again, fix a key, or accept
+#: that this subject has no sources. A terminal screen with no next move is the
+#: same dead end `app/matching.py` was written to end, one surface along.
+OUTCOMES = {
+    "done": ("finished", ""),
+    "partial": (
+        "stopped early",
+        "What it had gathered was kept. Run it again to carry on, or read what "
+        "it found first.",
+    ),
+    "cancelled": (
+        "stopped by you",
+        "Everything finished before you stopped it was kept.",
+    ),
+    "failed": (
+        "failed",
+        "The log says why. A failure on the first source is usually a key or a "
+        "network problem; one partway through is usually the source.",
+    ),
+    "interrupted": (
+        "interrupted by a restart",
+        "The app stopped while this was running. Nothing was lost that had "
+        "already been written; run it again to finish.",
+    ),
+}
+
+
+def outcome(run: dict) -> dict:
+    """The terminal state as a sentence, plus whether anything is owed.
+
+    An unknown state reads as *not* finished, which is the safe way round: a
+    view that calls a running thing done stops watching it.
+
+    The other half of §2.5 — "if the agent is waiting on my answer, that must
+    be unmissable" — is deliberately not here. Those questions are written to
+    the *job* row (`app/disambiguate.py` through `Progress.partial`), and the
+    author run that asks them has no emitter at all, so an `attention` flag on
+    this object would be a field that is always false: a hook that looks
+    implemented and never fires. It lives in `app/web/routers/jobs.py`, where
+    the data is.
+    """
+    state_name = str(run.get("state") or "")
+    said, next_step = OUTCOMES.get(state_name, (state_name or "running", ""))
+    return {
+        "state": state_name,
+        "done": state_name in OUTCOMES,
+        "said": said,
+        "next_step": next_step,
+    }
 
 
 def runs(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
