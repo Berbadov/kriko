@@ -745,6 +745,89 @@ li.gap {
 .brand-text .meta {
     font-size: var(--t-xs);
 }
+/* Brand and primary action share the rail's first row, so `.rail` keeps its
+ * three-row grid whether or not the action is rendered — an empty grid row
+ * still costs a gap, and buyer mode does not get this button. */
+.rail-head {
+    display: grid;
+    gap: var(--s-3);
+}
+/* Not a nav item. The rail lists places; this makes one.
+ *
+ * Filled accent, and it is the only filled accent in the chrome — the panel
+ * theme's note on `--accent-ink` is why the text is near-black rather than
+ * white (white on this gold is 1.7:1). The offset shadow is flat and hard on
+ * purpose: a soft drop shadow reads as depth, and this is a stamp. */
+.rail-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-3);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-display);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    box-shadow: 3px 3px 0 var(--n-4);
+    transition:
+        transform var(--dur-fast) ease,
+        box-shadow var(--dur-fast) ease;
+}
+.rail-action-plus {
+    font-size: var(--t-md);
+    line-height: 1;
+}
+.rail-action:hover {
+    /* It moves onto its own shadow — the press, before the press. */
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--n-4);
+}
+.rail-action:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--n-4);
+}
+.rail-action:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .rail-action,
+    .rail-action:hover,
+    .rail-action:active {
+        transform: none;
+        transition: none;
+    }
+}
+/* The number a row carries. Tabular figures so a count that ticks from 9 to
+ * 10 does not shift the label beside it, and mono because these are readings
+ * rather than prose. */
+.nav-figure {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--n-6);
+}
+.nav-figure-text {
+    white-space: nowrap;
+}
+/* Work that is happening, not a total that accumulated. Accent, because it is
+ * the one figure here with a reason to be looked at now. */
+.nav-figure.live {
+    color: var(--accent);
+    font-weight: 600;
+}
+.nav-link:hover .nav-figure,
+.nav-link.active .nav-figure {
+    color: inherit;
+}
 /* The one thing in the rail allowed to scroll — and it does it as chrome.
  *
  * `scrollbar-width: none` because the bar itself was the complaint, and the
@@ -818,7 +901,10 @@ li.gap {
 .nav-link {
     position: relative;
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
+    /* Three columns, and the third is `auto` rather than a fixed width: most
+     * rows have no figure at all, and a reserved gutter on fourteen rows to
+     * align three numbers is a rail with a stripe of nothing down it. */
+    grid-template-columns: 18px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--s-2);
     padding: var(--s-2) var(--s-2);
