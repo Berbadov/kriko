@@ -539,6 +539,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             verdicts = accept_findings(
                 conn, subject_id, pack_id, findings, retain=retained
             )
+            # One more attempt, on the failures only, for the failures a second
+            # attempt can honestly fix. See `_repair`.
+            verdicts = _repair(
+                conn, subject_id, pack_id, verdicts, findings,
+                researcher=researcher, task=task, emit=emit,
+                progress=progress, retain=retained,
+            )
             conn.commit()
             # Written down as soon as the claims exist, not at the end of the
             # run: an undo has to be possible for a run that was cancelled
@@ -1293,6 +1300,80 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
            if result["uncovered"] else "; the line-up is now covered")
     )
     return result
+
+
+#: How many times a refused finding may be re-asked for. One.
+#:
+#: Not zero, because the commonest refusal is a field left empty on work that
+#: was otherwise good — the reader watched three genuinely useful titles get
+#: binned for it — and asking again costs one short call against text already
+#: fetched.
+#:
+#: Not more than one, because a second refusal on the same field is not a
+#: transient failure, it is the extractor telling us it has nothing more to say
+#: about that document. Looping past that spends money to arrive at the same
+#: answer more slowly, and an unbounded repair loop on a paid plane is a bill
+#: nobody authorised.
+REPAIR_ATTEMPTS = 1
+
+
+def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
+            emit, progress, retain):
+    """Re-ask for the one field that would have kept a refused finding.
+
+    Only the failing items, only the fields `findings._repairable` judged
+    fixable, and only once. A finding whose *quote* could not be grounded is
+    never re-asked for — that is asking it to try harder at the thing it got
+    wrong, and the evidence model exists precisely so that cannot be
+    negotiated.
+    """
+    from app.findings import explanation
+
+    fixable = [one for one in verdicts.get("rejected", []) if one.get("fix")]
+    if not fixable or not hasattr(researcher, "repair"):
+        return verdicts
+
+    wanted = {one["title"]: one for one in fixable}
+    again = [dict(one) for one in findings if one.get("title") in wanted]
+    if not again:
+        return verdicts
+
+    emit.open_stage("repair", f"re-asking for {len(again)} finding(s)")
+    progress.log(
+        f"{len(again)} finding(s) were refused for a field that can be "
+        f"rewritten — asking once more"
+    )
+    try:
+        mended = researcher.repair(task, again, wanted)
+    except Exception as exc:  # noqa: BLE001 — a failed repair is not a failed run
+        emit.close_stage(detail=f"could not re-ask: {exc}")
+        return verdicts
+
+    kept = [one for one in mended if explanation(one)]
+    if not kept:
+        emit.close_stage(detail="nothing came back with the field filled in")
+        return verdicts
+
+    second = accept_findings(conn, subject_id, pack_id, kept, retain=retain)
+    emit.close_stage(
+        detail=f"{len(second.get('accepted', []))} of {len(again)} kept on the "
+               f"second attempt")
+
+    # Merge: what the repair kept joins the accepted list, and the refusals it
+    # replaced leave the rejected one. A finding that failed twice stays
+    # refused, carrying the second verdict rather than the first — the reader
+    # should see why it finally lost, not why it first did.
+    mended_titles = {one["title"] for one in second.get("accepted", [])}
+    from app.findings import summarise
+
+    accepted = verdicts.get("accepted", []) + second.get("accepted", [])
+    rejected = [one for one in verdicts.get("rejected", [])
+                if one["title"] not in mended_titles
+                and not any(one["title"] == two["title"]
+                            for two in second.get("rejected", []))]
+    rejected += second.get("rejected", [])
+    return {**verdicts, "accepted": accepted, "rejected": rejected,
+            "summary": summarise(accepted, rejected)}
 
 
 def site_register(settings, params: dict, progress: Progress) -> dict:
