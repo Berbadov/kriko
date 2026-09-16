@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import operations, sites
+from app import matching, operations, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for  # noqa: F401
@@ -258,6 +258,13 @@ def analyze(
         "method": result.resolution.method,
         "coverage": result.coverage,
         "flags": list(result.resolution.flags),
+        # How sure, and of what. A client that renders `PROBABLE_MATCH` as a
+        # match is showing a guess as a fact, and one that renders it as
+        # nothing is back at the dead end — so the doubt travels with the
+        # answer rather than being inferred from it.
+        **matching.scoring(result.resolution),
+        "next_step": matching.next_step(result.resolution, result.coverage,
+                                        body.url),
         # Which subjects the listing actually resolved to, claims or not.
         # `claims` cannot answer this: the interesting case is a subject that
         # resolved and has nothing known about it, which is exactly the row
@@ -352,3 +359,74 @@ def analyze(
         response=payload,
     )
     return payload
+
+
+@router.post("/diagnose/identity")
+def diagnose_identity(
+    body: ScrapeRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
+    """Why this page matched what it matched — or why it matched nothing.
+
+    The reader's ask, in their words: *"I need to be able to debug this myself
+    without reading source."* So this is the whole chain in one object — the
+    adapter that claimed the page, the identity it read off it, the labels it
+    could not place, every subject weighed, each key's score, and the
+    threshold the winner cleared or missed.
+
+    Deliberately a second door onto the *same* call rather than a mode on
+    `/analyze`. A diagnostic that changes the thing it measures is worthless,
+    and the reader's answer must not carry a debugging payload: this returns
+    the trace and no claims, `/analyze` returns claims and the summary, and
+    both run the identical adapt-then-lookup path.
+
+    It records no history and writes no analysis log. Looking at why something
+    failed is not the same act as asking about a product, and a diagnostic that
+    filled the reader's history with attempts would make the history useless
+    exactly when they needed it.
+    """
+    spec = sites.adapter_for(store, app_state, body.url)
+    if spec is None:
+        # Not a 404. "Nothing here reads this site" is the single most common
+        # answer this endpoint has, and it is a *finding* — the one that
+        # explains a silent panel — so it comes back as one rather than as an
+        # error the client has to catch to display.
+        return {
+            "adapter": None,
+            "page": {"url": body.url},
+            "outcome": {
+                "method": "no_adapter",
+                "verdict": "unreadable",
+                "notes": f"no installed pack, and nothing this installation has "
+                         f"learned, reads {sites.host_of(body.url) or body.url}",
+            },
+            "considered": [],
+            "next_step": {
+                "action": "register_site",
+                "say": "Kriko cannot read this site yet. Add it on the Sites "
+                       "screen and an agent will work out how.",
+                "url": body.url,
+            },
+        }
+
+    mapped = adapt(
+        spec,
+        body.fields,
+        url=body.url,
+        title=body.title,
+        description=body.description,
+        vocabulary=identity_vocabulary(store),
+    )
+    result = lookup(
+        store,
+        Query(kind=mapped.kind, identity=mapped.identity,
+              context=mapped.context, lang=body.lang, limit=body.limit),
+    )
+    out = matching.diagnosis(mapped, result, spec)
+    out["next_step"] = matching.next_step(result.resolution, result.coverage,
+                                          body.url)
+    # Not the claims themselves — how many there would be. Someone debugging a
+    # match wants to know the answer was non-empty, not to read it here.
+    out["outcome"]["claims"] = len(result.claims)
+    return out
