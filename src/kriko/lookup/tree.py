@@ -18,7 +18,8 @@ a better source-tier table and the answer changes with no rebuild.
 
 from dataclasses import asdict, dataclass
 
-from kriko.lookup.rank import DEFAULT_TIER_TRUST, tier_lookup, tier_of, trust_lookup
+from kriko.lookup.rank import (DEFAULT_TIER_TRUST, distinct_source_count,
+                               tier_lookup, tier_of, trust_lookup)
 from kriko.store.packstore import enabled_pack_ids
 
 #: Sort value for a source with no retrieval date. An absent timestamp is not
@@ -35,6 +36,7 @@ class EvidenceRow:
     quote: str
     stance: str          # supports | refutes | qualifies
     independent: bool
+    source_id: str
     tier: str
     trust: float
     retrieved_at: str    # when WE last saw the page. '' = unknown.
@@ -126,7 +128,7 @@ SELECT c.claim_id, c.pack_id, c.subject_id, c.kind, c.domain, c.severity,
        c.component, c.subsystem,
        s.label            AS subject_label,
        COALESCE(t.title, '') AS title,
-       e.stance, e.independent,
+       e.stance, e.independent, e.source_id,
        COALESCE(src.domain, '')       AS source_domain,
        COALESCE(src.url, '')          AS url,
        COALESCE(e.quote, '')          AS quote,
@@ -180,6 +182,7 @@ def _nodes(conn, pack_ids, *, subject_id=None, lang="en"):
                 quote=row["quote"],
                 stance=row["stance"] or "supports",
                 independent=bool(row["independent"]),
+                source_id=row["source_id"] or "",
                 tier=tier,
                 trust=trusts.get(tier, unknown),
                 retrieved_at=row["retrieved_at"],
@@ -195,12 +198,15 @@ def _node(bucket) -> ClaimNode:
     refuted_by = sum(1 for e in evidence if e.stance == "refutes")
     supporting = [e for e in evidence if e.stance != "refutes"]
 
-    # Distinct URL, not distinct evidence row: two quotes off one page are one
-    # source, and counting rows would let a single chatty page look corroborated.
-    # This is also distinct source_id, not merely distinct URL: source_id is a
-    # content hash of the normalised URL, so counting one counts the other.
-    supporting_sources = len({e.url for e in supporting if e.url})
-    independent_sources = len({e.url for e in supporting if e.url and e.independent})
+    # Distinct source_id, not distinct URL: two quotes off one page are one
+    # source, and counting rows would let a single chatty page look
+    # corroborated. source_id (not url) is the identity, because a source
+    # without a URL — a manual, a scanned bulletin — is still a real, distinct
+    # source and must not disappear from the count (backlog B50). Shared with
+    # `rank.score_sources` via `distinct_source_count` so the two never
+    # disagree about what "independent" means (backlog B49).
+    supporting_sources = distinct_source_count(supporting)
+    independent_sources = distinct_source_count(supporting, independent_only=True)
 
     best = max((e for e in supporting), key=lambda e: e.trust, default=None)
     retrieved = sorted(e.retrieved_at for e in supporting if e.retrieved_at)
@@ -230,7 +236,7 @@ def _node(bucket) -> ClaimNode:
     )
 
 
-def weakest_claims(conn, pack_ids=None, limit: int = 20) -> list[ClaimHealth]:
+def weakest_claims(conn, pack_ids=None, limit: int = 20, lang: str = "en") -> list[ClaimHealth]:
     """The claims we ship that are least well supported, worst first.
 
     Claims with **no** evidence at all are excluded, not ranked last: absence
@@ -238,15 +244,19 @@ def weakest_claims(conn, pack_ids=None, limit: int = 20) -> list[ClaimHealth]:
     treats a source-free claim as trust-neutral rather than penalised — an
     interval-based item is not less true for lacking a citation. They remain
     visible in `subject_tree`, so nothing is hidden by this.
+
+    `lang` is a row attribute, same as everywhere else in the engine (see
+    `Query.lang` and `/api/query`) — a caller passes the reader's language
+    instead of this module silently always answering in one (backlog B51).
     """
     ranked = sorted(
-        (node.health for node in _nodes(conn, pack_ids) if node.evidence),
+        (node.health for node in _nodes(conn, pack_ids, lang=lang) if node.evidence),
         key=lambda health: (health.concern, health.claim_id, health.pack_id),
     )
     return ranked[:max(0, limit)]
 
 
-def subject_tree(conn, subject_id: str, pack_ids=None) -> SubjectTree:
+def subject_tree(conn, subject_id: str, pack_ids=None, lang: str = "en") -> SubjectTree:
     """One subject, every claim about it, every piece of evidence under each.
 
     Unions across packs: a subject with the same identity hashes to the same
@@ -255,9 +265,12 @@ def subject_tree(conn, subject_id: str, pack_ids=None) -> SubjectTree:
 
     An unknown subject is an empty tree, not an error. A fresh install knows
     nothing and that is not a failure.
+
+    `lang` defaults to "en" for a caller that does not know better, but is a
+    parameter rather than a hardcoded value — see `weakest_claims`.
     """
     nodes = sorted(
-        _nodes(conn, pack_ids, subject_id=subject_id),
+        _nodes(conn, pack_ids, subject_id=subject_id, lang=lang),
         key=lambda node: (node.health.concern, node.health.claim_id, node.health.pack_id),
     )
     return SubjectTree(
