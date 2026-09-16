@@ -11,7 +11,7 @@ happens.
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app import costs, prefs
+from app import costs, prefs, scale
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -51,6 +51,18 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                if value is not None}
     prefs.write(conn, written)
     return prefs.choices(conn)
+
+
+@router.get("/scales")
+def read_scales(conn=Depends(get_app_state)) -> dict:
+    """Every position on the depth dial, with what each is likely to cost here.
+
+    Served with the estimate attached rather than as a bare list, because the
+    reader asked for exactly one thing — to know that fifteen sources costs
+    more than three *before* choosing — and a list of names would be the same
+    unanswerable choice the knobs already were.
+    """
+    return {"scales": scale.offered(conn), "default": scale.DEFAULT}
 
 
 @router.get("/costs")
