@@ -6,6 +6,57 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the 0.10.0 work order, P1 so far (§2.1–§2.4, §2.9)
+
+**§2.1 — the agent asks, once, and does not wait.** `app/disambiguate.py` runs
+one short call before the expensive research: is this name one product or
+several? The hard part was not asking but asking without breaking the
+automation principle, so nothing waits — every question carries a default and
+its reasoning, the run proceeds immediately, and the reader gets a statement of
+what was assumed rather than a gate. "Built for maker Acme, market TR, power
+mains — of which market was assumed, not confirmed." An assumed scope that is
+invisible was the actual bug. Questions land in the job row so a client can
+offer them back beside "run it again"; an answer mid-run would have nothing
+left to change. An unparseable reply costs a question, never the run behind it.
+
+**§2.2 — a model you can choose, priced from a file you can edit.**
+`app/models.toml` is copied to `~/.kriko` once and never rewritten, so a
+corrected price survives updates. Discovery cannot replace it — `GET /v1/models`
+returns ids and nothing else — so the two merge, and an unlisted model stays
+usable while reporting no price. A provider with no key is listed with the
+reason, not hidden. Per stage of a run (plan / extract / synthesise / validate),
+each falling back to the single default. Anthropic needed its own adapter:
+there is no compatibility endpoint, so `llm.py` could not reach it by
+configuration. That made "a completion key" a choice, so `ready()` treats
+OpenAI/Anthropic the way it already treats Exa/Tavily — without which an
+Anthropic-only install would have reported itself unable to run.
+
+**§2.3 — one dial.** Quick / Standard / Deep / Custom, each a bundle of the
+knobs that already existed and an estimate from this installation's own
+measured runs. `max_documents` defaulted to 5, which is truthy, so it would
+have won over every preset — the dial would have moved its label and nothing
+else. The preset's ceiling applies only when a scale is *named*: the existing
+budget test caught the default silently rising from $0.20 to $1.00 for every
+caller that never asked for a dial, the agenda included.
+
+**§2.4 — spend as it happens.** `app/meter.py` tallies per stage and per model
+while the run goes, sorted by cost so "what is expensive here" is the first row.
+The OpenAI adapter was discarding `prompt_tokens`/`completion_tokens` and
+keeping only the total — the one figure that cannot be priced, since the halves
+cost different amounts. A partly-priced run reports no total rather than a low
+one, and the cap stops the run cleanly keeping what was gathered.
+
+**§2.9 — the terminal panel removed**, and `routers/terminal.py` /
+`providers/termpty.py` deliberately *kept*: `app/tui/client.py` drives those
+same endpoints for `kriko tui`'s Ctrl-] pass-through, so deleting them would
+have taken out the author surface the removal was meant to preserve. Found by
+deleting them first and watching the sidecar log test go red. The bundle loses
+a 335 KB chunk and the .js budget goes back from 720,000 to 280,000.
+
+Commits `fd14366`, `a4b4882`, `cfcd182`, `7fae2bf`, `0f23aca`.
+
+---
+
 ### 2026-09-16 — the 0.10.0 reader work order, P0 (§1.1–§1.4, §1.6, §1.7)
 
 A 23-item work order. These are the launch blockers; §1.5 and everything in P1
