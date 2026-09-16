@@ -286,3 +286,22 @@ def test_the_two_planes_are_compared_on_what_survives_the_gate():
         )["planes"]
     }
     assert planes["harness"]["acceptance"] < planes["api"]["acceptance"]
+
+
+def test_the_benchmark_payload_never_names_a_word_the_interface_may_not_hold():
+    """The interface cannot spell this one, so the boundary spells it instead.
+
+    `test_ui_contains_no_pack_vocabulary` bans the word outright in `ui/`,
+    because it means an LLM on this screen and a car's model in every pack
+    about vehicles, and a payload key cannot say which. A producer and its
+    reader disagreeing about a string across a boundary is how an entire class
+    of pack came to be built, installed and unreachable, so this asserts on the
+    served payload rather than on either side's intentions.
+    """
+    from app.web.routers import bench as bench_router
+
+    served = bench_router._served(
+        {"model": "some-llm", "protocol": "standard", "runs": 3}
+    )
+    assert served == {"llm": "some-llm", "protocol": "standard", "runs": 3}
+    assert "model" not in served

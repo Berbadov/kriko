@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS documents (
     target_hint TEXT NOT NULL DEFAULT '',  -- search context that found it: a HINT, never attribution
     raw_text TEXT NOT NULL,
     text_hash TEXT NOT NULL UNIQUE,
-    fetched_at TEXT NOT NULL
+    fetched_at TEXT NOT NULL,
+    published_at TEXT NOT NULL DEFAULT ''  -- when the WORLD published it, "" if unknown
 );
 CREATE TABLE IF NOT EXISTS evidence (
     id INTEGER PRIMARY KEY,
@@ -134,6 +135,7 @@ def connect(path: Path | str = LEDGER_PATH) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     _rename_retired_column(conn)
+    _add_documents_published_at_column(conn)
     conn.executescript(_SCHEMA.format(MODEL_COLUMN=_STORAGE_COLUMN))
     conn.executescript(_TRIGGERS)
     return conn
@@ -165,6 +167,29 @@ def _rename_retired_column(conn) -> None:
         )
 
 
+def _add_documents_published_at_column(conn) -> None:
+    """Carry a ledger an older build wrote onto the current column set.
+
+    `CREATE TABLE IF NOT EXISTS` is a no-op against a `documents` table that
+    already exists without `published_at`, so without this an insert naming
+    the column would fail against months of accumulated ledger data. The
+    `DEFAULT ''` on the ALTER (not just on the fresh-schema DDL above)
+    matters: a column added `NOT NULL` with no default has broken this
+    project once already, and old rows genuinely never recorded a publish
+    date, so `''` ("unknown") is the honest backfill, not a placeholder to
+    fix later.
+    """
+    try:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(documents)")}
+    except sqlite3.DatabaseError:
+        return
+    if not columns or "published_at" in columns:
+        return
+    conn.execute(
+        "ALTER TABLE documents ADD COLUMN published_at TEXT NOT NULL DEFAULT ''"
+    )
+
+
 def insert_document(
     conn,
     *,
@@ -174,6 +199,7 @@ def insert_document(
     site_or_channel: str = "",
     lang: str = "",
     target_hint: str = "",
+    published_at: str = "",
 ) -> int:
     h = text_hash(raw_text)
     row = conn.execute("SELECT id FROM documents WHERE text_hash=?", (h,)).fetchone()
@@ -181,8 +207,9 @@ def insert_document(
         return row["id"]
     cur = conn.execute(
         "INSERT INTO documents (url, source_type, site_or_channel, lang, target_hint,"
-        " raw_text, text_hash, fetched_at) VALUES (?,?,?,?,?,?,?,?)",
-        (url, source_type, site_or_channel, lang, target_hint, raw_text, h, _now()),
+        " raw_text, text_hash, fetched_at, published_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        (url, source_type, site_or_channel, lang, target_hint, raw_text, h, _now(),
+         published_at or ""),
     )
     conn.commit()
     return cur.lastrowid

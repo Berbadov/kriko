@@ -10,6 +10,7 @@ class Document:
     url: str
     site_or_channel: str
     meta: dict = field(default_factory=dict)  # e.g. {"model_hint": "Megane IV", "engine_hint": "K9K"}
+    published_at: str = ""  # when the WORLD published it, "" if not discoverable
 
 
 class Source(Protocol):

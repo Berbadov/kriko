@@ -89,7 +89,7 @@ def test_acquire_ingests_full_text_with_target_hint(conn):
         "transmission",
         youtube=False,
         exa=exa,
-        page_fetcher=lambda url: big_text,
+        page_fetcher=lambda url: (big_text, ""),
     )
     assert s["ingested"] == 1
     row = conn.execute(
@@ -122,7 +122,7 @@ def test_acquire_skips_and_counts(conn):
         "transmission",
         youtube=False,
         exa=exa,
-        page_fetcher=lambda url: pages.get(url),
+        page_fetcher=lambda url: (pages.get(url), ""),
     )
     assert s["ingested"] == 1
     assert s["skipped_german"] == 1
@@ -133,7 +133,7 @@ def test_acquire_skips_and_counts(conn):
 
 def test_acquire_dedups_across_runs(conn):
     exa = _exa_with(("DW5", "https://a.test/dw5", "DW5 EDC7 problems"))
-    fetch = lambda url: "EDC7 gearbox failure discussion. " * 50
+    fetch = lambda url: ("EDC7 gearbox failure discussion. " * 50, "")
     s1 = acquire.acquire_part(
         conn, "dw5", "transmission", youtube=False, exa=exa, page_fetcher=fetch
     )
@@ -143,6 +143,29 @@ def test_acquire_dedups_across_runs(conn):
     assert s1["ingested"] == 1
     assert s2["ingested"] == 0
     assert conn.execute("SELECT count(*) FROM documents").fetchone()[0] == 1
+
+
+def test_acquire_threads_published_at_from_page_fetcher(conn):
+    exa = _exa_with(("DW5", "https://a.test/dw5", "DW5 EDC7 problems"))
+    s = acquire.acquire_part(
+        conn, "dw5", "transmission", youtube=False, exa=exa,
+        page_fetcher=lambda url: ("EDC7 gearbox failure discussion. " * 20,
+                                  "2021-05-03"),
+    )
+    assert s["ingested"] == 1
+    row = conn.execute("SELECT published_at FROM documents").fetchone()
+    assert row["published_at"] == "2021-05-03"
+
+
+def test_acquire_leaves_published_at_blank_when_fetcher_finds_none(conn):
+    exa = _exa_with(("DW5", "https://a.test/dw5", "DW5 EDC7 problems"))
+    s = acquire.acquire_part(
+        conn, "dw5", "transmission", youtube=False, exa=exa,
+        page_fetcher=lambda url: ("EDC7 gearbox failure discussion. " * 20, ""),
+    )
+    assert s["ingested"] == 1
+    row = conn.execute("SELECT published_at FROM documents").fetchone()
+    assert row["published_at"] == ""
 
 
 def test_acquire_ranks_before_capping(conn):
@@ -160,7 +183,7 @@ def test_acquire_ranks_before_capping(conn):
         youtube=False,
         exa=exa,
         max_sources=1,
-        page_fetcher=lambda url: fetched.append(url) or "text " * 100,
+        page_fetcher=lambda url: (fetched.append(url) or "text " * 100, ""),
     )
     assert fetched == ["https://specific.test/b"]
     assert s["ingested"] == 1

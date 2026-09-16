@@ -116,14 +116,17 @@ def test_ingest_lost_sources_fetches_and_ingests(tmp_path, monkeypatch):
     }, sort_keys=False))
     (tmp_path / "claims").mkdir()
 
-    monkeypatch.setattr("packs.cars.pipeline.ledger.acquire._fetch_page_text",
-                        lambda url: "page text about failure")
+    monkeypatch.setattr("packs.cars.pipeline.ledger.acquire._fetch_page",
+                        lambda url: ("page text about failure", "2020-01-01"))
     conn = db.connect(tmp_path / "l.db")
     n = remediate.ingest_lost_sources(conn, export_dir, tmp_path)
     assert n == 1
-    row = conn.execute("SELECT url, target_hint FROM documents").fetchone()
+    row = conn.execute(
+        "SELECT url, target_hint, published_at FROM documents"
+    ).fetchone()
     assert row["url"] == "https://example.com/x"
     assert row["target_hint"] == "eng1"
+    assert row["published_at"] == "2020-01-01"
     conn.close()
 
 
