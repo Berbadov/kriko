@@ -43,6 +43,19 @@ MAX_FIELD_CHARS = 400
 #: arguments is not a reason for a fifty-kilobyte row.
 MAX_SUMMARY_CHARS = 4000
 
+#: Field *names* that are never worth keeping verbatim, whatever tool put them
+#: there. Matched case-insensitively as a substring of the key, not the value —
+#: no tool in this codebase asks an agent for a credential today, but this
+#: table is a feed nothing else redacts and every reader's history keeps
+#: forever, so a future argument named `api_key` must not become a row on
+#: disk merely because nobody remembered to teach this module about it too.
+SECRET_KEY_NEEDLES = ("key", "token", "secret", "password", "authorization", "credential")
+
+
+def _looks_secret(name: str) -> bool:
+    low = name.lower()
+    return any(needle in low for needle in SECRET_KEY_NEEDLES)
+
 #: What each MCP tool is, in the operation vocabulary. Unlisted tools are
 #: `read`, which is what the majority of them are and the safest thing to
 #: assume about a name nobody has classified — a closed engineering vocabulary,
@@ -83,7 +96,10 @@ def digest(value, *, depth: int = 0):
     if isinstance(value, dict):
         if depth >= 3:
             return f"<{len(value)} field(s)>"
-        return {str(k): digest(v, depth=depth + 1) for k, v in list(value.items())[:40]}
+        return {
+            str(k): ("<redacted>" if _looks_secret(str(k)) else digest(v, depth=depth + 1))
+            for k, v in list(value.items())[:40]
+        }
     if isinstance(value, (list, tuple)):
         if depth >= 3:
             return f"<{len(value)} item(s)>"

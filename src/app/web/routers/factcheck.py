@@ -19,7 +19,7 @@ checked would prove nothing at all.
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from app import factcheck
+from app import factcheck, findings
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from pydantic import BaseModel, Field
@@ -97,6 +97,64 @@ def check(
         subject_id=claim["subject_id"],
         title=claim["title"],
     )
+
+
+@router.get("/grounding")
+def grounding(
+    request: Request,
+    pack_id: str = Query(..., min_length=1, max_length=200),
+    claim_id: str = Query(..., min_length=1, max_length=200),
+    store=Depends(get_store),
+) -> dict:
+    """Per-evidence grounded/ungrounded/not_kept for one claim (B120/B128).
+
+    Offline, unlike `check`/`verify` above: this asks whether the quote is
+    still in the *page this installation already read*, kept in
+    `app.sqlite` at acceptance time, rather than fetching the page again. The
+    two answer different questions — this one needs no network and catches
+    "nothing was ever kept to check against" (`not_kept`), which a live fetch
+    cannot tell apart from a page that still agrees.
+
+    `not_kept` is returned as its own verdict rather than folded into
+    anything that could be read as a pass — the whole reason `findings.
+    regrounded` exists is that "never checked" and "checked and fine" used to
+    be the same silence.
+    """
+    claim = store.execute(
+        "SELECT 1 FROM claims WHERE claim_id = ? AND pack_id = ?",
+        (claim_id, pack_id),
+    ).fetchone()
+    if claim is None:
+        raise HTTPException(404, f"no claim {claim_id} in pack {pack_id}")
+    rows = findings.regrounded(
+        store, request.app.state.settings.app_state_path, pack_id, claim_id
+    )
+    return {
+        "claim_id": claim_id,
+        "pack_id": pack_id,
+        "evidence": rows,
+        "not_kept": sum(1 for row in rows if row["verdict"] == "not_kept"),
+        "ungrounded": sum(1 for row in rows if row["verdict"] == "ungrounded"),
+    }
+
+
+@router.get("/document")
+def document(
+    source_id: str = Query(..., min_length=1, max_length=200),
+    conn=Depends(get_app_state),
+) -> dict:
+    """The page text a piece of evidence was checked against, if kept.
+
+    "Here is the page that proved this quote" — the UI's other half of
+    grounding, which needs the text itself and not only the verdict. A source
+    never fetched through the acceptance path (installed with a pack, or from
+    before B120) is a 404 named `not_kept`, the same word the verdict above
+    uses, rather than an empty 200 that reads as "nothing to show".
+    """
+    kept = state.document_for(conn, source_id)
+    if kept is None:
+        raise HTTPException(404, f"not_kept: no retained page for {source_id}")
+    return kept
 
 
 class VerifyRequest(BaseModel):
