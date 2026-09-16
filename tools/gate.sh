@@ -14,6 +14,7 @@
 #
 #     tools/gate.sh          # everything
 #     tools/gate.sh py       # just the Python suite
+#     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh ui       # just vitest, types, and the stale-bundle check
 #     tools/gate.sh tauri    # just the shell's cargo check, native + windows-target
 #
@@ -61,6 +62,20 @@ if [ "$only" = all ] || [ "$only" = py ]; then
     # coverage, so the architecture is checked here too.
     step "pytest (engine + catalog + pipeline)"
     "$PYTHON" -m pytest
+fi
+
+# Not in `py`: it builds an artifact and makes a virtualenv, which is a
+# different order of cost from a test run, and `py` is the one people run in a
+# loop. Its own word, in `all`.
+if [ "$only" = all ] || [ "$only" = wheel ]; then
+    ran=1
+    # Everything above this line runs against the *checkout*, where `src/` is
+    # on the path and `kriko` imports whether or not the wheel would contain
+    # it. A reader's install failed on exactly that gap — the console script
+    # was there and the package it imports was not — and nothing in the tree
+    # could have seen it.
+    step "the shipped wheel imports and runs"
+    tools/smoke_wheel.sh
 fi
 
 if [ "$only" = all ] || [ "$only" = node ]; then

@@ -271,5 +271,6 @@ the generalization principle for why per-model fixes don't exist here.
 | `CONTRIBUTING.md` | Branches, commits, test gates, what CI checks |
 | `backlog.md` / `done.md` | Open work and finished work — status, always current |
 | `docs/USAGE.md` | Operating it, and growing the knowledge base end to end |
+| `docs/INSTALL_WINDOWS.md` | Installing on Windows, start to finish, including the extension's permission step |
 | `docs/PACK_CONTRACT.md` | Authoring a pack for a new product category |
 | `tauri/README.md` | The desktop shell — launch sequence, failure surface, local build |

@@ -553,10 +553,35 @@ def cmd_operations(args, store) -> int:
     return _with_engine(args, run)
 
 
+def _version() -> str:
+    """The installed version, or a readable admission that it cannot be told.
+
+    Imported here rather than at module scope: `--version` has to work in an
+    environment broken enough that the answer is interesting, and an import
+    that raises at the top of this file would make the diagnostic itself the
+    thing that fails.
+    """
+    try:
+        from app.version import app_version
+
+        return app_version()
+    except Exception:  # noqa: BLE001 — a broken install must still answer
+        return "unknown (this install cannot report its own version)"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="kriko", description=__doc__.split("\n")[0])
     parser.add_argument("--store", default=None,
                         help=f"store file (default: {DEFAULT_STORE})")
+    # The cheapest possible "is this install actually working". It needs no
+    # store, no packs and no network, so it is the one command a smoke check
+    # can run in a clean environment — and `tools/smoke_wheel.sh` does,
+    # because the reader's `kriko` failed on an import before any subcommand
+    # was reached and nothing in the tree would have noticed.
+    parser.add_argument(
+        "--version", action="version",
+        version=f"kriko {_version()}",
+        help="print the installed version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("packs", help="list installed packs").set_defaults(fn=cmd_packs)
