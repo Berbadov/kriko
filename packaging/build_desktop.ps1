@@ -159,6 +159,14 @@ try {
     # that failure would otherwise go unnoticed until a reader reports it.
     # `tools/bump.py --show` is the same check `test_the_four_version_strings_agree`
     # makes, and it is cheap enough to run before rustc has compiled anything.
+    #
+    # Plain rather than --strict on purpose. --strict also fails when the
+    # *installed* distribution is behind the tree, which is the right check for
+    # the gate and the wrong one here: this runs before the `pip install -e .`
+    # below, so a stale install is a state this build is about to repair, and
+    # refusing over it would be a guard blocking the thing that fixes what it
+    # complains about. 0.10.0 was reported from the field doing exactly that,
+    # with this message naming a cause it had not checked.
     & $Python tools/bump.py --show
     if ($LASTEXITCODE -ne 0) {
         throw ("the version strings in pyproject.toml, tauri.conf.json, Cargo.toml," +
