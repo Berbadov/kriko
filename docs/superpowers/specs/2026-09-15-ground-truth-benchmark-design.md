@@ -1,7 +1,11 @@
 # Benchmarks against ground truth — design
 
-**Status:** design. B111 shipped the *harness* (cases, runs, costs); this is what
-it has to become to answer the question anyone actually has.
+**Status:** steps 1–6 implemented 2026-09-16. `app/gold.py` (judging, all three
+kinds), `app/bench.py` (kind dispatch — `specific`/`bulk`/`validation`),
+`app/protocols.py` (Wilson-interval `choose`, the preamble catalogue,
+`readout`) and `kriko/research/base.py`/`api.py` (`Spend.preamble`, the
+grounding-check hardening) all landed. What did **not** land in this session,
+and why, is at the bottom of this file, under "Known gaps after 2026-09-16".
 **Date:** 2026-09-15.
 **Prompted by:** *"Benchmarks should be done against ground truth; specific cases
 of bulk research, specific research, data validation etc. measuring cost and
@@ -161,3 +165,46 @@ a constructor argument and a bench column, not a redesign.
 Each step is shippable and each one makes the picker less of a guess. Step 1 is
 also the smallest, and it is the one that turns every later number into a claim
 about correctness rather than about discipline.
+
+## Known gaps after 2026-09-16
+
+Everything in `app/{bench,gold,protocols}.py` and `kriko/research/{base,api}.py`
+is implemented and tested (`src/app/tests/test_gold.py`,
+`test_bench_kinds.py`, `test_protocols.py`, `test_the_benchmark.py`,
+`src/kriko/tests/test_research.py`). Three things stop short of the driver
+that runs a sweep from the button, all in `src/app/web/tasks.py`, which this
+plane's file list does not cover:
+
+1. **`tasks.bench()`'s job loop does not sweep `search` or `kind`.** It loops
+   `case × plane × protocol × rep`; `bench.run_case` now accepts `search=` and
+   already dispatches on `case["kind"]`, so the mechanism is real, but nothing
+   in the job driver yet varies `search` across a sweep or reports `kind` in
+   its per-row log line. The fix is mechanical: a `searches_asked` list built
+   the same way `protocols_asked` is, one more nested loop, and passing
+   `search=search` into `bench_mod.run_case(...)`.
+2. **`tasks.py:_researcher()` does not forward `params.get("search")` or
+   `params.get("model")` to `api_researcher(...)`.** It already forwards
+   `protocol`; `search=str(params.get("search") or "")` and
+   `model=str(params.get("model") or "")` are the two missing keyword
+   arguments, both already accepted by `api_researcher`
+   (`app/providers/__init__.py`). Until this lands, `search` set on a
+   `run_case` call reaches nowhere on the real research path — verified by
+   `test_a_specific_case_still_goes_through_the_ordinary_path` and friends
+   passing today with `search` accepted but not asserted-effective end to end.
+3. **The `search_provider` column bulk/validation add to `bench_runs`
+   (2026-09-16) is populated by `record_bench`, but the `/api/bench` GET's
+   `readout()` reads it per-row from `state.bench_runs()`, not from
+   `state.bench_summary()`** — which is correct today (summary is
+   deliberately not grouped by search provider yet, to avoid multiplying the
+   grouping key before there is data to justify it) but means a reader
+   sweeping two search providers under one protocol will see `readout()` report
+   whichever provider is *most common* among that model/protocol's rows,
+   not a provider-by-provider breakdown. Splitting `readout()` by
+   `(model, protocol, search_provider)` is a small follow-up once `tasks.bench`
+   actually sweeps the axis (gap 1 above) — before that, there is only ever one
+   provider's worth of rows to summarise.
+
+None of these three block the mechanism from being *measured directly* — every
+new function in `app/bench.py`, `app/gold.py` and `app/protocols.py` is called
+and asserted against in tests with no network and no LLM — only from being
+*driven end-to-end from a single button press* yet.

@@ -129,6 +129,7 @@ class JobRunner:
             ) as outcome:
                 result = self.handlers[kind](self.settings, params, progress)
                 outcome["response"] = operations.summarise(result)
+                outcome["usd"], outcome["tokens"] = operations.metered(result)
             # No message, so `finish_job`'s COALESCE keeps the handler's own
             # last word. Every handler ends with a `progress.set(1.0, ...)`
             # that says what actually happened — "0 claim(s) kept", "cars
