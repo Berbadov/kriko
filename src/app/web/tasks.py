@@ -439,6 +439,8 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # the actions needed a sender, not a second transport.
         if hasattr(researcher, "on_action"):
             researcher.on_action = progress.log
+        if hasattr(researcher, "check_cancelled"):
+            researcher.check_cancelled = progress.check
         if provenance is not None:
             provenance.open(researcher)
         brief = researcher.brief(task)
@@ -1181,10 +1183,12 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # the longest-running thing in the app and the one whose log most needed
     # to say something before it finished.
     researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
     progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
     reply = researcher.ask(packauthor.brief(category))
+    progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
     # the category well and printed a malformed object has produced work worth
@@ -1257,6 +1261,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
     researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
     progress.set(0.1, f"extending {state_of.get('name') or slug}")
     progress.log(
         f"{len(state_of.get('subjects') or [])} subject(s) already; "
@@ -1266,6 +1271,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
         progress.log(f"asked for: {note}")
 
     reply = researcher.ask(packauthor.amend_brief(state_of, note))
+    progress.check()
     progress.set(0.7, "merging the additions")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
     try:
@@ -1321,10 +1327,12 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         timeout=float(params.get("timeout_seconds") or harness.TIMEOUT_SECONDS),
     )
     researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
     progress.set(0.1, f"reading {host}")
     progress.log(f"site: {host} — {url}")
 
     reply = researcher.ask(sites.BRIEF.format(site=host, url=url, keys=keys))
+    progress.check()
     progress.set(0.7, "checking the adapter")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
 
@@ -1407,7 +1415,7 @@ def verify(settings, params: dict, progress: Progress) -> dict:
     reader's own marks, not a deletion — pages get rewritten, and the engine has
     no authority to remove a pack's claim on the strength of a fetch.
     """
-    from app import factcheck
+    from app import factcheck, findings
 
     conn = connect(settings.store_path)
     try:
@@ -1438,6 +1446,7 @@ def verify(settings, params: dict, progress: Progress) -> dict:
 
         app_conn = state.connect(settings.app_state_path)
         verdicts: dict[str, int] = {}
+        grounding: dict[str, int] = {}
         checked = []
         try:
             for index, row in enumerate(rows, start=1):
@@ -1468,13 +1477,24 @@ def verify(settings, params: dict, progress: Progress) -> dict:
                     subject_id=row["subject_id"] or "",
                     title=row["title"] or "",
                 )
+                per_evidence = findings.regrounded(
+                    conn, settings.app_state_path, row["pack_id"], row["claim_id"]
+                )
+                for one in per_evidence:
+                    grounding[one["verdict"]] = grounding.get(one["verdict"], 0) + 1
                 checked.append(
                     {"claim_id": row["claim_id"], "title": row["title"] or "",
-                     "verdict": answer["verdict"]}
+                     "verdict": answer["verdict"], "grounding": per_evidence}
                 )
                 if answer["verdict"] != factcheck.QUOTED:
                     progress.log(
                         f"{answer['verdict']}: “{row['title'] or row['claim_id']}”"
+                    )
+                if any(one["verdict"] == "ungrounded" for one in per_evidence):
+                    progress.log(
+                        "ungrounded: the page this install kept for "
+                        f"“{row['title'] or row['claim_id']}” no longer "
+                        "carries the quote"
                     )
         finally:
             app_conn.close()
@@ -1486,7 +1506,12 @@ def verify(settings, params: dict, progress: Progress) -> dict:
         ", ".join(f"{count} {name}" for name, count in sorted(verdicts.items()))
         or "nothing to check",
     )
-    return {"checked": len(checked), "verdicts": verdicts, "claims": checked}
+    return {
+        "checked": len(checked),
+        "verdicts": verdicts,
+        "grounding": grounding,
+        "claims": checked,
+    }
 
 
 def bench(settings, params: dict, progress: Progress) -> dict:

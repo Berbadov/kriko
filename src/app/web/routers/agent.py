@@ -45,11 +45,14 @@ def command_for(store_path: Path) -> dict:
     passed one would fail on the reader's machine and nowhere else.
     """
     store = ["--store", str(store_path)]
+    # Carried explicitly rather than assumed inherited — see
+    # `agentconfig.platform_env`'s docstring for why a harness's own merge
+    # behaviour is not something this config can safely depend on.
     if getattr(sys, "frozen", False):
         return {
             "command": str(Path(sys.executable).resolve()),
             "args": ["--mcp", *store],
-            "env": {},
+            "env": agentconfig.platform_env(),
             "frozen": True,
         }
     # …/src/app/web/routers/agent.py → …/src
@@ -61,7 +64,7 @@ def command_for(store_path: Path) -> dict:
         # machine. Only the frozen binary above is safe to canonicalise.
         "command": sys.executable,
         "args": ["-m", "app.sidecar", "--mcp", *store],
-        "env": {"PYTHONPATH": str(src)},
+        "env": {**agentconfig.platform_env(), "PYTHONPATH": str(src)},
         "frozen": False,
     }
 

@@ -306,6 +306,33 @@ def test_restart_gives_a_new_shell_and_a_clean_transcript(tmp_path, _fresh_sessi
     assert body["offset"] < 400
 
 
+def test_close_ends_a_running_shell_and_it_stays_ended(tmp_path, _fresh_session):
+    """The tab-close case: the reader is done, not restarting, not typing
+    `exit`. It must free the process and must not come back on its own."""
+    pytest.importorskip("ptyprocess")
+    client = _client(tmp_path)
+    assert client.get("/api/terminal/state").json()["running"] is True
+
+    body = client.post("/api/terminal/close").json()
+    assert body["ended"] is True
+    assert body["running"] is False
+
+    # A client that keeps polling after closing the tab must not find a shell
+    # quietly running again underneath it.
+    again = client.get("/api/terminal/state").json()
+    assert again["ended"] is True
+    assert again["running"] is False
+
+
+def test_close_before_anything_ever_started_still_sticks(_fresh_session):
+    """Closing a tab that never opened a shell must not leave the session
+    startable again on the next poll."""
+    session = _fresh_session
+    assert session.proc is None
+    session.close()
+    assert session.state()["ended"] is True
+
+
 def test_an_ended_session_is_not_silently_resurrected(monkeypatch, tmp_path, _fresh_session):
     """The polling client asks twice a second. If `/state` restarted the shell,
     a deliberate `exit` would come straight back and the one signal saying it

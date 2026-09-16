@@ -151,9 +151,14 @@ class TermSession:
         """
         proc = self.proc
         self.proc = None
+        # Marked ended even with nothing to kill: `close()` is also what
+        # `/api/terminal/close` calls when the reader shuts the tab before a
+        # shell ever started, and `_ensure()` treats "not ended" as "start
+        # one" — without this, closing a session that never ran would not
+        # stick, and the next poll would spawn a shell nobody asked for.
+        self._end()
         if proc is None:
             return
-        self._end()
         try:
             proc.terminate(force=True)
         except Exception:
