@@ -6,6 +6,59 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the 0.10.0 work order (§2.5, §2.6, §2.10 engine, §3.5 part)
+
+**§2.5 — live runs.** Most of it existed: four named stages with `waiting`
+states, an event stream, per-stage counts, rows before stream. Two gaps closed.
+A run's terminal state was a word — "failed" tells somebody watching a
+four-minute run that it is over and nothing else — so each state now carries
+what it means and what to do next, and an unknown state reads as *not* finished
+because a view that calls a running thing done stops watching it. And a run
+that put questions to the reader flags them on the job row, where the questions
+already are.
+
+*It also turned up a defect I had introduced myself in §1.3.* The repair loop
+opened a `"repair"` pipeline stage; `STAGES` is a closed vocabulary and
+`open_stage` raises on anything outside it, so every run reaching the loop would
+have died — and no test saw it, because the loop only fires when a finding is
+refused for a fixable field *and* the plane has a `repair` method. Repair is not
+a fifth phase: it runs after ingestion and feeds back into it, so it emits
+events on that stage. Two tests now read the call sites for stage names, which
+is a poor test of behaviour and a good test of a vocabulary. Verified by putting
+the bug back.
+
+**§2.6 — benchmark scoping.** Models were not an axis at all, which is the one
+§2.6 names first; `searches` was honoured by the job and unreachable from the
+request. Both wired. `POST /bench/estimate` says what a grid would run and
+roughly cost — a separate endpoint, so asking what something costs can never
+start it — refusing to guess where nothing has been measured and pricing only
+the paid half. Saved grids, because results are comparable only if the config
+was, and one reconstructed from memory is a different experiment.
+
+**§2.10 — product search, engine half.** `kriko/lookup/find.py` searches
+labels, aliases *and* identity values, where `/subjects?q=` searched labels
+only. Every result carries its identity, because telling one of a thing from
+another of it is the entire ask. Run against the real installed pack, the claim
+count was the finding: every product row said `0 claim(s)` while the panel for
+the same product shows a full page, because that pack hangs claims on shared
+component subjects reached through a relation. The count goes through the same
+`expand` `lookup()` uses and now reads 162 where it read 0.
+
+**§3.5 — part.** `docs/STYLE.md` is the house style as rules, with the three
+things it does not apply to carved out. `docs/HOW_IT_WORKS.md` is the four
+diagrams in mermaid — matching first, because that is the one that mattered.
+The deep cuts to `USAGE.md` (742 lines) and `INTERNALS.md` (1042) are *not*
+done: deleting somebody's reference pages is their call.
+
+**§3.1–§3.4 — directions delivered, awaiting a pick.** Three logo directions
+(Chevron / Slab / Aperture, each taking one property from the Red Bull / Arte /
+Brutalist brief), two left-rail treatments, and the rebuilt extension panel in
+all four of its states.
+
+Commits `e63db72`, `31c122e`, `f81d41d`, `104601e`.
+
+---
+
 ### 2026-09-16 — the 0.10.0 work order, P1 so far (§2.1–§2.4, §2.9)
 
 **§2.1 — the agent asks, once, and does not wait.** `app/disambiguate.py` runs
