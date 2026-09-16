@@ -1430,7 +1430,14 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
     if not again:
         return verdicts
 
-    emit.open_stage("repair", f"re-asking for {len(again)} finding(s)")
+    # Events on `ingestion`, not a stage of its own. `STAGES` is a closed
+    # vocabulary and `open_stage` refuses anything outside it — so the
+    # "repair" stage this first tried to open raised `ValueError` and would
+    # have killed every run that reached the loop. It is the right refusal:
+    # repair is not a fifth phase of the pipeline, it is acceptance asking
+    # once more, and it runs *after* ingestion and feeds back into it rather
+    # than sitting anywhere in the sequence.
+    emit.event(f"re-asking for {len(again)} finding(s)", stage="ingestion")
     progress.log(
         f"{len(again)} finding(s) were refused for a field that can be "
         f"rewritten — asking once more"
@@ -1438,18 +1445,19 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
     try:
         mended = researcher.repair(task, again, wanted)
     except Exception as exc:  # noqa: BLE001 — a failed repair is not a failed run
-        emit.close_stage(detail=f"could not re-ask: {exc}")
+        emit.event(f"could not re-ask: {exc}", level="warn", stage="ingestion")
         return verdicts
 
     kept = [one for one in mended if explanation(one)]
     if not kept:
-        emit.close_stage(detail="nothing came back with the field filled in")
+        emit.event("nothing came back with the field filled in",
+                   level="warn", stage="ingestion")
         return verdicts
 
     second = accept_findings(conn, subject_id, pack_id, kept, retain=retain)
-    emit.close_stage(
-        detail=f"{len(second.get('accepted', []))} of {len(again)} kept on the "
-               f"second attempt")
+    emit.event(
+        f"{len(second.get('accepted', []))} of {len(again)} kept on the "
+        f"second attempt", stage="ingestion")
 
     # Merge: what the repair kept joins the accepted list, and the refusals it
     # replaced leave the rejected one. A finding that failed twice stays
