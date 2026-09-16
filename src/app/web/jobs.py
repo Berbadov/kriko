@@ -70,10 +70,39 @@ class Progress:
         if self.cancelled:
             raise Cancelled()
 
+    def partial(self, result: dict) -> None:
+        """Keep what is finished so far, in case the reader stops here.
+
+        The other half of cooperative cancel, and it was missing. A handler
+        asked to stop raised, `_run` wrote `CANCELLED` with no result, and
+        everything the handler had gathered died with the stack frame —
+        sources fetched, pages read, findings extracted and paid for. The
+        reader pressed stop and was charged for work they then had taken away
+        from them.
+
+        Called as often as a handler has something worth keeping. Each call
+        replaces the last, so a handler passes its running total rather than a
+        delta and there is no partial-of-a-partial to reason about.
+        """
+        state.save_partial(self._conn, self.job_id, result)
+
 
 #: A handler is `(settings, params, progress) -> dict`. It returns the job's
 #: result, raises to fail it, or raises `Cancelled` to stop cleanly.
 Handler = Callable[[object, dict, Progress], dict]
+
+
+def _stopped(kept: dict) -> str:
+    """What a cancelled run says it ended with. Never a bare "cancelled"."""
+    if not kept:
+        return "stopped before anything was finished"
+    stage = kept.get("stopped_at") or kept.get("stage") or ""
+    counts = ", ".join(
+        f"{value} {key}" for key, value in sorted(kept.items())
+        if isinstance(value, int) and not isinstance(value, bool) and value
+    )
+    said = "stopped" + (f" during {stage}" if stage else "")
+    return f"{said} — kept {counts}" if counts else f"{said}; what was finished is kept"
 
 
 class JobRunner:
@@ -140,7 +169,16 @@ class JobRunner:
             # information at all.
             state.finish_job(conn, job_id, state.SUCCEEDED, result=result)
         except Cancelled:
-            state.finish_job(conn, job_id, state.CANCELLED, message="cancelled")
+            # Whatever the handler checkpointed stays. A cancel is the reader
+            # deciding they have enough, or enough of nothing — either way it
+            # is a decision about spending more, never an instruction to throw
+            # away what is already bought.
+            kept = state.partial_of(conn, job_id)
+            state.finish_job(
+                conn, job_id, state.CANCELLED,
+                result={**kept, "partial": True} if kept else None,
+                message=_stopped(kept),
+            )
         except Exception as exc:  # noqa: BLE001 — a failed job is data, not a crash
             # The traceback goes in the log rather than to stderr: an operator
             # reading the dashboard should not have to find the terminal that
