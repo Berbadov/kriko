@@ -421,35 +421,88 @@ Original entry:
 screen with the terminal open; the panel and the page fight for width. Needs the
 screenshots rather than a guess.
 
-### B136 — `sources.published_at` is written by nobody, and deriving it is real work `[G3]`
+### B136 — **DONE 2026-09-16**: when a source was published
 
-Left open deliberately in the 0.10.0 overhaul, having been traced rather than
-guessed at. Nothing in the pipeline captures a world-publish date: no
-`article:published_time`, no JSON-LD `datePublished`, no video upload date.
-`rank.py` never reads the column, so the honest description today is "a column
-that is always empty", not "a column secretly weighted" — which is why it is
-here rather than in the fix list. Deleting it is riskier than leaving it (pack
-format, revision snapshots, two builders). Doing it properly: add
-`documents.published_at`, populate from page metadata at fetch time in
-`acquire.py`/`ingest.py`, and thread it into `export.py`'s `sources` dicts —
-both builders already read the field name correctly.
+Closed on both doors. The scraping pipeline reads a date at acquisition (page
+metadata via trafilatura, a video's upload date via yt-dlp), bounded to
+1995..today because a date in the future or before the web existed is a parser
+that has misread something rather than an antique page; an older ledger gets
+the column with an honest empty default. The research plane an agent drives
+had the same date available for about one function call — the reader downloads
+markup and hands back prose, and by then the metadata is gone with it — so the
+date is read where the markup still exists, and a reader may now answer with
+text *and* a date. Optional, so every existing reader still returns a bare
+string.
 
-### B137 — a green gate still cannot see a broken installer `[G5]`
+Nothing fills it in with the fetch time, which is the whole point: a fetch
+date standing in for a publication date makes every source look current, and
+that is worse than an empty column because it cannot be told from an answer.
+Nothing ranks on it; it is there to be shown.
 
-`tools/gate.sh` covers Python, both JS suites, types, the bundle and now the
-four version strings. It runs no `cargo build` and no `pwsh`, so an NSIS error
-or a missing crate feature is caught by a person on the Windows host, hours
-after the commit. `test_the_shell_is_valid_rust.py` closes the parse half
-cheaply; the type-and-link half genuinely needs the platform. Honest scope:
-either accept it as the documented boundary of a gate with no runner, or find a
-cheap `cargo check` that does not need `webkit2gtk`.
+### B137 — **MOSTLY DONE 2026-09-16**: the gate compiles the shell now `[G5]`
 
-### B138 — the gate runs no type checker on the Python side `[G5]`
+`cargo` turned out to be available, and `cargo check` never reaches the link
+phase — so it needs neither a Windows box nor `webkit2gtk` linking. The gate
+gained a `tauri` step: `cargo check --locked --offline` native *and*
+cross-compiled for `x86_64-pc-windows-gnu`, plus clippy. Sub-second warm, ~2
+minutes from a cold `target/`, and it skips with a printed remedy rather than
+failing where the toolchain, a rustup target, or a warm registry is missing —
+a gate that cannot run is worse than no gate.
 
-`svelte-check` gates the frontend; nothing gates `src/`. A change that is
-well-typed by convention and wrong by annotation passes every test. This is a
-`pyproject.toml` decision (which tool, how strict, how much existing code has
-to be annotated before it can be turned on) rather than a line of code.
+Measured, not assumed: a deliberately injected type error fails it with
+`error[E0308]`, and a `Cargo.toml` naming a feature the crate does not have is
+refused before anything compiles — exactly the class the per-file `rustc` gate
+could never see.
+
+Drift found while there: `desktop.yml` verifies the crate lock is the one that
+was committed as its first step, and `build_desktop.ps1` — the hand-run
+equivalent, and the one that actually builds every installer — never did. The
+existing drift test could not have caught it, because it only matches file
+references and npm/tauri subcommands, not a bare `cargo` call.
+
+**The honest remainder**, narrower than the entry it replaces: a green gate now
+catches Rust compile-time and crate-graph defects locally; it still cannot see
+a **link-time, bundling or runtime** defect — whether the crate links on
+Windows, whether NSIS bundles a binary the build actually produced, whether
+`tauri.conf.json` matches the schema the pinned CLI expects, whether
+PyInstaller freezes `pywinpty` correctly, or whether WebView2 renders anything.
+Only a Windows build proves those, which is what `desktop.yml`'s hand-run leg
+and `build_desktop.ps1`'s smoke steps are for.
+
+### B138 — **DONE 2026-09-16**: ruff and mypy run before the tests
+
+Curated rather than maximal, deliberately: a 20k-line codebase linted for the
+first time at full strength produces hundreds of findings, gets ignored, and
+becomes the always-red gate this project already learned is worse than none.
+No mass reformat either — whitespace across 20k lines would bury every real
+change in this branch.
+
+What it caught on the first run, which is the argument for having it:
+`urlparse(url).netloc.lstrip("www.")` — `lstrip` strips a *set of characters*,
+so `webflow.io` became `ebflow.io`, corrupting the domain used to decide
+whether two sources are independent. A lambda closing over a loop variable in
+the pack-update path. A `None`-safety guarantee silently defeated because a
+parameter was annotated `dict` when it was always a `Mapping`, so the narrowing
+gave up. And a stale `_fetch_page_text` reference in the remediation path — a
+runtime `ImportError` that pytest could never see, because that call is
+monkeypatched in its own test.
+
+Two orphans surfaced and were left, deliberately, as their own question: the
+body of `app/pipeline/process.py` below its two unconditional `raise`s, and
+`dedup.py`'s `merge_candidates`/`is_independent`/`same_claim`, imported from
+nowhere. Both are remnants of the judge/promote pipeline retired 2026-08-03,
+and deleting dead code is a decision, not a lint fix.
+
+### B139 — Delete the two orphans the linter found `[G5]`
+
+`src/app/pipeline/process.py`'s ~350 lines below the `raise` in `run`/`run_part`
+reference names that exist nowhere in the tree; `packs/cars/pipeline/claims/
+dedup.py`'s `merge_candidates`/`is_independent`/`same_claim` are imported by
+nothing. Both were retired with the judge/promote pipeline on 2026-08-03 and
+kept compiling ever since. They are currently held out of the lint gate by a
+named per-module ignore, which is the honest interim state: the gate says what
+it is not looking at. Deleting them is a small, separate change that wants its
+own diff rather than riding inside a lint pass.
 
 ### B112 — Make the research protocol enforced rather than advised `[G2]`
 *"Regulation of agents; protocols that force them to do arbitrary actions =>
