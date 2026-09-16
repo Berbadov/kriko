@@ -434,10 +434,11 @@ def _subjects(
                           "different device from the same brand)",
             })
             continue
-        row = {
+        identity_row = {key: identity[key] for key in table[kind]}
+        row: dict[str, object] = {
             "kind": kind,
             "label": label,
-            "identity": {key: identity[key] for key in table[kind]},
+            "identity": identity_row,
         }
         extra = {
             key: value
@@ -450,7 +451,7 @@ def _subjects(
         if any(aliases):
             row["aliases"] = [alias for alias in aliases if alias]
         rows.append(row)
-        known[(kind, tuple(sorted(row["identity"].items())))] = row["label"]
+        known[(kind, tuple(sorted(identity_row.items())))] = label
 
     if not rows:
         if quarantined:
@@ -796,7 +797,7 @@ turns a proposal into evidence.
 
 ## What this pack covers
 
-{_text(payload.get("covers")) or f"See the bar in `research/principle.md`."}
+{_text(payload.get("covers")) or "See the bar in `research/principle.md`."}
 
 ## Coverage
 
@@ -1139,8 +1140,8 @@ def amend(store_path, slug: str, reply: str) -> dict:
     for one in (payload.get("lineup") or []):
         if _text(one):
             amend_lineup.append(_text(one))
-    added_subjects, known, quarantined = _subjects(table, payload, amend_lineup)
-    added_subjects = yaml.safe_load(added_subjects) or []
+    added_subjects_yaml, known, quarantined = _subjects(table, payload, amend_lineup)
+    added_subjects = yaml.safe_load(added_subjects_yaml) or []
     seen = {
         _identity_key(row.get("kind"), row.get("identity"))
         for row in subjects

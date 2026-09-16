@@ -23,9 +23,10 @@ Killing a thread mid-write is how a half-installed pack happens, so a running
 job is asked to stop, never made to.
 """
 
+import sqlite3
 import threading
 import traceback
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -47,7 +48,7 @@ class Progress:
     """
 
     job_id: str
-    _conn: object
+    _conn: sqlite3.Connection
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
@@ -76,7 +77,7 @@ Handler = Callable[[object, dict, Progress], dict]
 
 
 class JobRunner:
-    def __init__(self, settings, handlers: dict[str, Handler]):
+    def __init__(self, settings, handlers: Mapping[str, Handler]):
         self.settings = settings
         self.handlers = handlers
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kriko-job")

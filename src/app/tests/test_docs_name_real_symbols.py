@@ -34,7 +34,6 @@ plus `docs/PACK_CONTRACT.md` and the rest at that level. Excluded:
   A quote is a citation, not an instruction.
 """
 
-import inspect
 import re
 import subprocess
 from pathlib import Path

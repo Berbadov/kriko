@@ -528,7 +528,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
 
         # ── Ingestion ────────────────────────────────────────────────────
         progress.check()
-        verdicts = {"accepted": [], "rejected": []}
+        verdicts: dict[str, list] = {"accepted": [], "rejected": []}
         #: The text each accepted quote was proved against, kept by
         #: `log_submission` so the proof can be repeated (B120).
         retained: list[dict] = []
@@ -1095,11 +1095,12 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
         progress.check()
         share = (position - 1) / len(wanted)
         candidate = decision.candidate
+        assert candidate is not None
         progress.set(0.1 + 0.8 * share, f"downloading {candidate.pack_id} {candidate.version}")
         path = packsource.download(
             candidate,
             into,
-            lambda read, total: progress.set(
+            lambda read, total, share=share, candidate=candidate: progress.set(
                 0.1 + 0.8 * (share + (read / total if total else 0) / len(wanted)),
                 f"downloading {candidate.pack_id} {read // 1024} KiB",
             ),

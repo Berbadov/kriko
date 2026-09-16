@@ -74,7 +74,6 @@ def test_pack_author_writes_no_draft_once_cancelled_after_the_ask(
 def test_pack_amend_leaves_the_draft_unchanged_once_cancelled_after_the_ask(
     tmp_path, monkeypatch
 ):
-    import json
 
     import pytest
 

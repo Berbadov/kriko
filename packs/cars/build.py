@@ -220,7 +220,7 @@ def _compat_conditions(
     """
     text = f"{claim.get('title', '')} {claim.get('rationale', '')}"
     spanned = spanned or {}
-    out = []
+    out: list[dict[str, object]] = []
 
     diesel, petrol = bool(_DIESEL_RE.search(text)), bool(_PETROL_RE.search(text))
     if diesel and not petrol:
@@ -255,9 +255,9 @@ def _compat_conditions(
     elif _MANUAL_ONLY_RE.search(text):
         out.append({"key": "transmission", "op": "eq", "value": "manual"})
 
-    kept = []
+    kept: list[dict[str, object]] = []
     for cond in out:
-        values = spanned.get(cond["key"])
+        values = spanned.get(str(cond["key"]))
         demanded = {v.strip() for v in str(cond["value"]).split(",")}
         if values and len(values) > 1 and (values & demanded):
             # The part is fitted across several values of this attribute AND the
@@ -949,7 +949,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
     } - {None}
 
     row_ids: list[str] = []
-    stats = Counter()
+    stats: Counter[str] = Counter()
 
     with conn:
         _emit_vocabulary(conn, pack_id, row_ids, stats)
