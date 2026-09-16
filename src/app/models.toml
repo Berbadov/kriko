@@ -1,0 +1,32 @@
+# What each model costs and how much it can read.
+#
+# **This file is the default, not the authority.** It is copied to
+# `~/.kriko/models.toml` on first run and never written again, so your edits
+# survive every update — which is the whole point. Prices change, gateways
+# charge differently, and a number compiled into the program is a number that
+# is wrong the day after it ships and that nobody can correct.
+#
+# Anything missing from here still works. A model Kriko has no row for is
+# usable; it simply reports tokens without a price, and the run says "cost
+# unknown" rather than inventing one. An invented cost is worse than no cost,
+# because the reader's next decision is whether to spend more.
+#
+# `usd_in` / `usd_out` are dollars per million tokens.
+# `context` is the input window in tokens.
+# `speed` is one of fast | balanced | slow — a rough feel, not a measurement.
+
+[anthropic]
+# Reached through `ANTHROPIC_API_KEY`. Prices are Anthropic's first-party API
+# rates; Bedrock and Vertex are partner-operated and bill differently.
+"claude-opus-5"    = { context = 1000000, usd_in = 5.00,  usd_out = 25.00, speed = "slow",     label = "Opus 5" }
+"claude-sonnet-5"  = { context = 1000000, usd_in = 2.00,  usd_out = 10.00, speed = "balanced", label = "Sonnet 5" }
+"claude-haiku-4-5" = { context = 200000,  usd_in = 1.00,  usd_out = 5.00,  speed = "fast",     label = "Haiku 4.5" }
+"claude-fable-5-1" = { context = 1000000, usd_in = 10.00, usd_out = 50.00, speed = "slow",     label = "Fable 5.1" }
+
+[openai]
+# Reached through `OPENAI_API_KEY`, or any endpoint that speaks the same wire
+# format — a gateway, a local server. If you point `LLM_BASE_URL` somewhere
+# else, add its models below under their own names; the id is whatever you
+# would send as `"model"`.
+"gpt-4o"      = { context = 128000, usd_in = 2.50, usd_out = 10.00, speed = "balanced", label = "GPT-4o" }
+"gpt-4o-mini" = { context = 128000, usd_in = 0.15, usd_out = 0.60,  speed = "fast",     label = "GPT-4o mini" }
