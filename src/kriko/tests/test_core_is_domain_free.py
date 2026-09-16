@@ -109,6 +109,40 @@ def _docstring_nodes(tree: ast.AST) -> set[int]:
     return out
 
 
+def _concatenated(node) -> str | None:
+    """The whole string a node builds, when it builds one out of literals.
+
+    `_offences` reads one `ast.Constant` at a time, which is enough for every
+    honest way of writing a word and useless against `"fu" + "el"`: neither
+    half is a banned word, and the vocabulary the engine may not know is back.
+    Adjacent literals (`"fu" "el"`) are folded by the parser and were already
+    caught; an explicit `+`, an f-string, and `"".join([...])` were not.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = _concatenated(node.left), _concatenated(node.right)
+        return None if left is None or right is None else left + right
+    if isinstance(node, ast.JoinedStr):
+        parts = [_concatenated(one) for one in node.values]
+        return None if any(one is None for one in parts) else "".join(parts)
+    if isinstance(node, ast.FormattedValue):
+        return ""
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "join"
+        and len(node.args) == 1
+        and isinstance(node.args[0], (ast.List, ast.Tuple))
+    ):
+        glue = _concatenated(node.func.value)
+        parts = [_concatenated(one) for one in node.args[0].elts]
+        if glue is None or any(one is None for one in parts):
+            return None
+        return glue.join(parts)
+    return None
+
+
 def _offences(path: Path) -> list[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     docstrings = _docstring_nodes(tree)
@@ -126,6 +160,11 @@ def _offences(path: Path) -> list[str]:
             words, where = _split_identifier(node.arg), f"argument {node.arg!r}"
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             words, where = _split_identifier(node.name), f"definition {node.name!r}"
+        elif isinstance(node, (ast.BinOp, ast.JoinedStr, ast.Call)):
+            built = _concatenated(node)
+            if not built:
+                continue
+            words, where = _split_identifier(built), f"built string {built[:40]!r}"
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
             if id(node) in docstrings:
                 continue
@@ -263,5 +302,34 @@ def test_the_guard_actually_catches_something():
         # docstring at line 1 trips on "fuel".
         prose_offences = _prose_offences(path)
         assert any("docstring contains" in o and "fuel" in o for o in prose_offences)
+    finally:
+        path.unlink()
+
+
+def test_a_banned_word_cannot_be_assembled_out_of_innocent_halves():
+    """Neither half is vocabulary; the whole is, and the whole is what runs.
+
+    A gate that reads one literal at a time is not a gate against anyone who
+    has noticed it reads one literal at a time -- and the engine knowing what
+    a car is remains the one unforgivable violation however the word got
+    spelled.
+    """
+    import tempfile
+
+    written = (
+        'def pick(row):\n'
+        '    a = "fu" + "el"\n'
+        '    b = "".join(["engine", "_", "code"])\n'
+        '    c = f"{a}_type"\n'
+        '    return row[a], row[b], row[c]\n'
+    )
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(written)
+        path = Path(fh.name)
+
+    try:
+        offences = _offences(path)
+        assert any("fuel" in o for o in offences), offences
+        assert any("engine" in o for o in offences), offences
     finally:
         path.unlink()

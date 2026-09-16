@@ -10,7 +10,7 @@ from app.pipeline import panel
 
 
 def _seed(conn):
-    conn.execute("INSERT INTO runs (started_at, stage, model, calls, tokens_in,"
+    conn.execute("INSERT INTO runs (started_at, stage, llm, calls, tokens_in,"
                  " tokens_out, usd) VALUES ('t','extract','deepseek-v4-flash',"
                  "10,1000,2000,0.01)")
     conn.commit()
