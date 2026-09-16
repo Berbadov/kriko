@@ -167,7 +167,7 @@ def lookup(conn, query: Query) -> LookupResult:
             continue
 
         evidence = conn.execute(
-            "SELECT e.quote, e.stance, e.independent, s.url, s.domain"
+            "SELECT e.quote, e.stance, e.independent, e.source_id, s.url, s.domain"
             " FROM evidence e JOIN sources s USING (source_id, pack_id)"
             " WHERE e.claim_id = ? AND e.pack_id = ?",
             (row["claim_id"], row["pack_id"])).fetchall()

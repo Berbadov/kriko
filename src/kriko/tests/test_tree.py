@@ -94,6 +94,13 @@ ALPHA_CLAIMS = """
   text: {en: {title: Older single maker item, body: b, advice: a}}
   evidence:
     - {url: "https://maker.example.com/e", quote: Older bulletin., retrieved_at: "2026-01-01"}
+- subject: {kind: product, identity: {brand: acme, model_name: w100}}
+  kind: known_issue
+  domain: mech
+  severity: high
+  text: {en: {title: Manual source item, body: b, advice: a}}
+  evidence:
+    - {quote: A scanned service manual says so., source_type: manual, retrieved_at: "2026-01-01"}
 """
 
 BETA_TOML = """
@@ -250,6 +257,21 @@ def test_the_best_tier_ignores_the_refuting_source(store):
     """The rebuttal is specialist; the support is manufacturer and forum."""
     row = next(r for r in weakest_claims(store) if r.title == "Refuted item")
     assert row.best_tier == "manufacturer"
+
+
+def test_a_url_less_source_still_counts_as_a_source(store):
+    """B50: a scanned manual has no URL but is a real, distinct source.
+
+    Before the fix, `supporting_sources` was `len({e.url for e in supporting
+    if e.url})`, which drops every source with an empty `url` — a
+    well-evidenced claim with only URL-less evidence read as zero sources,
+    exactly the "well-evidenced knowledge reads as unevidenced" bug B50
+    names. `source_id` is always populated (it falls back to a content hash
+    of the quote), so it must be the identity used for counting.
+    """
+    row = next(r for r in weakest_claims(store) if r.title == "Manual source item")
+    assert row.supporting_sources == 1
+    assert row.independent_sources == 1
 
 
 # ── absence is not weakness ──────────────────────────────────────────────
