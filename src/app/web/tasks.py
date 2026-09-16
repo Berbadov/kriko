@@ -133,11 +133,28 @@ def _budget(params: dict) -> float:
 
     A caller may raise it or lower it; a caller may not leave the paid plane
     uncapped by omission.
+
+    A *named* scale brings its own ceiling (`app/scale.py`), because a Deep run
+    stopped at a Quick run's ceiling is a reader refused the depth they chose,
+    and a Quick run allowed a Deep run's ceiling is a cap doing nothing.
+
+    A run that names no scale keeps `DEFAULT_BUDGET_USD` exactly as before, and
+    that condition is load-bearing rather than tidiness: letting the default
+    preset's ceiling apply to every unscaled run would have raised the standing
+    per-subject budget five-fold for every caller that never asked for a dial —
+    the agenda among them. A choice nobody made must not cost anybody money.
     """
     named = float(params.get("budget_usd") or 0.0)
     if str(params.get("backend") or default_backend()).lower() != "api":
         return named
-    return named if named > 0 else DEFAULT_BUDGET_USD
+    if named > 0:
+        return named
+    wanted = str(params.get("scale") or "").strip()
+    if wanted:
+        from app import scale
+
+        return scale.applied(wanted, params)["cap_usd"] or DEFAULT_BUDGET_USD
+    return DEFAULT_BUDGET_USD
 
 
 #: What each plane does *instead of* fetching, and what the reader does next.
@@ -418,14 +435,27 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # ── Discovery ────────────────────────────────────────────────────
         emit.open_stage("discovery", "planning the search")
         pack_id = params.get("pack_id") or _subject_pack(conn, subject_id)
+        # One dial, resolved once. An explicit `max_documents` still wins —
+        # the presets are bundles of these knobs, never a wall around them.
+        from app import scale as scaling
+
+        depth = scaling.applied(str(params.get("scale") or ""), params)
         task = plan_task(
             conn,
             subject_id,
             pack_id,
             budget_usd=_budget(params),
-            max_documents=int(params.get("max_documents") or 5),
+            max_documents=depth["max_documents"],
         )
         progress.set(0.1, f"planning {task.subject_label}")
+        # Recorded on the run, so a thin pack reads as "this was a Quick run"
+        # rather than as a quality failure — which is the difference between a
+        # reader adjusting the dial and a reader losing confidence in the tool.
+        emit.describe(scale=depth["scale"], sources_allowed=depth["max_documents"])
+        progress.log(
+            f"{depth['scale']} — up to {depth['max_documents']} source(s)"
+            + (f", capped at ${depth['cap_usd']:.2f}" if depth["cap_usd"] else "")
+        )
         emit.describe(pack_id=pack_id, subject=task.subject_label)
         for query in task.rendered_queries():
             progress.log(f"query: {query}")

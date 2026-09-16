@@ -44,7 +44,20 @@ class ResearchRequest(BaseModel):
     #: never chosen by omission.
     backend: str = ""
     budget_usd: float = 0.0
-    max_documents: int = Field(5, ge=1, le=50)
+    #: `0` means "whatever the scale says", and that is why the default is not
+    #: 5 any more. A truthy default silently won over every preset, so the dial
+    #: would have moved the label and nothing else — the exact bug where a
+    #: control appears to work and does not.
+    max_documents: int = Field(0, ge=0, le=50)
+    #: How deep to go: `quick` | `standard` | `deep` | `custom`.
+    #:
+    #: One name instead of four numbers, and the numbers still work — an
+    #: explicit `max_documents` or `budget_usd` wins over whatever the preset
+    #: proposes, because the dial is a bundle of these knobs rather than a wall
+    #: around them. Empty means the default, and an unknown name means the
+    #: default too: a request from an older client, or with a typo, should run
+    #: rather than be refused.
+    scale: str = Field("", max_length=32)
 
 
 class UpdateRequest(BaseModel):
