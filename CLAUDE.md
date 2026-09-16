@@ -341,6 +341,7 @@ original reasoning.
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
 | `docs/HOW_IT_WORKS.md` | Four diagrams — matching, the pack lifecycle, a run, the layering | current |
 | `docs/STYLE.md` | The rules these docs are written to | current |
+| `docs/BRAND.md` | Using the mark: which file is the source, which are rendered, and why it looks like this | current |
 | `docs/INSTALL_WINDOWS.md` | Installing on Windows, start to finish, including the extension's permission step | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
