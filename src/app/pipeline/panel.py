@@ -48,8 +48,8 @@ def _now_iso() -> str:
 def spend_section(conn) -> list[str]:
     lines = ["\n1. SPEND"]
     rows = conn.execute(
-        "SELECT stage, model, SUM(calls), SUM(tokens_in), SUM(tokens_out),"
-        " SUM(usd) FROM runs GROUP BY stage, model ORDER BY SUM(usd) DESC").fetchall()
+        "SELECT stage, llm, SUM(calls), SUM(tokens_in), SUM(tokens_out),"
+        " SUM(usd) FROM runs GROUP BY stage, llm ORDER BY SUM(usd) DESC").fetchall()
     if not rows:
         lines.append("  no runs recorded yet — nothing has ever been spent")
         return lines
@@ -58,8 +58,8 @@ def spend_section(conn) -> list[str]:
         total += usd
         lines.append(f"  {stage:<12} {model:<20} calls={calls:>5} "
                      f"in={tin:>9} out={tout:>9} {_money(usd)}")
-    imp = conn.execute("SELECT COUNT(*) FROM verdicts WHERE model='import'").fetchone()[0]
-    llm = conn.execute("SELECT COUNT(*) FROM verdicts WHERE model!='import'").fetchone()[0]
+    imp = conn.execute("SELECT COUNT(*) FROM verdicts WHERE llm='import'").fetchone()[0]
+    llm = conn.execute("SELECT COUNT(*) FROM verdicts WHERE llm!='import'").fetchone()[0]
     lines.append(f"  {'TOTAL':<12} {'':<20} {'':>5} {'':>9} {'':>9} {_money(total)}")
     lines.append(f"  verdicts: {imp} import ($0 each) + {llm} LLM")
     return lines
@@ -122,9 +122,9 @@ def catalog_section(data_dir: Path) -> list[str]:
 def activity_section(conn, lines_out: int = 5) -> list[str]:
     lines = [f"\n4. RECENT ACTIVITY (last {lines_out} runs)"]
     for r in conn.execute(
-        "SELECT started_at, stage, model, calls, usd FROM runs"
+        "SELECT started_at, stage, llm, calls, usd FROM runs"
         " ORDER BY started_at DESC LIMIT ?", (lines_out,)):
-        lines.append(f"  {r['started_at']} {r['stage']:<12} {r['model'] or '-':<20} "
+        lines.append(f"  {r['started_at']} {r['stage']:<12} {r['llm'] or '-':<20} "
                      f"{r['calls']} calls {_money(r['usd'])}")
     if REMEDIATION_LOG.exists():
         rows = [json.loads(l) for l in REMEDIATION_LOG.read_text().splitlines() if l.strip()]

@@ -74,8 +74,8 @@ def _cmd_report(conn) -> None:
     )
     total = 0.0
     for r in conn.execute(
-        "SELECT stage, model, SUM(calls), SUM(tokens_in), SUM(tokens_out), SUM(usd)"
-        " FROM runs GROUP BY stage, model ORDER BY stage"
+        "SELECT stage, llm, SUM(calls), SUM(tokens_in), SUM(tokens_out), SUM(usd)"
+        " FROM runs GROUP BY stage, llm ORDER BY stage"
     ):
         print(f"{r[0]:<10} {r[1]:<26} {r[2]:>6} {r[3]:>9} {r[4]:>9} {r[5]:>9.4f}")
         total += r[5]

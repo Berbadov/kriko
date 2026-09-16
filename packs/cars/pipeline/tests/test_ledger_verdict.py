@@ -188,8 +188,8 @@ def test_imported_verdict_synthesizes_without_llm(import_conn, monkeypatch):
     b = costs.Budget()
     assert verdict.run_verdicts(import_conn, b) == 1
     assert b.total_usd == 0
-    row = import_conn.execute("SELECT model, verdict_json FROM verdicts").fetchone()
-    assert row["model"] == "import"
+    row = import_conn.execute("SELECT llm, verdict_json FROM verdicts").fetchone()
+    assert row["llm"] == "import"
     v = json.loads(row["verdict_json"])
     assert v["supported"] is True
     assert v["attribution"]["component_id"] == "k9k"
@@ -235,5 +235,5 @@ def test_mixed_evidence_cluster_still_uses_llm(import_conn, monkeypatch):
     monkeypatch.setattr(verdict, "_client", lambda: FakeClient())
     assert verdict.run_verdicts(import_conn, costs.Budget()) == 1
     assert len(calls) == 1
-    row = import_conn.execute("SELECT model FROM verdicts").fetchone()
-    assert row["model"] == verdict.VERDICT_MODEL
+    row = import_conn.execute("SELECT llm FROM verdicts").fetchone()
+    assert row["llm"] == verdict.VERDICT_MODEL
