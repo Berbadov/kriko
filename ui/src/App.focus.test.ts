@@ -7,7 +7,7 @@
  * not one of them asserted where focus goes — so a working command dispatcher
  * behind an unusable input read, from the outside, as "the console is broken".
  *
- * The Console is gone — a real terminal (`lib/shell/TerminalPanel.svelte`)
+ * The Console is gone — it was folded into Agents
  * replaced it, mounted outside `.view` and so structurally unable to hit this
  * bug — which leaves no route in the app that currently claims `[autofocus]`.
  * What is asserted below is the mechanism's fallback behaviour, still real

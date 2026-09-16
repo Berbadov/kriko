@@ -142,41 +142,6 @@ describe("the active-row indicator", () => {
  * Asserted against the declarations for the same reason as the rules above:
  * jsdom has no layout, so a render test cannot see a scrollbar at any effort.
  */
-/* The terminal covering the app was two bugs at once: `hidden` not actually
- * hiding it (fixed with the attribute-qualified selector TerminalPanel.svelte
- * documents), and, below the 60rem split point, a deliberate `position:
- * fixed` overlay standing in for the grid column there was no width for. The
- * overlay is gone — the grid changes shape instead, moving `term` to its own
- * row under `work` while both keep sharing `rail`'s column — so there is no
- * width at which the panel can end up on top of anything rather than beside
- * or below it. Asserted against the stylesheet for the same reason as the
- * rest of this file: jsdom has no layout, so this is invisible to any render
- * test at any effort.
- */
-describe("the terminal panel", () => {
-    it("has no position: fixed left to cover the app with, at any width", () => {
-        const path = Object.keys(COMPONENTS).find((p) => p.endsWith("TerminalPanel.svelte"));
-        expect(path, "TerminalPanel.svelte not found by the glob").toBeTruthy();
-        const source = COMPONENTS[path as string].replace(/\/\*[\s\S]*?\*\//g, "");
-        expect(source).not.toMatch(/position:\s*fixed/);
-    });
-
-    it("moves to its own row under narrow windows instead of overlaying work", () => {
-        const at = CSS.indexOf("@media (max-width: 60rem)");
-        expect(at).toBeGreaterThan(-1);
-        const narrow = CSS.slice(at, CSS.indexOf("@media", at + 1));
-        expect(narrow).toMatch(
-            /grid-template-areas:\s*\n\s*"rail work"\s*\n\s*"rail term"/,
-        );
-        // Both rows shrinkable, for the same reason `.work` needs
-        // `minmax(0, ...)` above: a grid track's automatic minimum is its
-        // content, and without this the terminal's own output refuses to
-        // shrink and forces the row back over `work` — the very overlap this
-        // replaces.
-        expect(narrow).toMatch(/grid-template-rows:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*40%\)/);
-    });
-});
-
 describe("the work column", () => {
     it("gives the shell a viewport-sized frame, not a minimum", () => {
         const rules = block(".shell");
