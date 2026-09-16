@@ -703,7 +703,7 @@ def _emit_claim_evidence(
                 source_id,
                 quote,
                 str(source.get("timestamp_s") or ""),
-                "supports",
+                source.get("stance", "supports"),
                 1 if source.get("independent", True) else 0,
             ),
         )

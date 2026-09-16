@@ -98,7 +98,7 @@ def test_rebuild_preserves_content_addressed_verdicts(conn):
     _resolved_evidence(conn, "Keyless chuck bearing wear on the DHP484", "runout")
     cluster.rebuild_clusters(conn)
     conn.execute(
-        "INSERT INTO verdicts (input_hash, model, verdict_json, tokens_in,"
+        "INSERT INTO verdicts (input_hash, llm, verdict_json, tokens_in,"
         " tokens_out, usd, created_at) VALUES ('h1','m','{}',1,1,0.0,'now')"
     )
     conn.commit()
