@@ -27,6 +27,7 @@ from packs.cars.pipeline.ledger.ingest import ingest_document
 from packs.cars.pipeline.parts.search_templates import (
     _part_meta, _search_code, templates_for_part,
 )
+from packs.cars.pipeline.sources import dates
 from packs.cars.pipeline.sources.base import Document
 from packs.cars.pipeline.sources.curated import _fetch_html
 from packs.cars.pipeline.sources.youtube import get_transcript
@@ -156,14 +157,18 @@ def _search_youtube(part_id: str, part_type: str, fuel: str, max_per_query: int,
     return found
 
 
-def _fetch_page_text(url: str) -> str | None:
-    """Full article text (no truncation — chunking handles volume)."""
+def _fetch_page(url: str) -> tuple[str | None, str]:
+    """Full article text (no truncation — chunking handles volume) plus the
+    page's world-publish date, or "" when none is discoverable."""
     import trafilatura
 
     html = _fetch_html(url)
     if not html:
-        return None
-    return trafilatura.extract(html, include_comments=False, include_tables=False)
+        return None, ""
+    text = trafilatura.extract(html, include_comments=False, include_tables=False)
+    if not text:
+        return None, ""
+    return text, dates.page_published_at(html, source=url)
 
 
 def _known_targets(conn, part_id: str) -> set[str]:
@@ -179,9 +184,10 @@ def acquire_part(conn, part_id: str, part_type: str, *, fuel: str = "",
     """Discover, rank, fetch, and ingest sources for a part into `documents`.
 
     Returns a summary dict. Fetchers are injectable for offline tests:
-    page_fetcher(url) -> text|None, transcript_fetcher(video_id) -> text|None.
+    page_fetcher(url) -> (text|None, published_at),
+    transcript_fetcher(video_id) -> (text|None, published_at).
     """
-    page_fetcher = page_fetcher or _fetch_page_text
+    page_fetcher = page_fetcher or _fetch_page
     transcript_fetcher = transcript_fetcher or get_transcript
     meta = _part_meta(part_id)
     own_makes = {str(meta.get("manufacturer") or "").lower()} - {""}
@@ -202,9 +208,9 @@ def acquire_part(conn, part_id: str, part_type: str, *, fuel: str = "",
             summary["skipped_duplicate"] += 1
             continue
         if r["type"] == "youtube":
-            text = transcript_fetcher(r["video_id"])
+            text, published_at = transcript_fetcher(r["video_id"])
         else:
-            text = page_fetcher(r["url"])
+            text, published_at = page_fetcher(r["url"])
         if not text:
             summary["skipped_fetch"] += 1
             continue
@@ -219,7 +225,8 @@ def acquire_part(conn, part_id: str, part_type: str, *, fuel: str = "",
             conn,
             Document(text=text, url=r["url"],
                      site_or_channel=r.get("site_or_channel", ""),
-                     meta={"part_hint": part_id, "title": r.get("title", "")}),
+                     meta={"part_hint": part_id, "title": r.get("title", "")},
+                     published_at=published_at),
             source_type=r["type"], target_hint=part_id)
         summary["ingested"] += 1
     conn.commit()

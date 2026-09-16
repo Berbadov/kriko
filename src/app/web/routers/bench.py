@@ -58,15 +58,19 @@ def read_bench(
     rows = state.bench_runs(conn, limit=limit)
     summary = state.bench_summary(conn)
     return {
-        "runs": rows,
+        "runs": [_served(row) for row in rows],
         # How each plane failed, not only how often (B124). "Four of five
         # harness runs failed, all of them `auth`" is actionable; "four of five
         # failed" is not.
         "verdict": bench.verdict(rows),
         # Recall, precision and hallucination with Wilson intervals, for the
         # rows whose cases carried ground truth (B126).
-        "scored": bench.scored(rows),
-        "summary": summary,
+        "scored": {
+            "groups": [
+                _served(group) for group in bench.scored(rows).get("groups", [])
+            ]
+        },
+        "summary": [_served(row) for row in summary],
         "cases": bench.cases(store),
         # What the measurements currently *decide*, which is the point of
         # having them: a table nobody reads back is folklore with a schema.
@@ -84,12 +88,32 @@ def read_bench(
             for row in summary
             if row.get("model")
         },
+        # `readout` is the reader-facing table, so it crosses the boundary
+        # below like everything else here.
         # The reader's actual ask (B126 §7): per model, the batch size,
         # context budget, preamble, search provider, measured cost per
         # accepted claim and hallucination rate with its interval — and
         # whether there was even enough measured to say so.
-        "readout": protocols.readout(rows, summary),
+        "readout": [_served(row) for row in protocols.readout(rows, summary)],
     }
+
+
+SERVED_AS = {"model": "llm"}
+
+
+def _served(row: dict) -> dict:
+    """One row, spelled the way the interface is allowed to spell it.
+
+    `ui/` may not contain a pack's vocabulary, and the gate that enforces it
+    bans this particular word outright -- it means an LLM here and a car's
+    model in every pack about vehicles, and the interface cannot tell which
+    from a payload key. So the boundary renames, rather than the store: the
+    column keeps the name its own callers use, and nothing downstream has to
+    know two words for one thing. The last time a producer and its reader
+    disagreed about a string across this kind of boundary, an entire class of
+    pack silently never reached the reader.
+    """
+    return {SERVED_AS.get(key, key): value for key, value in row.items()}
 
 
 @router.post("/bench")
