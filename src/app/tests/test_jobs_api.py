@@ -109,7 +109,10 @@ def test_cancel_stops_a_running_job_at_its_next_checkpoint(settings):
             break
         time.sleep(0.02)
 
-    assert runner.cancel(job_id) in {state.RUNNING, state.CANCELLED}
+    # `CANCELLING` while it tears down, `CANCELLED` once it has. The two used
+    # to be one word plus a message, so a reader watching a run they had
+    # stopped saw `cancelled` while it was still spending.
+    assert runner.cancel(job_id) in {state.CANCELLING, state.CANCELLED}
     row = wait_for_done(conn, job_id)
     assert row["state"] == state.CANCELLED
     runner.shutdown(wait=True)
@@ -282,3 +285,120 @@ def test_the_stream_ends_when_the_job_does(client):
         body = "".join(response.iter_text())
     assert "data:" in body
     assert state.FAILED in body
+
+
+# ── cancelling must not cost the reader what they already paid for ──────
+#
+# "Cancel button buggy — kept going after clicking", and "cancel bins completed
+# work". The second is the expensive one: `except Cancelled` wrote CANCELLED
+# with no result, so sources fetched, pages read and findings extracted — all
+# of it already paid for — died with the stack frame.
+
+def test_a_cancelled_job_keeps_what_it_had_already_finished(settings):
+    def handler(_settings, _params, progress):
+        progress.partial({"documents": 3, "findings": 7,
+                          "stopped_at": "extraction"})
+        for _ in range(500):
+            progress.check()
+            time.sleep(0.01)
+        return {"finished": True}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if (state.get_job(conn, job_id) or {})["state"] == state.RUNNING:
+            break
+        time.sleep(0.02)
+
+    runner.cancel(job_id)
+    row = wait_for_done(conn, job_id)
+    assert row["state"] == state.CANCELLED
+    assert row["result"]["documents"] == 3
+    assert row["result"]["findings"] == 7
+    assert row["result"]["partial"] is True, "kept work must be labelled incomplete"
+    runner.shutdown(wait=True)
+
+
+def test_a_cancelled_job_says_what_it_kept_rather_than_just_cancelled(settings):
+    def handler(_settings, _params, progress):
+        progress.partial({"documents": 2, "stopped_at": "extraction"})
+        for _ in range(500):
+            progress.check()
+            time.sleep(0.01)
+        return {}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if (state.get_job(conn, job_id) or {})["state"] == state.RUNNING:
+            break
+        time.sleep(0.02)
+    runner.cancel(job_id)
+    row = wait_for_done(conn, job_id)
+    assert "extraction" in row["message"]
+    assert "2 documents" in row["message"]
+    runner.shutdown(wait=True)
+
+
+def test_a_job_cancelled_before_it_finished_anything_says_so_plainly(settings):
+    def handler(_settings, _params, progress):
+        for _ in range(500):
+            progress.check()
+            time.sleep(0.01)
+        return {}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if (state.get_job(conn, job_id) or {})["state"] == state.RUNNING:
+            break
+        time.sleep(0.02)
+    runner.cancel(job_id)
+    row = wait_for_done(conn, job_id)
+    assert row["message"] == "stopped before anything was finished"
+    assert not row["result"]
+    runner.shutdown(wait=True)
+
+
+def test_pressing_cancel_twice_does_not_queue_a_second_teardown(settings):
+    """A button that looks like it did nothing gets pressed again."""
+    def handler(_settings, _params, progress):
+        for _ in range(500):
+            progress.check()
+            time.sleep(0.01)
+        return {}
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if (state.get_job(conn, job_id) or {})["state"] == state.RUNNING:
+            break
+        time.sleep(0.02)
+
+    first = runner.cancel(job_id)
+    second = runner.cancel(job_id)
+    assert first == state.CANCELLING
+    assert second in {state.CANCELLING, state.CANCELLED}
+    row = wait_for_done(conn, job_id)
+    assert row["state"] == state.CANCELLED
+    runner.shutdown(wait=True)
+
+
+def test_a_job_that_died_mid_teardown_is_not_left_spinning(settings):
+    """`cancelling` is not terminal, so startup recovery has to cover it too."""
+    conn = state.connect(settings.app_state_path)
+    job_id = state.create_job(conn, "probe", {})
+    state.start_job(conn, job_id)
+    state.request_cancel(conn, job_id)
+    assert state.get_job(conn, job_id)["state"] == state.CANCELLING
+
+    state.interrupt_running(conn)
+    assert state.get_job(conn, job_id)["state"] == state.INTERRUPTED
