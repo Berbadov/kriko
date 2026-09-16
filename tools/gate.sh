@@ -30,6 +30,12 @@ step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 
 if [ "$only" = all ] || [ "$only" = py ]; then
     ran=1
+    # Four files carry this project's version and only one of them names the
+    # installer. Two releases have now shipped under a number the tree did not
+    # contain, each caught at build time on the Windows host -- hours after the
+    # commit that caused it. It costs a second here.
+    step "the four version strings agree"
+    "$PYTHON" tools/bump.py --show
     # No arguments: pytest.ini pins testpaths. Naming directories by hand is how
     # the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
     # test_repo_invariants.py enforces the layering rules and the testpaths

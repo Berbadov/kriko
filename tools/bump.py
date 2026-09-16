@@ -86,6 +86,19 @@ def show() -> int:
     if len(values) > 1:
         print("\nthese disagree — `python tools/bump.py <version>` sets them all")
         return 1
+    # The installed distribution is the fifth string, and the one the reader
+    # is shown: `/api/health` and `app_version()` read it rather than the
+    # tree. An editable install left behind by an earlier bump is how a
+    # 0.8.7 checkout reported itself as 0.7.11 for days. Absent is fine --
+    # a fresh clone has not installed anything yet, and that is not a lie.
+    here = installed()
+    if here and here not in values:
+        print(
+            f"\nthe tree says {values.pop()} and the installed distribution says"
+            f" {here} — /api/health will report the installed one:\n"
+            "    tools/setup.sh          (or: pip install -e .)"
+        )
+        return 1
     return 0
 
 

@@ -26,13 +26,17 @@ YELLOW = "33"
 BLUE = "34"
 
 #: The tabs, in the order the number keys select them.
-TABS = ("planes", "agenda", "jobs")
+TABS = ("planes", "agenda", "jobs", "ops")
 
 #: State names the engine's job rows use, and how each should read.
 JOB_COLOURS = {
     "succeeded": GREEN, "failed": RED, "cancelled": YELLOW,
     "running": BLUE, "queued": DIM, "interrupted": YELLOW,
 }
+
+#: `operations.state` uses a smaller vocabulary than `jobs.state`
+#: (`running | ok | failed`) — same colours where the words overlap.
+OP_COLOURS = {"ok": GREEN, "failed": RED, "running": BLUE}
 
 
 def style(text: str, *codes: str) -> str:
@@ -132,6 +136,8 @@ def rows_for(tab: str, data: dict) -> list[dict]:
         return list((data.get("agenda") or {}).get("rows", []))
     if tab == "jobs":
         return list((data.get("jobs") or {}).get("items", []))
+    if tab == "ops":
+        return list((data.get("ops") or {}).get("items", []))
     return []
 
 
@@ -162,7 +168,23 @@ def _line_jobs(row: dict, width: int) -> str:
     return style(text, JOB_COLOURS.get(state, "")) if state in JOB_COLOURS else text
 
 
-LINES = {"planes": _line_planes, "agenda": _line_agenda, "jobs": _line_jobs}
+def _line_ops(row: dict, width: int) -> str:
+    state = row.get("state", "")
+    cost = ""
+    if row.get("usd"):
+        cost = f"${row['usd']:.2f}"
+    elif row.get("tokens"):
+        cost = f"{row['tokens']}tok"
+    text = pad(
+        f"{state:<8} {row.get('door', ''):<5} {row.get('kind', ''):<10} "
+        f"{cost:<8} {row.get('name', '')}",
+        width,
+    )
+    return style(text, OP_COLOURS.get(state, "")) if state in OP_COLOURS else text
+
+
+LINES = {"planes": _line_planes, "agenda": _line_agenda, "jobs": _line_jobs,
+         "ops": _line_ops}
 
 
 def detail_for(tab: str, row: dict | None, data: dict) -> list[str]:
@@ -186,6 +208,15 @@ def detail_for(tab: str, row: dict | None, data: dict) -> list[str]:
         log = (data.get("log") or {}).get(row.get("job_id", "")) or row.get("log") or ""
         lines = [line for line in log.splitlines() if line]
         return lines or [row.get("message", "") or "no output yet"]
+    if tab == "ops":
+        lines = [f"subject: {row.get('subject_id') or '—'}   "
+                 f"pack: {row.get('pack_id') or '—'}   "
+                 f"started: {row.get('started_at', '')}"]
+        if row.get("error"):
+            lines.append(f"error: {row['error']}")
+        elif row.get("response_json"):
+            lines.append(row["response_json"])
+        return lines
     return []
 
 
@@ -237,6 +268,7 @@ def footer(state, width: int) -> list[str]:
         "planes": "r refresh · s shell · q quit",
         "agenda": "enter research · a run whole agenda · r refresh · s shell · q quit",
         "jobs": "enter follow · c cancel · R retry · r refresh · s shell · q quit",
+        "ops": "r refresh · s shell · q quit",
     }[state.tab]
     message = state.error or state.status
     colour = RED if state.error else DIM
@@ -296,4 +328,6 @@ def _empty(state) -> str:
         "agenda": "nothing to research: either no packs are installed, or "
                   "nothing has been asked for yet",
         "jobs": "no jobs yet — start one from the agenda tab",
+        "ops": "no operations recorded yet — nothing has touched the "
+               "knowledge through any door",
     }[state.tab]

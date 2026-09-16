@@ -313,7 +313,7 @@ Also: the preferred-agent choice was in Settings, which is not where anyone goes
 to think about agents. The same panel now renders on the Agents screen — one
 component in both places rather than two that can disagree.
 
-### B126 — Benchmarks against ground truth `[G2][G5]` **(STEPS 1-3 DONE 2026-09-15)**
+### B126 — Benchmarks against ground truth `[G2][G5]` **(DONE 2026-09-16, 0.10.0)**
 
 `app/gold.py` loads a pack's `research/gold.yaml`, judges produced claims against
 it (domain+word, phrase-in-title, phrase-in-quote — never an LLM scoring another
@@ -384,14 +384,14 @@ name is. Both are checkable mechanically: a subject whose identity does not
 share the category's own vocabulary is a scope escape, and a name over N words
 or containing "common problems" is a description.
 
-### B131 — MCP: "cannot connect to the server: kriko" on Windows `[G5]`
+### B131 — **DONE 2026-09-16** (0.10.0): the config Windows could not start
 The reader's Claude desktop app cannot reach the installed server. `/api/agent-config`
 advertises the frozen binary with `--mcp` and `app/agentconfig.py` can *verify*
 the advertised command by running it and completing an `initialize` — so the
 next step is the reader pressing that and sending what it says, rather than a
 guess. Filed so the verify path is what answers it.
 
-### B132 — **PARTLY DONE 2026-09-15**: the extension does something everywhere
+### B132 — **DONE 2026-09-16** (0.10.0): the extension does something everywhere
 
 The deeper half of the reader's report was not the launcher: *"I cannot open the
 web extension on the pages that aren't registered, so basically it opens on
@@ -420,6 +420,36 @@ Original entry:
 *"UI has several margin problems."* Reported against the Browser extension
 screen with the terminal open; the panel and the page fight for width. Needs the
 screenshots rather than a guess.
+
+### B136 — `sources.published_at` is written by nobody, and deriving it is real work `[G3]`
+
+Left open deliberately in the 0.10.0 overhaul, having been traced rather than
+guessed at. Nothing in the pipeline captures a world-publish date: no
+`article:published_time`, no JSON-LD `datePublished`, no video upload date.
+`rank.py` never reads the column, so the honest description today is "a column
+that is always empty", not "a column secretly weighted" — which is why it is
+here rather than in the fix list. Deleting it is riskier than leaving it (pack
+format, revision snapshots, two builders). Doing it properly: add
+`documents.published_at`, populate from page metadata at fetch time in
+`acquire.py`/`ingest.py`, and thread it into `export.py`'s `sources` dicts —
+both builders already read the field name correctly.
+
+### B137 — a green gate still cannot see a broken installer `[G5]`
+
+`tools/gate.sh` covers Python, both JS suites, types, the bundle and now the
+four version strings. It runs no `cargo build` and no `pwsh`, so an NSIS error
+or a missing crate feature is caught by a person on the Windows host, hours
+after the commit. `test_the_shell_is_valid_rust.py` closes the parse half
+cheaply; the type-and-link half genuinely needs the platform. Honest scope:
+either accept it as the documented boundary of a gate with no runner, or find a
+cheap `cargo check` that does not need `webkit2gtk`.
+
+### B138 — the gate runs no type checker on the Python side `[G5]`
+
+`svelte-check` gates the frontend; nothing gates `src/`. A change that is
+well-typed by convention and wrong by annotation passes every test. This is a
+`pyproject.toml` decision (which tool, how strict, how much existing code has
+to be annotated before it can be turned on) rather than a line of code.
 
 ### B112 — Make the research protocol enforced rather than advised `[G2]`
 *"Regulation of agents; protocols that force them to do arbitrary actions =>
@@ -484,7 +514,7 @@ owns the palette. The design argues for the app; the argument for the
 extension (it is the live stylesheet, and the original) is real. One line in
 the generator either way, and worth settling before it is written.
 
-### B114 — "Open with web extension" opens a browser with no extension `[G4]`
+### B114 — **DONE 2026-09-16** (0.10.0)
 *"It does open a chrome page with sahibinden but kriko isn't loaded."*
 
 **Root cause found and fixed 2026-09-14.** Chrome disabled `--load-extension`
@@ -559,7 +589,7 @@ pointless until that is `chrome.scripting.registerContentScripts` over the
 adapters' own `site` values — which needs `optional_host_permissions` and a
 reader grant, and lands naturally with B114's Web Store decision.
 
-### B116 — "Research the product I am looking at, now" `[G2][G5]`
+### B116 — **DONE 2026-09-16** (0.10.0)
 *"Assume the web page isn't registered in kriko or that specific product hasn't
 been added to the db. Users might want to know it, so this feature does the
 research and saves it in real time. All handled in the web extension."*
@@ -610,7 +640,7 @@ One rule must survive: **`api` is never chosen by omission.** A preference the
 reader set explicitly is different from a default that quietly starts spending,
 and the code that enforces that today should keep enforcing it.
 
-### B118 — **PARTLY DONE 2026-09-15**: what it cost, and what the next one will
+### B118 — **DONE 2026-09-16** (0.10.0)
 
 `app/costs.py` + `GET /api/costs` + the Settings panel: measured spend by plane,
 an estimate from *this installation's* own runs (never a vendor price list, and

@@ -235,6 +235,16 @@ weight nobody can justify. Two deliberate asymmetries:
   comment ("when WE last saw the page") is exactly true for the ledger path
   and only approximately true for the other two.
 
+`stance` is not read-only: `app/findings.py::accept_findings` writes it from
+whatever an MCP submission or job result declares (`item.get("stance",
+"supports")`), so a claim's rebuttal evidence — `stance='refutes'` — reaches
+the store at acceptance time rather than only ever being read back by
+`tree.py`'s health check. `lang` is a row attribute threaded the same way
+everywhere the engine builds a subject tree — `subject_tree()`,
+`weakest_claims()`, `Query.lang` (`kriko/lookup/query.py`) and the `/api/query`
+door all default it to `"en"` for a caller that does not know better, and pass
+it through rather than hardcoding a language anywhere in `kriko/`.
+
 Served read-only via `GET /api/health/weakest` and `GET /api/health/subject/{id}`
 (`src/app/web/routers/health.py`) and the `subject_health`/`weakest_claims` MCP
 tools (`src/app/mcp_server.py`); the dashboard's Health tab
@@ -309,7 +319,7 @@ absent or the stream dies mid-job.
 
 ## The other API surfaces
 
-Nine doors that the planes above do not open. Listed here because a surface
+The doors that the planes above do not open. Listed here because a surface
 nobody wrote down is a surface the next change treats as private —
 `test_docs_match_the_code.py` fails until each one names an endpoint.
 
@@ -360,17 +370,33 @@ and it is demand for *catalog* coverage. The MCP tool `research_agenda` is the
 same computation through the other door, and the generated skill embeds the
 top five with the sentence that the tool, not the file, is authoritative.
 
-**`GET|POST /api/factcheck`** (`routers/factcheck.py`) — one press: does the
-page a claim cites still contain the quote the pack shipped? The `POST` takes a
-`(pack_id, claim_id)` and nothing else, because the quote is read out of the
-store rather than taken from the caller — the browser extension can reach this
-surface, and a door that accepted "does this URL contain this string" would be
-an open fetch oracle. Four verdicts, `quoted / missing / unreadable /
-unreachable`, and `missing` says the page changed, never that the claim is
-false: pages get rewritten and Kriko has no authority to retract anything, so
-the verdict ranks nothing, hides nothing, and lives in `app.sqlite`'s
-`fact_checks`. The `GET` returns the whole screen's verdicts in one request,
-which is what keeps a report of forty claims from opening forty requests.
+**`GET|POST /api/factcheck`, `GET /api/factcheck/grounding`,
+`GET /api/factcheck/document`, `POST /api/verify`** (`routers/factcheck.py`) —
+one press: does the page a claim cites still contain the quote the pack
+shipped? The `POST /api/factcheck` takes a `(pack_id, claim_id)` and nothing
+else, because the quote is read out of the store rather than taken from the
+caller — the browser extension can reach this surface, and a door that
+accepted "does this URL contain this string" would be an open fetch oracle.
+Four verdicts, `quoted / missing / unreadable / unreachable`, and `missing`
+says the page changed, never that the claim is false: pages get rewritten and
+Kriko has no authority to retract anything, so the verdict ranks nothing,
+hides nothing, and lives in `app.sqlite`'s `fact_checks`. The `GET` returns the
+whole screen's verdicts in one request, which is what keeps a report of forty
+claims from opening forty requests.
+
+`GET /api/factcheck/grounding` is the offline half (B120/B128): per-evidence
+`grounded` / `ungrounded` / `not_kept` for one claim, against the page text
+kept in `app.sqlite` at acceptance time rather than a fresh fetch — it needs no
+network, and it is the only one of the four that can say "nothing was ever
+kept to check against" rather than confusing that with "the page still
+agrees". `GET /api/factcheck/document` returns the kept page text for one
+`source_id`, 404 as `not_kept` when this installation never retained one.
+`POST /api/verify` (`app/web/routers/factcheck.py`'s `verify_router`, mounted
+at `/api`, not under `/api/factcheck` — a whole-screen re-check is an
+*operation*, one claim is a fact check) starts a `verify` job over
+`(pack_id, subject_id, limit)`: no model, no agent, a substring test against
+every claim's evidence, because "does the quote still appear" is a question a
+model would answer confidently and a substring test answers honestly.
 
 **`GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`,
 `DELETE /api/sites/{host}`** (`routers/sites.py`) — which sites can be read
@@ -407,6 +433,37 @@ page itself already has a table. `/stream` polls the table rather than being
 pushed to, because the MCP server is a different process writing the same
 `app.sqlite`.
 
+**`POST /api/packs/scaffold`, `GET /api/packs/drafts`,
+`GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`,
+`POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`,
+`DELETE /api/packs/drafts/{slug}`** (`routers/packs.py`, backed by
+`app/packauthor.py` and `app/packdraft.py`) — a pack an agent authored,
+before it is anything the store can hold. `scaffold` writes a contract-passing
+skeleton to disk and installs nothing, so a mistake here costs a directory,
+never a store row. A draft under `~/.kriko/drafts/<slug>/` is a small tree of
+JSON/YAML files (`packdraft.FILES`), of which **the adapter is `adapters/*.json`,
+not `.yaml`** — the suffix `kriko.pack.build` actually reads; a draft that
+wrote it as `.yaml` built and installed cheerfully with an adapter no listing
+page could ever reach, invisibly, until this was fixed.
+
+`packauthor.draft_state` refuses a draft outright when it has no `principle`
+or **no `lineup`** — a pack that names no line-up cannot be told apart from
+one that named every product in its category, and the coverage gap the pack
+should be reporting would silently read as zero instead. Every proposed
+subject is checked against that line-up (`_in_scope`, fuzzy substring match on
+normalised text) and against the pack's own `coverage.out_of_scope`; a subject
+neither names is **quarantined** rather than shipped or silently dropped — set
+aside with a reason ("not named anywhere in this pack's own line-up — likely a
+different category"), recorded in the draft's `research/coverage.yaml`, and
+surfaced back to the reader and to the amending agent, because refusing the
+whole draft for one stray subject would throw away the rest of the research,
+and shipping it would ship the mis-categorised row. `amend` (B127) asks an
+agent to cover what the line-up still lacks; nothing already in the draft is
+rewritten, so a refused amendment leaves it exactly as it was. `install`
+builds if needed and installs in one press, then marks the draft installed
+rather than deleting it — an installed draft still supports **Cover the
+gaps**: amend, rebuild, install again.
+
 **`GET /api/submissions`** (`routers/submissions.py`) — what came in through
 the agent door and what the gate did with it. The only place a *refusal* is
 legible: `app/findings.py` rejects on grounding, and without this the rejection
@@ -425,6 +482,31 @@ settings screen that can read a key back is one that can leak it into a
 screenshot or a support log, and replacing a key you cannot see costs one
 paste.
 
+**`GET /api/agent-config`, `GET /api/agent-targets`,
+`POST /api/agent-targets/{id}/skill`, `GET /api/agent-skill`,
+`POST /api/agent-targets/{id}/connect`, `POST /api/agent-verify`**
+(`routers/agent.py`, backed by `app/agentconfig.py`) — wiring a coding-agent
+harness to this installation's MCP server. `agent-config` answers *which
+command* — the exact `command`/`args`/`env` block to paste into `.mcp.json`,
+never the resolved venv interpreter (it dies off-machine with `No module
+named 'fastapi'`) — and `agent-targets` answers *where it goes*: which
+harnesses this machine has and whether each already has it. `env` carries
+`agentconfig.platform_env()`, which is non-empty **on Windows only** — a
+harness that spawns the advertised command merges its own environment with
+what this supplies, and a bare Python subprocess on Windows with no
+`SYSTEMROOT` on its path cannot resolve DNS at all, so the launched MCP server
+would look "connected" and answer every tool call with a socket error. `Connect`
+(`/connect`) writes the config into that harness's own file, and
+`/agent-verify` is the diagnostic the reader actually needs after pasting one
+in: it starts the exact advertised command, completes a real MCP `initialize`
+handshake and a `tools/list`, and reports failure with whatever the process
+said on stderr — because "the file was written" and "the agent can talk to
+it" are different facts, and a harness that starts, exits, and leaves an agent
+silently answering nothing has no other way to be caught. `agent-skill` and
+`{id}/skill` push Kriko's product-identity skill to a harness that supports
+one, versioned so a skill on disk that predates the current one is reported as
+`stale` rather than `present`.
+
 **`GET /api/research-planes`** (`routers/research.py`) — the two ways an
 installation grows its own knowledge, read off `AgentResearcher` and
 `ApiResearcher` rather than restated in the frontend, for the reason
@@ -434,6 +516,16 @@ engine does not own — a sentence in the reader's terms, because `per_token` is
 not an answer to "what will this cost me", and `ready`, which is the paid
 plane's key check and nothing else (the agent plane's readiness is a harness
 question `/api/agent-targets` already answers). Returns no key and no hint.
+
+**Cancelling a running harness researcher actually stops the process tree.**
+`AgentResearcher.check_cancelled` (`app/providers/harness.py`) is a hook the
+job runner wires to `Progress.check` (`app/web/tasks.py`, three call sites) and
+the drain loop calls it on every line of the CLI's stdout — checked before
+narration, so a run the coding agent has gone quiet on is still interruptible.
+Left to propagate rather than caught: whatever it raises reaches the `finally`
+that calls `_kill_tree(proc)`, so `POST /api/jobs/{id}/cancel` on a harness
+run reads as cancelled, not as a crash, and does not leave an orphaned CLI
+subprocess behind.
 
 **`POST /api/agenda/run`, `GET /api/research-runs`,
 `GET|DELETE /api/research-runs/{id}`** (`routers/research.py`) — the
@@ -449,6 +541,31 @@ of 6; 2 were already absent") — an unattended multi-row run that could not be
 reversed would be a liability rather than a feature, which is why the undo
 landed before the loop that needs it.
 
+**`GET|POST /api/bench`** (`routers/bench.py`, backed by `app/bench.py` and
+`app/protocols.py`) — B111/B126: measure the research planes against the same
+cases, derived from the installed store rather than enumerated (a fixed list
+of subjects in Python would be the hardcoded-car-data bug in benchmark
+clothing). `POST` starts a job — real minutes of work and, on the paid plane,
+real money — sweeping `planes`, `protocols` and (B126 §8) a search provider,
+`reps` times each, against a throwaway copy of the store that is discarded
+with whatever it wrote, so a benchmark never grows the pack it measures.
+Three case kinds (B126 §3/§9), each scored differently: `specific` (one
+subject, the default), `bulk` (many subjects in one call, B126 §2) and
+`validation` (re-fetches a source and checks it against a known answer, no
+model involved). `GET /api/bench` returns the runs, `bench.verdict()` (how
+each plane *failed*, not only how often — "four of five harness runs failed,
+all of them `auth`" is actionable), `bench.scored()` (recall, precision and
+hallucination with Wilson intervals, for cases carrying ground truth),
+`protocols.choose()` (which protocol a model's own measured history picks),
+and the **readout** (`protocols.readout()`): one row per model with the batch
+size, context budget, preamble and search provider it would run with right
+now, its measured cost per accepted claim, and its hallucination rate with
+interval — a model with fewer than two measured runs still gets a row, with
+`note` saying why it is showing the known-good default rather than a chosen
+protocol. `kriko bench` (`app/cli.py`) runs the same sweep in the terminal
+rather than as a job — a benchmark watched by nobody is a benchmark nobody
+trusts — and prints this same readout table.
+
 **`GET /api/extension`, `POST /api/extension/stage`,
 `POST /api/extension/reveal`** (`routers/extension.py`) — where the unpacked
 extension is on disk, staged into a stable directory the reader can point
@@ -458,8 +575,9 @@ never a requirement: the response carries the path either way, because if the
 open fails the reader's next action is pasting it.
 
 **`GET /api/terminal/state`, `GET /api/terminal/stream`,
-`POST /api/terminal/input`, `POST /api/terminal/resize`**
-(`routers/terminal.py`) — a real shell, run inside the app, because a harness
+`POST /api/terminal/input`, `POST /api/terminal/resize`,
+`POST /api/terminal/close`** (`routers/terminal.py`) — a real shell, run
+inside the app, because a harness
 (Claude Code, opencode) that needs a one-time `login` cannot do it from inside
 a sandboxed subprocess spawn, and sending the reader out to their OS's own
 terminal for that is exactly the friction the app exists to remove. One PTY per
@@ -489,6 +607,11 @@ N?* — over whatever transport it likes:
   no-`EventSource` fallback and the first thing worth asking for in a bug
   report.
 * `POST /input` and `POST /resize` carry keystrokes and geometry.
+* `POST /close` ends the shell and leaves it ended — a different event from
+  typing `exit`: it frees the child process and its pty, and `_ensure()`
+  never restarts a session this endpoint ended, so a client that keeps
+  polling `/state` sees a stable `ended: true` rather than a shell that
+  silently respawns underneath it.
 
 Three properties follow that a socket could not give:
 
@@ -569,6 +692,48 @@ than saying nothing. `behind` still works.
 
 ---
 
+## The plain CLI: `kriko`
+
+**`src/app/cli.py`.** Two shapes, deliberately.
+
+`packs`, `install`, `uninstall`, `enable`, `build` and `lookup` open the store
+directly (`kriko.store.db.connect`) and touch no app state — the reader's
+whole loop with no server, no network and no second process, exactly the
+docstring at the top of the file says.
+
+`prefs`, `costs`, `sites`, `verify`, `drafts`, `operations`, `bench` and `tui`
+need `app.sqlite` (preferences, spend, site adapters, fact checks, pack
+drafts, the operations feed) or a job runner, and go through
+`app.tui.client.Engine` — the same client the operator console uses, over
+HTTP — rather than opening `app.sqlite` a second time. That is not a style
+choice: `app/tui/client.py` documents why a second process opening the store
+directly would be a second writer fighting whatever app is already running,
+and the same argument applies to `app.sqlite`. Each of these subcommands
+attaches to a running engine when one answers on `EXTENSION_PORT`, or starts
+one of its own in-process (`--no-start` refuses that and fails instead), the
+same discovery order `kriko tui` uses. `bench` is the one exception among
+these: it measures in-process against its own copy of `app.sqlite`
+(`app/bench.py` — see the Benchmark section below), because a measurement is
+supposed to be watched by the terminal that started it, not handed to a job.
+
+Every one of these commands turns a failed attach or a failed call
+(`app.tui.client.EngineError`) into one line on stderr and a non-zero exit —
+`_with_engine` in `cli.py` is the one place that happens, so a reader never
+sees a Python traceback for "the engine is not running" or "that draft does
+not exist".
+
+```
+kriko prefs [--harness ID] [--model NAME] [--search ID]
+kriko costs
+kriko sites [list|register HOST|forget HOST]
+kriko verify [--list] [--pack ID] [--subject ID]
+kriko drafts [list|show|amend|build|install|discard SLUG]
+kriko operations [--limit N]
+kriko bench [--plane ...] [--cases N] [--protocol ...]
+```
+
+---
+
 ## Operator Console: `kriko tui`
 
 `src/app/tui/` is a fourth interface beside `cli`, `web` and `mcp`, and the only
@@ -646,15 +811,18 @@ clients already show, live, rather than in a second transport; the transcript
 is bounded and the narration capped, because an agent in a tool loop must not
 be able to grow either without end.
 
-**Three tabs and a shell.** *Planes* answers "why do agent operations do
+**Four tabs and a shell.** *Planes* answers "why do agent operations do
 nothing" by naming the harness binary `harness.locate()` found, with its path —
 and, when it found none, where it looked. *Agenda* is `/api/agenda`, with Enter
 starting research on the selected subject. *Jobs* is `/api/jobs`, with the
-followed job's log tailing in the detail band. `s` drops the alternate screen
-and hands the real terminal to the PTY until Ctrl-] — a pass-through rather than
-an embedded emulator, because drawing a shell means writing a terminal emulator
-and there is already one running: the operator's. That is the surface a
-`claude` login needs.
+followed job's log tailing in the detail band. *Ops* is `/api/operations` —
+the live feed described below, one row per unit of agent-driven work
+regardless of which door it came in by, so an operator can see an MCP-door
+`submit_findings` in flight without switching to the dashboard. `s` drops the
+alternate screen and hands the real terminal to the PTY until Ctrl-] — a
+pass-through rather than an embedded emulator, because drawing a shell means
+writing a terminal emulator and there is already one running: the operator's.
+That is the surface a `claude` login needs.
 
 **Efficiency is the frame differ.** `term.diff` rewrites only the rows that
 changed, cursor-addressed, so an idle console writes nothing at all and a
