@@ -76,7 +76,7 @@ def installed() -> str:
     return app_version()
 
 
-def show() -> int:
+def show(strict: bool = False) -> int:
     found = current()
     width = max(len(str(p)) for p in found)
     for path, version in found.items():
@@ -91,8 +91,16 @@ def show() -> int:
     # tree. An editable install left behind by an earlier bump is how a
     # 0.8.7 checkout reported itself as 0.7.11 for days. Absent is fine --
     # a fresh clone has not installed anything yet, and that is not a lie.
+    #
+    # Only under `--strict`, and the reason is a build that failed on this in
+    # the field: `packaging/build_desktop.ps1` runs the plain check as a
+    # pre-flight, *before* its own `pip install -e .`, so failing here would
+    # refuse the build over a state that same build repairs a step later -- a
+    # guard blocking the thing that fixes what it is complaining about. The
+    # gate wants the check (a stale install serves the wrong version all day);
+    # a pre-flight that precedes the install does not.
     here = installed()
-    if here and here not in values:
+    if strict and here and here not in values:
         print(
             f"\nthe tree says {values.pop()} and the installed distribution says"
             f" {here} — /api/health will report the installed one:\n"
@@ -135,9 +143,14 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="tools/bump.py", description=__doc__.split("\n")[0])
     parser.add_argument("version", nargs="?", help="the new version, as X.Y.Z")
     parser.add_argument("--show", action="store_true", help="print all six and stop")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="also fail when the installed distribution is not the tree",
+    )
     args = parser.parse_args(argv)
     if args.show or not args.version:
-        return show()
+        return show(strict=args.strict)
     return bump(args.version)
 
 
