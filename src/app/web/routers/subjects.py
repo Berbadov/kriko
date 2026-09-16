@@ -41,6 +41,36 @@ def list_subjects(
     ]
 
 
+@router.get("/search")
+def search_subjects(
+    q: str = "",
+    pack_id: str = "",
+    kind: str = "",
+    limit: int = 20,
+    store=Depends(get_store),
+) -> dict:
+    """Find a product by typing its name. The panel's way in when recognition misses.
+
+    "The extension has no way to search for a particular product. I have to be
+    standing on the right page and hope recognition fires."
+
+    Distinct from `/subjects?q=`, which is an author's filter over a list they
+    are already looking at: that matches labels only, and a label is a display
+    string rather than the words anybody types. This matches aliases and
+    identity values too, and returns each subject's identity — because the ask
+    was to *tell variants apart*, and two rows reading `Golf VII` cannot.
+    """
+    from kriko.lookup import find
+
+    items = find.search(
+        store, q,
+        pack_ids=[pack_id] if pack_id else None,
+        kind=kind,
+        limit=max(1, min(int(limit), 50)),
+    )
+    return {"query": q, "items": items, "count": len(items)}
+
+
 @router.get("/subjects/{subject_id}")
 def get_subject(subject_id: str, store=Depends(get_store)):
     row = store.execute(
