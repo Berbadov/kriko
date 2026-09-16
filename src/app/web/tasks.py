@@ -480,6 +480,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 f"reading {document.site_or_channel or document.url}",
             )
             emit.count(chars=len(document.text or ""))
+            # Per document, because a run stopped halfway through ten sources
+            # has read the first five and that is worth keeping.
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "documents": index - 1, "findings": len(findings),
+                "stopped_at": "extraction",
+            })
             found = 0
             for finding in researcher.extract(task, document):
                 found += 1
@@ -517,6 +524,14 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 )
         if documents:
             emit.close_stage(detail=f"{len(findings)} finding(s)")
+        # Checkpointed here rather than only at the end: this is the moment the
+        # run has cost the most and delivered nothing durable, and it is where
+        # a reader watching a long run decides to stop it.
+        progress.partial({
+            "subject_id": subject_id, "pack_id": pack_id,
+            "documents": len(documents), "findings": len(findings),
+            "stopped_at": "extraction",
+        })
 
         # Whatever the plane knows about its own spend, and nothing invented.
         # `Researcher` has no token field, so this is a duck-typed hook: a
@@ -560,6 +575,16 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 detail=f"{len(verdicts.get('accepted', []))} kept, "
                 f"{len(verdicts.get('rejected', []))} refused"
             )
+            # The claims are in the store by now, so a cancel after this point
+            # must not report them as lost — they are not.
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "documents": len(documents),
+                "findings": len(findings),
+                "accepted": len(verdicts.get("accepted", [])),
+                "refused": len(verdicts.get("rejected", [])),
+                "stopped_at": "ingestion",
+            })
 
             # ── Ledgering ────────────────────────────────────────────────
             emit.open_stage("ledgering", "writing the verdicts down")

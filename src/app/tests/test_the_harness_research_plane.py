@@ -869,6 +869,7 @@ class _Recorder:
     def __init__(self):
         self.job_id = "job-1"
         self.lines: list[str] = []
+        self.partials: list[dict] = []
 
     def set(self, fraction, message=""):
         if message:
@@ -879,6 +880,11 @@ class _Recorder:
 
     def check(self):
         pass
+
+    def partial(self, result):
+        # Real `Progress` writes this to the job row so a cancel keeps what was
+        # finished. Held here so a test can assert on the checkpoints too.
+        self.partials.append(result)
 
     @property
     def log_text(self) -> str:
