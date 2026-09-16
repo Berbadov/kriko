@@ -67,6 +67,11 @@ export const NAV: NavGroupSpec[] = [
         authorOnly: true,
         items: [
             { name: "packs", label: "Packs" },
+            // Sites, next to Packs, because they are the same kind of thing
+            // from the reader's side: what this installation can read. The
+            // words somebody would type for it are all about the browser.
+            { name: "sites", label: "Sites",
+              also: ["adapter", "adapters", "website", "extension site", "register"] },
             // Three entries where there were three screens — Runs, Knowledge
             // pipeline, What researchers sent — and the same mistake Subjects
             // / Coverage / Health made. They are not three places: they are
@@ -76,7 +81,7 @@ export const NAV: NavGroupSpec[] = [
             // findings refused; submissions say what arrived through the agent
             // door. A reader chasing "did my research actually land" had to
             // visit all three and hold the answer in their head.
-            { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log"] },
+            { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log", "live", "operations", "feed", "mcp"] },
             // Console used to be a lens here, driving the same API a harness
             // does by hand. It is a real terminal now (`lib/shell/
             // TerminalPanel.svelte`), reachable from the rail directly rather
@@ -84,6 +89,8 @@ export const NAV: NavGroupSpec[] = [
             // searchable synonyms for Agents any more — see nav.ts's own
             // history in git for why they once were.
             { name: "agents", label: "Agents", also: ["connect", "mcp", "harness", "claude"] },
+            { name: "bench", label: "Benchmark",
+              also: ["hallucination", "cost per claim", "protocols", "grading", "b126"] },
         ],
     },
     {
@@ -136,6 +143,10 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     jobs: { name: "activity", lens: "runs" },
     pipeline: { name: "activity", lens: "pipeline" },
     submissions: { name: "activity", lens: "submissions" },
+    // The feed's own names. "What is my agent doing" is the question people
+    // will type, and neither word is a route (B122).
+    operations: { name: "activity", lens: "live" },
+    live: { name: "activity", lens: "live" },
     // Agents has one lens now — Connect — so neither name needs one.
     console: { name: "agents" },
     connect: { name: "agents" },

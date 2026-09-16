@@ -62,6 +62,94 @@ def searchable(query: str) -> str:
 
 
 @dataclass(frozen=True)
+class Spend:
+    """How one operation should spend one model. A *protocol* (B123).
+
+    The two failures are on opposite sides and the middle is narrow. Too little
+    batching burns tokens re-sending the same brief for every document. Too
+    much piles context until the model stops quoting and starts composing —
+    and this codebase catches that at the grounding gate, which means the batch
+    is *refused* and the tokens are spent anyway. So the settings that decide
+    it are worth naming, recording and choosing from measurements rather than
+    leaving as two literals in the middle of a prompt.
+
+    **The shape lives in the engine; the choosing does not.** `kriko/` may not
+    import `app/`, and picking a protocol means reading this installation's own
+    benchmark rows — which are interface state. So the engine defines what a
+    protocol *is* and takes one as an argument; `app/protocols.py` decides
+    which. That is the same split `app/providers/` already makes for sockets.
+
+    Nothing here is category-shaped, pack-shaped or provider-shaped: it is
+    three numbers and a named instruction about how a model is handed a task.
+    """
+
+    #: A name, so a measurement can be attributed to it. Two runs of the same
+    #: model with different settings are two measurements, and a benchmark
+    #: table that recorded only the model would average them into nothing.
+    name: str = "standard"
+    #: How much of one document is sent. The literal that used to be `[:12000]`
+    #: inside a prompt.
+    context_chars: int = 12000
+    #: How many documents go into one completion call. 1 is a call per
+    #: document — the safest for grounding and the most expensive in tokens.
+    batch_size: int = 1
+    #: The standing instruction sent ahead of the brief and the documents
+    #: (B126 §7) — what OpenAI calls the system message. A name into
+    #: `PREAMBLES`, not the text itself, for the same reason `name` is a name
+    #: and not the numbers: a benchmark row has to say *which* preamble a run
+    #: used, and a table that recorded the rendered text could never group two
+    #: runs as "the same preamble" again. `"terse"` renders to nothing, which
+    #: is the behaviour that existed before this field did.
+    preamble: str = "terse"
+
+    @property
+    def context_budget(self) -> int:
+        """Roughly how much text one call will carry. The ratio's denominator."""
+        return self.context_chars * max(1, self.batch_size)
+
+    @property
+    def preamble_text(self) -> str:
+        """The instruction this protocol's preamble renders to, or ""."""
+        return PREAMBLES.get(self.preamble, "")
+
+
+#: The preamble candidates a sweep can choose between (B126 §7) — "the
+#: precontext query" the reader asked for. A closed engineering vocabulary,
+#: not pack data: every pack's brief already carries its own principle and
+#: vocabulary, and what varies here is *how firmly the model is told to apply
+#: it*, which is a property of the call, not of the category.
+#:
+#: `"terse"` renders to "" on purpose: it is the protocol's default and it
+#: must reproduce exactly the prompt that existed before this axis did.
+PREAMBLES: dict[str, str] = {
+    "terse": "",
+    "principled": (
+        "Apply the pack's value principle strictly, before extracting "
+        "anything. Keep only claims specific to this exact configuration and "
+        "predictable from the listing without inspecting the item; drop "
+        "anything a routine pre-purchase/pre-sale inspection would already "
+        "catch, and drop anything you are not confident clears the bar rather "
+        "than including it."
+    ),
+    "worked-example": (
+        "Worked example of a claim worth keeping: a specific component, a "
+        "known failure mode tied to this exact configuration, a verbatim "
+        "quote from a real page, and something the reader would not learn "
+        "from a routine inspection. Worked example of a claim NOT worth "
+        "keeping: a generic dashboard-warning-light item true of every unit "
+        "in the category. Extract findings in that spirit."
+    ),
+}
+
+
+#: What a plane uses when nobody has measured anything yet. Deliberately the
+#: behaviour that existed before protocols did — one document per call, 12k of
+#: it, no preamble — so introducing the mechanism changes no output until a
+#: measurement says something better exists.
+STANDARD = Spend()
+
+
+@dataclass(frozen=True)
 class Document:
     """A fetched source, before anything has been extracted from it."""
     url: str
@@ -71,6 +159,24 @@ class Document:
     source_type: str = "page"       # page | video | structured | manual
     lang: str = ""
     retrieved_at: str = ""
+    #: When the world published it, never when this machine read it. Empty
+    #: when the page did not say, because the two are different facts and a
+    #: reader weighing how old a warning is deserves the first one or none.
+    published_at: str = ""
+
+
+@dataclass(frozen=True)
+class Fetched:
+    """What a reader may return instead of bare text.
+
+    The contract stays `fetch(url) -> str` for every caller that has one --
+    a string is still a complete answer -- and this is the richer reply for a
+    reader that also saw the markup, where a publication date lives. Optional
+    on purpose: the engine defines the shape and owns no sockets, so it cannot
+    require a fetcher to be clever.
+    """
+    text: str
+    published_at: str = ""
 
 
 @dataclass(frozen=True)

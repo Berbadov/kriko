@@ -15,7 +15,6 @@ generalization principle says a fix is the mechanism that catches the class,
 so nothing here may depend on which sites the installed packs happen to read.
 """
 
-import sqlite3
 
 import pytest
 

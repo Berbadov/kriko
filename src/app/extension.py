@@ -376,6 +376,27 @@ def launch_with_extension(
         # ignores them. It is the difference between a shortcut and a no-op.
         f"--user-data-dir={profile}",
         f"--load-extension={staged}",
+        # And without *this*, `--load-extension` above is ignored too.
+        #
+        # Chrome turned the switch off by default as an anti-malware measure:
+        # the `DisableLoadExtensionCommandLineSwitch` feature makes the flag a
+        # silent no-op, so the window opens, the landing page loads, and the
+        # extension is simply absent. That is exactly the 0.8.0 report — "it
+        # does open a chrome page with sahibinden but kriko isn't loaded" —
+        # and it is the worst shape a failure can take, because everything
+        # visible worked.
+        #
+        # Measured rather than assumed, on Chromium 141: launched with
+        # `--remote-debugging-port` and the target list counted, this flag is
+        # the difference between **0** `chrome-extension://` targets and
+        # **2**.
+        #
+        # It is a stopgap and should be treated as one. The switch that
+        # re-enables a switch is itself on its way out, and the durable answer
+        # is a Web Store listing (B114) — this keeps the one-click path working
+        # on the browsers where it still can, and the manual steps on the page
+        # remain the honest fallback for where it cannot.
+        "--disable-features=DisableLoadExtensionCommandLineSwitch",
         # A fresh profile otherwise opens on "make me your default browser"
         # and a sign-in wall: three dialogs between the reader and the thing
         # they pressed one button for.

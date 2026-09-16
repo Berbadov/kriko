@@ -213,6 +213,18 @@ def test_saving_a_key_makes_it_present_with_a_hint(tmp_path):
     assert body["ready"] is False  # openai still missing
 
 
+def test_tavily_alone_is_equal_footing_with_exa_for_readiness(tmp_path, monkeypatch):
+    """`ready` used to be `all(item["present"] ...)`, which required *every*
+    provider present — including the optional second search provider. Setting
+    only Tavily (with OpenAI) must be enough; a reader should never have to
+    add a key they were never asked to set."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-" + "x" * 20)
+    client = _client(tmp_path)
+    client.put("/api/keys", json={"values": {"tavily": FIXTURE}})
+    body = client.get("/api/keys").json()
+    assert body["ready"] is True
+
+
 def test_forgetting_a_key_removes_it_from_the_running_process_too(tmp_path):
     """A key removed in Settings that the next run still spends with is not removed."""
     client = _client(tmp_path)

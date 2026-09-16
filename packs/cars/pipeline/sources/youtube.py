@@ -8,23 +8,26 @@ CuratedSource (sources/curated.py) is the entry point for batch use.
 import logging
 import re
 
+from packs.cars.pipeline.sources import dates
 from packs.cars.pipeline.sources.base import Document
 
 log = logging.getLogger(__name__)
 
 
-def get_transcript(video_id: str) -> str | None:
+def get_transcript(video_id: str) -> tuple[str | None, str]:
     """Download and normalize the auto-generated transcript for a YouTube video.
 
-    Tries Turkish first, falls back to English. Returns clean prose text
-    (timestamps and duplicate cue lines stripped). Returns None if no
-    transcript is available or yt-dlp fails.
+    Tries Turkish first, falls back to English. Returns
+    ``(text, published_at)`` — clean prose text (timestamps and duplicate cue
+    lines stripped) plus the video's upload date, or ``""`` when yt-dlp
+    reports none. Returns ``(None, "")`` if no transcript is available or
+    yt-dlp fails.
     """
     try:
         import yt_dlp  # imported here so the rest of the module loads without it
     except ImportError:
         log.error("yt-dlp not installed — run: pip install yt-dlp")
-        return None
+        return None, ""
 
     url = f"https://www.youtube.com/watch?v={video_id}"
     opts = {
@@ -39,6 +42,7 @@ def get_transcript(video_id: str) -> str | None:
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            published_at = dates.youtube_published_at(info, source=url)
             subs = info.get("requested_subtitles") or {}
             for lang in ("tr", "en"):
                 if lang not in subs:
@@ -50,11 +54,11 @@ def get_transcript(video_id: str) -> str | None:
                 text = _normalize_vtt(raw)
                 if text:
                     log.debug("Fetched %s transcript for %s (%d chars)", lang, video_id, len(text))
-                    return text
+                    return text, published_at
     except Exception as exc:
         log.warning("yt-dlp failed for %s: %s", video_id, exc)
 
-    return None
+    return None, ""
 
 
 def _normalize_vtt(vtt: str) -> str:
@@ -86,11 +90,12 @@ class YouTubeSource:
     """Kept for interface compatibility — use CuratedSource for batch fetching."""
 
     def fetch_video(self, video_id: str, channel: str = "YouTube") -> Document | None:
-        text = get_transcript(video_id)
+        text, published_at = get_transcript(video_id)
         if not text:
             return None
         return Document(
             text=text[:8000],
             url=f"https://www.youtube.com/watch?v={video_id}",
             site_or_channel=channel,
+            published_at=published_at,
         )

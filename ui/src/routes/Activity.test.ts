@@ -31,12 +31,20 @@ function stub() {
 }
 
 describe("Activity", () => {
-    it("opens on runs, and offers the other two as lenses", async () => {
+    it("opens on the live feed, and offers the rest as lenses", async () => {
+        // Live first, and the default: the other three answer "what
+        // happened", which is only interesting once something has. B122.
         stub();
         render(Activity, {});
         expect(await screen.findByRole("tablist", { name: "Activity" })).toBeInTheDocument();
-        const runs = screen.getByRole("tab", { name: "Runs" });
-        expect(runs).toHaveAttribute("aria-selected", "true");
+        expect(screen.getByRole("tab", { name: "Live" })).toHaveAttribute(
+            "aria-selected",
+            "true",
+        );
+        expect(screen.getByRole("tab", { name: "Runs" })).toHaveAttribute(
+            "aria-selected",
+            "false",
+        );
         expect(screen.getByRole("tab", { name: /pipeline did/ })).toHaveAttribute(
             "aria-selected",
             "false",
@@ -56,10 +64,10 @@ describe("Activity", () => {
         ).toHaveAttribute("aria-selected", "true");
     });
 
-    it("falls back to runs when handed a lens that does not exist", async () => {
+    it("falls back to the first lens when handed one that does not exist", async () => {
         stub();
         render(Activity, { lens: "nonsense" });
-        expect(await screen.findByRole("tab", { name: "Runs" })).toHaveAttribute(
+        expect(await screen.findByRole("tab", { name: "Live" })).toHaveAttribute(
             "aria-selected",
             "true",
         );
@@ -67,7 +75,7 @@ describe("Activity", () => {
 
     it("switches the mounted screen, not just the tab", async () => {
         stub();
-        render(Activity, {});
+        render(Activity, { lens: "runs" });
         // Jobs owns this heading; Pipeline does not. Asserting on a heading
         // rather than on the tab state is the whole point — a tab strip that
         // highlights correctly and renders the same screen is the bug this

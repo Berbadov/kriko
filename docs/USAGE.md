@@ -115,12 +115,18 @@ was parsed, never a template over the top, so the reader's other servers and
 settings survive. A config that will not parse is refused rather than replaced.
 Restart the harness afterwards; none of them re-read their config while running.
 
-*Verify* starts the advertised command and completes an MCP handshake with it.
-A written config and a working one fail separately: a moved virtual environment
-or a missing module surfaces here and, otherwise, only as an agent that quietly
-returns nothing. It will only ever start the command the app itself
-advertised — a local endpoint that runs a command the caller names would be an
-RCE hole reachable by anything that can reach the port.
+*Verify* starts the advertised command, completes a real MCP `initialize`
+handshake with it, and asks it to list its tools on the same connection — a
+server that answers `initialize` but exposes nothing is exactly as useless as
+one that never started. A written config and a working one fail separately: a
+moved virtual environment or a missing module surfaces here and, otherwise,
+only as an agent that quietly returns nothing. It will only ever start the
+command the app itself advertised — a local endpoint that runs a command the
+caller names would be an RCE hole reachable by anything that can reach the
+port. On Windows, the advertised config carries an explicit environment
+(`SYSTEMROOT` and the rest) — a bare Python subprocess with none of that
+cannot resolve DNS, so without it the harness would connect and every tool
+call would fail with a socket error rather than a config problem.
 
 Any other harness still gets the paste-it-yourself block, generated per machine
 so the command is right from a checkout or an installer alike.
@@ -155,6 +161,52 @@ After any code change to `extension/`:
 ```bash
 # Chrome → chrome://extensions → click the reload (↺) button on Kriko
 ```
+
+---
+
+## 2c. Operate from the terminal
+
+Everything the dashboard's Settings, Sites, Verify and Knowledge screens do is
+also a `kriko` subcommand, for the same reason `kriko tui` exists: the window
+is not always the thing that opens. `packs`, `install`, `uninstall`, `enable`,
+`build` and `lookup` need only the store file and work with nothing else
+running. The rest — `prefs`, `costs`, `sites`, `verify`, `drafts`,
+`operations`, `bench` — need `~/.kriko/app.sqlite`, so each one attaches to a
+running app if one is already open (same store, same jobs), or starts an
+engine of its own for the one command and exits when it is done. If neither
+works you get one line on stderr and a non-zero exit, never a traceback:
+
+```
+$ kriko costs --no-start
+kriko: no engine is running, and starting one was not allowed
+```
+
+```bash
+kriko prefs                              # which agent/model/search provider is chosen
+kriko prefs --model gpt-4o                # change one
+kriko costs                               # what has been spent, and the next estimate
+
+kriko sites                               # what can be read, and what was asked for
+kriko sites register example.com          # teach it a new site (starts a job)
+kriko sites forget example.com            # throw away a locally-learned adapter
+
+kriko verify --list                       # past fact-checks, by verdict
+kriko verify --pack org.kriko.cars        # re-read every claim's sources (starts a job)
+
+kriko drafts                              # pack drafts an agent wrote
+kriko drafts show acme-drill
+kriko drafts amend acme-drill --note "the 18V line is missing"
+kriko drafts install acme-drill
+
+kriko operations                         # the live feed: every door, newest first
+
+kriko bench --cases 5                    # measure the research planes, in the terminal
+```
+
+`--url http://127.0.0.1:PORT` points any of these at a specific engine
+(matching `KRIKO_URL`, which `kriko tui` also reads); `--no-start` fails
+rather than starting one, for a script that wants to know whether an engine
+is actually running.
 
 ---
 

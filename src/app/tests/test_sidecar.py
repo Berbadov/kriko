@@ -381,12 +381,12 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
         port = int(line.split()[1])
         assert _health(port) is not None, "the sidecar announced a port it never served"
 
-        from websockets.sync.client import connect
-
-        with connect(f"ws://127.0.0.1:{port}/api/terminal/ws") as ws:
-            frame = json.loads(ws.recv(timeout=5))
-            assert frame["type"] == "error"
-            assert "no-such-shell" in frame["message"] or frame["message"]
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/api/terminal/state", timeout=5
+        ) as response:
+            body = json.load(response)
+        assert body["failure"], "a shell that cannot start must say so"
+        assert "no-such-shell" in body["failure"] or body["failure"]
 
         deadline = time.time() + 10
         text = ""
@@ -409,7 +409,7 @@ def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
     source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()
     body = source.split("def main(")[1]
     dispatch = body.index("return serve_mcp")
-    announce = body.index(f'print(f"{{PORT_LINE}}')
+    announce = body.index('print(f"{PORT_LINE}')
     assert dispatch < announce, (
         "the port is announced before the MCP dispatch — a stray line on stdout "
         "is a protocol error the client reports as malformed JSON"

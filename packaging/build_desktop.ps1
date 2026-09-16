@@ -112,14 +112,124 @@ function Assert-LastExitCode {
 
 try {
     Step "Tools"
-    foreach ($tool in @($Python, "node", "npm", "rustc", "cargo")) {
+
+    # The interpreter is checked apart from the rest, because it is the one
+    # "tool" that is usually a *path* rather than a name. Lumping it in with
+    # node and rustc meant a -Python that does not exist was reported as "not
+    # on PATH", which sends you to look at your PATH -- and on 2026-09-14 the
+    # real cause was a .venv built inside WSL, so the tree had .venv/bin/python
+    # and no .venv/Scripts/python.exe at all. Right diagnosis, wrong sentence,
+    # and the sentence is what someone acts on.
+    if ($Python -match '[\\/]') {
+        $resolved = Resolve-Path -LiteralPath $Python -ErrorAction SilentlyContinue
+        if (-not $resolved) {
+            throw ("No interpreter at '$Python' (looked in " + (Get-Location).Path + ").`n" +
+                   "  A venv made inside WSL has bin/python, not Scripts/python.exe -- and it" +
+                   " is a Linux build in any case, since PyInstaller cannot cross-compile.`n" +
+                   "  Make a Windows one:  py -3.13 -m venv .venv`n" +
+                   "  Or name a Windows interpreter:  -Python C:\path\to\python.exe")
+        }
+        $Python = $resolved.Path
+    }
+    elseif (-not (Get-Command $Python -ErrorAction SilentlyContinue)) {
+        throw "$Python is not on PATH. See the .NOTES block in this script."
+    }
+
+    foreach ($tool in @("node", "npm", "rustc", "cargo")) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
             throw "$tool is not on PATH. See the .NOTES block in this script."
         }
     }
+
     & $Python --version
+    Assert-LastExitCode "python --version"
     node --version
     rustc --version
+
+    # The five committed version strings, before anything else: NSIS names the
+    # bundle from tauri.conf.json (by way of Cargo.toml), and nothing above
+    # checks that file against pyproject.toml at all -- the -Version guard
+    # below only ever compares the *tag* to pyproject, and the installed-
+    # distribution check further down only ever compares the *install* to
+    # pyproject. A tree where pyproject was bumped by hand and
+    # tauri.conf.json was not would sail through both of those and come out
+    # the other end as an installer whose name is one version and whose
+    # `cargo tauri build` compiled another -- the exact failure `tools/bump.py`
+    # exists to make impossible to leave behind, and this is the one place
+    # that failure would otherwise go unnoticed until a reader reports it.
+    # `tools/bump.py --show` is the same check `test_the_four_version_strings_agree`
+    # makes, and it is cheap enough to run before rustc has compiled anything.
+    & $Python tools/bump.py --show
+    if ($LASTEXITCODE -ne 0) {
+        throw ("the version strings in pyproject.toml, tauri.conf.json, Cargo.toml," +
+               " package.json and Cargo.lock disagree (see the table above)." +
+               " `python tools/bump.py <version>` sets all of them at once --" +
+               " an installer built while they disagree is an installer whose" +
+               " name is not its contents.")
+    }
+
+    # -Version must be the version this checkout actually is.
+    #
+    # The stamp only reaches tauri.conf.json, which is what names the bundle.
+    # Cargo.toml, pyproject.toml and the frozen sidecar's own metadata all come
+    # from the tree. So `-Version 0.8.5` on a checkout at 0.8.0 produced
+    # `Kriko_0.8.5_x64-setup.exe` containing 0.8.0 of everything -- the build
+    # log said "Compiling kriko v0.8.0" one line above the bundle it named
+    # 0.8.5, and the reader installed it, found the fixes missing, and reported
+    # that the version number had not been updated. It had: the label had, and
+    # nothing else.
+    #
+    # An installer whose name is not its contents is worse than a failed build,
+    # because it is the evidence anyone would reach for. So the two have to
+    # agree, and the fix when they do not is `git pull` or
+    # `python tools/bump.py <version>` -- both of which move the tree, which is
+    # the thing being shipped.
+    if ($Version) {
+        $want = $Version -replace '^v', ''
+        $tree = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"'
+                ).Matches[0].Groups[1].Value
+        if ($want -ne $tree) {
+            throw ("asked to stamp $want and this checkout is $tree. The stamp only" +
+                   " names the bundle; Cargo.toml, pyproject and the frozen sidecar" +
+                   " come from the tree, so the installer would carry $tree under a" +
+                   " $want name. Run ``git pull``, or ``$Python tools/bump.py $want``" +
+                   " to move the tree, then build again.")
+        }
+    }
+
+    # The interpreter is frozen into the sidecar, so its version is the
+    # reader's and not just this build's. Two ways that goes wrong, neither of
+    # which announces itself until much later:
+    #
+    #   * Too old for pyproject's floor -- pip fails several steps from here
+    #     with a resolver message about the tree rather than about your choice.
+    #   * A pre-release. requirements.lock pins a pydantic that raises on
+    #     import under 3.14.0rc2 (B110), and PyInstaller freezes that happily:
+    #     the build goes green and the reader's sidecar dies on its first
+    #     request. The suite runs on 3.13, which is what this should be.
+    $floor = (Select-String -Path pyproject.toml -Pattern '^requires-python\s*=\s*"([^"]+)"'
+             ).Matches[0].Groups[1].Value -replace '[>=\s"]', ''
+    $report = & $Python -c ("import sys;print('.'.join(map(str,sys.version_info[:3])), " +
+                            "sys.version_info.releaselevel)")
+    $parts = $report.Trim().Split(' ')
+    $have = [version]$parts[0]
+    if ($have -lt [version]$floor) {
+        throw "$Python is $have, and pyproject.toml requires $floor or newer."
+    }
+    if ($parts[1] -ne 'final') {
+        throw ("$Python is a pre-release ($report). requirements.lock pins a pydantic that" +
+               " raises on import there, and a frozen sidecar built on it fails on its first" +
+               " request. Use a final release; the suite runs on 3.13.")
+    }
+
+    Step "The shell's crate graph is the one that was committed"
+    Push-Location tauri/src-tauri
+    try {
+        cargo metadata --locked --format-version 1 | Out-Null
+        Assert-LastExitCode "cargo metadata --locked"
+    } finally {
+        Pop-Location
+    }
 
     # -r first, and it is the point rather than tidiness: the lock is what a
     # reader's sidecar contains, and a floating resolve here is how two builds
@@ -130,6 +240,23 @@ try {
     Assert-LastExitCode "pip self-upgrade"
     & $Python -m pip install -r requirements.lock -e "." pyinstaller
     Assert-LastExitCode "pip install"
+
+    # And the install has to be *this* tree. `app_version()` reads the
+    # installed distribution's metadata, which is what /api/health reports and
+    # what PyInstaller freezes -- so an editable install pointing at another
+    # checkout (easy to have: one clone on the Desktop, one elsewhere) would
+    # freeze that other checkout's code under this one's name, which is B134
+    # again one layer in and with no log line to notice it by.
+    $installed = & $Python -c "from app.version import app_version; print(app_version())"
+    Assert-LastExitCode "read the installed version"
+    $tree = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"'
+            ).Matches[0].Groups[1].Value
+    if ($installed.Trim() -ne $tree) {
+        throw ("the install reports $($installed.Trim()) and this tree is $tree." +
+               " The sidecar is frozen from the installed distribution, so it would" +
+               " carry the wrong code. Check that $Python's environment has no other" +
+               " checkout installed, then re-run.")
+    }
 
     # The UI before the freeze: the spec refuses to freeze without a built
     # bundle rather than shipping an app that 404s on its own frontend.

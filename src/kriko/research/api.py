@@ -18,8 +18,43 @@ is how a hobby project produces a bill someone remembers.
 """
 
 import json
+import re
+import unicodedata
 
-from kriko.research.base import Document, Finding, ResearchTask
+from kriko.research.base import (
+    STANDARD,
+    Document,
+    Fetched,
+    Finding,
+    ResearchTask,
+    Spend,
+)
+
+#: Characters an extractor or a model is free to swap without changing the
+#: sentence. The same rule `app/factcheck.py` applies to a stored quote years
+#: later, applied here to a quote seconds after it was produced: a curly
+#: apostrophe or a collapsed run of whitespace is not evidence the quote was
+#: invented, and rejecting it on that basis would teach nobody anything except
+#: to distrust the gate.
+_SAME_CHARS = {
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+    "–": "-", "—": "-", "−": "-", "…": "...",
+}
+
+
+def _grounding_form(text: str) -> str:
+    """The comparable form of a quote or a document, for the grounding check.
+
+    Deliberately loose about whitespace and case and strict about everything
+    else — a model that reconstructs a sentence from memory still has to fail,
+    and the two things this folds away are cosmetic in every language this
+    runs against. Case-folding does not make a fabricated quote harder to
+    catch: truth does not live in capitalisation.
+    """
+    text = unicodedata.normalize("NFKC", text or "")
+    for needle, plain in _SAME_CHARS.items():
+        text = text.replace(needle, plain)
+    return re.sub(r"\s+", " ", text).strip().casefold()
 
 
 class BudgetExceeded(RuntimeError):
@@ -32,17 +67,36 @@ class ApiResearcher:
     name = "api"
     cost_basis = "per_token"
 
-    def __init__(self, search, fetch, complete, price_per_call: float = 0.0):
+    def __init__(
+        self,
+        search,
+        fetch,
+        complete,
+        price_per_call: float = 0.0,
+        spend: Spend | None = None,
+    ):
         """
         search(query, limit)  -> list of {"url", "title", "site"}
         fetch(url)            -> plain text, or "" when it cannot be read
         complete(prompt)      -> the model's reply as a string
+        spend                 -> how much text per call, and how many documents
+                                 per call (B123). `STANDARD` when nobody says,
+                                 which is exactly the behaviour that existed
+                                 before protocols did.
         """
         self._search = search
         self._fetch = fetch
         self._complete = complete
         self._price = price_per_call
+        self.spend = spend or STANDARD
         self.spent = 0.0
+        #: Findings by url, filled by the batched call and drained per
+        #: document. Empty under `batch_size = 1`, which reads every document
+        #: in its own call and needs no cache.
+        self._batched: dict[str, list[Finding]] = {}
+        #: What `gather` kept, so `extract` can assemble a batch out of the
+        #: documents nobody has read yet.
+        self._documents: list[Document] = []
 
     @property
     def tokens_used(self) -> int | None:
@@ -80,6 +134,7 @@ class ApiResearcher:
     def gather(self, task: ResearchTask) -> list[Document]:
         seen: set[str] = set()
         documents: list[Document] = []
+        self._batched = {}
 
         for query in task.rendered_queries():
             if len(documents) >= task.max_documents:
@@ -90,52 +145,134 @@ class ApiResearcher:
                 if not url or url in seen:
                     continue
                 seen.add(url)
-                text = self._fetch(url) or ""
+                got = self._fetch(url)
+                text = got.text if isinstance(got, Fetched) else (got or "")
+                published = got.published_at if isinstance(got, Fetched) else ""
                 if not text.strip():
                     continue        # unreadable is not a failure, just a miss
                 documents.append(Document(
                     url=url, text=text, title=hit.get("title", ""),
+                    published_at=published,
                     site_or_channel=hit.get("site", "")))
                 if len(documents) >= task.max_documents:
                     break
+        # Remembered so `extract` can batch the ones that have not been read
+        # yet. The caller hands documents back one at a time, which is the
+        # right interface and the reason a batch has to be assembled here.
+        self._documents = list(documents)
         return documents
 
     def extract(self, task: ResearchTask, document: Document) -> list[Finding]:
+        """The findings this document supports, under the current protocol.
+
+        **Batching happens here rather than in the caller**, and that is a
+        deliberate constraint: `Researcher.extract` is per-document, which is
+        the right interface — it is what lets the caller report progress per
+        source and attribute every finding to the page it came from. So a
+        protocol with `batch_size > 1` reads the *next* few documents in one
+        call and caches the rest by url, exactly as the harness plane already
+        caches what one CLI run reported. The engine's shape does not change;
+        what changes is how many times money is spent to fill it.
+        """
+        if document.url in self._batched:
+            return self._batched.pop(document.url)
+        batch = self._take(task, document)
+        found = self._read(task, batch)
+        for one in batch:
+            self._batched[one.url] = found.get(one.url, [])
+        return self._batched.pop(document.url, [])
+
+    def _take(self, task: ResearchTask, first: Document) -> list[Document]:
+        """`first`, plus however many more the protocol says fit in one call.
+
+        The rest of the run's documents are not handed to this method, so the
+        batch is built from what `gather` kept — which is why `_documents` is
+        remembered there rather than rediscovered here.
+        """
+        size = max(1, int(self.spend.batch_size))
+        if size == 1:
+            return [first]
+        rest = [
+            one
+            for one in self._documents
+            if one.url != first.url and one.url not in self._batched
+        ]
+        return [first, *rest[: size - 1]]
+
+    def _read(self, task: ResearchTask, batch: list[Document]) -> dict:
+        """One completion for one batch. Returns findings by url."""
         self._charge(task)
+        limit = max(500, int(self.spend.context_chars))
+        blocks = "\n\n".join(
+            f"### Document {index}\nURL: {one.url}\n\n{one.text[:limit]}"
+            for index, one in enumerate(batch, start=1)
+        )
+        preamble = self.spend.preamble_text
         prompt = (
-            f"{self.brief(task)}\n\n"
-            "## Document\n\n"
-            f"URL: {document.url}\n\n{document.text[:12000]}\n\n"
+            (f"{preamble}\n\n" if preamble else "")
+            + f"{self.brief(task)}\n\n"
+            "## Documents\n\n"
+            f"{blocks}\n\n"
             "## Reply\n\n"
             "Return ONLY a JSON array. Each element: "
-            '{"title","domain","severity","quote","body","advice"}. '
-            "`quote` must be copied verbatim from the document above. "
-            "Return [] if the document supports no claim about this subject."
+            '{"source_url","title","domain","severity","quote","body","advice"}. '
+            "`quote` must be copied verbatim from the document you took it "
+            "from, and `source_url` must be that document's URL — one of the "
+            "URLs listed above, exactly. Return [] if the documents support no "
+            "claim about this subject."
         )
         try:
             payload = json.loads(self._complete(prompt))
         except (json.JSONDecodeError, TypeError):
-            return []
+            return {}
         if not isinstance(payload, list):
-            return []
+            return {}
 
-        findings = []
+        by_url: dict[str, list[Finding]] = {}
+        texts = {one.url: one.text for one in batch}
+        grounded = {url: _grounding_form(text) for url, text in texts.items()}
         for item in payload:
             if not isinstance(item, dict):
                 continue
             quote = str(item.get("quote", "")).strip()
+            url = str(item.get("source_url", "")).strip()
+            if not url and len(batch) == 1:
+                # No ambiguity: there is exactly one document this could be,
+                # and requiring the model to name it anyway would reject real
+                # findings for no safety gained. This is the *only* case a
+                # missing url may be defaulted — see the batch case below.
+                url = batch[0].url
             # Grounding, enforced rather than requested: a quote that is not in
-            # the document is a hallucination, and the whole value of the
+            # the named document is a hallucination, and the whole value of the
             # evidence chain is that this cannot happen quietly.
-            if not quote or quote not in document.text:
+            #
+            # Three things are checked, not one: under a batch of more than one
+            # document, `url` must be non-empty (a finding with no source used
+            # to fall back to the *first* document regardless of batch size,
+            # which let a fabricated, source-less quote through whenever it
+            # happened to also appear on that unrelated page); `url` must be
+            # one this batch actually offered (a model citing a page it was
+            # never shown resolves to no text at all, never to "the nearest
+            # one"); and the quote must appear in *that* page's text — not
+            # merely somewhere in the batch — which is what catches a real
+            # quote filed against the wrong document. Comparison is via
+            # `_grounding_form`, loose about whitespace/case/curly punctuation
+            # and strict about everything else, because a model that
+            # reconstructs a sentence from memory still has to fail this.
+            if not quote or not url or url not in texts:
                 continue
-            findings.append(Finding(
-                title=str(item.get("title", "")).strip(),
+            if _grounding_form(quote) not in grounded[url]:
+                continue
+            title = str(item.get("title", "")).strip()
+            if not title:
+                continue
+            by_url.setdefault(url, []).append(Finding(
+                title=title,
                 domain=str(item.get("domain", "")).strip(),
                 severity=str(item.get("severity", "medium")).strip(),
                 quote=quote,
-                source_url=document.url,
+                source_url=url,
                 body=str(item.get("body", "")).strip(),
                 advice=str(item.get("advice", "")).strip(),
             ))
-        return [f for f in findings if f.title]
+        return by_url

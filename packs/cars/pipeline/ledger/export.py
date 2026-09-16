@@ -359,31 +359,71 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         if status is None:
             continue
 
-        sources = [
-            {"source_url": s["url"],
-             "source_domain": (urlparse(s["url"]).netloc.removeprefix("www.")
-                               if s["url"].startswith("http")
-                               else (s["site_or_channel"] or "")),
-             "site_or_channel": s["site_or_channel"],
-             # When we last actually saw the page. Feeds sources.retrieved_at
-             # and, through it, the staleness signal in kriko.lookup.tree.
-             # GROUP BY, not DISTINCT: documents.url is not unique (only
-             # text_hash is — a page refetched later is a new row), so
-             # DISTINCT over a per-row fetched_at would stop collapsing
-             # repeat fetches of the same page and double-count it as two
-             # independent sources. MAX picks the most recent fetch, and
-             # tree.py takes the MIN across a claim's sources for staleness,
-             # so the freshest per-source date is the right one to keep.
-             "retrieved_at": s["fetched_at"] or "",
-             "quote": s["quote"], "independent": True}
-            for s in conn.execute(
+        # B47: `refuted_by` is the model's own list of 1-based indices into
+        # `payload["evidence"]` (same "[i] source=..." numbering the prompt in
+        # verdict.build_prompt gave it) naming which evidence items contradict
+        # the claim. Turn that into the (url, site_or_channel, quote) triples
+        # so the matching row below can be marked stance='refutes' instead of
+        # every source being emitted as if it agreed.
+        refuted_keys = {
+            (e.get("url", ""), e.get("site_or_channel", ""), e.get("quote", ""))
+            for i, e in enumerate(payload["evidence"], 1)
+            if i in set(v.get("refuted_by") or [])
+        }
+
+        # B46: `independent` is a real signal — same domain (or the same
+        # channel, for a source with no URL) quoting itself twice is one
+        # source, not two — reusing `independent_source_count`'s own origin
+        # rule (netloc, or site_or_channel when there is no URL) rather than
+        # inventing a second definition. The first row seen for an origin is
+        # independent; every later row from the same origin, within this
+        # cluster, is not.
+        seen_origins: set[str] = set()
+        sources = []
+        for s in conn.execute(
                 "SELECT d.url, d.site_or_channel, MAX(d.fetched_at) AS fetched_at,"
+                # MAX over TEXT is lexical, and an empty string sorts before
+                # any real ISO date, so this naturally prefers a fetch that
+                # found a publish date over one that did not -- same trick as
+                # fetched_at, just for a fact that should not change between
+                # refetches of the same page anyway.
+                " MAX(d.published_at) AS published_at,"
                 " e.quote"
                 " FROM cluster_members m JOIN evidence e ON e.id=m.evidence_id"
                 " JOIN documents d ON d.id=e.doc_id WHERE m.cluster_id=?"
+                # GROUP BY, not DISTINCT: documents.url is not unique (only
+                # text_hash is — a page refetched later is a new row), so
+                # DISTINCT over a per-row fetched_at would stop collapsing
+                # repeat fetches of the same page and double-count it as two
+                # independent sources. MAX picks the most recent fetch, and
+                # tree.py takes the MIN across a claim's sources for
+                # staleness, so the freshest per-source date is the right
+                # one to keep.
                 " GROUP BY d.url, d.site_or_channel, e.quote"
-                " ORDER BY d.url", (row["id"],))
-        ]
+                " ORDER BY d.url", (row["id"],)):
+            domain = (urlparse(s["url"]).netloc.removeprefix("www.")
+                      if s["url"].startswith("http")
+                      else (s["site_or_channel"] or ""))
+            origin = (urlparse(s["url"]).netloc if s["url"].startswith("http")
+                      else (s["site_or_channel"] or s["url"])).lower()
+            independent = origin not in seen_origins
+            seen_origins.add(origin)
+            stance = ("refutes"
+                      if (s["url"], s["site_or_channel"], s["quote"]) in refuted_keys
+                      else "supports")
+            sources.append({
+                "source_url": s["url"], "source_domain": domain,
+                "site_or_channel": s["site_or_channel"],
+                # When we last actually saw the page. Feeds sources.retrieved_at
+                # and, through it, the staleness signal in kriko.lookup.tree.
+                "retrieved_at": s["fetched_at"] or "",
+                # When the WORLD published it, if discoverable — a different
+                # fact from retrieved_at above. Reported only; rank.py does
+                # not read this column (see backlog B136).
+                "published_at": s["published_at"] or "",
+                "quote": s["quote"], "independent": independent,
+                "stance": stance,
+            })
         domain = normalize_domain(row["domain"])
         key = f"{row['component_id']}_{domain}_{slug(v['title_en'])}".replace(" ", "_")
         claim = {
@@ -447,8 +487,15 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         # contamination, malformed gates), rewrite, re-check. A root-level or
         # persistent failure holds back the whole file.
         kept = sorted(claims, key=lambda c: c["claim_key"])
+        # B40: `errors`/`path` are only ever assigned inside this loop, so a
+        # future edit shortening it (or an early `continue` added above it)
+        # would read either name unbound at line 490 below. `range(2)` always
+        # iterates today, which is what let that go unnoticed; initialise
+        # both explicitly so the failure mode becomes "this file is held
+        # back" rather than a NameError partway through an export run.
+        path = out_dir / f"{comp}.yaml"
+        errors: list[str] = []
         for _attempt in range(2):
-            path = out_dir / f"{comp}.yaml"
             path.write_text(yaml.dump(
                 {**file_data, "claims": kept}, allow_unicode=True, sort_keys=False))
             errors = validate_part(path)

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Mode } from "./mode";
+    import Grounding from "./Grounding.svelte";
     import {
         askLine,
         canCheckFacts,
@@ -177,5 +178,9 @@
                 </blockquote>
             {/each}
         </details>
+    {/if}
+
+    {#if claim.claim_id}
+        <Grounding packId={claim.pack_id} claimId={claim.claim_id} />
     {/if}
 </article>

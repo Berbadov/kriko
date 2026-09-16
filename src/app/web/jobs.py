@@ -23,12 +23,14 @@ Killing a thread mid-write is how a half-installed pack happens, so a running
 job is asked to stop, never made to.
 """
 
+import sqlite3
 import threading
 import traceback
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
+from app import operations
 from app.web import state
 
 
@@ -46,7 +48,7 @@ class Progress:
     """
 
     job_id: str
-    _conn: object
+    _conn: sqlite3.Connection
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
@@ -75,7 +77,7 @@ Handler = Callable[[object, dict, Progress], dict]
 
 
 class JobRunner:
-    def __init__(self, settings, handlers: dict[str, Handler]):
+    def __init__(self, settings, handlers: Mapping[str, Handler]):
         self.settings = settings
         self.handlers = handlers
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kriko-job")
@@ -115,7 +117,20 @@ class JobRunner:
             if row is None or row["state"] != state.QUEUED:
                 return
             state.start_job(conn, job_id)
-            result = self.handlers[kind](self.settings, params, progress)
+            # The same row the MCP door writes (B122), so the feed is "what is
+            # this installation doing", not "what did the agent ask". A job and
+            # a tool call are both operations; that they are started by
+            # different things is exactly what `door` records.
+            with operations.record(
+                self.settings.app_state_path,
+                door="job",
+                name=kind,
+                kind=operations.kind_of(kind),
+                arguments=params,
+            ) as outcome:
+                result = self.handlers[kind](self.settings, params, progress)
+                outcome["response"] = operations.summarise(result)
+                outcome["usd"], outcome["tokens"] = operations.metered(result)
             # No message, so `finish_job`'s COALESCE keeps the handler's own
             # last word. Every handler ends with a `progress.set(1.0, ...)`
             # that says what actually happened — "0 claim(s) kept", "cars

@@ -50,8 +50,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -103,6 +106,16 @@ class Harness:
     #: being filled with a guess.
     structured: bool = True
     env: dict = field(default_factory=dict)
+    #: What to run instead of `args` when this machine's CLI does not list
+    #: `needs_in_help` among the things it can do. The streaming vector is the
+    #: one this plane wants (see `_claude_args`); this is the one that still
+    #: works on a build that has never heard of it. Empty means there is no
+    #: fallback and `args` is the only vector.
+    plain_args: tuple[str, ...] = ()
+    #: The word that must appear in `--help` for `args` to be usable at all.
+    #: Not an option name — `declared` already covers those — but a *value*,
+    #: which is the part of a CLI's contract that has no flag to probe.
+    needs_in_help: str = ""
     #: Flags to add **only if this machine's CLI declares them**. Hygiene
     #: rather than function: a reader on an older build must not lose the
     #: plane over a flag their `claude` has never heard of, and `--help` is
@@ -113,12 +126,53 @@ class Harness:
     #: was found — "your opencode is installed and Kriko will not use it, and
     #: here is why" is an answer; silently ignoring it is not.
     unusable: str = ""
+    #: True when the prompt may be handed over as an argument after `--`.
+    #:
+    #: **This is the reader's "no stdin data received in 3s".** Stdin was
+    #: chosen (B92) because `--allowedTools` is variadic and swallowed a
+    #: trailing prompt — but `--` ends option parsing, which solves the same
+    #: problem without a pipe. And a pipe is the part that turned out to be
+    #: fragile on Windows: the CLI is often a `claude.cmd` shim, so the handle
+    #: crosses `cmd.exe` into node, and when it does not arrive the CLI waits
+    #: three seconds and then runs *with no prompt at all* — which is exactly
+    #: the failure the reader pasted, on a run that had worked minutes before.
+    #: An argument cannot be lost in transit.
+    prompt_argument: bool = True
+    #: Where this CLI installs itself, relative to the reader's home, for when
+    #: `PATH` does not carry it. See `locate`.
+    homes: tuple[str, ...] = (
+        ".local/bin",
+        "AppData/Local/Programs",
+        "AppData/Roaming/npm",
+        ".npm-global/bin",
+        "node_modules/.bin",
+        "bin",
+    )
 
 
 def _claude_args() -> tuple[str, ...]:
+    """Headless, streaming, and allowed to search and nothing else.
+
+    **`stream-json` rather than `json`, since B121.** Under `json` the CLI
+    prints one object when it is finished, so a ten-minute run says nothing
+    for ten minutes and the reader watching the job log cannot tell a run that
+    is searching from one that is hung. `stream-json` prints one JSON object
+    per event as it happens — the tool calls, the pages fetched, the model's
+    own narration — which `narrate` turns into the lines the log shows. The
+    reply is unchanged: the last event is the same `result` object, carrying
+    the same `result`, `usage` and `total_cost_usd`, and `_envelope` already
+    read line-delimited output.
+
+    `--verbose` is not decoration: `claude -p --output-format stream-json`
+    refuses to start without it ("requires --verbose"), before any API call.
+    It is in `args` rather than in `preferred` for exactly that reason — a
+    machine whose CLI does not take it has no working vector here anyway, and
+    a silently dropped flag would turn a hard error into a mystery.
+    """
     return (
         "-p",
-        "--output-format", "json",
+        "--output-format", "stream-json",
+        "--verbose",
         "--allowedTools", ",".join(SEARCH_TOOLS),
     )
 
@@ -137,6 +191,19 @@ KNOWN = (
         # auth, the built-in tools and permissions alone. Both are what this
         # spawn already claimed to be.
         preferred=("--strict-mcp-config", "--safe-mode"),
+        # The reader's Windows CLI is not this machine's. A build whose
+        # `--output-format` never listed `stream-json` would refuse the
+        # streaming vector outright and the plane would be dead again, with
+        # the same "Claude Code exited 1" it took two releases to get out of.
+        # So: watch the run where the CLI can stream, and fall back to the
+        # single-object reply where it cannot. Visibility is the thing worth
+        # losing; the plane is not.
+        needs_in_help="stream-json",
+        plain_args=(
+            "-p",
+            "--output-format", "json",
+            "--allowedTools", ",".join(SEARCH_TOOLS),
+        ),
     ),
     Harness(
         "opencode",
@@ -169,14 +236,62 @@ def _ensure_opencode_agent() -> None:
         _OPENCODE_AGENT_PATH.write_text(_OPENCODE_AGENT_BODY, encoding="utf-8")
 
 
+#: Extra directories to search, `os.pathsep`-separated. The escape hatch for a
+#: reader whose CLI is somewhere none of the rules below predict — one
+#: environment variable beats a support thread.
+DIRS_ENV = "KRIKO_HARNESS_DIRS"
+
+#: Executable suffixes to try on Windows, where `claude` is `claude.exe` and an
+#: npm-installed one is `claude.cmd`. Empty string first: a bare name is right
+#: everywhere else, and on Windows `shutil.which` has already handled PATHEXT.
+_SUFFIXES = (("", ".exe", ".cmd", ".bat") if os.name == "nt" else ("",))
+
+
+def locate(one: Harness) -> str:
+    """The full path to this CLI, or `""`.
+
+    **`PATH` is not enough, and that is not a theory.** The sidecar is launched
+    by a desktop shell, which is launched by the OS's file manager, which hands
+    down the `PATH` that existed *at login*. A reader who installs Claude Code
+    and comes straight back to Kriko has a `claude.exe` on disk
+    (`%USERPROFILE%/.local/bin` is where its own installer puts it) and a
+    `shutil.which("claude")` that returns `None` — so `available()` is empty,
+    the harness plane reports itself not ready, and every agent operation in
+    the app quietly does nothing. Nothing in the UI can say why, because
+    nothing in the app knows there is anything to say.
+
+    So: `PATH` first (it is right whenever it is populated), then `DIRS_ENV`,
+    then the handful of directories these CLIs actually install themselves
+    into. That list is allowed to be a constant for the same reason `KNOWN` is
+    — coding-agent CLIs are a closed engineering category, not data that grows
+    with pack coverage — and it is a *fallback*, so a wrong guess in it costs
+    nothing.
+    """
+    found = shutil.which(one.executable)
+    if found:
+        return found
+    home = Path.home()
+    roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
+    roots += [home / part for part in one.homes]
+    for root in roots:
+        for suffix in _SUFFIXES:
+            candidate = root / f"{one.executable}{suffix}"
+            try:
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return str(candidate)
+            except OSError:
+                continue
+    return ""
+
+
 def available() -> list[Harness]:
     """Which harness CLIs this machine can actually start *and* sandbox."""
-    return [h for h in KNOWN if not h.unusable and shutil.which(h.executable)]
+    return [h for h in KNOWN if not h.unusable and locate(h)]
 
 
 def found_but_unusable() -> list[Harness]:
     """Installed, and deliberately not driven. For the screen to explain."""
-    return [h for h in KNOWN if h.unusable and shutil.which(h.executable)]
+    return [h for h in KNOWN if h.unusable and locate(h)]
 
 
 def chosen(preferred: str = "") -> Harness | None:
@@ -190,8 +305,32 @@ def chosen(preferred: str = "") -> Harness | None:
 #: once per subject in an agenda run and spawning a second process to ask a
 #: question whose answer cannot change mid-run is waste.
 _DECLARED: dict[str, frozenset[str]] = {}
+_HELP: dict[str, str] = {}
 
 _OPTION = re.compile(r"--[a-z][a-z0-9-]+")
+
+
+def helptext(executable: str) -> str:
+    """What `--help` printed, cached. `""` on any failure.
+
+    The raw text as well as the option names, because not every capability is
+    an option: `--output-format` exists on every build of the CLI and the
+    *values* it accepts are what changed. A vector that asks for a format this
+    machine's CLI does not list is a plane that cannot start, which is B92's
+    failure with a different flag.
+    """
+    if executable in _HELP:
+        return _HELP[executable]
+    try:
+        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
+            [executable, "--help"], capture_output=True, text=True, timeout=30
+        )
+        text = (done.stdout or "") + (done.stderr or "")
+    except Exception:  # noqa: BLE001 — see `declared`
+        text = ""
+    _HELP[executable] = text
+    _DECLARED[executable] = frozenset(_OPTION.findall(text))
+    return text
 
 
 def declared(executable: str) -> frozenset[str]:
@@ -205,17 +344,9 @@ def declared(executable: str) -> frozenset[str]:
     costs the reader nothing but the hygiene flags — a missing CLI is already
     `NoHarness`, and a `--help` that hangs must not become a plane that hangs.
     """
-    if executable in _DECLARED:
-        return _DECLARED[executable]
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "--help"], capture_output=True, text=True, timeout=30
-        )
-        found = frozenset(_OPTION.findall((done.stdout or "") + (done.stderr or "")))
-    except Exception:
-        found = frozenset()
-    _DECLARED[executable] = found
-    return found
+    if executable not in _DECLARED:
+        helptext(executable)
+    return _DECLARED.get(executable, frozenset())
 
 
 def command_for(one: Harness) -> list[str]:
@@ -227,8 +358,13 @@ def command_for(one: Harness) -> list[str]:
     B92 shipped a plane that could not start at all. A test can only judge the
     vector if the vector has a name.
     """
-    supported = declared(one.executable)
-    return [one.executable, *one.args, *(f for f in one.preferred if f in supported)]
+    executable = locate(one) or one.executable
+    supported = declared(executable)
+    args = one.args
+    if one.needs_in_help and one.plain_args:
+        if one.needs_in_help not in helptext(executable):
+            args = one.plain_args
+    return [executable, *args, *(f for f in one.preferred if f in supported)]
 
 
 # ── The output contract ──────────────────────────────────────────────────────
@@ -362,14 +498,22 @@ def _envelope(stdout: str) -> dict:
         if results:
             return results[-1]
         return objects[-1] if objects else {}
+    last: dict = {}
     for line in reversed(text.splitlines()):
         try:
             one = json.loads(line)
         except ValueError:
             continue
-        if isinstance(one, dict):
+        if not isinstance(one, dict):
+            continue
+        # The `result` event by preference, not merely the last object: under
+        # `--output-format stream-json` the result is followed by nothing
+        # today and by whatever a future CLI adds tomorrow, and it is the one
+        # event carrying `result`, `usage`, `total_cost_usd` and `is_error`.
+        if one.get("type") == "result":
             return one
-    return {}
+        last = last or one
+    return last
 
 
 def _why(envelope: dict, stdout: str, stderr: str) -> str:
@@ -410,6 +554,117 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
     return " -- ".join(dict.fromkeys(parts))[:2000] or "no output"
 
 
+# ── what the run is doing, while it does it ──────────────────────────────────
+
+#: The longest prompt that goes on the command line rather than through a
+#: pipe. Windows caps a process's whole command line at 32,767 characters and
+#: the vector itself takes some of that, so this leaves a wide margin — a
+#: research brief is a few thousand characters and a pack-authoring brief is
+#: under ten thousand. Past it, stdin is the only option and its risk (see
+#: `_run`) is accepted because the alternative is not running at all.
+MAX_PROMPT_ARGUMENT = 24000
+
+#: How much of a run's raw output is kept in memory. The reply is parsed from
+#: this, so it has to hold the last `result` event — which is the last line —
+#: and it is bounded for the reason `termpty.SCROLLBACK` is: a process that
+#: will not stop talking must cost a fixed amount of memory, not all of it.
+TRANSCRIPT_TAIL = 512 * 1024
+
+#: The most lines one run may narrate. A ceiling rather than a rate limit: the
+#: job log is a column in `app.sqlite` that every reader of the job re-reads,
+#: and an agent stuck in a tool loop must not be able to grow it without end.
+#: A real research run narrates a few dozen.
+MAX_NARRATED = 400
+
+#: Events that are machinery rather than actions — session bookkeeping, the
+#: partial-token frames, the command list. Named rather than filtered by
+#: "anything I do not recognise", so a *new* event type shows up as a line
+#: nobody wrote a translation for instead of silently disappearing.
+QUIET_EVENTS = frozenset(
+    {"stream_event", "active_goal", "autocompact_state", "rate_limit_event"}
+)
+
+
+def _short(text: str, limit: int = 160) -> str:
+    """One line, trimmed. A log line that wraps four times is not a log line."""
+    flat = " ".join(str(text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
+
+def _tool_line(name: str, args: dict | None) -> str:
+    """What one tool call was, in the reader's words rather than the API's.
+
+    `SEARCH_TOOLS` is the whole grant, so there are two shapes worth naming
+    and a general one for anything a future grant adds. It reads the argument
+    the tool is *about* — the query, the URL — because "WebSearch" on its own
+    tells a reader watching the log nothing they did not already assume.
+    """
+    args = args if isinstance(args, dict) else {}
+    query = args.get("query") or args.get("q")
+    url = args.get("url")
+    if name == "WebSearch" and query:
+        return f'searched "{_short(query, 120)}"'
+    if name == "WebFetch" and url:
+        return f"fetched {_short(url, 120)}"
+    detail = query or url or ""
+    return f"{name} {_short(detail, 100)}".strip()
+
+
+def narrate(event: dict) -> str:
+    """One stream event, as a line for the job log — or `""` for machinery.
+
+    This is the whole of B121's answer to *"that shell is supposed to show the
+    agent's actions"*. It was not, and nothing was: between "harness plane" and
+    the verdicts there were up to ten minutes of silence, and what the agent
+    actually did was invisible while it happened and gone afterwards. The
+    transport is the job log, which already streams to both the app and
+    `kriko tui` — a run's actions do not need a second channel, they needed a
+    sender.
+    """
+    if not isinstance(event, dict):
+        return ""
+    kind = event.get("type")
+    if kind in QUIET_EVENTS:
+        return ""
+    if kind == "system":
+        if event.get("subtype") != "init":
+            return ""
+        model = str(event.get("model") or "").strip()
+        return f"started {model}".strip() if model else "started"
+    if kind == "assistant":
+        message = event.get("message")
+        blocks = message.get("content") if isinstance(message, dict) else None
+        lines = []
+        for block in blocks if isinstance(blocks, list) else ():
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                lines.append(_tool_line(str(block.get("name") or ""), block.get("input")))
+            elif block.get("type") == "text" and str(block.get("text") or "").strip():
+                lines.append(_short(block["text"]))
+        return "; ".join(one for one in lines if one)
+    if kind == "user":
+        # Only the failures. A tool result is the page the agent just read,
+        # and repeating it into the log would bury the run in its own sources
+        # — but a search that errored is the thing a reader most needs to see.
+        message = event.get("message")
+        blocks = message.get("content") if isinstance(message, dict) else None
+        for block in blocks if isinstance(blocks, list) else ():
+            if isinstance(block, dict) and block.get("is_error"):
+                return "a tool call failed: " + _short(str(block.get("content") or ""), 120)
+        return ""
+    if kind == "result":
+        turns = event.get("num_turns")
+        cost = event.get("total_cost_usd")
+        said = "finished"
+        if isinstance(turns, int):
+            said += f" after {turns} turn(s)"
+        if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost:
+            said += f", ${cost:.4f} on the subscription's account"
+        return said
+    return ""
+
+
 #: What a harness failure means, and what to do about it. A closed
 #: vocabulary of *CLI* failure classes — a fixed engineering category, like
 #: `KNOWN` itself, and nothing that grows with pack coverage. Matched against
@@ -420,16 +675,20 @@ HINTS = (
      "the message names, or switch to another plane on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",
       "invalid api key", "oauth"),
-     "the CLI is not logged in. Run `claude` once in a terminal, log in, and "
-     "press this again."),
+     "the CLI is not logged in, and only you can log it in -- no API call can "
+     "do it on its behalf. Open the terminal in this app (Ctrl+`), run "
+     "`claude`, and follow the login prompt (or type `/login`). Then press "
+     "this again. Kriko Console in your Start menu opens the same shell "
+     "without the app."),
     (("credit balance", "billing", "payment"),
      "the account behind the CLI cannot pay for this run."),
     (("error_max_turns",),
      "the agent ran out of turns before it reported. This is Kriko's to fix, "
      "not yours -- please send the log."),
     (("enoent", "not recognized", "cannot find the path"),
-     "the CLI could not start. Reinstall Claude Code, or check that `claude` "
-     "runs in a terminal."),
+     "the CLI could not start. Check that `claude` runs in the terminal in "
+     "this app; if it is installed somewhere unusual, set KRIKO_HARNESS_DIRS "
+     "to its folder. The Agents screen names the binary Kriko found."),
 )
 
 
@@ -476,6 +735,28 @@ class HarnessResearcher(AgentResearcher):
         #: written to the submission row (B95) — the brief hands out seeds, so
         #: the shapes that actually get used are only knowable from here.
         self.queries_run: list[str] = []
+        #: Where a line goes when the agent does something (B121). Set
+        #: duck-typed by `app/web/tasks.py` to the job's own `progress.log`,
+        #: exactly as `tokens_used` is read back duck-typed — the engine has
+        #: no field for "somewhere to narrate to" and should not grow one.
+        #: `None` means nobody is watching, which is the CLI's case and costs
+        #: the run nothing.
+        self.on_action: Callable[[str], None] | None = None
+        #: Polled once per streamed line, the same duck-typed shape as
+        #: `on_action` — `tasks.py` wires this to `Progress.check`. Raising
+        #: from it is the one thing that must reach the caller unmodified:
+        #: `_stream` kills the child's whole process tree and lets whatever
+        #: was raised propagate as-is, so a `Cancelled` surfaces as cancelled
+        #: rather than as a crash or a timeout. `None` means nobody is asking,
+        #: which costs the run nothing — the CLI's own case, and every run
+        #: before `pack_author`/`pack_amend`/`site_register` were given one.
+        self.check_cancelled: Callable[[], None] | None = None
+        #: The run's raw output, bounded. The reply is parsed out of this, and
+        #: it is what a failure quotes its tail of.
+        self.transcript = ""
+        #: The lines this run narrated, in order. Kept so a caller that was not
+        #: watching live can still ask what happened.
+        self.actions: list[str] = []
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -568,23 +849,32 @@ class HarnessResearcher(AgentResearcher):
 
     # ── the subprocess ───────────────────────────────────────────────────────
 
-    def _run(self, prompt: str) -> str:
-        """The prompt goes in on **stdin**, never as an argument.
+    def _run(self, prompt: str, on_line: Callable[[str], None] | None = None) -> str:
+        """The prompt goes in **after `--`**, and on stdin only when it is huge.
 
-        This is the defect that made B92 ship a plane that could not run at
-        all. `claude --help` declares `--allowedTools <tools...>`: a *variadic*
-        option, which swallows every following argument. So a vector ending
-        `--allowedTools WebSearch,WebFetch <prompt>` handed the brief to the
-        allowlist and left the CLI with no prompt, and the reader got
+        Two defects, one line apart in history.
 
-            Claude Code exited 1: Error: Input must be provided either
-            through stdin or as a prompt argument when using --print
+        **B92**: `claude --help` declares `--allowedTools <tools...>`, a
+        *variadic* option, which swallows every following argument — so a
+        vector ending `--allowedTools WebSearch,WebFetch <prompt>` handed the
+        brief to the allowlist and the CLI answered
 
-        after waiting out a run. Stdin is not a workaround for that one flag —
-        it removes the whole class: no argument order can consume it, no
-        quoting can mangle it, and a 4 KB brief cannot run into a command-line
-        length limit (Windows caps a process's at 32,767 characters, and a
-        brief plus a contract plus a pack's principle is on the same order).
+            Error: Input must be provided either through stdin or as a
+            prompt argument when using --print
+
+        after the reader had waited out a run. That was fixed by moving the
+        prompt to stdin.
+
+        **B125**: stdin is a *pipe*, and on Windows the pipe crosses a
+        `claude.cmd` shim into node. When it does not arrive, the CLI says
+        "Warning: no stdin data received in 3s, proceeding without it" and then
+        fails with B92's own message — on a machine where the same code path
+        had worked minutes earlier. The reader pasted exactly that.
+
+        `--` ends option parsing, which solves B92 without a pipe: no argument
+        order can consume the prompt, and nothing has to survive a shim. The
+        stdin path stays for a prompt longer than `MAX_PROMPT_ARGUMENT`, since
+        Windows caps a command line at 32,767 characters.
 
         `test_the_harness_command_line_is_one_the_cli_accepts` runs the real
         CLI with an empty prompt and asserts its only complaint is the empty
@@ -592,52 +882,271 @@ class HarnessResearcher(AgentResearcher):
         asserted the *shape* of `args` and none asserted the CLI would take
         them — the same mistake as the twelve tray tests that passed on a
         `main.rs` which could not parse (B89).
+
+        **And the output is read as it arrives, since B121.** It used to be
+        `subprocess.run(capture_output=True)`, which is a decision to learn
+        nothing until the process is over; `on_line` (or `self.on_action`) now
+        receives one line per action the agent takes, while it takes it.
         """
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
         command = command_for(self.harness)
-        fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
-                stdin_write.write(prompt)
-            with open(stdin_path, "r", encoding="utf-8") as stdin_read:
-                try:
-                    done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-                        command,
-                        stdin=stdin_read,
-                        capture_output=True,
-                        text=True,
-                        timeout=self.timeout,
-                        env={**os.environ, **self.harness.env},
-                        cwd=os.path.expanduser("~"),
-                    )
-                except FileNotFoundError as exc:
-                    raise NoHarness(
-                        f"{self.harness.label} is not on PATH ({self.harness.executable})"
-                    ) from exc
-                except subprocess.TimeoutExpired as exc:
-                    raise TimeoutError(
-                        f"{self.harness.label} did not finish within "
-                        f"{int(self.timeout)}s"
-                    ) from exc
-        finally:
-            os.remove(stdin_path)
+        say = on_line if on_line is not None else self.on_action
 
-        if done.returncode != 0:
-            envelope = _envelope(done.stdout or "") if self.harness.structured else {}
+        if self.harness.prompt_argument and len(prompt) <= MAX_PROMPT_ARGUMENT:
+            # `--` first: it ends option parsing, so a variadic option cannot
+            # eat the prompt and the prompt cannot be read as an option.
+            code, stdout, stderr = self._stream(
+                [*command, "--", prompt], subprocess.DEVNULL, say
+            )
+        else:
+            fd, stdin_path = tempfile.mkstemp(prefix="kriko-harness-")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as stdin_write:
+                    stdin_write.write(prompt)
+                with open(stdin_path, "r", encoding="utf-8") as stdin_read:
+                    code, stdout, stderr = self._stream(command, stdin_read, say)
+            finally:
+                os.remove(stdin_path)
+
+        if code != 0:
+            envelope = _envelope(stdout) if self.harness.structured else {}
             # Metered before raising. A run that failed on its fourth search
             # still spent the reader's subscription on three, and a plane that
             # only counts what succeeded is a plane whose cost column lies.
             self._meter(envelope)
-            reason = _why(envelope, done.stdout or "", done.stderr or "")
+            reason = _why(envelope, stdout, stderr)
             hint = _hint(reason)
             raise RuntimeError(
-                f"{self.harness.label} exited {done.returncode}: {reason}"
+                f"{self.harness.label} exited {code}: {reason}"
                 + (f" -- {hint}" if hint else "")
             )
         if not self.harness.structured:
-            return done.stdout or ""
-        return self._unwrap(done.stdout or "")
+            return stdout
+        return self._unwrap(stdout)
+
+    def _stream(self, command, stdin_read, say) -> tuple[int, str, str]:
+        """Run the CLI, reading its output line by line as it is produced.
+
+        Three threads' worth of care for one subprocess, and each one is
+        answering a failure this file has already had:
+
+        * **stdout is read in this thread**, so a reader watching the job log
+          sees a line the moment the CLI writes it rather than when the pipe's
+          buffer happens to flush. It is also why nothing here calls
+          `communicate()`.
+        * **stderr is drained by its own thread.** A CLI that fills the stderr
+          pipe while nobody is reading it blocks forever, and "the harness
+          plane hangs on some machines and not others" is the worst possible
+          shape for that bug.
+        * **The timeout is a timer that kills**, rather than an argument to
+          `run`. A `TimeoutExpired` from `run` gives back what was captured; a
+          streamed run has already reported everything it saw, so the kill only
+          needs to end the process — and the reader has the transcript of what
+          it was doing when it stopped, which is the thing the old timeout
+          never produced.
+
+        Narration is capped (`MAX_NARRATED`) and never fatal: a log line that
+        cannot be written is a worse log, and losing a completed run of real
+        research to it would be absurd.
+        """
+        self.transcript = ""
+        try:
+            proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+                command,
+                stdin=stdin_read,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+                env={**os.environ, **self.harness.env},
+                cwd=os.path.expanduser("~"),
+                shell=self._needs_shell(command),
+                # POSIX only (Windows accepts and ignores it — see
+                # `subprocess._execute_child`'s `unused_start_new_session`).
+                # It is what makes `_kill_tree` able to reach a child at all:
+                # without its own session, a killed `cmd.exe` (or a shell
+                # wrapper) leaves whatever it spawned running past the
+                # deadline, still holding the reader's subscription on a
+                # search that will never be read.
+                start_new_session=True,
+            )
+        except FileNotFoundError as exc:
+            raise NoHarness(
+                f"{self.harness.label} is not on PATH ({self.harness.executable})"
+            ) from exc
+
+        said: list[str] = []
+        errors: list[str] = []
+        drain = threading.Thread(
+            target=self._drain, args=(proc.stderr, errors), daemon=True
+        )
+        drain.start()
+
+        expired = threading.Event()
+
+        def _give_up() -> None:
+            expired.set()
+            self._kill_tree(proc)
+
+        timer = threading.Timer(self.timeout, _give_up)
+        timer.start()
+        narrated = 0
+        assert proc.stdout is not None
+        try:
+            for line in proc.stdout:
+                self._keep(line)
+                # Checked before narration, every line: a run an agent has
+                # gone quiet on (nothing left to say for `MAX_NARRATED` lines,
+                # or a CLI that streams no text) must still be interruptible.
+                # Left to propagate on purpose — the `finally` below kills the
+                # tree, and whatever `check_cancelled` raised (a `Cancelled`,
+                # in production) reaches the caller exactly as raised, so a
+                # cancelled run reads as cancelled rather than as a crash.
+                if self.check_cancelled is not None:
+                    self.check_cancelled()
+                if say is None:
+                    continue
+                if narrated >= MAX_NARRATED:
+                    # Said once, then silence. A cap that stops quietly leaves
+                    # the reader looking at exactly what B121 fixed — a run
+                    # that went silent — with no way to tell the two apart.
+                    if narrated == MAX_NARRATED:
+                        narrated += 1
+                        try:
+                            say(
+                                f"(still running; the next actions are not "
+                                f"shown — {MAX_NARRATED}-line cap)"
+                            )
+                        except Exception:  # noqa: BLE001
+                            say = None
+                    continue
+                spoken = self._narrate(line)
+                if not spoken:
+                    continue
+                narrated += 1
+                said.append(spoken)
+                try:
+                    say(spoken)
+                except Exception:  # noqa: BLE001 — see the docstring
+                    say = None
+            proc.wait()
+        finally:
+            timer.cancel()
+            # A cancellation (or any other exception) escaping the loop above
+            # leaves before `proc.wait()`, and the child — the whole tree, for
+            # a `.cmd` shim whose real work is one level below `cmd.exe` — must
+            # not be left running past whatever stopped this thread reading
+            # it. Idempotent: a process the timeout path already killed, or
+            # one that finished on its own, answers `poll()` with a code and
+            # this does nothing. It happens *before* the drain thread is
+            # joined and before the pipes are closed, because both of those
+            # wait on a reader that only returns when the child's pipe reaches
+            # end of file: closing a buffered pipe takes the same lock the
+            # blocked `readline` holds, so a teardown in the other order waits
+            # out the very process it is trying to abandon.
+            if proc.poll() is None:
+                self._kill_tree(proc)
+            drain.join(timeout=5.0)
+            for pipe in (proc.stdout, proc.stderr):
+                if pipe is None:
+                    continue
+                try:
+                    pipe.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        self.actions = said
+        if expired.is_set():
+            raise TimeoutError(
+                f"{self.harness.label} did not finish within {int(self.timeout)}s"
+            )
+        return proc.returncode or 0, self.transcript, "".join(errors)
+
+    @staticmethod
+    def _kill_tree(proc) -> None:
+        """End the whole process, not just the one pid this object holds.
+
+        `_needs_shell` means the pid here is sometimes `cmd.exe`, whose real
+        child (the CLI, and whatever it forked for a fetch) `proc.kill()`
+        never touches — a run declared timed out would keep spending the
+        reader's subscription in the background, invisibly, past the
+        deadline this exists to enforce. `start_new_session=True` on spawn is
+        what makes a tree kill possible on POSIX (`killpg` reaches the whole
+        session); on Windows `taskkill /T` is the documented way to end one.
+        Every step is best-effort — a process that is already gone by the
+        time this runs is the good outcome, not a failure to report.
+        """
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                    capture_output=True, timeout=10,
+                )
+            else:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except Exception:  # noqa: BLE001 — already gone is the good case
+            pass
+        try:
+            proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _needs_shell(command: list[str]) -> bool:
+        """Whether this vector can only start through `cmd.exe`.
+
+        Windows `CreateProcess` (what `subprocess.Popen(shell=False)` calls)
+        needs a PE image; it cannot launch a `.cmd`/`.bat` file directly and
+        fails before a byte of stdin is written — `WinError 193: %1 is not a
+        valid Win32 application`, or `WinError 2`, depending on the build.
+        `claude.cmd` next to no `claude.exe` at all is exactly what npm's own
+        global installer for Claude Code produces, and it is exactly what
+        `locate()`'s suffix search (`_SUFFIXES`) is written to find. `shell=True`
+        on Windows already does the right thing with a list of arguments —
+        Python quotes each one with `list2cmdline` before handing the joined
+        string to `%ComSpec% /c` — so this is the one platform difference the
+        caller needs, never a rewrite of the command itself.
+        """
+        return (
+            os.name == "nt"
+            and bool(command)
+            and command[0].lower().endswith((".cmd", ".bat"))
+        )
+
+    @staticmethod
+    def _drain(pipe, into: list) -> None:
+        try:
+            for line in pipe:
+                into.append(line)
+                if len(into) > 400:
+                    del into[: len(into) - 400]
+        except Exception:  # noqa: BLE001 — a closed pipe is how this ends
+            pass
+
+    def _keep(self, line: str) -> None:
+        """Append to the bounded transcript the reply is parsed out of."""
+        self.transcript += line
+        if len(self.transcript) > TRANSCRIPT_TAIL:
+            self.transcript = self.transcript[-TRANSCRIPT_TAIL:]
+
+    def _narrate(self, line: str) -> str:
+        """One output line, as something worth logging — or nothing.
+
+        A CLI that answers in prose (`structured=False`) has no events to
+        translate, so its own words are the narration. One that answers in
+        JSON is translated by `narrate`, and a line that is neither is
+        machinery: partial frames, blank lines, a banner.
+        """
+        if not self.harness.structured:
+            return _short(line, 200)
+        try:
+            event = json.loads(line)
+        except ValueError:
+            return ""
+        return narrate(event) if isinstance(event, dict) else ""
 
     def _meter(self, envelope: dict) -> None:
         """Stamp what the reply admits to spending. Read duck-typed by

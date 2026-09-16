@@ -137,8 +137,20 @@ def _workflows() -> list[Path]:
 
 
 def test_there_are_workflows_to_check():
-    """A glob that matches nothing passes every check under it."""
-    assert len(_workflows()) >= 2, [p.name for p in _workflows()]
+    """A glob that matches nothing passes every check under it.
+
+    Was `>= 2` until 2026-09-13, when `ci.yml` was deleted — this account has no
+    Actions minutes, so every run since the workflow was un-paused failed in
+    seconds without ever being allocated a runner, and its three jobs moved into
+    `tools/gate.sh` (see CONTRIBUTING.md). `desktop.yml` is the one that remains,
+    and it is the one this file's real check was written for: it installs Python
+    and must install the lock.
+
+    The floor stays above zero rather than being deleted with the workflow,
+    because the failure this guards is a glob that silently matches nothing —
+    which is exactly what a second deletion would produce.
+    """
+    assert len(_workflows()) >= 1, [p.name for p in _workflows()]
 
 
 @pytest.mark.parametrize("workflow", _workflows(), ids=lambda p: p.name)

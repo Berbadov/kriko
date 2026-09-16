@@ -43,7 +43,7 @@ def is_independent(a_doc: Document, b_doc: Document) -> bool:
         try:
             from urllib.parse import urlparse
 
-            return urlparse(url).netloc.lower().lstrip("www.")
+            return urlparse(url).netloc.lower().removeprefix("www.")
         except Exception:
             return url
 
