@@ -46,6 +46,12 @@ function loadBackground({
     // app was raised is the original bug; a tab *not* opened when it was not
     // is the same bug wearing the other hat.
     tabsCreated: [],
+    // Tabs the worker reloaded. A reload is the *only* honest response to
+    // "registered and permitted but no panel yet", and offering one where the
+    // blocker is a permission is the message the reader could not get rid of.
+    tabsReloaded: [],
+    // Every sentence the worker put in front of the reader, in order.
+    notified: [],
   };
   const messageListeners = [];
   // Keyboard commands fire at the browser, not at a tab, so the worker
@@ -99,6 +105,7 @@ function loadBackground({
         onUpdated: { addListener() {} },
         async query() { return [{ id: 1 }]; },
         async create({ url }) { state.tabsCreated.push(url); return { id: 99 }; },
+        async reload(tabId) { state.tabsReloaded.push(tabId); },
         async sendMessage(tabId, message) {
           state.tabMessages.push({ tabId, message });
           const reply = tabResponses[message.type];
@@ -107,7 +114,13 @@ function loadBackground({
         },
       },
       scripting: {
-        async executeScript() {},
+        // The worker's one channel to the reader is an injected toast, so a
+        // harness that swallowed this could not test a single thing the
+        // extension actually *says* — which is where the bug was: a message
+        // naming the wrong cause, on a page where everything else worked.
+        async executeScript({ args } = {}) {
+          if (Array.isArray(args)) state.notified.push(String(args[0]));
+        },
         async getRegisteredContentScripts() { return [...state.registered]; },
         async registerContentScripts(scripts) {
           for (const script of scripts) {

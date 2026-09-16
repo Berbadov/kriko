@@ -605,6 +605,22 @@ CREATE TABLE IF NOT EXISTS site_requests (
     last_at    TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS site_requests_last ON site_requests (last_at DESC);
+
+-- What the *browser* made of the sites this installation can read.
+--
+-- The app can see that an adapter exists; only the extension can see whether
+-- Chrome ever granted the host permission that turns one into an injected
+-- content script. Until this table existed the Sites screen showed "readable"
+-- for a site the panel would never appear on, and the reader — correctly —
+-- read that as the whole feature being broken. Reported by the extension after
+-- each of its syncs, so a row is a fact about a browser and not a guess.
+CREATE TABLE IF NOT EXISTS site_activation (
+  host    TEXT PRIMARY KEY,
+  state   TEXT NOT NULL DEFAULT '',   -- active|pending|refused
+  detail  TEXT NOT NULL DEFAULT '',
+  pattern TEXT NOT NULL DEFAULT '',
+  at      TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -1324,6 +1340,45 @@ def set_site_request(conn: sqlite3.Connection, host: str, *, state: str,
         (state, detail, _now(), host),
     )
     conn.commit()
+
+
+def forget_site_request(conn: sqlite3.Connection, host: str) -> bool:
+    """Drop an ask. Called when the site became readable — it is not an ask any more."""
+    done = conn.execute("DELETE FROM site_requests WHERE host = ?", (host,))
+    conn.commit()
+    return bool(done.rowcount)
+
+
+def record_activation(conn: sqlite3.Connection, rows) -> int:
+    """What the extension's last sync made of each site. Replaces, never merges.
+
+    A whole-list replace because the extension's status *is* the whole list:
+    a site it no longer reports is one it no longer has registered, and
+    merging would leave the screen claiming an activation that no browser
+    still holds.
+    """
+    now = _now()
+    conn.execute("DELETE FROM site_activation")
+    for row in rows:
+        host = str(row.get("site") or "").strip().lower()
+        if not host:
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO site_activation (host, state, detail,"
+            " pattern, at) VALUES (?,?,?,?,?)",
+            (host, str(row.get("state") or "")[:32],
+             str(row.get("detail") or "")[:500],
+             str(row.get("pattern") or "")[:200], now),
+        )
+    conn.commit()
+    return len(rows)
+
+
+def activations(conn: sqlite3.Connection) -> dict[str, dict]:
+    return {
+        row["host"]: dict(row)
+        for row in conn.execute("SELECT * FROM site_activation")
+    }
 
 
 def site_requests(conn: sqlite3.Connection, *, host: str = "") -> list[dict]:
