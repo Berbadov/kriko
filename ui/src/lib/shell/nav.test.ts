@@ -44,6 +44,7 @@ describe("the route table", () => {
         expect(isAuthorOnly("overview")).toBe(true);
         expect(isAuthorOnly("knowledge")).toBe(true);
         expect(isAuthorOnly("console")).toBe(true);
+        expect(isAuthorOnly("bench")).toBe(true);
         // Retired names keep the gate they had, because they resolve to a
         // route that has one.
         expect(isAuthorOnly("health")).toBe(true);
@@ -77,6 +78,7 @@ describe("the route table", () => {
             // retired still resolve, asserted below.
             "activity",
             "agents",
+            "bench",
             "settings",
             "about",
         ]);
@@ -89,8 +91,8 @@ describe("the route table", () => {
         // actually went wrong here twice. Nine screens became a rail of
         // fifteen entries because every new capability got a row, and a rail
         // nobody can scan is a rail whose grouping stopped paying for itself.
-        // A new destination is welcome; a fourteenth is a design conversation.
-        expect(ALL_ROUTES.length).toBeLessThanOrEqual(13);
+        // A new destination is welcome; a fifteenth is a design conversation.
+        expect(ALL_ROUTES.length).toBeLessThanOrEqual(14);
     });
 
     it("still resolves every name the rail used to spell out", () => {
