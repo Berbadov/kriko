@@ -949,3 +949,96 @@ export type ScheduleCheck = Schedule & {
     reason: string;
     due_at: string;
 };
+
+export type BenchProtocol = {
+    name: string;
+    context_chars: number;
+    batch_size: number;
+    preamble: string;
+};
+
+export type BenchRun = {
+    id?: number;
+    at?: string;
+    plane: string;
+    llm: string;
+    protocol: string;
+    kind: string;
+    search_provider: string;
+    ms?: number | null;
+    tokens?: number | null;
+    usd: number | null;
+    documents?: number | null;
+    findings?: number | null;
+    accepted?: number | null;
+    refused?: number | null;
+    error?: string;
+    reasons: string[];
+    gold: Record<string, unknown> | null;
+};
+
+export type BenchScoredGroup = {
+    plane: string;
+    llm: string;
+    protocol: string;
+    runs: number;
+    found: number;
+    wanted: number;
+    produced: number;
+    hallucinated: number;
+    recall: number | null;
+    recall_interval: [number, number] | null;
+    hallucination_rate: number | null;
+    hallucination_interval: [number, number] | null;
+};
+
+export type BenchSummaryRow = {
+    plane: string;
+    llm: string;
+    protocol: string;
+    runs: number;
+    ms: number | null;
+    tokens: number | null;
+    usd: number | null;
+    documents: number | null;
+    findings: number | null;
+    accepted: number | null;
+    refused: number | null;
+    failures: number;
+    acceptance: number | null;
+};
+
+export type BenchReadoutRow = {
+    llm: string;
+    protocol: string;
+    batch_size: number;
+    context_chars: number;
+    preamble: string;
+    search_provider: string;
+    usd_per_accepted_claim: number | null;
+    hallucination_rate: number | null;
+    hallucination_interval: [number, number] | null;
+    runs: number;
+    note: string;
+};
+
+export type Bench = {
+    runs: BenchRun[];
+    verdict: Record<string, unknown>;
+    scored: { groups: BenchScoredGroup[] };
+    summary: BenchSummaryRow[];
+    cases: Record<string, unknown>[];
+    protocols: BenchProtocol[];
+    chosen: Record<string, string>;
+    readout: BenchReadoutRow[];
+};
+
+export type BenchRequest = Partial<{
+    planes: string;
+    pack_id: string;
+    cases: number;
+    max_documents: number;
+    budget_usd: number;
+    protocols: string;
+    reps: number;
+}>;

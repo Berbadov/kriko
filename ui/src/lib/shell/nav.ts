@@ -89,6 +89,8 @@ export const NAV: NavGroupSpec[] = [
             // searchable synonyms for Agents any more — see nav.ts's own
             // history in git for why they once were.
             { name: "agents", label: "Agents", also: ["connect", "mcp", "harness", "claude"] },
+            { name: "bench", label: "Benchmark",
+              also: ["hallucination", "cost per claim", "protocols", "grading", "b126"] },
         ],
     },
     {
