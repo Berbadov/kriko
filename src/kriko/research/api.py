@@ -182,6 +182,66 @@ class ApiResearcher:
             self._batched[one.url] = found.get(one.url, [])
         return self._batched.pop(document.url, [])
 
+    def repair(self, task: ResearchTask, findings: list[dict],
+               verdicts: dict) -> list[dict]:
+        """Ask once more for the fields that got these findings refused.
+
+        The failing items only, and only what was wrong with each. Everything
+        else about a finding — its quote, its source, its severity — already
+        passed and is passed straight back in, because re-deriving it would
+        risk a *different* claim coming back under the same title, and the
+        quote has already been proved against a document this call no longer
+        carries.
+
+        It exists because a refusal like "rationale is 0 chars" is not a
+        judgement about the finding. It is a field left empty, on work the
+        reader described as genuinely good, and the only reason it could not
+        be fixed was that nobody ever asked a second time.
+        """
+        asks = []
+        for one in findings:
+            why = verdicts.get(one.get("title", ""), {})
+            asks.append({
+                "title": one.get("title", ""),
+                "what_is_wrong": why.get("reason", ""),
+                "quote": one.get("quote", ""),
+            })
+        prompt = (
+            "Some findings you wrote were refused for one fixable field each. "
+            "Fix only that field. Do not change the title, the quote, or which "
+            "source it came from, and do not invent a new claim.\n\n"
+            f"The explanation field (`body`) must be {task.rationale_rule}\n\n"
+            "## Refused\n\n"
+            + "\n".join(
+                f"{index}. {one['title']}\n   refused because: "
+                f"{one['what_is_wrong']}\n   its quote: {one['quote'][:400]}"
+                for index, one in enumerate(asks, start=1)
+            )
+            + "\n\n## Reply\n\nReturn ONLY a JSON array, one element per "
+              'refused finding above, each {"title","body"}. `title` must be '
+              "copied back exactly so each rewrite can be matched to what it "
+              "fixes."
+        )
+        self._charge(task)
+        try:
+            payload = json.loads(self._complete(prompt))
+        except (json.JSONDecodeError, TypeError):
+            return []
+        if not isinstance(payload, list):
+            return []
+
+        rewritten = {
+            str(item.get("title", "")).strip(): str(item.get("body", "")).strip()
+            for item in payload
+            if isinstance(item, dict)
+        }
+        out = []
+        for one in findings:
+            body = rewritten.get(str(one.get("title", "")).strip(), "")
+            if body:
+                out.append({**one, "body": body, "rationale": body})
+        return out
+
     def _take(self, task: ResearchTask, first: Document) -> list[Document]:
         """`first`, plus however many more the protocol says fit in one call.
 
@@ -218,8 +278,15 @@ class ApiResearcher:
             '{"source_url","title","domain","severity","quote","body","advice"}. '
             "`quote` must be copied verbatim from the document you took it "
             "from, and `source_url` must be that document's URL — one of the "
-            "URLs listed above, exactly. Return [] if the documents support no "
-            "claim about this subject."
+            "URLs listed above, exactly. "
+            # The field the whole run gets refused for if it is left thin, and
+            # it was described here only by its name. A model asked for
+            # `{"body"}` in a list of seven keys writes a phrase; the gate
+            # wants two sentences, and the difference was the entire yield of
+            # some runs.
+            f"`body` is the explanation and it is not optional: {task.rationale_rule}"
+            " Never restate the title in it. "
+            "Return [] if the documents support no claim about this subject."
         )
         try:
             payload = json.loads(self._complete(prompt))

@@ -2,6 +2,8 @@
 
 import yaml
 
+from kriko.gates import load_gates
+
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher, BudgetExceeded
 from kriko.research.base import (
@@ -166,4 +168,5 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         domains=tuple(domains),
         budget_usd=budget_usd,
         max_documents=max_documents,
+        min_rationale_chars=load_gates(conn, pack_id).min_rationale_chars,
     )
