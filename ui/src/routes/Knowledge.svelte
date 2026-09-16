@@ -120,7 +120,14 @@
             api.packs().catch(() => [] as Pack[]),
             // Best effort: a reader with no drafts is the common case, and a
             // failure here must not cost them the screen.
-            api.packDrafts().then((r) => r.items).catch(() => [] as PackDraft[]),
+            // `?? []`, not just `.catch`: a response that arrives but carries
+            // no `items` does not throw, and a non-array here reaches
+            // `visibleDrafts.filter` as a TypeError with no stack worth
+            // reading. A screen must not need its server to be correct to
+            // render.
+            api.packDrafts()
+                .then((r) => (Array.isArray(r?.items) ? r.items : []))
+                .catch(() => [] as PackDraft[]),
         ]);
         status = s;
         packs = p;
