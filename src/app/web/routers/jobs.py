@@ -150,12 +150,40 @@ def list_jobs(
     return {"items": state.list_jobs(app_state, limit)}
 
 
+def _with_attention(row: dict) -> dict:
+    """Mark a job that has put something to the reader.
+
+    "If the agent is waiting on my answer, that must be unmissable." It is not
+    *waiting* — the identification pass states its defaults and carries on, by
+    design (`app/disambiguate.py`) — but it is the one thing on the screen
+    worth looking at, and a question rendered as another log line is a question
+    nobody answers.
+
+    Derived here rather than stored, because the questions are already in the
+    job's own partial result and a second copy is a second thing to keep in
+    step. It survives the run finishing: the answers make the *next* run exact,
+    so they are worth offering beside "run it again" long after this one ended.
+    """
+    result = row.get("result") or {}
+    questions = result.get("questions") if isinstance(result, dict) else None
+    row["attention"] = {
+        "kind": "questions",
+        "count": len(questions),
+        "say": (
+            f"{len(questions)} question(s) about what this is — it carried on "
+            f"with its own answers. Yours would make the next run exact."
+        ),
+        "questions": questions,
+    } if isinstance(questions, list) and questions else None
+    return row
+
+
 @router.get("/jobs/{job_id}")
 def get_job(job_id: str, app_state=Depends(get_app_state)):
     row = state.get_job(app_state, job_id)
     if row is None:
         raise HTTPException(404, f"no such job: {job_id}")
-    return row
+    return _with_attention(row)
 
 
 @router.post("/jobs/{job_id}/cancel")

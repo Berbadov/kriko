@@ -534,3 +534,57 @@ def test_a_failed_research_run_is_readable_afterwards(client):
     # The stage it died in, not just the fact that it died.
     stages = client.get(f"/api/pipeline/runs/{runs[0]['run_id']}").json()["stages"]
     assert next(s for s in stages if s["stage"] == "discovery")["state"] == "failed"
+
+
+# ── the closed vocabulary, enforced against its own callers ─────────────
+#
+# `open_stage` refuses a stage outside `STAGES`, which is right — but it
+# refuses at *runtime*, in a worker thread, inside a research run. The repair
+# loop opened a `"repair"` stage that does not exist, and every run that
+# reached it would have died with a `ValueError` that no test exercised,
+# because the loop only fires when a finding is refused for a fixable field
+# *and* the plane has a `repair` method.
+#
+# So this reads the call sites instead. A grep is a poor test of behaviour and
+# a good test of a vocabulary: the failure mode here is a string nobody
+# checked, and a string is exactly what source can be checked for.
+
+def test_every_stage_a_handler_opens_is_a_real_stage():
+    import re
+    from pathlib import Path
+
+    from app.web.pipeline import STAGES
+
+    handlers = Path(__file__).resolve().parents[1] / "web" / "tasks.py"
+    opened = set(re.findall(r'open_stage\(\s*"([a-z_]+)"', handlers.read_text()))
+    assert opened, "no stages opened at all — this test is watching nothing"
+    unknown = sorted(opened - set(STAGES))
+    assert not unknown, (
+        f"{unknown} are opened by a handler and are not in STAGES, so "
+        f"open_stage raises ValueError the moment that code path runs. Either "
+        f"add the stage deliberately — it is an architecture change, see the "
+        f"module docstring — or emit events on the stage it really belongs to."
+    )
+
+
+def test_every_stage_named_on_an_event_is_a_real_stage():
+    """The same check for `event(stage=...)`, which is where repair went instead."""
+    import re
+    from pathlib import Path
+
+    from app.web.pipeline import STAGES
+
+    handlers = Path(__file__).resolve().parents[1] / "web" / "tasks.py"
+    named = set(re.findall(r'stage=\s*"([a-z_]+)"', handlers.read_text()))
+    unknown = sorted(named - set(STAGES))
+    assert not unknown, f"{unknown} are not pipeline stages"
+
+
+def test_opening_an_unknown_stage_is_refused_rather_than_recorded():
+    """The guard itself, so relaxing it has to be a deliberate act."""
+    import pytest
+
+    from app.web.pipeline import Emitter
+
+    with pytest.raises(ValueError):
+        Emitter(None, kind="research").open_stage("not-a-stage")
