@@ -27,10 +27,40 @@ engineering category, not data that grows with pack coverage.
 import json
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 SERVER_KEY = "mcpServers"
+
+#: Windows will not start *any* process without `SystemRoot` — it is how the
+#: loader finds its own DLLs — and a frozen PyInstaller onefile additionally
+#: needs `TEMP`/`TMP` to unpack itself before `--mcp` is ever parsed. Losing
+#: either is not a warning, it is the process dying before line one of our
+#: code runs, with nothing on stdout for a stdio JSON-RPC client to frame and
+#: only stderr (which nothing reads once written) saying why. Whether the
+#: harness that spawns our advertised command merges its own environment with
+#: the `env` block we hand it, or replaces it outright, is exactly the
+#: uncertainty B131 was filed on — so these are carried explicitly in every
+#: config this module writes, never left to that assumption either way.
+_WINDOWS_ENV_KEYS = ("SystemRoot", "TEMP", "TMP", "ComSpec", "PATH")
+
+
+def platform_env(
+    platform: str | None = None, environ: Mapping[str, str] | None = None
+) -> dict:
+    """The variables a Windows child cannot start without, or `{}` elsewhere.
+
+    Takes `platform`/`environ` rather than reading `sys.platform`/`os.environ`
+    directly so a test can prove the Windows branch without running on
+    Windows — the failure this exists for cannot otherwise be reproduced in
+    this repository's CI at all.
+    """
+    platform = platform if platform is not None else sys.platform
+    if platform != "win32":
+        return {}
+    environ = environ if environ is not None else os.environ
+    return {key: environ[key] for key in _WINDOWS_ENV_KEYS if environ.get(key)}
 
 
 @dataclass(frozen=True)
@@ -116,6 +146,7 @@ def status_of(target: Target, *, server_name: str, store_path: Path) -> dict:
     `stale` is the state worth having: an entry exists, so a reader would call
     it connected, but it does not name the store this window is reading.
     """
+    assert target.path is not None
     row = {
         "id": target.id,
         "label": target.label,
@@ -195,6 +226,72 @@ def write_skill(target: Target, name: str, body: str) -> str | None:
     return str(path)
 
 
+def skill_status(target: Target, name: str, body: str) -> dict:
+    """Whether this harness has the *current* skill on disk.
+
+    Three answers, and they are three different situations: `unsupported` (this
+    harness has nowhere to put a skill), `missing` (it has somewhere and there
+    is nothing there), `stale` (there is something there and it is not what
+    this build would write).
+
+    Stale is the one that matters and the one nothing could see before. The
+    skill is generated from the installed packs and from this app's own code,
+    and it was written exactly once — when the reader pressed Connect. So an
+    overhauled protocol, a tool that did not exist last month, or a pack that
+    updated yesterday all reached the code and never reached the agent, and
+    from the reader's side the answer to "did the skill change" was correctly
+    *no*.
+    """
+    path = skill_path(target, name)
+    if path is None:
+        return {"supported": False, "path": None, "present": False, "stale": False}
+    from app import agentskill
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    present = bool(text.strip())
+    return {
+        "supported": True,
+        "path": str(path),
+        "present": present,
+        "stale": present and agentskill.digest_of_file(text) != agentskill.digest(body),
+    }
+
+
+def refresh_skills(name: str, body: str) -> list[dict]:
+    """Rewrite the skill wherever a stale or missing copy is already wired.
+
+    Called at startup. Only for harnesses this installation is *already*
+    connected to: writing into the config directory of a CLI the reader never
+    wired would be installing something they did not ask for, and the check
+    for "already wired" is the file being there, not a preference somewhere.
+
+    Silent per target, because a read-only home directory or a CLI that moved
+    is not a reason the app fails to start — it is a row on the Agents screen
+    saying the copy on disk is old.
+    """
+    written: list[dict] = []
+    if not body:
+        return written
+    for target in targets():
+        status = skill_status(target, name, body)
+        if not status["supported"] or not status["present"]:
+            # Nothing there is not staleness: a harness the reader never
+            # connected gets nothing until they press Connect.
+            continue
+        if not status["stale"]:
+            continue
+        try:
+            path = write_skill(target, name, body)
+        except OSError:
+            continue
+        if path:
+            written.append({"target": target.id, "path": path})
+    return written
+
+
 def by_id(target_id: str) -> Target | None:
     return next((t for t in targets() if t.id == target_id), None)
 
@@ -236,8 +333,10 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
     process at all, and until the agent silently returns nothing there is no
     sign of it.
 
-    So this runs exactly what the config names, in a plain environment, and
-    reports the first JSON line it gets back. It is a *diagnostic*, not a
+    So this runs exactly what the config names, in a plain environment,
+    completes `initialize`, and — because a server that answers `initialize`
+    but exposes nothing is exactly as useless to the reader — asks it to
+    `tools/list` too, on the same connection. It is a *diagnostic*, not a
     terminal: the command is the one the app just advertised, never one the
     caller supplies. A local server that will run whatever it is handed is a
     remote-code-execution hole reachable by anything that can reach the port —
@@ -247,14 +346,26 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
     import subprocess
     import time
 
-    request = json.dumps({
-        "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "kriko-app", "version": "0"},
-        },
-    }) + "\n"
+    def frame(method: str, params: dict, id_: int | None) -> str:
+        message: dict = {"jsonrpc": "2.0", "method": method, "params": params}
+        if id_ is not None:
+            message["id"] = id_
+        return json.dumps(message) + "\n"
+
+    def read_reply(deadline: float) -> dict | None:
+        """The next line that parses as JSON, or `None` if the deadline or
+        the process passes first. A server that logs to stdout is noisy, not
+        broken, so a line that is not JSON is skipped rather than failed on."""
+        assert process.stdout is not None
+        while time.time() < deadline:
+            line = process.stdout.readline()
+            if not line:
+                return None
+            try:
+                return json.loads(line)
+            except ValueError:
+                continue
+        return None
 
     try:
         process = subprocess.Popen(
@@ -265,27 +376,57 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}
+    assert process.stdin is not None
+    assert process.stdout is not None
+    assert process.stderr is not None
 
     try:
-        process.stdin.write(request)
-        process.stdin.flush()
         deadline = time.time() + timeout
-        while time.time() < deadline:
-            line = process.stdout.readline()
-            if not line:
-                break
-            try:
-                answer = json.loads(line)
-            except ValueError:
-                continue  # a server that logs to stdout is noisy, not broken
-            name = (answer.get("result") or {}).get("serverInfo", {}).get("name")
-            if name:
-                return {"ok": True, "server": name}
-            return {"ok": False, "detail": f"answered, but not as an MCP server: {line[:200]}"}
-        # stderr is the whole diagnosis when a command fails to start properly —
-        # a missing module, a venv that moved — and it is never seen otherwise.
-        process.kill()
-        return {"ok": False, "detail": (process.stderr.read() or "no answer").strip()[:2000]}
+        process.stdin.write(frame(
+            "initialize", {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "kriko-app", "version": "0"},
+            }, 1,
+        ))
+        process.stdin.flush()
+        answer = read_reply(deadline)
+        if answer is None:
+            process.kill()
+            return {"ok": False, "detail": (process.stderr.read() or "no answer").strip()[:2000]}
+        name = (answer.get("result") or {}).get("serverInfo", {}).get("name")
+        if not name:
+            return {"ok": False, "detail": f"answered, but not as an MCP server: {json.dumps(answer)[:200]}"}
+
+        # The lifecycle notification a well-behaved client always sends, and
+        # the one point where this diagnostic must not itself be the reason
+        # the check fails: a server that (correctly, per this SDK's own
+        # `ServerSession`) does not require it before answering `tools/list`
+        # must not be marked broken because *our* write failed to reach a
+        # process that had already exited cleanly for some other reason.
+        try:
+            process.stdin.write(frame("notifications/initialized", {}, None))
+            process.stdin.flush()
+        except (OSError, ValueError):
+            pass
+
+        process.stdin.write(frame("tools/list", {}, 2))
+        process.stdin.flush()
+        listed = read_reply(deadline)
+        if listed is None:
+            process.kill()
+            return {
+                "ok": False,
+                "detail": "initialized, but tools/list got no answer: "
+                + (process.stderr.read() or "(no stderr)").strip()[:2000],
+            }
+        tools = [t.get("name") for t in (listed.get("result") or {}).get("tools", [])]
+        if not tools:
+            return {
+                "ok": False,
+                "detail": f"initialized, but tools/list named none: {json.dumps(listed)[:200]}",
+            }
+        return {"ok": True, "server": name, "tools": tools}
     except OSError as exc:
         return {"ok": False, "detail": str(exc)}
     finally:

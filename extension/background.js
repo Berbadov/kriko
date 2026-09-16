@@ -75,7 +75,84 @@ async function toggleHoverLite(tab) {
   }
 }
 
-chrome.action.onClicked.addListener((tab) => { void toggleHoverLite(tab); });
+// The toolbar click, on any page.
+//
+// It used to toggle the panel and give up silently where no content script is
+// running — which is every site no pack has an adapter for, and which the
+// reader experienced as "I cannot open the extension on pages that aren't
+// registered, so basically it opens on sahibinden only". Nothing was broken;
+// the site was simply unknown, and the extension had no way to say so.
+//
+// So a click that finds no panel now *reports the page* to the app. The app
+// answers whether it can read the site, and when it cannot it records the ask
+// — which is the only honest input to "which site should Kriko learn next",
+// and the list the Sites screen offers a Register button on.
+//
+// `activeTab` is what makes this legitimate: the click is the grant, for that
+// tab, at that moment. No new host permission is requested, nothing is read
+// from the page, and the URL leaves the browser only because the reader
+// pressed a button meaning "tell Kriko about this page".
+chrome.action.onClicked.addListener((tab) => { void onToolbarClick(tab); });
+
+async function onToolbarClick(tab) {
+  if (await toggleHoverLite(tab)) return true;
+  return reportUnreadableSite(tab);
+}
+
+async function reportUnreadableSite(tab) {
+  const url = tab && tab.url;
+  if (!url || !/^https?:/i.test(url)) return false;
+  try {
+    const response = await _fetchApp(`${await apiBase()}/api/sites/seen`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, title: (tab && tab.title) || "" }),
+    });
+    const answer = response && response.ok ? await response.json() : null;
+    // A site the app *can* read, with no panel on it, is a different bug: the
+    // dynamic registration has not caught up, so ask it to.
+    if (answer && answer.readable) {
+      await syncSites({ fresh: true });
+      await notify(tab, "Kriko knows this site — reloading the page should show the panel.");
+      return true;
+    }
+    await notify(
+      tab,
+      "Kriko cannot read this site yet. It has been added to Sites in the app, where you can ask an agent to learn it.",
+    );
+    return true;
+  } catch (_) {
+    await notify(tab, "Kriko is not running. Open the app and press this again.");
+    return false;
+  }
+}
+
+// One line of feedback, in the page, with no content script required.
+// `chrome.scripting.executeScript` under `activeTab` is granted by the click
+// itself; a toast that needs a permission the reader has not given would be a
+// message they never see.
+async function notify(tab, text) {
+  if (!tab || !tab.id || !chrome.scripting) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (message) => {
+        const box = document.createElement("div");
+        box.textContent = message;
+        box.style.cssText =
+          "position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;" +
+          "padding:12px 14px;border-radius:8px;font:13px/1.4 system-ui,sans-serif;" +
+          "background:#15171c;color:#e7e9ed;border:1px solid #2c313a;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+        document.documentElement.appendChild(box);
+        setTimeout(() => box.remove(), 6000);
+      },
+      args: [text],
+    });
+  } catch (_) {
+    // A page that refuses injection (a store page, a PDF viewer) is not an
+    // error worth surfacing: the ask was still recorded.
+  }
+}
 
 // The keyboard door. `commands` is declared in the manifest with a *suggested*
 // key, not a claimed one — Chrome drops a suggestion that collides with
@@ -91,7 +168,7 @@ if (chrome.commands && chrome.commands.onCommand) {
   chrome.commands.onCommand.addListener(async (command) => {
     if (command !== "toggle-panel") return;
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    await toggleHoverLite(tabs[0]);
+    await onToolbarClick(tabs[0]);
   });
 }
 

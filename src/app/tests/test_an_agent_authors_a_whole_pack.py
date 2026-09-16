@@ -35,6 +35,7 @@ PACK = {
     "templates": ["{label} common problems", "{label} chuck wobble forum"],
     "domains": [{"id": "mechanical", "label": "Mechanical"}],
     "attributes": [{"id": "voltage_v", "label": "Voltage", "datatype": "number"}],
+    "lineup": ["Makita DHP484", "Bosch GSB 18V-55"],
     "subjects": [
         {"kind": "product", "label": "Makita DHP484",
          "identity": {"brand": "makita", "series": "DHP484"},
@@ -339,6 +340,9 @@ class _Recorder:
     def cancelled(self):
         return False
 
+    def check(self):
+        pass
+
 
 def test_authoring_a_pack_is_given_longer_than_one_subjects_research(
     tmp_path, monkeypatch
@@ -364,7 +368,10 @@ def test_authoring_a_pack_is_given_longer_than_one_subjects_research(
         return harness_mod.HarnessResearcher(fake, timeout=60)
 
     monkeypatch.setattr("app.providers.harness_researcher", factory)
-    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    settings = type(
+        "S", (), {"store_path": _store(tmp_path),
+                  "app_state_path": tmp_path / "app.sqlite"}
+    )()
     tasks.pack_author(settings, {"category": "cordless drills"}, _Recorder())
 
     assert asked["timeout"] == harness_mod.AUTHOR_TIMEOUT_SECONDS
@@ -390,7 +397,8 @@ def test_one_press_ends_with_a_draft_and_a_message_naming_it(tmp_path, monkeypat
         "app.providers.harness_researcher",
         lambda **kw: harness_mod.HarnessResearcher(fake, timeout=60))
 
-    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    settings = type("S", (), {"store_path": _store(tmp_path),
+                                  "app_state_path": tmp_path / "app.sqlite"})()
     progress = _Recorder()
     result = tasks.pack_author(settings, {"category": "cordless drills"}, progress)
 
@@ -412,7 +420,8 @@ def test_no_coding_agent_says_what_to_do_instead_rather_than_failing_blankly(
 
     monkeypatch.setattr(harness_mod, "available", lambda: [])
     monkeypatch.setattr(harness_mod, "found_but_unusable", lambda: [])
-    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    settings = type("S", (), {"store_path": _store(tmp_path),
+                                  "app_state_path": tmp_path / "app.sqlite"})()
 
     with pytest.raises(ValueError, match="MCP server"):
         tasks.pack_author(settings, {"category": "drills"}, _Recorder())
@@ -422,7 +431,8 @@ def test_an_empty_category_is_refused_before_an_agent_is_started(tmp_path):
     """The one thing the reader does have to type."""
     from app.web import tasks
 
-    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    settings = type("S", (), {"store_path": _store(tmp_path),
+                                  "app_state_path": tmp_path / "app.sqlite"})()
     with pytest.raises(ValueError, match="category"):
         tasks.pack_author(settings, {"category": "  "}, _Recorder())
 
@@ -441,7 +451,8 @@ def test_what_the_agent_said_survives_a_reply_that_was_not_a_pack(
         "app.providers.harness_researcher",
         lambda **kw: harness_mod.HarnessResearcher(fake, timeout=60))
 
-    settings = type("S", (), {"store_path": _store(tmp_path)})()
+    settings = type("S", (), {"store_path": _store(tmp_path),
+                                  "app_state_path": tmp_path / "app.sqlite"})()
     progress = _Recorder()
     with pytest.raises(ValueError, match="did not produce a usable pack"):
         tasks.pack_author(settings, {"category": "drills"}, progress)

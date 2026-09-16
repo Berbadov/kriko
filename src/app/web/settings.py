@@ -151,4 +151,4 @@ class Settings:
             "shell_attached": os.environ.get("KRIKO_SUPERVISED") == "1",
         }
         base.update(overrides)
-        return cls(**base)
+        return cls(**base)  # type: ignore[arg-type]

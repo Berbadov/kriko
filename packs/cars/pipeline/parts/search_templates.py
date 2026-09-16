@@ -13,7 +13,6 @@ Usage (called by auto.py with --part flag):
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import yaml
 

@@ -43,12 +43,14 @@ The division of labour is the whole point:
 
 import json
 import re
+from pathlib import Path
 
 import yaml
 
 from app import packdraft
 
-__all__ = ["brief", "CONTRACT", "author", "PackRefused"]
+__all__ = ["brief", "CONTRACT", "author", "PackRefused",
+           "amend", "amend_brief", "draft_state"]
 
 #: Deliberately the same order of magnitude as a research reply. A pack that
 #: needs more rows than this is a pack an agent should be growing with
@@ -56,6 +58,24 @@ __all__ = ["brief", "CONTRACT", "author", "PackRefused"]
 MAX_SUBJECTS = 40
 MAX_CLAIMS = 80
 MAX_TEMPLATES = 12
+
+#: The most products a line-up may name. Generous: a category with more than
+#: this has sub-categories, and a pack that tried to be all of them would have
+#: identity keys that mean nothing.
+MAX_LINEUP = 200
+
+#: Words that make a pack *name* a description instead. Every pack here is
+#: about problems with things, so these distinguish nothing and cost the reader
+#: a line of a list. A closed vocabulary of filler, not category data.
+NAME_FILLER = (
+    "common problems", "common issues", "known issues", "known faults",
+    "problems and", "issues and", "faults and", "reliability guide",
+    "buyer's guide", "buying guide", "what goes wrong",
+)
+
+#: And the length past which a name is a sentence. Six words is "Samsung
+#: Galaxy Buds wireless earbuds"; seven is somebody explaining.
+MAX_NAME_WORDS = 6
 
 _ID = re.compile(r"[^a-z0-9_.-]+")
 
@@ -124,10 +144,38 @@ subject's own name and any identity key you declared may be used by name.
 Write phrases somebody has typed. A template that renders a catalog identifier
 ("1.5_TSI", a power rating) produces a query that runs and finds nothing.
 
-## Decision 4 — a first row, and only an honest one
+## Decision 4 — the line-up, all of it
 
-Two or three real subjects with the claims you actually found evidence for. A
-claim needs a `title`, a `body` in the words a reader would recognise the
+**First enumerate, then research.** Before you write a single claim, list every
+distinct product in this category that a buyer could plausibly be looking at:
+current models and the recent ones still being resold. That list is `lineup`,
+and it is part of what you print.
+
+A pack covering three of twenty is worse than useless — it is *confidently*
+incomplete: a reader who looks up the fourth gets "nothing known" and concludes
+there is nothing to know. So:
+
+* **`lineup` is everything you can name.** If the category has forty products,
+  name forty. Naming is cheap; it is the research that is expensive, and the
+  list is what makes the remaining work visible instead of invisible.
+* **`subjects` is everything you actually cover.** Aim to cover the whole
+  line-up. Where you cannot — you ran out of sources, or the evidence is too
+  thin — leave the subject out and the difference is computed for you.
+* **What you left out is reported, not hidden.** Kriko subtracts `subjects`
+  from `lineup` and writes the remainder into the pack as an open gap, with
+  your `coverage.note` beside it. A gap that is written down gets filled by
+  the next run; a gap nobody recorded is a hole in the knowledge forever.
+
+**Stay inside the category.** Every subject must be an instance of the thing
+you were asked about. If a neighbouring product keeps appearing in your sources
+— an accessory, a different device from the same brand — name it under
+`out_of_scope` instead of adding it. A pack about headphones containing a watch
+is not a generous pack, it is a pack whose identity keys no longer mean
+anything.
+
+## Decision 5 — the claims themselves
+
+A claim needs a `title`, a `body` in the words a reader would recognise the
 problem by, and `advice` — what to do about it before deciding. Severity is
 `high`, `medium` or `low`.
 
@@ -135,6 +183,15 @@ problem by, and `advice` — what to do about it before deciding. Severity is
 you in somebody's store. If you found nothing solid for a subject, ship the
 subject with no claims; coverage gaps are a first-class thing here and the
 research plane fills them later.
+
+## The name
+
+`name` is a **name**, not a description: what somebody would call this pack in
+a list of packs. "Samsung earbuds" or "Galaxy Buds" — not "Samsung Galaxy Buds
+and wireless headphones common problems", which is a sentence about a pack
+rather than a name for one. Six words at most, and no "common problems",
+"issues", "known faults": every pack here is about those, so the words
+distinguish nothing.
 
 {CONTRACT}
 """
@@ -149,7 +206,10 @@ nothing you print is executed.
 
 ```json
 {"pack_id": "lowercase.dotted.id",
- "name": "What it covers, in a few words",
+ "name": "Two or three words, a name and not a sentence",
+ "lineup": ["Every product in this category you can name, covered or not"],
+ "coverage": {"note": "why anything in lineup has no subject, in one or two sentences",
+              "out_of_scope": ["things that kept appearing and are not this category"]},
  "languages": ["en"],
  "markets": ["EU"],
  "identity": {"product": ["brand", "series"], "platform": ["brand", "family"]},
@@ -183,6 +243,18 @@ Rules the writer enforces, so getting them wrong costs you the run:
   category writes none. The `label` is what a person reads.
 * Nothing you print may be Python, a path, or a file name. A pack an agent
   wrote is data; that is the boundary that lets it be written at all.
+* `lineup` must be there, and it must be longer than a token gesture. A pack
+  that claims a category has three products in it when it has twenty is
+  refused: under-claiming the line-up is how an incomplete pack passes for a
+  complete one, and it is the one error here that nothing downstream can
+  detect.
+* `name` is refused if it reads as a description — over six words, or carrying
+  "common problems", "issues", "faults", "guide".
+
+Print the whole object in one fence. If you are running out of room, cut
+*claims* rather than the line-up: a named subject with no claims is an honest
+gap that the research plane fills later, and a missing name is a hole nobody
+knows about.
 """
 
 
@@ -290,10 +362,41 @@ def _terms(table: dict[str, list[str]], payload: dict) -> str:
     return header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False)
 
 
-def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
-    """The subjects file, and the identities the claims file may point at."""
+def _in_scope(label_flat: str, lineup_flat: set[str]) -> bool:
+    """Same fuzzy match `_coverage` uses to mark a line-up entry covered.
+
+    One rule for both directions: a subject the agent proposed is in scope
+    exactly when it would have counted as covering a line-up entry.
+    """
+    if not lineup_flat or not label_flat:
+        return True
+    return any(
+        label_flat in seen or seen in label_flat for seen in lineup_flat
+    )
+
+
+def _subjects(
+    table: dict[str, list[str]], payload: dict, lineup: list[str] | None = None,
+) -> tuple[str, dict, list[dict]]:
+    """The subjects file, the identities the claims file may point at, and
+    what was quarantined rather than shipped.
+
+    **Never silently kept, never silently dropped.** A subject the agent's own
+    line-up never named — and that it did not list under `out_of_scope`
+    either — is the "headphones pack with a watch in it" failure: the agent
+    talked past its own declared category. Refusing the whole draft for one
+    stray row would throw away the rest of the research; shipping the row
+    would ship the defect. So it is set aside, with the reason, and the
+    caller decides what to do with the list.
+    """
     default_kind = next(iter(table))
-    rows, known = [], {}
+    lineup_flat = {_flat(one) for one in (lineup or []) if _flat(one)}
+    scope_flat = {
+        _flat(one)
+        for one in ((payload.get("coverage") or {}).get("out_of_scope") or [])
+        if _flat(one)
+    }
+    rows, known, quarantined = [], {}, []
     for entry in (payload.get("subjects") or [])[:MAX_SUBJECTS]:
         if not isinstance(entry, dict):
             continue
@@ -314,10 +417,28 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
                 f"{', '.join(missing)} — a missing key hashes to a different "
                 f"thing rather than failing"
             )
-        row = {
+        label = _text(entry.get("label")) or "/".join(identity.values())
+        label_flat = _flat(label)
+        if label_flat in scope_flat:
+            quarantined.append({
+                "kind": kind, "label": label,
+                "reason": "the pack's own coverage.out_of_scope names this "
+                          "one — it was proposed as a subject anyway",
+            })
+            continue
+        if not _in_scope(label_flat, lineup_flat):
+            quarantined.append({
+                "kind": kind, "label": label,
+                "reason": "not named anywhere in this pack's own line-up — "
+                          "likely a different category (an accessory, or a "
+                          "different device from the same brand)",
+            })
+            continue
+        identity_row = {key: identity[key] for key in table[kind]}
+        row: dict[str, object] = {
             "kind": kind,
-            "label": _text(entry.get("label")) or "/".join(identity.values()),
-            "identity": {key: identity[key] for key in table[kind]},
+            "label": label,
+            "identity": identity_row,
         }
         extra = {
             key: value
@@ -330,9 +451,15 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
         if any(aliases):
             row["aliases"] = [alias for alias in aliases if alias]
         rows.append(row)
-        known[(kind, tuple(sorted(row["identity"].items())))] = row["label"]
+        known[(kind, tuple(sorted(identity_row.items())))] = label
 
     if not rows:
+        if quarantined:
+            raise PackRefused(
+                "every subject was quarantined rather than added: " + "; ".join(
+                    f"{one['label']} ({one['reason']})" for one in quarantined[:10]
+                )
+            )
         raise PackRefused(
             "no subjects. A pack with nothing in it installs and answers "
             "nothing, which is indistinguishable from a broken one"
@@ -343,7 +470,11 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
         "# `identity` carries exactly the keys `pack.toml` declares for the\n"
         "# kind: that dictionary is hashed to the subject id.\n"
     )
-    return header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False), known
+    return (
+        header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False),
+        known,
+        quarantined,
+    )
 
 
 def _claims(table: dict[str, list[str]], payload: dict, known: dict) -> str:
@@ -441,6 +572,85 @@ markets = [{", ".join(f'"{market}"' for market in markets)}]
 """
 
 
+def _pack_name(payload: dict, category: str, pack_id: str) -> str:
+    """A name, and refused when it is a description.
+
+    The reader's pack came back called "Samsung Galaxy Buds and wireless
+    headphones common problems", which is a sentence about a pack rather than a
+    name for one — and in a list of packs it is the line nobody can scan. Every
+    pack here is about what goes wrong with things, so "common problems"
+    distinguishes nothing while costing the whole width of the row.
+
+    Refused rather than rewritten. Trimming it here would produce a name the
+    agent did not choose and cannot be told about; refusing produces a run
+    that says exactly what to do differently, which is the only feedback this
+    loop has.
+    """
+    name = _text(payload.get("name")) or category or pack_id
+    low = name.lower()
+    for filler in NAME_FILLER:
+        if filler in low:
+            raise PackRefused(
+                f"the pack name {name!r} contains {filler!r}. Every pack here "
+                "is about what goes wrong with something, so that phrase "
+                "distinguishes nothing — name the things, not the topic"
+            )
+    if len(name.split()) > MAX_NAME_WORDS:
+        raise PackRefused(
+            f"the pack name {name!r} is {len(name.split())} words. A name is "
+            f"what somebody calls this in a list of packs — {MAX_NAME_WORDS} "
+            "words at most. The description belongs in `principle`"
+        )
+    return name
+
+
+def _coverage(payload: dict, known: dict, quarantined: list[dict] | None = None) -> dict:
+    """The line-up, and what of it this draft does not cover.
+
+    **This is the answer to "the agent wrote three of twenty and said
+    nothing".** An author that stops early is not doing anything wrong on its
+    own terms — it found what it found — but a pack covering a fraction of a
+    category is *confidently* incomplete: the reader who looks up the fourth
+    product gets "nothing known" and concludes there is nothing to know.
+
+    So the line-up is data. The agent names everything it can (naming is cheap;
+    research is what is expensive), Kriko subtracts what it actually covered,
+    and the remainder is written into the draft as an open gap. `pack_amend`
+    reads exactly this file to know what to ask for next.
+
+    Matching is by normalised text rather than by identity, because the line-up
+    is a list of names a person would recognise and the subjects are rows with
+    identity keys. An approximate match here costs a gap being reported as
+    covered; requiring identities would cost the agent the ability to name
+    something it did not research, which is the whole point.
+    """
+    raw = payload.get("lineup")
+    lineup = [_text(one) for one in (raw or []) if _text(one)][:MAX_LINEUP]
+    covered = {_flat(label) for label in known.values()} | {
+        _flat(one) for one in known
+    }
+    uncovered = [one for one in lineup if _flat(one) not in covered and not any(
+        _flat(one) in seen or seen in _flat(one) for seen in covered if seen
+    )]
+    block = payload.get("coverage")
+    block = block if isinstance(block, dict) else {}
+    return {
+        "lineup": lineup,
+        "covered": sorted(covered - {""}),
+        "uncovered": uncovered,
+        "note": _text(block.get("note")) or _text(payload.get("notes")),
+        "out_of_scope": [
+            _text(one) for one in (block.get("out_of_scope") or []) if _text(one)
+        ],
+        "quarantined": list(quarantined or []),
+    }
+
+
+def _flat(value) -> str:
+    """Lowercase, punctuation-free, for comparing a name with a name."""
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
 def author(store_path, reply: str, *, category: str = "") -> dict:
     """Turn what the agent printed into a draft. Returns what was written.
 
@@ -458,7 +668,7 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         )
     pack_id = _clean_id(payload.get("pack_id") or payload.get("id"),
                         what="pack id")
-    name = _text(payload.get("name")) or category or pack_id
+    name = _pack_name(payload, category, pack_id)
     table = _identity_table(payload.get("identity"))
 
     templates = [
@@ -478,8 +688,17 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
             "will not supply — it ranks, it does not decide taste"
         )
 
-    subjects, known = _subjects(table, payload)
+    lineup_raw = [_text(one) for one in (payload.get("lineup") or []) if _text(one)]
+    if not lineup_raw:
+        raise PackRefused(
+            "no `lineup`. A pack that names none cannot be told apart from "
+            "one that named everything — the coverage gap this pack should "
+            "report would silently read as zero instead"
+        )
+
+    subjects, known, quarantined = _subjects(table, payload, lineup_raw)
     claims = _claims(table, payload, known)
+    gaps = _coverage(payload, known, quarantined)
 
     draft = packdraft.create(
         store_path, pack_id=pack_id, name=name, identity=table)
@@ -505,7 +724,17 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         packdraft.write(store_path, slug=draft.slug, path="data/claims.yaml",
                         text=claims),
         packdraft.write(store_path, slug=draft.slug, path="README.md",
-                        text=_readme(name, pack_id, category, payload, table)),
+                        text=_readme(name, pack_id, category, payload, table,
+                                     gaps)),
+        # The line-up, and what of it is not covered, as a file rather than as
+        # a sentence in a log. This is the whole answer to "the agent wrote
+        # three of twenty and said nothing": the twenty are named, seventeen
+        # are marked uncovered, and `pack_amend` reads this file to know what
+        # to ask for next. A gap that is written down gets filled.
+        packdraft.write(store_path, slug=draft.slug,
+                        path="research/coverage.yaml",
+                        text=yaml.safe_dump(gaps, allow_unicode=True,
+                                            sort_keys=False)),
     ]
     return {
         "slug": draft.slug,
@@ -517,6 +746,13 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         "claims": len(yaml.safe_load(claims) or []),
         "identity": table,
         "notes": _text(payload.get("notes")),
+        # Returned as well as written, because the job's last line is where a
+        # reader learns the pack is partial — and a partial pack they know
+        # about is a next step, while one they do not is a wrong answer
+        # waiting.
+        "lineup": len(gaps.get("lineup") or []),
+        "uncovered": list(gaps.get("uncovered") or []),
+        "quarantined": list(gaps.get("quarantined") or []),
         # Stated here rather than by the caller: authoring a pack and putting
         # it in the store are two authorities, and the one that writes the
         # files is the one that should be on record about not installing them.
@@ -525,9 +761,30 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
 
 
 def _readme(name: str, pack_id: str, category: str, payload: dict,
-            table: dict) -> str:
+            table: dict, gaps: dict | None = None) -> str:
     kinds = ", ".join(f"`{kind}`" for kind in table)
     notes = _text(payload.get("notes"))
+    gaps = gaps or {}
+    uncovered = gaps.get("uncovered") or []
+    quarantined = gaps.get("quarantined") or []
+    quarantine_note = (
+        "\n\n**Quarantined, not shipped:** " + "; ".join(
+            f"{one.get('label')} ({one.get('reason')})" for one in quarantined[:20]
+        )
+        if quarantined else ""
+    )
+    coverage = (
+        f"{len(gaps.get('lineup') or [])} named in the category, "
+        f"{len(gaps.get('covered') or [])} covered here."
+        + (
+            "\n\nNot covered yet: " + ", ".join(uncovered[:40])
+            + ("…" if len(uncovered) > 40 else "")
+            + "\n\nThese are in `research/coverage.yaml`, and **Cover the gaps** "
+              "on this draft asks an agent for exactly them."
+            if uncovered
+            else "\n\nNothing in the line-up is uncovered."
+        )
+    )
     return f"""# {name}
 
 `{pack_id}` — authored by an agent from the category "{category or name}", and
@@ -540,7 +797,11 @@ turns a proposal into evidence.
 
 ## What this pack covers
 
-{_text(payload.get("covers")) or f"See the bar in `research/principle.md`."}
+{_text(payload.get("covers")) or "See the bar in `research/principle.md`."}
+
+## Coverage
+
+{coverage}{quarantine_note}
 
 ## What the author could not establish
 
@@ -554,30 +815,448 @@ worth catching here — it is true, and it is noise.
 """
 
 
-_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+_FENCE = re.compile(r"```(?:json)?\s*(\{.*?)\s*```", re.DOTALL)
+
+_DECODER = json.JSONDecoder()
 
 
-def _payload(text: str) -> dict:
-    """The pack object, out of whatever the agent wrapped it in.
+def _objects(text: str) -> list[dict]:
+    """Every JSON object in `text`, in the order it appears.
 
-    Same tolerance as the research plane's reader, and for the same reason: a
-    model told to print a fence usually does and sometimes does not, and losing
-    a completed run to a missing backtick would be absurd.
+    `raw_decode` rather than `json.loads`, which is the whole difference
+    between this and what it replaces: `loads` demands that the object be the
+    *entire* string, so an agent that printed a perfectly good object and then
+    said "let me know if you want more" lost the run. Prose either side, two
+    objects, an object in a fence and an object beside it all reduce to the
+    same list here.
     """
-    text = text or ""
-    for match in reversed(_FENCE.findall(text)):
+    found: list[dict] = []
+    index = (text or "").find("{")
+    while index != -1:
         try:
-            parsed = json.loads(match)
+            parsed, end = _DECODER.raw_decode(text, index)
+        except ValueError:
+            index = text.find("{", index + 1)
+            continue
+        if isinstance(parsed, dict):
+            found.append(parsed)
+            index = text.find("{", max(end, index + 1))
+        else:
+            index = text.find("{", index + 1)
+    return found
+
+
+def _repair(text: str) -> tuple[dict, str]:
+    """The longest prefix of a cut-off object that is still an object.
+
+    A run that was killed by a token ceiling prints a complete category read
+    and half a closing brace, and throwing all of it away is the most
+    expensive possible response to the cheapest possible fault. So the scan
+    remembers every point at which the object could legally have ended — after
+    a closed container, or before a comma — and closes it there.
+
+    The result is a *partial* pack, and it is never pretended otherwise: the
+    note comes back with it and every rule below still has to pass.
+    """
+    start = (text or "").find("{")
+    if start == -1:
+        return {}, ""
+    chunk = text[start:]
+    stack: list[str] = []
+    cuts: list[tuple[int, str]] = []
+    in_string = escaped = False
+    for position, character in enumerate(chunk):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character in "{[":
+            stack.append("}" if character == "{" else "]")
+        elif character in "}]":
+            if stack:
+                stack.pop()
+            if stack:
+                cuts.append((position + 1, "".join(reversed(stack))))
+        elif character == "," and stack:
+            cuts.append((position, "".join(reversed(stack))))
+    for position, closers in reversed(cuts):
+        try:
+            parsed = json.loads(chunk[:position] + closers)
         except ValueError:
             continue
         if isinstance(parsed, dict):
-            return parsed
-    start = text.find("{")
-    while start != -1:
+            dropped = len(chunk) - position
+            return parsed, (
+                f"the reply stopped mid-object; {dropped} character(s) after "
+                f"the last complete entry were dropped"
+            )
+    return {}, ""
+
+
+def read_payload(text: str) -> tuple[dict, str]:
+    """The pack object plus a note about how it had to be recovered.
+
+    Order matters. A fenced object is what the contract asked for, so it wins;
+    an unfenced one is the same agent being slightly less careful and is worth
+    just as much. The *last* object wins among equals, because a model that
+    reconsiders prints the correction after the draft — and the repair pass is
+    last of all, because a truncated object is a partial answer and a complete
+    one is never worth passing over for it.
+    """
+    text = text or ""
+    fenced: list[dict] = []
+    for match in _FENCE.findall(text):
+        fenced.extend(_objects(match or ""))
+    if fenced:
+        return fenced[-1], ""
+    loose = _objects(text)
+    if loose:
+        return loose[-1], ""
+    return _repair(text)
+
+
+def _payload(text: str) -> dict:
+    return read_payload(text)[0]
+
+
+# ── amending a draft, rather than authoring it again ─────────────────────────
+#
+# B127, and the reader's own words: *"this pack seems very solid but it includes
+# 19 products and lacks the 20th. I don't want to rebuild the whole thing —
+# what about I tell the agent that it lacks some products and it covers those
+# gaps."*
+#
+# Authoring was all-or-nothing: the only way to change a draft was to run the
+# whole thing again, which re-spends the run and can come back *worse* — the
+# reader's second attempt returned nothing at all. That is not a generosity
+# problem, it is a missing verb. A generator you cannot correct is a slot
+# machine; a tool you can is worth keeping.
+
+
+def amend_brief(draft_state: dict, note: str = "") -> str:
+    """What to tell an agent holding a draft that is nearly right.
+
+    It is handed what exists — the pack's own principle, its identity keys, the
+    subjects it already has, and the line-up entries nothing covers — and asked
+    for **additions only**. Everything already in the draft is off limits: a
+    rewrite is how "nearly right" becomes "different, and now also wrong
+    somewhere else", and the reader asked for the opposite of that.
+    """
+    uncovered = draft_state.get("uncovered") or []
+    covered = draft_state.get("subjects") or []
+    identity = draft_state.get("identity") or {}
+    keys = "; ".join(
+        f"{kind}: {', '.join(names)}" for kind, names in identity.items()
+    )
+    wanted = note.strip() or (
+        "everything under 'Not covered yet' below" if uncovered
+        else "whatever the line-up is still missing"
+    )
+    return f"""# Extend an existing Kriko pack: {draft_state.get('name') or ''}
+
+This pack already exists as a draft. You are **adding to it**, not rewriting
+it. Nothing already in it may be changed, renamed or removed — a correction
+that arrives as a rewrite is how a nearly-right pack becomes a differently
+wrong one.
+
+## What is being asked for
+
+{wanted}
+
+## What the pack already is
+
+* **Pack id**: `{draft_state.get('pack_id') or ''}`
+* **Identity keys** (use exactly these; a subject missing one is refused):
+  {keys}
+* **The bar for a claim** — this pack's own, and your additions must clear it:
+
+{_indent(draft_state.get('principle') or '(none recorded)')}
+
+## Already covered — do not repeat these
+
+{_bullets(covered) or '(nothing yet)'}
+
+## Not covered yet
+
+{_bullets(uncovered) or '(the line-up records no gap; use the request above)'}
+
+## What to do
+
+Research the missing ones the way the pack's own templates would, and add
+**subjects** for them, with the claims you actually found evidence for. A
+subject you can name but found nothing solid for is still worth adding with no
+claims: it is an honest gap the research plane fills later, and it stops the
+next reader concluding there is nothing to know.
+
+Never invent a claim. Never add something that is not an instance of this
+category — if a neighbouring product keeps appearing, list it under
+`coverage.out_of_scope` instead.
+
+{AMEND_CONTRACT}
+"""
+
+
+AMEND_CONTRACT = """## How to report the additions (this run)
+
+Print **one JSON object** as the last thing you say, in a ```json fence. Only
+the additions — Kriko merges them into the existing draft, and anything you
+repeat is ignored rather than duplicated.
+
+```json
+{"subjects": [
+   {"kind": "product", "label": "The one that was missing",
+    "identity": {"...": "..."}, "aliases": ["..."]}
+ ],
+ "claims": [
+   {"subject": {"kind": "product", "identity": {"...": "..."}},
+    "domain": "...", "severity": "medium",
+    "title": "...", "body": "...", "advice": "..."}
+ ],
+ "lineup": ["anything else you can now name that the line-up was missing"],
+ "coverage": {"note": "what you still could not cover, and why",
+              "out_of_scope": ["..."]},
+ "notes": "what you read"}
+```
+
+Every `identity` key must be one this pack already declares, and every `domain`
+one it already lists — you are adding rows to a table whose columns are fixed.
+"""
+
+
+def _indent(text: str) -> str:
+    return "\n".join(f"    {line}" for line in str(text or "").splitlines()[:40])
+
+
+def _bullets(items) -> str:
+    return "\n".join(f"* {one}" for one in list(items or [])[:120])
+
+
+def draft_state(store_path, slug: str) -> dict:
+    """What a draft currently holds, for the amend brief and for the screen.
+
+    Read off the files rather than remembered, because the draft is the record:
+    an agent may have written to it through `write_draft_file` since, and a
+    brief built from a stale memory would ask for work that is already done.
+    """
+    draft = packdraft.open_draft(store_path, slug)
+    root = draft.root
+
+    def _yaml(relative: str, default):
+        path = root / relative
+        if not path.exists():
+            return default
         try:
-            parsed = json.loads(text[start:])
-        except ValueError:
-            start = text.find("{", start + 1)
+            return yaml.safe_load(path.read_text(encoding="utf-8")) or default
+        except Exception:  # noqa: BLE001 — a broken file is an empty answer
+            return default
+
+    subjects = _yaml("data/subjects.yaml", [])
+    claims = _yaml("data/claims.yaml", [])
+    coverage = _yaml("research/coverage.yaml", {})
+    manifest = {}
+    try:
+        loaded = packdraft.load(root)
+        manifest = {
+            "pack_id": loaded.pack_id,
+            "name": loaded.name,
+            "version": loaded.version,
+        }
+    except Exception:  # noqa: BLE001 — reported by `listing`, not here
+        manifest = {"pack_id": "", "name": slug, "version": ""}
+
+    identity: dict[str, list[str]] = {}
+    for row in subjects if isinstance(subjects, list) else []:
+        if isinstance(row, dict) and row.get("kind"):
+            identity.setdefault(
+                str(row["kind"]), sorted((row.get("identity") or {}).keys())
+            )
+    principle = ""
+    principle_path = root / "research" / "principle.md"
+    if principle_path.exists():
+        principle = principle_path.read_text(encoding="utf-8")
+
+    return {
+        **manifest,
+        "slug": draft.slug,
+        "identity": identity,
+        "principle": principle,
+        "subjects": [
+            str(row.get("label") or "")
+            for row in (subjects if isinstance(subjects, list) else [])
+            if isinstance(row, dict)
+        ],
+        "claims": len(claims if isinstance(claims, list) else []),
+        "uncovered": list((coverage or {}).get("uncovered") or []),
+        "lineup": list((coverage or {}).get("lineup") or []),
+    }
+
+
+def amend(store_path, slug: str, reply: str) -> dict:
+    """Merge an agent's additions into an existing draft. Adds, never replaces.
+
+    Deduplicated by identity for subjects and by (subject, title) for claims,
+    so an agent that repeats what it was shown costs nothing — which is the
+    behaviour to design for, because the brief hands it the existing list and a
+    model reading a list will sometimes echo it.
+
+    The whole point is that a *wrong* amendment cannot damage what was already
+    right: nothing existing is rewritten, and a refused amendment leaves the
+    draft exactly as it was.
+    """
+    payload = _payload(reply)
+    if not payload:
+        raise PackRefused(
+            "the agent printed no JSON object. The draft is unchanged — the "
+            "run's log holds what it did say"
+        )
+    state = draft_state(store_path, slug)
+    draft = packdraft.open_draft(store_path, slug)
+    root = draft.root
+
+    def _load(relative, default):
+        path = root / relative
+        if not path.exists():
+            return default
+        return yaml.safe_load(path.read_text(encoding="utf-8")) or default
+
+    subjects = _load("data/subjects.yaml", [])
+    claims = _load("data/claims.yaml", [])
+    coverage = _load("research/coverage.yaml", {})
+
+    table = {kind: list(keys) for kind, keys in (state.get("identity") or {}).items()}
+    if not table:
+        raise PackRefused(
+            "this draft declares no subjects yet, so there is nothing to "
+            "extend — author it again rather than amending it"
+        )
+
+    amend_lineup = list(state.get("lineup") or [])
+    for one in (payload.get("lineup") or []):
+        if _text(one):
+            amend_lineup.append(_text(one))
+    added_subjects_yaml, known, quarantined = _subjects(table, payload, amend_lineup)
+    added_subjects = yaml.safe_load(added_subjects_yaml) or []
+    seen = {
+        _identity_key(row.get("kind"), row.get("identity"))
+        for row in subjects
+        if isinstance(row, dict)
+    }
+    fresh = [
+        row for row in added_subjects
+        if _identity_key(row.get("kind"), row.get("identity")) not in seen
+    ]
+
+    added_claims = yaml.safe_load(_claims(table, payload, known)) or []
+    have = {
+        (_identity_key(row.get("kind"), row.get("subject")), _flat(row.get("title")))
+        for row in claims
+        if isinstance(row, dict)
+    }
+    fresh_claims = [
+        row for row in added_claims
+        if (
+            _identity_key(row.get("kind"), row.get("subject")),
+            _flat(row.get("title")),
+        ) not in have
+    ]
+
+    if not fresh and not fresh_claims:
+        if quarantined and not added_subjects:
+            raise PackRefused(
+                "every subject in the reply was quarantined rather than "
+                "added: " + "; ".join(
+                    f"{one['label']} ({one['reason']})" for one in quarantined[:10]
+                )
+            )
+        raise PackRefused(
+            "every subject and claim in the reply is already in this draft. "
+            "Nothing was written — the request may already be covered, or the "
+            "agent echoed the list it was shown"
+        )
+
+    written = []
+    if fresh:
+        written.append(packdraft.write(
+            store_path, slug=slug, path="data/subjects.yaml",
+            text=_preamble(root / "data" / "subjects.yaml")
+            + yaml.safe_dump(list(subjects) + fresh, allow_unicode=True,
+                             sort_keys=False)))
+    if fresh_claims:
+        written.append(packdraft.write(
+            store_path, slug=slug, path="data/claims.yaml",
+            text=_preamble(root / "data" / "claims.yaml")
+            + yaml.safe_dump(list(claims) + fresh_claims, allow_unicode=True,
+                             sort_keys=False)))
+
+    # The line-up grows and the gap shrinks, in one place, so a second amend
+    # asks for what is still missing rather than for what was just done.
+    lineup = list(coverage.get("lineup") or [])
+    for one in (payload.get("lineup") or []):
+        text = _text(one)
+        if text and _flat(text) not in {_flat(seen) for seen in lineup}:
+            lineup.append(text)
+    labels = {_flat(row.get("label")) for row in list(subjects) + fresh
+              if isinstance(row, dict)}
+    block = payload.get("coverage")
+    block = block if isinstance(block, dict) else {}
+    coverage = {
+        "lineup": lineup,
+        "covered": sorted(one for one in labels if one),
+        "uncovered": [one for one in lineup if _flat(one) not in labels],
+        "note": _text(block.get("note")) or coverage.get("note", ""),
+        "out_of_scope": sorted(set(
+            list(coverage.get("out_of_scope") or [])
+            + [_text(one) for one in (block.get("out_of_scope") or []) if _text(one)]
+        )),
+        "quarantined": list(coverage.get("quarantined") or []) + quarantined,
+    }
+    written.append(packdraft.write(
+        store_path, slug=slug, path="research/coverage.yaml",
+        text=yaml.safe_dump(coverage, allow_unicode=True, sort_keys=False)))
+
+    return {
+        "slug": slug,
+        "pack_id": state.get("pack_id", ""),
+        "name": state.get("name", ""),
+        "files": written,
+        "subjects_added": len(fresh),
+        "claims_added": len(fresh_claims),
+        "subjects": len(subjects) + len(fresh),
+        "claims": len(claims) + len(fresh_claims),
+        "uncovered": coverage["uncovered"],
+        "quarantined": quarantined,
+        "notes": _text(payload.get("notes")),
+    }
+
+
+def _preamble(path: Path) -> str:
+    """The comment block a file opens with, kept across a rewrite.
+
+    `yaml.safe_dump` produces rows and no prose, so appending to a file by
+    dumping it whole would silently delete the header that says what the file
+    is. Small, and exactly the kind of erosion that makes an amended draft look
+    like a different tool wrote half of it.
+    """
+    if not path.exists():
+        return ""
+    lines = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#") or not line.strip():
+            lines.append(line)
             continue
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
+        break
+    return "\n".join(lines).rstrip("\n") + "\n" if lines else ""
+
+
+def _identity_key(kind, identity) -> tuple:
+    """A comparable key for a subject or a claim's subject reference."""
+    pairs = tuple(sorted(
+        (str(key), _flat(value)) for key, value in (identity or {}).items()
+    ))
+    return (str(kind or ""), pairs)

@@ -356,3 +356,91 @@ def test_build_refuses_an_empty_pack_without_force(tmp_path, capsys):
     assert code == 0
     assert out.exists()
     assert "0 subjects" in output
+
+
+# ── the engine-backed subcommands: prefs, costs, sites, verify, drafts,
+# operations. Each attaches to a running engine or starts one of its own
+# (`app.tui.client.connect`), against `--store`'s own sibling `app.sqlite` —
+# never the reader's real `~/.kriko`.
+
+def test_prefs_shows_what_the_machine_offers_with_no_engine_running(store_path, capsys):
+    """The defect this closes: before this command existed, the only way to
+    see or change the preferred harness/model/search provider was the web
+    dashboard — invisible when the window will not open."""
+    code, out = _run(capsys, "--store", store_path, "prefs")
+    assert code == 0
+    assert "chosen now" in out
+
+
+def test_prefs_can_set_a_value_and_read_it_back(store_path, capsys):
+    code, _ = _run(capsys, "--store", store_path, "prefs", "--model", "gpt-4o")
+    assert code == 0
+    _, out = _run(capsys, "--store", store_path, "prefs")
+    assert "gpt-4o" in out
+
+
+def test_setting_one_preference_does_not_reset_the_others(store_path, capsys):
+    """The defect: `prefs --model X` sent `preferred_harness=""` and
+    `search_provider=""` along with it — every field the CLI parser has a
+    default for, not only the one the reader actually asked to change — and
+    `/api/prefs` writes any field present in the request body, so a harness
+    chosen earlier was silently reset to "whatever the machine offers" the
+    next time the reader only meant to change the model. Rule 6: a command
+    run twice with different flags must not clobber what the first run set."""
+    _run(capsys, "--store", store_path, "prefs", "--harness", "claude-code")
+    _run(capsys, "--store", store_path, "prefs", "--model", "gpt-4o")
+    _, out = _run(capsys, "--store", store_path, "prefs")
+    assert "claude-code" in out
+    assert "gpt-4o" in out
+
+
+def test_costs_reports_nothing_spent_on_a_fresh_store(store_path, capsys):
+    code, out = _run(capsys, "--store", store_path, "costs")
+    assert code == 0
+    assert "$0.00" in out
+
+
+def test_sites_reports_nothing_registered_on_a_fresh_store(store_path, capsys):
+    code, out = _run(capsys, "--store", store_path, "sites")
+    assert code == 0
+    assert "no sites" in out
+
+
+def test_sites_register_requires_a_host(store_path, capsys):
+    """The defect: `host` is an optional positional (argparse default ""),
+    so `kriko sites register` with nothing after it used to ask the engine
+    to register the empty string rather than say what is missing."""
+    code = main(["--store", store_path, "sites", "register"])
+    err = capsys.readouterr().err
+    assert code == 1
+    assert "needs a host" in err
+
+
+def test_operations_reports_nothing_recorded_on_a_fresh_store(store_path, capsys):
+    code, out = _run(capsys, "--store", store_path, "operations")
+    assert code == 0
+    assert "no operations recorded" in out
+
+
+def test_drafts_reports_nothing_on_a_fresh_store(store_path, capsys):
+    code, out = _run(capsys, "--store", store_path, "drafts")
+    assert code == 0
+    assert "no pack drafts" in out
+
+
+def test_verify_list_shows_counts_even_when_empty(store_path, capsys):
+    code, out = _run(capsys, "--store", store_path, "verify", "--list")
+    assert code == 0
+    assert "counts:" in out
+
+
+def test_no_start_without_a_running_engine_fails_cleanly_not_a_traceback(
+    store_path, capsys
+):
+    """Rule: a client that cannot reach an engine gets a one-line message and
+    a non-zero exit, never a Python traceback on the reader's screen."""
+    code = main(["--store", store_path, "costs", "--no-start"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Traceback" not in captured.err
+    assert "no engine is running" in captured.err

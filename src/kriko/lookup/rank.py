@@ -98,6 +98,33 @@ def tier_of(domain: str, tiers: dict[str, str]) -> str:
     return tiers.get("*", "unknown")
 
 
+def distinct_source_count(rows, *, independent_only: bool = False) -> int:
+    """How many distinct sources support a claim, by `source_id`.
+
+    The one place `independent` and "how many sources" get counted, shared by
+    `score_sources` (ranking) and `kriko.lookup.tree` (the health view) so the
+    two can never disagree about what "independent" means (backlog B49) or
+    under-count a source that has no URL (backlog B50) — `source_id` is a
+    content hash that is always populated, unlike `url`, which a manual or
+    scanned source legitimately leaves blank. A `refutes` row is never counted
+    here; it is corroboration for a contradiction, not for the claim.
+
+    `rows` is any iterable of objects/mappings exposing `source_id`, `stance`
+    and `independent` (a `sqlite3.Row` or `EvidenceRow` both qualify).
+    """
+    seen = set()
+    for row in rows:
+        source_id = row["source_id"] if hasattr(row, "keys") else row.source_id
+        stance = row["stance"] if hasattr(row, "keys") else row.stance
+        independent = row["independent"] if hasattr(row, "keys") else row.independent
+        if not source_id or stance == "refutes":
+            continue
+        if independent_only and not independent:
+            continue
+        seen.add(source_id)
+    return len(seen)
+
+
 def score_sources(rows, tiers, trusts) -> tuple[tuple[Source, ...], float, bool]:
     """Turn evidence rows into sources, a trust score, and a disputed flag.
 
@@ -108,7 +135,6 @@ def score_sources(rows, tiers, trusts) -> tuple[tuple[Source, ...], float, bool]
     sources = []
     best = 0.0
     disputed = False
-    independent = 0
 
     for row in rows:
         tier = tier_of(row["domain"], tiers)
@@ -121,8 +147,8 @@ def score_sources(rows, tiers, trusts) -> tuple[tuple[Source, ...], float, bool]
             disputed = True
             continue
         best = max(best, trust)
-        if row["independent"]:
-            independent += 1
+
+    independent = distinct_source_count(rows, independent_only=True)
 
     if not sources:
         # Maintenance claims carry no sources by nature. Trust-neutral, never

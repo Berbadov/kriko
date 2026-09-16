@@ -1,18 +1,20 @@
-/* The shell that replaced the Console.
+/* The shell that replaced the Console — and the transport that replaced the
+ * WebSocket.
  *
- * Two jsdom gaps stood between this test and a real `@xterm/xterm` mount:
+ * Two jsdom gaps stand between this test and a real `@xterm/xterm` mount:
  * no `window.matchMedia` (xterm's `CoreBrowserService` calls it
  * unconditionally) and no `ResizeObserver` (this component's own fit-on-resize
  * effect constructs one). Both are polyfilled below, once, for every test in
  * this file — neither exists to test jsdom, only to let xterm run inside it.
  *
  * The other jsdom gap, `HTMLCanvasElement.getContext` returning `null`, is
- * harmless: xterm's DOM renderer tolerates it and logs a warning, nothing
- * more, so it needs no polyfill here.
+ * harmless: xterm's DOM renderer tolerates it and logs a warning, nothing more.
  *
- * The real network is replaced with `FakeWebSocket`, a minimal stand-in
- * whose `onopen`/`onmessage`/`onclose` are triggered by hand — this
- * component owns no server, so nothing here should attempt a real socket.
+ * The network is replaced with `FakeEventSource` (output) and a `fetch` spy
+ * (input) — the two halves the panel now speaks instead of one socket. jsdom
+ * has no `EventSource` at all, which is itself worth knowing: the panel's
+ * polling fallback is not a legacy-browser courtesy, it is the path a
+ * hostile-to-streaming environment actually takes.
  */
 import { render, screen, waitFor } from "@testing-library/svelte";
 import { fireEvent } from "@testing-library/dom";
@@ -20,29 +22,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TerminalPanel from "./TerminalPanel.svelte";
 import { terminalOpen, toggleTerminal } from "./terminal";
 
-class FakeWebSocket {
-    static readonly CONNECTING = 0;
-    static readonly OPEN = 1;
-    static readonly CLOSING = 2;
-    static readonly CLOSED = 3;
-    static instances: FakeWebSocket[] = [];
+class FakeEventSource {
+    static instances: FakeEventSource[] = [];
 
-    readyState = FakeWebSocket.CONNECTING;
-    sent: string[] = [];
     onopen: (() => void) | null = null;
     onmessage: ((event: { data: string }) => void) | null = null;
     onerror: (() => void) | null = null;
+    closed = false;
 
     constructor(public url: string) {
-        FakeWebSocket.instances.push(this);
-    }
-
-    send(data: string) {
-        this.sent.push(data);
+        FakeEventSource.instances.push(this);
     }
 
     open() {
-        this.readyState = FakeWebSocket.OPEN;
         this.onopen?.();
     }
 
@@ -50,18 +42,33 @@ class FakeWebSocket {
         this.onmessage?.({ data: JSON.stringify(payload) });
     }
 
-    onclose: ((event: { code?: number; reason?: string }) => void) | null = null;
+    fail() {
+        this.onerror?.();
+    }
 
-    close(code?: number, reason?: string) {
-        this.readyState = FakeWebSocket.CLOSED;
-        this.onclose?.({ code, reason });
+    close() {
+        this.closed = true;
     }
 }
 
+/** Every request the panel made, newest last. */
+let calls: Array<{ url: string; body: unknown }> = [];
+/** What `GET /api/terminal/state` answers, for the polling-fallback tests. */
+let stateBody: Record<string, unknown> = { data: "", offset: 0, running: true, ended: false, failure: "" };
+
 beforeEach(() => {
     terminalOpen.set(false);
-    FakeWebSocket.instances = [];
-    vi.stubGlobal("WebSocket", FakeWebSocket);
+    FakeEventSource.instances = [];
+    calls = [];
+    stateBody = { data: "", offset: 0, running: true, ended: false, failure: "" };
+    vi.stubGlobal("EventSource", FakeEventSource);
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+        calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+        if (String(url).includes("/api/terminal/state")) {
+            return { ok: true, status: 200, json: async () => stateBody } as Response;
+        }
+        return { ok: true, status: 200, json: async () => ({ ok: true }) } as Response;
+    });
     vi.stubGlobal(
         "matchMedia",
         (query: string) => ({
@@ -92,170 +99,235 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
+const openPanel = async () => {
+    render(TerminalPanel);
+    toggleTerminal();
+    return screen.findByRole("complementary", { name: "Terminal" });
+};
+
 describe("TerminalPanel", () => {
     it("renders nothing until the panel has ever been opened", () => {
         render(TerminalPanel);
         expect(screen.queryByRole("complementary", { name: "Terminal" })).toBeNull();
-        expect(FakeWebSocket.instances).toHaveLength(0);
+        expect(FakeEventSource.instances).toHaveLength(0);
     });
 
-    it("mounts and connects the first time it opens", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        await waitFor(() =>
-            expect(screen.getByRole("complementary", { name: "Terminal" })).toBeInTheDocument(),
-        );
-        expect(FakeWebSocket.instances).toHaveLength(1);
-        expect(FakeWebSocket.instances[0].url).toBe("ws://localhost:3000/api/terminal/ws");
+    it("opens one stream the first time it opens", async () => {
+        await openPanel();
+        expect(FakeEventSource.instances).toHaveLength(1);
+    });
+
+    it("dials a relative URL, so it cannot disagree about where the server is", async () => {
+        // B109's last confirmed fact was close code 1006 on a socket whose URL
+        // the old `wsUrl()` built out of `location.host` — a second chance to
+        // be wrong about the port the sidecar announced. A relative URL
+        // resolves against the document that is already loaded from the
+        // server, so there is nothing left to disagree with.
+        await openPanel();
+        const url = FakeEventSource.instances[0].url;
+        expect(url.startsWith("/api/terminal/stream")).toBe(true);
+        expect(url).not.toContain("://");
     });
 
     it("stays connected — closing again hides rather than unmounts", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        const panel = await screen.findByRole("complementary", { name: "Terminal" });
+        const panel = await openPanel();
         toggleTerminal();
         await waitFor(() => expect(panel).toHaveAttribute("hidden"));
-        expect(FakeWebSocket.instances).toHaveLength(1);
+        expect(FakeEventSource.instances).toHaveLength(1);
 
         toggleTerminal();
         await waitFor(() => expect(panel).not.toHaveAttribute("hidden"));
-        // Still the one connection from the first open, not a second one.
-        expect(FakeWebSocket.instances).toHaveLength(1);
+        expect(FakeEventSource.instances).toHaveLength(1);
     });
 
-    it("sends a resize frame once the socket is open", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        expect(ws.sent).toHaveLength(0);
-
-        ws.open();
-        await waitFor(() => expect(ws.sent).toHaveLength(1));
-        const frame = JSON.parse(ws.sent[0]);
-        expect(frame).toMatchObject({ type: "resize" });
-        expect(typeof frame.cols).toBe("number");
-        expect(typeof frame.rows).toBe("number");
+    it("posts the terminal's geometry when it mounts", async () => {
+        await openPanel();
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/resize")).toBe(true),
+        );
+        const resize = calls.find((call) => call.url === "/api/terminal/resize");
+        expect(typeof (resize?.body as { cols: number }).cols).toBe("number");
+        expect(typeof (resize?.body as { rows: number }).rows).toBe("number");
     });
 
-    it("sends typed keystrokes as data frames", async () => {
+    it("posts typed keystrokes", async () => {
         // A real keypress into xterm's DOM renderer does not survive jsdom
-        // reliably, but the component reaches the network through exactly
-        // one seam — `term.onData(...)` — so capturing the callback it
-        // registers there and calling it by hand exercises the same wiring
-        // a keystroke would.
+        // reliably, but the component reaches the network through exactly one
+        // seam — `term.onData(...)` — so capturing the callback it registers
+        // there and calling it by hand exercises the same wiring.
         // `onData` is a getter returning the subscribe function, not a plain
-        // method — `vi.spyOn` needs the `"get"` access type to reach it, and
-        // xterm's own public typings (a plain method signature) do not admit
-        // that at the type level even though the compiled class does at
-        // runtime, hence the cast.
+        // method, hence the `"get"` access type and the cast.
         const xterm = await import("@xterm/xterm");
         let onData: ((data: string) => void) | undefined;
         const prototype = xterm.Terminal.prototype as unknown as Record<string, unknown>;
-        const onDataSpy = vi
+        const spy = vi
             .spyOn(prototype, "onData", "get")
             .mockImplementation(() => (callback: (data: string) => void) => {
                 onData = callback;
                 return { dispose() {} };
             });
 
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        ws.open();
-        await waitFor(() => expect(ws.sent).toHaveLength(1));
-        ws.sent.length = 0;
-
+        await openPanel();
         expect(onData).toBeDefined();
         onData?.("ls\n");
-        expect(ws.sent).toEqual([JSON.stringify({ type: "data", data: "ls\n" })]);
 
-        onDataSpy.mockRestore();
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/input")).toBe(true),
+        );
+        const input = calls.find((call) => call.url === "/api/terminal/input");
+        expect(input?.body).toEqual({ data: "ls\n" });
+        spy.mockRestore();
     });
 
     it("writes a received data frame into the terminal", async () => {
         const xterm = await import("@xterm/xterm");
         const writeSpy = vi.spyOn(xterm.Terminal.prototype, "write");
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        ws.open();
-
-        ws.receive({ type: "data", data: "hello" });
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "data", data: "hello", offset: 5 });
         await waitFor(() => expect(writeSpy).toHaveBeenCalledWith("hello"));
         writeSpy.mockRestore();
     });
 
     it("drops a frame that is not this protocol's JSON, without throwing", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        ws.open();
-        expect(() => ws.onmessage?.({ data: "not json" })).not.toThrow();
+        await openPanel();
+        const stream = FakeEventSource.instances[0];
+        expect(() => stream.onmessage?.({ data: "not json" })).not.toThrow();
     });
 
-    it("shows a disconnected state when the socket closes", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        ws.open();
-
-        ws.close();
-        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
-    });
-
-    it("writes the close code into the disconnect banner when the socket never sent an error frame", async () => {
-        // B109, fourth gap: 0.7.7-0.7.9 each closed a path that could reach
-        // the bare "[disconnected]" line with no error frame, and the
-        // reader still saw exactly that after all three shipped -- meaning
-        // the socket never finished connecting in the first place. Code
-        // 1006 ("abnormal closure") is what the browser reports for exactly
-        // that case, with no server-sent frame required, so it belongs in
-        // the banner every time, not just when a frame told us why.
+    it("writes the reason into the terminal on an error frame", async () => {
         const xterm = await import("@xterm/xterm");
         const writeSpy = vi.spyOn(xterm.Terminal.prototype, "write");
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-
-        ws.close(1006, "");
-        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
-
-        const written = writeSpy.mock.calls.map((call) => call[0]).join("");
-        expect(written).toContain("1006");
-        // The reader's 0.7.10 report came back exactly 1006 -- confirmed
-        // abnormal closure -- but that alone doesn't say whether the socket
-        // even dialed the right place. `ws.url` is the one fact 1006 can't
-        // carry on its own.
-        expect(written).toContain(ws.url);
+        await openPanel();
+        FakeEventSource.instances[0].receive({
+            type: "error",
+            message: "OSError: no such shell",
+        });
+        await waitFor(() => {
+            const written = writeSpy.mock.calls.map((call) => call[0]).join("");
+            expect(written).toContain("no such shell");
+        });
         writeSpy.mockRestore();
     });
 
-    it("writes the reason into the terminal and skips the bare disconnect banner on an error frame", async () => {
-        // B109: a `TermSession.start()` failure now arrives as an
-        // `{type: "error"}` frame right before the close — the reader should
-        // see *why*, not the old undifferentiated "[disconnected]".
+    it("resumes from the last byte it saw rather than restarting blank", async () => {
+        // The property the socket could never have: a dropped connection costs
+        // latency, not output. The reconnect asks for what came after the
+        // offset already on screen.
+        await openPanel();
+        const first = FakeEventSource.instances[0];
+        first.receive({ type: "data", data: "hello", offset: 42 });
+        first.fail();
+        await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(1));
+        expect(FakeEventSource.instances[1].url).toContain("offset=42");
+    });
+
+    it("falls back to polling when the stream keeps failing", async () => {
+        // Whatever refuses a stream here is the same class of thing that
+        // refused the WebSocket in the reader's install. Polling is the floor
+        // this panel is not allowed to fall through.
+        stateBody = { data: "from the poll", offset: 13, running: true, ended: false, failure: "" };
         const xterm = await import("@xterm/xterm");
         const writeSpy = vi.spyOn(xterm.Terminal.prototype, "write");
-        render(TerminalPanel);
-        toggleTerminal();
-        await screen.findByRole("complementary", { name: "Terminal" });
-        const ws = FakeWebSocket.instances[0];
-        ws.open();
-
-        ws.receive({ type: "error", message: "OSError: no such shell" });
-        ws.close();
-        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
-
-        const written = writeSpy.mock.calls.map((call) => call[0]).join("");
-        expect(written).toContain("no such shell");
-        expect(written).not.toContain("[disconnected]");
+        await openPanel();
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            const latest = FakeEventSource.instances[FakeEventSource.instances.length - 1];
+            latest.fail();
+            await waitFor(() =>
+                expect(
+                    FakeEventSource.instances.length > attempt + 1 ||
+                        calls.some((call) => call.url.startsWith("/api/terminal/state")),
+                ).toBe(true),
+            );
+        }
+        await waitFor(() => expect(writeSpy).toHaveBeenCalledWith("from the poll"));
         writeSpy.mockRestore();
+    });
+
+    it("shows a disconnected state when the shell exits", async () => {
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        await waitFor(() => expect(screen.getByText("disconnected")).toBeInTheDocument());
+    });
+
+    it("offers a way back when the shell exits", async () => {
+        // `exit` is an ordinary thing to type, and on the 0.8.0 Windows install
+        // the shell died on its own at every open. Either way the panel used to
+        // say so and offer nothing, for the life of the app.
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        const restart = await screen.findByRole("button", { name: "Restart" });
+
+        await fireEvent.click(restart);
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/restart")).toBe(true),
+        );
+        // And it re-reads from the start: the transcript went with the old
+        // shell, so a cursor still pointing at byte 400 of it waits forever.
+        await waitFor(() =>
+            expect(
+                FakeEventSource.instances[FakeEventSource.instances.length - 1].url,
+            ).toContain("offset=0"),
+        );
+    });
+
+    it("disables Restart while its own request is in flight", async () => {
+        // `restarting` was a plain variable, not `$state` — its writes never
+        // reached the `disabled` binding, so a reader double-clicking Restart
+        // (rule: assume they always do) fired the request twice.
+        let resolveRestart: (() => void) | undefined;
+        vi.stubGlobal("fetch", async (url: string) => {
+            calls.push({ url, body: undefined });
+            if (String(url).includes("/api/terminal/state")) {
+                return { ok: true, status: 200, json: async () => stateBody } as Response;
+            }
+            if (String(url) === "/api/terminal/restart") {
+                await new Promise<void>((resolve) => {
+                    resolveRestart = resolve;
+                });
+            }
+            return { ok: true, status: 200, json: async () => ({ ok: true }) } as Response;
+        });
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        const restart = await screen.findByRole("button", { name: "Restart" });
+
+        await fireEvent.click(restart);
+        expect(restart).toBeDisabled();
+        // The double-click the reader always does: a second press while the
+        // first request is still in flight must not fire a second one.
+        await fireEvent.click(restart);
+        resolveRestart?.();
+        await waitFor(
+            () =>
+                expect(
+                    calls.filter((call) => call.url === "/api/terminal/restart").length,
+                ).toBe(1),
+        );
+    });
+
+    it("treats a keystroke into a dead shell as asking for a live one", async () => {
+        const xterm = await import("@xterm/xterm");
+        let onData: ((data: string) => void) | undefined;
+        const prototype = xterm.Terminal.prototype as unknown as Record<string, unknown>;
+        const spy = vi
+            .spyOn(prototype, "onData", "get")
+            .mockImplementation(() => (callback: (data: string) => void) => {
+                onData = callback;
+                return { dispose() {} };
+            });
+
+        await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        await screen.findByRole("button", { name: "Restart" });
+        calls.length = 0;
+
+        onData?.("\r");
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/restart")).toBe(true),
+        );
+        // And not as input, which would go to a pty that is not there.
+        expect(calls.some((call) => call.url === "/api/terminal/input")).toBe(false);
+        spy.mockRestore();
     });
 
     it("toggles on Ctrl+` from anywhere in the window", async () => {
@@ -269,11 +341,76 @@ describe("TerminalPanel", () => {
     });
 
     it("closes on the panel's own close button", async () => {
-        render(TerminalPanel);
-        toggleTerminal();
-        const panel = await screen.findByRole("complementary", { name: "Terminal" });
+        const panel = await openPanel();
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+    });
+
+    it("ends the session on close, not only hides it", async () => {
+        // Hiding on Ctrl+` resumes the same shell; the panel's own close
+        // button is the one action that should free it, via the endpoint
+        // B131 added for exactly this.
+        await openPanel();
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/close")).toBe(true),
+        );
+    });
+
+    it("closes even when the close request itself fails", async () => {
+        // A reader pressing the one button meant to make this go away must
+        // never be told "no" by a network hiccup — the panel hides regardless,
+        // and a shell this call failed to reach is caught the same way any
+        // other dead session is, next time the panel opens.
+        const panel = await openPanel();
+        vi.stubGlobal("fetch", async () => {
+            throw new Error("offline");
+        });
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+    });
+
+    it("is closable from a dead session too, and reopening shows the restart offer rather than a traceback", async () => {
+        const panel = await openPanel();
+        FakeEventSource.instances[0].receive({ type: "ended" });
+        await screen.findByRole("button", { name: "Restart" });
 
         await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
         await waitFor(() => expect(panel).toHaveAttribute("hidden"));
+        await waitFor(() =>
+            expect(calls.some((call) => call.url === "/api/terminal/close")).toBe(true),
+        );
+
+        toggleTerminal();
+        await waitFor(() => expect(panel).not.toHaveAttribute("hidden"));
+        // Still a clean, readable dead state — never a stack trace — with the
+        // one action that gets a reader out of it.
+        expect(screen.getByText("disconnected")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Restart" })).toBeInTheDocument();
+    });
+
+    it("actually disappears when closed, not just in the attribute", async () => {
+        // The bug this exists for: `hidden`'s `display: none` comes from the
+        // user-agent stylesheet and `.terminal-panel { display: flex }` is an
+        // author rule, so the author rule won and the panel stayed on screen —
+        // fixed, full-height, over the whole app, with a close button that
+        // visibly did nothing. Reported from the 0.8.0 install.
+        //
+        // The test above asserted the *attribute*, which was true the entire
+        // time. Only computed style can tell these apart.
+        const panel = await openPanel();
+
+        // Canary first. If jsdom is not applying this component's <style> at
+        // all, every assertion below passes for the wrong reason and this file
+        // silently stops testing the thing it is named after.
+        //
+        // `display: flex` rather than `position: fixed` since the panel became
+        // a column in the shell's grid rather than a sheet over it — the page
+        // now reflows around it instead of continuing underneath, which was the
+        // other half of the same report.
+        expect(getComputedStyle(panel).display).toBe("flex");
+
+        await fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+        await waitFor(() => expect(getComputedStyle(panel).display).toBe("none"));
     });
 });

@@ -448,3 +448,94 @@ def test_a_packaging_script_prints_ascii_only(script: Path):
         f"{script.name} prints non-ASCII, which garbles on a Windows console: "
         + "; ".join(offenders)
     )
+
+
+def test_every_powershell_script_parses():
+    """The other half of the B89 lesson, for the other language in the build.
+
+    `test_a_powershell_script_is_ascii_only` above exists because 5.1 could not
+    *decode* this file. This one is about whether it can be *parsed* — and the
+    two are not the same check. Every other assertion in this module reads the
+    script as text, which can only ever prove a string is present; twelve tray
+    tests once passed on a `main.rs` that could not be parsed, found nine
+    minutes into a hand build by the first `cargo` that ever read it. The same
+    hole was open here, on a script whose whole job is to produce the installer.
+
+    PowerShell's own parser, via `pwsh`, which needs nothing from the script and
+    does not run a line of it. Skips where there is no `pwsh` — a gate that
+    cannot run must not pass silently, but neither may it fail a Linux checkout
+    that never installed one. `tauri/README.md` names it in the pre-flight.
+    """
+    import shutil
+    import subprocess
+
+    pwsh = shutil.which("pwsh") or shutil.which("powershell") or "/opt/pwsh/pwsh"
+    if not Path(pwsh).exists() and not shutil.which(pwsh):
+        pytest.skip("no pwsh on this machine")
+
+    for script in _powershell_scripts():
+        done = subprocess.run(
+            [pwsh, "-NoProfile", "-Command",
+             "$e = $null;"
+             f"$null = [System.Management.Automation.Language.Parser]::ParseFile('{script}',"
+             " [ref]$null, [ref]$e);"
+             "if ($e) { $e | ForEach-Object {"
+             " \"line $($_.Extent.StartLineNumber): $($_.Message)\" }; exit 1 }"],
+            capture_output=True, text=True, timeout=120,
+        )
+        assert done.returncode == 0, (
+            f"{script.name} does not parse:\n{done.stdout}{done.stderr}"
+        )
+
+
+def test_the_stamp_has_to_be_the_version_the_tree_actually_is():
+    """An installer whose name is not its contents is worse than a failed build.
+
+    2026-09-15: `-Version 0.8.5` on a checkout at 0.8.0 produced
+    `Kriko_0.8.5_x64-setup.exe` containing 0.8.0 of everything — the log said
+    "Compiling kriko v0.8.0" one line above the bundle it named 0.8.5. The
+    reader installed it, found the fixes missing, and reported that the version
+    number had not been updated. It had: the *label* had.
+
+    The stamp only reaches `tauri.conf.json`, which is what names the bundle;
+    Cargo.toml, pyproject and the frozen sidecar's own metadata all come from
+    the tree. So the script has to refuse the mismatch, and say which of the
+    two moves (`git pull`, `tools/bump.py`) fixes it.
+    """
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "asked to stamp" in script
+    assert "pyproject.toml" in script
+    assert "bump.py" in script and "git pull" in script
+
+
+def test_the_freeze_refuses_an_install_that_is_a_different_checkout():
+    """`app_version()` reads the installed distribution's metadata, which is
+    what PyInstaller freezes and what /api/health reports. An editable install
+    pointing at another clone — easy to have — would freeze that clone's code
+    under this one's name, which is B134 with no log line to notice it by."""
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "app_version" in script
+    assert "the install reports" in script
+
+
+def test_the_script_refuses_to_build_from_a_tree_whose_own_files_disagree():
+    """The gap the two checks above leave open.
+
+    `-Version` vs pyproject, and the installed distribution vs pyproject, are
+    both checked — but neither ever looks at `tauri.conf.json`, which is the
+    file NSIS actually names the bundle from. A tree where `pyproject.toml`
+    was bumped by hand and `tauri.conf.json` was not would pass both existing
+    checks and come out the other end as an installer whose filename is one
+    version and whose compiled code is another — the same failure
+    `test_the_stamp_has_to_be_the_version_the_tree_actually_is` documents,
+    one file over. `tools/bump.py --show` already makes exactly this
+    comparison and exits non-zero on a disagreement (it is
+    `test_the_four_version_strings_agree` as a command); the build script has
+    to call it before doing any of the expensive work below.
+    """
+    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    assert "bump.py" in script and "--show" in script
+    assert "tauri.conf.json" in script
+    # Before the Python side is even installed, not after — a mismatch here
+    # is cheap to catch before rustc or npm have done any work.
+    assert script.index("bump.py") < script.index("Install the Python side")

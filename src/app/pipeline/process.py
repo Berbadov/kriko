@@ -468,7 +468,7 @@ def run_part(
             _mark_processed(slug_make, slug_model, slug_gen, {entry_key})
 
         if dry_run:
-            print(f"\nDRY RUN — no changes written.")
+            print("\nDRY RUN — no changes written.")
             return
         if not all_candidates:
             print("\nNo claims extracted.")

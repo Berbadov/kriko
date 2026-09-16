@@ -2,7 +2,43 @@
 
 The principles that govern *what* Kriko does live in [`CLAUDE.md`](CLAUDE.md) and
 are not repeated here. This file covers the mechanics: branches, commits, tests,
-and what CI checks.
+and the gate they run behind.
+
+## The loop
+
+Three commands. Everything else is detail.
+
+```bash
+tools/setup.sh           # get a working tree (idempotent — run it whenever something feels wrong)
+tools/gate.sh            # everything the branch used to be checked for
+python tools/bump.py X.Y.Z   # set the version, in all five places it lives
+```
+
+**`tools/setup.sh`** is the one that did not exist until 2026-09-13, and its
+absence cost a fresh session six separate discoveries before `pytest` told the
+truth: that the tree needs Python 3.14; that `requirements.lock` is the closure
+the installer freezes and installing anything else makes the suite's central
+claim false; that `-e .` is what makes `app.version` report the tree's version;
+that the `pipeline` extra is optional for *serving* and not for the *suite*
+(without it six modules will not import); that `ui/` and the repo root have
+separate `node_modules`; and that `src/*.egg-info` goes stale and fails a
+version test for a reason that is about your directory rather than your change.
+None of that is interesting, so it lives in the script.
+
+It never touches `~/.kriko`. Your store, history and keys are not development
+environment, and a setup script that resets them is one people are afraid to run.
+
+**`python tools/bump.py --show`** prints the version from all five places and
+exits non-zero if they disagree — four committed files plus the *installed*
+distribution's metadata, which is what `/api/health` actually reports. The fifth
+is why a `sed` never finished the job: a tree at 0.8.1 with a 0.8.0 editable
+install serves 0.8.0. It does not commit and does not tag; a tool that tags as a
+side effect of an edit cuts releases by accident.
+
+**The MCP server** (`.mcp.json`) runs `.venv/bin/python -m app.sidecar --mcp`,
+relative to the repository root, so it works in any checkout `tools/setup.sh`
+has been run in. It used to name one contributor's absolute home directory and
+failed to connect everywhere else.
 
 ## Before you start
 
@@ -53,8 +89,8 @@ directories by hand is how the suite quietly shrank to 576 of 761 tests when
 `app/pipeline/` was added, skipping every test in `app/pipeline/tests` without failing.
 
 The suite must pass with **no API keys and no `.env`**. A test that needs a key is
-reaching the network and belongs behind a marker — CI runs with no secrets, on
-purpose.
+reaching the network and belongs behind a marker — the gate runs with no secrets,
+on purpose.
 
 If you move a module used by the serving path, also run the import and pack checks:
 
@@ -81,8 +117,8 @@ npm --prefix ui run build      # rewrites src/app/web/static/
 git add ui src/app/web/static
 ```
 
-CI rebuilds and fails on a dirty diff, so a forgotten rebuild is caught rather than
-shipped. `ui/package-lock.json` is committed (overriding the repo-wide ignore) because
+`tools/gate.sh ui` rebuilds and fails on a dirty diff, so a forgotten rebuild is
+caught rather than shipped. `ui/package-lock.json` is committed (overriding the repo-wide ignore) because
 that check needs the same dependency versions to produce the same asset hashes.
 
 `ui/src/` must contain **no pack vocabulary** — no `make`, `model`, `fuel` and so on.
@@ -109,7 +145,7 @@ Dependencies flow one way. Each layer may import from the layers below it, never
 from the layers above:
 
 ```
-src/app/             CLI, local web dashboard, MCP server
+src/app/             CLI, local web dashboard, MCP server, operator TUI
 src/app/pipeline/    ledger and remediation orchestration
 src/kriko/           generic store, ledger/extract, lookup, ranking, research
 packs/                category data, builders, vocabulary, coverage and pack pipelines
@@ -129,25 +165,52 @@ just a startup-cost decision, and fine.
 `src/app/pipeline/tests/test_repo_invariants.py` enforces this, so a violation fails
 the suite rather than waiting to be noticed in review.
 
-## What CI checks
+## The gate
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml), on every PR:
+```bash
+tools/gate.sh            # everything, in one command
+tools/gate.sh py         # just the Python suite
+tools/gate.sh ui         # just vitest, types, and the stale-bundle check
+```
 
-| Job | What it catches |
+| Gate | What it catches |
 |---|---|
-| `python` | the full suite, plus the layering and testpaths invariants |
-| `extension` | scraper and hub-console tests under jsdom |
-| `ui` | Svelte component tests, and a rebuild that fails if the committed bundle is stale |
+| `pytest` | the full suite, plus the layering and testpaths invariants |
+| `npm test` | scraper and extension-panel tests under jsdom |
+| `npm --prefix ui test` | Svelte component tests |
+| `svelte-check` | type errors, at `--threshold error` |
+| rebuild + `git diff` | a committed bundle that no longer matches `ui/src/` |
+
+**It runs on your machine, and that is a deliberate retreat.** These were the
+three jobs in `.github/workflows/ci.yml`, deleted on 2026-09-13. The checks did
+not stop mattering — the 1.0.0 audit's finding was that four reported defects had
+passed every automated gate, and the answer to that was more gates, not fewer.
+What stopped working was the runner: with the account's Actions minutes gone,
+every job since 2026-09-08 failed in under fifteen seconds without ever being
+allocated one, produced no logs, and left a red tick on a commit nothing had
+tested. A signal that is always red carries no information, and this one was
+teaching people to ignore a red build.
+
+So the jobs moved into `tools/gate.sh` verbatim rather than being dropped, and
+the obligation moved with them: run it before you push. Restoring the workflow is
+a `git revert` and a billing change, in that order.
 
 There is no docker-build job, and there will not be one: Kriko is a standalone
 app, not a deployment. `test_the_app_stays_standalone` fails if a Dockerfile, a
 compose file, a `deploy/` directory, or a Postgres driver returns — so this
-paragraph cannot go stale without the suite going red. The `desktop` workflow
-builds the actual shipping artifact (four installers on three runners) and runs
-`packaging/smoke_sidecar.py` against the frozen binary before bundling it.
+paragraph cannot go stale without the suite going red.
 
-CI runs with no secrets. The `extension` job uses `npm install` rather than `npm ci`,
-because the root `package-lock.json` is gitignored. The `ui` job uses `npm ci`: its
-lockfile *is* committed, because the stale-bundle check compares a fresh build against
-the committed one and a floating dependency version would change an asset hash and fail
-the build for no reason.
+The `desktop` workflow still builds the actual shipping artifact (four
+installers on three runners) and runs `packaging/smoke_sidecar.py` against the
+frozen binary before bundling it. Every step of it stands; on 2026-09-13 its
+*triggers* were narrowed to `workflow_dispatch` only, because it needs minutes
+too and firing on tags and packaging PRs only painted a false red. Run it by
+hand from the Actions tab (`platforms: all` for the Linux and macOS legs), or
+follow `tauri/README.md` to build on a Windows host — which is how every
+installer since 0.5.0 was made.
+
+The gate runs with no secrets. `npm test` at the root uses `npm install` rather
+than `npm ci`, because the root `package-lock.json` is gitignored. The `ui` gate
+uses `npm ci`: its lockfile *is* committed, because the stale-bundle check
+compares a fresh build against the committed one and a floating dependency
+version would change an asset hash and fail for no reason.

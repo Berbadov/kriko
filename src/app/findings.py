@@ -34,12 +34,28 @@ def domain_of(url: str) -> str:
     return urlsplit(url).netloc.lower().removeprefix("www.")
 
 
-def accept_findings(conn, subject_id: str, pack_id: str, findings: list[dict]) -> dict:
+def accept_findings(
+    conn,
+    subject_id: str,
+    pack_id: str,
+    findings: list[dict],
+    *,
+    retain: list | None = None,
+) -> dict:
     """Store the findings that survive; report every one that does not.
 
     Returns a per-finding verdict rather than a count, so a caller learns which
     of its quotes or claims did not make it instead of discovering later that
     half the work vanished.
+
+    `retain` is where the *documents* go (B120): pass a list and it is filled
+    with `{source_id, pack_id, url, text}` for every finding that was accepted,
+    for `log_submission` to keep in `app.sqlite`. A collecting list rather than
+    a second connection argument, and rather than another key in the returned
+    verdicts: acceptance must not depend on the interface's database being
+    present (see `log_submission`), and the verdicts are handed straight back
+    to the agent that submitted them — echoing its own page text at it would
+    be a protocol change nobody asked for.
     """
     accepted, rejected = [], []
 
@@ -120,7 +136,7 @@ def accept_findings(conn, subject_id: str, pack_id: str, findings: list[dict]) -
                 "",
                 "",
                 item.get("source_type", "page"),
-                "",
+                str(item.get("published_at") or ""),
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
             ),
         )
@@ -170,6 +186,15 @@ def accept_findings(conn, subject_id: str, pack_id: str, findings: list[dict]) -
             ),
         )
         accepted.append({"title": title, "claim_id": claim_id})
+        if retain is not None:
+            retain.append(
+                {
+                    "source_id": source_id,
+                    "pack_id": pack_id,
+                    "url": url,
+                    "text": document,
+                }
+            )
 
     return {
     "accepted": accepted,
@@ -187,12 +212,19 @@ def log_submission(
     pack_id: str,
     verdicts: dict,
     queries: Sequence[str] | None = None,
+    documents: Sequence[dict] | None = None,
 ) -> None:
     """Note what happened to a batch, in `app.sqlite`, and never raise.
 
     `queries` is what the researcher searched for (B95) — passed through
     untouched, because which shapes earn their keep is a question about the
     pack's seeds and nothing on the acceptance path has an opinion about it.
+
+    `documents` is `accept_findings`' `retain` list (B120): the text each
+    accepted quote was checked against, kept so the check can be made again.
+    Written here because this function already runs on both doors and already
+    owns the interface's database — the alternative was for acceptance to open
+    it, which is the coupling the paragraph below exists to prevent.
 
     Kept out of `accept_findings` on purpose: acceptance is a decision about
     the knowledge store and takes its connection, while this is interface
@@ -219,10 +251,80 @@ def log_submission(
             verdicts=verdicts,
             queries=queries,
         )
+        state.retain_documents(conn, documents or ())
     except Exception:  # noqa: BLE001
         pass
     finally:
         conn.close()
+
+
+def regrounded(conn, app_state_path, pack_id: str, claim_id: str) -> list[dict]:
+    """Re-run the grounding check on a stored claim, offline. One row per quote.
+
+    This is what keeping the document buys, and the reason B120 was a defect
+    rather than a tidy-up: the check that makes a quote into evidence used to
+    happen exactly once, against text that was then dropped, so nothing could
+    ever ask it again. Now it can be asked at any time, with no network and no
+    model, and it answers one of three things per piece of evidence:
+
+    * ``grounded`` — the quote is in the page this install read.
+    * ``ungrounded`` — it is not. The evidence and the document disagree, which
+      after acceptance can only mean the row was written by something other
+      than this path, or the text was replaced by a later, different read of
+      the same URL.
+    * ``not_kept`` — this install has no copy: the claim came from a pack, from
+      a run that predates B120, or from a page too large to keep.
+
+    Deliberately *not* a fetch. `app/factcheck.py` is the one that goes out to
+    the web and asks whether the page still says it; this asks the narrower
+    question that needs no permission, no timeout and no user-agent — and the
+    two together are what separates "the page changed" from "it never said
+    this", which neither could answer alone.
+
+    Reports rather than retracts, like everything else on this side of the
+    line: the engine has no authority to remove a claim on a mechanical check.
+    """
+    from app.web import state
+
+    rows = conn.execute(
+        "SELECT evidence_id, source_id, quote FROM evidence"
+        " WHERE pack_id = ? AND claim_id = ?",
+        (pack_id, claim_id),
+    ).fetchall()
+    if not rows:
+        return []
+    try:
+        app_conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 — a missing interface database is a
+        # "nothing kept" answer, not a failure of the check.
+        app_conn = None
+    out = []
+    try:
+        for row in rows:
+            kept = (
+                state.document_for(app_conn, row["source_id"])
+                if app_conn is not None
+                else None
+            )
+            if kept is None or not kept.get("text"):
+                verdict = "not_kept"
+            elif is_grounded(kept["text"], row["quote"]):
+                verdict = "grounded"
+            else:
+                verdict = "ungrounded"
+            out.append(
+                {
+                    "evidence_id": row["evidence_id"],
+                    "source_id": row["source_id"],
+                    "quote": row["quote"],
+                    "url": (kept or {}).get("url", ""),
+                    "verdict": verdict,
+                }
+            )
+    finally:
+        if app_conn is not None:
+            app_conn.close()
+    return out
 
 
 #: Deleted in this order so that a foreign key never dangles mid-transaction:

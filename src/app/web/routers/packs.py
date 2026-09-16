@@ -241,6 +241,13 @@ def scaffold_pack(body: NewPack):
 # installs.
 
 
+class AmendRequest(BaseModel):
+    """What is missing, in the reader's own words. Optional: with nothing said,
+    the draft's own uncovered line-up is the request."""
+
+    note: str = Field("", max_length=2000)
+
+
 @router.get("/packs/drafts")
 def list_pack_drafts(request: Request):
     """Every drafted pack, whether it loads, and whether it has been built."""
@@ -262,6 +269,42 @@ def build_pack_draft(slug: str, request: Request):
     return {"slug": slug, "artifact": str(out)}
 
 
+@router.post("/packs/drafts/{slug}/amend")
+def amend_pack_draft(slug: str, request: Request, body: AmendRequest | None = None):
+    """Ask an agent for what this draft is missing (B127). Returns a job id.
+
+    The reader's sentence — "it has nineteen and lacks the twentieth" — as a
+    button. Nothing already in the draft is rewritten, and a refused amendment
+    leaves it exactly as it was, which is what makes this safe to press on a
+    pack you already like.
+    """
+    runner = request.app.state.jobs
+    try:
+        job_id = runner.submit(
+            "pack_amend",
+            {"slug": slug, "note": (body.note if body else "")},
+        )
+    except KeyError as exc:  # pragma: no cover - the handler is registered
+        raise HTTPException(400, str(exc)) from exc
+    return {"job_id": job_id, "kind": "pack_amend", "slug": slug}
+
+
+@router.get("/packs/drafts/{slug}")
+def read_pack_draft(slug: str, request: Request):
+    """What this draft holds, and what of its own line-up it does not cover.
+
+    The gap list is the screen's reason to offer **Cover the gaps** at all: a
+    button that asks for "whatever is missing" without showing what that is
+    asks the reader to trust a number.
+    """
+    from app import packauthor
+
+    try:
+        return packauthor.draft_state(request.app.state.settings.store_path, slug)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
 @router.post("/packs/drafts/{slug}/install")
 def install_pack_draft(slug: str, request: Request, store=Depends(get_store)):
     """Build the draft if needed, then install it. The reader's press.
@@ -281,7 +324,14 @@ def install_pack_draft(slug: str, request: Request, store=Depends(get_store)):
         pack_id = packstore.install(store, artifact)
     except (ValueError, sqlite3.Error) as exc:
         raise HTTPException(400, f"invalid pack artifact: {exc}") from exc
-    return {"slug": slug, "pack_id": pack_id}
+    # Marked, not deleted (B129). The reader installed the Samsung draft, saw
+    # the pack appear in Knowledge, and the "…was drafted for you" card stayed —
+    # which reads as an install that did not take. Deleting the directory
+    # instead would throw away the one copy of what the agent proposed, and
+    # `Cover the gaps` still works on an installed draft: amend, rebuild,
+    # install again.
+    packdraft.mark_installed(settings.store_path, slug, pack_id)
+    return {"slug": slug, "pack_id": pack_id, "installed": True}
 
 
 @router.delete("/packs/drafts/{slug}")
