@@ -1,4 +1,7 @@
-"""How the TUI reaches an engine — and how it starts one when there is none.
+"""How a terminal client reaches an engine — and how it starts one when there
+is none. Used by both the operator TUI (`app/tui/app.py`) and the plain CLI's
+HTTP-backed subcommands (`app/cli.py`: prefs, costs, sites, verify, drafts,
+operations) — one client, so a fix to a call here is a fix both see.
 
 **One API, two clients.** Everything this module calls is an endpoint the web
 dashboard already calls. That is the whole reason a TUI is cheap here: the
@@ -97,6 +100,12 @@ class Engine:
     def post(self, path: str, body: dict | None = None) -> dict:
         return self.request("POST", path, body if body is not None else {})
 
+    def delete(self, path: str) -> dict:
+        return self.request("DELETE", path)
+
+    def put(self, path: str, body: dict | None = None) -> dict:
+        return self.request("PUT", path, body if body is not None else {})
+
     # ── what the screens ask for ────────────────────────────────────────
 
     def health(self) -> dict:
@@ -116,6 +125,12 @@ class Engine:
 
     def packs(self) -> dict:
         return self.get("/api/packs")
+
+    def operations(self, limit: int = 200) -> dict:
+        """The live operations feed (`docs/AGENT_OPERATIONS.md`) — every door,
+        newest first, so the operator can see agent-driven work regardless of
+        whether it came in over MCP, a job, or HTTP."""
+        return self.get(f"/api/operations?limit={int(limit)}")
 
     def research(self, subject_id: str, pack_id: str = "", backend: str = "") -> dict:
         """Start one subject's research. Backend empty = the engine decides.
@@ -148,6 +163,61 @@ class Engine:
 
     def terminal_resize(self, cols: int, rows: int) -> dict:
         return self.post("/api/terminal/resize", {"cols": cols, "rows": rows})
+
+    def terminal_close(self) -> dict:
+        return self.post("/api/terminal/close")
+
+    # ── the other screens the CLI can now also reach (`kriko` subcommands
+    # for prefs/costs/sites/verify/drafts) — the same door, so a fix to one
+    # of these endpoints is a fix both clients see. ─────────────────────
+
+    def prefs(self) -> dict:
+        return self.get("/api/prefs")
+
+    def write_prefs(self, **fields: str) -> dict:
+        return self.put("/api/prefs", {k: v for k, v in fields.items() if v is not None})
+
+    def costs(self) -> dict:
+        return self.get("/api/costs")
+
+    def sites(self) -> dict:
+        return self.get("/api/sites")
+
+    def register_site(self, host: str, url: str = "", pack_id: str = "") -> dict:
+        return self.post(f"/api/sites/{host}/register", {"url": url, "pack_id": pack_id})
+
+    def forget_site(self, host: str) -> dict:
+        return self.delete(f"/api/sites/{host}")
+
+    def verify(self, pack_id: str = "", subject_id: str = "", limit: int = 50) -> dict:
+        return self.post(
+            "/api/verify",
+            {"pack_id": pack_id, "subject_id": subject_id, "limit": limit},
+        )
+
+    def fact_checks(self, verdict: str = "", limit: int = 200) -> dict:
+        path = f"/api/factcheck?limit={int(limit)}"
+        if verdict:
+            path += f"&verdict={verdict}"
+        return self.get(path)
+
+    def drafts(self) -> dict:
+        return self.get("/api/packs/drafts")
+
+    def draft(self, slug: str) -> dict:
+        return self.get(f"/api/packs/drafts/{slug}")
+
+    def amend_draft(self, slug: str, note: str = "") -> dict:
+        return self.post(f"/api/packs/drafts/{slug}/amend", {"note": note})
+
+    def build_draft(self, slug: str) -> dict:
+        return self.post(f"/api/packs/drafts/{slug}/build")
+
+    def install_draft(self, slug: str) -> dict:
+        return self.post(f"/api/packs/drafts/{slug}/install")
+
+    def discard_draft(self, slug: str) -> dict:
+        return self.delete(f"/api/packs/drafts/{slug}")
 
 
 def reachable(url: str) -> bool:

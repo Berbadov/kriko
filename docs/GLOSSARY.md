@@ -34,6 +34,10 @@ it is **not**.
 | **job** | Long work as a durable row rather than a request: research, pack builds, updates. A `POST` returns an id immediately; the log, result and failure outlive the process. | `app/web/jobs.py`, `app/web/tasks.py` |
 | **sidecar** | The engine as a child process. Binds an OS-chosen port, prints `KRIKO_PORT <n>`, and is supervised by the desktop shell. | `app/sidecar.py` |
 | **interface state** | `~/.kriko/app.sqlite` — history, settings, job rows. Deliberately *not* in the store: uninstalling a pack must not drop your history. | `app/web/state.py` |
+| **operation** | One unit of agent-driven work, whichever door it came in by (MCP, a job, HTTP). Coarser than a job: it also covers an MCP `submit_findings` call that never went through the job runner at all. Recorded live, before the work is done, so it reads `running` while it is in flight. | `app/operations.py`, `docs/AGENT_OPERATIONS.md` |
+| **quarantine** | A subject an agent proposed in a pack draft that its own `lineup` never named and its `coverage.out_of_scope` never excluded either — set aside with a reason, never shipped and never silently dropped. | `app/packauthor.py` |
+| **readout** | The benchmark's one row per model: the protocol (batch size, context, preamble) it would run with right now, its measured cost per accepted claim, and its hallucination rate with interval. What the sweep is *for*. | `app/protocols.py::readout` |
+| **grounded / ungrounded / not_kept** | The three per-evidence verdicts `GET /api/factcheck/grounding` can return, offline, against the page text kept at acceptance time. `not_kept` is its own verdict rather than folded into a pass, because "never checked" and "checked and fine" must never read the same. | `app/findings.py::regrounded` |
 
 ## The three planes
 
