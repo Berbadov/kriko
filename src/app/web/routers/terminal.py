@@ -160,6 +160,23 @@ def terminal_input(body: Input) -> dict:
     return {"ok": True}
 
 
+@router.post("/close", dependencies=[guard])
+def terminal_close() -> dict:
+    """End the shell, and leave it ended.
+
+    The reader closing the tab is a different event from typing `exit` or
+    asking for a fresh shell: it must free the child process and its pty
+    (`SESSION.close()` kills before it releases, so the reader thread is never
+    left parked on a descriptor nobody will read again), and it must not come
+    back on its own. `_ensure()` only ever starts a session that has never
+    run — a session this endpoint just ended stays ended, exactly like one
+    the shell ended itself, so a client that keeps polling `/state` sees a
+    stable `ended: true` rather than a shell that silently respawns under it.
+    """
+    SESSION.close()
+    return SESSION.state()
+
+
 @router.post("/restart", dependencies=[guard])
 def terminal_restart(body: Size) -> dict:
     """A new shell, and a clean transcript.

@@ -362,10 +362,41 @@ def _terms(table: dict[str, list[str]], payload: dict) -> str:
     return header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False)
 
 
-def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
-    """The subjects file, and the identities the claims file may point at."""
+def _in_scope(label_flat: str, lineup_flat: set[str]) -> bool:
+    """Same fuzzy match `_coverage` uses to mark a line-up entry covered.
+
+    One rule for both directions: a subject the agent proposed is in scope
+    exactly when it would have counted as covering a line-up entry.
+    """
+    if not lineup_flat or not label_flat:
+        return True
+    return any(
+        label_flat in seen or seen in label_flat for seen in lineup_flat
+    )
+
+
+def _subjects(
+    table: dict[str, list[str]], payload: dict, lineup: list[str] | None = None,
+) -> tuple[str, dict, list[dict]]:
+    """The subjects file, the identities the claims file may point at, and
+    what was quarantined rather than shipped.
+
+    **Never silently kept, never silently dropped.** A subject the agent's own
+    line-up never named — and that it did not list under `out_of_scope`
+    either — is the "headphones pack with a watch in it" failure: the agent
+    talked past its own declared category. Refusing the whole draft for one
+    stray row would throw away the rest of the research; shipping the row
+    would ship the defect. So it is set aside, with the reason, and the
+    caller decides what to do with the list.
+    """
     default_kind = next(iter(table))
-    rows, known = [], {}
+    lineup_flat = {_flat(one) for one in (lineup or []) if _flat(one)}
+    scope_flat = {
+        _flat(one)
+        for one in ((payload.get("coverage") or {}).get("out_of_scope") or [])
+        if _flat(one)
+    }
+    rows, known, quarantined = [], {}, []
     for entry in (payload.get("subjects") or [])[:MAX_SUBJECTS]:
         if not isinstance(entry, dict):
             continue
@@ -386,9 +417,26 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
                 f"{', '.join(missing)} — a missing key hashes to a different "
                 f"thing rather than failing"
             )
+        label = _text(entry.get("label")) or "/".join(identity.values())
+        label_flat = _flat(label)
+        if label_flat in scope_flat:
+            quarantined.append({
+                "kind": kind, "label": label,
+                "reason": "the pack's own coverage.out_of_scope names this "
+                          "one — it was proposed as a subject anyway",
+            })
+            continue
+        if not _in_scope(label_flat, lineup_flat):
+            quarantined.append({
+                "kind": kind, "label": label,
+                "reason": "not named anywhere in this pack's own line-up — "
+                          "likely a different category (an accessory, or a "
+                          "different device from the same brand)",
+            })
+            continue
         row = {
             "kind": kind,
-            "label": _text(entry.get("label")) or "/".join(identity.values()),
+            "label": label,
             "identity": {key: identity[key] for key in table[kind]},
         }
         extra = {
@@ -405,6 +453,12 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
         known[(kind, tuple(sorted(row["identity"].items())))] = row["label"]
 
     if not rows:
+        if quarantined:
+            raise PackRefused(
+                "every subject was quarantined rather than added: " + "; ".join(
+                    f"{one['label']} ({one['reason']})" for one in quarantined[:10]
+                )
+            )
         raise PackRefused(
             "no subjects. A pack with nothing in it installs and answers "
             "nothing, which is indistinguishable from a broken one"
@@ -415,7 +469,11 @@ def _subjects(table: dict[str, list[str]], payload: dict) -> tuple[str, dict]:
         "# `identity` carries exactly the keys `pack.toml` declares for the\n"
         "# kind: that dictionary is hashed to the subject id.\n"
     )
-    return header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False), known
+    return (
+        header + yaml.safe_dump(rows, allow_unicode=True, sort_keys=False),
+        known,
+        quarantined,
+    )
 
 
 def _claims(table: dict[str, list[str]], payload: dict, known: dict) -> str:
@@ -545,7 +603,7 @@ def _pack_name(payload: dict, category: str, pack_id: str) -> str:
     return name
 
 
-def _coverage(payload: dict, known: dict) -> dict:
+def _coverage(payload: dict, known: dict, quarantined: list[dict] | None = None) -> dict:
     """The line-up, and what of it this draft does not cover.
 
     **This is the answer to "the agent wrote three of twenty and said
@@ -583,6 +641,7 @@ def _coverage(payload: dict, known: dict) -> dict:
         "out_of_scope": [
             _text(one) for one in (block.get("out_of_scope") or []) if _text(one)
         ],
+        "quarantined": list(quarantined or []),
     }
 
 
@@ -628,9 +687,17 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
             "will not supply — it ranks, it does not decide taste"
         )
 
-    subjects, known = _subjects(table, payload)
+    lineup_raw = [_text(one) for one in (payload.get("lineup") or []) if _text(one)]
+    if not lineup_raw:
+        raise PackRefused(
+            "no `lineup`. A pack that names none cannot be told apart from "
+            "one that named everything — the coverage gap this pack should "
+            "report would silently read as zero instead"
+        )
+
+    subjects, known, quarantined = _subjects(table, payload, lineup_raw)
     claims = _claims(table, payload, known)
-    gaps = _coverage(payload, known)
+    gaps = _coverage(payload, known, quarantined)
 
     draft = packdraft.create(
         store_path, pack_id=pack_id, name=name, identity=table)
@@ -684,6 +751,7 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         # waiting.
         "lineup": len(gaps.get("lineup") or []),
         "uncovered": list(gaps.get("uncovered") or []),
+        "quarantined": list(gaps.get("quarantined") or []),
         # Stated here rather than by the caller: authoring a pack and putting
         # it in the store are two authorities, and the one that writes the
         # files is the one that should be on record about not installing them.
@@ -697,6 +765,13 @@ def _readme(name: str, pack_id: str, category: str, payload: dict,
     notes = _text(payload.get("notes"))
     gaps = gaps or {}
     uncovered = gaps.get("uncovered") or []
+    quarantined = gaps.get("quarantined") or []
+    quarantine_note = (
+        "\n\n**Quarantined, not shipped:** " + "; ".join(
+            f"{one.get('label')} ({one.get('reason')})" for one in quarantined[:20]
+        )
+        if quarantined else ""
+    )
     coverage = (
         f"{len(gaps.get('lineup') or [])} named in the category, "
         f"{len(gaps.get('covered') or [])} covered here."
@@ -725,7 +800,7 @@ turns a proposal into evidence.
 
 ## Coverage
 
-{coverage}
+{coverage}{quarantine_note}
 
 ## What the author could not establish
 
@@ -739,7 +814,7 @@ worth catching here — it is true, and it is noise.
 """
 
 
-_FENCE = re.compile(r"```(?:json)?\s*(\{.*)?```", re.DOTALL)
+_FENCE = re.compile(r"```(?:json)?\s*(\{.*?)\s*```", re.DOTALL)
 
 _DECODER = json.JSONDecoder()
 
@@ -1060,7 +1135,11 @@ def amend(store_path, slug: str, reply: str) -> dict:
             "extend — author it again rather than amending it"
         )
 
-    added_subjects, known = _subjects(table, payload)
+    amend_lineup = list(state.get("lineup") or [])
+    for one in (payload.get("lineup") or []):
+        if _text(one):
+            amend_lineup.append(_text(one))
+    added_subjects, known, quarantined = _subjects(table, payload, amend_lineup)
     added_subjects = yaml.safe_load(added_subjects) or []
     seen = {
         _identity_key(row.get("kind"), row.get("identity"))
@@ -1087,6 +1166,13 @@ def amend(store_path, slug: str, reply: str) -> dict:
     ]
 
     if not fresh and not fresh_claims:
+        if quarantined and not added_subjects:
+            raise PackRefused(
+                "every subject in the reply was quarantined rather than "
+                "added: " + "; ".join(
+                    f"{one['label']} ({one['reason']})" for one in quarantined[:10]
+                )
+            )
         raise PackRefused(
             "every subject and claim in the reply is already in this draft. "
             "Nothing was written — the request may already be covered, or the "
@@ -1127,6 +1213,7 @@ def amend(store_path, slug: str, reply: str) -> dict:
             list(coverage.get("out_of_scope") or [])
             + [_text(one) for one in (block.get("out_of_scope") or []) if _text(one)]
         )),
+        "quarantined": list(coverage.get("quarantined") or []) + quarantined,
     }
     written.append(packdraft.write(
         store_path, slug=slug, path="research/coverage.yaml",
@@ -1142,6 +1229,7 @@ def amend(store_path, slug: str, reply: str) -> dict:
         "subjects": len(subjects) + len(fresh),
         "claims": len(claims) + len(fresh_claims),
         "uncovered": coverage["uncovered"],
+        "quarantined": quarantined,
         "notes": _text(payload.get("notes")),
     }
 

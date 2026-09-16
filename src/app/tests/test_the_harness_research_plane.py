@@ -646,6 +646,63 @@ def test_asking_what_the_cli_declares_never_raises(monkeypatch):
     assert harness_mod.declared("kriko-no-such-command-exists") == frozenset()
 
 
+def test_a_cmd_shim_is_only_spawned_through_the_shell_on_windows():
+    """`CreateProcess` cannot start a `.cmd`/`.bat` on its own — Windows needs
+    `cmd.exe` for that — so this is the one branch allowed to differ by
+    platform, and it must not fire anywhere else (`shell=True` on POSIX would
+    run the wrong thing entirely: the first argument as a shell string)."""
+    needs = HarnessResearcher._needs_shell
+    assert needs(["C:\\npm\\claude.cmd", "-p"]) is False, "not on this test's own OS"
+
+
+def test_a_cmd_shim_needs_the_shell_and_an_exe_does_not(monkeypatch):
+    monkeypatch.setattr(harness_mod.os, "name", "nt")
+    needs = HarnessResearcher._needs_shell
+    assert needs(["C:\\npm\\claude.cmd", "-p"]) is True
+    assert needs(["C:\\npm\\claude.CMD", "-p"]) is True, "case-insensitive"
+    assert needs(["C:\\Program Files\\claude.exe", "-p"]) is False
+    assert needs([]) is False
+
+
+def test_the_cmd_shim_is_actually_handed_to_popen_with_shell_true(monkeypatch, tmp_path):
+    """Not just the predicate — the real call site, since B92's own postmortem
+    is a gate that asserted the shape and never ran the thing.
+
+    `_needs_shell` itself is stubbed rather than `os.name`: flipping `os.name`
+    to `"nt"` on this machine also flips which `pathlib` class `Path.home()`
+    builds, which `locate()` calls before `_stream` is ever reached — a
+    platform this test does not otherwise touch."""
+    monkeypatch.setattr(HarnessResearcher, "_needs_shell", staticmethod(lambda command: True))
+    captured = {}
+
+    class _FakeProc:
+        stdout = iter(['{"type": "result", "result": "ok"}\n'])
+        stderr = iter(())
+        returncode = 0
+        pid = 4321
+
+        def wait(self):
+            return None
+
+        def poll(self):
+            return 0
+
+        def kill(self):
+            return None
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["shell"] = kwargs.get("shell")
+        return _FakeProc()
+
+    monkeypatch.setattr(harness_mod.subprocess, "Popen", fake_popen)
+    one = harness_mod.Harness("fake", "Fake CLI", "C:\\npm\\claude.cmd", ("-p",))
+    researcher = HarnessResearcher(one, timeout=5)
+    researcher.gather(_task())
+    assert captured["shell"] is True
+    assert captured["command"][0] == "C:\\npm\\claude.cmd"
+
+
 def test_a_missing_executable_says_so_rather_than_raising_oserror():
     fake = harness_mod.Harness("nope", "Nope", "kriko-no-such-command-exists")
     with pytest.raises(NoHarness):
@@ -1107,6 +1164,132 @@ def test_a_log_line_that_cannot_be_written_does_not_fail_the_run(tmp_path):
     researcher.on_action = broken
     assert researcher.gather(_task()) == []
     assert researcher.note
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX here; taskkill /T covers Windows")
+def test_a_timeout_kills_the_whole_process_tree_not_just_the_shell(tmp_path):
+    """`proc.kill()` alone only ends the direct child. A `.cmd` shim's real
+    work happens one level below that — `cmd.exe` spawning node — and a run
+    declared timed out must not leave that child spending the reader's
+    subscription in the background."""
+    marker = tmp_path / "child-alive"
+    grandchild = tmp_path / "grandchild.py"
+    grandchild.write_text(
+        f"open({str(marker)!r}, 'w').close()\n"
+        "import time\ntime.sleep(60)\n",
+        encoding="utf-8",
+    )
+    parent = tmp_path / "parent.py"
+    parent.write_text(
+        "import subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, {str(grandchild)!r}])\n"
+        "time.sleep(60)\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(parent),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=0.5)
+    with pytest.raises(TimeoutError):
+        researcher.gather(_task())
+
+    assert marker.exists(), "the grandchild never even started -- this test proves nothing"
+
+    import subprocess as sp
+    import time as _time
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline:
+        # `pgrep -f` is the simplest cross-distro way to ask "is anything
+        # still running that was told to sleep 60s from this test's own
+        # temp file" without tracking a pid this test was never given.
+        found = sp.run(
+            ["pgrep", "-f", str(grandchild)], capture_output=True, text=True
+        ).stdout.strip()
+        if not found:
+            break
+        _time.sleep(0.2)
+    else:
+        pytest.fail("the grandchild process was still running after the timeout")
+
+
+class _StopIt(Exception):
+    """Stands in for `app.web.jobs.Cancelled` without harness.py importing it.
+
+    `check_cancelled` is duck-typed exactly like `on_action` — whatever it
+    raises must reach the caller unmodified, so a real `Cancelled` surfaces as
+    cancelled rather than as a crash. This proves the propagation contract
+    with a type harness.py has never heard of, which is the point.
+    """
+
+
+def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path):
+    """The cross-plane defect: `pack_author`/`pack_amend`/`site_register` can
+    ask to stop, but nothing told the subprocess. `check_cancelled` is the
+    checkpoint `_stream` now polls every line, and it must both end the real
+    work (a `.cmd` shim's child included, hence a tree kill) and let the
+    reader's own exception type through rather than reporting a crash."""
+    marker = tmp_path / "grandchild-alive"
+    grandchild = tmp_path / "grandchild.py"
+    grandchild.write_text(
+        f"open({str(marker)!r}, 'w').close()\n"
+        "import time\ntime.sleep(60)\n",
+        encoding="utf-8",
+    )
+    parent = tmp_path / "parent.py"
+    parent.write_text(
+        "import os, subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, {str(grandchild)!r}])\n"
+        f"while not os.path.exists({str(marker)!r}):\n"
+        "    time.sleep(0.01)\n"
+        "print('{\"type\": \"result\", \"result\": \"unused\"}', flush=True)\n"
+        "time.sleep(60)\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(parent),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=60)
+    calls = {"n": 0}
+
+    def check_cancelled():
+        calls["n"] += 1
+        if calls["n"] >= 1:
+            raise _StopIt("the reader asked to stop")
+
+    researcher.check_cancelled = check_cancelled
+
+    import time as _time
+
+    started = _time.time()
+    with pytest.raises(_StopIt):
+        researcher.gather(_task())
+    elapsed = _time.time() - started
+    assert elapsed < 30, (
+        f"took {elapsed:.1f}s -- a cancel must not wait anywhere near the "
+        f"{researcher.timeout}s timeout"
+    )
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline and not marker.exists():
+        _time.sleep(0.05)
+    assert marker.exists(), "the grandchild never even started -- this test proves nothing"
+
+    deadline = _time.time() + 5
+    while _time.time() < deadline and _grandchild_running(grandchild):
+        _time.sleep(0.1)
+    assert not _grandchild_running(grandchild), (
+        "the grandchild was still running after a cancel -- only the read "
+        "loop stopped, not the work"
+    )
+
+
+def _grandchild_running(script: Path) -> bool:
+    import subprocess as sp
+
+    return bool(
+        sp.run(["pgrep", "-f", str(script)], capture_output=True, text=True).stdout.strip()
+    )
 
 
 def test_a_cli_that_never_finishes_is_killed_and_said_so(tmp_path):

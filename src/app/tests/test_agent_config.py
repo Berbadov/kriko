@@ -118,6 +118,28 @@ def test_a_frozen_app_advertises_itself_and_not_an_interpreter(monkeypatch, tmp_
     assert entry["env"] == {}, "PYTHONPATH means nothing to a frozen binary"
 
 
+def test_on_windows_the_written_command_carries_its_own_survival_kit(monkeypatch, tmp_path):
+    """The bug live reports call "cannot connect to the server: kriko": a
+    harness on Windows that does not merge its own environment into the
+    config's `env` spawns a process with none of `SystemRoot`/`TEMP`, which a
+    plain interpreter or a PyInstaller onefile cannot survive — before a
+    single byte of our JSON-RPC frame is ever written. This must not depend on
+    the harness inheriting anything."""
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setenv("SystemRoot", "C:\\Windows")
+    monkeypatch.setenv("TEMP", "C:\\Users\\r\\AppData\\Local\\Temp")
+
+    interpreted = command_for(tmp_path / "knowledge.sqlite")
+    assert interpreted["env"]["SystemRoot"] == "C:\\Windows"
+    assert interpreted["env"]["TEMP"]
+    assert "PYTHONPATH" in interpreted["env"], "still needed to find app.sidecar"
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", "C:\\Program Files\\Kriko\\kriko-sidecar.exe")
+    frozen = command_for(tmp_path / "knowledge.sqlite")
+    assert frozen["env"]["SystemRoot"] == "C:\\Windows"
+
+
 def test_the_named_tools_exist_on_the_server():
     """The three names the UI shows are the three an agent cannot work without."""
     from app import mcp_server
@@ -192,7 +214,22 @@ def test_verify_actually_starts_the_thing_it_advertised(tmp_path):
     """The reader's question after Connect is "does it work", not "was it
     written" — and those fail separately, for different reasons."""
     body = _client(tmp_path).post("/api/agent-verify").json()
-    assert body == {"ok": True, "server": "kriko"}
+    assert body["ok"] is True
+    assert body["server"] == "kriko"
+    # `initialize` answering is not the reader's question — a server that
+    # exposes no tools is exactly as useless as one that never started, so
+    # verify must have gone one step further and asked.
+    assert "research_brief" in body["tools"]
+    assert "submit_findings" in body["tools"]
+
+
+def test_verify_lists_every_tool_the_server_actually_registers(tmp_path):
+    """The registry, not a guess — the same source `registered_tools()` reads
+    in `test_mcp_server.py`, so a tool renamed on one side shows up here."""
+    from app import mcp_server
+
+    body = _client(tmp_path).post("/api/agent-verify").json()
+    assert set(body["tools"]) == mcp_server.registered_tools()
 
 
 def test_verify_reports_a_command_that_cannot_start_rather_than_raising(tmp_path):

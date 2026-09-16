@@ -50,6 +50,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 import threading
@@ -741,6 +742,15 @@ class HarnessResearcher(AgentResearcher):
         #: `None` means nobody is watching, which is the CLI's case and costs
         #: the run nothing.
         self.on_action: Callable[[str], None] | None = None
+        #: Polled once per streamed line, the same duck-typed shape as
+        #: `on_action` — `tasks.py` wires this to `Progress.check`. Raising
+        #: from it is the one thing that must reach the caller unmodified:
+        #: `_stream` kills the child's whole process tree and lets whatever
+        #: was raised propagate as-is, so a `Cancelled` surfaces as cancelled
+        #: rather than as a crash or a timeout. `None` means nobody is asking,
+        #: which costs the run nothing — the CLI's own case, and every run
+        #: before `pack_author`/`pack_amend`/`site_register` were given one.
+        self.check_cancelled: Callable[[], None] | None = None
         #: The run's raw output, bounded. The reply is parsed out of this, and
         #: it is what a failure quotes its tail of.
         self.transcript = ""
@@ -953,6 +963,15 @@ class HarnessResearcher(AgentResearcher):
                 bufsize=1,
                 env={**os.environ, **self.harness.env},
                 cwd=os.path.expanduser("~"),
+                shell=self._needs_shell(command),
+                # POSIX only (Windows accepts and ignores it — see
+                # `subprocess._execute_child`'s `unused_start_new_session`).
+                # It is what makes `_kill_tree` able to reach a child at all:
+                # without its own session, a killed `cmd.exe` (or a shell
+                # wrapper) leaves whatever it spawned running past the
+                # deadline, still holding the reader's subscription on a
+                # search that will never be read.
+                start_new_session=True,
             )
         except FileNotFoundError as exc:
             raise NoHarness(
@@ -970,10 +989,7 @@ class HarnessResearcher(AgentResearcher):
 
         def _give_up() -> None:
             expired.set()
-            try:
-                proc.kill()
-            except Exception:  # noqa: BLE001 — already gone is the good case
-                pass
+            self._kill_tree(proc)
 
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
@@ -981,6 +997,15 @@ class HarnessResearcher(AgentResearcher):
         try:
             for line in proc.stdout:
                 self._keep(line)
+                # Checked before narration, every line: a run an agent has
+                # gone quiet on (nothing left to say for `MAX_NARRATED` lines,
+                # or a CLI that streams no text) must still be interruptible.
+                # Left to propagate on purpose — the `finally` below kills the
+                # tree, and whatever `check_cancelled` raised (a `Cancelled`,
+                # in production) reaches the caller exactly as raised, so a
+                # cancelled run reads as cancelled rather than as a crash.
+                if self.check_cancelled is not None:
+                    self.check_cancelled()
                 if say is None:
                     continue
                 if narrated >= MAX_NARRATED:
@@ -1009,6 +1034,20 @@ class HarnessResearcher(AgentResearcher):
             proc.wait()
         finally:
             timer.cancel()
+            # A cancellation (or any other exception) escaping the loop above
+            # leaves before `proc.wait()`, and the child — the whole tree, for
+            # a `.cmd` shim whose real work is one level below `cmd.exe` — must
+            # not be left running past whatever stopped this thread reading
+            # it. Idempotent: a process the timeout path already killed, or
+            # one that finished on its own, answers `poll()` with a code and
+            # this does nothing. It happens *before* the drain thread is
+            # joined and before the pipes are closed, because both of those
+            # wait on a reader that only returns when the child's pipe reaches
+            # end of file: closing a buffered pipe takes the same lock the
+            # blocked `readline` holds, so a teardown in the other order waits
+            # out the very process it is trying to abandon.
+            if proc.poll() is None:
+                self._kill_tree(proc)
             drain.join(timeout=5.0)
             for pipe in (proc.stdout, proc.stderr):
                 try:
@@ -1022,6 +1061,57 @@ class HarnessResearcher(AgentResearcher):
                 f"{self.harness.label} did not finish within {int(self.timeout)}s"
             )
         return proc.returncode or 0, self.transcript, "".join(errors)
+
+    @staticmethod
+    def _kill_tree(proc) -> None:
+        """End the whole process, not just the one pid this object holds.
+
+        `_needs_shell` means the pid here is sometimes `cmd.exe`, whose real
+        child (the CLI, and whatever it forked for a fetch) `proc.kill()`
+        never touches — a run declared timed out would keep spending the
+        reader's subscription in the background, invisibly, past the
+        deadline this exists to enforce. `start_new_session=True` on spawn is
+        what makes a tree kill possible on POSIX (`killpg` reaches the whole
+        session); on Windows `taskkill /T` is the documented way to end one.
+        Every step is best-effort — a process that is already gone by the
+        time this runs is the good outcome, not a failure to report.
+        """
+        try:
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                    capture_output=True, timeout=10,
+                )
+            else:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except Exception:  # noqa: BLE001 — already gone is the good case
+            pass
+        try:
+            proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _needs_shell(command: list[str]) -> bool:
+        """Whether this vector can only start through `cmd.exe`.
+
+        Windows `CreateProcess` (what `subprocess.Popen(shell=False)` calls)
+        needs a PE image; it cannot launch a `.cmd`/`.bat` file directly and
+        fails before a byte of stdin is written — `WinError 193: %1 is not a
+        valid Win32 application`, or `WinError 2`, depending on the build.
+        `claude.cmd` next to no `claude.exe` at all is exactly what npm's own
+        global installer for Claude Code produces, and it is exactly what
+        `locate()`'s suffix search (`_SUFFIXES`) is written to find. `shell=True`
+        on Windows already does the right thing with a list of arguments —
+        Python quotes each one with `list2cmdline` before handing the joined
+        string to `%ComSpec% /c` — so this is the one platform difference the
+        caller needs, never a rewrite of the command itself.
+        """
+        return (
+            os.name == "nt"
+            and bool(command)
+            and command[0].lower().endswith((".cmd", ".bat"))
+        )
 
     @staticmethod
     def _drain(pipe, into: list) -> None:
