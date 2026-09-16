@@ -96,9 +96,6 @@ def _tools() -> dict:
     """
     from app import mcp_server
 
-    source = inspect.getsource(mcp_server)
-    from app import mcp_server
-
     names = sorted(mcp_server.registered_tools())
     return {name: getattr(mcp_server, name) for name in names}
 

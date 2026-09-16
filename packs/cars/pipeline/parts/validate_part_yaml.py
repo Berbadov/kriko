@@ -316,7 +316,7 @@ def main() -> None:
     n_errors = validate_all(paths)
 
     if n_errors == 0:
-        print(f"OK — all files valid.")
+        print("OK — all files valid.")
     else:
         print(f"\n{n_errors} error(s) found.")
         sys.exit(1)

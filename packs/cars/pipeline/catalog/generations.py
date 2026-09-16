@@ -24,7 +24,6 @@ from pathlib import Path
 
 import yaml
 
-from packs.cars.pipeline.paths import REPO_ROOT
 GENERATIONS_DIR = Path(__file__).resolve().parent / "generations"
 
 # A car cannot predate the automobile or be more than a model year ahead.

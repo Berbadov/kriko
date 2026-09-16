@@ -32,7 +32,7 @@ protocols did. A mechanism for going faster must never make a fresh install
 slower or wronger than it was.
 """
 
-from kriko.research.base import PREAMBLES, STANDARD, Spend
+from kriko.research.base import STANDARD, Spend
 
 #: The named protocols. A closed engineering vocabulary — the rule against
 #: hand-enumerated lists is about data that grows with pack coverage, and this

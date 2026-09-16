@@ -24,7 +24,6 @@ that says it happened.
 """
 
 import threading
-import time
 from dataclasses import dataclass, field
 
 from app.tui import screen, term

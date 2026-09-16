@@ -1447,7 +1447,8 @@ def open_operation(
         (door, kind, name, subject_id, pack_id, request, _now()),
     )
     conn.commit()
-    return int(cursor.lastrowid)
+    assert cursor.lastrowid is not None
+    return cursor.lastrowid
 
 
 def close_operation(
@@ -1673,7 +1674,8 @@ def update_job(
     The log is appended in SQL rather than read-modify-written in Python so a
     reader polling the row cannot see a line vanish between two writes.
     """
-    sets, args = [], []
+    sets: list[str] = []
+    args: list[float | str | int] = []
     if progress is not None:
         sets.append("progress = ?")
         args.append(max(0.0, min(1.0, progress)))

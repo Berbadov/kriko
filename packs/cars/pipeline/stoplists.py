@@ -30,7 +30,6 @@ import re
 from functools import lru_cache
 
 from packs.cars.pipeline.paths import REPO_ROOT
-from pathlib import Path
 from urllib.parse import urlparse
 
 from packs.cars.pipeline.util.yamlutil import load_yaml

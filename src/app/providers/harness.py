@@ -498,7 +498,7 @@ def _envelope(stdout: str) -> dict:
         if results:
             return results[-1]
         return objects[-1] if objects else {}
-    last = {}
+    last: dict = {}
     for line in reversed(text.splitlines()):
         try:
             one = json.loads(line)
@@ -591,7 +591,7 @@ def _short(text: str, limit: int = 160) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
-def _tool_line(name: str, args: dict) -> str:
+def _tool_line(name: str, args: dict | None) -> str:
     """What one tool call was, in the reader's words rather than the API's.
 
     `SEARCH_TOOLS` is the whole grant, so there are two shapes worth naming
@@ -994,6 +994,7 @@ class HarnessResearcher(AgentResearcher):
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
         narrated = 0
+        assert proc.stdout is not None
         try:
             for line in proc.stdout:
                 self._keep(line)
@@ -1050,6 +1051,8 @@ class HarnessResearcher(AgentResearcher):
                 self._kill_tree(proc)
             drain.join(timeout=5.0)
             for pipe in (proc.stdout, proc.stderr):
+                if pipe is None:
+                    continue
                 try:
                     pipe.close()
                 except Exception:  # noqa: BLE001

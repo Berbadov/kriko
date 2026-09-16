@@ -453,13 +453,13 @@ def _pack_section(conn, pack: dict) -> str:
 
     example = _example(conn, pack_id)
     if example:
-        out += f"\nA subject that exists right now"
+        out += "\nA subject that exists right now"
         out += (
             " and has nothing known about it"
             if not example["has_claims"]
             else ""
         )
-        out += f" — start here:\n\n```\n"
+        out += " — start here:\n\n```\n"
         out += f"research_brief(subject_id=\"{example['subject_id']}\", pack_id=\"{pack_id}\")\n```\n"
         if example["identity"]:
             out += f"\nIt is `{example['label']}`, identified as "

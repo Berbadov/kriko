@@ -19,7 +19,6 @@ from app.web.routers.history import label_for  # noqa: F401
 from app.web.observability import log_analysis_jsonl
 from kriko.adapters import (
     adapt,
-    adapter_for,
     declared_labels,
     identity_vocabulary,
     load_adapters,

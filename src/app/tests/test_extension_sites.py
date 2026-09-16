@@ -165,19 +165,21 @@ def test_the_adapters_carry_no_executable_anything():
     """
     forbidden = {"js", "script", "code", "eval", "function"}
     for pack_id, adapter in adapters():
-        keys = set()
-
-        def walk(node):
-            if isinstance(node, dict):
-                keys.update(str(k).lower() for k in node)
-                for v in node.values():
-                    walk(v)
-            elif isinstance(node, list):
-                for v in node:
-                    walk(v)
-
-        walk(adapter)
+        keys = _collect_keys(adapter)
         assert not (keys & forbidden), f"{pack_id}: adapter carries {keys & forbidden}"
+
+
+def _collect_keys(node, keys=None):
+    if keys is None:
+        keys = set()
+    if isinstance(node, dict):
+        keys.update(str(k).lower() for k in node)
+        for v in node.values():
+            _collect_keys(v, keys)
+    elif isinstance(node, list):
+        for v in node:
+            _collect_keys(v, keys)
+    return keys
 
 
 # ── nothing the extension ships may phone out ────────────────────────────

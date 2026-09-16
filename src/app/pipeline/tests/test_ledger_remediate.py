@@ -11,7 +11,7 @@ import json
 
 import yaml
 
-from packs.cars.coverage import Finding, Report, build_report
+from packs.cars.coverage import Finding, Report
 from kriko.ledger import db
 from app.pipeline import remediate
 
@@ -65,7 +65,6 @@ def test_plan_dedupes_multiple_findings_for_same_part():
 
 def test_lost_source_urls_collects_only_claims_with_urls(tmp_path, monkeypatch):
     import yaml as _yaml
-    from packs.cars.pipeline.ledger.parity import _source_urls
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
