@@ -10,7 +10,6 @@
     import { hashWith, route } from "./lib/router";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import { terminalOpen } from "./lib/shell/terminal";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
     import About from "./routes/About.svelte";
     import Activity from "./routes/Activity.svelte";
@@ -70,9 +69,7 @@
     // itself. See lib/focus.ts.
     $effect(() => watchFocus());
 
-    let terminalEverOpened = $state(false);
     $effect(() => {
-        if ($terminalOpen) terminalEverOpened = true;
     });
 
     /* Saying that the page changed, and putting focus where it changed.
@@ -111,12 +108,11 @@
      * exactly the question being asked here. Reading it beats both a
      * hardcoded list of route names and a `document.activeElement` race.
      *
-     * The Console is gone (a real terminal replaced it — see
-     * `lib/shell/TerminalPanel.svelte`, mounted outside `.view` and so outside
-     * this effect's reach entirely), which leaves no current route claiming
-     * `[autofocus]`. The check stays anyway: it costs one `querySelector` per
-     * navigation, and the alternative is deleting the one thing standing
-     * between the next typing-first route and the exact regression above.
+     * No current route claims `[autofocus]` — the Console that did was folded
+     * into Agents, and the terminal panel that replaced *it* is gone too. The
+     * check stays anyway: it costs one `querySelector` per navigation, and the
+     * alternative is deleting the one thing standing between the next
+     * typing-first route and the exact regression above.
      */
     function focusTheView() {
         if (!viewEl) return;
@@ -135,7 +131,7 @@
     });
 </script>
 
-<div class="shell" class:with-terminal={$terminalOpen}>
+<div class="shell">
     <!-- A button, not `<a href="#main">`: the app is hash-routed, so a URL
          fragment is an address here. `#main` would parse as the route `main`
          and the skip link would navigate to "No such view" — the one place
@@ -153,9 +149,6 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
-    {#if terminalEverOpened}
-        <Lazy loader={() => import("./lib/shell/TerminalPanel.svelte")} />
-    {/if}
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement

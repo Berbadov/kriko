@@ -8,10 +8,10 @@
      * API by hand when a harness could not. The console ran no shell; it was
      * a safe, API-only prompt on purpose. That stopped being enough the day a
      * harness itself needed a one-time interactive `login` — no API call can
-     * do that on the CLI's behalf — so the console is gone and a real
-     * terminal (`lib/shell/TerminalPanel.svelte`) took its place: always
-     * reachable from the rail, not tucked behind a lens here, because a
-     * shell is not a research feature the way Connect is.
+     * do that on the CLI's behalf. An embedded terminal took its place and has
+     * since been removed (§2.9); the shell that survives is `kriko tui`'s
+     * pass-through, which is where an interactive `login` belongs anyway: a
+     * one-time setup step is an operator's job, not a screen the reader keeps.
      *
      * Wiring is the one thing left, so it is the only thing rendered.
      */

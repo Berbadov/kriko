@@ -68,7 +68,8 @@ meant.
 
 - the **desktop shell** — `tauri/`, ~180 lines of Rust that owns the sidecar's
   lifetime and holds no engine logic;
-- the **shell** in the terminal panel — a PTY running `cmd.exe` or `$SHELL`.
+- the **shell** in `kriko tui` — a PTY running `cmd.exe` or `$SHELL`, passed
+  through to the operator's own terminal rather than drawn inside the TUI.
 
 `installer.nsh` has to stop both, which is why its comment "the shell first,
 then the engine" is about the desktop one and reads oddly otherwise. Prefer
