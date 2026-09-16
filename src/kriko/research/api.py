@@ -18,8 +18,36 @@ is how a hobby project produces a bill someone remembers.
 """
 
 import json
+import re
+import unicodedata
 
 from kriko.research.base import STANDARD, Document, Finding, ResearchTask, Spend
+
+#: Characters an extractor or a model is free to swap without changing the
+#: sentence. The same rule `app/factcheck.py` applies to a stored quote years
+#: later, applied here to a quote seconds after it was produced: a curly
+#: apostrophe or a collapsed run of whitespace is not evidence the quote was
+#: invented, and rejecting it on that basis would teach nobody anything except
+#: to distrust the gate.
+_SAME_CHARS = {
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+    "–": "-", "—": "-", "−": "-", "…": "...",
+}
+
+
+def _grounding_form(text: str) -> str:
+    """The comparable form of a quote or a document, for the grounding check.
+
+    Deliberately loose about whitespace and case and strict about everything
+    else — a model that reconstructs a sentence from memory still has to fail,
+    and the two things this folds away are cosmetic in every language this
+    runs against. Case-folding does not make a fabricated quote harder to
+    catch: truth does not live in capitalisation.
+    """
+    text = unicodedata.normalize("NFKC", text or "")
+    for needle, plain in _SAME_CHARS.items():
+        text = text.replace(needle, plain)
+    return re.sub(r"\s+", " ", text).strip().casefold()
 
 
 class BudgetExceeded(RuntimeError):
@@ -169,16 +197,19 @@ class ApiResearcher:
             f"### Document {index}\nURL: {one.url}\n\n{one.text[:limit]}"
             for index, one in enumerate(batch, start=1)
         )
+        preamble = self.spend.preamble_text
         prompt = (
-            f"{self.brief(task)}\n\n"
+            (f"{preamble}\n\n" if preamble else "")
+            + f"{self.brief(task)}\n\n"
             "## Documents\n\n"
             f"{blocks}\n\n"
             "## Reply\n\n"
             "Return ONLY a JSON array. Each element: "
             '{"source_url","title","domain","severity","quote","body","advice"}. '
             "`quote` must be copied verbatim from the document you took it "
-            "from, and `source_url` must be that document's URL. "
-            "Return [] if the documents support no claim about this subject."
+            "from, and `source_url` must be that document's URL — one of the "
+            "URLs listed above, exactly. Return [] if the documents support no "
+            "claim about this subject."
         )
         try:
             payload = json.loads(self._complete(prompt))
@@ -189,18 +220,38 @@ class ApiResearcher:
 
         by_url: dict[str, list[Finding]] = {}
         texts = {one.url: one.text for one in batch}
+        grounded = {url: _grounding_form(text) for url, text in texts.items()}
         for item in payload:
             if not isinstance(item, dict):
                 continue
             quote = str(item.get("quote", "")).strip()
-            url = str(item.get("source_url", "")).strip() or batch[0].url
+            url = str(item.get("source_url", "")).strip()
+            if not url and len(batch) == 1:
+                # No ambiguity: there is exactly one document this could be,
+                # and requiring the model to name it anyway would reject real
+                # findings for no safety gained. This is the *only* case a
+                # missing url may be defaulted — see the batch case below.
+                url = batch[0].url
             # Grounding, enforced rather than requested: a quote that is not in
-            # the document is a hallucination, and the whole value of the
-            # evidence chain is that this cannot happen quietly. Under a batch
-            # this also catches the *attribution* slip — a real quote filed
-            # against the wrong document — by checking it against the text of
-            # the url the model named, not against whichever page is handy.
-            if not quote or quote not in texts.get(url, ""):
+            # the named document is a hallucination, and the whole value of the
+            # evidence chain is that this cannot happen quietly.
+            #
+            # Three things are checked, not one: under a batch of more than one
+            # document, `url` must be non-empty (a finding with no source used
+            # to fall back to the *first* document regardless of batch size,
+            # which let a fabricated, source-less quote through whenever it
+            # happened to also appear on that unrelated page); `url` must be
+            # one this batch actually offered (a model citing a page it was
+            # never shown resolves to no text at all, never to "the nearest
+            # one"); and the quote must appear in *that* page's text — not
+            # merely somewhere in the batch — which is what catches a real
+            # quote filed against the wrong document. Comparison is via
+            # `_grounding_form`, loose about whitespace/case/curly punctuation
+            # and strict about everything else, because a model that
+            # reconstructs a sentence from memory still has to fail this.
+            if not quote or not url or url not in texts:
+                continue
+            if _grounding_form(quote) not in grounded[url]:
                 continue
             title = str(item.get("title", "")).strip()
             if not title:
