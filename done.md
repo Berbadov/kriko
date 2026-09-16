@@ -6,6 +6,79 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the 0.10.0 reader work order, P0 (§1.1–§1.4, §1.6, §1.7)
+
+A 23-item work order. These are the launch blockers; §1.5 and everything in P1
+and P2 are still open, tracked in `backlog.md` under *The 0.10.0 work order*.
+
+Three of the seven were the same defect wearing different clothes — a value
+that could not be matched, a field that could not be filled, a state nobody
+reported — and each was found by reproducing the reader's own sentence rather
+than by reading the code that was supposed to produce it.
+
+**§1.1 — "the pack exists but the extension can't see it."** `_resolve_in_pack`
+intersected identity attributes exactly, so one value differing by a word
+emptied the candidate set, and an empty set is indistinguishable from never
+having heard of the product. `kriko/lookup/score.py` scores what the exact path
+rejects: per-key, weighted, with the reasons attached and two pack-declared
+thresholds — above the floor is a match, above the band is a question. A
+contradiction counts twice against a candidate, because without that a page
+agreeing on the maker and contradicting the model scores 0.5 and gets offered as
+probably that product. Identity values got their own tokeniser: `title_sim`
+drops anything under two characters, which read two values differing only in
+their numbers as identical. Two of the 98 recorded parity cases moved, both from
+`NOT_MATCHED` with nothing to `PROBABLE_MATCH` with eight claims; the other 96
+are byte-identical. `/api/diagnose/identity` is the reader's own ask — debug it
+without reading source.
+
+**§1.2 — cancel.** `except Cancelled` wrote CANCELLED with no result, so
+everything a run had gathered and paid for died with the stack frame.
+`Progress.partial` checkpoints as work happens and a cancelled run keeps it.
+`cancelling` is a real state rather than a message. The harness sat inside `for
+line in proc.stdout`, which cannot be interrupted, so the cancel check after it
+was worth nothing during exactly the period worth cancelling — the read moved
+behind a queue with a timeout. A second press could write `cancelling` over
+`cancelled`; the guard is in the WHERE clause now.
+
+**§1.3 — "rationale is 0 chars".** Two names for one concept, bridged nowhere:
+the gate measured `rationale`, the store wrote `body`, and the paid plane only
+ever filled the second. So the gate refused everything that plane produced —
+while an agent that filled `rationale` passed the gate and had its explanation
+dropped on the way into the store, landing a claim with a title and nothing
+under it. One string is judged and kept now. The pack's minimum reaches both
+prompts instead of only being checked afterwards, the skill states the field as
+required rather than "optional but worth setting", and the job re-asks once for
+the failures a second attempt can honestly fix.
+
+**§1.4 — site registration.** Three defects. The `requested` list was a straight
+read of the table, so a registered site sat in both lists at once — derived from
+the adapters now. The panel never appeared because `permissions.request` must
+come from a gesture inside the extension, which no screen said; the extension
+reports what its sync concluded per host and `/api/sites/{host}/activation`
+names the blocker. And "reloading the page should show the panel" was a guess
+that had been wrong for six versions — no reload can grant a permission.
+
+**§1.6 — `ModuleNotFoundError: No module named 'kriko'`.** The tree's packaging
+is sound: a clean-environment wheel install imports and runs here, so the fault
+is in the reader's artifact or environment and `docs/INSTALL_WINDOWS.md` has the
+three commands that tell those apart. What was missing is that nothing could
+have caught it — every check runs against a checkout where `src/` is on the
+path. `tools/smoke_wheel.sh` builds the real wheel and runs it from `/`. Its
+first version passed on a deliberately broken config because setuptools reuses
+`build/lib`; clearing that first is the difference between a check and a
+decoration.
+
+**§1.7 — the banner that stays.** Both endpoints were already correct. The card
+changed its words to "is installed" and kept its warning colour and its position
+above everything, which is the half anybody reads. It is a receipt now, with
+"Hide this" separate from "Throw it away" — nobody should have to destroy a
+proposal to stop being reminded of it.
+
+Commits `bb67237`, `4892fd3`, `7323e1d`, `64b1a91`, `08820e5`, `52d9354`,
+`052c471`.
+
+---
+
 ### 2026-09-16 — the three that were parked, and a decision reversed (B136, B137, B138)
 
 The overhaul's own report left three things open as "real scope, not a blind
