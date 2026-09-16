@@ -116,7 +116,7 @@ def lookup(conn, query: Query) -> LookupResult:
     # Across packs it is the opposite: two packs matching the same subject is
     # not ambiguity, it is two answers to one question, and intersecting them
     # would mean installing a second pack could only ever *reduce* what you see.
-    reached = {}
+    reached: dict[str, str] = {}
     for pack_id in pack_ids:
         in_pack = [sid for sid in resolution.subject_ids
                    if _subject_pack(conn, sid) == pack_id]

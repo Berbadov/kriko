@@ -222,6 +222,15 @@ try {
                " request. Use a final release; the suite runs on 3.13.")
     }
 
+    Step "The shell's crate graph is the one that was committed"
+    Push-Location tauri/src-tauri
+    try {
+        cargo metadata --locked --format-version 1 | Out-Null
+        Assert-LastExitCode "cargo metadata --locked"
+    } finally {
+        Pop-Location
+    }
+
     # -r first, and it is the point rather than tidiness: the lock is what a
     # reader's sidecar contains, and a floating resolve here is how two builds
     # of one tag stop being the same binary (B57). PyInstaller is a build tool

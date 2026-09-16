@@ -358,6 +358,45 @@ def test_two_pages_on_the_same_domain_are_not_both_independent(tmp_path):
     assert flags == [False, True]
 
 
+def test_published_at_survives_into_exported_source(tmp_path):
+    """B136: a document that carries a world-publish date at insert time
+    must reach the built claim's `sources[].published_at` — the field both
+    builders already read, but nothing wrote until acquisition did."""
+    conn = db.connect(tmp_path / "l.db")
+    doc_id = db.insert_document(
+        conn, url="https://a.test/1", source_type="page",
+        raw_text="text with published date", target_hint="dq381",
+        published_at="2021-05-03",
+    )
+    ev_id = db.insert_evidence(conn, doc_id=doc_id, claim={
+        "title": "DQ381 mechatronic solenoid wear", "domain": "transmission",
+        "severity": "medium", "rationale": "r", "inspection_advice": "i",
+        "quote": "quote", "engine_or_variant_hint": "DQ381",
+        "quote_grounded": True}, span_start=None, span_end=None,
+        extractor_version=2)
+    conn.execute("INSERT INTO resolutions VALUES (?,?,?,?)",
+                 (ev_id, "dq381", "alias", 1))
+    conn.execute("INSERT INTO clusters (component_id, domain, cluster_version)"
+                 " VALUES ('dq381','transmission',1)")
+    conn.execute("INSERT INTO cluster_members VALUES (1,1)")
+    conn.commit()
+    _add_verdict(conn, _verdict())
+
+    paths = export.export_all(conn, tmp_path / "out")
+    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    assert sources[0]["published_at"] == "2021-05-03"
+
+
+def test_published_at_blank_when_never_discovered(populated, tmp_path):
+    """`populated`'s documents never set published_at, so the exported field
+    must be an honest "", never a stand-in for retrieved_at/fetched_at."""
+    _add_verdict(populated, _verdict())
+    paths = export.export_all(populated, tmp_path / "out")
+    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    assert all(s["published_at"] == "" for s in sources)
+    assert all(s["published_at"] != s["retrieved_at"] for s in sources)
+
+
 def test_two_fetches_of_the_same_url_collapse_to_one_source(tmp_path):
     """A page refetched later (documents.url is not unique — only text_hash
     is) must still count as ONE independent source, with retrieved_at set to

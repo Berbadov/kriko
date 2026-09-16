@@ -36,6 +36,24 @@ if [ "$only" = all ] || [ "$only" = py ]; then
     # commit that caused it. It costs a second here.
     step "the four version strings agree"
     "$PYTHON" tools/bump.py --show
+    # B138: ruff before pytest, so a lint failure is cheap to see and does not
+    # wait behind a ~80s test run. Config (the curated rule set, and every
+    # per-file ignore with its reason) lives in pyproject.toml, not here.
+    step "ruff (src/kriko, src/app, packs)"
+    "$PYTHON" -m ruff check src packs
+    # Three invocations, not one `mypy src packs`: `kriko/ledger/extraction.py`
+    # and `packs/cars/pipeline/ledger/extraction.py` share a module-path
+    # suffix, and mypy's module resolution conflates them into one "Module
+    # kriko.ledger has no attribute extraction" false positive when both are
+    # on the same command line. Each of the three checks clean alone; the
+    # per-module strictness tiers in pyproject.toml apply regardless of how
+    # many invocations they are split across.
+    step "mypy (src/kriko)"
+    "$PYTHON" -m mypy src/kriko
+    step "mypy (src/app)"
+    "$PYTHON" -m mypy src/app
+    step "mypy (packs)"
+    "$PYTHON" -m mypy packs
     # No arguments: pytest.ini pins testpaths. Naming directories by hand is how
     # the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
     # test_repo_invariants.py enforces the layering rules and the testpaths
