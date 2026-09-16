@@ -78,12 +78,17 @@ if missing:
     )
 # Read from disk at runtime, so being declared as package data is the only
 # thing standing between a wheel and a FileNotFoundError on the first query.
-if not any(name.endswith("kriko/store/schema.sql") for name in names):
-    raise SystemExit(
-        "the wheel has no kriko/store/schema.sql. It is read at every "
-        "connect(); see [tool.setuptools.package-data]."
-    )
-print(f"  kriko and app are both in it, with the store's DDL")
+# One entry per file that is *data*: each is invisible to PyInstaller and to
+# setuptools alike, and each fails only in a real install.
+for data in ("kriko/store/schema.sql", "app/models.toml"):
+    if not any(name.endswith(data) for name in names):
+        raise SystemExit(
+            f"the wheel has no {data}. It is read from disk at runtime, so a "
+            f"checkout finds it and a wheel does not; see "
+            f"[tool.setuptools.package-data]."
+        )
+print("  kriko and app are both in it, with the store's DDL and the "
+      "model catalogue")
 PY
 
 say "installing it somewhere with nothing else on the path"

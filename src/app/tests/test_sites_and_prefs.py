@@ -210,9 +210,18 @@ def test_forgetting_a_learned_site_leaves_the_packs_alone(client, settings):
 
 
 def test_nothing_chosen_behaves_exactly_as_before(client):
+    """Every key empty, including the per-stage ones.
+
+    Asserted as a whole rather than key by key, because the property is that
+    an installation which never opens this screen behaves *exactly* as it did —
+    and a per-stage model quietly defaulting to something would break that in
+    the one way nobody would notice.
+    """
     body = client.get("/api/prefs").json()
     assert body["chosen"] == {
-        "preferred_harness": "", "llm_model": "", "search_provider": ""
+        "preferred_harness": "", "llm_model": "", "search_provider": "",
+        "llm_model_plan": "", "llm_model_extract": "",
+        "llm_model_synthesise": "", "llm_model_validate": "",
     }
 
 
@@ -225,6 +234,8 @@ def test_a_choice_survives_being_made(client):
     assert chosen == {
         "preferred_harness": "", "llm_model": "qwen3.5-27b",
         "search_provider": "tavily",
+        "llm_model_plan": "", "llm_model_extract": "",
+        "llm_model_synthesise": "", "llm_model_validate": "",
     }
 
 
@@ -359,3 +370,61 @@ class _Progress:
 
     def check(self) -> None:
         pass
+
+
+# ── choosing a model, with what you need to choose it ───────────────────
+#
+# "Let me choose the model." It was a free-text box: a choice offered with
+# none of the information needed to make it, and no way to tell a model you
+# cannot use from one that does not exist.
+
+def test_a_model_is_offered_with_what_it_costs_and_how_much_it_reads(client):
+    offered = client.get("/api/prefs").json()["models"]["offered"]
+    assert offered, "a free-text box is not a choice"
+    row = next(one for one in offered if one["id"] == "claude-opus-5")
+    assert row["usd_in"] and row["usd_out"] and row["context"]
+    assert row["speed"]
+
+
+def test_a_model_with_no_key_says_why_rather_than_vanishing(client):
+    """"Why can I not pick that one" has an answer, and hiding the row withholds it."""
+    offered = client.get("/api/prefs").json()["models"]["offered"]
+    unusable = [one for one in offered if one["unusable"]]
+    assert unusable, "no keys are set in this fixture, so everything is unusable"
+    assert all("key" in one["unusable"] for one in unusable)
+
+
+def test_usable_models_are_listed_before_ones_that_cannot_run(client):
+    offered = client.get("/api/prefs").json()["models"]["offered"]
+    blocked = [bool(one["unusable"]) for one in offered]
+    assert blocked == sorted(blocked), "unusable options must not lead the list"
+
+
+def test_the_reader_is_told_where_to_edit_the_prices(client):
+    """Editable config is only editable if you can find it."""
+    assert client.get("/api/prefs").json()["models"]["catalogue"].endswith(
+        "models.toml")
+
+
+def test_each_stage_of_a_run_can_take_its_own_model(client):
+    roles = client.get("/api/prefs").json()["roles"]
+    assert [one["id"] for one in roles] == [
+        "plan", "extract", "synthesise", "validate"]
+    assert all(one["note"] for one in roles), (
+        "a client writing its own description of a stage is one that drifts")
+
+
+def test_a_stage_with_no_choice_falls_back_to_the_default(client):
+    from app import prefs
+    from app.web import state
+
+    client.put("/api/prefs", json={"llm_model": "gpt-4o-mini"})
+    conn = state.connect(client.app.state.settings.app_state_path)
+    try:
+        assert prefs.for_role(conn, "extract") == "gpt-4o-mini"
+        client.put("/api/prefs", json={"llm_model_extract": "claude-haiku-4-5"})
+        assert prefs.for_role(conn, "extract") == "claude-haiku-4-5"
+        # And only that stage moved.
+        assert prefs.for_role(conn, "synthesise") == "gpt-4o-mini"
+    finally:
+        conn.close()
