@@ -339,6 +339,7 @@ original reasoning.
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
+| `docs/INSTALL_WINDOWS.md` | Installing on Windows, start to finish, including the extension's permission step | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
 | `docs/superpowers/specs/2026-09-15-ground-truth-benchmark-design.md` | B126: benchmarks against pack-authored ground truth — precision/recall/hallucination with intervals, and the sweep that outputs batch size, context and preamble | current — design only |
