@@ -84,7 +84,7 @@ class PackRefused(ValueError):
     """The agent's proposal was not a pack. Carries what was wrong with it."""
 
 
-def brief(category: str) -> str:
+def brief(category: str, scope: dict | None = None) -> str:
     """What to tell an agent that has never seen this repository.
 
     Written as a specification of the decisions rather than of the files,
@@ -94,7 +94,20 @@ def brief(category: str) -> str:
     identity keys" without saying what a wrong choice does silently is an
     instruction that will be obeyed carelessly.
     """
-    return f"""# Author a Kriko knowledge pack: {category}
+    from app import disambiguate
+
+    # What the cheap identification pass settled, and what it assumed. Stated
+    # to the author rather than left implicit, because an agent that does not
+    # know which variant it is writing about will average several into one —
+    # and a pack that averages two failure profiles describes neither.
+    said = disambiguate.sentence(scope or {})
+    narrowed = (
+        f"\n\n## The scope of this pack\n\n{said}\n\nWrite about that one. "
+        f"Where a claim genuinely applies to a different variant, say which in "
+        f"the claim itself rather than widening the pack silently.\n"
+        if said else ""
+    )
+    return f"""# Author a Kriko knowledge pack: {category}{narrowed}
 
 Kriko answers one question about a manufactured thing: *what is known to go
 wrong with **this specific one***. It knows nothing about any category — every

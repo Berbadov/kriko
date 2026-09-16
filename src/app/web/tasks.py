@@ -1220,10 +1220,19 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # to say something before it finished.
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
-    progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
+    # ── the cheap pass, before the expensive one ─────────────────────────
+    #
+    # "It never asks me anything." A pack built on the wrong variant is worse
+    # than no pack, because it is confidently wrong — and the point of asking
+    # *here* is that the expensive research has not happened yet. Nothing waits
+    # on the answer: see `app/disambiguate.py` for why non-blocking is not a
+    # compromise but the automation principle holding.
+    scope = _disambiguate(settings, researcher, category, params, progress)
+
+    progress.set(0.15, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
-    reply = researcher.ask(packauthor.brief(category))
+    reply = researcher.ask(packauthor.brief(category, scope=scope))
     progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
@@ -1248,6 +1257,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         f"Knowledge and press Install."
     )
     written["category"] = category
+    written["scope"] = scope
     if written.get("uncovered"):
         # Said in the job's own last line, because a partial pack the reader
         # knows about is a next step and one they do not is a wrong answer
@@ -1399,6 +1409,54 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
     rejected += second.get("rejected", [])
     return {**verdicts, "accepted": accepted, "rejected": rejected,
             "summary": summarise(accepted, rejected)}
+
+
+def _disambiguate(settings, researcher, subject, params, progress) -> dict:
+    """One short call: is this name one product or several?
+
+    Returns the scope record — what was settled, and which parts of it were
+    *assumed* rather than confirmed. Never raises and never waits: a
+    disambiguation that failed must cost the reader a question, not the run
+    behind it, so every failure path here returns the same empty scope the run
+    had before this existed.
+    """
+    from app import disambiguate
+
+    conn = connect(settings.store_path)
+    try:
+        keys = identity_keys_text(conn)
+    finally:
+        conn.close()
+
+    progress.set(0.05, f"checking what “{subject}” actually means")
+    try:
+        found = disambiguate.parse(
+            researcher.ask(disambiguate.brief(subject, keys)))
+    except Cancelled:
+        raise
+    except Exception as exc:  # noqa: BLE001 — a lost question, never a lost run
+        progress.log(f"could not check the name for ambiguity ({exc}) — "
+                     f"carrying on without asking")
+        return {}
+
+    if not found["ambiguous"]:
+        progress.log(f"“{subject}” names one product — nothing to ask")
+        return disambiguate.scope(found)
+
+    # Written to the job row so a client can render them *while the run
+    # continues*. The reader answering is a refinement, not a gate.
+    progress.partial({"questions": found["questions"], "why": found["why"],
+                      "stopped_at": "disambiguation"})
+    progress.log(f"{found['why']}" if found["why"] else "this name is ambiguous")
+    for question in found["questions"]:
+        progress.log(f"  ? {question['ask']} — assuming {question['default']!r}"
+                     + (f" ({question['because']})" if question["because"] else ""))
+
+    scope = disambiguate.scope(found, params.get("answers") or {})
+    said = disambiguate.sentence(scope)
+    if said:
+        progress.log(said)
+    return scope
 
 
 def site_register(settings, params: dict, progress: Progress) -> dict:
