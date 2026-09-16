@@ -739,33 +739,114 @@ worth catching here — it is true, and it is noise.
 """
 
 
-_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+_FENCE = re.compile(r"```(?:json)?\s*(\{.*)?```", re.DOTALL)
+
+_DECODER = json.JSONDecoder()
 
 
-def _payload(text: str) -> dict:
-    """The pack object, out of whatever the agent wrapped it in.
+def _objects(text: str) -> list[dict]:
+    """Every JSON object in `text`, in the order it appears.
 
-    Same tolerance as the research plane's reader, and for the same reason: a
-    model told to print a fence usually does and sometimes does not, and losing
-    a completed run to a missing backtick would be absurd.
+    `raw_decode` rather than `json.loads`, which is the whole difference
+    between this and what it replaces: `loads` demands that the object be the
+    *entire* string, so an agent that printed a perfectly good object and then
+    said "let me know if you want more" lost the run. Prose either side, two
+    objects, an object in a fence and an object beside it all reduce to the
+    same list here.
     """
-    text = text or ""
-    for match in reversed(_FENCE.findall(text)):
+    found: list[dict] = []
+    index = (text or "").find("{")
+    while index != -1:
         try:
-            parsed = json.loads(match)
+            parsed, end = _DECODER.raw_decode(text, index)
+        except ValueError:
+            index = text.find("{", index + 1)
+            continue
+        if isinstance(parsed, dict):
+            found.append(parsed)
+            index = text.find("{", max(end, index + 1))
+        else:
+            index = text.find("{", index + 1)
+    return found
+
+
+def _repair(text: str) -> tuple[dict, str]:
+    """The longest prefix of a cut-off object that is still an object.
+
+    A run that was killed by a token ceiling prints a complete category read
+    and half a closing brace, and throwing all of it away is the most
+    expensive possible response to the cheapest possible fault. So the scan
+    remembers every point at which the object could legally have ended — after
+    a closed container, or before a comma — and closes it there.
+
+    The result is a *partial* pack, and it is never pretended otherwise: the
+    note comes back with it and every rule below still has to pass.
+    """
+    start = (text or "").find("{")
+    if start == -1:
+        return {}, ""
+    chunk = text[start:]
+    stack: list[str] = []
+    cuts: list[tuple[int, str]] = []
+    in_string = escaped = False
+    for position, character in enumerate(chunk):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character in "{[":
+            stack.append("}" if character == "{" else "]")
+        elif character in "}]":
+            if stack:
+                stack.pop()
+            if stack:
+                cuts.append((position + 1, "".join(reversed(stack))))
+        elif character == "," and stack:
+            cuts.append((position, "".join(reversed(stack))))
+    for position, closers in reversed(cuts):
+        try:
+            parsed = json.loads(chunk[:position] + closers)
         except ValueError:
             continue
         if isinstance(parsed, dict):
-            return parsed
-    start = text.find("{")
-    while start != -1:
-        try:
-            parsed = json.loads(text[start:])
-        except ValueError:
-            start = text.find("{", start + 1)
-            continue
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
+            dropped = len(chunk) - position
+            return parsed, (
+                f"the reply stopped mid-object; {dropped} character(s) after "
+                f"the last complete entry were dropped"
+            )
+    return {}, ""
+
+
+def read_payload(text: str) -> tuple[dict, str]:
+    """The pack object plus a note about how it had to be recovered.
+
+    Order matters. A fenced object is what the contract asked for, so it wins;
+    an unfenced one is the same agent being slightly less careful and is worth
+    just as much. The *last* object wins among equals, because a model that
+    reconsiders prints the correction after the draft — and the repair pass is
+    last of all, because a truncated object is a partial answer and a complete
+    one is never worth passing over for it.
+    """
+    text = text or ""
+    fenced: list[dict] = []
+    for match in _FENCE.findall(text):
+        fenced.extend(_objects(match or ""))
+    if fenced:
+        return fenced[-1], ""
+    loose = _objects(text)
+    if loose:
+        return loose[-1], ""
+    return _repair(text)
+
+
+def _payload(text: str) -> dict:
+    return read_payload(text)[0]
 
 
 # ── amending a draft, rather than authoring it again ─────────────────────────
