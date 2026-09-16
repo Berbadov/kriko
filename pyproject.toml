@@ -27,6 +27,8 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0.1",
     "mcp>=1.0,<2.0",
+    # The PTY behind `kriko tui`'s shell pass-through. The in-app terminal
+    # panel that also used it is gone (§2.9), the operator console is not.
     "ptyprocess>=0.7; sys_platform != 'win32'",
     "pywinpty>=2.0; sys_platform == 'win32'",
 ]

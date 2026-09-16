@@ -47,17 +47,19 @@ import pytest
 #: third. Enough that ordinary feature work never touches it; small enough
 #: that one accidental library does.
 #:
-#: Raised .js from 280,000 to 720,000 on 2026-09-11: the embedded terminal
-#: (`lib/shell/TerminalPanel.svelte`) brought in `@xterm/xterm` and
-#: `@xterm/addon-fit`, a real terminal emulator and its DOM renderer, pushing
-#: the built bundle to 551,840 bytes. That is the one library this budget
-#: exists to make someone say out loud rather than let drift — said here.
-BUDGET = {".js": 720_000, ".css": 60_000}
+#: Raised .js from 280,000 to 720,000 on 2026-09-11 for the embedded terminal,
+#: which brought in `@xterm/xterm` and `@xterm/addon-fit` — a terminal emulator
+#: and its DOM renderer — and pushed the built bundle to 551,840 bytes. **Given
+#: back on 2026-09-16** when that panel was removed (§2.9): a budget raised for
+#: one library and left raised after it goes is not a budget, it is a ratchet
+#: that only turns one way. Back to 280,000, which today's 251 KB sits inside.
+BUDGET = {".js": 280_000, ".css": 60_000}
 
-#: Chunks deliberately kept out of the first paint, by the stem Vite names
-#: them with. One entry, and it has to stay hard to add a second: see the
-#: docstring for the argument the terminal had to make.
-DEFERRED = ("TerminalPanel",)
+#: Chunks deliberately kept out of the first paint, by the stem Vite names them
+#: with. Empty since the terminal left, and that is the honest state — the
+#: alternative was leaving a name here that matches nothing, which reads as a
+#: rule being enforced when nothing is.
+DEFERRED: tuple[str, ...] = ()
 
 #: What a reader waits on before the window can render — the entry chunk and
 #: its CSS, with every deferred leaf above excluded. 253 KB of JS and 42 KB of
