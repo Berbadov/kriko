@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from app import sites
 from app.web import state
-from app.web.deps import get_app_state, get_jobs, get_store
+from app.web.deps import get_app_state, get_store
 
 router = APIRouter(prefix="/api", tags=["sites"])
 

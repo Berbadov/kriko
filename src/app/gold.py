@@ -160,7 +160,8 @@ def judge(case: dict, produced: list[dict]) -> dict:
       penalising a genuinely new find would teach the benchmark to reward
       timidity.
     """
-    found, missed = [], []
+    found: list[str] = []
+    missed: list[str] = []
     for entry in case.get("must_find") or []:
         hit = next(
             (one for one in produced
@@ -247,6 +248,9 @@ def judge_bulk(case: dict, judged_by_subject: dict[str, dict]) -> dict:
     def _mean(values: list[float]) -> float | None:
         return round(sum(values) / len(values), 3) if values else None
 
+    mean_first = _mean(first_half) if len(recalls) >= 2 else None
+    mean_second = _mean(second_half) if len(recalls) >= 2 else None
+
     return {
         "case": case.get("id", ""),
         "kind": "bulk",
@@ -258,11 +262,11 @@ def judge_bulk(case: dict, judged_by_subject: dict[str, dict]) -> dict:
         # few subjects to split meaningfully — one or two subjects cannot show
         # a trend, and a mechanism that always printed a number would teach a
         # reader to trust noise.
-        "recall_first_half": _mean(first_half) if len(recalls) >= 2 else None,
-        "recall_second_half": _mean(second_half) if len(recalls) >= 2 else None,
+        "recall_first_half": mean_first,
+        "recall_second_half": mean_second,
         "degrades": (
-            _mean(first_half) is not None and _mean(second_half) is not None
-            and _mean(second_half) < _mean(first_half) - 0.15
+            mean_first is not None and mean_second is not None
+            and mean_second < mean_first - 0.15
             if len(recalls) >= 2 else None
         ),
     }

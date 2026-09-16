@@ -385,7 +385,6 @@ def _match_specs_to_variants(
     for v in variants:
         vid = v.get("id", "")
         v_fuel = (v.get("fuel") or "").lower()
-        v_hp = v.get("power_min_hp") or v.get("power_max_hp") or 0
         v_ec = (v.get("engine_code") or "").upper()
         v_ef = (v.get("engine_family") or "").lower()
         v_trans_code = (v.get("transmission_code") or "")
@@ -511,7 +510,7 @@ def discover(
         print(f"  Finding generation {generation} section…")
         section = _find_generation_section(wikitext, generation)
     else:
-        print(f"  Single-generation article — using full wikitext.")
+        print("  Single-generation article — using full wikitext.")
         section = wikitext
 
     if not section:
@@ -707,7 +706,7 @@ def main() -> None:
                                if s.fuel in researchable_fuels})
     non_manual_tx = [t for t in catalog.transmissions if t != "manual" and t != "cvt"]
 
-    print(f"\nResearch targets:")
+    print("\nResearch targets:")
     for fam in unique_families:
         fuel = next((s.fuel for s in catalog.engines if s.engine_family == fam), "")
         fuel_flag = f"--fuel {fuel}" if fuel else ""

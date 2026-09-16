@@ -33,6 +33,15 @@ import json
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from typing import TypedDict
+
+
+class _Outcome(TypedDict):
+    state: str
+    response: str
+    error: str
+    usd: float | None
+    tokens: int | None
 
 #: Longer than this and a string is replaced by its own measurement. Generous
 #: enough that a query, a URL or a title survives whole; small enough that a
@@ -172,7 +181,7 @@ def record(app_state_path, *, door: str, name: str, kind: str = "", arguments=No
     except Exception:  # noqa: BLE001 — see the module docstring
         conn, op_id = None, 0
 
-    outcome = {
+    outcome: _Outcome = {
         "state": "ok",
         "response": "",
         "error": "",

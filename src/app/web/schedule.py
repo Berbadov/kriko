@@ -121,11 +121,17 @@ def settings_for(conn) -> dict:
     this module asks of it.
     """
     stored = state.all_settings(conn).get(KEY)
-    merged = dict(DEFAULTS)
+    merged: dict[str, object] = dict(DEFAULTS)
     if isinstance(stored, dict):
         merged.update({k: v for k, v in stored.items() if k in DEFAULTS})
-    merged["every_hours"] = max(MIN_HOURS, float(merged["every_hours"] or 0))
-    merged["rows"] = max(1, min(100, int(merged["rows"] or 1)))
+    hours = merged["every_hours"] or 0
+    rows = merged["rows"] or 1
+    merged["every_hours"] = max(
+        MIN_HOURS, float(hours) if isinstance(hours, (int, float, str)) else MIN_HOURS
+    )
+    merged["rows"] = max(
+        1, min(100, int(rows) if isinstance(rows, (int, float, str)) else 1)
+    )
     merged["enabled"] = bool(merged["enabled"])
     merged["plane"] = str(merged["plane"] or "harness")
     return merged

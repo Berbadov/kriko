@@ -261,7 +261,7 @@ def test_export_grounds_year_window_from_quotes(populated, tmp_path):
                           title_en="DQ200 mechatronic unit failure"),
                  quote="The fault affects 2019 builds onward and was fixed in 2022.")
     _add_verdict(populated, _verdict())
-    paths = export.export_all(populated, tmp_path / "out")
+    export.export_all(populated, tmp_path / "out")
     doc = yaml.safe_load((tmp_path / "out" / "dq200.yaml").read_text())
     c = doc["claims"][0]
     assert c["applies_when"]["applies_year_from"] == 2019

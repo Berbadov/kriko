@@ -7,7 +7,6 @@ comparisons and as a last-resort fallback that the verdict call re-checks."""
 
 import re
 from functools import lru_cache
-from pathlib import Path
 
 import yaml
 from packs.cars.pipeline.paths import REPO_ROOT

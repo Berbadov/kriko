@@ -23,7 +23,6 @@ hold the four things that make that safe rather than reckless:
 
 import ast
 import inspect
-import re
 from pathlib import Path
 
 import pytest

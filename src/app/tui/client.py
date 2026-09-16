@@ -91,7 +91,7 @@ class Engine:
         try:
             parsed = json.loads(raw)
         except ValueError as error:
-            raise EngineError(f"the engine answered with something that is not JSON") from error
+            raise EngineError("the engine answered with something that is not JSON") from error
         return parsed if isinstance(parsed, dict) else {"items": parsed}
 
     def get(self, path: str) -> dict:

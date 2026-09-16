@@ -409,7 +409,7 @@ def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
     source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()
     body = source.split("def main(")[1]
     dispatch = body.index("return serve_mcp")
-    announce = body.index(f'print(f"{{PORT_LINE}}')
+    announce = body.index('print(f"{PORT_LINE}')
     assert dispatch < announce, (
         "the port is announced before the MCP dispatch — a stray line on stdout "
         "is a protocol error the client reports as malformed JSON"

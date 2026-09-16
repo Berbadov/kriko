@@ -19,7 +19,7 @@ is handy.
 import pytest
 
 from app import protocols
-from kriko.research import STANDARD, ApiResearcher, Document, ResearchTask, Spend
+from kriko.research import STANDARD, ApiResearcher, ResearchTask, Spend
 
 
 def _summary(*, runs: int = 100, acceptance: float = 0.6, **over) -> dict:
