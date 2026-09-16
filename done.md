@@ -6,6 +6,52 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-16 — the three that were parked, and a decision reversed (B136, B137, B138)
+
+The overhaul's own report left three things open as "real scope, not a blind
+change". Two of them turned out to be cheaper than that once measured rather
+than estimated, which is its own lesson about parking work on an estimate.
+
+**`cargo` was available all along.** B137 had been filed as needing a Windows
+host, and `cargo check` never reaches the link phase — so the gate now compiles
+the shell natively *and* cross-compiled for Windows, sub-second warm. Proven by
+injecting a type error (caught, `error[E0308]`) and a `Cargo.toml` feature the
+crate does not have (refused before anything compiled) — the exact class the
+per-file `rustc` gate could never see. It skips with a printed remedy where a
+toolchain is missing, because a gate that cannot run is worse than none.
+
+**trafilatura was already a dependency.** B136 had been filed as needing new
+page-metadata extraction; the library that does it was installed, and the
+research plane an agent drives had the date available for about one function
+call before throwing it away with the rest of the markup. Both doors now read
+it, bounded, and neither substitutes the fetch time — which is the whole reason
+the column is worth having.
+
+**The linter's first run paid for itself.** `.lstrip("www.")` strips a set of
+characters, not a prefix, so `webflow.io` became `ebflow.io` in the domain
+comparison that decides whether two sources are independent — a corroboration
+bug, found by a tool, in the same week another corroboration bug was found by
+hand. Also a stale function reference that would have been a runtime
+`ImportError`, invisible to pytest because that call is monkeypatched in its
+own test.
+
+**And one decision was reversed rather than overridden.** Splitting every route
+out of the bundle failed `test_bundle_budget.py`, which is not a size test so
+much as a gate that forces an argument when a second chunk appears. The
+argument, having had it: the reasoning against splitting holds for routes —
+local disk, no network, every reader has every route — and fails for exactly
+one leaf, xterm at 335 KB behind a keystroke most readers never press. Routes
+went back to eager, the terminal stayed deferred, first paint went 574 KB →
+253 KB, and the file now budgets the first paint separately, because otherwise
+a deferred chunk and a chunk nobody wrote weigh the same.
+
+Also found: the benchmark screen would have rendered empty against a live
+server, because `/api/bench` said `model` and `ui/` is forbidden that word by
+the vocabulary gate. Same shape as the adapter suffix — a producer and its
+reader disagreeing across a boundary — so the serving layer renames and a test
+pins it.
+
+
 ### 2026-09-16 — the overhaul: seven planes, and the silences between them (0.10.0)
 
 The reader's brief was "the bugs are everywhere, features aren't working well;
