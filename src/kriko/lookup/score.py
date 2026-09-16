@@ -320,8 +320,13 @@ def candidates(conn, kind: str, identity: dict, pack_id: str, terms,
         if not total:
             continue
         score = sum(one.score * one.weight for one in keys) / total
-        if score <= 0:
-            continue
+        # A candidate that scores zero is kept, not dropped. It can never
+        # match — every threshold is above zero — but it is the only thing
+        # there is to *explain* with when a page and a catalog agree on
+        # nothing at all, and that is exactly the case that produced the bare
+        # "no pack recognised this" the reader could do nothing with. "The
+        # nearest thing installed holds a different model" is a sentence with
+        # a next move in it; silence is not.
         scored.append(
             Candidate(subject_id, pack_id, labels.get(subject_id, ""),
                       round(score, 4), keys)
