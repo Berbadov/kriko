@@ -34,6 +34,32 @@ def domain_of(url: str) -> str:
     return urlsplit(url).netloc.lower().removeprefix("www.")
 
 
+#: The explanation attached to a finding, under either of the two names it has
+#: been submitted under. **They are one concept and were never bridged**, which
+#: is the whole of the reader's "rationale is 0 chars" report.
+#:
+#: `kriko.gates` calls it `rationale` and measures it. `claim_text` calls it
+#: `body` and stores it. `kriko.research.base.Finding` carries `body`, the API
+#: plane's extraction prompt asks for `body`, and `accept_findings` read
+#: `rationale`. So the gate measured a field no extractor on the paid plane ever
+#: filled, and refused every finding it produced — while an MCP agent that did
+#: fill `rationale` passed the gate and had its explanation dropped on the way
+#: into the store, landing a claim with a title and nothing under it.
+#:
+#: Both directions were broken, and both looked like a model behaving badly.
+#: Accepting both spellings here, once, is what makes the two ends agree; the
+#: prompts and the skill now name `rationale` so new callers have one answer.
+RATIONALE_KEYS = ("rationale", "body")
+
+
+def explanation(item: dict) -> str:
+    for key in RATIONALE_KEYS:
+        value = (item.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def accept_findings(
     conn,
     subject_id: str,
@@ -98,13 +124,13 @@ def accept_findings(
             )
             continue
 
-        rationale = (item.get("rationale") or "").strip()
+        rationale = explanation(item)
         has_anchor = bool(item.get("component") or item.get("component_hint"))
         reason = gate_reason(
             f"{title} {rationale}", vocab, subject=title, has_anchor=has_anchor
         )
         if reason:
-            rejected.append({"title": title, "reason": reason})
+            rejected.append({"title": title, "reason": reason, "fix": ""})
             continue
 
         structural = structural_reasons(
@@ -112,7 +138,19 @@ def accept_findings(
             has_anchor=has_anchor,
         )
         if structural:
-            rejected.append({"title": title, "reason": "; ".join(structural)})
+            rejected.append({
+                "title": title,
+                "reason": "; ".join(structural),
+                # Which refusals are worth another attempt, and which are a
+                # verdict. A finding whose evidence was fabricated must not be
+                # re-asked for — that is asking it to try harder at the thing
+                # it got wrong. A finding whose *rationale* was left empty is
+                # one edit from being kept, and the whole finding is otherwise
+                # good: the titles in the reader's report were genuinely the
+                # best of the run and were binned for a field nobody had
+                # required.
+                "fix": _repairable(structural),
+            })
             continue
 
         url = item.get("source_url") or ""
@@ -166,7 +204,10 @@ def accept_findings(
                 pack_id,
                 "en",
                 title,
-                item.get("body", ""),
+                # The same string the gate just measured. It used to be
+                # `item.get("body", "")` while the gate read `rationale`, and
+                # the two were never bridged — see `explanation`.
+                rationale,
                 item.get("advice", ""),
             ),
         )
@@ -197,11 +238,70 @@ def accept_findings(
             )
 
     return {
-    "accepted": accepted,
-    "rejected": rejected,
-    "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
-    "claims rank as reported, not confirmed, until corroborated",
+        "accepted": accepted,
+        "rejected": rejected,
+        # Two audiences, two sentences. `rejected[].reason` is written at the
+        # model — "rationale is 0 chars" is an instruction it can act on. The
+        # reader got that same string in their face, which is debug output
+        # leaking through an interface, so they get this instead.
+        "summary": summarise(accepted, rejected),
+        "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
+        "claims rank as reported, not confirmed, until corroborated",
     }
+
+
+#: Refusals a second attempt can honestly fix, and what to ask for. Keyed by a
+#: fragment of the gate's own message rather than by an error code, because
+#: `kriko.gates` returns prose — and inventing codes here would mean two places
+#: deciding what a refusal means, which is how they come to disagree.
+REPAIRABLE = {
+    "rationale is": "rationale",
+    "title is": "title",
+}
+
+
+def _repairable(reasons: Sequence[str]) -> str:
+    """Which single field would fix these refusals, or "" if none would.
+
+    Deliberately "" when a finding failed on more than one count. Re-asking for
+    one field when two are wrong produces a second refusal and a third attempt,
+    and a loop that cannot converge is worse than an honest stop.
+    """
+    fields = {
+        field
+        for reason in reasons
+        for fragment, field in REPAIRABLE.items()
+        if reason.startswith(fragment)
+    }
+    return fields.pop() if len(fields) == 1 and len(reasons) == 1 else ""
+
+
+def summarise(accepted: Sequence, rejected: Sequence) -> str:
+    """What happened, for somebody who is not going to read a verdict list.
+
+    The reader saw `rationale is 0 chars — write 2–3 plain sentences a
+    non-expert can act on (min 60)` three times over. That is a good sentence
+    aimed at a model and a terrible one aimed at a person: it describes a field
+    they have never heard of, in a schema they did not write, about work they
+    cannot redo by hand.
+    """
+    kept = len(accepted)
+    if not rejected:
+        return f"{kept} finding(s) kept." if kept else "Nothing was submitted."
+
+    held = [one for one in rejected if one.get("fix")]
+    refused = len(rejected) - len(held)
+    parts = [f"{kept} finding(s) kept" if kept else "Nothing was kept"]
+    if held:
+        parts.append(
+            f"{len(held)} could not be explained well enough to be useful and "
+            f"{'was' if len(held) == 1 else 'were'} held back"
+        )
+    if refused:
+        parts.append(
+            f"{refused} did not survive the evidence check or this pack's bar"
+        )
+    return ", ".join(parts) + "."
 
 
 def log_submission(
