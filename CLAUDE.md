@@ -339,6 +339,8 @@ original reasoning.
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
+| `docs/HOW_IT_WORKS.md` | Four diagrams — matching, the pack lifecycle, a run, the layering | current |
+| `docs/STYLE.md` | The rules these docs are written to | current |
 | `docs/INSTALL_WINDOWS.md` | Installing on Windows, start to finish, including the extension's permission step | current |
 | `docs/INTERNALS.md` | Mechanism-level architecture reference | current (verify details against code) |
 | `docs/PACK_CONTRACT.md` | What a pack must contain, and what it may | current |
