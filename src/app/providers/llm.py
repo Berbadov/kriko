@@ -67,9 +67,22 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
         # make a run of unparseable replies look free.
         usage = body.get("usage")
         if isinstance(usage, dict):
+            # Both halves, not just the total. They were there all along —
+            # `prompt_tokens` and `completion_tokens` are in every
+            # OpenAI-shaped response — and only the total was kept, which is
+            # the one number that *cannot* be priced: input and output cost
+            # different amounts, so a meter handed a total is a meter
+            # guessing. See `app/modelcatalogue.py`.
+            _add(complete, "tokens_in", usage.get("prompt_tokens"))
+            _add(complete, "tokens_out", usage.get("completion_tokens"))
             total = usage.get("total_tokens")
             if isinstance(total, int) and not isinstance(total, bool):
                 complete.tokens_used = (complete.tokens_used or 0) + total
+            elif complete.tokens_in is not None or complete.tokens_out is not None:
+                # A provider that reports the halves and no total still gets
+                # counted, rather than reading as a free run.
+                complete.tokens_used = (complete.tokens_in or 0) + (
+                    complete.tokens_out or 0)
 
         choices = body.get("choices")
         if not isinstance(choices, list) or not choices:
@@ -81,7 +94,16 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
     #: None, not 0 — see the docstring. Set after the definition because the
     #: closure increments it by name.
     complete.tokens_used = None
+    #: The two halves, kept apart so a cost can be computed from them at all.
+    complete.tokens_in = None
+    complete.tokens_out = None
+    complete.model = name
     return complete
+
+
+def _add(fn, field: str, value) -> None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        setattr(fn, field, (getattr(fn, field) or 0) + value)
 
 
 def _unfence(text: str) -> str:

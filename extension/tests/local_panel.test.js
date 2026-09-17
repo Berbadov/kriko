@@ -119,7 +119,7 @@ test("the presentation half rides with the local data and the selectors do not",
 
 // ── the panel interprets what the pack declared ─────────────────────────
 
-const RESULT = { risks: [], coverage: "RISKS_FOUND", identity: {}, context: {} };
+const RESULT = { claims: [], coverage: "RISKS_FOUND", identity: {}, context: {} };
 
 /** Deliver one damage reading to a freshly opened panel. */
 function withDamage(damage, panel = null) {

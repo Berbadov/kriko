@@ -51,7 +51,7 @@
             ],
             "js": [
                 "hover_lite/icons.js",
-                "hover_lite/risk_card.js",
+                "hover_lite/claim_card.js",
                 "hover_lite/hover_lite.js"
             ],
             "run_at": "document_idle"

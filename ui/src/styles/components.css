@@ -37,40 +37,6 @@
     height: 100dvh;
     overflow: clip;
 }
-/* The terminal takes a column rather than covering one — at every width.
- *
- * It was `position: fixed` over the work area, which is why the reader
- * reported the panel "invading the rest of the app": the page was still
- * there, full width, with a third of it underneath an opaque panel — so
- * headings wrapped under it and buttons could not be reached. Closing it
- * revealed a layout that had never reflowed.
- *
- * A grid column reflows by construction. The panel keeps its own width and
- * the work area gets what is left, which is also what makes the terminal
- * usable *while reading a screen* rather than instead of one.
- *
- * Below the split point there is not enough width for a third column, so the
- * grid changes shape instead of the panel changing tactics: `term` moves to
- * its own row, under `work`, still sharing `rail`'s column top to bottom
- * (naming the same area in two rows merges them into one cell — no separate
- * rule needed to keep the rail whole). Both rows get `minmax(0, ...)` for the
- * same reason `.work` does above: a grid track's automatic minimum is its
- * content, and without this neither row can shrink below its own terminal
- * output, which is exactly the overlap this replaces. Nothing here ever
- * covers `work` — the two are never in the same cell, at any width. */
-.shell.with-terminal {
-    grid-template-columns: var(--rail) minmax(0, 1fr) var(--terminal-w);
-    grid-template-areas: "rail work term";
-}
-@media (max-width: 60rem) {
-    .shell.with-terminal {
-        grid-template-columns: var(--rail) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
-        grid-template-areas:
-            "rail work"
-            "rail term";
-    }
-}
 /* The work column scrolls *as content*, unlike the rail, which hides its bar
  * and conveys overflow with gradients. The difference is deliberate: chrome
  * is a fixed set of rows a reader can see all of, a report is arbitrarily
@@ -363,16 +329,23 @@ select:focus {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* Fill, edge and ink — the three a severity has, rather than the two this
+ * app had. The panel has always drawn the edge; without it a tinted pill on a
+ * tinted card loses its outline entirely at low severity, where fill and
+ * surface are a few units apart. */
 .sev.high {
     background: var(--high-soft);
+    border: 1px solid var(--high-border);
     color: var(--high);
 }
 .sev.medium {
     background: var(--medium-soft);
+    border: 1px solid var(--medium-border);
     color: var(--medium);
 }
 .sev.low {
     background: var(--low-soft);
+    border: 1px solid var(--low-border);
     color: var(--low);
 }
 
@@ -779,6 +752,89 @@ li.gap {
 .brand-text .meta {
     font-size: var(--t-xs);
 }
+/* Brand and primary action share the rail's first row, so `.rail` keeps its
+ * three-row grid whether or not the action is rendered — an empty grid row
+ * still costs a gap, and buyer mode does not get this button. */
+.rail-head {
+    display: grid;
+    gap: var(--s-3);
+}
+/* Not a nav item. The rail lists places; this makes one.
+ *
+ * Filled accent, and it is the only filled accent in the chrome — the panel
+ * theme's note on `--accent-ink` is why the text is near-black rather than
+ * white (white on this gold is 1.7:1). The offset shadow is flat and hard on
+ * purpose: a soft drop shadow reads as depth, and this is a stamp. */
+.rail-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-3);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-display);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    box-shadow: 3px 3px 0 var(--n-4);
+    transition:
+        transform var(--dur-fast) ease,
+        box-shadow var(--dur-fast) ease;
+}
+.rail-action-plus {
+    font-size: var(--t-md);
+    line-height: 1;
+}
+.rail-action:hover {
+    /* It moves onto its own shadow — the press, before the press. */
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 var(--n-4);
+}
+.rail-action:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--n-4);
+}
+.rail-action:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .rail-action,
+    .rail-action:hover,
+    .rail-action:active {
+        transform: none;
+        transition: none;
+    }
+}
+/* The number a row carries. Tabular figures so a count that ticks from 9 to
+ * 10 does not shift the label beside it, and mono because these are readings
+ * rather than prose. */
+.nav-figure {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--n-6);
+}
+.nav-figure-text {
+    white-space: nowrap;
+}
+/* Work that is happening, not a total that accumulated. Accent, because it is
+ * the one figure here with a reason to be looked at now. */
+.nav-figure.live {
+    color: var(--accent);
+    font-weight: 600;
+}
+.nav-link:hover .nav-figure,
+.nav-link.active .nav-figure {
+    color: inherit;
+}
 /* The one thing in the rail allowed to scroll — and it does it as chrome.
  *
  * `scrollbar-width: none` because the bar itself was the complaint, and the
@@ -852,7 +908,10 @@ li.gap {
 .nav-link {
     position: relative;
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
+    /* Three columns, and the third is `auto` rather than a fixed width: most
+     * rows have no figure at all, and a reserved gutter on fourteen rows to
+     * align three numbers is a rail with a stripe of nothing down it. */
+    grid-template-columns: 18px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--s-2);
     padding: var(--s-2) var(--s-2);
@@ -923,11 +982,6 @@ li.gap {
     flex-wrap: wrap;
     gap: var(--s-2);
 }
-.rail-foot .terminal-toggle {
-    font-size: var(--t-xs);
-    padding: var(--s-1) var(--s-2);
-}
-
 /* Tighten before scrolling. On a laptop the rows fit with less air between
  * the groups, and less air is a far cheaper cost than a scroll region. */
 @media (max-height: 820px) {
@@ -1087,14 +1141,17 @@ li.gap {
     border-left: 3px solid var(--line);
 }
 .card.risk:has(.sev.high) {
+    border-color: var(--high-border);
     border-left-color: var(--high);
     background: var(--high-soft);
 }
 .card.risk:has(.sev.medium) {
+    border-color: var(--medium-border);
     border-left-color: var(--medium);
     background: var(--medium-soft);
 }
 .card.risk:has(.sev.low) {
+    border-color: var(--low-border);
     border-left-color: var(--low);
     background: var(--low-soft);
 }

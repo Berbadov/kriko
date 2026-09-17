@@ -91,6 +91,17 @@ PROVIDERS = (
         purpose="Receives the text of the pages research fetched, and returns "
         "the claims it can quote from them. Never your browsing history.",
     ),
+    Provider(
+        id="anthropic",
+        label="Anthropic",
+        env="ANTHROPIC_API_KEY",
+        purpose="The other completion provider. Receives the text of the "
+        "pages research fetched, and returns the claims it can quote from "
+        "them. Never your browsing history. Set either this or OpenAI; "
+        "Settings picks which model is used, and it can differ per stage of "
+        "a run.",
+        optional=True,
+    ),
 )
 
 BY_ID = {provider.id: provider for provider in PROVIDERS}
@@ -99,6 +110,12 @@ BY_ID = {provider.id: provider for provider in PROVIDERS}
 #: reader has not chosen. A closed engineering vocabulary — these are integrations
 #: this app has code for, not data that grows with pack coverage.
 SEARCH_PROVIDERS = ("exa", "tavily")
+
+#: The providers that answer "read this text and tell me what it supports".
+#: Same shape as SEARCH_PROVIDERS and for the same reason: once there are two,
+#: having one of them is enough, and requiring both would make adding a choice
+#: a way to break an installation that was working.
+COMPLETION_PROVIDERS = ("openai", "anthropic")
 
 
 def env_path(home: Path | None = None) -> Path:
@@ -210,23 +227,23 @@ def ready(path: Path | None = None, environ: dict | None = None) -> bool:
     Half-configured is not a degraded mode, it is a run that fails on its first
     document, and the API card stays inert until both are there.
 
-    "A search key" is now a choice rather than a name: Exa or Tavily, either
-    one. Requiring both would have made adding a second provider a way to break
-    an installation that was working — which is the opposite of what a choice
-    is for.
+    Both halves are a *choice* rather than a name: Exa or Tavily, OpenAI or
+    Anthropic. Requiring both of either pair would make adding a second
+    provider a way to break an installation that was working — the opposite of
+    what a choice is for. Anything outside the two pairs and not optional is
+    still required outright.
     """
     rows = {item["id"]: item["present"] for item in status(path, environ)}
-    searchers = [
-        rows.get(provider.id, False)
-        for provider in PROVIDERS
-        if provider.id in SEARCH_PROVIDERS
-    ]
+    searchers = [rows.get(one, False) for one in SEARCH_PROVIDERS]
+    completers = [rows.get(one, False) for one in COMPLETION_PROVIDERS]
     required = [
         rows.get(provider.id, False)
         for provider in PROVIDERS
-        if provider.id not in SEARCH_PROVIDERS and not provider.optional
+        if provider.id not in SEARCH_PROVIDERS
+        and provider.id not in COMPLETION_PROVIDERS
+        and not provider.optional
     ]
-    return any(searchers) and all(required)
+    return any(searchers) and any(completers) and all(required)
 
 
 def search_providers(path: Path | None = None, environ: dict | None = None) -> list[str]:

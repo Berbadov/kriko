@@ -11,7 +11,7 @@ happens.
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app import costs, prefs
+from app import costs, prefs, scale
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -28,6 +28,16 @@ class PrefsWrite(BaseModel):
     preferred_harness: str | None = Field(None, max_length=64)
     llm_model: str | None = Field(None, max_length=200)
     search_provider: str | None = Field(None, max_length=64)
+    #: One per stage of a run, each falling back to `llm_model`. Spelled out
+    #: rather than accepted as a free-form mapping, because a settings writer
+    #: that took arbitrary keys would let a browser on localhost write any
+    #: row it liked into this installation's settings — the same reasoning
+    #: `app/keys.py` gives for naming its providers instead of accepting
+    #: `KEY=value`.
+    llm_model_plan: str | None = Field(None, max_length=200)
+    llm_model_extract: str | None = Field(None, max_length=200)
+    llm_model_synthesise: str | None = Field(None, max_length=200)
+    llm_model_validate: str | None = Field(None, max_length=200)
 
 
 @router.get("/prefs")
@@ -41,6 +51,18 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                if value is not None}
     prefs.write(conn, written)
     return prefs.choices(conn)
+
+
+@router.get("/scales")
+def read_scales(conn=Depends(get_app_state)) -> dict:
+    """Every position on the depth dial, with what each is likely to cost here.
+
+    Served with the estimate attached rather than as a bare list, because the
+    reader asked for exactly one thing — to know that fifteen sources costs
+    more than three *before* choosing — and a list of names would be the same
+    unanswerable choice the knobs already were.
+    """
+    return {"scales": scale.offered(conn), "default": scale.DEFAULT}
 
 
 @router.get("/costs")

@@ -328,6 +328,7 @@ def _fake_cli(tmp_path, reply_text: str):
 class _Recorder:
     def __init__(self):
         self.lines: list[str] = []
+        self.partials: list[dict] = []
 
     def set(self, fraction, message=""):
         if message:
@@ -342,6 +343,11 @@ class _Recorder:
 
     def check(self):
         pass
+
+    def partial(self, result):
+        # Real `Progress` writes this to the job row so a cancel keeps what was
+        # finished. Held here so a test can assert on the checkpoints too.
+        self.partials.append(result)
 
 
 def test_authoring_a_pack_is_given_longer_than_one_subjects_research(

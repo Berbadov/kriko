@@ -40,8 +40,12 @@ const ANALYSIS = {
   adapter: "sahibinden",
   identity: { make: "volkswagen", model: "golf" },
   context: { usage_km: 190000 },
+  context_units: { usage_km: "km" },
+  packs: [{ pack_id: "org.kriko.cars", version: "0.4.0" }],
   unmapped_labels: ["Takasa Uygun"],
   method: "narrowed", coverage: "RISKS_FOUND", flags: [],
+  verdict: "recognised", score: 1.0, considered: [],
+  next_step: { action: "none", say: "" },
   claims: [CLAIM],
 };
 
@@ -107,22 +111,26 @@ test("a site no installed pack can read is never scraped at all", async () => {
 
 // ── claims become the panel's view model ────────────────────────────────
 
-test("a claim becomes a risk card the panel can render", async () => {
+test("a claim reaches the panel under the engine's own field names", async () => {
+  // The worker used to rename three things on the way through — `claims` to
+  // `risks`, `body` to `rationale`, `advice` to `inspection_advice` — for
+  // nothing. A shared component would have had to translate, and a bug report
+  // saying "risk" needed a mental hop to reach a `claims` table.
   const { result } = await analyse();
-  const [risk] = result.risks;
+  const [claim] = result.claims;
 
-  assert.equal(risk.title, CLAIM.title);
-  assert.equal(risk.rationale, CLAIM.body);
-  assert.equal(risk.inspection_advice, CLAIM.advice);
-  assert.equal(risk.severity, "high");
-  assert.equal(risk.domain, "engine");
-  assert.deepEqual(risk.why_shown, CLAIM.why);
+  assert.equal(claim.title, CLAIM.title);
+  assert.equal(claim.body, CLAIM.body);
+  assert.equal(claim.advice, CLAIM.advice);
+  assert.equal(claim.severity, "high");
+  assert.equal(claim.domain, "engine");
+  assert.deepEqual(claim.why_shown, CLAIM.why);
 });
 
 test("a manufacturer-sourced claim reads as confirmed", async () => {
   const { result } = await analyse();
-  assert.equal(result.risks[0].strength, "confirmed");
-  assert.equal(result.risks[0].confidence, 0.82);
+  assert.equal(result.claims[0].strength, "confirmed");
+  assert.equal(result.claims[0].confidence, 0.82);
 });
 
 test("a forum-sourced claim reads as reported, and says how many said it", async () => {
@@ -133,17 +141,17 @@ test("a forum-sourced claim reads as reported, and says how many said it", async
   const { result } = await analyse({
     analysis: { ...ANALYSIS, claims: [claim] } });
 
-  assert.equal(result.risks[0].strength, "reported");
-  assert.equal(result.risks[0].source_count, 2);
+  assert.equal(result.claims[0].strength, "reported");
+  assert.equal(result.claims[0].source_count, 2);
   // A numeric score next to "Reported" would read as trustworthy and undercut
   // the label; the card only shows one on confirmed claims.
-  assert.equal(result.risks[0].confidence, undefined);
+  assert.equal(result.claims[0].confidence, undefined);
 });
 
 test("a disputed claim still reaches the panel, marked", async () => {
   const { result } = await analyse({
     analysis: { ...ANALYSIS, claims: [{ ...CLAIM, disputed: true }] } });
-  assert.equal(result.risks[0].disputed, true);
+  assert.equal(result.claims[0].disputed, true);
 });
 
 test("coverage and the resolved identity survive into the view model", async () => {
@@ -156,7 +164,7 @@ test("coverage and the resolved identity survive into the view model", async () 
 test("a page nothing matched is an answer, not an error", async () => {
   const { result } = await analyse({ analysis: {
     ...ANALYSIS, coverage: "NOT_MATCHED", claims: [] } });
-  assert.deepEqual(result.risks, []);
+  assert.deepEqual(result.claims, []);
   assert.equal(result.coverage, "NOT_MATCHED");
 });
 
@@ -171,7 +179,7 @@ test("the result is written to session storage under the listing url", async () 
   assert.deepEqual(entry.listing, SCRAPE.listing);
 });
 
-test("the badge counts high-severity risks", async () => {
+test("the badge counts high-severity claims", async () => {
   const { state } = await analyse();
   assert.equal(state.badge[1], "1");
 });
@@ -451,4 +459,55 @@ test("an older extension's `raised` key still means what it said", async () => {
   });
   assert.equal(got.raised, true);
   assert.deepEqual(h.state.tabsCreated, []);
+});
+
+
+// ── what the worker carries through, and what it used to drop ───────────
+
+test("the byline and the units reach the panel", async () => {
+  // Both are sent by /api/analyze and both were dropped in `toViewModel`,
+  // silently. The footer printed "unknown" on every result since the byline
+  // was added, and every context fact rendered without its unit — neither
+  // visible from any test, because a test of this shape written against
+  // `toViewModel` would have asserted whatever it happened to copy.
+  const { result } = await analyse();
+  assert.deepEqual(result.packs, ANALYSIS.packs);
+  assert.deepEqual(result.context_units, ANALYSIS.context_units);
+});
+
+test("how sure the engine is travels with the answer", async () => {
+  // The panel had two states for four situations. A verdict the client cannot
+  // see is a verdict the client renders as certainty.
+  const { result } = await analyse();
+  assert.equal(result.verdict, "recognised");
+  assert.equal(result.score, 1.0);
+  assert.deepEqual(result.next_step, { action: "none", say: "" });
+});
+
+test("a doubtful answer arrives as doubtful, with what was weighed", async () => {
+  const probable = {
+    ...ANALYSIS, claims: [], coverage: "PROBABLE_MATCH", method: "probable",
+    verdict: "probably", score: 0.51,
+    considered: [{ subject_id: "s1", pack_id: "p", label: "Golf VII 1.6 TDI",
+                   score: 0.51, keys: [] }],
+    next_step: { action: "confirm", say: "This looks like Golf VII 1.6 TDI…",
+                 subject_id: "s1" },
+  };
+  const { result } = await analyse({ analysis: probable });
+  assert.equal(result.verdict, "probably");
+  assert.equal(result.considered.length, 1);
+  assert.equal(result.next_step.action, "confirm");
+});
+
+test("a missing verdict is empty rather than invented", async () => {
+  // An older engine sends none. The panel must be able to tell "this engine
+  // did not say" from "this engine said unrecognised" — the second is an
+  // answer and the first is silence.
+  const { adapter, ...rest } = ANALYSIS;
+  const older = { adapter, ...rest };
+  delete older.verdict;
+  delete older.next_step;
+  const { result } = await analyse({ analysis: older });
+  assert.equal(result.verdict, "");
+  assert.equal(result.next_step, null);
 });
