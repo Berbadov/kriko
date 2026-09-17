@@ -747,6 +747,90 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
+## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.6 + §2.9 + §3.2–§3.4 closed, §2.10/§3.5 part-done, 4 open
+
+A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
+`done.md`. What is left, in the reader's own numbering:
+
+**§1.5 — extension installation fails.** Diagnose the install path itself:
+packaging, manifest, the staging step in `app/extension.py`, and the
+app-vs-extension version check. `docs/INSTALL_WINDOWS.md` now documents the
+flow including the permission grant, but the reported *failure* has not been
+reproduced — it needs the reader's Chrome and the error it actually shows.
+
+**~~§2.1 — the agent must ask follow-up questions.~~ DONE — see `done.md`.** A cheap disambiguation pass
+before the expensive run: 3–5 questions in one batch, each with a proposed
+default, non-blocking, answers written onto the pack as a structured
+product-identity record. The proposed schema is in the session plan; it is the
+same record §1.1's matching wants, so `score.py`'s per-key reasons are the
+thing to build it against.
+
+**~~§2.2 — choose the model, per run and per role.~~ DONE — see `done.md`.** `app/prefs.py` already
+carries `preferred_harness` / `llm_model` / `search_provider`; what is missing
+is per-role assignment, discovery of what each harness offers rather than a
+hardcoded list, and usable-or-not with the reason. `providers/llm.py` is
+OpenAI-wire only, so Anthropic needs a native adapter.
+
+**~~§2.3 — scale control.~~ DONE — see `done.md`.** One dial, named presets mapping to source count,
+breadth, depth and ceilings, with an estimate from `app/costs.py`'s measured
+actuals and a hard per-run cap that degrades cleanly into §1.2's partial.
+
+**~~§2.4 — live token and cost meter.~~ DONE — see `done.md`.** `providers/llm.py` counts total tokens
+only; split input/output, thread the same accounting through the harness and
+search providers, per model and per stage, with pricing in editable config.
+
+**§2.5 — live runs need to feel alive.** Named stages, real counts, visible
+retries and drops, a clear terminal state. The `emit` stage machinery in
+`app/web/tasks.py` already carries most of this; the gap is what the screen
+does with it.
+
+**§2.6 — benchmark scoping**, on `app/bench.py`: which models, harnesses,
+providers, stages, categories, repetitions; estimate first; saved configs.
+
+**§2.7 — verify Tavily, Exa and the OpenAI LLM path by hand** with real keys,
+including every error path, wired into §2.4's accounting.
+
+**§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity.
+
+**~~§2.9 — remove Terminal.~~ DONE — see `done.md`.** Confirmed with the reader as the *in-app PTY
+panel* — `ui/src/lib/shell/TerminalPanel.svelte`, `web/routers/terminal.py`,
+`providers/termpty.py`, the rail entry, the `ptyprocess`/`pywinpty`
+dependencies. The operator TUI (`app/tui/`) stays.
+
+**~~§2.10 — product search inside the extension.~~ DONE — see `done.md`.**
+Engine half 2026-09-16 (`kriko/lookup/find.py`), panel half 2026-09-17. Every
+result carries its identity, and `#/subject/<id>` is where a row goes.
+
+**§2.11 — expose what is currently hardcoded**, with progressive disclosure.
+
+**~~§3.1 — rebuild the extension.~~ DONE — see `done.md`.** Four commits: the
+`risks`/`claims` rename and three dead render paths out; the palette generated
+from the app's theme (B113 phases 0–2, first run a provable no-op); severity
+derived; then the panel — four verdict states, search, and the no-adapter
+state. B113's remaining phase 3 (saying in the *app* that the panel draws two
+blocks from the reader's page which never reach the engine) is not done.
+
+**~~§3.2/§3.3 — left panel and design system.~~ MOSTLY DONE — see `done.md`.**
+Icon set complete, live numbers and a sparkline on three rows, and the primary
+action out of the list. What is left is the *one spacing and type scale* — the
+rail already uses the shared tokens, and the rewrite is better done against the
+extension rebuild (§3.1), where both surfaces move together.
+
+**~~§3.4 — new logo.~~ DONE — see `done.md`.** Slab K, accent upper arm, drawn
+on the grid the icon renderer already read. The extension's four PNGs and the
+lockup are now generated from it rather than maintained beside it.
+
+**§3.5 — documentation rewrite.** House style as rules, ruthless cuts, and
+text-format diagrams — the pack lifecycle, page-to-pack matching, the adapter
+pipeline, the run pipeline.
+
+**Adapters replacing sahibinden** (§1.4's critical path): the reader named
+`arabam.com` and `mobile.de`/`autoscout24`. Both authored through the existing
+agent path, not hand-written. sahibinden's static manifest block comes out in
+the same change.
+
+---
+
 ## P0
 
 ### B109 — Terminal: CLOSED 2026-09-13 by dropping the WebSocket (0.7.12)

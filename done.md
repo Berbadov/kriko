@@ -6,6 +6,313 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-17 — the 0.10.0 work order (§3.1, and §1.4/§2.10's missing half)
+
+**§3.1 — the extension rebuilt, function and UI together.** Four commits, and
+the first three were subtraction and mechanism (see their own messages). This
+is the panel.
+
+*The four match states are drawable now.* `/api/analyze` has returned
+`verdict`, `score`, `considered` and `next_step` since §1.1 landed and the
+panel rendered none of them — claims or a blank, for four different situations.
+A recognised page still gets no banner, because one on every successful answer
+is one nobody reads by the third. The other three get a card that says which
+one happened, what was weighed, and what to do:
+
+- **probably** — served, and labelled as a question, with the score.
+- **unrecognised with candidates** — the nearest subject and its per-key
+  readings, colour-coded on the two that point at different bugs: a key
+  reading `conflict` is usually the page, a key reading `absent` is usually
+  the adapter.
+- **unrecognised with none** — no pack covers this kind of product, open the
+  app.
+
+**Every sentence is the engine's.** `next_step.say` is rendered verbatim and
+`action` is a closed vocabulary the panel turns into a button. A client that
+writes its own copy from a status code stops agreeing with the engine the
+first time a method is added, which is the failure this ends rather than
+repeats. The one thing the panel decides is the *label*, because `research`
+arrives with a `subject_id` when there is something to run against and without
+one when there is not — and a button saying "Research it" that opens a search
+field is a button the reader stops trusting.
+
+*§2.10's other half.* Search is in the panel: a field in the header, results
+from `GET /api/search`, and **every row carries its identity**. Against the
+real cars pack, "golf dq200" returns two rows both reading *Volkswagen Golf
+VII EA211 … DQ200*, distinguished only by 1197cc/105hp and 1395cc/125hp —
+which is the reader's own complaint, answered. Pressing one opens the app at
+`#/subject/<id>`, a route the app gained for this: it opens that row rather
+than filtering to it, because "this one among the others" is what somebody
+searching a catalogue came for.
+
+*§1.4's other half.* Pressing Analyze on a site nothing reads used to do
+nothing at all — deliberately, and right for the automatic run at page load
+where nobody asked anything. After a press it is the dead end this release
+exists to remove. It now says so and offers the app's Sites screen. Still not
+a red banner: a page Kriko cannot read is not an error the reader made.
+
+**And the gate stopped depending on the developer's machine.** Three
+`test_cli.py` cases assert what the CLI does with no engine running, and
+`attach()` scans the one fixed port the extension is allowed to assume — so
+they were asking whatever was serving on 8787. They failed twice during this
+work with somebody else's sites in the diff. The dangerous direction is the
+other one: a test that *passes* because a live engine answered proves nothing
+and looks fine. `no_attaching_to_the_readers_own_engine` is the third autouse
+guard in that conftest and the same shape as the two above it. Verified by
+running `test_cli.py` green with the app deliberately serving on 8787.
+
+Verified by hand throughout, in Chromium with the extension loaded unpacked
+against a sidecar holding the real cars pack: all four verdict states forced
+through a stub engine and photographed, search driven against the real store,
+and the no-adapter state pressed.
+
+### 2026-09-16 — the 0.10.0 work order (§3.2, §3.3, §3.4)
+
+**§3.4 — the logo.** The mark is a slab K on the 16-cell grid
+`packaging/render_icon.py` already rasterised, and its upper arm is the whole
+accent rather than a joint: an earlier draft put the amber on one terminal
+block and below about 48px it read as a detached square, because a corner touch
+is not a join. Taking the arm gives the letter a stroke that rises out of it
+the way a step chart does, which is the product in a glyph.
+
+Three things came out of drawing it that were not about drawing:
+
+*The extension's four toolbar PNGs are now rendered rather than hand-drawn.*
+They were a rasterised glyph beside a grid of rects — two people drawing one
+letter — and `test_the_app_and_the_extension_show_the_same_letter` existed to
+catch them diverging. Derivation makes divergence unrepresentable instead, and
+what that test now guards is that somebody re-ran the render. Stated in its
+docstring, because it is a weaker claim than the one it used to make.
+
+*The lockup is generated too* (`packaging/render_lockup.py`), and it reads the
+mark out of `logo-mark.svg` rather than repeating its coordinates — a copy
+would be the same two-drawings failure one file along. The wordmark is drawn on
+the same grid at the same cap height and stroke rather than set in a typeface:
+it renders with no font file on an app whose premise is working offline, and it
+cannot drift when the display face changes. `logo-wordmark.svg` and
+`logo-mark-textbox.svg` are gone — both still carried the "Lemonaide" identity
+this product stopped being in 0.3.1, and nothing referenced either.
+
+*And a defect worth the entry on its own.* The first mark shipped with `--n-2`
+inside its XML comment. Two hyphens cannot appear in an XML comment, so the
+file was invalid, every browser drew a broken-image glyph in the rail, and all
+eleven brand tests passed — `render_icon.py` reads the file with a regular
+expression, not a parser. Found by taking a screenshot. `test_every_brand_asset
+_actually_parses` closes it, verified by putting the bug back; it is the same
+lesson as `test_the_shell_is_valid_rust`, arrived at the same way.
+
+**§3.2 — the rail.** `sites` and `bench` had no glyph, and `NavIcon.svelte`
+renders nothing for an unknown name by design, so two rows had been shipping
+with an empty icon column and no test could see it. Both drawn in the existing
+idiom.
+
+Three rows now carry a number — claims on Browse, running jobs on Activity,
+spend on Agents, with a sparkline where there is a series to draw. Off
+`/api/status`, `/api/jobs` and `/api/usage`, which were all already served; a
+rail with its own endpoint is a rail that goes stale the day a claim changes
+shape. `Promise.allSettled`, because a rail that blanks two good figures over
+one dead endpoint reads as "you have nothing", and a 30-second clock, because
+these are ambient readings and the screen actually watching a job polls it.
+
+Three deliberate silences: nothing at all before the first read lands, no job
+count when nothing is running (a steady "0" trains the reader to stop looking),
+and no spend figure when nothing could be priced — an unpriced model meters
+tokens and reports no cost, and "$0.00" over a paid run is the error that
+compounds.
+
+*Not done:* one spacing and type scale across the rail. The existing rows
+already use the shared `--s-*` and `--t-*` tokens; rewriting them for
+tidiness would be churn in a diff that is already visual, and I would rather
+do it against the extension rebuild where both surfaces move together.
+
+**§3.3 — the primary action.** "Start a new pack" is out of the list and above
+it: filled accent, near-black ink (white on this gold is 1.7:1), and a hard
+flat offset shadow it presses into — a soft drop shadow reads as depth and this
+is a stamp. Author mode only; a primary action opening a screen the reader
+cannot use is worse than none.
+
+Verified by hand, in a browser, against a running server: the rail on a fresh
+install with one pack and no claims (the zero state, where Browse reads 0 and
+Agents reads nothing), and again with 1,620 claims, two running jobs and $4.17
+spent across four planes.
+
+### 2026-09-16 — the 0.10.0 work order (§2.5, §2.6, §2.10 engine, §3.5 part)
+
+**§2.5 — live runs.** Most of it existed: four named stages with `waiting`
+states, an event stream, per-stage counts, rows before stream. Two gaps closed.
+A run's terminal state was a word — "failed" tells somebody watching a
+four-minute run that it is over and nothing else — so each state now carries
+what it means and what to do next, and an unknown state reads as *not* finished
+because a view that calls a running thing done stops watching it. And a run
+that put questions to the reader flags them on the job row, where the questions
+already are.
+
+*It also turned up a defect I had introduced myself in §1.3.* The repair loop
+opened a `"repair"` pipeline stage; `STAGES` is a closed vocabulary and
+`open_stage` raises on anything outside it, so every run reaching the loop would
+have died — and no test saw it, because the loop only fires when a finding is
+refused for a fixable field *and* the plane has a `repair` method. Repair is not
+a fifth phase: it runs after ingestion and feeds back into it, so it emits
+events on that stage. Two tests now read the call sites for stage names, which
+is a poor test of behaviour and a good test of a vocabulary. Verified by putting
+the bug back.
+
+**§2.6 — benchmark scoping.** Models were not an axis at all, which is the one
+§2.6 names first; `searches` was honoured by the job and unreachable from the
+request. Both wired. `POST /bench/estimate` says what a grid would run and
+roughly cost — a separate endpoint, so asking what something costs can never
+start it — refusing to guess where nothing has been measured and pricing only
+the paid half. Saved grids, because results are comparable only if the config
+was, and one reconstructed from memory is a different experiment.
+
+**§2.10 — product search, engine half.** `kriko/lookup/find.py` searches
+labels, aliases *and* identity values, where `/subjects?q=` searched labels
+only. Every result carries its identity, because telling one of a thing from
+another of it is the entire ask. Run against the real installed pack, the claim
+count was the finding: every product row said `0 claim(s)` while the panel for
+the same product shows a full page, because that pack hangs claims on shared
+component subjects reached through a relation. The count goes through the same
+`expand` `lookup()` uses and now reads 162 where it read 0.
+
+**§3.5 — part.** `docs/STYLE.md` is the house style as rules, with the three
+things it does not apply to carved out. `docs/HOW_IT_WORKS.md` is the four
+diagrams in mermaid — matching first, because that is the one that mattered.
+The deep cuts to `USAGE.md` (742 lines) and `INTERNALS.md` (1042) are *not*
+done: deleting somebody's reference pages is their call.
+
+**§3.1–§3.4 — directions delivered, awaiting a pick.** Three logo directions
+(Chevron / Slab / Aperture, each taking one property from the Red Bull / Arte /
+Brutalist brief), two left-rail treatments, and the rebuilt extension panel in
+all four of its states.
+
+Commits `e63db72`, `31c122e`, `f81d41d`, `104601e`.
+
+---
+
+### 2026-09-16 — the 0.10.0 work order, P1 so far (§2.1–§2.4, §2.9)
+
+**§2.1 — the agent asks, once, and does not wait.** `app/disambiguate.py` runs
+one short call before the expensive research: is this name one product or
+several? The hard part was not asking but asking without breaking the
+automation principle, so nothing waits — every question carries a default and
+its reasoning, the run proceeds immediately, and the reader gets a statement of
+what was assumed rather than a gate. "Built for maker Acme, market TR, power
+mains — of which market was assumed, not confirmed." An assumed scope that is
+invisible was the actual bug. Questions land in the job row so a client can
+offer them back beside "run it again"; an answer mid-run would have nothing
+left to change. An unparseable reply costs a question, never the run behind it.
+
+**§2.2 — a model you can choose, priced from a file you can edit.**
+`app/models.toml` is copied to `~/.kriko` once and never rewritten, so a
+corrected price survives updates. Discovery cannot replace it — `GET /v1/models`
+returns ids and nothing else — so the two merge, and an unlisted model stays
+usable while reporting no price. A provider with no key is listed with the
+reason, not hidden. Per stage of a run (plan / extract / synthesise / validate),
+each falling back to the single default. Anthropic needed its own adapter:
+there is no compatibility endpoint, so `llm.py` could not reach it by
+configuration. That made "a completion key" a choice, so `ready()` treats
+OpenAI/Anthropic the way it already treats Exa/Tavily — without which an
+Anthropic-only install would have reported itself unable to run.
+
+**§2.3 — one dial.** Quick / Standard / Deep / Custom, each a bundle of the
+knobs that already existed and an estimate from this installation's own
+measured runs. `max_documents` defaulted to 5, which is truthy, so it would
+have won over every preset — the dial would have moved its label and nothing
+else. The preset's ceiling applies only when a scale is *named*: the existing
+budget test caught the default silently rising from $0.20 to $1.00 for every
+caller that never asked for a dial, the agenda included.
+
+**§2.4 — spend as it happens.** `app/meter.py` tallies per stage and per model
+while the run goes, sorted by cost so "what is expensive here" is the first row.
+The OpenAI adapter was discarding `prompt_tokens`/`completion_tokens` and
+keeping only the total — the one figure that cannot be priced, since the halves
+cost different amounts. A partly-priced run reports no total rather than a low
+one, and the cap stops the run cleanly keeping what was gathered.
+
+**§2.9 — the terminal panel removed**, and `routers/terminal.py` /
+`providers/termpty.py` deliberately *kept*: `app/tui/client.py` drives those
+same endpoints for `kriko tui`'s Ctrl-] pass-through, so deleting them would
+have taken out the author surface the removal was meant to preserve. Found by
+deleting them first and watching the sidecar log test go red. The bundle loses
+a 335 KB chunk and the .js budget goes back from 720,000 to 280,000.
+
+Commits `fd14366`, `a4b4882`, `cfcd182`, `7fae2bf`, `0f23aca`.
+
+---
+
+### 2026-09-16 — the 0.10.0 reader work order, P0 (§1.1–§1.4, §1.6, §1.7)
+
+A 23-item work order. These are the launch blockers; §1.5 and everything in P1
+and P2 are still open, tracked in `backlog.md` under *The 0.10.0 work order*.
+
+Three of the seven were the same defect wearing different clothes — a value
+that could not be matched, a field that could not be filled, a state nobody
+reported — and each was found by reproducing the reader's own sentence rather
+than by reading the code that was supposed to produce it.
+
+**§1.1 — "the pack exists but the extension can't see it."** `_resolve_in_pack`
+intersected identity attributes exactly, so one value differing by a word
+emptied the candidate set, and an empty set is indistinguishable from never
+having heard of the product. `kriko/lookup/score.py` scores what the exact path
+rejects: per-key, weighted, with the reasons attached and two pack-declared
+thresholds — above the floor is a match, above the band is a question. A
+contradiction counts twice against a candidate, because without that a page
+agreeing on the maker and contradicting the model scores 0.5 and gets offered as
+probably that product. Identity values got their own tokeniser: `title_sim`
+drops anything under two characters, which read two values differing only in
+their numbers as identical. Two of the 98 recorded parity cases moved, both from
+`NOT_MATCHED` with nothing to `PROBABLE_MATCH` with eight claims; the other 96
+are byte-identical. `/api/diagnose/identity` is the reader's own ask — debug it
+without reading source.
+
+**§1.2 — cancel.** `except Cancelled` wrote CANCELLED with no result, so
+everything a run had gathered and paid for died with the stack frame.
+`Progress.partial` checkpoints as work happens and a cancelled run keeps it.
+`cancelling` is a real state rather than a message. The harness sat inside `for
+line in proc.stdout`, which cannot be interrupted, so the cancel check after it
+was worth nothing during exactly the period worth cancelling — the read moved
+behind a queue with a timeout. A second press could write `cancelling` over
+`cancelled`; the guard is in the WHERE clause now.
+
+**§1.3 — "rationale is 0 chars".** Two names for one concept, bridged nowhere:
+the gate measured `rationale`, the store wrote `body`, and the paid plane only
+ever filled the second. So the gate refused everything that plane produced —
+while an agent that filled `rationale` passed the gate and had its explanation
+dropped on the way into the store, landing a claim with a title and nothing
+under it. One string is judged and kept now. The pack's minimum reaches both
+prompts instead of only being checked afterwards, the skill states the field as
+required rather than "optional but worth setting", and the job re-asks once for
+the failures a second attempt can honestly fix.
+
+**§1.4 — site registration.** Three defects. The `requested` list was a straight
+read of the table, so a registered site sat in both lists at once — derived from
+the adapters now. The panel never appeared because `permissions.request` must
+come from a gesture inside the extension, which no screen said; the extension
+reports what its sync concluded per host and `/api/sites/{host}/activation`
+names the blocker. And "reloading the page should show the panel" was a guess
+that had been wrong for six versions — no reload can grant a permission.
+
+**§1.6 — `ModuleNotFoundError: No module named 'kriko'`.** The tree's packaging
+is sound: a clean-environment wheel install imports and runs here, so the fault
+is in the reader's artifact or environment and `docs/INSTALL_WINDOWS.md` has the
+three commands that tell those apart. What was missing is that nothing could
+have caught it — every check runs against a checkout where `src/` is on the
+path. `tools/smoke_wheel.sh` builds the real wheel and runs it from `/`. Its
+first version passed on a deliberately broken config because setuptools reuses
+`build/lib`; clearing that first is the difference between a check and a
+decoration.
+
+**§1.7 — the banner that stays.** Both endpoints were already correct. The card
+changed its words to "is installed" and kept its warning colour and its position
+above everything, which is the half anybody reads. It is a receipt now, with
+"Hide this" separate from "Throw it away" — nobody should have to destroy a
+proposal to stop being reminded of it.
+
+Commits `bb67237`, `4892fd3`, `7323e1d`, `64b1a91`, `08820e5`, `52d9354`,
+`052c471`.
+
+---
+
 ### 2026-09-16 — the three that were parked, and a decision reversed (B136, B137, B138)
 
 The overhaul's own report left three things open as "real scope, not a blind

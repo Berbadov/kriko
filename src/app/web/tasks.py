@@ -133,11 +133,28 @@ def _budget(params: dict) -> float:
 
     A caller may raise it or lower it; a caller may not leave the paid plane
     uncapped by omission.
+
+    A *named* scale brings its own ceiling (`app/scale.py`), because a Deep run
+    stopped at a Quick run's ceiling is a reader refused the depth they chose,
+    and a Quick run allowed a Deep run's ceiling is a cap doing nothing.
+
+    A run that names no scale keeps `DEFAULT_BUDGET_USD` exactly as before, and
+    that condition is load-bearing rather than tidiness: letting the default
+    preset's ceiling apply to every unscaled run would have raised the standing
+    per-subject budget five-fold for every caller that never asked for a dial —
+    the agenda among them. A choice nobody made must not cost anybody money.
     """
     named = float(params.get("budget_usd") or 0.0)
     if str(params.get("backend") or default_backend()).lower() != "api":
         return named
-    return named if named > 0 else DEFAULT_BUDGET_USD
+    if named > 0:
+        return named
+    wanted = str(params.get("scale") or "").strip()
+    if wanted:
+        from app import scale
+
+        return scale.applied(wanted, params)["cap_usd"] or DEFAULT_BUDGET_USD
+    return DEFAULT_BUDGET_USD
 
 
 #: What each plane does *instead of* fetching, and what the reader does next.
@@ -418,14 +435,34 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # ── Discovery ────────────────────────────────────────────────────
         emit.open_stage("discovery", "planning the search")
         pack_id = params.get("pack_id") or _subject_pack(conn, subject_id)
+        # One dial, resolved once. An explicit `max_documents` still wins —
+        # the presets are bundles of these knobs, never a wall around them.
+        from app import scale as scaling
+
+        depth = scaling.applied(str(params.get("scale") or ""), params)
+        # Live, per stage and per model, while the run spends — rather than
+        # one number on the way out, which arrives too late to act on and
+        # cannot say where the money went.
+        from app.meter import Meter
+        from app.web.settings import KRIKO_HOME
+
+        meter = Meter(home=KRIKO_HOME, cap_usd=_budget(params))
         task = plan_task(
             conn,
             subject_id,
             pack_id,
             budget_usd=_budget(params),
-            max_documents=int(params.get("max_documents") or 5),
+            max_documents=depth["max_documents"],
         )
         progress.set(0.1, f"planning {task.subject_label}")
+        # Recorded on the run, so a thin pack reads as "this was a Quick run"
+        # rather than as a quality failure — which is the difference between a
+        # reader adjusting the dial and a reader losing confidence in the tool.
+        emit.describe(scale=depth["scale"], sources_allowed=depth["max_documents"])
+        progress.log(
+            f"{depth['scale']} — up to {depth['max_documents']} source(s)"
+            + (f", capped at ${depth['cap_usd']:.2f}" if depth["cap_usd"] else "")
+        )
         emit.describe(pack_id=pack_id, subject=task.subject_label)
         for query in task.rendered_queries():
             progress.log(f"query: {query}")
@@ -480,6 +517,32 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 f"reading {document.site_or_channel or document.url}",
             )
             emit.count(chars=len(document.text or ""))
+            # Both meters, per document: the partial is what survives a
+            # cancel, the tally is what the screen shows while it runs.
+            complete = getattr(researcher, "_complete", None)
+            if complete is not None:
+                meter.observe("extract", complete)
+                said = meter.crossed()
+                if said:
+                    progress.log(said)
+                    emit.event(said, level="warn")
+                if meter.over_cap():
+                    # Cleanly, keeping everything gathered so far. A cap that
+                    # truncates silently or crashes teaches the reader the
+                    # number does nothing.
+                    progress.log(
+                        f"stopping at this run's ${meter.cap_usd:.2f} cap — "
+                        f"{len(documents) - index} source(s) not read")
+                    emit.close_stage(detail="stopped at the cost cap")
+                    break
+            # Per document, because a run stopped halfway through ten sources
+            # has read the first five and that is worth keeping.
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "documents": index - 1, "findings": len(findings),
+                "stopped_at": "extraction",
+                "spend": meter.snapshot(),
+            })
             found = 0
             for finding in researcher.extract(task, document):
                 found += 1
@@ -517,6 +580,15 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 )
         if documents:
             emit.close_stage(detail=f"{len(findings)} finding(s)")
+        # Checkpointed here rather than only at the end: this is the moment the
+        # run has cost the most and delivered nothing durable, and it is where
+        # a reader watching a long run decides to stop it.
+        progress.partial({
+            "subject_id": subject_id, "pack_id": pack_id,
+            "documents": len(documents), "findings": len(findings),
+            "stopped_at": "extraction",
+            "spend": meter.snapshot(),
+        })
 
         # Whatever the plane knows about its own spend, and nothing invented.
         # `Researcher` has no token field, so this is a duck-typed hook: a
@@ -539,6 +611,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             verdicts = accept_findings(
                 conn, subject_id, pack_id, findings, retain=retained
             )
+            # One more attempt, on the failures only, for the failures a second
+            # attempt can honestly fix. See `_repair`.
+            verdicts = _repair(
+                conn, subject_id, pack_id, verdicts, findings,
+                researcher=researcher, task=task, emit=emit,
+                progress=progress, retain=retained,
+            )
             conn.commit()
             # Written down as soon as the claims exist, not at the end of the
             # run: an undo has to be possible for a run that was cancelled
@@ -553,6 +632,16 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 detail=f"{len(verdicts.get('accepted', []))} kept, "
                 f"{len(verdicts.get('rejected', []))} refused"
             )
+            # The claims are in the store by now, so a cancel after this point
+            # must not report them as lost — they are not.
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "documents": len(documents),
+                "findings": len(findings),
+                "accepted": len(verdicts.get("accepted", [])),
+                "refused": len(verdicts.get("rejected", [])),
+                "stopped_at": "ingestion",
+            })
 
             # ── Ledgering ────────────────────────────────────────────────
             emit.open_stage("ledgering", "writing the verdicts down")
@@ -1188,10 +1277,19 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # to say something before it finished.
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
-    progress.set(0.1, f"{researcher.search_provider} is reading up on {category}")
+    # ── the cheap pass, before the expensive one ─────────────────────────
+    #
+    # "It never asks me anything." A pack built on the wrong variant is worse
+    # than no pack, because it is confidently wrong — and the point of asking
+    # *here* is that the expensive research has not happened yet. Nothing waits
+    # on the answer: see `app/disambiguate.py` for why non-blocking is not a
+    # compromise but the automation principle holding.
+    scope = _disambiguate(settings, researcher, category, params, progress)
+
+    progress.set(0.15, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
-    reply = researcher.ask(packauthor.brief(category))
+    reply = researcher.ask(packauthor.brief(category, scope=scope))
     progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
@@ -1216,6 +1314,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         f"Knowledge and press Install."
     )
     written["category"] = category
+    written["scope"] = scope
     if written.get("uncovered"):
         # Said in the job's own last line, because a partial pack the reader
         # knows about is a next step and one they do not is a wrong answer
@@ -1293,6 +1392,136 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
            if result["uncovered"] else "; the line-up is now covered")
     )
     return result
+
+
+#: How many times a refused finding may be re-asked for. One.
+#:
+#: Not zero, because the commonest refusal is a field left empty on work that
+#: was otherwise good — the reader watched three genuinely useful titles get
+#: binned for it — and asking again costs one short call against text already
+#: fetched.
+#:
+#: Not more than one, because a second refusal on the same field is not a
+#: transient failure, it is the extractor telling us it has nothing more to say
+#: about that document. Looping past that spends money to arrive at the same
+#: answer more slowly, and an unbounded repair loop on a paid plane is a bill
+#: nobody authorised.
+REPAIR_ATTEMPTS = 1
+
+
+def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
+            emit, progress, retain):
+    """Re-ask for the one field that would have kept a refused finding.
+
+    Only the failing items, only the fields `findings._repairable` judged
+    fixable, and only once. A finding whose *quote* could not be grounded is
+    never re-asked for — that is asking it to try harder at the thing it got
+    wrong, and the evidence model exists precisely so that cannot be
+    negotiated.
+    """
+    from app.findings import explanation
+
+    fixable = [one for one in verdicts.get("rejected", []) if one.get("fix")]
+    if not fixable or not hasattr(researcher, "repair"):
+        return verdicts
+
+    wanted = {one["title"]: one for one in fixable}
+    again = [dict(one) for one in findings if one.get("title") in wanted]
+    if not again:
+        return verdicts
+
+    # Events on `ingestion`, not a stage of its own. `STAGES` is a closed
+    # vocabulary and `open_stage` refuses anything outside it — so the
+    # "repair" stage this first tried to open raised `ValueError` and would
+    # have killed every run that reached the loop. It is the right refusal:
+    # repair is not a fifth phase of the pipeline, it is acceptance asking
+    # once more, and it runs *after* ingestion and feeds back into it rather
+    # than sitting anywhere in the sequence.
+    emit.event(f"re-asking for {len(again)} finding(s)", stage="ingestion")
+    progress.log(
+        f"{len(again)} finding(s) were refused for a field that can be "
+        f"rewritten — asking once more"
+    )
+    try:
+        mended = researcher.repair(task, again, wanted)
+    except Exception as exc:  # noqa: BLE001 — a failed repair is not a failed run
+        emit.event(f"could not re-ask: {exc}", level="warn", stage="ingestion")
+        return verdicts
+
+    kept = [one for one in mended if explanation(one)]
+    if not kept:
+        emit.event("nothing came back with the field filled in",
+                   level="warn", stage="ingestion")
+        return verdicts
+
+    second = accept_findings(conn, subject_id, pack_id, kept, retain=retain)
+    emit.event(
+        f"{len(second.get('accepted', []))} of {len(again)} kept on the "
+        f"second attempt", stage="ingestion")
+
+    # Merge: what the repair kept joins the accepted list, and the refusals it
+    # replaced leave the rejected one. A finding that failed twice stays
+    # refused, carrying the second verdict rather than the first — the reader
+    # should see why it finally lost, not why it first did.
+    mended_titles = {one["title"] for one in second.get("accepted", [])}
+    from app.findings import summarise
+
+    accepted = verdicts.get("accepted", []) + second.get("accepted", [])
+    rejected = [one for one in verdicts.get("rejected", [])
+                if one["title"] not in mended_titles
+                and not any(one["title"] == two["title"]
+                            for two in second.get("rejected", []))]
+    rejected += second.get("rejected", [])
+    return {**verdicts, "accepted": accepted, "rejected": rejected,
+            "summary": summarise(accepted, rejected)}
+
+
+def _disambiguate(settings, researcher, subject, params, progress) -> dict:
+    """One short call: is this name one product or several?
+
+    Returns the scope record — what was settled, and which parts of it were
+    *assumed* rather than confirmed. Never raises and never waits: a
+    disambiguation that failed must cost the reader a question, not the run
+    behind it, so every failure path here returns the same empty scope the run
+    had before this existed.
+    """
+    from app import disambiguate
+
+    conn = connect(settings.store_path)
+    try:
+        keys = identity_keys_text(conn)
+    finally:
+        conn.close()
+
+    progress.set(0.05, f"checking what “{subject}” actually means")
+    try:
+        found = disambiguate.parse(
+            researcher.ask(disambiguate.brief(subject, keys)))
+    except Cancelled:
+        raise
+    except Exception as exc:  # noqa: BLE001 — a lost question, never a lost run
+        progress.log(f"could not check the name for ambiguity ({exc}) — "
+                     f"carrying on without asking")
+        return {}
+
+    if not found["ambiguous"]:
+        progress.log(f"“{subject}” names one product — nothing to ask")
+        return disambiguate.scope(found)
+
+    # Written to the job row so a client can render them *while the run
+    # continues*. The reader answering is a refinement, not a gate.
+    progress.partial({"questions": found["questions"], "why": found["why"],
+                      "stopped_at": "disambiguation"})
+    progress.log(f"{found['why']}" if found["why"] else "this name is ambiguous")
+    for question in found["questions"]:
+        progress.log(f"  ? {question['ask']} — assuming {question['default']!r}"
+                     + (f" ({question['because']})" if question["because"] else ""))
+
+    scope = disambiguate.scope(found, params.get("answers") or {})
+    said = disambiguate.sentence(scope)
+    if said:
+        progress.log(said)
+    return scope
 
 
 def site_register(settings, params: dict, progress: Progress) -> dict:
@@ -1583,21 +1812,32 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         if one.strip()
     ] or [""]
 
+    # Which models answered. The axis §2.6 asks for first, and swept on the
+    # same terms as every other one here: only when named. A benchmark that
+    # swept the catalogue by default would multiply the bill by however many
+    # models the reader happens to have priced.
+    models_asked = [
+        one.strip()
+        for one in str(params.get("models") or params.get("model") or "").split(",")
+        if one.strip()
+    ] or [""]
+
     batch_id = secrets.token_hex(8)
     app_conn = state.connect(settings.app_state_path)
     rows = []
     try:
         total = (
             len(found) * len(chosen) * len(protocols_asked)
-            * len(searches_asked) * reps
+            * len(searches_asked) * len(models_asked) * reps
         )
         done = 0
         for case in found:
             for plane in chosen:
-                for protocol, search, rep in [
-                    (one, engine, index)
+                for protocol, search, model, rep in [
+                    (one, engine, which, index)
                     for one in protocols_asked
                     for engine in searches_asked
+                    for which in models_asked
                     for index in range(1, reps + 1)
                 ]:
                     progress.check()
@@ -1616,6 +1856,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         ),
                         batch_id=batch_id,
                         search=search,
+                        model=model,
                     )
                     row["rep"] = rep
                     state.record_bench(app_conn, row)

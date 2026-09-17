@@ -31,6 +31,22 @@ class SeenRequest(BaseModel):
     title: str = Field("", max_length=500)
 
 
+class ActivationRow(BaseModel):
+    """One site, as the extension's own reconciliation left it."""
+
+    site: str = Field(max_length=253)
+    #: `active` | `pending` | `refused` — the extension's words, kept rather
+    #: than translated here, so a new state it learns to report arrives as
+    #: itself instead of as whatever this file guessed it meant.
+    state: str = Field("", max_length=32)
+    detail: str = Field("", max_length=500)
+    pattern: str = Field("", max_length=200)
+
+
+class ActivationReport(BaseModel):
+    sites: list[ActivationRow] = Field(default_factory=list, max_length=500)
+
+
 class RegisterRequest(BaseModel):
     url: str = Field("", max_length=2000)
     #: Whose identity keys the adapter maps into. Empty means "whichever pack
@@ -41,11 +57,48 @@ class RegisterRequest(BaseModel):
 
 @router.get("/sites")
 def list_sites(store=Depends(get_store), conn=Depends(get_app_state)) -> dict:
-    """Everything readable here, plus the sites somebody asked for and cannot be."""
+    """Everything readable here, plus the sites somebody asked for and cannot be.
+
+    The two lists are defined in `sites.TWO_LISTS`, and the second is *derived*
+    from the first. It used to be a straight read of the table, which left a
+    registered site sitting in both at once with the same URL in each — the
+    reader's report, and a screen contradicting itself.
+
+    `activation` rides along because "readable" and "the panel appears" are not
+    the same fact and the screen was only ever shown the first.
+    """
+    rows = sites.registered(store, conn)
+    for row in rows:
+        row["activation"] = sites.activation(store, conn, row["site"])
     return {
-        "registered": sites.registered(store, conn),
-        "requested": state.site_requests(conn),
+        "registered": rows,
+        "requested": sites.requested(store, conn),
     }
+
+
+@router.get("/sites/{host}/activation")
+def site_activation(host: str, store=Depends(get_store),
+                    conn=Depends(get_app_state)) -> dict:
+    """Will the panel appear on this host — and if not, name the blocker.
+
+    The reader registered a site, was told Kriko recognised it, reloaded, and
+    nothing happened. Nothing was broken except the *reporting*: the host
+    permission had never been granted, because only a gesture inside the
+    extension can grant one. This is the endpoint that says so.
+    """
+    return sites.activation(store, conn, host)
+
+
+@router.post("/sites/activation")
+def report_activation(body: ActivationReport, conn=Depends(get_app_state)) -> dict:
+    """The extension telling the app what its last sync actually achieved.
+
+    One direction only, and it has to be this one: the browser is the only
+    thing that knows whether a permission was granted, and the app is the only
+    thing with a screen to say it on.
+    """
+    written = state.record_activation(conn, [one.model_dump() for one in body.sites])
+    return {"recorded": written}
 
 
 @router.post("/sites/seen")

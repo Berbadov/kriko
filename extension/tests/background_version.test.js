@@ -163,7 +163,7 @@ test("only the worker stamps the header, because a content script cannot", async
   // CORS preflight the app does not answer. The worker is exempt via
   // `host_permissions`; the content scripts are not, and must not fetch.
   for (const name of ["content.js", "hover_lite/hover_lite.js",
-                      "hover_lite/risk_card.js", "hover_lite/icons.js"]) {
+                      "hover_lite/claim_card.js", "hover_lite/icons.js"]) {
     const source = fs.readFileSync(path.join(__dirname, "..", name), "utf8");
     assert.ok(
       !/\bfetch\s*\(/.test(source),

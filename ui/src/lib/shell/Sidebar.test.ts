@@ -1,6 +1,15 @@
 import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import Sidebar from "./Sidebar.svelte";
+import { readings, unwatch, EMPTY } from "./instruments";
+
+/* The rail starts its own clock on mount. Stopped here so one test's poll
+ * cannot land in the next one's assertions, and the store reset so a figure
+ * set by one test does not leak into a rail that should have none. */
+afterEach(() => {
+    unwatch();
+    readings.set(EMPTY);
+});
 
 describe("Sidebar", () => {
     it("shows a buyer two group-less destinations and no operator work", () => {
@@ -70,5 +79,45 @@ describe("the rail's current row", () => {
             "data-route",
             "check",
         );
+    });
+});
+
+describe("the rail's primary action", () => {
+    it("gives an author the one action that makes knowledge, outside the list of places", () => {
+        render(Sidebar, { mode: "author" });
+        const action = screen.getByRole("link", { name: /Start a new pack/ });
+        expect(action).toBeInTheDocument();
+        // Outside `.rail-nav` on purpose: a rail lists where you are, and this
+        // is a do. Inside it, it reads as the fourteenth destination.
+        expect(action.closest("nav")).toBeNull();
+    });
+
+    it("does not offer it to a buyer, who has no screen behind it", () => {
+        render(Sidebar, { mode: "buyer" });
+        expect(screen.queryByRole("link", { name: /Start a new pack/ })).toBeNull();
+    });
+});
+
+describe("the rail's figures", () => {
+    it("carries the claim count on the row that browses them", () => {
+        readings.set({ ...EMPTY, claims: 1620 });
+        render(Sidebar, { mode: "author" });
+        expect(screen.getByTitle(/1,620 claims/)).toBeInTheDocument();
+    });
+
+    it("says nothing on any row until something has been read", () => {
+        render(Sidebar, { mode: "author" });
+        // Not "renders a zero" — an unread figure and a figure that is zero
+        // are different claims and the rail may only make the second one.
+        expect(screen.queryByTitle(/claims across/)).toBeNull();
+        expect(screen.queryByTitle(/jobs running/)).toBeNull();
+    });
+
+    it("leaves every other row exactly as it was", () => {
+        readings.set({ ...EMPTY, claims: 3, running: 1, spentUsd: 0.5 });
+        render(Sidebar, { mode: "author" });
+        // Three figures, fourteen rows. A number on every row is a dashboard.
+        expect(screen.getAllByTitle(/claims across|jobs? running|spent on research/))
+            .toHaveLength(3);
     });
 });

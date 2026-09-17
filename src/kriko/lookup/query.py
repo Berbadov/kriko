@@ -31,11 +31,28 @@ class Query:
 @dataclass(frozen=True)
 class Resolution:
     subject_ids: tuple[str, ...]
-    method: str          # exact | ambiguous | no_match
+    #: exact | ambiguous | probable | no_match.
+    #:
+    #: `probable` is the one that is not about the catalog's certainty but about
+    #: *ours*: the exact intersection found nothing, and scoring found something
+    #: close enough to be worth putting to the reader as a question. A client
+    #: must not render it as a match — it renders as "this pack probably covers
+    #: this one, confirm?" — and must not render it as nothing, which is the
+    #: dead end `score.py` exists to end.
+    method: str
     notes: str = ""
     # Soft-narrowing steps that could not be applied, e.g. a stated power that
     # matched no candidate. Never silently dropped — a coverage signal.
     flags: tuple[str, ...] = ()
+    #: 0..1 for a scored resolution, 1.0 for an exact one. How sure, not how
+    #: many.
+    score: float = 1.0
+    #: Every subject that was weighed and why, best first — including the ones
+    #: that lost. This is what `/api/diagnose/identity` renders and what the
+    #: panel shows instead of a silence: a reader who is told "no pack
+    #: recognised this" and nothing else cannot tell a missing pack from a
+    #: misread page, and those need opposite responses.
+    considered: tuple = ()
 
 
 @dataclass(frozen=True)
@@ -73,4 +90,4 @@ class Claim:
 class LookupResult:
     resolution: Resolution
     claims: tuple[Claim, ...]
-    coverage: str    # RISKS_FOUND | MATCHED_NO_DATA | NOT_MATCHED
+    coverage: str    # RISKS_FOUND | PROBABLE_MATCH | MATCHED_NO_DATA | NOT_MATCHED

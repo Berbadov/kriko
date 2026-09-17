@@ -1,13 +1,24 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { MODES, setMode, type Mode } from "../mode";
     import { hashWith, route } from "../router";
+    import { figures } from "./figures";
+    import { readings, watch } from "./instruments";
     import NavGroup from "./NavGroup.svelte";
     import { groupsFor, resolve } from "./nav";
-    import { terminalOpen, toggleTerminal } from "./terminal";
 
     let { mode }: { mode: Mode } = $props();
 
     const groups = $derived(groupsFor(mode));
+
+    /* The rail's own numbers. Started here rather than in App.svelte because
+     * the rail is the only thing that reads them — a clock owned by whatever
+     * happens to mount first is a clock that stops when that thing unmounts.
+     * `watch` is idempotent and returns its own stop, so a remount does not
+     * leave two running. */
+    onMount(watch);
+
+    const reading = $derived(figures($readings));
 
     /* The rail highlights the screen that is *rendered*, which is not always
      * the screen that was asked for. `#/coverage` renders Knowledge's gaps
@@ -63,6 +74,7 @@
 </script>
 
 <aside class="rail">
+  <div class="rail-head">
     <a class="brand" href={href("check")}>
         <!-- The extension's toolbar icon, the same file the installer's
              app icon is rendered from. The reader met this product in a
@@ -79,25 +91,31 @@
         </span>
     </a>
 
+    <!-- The one action in this product that creates knowledge rather than
+         reading it, and until 0.10.0 it read as the fourteenth item in a list
+         of places. A rail is a list of *where you are*; this is a *do*, so it
+         does not live in the list.
+
+         Author mode only: a reader in buyer mode has no screens behind it and
+         a primary action that opens a page they cannot use is worse than no
+         action. -->
+    {#if mode === "author"}
+        <a class="rail-action" href={href("packs")}>
+            <span class="rail-action-plus" aria-hidden="true">+</span>
+            Start a new pack
+        </a>
+    {/if}
+  </div>
+
     <nav class="rail-nav">
         {#each groups as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
-                <NavGroup {group} {current} {href} />
+                <NavGroup {group} {current} {href} figures={reading} />
             </div>
         {/each}
     </nav>
 
     <div class="rail-foot">
-        <button
-            type="button"
-            class="tab terminal-toggle"
-            class:active={$terminalOpen}
-            aria-pressed={$terminalOpen}
-            onclick={toggleTerminal}
-            title="Terminal (Ctrl+`)"
-        >
-            Terminal
-        </button>
         <span class="modes" role="group" aria-label="Mode">
             {#each MODES as candidate (candidate)}
                 <button

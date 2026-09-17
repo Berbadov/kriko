@@ -83,11 +83,10 @@ export const NAV: NavGroupSpec[] = [
             // visit all three and hold the answer in their head.
             { name: "activity", label: "Activity", also: ["runs", "jobs", "pipeline", "submissions", "researchers", "log", "live", "operations", "feed", "mcp"] },
             // Console used to be a lens here, driving the same API a harness
-            // does by hand. It is a real terminal now (`lib/shell/
-            // TerminalPanel.svelte`), reachable from the rail directly rather
-            // than through this screen, so "console" and "terminal" are not
-            // searchable synonyms for Agents any more — see nav.ts's own
-            // history in git for why they once were.
+            // does by hand. An embedded terminal replaced it and has since
+            // been removed (§2.9); the shell that survives is `kriko tui`'s
+            // pass-through, which is not a destination in this app at all —
+            // so neither word is a searchable synonym for Agents any more.
             { name: "agents", label: "Agents", also: ["connect", "mcp", "harness", "claude"] },
             { name: "bench", label: "Benchmark",
               also: ["hallucination", "cost per claim", "protocols", "grading", "b126"] },
@@ -133,6 +132,9 @@ const AUTHOR_ROUTES = new Set(
  */
 export const ALIASES: Record<string, { name: string; lens?: string }> = {
     subjects: { name: "knowledge", lens: "all" },
+    // Singular, and it carries an id: `#/subject/<id>` is what the browser
+    // panel's search builds. The plural above is the unfiltered list.
+    subject: { name: "knowledge", lens: "all" },
     coverage: { name: "knowledge", lens: "gaps" },
     health: { name: "knowledge", lens: "weak" },
     marks: { name: "knowledge", lens: "marked" },
