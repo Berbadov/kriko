@@ -9,6 +9,7 @@ import ast
 import json
 import re
 import subprocess
+import sys
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -626,41 +627,29 @@ def test_the_app_stays_standalone():
 
 
 def test_the_app_wears_the_extension_palette():
-    """The app's default theme tracks the extension's live stylesheet.
+    """The app's default theme and the extension's live sheet are one palette.
 
     This exists because it already went wrong: the `lemonade` theme was ported
-    from `extension/colors_and_type.css`, a file nothing loads — the extension
-    has no HTML outside its test fixtures, and `manifest.json` ships
-    `hover_lite/hover_lite.css` into a shadow root instead. The port was
+    from `extension/colors_and_type.css`, a file nothing loaded — the port was
     faithful to a stylesheet that had not painted a pixel in months, and the
-    only thing that caught it was the reader looking at both windows.
+    only thing that caught it was the reader looking at both windows. (That
+    file is deleted now.)
 
-    So the check is not "panel.css is correct" — that is a fact about one
-    afternoon. It is "panel.css and the live sheet still agree", which fails
-    the moment somebody restyles the extension and forgets the app, in either
-    direction.
+    It used to compare two values by hand — the ground and the accent — which
+    was two of twenty-eight and chosen because they are what a glance
+    registers. The palette is generated now, so this defers to the generator:
+    `tools/tokens.py --check` compares all of them, and the map it compares
+    them through is code rather than a comment. What is still asserted here is
+    the part no generator covers — that the app names the same two faces, and
+    that it actually *opens* wearing this theme.
     """
-    live = (REPO / "extension" / "hover_lite" / "hover_lite.css").read_text()
+    generated = subprocess.run(
+        [sys.executable, "tools/tokens.py", "--check"],
+        cwd=REPO, capture_output=True, text=True,
+    )
+    assert generated.returncode == 0, generated.stderr or generated.stdout
+
     theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text()
-
-    def declared(css: str, prop: str) -> str | None:
-        found = re.search(rf"^\s*{re.escape(prop)}:\s*([^;]+);", css, re.M)
-        return found.group(1).strip().lower() if found else None
-
-    # Ground and accent are the two values a glance actually registers; if
-    # these drift the two windows stop looking like one product, whatever the
-    # other forty tokens say.
-    for label, live_prop, theme_prop in (
-        ("the ground", "--bg-base", "--n-0"),
-        ("the accent", "--accent", "--accent"),
-    ):
-        want, got = declared(live, live_prop), declared(theme, theme_prop)
-        assert want is not None, f"{live_prop} is gone from hover_lite.css"
-        assert got == want, (
-            f"{label} drifted: the extension paints {live_prop}: {want}, the "
-            f"app's panel theme has {theme_prop}: {got}. Whichever moved "
-            f"first, the other has to follow — they are one product."
-        )
 
     for family in ("ibm plex sans", "ibm plex mono"):
         assert family in theme.lower(), (
@@ -672,6 +661,35 @@ def test_the_app_wears_the_extension_palette():
     assert 'DEFAULT_THEME: Theme = "panel"' in (
         REPO / "ui" / "src" / "lib" / "theme.ts"
     ).read_text(), "the app no longer opens wearing the extension's palette"
+
+
+def test_both_clients_call_it_the_same_thing_on_screen():
+    """The reader's word is one word, in the panel and in the app.
+
+    The row is a `claim` everywhere it is named — store, wire, both clients'
+    variables — and what a buyer *reads* is "risk", in both. That split is
+    deliberate (`docs/STYLE.md` rule 9) and it is exactly the kind of
+    correspondence this repository keeps finding rotted: two files, one
+    convention, nothing holding them together.
+
+    It rotted once already, during the rename that made the field names agree:
+    the panel's counts bar was changed to say CLAIMS while the app went on
+    saying "8 known risks, 7 serious" over the same eight rows. Caught by
+    looking at the two windows, which is not a mechanism.
+    """
+    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text()
+    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text()
+
+    said = re.search(r'"known risk"', app)
+    assert said, (
+        "ui/src/lib/verdict.ts no longer says \"known risk\" — if the app's "
+        "word for the reader changed, the panel's has to change with it"
+    )
+    for shown in ("${c.total} RISKS", "RISKS · ${total}"):
+        assert shown in panel, (
+            f"the panel no longer shows {shown!r}, but the app still counts "
+            f"'known risk'. One reader, one word."
+        )
 
 
 def test_no_two_tracked_files_differ_only_in_case():

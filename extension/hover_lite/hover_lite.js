@@ -946,7 +946,18 @@
           <span class="num">${c.low}</span>
           <span class="lbl">LOW</span>
         </span>
-        <span class="lite-counts-total">${c.total} CLAIMS</span>
+        <!-- "RISKS", not "CLAIMS", and that is not a leftover.
+             The row is a claim everywhere it is *named* — the store, the
+             wire, this file's variables — because one thing needs one
+             identifier. What a buyer reads is another question, and the app
+             answers it "8 known risks, 7 serious" on the same data. Jargon on
+             screen would be a worse product and a harder bug report. What was
+             wrong was the worker inventing a second field name, never the word
+             on screen: docs/STYLE.md rule 9 allows those to differ, and this
+             is the case it was written for.
+             (And no backticks in here — this comment is inside a template
+             literal, which is how it broke the first time.) -->
+        <span class="lite-counts-total">${c.total} RISKS</span>
       </div>
     `;
   }
@@ -1174,7 +1185,7 @@
     if (!head) {
       claimsHeadEl.innerHTML = `
         <div class="lite-claims-head">
-          <div class="lite-claims-label">CLAIMS · ${total}</div>
+          <div class="lite-claims-label">RISKS · ${total}</div>
           <div class="lite-chip-group">
             <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
               + EXPAND ALL
@@ -1192,7 +1203,7 @@
 
     // Update in place
     const label = head.querySelector(".lite-claims-label");
-    if (label) label.textContent = `CLAIMS · ${total}`;
+    if (label) label.textContent = `RISKS · ${total}`;
     const expandBtn   = head.querySelector(".lite-chip-expand");
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";

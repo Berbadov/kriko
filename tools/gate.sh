@@ -96,6 +96,13 @@ if [ "$only" = all ] || [ "$only" = ui ]; then
     step "svelte-check"
     npm --prefix ui run check -- --threshold error
 
+    # The extension's colour tokens are generated from the app's theme — same
+    # discipline as the bundle below, and for the same reason: the extension
+    # loads static files with no build step, so the output is committed and
+    # something has to notice when it stops matching its source.
+    step "the panel's palette is not stale"
+    python tools/tokens.py --check
+
     # src/app/web/static/ is committed build output: the wheel ships it, so a
     # stale bundle means `pip install kriko` serves a UI nobody can reproduce
     # from source. Rebuild and require a clean diff.

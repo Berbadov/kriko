@@ -329,16 +329,23 @@ select:focus {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* Fill, edge and ink — the three a severity has, rather than the two this
+ * app had. The panel has always drawn the edge; without it a tinted pill on a
+ * tinted card loses its outline entirely at low severity, where fill and
+ * surface are a few units apart. */
 .sev.high {
     background: var(--high-soft);
+    border: 1px solid var(--high-border);
     color: var(--high);
 }
 .sev.medium {
     background: var(--medium-soft);
+    border: 1px solid var(--medium-border);
     color: var(--medium);
 }
 .sev.low {
     background: var(--low-soft);
+    border: 1px solid var(--low-border);
     color: var(--low);
 }
 
@@ -1134,14 +1141,17 @@ li.gap {
     border-left: 3px solid var(--line);
 }
 .card.risk:has(.sev.high) {
+    border-color: var(--high-border);
     border-left-color: var(--high);
     background: var(--high-soft);
 }
 .card.risk:has(.sev.medium) {
+    border-color: var(--medium-border);
     border-left-color: var(--medium);
     background: var(--medium-soft);
 }
 .card.risk:has(.sev.low) {
+    border-color: var(--low-border);
     border-left-color: var(--low);
     background: var(--low-soft);
 }
