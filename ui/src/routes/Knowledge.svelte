@@ -38,7 +38,10 @@
     // The lens can arrive from the route: `#/coverage` and `#/health` are
     // links this app has been handing out for versions, and they resolve here
     // now (see nav.ts's ALIASES). A bookmark must land on the lens it named.
-    let { lens: initial = "all" }: { lens?: string } = $props();
+    let {
+        lens: initial = "all",
+        subjectId = "",
+    }: { lens?: string; subjectId?: string } = $props();
 
     const asLens = (named: string): Lens =>
         (["all", "gaps", "weak", "marked"].includes(named) ? named : "all") as Lens;
@@ -197,6 +200,24 @@
         shown = 25;
         timer = setTimeout(loadList, 180);
     }
+
+    /* One subject, named in the address.
+     *
+     * `#/knowledge/<subject_id>` exists because the browser panel's search
+     * needed somewhere to send a row: a reader who typed a name, saw the
+     * variant they meant among three that share a label, and pressed it was
+     * otherwise dropped on an unfiltered list to find it a second time.
+     *
+     * It opens the row rather than filtering to it. Filtering would answer
+     * "show me this one" and lose the thing the reader came for, which is
+     * *this one among the others* — the same reason every search result
+     * carries its identity.
+     */
+    $effect(() => {
+        if (!subjectId || open[subjectId]) return;
+        const row = subjects.find((one) => one.subject_id === subjectId);
+        if (row) void expand(row);
+    });
 
     async function expand(subject: Subject) {
         open = { ...open, [subject.subject_id]: !open[subject.subject_id] };

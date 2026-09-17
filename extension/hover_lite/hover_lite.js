@@ -32,6 +32,14 @@
    * on the second site and unnoticed on the third. */
   const IDLE_HINT = "Analyze this page to see what is known about it.";
 
+  /* The engine's verdict, as a word the panel shows. Three of the four are
+   * worth a banner; `recognised` is the ordinary case and gets none. */
+  const VERDICT_WORD = {
+    recognised: "Recognised",
+    probably: "Probably this one",
+    unrecognised: "Not recognised",
+  };
+
   // ─── State ────────────────────────────────────────────────────────────
   const state = {
     mounted: false,            // panel currently in DOM
@@ -49,6 +57,16 @@
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
+    // Typing the name. Panel-local: a search is a question the reader is
+    // asking right now, not something the next analysis should remember.
+    searchOpen: false,
+    searchQuery: "",
+    searchResults: null,       // null = nothing asked yet, [] = asked and none
+    searchBusy: false,
+    searchError: null,
+    // Set only by an explicit press. The automatic run at page load leaves it
+    // alone, because nobody asked it anything.
+    noAdapter: false,
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
@@ -81,6 +99,7 @@
   let claimsListEl = null;
   let densityBtn = null;
   let closeBtn = null;
+  let searchBtn = null;
   let footerEl = null;
 
   let closeTimer = null;
@@ -357,6 +376,8 @@
 
   // Apply entry helper
   function applyEntry(entry) {
+    // An answer of any kind means something read this page after all.
+    state.noAdapter = false;
     if (!entry) return;
     if (entry.listing || (entry.ok && entry.result)) {
       state.listingMeta = deriveListingMeta(entry);
@@ -445,6 +466,21 @@
         if (cardEl) factClaimCard(cardEl, state.facts.get(claim.claim_id), false);
       }
     );
+  }
+
+  /* A browser URL for a route the result did not come with.
+   *
+   * The panel is never told the app's address — the worker owns it, and owns
+   * it in one place on purpose. But every answer carries `app_url` built from
+   * that address, so the base can be read back off one rather than asking for
+   * it and having two copies. Empty when there is no answer yet, which is the
+   * honest result: `openInApp` still records the route, and a window opened
+   * within its TTL picks it up.
+   */
+  function appUrlFor(route) {
+    const known = (state.result && (state.result.app_url || "")) || "";
+    const at = known.indexOf("/#/");
+    return at > 0 ? `${known.slice(0, at)}/#/${route}` : "";
   }
 
   // Raise the desktop app on a route. Not a link: a page cannot bring a
@@ -621,10 +657,21 @@
         }
         if (response && !response.ok) {
           if (response.code === "NO_ADAPTER") {
-            // Nothing installed reads this site. Say nothing rather than
-            // painting a red banner over an ordinary web page.
+            /* Nothing installed reads this site.
+             *
+             * Still not a red banner — a page Kriko cannot read is not an
+             * error the reader made, and painting one over an ordinary web
+             * page is how an extension teaches people to close it.
+             *
+             * But it is no longer *silence*, and that distinction is the whole
+             * of §1.4. Silence is right for the automatic run at page load,
+             * where the reader asked for nothing. It is wrong here: they
+             * pressed a button called Analyze current page and nothing
+             * happened, which is the dead end this release exists to remove.
+             */
             setPipeline("idle");
             state.errorMsg = null;
+            state.noAdapter = true;
             renderBody();
             return;
           }
@@ -715,6 +762,7 @@
     claimsHeadEl = panel.querySelector(".lite-claims-head-slot");
     claimsListEl = panel.querySelector(".lite-claims");
     densityBtn  = panel.querySelector(".lite-btn-density");
+    searchBtn   = panel.querySelector(".lite-btn-search");
     closeBtn    = panel.querySelector(".lite-btn-close");
     footerEl    = panel.querySelector(".lite-footer");
 
@@ -726,6 +774,8 @@
 
     ctaBtn.addEventListener("click", triggerAnalyze);
     densityBtn.addEventListener("click", triggerAnalyze);
+    searchBtn.addEventListener("click", () =>
+      (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
 
     // Initial render
@@ -747,7 +797,7 @@
     try { hostEl.remove(); } catch (_) {}
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
-    claimsHeadEl = claimsListEl = densityBtn = closeBtn = null;
+    claimsHeadEl = claimsListEl = densityBtn = closeBtn = searchBtn = null;
     footerEl = null;
   }
 
@@ -890,11 +940,19 @@
         ${dragDots}
         <div class="lite-titlebox">
           <div class="lite-title">Kriko</div>
-          <div class="lite-subtitle">Floating panel · drag to reposition</div>
+          <div class="lite-subtitle">drag to move</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-density"
                 title="Refresh analysis" aria-label="Refresh analysis">
           ${iconSvg("refresh", { size: 16, strokeWidth: 2 })}
+        </button>
+        <!-- Search sits in the header rather than behind a verdict, because
+             wanting to look something up is not only what happens after a
+             failed match: a reader comparing two of something is not standing
+             on either page. -->
+        <button type="button" class="lite-iconbtn lite-btn-search"
+                title="Search the installed packs" aria-label="Search">
+          ${iconSvg("search", { size: 16, strokeWidth: 2 })}
         </button>
         <button type="button" class="lite-iconbtn lite-btn-close"
                 title="Close" aria-label="Close">
@@ -913,6 +971,8 @@
           </button>
           <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
+        <div class="lite-search-slot"></div>
+        <div class="lite-verdict-slot"></div>
         <div class="lite-claims-head-slot"></div>
         <section class="lite-claims"></section>
         <div class="lite-details-slot"></div>
@@ -1169,6 +1229,337 @@
   }
 
   // Render claims header helper
+  /* ─── How sure the engine is, and what to do about it ──────────────────
+   *
+   * The panel had two states for four situations. A page the packs recognised
+   * exactly and a page they had never heard of both rendered as claims or as
+   * a blank, and the reader who met the blank had a good pack installed for
+   * that exact product with no way to find out which of four things had gone
+   * wrong: a pack never installed, a page misread, a catalog spelling one
+   * value differently, or a genuine gap.
+   *
+   * `verdict`, `score`, `considered` and `next_step` are the engine's answer
+   * to that, and every one of them is *the engine's* — this renders them and
+   * writes none of the copy. `next_step.say` is a sentence `app/matching.py`
+   * composed from the same objects the answer was built from, and `action` is
+   * a closed vocabulary. A client writing its own copy from a status code
+   * stops agreeing with the engine the first time a method is added, which is
+   * the failure this whole block exists to end rather than to repeat.
+   */
+  /* What the button says, and it is a function rather than a map because the
+   * same action word can only do two different things here.
+   *
+   * `research` arrives with a `subject_id` when the engine resolved something
+   * to research (a recognised product the packs hold nothing on), and without
+   * one when it did not (a page nothing placed). The second cannot start a
+   * research run — there is no subject to run it against — so it goes to
+   * search, and the button has to say so. A button labelled "Research it"
+   * that opens a search field is a button the reader stops trusting. */
+  function actionLabel(action, step) {
+    if (action === "install") return "Open Kriko";
+    if (action === "research") {
+      return step && step.subject_id ? "Research it" : "Find it by name";
+    }
+    if (action === "confirm") return "Not this one — search";
+    return "";
+  }
+
+  /* ─── Typing the name, when standing on the page was not enough ────────
+   *
+   * "The extension has no way to search for a particular product. I have to be
+   * standing on the right page and hope recognition fires."
+   *
+   * Every way into this panel was the page: an adapter matched, a scrape ran,
+   * and either the packs placed it or the reader got a blank. That is fine
+   * when it works and a dead end when it does not — a site with no adapter, a
+   * listing that names the thing in words no pack declared, or somebody
+   * comparing two of something from their sofa.
+   *
+   * So: a field. It is also where three of the four verdicts send the reader,
+   * which is the point rather than a convenience — "we could not place this
+   * page" and "type what it is" are the same moment.
+   *
+   * **Every result carries its identity, and that is the feature.** Two rows
+   * reading `Golf VII` are not a choice; the same name followed by the two
+   * configurations that differ is. A list of labels cannot tell one of a thing
+   * from another of it, which is the entire reason the reader asked.
+   */
+  const SEARCH_MIN = 2;
+  const SEARCH_DEBOUNCE_MS = 220;
+  let searchTimer = null;
+  let searchRunId = 0;
+
+  function openSearch() {
+    state.searchOpen = true;
+    renderSearch();
+    const field = bodyEl && bodyEl.querySelector(".lite-search-field");
+    if (field) field.focus();
+  }
+
+  function runSearch(text) {
+    const query = String(text || "").trim();
+    state.searchQuery = query;
+    if (searchTimer) clearTimeout(searchTimer);
+    if (query.length < SEARCH_MIN) {
+      state.searchResults = null;
+      state.searchBusy = false;
+      return renderSearchResults();
+    }
+    // Debounced, and every reply carries the id of the keystroke that asked
+    // for it: without that, a slow answer to "gol" lands after a fast one to
+    // "golf" and the reader watches their own typing undo itself.
+    const runId = ++searchRunId;
+    state.searchBusy = true;
+    renderSearchResults();
+    searchTimer = setTimeout(() => {
+      chrome.runtime.sendMessage({ type: "SEARCH", payload: { q: query } }, (reply) => {
+        if (runId !== searchRunId) return;
+        state.searchBusy = false;
+        if (chrome.runtime.lastError || !reply || !reply.ok) {
+          state.searchResults = [];
+          state.searchError = (reply && reply.error)
+            || (chrome.runtime.lastError && chrome.runtime.lastError.message)
+            || "Could not search.";
+        } else {
+          state.searchError = null;
+          state.searchResults = Array.isArray(reply.items) ? reply.items : [];
+        }
+        renderSearchResults();
+      });
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  function renderSearch() {
+    const slot = bodyEl && bodyEl.querySelector(".lite-search-slot");
+    if (!slot) return;
+    if (!state.searchOpen) { slot.innerHTML = ""; return; }
+    if (slot.querySelector(".lite-search")) return renderSearchResults();
+
+    slot.innerHTML = `
+      <div class="lite-search">
+        <div class="lite-search-bar">
+          <span class="lite-search-icon">${iconSvg("search", { size: 15 })}</span>
+          <input class="lite-search-field" type="text" autocomplete="off"
+                 spellcheck="false" placeholder="Type a product name"
+                 aria-label="Search the installed packs" />
+          <button type="button" class="lite-search-close"
+                  title="Close search" aria-label="Close search">
+            ${iconSvg("x", { size: 14, strokeWidth: 2 })}
+          </button>
+        </div>
+        <div class="lite-search-results"></div>
+      </div>
+    `;
+    const field = slot.querySelector(".lite-search-field");
+    field.value = state.searchQuery || "";
+    field.addEventListener("input", (event) => runSearch(event.target.value));
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.stopPropagation(); closeSearch(); }
+    });
+    slot.querySelector(".lite-search-close")
+      .addEventListener("click", () => closeSearch());
+    renderSearchResults();
+  }
+
+  function closeSearch() {
+    state.searchOpen = false;
+    state.searchQuery = "";
+    state.searchResults = null;
+    state.searchError = null;
+    if (searchTimer) clearTimeout(searchTimer);
+    renderSearch();
+  }
+
+  function renderSearchResults() {
+    const box = bodyEl && bodyEl.querySelector(".lite-search-results");
+    if (!box) return;
+    box.innerHTML = "";
+
+    if (state.searchBusy) {
+      box.innerHTML = `<p class="lite-search-note">Searching…</p>`;
+      return;
+    }
+    if (state.searchError) {
+      box.innerHTML = `<p class="lite-search-note">${escapeHtml(state.searchError)}</p>`;
+      return;
+    }
+    if (state.searchResults === null) {
+      box.innerHTML =
+        `<p class="lite-search-note">Type at least ${SEARCH_MIN} characters. ` +
+        `Every word has to land somewhere — a name, an alias, or one of the ` +
+        `values the thing is made of.</p>`;
+      return;
+    }
+    if (!state.searchResults.length) {
+      box.innerHTML =
+        `<p class="lite-search-note">Nothing in the installed packs matches ` +
+        `that. Fewer words usually finds more.</p>`;
+      return;
+    }
+
+    for (const row of state.searchResults) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "lite-search-hit";
+      // The identity, spelled out, is the half that makes this a choice.
+      const identity = Object.entries(row.identity || {})
+        .map(([key, value]) => `
+          <span class="lite-search-id">
+            <span class="lite-search-id-key">${escapeHtml(key)}</span>
+            ${escapeHtml(String(value))}
+          </span>`)
+        .join("");
+      const claims = typeof row.claims === "number" ? row.claims : null;
+      item.innerHTML = `
+        <span class="lite-search-hit-head">
+          <span class="lite-search-label">${escapeHtml(row.label || row.subject_id || "")}</span>
+          ${claims !== null
+            ? `<span class="lite-search-count">${claims} known</span>`
+            : ""}
+        </span>
+        <span class="lite-search-identity">${identity}</span>
+      `;
+      item.addEventListener("click", () => openInApp(
+        `subject/${encodeURIComponent(row.subject_id)}`,
+        appUrlFor(`subject/${encodeURIComponent(row.subject_id)}`),
+      ));
+      box.appendChild(item);
+    }
+  }
+
+  function renderVerdict() {
+    const slot = bodyEl.querySelector(".lite-verdict-slot");
+    if (!slot) return;
+    slot.innerHTML = "";
+
+    if (state.noAdapter && state.pipeline !== "result") {
+      const card = document.createElement("div");
+      card.className = "lite-verdict";
+      card.dataset.verdict = "no-adapter";
+      card.innerHTML = `
+        <div class="lite-verdict-head">
+          <span class="lite-verdict-word">Not read here</span>
+        </div>
+        <p class="lite-verdict-say">Nothing installed knows how to read this
+          site yet. Teaching Kriko a site is a few minutes in the app, and an
+          agent can write most of it.</p>
+      `;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn";
+      button.textContent = "Add this site";
+      button.addEventListener("click", () =>
+        openInApp("sites", appUrlFor("sites")));
+      card.appendChild(button);
+      slot.appendChild(card);
+      return;
+    }
+
+    if (state.pipeline !== "result" || !state.result) return;
+
+    const verdict = state.result.verdict || "";
+    const step = state.result.next_step || null;
+    // `recognised` with claims is the ordinary case and says nothing: a banner
+    // on every successful answer is a banner nobody reads by the third one.
+    if (verdict === "recognised" && !(step && step.say)) return;
+    if (!verdict && !step) return;
+
+    const card = document.createElement("div");
+    card.className = "lite-verdict";
+    card.dataset.verdict = verdict || "unknown";
+
+    const head = document.createElement("div");
+    head.className = "lite-verdict-head";
+    head.innerHTML = `
+      <span class="lite-verdict-word">${escapeHtml(VERDICT_WORD[verdict] || verdict)}</span>
+      ${typeof state.result.score === "number" && verdict !== "recognised"
+        ? `<span class="lite-verdict-score">${(state.result.score * 100).toFixed(0)}%</span>`
+        : ""}
+    `;
+    card.appendChild(head);
+
+    if (step && step.say) {
+      const say = document.createElement("p");
+      say.className = "lite-verdict-say";
+      say.textContent = step.say;
+      card.appendChild(say);
+    }
+
+    const weighed = renderConsidered();
+    if (weighed) card.appendChild(weighed);
+
+    const action = step && step.action && step.action !== "none" ? step.action : "";
+    const label = actionLabel(action, step);
+    if (label) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn";
+      button.textContent = label;
+      button.addEventListener("click", () => takeNextStep(action, step, button));
+      card.appendChild(button);
+    }
+
+    slot.appendChild(card);
+  }
+
+  /* What the reader was actually shown, which is not always what was weighed.
+   *
+   * A verdict is a number, and a number nobody can decompose is a number
+   * nobody can argue with. Each row here is one subject the engine considered
+   * and each key's own reading — and the two readings that matter are the two
+   * that point at different bugs: a key reading `conflict` is usually the
+   * page, a key reading `absent` is usually the adapter. That sentence is in
+   * `docs/HOW_IT_WORKS.md` and until now there was nowhere to act on it.
+   */
+  function renderConsidered() {
+    const rows = (state.result.considered || []).slice(0, 3);
+    if (!rows.length) return null;
+
+    const box = document.createElement("details");
+    box.className = "lite-weighed";
+    const many = rows.length === 1 ? "1 subject weighed" : `${rows.length} subjects weighed`;
+    box.innerHTML = `<summary>${escapeHtml(many)}</summary>`;
+
+    for (const row of rows) {
+      const one = document.createElement("div");
+      one.className = "lite-weighed-row";
+      const keys = (row.keys || [])
+        .map((key) => `
+          <span class="lite-weighed-key" data-how="${escapeHtml(key.how || "")}">
+            ${escapeHtml(key.key)}
+            <span class="lite-weighed-how">${escapeHtml(key.how || "")}</span>
+          </span>`)
+        .join("");
+      one.innerHTML = `
+        <div class="lite-weighed-label">
+          ${escapeHtml(row.label || row.subject_id || "")}
+          <span class="lite-weighed-score">${((row.score || 0) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="lite-weighed-keys">${keys}</div>
+      `;
+      box.appendChild(one);
+    }
+    return box;
+  }
+
+  function takeNextStep(action, step, button) {
+    if (action === "research" && step && step.subject_id) {
+      const subject = (state.result.subjects || [])
+        .find((one) => one.subject_id === step.subject_id);
+      if (subject) return researchSubject(subject, button);
+    }
+    if (action === "install") {
+      // No pack here covers this kind of product at all, which is not
+      // something the panel can fix — installing or writing one is the app's
+      // job, and raising it is the whole step.
+      return openInApp("packs", appUrlFor("packs"));
+    }
+    // Everything else lands on search, and that is not a fallback: a page the
+    // packs could not place is exactly when a reader wants to type the name
+    // themselves, which is the thing the panel could never do.
+    openSearch();
+  }
+
   function renderClaimsHeader() {
     if (!claimsHeadEl) return;
     if (state.pipeline !== "result" || !state.result) {
@@ -1264,11 +1655,17 @@
     if (!state.result.claims || !state.result.claims.length) {
       const gaps = (state.result.subjects || []).filter((s) => !s.claims);
       if (!gaps.length) {
-        const empty = document.createElement("div");
-        empty.className = "lite-empty";
-        empty.textContent =
-          "Nothing matched this listing. No installed pack recognises it.";
-        claimsListEl.appendChild(empty);
+        // Deliberately nothing here when the verdict block has already spoken.
+        // It says which of four things happened and what to do about it; a
+        // second, vaguer sentence underneath ("no installed pack recognises
+        // it") is the dead end this release removed, re-added below itself.
+        if (!state.result.next_step && !state.result.verdict) {
+          const empty = document.createElement("div");
+          empty.className = "lite-empty";
+          empty.textContent =
+            "Nothing matched this listing. No installed pack recognises it.";
+          claimsListEl.appendChild(empty);
+        }
       }
       renderGaps();
       return;
@@ -1503,6 +1900,8 @@
     renderCriticalAlerts();
     renderCta();
     renderStatus();
+    renderSearch();
+    renderVerdict();
     renderClaimsHeader();
     renderClaimsList();
     renderListingDetails();
