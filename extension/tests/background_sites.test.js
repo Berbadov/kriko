@@ -84,12 +84,12 @@ test("a granted site is registered, with the panel's scripts in order",
     const script = h.state.registered[0];
     assert.equal(script.id, NEW_ID);
     assert.deepEqual(script.matches, [NEW_ORIGIN]);
-    // `hover_lite.js` calls into `icons.js` and `risk_card.js`, so the order
+    // `hover_lite.js` calls into `icons.js` and `claim_card.js`, so the order
     // is load-bearing, not cosmetic.
     assert.deepEqual(script.js, [
       "content.js",
       "hover_lite/icons.js",
-      "hover_lite/risk_card.js",
+      "hover_lite/claim_card.js",
       "hover_lite/hover_lite.js",
     ]);
     assert.equal(script.runAt, "document_idle");

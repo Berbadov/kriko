@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const { JSDOM } = require("jsdom");
 
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
-const CARD_JS = path.join(__dirname, "..", "hover_lite", "risk_card.js");
+const CARD_JS = path.join(__dirname, "..", "hover_lite", "claim_card.js");
 
 function loadPanel({
   url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
@@ -57,7 +57,7 @@ function loadPanel({
   // The *real* card renderer, not a stub. The controls a test cares about —
   // the verdict buttons — are in this markup, so a stub returning a bare
   // <div> would let the panel's wiring pass while shipping nothing clickable.
-  vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "risk_card.js" });
+  vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "claim_card.js" });
   vm.runInContext(fs.readFileSync(PANEL_JS, "utf8"), sandbox, { filename: "hover_lite.js" });
 
   function openPanel() {
@@ -98,9 +98,9 @@ function loadPanel({
     return host ? host.dataset.pipeline : null;
   }
 
-  function risks() {
+  function claims() {
     const root = shadow();
-    return root ? root.querySelector(".lite-risks") : null;
+    return root ? root.querySelector(".lite-claims") : null;
   }
 
   /** Click something in the shadow tree, by selector. */
@@ -111,7 +111,7 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverEntry, footer, listing, risks, click,
+  return { dom, openPanel, deliverEntry, footer, listing, claims, click,
            shadow, sent, errorText, pipeline };
 }
 

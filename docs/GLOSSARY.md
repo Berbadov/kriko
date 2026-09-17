@@ -82,9 +82,20 @@ clusters, verdicts — and it is build-time machinery. The research job's
 `log_submission`, a different database doing interface bookkeeping. Prefer "the
 evidence ledger" and "the submissions log" (B120 found this one).
 
-**"extension" is singular but lives in two directories.** `extension/` is the
-browser client that ships; `extension_ui/` holds its manifest. Both are the one
-extension.
+**"risk" was a fourth name for a claim, and is retired.** The engine stores a
+**claim**, `/api/analyze` sends `claims`, and the app renders a claim — but
+until 0.10.0 the extension's worker renamed the array to `risks` at its own
+boundary, along with `body`→`rationale` and `advice`→`inspection_advice`, and
+every line downstream spoke the new words. Nothing was gained: a shared
+component would have had to translate, and a bug report saying "risk" needed a
+mental hop to reach a `claims` table. One word, one meaning — it is a claim
+everywhere now. The panel's CSS still says `.lite-rc`, which is a class name
+rather than a word for the thing.
+
+**"extension" is one thing in one directory.** `extension/` is the browser
+client, and everything it ships is under it — the manifest, the worker, the
+panel, the options page. An `extension_ui/` was named here for a while and has
+not existed for longer than that.
 
 **"reader"** is this project's word for the person using Kriko — a buyer
 looking at a listing. Not a developer, not an operator. When a doc says "the

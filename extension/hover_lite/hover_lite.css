@@ -68,7 +68,7 @@
   0%   { transform: translateY(0) scale(1); opacity: 1; }
   100% { transform: translateY(-4px) scale(0.96); opacity: 0; }
 }
-@keyframes riskIn {
+@keyframes claimIn {
   0%   { opacity: 0; transform: translateY(8px); }
   100% { opacity: 1; transform: translateY(0); }
 }
@@ -155,7 +155,6 @@
   line-height: 1;
   color: var(--fg);
 }
-.lite-title .cc { color: var(--accent); }
 .lite-subtitle {
   margin: 5px 0 0;
   font-family: var(--font-mono);
@@ -634,17 +633,17 @@
 }
 
 /* ─────────────────────────────────────────────
-   Risks header bar
+   Claims header bar
    ───────────────────────────────────────────── */
-.lite-risks-head {
+.lite-claims-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  animation: riskIn 280ms var(--ease-out) both;
+  animation: claimIn 280ms var(--ease-out) both;
   animation-delay: 40ms;
 }
-.lite-risks-label {
+.lite-claims-label {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--fg-muted);
@@ -671,13 +670,13 @@
 .lite-chip:focus-visible { outline: 2px solid var(--low-ink); outline-offset: 2px; }
 
 /* ─────────────────────────────────────────────
-   Risk list
+   Claim list
    ───────────────────────────────────────────── */
-.lite-risks { display: flex; flex-direction: column; gap: 11px; }
-.lite-risk-anim { animation: riskIn 320ms var(--ease-out) both; }
+.lite-claims { display: flex; flex-direction: column; gap: 11px; }
+.lite-claim-anim { animation: claimIn 320ms var(--ease-out) both; }
 
 /* ─────────────────────────────────────────────
-   Risk card (left-tile layout)
+   Claim card (left-tile layout)
    ───────────────────────────────────────────── */
 .lite-rc {
   background: var(--bg-surface);
@@ -780,16 +779,6 @@
   background: rgba(180, 140, 60, 0.12);
   border-color: rgba(180, 140, 60, 0.32);
 }
-.lite-rc-strength[data-strength="due"] {
-  color: #f59e42;
-  background: rgba(220, 120, 20, 0.15);
-  border-color: rgba(220, 120, 20, 0.38);
-}
-.lite-rc-strength[data-strength="due_stated"] {
-  color: #a88c5a;
-  background: rgba(160, 110, 50, 0.10);
-  border-color: rgba(160, 110, 50, 0.25);
-}
 
 /* Toggle button (right side, text +/–) */
 .lite-rc-toggle {
@@ -835,7 +824,7 @@
   transition-delay: 60ms;
 }
 
-.lite-rc-rationale {
+.lite-rc-body {
   margin: 0;
   font-size: 12.5px;
   color: #aab0ba;
@@ -873,53 +862,6 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 3px;
-}
-
-/* ─────────────────────────────────────────────
-   Summary (at the bottom)
-   ───────────────────────────────────────────── */
-.lite-summary {
-  border-top: 1px solid var(--border-soft);
-  padding-top: 16px;
-  display: flex;
-  flex-direction: column;
-}
-.lite-summary-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--fg-muted);
-  margin-bottom: 10px;
-}
-.lite-summary-body {
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--fg-body);
-  line-height: 1.6;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  overflow: hidden;
-  max-height: calc(1.6em * 3);
-  transition: max-height 280ms var(--ease-out);
-  cursor: pointer;
-}
-.lite-summary[data-expanded="1"] .lite-summary-body { cursor: default; }
-.lite-summary-toggle {
-  all: unset;
-  cursor: pointer;
-  align-self: flex-start;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 1px;
-  color: var(--accent);
-  margin-top: 11px;
-}
-.lite-summary-toggle:hover { opacity: 0.8; }
-.lite-summary-toggle:focus-visible {
-  outline: 2px solid var(--low-ink);
-  outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /* ─────────────────────────────────────────────
@@ -1089,7 +1031,7 @@
 }
 
 /* ─────────────────────────────────────────────
-   Domain groups (grouped risk cards)
+   Domain groups (grouped claim cards)
    ───────────────────────────────────────────── */
 .lite-domain-groups {
   display: flex;
@@ -1205,8 +1147,8 @@
   .lite-panel[data-mounting="1"],
   .lite-panel[data-closing="1"],
   .lite-counts,
-  .lite-risks-head,
-  .lite-risk-anim,
+  .lite-claims-head,
+  .lite-claim-anim,
   .lite-skeleton,
   .lite-cta-icon.spin,
   .lite-iconbtn[data-spinning="1"] svg {
@@ -1217,7 +1159,6 @@
   .lite-iconbtn,
   .lite-chip,
   .lite-cta,
-  .lite-summary-body,
   .lite-details-bodywrap,
   .lite-details-rows,
   .lite-detrow-bodywrap,
