@@ -17,10 +17,20 @@
   window.__krikoPanelInstalled = true;
 
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
-  const { renderRiskCard, updateRiskCard, markRiskCard, factRiskCard } =
-    window.__KrikoPanelRiskCard;
+  const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard } =
+    window.__KrikoPanelClaimCard;
 
   const HOST_TAG = "kriko-panel-host";
+
+  /* What the panel says before anything has been analysed.
+   *
+   * It used to name one site — "Open a Sahibinden listing, then analyze." —
+   * which was the last of the site's own knowledge left in the client after
+   * every other trace of it was pushed into the pack's adapter. The panel only
+   * ever mounts on a page an adapter matched, so naming *which* site was never
+   * information the reader needed; it was only a sentence that would be wrong
+   * on the second site and unnoticed on the third. */
+  const IDLE_HINT = "Analyze this page to see what is known about it.";
 
   // ─── State ────────────────────────────────────────────────────────────
   const state = {
@@ -31,10 +41,9 @@
     pos: null,                 // {left, top} once dragged
     dragging: false,
     compact: false,
-    openIds: new Set(),        // expanded risk indices
+    openIds: new Set(),        // expanded claim indices
     detailsOpen: false,        // Listing-details panel collapsed by default
     openDetailRows: new Set(), // expanded rows inside listing details
-    summaryExpanded: false,    // Summary card line-clamped by default
     pipeline: "idle",          // idle | analyzing | result | error
     result: null,              // AnalyzeResponse
     errorMsg: null,
@@ -68,18 +77,17 @@
   let bodyEl = null;
   let statusEl = null;
   let ctaBtn = null;
-  let risksHeadEl = null;
-  let risksListEl = null;
+  let claimsHeadEl = null;
+  let claimsListEl = null;
   let densityBtn = null;
   let closeBtn = null;
   let footerEl = null;
 
   let closeTimer = null;
 
-  // Memo refs so summary / listing-details only rebuild when the underlying
+  // A memo ref so listing details only rebuild when the underlying
   // data changes — toggles flip data-attributes in place so the CSS
   // animations can play.
-  let lastSummaryText = null;
   let lastDetailsListingMeta = null;
 
   // ─── No font is fetched, and that is the feature ──────────────────────
@@ -114,13 +122,13 @@
       .replace(/'/g, "&#39;");
   }
 
-  // What the panel puts above the risks. Two sources, and the split is the
+  // What the panel puts above the claims. Two sources, and the split is the
   // point of Phase 6c:
   //
   //   `entry.result`  — what the ENGINE understood. Rendering this rather than
   //                     the page's own words makes the header double as the
   //                     answer to "did it understand this car?", which is the
-  //                     question a reader actually has when the risks look
+  //                     question a reader actually has when the claims look
   //                     wrong. A header echoing the page can never say that.
   //   `entry.listing` — the damage and equipment panels, scraped locally and
   //                     never sent anywhere, because the engine has no rule
@@ -307,11 +315,11 @@
   }
 
   function counts() {
-    if (!state.result || !Array.isArray(state.result.risks)) {
+    if (!state.result || !Array.isArray(state.result.claims)) {
       return { high: 0, medium: 0, low: 0, total: 0 };
     }
-    const out = { high: 0, medium: 0, low: 0, total: state.result.risks.length };
-    for (const r of state.result.risks) {
+    const out = { high: 0, medium: 0, low: 0, total: state.result.claims.length };
+    for (const r of state.result.claims) {
       if (r.severity === "high") out.high += 1;
       else if (r.severity === "medium") out.medium += 1;
       else if (r.severity === "low") out.low += 1;
@@ -371,33 +379,33 @@
   // refutation. What it buys is a queue of claims worth re-researching in the
   // reader's own words, which is the best signal this project can receive and
   // was previously being dropped on the floor.
-  function markClaim(risk, verdict, cardEl) {
-    if (!risk.claim_id || !risk.pack_id) return;
-    const previous = state.marks.get(risk.claim_id);
+  function markClaim(claim, verdict, cardEl) {
+    if (!claim.claim_id || !claim.pack_id) return;
+    const previous = state.marks.get(claim.claim_id);
     // Pressing the pressed one takes it back. Painted immediately and
     // reverted if the app disagrees: a verdict button that waits for a round
     // trip feels broken on a local app that answers in 3ms.
     const next = previous === verdict ? null : verdict;
-    if (next) state.marks.set(risk.claim_id, next);
-    else state.marks.delete(risk.claim_id);
-    if (cardEl) markRiskCard(cardEl, next);
+    if (next) state.marks.set(claim.claim_id, next);
+    else state.marks.delete(claim.claim_id);
+    if (cardEl) markClaimCard(cardEl, next);
 
     chrome.runtime.sendMessage(
       {
         type: "MARK_CLAIM",
         payload: {
-          pack_id: risk.pack_id,
-          claim_id: risk.claim_id,
-          subject_id: risk.subject_id || "",
-          title: risk.title || "",
+          pack_id: claim.pack_id,
+          claim_id: claim.claim_id,
+          subject_id: claim.subject_id || "",
+          title: claim.title || "",
           verdict: next,
         },
       },
       (response) => {
         if (chrome.runtime.lastError || (response && !response.ok)) {
-          if (previous) state.marks.set(risk.claim_id, previous);
-          else state.marks.delete(risk.claim_id);
-          if (cardEl) markRiskCard(cardEl, previous);
+          if (previous) state.marks.set(claim.claim_id, previous);
+          else state.marks.delete(claim.claim_id);
+          if (cardEl) markClaimCard(cardEl, previous);
         }
       }
     );
@@ -414,27 +422,27 @@
    * the reader is knowing which of these sentences they can still go and read
    * for themselves.
    */
-  function checkFacts(risk, cardEl) {
-    if (!risk.claim_id || !risk.pack_id) return;
-    if (state.checkingFacts.has(risk.claim_id)) return;
-    state.checkingFacts.add(risk.claim_id);
-    if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), true);
+  function checkFacts(claim, cardEl) {
+    if (!claim.claim_id || !claim.pack_id) return;
+    if (state.checkingFacts.has(claim.claim_id)) return;
+    state.checkingFacts.add(claim.claim_id);
+    if (cardEl) factClaimCard(cardEl, state.facts.get(claim.claim_id), true);
 
     chrome.runtime.sendMessage(
       {
         type: "CHECK_FACTS",
-        payload: { pack_id: risk.pack_id, claim_id: risk.claim_id },
+        payload: { pack_id: claim.pack_id, claim_id: claim.claim_id },
       },
       (response) => {
-        state.checkingFacts.delete(risk.claim_id);
+        state.checkingFacts.delete(claim.claim_id);
         if (!chrome.runtime.lastError && response && response.ok && response.check) {
-          state.facts.set(risk.claim_id, response.check);
+          state.facts.set(claim.claim_id, response.check);
         }
         // A failure leaves the card as it was. The claim and its sources are
         // on screen and the reader can open the link themselves, which is
         // what they did before this button existed — a panel-wide error over
         // a supplementary badge would be the tail wagging the dog.
-        if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), false);
+        if (cardEl) factClaimCard(cardEl, state.facts.get(claim.claim_id), false);
       }
     );
   }
@@ -704,8 +712,8 @@
     bodyEl      = panel.querySelector(".lite-body");
     statusEl    = panel.querySelector(".lite-status");
     ctaBtn      = panel.querySelector(".lite-cta");
-    risksHeadEl = panel.querySelector(".lite-risks-head-slot");
-    risksListEl = panel.querySelector(".lite-risks");
+    claimsHeadEl = panel.querySelector(".lite-claims-head-slot");
+    claimsListEl = panel.querySelector(".lite-claims");
     densityBtn  = panel.querySelector(".lite-btn-density");
     closeBtn    = panel.querySelector(".lite-btn-close");
     footerEl    = panel.querySelector(".lite-footer");
@@ -739,7 +747,7 @@
     try { hostEl.remove(); } catch (_) {}
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
-    risksHeadEl = risksListEl = densityBtn = closeBtn = null;
+    claimsHeadEl = claimsListEl = densityBtn = closeBtn = null;
     footerEl = null;
   }
 
@@ -881,16 +889,12 @@
       <header class="lite-header">
         ${dragDots}
         <div class="lite-titlebox">
-          <div class="lite-title">Kriko<span class="cc">.cc</span></div>
+          <div class="lite-title">Kriko</div>
           <div class="lite-subtitle">Floating panel · drag to reposition</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-density"
                 title="Refresh analysis" aria-label="Refresh analysis">
           ${iconSvg("refresh", { size: 16, strokeWidth: 2 })}
-        </button>
-        <button type="button" class="lite-iconbtn lite-btn-menu"
-                title="Menu" aria-label="Menu">
-          ${iconSvg("rowsLoose", { size: 18, strokeWidth: 2 })}
         </button>
         <button type="button" class="lite-iconbtn lite-btn-close"
                 title="Close" aria-label="Close">
@@ -907,11 +911,10 @@
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
             <span class="lite-cta-label">Analyze current page</span>
           </button>
-          <p class="lite-status">Open a Sahibinden listing, then analyze.</p>
+          <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
-        <div class="lite-risks-head-slot"></div>
-        <section class="lite-risks"></section>
-        <div class="lite-summary-slot"></div>
+        <div class="lite-claims-head-slot"></div>
+        <section class="lite-claims"></section>
         <div class="lite-details-slot"></div>
       </div>
 
@@ -943,7 +946,7 @@
           <span class="num">${c.low}</span>
           <span class="lbl">LOW</span>
         </span>
-        <span class="lite-counts-total">${c.total} RISKS</span>
+        <span class="lite-counts-total">${c.total} CLAIMS</span>
       </div>
     `;
   }
@@ -995,81 +998,6 @@
       alertsEl.dataset.open = isOpen ? "0" : "1";
       toggleEl.textContent = isOpen ? "+" : "–";
     });
-  }
-
-  function renderSummary() {
-    const slot = bodyEl.querySelector(".lite-summary-slot");
-    if (!slot) return;
-    if (state.pipeline !== "result" || !state.result || !state.result.summary) {
-      slot.innerHTML = "";
-      lastSummaryText = null;
-      return;
-    }
-
-    const txt = state.result.summary;
-
-    // Rebuild only when the text itself changes — otherwise just flip the
-    // expanded attribute in place so the CSS animation runs.
-    if (txt !== lastSummaryText) {
-      lastSummaryText = txt;
-      slot.innerHTML = `
-        <div class="lite-summary" data-expanded="${state.summaryExpanded ? "1" : "0"}">
-          <div class="lite-summary-label">SUMMARY</div>
-          <p class="lite-summary-body">${escapeHtml(txt)}</p>
-          <button type="button" class="lite-summary-toggle" hidden>
-            ${state.summaryExpanded ? "SHOW LESS" : "SHOW MORE"}
-          </button>
-        </div>
-      `;
-      const card = slot.querySelector(".lite-summary");
-      const body = slot.querySelector(".lite-summary-body");
-      const toggle = slot.querySelector(".lite-summary-toggle");
-
-      // Show toggle only when the text actually overflows the clamp.
-      requestAnimationFrame(() => {
-        const overflows = body.scrollHeight - body.clientHeight > 1;
-        toggle.hidden = !overflows;
-      });
-
-      function setSummaryExpanded(next) {
-        if (next === state.summaryExpanded) return;
-        state.summaryExpanded = next;
-        toggle.textContent = next ? "SHOW LESS" : "SHOW MORE";
-        if (next) {
-          // Expand: animate from clamped (CSS default) to exact content height.
-          body.style.maxHeight = body.scrollHeight + "px";
-          card.dataset.expanded = "1";
-          const onEnd = (e) => {
-            if (e.propertyName !== "max-height") return;
-            // Drop the inline cap so future content changes adapt naturally.
-            body.style.maxHeight = "none";
-            body.removeEventListener("transitionend", onEnd);
-          };
-          body.addEventListener("transitionend", onEnd);
-        } else {
-          // Collapse: pin current height in px so the transition has a
-          // starting value to interpolate from, then revert to the CSS clamp.
-          body.style.maxHeight = body.scrollHeight + "px";
-          void body.offsetHeight; // force reflow
-          body.style.maxHeight = "";
-          card.dataset.expanded = "0";
-        }
-      }
-
-      toggle.addEventListener("click", () => setSummaryExpanded(!state.summaryExpanded));
-      // Clicking the clamped text itself also expands — matches the user's
-      // "click on the …" intuition. (Doesn't collapse on click.)
-      body.addEventListener("click", () => {
-        if (!state.summaryExpanded) setSummaryExpanded(true);
-      });
-      return;
-    }
-
-    // In-place state sync
-    const card = slot.querySelector(".lite-summary");
-    const toggle = slot.querySelector(".lite-summary-toggle");
-    if (card) card.dataset.expanded = state.summaryExpanded ? "1" : "0";
-    if (toggle) toggle.textContent = state.summaryExpanded ? "SHOW LESS" : "SHOW MORE";
   }
 
   function renderListingDetails() {
@@ -1213,13 +1141,14 @@
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
-      statusEl.textContent = "Open a Sahibinden listing, then analyze.";
+      statusEl.textContent = IDLE_HINT;
       statusEl.style.display = "";
     } else if (state.pipeline === "analyzing") {
       statusEl.textContent = "Resolving engine family · retrieving transcripts…";
       statusEl.style.display = "";
     } else if (state.pipeline === "result") {
-      // Summary card below has the prose; keep the status line out of the way.
+      // The claim list below says everything; a status line repeating it is
+      // a line the eye has to skip on every result.
       statusEl.textContent = "";
       statusEl.style.display = "none";
     } else if (state.pipeline === "error") {
@@ -1228,24 +1157,24 @@
     }
   }
 
-  // Render risks header helper
-  function renderRisksHeader() {
-    if (!risksHeadEl) return;
+  // Render claims header helper
+  function renderClaimsHeader() {
+    if (!claimsHeadEl) return;
     if (state.pipeline !== "result" || !state.result) {
-      risksHeadEl.innerHTML = "";
+      claimsHeadEl.innerHTML = "";
       return;
     }
-    const total = state.result.risks.length;
+    const total = state.result.claims.length;
     const allOpen  = state.openIds.size === total && total > 0;
     const allClose = state.openIds.size === 0;
 
     // Build once. On subsequent toggles, mutate in place so the entrance
     // animation does not retrigger.
-    let head = risksHeadEl.querySelector(".lite-risks-head");
+    let head = claimsHeadEl.querySelector(".lite-claims-head");
     if (!head) {
-      risksHeadEl.innerHTML = `
-        <div class="lite-risks-head">
-          <div class="lite-risks-label">RISKS · ${total}</div>
+      claimsHeadEl.innerHTML = `
+        <div class="lite-claims-head">
+          <div class="lite-claims-label">CLAIMS · ${total}</div>
           <div class="lite-chip-group">
             <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
               + EXPAND ALL
@@ -1256,24 +1185,24 @@
           </div>
         </div>
       `;
-      risksHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
-      risksHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
+      claimsHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
+      claimsHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
       return;
     }
 
     // Update in place
-    const label = head.querySelector(".lite-risks-label");
-    if (label) label.textContent = `RISKS · ${total}`;
+    const label = head.querySelector(".lite-claims-label");
+    if (label) label.textContent = `CLAIMS · ${total}`;
     const expandBtn   = head.querySelector(".lite-chip-expand");
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
     if (collapseBtn) collapseBtn.dataset.on = allClose ? "1" : "0";
   }
 
-  function renderRisksList() {
-    if (!risksListEl) return;
-    risksListEl.dataset.compact = state.compact ? "1" : "0";
-    risksListEl.innerHTML = "";
+  function renderClaimsList() {
+    if (!claimsListEl) return;
+    claimsListEl.dataset.compact = state.compact ? "1" : "0";
+    claimsListEl.innerHTML = "";
 
     if (state.pipeline === "analyzing") {
       const skel = document.createElement("div");
@@ -1283,7 +1212,7 @@
         row.className = "lite-skeleton";
         skel.appendChild(row);
       }
-      risksListEl.appendChild(skel);
+      claimsListEl.appendChild(skel);
       return;
     }
 
@@ -1304,7 +1233,7 @@
           chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => {}));
         err.append(" ", button);
       }
-      risksListEl.appendChild(err);
+      claimsListEl.appendChild(err);
       return;
     }
 
@@ -1315,30 +1244,27 @@
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
         <div>No analysis yet. Hit <b>Analyze current page</b> — typical run is under 2&nbsp;s.</div>
       `;
-      risksListEl.appendChild(empty);
+      claimsListEl.appendChild(empty);
       return;
     }
 
-    // An answer with no risks is not the same as no answer. If the packs
+    // An answer with no claims is not the same as no answer. If the packs
     // resolved this listing and hold nothing on it, that gap is the content.
-    if (!state.result.risks || !state.result.risks.length) {
+    if (!state.result.claims || !state.result.claims.length) {
       const gaps = (state.result.subjects || []).filter((s) => !s.claims);
       if (!gaps.length) {
         const empty = document.createElement("div");
         empty.className = "lite-empty";
         empty.textContent =
           "Nothing matched this listing. No installed pack recognises it.";
-        risksListEl.appendChild(empty);
+        claimsListEl.appendChild(empty);
       }
       renderGaps();
       return;
     }
 
-    // Group for display. Serving payload v2: when the backend sends
-    // `subsystems` (registry component groups — engine/timing, body/comfort, …),
-    // render those sections with the Turkish label; otherwise fall back to the
-    // legacy domain grouping. Global risk indices into state.result.risks are
-    // preserved either way so toggleOne/setAllOpen keep working.
+    // Group for display, by the claim's own domain. Global claim indices into
+    // state.result.claims are preserved so toggleOne/setAllOpen keep working.
     const domainLabels = {
       engine: "Engine", transmission: "Transmission", emissions: "Emissions",
       electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
@@ -1346,23 +1272,17 @@
       interior: "Interior", "body/structure": "Body", steering: "Steering",
     };
 
+    // Grouped by the claim's own domain. There used to be a branch above this
+    // one reading a `subsystems` array off the result, with a `display_tr`
+    // label — a server field that has never existed and a site's own language
+    // living in the client. Both are gone; this is the only path.
     let groups;
-    if (state.result.subsystems && state.result.subsystems.length) {
-      groups = state.result.subsystems
-        .map((g) => ({
-          iconDomain: (g.name || "other").split("/")[0],
-          label: g.display_tr || g.name || "Other",
-          items: (g.risks || [])
-            .map((risk) => ({ risk, idx: state.result.risks.indexOf(risk) }))
-            .filter((it) => it.idx >= 0),
-        }))
-        .filter((g) => g.items.length);
-    } else {
+    {
       const byDomain = {};
-      state.result.risks.forEach((risk, i) => {
-        const d = (risk.domain || "other").toLowerCase().trim();
+      state.result.claims.forEach((claim, i) => {
+        const d = (claim.domain || "other").toLowerCase().trim();
         if (!byDomain[d]) byDomain[d] = [];
-        byDomain[d].push({ risk, idx: i });
+        byDomain[d].push({ claim, idx: i });
       });
       groups = Object.entries(byDomain).map(([domain, items]) => ({
         iconDomain: domain,
@@ -1373,9 +1293,9 @@
 
     let delayCounter = 0;
     for (const { iconDomain, label, items } of groups) {
-      const high = items.filter(i => i.risk.severity === "high").length;
-      const med  = items.filter(i => i.risk.severity === "medium").length;
-      const low  = items.filter(i => i.risk.severity === "low").length;
+      const high = items.filter(i => i.claim.severity === "high").length;
+      const med  = items.filter(i => i.claim.severity === "medium").length;
+      const low  = items.filter(i => i.claim.severity === "low").length;
 
       // Build severity dots summary
       const sevHtml = [];
@@ -1397,40 +1317,40 @@
         <div class="lite-domain-body"></div>
       `;
 
-      // Populate body with risk cards
+      // Populate body with claim cards
       const bodyEl = groupEl.querySelector(".lite-domain-body");
-      items.forEach(({ risk, idx }) => {
+      items.forEach(({ claim, idx }) => {
         const wrap = document.createElement("div");
-        wrap.className = "lite-risk-anim";
+        wrap.className = "lite-claim-anim";
         wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
         delayCounter++;
-        const card = renderRiskCard(risk, { open: state.openIds.has(idx), compact: state.compact });
+        const card = renderClaimCard(claim, { open: state.openIds.has(idx), compact: state.compact });
         const btn = card.querySelector(".lite-rc-toggle");
         btn.addEventListener("click", () => toggleOne(idx, card));
         // Re-assert any verdict this claim already carries: the list is
         // rebuilt on every expand-all and every fresh analysis, and a mark
         // that disappeared on redraw would read as one that failed to save.
-        if (risk.claim_id && state.marks.has(risk.claim_id)) {
-          markRiskCard(card, state.marks.get(risk.claim_id));
+        if (claim.claim_id && state.marks.has(claim.claim_id)) {
+          markClaimCard(card, state.marks.get(claim.claim_id));
         }
         // Re-asserted on redraw for the same reason a mark is: the list is
         // rebuilt on every expand-all, and a verdict that vanished would read
         // as one that failed.
-        if (risk.claim_id && state.facts.has(risk.claim_id)) {
-          factRiskCard(card, state.facts.get(risk.claim_id),
-            state.checkingFacts.has(risk.claim_id));
+        if (claim.claim_id && state.facts.has(claim.claim_id)) {
+          factClaimCard(card, state.facts.get(claim.claim_id),
+            state.checkingFacts.has(claim.claim_id));
         }
         const factBtn = card.querySelector(".lite-rc-factbtn");
         if (factBtn) {
           factBtn.addEventListener("click", (event) => {
             event.stopPropagation(); // the card header toggles on click
-            checkFacts(risk, card);
+            checkFacts(claim, card);
           });
         }
         card.querySelectorAll(".lite-rc-markbtn").forEach((markBtn) => {
           markBtn.addEventListener("click", (event) => {
             event.stopPropagation(); // the card header toggles on click
-            markClaim(risk, markBtn.dataset.verdict, card);
+            markClaim(claim, markBtn.dataset.verdict, card);
           });
         });
         wrap.appendChild(card);
@@ -1447,7 +1367,7 @@
         toggleSpan.textContent = isOpen ? "+" : "\u2212";
       });
 
-      risksListEl.appendChild(groupEl);
+      claimsListEl.appendChild(groupEl);
     }
 
     renderGaps();
@@ -1461,7 +1381,7 @@
    * apology.
    */
   function renderGaps() {
-    if (!risksListEl || !state.result) return;
+    if (!claimsListEl || !state.result) return;
     // Never on NOT_MATCHED: a page nothing adapted has no `subjects` at all
     // (the backend only resolves subject_ids when something matched), so this
     // filter already excludes it — there is no separate check to remember or
@@ -1478,7 +1398,7 @@
     // Re-render (rather than append) each time so a plane answer that arrives
     // after the first paint, or a poll updating one card's progress text,
     // does not leave stale duplicate cards behind.
-    risksListEl.querySelectorAll(".lite-gap").forEach((el) => el.remove());
+    claimsListEl.querySelectorAll(".lite-gap").forEach((el) => el.remove());
 
     for (const subject of gaps) {
       const card = document.createElement("div");
@@ -1495,7 +1415,7 @@
       `;
       const button = card.querySelector(".lite-gap-btn");
       button.addEventListener("click", () => researchSubject(subject, button));
-      risksListEl.appendChild(card);
+      claimsListEl.appendChild(card);
     }
   }
 
@@ -1544,7 +1464,7 @@
 
     // The panel's job ends at "here is what to worry about"; these two are
     // what a reader does with that. Both were app-only screens, so a reader
-    // who had just read the risks had to go and find the same listing again
+    // who had just read the claims had to go and find the same listing again
     // by hand — the answer is already stored under an id, and the id is right
     // here.
     //
@@ -1572,9 +1492,8 @@
     renderCriticalAlerts();
     renderCta();
     renderStatus();
-    renderRisksHeader();
-    renderRisksList();
-    renderSummary();
+    renderClaimsHeader();
+    renderClaimsList();
     renderListingDetails();
     renderFooter();
   }
@@ -1583,20 +1502,20 @@
   function toggleOne(idx, cardEl) {
     if (state.openIds.has(idx)) state.openIds.delete(idx);
     else state.openIds.add(idx);
-    updateRiskCard(cardEl, { open: state.openIds.has(idx) });
+    updateClaimCard(cardEl, { open: state.openIds.has(idx) });
     // Update Expand/Collapse-all chip "on" state
-    renderRisksHeader();
+    renderClaimsHeader();
   }
   function setAllOpen(open) {
     if (!state.result) return;
     state.openIds = open
-      ? new Set(state.result.risks.map((_, i) => i))
+      ? new Set(state.result.claims.map((_, i) => i))
       : new Set();
     // Mutate cards in place so each one runs its own expand/collapse animation
     // — re-rendering the list would retrigger the entrance animation.
-    const cards = risksListEl.querySelectorAll(".lite-rc");
-    cards.forEach((card) => updateRiskCard(card, { open }));
-    renderRisksHeader();
+    const cards = claimsListEl.querySelectorAll(".lite-rc");
+    cards.forEach((card) => updateClaimCard(card, { open }));
+    renderClaimsHeader();
   }
   function expandAll()   { setAllOpen(true); }
   function collapseAll() { setAllOpen(false); }

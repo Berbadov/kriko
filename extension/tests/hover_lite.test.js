@@ -15,7 +15,7 @@ const ENTRY = {
   ok: true,
   listing: { damage_info: null, equipment: {} },
   result: {
-    risks: [],
+    claims: [],
     coverage: "RISKS_FOUND",
     identity: { make: "volkswagen", model: "golf", fuel: "Dizel" },
     context: { build_year: 2014, usage_km: 190000 },
@@ -58,7 +58,7 @@ test("an answer no pack claims renders as unknown rather than blank", () => {
   // word "unknown" is itself the tell; an empty footer is not.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ok: true, result: { risks: [] } });
+  p.deliverEntry({ ok: true, result: { claims: [] } });
   assert.equal(p.footer().hidden, false);
   assert.equal(p.footer().textContent, "unknown");
 });
@@ -79,7 +79,7 @@ test("the header shows what the engine understood, not what the page said", () =
   // Before Phase 6c this came from the client's own reading of the page. It
   // now comes from the resolved identity, which means the header doubles as
   // the answer to "did it understand this car?" — the question a reader
-  // actually has when the risks look wrong.
+  // actually has when the claims look wrong.
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry(ENTRY);
@@ -95,7 +95,7 @@ test("a page the engine could not resolve still renders a header", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ok: true, listing: {},
-                   result: { risks: [], coverage: "NOT_MATCHED",
+                   result: { claims: [], coverage: "NOT_MATCHED",
                              identity: {}, context: {} } });
   assert.ok(p.listing());
 });
@@ -141,7 +141,7 @@ test("a real failure is still shown as one", () => {
 // ── the way back to the app ─────────────────────────────────────────────
 
 test("the footer raises the desktop app rather than opening a browser tab", () => {
-  // The panel is deliberately small — it shows the risks and stops. The full
+  // The panel is deliberately small — it shows the claims and stops. The full
   // report, the sources and the comparison live in the app.
   //
   // It used to get there with an <a href> at the engine's own port, which
@@ -177,7 +177,7 @@ test("an answer the app never stored offers no way in", () => {
 });
 
 test("the panel hands the reader on to the two screens they act from", () => {
-  // Reading the risks is half of it. The other half — the questions to take
+  // Reading the claims is half of it. The other half — the questions to take
   // to the seller, and holding this listing against the others — lived only
   // in the app, so a reader finishing the panel had to find the same listing
   // again by hand. The answer is already saved under an id, and the routes
@@ -264,7 +264,7 @@ test("a verdict on a claim reaches the app with the claim's own id", () => {
   // third the next time the pack changed.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [RISK] } });
 
   p.click('.lite-rc-markbtn[data-verdict="useful"]');
 
@@ -281,7 +281,7 @@ test("the verdict paints immediately, before the app has answered", () => {
   // dead until it returns gets clicked twice.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [RISK] } });
 
   const button = p.click('.lite-rc-markbtn[data-verdict="wrong"]');
   assert.equal(button.getAttribute("aria-pressed"), "true");
@@ -293,7 +293,7 @@ test("the verdict paints immediately, before the app has answered", () => {
 test("pressing the verdict already held takes it back", () => {
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [RISK] } });
 
   p.click('.lite-rc-markbtn[data-verdict="useful"]');
   const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
@@ -309,7 +309,7 @@ test("a verdict the app refuses does not stay painted", () => {
   // engine reads to the reader as one that did.
   const p = loadPanel({ workerResponse: { ok: false, error: "no such claim" } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [RISK] } });
 
   const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
   assert.equal(button.getAttribute("aria-pressed"), "false");
@@ -321,7 +321,7 @@ test("a claim with no id offers no verdict at all", () => {
   const p = loadPanel();
   p.openPanel();
   const { claim_id, ...anonymous } = RISK;
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [anonymous] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [anonymous] } });
 
   assert.equal(p.shadow().querySelector(".lite-rc-markbtn"), null);
 });
@@ -332,7 +332,7 @@ const GAP_ENTRY = {
   ...ENTRY,
   result: {
     ...ENTRY.result,
-    risks: [],
+    claims: [],
     coverage: "NO_RISKS",
     subjects: [{ subject_id: "s9", pack_id: "org.kriko.cars",
                  label: "VW Golf 1.6 TDI", kind: "product", claims: 0 }],
@@ -362,7 +362,7 @@ test("a subject that already has claims is not offered as a gap", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
-    risks: [RISK],
+    claims: [RISK],
     subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 4 }] } });
 
   assert.equal(p.shadow().querySelector(".lite-gap"), null);
@@ -381,7 +381,7 @@ const CHECK = { pack_id: "org.kriko.cars", claim_id: "c1", verdict: "quoted",
 test("pressing the check asks the app about this claim, by id", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   p.click(".lite-rc-factbtn");
 
@@ -395,7 +395,7 @@ test("pressing the check asks the app about this claim, by id", () => {
 test("the verdict lands on the card with the date it was checked", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   p.click(".lite-rc-factbtn");
 
@@ -410,7 +410,7 @@ test("a claim with nothing to re-read offers no button", () => {
   // "unreachable" would be a control that exists to disappoint.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [RISK] } });
 
   assert.equal(p.shadow().querySelector(".lite-rc-factbtn"), null);
 });
@@ -418,7 +418,7 @@ test("a claim with nothing to re-read offers no button", () => {
 test("a check the app refuses leaves the card as it was", () => {
   const p = loadPanel({ workerResponse: { ok: false, error: "no engine" } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   const button = p.click(".lite-rc-factbtn");
 
@@ -432,11 +432,11 @@ test("a check the app refuses leaves the card as it was", () => {
 test("a verdict already held survives the list being rebuilt", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
   p.click(".lite-rc-factbtn");
 
   // A fresh analysis of the same page redraws every card from scratch.
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   const label = p.shadow().querySelector(".lite-rc-factverdict");
   assert.equal(label.hidden, false);
