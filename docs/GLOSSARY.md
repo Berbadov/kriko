@@ -89,8 +89,15 @@ boundary, along with `body`→`rationale` and `advice`→`inspection_advice`, an
 every line downstream spoke the new words. Nothing was gained: a shared
 component would have had to translate, and a bug report saying "risk" needed a
 mental hop to reach a `claims` table. One word, one meaning — it is a claim
-everywhere now. The panel's CSS still says `.lite-rc`, which is a class name
-rather than a word for the thing.
+everywhere it is *named* now.
+
+**What a buyer reads is a different question, and the answer is "risk".** Both
+clients say *8 known risks, 7 serious* over the same rows, because "8 claims"
+is jargon on a screen somebody is using to decide whether to buy a car. That
+is rule 9 of `docs/STYLE.md` working as intended, not a leftover: the code word
+and the screen word are allowed to differ, and the docs use the reader's. What
+was wrong was never the word on screen — it was a second *field name* invented
+at one client's boundary.
 
 **"extension" is one thing in one directory.** `extension/` is the browser
 client, and everything it ships is under it — the manifest, the worker, the
