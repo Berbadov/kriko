@@ -39,6 +39,12 @@
     --n-7: #7e858f; /* --fg-muted  — secondary text */
     --n-8: #c2c7cf; /* --fg-body */
     --n-9: #e7e9ed; /* --fg        — headings */
+    /* Two surfaces beside the ramp rather than in it, because inserting them
+     * would renumber every step and every component that names one. The panel
+     * has always had both and this app had no word for either: a row inside a
+     * card, and a rule inside a card as opposed to between cards. */
+    --panel-item: #1d2026; /* --bg-item    — a row inside a card */
+    --line-soft: #23272e;  /* --border-soft — a rule inside a card */
 
     /* Gold, not blue. This is the single most recognisable thing about the
      * panel and the reason the app did not look like the extension. */
@@ -52,12 +58,42 @@
      * composites against whatever it lands on and stops being predictable. */
     --accent-soft: #2b2517;
 
+    /* One ink per severity, and the other two derived from it.
+     *
+     * The three fills used to be literals — #2a1719, #2a2015, #14251f — and
+     * measuring them against the ink and the ground says they were all 15%,
+     * to within two units per channel. So they were already a derivation;
+     * nobody had written the rule down, and a fourth severity would have
+     * needed somebody to rediscover it by eye.
+     *
+     * Opaque, not translucent, which is the one place this parts company with
+     * the panel's `rgba(...)`: this app puts text on top of these fills, and a
+     * translucent fill composites against whatever surface it lands on and
+     * stops being predictable. `color-mix` over the ground gives a derived
+     * value that is still a flat colour.
+     *
+     * The light themes keep literal fills. Measured the same way, theirs are
+     * not a linear mix at all — a couple come out *negative*, meaning the fill
+     * is more saturated than any amount of ink over that ground. They are
+     * tuned for text contrast on a light page, and one formula across all
+     * three themes would flatten that into something worse than three values.
+     */
     --high: #f0565b;
-    --high-soft: #2a1719;
+    --high-soft: color-mix(in srgb, var(--high) 15%, var(--n-0));
     --medium: #e2933f;
-    --medium-soft: #2a2015;
+    --medium-soft: color-mix(in srgb, var(--medium) 15%, var(--n-0));
     --low: #46b48c;
-    --low-soft: #14251f;
+    --low-soft: color-mix(in srgb, var(--low) 15%, var(--n-0));
+    /* The edge, derived rather than picked. The app had no border token at
+     * all — the panel has had one per severity since it was written, and a
+     * card with a tinted fill and no edge reads as a smudge against a card
+     * that has one. 30% of the ink over the ground is visible on a near-black
+     * page and on a cream one, which is why it is a mix rather than an alpha:
+     * a translucent edge composites against whatever it lands on, and this
+     * app puts cards on three different surfaces. */
+    --high-border: color-mix(in srgb, var(--high) 30%, var(--n-0));
+    --medium-border: color-mix(in srgb, var(--medium) 30%, var(--n-0));
+    --low-border: color-mix(in srgb, var(--low) 30%, var(--n-0));
 
 
     /* ── control surfaces ─────────────────────────────────────────────
