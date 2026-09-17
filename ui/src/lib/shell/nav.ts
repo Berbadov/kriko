@@ -132,6 +132,9 @@ const AUTHOR_ROUTES = new Set(
  */
 export const ALIASES: Record<string, { name: string; lens?: string }> = {
     subjects: { name: "knowledge", lens: "all" },
+    // Singular, and it carries an id: `#/subject/<id>` is what the browser
+    // panel's search builds. The plural above is the unfiltered list.
+    subject: { name: "knowledge", lens: "all" },
     coverage: { name: "knowledge", lens: "gaps" },
     health: { name: "knowledge", lens: "weak" },
     marks: { name: "knowledge", lens: "marked" },

@@ -16,6 +16,11 @@
 //     what a label means, it belongs in the pack's adapter JSON.
 
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
+
+//: How many rows one search may return to the panel. The engine allows up to
+//: 50; a floating panel beside a listing is a list somebody scans, and the
+//: right answer to "I cannot see it" is a better query rather than more rows.
+const SEARCH_LIMIT = 12;
 const STORAGE_KEY_PREFIX = "kriko_result_";
 const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -1270,6 +1275,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  /* Typing a product name, when standing on its page did not place it.
+   *
+   * A read, so it goes through `_getApp` — and through the worker at all for
+   * the same reason every other call does: the content script has no
+   * `host_permissions` for 127.0.0.1, so a fetch from the panel would be a
+   * cross-origin request the page's own CSP gets a say in.
+   *
+   * The query is passed straight through and the limit is not the caller's to
+   * choose. A panel is a list, not a catalogue, and a client that could ask
+   * for a thousand rows is a client that will one day be asked to render
+   * them.
+   */
+  if (request.type === "SEARCH") {
+    const query = String(request.payload?.q || "").trim();
+    if (!query) {
+      sendResponse({ ok: true, items: [] });
+      return false;
+    }
+    _getApp(`/api/search?q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}`)
+      .then((body) => sendResponse({
+        ok: true, items: Array.isArray(body?.items) ? body.items : [] }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async
