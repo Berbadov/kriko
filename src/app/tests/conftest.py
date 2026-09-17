@@ -91,3 +91,31 @@ def no_test_starts_a_real_coding_agent(monkeypatch):
         return real(self, prompt)
 
     monkeypatch.setattr(harness.HarnessResearcher, "_run", guarded)
+
+
+@pytest.fixture(autouse=True)
+def no_attaching_to_the_readers_own_engine(monkeypatch):
+    """A test may not find the engine the developer has running.
+
+    The third instance of the same shape as the two guards above, and it cost
+    two false gate failures before it was written. `attach()` scans
+    `DEFAULT_PORTS` — the one fixed port the extension is allowed to assume —
+    so three `test_cli.py` cases that assert what the CLI does with *no engine
+    running* were instead asking whatever was serving on 8787. On a clean
+    machine they pass. On the machine of anybody who has the app open while
+    they work, which is everybody working on the app, they fail with somebody
+    else's sites and somebody else's operations in the diff.
+
+    Worse than the failure is the direction it could have gone: a test that
+    *passes* because a live engine answered is a test that proves nothing, and
+    nothing about it would look wrong.
+
+    So the default port list is empty under test. A test that wants an engine
+    starts its own — `serve_in_thread` exists for exactly that and takes its
+    own `Settings` — and a test that passes an explicit `url` is untouched,
+    because that is a deliberate address rather than a scan.
+    """
+    from app.tui import client
+
+    monkeypatch.setattr(client, "DEFAULT_PORTS", ())
+    monkeypatch.delenv("KRIKO_URL", raising=False)
