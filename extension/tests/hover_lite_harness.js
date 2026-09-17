@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const { JSDOM } = require("jsdom");
 
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
-const CARD_JS = path.join(__dirname, "..", "hover_lite", "risk_card.js");
+const CARD_JS = path.join(__dirname, "..", "hover_lite", "claim_card.js");
 
 function loadPanel({
   url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
@@ -18,6 +18,10 @@ function loadPanel({
   // that is the path nearly every test is about; a test that cares about
   // refusal sets it, and the panel must roll its optimistic paint back.
   workerResponse = { ok: true },
+  // What the worker answers a SEARCH with. Separate from `workerResponse`
+  // because a search reply has its own shape and nearly every test that cares
+  // about one does not care about the rest.
+  searchResponse = { ok: true, items: [] },
 } = {}) {
   const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
 
@@ -26,15 +30,22 @@ function loadPanel({
   // Every message the panel sent to the service worker — the panel's half of
   // the messaging contract, which Phase 6c renamed.
   const sent = [];
+  const timers = [];
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
     location: dom.window.location,
     console,
-    // Keep mount's animation timers no-ops so loading the panel in a test does
-    // not schedule work after the test finishes.
-    setTimeout: () => 0,
-    clearTimeout: () => {},
+    /* Timers are queued, not run, and not dropped either.
+     *
+     * They used to be a no-op, which kept mount's animation timers from
+     * firing after a test finished — right, and it also meant anything the
+     * panel *debounces* could never be tested at all. Queueing lets a test
+     * that wants a debounce to land call `flushTimers()` and leaves every
+     * other test exactly as it was: nothing runs unless something asks.
+     */
+    setTimeout: (fn) => { timers.push(fn); return timers.length; },
+    clearTimeout: (id) => { if (id) timers[id - 1] = null; },
     requestAnimationFrame: (fn) => { fn(); return 0; },
     chrome: {
       runtime: {
@@ -42,7 +53,9 @@ function loadPanel({
         sendMessage(message, callback) {
           sent.push(message);
           if (typeof callback !== "function") return;
-          callback(message.type === "ANALYZE" ? analyzeResponse : workerResponse);
+          if (message.type === "ANALYZE") return callback(analyzeResponse);
+          if (message.type === "SEARCH") return callback(searchResponse);
+          callback(workerResponse);
         },
         getURL: (p) => p,
       },
@@ -57,7 +70,7 @@ function loadPanel({
   // The *real* card renderer, not a stub. The controls a test cares about —
   // the verdict buttons — are in this markup, so a stub returning a bare
   // <div> would let the panel's wiring pass while shipping nothing clickable.
-  vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "risk_card.js" });
+  vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "claim_card.js" });
   vm.runInContext(fs.readFileSync(PANEL_JS, "utf8"), sandbox, { filename: "hover_lite.js" });
 
   function openPanel() {
@@ -98,9 +111,9 @@ function loadPanel({
     return host ? host.dataset.pipeline : null;
   }
 
-  function risks() {
+  function claims() {
     const root = shadow();
-    return root ? root.querySelector(".lite-risks") : null;
+    return root ? root.querySelector(".lite-claims") : null;
   }
 
   /** Click something in the shadow tree, by selector. */
@@ -111,8 +124,26 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverEntry, footer, listing, risks, click,
-           shadow, sent, errorText, pipeline };
+  /** Run everything queued, in order, including anything queued while running. */
+  function flushTimers() {
+    for (let i = 0; i < timers.length; i += 1) {
+      const fn = timers[i];
+      timers[i] = null;
+      if (fn) fn();
+    }
+  }
+
+  /** Type into a field in the shadow tree, the way a reader does. */
+  function type(selector, value) {
+    const el = shadow() && shadow().querySelector(selector);
+    if (!el) throw new Error(`nothing matching ${selector} to type into`);
+    el.value = value;
+    el.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+    return el;
+  }
+
+  return { dom, openPanel, deliverEntry, footer, listing, claims, click, type,
+           shadow, sent, errorText, pipeline, flushTimers };
 }
 
 module.exports = { loadPanel };

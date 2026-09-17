@@ -107,3 +107,23 @@ limits:
     # this is where they belong.
     - { pattern: max_title_chars, note: "100" }
     - { pattern: min_rationale_chars, note: "60" }
+    # How near a reading has to be before this pack answers to it, and before
+    # it asks. Both were engine defaults until scoring arrived; they are taste
+    # about *cars*, so they belong here with the other two.
+    #
+    # The floor is higher than the engine's 0.62 because of what a car listing
+    # looks like when it goes wrong. A page Kriko half-read yields a make and a
+    # model and nothing else, and a make read through the abbreviation net
+    # ("VW" against "volkswagen") scores 0.33 — which puts a bare
+    # make-plus-model at 0.67 and, under the engine default, answers a reader
+    # who is standing in front of a specific car with claims for five engines
+    # at once as though it were sure. It is not sure. Above 0.7 asks the
+    # question instead, which is the honest reading of two thin keys, and a
+    # listing that also states its fuel, gearbox or displacement clears the
+    # floor on the strength of those.
+    - { pattern: match_floor, note: "0.72" }
+    # Deliberately low. A listing that names the right car in unfamiliar words
+    # is the case this pack most wants to reach — it is the reader's own
+    # complaint — and the cost of reaching too far is a question, not a wrong
+    # answer.
+    - { pattern: match_probable, note: "0.4" }

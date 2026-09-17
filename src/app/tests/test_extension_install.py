@@ -58,7 +58,12 @@ def test_staging_ships_only_what_a_browser_loads(tmp_path):
 
     assert "manifest.json" in landed
     assert "tests" not in landed
-    assert "colors_and_type.css" not in landed
+    # The allowlist is a *list*, so what it keeps out is only ever what
+    # somebody remembered. This asserts the shape instead: nothing lands that
+    # `SHIPPED` does not name, which holds for the next file too.
+    assert landed <= set(extension.SHIPPED), (
+        f"staged files nobody listed: {sorted(landed - set(extension.SHIPPED))}"
+    )
 
 
 def test_staging_again_removes_what_the_extension_stopped_shipping(tmp_path):

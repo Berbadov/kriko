@@ -27,6 +27,12 @@
                      * dim that secondary text actually uses */
     --n-8: #4b4738; /* stone-700 */
     --n-9: #1f1d17; /* stone-900 */
+    /* A row inside a card, and a rule inside a card as opposed to between
+     * cards. Both sit between two ramp steps rather than on one, which is why
+     * they are named beside the ramp instead of inserted into it — inserting
+     * would renumber every step and every component naming one. */
+    --panel-item: #fdfbf3;
+    --line-soft: #f1ebda;
 
     --accent: #2f6562; /* teal-700 */
     --accent-ink: #fbf8f1;
@@ -38,6 +44,16 @@
     --medium-soft: #f8e4c4;
     --low: #3c7244;
     --low-soft: #dcebd9;
+    /* The edge, derived rather than picked. The app had no border token at
+     * all — the panel has had one per severity since it was written, and a
+     * card with a tinted fill and no edge reads as a smudge against a card
+     * that has one. 30% of the ink over the ground is visible on a near-black
+     * page and on a cream one, which is why it is a mix rather than an alpha:
+     * a translucent edge composites against whatever it lands on, and this
+     * app puts cards on three different surfaces. */
+    --high-border: color-mix(in srgb, var(--high) 30%, var(--n-0));
+    --medium-border: color-mix(in srgb, var(--medium) 30%, var(--n-0));
+    --low-border: color-mix(in srgb, var(--low) 30%, var(--n-0));
 
 
     /* control surfaces — cream, so the same light-theme reasoning as slate's

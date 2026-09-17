@@ -129,9 +129,26 @@ finding is an object, and these five fields are not optional:
 | `quote` | the **exact** sentence from the document, copied character for character |
 | `source_url` | where you read it |
 | `document_text` | the text you read the quote in |
+| `rationale` | 2–3 plain sentences a non-expert can act on |
+
+`rationale` was on the optional list until 2026-09-16, and every pack's gate
+refused findings without one. Agents did as they were told, wrote the title and
+left the field empty, and the refusals arrived after the work was done — a whole
+run of good titles, binned for a field nobody had been asked for. It is
+required. Each pack states its own minimum length below.
+
+Write it for somebody who is about to spend money, not for another engineer.
+Say what goes wrong, when it goes wrong, and what it costs them to find out —
+never a restatement of the title:
+
+> **Bad** (a title again): "The timing belt is due at 120,000 km."
+> **Good**: "The belt is a service item, not a lifetime one, and this
+> configuration reaches its interval around 120,000 km. If it goes, it takes
+> the valves with it and the repair costs more than the difference between two
+> examples. Ask for the invoice; a seller who has done it will have kept it."
 
 Optional but worth setting: `component` or `component_hint` (the concrete part
-the finding is about), `rationale`, `advice`.
+the finding is about), and `advice`.
 
 `document_text` is what makes the grounding check possible. Without it there is
 nothing to check the quote against, and "trust me" is not an evidence model.
@@ -153,6 +170,11 @@ and each is worth reading as instruction rather than as an error:
 - **nothing to anchor it** — no `component`, and neither the title nor the
   rationale names an identifier, a specification, or a usage figure. A risk
   that could belong to any configuration belongs to none.
+- **the rationale is too short** — under the pack's minimum, which is stated
+  with each pack below. This one is worth re-reading as arithmetic rather than
+  as taste: the gate counts characters, so a finding refused for it is one
+  edit away from being kept. Resubmit the same finding with the field filled
+  in; nothing else about it needs to change.
 
 Findings arrive as drafts. Submitting is not publishing, so a finding you are
 unsure of is better filed with its weak source than dropped.
@@ -465,6 +487,19 @@ def _pack_section(conn, pack: dict) -> str:
             out += f"\nIt is `{example['label']}`, identified as "
             out += ", ".join(f"{k}={v!r}" for k, v in example["identity"].items())
             out += ".\n"
+
+    # Read off the pack's own gate rows, never written here. The number is
+    # this category's taste about how much explanation a risk needs, and an
+    # engine that named it would be deciding that for every category at once.
+    from kriko.gates import load_gates
+
+    minimum = load_gates(conn, pack_id).min_rationale_chars
+    if minimum:
+        out += (
+            f"\n**Rationales here must be at least {minimum} characters.**"
+            f" That is roughly two plain sentences. It is checked when you"
+            f" submit, so writing it now costs less than being refused later.\n"
+        )
 
     out += f"\n#### What {pack['name']} considers worth keeping\n\n"
     out += (pack["principle"] or "_This pack ships no principle._") + "\n"

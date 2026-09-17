@@ -17,10 +17,28 @@
   window.__krikoPanelInstalled = true;
 
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
-  const { renderRiskCard, updateRiskCard, markRiskCard, factRiskCard } =
-    window.__KrikoPanelRiskCard;
+  const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard } =
+    window.__KrikoPanelClaimCard;
 
   const HOST_TAG = "kriko-panel-host";
+
+  /* What the panel says before anything has been analysed.
+   *
+   * It used to name one site — "Open a Sahibinden listing, then analyze." —
+   * which was the last of the site's own knowledge left in the client after
+   * every other trace of it was pushed into the pack's adapter. The panel only
+   * ever mounts on a page an adapter matched, so naming *which* site was never
+   * information the reader needed; it was only a sentence that would be wrong
+   * on the second site and unnoticed on the third. */
+  const IDLE_HINT = "Analyze this page to see what is known about it.";
+
+  /* The engine's verdict, as a word the panel shows. Three of the four are
+   * worth a banner; `recognised` is the ordinary case and gets none. */
+  const VERDICT_WORD = {
+    recognised: "Recognised",
+    probably: "Probably this one",
+    unrecognised: "Not recognised",
+  };
 
   // ─── State ────────────────────────────────────────────────────────────
   const state = {
@@ -31,15 +49,24 @@
     pos: null,                 // {left, top} once dragged
     dragging: false,
     compact: false,
-    openIds: new Set(),        // expanded risk indices
+    openIds: new Set(),        // expanded claim indices
     detailsOpen: false,        // Listing-details panel collapsed by default
     openDetailRows: new Set(), // expanded rows inside listing details
-    summaryExpanded: false,    // Summary card line-clamped by default
     pipeline: "idle",          // idle | analyzing | result | error
     result: null,              // AnalyzeResponse
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
+    // Typing the name. Panel-local: a search is a question the reader is
+    // asking right now, not something the next analysis should remember.
+    searchOpen: false,
+    searchQuery: "",
+    searchResults: null,       // null = nothing asked yet, [] = asked and none
+    searchBusy: false,
+    searchError: null,
+    // Set only by an explicit press. The automatic run at page load leaves it
+    // alone, because nobody asked it anything.
+    noAdapter: false,
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
@@ -68,18 +95,18 @@
   let bodyEl = null;
   let statusEl = null;
   let ctaBtn = null;
-  let risksHeadEl = null;
-  let risksListEl = null;
+  let claimsHeadEl = null;
+  let claimsListEl = null;
   let densityBtn = null;
   let closeBtn = null;
+  let searchBtn = null;
   let footerEl = null;
 
   let closeTimer = null;
 
-  // Memo refs so summary / listing-details only rebuild when the underlying
+  // A memo ref so listing details only rebuild when the underlying
   // data changes — toggles flip data-attributes in place so the CSS
   // animations can play.
-  let lastSummaryText = null;
   let lastDetailsListingMeta = null;
 
   // ─── No font is fetched, and that is the feature ──────────────────────
@@ -114,13 +141,13 @@
       .replace(/'/g, "&#39;");
   }
 
-  // What the panel puts above the risks. Two sources, and the split is the
+  // What the panel puts above the claims. Two sources, and the split is the
   // point of Phase 6c:
   //
   //   `entry.result`  — what the ENGINE understood. Rendering this rather than
   //                     the page's own words makes the header double as the
   //                     answer to "did it understand this car?", which is the
-  //                     question a reader actually has when the risks look
+  //                     question a reader actually has when the claims look
   //                     wrong. A header echoing the page can never say that.
   //   `entry.listing` — the damage and equipment panels, scraped locally and
   //                     never sent anywhere, because the engine has no rule
@@ -307,11 +334,11 @@
   }
 
   function counts() {
-    if (!state.result || !Array.isArray(state.result.risks)) {
+    if (!state.result || !Array.isArray(state.result.claims)) {
       return { high: 0, medium: 0, low: 0, total: 0 };
     }
-    const out = { high: 0, medium: 0, low: 0, total: state.result.risks.length };
-    for (const r of state.result.risks) {
+    const out = { high: 0, medium: 0, low: 0, total: state.result.claims.length };
+    for (const r of state.result.claims) {
       if (r.severity === "high") out.high += 1;
       else if (r.severity === "medium") out.medium += 1;
       else if (r.severity === "low") out.low += 1;
@@ -349,6 +376,8 @@
 
   // Apply entry helper
   function applyEntry(entry) {
+    // An answer of any kind means something read this page after all.
+    state.noAdapter = false;
     if (!entry) return;
     if (entry.listing || (entry.ok && entry.result)) {
       state.listingMeta = deriveListingMeta(entry);
@@ -371,33 +400,33 @@
   // refutation. What it buys is a queue of claims worth re-researching in the
   // reader's own words, which is the best signal this project can receive and
   // was previously being dropped on the floor.
-  function markClaim(risk, verdict, cardEl) {
-    if (!risk.claim_id || !risk.pack_id) return;
-    const previous = state.marks.get(risk.claim_id);
+  function markClaim(claim, verdict, cardEl) {
+    if (!claim.claim_id || !claim.pack_id) return;
+    const previous = state.marks.get(claim.claim_id);
     // Pressing the pressed one takes it back. Painted immediately and
     // reverted if the app disagrees: a verdict button that waits for a round
     // trip feels broken on a local app that answers in 3ms.
     const next = previous === verdict ? null : verdict;
-    if (next) state.marks.set(risk.claim_id, next);
-    else state.marks.delete(risk.claim_id);
-    if (cardEl) markRiskCard(cardEl, next);
+    if (next) state.marks.set(claim.claim_id, next);
+    else state.marks.delete(claim.claim_id);
+    if (cardEl) markClaimCard(cardEl, next);
 
     chrome.runtime.sendMessage(
       {
         type: "MARK_CLAIM",
         payload: {
-          pack_id: risk.pack_id,
-          claim_id: risk.claim_id,
-          subject_id: risk.subject_id || "",
-          title: risk.title || "",
+          pack_id: claim.pack_id,
+          claim_id: claim.claim_id,
+          subject_id: claim.subject_id || "",
+          title: claim.title || "",
           verdict: next,
         },
       },
       (response) => {
         if (chrome.runtime.lastError || (response && !response.ok)) {
-          if (previous) state.marks.set(risk.claim_id, previous);
-          else state.marks.delete(risk.claim_id);
-          if (cardEl) markRiskCard(cardEl, previous);
+          if (previous) state.marks.set(claim.claim_id, previous);
+          else state.marks.delete(claim.claim_id);
+          if (cardEl) markClaimCard(cardEl, previous);
         }
       }
     );
@@ -414,29 +443,44 @@
    * the reader is knowing which of these sentences they can still go and read
    * for themselves.
    */
-  function checkFacts(risk, cardEl) {
-    if (!risk.claim_id || !risk.pack_id) return;
-    if (state.checkingFacts.has(risk.claim_id)) return;
-    state.checkingFacts.add(risk.claim_id);
-    if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), true);
+  function checkFacts(claim, cardEl) {
+    if (!claim.claim_id || !claim.pack_id) return;
+    if (state.checkingFacts.has(claim.claim_id)) return;
+    state.checkingFacts.add(claim.claim_id);
+    if (cardEl) factClaimCard(cardEl, state.facts.get(claim.claim_id), true);
 
     chrome.runtime.sendMessage(
       {
         type: "CHECK_FACTS",
-        payload: { pack_id: risk.pack_id, claim_id: risk.claim_id },
+        payload: { pack_id: claim.pack_id, claim_id: claim.claim_id },
       },
       (response) => {
-        state.checkingFacts.delete(risk.claim_id);
+        state.checkingFacts.delete(claim.claim_id);
         if (!chrome.runtime.lastError && response && response.ok && response.check) {
-          state.facts.set(risk.claim_id, response.check);
+          state.facts.set(claim.claim_id, response.check);
         }
         // A failure leaves the card as it was. The claim and its sources are
         // on screen and the reader can open the link themselves, which is
         // what they did before this button existed — a panel-wide error over
         // a supplementary badge would be the tail wagging the dog.
-        if (cardEl) factRiskCard(cardEl, state.facts.get(risk.claim_id), false);
+        if (cardEl) factClaimCard(cardEl, state.facts.get(claim.claim_id), false);
       }
     );
+  }
+
+  /* A browser URL for a route the result did not come with.
+   *
+   * The panel is never told the app's address — the worker owns it, and owns
+   * it in one place on purpose. But every answer carries `app_url` built from
+   * that address, so the base can be read back off one rather than asking for
+   * it and having two copies. Empty when there is no answer yet, which is the
+   * honest result: `openInApp` still records the route, and a window opened
+   * within its TTL picks it up.
+   */
+  function appUrlFor(route) {
+    const known = (state.result && (state.result.app_url || "")) || "";
+    const at = known.indexOf("/#/");
+    return at > 0 ? `${known.slice(0, at)}/#/${route}` : "";
   }
 
   // Raise the desktop app on a route. Not a link: a page cannot bring a
@@ -613,10 +657,21 @@
         }
         if (response && !response.ok) {
           if (response.code === "NO_ADAPTER") {
-            // Nothing installed reads this site. Say nothing rather than
-            // painting a red banner over an ordinary web page.
+            /* Nothing installed reads this site.
+             *
+             * Still not a red banner — a page Kriko cannot read is not an
+             * error the reader made, and painting one over an ordinary web
+             * page is how an extension teaches people to close it.
+             *
+             * But it is no longer *silence*, and that distinction is the whole
+             * of §1.4. Silence is right for the automatic run at page load,
+             * where the reader asked for nothing. It is wrong here: they
+             * pressed a button called Analyze current page and nothing
+             * happened, which is the dead end this release exists to remove.
+             */
             setPipeline("idle");
             state.errorMsg = null;
+            state.noAdapter = true;
             renderBody();
             return;
           }
@@ -704,9 +759,10 @@
     bodyEl      = panel.querySelector(".lite-body");
     statusEl    = panel.querySelector(".lite-status");
     ctaBtn      = panel.querySelector(".lite-cta");
-    risksHeadEl = panel.querySelector(".lite-risks-head-slot");
-    risksListEl = panel.querySelector(".lite-risks");
+    claimsHeadEl = panel.querySelector(".lite-claims-head-slot");
+    claimsListEl = panel.querySelector(".lite-claims");
     densityBtn  = panel.querySelector(".lite-btn-density");
+    searchBtn   = panel.querySelector(".lite-btn-search");
     closeBtn    = panel.querySelector(".lite-btn-close");
     footerEl    = panel.querySelector(".lite-footer");
 
@@ -718,6 +774,8 @@
 
     ctaBtn.addEventListener("click", triggerAnalyze);
     densityBtn.addEventListener("click", triggerAnalyze);
+    searchBtn.addEventListener("click", () =>
+      (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
 
     // Initial render
@@ -739,7 +797,7 @@
     try { hostEl.remove(); } catch (_) {}
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
-    risksHeadEl = risksListEl = densityBtn = closeBtn = null;
+    claimsHeadEl = claimsListEl = densityBtn = closeBtn = searchBtn = null;
     footerEl = null;
   }
 
@@ -881,16 +939,20 @@
       <header class="lite-header">
         ${dragDots}
         <div class="lite-titlebox">
-          <div class="lite-title">Kriko<span class="cc">.cc</span></div>
-          <div class="lite-subtitle">Floating panel · drag to reposition</div>
+          <div class="lite-title">Kriko</div>
+          <div class="lite-subtitle">drag to move</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-density"
                 title="Refresh analysis" aria-label="Refresh analysis">
           ${iconSvg("refresh", { size: 16, strokeWidth: 2 })}
         </button>
-        <button type="button" class="lite-iconbtn lite-btn-menu"
-                title="Menu" aria-label="Menu">
-          ${iconSvg("rowsLoose", { size: 18, strokeWidth: 2 })}
+        <!-- Search sits in the header rather than behind a verdict, because
+             wanting to look something up is not only what happens after a
+             failed match: a reader comparing two of something is not standing
+             on either page. -->
+        <button type="button" class="lite-iconbtn lite-btn-search"
+                title="Search the installed packs" aria-label="Search">
+          ${iconSvg("search", { size: 16, strokeWidth: 2 })}
         </button>
         <button type="button" class="lite-iconbtn lite-btn-close"
                 title="Close" aria-label="Close">
@@ -907,11 +969,12 @@
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
             <span class="lite-cta-label">Analyze current page</span>
           </button>
-          <p class="lite-status">Open a Sahibinden listing, then analyze.</p>
+          <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
-        <div class="lite-risks-head-slot"></div>
-        <section class="lite-risks"></section>
-        <div class="lite-summary-slot"></div>
+        <div class="lite-search-slot"></div>
+        <div class="lite-verdict-slot"></div>
+        <div class="lite-claims-head-slot"></div>
+        <section class="lite-claims"></section>
         <div class="lite-details-slot"></div>
       </div>
 
@@ -943,6 +1006,17 @@
           <span class="num">${c.low}</span>
           <span class="lbl">LOW</span>
         </span>
+        <!-- "RISKS", not "CLAIMS", and that is not a leftover.
+             The row is a claim everywhere it is *named* — the store, the
+             wire, this file's variables — because one thing needs one
+             identifier. What a buyer reads is another question, and the app
+             answers it "8 known risks, 7 serious" on the same data. Jargon on
+             screen would be a worse product and a harder bug report. What was
+             wrong was the worker inventing a second field name, never the word
+             on screen: docs/STYLE.md rule 9 allows those to differ, and this
+             is the case it was written for.
+             (And no backticks in here — this comment is inside a template
+             literal, which is how it broke the first time.) -->
         <span class="lite-counts-total">${c.total} RISKS</span>
       </div>
     `;
@@ -995,81 +1069,6 @@
       alertsEl.dataset.open = isOpen ? "0" : "1";
       toggleEl.textContent = isOpen ? "+" : "–";
     });
-  }
-
-  function renderSummary() {
-    const slot = bodyEl.querySelector(".lite-summary-slot");
-    if (!slot) return;
-    if (state.pipeline !== "result" || !state.result || !state.result.summary) {
-      slot.innerHTML = "";
-      lastSummaryText = null;
-      return;
-    }
-
-    const txt = state.result.summary;
-
-    // Rebuild only when the text itself changes — otherwise just flip the
-    // expanded attribute in place so the CSS animation runs.
-    if (txt !== lastSummaryText) {
-      lastSummaryText = txt;
-      slot.innerHTML = `
-        <div class="lite-summary" data-expanded="${state.summaryExpanded ? "1" : "0"}">
-          <div class="lite-summary-label">SUMMARY</div>
-          <p class="lite-summary-body">${escapeHtml(txt)}</p>
-          <button type="button" class="lite-summary-toggle" hidden>
-            ${state.summaryExpanded ? "SHOW LESS" : "SHOW MORE"}
-          </button>
-        </div>
-      `;
-      const card = slot.querySelector(".lite-summary");
-      const body = slot.querySelector(".lite-summary-body");
-      const toggle = slot.querySelector(".lite-summary-toggle");
-
-      // Show toggle only when the text actually overflows the clamp.
-      requestAnimationFrame(() => {
-        const overflows = body.scrollHeight - body.clientHeight > 1;
-        toggle.hidden = !overflows;
-      });
-
-      function setSummaryExpanded(next) {
-        if (next === state.summaryExpanded) return;
-        state.summaryExpanded = next;
-        toggle.textContent = next ? "SHOW LESS" : "SHOW MORE";
-        if (next) {
-          // Expand: animate from clamped (CSS default) to exact content height.
-          body.style.maxHeight = body.scrollHeight + "px";
-          card.dataset.expanded = "1";
-          const onEnd = (e) => {
-            if (e.propertyName !== "max-height") return;
-            // Drop the inline cap so future content changes adapt naturally.
-            body.style.maxHeight = "none";
-            body.removeEventListener("transitionend", onEnd);
-          };
-          body.addEventListener("transitionend", onEnd);
-        } else {
-          // Collapse: pin current height in px so the transition has a
-          // starting value to interpolate from, then revert to the CSS clamp.
-          body.style.maxHeight = body.scrollHeight + "px";
-          void body.offsetHeight; // force reflow
-          body.style.maxHeight = "";
-          card.dataset.expanded = "0";
-        }
-      }
-
-      toggle.addEventListener("click", () => setSummaryExpanded(!state.summaryExpanded));
-      // Clicking the clamped text itself also expands — matches the user's
-      // "click on the …" intuition. (Doesn't collapse on click.)
-      body.addEventListener("click", () => {
-        if (!state.summaryExpanded) setSummaryExpanded(true);
-      });
-      return;
-    }
-
-    // In-place state sync
-    const card = slot.querySelector(".lite-summary");
-    const toggle = slot.querySelector(".lite-summary-toggle");
-    if (card) card.dataset.expanded = state.summaryExpanded ? "1" : "0";
-    if (toggle) toggle.textContent = state.summaryExpanded ? "SHOW LESS" : "SHOW MORE";
   }
 
   function renderListingDetails() {
@@ -1213,13 +1212,14 @@
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
-      statusEl.textContent = "Open a Sahibinden listing, then analyze.";
+      statusEl.textContent = IDLE_HINT;
       statusEl.style.display = "";
     } else if (state.pipeline === "analyzing") {
       statusEl.textContent = "Resolving engine family · retrieving transcripts…";
       statusEl.style.display = "";
     } else if (state.pipeline === "result") {
-      // Summary card below has the prose; keep the status line out of the way.
+      // The claim list below says everything; a status line repeating it is
+      // a line the eye has to skip on every result.
       statusEl.textContent = "";
       statusEl.style.display = "none";
     } else if (state.pipeline === "error") {
@@ -1228,24 +1228,355 @@
     }
   }
 
-  // Render risks header helper
-  function renderRisksHeader() {
-    if (!risksHeadEl) return;
-    if (state.pipeline !== "result" || !state.result) {
-      risksHeadEl.innerHTML = "";
+  // Render claims header helper
+  /* ─── How sure the engine is, and what to do about it ──────────────────
+   *
+   * The panel had two states for four situations. A page the packs recognised
+   * exactly and a page they had never heard of both rendered as claims or as
+   * a blank, and the reader who met the blank had a good pack installed for
+   * that exact product with no way to find out which of four things had gone
+   * wrong: a pack never installed, a page misread, a catalog spelling one
+   * value differently, or a genuine gap.
+   *
+   * `verdict`, `score`, `considered` and `next_step` are the engine's answer
+   * to that, and every one of them is *the engine's* — this renders them and
+   * writes none of the copy. `next_step.say` is a sentence `app/matching.py`
+   * composed from the same objects the answer was built from, and `action` is
+   * a closed vocabulary. A client writing its own copy from a status code
+   * stops agreeing with the engine the first time a method is added, which is
+   * the failure this whole block exists to end rather than to repeat.
+   */
+  /* What the button says, and it is a function rather than a map because the
+   * same action word can only do two different things here.
+   *
+   * `research` arrives with a `subject_id` when the engine resolved something
+   * to research (a recognised product the packs hold nothing on), and without
+   * one when it did not (a page nothing placed). The second cannot start a
+   * research run — there is no subject to run it against — so it goes to
+   * search, and the button has to say so. A button labelled "Research it"
+   * that opens a search field is a button the reader stops trusting. */
+  function actionLabel(action, step) {
+    if (action === "install") return "Open Kriko";
+    if (action === "research") {
+      return step && step.subject_id ? "Research it" : "Find it by name";
+    }
+    if (action === "confirm") return "Not this one — search";
+    return "";
+  }
+
+  /* ─── Typing the name, when standing on the page was not enough ────────
+   *
+   * "The extension has no way to search for a particular product. I have to be
+   * standing on the right page and hope recognition fires."
+   *
+   * Every way into this panel was the page: an adapter matched, a scrape ran,
+   * and either the packs placed it or the reader got a blank. That is fine
+   * when it works and a dead end when it does not — a site with no adapter, a
+   * listing that names the thing in words no pack declared, or somebody
+   * comparing two of something from their sofa.
+   *
+   * So: a field. It is also where three of the four verdicts send the reader,
+   * which is the point rather than a convenience — "we could not place this
+   * page" and "type what it is" are the same moment.
+   *
+   * **Every result carries its identity, and that is the feature.** Two rows
+   * reading `Golf VII` are not a choice; the same name followed by the two
+   * configurations that differ is. A list of labels cannot tell one of a thing
+   * from another of it, which is the entire reason the reader asked.
+   */
+  const SEARCH_MIN = 2;
+  const SEARCH_DEBOUNCE_MS = 220;
+  let searchTimer = null;
+  let searchRunId = 0;
+
+  function openSearch() {
+    state.searchOpen = true;
+    renderSearch();
+    const field = bodyEl && bodyEl.querySelector(".lite-search-field");
+    if (field) field.focus();
+  }
+
+  function runSearch(text) {
+    const query = String(text || "").trim();
+    state.searchQuery = query;
+    if (searchTimer) clearTimeout(searchTimer);
+    if (query.length < SEARCH_MIN) {
+      state.searchResults = null;
+      state.searchBusy = false;
+      return renderSearchResults();
+    }
+    // Debounced, and every reply carries the id of the keystroke that asked
+    // for it: without that, a slow answer to "gol" lands after a fast one to
+    // "golf" and the reader watches their own typing undo itself.
+    const runId = ++searchRunId;
+    state.searchBusy = true;
+    renderSearchResults();
+    searchTimer = setTimeout(() => {
+      chrome.runtime.sendMessage({ type: "SEARCH", payload: { q: query } }, (reply) => {
+        if (runId !== searchRunId) return;
+        state.searchBusy = false;
+        if (chrome.runtime.lastError || !reply || !reply.ok) {
+          state.searchResults = [];
+          state.searchError = (reply && reply.error)
+            || (chrome.runtime.lastError && chrome.runtime.lastError.message)
+            || "Could not search.";
+        } else {
+          state.searchError = null;
+          state.searchResults = Array.isArray(reply.items) ? reply.items : [];
+        }
+        renderSearchResults();
+      });
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  function renderSearch() {
+    const slot = bodyEl && bodyEl.querySelector(".lite-search-slot");
+    if (!slot) return;
+    if (!state.searchOpen) { slot.innerHTML = ""; return; }
+    if (slot.querySelector(".lite-search")) return renderSearchResults();
+
+    slot.innerHTML = `
+      <div class="lite-search">
+        <div class="lite-search-bar">
+          <span class="lite-search-icon">${iconSvg("search", { size: 15 })}</span>
+          <input class="lite-search-field" type="text" autocomplete="off"
+                 spellcheck="false" placeholder="Type a product name"
+                 aria-label="Search the installed packs" />
+          <button type="button" class="lite-search-close"
+                  title="Close search" aria-label="Close search">
+            ${iconSvg("x", { size: 14, strokeWidth: 2 })}
+          </button>
+        </div>
+        <div class="lite-search-results"></div>
+      </div>
+    `;
+    const field = slot.querySelector(".lite-search-field");
+    field.value = state.searchQuery || "";
+    field.addEventListener("input", (event) => runSearch(event.target.value));
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.stopPropagation(); closeSearch(); }
+    });
+    slot.querySelector(".lite-search-close")
+      .addEventListener("click", () => closeSearch());
+    renderSearchResults();
+  }
+
+  function closeSearch() {
+    state.searchOpen = false;
+    state.searchQuery = "";
+    state.searchResults = null;
+    state.searchError = null;
+    if (searchTimer) clearTimeout(searchTimer);
+    renderSearch();
+  }
+
+  function renderSearchResults() {
+    const box = bodyEl && bodyEl.querySelector(".lite-search-results");
+    if (!box) return;
+    box.innerHTML = "";
+
+    if (state.searchBusy) {
+      box.innerHTML = `<p class="lite-search-note">Searching…</p>`;
       return;
     }
-    const total = state.result.risks.length;
+    if (state.searchError) {
+      box.innerHTML = `<p class="lite-search-note">${escapeHtml(state.searchError)}</p>`;
+      return;
+    }
+    if (state.searchResults === null) {
+      box.innerHTML =
+        `<p class="lite-search-note">Type at least ${SEARCH_MIN} characters. ` +
+        `Every word has to land somewhere — a name, an alias, or one of the ` +
+        `values the thing is made of.</p>`;
+      return;
+    }
+    if (!state.searchResults.length) {
+      box.innerHTML =
+        `<p class="lite-search-note">Nothing in the installed packs matches ` +
+        `that. Fewer words usually finds more.</p>`;
+      return;
+    }
+
+    for (const row of state.searchResults) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "lite-search-hit";
+      // The identity, spelled out, is the half that makes this a choice.
+      const identity = Object.entries(row.identity || {})
+        .map(([key, value]) => `
+          <span class="lite-search-id">
+            <span class="lite-search-id-key">${escapeHtml(key)}</span>
+            ${escapeHtml(String(value))}
+          </span>`)
+        .join("");
+      const claims = typeof row.claims === "number" ? row.claims : null;
+      item.innerHTML = `
+        <span class="lite-search-hit-head">
+          <span class="lite-search-label">${escapeHtml(row.label || row.subject_id || "")}</span>
+          ${claims !== null
+            ? `<span class="lite-search-count">${claims} known</span>`
+            : ""}
+        </span>
+        <span class="lite-search-identity">${identity}</span>
+      `;
+      item.addEventListener("click", () => openInApp(
+        `subject/${encodeURIComponent(row.subject_id)}`,
+        appUrlFor(`subject/${encodeURIComponent(row.subject_id)}`),
+      ));
+      box.appendChild(item);
+    }
+  }
+
+  function renderVerdict() {
+    const slot = bodyEl.querySelector(".lite-verdict-slot");
+    if (!slot) return;
+    slot.innerHTML = "";
+
+    if (state.noAdapter && state.pipeline !== "result") {
+      const card = document.createElement("div");
+      card.className = "lite-verdict";
+      card.dataset.verdict = "no-adapter";
+      card.innerHTML = `
+        <div class="lite-verdict-head">
+          <span class="lite-verdict-word">Not read here</span>
+        </div>
+        <p class="lite-verdict-say">Nothing installed knows how to read this
+          site yet. Teaching Kriko a site is a few minutes in the app, and an
+          agent can write most of it.</p>
+      `;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn";
+      button.textContent = "Add this site";
+      button.addEventListener("click", () =>
+        openInApp("sites", appUrlFor("sites")));
+      card.appendChild(button);
+      slot.appendChild(card);
+      return;
+    }
+
+    if (state.pipeline !== "result" || !state.result) return;
+
+    const verdict = state.result.verdict || "";
+    const step = state.result.next_step || null;
+    // `recognised` with claims is the ordinary case and says nothing: a banner
+    // on every successful answer is a banner nobody reads by the third one.
+    if (verdict === "recognised" && !(step && step.say)) return;
+    if (!verdict && !step) return;
+
+    const card = document.createElement("div");
+    card.className = "lite-verdict";
+    card.dataset.verdict = verdict || "unknown";
+
+    const head = document.createElement("div");
+    head.className = "lite-verdict-head";
+    head.innerHTML = `
+      <span class="lite-verdict-word">${escapeHtml(VERDICT_WORD[verdict] || verdict)}</span>
+      ${typeof state.result.score === "number" && verdict !== "recognised"
+        ? `<span class="lite-verdict-score">${(state.result.score * 100).toFixed(0)}%</span>`
+        : ""}
+    `;
+    card.appendChild(head);
+
+    if (step && step.say) {
+      const say = document.createElement("p");
+      say.className = "lite-verdict-say";
+      say.textContent = step.say;
+      card.appendChild(say);
+    }
+
+    const weighed = renderConsidered();
+    if (weighed) card.appendChild(weighed);
+
+    const action = step && step.action && step.action !== "none" ? step.action : "";
+    const label = actionLabel(action, step);
+    if (label) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn";
+      button.textContent = label;
+      button.addEventListener("click", () => takeNextStep(action, step, button));
+      card.appendChild(button);
+    }
+
+    slot.appendChild(card);
+  }
+
+  /* What the reader was actually shown, which is not always what was weighed.
+   *
+   * A verdict is a number, and a number nobody can decompose is a number
+   * nobody can argue with. Each row here is one subject the engine considered
+   * and each key's own reading — and the two readings that matter are the two
+   * that point at different bugs: a key reading `conflict` is usually the
+   * page, a key reading `absent` is usually the adapter. That sentence is in
+   * `docs/HOW_IT_WORKS.md` and until now there was nowhere to act on it.
+   */
+  function renderConsidered() {
+    const rows = (state.result.considered || []).slice(0, 3);
+    if (!rows.length) return null;
+
+    const box = document.createElement("details");
+    box.className = "lite-weighed";
+    const many = rows.length === 1 ? "1 subject weighed" : `${rows.length} subjects weighed`;
+    box.innerHTML = `<summary>${escapeHtml(many)}</summary>`;
+
+    for (const row of rows) {
+      const one = document.createElement("div");
+      one.className = "lite-weighed-row";
+      const keys = (row.keys || [])
+        .map((key) => `
+          <span class="lite-weighed-key" data-how="${escapeHtml(key.how || "")}">
+            ${escapeHtml(key.key)}
+            <span class="lite-weighed-how">${escapeHtml(key.how || "")}</span>
+          </span>`)
+        .join("");
+      one.innerHTML = `
+        <div class="lite-weighed-label">
+          ${escapeHtml(row.label || row.subject_id || "")}
+          <span class="lite-weighed-score">${((row.score || 0) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="lite-weighed-keys">${keys}</div>
+      `;
+      box.appendChild(one);
+    }
+    return box;
+  }
+
+  function takeNextStep(action, step, button) {
+    if (action === "research" && step && step.subject_id) {
+      const subject = (state.result.subjects || [])
+        .find((one) => one.subject_id === step.subject_id);
+      if (subject) return researchSubject(subject, button);
+    }
+    if (action === "install") {
+      // No pack here covers this kind of product at all, which is not
+      // something the panel can fix — installing or writing one is the app's
+      // job, and raising it is the whole step.
+      return openInApp("packs", appUrlFor("packs"));
+    }
+    // Everything else lands on search, and that is not a fallback: a page the
+    // packs could not place is exactly when a reader wants to type the name
+    // themselves, which is the thing the panel could never do.
+    openSearch();
+  }
+
+  function renderClaimsHeader() {
+    if (!claimsHeadEl) return;
+    if (state.pipeline !== "result" || !state.result) {
+      claimsHeadEl.innerHTML = "";
+      return;
+    }
+    const total = state.result.claims.length;
     const allOpen  = state.openIds.size === total && total > 0;
     const allClose = state.openIds.size === 0;
 
     // Build once. On subsequent toggles, mutate in place so the entrance
     // animation does not retrigger.
-    let head = risksHeadEl.querySelector(".lite-risks-head");
+    let head = claimsHeadEl.querySelector(".lite-claims-head");
     if (!head) {
-      risksHeadEl.innerHTML = `
-        <div class="lite-risks-head">
-          <div class="lite-risks-label">RISKS · ${total}</div>
+      claimsHeadEl.innerHTML = `
+        <div class="lite-claims-head">
+          <div class="lite-claims-label">RISKS · ${total}</div>
           <div class="lite-chip-group">
             <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
               + EXPAND ALL
@@ -1256,13 +1587,13 @@
           </div>
         </div>
       `;
-      risksHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
-      risksHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
+      claimsHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
+      claimsHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
       return;
     }
 
     // Update in place
-    const label = head.querySelector(".lite-risks-label");
+    const label = head.querySelector(".lite-claims-label");
     if (label) label.textContent = `RISKS · ${total}`;
     const expandBtn   = head.querySelector(".lite-chip-expand");
     const collapseBtn = head.querySelector(".lite-chip-collapse");
@@ -1270,10 +1601,10 @@
     if (collapseBtn) collapseBtn.dataset.on = allClose ? "1" : "0";
   }
 
-  function renderRisksList() {
-    if (!risksListEl) return;
-    risksListEl.dataset.compact = state.compact ? "1" : "0";
-    risksListEl.innerHTML = "";
+  function renderClaimsList() {
+    if (!claimsListEl) return;
+    claimsListEl.dataset.compact = state.compact ? "1" : "0";
+    claimsListEl.innerHTML = "";
 
     if (state.pipeline === "analyzing") {
       const skel = document.createElement("div");
@@ -1283,7 +1614,7 @@
         row.className = "lite-skeleton";
         skel.appendChild(row);
       }
-      risksListEl.appendChild(skel);
+      claimsListEl.appendChild(skel);
       return;
     }
 
@@ -1304,7 +1635,7 @@
           chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => {}));
         err.append(" ", button);
       }
-      risksListEl.appendChild(err);
+      claimsListEl.appendChild(err);
       return;
     }
 
@@ -1315,30 +1646,33 @@
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
         <div>No analysis yet. Hit <b>Analyze current page</b> — typical run is under 2&nbsp;s.</div>
       `;
-      risksListEl.appendChild(empty);
+      claimsListEl.appendChild(empty);
       return;
     }
 
-    // An answer with no risks is not the same as no answer. If the packs
+    // An answer with no claims is not the same as no answer. If the packs
     // resolved this listing and hold nothing on it, that gap is the content.
-    if (!state.result.risks || !state.result.risks.length) {
+    if (!state.result.claims || !state.result.claims.length) {
       const gaps = (state.result.subjects || []).filter((s) => !s.claims);
       if (!gaps.length) {
-        const empty = document.createElement("div");
-        empty.className = "lite-empty";
-        empty.textContent =
-          "Nothing matched this listing. No installed pack recognises it.";
-        risksListEl.appendChild(empty);
+        // Deliberately nothing here when the verdict block has already spoken.
+        // It says which of four things happened and what to do about it; a
+        // second, vaguer sentence underneath ("no installed pack recognises
+        // it") is the dead end this release removed, re-added below itself.
+        if (!state.result.next_step && !state.result.verdict) {
+          const empty = document.createElement("div");
+          empty.className = "lite-empty";
+          empty.textContent =
+            "Nothing matched this listing. No installed pack recognises it.";
+          claimsListEl.appendChild(empty);
+        }
       }
       renderGaps();
       return;
     }
 
-    // Group for display. Serving payload v2: when the backend sends
-    // `subsystems` (registry component groups — engine/timing, body/comfort, …),
-    // render those sections with the Turkish label; otherwise fall back to the
-    // legacy domain grouping. Global risk indices into state.result.risks are
-    // preserved either way so toggleOne/setAllOpen keep working.
+    // Group for display, by the claim's own domain. Global claim indices into
+    // state.result.claims are preserved so toggleOne/setAllOpen keep working.
     const domainLabels = {
       engine: "Engine", transmission: "Transmission", emissions: "Emissions",
       electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
@@ -1346,23 +1680,17 @@
       interior: "Interior", "body/structure": "Body", steering: "Steering",
     };
 
+    // Grouped by the claim's own domain. There used to be a branch above this
+    // one reading a `subsystems` array off the result, with a `display_tr`
+    // label — a server field that has never existed and a site's own language
+    // living in the client. Both are gone; this is the only path.
     let groups;
-    if (state.result.subsystems && state.result.subsystems.length) {
-      groups = state.result.subsystems
-        .map((g) => ({
-          iconDomain: (g.name || "other").split("/")[0],
-          label: g.display_tr || g.name || "Other",
-          items: (g.risks || [])
-            .map((risk) => ({ risk, idx: state.result.risks.indexOf(risk) }))
-            .filter((it) => it.idx >= 0),
-        }))
-        .filter((g) => g.items.length);
-    } else {
+    {
       const byDomain = {};
-      state.result.risks.forEach((risk, i) => {
-        const d = (risk.domain || "other").toLowerCase().trim();
+      state.result.claims.forEach((claim, i) => {
+        const d = (claim.domain || "other").toLowerCase().trim();
         if (!byDomain[d]) byDomain[d] = [];
-        byDomain[d].push({ risk, idx: i });
+        byDomain[d].push({ claim, idx: i });
       });
       groups = Object.entries(byDomain).map(([domain, items]) => ({
         iconDomain: domain,
@@ -1373,9 +1701,9 @@
 
     let delayCounter = 0;
     for (const { iconDomain, label, items } of groups) {
-      const high = items.filter(i => i.risk.severity === "high").length;
-      const med  = items.filter(i => i.risk.severity === "medium").length;
-      const low  = items.filter(i => i.risk.severity === "low").length;
+      const high = items.filter(i => i.claim.severity === "high").length;
+      const med  = items.filter(i => i.claim.severity === "medium").length;
+      const low  = items.filter(i => i.claim.severity === "low").length;
 
       // Build severity dots summary
       const sevHtml = [];
@@ -1397,40 +1725,40 @@
         <div class="lite-domain-body"></div>
       `;
 
-      // Populate body with risk cards
+      // Populate body with claim cards
       const bodyEl = groupEl.querySelector(".lite-domain-body");
-      items.forEach(({ risk, idx }) => {
+      items.forEach(({ claim, idx }) => {
         const wrap = document.createElement("div");
-        wrap.className = "lite-risk-anim";
+        wrap.className = "lite-claim-anim";
         wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
         delayCounter++;
-        const card = renderRiskCard(risk, { open: state.openIds.has(idx), compact: state.compact });
+        const card = renderClaimCard(claim, { open: state.openIds.has(idx), compact: state.compact });
         const btn = card.querySelector(".lite-rc-toggle");
         btn.addEventListener("click", () => toggleOne(idx, card));
         // Re-assert any verdict this claim already carries: the list is
         // rebuilt on every expand-all and every fresh analysis, and a mark
         // that disappeared on redraw would read as one that failed to save.
-        if (risk.claim_id && state.marks.has(risk.claim_id)) {
-          markRiskCard(card, state.marks.get(risk.claim_id));
+        if (claim.claim_id && state.marks.has(claim.claim_id)) {
+          markClaimCard(card, state.marks.get(claim.claim_id));
         }
         // Re-asserted on redraw for the same reason a mark is: the list is
         // rebuilt on every expand-all, and a verdict that vanished would read
         // as one that failed.
-        if (risk.claim_id && state.facts.has(risk.claim_id)) {
-          factRiskCard(card, state.facts.get(risk.claim_id),
-            state.checkingFacts.has(risk.claim_id));
+        if (claim.claim_id && state.facts.has(claim.claim_id)) {
+          factClaimCard(card, state.facts.get(claim.claim_id),
+            state.checkingFacts.has(claim.claim_id));
         }
         const factBtn = card.querySelector(".lite-rc-factbtn");
         if (factBtn) {
           factBtn.addEventListener("click", (event) => {
             event.stopPropagation(); // the card header toggles on click
-            checkFacts(risk, card);
+            checkFacts(claim, card);
           });
         }
         card.querySelectorAll(".lite-rc-markbtn").forEach((markBtn) => {
           markBtn.addEventListener("click", (event) => {
             event.stopPropagation(); // the card header toggles on click
-            markClaim(risk, markBtn.dataset.verdict, card);
+            markClaim(claim, markBtn.dataset.verdict, card);
           });
         });
         wrap.appendChild(card);
@@ -1447,7 +1775,7 @@
         toggleSpan.textContent = isOpen ? "+" : "\u2212";
       });
 
-      risksListEl.appendChild(groupEl);
+      claimsListEl.appendChild(groupEl);
     }
 
     renderGaps();
@@ -1461,7 +1789,7 @@
    * apology.
    */
   function renderGaps() {
-    if (!risksListEl || !state.result) return;
+    if (!claimsListEl || !state.result) return;
     // Never on NOT_MATCHED: a page nothing adapted has no `subjects` at all
     // (the backend only resolves subject_ids when something matched), so this
     // filter already excludes it — there is no separate check to remember or
@@ -1478,7 +1806,7 @@
     // Re-render (rather than append) each time so a plane answer that arrives
     // after the first paint, or a poll updating one card's progress text,
     // does not leave stale duplicate cards behind.
-    risksListEl.querySelectorAll(".lite-gap").forEach((el) => el.remove());
+    claimsListEl.querySelectorAll(".lite-gap").forEach((el) => el.remove());
 
     for (const subject of gaps) {
       const card = document.createElement("div");
@@ -1495,7 +1823,7 @@
       `;
       const button = card.querySelector(".lite-gap-btn");
       button.addEventListener("click", () => researchSubject(subject, button));
-      risksListEl.appendChild(card);
+      claimsListEl.appendChild(card);
     }
   }
 
@@ -1544,7 +1872,7 @@
 
     // The panel's job ends at "here is what to worry about"; these two are
     // what a reader does with that. Both were app-only screens, so a reader
-    // who had just read the risks had to go and find the same listing again
+    // who had just read the claims had to go and find the same listing again
     // by hand — the answer is already stored under an id, and the id is right
     // here.
     //
@@ -1572,9 +1900,10 @@
     renderCriticalAlerts();
     renderCta();
     renderStatus();
-    renderRisksHeader();
-    renderRisksList();
-    renderSummary();
+    renderSearch();
+    renderVerdict();
+    renderClaimsHeader();
+    renderClaimsList();
     renderListingDetails();
     renderFooter();
   }
@@ -1583,20 +1912,20 @@
   function toggleOne(idx, cardEl) {
     if (state.openIds.has(idx)) state.openIds.delete(idx);
     else state.openIds.add(idx);
-    updateRiskCard(cardEl, { open: state.openIds.has(idx) });
+    updateClaimCard(cardEl, { open: state.openIds.has(idx) });
     // Update Expand/Collapse-all chip "on" state
-    renderRisksHeader();
+    renderClaimsHeader();
   }
   function setAllOpen(open) {
     if (!state.result) return;
     state.openIds = open
-      ? new Set(state.result.risks.map((_, i) => i))
+      ? new Set(state.result.claims.map((_, i) => i))
       : new Set();
     // Mutate cards in place so each one runs its own expand/collapse animation
     // — re-rendering the list would retrigger the entrance animation.
-    const cards = risksListEl.querySelectorAll(".lite-rc");
-    cards.forEach((card) => updateRiskCard(card, { open }));
-    renderRisksHeader();
+    const cards = claimsListEl.querySelectorAll(".lite-rc");
+    cards.forEach((card) => updateClaimCard(card, { open }));
+    renderClaimsHeader();
   }
   function expandAll()   { setAllOpen(true); }
   function collapseAll() { setAllOpen(false); }

@@ -1,32 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-label="Kriko">
-  <!-- The mark is the extension's toolbar icon, redrawn on the 16x16 grid
-       packaging/render_icon.py rasterises. Same three colours, same shape:
-       one K, so the tile in a browser toolbar and the tile in a taskbar are
-       recognisably the same product. Ground first, then the letter over it —
-       the renderer paints in document order. -->
+  <!-- The mark, on the 16x16 grid packaging/render_icon.py rasterises. Every
+       icon the product shows is this one file — the browser toolbar tile, the
+       taskbar tile, the rail at the top-left of the app, the favicon — so they
+       are recognisably one product rather than four. Ground first, then the
+       letter over it: the renderer paints in document order, and the lower arm
+       deliberately overpaints the upper one where they meet at the spine.
+
+       Slab, not line. A hairline K closes into a smudge at 16px; mass does
+       not. The stem runs nearly the full height and each arm is three blocks
+       stepping away from it, overlapping by two rows so the staircase reads as
+       one stroke rather than three squares.
+
+       **The upper arm is the whole accent, and that is the mark.** It is the
+       panel's accent token, the colour the panel reserves for severity, and it
+       rises out of the letter as a step chart does. That is the product in a
+       glyph: the thing that tells you what is going wrong with what you are
+       looking at. An earlier draft put the amber on one terminal block and it
+       read as a detached square at any size below 48px — a corner touch is not
+       a join.
+
+       The three colours are the panel theme's n-2, n-9 and accent tokens,
+       and test_the_mark_is_painted_in_the_panel_theme_s_own_colours fails if
+       either side moves without the other. Their names are written without
+       the leading dashes on purpose: two hyphens cannot appear inside an XML
+       comment, and an SVG that does not parse is a broken image in the rail
+       that no test reading this file for strings would ever notice. That is
+       exactly how it shipped for one build. -->
   <rect x="0" y="0" width="16" height="16" fill="#15171C"></rect>
-  <rect x="3" y="2" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="12" y="2" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="3" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="10" y="3" width="3" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="4" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="8" y="4" width="4" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="5" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="7" y="5" width="3" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="6" width="6" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="7" width="1" height="1" fill="#E7E9ED"></rect>
-  <rect x="4" y="7" width="2" height="1" fill="#E8C04B"></rect>
-  <rect x="6" y="7" width="1" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="8" width="1" height="1" fill="#E7E9ED"></rect>
-  <rect x="4" y="8" width="2" height="1" fill="#E8C04B"></rect>
-  <rect x="6" y="8" width="1" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="9" width="6" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="10" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="7" y="10" width="3" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="11" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="8" y="11" width="4" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="12" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="10" y="12" width="3" height="1" fill="#E7E9ED"></rect>
-  <rect x="3" y="13" width="2" height="1" fill="#E7E9ED"></rect>
-  <rect x="12" y="13" width="2" height="1" fill="#E7E9ED"></rect>
+  <rect x="2" y="1" width="3" height="14" fill="#E7E9ED"></rect>
+  <rect x="5" y="5" width="3" height="4" fill="#E8C04B"></rect>
+  <rect x="8" y="3" width="3" height="4" fill="#E8C04B"></rect>
+  <rect x="11" y="1" width="3" height="4" fill="#E8C04B"></rect>
+  <rect x="5" y="7" width="3" height="4" fill="#E7E9ED"></rect>
+  <rect x="8" y="9" width="3" height="4" fill="#E7E9ED"></rect>
+  <rect x="11" y="11" width="3" height="4" fill="#E7E9ED"></rect>
 </svg>

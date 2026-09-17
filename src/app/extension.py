@@ -36,9 +36,15 @@ import sys
 from pathlib import Path
 
 #: Everything the browser needs, and nothing else. An allowlist rather than a
-#: copy of the directory: `tests/` and `colors_and_type.css` are not the
-#: extension, and a folder full of things Chrome will not load invites the
-#: reader to wonder which of them is broken.
+#: copy of the directory: `tests/` is not the extension, and a folder full of
+#: things Chrome will not load invites the reader to wonder which of them is
+#: broken.
+#:
+#: It also used to exclude `colors_and_type.css` — a light cream-and-lemon
+#: design system that nothing loaded, carried in the tree for months, and
+#: faithfully ported into an app theme by somebody who had no way to know it
+#: painted nothing. Deleted 2026-09-17. The allowlist is why it never reached
+#: a browser; it is not why it survived that long.
 SHIPPED = (
     "manifest.json",
     "background.js",

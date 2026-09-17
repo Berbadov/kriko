@@ -27,6 +27,8 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0.1",
     "mcp>=1.0,<2.0",
+    # The PTY behind `kriko tui`'s shell pass-through. The in-app terminal
+    # panel that also used it is gone (§2.9), the operator console is not.
     "ptyprocess>=0.7; sys_platform != 'win32'",
     "pywinpty>=2.0; sys_platform == 'win32'",
 ]
@@ -65,6 +67,10 @@ dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 # hit the same missing-data-file problem. Enforced by
 # test_every_data_file_under_src_is_declared_as_package_data.
 "kriko.store" = ["*.sql"]
+# The default model catalogue, copied to ~/.kriko on first run. Read from disk
+# like the DDL above, so it fails the same way if it is not declared: an
+# editable install finds it in the checkout and a real wheel does not.
+"app" = ["*.toml"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -156,7 +162,7 @@ module = ["app.tui.term", "app.extension"]
 disable_error_code = ["attr-defined"]
 
 [[tool.mypy.overrides]]
-# Both modules stamp extra attributes onto an object at runtime by design —
+# All three modules stamp extra attributes onto an object at runtime by design —
 # `complete.tokens_used` in `llm.py`'s own docstring, and `researcher.model` /
 # `.search_provider` / `.protocol` in `providers/__init__.py`'s, both read
 # back duck-typed by `app/web/tasks.py`'s provenance row. The engine has no
@@ -164,7 +170,7 @@ disable_error_code = ["attr-defined"]
 # provider" is (the layering principle); giving these a real static shape
 # would mean a `Protocol` per call site, which is real work this pass did not
 # do — reported, not silenced blindly.
-module = ["app.providers.llm", "app.providers"]
+module = ["app.providers.llm", "app.providers.anthropic_llm", "app.providers"]
 disable_error_code = ["attr-defined"]
 
 [[tool.mypy.overrides]]

@@ -15,7 +15,7 @@ const ENTRY = {
   ok: true,
   listing: { damage_info: null, equipment: {} },
   result: {
-    risks: [],
+    claims: [],
     coverage: "RISKS_FOUND",
     identity: { make: "volkswagen", model: "golf", fuel: "Dizel" },
     context: { build_year: 2014, usage_km: 190000 },
@@ -58,7 +58,7 @@ test("an answer no pack claims renders as unknown rather than blank", () => {
   // word "unknown" is itself the tell; an empty footer is not.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ok: true, result: { risks: [] } });
+  p.deliverEntry({ ok: true, result: { claims: [] } });
   assert.equal(p.footer().hidden, false);
   assert.equal(p.footer().textContent, "unknown");
 });
@@ -79,7 +79,7 @@ test("the header shows what the engine understood, not what the page said", () =
   // Before Phase 6c this came from the client's own reading of the page. It
   // now comes from the resolved identity, which means the header doubles as
   // the answer to "did it understand this car?" — the question a reader
-  // actually has when the risks look wrong.
+  // actually has when the claims look wrong.
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry(ENTRY);
@@ -95,7 +95,7 @@ test("a page the engine could not resolve still renders a header", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ok: true, listing: {},
-                   result: { risks: [], coverage: "NOT_MATCHED",
+                   result: { claims: [], coverage: "NOT_MATCHED",
                              identity: {}, context: {} } });
   assert.ok(p.listing());
 });
@@ -141,7 +141,7 @@ test("a real failure is still shown as one", () => {
 // ── the way back to the app ─────────────────────────────────────────────
 
 test("the footer raises the desktop app rather than opening a browser tab", () => {
-  // The panel is deliberately small — it shows the risks and stops. The full
+  // The panel is deliberately small — it shows the claims and stops. The full
   // report, the sources and the comparison live in the app.
   //
   // It used to get there with an <a href> at the engine's own port, which
@@ -177,7 +177,7 @@ test("an answer the app never stored offers no way in", () => {
 });
 
 test("the panel hands the reader on to the two screens they act from", () => {
-  // Reading the risks is half of it. The other half — the questions to take
+  // Reading the claims is half of it. The other half — the questions to take
   // to the seller, and holding this listing against the others — lived only
   // in the app, so a reader finishing the panel had to find the same listing
   // again by hand. The answer is already saved under an id, and the routes
@@ -245,7 +245,7 @@ test("an ordinary failure offers nothing but the failure", () => {
 
 // ── marking knowledge from the panel ────────────────────────────────────
 
-const RISK = {
+const CLAIM = {
   claim_id: "c1",
   // A verdict is stored per (pack, claim): claim ids are only unique inside
   // the pack that minted them, so the pack travels with the mark.
@@ -264,7 +264,7 @@ test("a verdict on a claim reaches the app with the claim's own id", () => {
   // third the next time the pack changed.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
 
   p.click('.lite-rc-markbtn[data-verdict="useful"]');
 
@@ -281,7 +281,7 @@ test("the verdict paints immediately, before the app has answered", () => {
   // dead until it returns gets clicked twice.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
 
   const button = p.click('.lite-rc-markbtn[data-verdict="wrong"]');
   assert.equal(button.getAttribute("aria-pressed"), "true");
@@ -293,7 +293,7 @@ test("the verdict paints immediately, before the app has answered", () => {
 test("pressing the verdict already held takes it back", () => {
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
 
   p.click('.lite-rc-markbtn[data-verdict="useful"]');
   const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
@@ -309,7 +309,7 @@ test("a verdict the app refuses does not stay painted", () => {
   // engine reads to the reader as one that did.
   const p = loadPanel({ workerResponse: { ok: false, error: "no such claim" } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
 
   const button = p.click('.lite-rc-markbtn[data-verdict="useful"]');
   assert.equal(button.getAttribute("aria-pressed"), "false");
@@ -320,8 +320,8 @@ test("a claim with no id offers no verdict at all", () => {
   // to is worse than no verdict, so the control is absent rather than inert.
   const p = loadPanel();
   p.openPanel();
-  const { claim_id, ...anonymous } = RISK;
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [anonymous] } });
+  const { claim_id, ...anonymous } = CLAIM;
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [anonymous] } });
 
   assert.equal(p.shadow().querySelector(".lite-rc-markbtn"), null);
 });
@@ -332,7 +332,7 @@ const GAP_ENTRY = {
   ...ENTRY,
   result: {
     ...ENTRY.result,
-    risks: [],
+    claims: [],
     coverage: "NO_RISKS",
     subjects: [{ subject_id: "s9", pack_id: "org.kriko.cars",
                  label: "VW Golf 1.6 TDI", kind: "product", claims: 0 }],
@@ -362,7 +362,7 @@ test("a subject that already has claims is not offered as a gap", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
-    risks: [RISK],
+    claims: [CLAIM],
     subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 4 }] } });
 
   assert.equal(p.shadow().querySelector(".lite-gap"), null);
@@ -374,14 +374,14 @@ test("a subject that already has claims is not offered as a gap", () => {
  * here is also asserting what does *not* happen: no panel-wide error, no card
  * that empties itself, nothing that reads as a retraction.
  */
-const CITED = { ...RISK, sources: [{ url: "https://example.test/thread", title: "Owners' thread" }] };
+const CITED = { ...CLAIM, sources: [{ url: "https://example.test/thread", title: "Owners' thread" }] };
 const CHECK = { pack_id: "org.kriko.cars", claim_id: "c1", verdict: "quoted",
                 detail: "", sources: [], checked_at: "2026-09-09T10:00:00" };
 
 test("pressing the check asks the app about this claim, by id", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   p.click(".lite-rc-factbtn");
 
@@ -395,7 +395,7 @@ test("pressing the check asks the app about this claim, by id", () => {
 test("the verdict lands on the card with the date it was checked", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   p.click(".lite-rc-factbtn");
 
@@ -406,11 +406,11 @@ test("the verdict lands on the card with the date it was checked", () => {
 });
 
 test("a claim with nothing to re-read offers no button", () => {
-  // RISK carries no sources. Offering a check that can only ever answer
+  // CLAIM carries no sources. Offering a check that can only ever answer
   // "unreachable" would be a control that exists to disappoint.
   const p = loadPanel();
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [RISK] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
 
   assert.equal(p.shadow().querySelector(".lite-rc-factbtn"), null);
 });
@@ -418,7 +418,7 @@ test("a claim with nothing to re-read offers no button", () => {
 test("a check the app refuses leaves the card as it was", () => {
   const p = loadPanel({ workerResponse: { ok: false, error: "no engine" } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   const button = p.click(".lite-rc-factbtn");
 
@@ -432,13 +432,246 @@ test("a check the app refuses leaves the card as it was", () => {
 test("a verdict already held survives the list being rebuilt", () => {
   const p = loadPanel({ workerResponse: { ok: true, check: CHECK } });
   p.openPanel();
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
   p.click(".lite-rc-factbtn");
 
   // A fresh analysis of the same page redraws every card from scratch.
-  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, risks: [CITED] } });
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CITED] } });
 
   const label = p.shadow().querySelector(".lite-rc-factverdict");
   assert.equal(label.hidden, false);
   assert.equal(label.dataset.verdict, "quoted");
+});
+
+// ── how sure the engine is, and what the reader does about it ───────────
+//
+// The panel had two states for four situations: claims, or a blank. A reader
+// who met the blank had a good pack installed for that exact product and no
+// way to find out which of four things had gone wrong. Every assertion below
+// is about the panel *not writing its own copy* — the sentence and the action
+// word are the engine's, because a client that composes its own from a status
+// code stops agreeing the first time a method is added.
+
+const PROBABLE = {
+  ...ENTRY,
+  result: {
+    ...ENTRY.result,
+    coverage: "PROBABLE_MATCH",
+    verdict: "probably",
+    score: 0.58,
+    considered: [{
+      subject_id: "s1", pack_id: "org.kriko.cars",
+      label: "Golf VII EA211 105 hp", score: 0.58,
+      keys: [
+        { key: "make", how: "exact", score: 1 },
+        { key: "engine_code", how: "absent", score: 0 },
+      ],
+    }],
+    next_step: {
+      action: "confirm", subject_id: "s1",
+      say: "This looks like Golf VII EA211 105 hp, but the page and the pack "
+         + "do not agree on everything. Is that the same one?",
+    },
+  },
+};
+
+const verdict = (p) => p.shadow().querySelector(".lite-verdict");
+
+test("a recognised page with claims gets no banner", () => {
+  // A banner on every successful answer is a banner nobody reads by the third.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, verdict: "recognised", score: 1,
+    claims: [CLAIM], next_step: { action: "none", say: "" } } });
+  assert.equal(verdict(p), null);
+});
+
+test("a doubtful answer is served, and labelled as a question", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(PROBABLE);
+
+  const box = verdict(p);
+  assert.equal(box.dataset.verdict, "probably");
+  assert.match(box.textContent, /Probably this one/);
+  assert.equal(box.querySelector(".lite-verdict-score").textContent, "58%");
+});
+
+test("the sentence is the engine's, word for word", () => {
+  // Not paraphrased, not recomposed from the verdict — the same string.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(PROBABLE);
+  assert.equal(
+    verdict(p).querySelector(".lite-verdict-say").textContent,
+    PROBABLE.result.next_step.say,
+  );
+});
+
+test("what was weighed is shown per key, with each key's own reading", () => {
+  // The two readings that matter point at different bugs: `conflict` is
+  // usually the page, `absent` is usually the adapter.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(PROBABLE);
+
+  const keys = [...verdict(p).querySelectorAll(".lite-weighed-key")]
+    .map((el) => el.dataset.how);
+  assert.deepEqual(keys, ["exact", "absent"]);
+  assert.match(verdict(p).textContent, /Golf VII EA211 105 hp/);
+});
+
+test("a page nothing covers offers the app rather than a search", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, verdict: "unrecognised", score: 0, considered: [],
+    next_step: { action: "install",
+      say: "No installed pack covers this kind of product at all." } } });
+
+  assert.equal(verdict(p).querySelector(".lite-verdict-btn").textContent,
+               "Open Kriko");
+});
+
+test("research with nothing to research on says what it will actually do", () => {
+  // `research` arrives with a subject_id when there is something to run
+  // against and without one when there is not. The second cannot start a run,
+  // so it opens search — and a button labelled "Research it" that opens a
+  // search field is a button the reader stops trusting.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, verdict: "unrecognised", score: 0.2,
+    considered: [{ subject_id: "s9", label: "Something else", score: 0.2, keys: [] }],
+    next_step: { action: "research", url: "https://example/x",
+      say: "The nearest thing installed is Something else." } } });
+
+  assert.equal(verdict(p).querySelector(".lite-verdict-btn").textContent,
+               "Find it by name");
+});
+
+test("an engine that says nothing about the verdict draws no banner", () => {
+  // An older engine sends no verdict at all. Silence is not a fifth state to
+  // render — it is the absence of an answer, and inventing one for it would
+  // put words in the engine's mouth.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  assert.equal(verdict(p), null);
+});
+
+// ── typing the name ─────────────────────────────────────────────────────
+
+const HITS = {
+  ok: true,
+  items: [
+    { subject_id: "a", pack_id: "org.kriko.cars", label: "Golf VII", claims: 134,
+      identity: { engine_code: "EA211", power_min_hp: "105" } },
+    { subject_id: "b", pack_id: "org.kriko.cars", label: "Golf VII", claims: 134,
+      identity: { engine_code: "EA211", power_min_hp: "125" } },
+  ],
+};
+
+test("the header opens a field to type a product name into", () => {
+  const p = loadPanel();
+  p.openPanel();
+  assert.equal(p.shadow().querySelector(".lite-search-field"), null);
+  p.click(".lite-btn-search");
+  assert.ok(p.shadow().querySelector(".lite-search-field"));
+});
+
+test("two characters is the floor, and nothing is asked below it", () => {
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "g");
+  p.flushTimers();
+  assert.equal(p.sent.filter((m) => m.type === "SEARCH").length, 0);
+});
+
+test("a search asks the worker, because the panel cannot reach the app", () => {
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "golf");
+  p.flushTimers();
+
+  const asked = p.sent.filter((m) => m.type === "SEARCH");
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].payload.q, "golf");
+});
+
+test("every result carries its identity, which is the whole point", () => {
+  // Two rows reading "Golf VII" are not a choice. The values underneath are
+  // what make them one, and that is what the reader asked search for.
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "golf");
+  p.flushTimers();
+
+  const hits = [...p.shadow().querySelectorAll(".lite-search-hit")];
+  assert.equal(hits.length, 2);
+  assert.match(hits[0].textContent, /105/);
+  assert.match(hits[1].textContent, /125/);
+  assert.match(hits[0].textContent, /134 known/);
+});
+
+test("a search that finds nothing says so rather than showing an empty list", () => {
+  const p = loadPanel({ searchResponse: { ok: true, items: [] } });
+  p.openPanel();
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "nothing like this");
+  p.flushTimers();
+  assert.match(p.shadow().querySelector(".lite-search-note").textContent,
+               /Nothing in the installed packs matches/);
+});
+
+test("pressing a result raises the app on that subject", () => {
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "golf");
+  p.flushTimers();
+  p.click(".lite-search-hit");
+
+  const opened = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
+  assert.equal(opened.payload.route, "subject/a");
+});
+
+test("pressing Analyze on a site nothing reads says so, and offers the fix", () => {
+  // Silence is right for the automatic run at page load — nobody asked it
+  // anything. It is wrong after a press: the reader hit a button called
+  // "Analyze current page" and watched nothing happen, which is the dead end
+  // §1.4 is about.
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "no-adapter");
+  assert.match(box.textContent.replace(/\s+/g, " "),
+               /Nothing installed knows how to read this site yet/);
+  p.click(".lite-verdict-btn");
+  assert.equal(p.sent.filter((m) => m.type === "OPEN_IN_APP").pop().payload.route,
+               "sites");
+});
+
+test("it is not a red banner, because the reader did nothing wrong", () => {
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
+  p.openPanel();
+  p.click(".lite-cta");
+  assert.equal(p.pipeline(), "idle");
+  assert.equal(p.errorText(), null);
+});
+
+test("an answer clears it — something read the page after all", () => {
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
+  p.openPanel();
+  p.click(".lite-cta");
+  assert.ok(p.shadow().querySelector(".lite-verdict"));
+  p.deliverEntry(ENTRY);
+  assert.equal(p.shadow().querySelector(".lite-verdict"), null);
 });

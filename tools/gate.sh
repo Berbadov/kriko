@@ -14,6 +14,7 @@
 #
 #     tools/gate.sh          # everything
 #     tools/gate.sh py       # just the Python suite
+#     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh ui       # just vitest, types, and the stale-bundle check
 #     tools/gate.sh tauri    # just the shell's cargo check, native + windows-target
 #
@@ -63,6 +64,20 @@ if [ "$only" = all ] || [ "$only" = py ]; then
     "$PYTHON" -m pytest
 fi
 
+# Not in `py`: it builds an artifact and makes a virtualenv, which is a
+# different order of cost from a test run, and `py` is the one people run in a
+# loop. Its own word, in `all`.
+if [ "$only" = all ] || [ "$only" = wheel ]; then
+    ran=1
+    # Everything above this line runs against the *checkout*, where `src/` is
+    # on the path and `kriko` imports whether or not the wheel would contain
+    # it. A reader's install failed on exactly that gap — the console script
+    # was there and the package it imports was not — and nothing in the tree
+    # could have seen it.
+    step "the shipped wheel imports and runs"
+    tools/smoke_wheel.sh
+fi
+
 if [ "$only" = all ] || [ "$only" = node ]; then
     ran=1
     step "node (scraper + extension panel)"
@@ -80,6 +95,13 @@ if [ "$only" = all ] || [ "$only" = ui ]; then
     # warning that fails a build is a warning somebody silences.
     step "svelte-check"
     npm --prefix ui run check -- --threshold error
+
+    # The extension's colour tokens are generated from the app's theme — same
+    # discipline as the bundle below, and for the same reason: the extension
+    # loads static files with no build step, so the output is committed and
+    # something has to notice when it stops matching its source.
+    step "the panel's palette is not stale"
+    python tools/tokens.py --check
 
     # src/app/web/static/ is committed build output: the wheel ships it, so a
     # stale bundle means `pip install kriko` serves a UI nobody can reproduce
