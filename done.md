@@ -6,6 +6,66 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-17 — the 0.10.0 work order (§3.1, and §1.4/§2.10's missing half)
+
+**§3.1 — the extension rebuilt, function and UI together.** Four commits, and
+the first three were subtraction and mechanism (see their own messages). This
+is the panel.
+
+*The four match states are drawable now.* `/api/analyze` has returned
+`verdict`, `score`, `considered` and `next_step` since §1.1 landed and the
+panel rendered none of them — claims or a blank, for four different situations.
+A recognised page still gets no banner, because one on every successful answer
+is one nobody reads by the third. The other three get a card that says which
+one happened, what was weighed, and what to do:
+
+- **probably** — served, and labelled as a question, with the score.
+- **unrecognised with candidates** — the nearest subject and its per-key
+  readings, colour-coded on the two that point at different bugs: a key
+  reading `conflict` is usually the page, a key reading `absent` is usually
+  the adapter.
+- **unrecognised with none** — no pack covers this kind of product, open the
+  app.
+
+**Every sentence is the engine's.** `next_step.say` is rendered verbatim and
+`action` is a closed vocabulary the panel turns into a button. A client that
+writes its own copy from a status code stops agreeing with the engine the
+first time a method is added, which is the failure this ends rather than
+repeats. The one thing the panel decides is the *label*, because `research`
+arrives with a `subject_id` when there is something to run against and without
+one when there is not — and a button saying "Research it" that opens a search
+field is a button the reader stops trusting.
+
+*§2.10's other half.* Search is in the panel: a field in the header, results
+from `GET /api/search`, and **every row carries its identity**. Against the
+real cars pack, "golf dq200" returns two rows both reading *Volkswagen Golf
+VII EA211 … DQ200*, distinguished only by 1197cc/105hp and 1395cc/125hp —
+which is the reader's own complaint, answered. Pressing one opens the app at
+`#/subject/<id>`, a route the app gained for this: it opens that row rather
+than filtering to it, because "this one among the others" is what somebody
+searching a catalogue came for.
+
+*§1.4's other half.* Pressing Analyze on a site nothing reads used to do
+nothing at all — deliberately, and right for the automatic run at page load
+where nobody asked anything. After a press it is the dead end this release
+exists to remove. It now says so and offers the app's Sites screen. Still not
+a red banner: a page Kriko cannot read is not an error the reader made.
+
+**And the gate stopped depending on the developer's machine.** Three
+`test_cli.py` cases assert what the CLI does with no engine running, and
+`attach()` scans the one fixed port the extension is allowed to assume — so
+they were asking whatever was serving on 8787. They failed twice during this
+work with somebody else's sites in the diff. The dangerous direction is the
+other one: a test that *passes* because a live engine answered proves nothing
+and looks fine. `no_attaching_to_the_readers_own_engine` is the third autouse
+guard in that conftest and the same shape as the two above it. Verified by
+running `test_cli.py` green with the app deliberately serving on 8787.
+
+Verified by hand throughout, in Chromium with the extension loaded unpacked
+against a sidecar holding the real cars pack: all four verdict states forced
+through a stub engine and photographed, search driven against the real store,
+and the no-adapter state pressed.
+
 ### 2026-09-16 — the 0.10.0 work order (§3.2, §3.3, §3.4)
 
 **§3.4 — the logo.** The mark is a slab K on the 16-cell grid

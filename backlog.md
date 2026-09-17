@@ -797,14 +797,18 @@ panel* — `ui/src/lib/shell/TerminalPanel.svelte`, `web/routers/terminal.py`,
 `providers/termpty.py`, the rail entry, the `ptyprocess`/`pywinpty`
 dependencies. The operator TUI (`app/tui/`) stays.
 
-**§2.10 — product search inside the extension**, showing each pack's scope so
-variants are distinguishable. The manual fallback when recognition misses.
+**~~§2.10 — product search inside the extension.~~ DONE — see `done.md`.**
+Engine half 2026-09-16 (`kriko/lookup/find.py`), panel half 2026-09-17. Every
+result carries its identity, and `#/subject/<id>` is where a row goes.
 
 **§2.11 — expose what is currently hardcoded**, with progressive disclosure.
 
-**§3.1 — rebuild the extension**, function and UI together, on the app's own
-tokens. §1.1's `verdict` / `considered` / `next_step` fields and §1.4's
-activation states are what it renders.
+**~~§3.1 — rebuild the extension.~~ DONE — see `done.md`.** Four commits: the
+`risks`/`claims` rename and three dead render paths out; the palette generated
+from the app's theme (B113 phases 0–2, first run a provable no-op); severity
+derived; then the panel — four verdict states, search, and the no-adapter
+state. B113's remaining phase 3 (saying in the *app* that the panel draws two
+blocks from the reader's page which never reach the engine) is not done.
 
 **~~§3.2/§3.3 — left panel and design system.~~ MOSTLY DONE — see `done.md`.**
 Icon set complete, live numbers and a sparkline on three rows, and the primary

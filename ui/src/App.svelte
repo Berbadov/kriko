@@ -191,6 +191,7 @@
                     {:else if view.name === "knowledge"}
                         <Knowledge
                             lens={view.lens ?? $route.query.lens ?? "all"}
+                            subjectId={$route.params[0] ?? ""}
                         />
                     {:else if $route.name === "history"}
                         <h2>History</h2>
