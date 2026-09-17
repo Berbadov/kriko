@@ -221,6 +221,30 @@ class ResearchTask:
     query_languages: tuple[str, ...] = ()
     budget_usd: float = 0.0
     max_documents: int = 5
+    #: The shortest explanation this pack will accept, in characters, from its
+    #: own `min_rationale_chars` gate. Carried on the task rather than read at
+    #: extraction time because the extractor has no store handle — and stated
+    #: to the extractor at all because it was previously only *checked*, after
+    #: the work was done. A model asked for a field in a list of seven keys
+    #: writes a phrase; the gate wants two sentences, and the gap between them
+    #: was the entire yield of some runs. 0 means the pack declared none.
+    min_rationale_chars: int = 0
+
+    @property
+    def rationale_rule(self) -> str:
+        """What to tell an extractor about the explanation field.
+
+        A sentence rather than a number, because the number alone reads as a
+        formatting constraint and the thing being asked for is a *kind of
+        writing*.
+        """
+        rule = ("two or three plain sentences somebody about to spend money "
+                "can act on — what goes wrong, when, and what it costs them "
+                "to find out.")
+        if self.min_rationale_chars:
+            rule += (f" This pack refuses anything under "
+                     f"{self.min_rationale_chars} characters.")
+        return rule
 
     def language_of(self, query_index: int) -> str:
         """The language template `n` is written in, or the pack's primary."""

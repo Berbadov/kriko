@@ -214,4 +214,11 @@ def lookup(conn, query: Query) -> LookupResult:
     deduped.sort(key=lambda c: (-c.relevance, c.severity, c.title))
     capped = tuple(deduped[:query.limit])
     coverage = "RISKS_FOUND" if capped else "MATCHED_NO_DATA"
+    # A scored match is served, and served *labelled*. Withholding the claims
+    # would put the reader back at the blank page `score.py` was written to
+    # end, and serving them as certain would be worse than the blank — so the
+    # coverage word itself carries the doubt, for a client that reads only
+    # that, and `resolution.method` carries it for one that reads more.
+    if resolution.method == "probable" and capped:
+        coverage = "PROBABLE_MATCH"
     return LookupResult(resolution, capped, coverage)

@@ -18,13 +18,39 @@ separate: a preference the reader can set without being shown the bill is how
 a $40 surprise happens.
 """
 
+from app import modelcatalogue
+
 #: The settings keys. Named once, here, because both the router that writes
 #: them and the providers that read them would otherwise spell them twice.
 HARNESS = "preferred_harness"
 MODEL = "llm_model"
 SEARCH = "search_provider"
 
-KEYS = (HARNESS, MODEL, SEARCH)
+#: One key per stage of a run, and every one of them optional.
+#:
+#: The reader asked to put a cheap model on extraction and a strong one on
+#: synthesis, which only works if the stages can differ — but a first-time
+#: reader must never meet four dropdowns where there was one. So each falls
+#: back to `MODEL`, and an installation that never opens the advanced control
+#: behaves exactly as it did.
+def role_key(role: str) -> str:
+    return f"{MODEL}_{role}"
+
+
+ROLE_KEYS = tuple(role_key(one) for one in modelcatalogue.ROLES)
+
+KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS)
+
+
+def for_role(conn, role: str) -> str:
+    """Which model this stage should use. The role's own, or the default.
+
+    Resolved here rather than at each call site, because a stage that forgot to
+    fall back would silently use whatever the environment said and the reader
+    would have no way to tell which model wrote what.
+    """
+    stored = read(conn)
+    return stored.get(role_key(role)) or stored.get(MODEL) or ""
 
 
 def read(conn) -> dict:
@@ -55,6 +81,7 @@ def choices(conn, app_state_path=None) -> dict:
     """
     from app import keys
     from app.providers import harness, llm
+    from app.web.settings import KRIKO_HOME
 
     chosen = read(conn)
     installed = [
@@ -80,9 +107,29 @@ def choices(conn, app_state_path=None) -> dict:
         "models": {
             "current": chosen[MODEL] or llm.model_name(),
             "default": llm.DEFAULT_MODEL,
-            # Free text on purpose. The endpoint a reader points this at may be
-            # OpenAI, a gateway, or something local, and a drop-down built from
-            # one vendor's list would make the other two unreachable.
+            # Still free text, and now also a list. The two are not in tension:
+            # the endpoint a reader points this at may be a gateway or
+            # something local, so a drop-down alone would make those
+            # unreachable — but "type a model name" as the *only* affordance
+            # was a choice offered with none of what you need to make it.
             "note": "Any model name your completion endpoint accepts.",
+            "offered": modelcatalogue.offered(
+                KRIKO_HOME,
+                ready={one["id"] for one in keys.status() if one["present"]},
+            ),
+            # Where the reader edits prices. Named rather than described,
+            # because "editable config" is only true if they can find it.
+            "catalogue": str(modelcatalogue.catalogue_path(KRIKO_HOME)),
         },
+        # Per stage of a run, each falling back to the one above. Sent with the
+        # notes so a client never has to write its own description of what a
+        # stage does and then drift from it.
+        "roles": [
+            {
+                "id": role,
+                "note": modelcatalogue.ROLE_NOTES.get(role, ""),
+                "chosen": chosen.get(role_key(role), ""),
+            }
+            for role in modelcatalogue.ROLES
+        ],
     }

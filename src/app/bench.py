@@ -133,6 +133,7 @@ def run_case(
     budget_usd: float = DEFAULT_BUDGET_USD,
     batch_id: str = "",
     search: str = "",
+    model: str = "",
     opener=None,
 ) -> dict:
     """One case, measured — dispatched on the case's `kind` (B126 §3/§9).
@@ -158,7 +159,7 @@ def run_case(
         return _run_bulk(
             settings, case, plane=plane, protocol=protocol,
             max_documents=max_documents, budget_usd=budget_usd,
-            batch_id=batch_id, search=search,
+            batch_id=batch_id, search=search, model=model,
         )
     if kind == "validation":
         return _run_validation(
@@ -168,7 +169,7 @@ def run_case(
     return _run_specific(
         settings, case, plane=plane, protocol=protocol,
         max_documents=max_documents, budget_usd=budget_usd,
-        batch_id=batch_id, search=search,
+        batch_id=batch_id, search=search, model=model,
     )
 
 
@@ -188,7 +189,7 @@ def _spend_columns(protocol: str) -> tuple[dict, str]:
 
 def _run_specific(
     settings, case: dict, *, plane: str, protocol: str, max_documents: int,
-    budget_usd: float, batch_id: str, search: str = "",
+    budget_usd: float, batch_id: str, search: str = "", model: str = "",
 ) -> dict:
     """One subject, the ordinary research operation — precision/recall per
     claim (B126 §3). The original shape of this benchmark, before `bulk` and
@@ -238,6 +239,11 @@ def _run_specific(
                     "backend": plane,
                     "protocol": protocol,
                     "search": search,
+                    # Empty means "whichever this installation would pick",
+                    # exactly as `protocol` and `search` already do — so a
+                    # benchmark that names no model measures the reader's own
+                    # setting rather than one this file chose for them.
+                    "model": model,
                     "max_documents": max_documents,
                     "budget_usd": budget_usd,
                 },
@@ -280,7 +286,7 @@ def _run_specific(
 
 def _run_bulk(
     settings, case: dict, *, plane: str, protocol: str, max_documents: int,
-    budget_usd: float, batch_id: str, search: str = "",
+    budget_usd: float, batch_id: str, search: str = "", model: str = "",
 ) -> dict:
     """An agenda run over N subjects — throughput, and whether quality
     *degrades with volume* (B126 §3), the failure a single-case benchmark
@@ -333,7 +339,7 @@ def _run_bulk(
         one = _run_specific(
             settings, sub_case, plane=plane, protocol=protocol,
             max_documents=max_documents, budget_usd=budget_usd,
-            batch_id=batch_id, search=search,
+            batch_id=batch_id, search=search, model=model,
         )
         if one.get("error"):
             # "A claimed uninstalled" and "the plane failed" look the same
@@ -615,6 +621,76 @@ def verdict(rows: list[dict]) -> dict:
         else:
             seen["dominant_failure"] = ""
     return {"planes": sorted(planes.values(), key=lambda one: one["plane"])}
+
+
+def grid(params: dict, case_count: int) -> dict:
+    """How many measurements a request asks for, and along which axes.
+
+    Every axis here multiplies, which is the whole reason the reader asked to
+    scope this: cases × planes × protocols × searches × models × reps. Three
+    cases, two planes and three protocols at two reps is thirty-six runs, and
+    nothing on the screen said so before pressing.
+
+    Empty on an axis means "one — whatever this installation would pick",
+    never "all of them". A benchmark that swept every axis by default is one
+    nobody presses twice.
+    """
+    def axis(*names) -> list[str]:
+        for name in names:
+            raw = str(params.get(name) or "")
+            found = [one.strip() for one in raw.split(",") if one.strip()]
+            if found:
+                return found
+        return [""]
+
+    planes = axis("planes") if params.get("planes") else ["(this machine's)"]
+    axes = {
+        "cases": max(1, case_count),
+        "planes": len(planes),
+        "protocols": len(axis("protocols")),
+        "searches": len(axis("searches", "search")),
+        "models": len(axis("models", "model")),
+        "reps": max(1, min(int(params.get("reps") or 1), 10)),
+    }
+    total = 1
+    for value in axes.values():
+        total *= value
+    return {"axes": axes, "runs": total}
+
+
+def estimate(conn, params: dict, case_count: int) -> dict:
+    """What this grid is likely to cost, before anybody presses it.
+
+    "Benchmarking everything costs a lot. I need to scope it." Scoping without
+    a number is still guessing — so this multiplies the grid by what a measured
+    run has actually cost *here*, and says `None` where nothing has been
+    measured rather than inventing a figure. Same refusal as `app/costs.py`,
+    for the same reason: the next decision is whether to spend.
+
+    Only the paid plane is priced. A harness run's marginal cost really is
+    zero, and counting it as free is a measurement rather than an optimism.
+    """
+    from app import costs
+
+    shape = grid(params, case_count)
+    per_run = costs.estimate(conn, plane="api")
+    usd, tokens = per_run.get("usd"), per_run.get("tokens")
+    priced = shape["runs"]
+    planes = [one.strip() for one in str(params.get("planes") or "").split(",")
+              if one.strip()]
+    if planes and "api" not in planes:
+        # Nothing paid in this grid at all.
+        return {**shape, "usd": 0.0, "tokens": 0, "basis": per_run.get("basis", 0),
+                "note": "no paid plane in this grid — nothing to spend"}
+    if planes:
+        priced = shape["runs"] // max(1, len(planes))
+    return {
+        **shape,
+        "usd": round(usd * priced, 4) if isinstance(usd, (int, float)) else None,
+        "tokens": int(tokens * priced) if isinstance(tokens, (int, float)) else None,
+        "basis": per_run.get("basis", 0),
+        "note": per_run.get("note", ""),
+    }
 
 
 def planes_available(settings) -> list[str]:

@@ -38,6 +38,9 @@ class Term:
     # rather than one row per value — a production run of 2014-2020 is one fact,
     # not seven. The query supplies a point that must fall inside.
     is_range: bool = False
+    # How much this key counts toward a *near* match (`score.py`). Unused by the
+    # exact path, which weighs nothing — there, every hard key is absolute.
+    weight: float = 1.0
 
 
 def _match_rules(raw: str) -> dict:
@@ -69,8 +72,22 @@ def load_terms(conn, pack_ids) -> dict[str, Term]:
             required=bool(rules.get("required")),
             narrow_order=rules.get("narrow_order"),
             tolerance=rules.get("tolerance"),
-            is_range=bool(rules.get("range")))
+            is_range=bool(rules.get("range")),
+            weight=_weight(rules.get("weight")))
     return terms
+
+
+def _weight(raw) -> float:
+    """A term's match weight, defaulting to 1.0. A bad value is not a crash.
+
+    Same reasoning as `score.thresholds`: a pack with a typo in one row should
+    match slightly worse, not become unmatchable.
+    """
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 1.0
+    return value if value > 0 else 1.0
 
 
 def alias_map(conn, pack_ids) -> dict[str, str]:
@@ -220,13 +237,88 @@ def resolve(conn, query, pack_ids) -> Resolution:
             flags.extend(f"{pack_id}/{f}" for f in one.flags)
 
     if not subjects:
-        return Resolution((), "no_match",
-                          "; ".join(notes) or "no pack recognised this",
-                          tuple(dict.fromkeys(flags)))
+        # Only here. The exact path has spoken and found nothing, so scoring
+        # costs a query on a page that was about to show a blank — and the
+        # blank is the bug. See `score.py` for why this is not the first thing
+        # tried rather than the last.
+        return _resolve_by_score(conn, query, pack_ids, notes, flags)
 
     return Resolution(tuple(sorted(set(subjects))),
                       "ambiguous" if ambiguous else "exact",
                       "; ".join(notes), tuple(dict.fromkeys(flags)))
+
+
+def _resolve_by_score(conn, query, pack_ids, notes, flags) -> Resolution:
+    """What the exact path could not say: how close the nearest thing was.
+
+    Per pack, for the same reason `resolve` is: thresholds and weights are the
+    pack's, so a strict pack and a lenient one installed side by side each
+    answer in their own terms. The best score across packs decides the method,
+    and every candidate weighed is carried back so a client can show the reader
+    — or a developer — why.
+    """
+    from kriko.lookup import score as scoring
+
+    weighed: list[scoring.Candidate] = []
+    matched: list[str] = []
+    probable: list[str] = []
+
+    for pack_id in pack_ids:
+        pack = (pack_id,)
+        terms = load_terms(conn, pack)
+        identity = normalize_identity(query.identity, alias_map(conn, pack),
+                                      value_alias_map(conn, pack))
+        found = scoring.candidates(conn, query.kind, identity, pack_id, terms)
+        if not found:
+            continue
+        weighed.extend(found)
+        floor, band = scoring.thresholds(conn, pack_id)
+        for one in found:
+            if one.score >= floor:
+                matched.append(one.subject_id)
+            elif one.score >= band:
+                probable.append(one.subject_id)
+
+    weighed.sort(key=lambda one: (-one.score, one.subject_id))
+    considered = tuple(weighed[:5])
+    flagged = tuple(dict.fromkeys(flags))
+
+    if matched:
+        # Scored its way to a match. `ambiguous` where several cleared the
+        # floor, exactly as the exact path reports several equal candidates:
+        # the reader is shown what holds for all of them, not a coin toss.
+        best = max(one.score for one in weighed if one.subject_id in matched)
+        return Resolution(
+            tuple(sorted(set(matched))),
+            "ambiguous" if len(set(matched)) > 1 else "exact",
+            _scored_note(weighed[0], "matched on a close reading"),
+            flagged, round(best, 4), considered)
+
+    if probable:
+        return Resolution(
+            tuple(sorted(set(probable))), "probable",
+            _scored_note(weighed[0], "close, but not close enough to assume"),
+            flagged, round(weighed[0].score, 4), considered)
+
+    # Genuinely nothing — but say what was weighed rather than only that
+    # nothing won. `considered` is empty when the packs hold no subject of this
+    # kind at all, which is a different problem and reads as one.
+    return Resolution(
+        (), "no_match",
+        "; ".join(notes) or _nothing_note(weighed),
+        flagged, 0.0, considered)
+
+
+def _scored_note(best, lead: str) -> str:
+    return f"{lead}: {best.label or best.subject_id} ({best.score:.0%})"
+
+
+def _nothing_note(weighed) -> str:
+    if not weighed:
+        return "no pack recognised this"
+    best = weighed[0]
+    return (f"no pack recognised this — the nearest was "
+            f"{best.label or best.subject_id} at {best.score:.0%}")
 
 
 def _resolve_in_pack(conn, query, pack_id) -> Resolution:

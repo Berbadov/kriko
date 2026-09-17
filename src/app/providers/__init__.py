@@ -28,6 +28,35 @@ cost". These functions make one request and return its result.
 
 from app.providers import exa, fetch, harness, llm
 
+
+def completer_for(model: str):
+    """The adapter that speaks to whoever serves this model.
+
+    Routed on the *model name* rather than on a provider setting, because the
+    reader picks a model and should not also have to tell us who sells it —
+    and because with a model chosen per stage of a run (`app/prefs.py`'s
+    roles), a single provider setting could not describe a run that used two.
+
+    `models.toml` is the routing table, which is the same file the reader edits
+    to correct a price: pointing a gateway at a new model and naming its
+    provider is one row, not a release. An unlisted model falls to the
+    OpenAI-shaped adapter, which is the format everything but Anthropic
+    implements.
+    """
+    from app import modelcatalogue
+    from app.web.settings import KRIKO_HOME
+
+    row = modelcatalogue.load(KRIKO_HOME).get(model) or {}
+    if row.get("provider") == "anthropic" or model.startswith("claude-"):
+        # The prefix check is a fallback for a model released after the
+        # reader's catalogue was written: `claude-` is Anthropic's own
+        # namespace, so sending it to an OpenAI-shaped endpoint could only
+        # ever fail.
+        from app.providers import anthropic_llm
+
+        return anthropic_llm.completer(model=model)
+    return llm.completer(model=model)
+
 __all__ = [
     "exa", "fetch", "harness", "llm",
     "api_researcher", "harness_researcher",
@@ -114,7 +143,7 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     researcher = ApiResearcher(
         found,
         fetch.reader(),
-        llm.completer(model=model),
+        completer_for(model),
         price_per_call=price_per_call,
         spend=spend,
     )

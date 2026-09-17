@@ -605,6 +605,22 @@ CREATE TABLE IF NOT EXISTS site_requests (
     last_at    TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS site_requests_last ON site_requests (last_at DESC);
+
+-- What the *browser* made of the sites this installation can read.
+--
+-- The app can see that an adapter exists; only the extension can see whether
+-- Chrome ever granted the host permission that turns one into an injected
+-- content script. Until this table existed the Sites screen showed "readable"
+-- for a site the panel would never appear on, and the reader — correctly —
+-- read that as the whole feature being broken. Reported by the extension after
+-- each of its syncs, so a row is a fact about a browser and not a guess.
+CREATE TABLE IF NOT EXISTS site_activation (
+  host    TEXT PRIMARY KEY,
+  state   TEXT NOT NULL DEFAULT '',   -- active|pending|refused
+  detail  TEXT NOT NULL DEFAULT '',
+  pattern TEXT NOT NULL DEFAULT '',
+  at      TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -1326,6 +1342,45 @@ def set_site_request(conn: sqlite3.Connection, host: str, *, state: str,
     conn.commit()
 
 
+def forget_site_request(conn: sqlite3.Connection, host: str) -> bool:
+    """Drop an ask. Called when the site became readable — it is not an ask any more."""
+    done = conn.execute("DELETE FROM site_requests WHERE host = ?", (host,))
+    conn.commit()
+    return bool(done.rowcount)
+
+
+def record_activation(conn: sqlite3.Connection, rows) -> int:
+    """What the extension's last sync made of each site. Replaces, never merges.
+
+    A whole-list replace because the extension's status *is* the whole list:
+    a site it no longer reports is one it no longer has registered, and
+    merging would leave the screen claiming an activation that no browser
+    still holds.
+    """
+    now = _now()
+    conn.execute("DELETE FROM site_activation")
+    for row in rows:
+        host = str(row.get("site") or "").strip().lower()
+        if not host:
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO site_activation (host, state, detail,"
+            " pattern, at) VALUES (?,?,?,?,?)",
+            (host, str(row.get("state") or "")[:32],
+             str(row.get("detail") or "")[:500],
+             str(row.get("pattern") or "")[:200], now),
+        )
+    conn.commit()
+    return len(rows)
+
+
+def activations(conn: sqlite3.Connection) -> dict[str, dict]:
+    return {
+        row["host"]: dict(row)
+        for row in conn.execute("SELECT * FROM site_activation")
+    }
+
+
 def site_requests(conn: sqlite3.Connection, *, host: str = "") -> list[dict]:
     sql = "SELECT * FROM site_requests"
     args: list = []
@@ -1629,6 +1684,13 @@ def query_shapes(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
 # is visible as a state rather than as a spinner nobody can explain.
 
 QUEUED, RUNNING = "queued", "running"
+#: Asked to stop, still tearing down. A real state rather than a message,
+#: because the reader pressed a button and the two honest answers — "stopping"
+#: and "stopped" — were rendered identically while in-flight work drained. A
+#: run that says `cancelled` while it is still spending is the complaint;
+#: one that still says `running` after the reader stopped it is the same
+#: complaint wearing the other hat.
+CANCELLING = "cancelling"
 SUCCEEDED, FAILED, CANCELLED, INTERRUPTED = (
     "succeeded",
     "failed",
@@ -1636,6 +1698,10 @@ SUCCEEDED, FAILED, CANCELLED, INTERRUPTED = (
     "interrupted",
 )
 TERMINAL = frozenset({SUCCEEDED, FAILED, CANCELLED, INTERRUPTED})
+#: States a job is still alive in. `CANCELLING` is here, not in TERMINAL: the
+#: worker has not finished, and a poller that stopped watching would miss the
+#: partial being written.
+LIVE = frozenset({QUEUED, RUNNING, CANCELLING})
 
 
 def _now() -> str:
@@ -1729,14 +1795,56 @@ def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
     if row["state"] == QUEUED:
         finish_job(conn, job_id, CANCELLED, message="cancelled before it started")
         return CANCELLED
-    if row["state"] == RUNNING:
-        conn.execute(
-            "UPDATE jobs SET cancel_requested = 1, message = ? WHERE job_id = ?",
-            ("cancelling…", job_id),
+    if row["state"] in (RUNNING, CANCELLING):
+        # Idempotent on purpose. A reader who presses a button that appears to
+        # do nothing presses it again, and a second press must not queue a
+        # second teardown or reset the clock on the first.
+        #
+        # The state guard is in the WHERE clause rather than in the `if` above,
+        # because the worker is running while this executes: between reading
+        # the row and writing it, the job can finish. Without it a second press
+        # arriving in that window writes `cancelling` over `cancelled` and the
+        # run is left looking alive forever — a spinner nobody can clear, which
+        # is worse than the unresponsive button it was meant to fix.
+        done = conn.execute(
+            "UPDATE jobs SET cancel_requested = 1, state = ?, message = ?"
+            " WHERE job_id = ? AND state IN (?, ?)",
+            (CANCELLING, "stopping…", job_id, RUNNING, CANCELLING),
         )
         conn.commit()
-        return RUNNING
+        if not done.rowcount:
+            return (get_job(conn, job_id) or {}).get("state") or CANCELLED
+        return CANCELLING
     return row["state"]
+
+
+def save_partial(conn: sqlite3.Connection, job_id: str, result: dict) -> None:
+    """Keep what a running job has finished, before it is asked to stop.
+
+    Written *as the work happens* rather than at the end, which is the whole
+    point: the reader cancelled a run that had already gathered sources and
+    extracted findings, and all of it went in the bin because the only place
+    a result was ever written was the success path. Nothing that reached this
+    row is lost by stopping.
+    """
+    conn.execute(
+        "UPDATE jobs SET result_json = ? WHERE job_id = ?",
+        (json.dumps(result, default=str), job_id),
+    )
+    conn.commit()
+
+
+def partial_of(conn: sqlite3.Connection, job_id: str) -> dict:
+    row = conn.execute(
+        "SELECT result_json FROM jobs WHERE job_id = ?", (job_id,)
+    ).fetchone()
+    if row is None or not row["result_json"]:
+        return {}
+    try:
+        found = json.loads(row["result_json"])
+    except json.JSONDecodeError:
+        return {}
+    return found if isinstance(found, dict) else {}
 
 
 def cancel_requested(conn: sqlite3.Connection, job_id: str) -> bool:
@@ -1785,15 +1893,19 @@ def work_in_flight(conn: sqlite3.Connection) -> int:
 
 def interrupt_running(conn: sqlite3.Connection) -> int:
     """Called at startup. Anything still `running` belongs to a dead process."""
+    # `CANCELLING` belongs in here with the other two. Left out, a job whose
+    # process died mid-teardown is the one row that spins forever after a
+    # restart — exactly what this function exists to prevent.
     cursor = conn.execute(
         "UPDATE jobs SET state = ?, finished_at = ?, message = ?"
-        " WHERE state IN (?, ?)",
+        " WHERE state IN (?, ?, ?)",
         (
             INTERRUPTED,
             _now(),
             "the server stopped while this was running",
             RUNNING,
             QUEUED,
+            CANCELLING,
         ),
     )
     conn.commit()

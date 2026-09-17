@@ -576,13 +576,21 @@ open fails the reader's next action is pasting it.
 
 **`GET /api/terminal/state`, `GET /api/terminal/stream`,
 `POST /api/terminal/input`, `POST /api/terminal/resize`,
-`POST /api/terminal/close`** (`routers/terminal.py`) — a real shell, run
-inside the app, because a harness
-(Claude Code, opencode) that needs a one-time `login` cannot do it from inside
-a sandboxed subprocess spawn, and sending the reader out to their OS's own
-terminal for that is exactly the friction the app exists to remove. One PTY per
-app session (`app/providers/termpty.py`'s module-level `SESSION`), started on
-the first request that needs it.
+`POST /api/terminal/close`** (`routers/terminal.py`) — a real shell, because a
+harness (Claude Code, opencode) that needs a one-time `login` cannot do it from
+inside a sandboxed subprocess spawn. One PTY per app session
+(`app/providers/termpty.py`'s module-level `SESSION`), started on the first
+request that needs it.
+
+**Its client is `kriko tui`, not the app** (2026-09-16, §2.9). There was a
+panel in the dashboard on these same endpoints, and it was removed: it was a
+longer way round to the buyer flow, and a terminal emulator in a webview cost
+`@xterm/xterm` plus its DOM renderer — 335 KB of chunk and a bundle budget
+raised by 440 KB to admit it, both now given back. The endpoints stay because
+`app/tui/client.py` drives them for the console's Ctrl-] pass-through, which is
+where a one-time interactive `login` belonged all along: it is an operator's
+setup step, not a screen a reader keeps. A shell in the *operator's own*
+terminal needs no emulator at all.
 
 **This was a WebSocket until 0.7.12, and the WebSocket is why it never
 worked.** B107/B109 spent six releases closing real paths inside that handler —
@@ -665,6 +673,7 @@ Every table, and the question it answers:
 | `operations` | One row per unit of agent-driven work, opened before the work and closed after it. What makes "is my agent doing anything right now" answerable — including through the MCP door, which this app does not start and cannot otherwise see. A feed, bounded at 2000 rows: what a run *produced* lives in `submissions`, `pipeline_runs` and `research_runs`, all of which outlive it. |
 | `local_adapters` | How to read a site this installation learned by itself, kept out of the store by the same rule everything else here is: a site the reader taught their own copy about is not pack content, must not enter a `content_digest`, and must not travel to anyone else's install as though an author had reviewed it. Always loses to a pack's adapter for the same host. |
 | `site_requests` | Sites somebody stood on and pressed the button, that nothing here can read. One row per host with a count and one sample page — the demand signal, and the only honest input to "which site should Kriko learn next". |
+| `site_activation` | What the *browser* made of each readable site, reported by the extension after every sync. The app can see that an adapter exists; only the extension can see whether Chrome granted the host permission that turns one into an injected content script — and `permissions.request` must come from a gesture inside the extension, so registering a site in the app can never be enough. Without this row the Sites screen said "readable" about a site the panel would never appear on, which is what the reader met as "kriko recognizes this site please reload" that no reload ever cleared. Replaced wholesale on each report, never merged: a site the extension stops naming is one it no longer has registered. |
 | `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
 | `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
 

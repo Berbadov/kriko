@@ -57,15 +57,24 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
     return stop;
 }
 
-/** `running` and `queued` are the two states worth watching. */
+/** `queued`, `running` and `cancelling` are the states worth watching.
+ *
+ * Derived from `done` rather than listed, which is why gaining a fourth live
+ * state cost this line nothing.
+ */
 export const isLive = (job: Job) => !job.done;
 
 export const STATE_WORD: Record<string, string> = {
     queued: "waiting its turn",
     running: "running",
+    // Two words for what used to be one. A run that has been asked to stop is
+    // still spending until its teardown finishes, and showing "cancelled"
+    // through that window is the reader's own report — they pressed the button
+    // and watched the tokens keep going.
+    cancelling: "stopping…",
     succeeded: "done",
     failed: "failed",
-    cancelled: "cancelled",
+    cancelled: "stopped",
     interrupted: "interrupted by a restart",
 };
 

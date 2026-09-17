@@ -16,6 +16,11 @@
 //     what a label means, it belongs in the pack's adapter JSON.
 
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
+
+//: How many rows one search may return to the panel. The engine allows up to
+//: 50; a floating panel beside a listing is a list somebody scans, and the
+//: right answer to "I cannot see it" is a better query rather than more rows.
+const SEARCH_LIMIT = 12;
 const STORAGE_KEY_PREFIX = "kriko_result_";
 const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -109,11 +114,39 @@ async function reportUnreadableSite(tab) {
       body: JSON.stringify({ url, title: (tab && tab.title) || "" }),
     });
     const answer = response && response.ok ? await response.json() : null;
-    // A site the app *can* read, with no panel on it, is a different bug: the
-    // dynamic registration has not caught up, so ask it to.
+    // A site the app *can* read, with no panel on it, is a different bug —
+    // and for six versions this branch guessed at which one and guessed
+    // wrong. It said "reloading the page should show the panel", the reader
+    // reloaded, nothing happened, and the message came back unchanged, because
+    // the actual blocker was a host permission Chrome will only grant from a
+    // gesture inside this extension. No number of reloads can supply that.
+    //
+    // So: re-sync, then read what the sync actually concluded about *this*
+    // host, and say that. A reload is only offered where a reload is genuinely
+    // what is missing.
     if (answer && answer.readable) {
-      await syncSites({ fresh: true });
-      await notify(tab, "Kriko knows this site — reloading the page should show the panel.");
+      const record = await syncSites({ fresh: true });
+      const host = _hostOf(url);
+      const row = (record.sites || []).find((one) => one.site === host);
+      if (row && row.state === "pending") {
+        await notify(
+          tab,
+          "Kriko reads this site, but your browser has not granted it "
+          + "permission yet. Open Kriko's extension options and press Grant — "
+          + "only the extension can ask.",
+        );
+        if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
+        return true;
+      }
+      if (row && row.state === "refused") {
+        await notify(tab, `Kriko cannot register this site: ${row.detail || "the browser refused it"}`);
+        return true;
+      }
+      // Registered and permitted. A content script only starts on a load, so
+      // here — and only here — a reload really is the missing step, and we do
+      // it rather than asking for it.
+      await notify(tab, "Kriko reads this site. Reloading to show the panel…");
+      if (chrome.tabs && chrome.tabs.reload) await chrome.tabs.reload(tab.id);
       return true;
     }
     await notify(
@@ -380,12 +413,12 @@ const SITE_SYNC_PERIOD_MINUTES = 30;
 
 // The same files, in the same order, as `manifest.json`'s two static blocks.
 // A dynamic registration is one entry rather than two because order inside
-// the array is what matters: `icons.js` and `risk_card.js` define what
+// the array is what matters: `icons.js` and `claim_card.js` define what
 // `hover_lite.js` calls.
 const SITE_SCRIPTS = [
   "content.js",
   "hover_lite/icons.js",
-  "hover_lite/risk_card.js",
+  "hover_lite/claim_card.js",
   "hover_lite/hover_lite.js",
 ];
 
@@ -396,6 +429,14 @@ const SITE_SCRIPTS = [
 // `site: "*"` gets nothing, and a typo becomes a visibly missing site rather
 // than a permission prompt for the whole web.
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+function _hostOf(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch (_) {
+    return "";
+  }
+}
 
 function siteToPattern(site) {
   const host = String(site || "").trim().toLowerCase();
@@ -569,7 +610,39 @@ async function syncSites({ fresh = false } = {}) {
     code: "",
   };
   await _writeSiteStatus(record);
+  await _reportActivation(sites);
   return record;
+}
+
+// Tell the app what the browser made of its sites.
+//
+// The app can see that an adapter exists. Only this worker can see whether
+// Chrome ever granted the host permission that turns one into an injected
+// content script, and until it said so the Sites screen showed "readable" for
+// a site the panel would never appear on. The reader registered a site, was
+// told Kriko recognised it, reloaded, and nothing happened — with the screen
+// insisting nothing was wrong.
+//
+// Best effort, and silent on failure: the app being closed is the ordinary
+// state of a browser, and a status nobody could deliver is not a reason to
+// undo a registration that succeeded.
+async function _reportActivation(sites) {
+  try {
+    await _fetchApp(`${await apiBase()}/api/sites/activation`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sites: sites.map((one) => ({
+          site: one.site,
+          state: one.state || "",
+          detail: one.detail || "",
+          pattern: one.pattern || "",
+        })),
+      }),
+    });
+  } catch (_) {
+    // The app is not running. It will ask again on its next sync.
+  }
 }
 
 // Four triggers, one function, because the sync is convergent — none of these
@@ -624,6 +697,27 @@ function toViewModel(payload, appBase) {
     method: payload.method,
     flags: payload.flags || [],
     unmapped_labels: payload.unmapped_labels || [],
+    // How sure the engine is that this page *is* this product, and what it
+    // weighed to decide. Carried since 0.10.0 because the panel had exactly
+    // two states — a match, or a blank — for four different situations, and
+    // the reader who met the blank had a good pack installed for that exact
+    // product with no way to find out which had happened.
+    //
+    // `next_step` is the engine's own sentence and action word, not a status
+    // code for the panel to write copy from: a client writing its own copy
+    // stops agreeing with the engine the first time a method is added.
+    verdict: payload.verdict || "",
+    score: typeof payload.score === "number" ? payload.score : null,
+    considered: Array.isArray(payload.considered) ? payload.considered : [],
+    next_step: payload.next_step || null,
+    // Which packs answered, and the units their context values are in. Both
+    // are sent by /api/analyze and both were dropped here, silently: the
+    // footer printed "unknown" on every result since the byline was added,
+    // and every context fact rendered without its unit. Neither had a test,
+    // because a test for this shape would have been written against this
+    // function rather than against the payload it is supposed to carry.
+    packs: Array.isArray(payload.packs) ? payload.packs : [],
+    context_units: payload.context_units || {},
     // The app stores every analysis and already renders one at this route, so
     // "see the whole thing" needs no new endpoint — only the id it handed back.
     //
@@ -669,7 +763,7 @@ function toViewModel(payload, appBase) {
     // nothing to say about it, which is a gap the panel can offer to fill
     // rather than an emptiness it has to apologise for.
     subjects: Array.isArray(payload.subjects) ? payload.subjects : [],
-    risks: claims.map((claim) => {
+    claims: claims.map((claim) => {
       const strength = _strengthOf(claim);
       return {
         // Identity, so a card can be pointed at rather than only described:
@@ -677,8 +771,8 @@ function toViewModel(payload, appBase) {
         claim_id: claim.claim_id,
         subject_id: claim.subject_id,
         title: claim.title,
-        rationale: claim.body,
-        inspection_advice: claim.advice,
+        body: claim.body,
+        advice: claim.advice,
         severity: claim.severity,
         domain: claim.domain,
         subject: claim.subject,
@@ -764,16 +858,16 @@ async function _writeCachedAnalysis(url, entry) {
 }
 
 async function _updateBadgeForResult(result, tabId) {
-  const risks = Array.isArray(result?.risks) ? result.risks : [];
-  const highCount = risks.filter((r) => r.severity === "high").length;
+  const claims = Array.isArray(result?.claims) ? result.claims : [];
+  const highCount = claims.filter((r) => r.severity === "high").length;
 
   let badgeText = "";
   let badgeColor = "#2d7b41"; // low green
   if (highCount > 0) {
     badgeText = String(highCount);
     badgeColor = "#b5392f"; // high red
-  } else if (risks.length > 0) {
-    badgeText = String(risks.length);
+  } else if (claims.length > 0) {
+    badgeText = String(claims.length);
     badgeColor = "#a3641a"; // medium orange
   }
 
@@ -1181,6 +1275,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  /* Typing a product name, when standing on its page did not place it.
+   *
+   * A read, so it goes through `_getApp` — and through the worker at all for
+   * the same reason every other call does: the content script has no
+   * `host_permissions` for 127.0.0.1, so a fetch from the panel would be a
+   * cross-origin request the page's own CSP gets a say in.
+   *
+   * The query is passed straight through and the limit is not the caller's to
+   * choose. A panel is a list, not a catalogue, and a client that could ask
+   * for a thousand rows is a client that will one day be asked to render
+   * them.
+   */
+  if (request.type === "SEARCH") {
+    const query = String(request.payload?.q || "").trim();
+    if (!query) {
+      sendResponse({ ok: true, items: [] });
+      return false;
+    }
+    _getApp(`/api/search?q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}`)
+      .then((body) => sendResponse({
+        ok: true, items: Array.isArray(body?.items) ? body.items : [] }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async

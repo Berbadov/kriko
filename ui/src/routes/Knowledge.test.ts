@@ -148,3 +148,90 @@ describe("Knowledge", () => {
         expect(screen.getByText(/suspect what the page was read as/)).toBeInTheDocument();
     });
 });
+
+// ── the card that would not go away ────────────────────────────────────
+//
+// "After making a pack, there's a warning banner with install it / forget. I
+// click either one and the warning stays there." Both endpoints were correct.
+// B129 had already made the card say "is installed" — and left it a
+// warning-coloured box in the alert position, which is the half anybody reads.
+
+const DRAFT = {
+    slug: "widgets",
+    root: "/root/.kriko/drafts/widgets",
+    files: ["pack.toml"],
+    artifact: null,
+    pack_id: "widgets",
+    name: "Widgets",
+    version: "0.1.0",
+    error: "",
+    installed_as: "",
+};
+
+const drafted = (over = {}) => ({
+    "/api/packs/drafts": { items: [{ ...DRAFT, ...over }] },
+});
+
+describe("a drafted pack", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("is an alert while it is still waiting on the reader", async () => {
+        serve(drafted());
+        render(Knowledge);
+        const card = await screen.findByText(/was drafted for you/);
+        expect(card.closest("article")?.className).toContain("notice");
+    });
+
+    it("stops being an alert once it is in the store", async () => {
+        serve(drafted({ installed_as: "widgets" }));
+        render(Knowledge);
+        const card = await screen.findByText(/is installed/);
+        expect(card.closest("article")?.className).not.toContain("notice");
+    });
+
+    it("offers hiding only once there is nothing left to decide", async () => {
+        serve(drafted());
+        render(Knowledge);
+        await screen.findByText(/was drafted for you/);
+        expect(screen.queryByText("Hide this")).toBeNull();
+    });
+
+    it("can be hidden without throwing away what the agent wrote", async () => {
+        serve(drafted({ installed_as: "widgets" }));
+        render(Knowledge);
+        (await screen.findByText("Hide this")).click();
+
+        await waitFor(() => expect(screen.queryByText(/is installed/)).toBeNull());
+        const calls = vi.mocked(globalThis.fetch).mock.calls;
+        // Written down, or it comes back on reload — which is the same
+        // complaint the reader already made.
+        await waitFor(() =>
+            expect(
+                calls.some(
+                    ([url, init]) =>
+                        String(url).includes("/api/settings") &&
+                        String((init as RequestInit)?.body ?? "").includes("widgets"),
+                ),
+            ).toBe(true),
+        );
+        // And nothing was deleted: hiding a receipt must not destroy the one
+        // copy of what the agent proposed.
+        expect(
+            calls.some(
+                ([url, init]) =>
+                    String(url).includes("/api/packs/drafts/widgets") &&
+                    (init as RequestInit)?.method === "DELETE",
+            ),
+        ).toBe(false);
+    });
+
+    it("stays hidden when the screen is loaded again", async () => {
+        serve({
+            ...drafted({ installed_as: "widgets" }),
+            "/api/settings": { knowledge_hidden_drafts: "widgets" },
+        });
+        render(Knowledge);
+        await waitFor(() =>
+            expect(screen.queryByText(/is installed/)).toBeNull());
+    });
+});

@@ -68,7 +68,8 @@ meant.
 
 - the **desktop shell** — `tauri/`, ~180 lines of Rust that owns the sidecar's
   lifetime and holds no engine logic;
-- the **shell** in the terminal panel — a PTY running `cmd.exe` or `$SHELL`.
+- the **shell** in `kriko tui` — a PTY running `cmd.exe` or `$SHELL`, passed
+  through to the operator's own terminal rather than drawn inside the TUI.
 
 `installer.nsh` has to stop both, which is why its comment "the shell first,
 then the engine" is about the desktop one and reads oddly otherwise. Prefer
@@ -81,9 +82,27 @@ clusters, verdicts — and it is build-time machinery. The research job's
 `log_submission`, a different database doing interface bookkeeping. Prefer "the
 evidence ledger" and "the submissions log" (B120 found this one).
 
-**"extension" is singular but lives in two directories.** `extension/` is the
-browser client that ships; `extension_ui/` holds its manifest. Both are the one
-extension.
+**"risk" was a fourth name for a claim, and is retired.** The engine stores a
+**claim**, `/api/analyze` sends `claims`, and the app renders a claim — but
+until 0.10.0 the extension's worker renamed the array to `risks` at its own
+boundary, along with `body`→`rationale` and `advice`→`inspection_advice`, and
+every line downstream spoke the new words. Nothing was gained: a shared
+component would have had to translate, and a bug report saying "risk" needed a
+mental hop to reach a `claims` table. One word, one meaning — it is a claim
+everywhere it is *named* now.
+
+**What a buyer reads is a different question, and the answer is "risk".** Both
+clients say *8 known risks, 7 serious* over the same rows, because "8 claims"
+is jargon on a screen somebody is using to decide whether to buy a car. That
+is rule 9 of `docs/STYLE.md` working as intended, not a leftover: the code word
+and the screen word are allowed to differ, and the docs use the reader's. What
+was wrong was never the word on screen — it was a second *field name* invented
+at one client's boundary.
+
+**"extension" is one thing in one directory.** `extension/` is the browser
+client, and everything it ships is under it — the manifest, the worker, the
+panel, the options page. An `extension_ui/` was named here for a while and has
+not existed for longer than that.
 
 **"reader"** is this project's word for the person using Kriko — a buyer
 looking at a listing. Not a developer, not an operator. When a doc says "the
