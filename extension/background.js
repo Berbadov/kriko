@@ -408,12 +408,12 @@ const SITE_SYNC_PERIOD_MINUTES = 30;
 
 // The same files, in the same order, as `manifest.json`'s two static blocks.
 // A dynamic registration is one entry rather than two because order inside
-// the array is what matters: `icons.js` and `risk_card.js` define what
+// the array is what matters: `icons.js` and `claim_card.js` define what
 // `hover_lite.js` calls.
 const SITE_SCRIPTS = [
   "content.js",
   "hover_lite/icons.js",
-  "hover_lite/risk_card.js",
+  "hover_lite/claim_card.js",
   "hover_lite/hover_lite.js",
 ];
 
@@ -692,6 +692,27 @@ function toViewModel(payload, appBase) {
     method: payload.method,
     flags: payload.flags || [],
     unmapped_labels: payload.unmapped_labels || [],
+    // How sure the engine is that this page *is* this product, and what it
+    // weighed to decide. Carried since 0.10.0 because the panel had exactly
+    // two states — a match, or a blank — for four different situations, and
+    // the reader who met the blank had a good pack installed for that exact
+    // product with no way to find out which had happened.
+    //
+    // `next_step` is the engine's own sentence and action word, not a status
+    // code for the panel to write copy from: a client writing its own copy
+    // stops agreeing with the engine the first time a method is added.
+    verdict: payload.verdict || "",
+    score: typeof payload.score === "number" ? payload.score : null,
+    considered: Array.isArray(payload.considered) ? payload.considered : [],
+    next_step: payload.next_step || null,
+    // Which packs answered, and the units their context values are in. Both
+    // are sent by /api/analyze and both were dropped here, silently: the
+    // footer printed "unknown" on every result since the byline was added,
+    // and every context fact rendered without its unit. Neither had a test,
+    // because a test for this shape would have been written against this
+    // function rather than against the payload it is supposed to carry.
+    packs: Array.isArray(payload.packs) ? payload.packs : [],
+    context_units: payload.context_units || {},
     // The app stores every analysis and already renders one at this route, so
     // "see the whole thing" needs no new endpoint — only the id it handed back.
     //
@@ -737,7 +758,7 @@ function toViewModel(payload, appBase) {
     // nothing to say about it, which is a gap the panel can offer to fill
     // rather than an emptiness it has to apologise for.
     subjects: Array.isArray(payload.subjects) ? payload.subjects : [],
-    risks: claims.map((claim) => {
+    claims: claims.map((claim) => {
       const strength = _strengthOf(claim);
       return {
         // Identity, so a card can be pointed at rather than only described:
@@ -745,8 +766,8 @@ function toViewModel(payload, appBase) {
         claim_id: claim.claim_id,
         subject_id: claim.subject_id,
         title: claim.title,
-        rationale: claim.body,
-        inspection_advice: claim.advice,
+        body: claim.body,
+        advice: claim.advice,
         severity: claim.severity,
         domain: claim.domain,
         subject: claim.subject,
@@ -832,16 +853,16 @@ async function _writeCachedAnalysis(url, entry) {
 }
 
 async function _updateBadgeForResult(result, tabId) {
-  const risks = Array.isArray(result?.risks) ? result.risks : [];
-  const highCount = risks.filter((r) => r.severity === "high").length;
+  const claims = Array.isArray(result?.claims) ? result.claims : [];
+  const highCount = claims.filter((r) => r.severity === "high").length;
 
   let badgeText = "";
   let badgeColor = "#2d7b41"; // low green
   if (highCount > 0) {
     badgeText = String(highCount);
     badgeColor = "#b5392f"; // high red
-  } else if (risks.length > 0) {
-    badgeText = String(risks.length);
+  } else if (claims.length > 0) {
+    badgeText = String(claims.length);
     badgeColor = "#a3641a"; // medium orange
   }
 

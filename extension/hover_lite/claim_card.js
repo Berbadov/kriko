@@ -1,4 +1,4 @@
-/* RiskCard — dark left-tile layout matching Kriko Panel design. */
+/* ClaimCard — dark left-tile layout matching Kriko Panel design. */
 
 (function () {
   const { iconSvg } = window.__KrikoPanelIcons;
@@ -31,31 +31,36 @@
 
   /** Whether this claim can be re-checked: an identity the app can look up,
    * and a page to re-read. */
-  function canCheck(risk) {
+  function canCheck(claim) {
     return Boolean(
-      risk.claim_id
-        && risk.pack_id
-        && (risk.sources || []).some((source) => source && source.url)
+      claim.claim_id
+        && claim.pack_id
+        && (claim.sources || []).some((source) => source && source.url)
     );
   }
 
-  function renderRiskCard(risk, { open = false, compact = false } = {}) {
-    const sev = ["high", "medium", "low"].includes(risk.severity) ? risk.severity : "medium";
+  function renderClaimCard(claim, { open = false, compact = false } = {}) {
+    const sev = ["high", "medium", "low"].includes(claim.severity) ? claim.severity : "medium";
 
-    // Strength badge: four tiers — confirmed, due, due_stated, reported.
-    const confirmed = risk.strength === "confirmed";
-    const due       = risk.strength === "due";
-    const dueStated = risk.strength === "due_stated";
+    /* Strength badge: two tiers, and it used to claim four.
+     *
+     * `due` and `due_stated` — "Due unless serviced", "Seller states done —
+     * verify" — were rendered here and `_strengthOf` in the worker can only
+     * ever return `confirmed` or `reported`, so neither label has been
+     * reachable for as long as the branch has existed. They are a good idea
+     * (the product principle's maintenance-interval claims are exactly that
+     * shape) and they belong wherever that shape is decided, which is the
+     * pack's bar and the engine's ranking — not in a dead branch of a card
+     * renderer where nothing can ever set them. */
+    const confirmed = claim.strength === "confirmed";
     // Only show numeric confidence on confirmed cards — on other cards a score
     // reads as trustworthy and undercuts the amber/orange label.
     const confText =
-      confirmed && typeof risk.confidence === "number" ? risk.confidence.toFixed(2) : null;
-    const srcN = typeof risk.source_count === "number" ? risk.source_count : null;
+      confirmed && typeof claim.confidence === "number" ? claim.confidence.toFixed(2) : null;
+    const srcN = typeof claim.source_count === "number" ? claim.source_count : null;
     const strengthLabel = confirmed  ? "Confirmed"
-      : due       ? "Due unless serviced"
-      : dueStated ? "Seller states done — verify"
       : `Reported${srcN ? ` · ${srcN} source${srcN === 1 ? "" : "s"}` : ""}`;
-    const strengthAttr = risk.strength || "reported";
+    const strengthAttr = claim.strength || "reported";
 
     const article = document.createElement("article");
     article.className = "lite-rc";
@@ -70,14 +75,14 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 3 1.5 21h21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/></svg>
         </div>
         <div class="lite-rc-titlebox">
-          <div class="lite-rc-title">${escapeHtml(risk.title)}</div>
-          ${risk.why_shown && risk.why_shown.length ? `
+          <div class="lite-rc-title">${escapeHtml(claim.title)}</div>
+          ${claim.why_shown && claim.why_shown.length ? `
             <div class="lite-rc-why">
-              ${risk.why_shown.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
+              ${claim.why_shown.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
             </div>` : ""}
           <div class="lite-rc-meta">
             <span class="lite-rc-strength" data-strength="${escapeHtml(strengthAttr)}">${escapeHtml(strengthLabel)}</span>
-            <span class="sep"> · </span><span>${escapeHtml(risk.domain || "")}</span>
+            <span class="sep"> · </span><span>${escapeHtml(claim.domain || "")}</span>
             ${confText ? `<span class="sep"> · </span><span>conf ${confText}</span>` : ""}
           </div>
         </div>
@@ -91,22 +96,22 @@
       <div class="lite-rc-bodywrap">
         <div class="lite-rc-bodyclip">
           <div class="lite-rc-body">
-            <p class="lite-rc-rationale">${escapeHtml(risk.rationale || "")}</p>
-            ${risk.inspection_advice ? `
+            <p class="lite-rc-body">${escapeHtml(claim.body || "")}</p>
+            ${claim.advice ? `
               <div class="lite-rc-insp">
                 <span class="lite-rc-insp-icon">${iconSvg("eye", { size: 13 })}</span>
                 <div class="lite-rc-insp-body">
                   <div class="lite-rc-insp-label">Inspection</div>
-                  ${escapeHtml(risk.inspection_advice)}
+                  ${escapeHtml(claim.advice)}
                 </div>
               </div>` : ""}
-            ${canCheck(risk) ? `
+            ${canCheck(claim) ? `
               <div class="lite-rc-fact">
                 <button type="button" class="lite-rc-factbtn"
                         title="Re-read the page this claim cites">Check the source</button>
                 <span class="lite-rc-factverdict" hidden></span>
               </div>` : ""}
-            ${risk.claim_id ? `
+            ${claim.claim_id ? `
               <div class="lite-rc-mark" role="group" aria-label="Was this any use?">
                 <span class="lite-rc-mark-label">Was this any use?</span>
                 <button type="button" class="lite-rc-markbtn" data-verdict="useful"
@@ -124,7 +129,7 @@
     return article;
   }
 
-  function updateRiskCard(article, { open, compact }) {
+  function updateClaimCard(article, { open, compact }) {
     if (open !== undefined) {
       article.dataset.open = open ? "1" : "0";
       const toggleBtn = article.querySelector(".lite-rc-toggle");
@@ -143,11 +148,11 @@
 
   /** Show which verdict, if any, this claim already carries.
    *
-   * Separate from `updateRiskCard` because a mark arrives from a round trip
+   * Separate from `updateClaimCard` because a mark arrives from a round trip
    * to the app while `open`/`compact` are local state — folding them together
    * would make every expand re-assert a verdict the server may have refused.
    */
-  function markRiskCard(article, verdict) {
+  function markClaimCard(article, verdict) {
     article.querySelectorAll(".lite-rc-markbtn").forEach((button) => {
       const on = button.dataset.verdict === verdict;
       button.setAttribute("aria-pressed", on ? "true" : "false");
@@ -156,10 +161,10 @@
 
   /** Paint what the cited page says now.
    *
-   * Its own function for the same reason `markRiskCard` is: this arrives from
+   * Its own function for the same reason `markClaimCard` is: this arrives from
    * a round trip to the app, while `open`/`compact` are local state.
    */
-  function factRiskCard(article, check, busy) {
+  function factClaimCard(article, check, busy) {
     const button = article.querySelector(".lite-rc-factbtn");
     const label = article.querySelector(".lite-rc-factverdict");
     if (button) {
@@ -183,11 +188,11 @@
       + (when ? ` \u00b7 ${when}` : "");
   }
 
-  window.__KrikoPanelRiskCard = {
-    renderRiskCard,
-    updateRiskCard,
-    markRiskCard,
-    factRiskCard,
+  window.__KrikoPanelClaimCard = {
+    renderClaimCard,
+    updateClaimCard,
+    markClaimCard,
+    factClaimCard,
     canCheck,
     FACT_WORD,
   };

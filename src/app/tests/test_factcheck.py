@@ -250,7 +250,7 @@ def test_a_check_lives_in_the_interfaces_file_not_the_engines(client, monkeypatc
 # are held together by this test, so this test has to exist.
 
 ROOT = Path(__file__).resolve().parents[3]
-PANEL = ROOT / "extension" / "hover_lite" / "risk_card.js"
+PANEL = ROOT / "extension" / "hover_lite" / "claim_card.js"
 REPORT = ROOT / "ui" / "src" / "lib" / "report.ts"
 
 
