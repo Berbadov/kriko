@@ -38,6 +38,11 @@ class PrefsWrite(BaseModel):
     llm_model_extract: str | None = Field(None, max_length=200)
     llm_model_synthesise: str | None = Field(None, max_length=200)
     llm_model_validate: str | None = Field(None, max_length=200)
+    #: One per harness that takes a model, each falling back to the CLI's own
+    #: default. Spelled out for the same reason as the stage keys above.
+    harness_model_claude_code: str | None = Field(None, max_length=200)
+    harness_model_opencode: str | None = Field(None, max_length=200)
+    harness_model_antigravity_cli: str | None = Field(None, max_length=200)
 
 
 @router.get("/prefs")

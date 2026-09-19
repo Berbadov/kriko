@@ -222,6 +222,8 @@ def test_nothing_chosen_behaves_exactly_as_before(client):
         "preferred_harness": "", "llm_model": "", "search_provider": "",
         "llm_model_plan": "", "llm_model_extract": "",
         "llm_model_synthesise": "", "llm_model_validate": "",
+        "harness_model_claude_code": "", "harness_model_opencode": "",
+        "harness_model_antigravity_cli": "",
     }
 
 
@@ -236,6 +238,8 @@ def test_a_choice_survives_being_made(client):
         "search_provider": "tavily",
         "llm_model_plan": "", "llm_model_extract": "",
         "llm_model_synthesise": "", "llm_model_validate": "",
+        "harness_model_claude_code": "", "harness_model_opencode": "",
+        "harness_model_antigravity_cli": "",
     }
 
 
@@ -420,6 +424,21 @@ def test_the_reader_is_told_where_to_edit_the_prices(client):
     """Editable config is only editable if you can find it."""
     assert client.get("/api/prefs").json()["models"]["catalogue"].endswith(
         "models.toml")
+
+
+def test_each_usable_harness_can_take_its_own_model(client):
+    """Sonnet for claude, a provider/model id for opencode, a model id for
+    agy — three namespaces, so three keys and no shared fallback. Round-trips
+    through the same prefs door as every other choice."""
+    client.put("/api/prefs", json={"harness_model_claude_code": "sonnet"})
+    chosen = client.get("/api/prefs").json()["chosen"]
+    assert chosen["harness_model_claude_code"] == "sonnet"
+    assert chosen["harness_model_opencode"] == ""
+    assert chosen["harness_model_antigravity_cli"] == ""
+    harnesses = client.get("/api/prefs").json()["harnesses"]
+    for one in harnesses:
+        assert "llm" in one and "llms" in one and "llm_hint" in one
+        assert "llm_selectable" in one
 
 
 def test_each_stage_of_a_run_can_take_its_own_model(client):

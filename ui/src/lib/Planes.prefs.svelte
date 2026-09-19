@@ -110,6 +110,43 @@
                 {#each unusableOf(data) as one (one.id)}
                     <p class="meta">{one.label} is installed and not used: {one.why}</p>
                 {/each}
+                {#each harnessesOf(data) as one (one.id)}
+                    {#if one.llm_selectable}
+                        <label class="field">
+                            {one.label} LLM
+                            <input
+                                list={`p-harness-llms-${one.id}`}
+                                value={one.llm ?? ""}
+                                placeholder="CLI default"
+                                onchange={(event) =>
+                                    save({
+                                        [`harness_model_${one.id.replace(/-/g, "_")}`]:
+                                            event.currentTarget.value,
+                                    })}
+                            />
+                        </label>
+                        <datalist id={`p-harness-llms-${one.id}`}>
+                            {#each one.llms ?? [] as name (name)}
+                                <option value={name}>{name}</option>
+                            {/each}
+                        </datalist>
+                        <p class="meta">
+                            {#if (one.llms ?? []).length}
+                                Offered by the CLI itself; anything else typed is
+                                sent as-is and judged by the CLI.
+                            {:else}
+                                The CLI named nothing — type any {one.llm_hint || "name"}.
+                            {/if}
+                            {#if one.llm_hint && (one.llms ?? []).length}{one.llm_hint}.{/if}
+                            Empty uses the CLI default.
+                        </p>
+                    {:else}
+                        <p class="meta">
+                            {one.label} runs its own default — Kriko has no
+                            verified per-run switch for it yet.
+                        </p>
+                    {/if}
+                {/each}
             </div>
 
             <div class="field">

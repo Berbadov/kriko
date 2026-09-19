@@ -106,6 +106,9 @@ def _researcher(params: dict):
             # So "which agent" is the reader's standing choice rather than
             # whichever CLI happened to be found first (B117).
             app_state_path=params.get("app_state_path"),
+            # And "which model" rides the same params: a per-run choice wins,
+            # a stored per-harness choice applies, otherwise the CLI default.
+            model=str(params.get("model") or ""),
         )
     if backend != "api":
         return get_researcher({"backend": backend})
