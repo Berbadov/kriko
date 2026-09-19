@@ -35,6 +35,34 @@ function stub(handlers: Record<string, unknown>) {
 }
 
 describe("Jobs", () => {
+    it("disables cancellation while the worker is stopping", async () => {
+        const job = { ...JOB, state: "cancelling", cancel_requested: true };
+        const fetchMock = stub({ "/api/jobs": { items: [job] }, "/api/jobs/j1": job });
+        render(Jobs);
+        const button = await screen.findByRole("button", { name: "Stopping…" });
+        expect(button).toBeDisabled();
+        await fireEvent.click(button);
+        expect(fetchMock.mock.calls.some(([path]) => path.endsWith("/cancel"))).toBe(false);
+        expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    });
+
+    it("keeps Cancel disabled until the cancellation request completes", async () => {
+        let release!: (response: Response) => void;
+        const fetchMock = vi.fn((path: string) => {
+            if (path.endsWith("/cancel")) return new Promise<Response>((resolve) => { release = resolve; });
+            return Promise.resolve(new Response(JSON.stringify(
+                path.split("?")[0] === "/api/jobs" ? { items: [JOB] } : JOB,
+            )));
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        render(Jobs);
+        await fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+        expect(screen.getByRole("button", { name: "Stopping…" })).toBeDisabled();
+        expect(fetchMock.mock.calls.filter(([path]) => path.endsWith("/cancel"))).toHaveLength(1);
+        release(new Response(JSON.stringify({ state: "cancelling" })));
+        await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled());
+    });
+
     it("shows a running job with its progress and message", async () => {
         // The per-job stub matters: without it the fallback poll would fall
         // through to the list route and the row would be appended twice.

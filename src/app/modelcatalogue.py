@@ -41,6 +41,7 @@ from pathlib import Path
 #: dropdown per stage would be a wall of them for a first-time reader, so this
 #: is an advanced control and every role falls back to the single default.
 ROLES = ("plan", "extract", "synthesise", "validate")
+ACTIVE_ROLES = ("extract",)
 
 #: What each role is for, in the reader's terms. Shipped with the roles rather
 #: than written in the client, so the two cannot drift apart.
@@ -122,8 +123,17 @@ def price(model: str, tokens_in: int, tokens_out: int,
         return None
 
 
+def provider_for(model: str, home: Path | None = None) -> str:
+    row = load(home).get(model) or {}
+    return str(row.get("provider") or (
+        "anthropic" if model.startswith("claude-") else "openai"
+    ))
+
+
 def _usable(provider: str, ready: set[str]) -> str:
     """"" when it can be used, or the reason it cannot — never silence."""
+    if provider not in ("openai", "anthropic"):
+        return f"no completion adapter for {provider}"
     if provider in ready:
         return ""
     return f"no {provider} key — add one on Settings"

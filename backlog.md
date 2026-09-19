@@ -747,10 +747,15 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
-## The 0.10.0 work order *(2026-09-16)* — P0 + §2.1–§2.6 + §2.9 + §3.2–§3.4 closed, §2.10/§3.5 part-done, 4 open
+## The 0.10.0 work order *(2026-09-16; corrected 2026-09-18)* — P0 + §2.1–§2.6 + §2.9 + §3.2–§3.4 closed, §2.10/§3.5 part-done, 4 open
 
 A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
-`done.md`. What is left, in the reader's own numbering:
+`done.md`. Correction 2026-09-18: the 0.10.0 merge message claimed "20 of 23",
+but §2.2's per-role models were saved and never executed, several run kinds
+ignored Cancel, and the extension had search-without-research. Those are closed
+for real in `done.md` (2026-09-18 entries: effective model selection, reliable
+Cancel, the panel's "Research this product" flow). What is left, in the
+reader's own numbering:
 
 **§1.5 — extension installation fails.** Diagnose the install path itself:
 packaging, manifest, the staging step in `app/extension.py`, and the
@@ -790,7 +795,18 @@ providers, stages, categories, repetitions; estimate first; saved configs.
 **§2.7 — verify Tavily, Exa and the OpenAI LLM path by hand** with real keys,
 including every error path, wired into §2.4's accounting.
 
-**§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity.
+**§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity. **Partly
+done 2026-09-18**: Antigravity CLI (`agy`) is verified end to end on the real
+machine — `-p` prompt, `stream-json` events, `--model` selection, usage
+metering, disposable working directory, and permission denials that fail loudly
+with the allow-rule fix instead of silent empty research. Still open: Mistral
+Vibe and Gemini CLI are registered with download links but gated `unusable`
+until their headless flags, sandbox files and output parsing are verified
+against real binaries (Vibe's tool names and agent schema are undocumented;
+Gemini's `--allowed-tools` is deprecated upstream and its sandbox schema would
+force an auth method). A missing CLI now shows download + install command +
+which account it bills to, plus the `KRIKO_HARNESS_DIRS` manual path, on both
+the Agents card and Settings.
 
 **~~§2.9 — remove Terminal.~~ DONE — see `done.md`.** Confirmed with the reader as the *in-app PTY
 panel* — `ui/src/lib/shell/TerminalPanel.svelte`, `web/routers/terminal.py`,

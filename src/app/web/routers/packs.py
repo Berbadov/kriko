@@ -223,8 +223,15 @@ def scaffold_pack(body: NewPack):
     except FileExistsError as exc:
         # 409, not 400: the request was well formed and the conflict is with
         # the filesystem's current state — and the answer is a different
-        # directory, not a corrected field.
-        raise HTTPException(409, str(exc)) from exc
+        # directory, not a corrected field. But Windows raises the same
+        # exception when a *parent* of the root is a plain file, which is a
+        # bad path rather than a conflict — so the conflict is named by
+        # checking the one file the scaffold refuses to overwrite.
+        if (root / "pack.toml").exists():
+            raise HTTPException(409, str(exc)) from exc
+        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
+    except NotADirectoryError as exc:
+        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except OSError as exc:
@@ -246,6 +253,7 @@ class AmendRequest(BaseModel):
     the draft's own uncovered line-up is the request."""
 
     note: str = Field("", max_length=2000)
+    harness: str = Field("", max_length=64)
 
 
 @router.get("/packs/drafts")
@@ -282,7 +290,7 @@ def amend_pack_draft(slug: str, request: Request, body: AmendRequest | None = No
     try:
         job_id = runner.submit(
             "pack_amend",
-            {"slug": slug, "note": (body.note if body else "")},
+            {"slug": slug, **(body.model_dump() if body else {"note": "", "harness": ""})},
         )
     except KeyError as exc:  # pragma: no cover - the handler is registered
         raise HTTPException(400, str(exc)) from exc

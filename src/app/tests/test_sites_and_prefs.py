@@ -262,17 +262,33 @@ def test_the_chosen_search_provider_is_the_one_wired(settings, monkeypatch):
     assert (found, name) == ("tavily-search", "tavily")
 
 
-def test_a_chosen_provider_with_no_key_falls_back_rather_than_failing(
+def test_paid_research_uses_extract_preference(settings, monkeypatch):
+    from app import providers
+
+    conn = state.connect(settings.app_state_path)
+    prefs.write(conn, {prefs.MODEL: "global", prefs.role_key("extract"): "extractor"})
+    conn.close()
+    monkeypatch.setattr(providers, "_searcher", lambda *args: (lambda q, n: [], "exa"))
+    monkeypatch.setattr(providers, "completer_for", lambda name: lambda prompt: "[]")
+    researcher = providers.api_researcher(app_state_path=settings.app_state_path)
+    assert researcher.model == "extractor"
+    assert providers.api_researcher(
+        app_state_path=settings.app_state_path, model="per-run"
+    ).model == "per-run"
+
+
+def test_a_chosen_provider_with_no_key_refuses_paid_fallback(
     settings, monkeypatch
 ):
-    """A preference is never why a run does not start."""
     from app import providers
 
     monkeypatch.setattr(keys, "search_providers", lambda: ["exa"])
     monkeypatch.setattr(providers.exa, "searcher", lambda: "exa-search")
     conn = state.connect(settings.app_state_path)
     prefs.write(conn, {prefs.SEARCH: "tavily"})
-    assert providers._searcher(settings.app_state_path)[1] == "exa"
+    with pytest.raises(providers.MissingKey, match="tavily"):
+        providers._searcher(settings.app_state_path)
+    assert providers._searcher(settings.app_state_path, "exa")[1] == "exa"
 
 
 def test_an_uninstalled_preferred_harness_falls_back_rather_than_crashing(monkeypatch):
@@ -425,6 +441,7 @@ def test_a_stage_with_no_choice_falls_back_to_the_default(client):
         client.put("/api/prefs", json={"llm_model_extract": "claude-haiku-4-5"})
         assert prefs.for_role(conn, "extract") == "claude-haiku-4-5"
         # And only that stage moved.
-        assert prefs.for_role(conn, "synthesise") == "gpt-4o-mini"
+        assert prefs.for_role(conn, "synthesise") == ""
+        assert prefs.for_role(conn, "extract", "per-run") == "per-run"
     finally:
         conn.close()

@@ -138,8 +138,11 @@ export const api = {
      * rather than a request: it spawns an agent that searches for minutes, and
      * the reply is worth outliving the page. Installs nothing.
      */
-    authorPack: (category: string) =>
-        postJson<{ job_id: string; kind: string }>("/api/packs/author", { category }),
+    authorPack: (category: string, harness = "") =>
+        postJson<{ job_id: string; kind: string }>(
+            "/api/packs/author",
+            harness ? { category, harness } : { category },
+        ),
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
@@ -147,10 +150,10 @@ export const api = {
     packDraft: (slug: string) =>
         get<T.DraftState>(`/api/packs/drafts/${seg(slug)}`),
     /** Ask an agent for what this draft is missing. Adds; never rewrites. */
-    amendPackDraft: (slug: string, note: string) =>
+    amendPackDraft: (slug: string, note: string, harness = "") =>
         postJson<{ job_id: string; kind: string }>(
             `/api/packs/drafts/${seg(slug)}/amend`,
-            { note },
+            harness ? { note, harness } : { note },
         ),
     /** Re-read the sources behind everything on this screen. A job: forty
      *  claims at three fetches each is minutes, not a press. */
@@ -227,10 +230,10 @@ export const api = {
         ),
     /** Which sites can be read here, and which were asked for. */
     sites: () => get<T.Sites>("/api/sites"),
-    registerSite: (host: string, url = "") =>
+    registerSite: (host: string, url = "", harness = "") =>
         postJson<{ job_id: string; host: string }>(
             `/api/sites/${seg(host)}/register`,
-            { url },
+            harness ? { url, harness } : { url },
         ),
     forgetSite: (host: string) =>
         del<{ host: string; forgotten: boolean }>(`/api/sites/${seg(host)}`),
@@ -266,8 +269,10 @@ export const api = {
      * here: whether a coding-agent CLI is installed is a fact about the
      * machine, and a frontend that guessed it would eventually mark the wrong
      * card. */
-    researchPlanes: () =>
-        get<{ planes: T.ResearchPlane[]; default?: string }>("/api/research-planes"),
+    researchPlanes: (selection: T.RunSelection = {}) =>
+        get<{ planes: T.ResearchPlane[]; default?: string }>(
+            `/api/research-planes${Object.keys(selection).length ? `?${new URLSearchParams(selection)}` : ""}`,
+        ),
     /** Walk the agenda unattended. One job for the whole run: `agenda_run`
      *  calls the research path inline, because the job runner has a single
      *  worker and a job that submits jobs deadlocks. */
@@ -333,6 +338,12 @@ export const api = {
             body: file,
         }),
     bench: () => get<T.Bench>("/api/bench"),
+    estimateBench: (body: T.BenchRequest) => postJson<T.BenchEstimate>("/api/bench/estimate", body),
+    benchConfigs: () => get<{ configs: Record<string, T.BenchRequest> }>("/api/bench/configs"),
+    saveBenchConfig: (name: string, config: T.BenchRequest) =>
+        putJson<{ configs: Record<string, T.BenchRequest> }>("/api/bench/configs", { name, config }),
+    forgetBenchConfig: (name: string) =>
+        del<{ configs: Record<string, T.BenchRequest> }>(`/api/bench/configs/${seg(name)}`),
     startBench: (body: T.BenchRequest = {}) =>
         postJson<{ job_id: string; kind: string }>("/api/bench", body),
 };

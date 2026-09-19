@@ -50,6 +50,89 @@ def runner_with(settings, handler):
     return JobRunner(settings, {"probe": handler})
 
 
+def test_cancel_before_atomic_start_never_runs_handler(settings, monkeypatch):
+    called = []
+    conn = state.connect(settings.app_state_path)
+    job_id = state.create_job(conn, "probe", {})
+    original = state.start_job
+
+    def cancel_then_start(worker, identifier):
+        assert state.request_cancel(conn, identifier) == state.CANCELLED
+        return original(worker, identifier)
+
+    monkeypatch.setattr(state, "start_job", cancel_then_start)
+    runner = runner_with(settings, lambda *args: called.append(True))
+    try:
+        runner._run(job_id, "probe", {})
+        row = state.get_job(conn, job_id)
+        assert called == []
+        assert row["state"] == state.CANCELLED
+        assert row["cancel_requested"] is True
+        assert row["started_at"] is None
+    finally:
+        runner.shutdown(wait=True)
+        conn.close()
+
+
+def test_cancel_between_last_checkpoint_and_finish_is_not_success(settings):
+    conn = state.connect(settings.app_state_path)
+    try:
+        job_id = state.create_job(conn, "probe", {})
+        assert state.start_job(conn, job_id)
+        state.request_cancel(conn, job_id)
+        state.finish_job(conn, job_id, state.SUCCEEDED, result={"accepted": 1})
+        row = state.get_job(conn, job_id)
+        assert row["state"] == state.CANCELLED
+        assert row["result"] == {"accepted": 1, "partial": True}
+        assert row["cancel_requested"] is True
+        assert not state.start_job(conn, job_id)
+    finally:
+        conn.close()
+
+
+def test_start_is_claimed_once_and_cancelling_counts_as_work(settings):
+    conn = state.connect(settings.app_state_path)
+    other = state.connect(settings.app_state_path)
+    try:
+        job_id = state.create_job(conn, "probe", {})
+        assert state.start_job(conn, job_id)
+        assert not state.start_job(other, job_id)
+        assert state.request_cancel(other, job_id) == state.CANCELLING
+        state.update_job(conn, job_id, message="still reading")
+        row = state.get_job(conn, job_id)
+        assert row["cancel_requested"] is True
+        assert "safe checkpoint" in row["message"]
+        assert state.work_in_flight(conn) == 1
+        state.finish_job(conn, job_id, state.CANCELLED)
+        before = state.get_job(conn, job_id)
+        assert state.request_cancel(other, job_id) == state.CANCELLED
+        assert state.get_job(conn, job_id) == before
+    finally:
+        conn.close()
+        other.close()
+
+
+def test_cancel_after_handler_return_keeps_result(settings):
+    def handler(_settings, _params, progress):
+        conn = state.connect(settings.app_state_path)
+        try:
+            state.request_cancel(conn, progress.job_id)
+        finally:
+            conn.close()
+        return {"artifact": "finished.kpack"}
+
+    runner = runner_with(settings, handler)
+    conn = state.connect(settings.app_state_path)
+    try:
+        row = wait_for_done(conn, runner.submit("probe", {}))
+        assert row["state"] == state.CANCELLED
+        assert row["result"] == {"artifact": "finished.kpack", "partial": True}
+        assert row["cancel_requested"] is True
+    finally:
+        runner.shutdown(wait=True)
+        conn.close()
+
+
 def test_a_finished_job_keeps_its_result_and_its_log(settings):
     def handler(_settings, params, progress):
         progress.log("started")
@@ -295,9 +378,12 @@ def test_the_stream_ends_when_the_job_does(client):
 # of it already paid for — died with the stack frame.
 
 def test_a_cancelled_job_keeps_what_it_had_already_finished(settings):
+    checkpointed = threading.Event()
+
     def handler(_settings, _params, progress):
         progress.partial({"documents": 3, "findings": 7,
                           "stopped_at": "extraction"})
+        checkpointed.set()
         for _ in range(500):
             progress.check()
             time.sleep(0.01)
@@ -312,6 +398,7 @@ def test_a_cancelled_job_keeps_what_it_had_already_finished(settings):
             break
         time.sleep(0.02)
 
+    assert checkpointed.wait(5)
     runner.cancel(job_id)
     row = wait_for_done(conn, job_id)
     assert row["state"] == state.CANCELLED
@@ -322,8 +409,11 @@ def test_a_cancelled_job_keeps_what_it_had_already_finished(settings):
 
 
 def test_a_cancelled_job_says_what_it_kept_rather_than_just_cancelled(settings):
+    checkpointed = threading.Event()
+
     def handler(_settings, _params, progress):
         progress.partial({"documents": 2, "stopped_at": "extraction"})
+        checkpointed.set()
         for _ in range(500):
             progress.check()
             time.sleep(0.01)
@@ -337,6 +427,7 @@ def test_a_cancelled_job_says_what_it_kept_rather_than_just_cancelled(settings):
         if (state.get_job(conn, job_id) or {})["state"] == state.RUNNING:
             break
         time.sleep(0.02)
+    assert checkpointed.wait(5)
     runner.cancel(job_id)
     row = wait_for_done(conn, job_id)
     assert "extraction" in row["message"]

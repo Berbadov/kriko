@@ -276,6 +276,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def note_the_extension(request: Request, call_next):
         origin = request.headers.get("origin", "")
         if origin.startswith(("chrome-extension://", "moz-extension://")):
+            digest = request.headers.get(ext.DIGEST_HEADER, "")
+            loaded = getattr(app.state, "extension_digests", {})
+            loaded[origin] = {
+                "content_digest": digest if len(digest) == 64 and all(
+                    char in "0123456789abcdef" for char in digest) else "",
+                "version": request.headers.get(ext.VERSION_HEADER, ""),
+            }
+            app.state.extension_digests = loaded
             try:
                 conn = state.connect(app.state.settings.app_state_path)
                 try:
