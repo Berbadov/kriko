@@ -3,6 +3,7 @@
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
+    import type { Site } from "../lib/types";
 
     /* Which sites Kriko can read, and how it learns another.
      *
@@ -95,6 +96,23 @@
                                         is unused
                                     {/if}
                                 </span>
+                                {#if site.activation && site.activation.state !== "active"}
+                                    <span class="meta">
+                                        {#if site.activation.state === "needs_permission"}
+                                            · adapter ready, but the browser has not
+                                            granted permission — open the extension's
+                                            options page and press Grant, then reload
+                                            the listing
+                                        {:else if site.activation.state === "unknown"}
+                                            · adapter ready; the extension has not
+                                            reported on this site yet — open a listing
+                                            there and press the extension button
+                                        {:else}
+                                            · {site.activation.detail ||
+                                                "the panel will not appear here yet"}
+                                        {/if}
+                                    </span>
+                                {/if}
                             </div>
                             {#if site.source === "local"}
                                 <button

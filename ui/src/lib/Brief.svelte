@@ -36,6 +36,7 @@
     let error = $state<unknown>(null);
     let copied = $state("");
     let harness = $state("");
+    let llm = $state("");
     /* Which planes this machine can run, so the button that starts one is only
      * offered when it would work. Best-effort: a planes call that fails costs
      * the reader the button and never the brief. */
@@ -66,6 +67,7 @@
                 pack_id: packId,
                 backend,
                 ...(harness ? { harness } : {}),
+                ...(backend === "harness" && llm ? { llm } : {}),
             });
             job = await api.job(job_id);
             follow(job_id, (update) => (job = update));
@@ -143,6 +145,8 @@
                  a button whose failure message is "install something" is a
                  worse answer than the sentence under the disabled card. -->
             {#if harnessPlane?.ready}
+                {@const chosenHarness = (harnessPlane.harnesses ?? []).find(
+                    (one) => one.id === (harness || harnessPlane.selected_harness))}
                 <label>Agent
                     <select bind:value={harness} disabled={!!job && !job.done}>
                         <option value="">Use preference ({harnessPlane.selected_harness || 'automatic'})</option>
@@ -151,6 +155,21 @@
                         {/each}
                     </select>
                 </label>
+                {#if chosenHarness?.llm_selectable}
+                    <label>LLM
+                        <input
+                            list="brief-harness-llms"
+                            bind:value={llm}
+                            disabled={!!job && !job.done}
+                            placeholder={chosenHarness.llm || "CLI default"}
+                        />
+                    </label>
+                    <datalist id="brief-harness-llms">
+                        {#each chosenHarness.llms ?? [] as name (name)}
+                            <option value={name}>{name}</option>
+                        {/each}
+                    </datalist>
+                {/if}
                 {#if harnessPlane.reason}<p class="meta">{harnessPlane.reason}</p>{/if}
                 <button
                     disabled={!!job && !job.done}

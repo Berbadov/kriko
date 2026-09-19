@@ -433,3 +433,64 @@ def test_the_benchmark_payload_never_names_a_word_the_interface_may_not_hold():
     )
     assert served == {"llm": "some-llm", "protocol": "standard", "runs": 3}
     assert "model" not in served
+
+
+def test_only_explicitly_selected_values_are_swept():
+    assert bench.split_axis({}, "models", "model", "llms", "llm") == []
+    assert bench.split_axis({"models": ""}, "models", "model") == []
+    assert bench.split_axis(
+        {"models": "gpt-4o-mini, claude-haiku-4-5"}, "models", "model"
+    ) == ["gpt-4o-mini", "claude-haiku-4-5"]
+    assert bench.split_axis(
+        {"models": "a, a, b "}, "models", "model"
+    ) == ["a", "b"]
+    assert bench.split_axis(
+        {"llms": "a,b"}, "models", "model", "llms", "llm"
+    ) == ["a", "b"]
+    assert bench.split_axis(
+        {"search": "exa"}, "searches", "search"
+    ) == ["exa"]
+    shape = bench.grid(
+        {"planes": "api, api", "protocols": "standard, standard",
+         "searches": "exa, tavily", "models": "a,b", "reps": 2},
+        case_count=1,
+    )
+    assert shape["axes"] == {
+        "cases": 1, "planes": 1, "protocols": 1,
+        "searches": 2, "models": 2, "reps": 2,
+    }
+    assert shape["runs"] == 8
+
+
+def test_estimate_refuses_unknown_axis_values(settings, store):
+    from app.web import state as app_state
+
+    conn = app_state.connect(settings.app_state_path)
+    try:
+        with pytest.raises(ValueError, match="unknown plane"):
+            bench.estimate(conn, {"planes": "quantum"}, case_count=1)
+        with pytest.raises(ValueError, match="unknown protocol"):
+            bench.estimate(conn, {"protocols": "nope"}, case_count=1)
+        with pytest.raises(ValueError, match="unknown search"):
+            bench.estimate(conn, {"searches": "nope"}, case_count=1)
+    finally:
+        conn.close()
+
+
+def test_estimate_endpoint_refuses_unknown_values(settings, store):
+    client = TestClient(create_app(settings))
+    refused = client.post("/api/bench/estimate", json={"protocols": "nope"})
+    assert refused.status_code == 422
+    refused = client.post("/api/bench/estimate", json={"planes": "quantum"})
+    assert refused.status_code == 422
+    refused = client.post("/api/bench/estimate", json={"searches": "nope"})
+    assert refused.status_code == 422
+    allowed = client.post("/api/bench/estimate", json={"planes": "harness"})
+    assert allowed.status_code == 200
+    assert allowed.json()["usd"] == 0.0
+
+
+def test_start_endpoint_refuses_unknown_values(settings, store):
+    client = TestClient(create_app(settings))
+    refused = client.post("/api/bench", json={"searches": "nope"})
+    assert refused.status_code == 422

@@ -15,6 +15,15 @@ Windows identically, and nothing in the ordinary test suite could have said so.
 #: serve tools over stdio, and collecting them is what broke the freeze.
 MCP_EXCLUDED_PREFIXES = ("mcp.cli",)
 
+CONSOLE_MODULES = (
+    "app.cli",
+    "app.tui",
+    "app.tui.app",
+    "app.tui.client",
+    "app.tui.screen",
+    "app.tui.term",
+)
+
 
 def wanted(name: str) -> bool:
     """The filter `collect_submodules` applies before importing a candidate."""
@@ -31,3 +40,9 @@ def mcp_submodules() -> list[str]:
     from PyInstaller.utils.hooks import collect_submodules
 
     return collect_submodules("mcp", filter=wanted)
+
+
+def kriko_submodules() -> list[str]:
+    from PyInstaller.utils.hooks import collect_submodules
+
+    return collect_submodules("kriko")

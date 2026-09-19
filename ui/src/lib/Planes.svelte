@@ -81,15 +81,48 @@
         <strong>Activity → Runs</strong>.
     </p>
 
-    <details>
-        <summary>This run's choices</summary>
-        <p class="meta">Empty uses Settings. LLM and search apply only to the paid plane; agent applies only to the harness plane.</p>
-        <label>LLM <input bind:value={llm} onchange={refresh} /></label>
-        <label>Agent ID <input bind:value={harness} onchange={refresh} /></label>
-        <label>Search <select bind:value={search} onchange={refresh}><option value="">Use preference</option><option value="exa">Exa</option><option value="tavily">Tavily</option></select></label>
-    </details>
     <Async {promise} loading="Reading…" retry={refresh}>
         {#snippet children(data: { planes: ResearchPlane[]; default?: string })}
+            {@const harnessPlane = data.planes.find((plane) => plane.id === "harness")}
+            {@const harnessChoices = harnessPlane?.harnesses ?? []}
+            {@const activeHarness =
+                harnessChoices.find((one) => one.id === (harness || harnessPlane?.selected_harness))}
+            <details>
+                <summary>This run's choices</summary>
+                <p class="meta">
+                    Empty uses Settings. On the paid plane the LLM is a
+                    completion LLM; on the harness plane it is that agent's
+                    own. The agent dropdown only affects the harness plane.
+                </p>
+                <label>
+                    Agent
+                    <select bind:value={harness} onchange={refresh}>
+                        <option value="">Use preference</option>
+                        {#each harnessChoices as one (one.id)}
+                            <option value={one.id}>{one.label}</option>
+                        {/each}
+                    </select>
+                </label>
+                <label>
+                    LLM
+                    <input
+                        list="run-harness-llms"
+                        bind:value={llm}
+                        onchange={refresh}
+                        placeholder={activeHarness
+                            ? (activeHarness.llm_selectable
+                                ? (activeHarness.llm || "CLI default")
+                                : "no LLM switch on this agent")
+                            : "paid-plane LLM"}
+                    />
+                </label>
+                <datalist id="run-harness-llms">
+                    {#each activeHarness?.llms ?? [] as name (name)}
+                        <option value={name}>{name}</option>
+                    {/each}
+                </datalist>
+                <label>Search <select bind:value={search} onchange={refresh}><option value="">Use preference</option><option value="exa">Exa</option><option value="tavily">Tavily</option></select></label>
+            </details>
             <div class="planes">
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
@@ -120,7 +153,8 @@
                         {#each (plane.harnesses ?? []).filter((one) => one.id === plane.selected_harness) as found (found.id)}
                             <p class="meta">
                                 Using <strong>{found.label}</strong>
-                                (<code>{found.command}</code>).
+                                (<code>{found.command}</code>)
+                                {#if found.llm_selectable}with <code>{found.llm || "CLI default"}</code>{/if}.
                                 {#if found.needs_account}<br />Bills to {found.needs_account}.{/if}
                             </p>
                         {/each}

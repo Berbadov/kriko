@@ -338,3 +338,45 @@ def test_validation_needs_no_network_and_no_llm(settings, stored_claim, monkeypa
     case = {"subject_id": "sa", "pack_id": "probe", "kind": "validation"}
     row = bench.run_case(settings, case, plane="harness", opener=opener)
     assert row["accepted"] == 1
+
+
+def test_llm_and_search_axes_sweep_only_the_named_values(settings, store, monkeypatch):
+    from app.web import tasks
+
+    seen = []
+
+    monkeypatch.setattr(
+        bench, "run_case",
+        lambda settings, case, **kw: seen.append(
+            (kw["model"], kw["search"])) or {
+            "subject_id": case["subject_id"], "subject": case["label"],
+            "plane": kw["plane"], "model": kw["model"], "accepted": 1,
+            "refused": 0, "ms": 10, "documents": 1, "findings": 1,
+            "batch_id": kw.get("batch_id", ""),
+        },
+    )
+    result = tasks.bench(
+        settings,
+        {"planes": "api", "cases": 1, "models": "a,b", "searches": "exa,tavily"},
+        bench._Silent(),
+    )
+    assert sorted(seen) == [("a", "exa"), ("a", "tavily"), ("b", "exa"), ("b", "tavily")]
+    assert len(result["rows"]) == 4
+
+
+def test_an_unnamed_llm_axis_is_one_default_run_not_the_catalogue(settings, store, monkeypatch):
+    from app.web import tasks
+
+    seen = []
+
+    monkeypatch.setattr(
+        bench, "run_case",
+        lambda settings, case, **kw: seen.append(kw["model"]) or {
+            "subject_id": case["subject_id"], "subject": case["label"],
+            "plane": kw["plane"], "model": kw["model"], "accepted": 1,
+            "refused": 0, "ms": 10, "documents": 1, "findings": 1,
+            "batch_id": kw.get("batch_id", ""),
+        },
+    )
+    tasks.bench(settings, {"planes": "api", "cases": 1}, bench._Silent())
+    assert seen == [""]

@@ -98,6 +98,11 @@ def list_planes(
             # (see its docstring) — but "Kriko found a harness" and "Kriko
             # found *this* binary" are different sentences, and only the
             # second one can be checked against what they installed.
+            # Each installed harness carries its model choice: what is stored
+            # for it, what the CLI itself offers, and whether a choice is
+            # even drivable. A model dropdown without this is a guess with
+            # a text field — the reader asked for Sonnet vs Haiku vs Opus
+            # *by name*, and the names live with the CLI, not in Kriko.
             row["harnesses"] = [
                 {
                     "id": h.id,
@@ -105,6 +110,13 @@ def list_planes(
                     "command": h.executable,
                     "path": harness_mod.locate(h),
                     "needs_account": h.needs_account,
+                    # `llm` on the wire, `model` in the code: the frontend
+                    # may not name a pack's identity keys, and one of them
+                    # is "model" (see SERVED_AS in routers/bench.py).
+                    "llm": prefs.for_harness(conn, h.id),
+                    "llms": harness_mod.models_for(h),
+                    "llm_hint": h.model_hint,
+                    "llm_selectable": bool(h.model_flag),
                 }
                 for h in installed
             ]

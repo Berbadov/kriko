@@ -3,6 +3,7 @@
     import Keys from "../lib/Keys.svelte";
     import PlanePrefs from "../lib/Planes.prefs.svelte";
     import { api } from "../lib/api";
+    import type { ProviderTest } from "../lib/types";
     import { MODES, mode, setMode } from "../lib/mode";
     import { THEMES, THEME_LABELS, setTheme, theme } from "../lib/theme";
 
@@ -48,6 +49,39 @@
         setMode(next);
         setTimeout(refresh, 50);
     }
+
+    type Check = ProviderTest & { busy: boolean };
+
+    let keysPromise = $state(api.keys());
+    let checks = $state<Record<string, Check>>({});
+
+    const blank = (providerId: string, busy: boolean): Check => ({
+        provider: providerId,
+        ok: false,
+        latency_ms: 0,
+        error: "",
+        detail: "",
+        results: null,
+        tokens_in: null,
+        tokens_out: null,
+        tokens: null,
+        usd: null,
+        llm: "",
+        busy,
+    });
+
+    async function testProvider(providerId: string) {
+        checks[providerId] = blank(providerId, true);
+        try {
+            const verdict = await api.testKey(providerId);
+            checks[providerId] = { ...verdict, busy: false };
+        } catch (thrown) {
+            const detail = thrown instanceof Error ? thrown.message : String(thrown);
+            checks[providerId] = { ...blank(providerId, false), error: "request", detail };
+        }
+    }
+
+    const checkOf = (providerId: string): Check | undefined => checks[providerId];
 </script>
 
 <h2>Settings</h2>
@@ -106,6 +140,56 @@
      that is *not* in app.sqlite, and the section below says so. -->
 <Keys />
 
+<section>
+    <h3>Check a provider key</h3>
+    <p class="meta">
+        Each press sends one small search or one short reply request from the
+        server, then reports what the provider answered. Nothing on this screen
+        ever shows a key.
+    </p>
+    <Async promise={keysPromise} loading="Reading...">
+        {#snippet children(data)}
+            <ul class="checks">
+                {#each (data.providers ?? []) as provider (provider.id)}
+                    {@const check = checkOf(provider.id)}
+                    <li class="check">
+                        <div class="check-head">
+                            <strong>{provider.label}</strong>
+                            {#if provider.present}
+                                <span class="badge fact-ok">set {provider.hint}</span>
+                            {:else}
+                                <span class="badge">not set</span>
+                            {/if}
+                            <button
+                                type="button"
+                                disabled={!provider.present || check?.busy}
+                                onclick={() => testProvider(provider.id)}
+                            >
+                                {check?.busy ? "Testing..." : "Test"}
+                            </button>
+                        </div>
+                        {#if check}
+                            {#if check.busy}
+                                <p class="state" role="status">Testing...</p>
+                            {:else if check.ok}
+                                <p class="state fact-ok" role="status">
+                                    ok in {check.latency_ms} ms{#if check.results !== null}
+                                        · {check.results} result(s){/if}{#if check.tokens !== null}
+                                        · {check.tokens} tokens{/if}
+                                </p>
+                            {:else if check.error}
+                                <p class="state" role="status">
+                                    {check.error}{#if check.detail}: {check.detail}{/if}
+                                </p>
+                            {/if}
+                        {/if}
+                    </li>
+                {/each}
+            </ul>
+        {/snippet}
+    </Async>
+</section>
+
 <!-- Which agent, which LLM, which search provider — and what the runs have
      actually cost. Under the keys because a choice between providers only
      means something once a key exists for one of them. -->
@@ -161,5 +245,24 @@
     }
     .choice.on {
         border-color: var(--accent);
+    }
+    .checks {
+        list-style: none;
+        padding: 0;
+        margin-block: var(--s-3);
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-2);
+    }
+    .check {
+        padding: var(--s-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+    }
+    .check-head {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        flex-wrap: wrap;
     }
 </style>

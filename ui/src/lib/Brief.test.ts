@@ -113,4 +113,60 @@ describe("Brief", () => {
             ).toBeInTheDocument(),
         );
     });
+
+    it("offers the selected agent's models, and sends the chosen one", async () => {
+        const seen: unknown[] = [];
+        stubFetch({
+            "/api/research": { job_id: "j1" },
+            "/api/research-planes": {
+                planes: [
+                    {
+                        id: "harness",
+                        cost_basis: "subscription",
+                        what: "runs it",
+                        ready: true,
+                        needs_keys: false,
+                        selected_harness: "claude-code",
+                        harnesses: [
+                            {
+                                id: "claude-code",
+                                label: "Claude Code",
+                                command: "claude",
+                                llm: "",
+                                llms: ["opus", "sonnet", "haiku"],
+                                llm_hint: "an alias",
+                                llm_selectable: true,
+                            },
+                        ],
+                    },
+                ],
+            },
+            "/api/jobs/j1": DONE,
+        });
+        const realFetch = globalThis.fetch;
+        globalThis.fetch = (async (path: unknown, init?: { body?: unknown }) => {
+            if (String(path) === "/api/research") seen.push(JSON.parse(String(init?.body)));
+            return realFetch(path as string, init as RequestInit);
+        }) as typeof fetch;
+        try {
+            render(Brief, PROPS);
+            const box = (await screen.findByPlaceholderText("CLI default")) as HTMLInputElement;
+            box.value = "sonnet";
+            box.dispatchEvent(new Event("input", { bubbles: true }));
+            (await screen.findByRole("button", { name: "Run my agent on this" })).click();
+            await waitFor(() =>
+                expect(
+                    seen.filter(
+                        (body) =>
+                            (body as Record<string, unknown>).backend === "harness",
+                    ),
+                ).toHaveLength(1),
+            );
+            expect(seen).toContainEqual(
+                expect.objectContaining({ backend: "harness", llm: "sonnet" }),
+            );
+        } finally {
+            globalThis.fetch = realFetch;
+        }
+    });
 });

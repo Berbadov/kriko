@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
+import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import Planes from "./Planes.svelte";
 import { stubFetch, stubFetchFailing } from "./stub-fetch";
@@ -222,6 +222,35 @@ describe("the three research planes", () => {
         // because the default was the plane that fetches nothing by design,
         // and no screen said which plane that was.
         expect(await screen.findByText("default")).toBeInTheDocument();
+    });
+
+    it("names the model the selected agent will run with", async () => {
+        const withModel = planes(true);
+        withModel["/api/research-planes"].planes[0] = {
+            ...withModel["/api/research-planes"].planes[0],
+            harnesses: [
+                {
+                    id: "claude-code",
+                    label: "Claude Code",
+                    command: "claude",
+                    llm: "sonnet",
+                    llms: ["opus", "sonnet", "haiku"],
+                    llm_hint: "an alias",
+                    llm_selectable: true,
+                },
+            ],
+        };
+        stubFetch(withModel);
+        const { container } = render(Planes);
+        // The model name sits in its own <code>, so match across elements.
+        await waitFor(() =>
+            expect(container.textContent).toMatch(/with[\s\S]*sonnet/),
+        );
+        // And the run's Agent choice is a dropdown of installed agents,
+        // not a text field the reader has to spell an id into.
+        const agent = container.querySelector("details label select");
+        expect(agent).toBeTruthy();
+        expect(agent?.closest("label")?.textContent).toMatch(/Agent/);
     });
 
     it("says why an installed agent is not being used", async () => {

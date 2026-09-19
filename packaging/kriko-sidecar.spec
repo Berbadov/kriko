@@ -51,7 +51,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, SPECPATH)
-from freeze_imports import mcp_submodules
+from freeze_imports import CONSOLE_MODULES, kriko_submodules, mcp_submodules
 
 ROOT = Path(SPECPATH).parent
 STATIC = ROOT / "src" / "app" / "web" / "static"
@@ -141,7 +141,9 @@ a = Analysis(
         "kriko.research.api",
         "app.mcp_server",
     ]
-    + mcp_submodules(),
+    + list(CONSOLE_MODULES)
+    + mcp_submodules()
+    + kriko_submodules(),
     hookspath=[],
     runtime_hooks=[],
     # The research API plane and the whole pipeline are optional extras; a
