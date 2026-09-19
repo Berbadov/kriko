@@ -89,6 +89,23 @@
                         is what runs research at no marginal cost, so this is worth
                         fixing before the paid one.
                     </p>
+                    {#each data?.missing ?? [] as one (one.id)}
+                        <p class="meta">
+                            <strong>{one.label}</strong>
+                            {#if one.download_url}
+                                — <a href={one.download_url} target="_blank" rel="noreferrer">download</a>
+                            {/if}
+                            {#if one.install_hint}<br /><code>{one.install_hint}</code>{/if}
+                            {#if one.needs_account}<br />{one.needs_account}.{/if}
+                        </p>
+                    {/each}
+                    {#if data?.dirs_env}
+                        <p class="meta">
+                            Installed somewhere unusual? Set <code>{data.dirs_env}</code> to its
+                            folder and reload this panel — Kriko searches PATH, that variable,
+                            then the usual install folders.
+                        </p>
+                    {/if}
                 {/if}
                 {#each unusableOf(data) as one (one.id)}
                     <p class="meta">{one.label} is installed and not used: {one.why}</p>
@@ -120,6 +137,7 @@
                 <label for="p-llm">LLM</label>
                 <input
                     id="p-llm"
+                    list="p-llms"
                     value={data.chosen?.llm_model ?? ''}
                     placeholder={data.models?.default ?? ''}
                     onchange={(event) => save({ llm_model: event.currentTarget.value })}
@@ -128,6 +146,35 @@
                     {data.models?.note ?? ''} Currently: <code>{data.models?.current ?? '—'}</code>.
                 </p>
             </div>
+            <datalist id="p-llms">
+                {#each data.models?.offered ?? [] as one (one.id)}
+                    <option value={one.id}>{one.label} — {one.unusable || one.provider}</option>
+                {/each}
+            </datalist>
+            {#if data.effective}
+                <p class="meta">Paid extraction uses <code>{data.effective.llm}</code> with {data.effective.search || 'no search provider'}.</p>
+                {#if data.effective.reason}<p class="state">{data.effective.reason}</p>{/if}
+                {#if data.effective.harness_note}<p class="meta">{data.effective.harness_note}</p>{/if}
+            {/if}
+            <details>
+                <summary>LLM catalogue and stage preferences</summary>
+                <p class="meta">Custom IDs are accepted. Prices are USD per million tokens; unknown is not free. Edit prices in <code>{data.models?.catalogue ?? 'your catalogue'}</code>.</p>
+                <table>
+                    <thead><tr><th>LLM</th><th>Context</th><th>Input / output</th><th>Speed</th><th>Availability</th></tr></thead>
+                    <tbody>
+                        {#each data.models?.offered ?? [] as one (one.id)}
+                            <tr><th>{one.label}</th><td>{one.context?.toLocaleString() ?? 'unknown'}</td><td>{one.usd_in ?? 'unknown'} / {one.usd_out ?? 'unknown'}</td><td>{one.speed || 'unknown'}</td><td>{one.unusable || 'key configured'}</td></tr>
+                        {/each}
+                    </tbody>
+                </table>
+                {#each data.roles ?? [] as role (role.id)}
+                    <label class="field">
+                        {role.id} — {role.note}
+                        <input list="p-llms" value={role.chosen} disabled={!role.active} placeholder={data.models?.current ?? ''} onchange={(event) => save({ [`llm_model_${role.id}`]: event.currentTarget.value })} />
+                    </label>
+                    <p class="meta">{role.active ? `Uses ${role.effective}; a per-run choice wins.` : role.inactive_reason}</p>
+                {/each}
+            </details>
             {#if saved}<p class="state">{saved}</p>{/if}
         {/snippet}
     </Async>

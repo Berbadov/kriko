@@ -96,7 +96,7 @@
       <div class="lite-rc-bodywrap">
         <div class="lite-rc-bodyclip">
           <div class="lite-rc-body">
-            <p class="lite-rc-body">${escapeHtml(claim.body || "")}</p>
+            <p class="lite-rc-text">${escapeHtml(claim.body || "")}</p>
             ${claim.advice ? `
               <div class="lite-rc-insp">
                 <span class="lite-rc-insp-icon">${iconSvg("eye", { size: 13 })}</span>

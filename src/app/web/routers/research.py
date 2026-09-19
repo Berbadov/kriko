@@ -17,9 +17,9 @@ landed before the loop that needs it, and both live here rather than in
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
-from app import keys
+from app import prefs
 from app.web import observability, schedule, state
 from app.web.deps import get_app_state, get_jobs
 
@@ -50,7 +50,10 @@ PLANE_WORDS = {
 
 
 @router.get("/research-planes")
-def list_planes() -> dict:
+def list_planes(
+    llm: str = "", search: str = "", harness: str = "",
+    conn=Depends(get_app_state),
+) -> dict:
     """The two ways knowledge gets built, and whether each one can run now.
 
     Read off the researcher classes rather than restated in the frontend, for
@@ -66,7 +69,7 @@ def list_planes() -> dict:
     from app.providers.harness import HarnessResearcher
     from kriko.research import AgentResearcher, ApiResearcher
 
-    ready = keys.ready()
+    selection = prefs.effective(conn, model=llm, search=search, harness=harness)
     installed = harness_mod.available()
     planes = []
     for cls in (HarnessResearcher, AgentResearcher, ApiResearcher):
@@ -82,9 +85,12 @@ def list_planes() -> dict:
             "needs_keys": cls.name == "api",
         }
         if cls.name == "api":
-            row["ready"] = ready
+            row.update(ready=selection["ready"], reason=selection["reason"],
+                       llm=selection["llm"], search=selection["search"])
         if cls.name == "harness":
-            row["ready"] = bool(installed)
+            row.update(ready=selection["harness_ready"],
+                       selected_harness=selection["harness"],
+                       reason=selection["harness_note"])
             # Named, not counted. "no coding-agent CLI found" is answerable
             # only if the reader knows which names were looked for.
             # The resolved path, not just the name. A reader whose PATH does
@@ -98,10 +104,36 @@ def list_planes() -> dict:
                     "label": h.label,
                     "command": h.executable,
                     "path": harness_mod.locate(h),
+                    "needs_account": h.needs_account,
                 }
                 for h in installed
             ]
             row["looked_for"] = [h.executable for h in harness_mod.KNOWN]
+            # Missing, with somewhere to go: a name and a command are not
+            # actionable, a download page and an install command are. The
+            # account line is the cost answer — every headless run bills to
+            # a subscription, quota or key the reader already holds.
+            installed_ids = {h.id for h in installed}
+            row["missing"] = [
+                {
+                    "id": h.id,
+                    "label": h.label,
+                    "command": h.executable,
+                    "download_url": h.download_url,
+                    "install_hint": h.install_hint,
+                    "needs_account": h.needs_account,
+                }
+                for h in harness_mod.KNOWN
+                if h.id not in installed_ids and not h.unusable
+            ]
+            # The manual path: where Kriko looked beyond PATH, and the one
+            # variable that adds another directory to that search.
+            from pathlib import Path as _Path
+
+            row["dirs_env"] = harness_mod.DIRS_ENV
+            row["search_dirs"] = [
+                str(_Path.home() / part) for part in harness_mod.KNOWN[0].homes
+            ]
             # Installed, found, and deliberately not driven — with the reason.
             # "My opencode is installed, why isn't Kriko using it" is a fair
             # question and silence is not an answer to it: `opencode run` has
@@ -118,6 +150,31 @@ def list_planes() -> dict:
     from app.web.tasks import default_backend
 
     return {"planes": planes, "default": default_backend()}
+
+
+def resolve_research_subject(store, *, q: str = "", subject_id: str = "") -> dict:
+    from kriko.lookup import find
+
+    q, subject_id = q.strip(), subject_id.strip()
+    if bool(q) == bool(subject_id):
+        raise HTTPException(422, "provide exactly one of q or subject_id")
+    if subject_id:
+        matches = [dict(row) for row in store.execute(
+            "SELECT s.subject_id, s.pack_id, s.label FROM subjects s"
+            " JOIN packs p USING (pack_id)"
+            " WHERE s.subject_id = ? AND p.enabled = 1",
+            (subject_id,),
+        )]
+    else:
+        matches = find.search(store, q, limit=20)
+    if not matches:
+        raise HTTPException(404, "no installed subject matches this product")
+    if len(matches) != 1:
+        raise HTTPException(409, {
+            "message": "choose a specific subject before researching",
+            "items": matches,
+        })
+    return {key: matches[0][key] for key in ("subject_id", "pack_id")}
 
 
 class AgendaRunRequest(BaseModel):
@@ -137,6 +194,9 @@ class AgendaRunRequest(BaseModel):
     #: unlimited — see the note there.
     budget_usd: float = Field(0.0, ge=0.0, le=100.0)
     max_documents: int = Field(5, ge=1, le=50)
+    model: str = Field("", max_length=200, validation_alias=AliasChoices("model", "llm"))
+    harness: str = Field("", max_length=64)
+    search: str = Field("", max_length=64)
 
 
 @router.post("/agenda/run")

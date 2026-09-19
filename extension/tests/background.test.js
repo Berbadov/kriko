@@ -16,6 +16,37 @@ const path = require("node:path");
 
 const { loadBackground, send } = require("./background_harness.js");
 
+test("RESEARCH_PRODUCT posts only the explicit product choice through the extension door", async () => {
+  const h = loadBackground({ routes: {
+    "/api/extension/research-plane": { job_id: "product-job", kind: "research" },
+  } });
+  const reply = await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "Example device", allow_draft: true, cap: 0.2,
+  } });
+  assert.equal(reply.job.job_id, "product-job");
+  assert.equal(h.state.requests.length, 1);
+  const request = h.state.requests[0];
+  assert.equal(request.url, "http://127.0.0.1:8787/api/extension/research-plane");
+  assert.equal(request.method, "POST");
+  assert.equal(request.headers["content-type"], "application/json");
+  assert.equal(request.headers["X-Kriko-Extension"], MANIFEST.version);
+  assert.deepEqual(request.body, { q: "Example device", allow_draft: true, cap: 0.2 });
+});
+
+test("selected subject research does not permit a draft by accident", async () => {
+  const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { subject_id: "s1", q: "ignored", cap: 0.2 } });
+  assert.deepEqual(h.state.requests[0].body, { subject_id: "s1", cap: 0.2 });
+});
+
+test("cancellation posts to the existing job endpoint", async () => {
+  const h = loadBackground({ routes: { "/api/jobs/j1/cancel": { job_id: "j1", state: "cancelled" } } });
+  const reply = await send(h, { type: "CANCEL_JOB", payload: { job_id: "j1" } });
+  assert.equal(reply.job.state, "cancelled");
+  assert.equal(h.state.requests[0].method, "POST");
+  assert.deepEqual(h.state.requests[0].body, {});
+});
+
 const MANIFEST = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "manifest.json"), "utf8"));
 

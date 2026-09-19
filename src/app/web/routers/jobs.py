@@ -17,7 +17,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from app.web import state, tasks
 from app.web.deps import get_app_state, get_jobs
@@ -58,6 +58,9 @@ class ResearchRequest(BaseModel):
     #: default too: a request from an older client, or with a typo, should run
     #: rather than be refused.
     scale: str = Field("", max_length=32)
+    model: str = Field("", max_length=200, validation_alias=AliasChoices("model", "llm"))
+    harness: str = Field("", max_length=64)
+    search: str = Field("", max_length=64)
 
 
 class UpdateRequest(BaseModel):

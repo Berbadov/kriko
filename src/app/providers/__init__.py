@@ -46,8 +46,10 @@ def completer_for(model: str):
     from app import modelcatalogue
     from app.web.settings import KRIKO_HOME
 
-    row = modelcatalogue.load(KRIKO_HOME).get(model) or {}
-    if row.get("provider") == "anthropic" or model.startswith("claude-"):
+    provider = modelcatalogue.provider_for(model, KRIKO_HOME)
+    if provider not in ("openai", "anthropic"):
+        raise MissingKey(f"no completion adapter for {provider}")
+    if provider == "anthropic":
         # The prefix check is a fallback for a model released after the
         # reader's catalogue was written: `claude-` is Anthropic's own
         # namespace, so sending it to an OpenAI-shaped endpoint could only
@@ -56,7 +58,6 @@ def completer_for(model: str):
 
         return anthropic_llm.completer(model=model)
     return llm.completer(model=model)
-
 __all__ = [
     "exa", "fetch", "harness", "llm",
     "api_researcher", "harness_researcher",
@@ -96,8 +97,11 @@ def _searcher(app_state_path, preferred: str = ""):
             wanted = prefs.read(conn).get(prefs.SEARCH, "")
         finally:
             conn.close()
+    wanted = wanted.strip()
     have = keys.search_providers()
-    if wanted and wanted in have:
+    if wanted:
+        if wanted not in have:
+            raise MissingKey(f"selected search provider {wanted!r} is unavailable — add its key or change the selection")
         picked = wanted
     elif have:
         picked = have[0]
@@ -173,7 +177,7 @@ def _preferred_model(app_state_path) -> str:
     except Exception:  # noqa: BLE001 — a preference is never why a run fails
         return ""
     try:
-        return prefs.read(conn).get(prefs.MODEL, "")
+        return prefs.for_role(conn, "extract")
     finally:
         conn.close()
 

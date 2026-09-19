@@ -20,6 +20,7 @@ is how a hobby project produces a bill someone remembers.
 import json
 import re
 import unicodedata
+from collections.abc import Callable
 
 from kriko.research.base import (
     STANDARD,
@@ -74,6 +75,7 @@ class ApiResearcher:
         complete,
         price_per_call: float = 0.0,
         spend: Spend | None = None,
+        check_cancelled: Callable[[], None] | None = None,
     ):
         """
         search(query, limit)  -> list of {"url", "title", "site"}
@@ -84,6 +86,7 @@ class ApiResearcher:
                                  which is exactly the behaviour that existed
                                  before protocols did.
         """
+        self.check_cancelled = check_cancelled or (lambda: None)
         self._search = search
         self._fetch = fetch
         self._complete = complete
@@ -120,6 +123,7 @@ class ApiResearcher:
         return int(value)
 
     def _charge(self, task: ResearchTask) -> None:
+        self.check_cancelled()
         self.spent += self._price
         if task.budget_usd and self.spent > task.budget_usd:
             raise BudgetExceeded(
@@ -135,16 +139,22 @@ class ApiResearcher:
         seen: set[str] = set()
         documents: list[Document] = []
         self._batched = {}
+        self._documents = documents
+        self.check_cancelled()
 
         for query in task.rendered_queries():
             if len(documents) >= task.max_documents:
                 break
             self._charge(task)
-            for hit in self._search(query, task.max_documents) or []:
+            hits = self._search(query, task.max_documents) or []
+            self.check_cancelled()
+            for hit in hits:
+                self.check_cancelled()
                 url = hit.get("url", "")
                 if not url or url in seen:
                     continue
                 seen.add(url)
+                self.check_cancelled()
                 got = self._fetch(url)
                 text = got.text if isinstance(got, Fetched) else (got or "")
                 published = got.published_at if isinstance(got, Fetched) else ""
@@ -154,8 +164,10 @@ class ApiResearcher:
                     url=url, text=text, title=hit.get("title", ""),
                     published_at=published,
                     site_or_channel=hit.get("site", "")))
+                self.check_cancelled()
                 if len(documents) >= task.max_documents:
                     break
+        self.check_cancelled()
         # Remembered so `extract` can batch the ones that have not been read
         # yet. The caller hands documents back one at a time, which is the
         # right interface and the reason a batch has to be assembled here.
@@ -174,6 +186,7 @@ class ApiResearcher:
         caches what one CLI run reported. The engine's shape does not change;
         what changes is how many times money is spent to fill it.
         """
+        self.check_cancelled()
         if document.url in self._batched:
             return self._batched.pop(document.url)
         batch = self._take(task, document)
@@ -223,8 +236,10 @@ class ApiResearcher:
               "fixes."
         )
         self._charge(task)
+        self.check_cancelled()
+        reply = self._complete(prompt)
         try:
-            payload = json.loads(self._complete(prompt))
+            payload = json.loads(reply)
         except (json.JSONDecodeError, TypeError):
             return []
         if not isinstance(payload, list):
@@ -288,8 +303,10 @@ class ApiResearcher:
             " Never restate the title in it. "
             "Return [] if the documents support no claim about this subject."
         )
+        self.check_cancelled()
+        reply = self._complete(prompt)
         try:
-            payload = json.loads(self._complete(prompt))
+            payload = json.loads(reply)
         except (json.JSONDecodeError, TypeError):
             return {}
         if not isinstance(payload, list):

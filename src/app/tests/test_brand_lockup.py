@@ -36,16 +36,18 @@ def test_the_lockup_wears_the_mark_rather_than_a_copy_of_it():
     follow — not by reading the generator, which would only prove the code
     says what it says.
     """
-    source = render_lockup.MARK.read_text(encoding="utf-8")
+    # Bytes, not text: `write_text` translates newlines to the platform's own
+    # on Windows, so a text round-trip dirties the file there (LF becomes CRLF)
+    # while passing silently on Linux. The restore must be byte-identical.
+    source = render_lockup.MARK.read_bytes()
     try:
-        render_lockup.MARK.write_text(
-            source.replace('x="2" y="1" width="3" height="14"',
-                           'x="2" y="1" width="4" height="14"'),
-            encoding="utf-8",
+        render_lockup.MARK.write_bytes(
+            source.replace(b'x="2" y="1" width="3" height="14"',
+                           b'x="2" y="1" width="4" height="14"'),
         )
         moved, _ = render_lockup.render()
     finally:
-        render_lockup.MARK.write_text(source, encoding="utf-8")
+        render_lockup.MARK.write_bytes(source)
     assert 'x="2" y="1" width="4" height="14"' in moved
 
 

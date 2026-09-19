@@ -63,6 +63,7 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
  * state cost this line nothing.
  */
 export const isLive = (job: Job) => !job.done;
+export const canCancel = (job: Job) => isLive(job) && job.state !== "cancelling";
 
 export const STATE_WORD: Record<string, string> = {
     queued: "waiting its turn",

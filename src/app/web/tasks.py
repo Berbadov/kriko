@@ -14,6 +14,7 @@ the whole point of the jobs layer.
 
 import importlib
 import secrets
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -391,6 +392,8 @@ def research(settings, params: dict, progress: Progress) -> dict:
     provenance = _Provenance(settings, emit.run_id, progress.job_id, params)
     try:
         result = _research(settings, params, progress, emit, provenance)
+        progress.partial(result)
+        progress.check()
     except Cancelled:
         # Cancelled is not failed. The reader stopped it, and a view that
         # colours a deliberate stop the same as a crash trains the reader to
@@ -488,7 +491,28 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         emit.event(f"{researcher.name} plane, cost {researcher.cost_basis}")
         progress.check()
 
-        documents = researcher.gather(task)
+        progress.partial({
+            "subject_id": subject_id, "pack_id": pack_id,
+            "brief": brief, "stopped_at": "discovery",
+        })
+        try:
+            documents = researcher.gather(task)
+        except Cancelled:
+            gathered = getattr(researcher, "_documents", [])
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "brief": brief, "stopped_at": "discovery",
+                "documents": len(gathered),
+                "retained_documents": [asdict(one) for one in gathered],
+            })
+            raise
+        progress.partial({
+            "subject_id": subject_id, "pack_id": pack_id,
+            "brief": brief, "stopped_at": "discovery",
+            "documents": len(documents),
+            "retained_documents": [asdict(one) for one in documents],
+        })
+        progress.check()
         progress.log(f"gathered {len(documents)} document(s)")
         if not documents:
             # Said in the log, not only in the stage list: the log is what the
@@ -539,7 +563,9 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             # has read the first five and that is worth keeping.
             progress.partial({
                 "subject_id": subject_id, "pack_id": pack_id,
-                "documents": index - 1, "findings": len(findings),
+                "documents": len(documents), "findings": len(findings),
+                "retained_documents": [asdict(one) for one in documents],
+                "pending_findings": findings, "brief": brief,
                 "stopped_at": "extraction",
                 "spend": meter.snapshot(),
             })
@@ -571,6 +597,14 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                     severity=finding.severity,
                     domain=finding.domain,
                 )
+            progress.partial({
+                "subject_id": subject_id, "pack_id": pack_id,
+                "documents": len(documents), "findings": len(findings),
+                "retained_documents": [asdict(one) for one in documents],
+                "pending_findings": findings, "brief": brief,
+                "stopped_at": "extraction", "spend": meter.snapshot(),
+            })
+            progress.check()
             emit.count(findings=found)
             if not found:
                 emit.event(
@@ -586,6 +620,8 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         progress.partial({
             "subject_id": subject_id, "pack_id": pack_id,
             "documents": len(documents), "findings": len(findings),
+            "retained_documents": [asdict(one) for one in documents],
+            "pending_findings": findings, "brief": brief,
             "stopped_at": "extraction",
             "spend": meter.snapshot(),
         })
@@ -640,6 +676,8 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 "findings": len(findings),
                 "accepted": len(verdicts.get("accepted", [])),
                 "refused": len(verdicts.get("rejected", [])),
+                "verdicts": verdicts, "brief": brief,
+                "retained_documents": [asdict(one) for one in documents],
                 "stopped_at": "ingestion",
             })
 
@@ -1289,7 +1327,19 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.15, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
 
-    reply = researcher.ask(packauthor.brief(category, scope=scope))
+    prompt = packauthor.brief(category, scope=scope)
+    if params.get("product_only"):
+        prompt += (
+            "\n\nProduct-only scope: the name above is a specific product, not a "
+            "request to research its whole category. Author a draft only for that "
+            "product and its necessary components. Do not expand to other products, "
+            "a brand catalogue, or a category-wide lineup. Preserve the resolved "
+            "identity and state any variant assumptions explicitly. The product-only "
+            "scope overrides any broader category or lineup instructions above. "
+            "Keep the same output contract and evidence requirements. "
+            "Do not install anything."
+        )
+    reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
@@ -1442,12 +1492,16 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
         f"{len(again)} finding(s) were refused for a field that can be "
         f"rewritten — asking once more"
     )
+    progress.check()
     try:
         mended = researcher.repair(task, again, wanted)
+    except (Cancelled, BudgetExceeded):
+        raise
     except Exception as exc:  # noqa: BLE001 — a failed repair is not a failed run
         emit.event(f"could not re-ask: {exc}", level="warn", stage="ingestion")
         return verdicts
 
+    progress.check()
     kept = [one for one in mended if explanation(one)]
     if not kept:
         emit.event("nothing came back with the field filled in",
@@ -1857,11 +1911,17 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         batch_id=batch_id,
                         search=search,
                         model=model,
+                        check_cancelled=progress.check,
                     )
                     row["rep"] = rep
                     state.record_bench(app_conn, row)
                     rows.append(row)
                     done += 1
+                    progress.partial({
+                        "batch_id": batch_id, "rows": rows,
+                        "measurements": done, "stopped_at": "benchmark",
+                    })
+                    progress.check()
                     # One line per measurement, so the reader watching the job
                     # sees the comparison build rather than a number at the end.
                     progress.log(

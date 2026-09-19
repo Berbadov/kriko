@@ -255,7 +255,9 @@ export type Job = {
     finished_at: string | null;
 };
 
-export type ResearchRequest = {
+export type RunSelection = { llm?: string; harness?: string; search?: string };
+
+export type ResearchRequest = RunSelection & {
     subject_id: string;
     pack_id?: string;
     backend?: string;
@@ -563,12 +565,29 @@ export type SiteRequest = {
 export type Sites = { registered: Site[]; requested: SiteRequest[] };
 
 /** Which agent, which LLM, which search provider — and what could be chosen. */
+export type LlmChoice = {
+    id: string; label: string; provider: string; context: number | null;
+    usd_in: number | null; usd_out: number | null; speed: string;
+    unusable: string; known: boolean; note?: string;
+};
+
 export type Prefs = {
-    chosen: { preferred_harness: string; llm_model: string; search_provider: string };
+    chosen: { preferred_harness: string; llm_model: string; search_provider: string; llm_model_extract?: string; llm_model_plan?: string; llm_model_synthesise?: string; llm_model_validate?: string };
     harnesses: { id: string; label: string; path: string }[];
     unusable: { id: string; label: string; why: string }[];
+    missing: {
+        id: string;
+        label: string;
+        command: string;
+        download_url: string;
+        install_hint: string;
+        needs_account: string;
+    }[];
+    dirs_env: string;
     search_providers: { id: string; label: string; ready: boolean }[];
-    models: { current: string; default: string; note: string };
+    models: { current: string; default: string; note: string; offered?: LlmChoice[]; catalogue?: string };
+    roles?: { id: string; note: string; chosen: string; active: boolean; effective: string; inactive_reason: string }[];
+    effective?: { llm: string; search: string; ready: boolean; reason: string; harness: string; harness_note: string };
 };
 
 /** What has been spent, and what the next run is likely to cost.
@@ -764,8 +783,12 @@ export type ResearchPlane = {
      *  and on the harness plane with no coding-agent CLI installed. */
     ready: boolean;
     needs_keys: boolean;
+    selected_harness?: string;
+    reason?: string;
+    llm?: string;
+    search?: string;
     /** The harness plane only: which coding-agent CLIs were found here. */
-    harnesses?: { id: string; label: string; command: string }[];
+    harnesses?: { id: string; label: string; command: string; needs_account?: string }[];
     /** The harness plane only: the commands that were looked for, so a card
      *  that cannot run names the thing to install. */
     looked_for?: string[];
@@ -773,6 +796,21 @@ export type ResearchPlane = {
      *  reason. "My agent is installed, why isn't Kriko using it" is a fair
      *  question, and silence is not an answer to it. */
     unusable?: { id: string; label: string; command: string; why: string }[];
+    /** Not found here, each with where to get it and what account it bills
+     *  to. A missing CLI is the ordinary state, not an error — the card
+     *  lists the way out rather than just the absence. */
+    missing?: {
+        id: string;
+        label: string;
+        command: string;
+        download_url: string;
+        install_hint: string;
+        needs_account: string;
+    }[];
+    /** The environment variable that adds another directory to the CLI
+     *  search, and the home-relative directories searched without it. */
+    dirs_env?: string;
+    search_dirs?: string[];
 };
 
 /** What `/api/keys` says about one provider — never the key itself.
@@ -839,7 +877,7 @@ export type ResearchRunDetail = ResearchRun & {
     undoable: boolean;
 };
 
-export type AgendaRunRequest = {
+export type AgendaRunRequest = RunSelection & {
     rows?: number;
     pack_id?: string | null;
     backend?: string;
@@ -1041,4 +1079,8 @@ export type BenchRequest = Partial<{
     budget_usd: number;
     protocols: string;
     reps: number;
+    llms: string;
+    searches: string;
 }>;
+
+export type BenchEstimate = { runs: number; usd: number | null; tokens: number | null; basis: number; note: string; axes: Record<string, number> };

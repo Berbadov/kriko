@@ -236,3 +236,48 @@ def test_a_staged_page_can_load_everything_it_asks_for(tmp_path):
     assert broken == [], (
         f"staged pages reference files that were not shipped: {broken}"
     )
+
+
+def test_staged_digest_tracks_bytes_without_a_version_bump(tmp_path, monkeypatch):
+    import hashlib
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "manifest.json").write_bytes(b'{"version":"1.0.0"}')
+    (source / "background.js").write_bytes(b"initial")
+    (source / "assets").mkdir()
+    (source / "assets" / "icon.svg").write_bytes(b"icon")
+    (source / "ignored.txt").write_bytes(b"not shipped")
+    monkeypatch.setattr(extension, "source_dir", lambda: source)
+    monkeypatch.delenv("KRIKO_EXTENSION_DIR", raising=False)
+    client = _client(tmp_path)
+    assert client.get("/api/extension").json()["staged_content_digest"] == ""
+    staged = client.post("/api/extension/stage").json()
+    assert staged["files"] == ["assets/icon.svg", "background.js", "manifest.json"]
+    canonical = b"".join(
+        name.encode("utf-8") + b"\0" + (source / name).read_bytes() + b"\0"
+        for name in staged["files"]
+    )
+    assert staged["content_digest"] == hashlib.sha256(canonical).hexdigest()
+    status = client.get("/api/extension").json()
+    assert status["staged_content_digest"] == status["content_digest"] == staged["content_digest"]
+    assert status["staged_files"] == staged["files"]
+    (source / "background.js").write_bytes(b"changed")
+    status = client.get("/api/extension").json()
+    assert status["version"] == status["staged_version"] == "1.0.0"
+    assert status["content_digest"] != status["staged_content_digest"]
+    assert status["staged_content_digest"] == staged["content_digest"]
+    refreshed = client.post("/api/extension/stage").json()
+    assert refreshed["content_digest"] == status["content_digest"]
+    (source / "ignored.txt").write_bytes(b"still not shipped")
+    assert extension.content_digest(source) == refreshed["content_digest"]
+    (source / "assets" / "icon.svg").rename(source / "assets" / "renamed.svg")
+    assert extension.content_digest(source) != refreshed["content_digest"]
+
+
+def test_missing_extension_has_no_digest(tmp_path, monkeypatch):
+    monkeypatch.setattr(extension, "source_dir", lambda: None)
+    monkeypatch.delenv("KRIKO_EXTENSION_DIR", raising=False)
+    body = _client(tmp_path).get("/api/extension").json()
+    assert body["content_digest"] == body["staged_content_digest"] == ""
+    assert body["staged_files"] == []

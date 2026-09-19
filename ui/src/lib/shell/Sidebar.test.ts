@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/svelte";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import Jobs from "../../routes/Jobs.svelte";
+import { parseHash } from "../router";
 import Sidebar from "./Sidebar.svelte";
 import { readings, unwatch, EMPTY } from "./instruments";
 
@@ -87,6 +89,11 @@ describe("the rail's primary action", () => {
         render(Sidebar, { mode: "author" });
         const action = screen.getByRole("link", { name: /Start a new pack/ });
         expect(action).toBeInTheDocument();
+        expect(parseHash(action.getAttribute("href") ?? "")).toEqual({
+            name: "jobs",
+            params: [],
+            query: { mode: "author", author: "new" },
+        });
         // Outside `.rail-nav` on purpose: a rail lists where you are, and this
         // is a do. Inside it, it reads as the fourteenth destination.
         expect(action.closest("nav")).toBeNull();
@@ -95,6 +102,51 @@ describe("the rail's primary action", () => {
     it("does not offer it to a buyer, who has no screen behind it", () => {
         render(Sidebar, { mode: "buyer" });
         expect(screen.queryByRole("link", { name: /Start a new pack/ })).toBeNull();
+    });
+});
+
+describe("the new-pack destination", () => {
+    function at(hash: string) {
+        window.history.replaceState(null, "", hash);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+
+    afterEach(() => {
+        window.history.replaceState(null, "", "#/check");
+    });
+
+    it("opens and focuses authoring on arrival, without starting work", async () => {
+        const fetchMock = vi.fn(async (_path: string, _init?: RequestInit) =>
+            new Response(JSON.stringify({ items: [] })),
+        );
+        vi.stubGlobal("fetch", fetchMock);
+        render(Sidebar, { mode: "author" });
+        at(screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href")!);
+        render(Jobs);
+        const input = screen.getByLabelText("What is the category?");
+        await waitFor(() => expect(input).toHaveFocus());
+        expect(input.closest("details")).toHaveAttribute("open");
+        expect(parseHash(window.location.hash).query).toEqual({ mode: "author" });
+        expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+    });
+
+    it("reopens the form on the same route without clearing a draft", async () => {
+        vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [] }))));
+        at("#/jobs?mode=author");
+        render(Sidebar, { mode: "author" });
+        render(Jobs);
+        const input = screen.getByLabelText("What is the category?");
+        expect(input.closest("details")).not.toHaveAttribute("open");
+        const action = screen.getByRole("link", { name: /Start a new pack/ });
+        at(action.getAttribute("href")!);
+        await waitFor(() => expect(input).toHaveFocus());
+        await fireEvent.input(input, { target: { value: "espresso machines" } });
+        input.closest("details")!.open = false;
+        action.focus();
+        at(action.getAttribute("href")!);
+        await waitFor(() => expect(input).toHaveFocus());
+        expect(input.closest("details")).toHaveAttribute("open");
+        expect(input).toHaveValue("espresso machines");
     });
 });
 

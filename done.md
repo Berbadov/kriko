@@ -6,6 +6,79 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-18 — the 0.10.0 completion audit (agent options, Cancel, panel research, styling)
+
+The 0.10.0 merge claimed 20 of 23 items. Three of the twenty were preferences
+without execution, buttons without wiring, and search without research. This
+pass closed the gap between the claim and the tree, on the reader's own
+machine, with the reader's own CLIs.
+
+**Agent options, made real.** Per-role models were saved by the UI and ignored
+by execution (`prefs.for_role` had no production caller). One resolver now
+decides every run — per-run override, then the extract preference, then the
+global default — and the paid plane builds from it; roles that make no paid
+call are marked inactive rather than inventing new ones. Per-run
+model/harness/search travel through the research, agenda, authoring, amendment,
+site and benchmark requests, and the screens show the effective selection
+instead of the first harness found. Choosing a search provider with no key now
+refuses loudly instead of silently substituting another.
+
+**Antigravity CLI verified, Vibe/Gemini gated honestly.** `agy` was driven for
+real: prompt-as-`-p`-value (piped stdin is ignored there, an empty `-p` eats
+the next flag), `stream-json` events parsed into findings/usage/narration,
+`--model` per-run selection, a disposable working directory, and the key
+finding — headless runs auto-deny anything needing approval, so a fetch denial
+fails the run with the allow-rule fix rather than reporting "researched, found
+nothing". Mistral Vibe and Gemini CLI stay registered but `unusable` with the
+reason: their tool names, sandbox files and output parsing are unverified, and
+Gemini's `--allowed-tools` is deprecated upstream.
+
+**Missing-harness UX.** A CLI that is not installed is the ordinary state, so
+the Agents card and Settings list what to install (official download page, the
+install command), which account each one bills to, and the `KRIKO_HARNESS_DIRS`
+manual path with the directories searched without it.
+
+**Cancel that cancels.** Queued start/cancel lost a race and started cancelled
+work; the paid plane and benchmark cases never saw the flag; the benchmark
+sandbox progress adapter could not run a case at all. All three fixed, with
+"Stopping…" states and retained-partial semantics stated honestly.
+
+**The panel researches this product.** "Find in installed packs" and "Research
+this product" are two buttons now. Research runs the consent form first (cost
+shown before the press), works for known subjects and for unknown products via
+an explicit product-only draft that is never auto-installed, and Cancel reads
+"Cancelled", not "Research failed". Extension freshness compares content
+digests, because the manifest version cannot tell a stale copy from a current
+one.
+
+**Styling.** Focus outlines use a colour again, rail figures meet contrast,
+type sizes travel with their line-heights, the new-pack action lands on the
+authoring form, and the claim body no longer inherits its container's
+padding and border. Two whole-file line-ending rewrites (CRLF) reverted to LF.
+
+Verified: 1862/1883 backend tests green with `PYTHONUTF8=1` (the suite is
+written for POSIX line endings and locale), 150/150 extension node tests,
+528/528 vitest, `svelte-check`/`ruff`/`mypy` clean, UI bundle rebuilt.
+Uncommitted.
+
+Three of this pass's own regressions were caught by the full run and fixed:
+the extension digest's unsorted `rglob` (repo invariant), the Sidebar CTA hash
+the links guard read as a `#/new` route (guard now reads the route position of
+`hashWith`), and slate-light accent ink at 4.47:1 (darkened one step to
+4.73:1). Plus a Windows-only test bug found by bisect: the lockup test rewrote
+`logo-mark.svg` in text mode, so every suite run dirtied the file with CRLF —
+it round-trips bytes now.
+
+21 failures remain, all pre-existing on this Windows host and none in touched
+files: `os.geteuid`/POSIX-env sidecar/logging tests, Windows socket semantics
+in `reserve()`, backslash `testpaths`, the HEAD `ledger_run` pipeline import,
+`pywinpty` lock entry, Chromium candidate names, the reader's own
+`icon.png` (both brand-icon tests — the custom icon is theirs, left alone),
+the frozen-env assertion, and the reader's real Claude Desktop config. Two
+environment gaps were closed to get a signal at all: installed the declared
+`trafilatura` and `langextract` dependencies, and `PYTHONUTF8=1` for the
+cp1252 YAML reads.
+
 ### 2026-09-17 — the 0.10.0 work order (§3.1, and §1.4/§2.10's missing half)
 
 **§3.1 — the extension rebuilt, function and UI together.** Four commits, and

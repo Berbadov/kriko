@@ -100,7 +100,7 @@
          a primary action that opens a page they cannot use is worse than no
          action. -->
     {#if mode === "author"}
-        <a class="rail-action" href={href("packs")}>
+        <a class="rail-action" href={hashWith({ mode, author: "new" }, "jobs")}>
             <span class="rail-action-plus" aria-hidden="true">+</span>
             Start a new pack
         </a>
