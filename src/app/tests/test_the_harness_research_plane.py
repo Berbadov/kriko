@@ -1560,3 +1560,92 @@ def test_the_planes_endpoint_names_missing_clis_with_a_way_out(tmp_path, monkeyp
         assert one["download_url"] and one["install_hint"] and one["needs_account"]
     assert row["dirs_env"] == "KRIKO_HARNESS_DIRS"
     assert row["search_dirs"]
+
+
+# ── per-harness models: the reader names Sonnet, not "a model" ───────────────
+#
+# The request was specific — Sonnet vs Haiku vs Opus *inside* Claude Code, and
+# the other harnesses' own lists — because one global text field cannot name a
+# model in three different namespaces. A claude alias handed to agy would run
+# as if it were right; the resolver below exists so it never is.
+
+
+def test_claude_and_agy_models_come_from_the_clis_themselves():
+    """Aliases for claude (documented), a live list for agy (measured)."""
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    assert harness_mod.models_for(claude) == ["opus", "sonnet", "haiku"]
+    agy = next(h for h in harness_mod.KNOWN if h.id == "antigravity-cli")
+    if not harness_mod.locate(agy):
+        pytest.skip("no agy on this machine")
+    names = harness_mod.models_for(agy)
+    assert names, "agy is installed but named no models"
+    assert all(" " not in name for name in names)
+
+
+def test_models_for_a_missing_cli_is_an_empty_list_not_an_error():
+    missing = harness_mod.Harness("nope", "Nope", "kriko-no-such-command-exists")
+    assert harness_mod.models_for(missing) == []
+
+
+def test_a_model_reaches_the_vector_only_through_a_verified_flag(monkeypatch):
+    """`--model` is real on claude and agy, documented-but-unlisted on
+    opencode, and absent elsewhere. A choice for a CLI with no switch is
+    refused — running the default as if it were the choice is the failure."""
+    monkeypatch.setattr(
+        harness_mod, "declared", lambda _: frozenset({"--output-format", "--model"})
+    )
+    monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    assert harness_mod.command_for(claude, model="sonnet")[-2:] == ["--model", "sonnet"]
+    opencode = next(h for h in harness_mod.KNOWN if h.id == "opencode")
+    assert harness_mod.command_for(opencode, model="anthropic/x")[-2:] == ["--model", "anthropic/x"]
+    agy = next(h for h in harness_mod.KNOWN if h.id == "antigravity-cli")
+    assert harness_mod.command_for(agy, model="m")[-2:] == ["--model", "m"]
+    bare = harness_mod.Harness("bare", "Bare", "bare")
+    with pytest.raises(NoHarness):
+        harness_mod.command_for(bare, model="anything")
+
+
+def test_per_harness_model_resolution_is_override_then_stored_then_empty(tmp_path):
+    """Three namespaces, so no cross-harness fallback: a claude alias is not
+    an opencode provider/model id, and guessing across that line is how a run
+    gets a name from the wrong world."""
+    from app import prefs
+    from app.web import state
+
+    settings = _settings(tmp_path)
+    conn = state.connect(settings.app_state_path)
+    try:
+        assert prefs.for_harness(conn, "claude-code") == ""
+        prefs.write(conn, {"harness_model_claude_code": "sonnet"})
+        assert prefs.for_harness(conn, "claude-code") == "sonnet"
+        assert prefs.for_harness(conn, "claude-code", "opus") == "opus"
+        assert prefs.for_harness(conn, "antigravity-cli") == ""
+    finally:
+        conn.close()
+
+
+def test_the_harness_researcher_takes_the_model_of_the_cli_it_runs(tmp_path, monkeypatch):
+    """The stored choice follows the harness that runs, not the one that was
+    preferred: a fallback CLI must never inherit the preferred one's model."""
+    from app import prefs, providers
+    from app.web import state
+
+    settings = _settings(tmp_path)
+    conn = state.connect(settings.app_state_path)
+    prefs.write(conn, {"harness_model_claude_code": "sonnet"})
+    conn.close()
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    agy = next(h for h in harness_mod.KNOWN if h.id == "antigravity-cli")
+    monkeypatch.setattr(harness_mod, "available", lambda: [agy])
+    researcher = providers.harness_researcher(app_state_path=settings.app_state_path)
+    assert researcher.requested_model == "", "agy has no stored model; claude's must not leak"
+    monkeypatch.setattr(
+        providers.harness, "chosen",
+        lambda preferred="": claude if preferred in ("", "claude-code") else None,
+    )
+    monkeypatch.setattr(harness_mod, "available", lambda: [claude, agy])
+    researcher = providers.harness_researcher(
+        preferred="claude-code", app_state_path=settings.app_state_path, model="opus",
+    )
+    assert researcher.requested_model == "opus"

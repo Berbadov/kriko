@@ -39,7 +39,22 @@ def role_key(role: str) -> str:
 
 ROLE_KEYS = tuple(role_key(one) for one in modelcatalogue.ROLES)
 
-KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS)
+
+def harness_model_key(harness_id: str) -> str:
+    return f"harness_model_{harness_id}".replace("-", "_")
+
+
+#: One key per harness that can take a model. Optional like the rest: empty
+#: means the CLI's own default, which is the only honest fallback — a claude
+#: alias is not an opencode provider/model id, so falling back across
+#: harnesses would be a guess in a namespace that is not ours.
+HARNESS_MODEL_KEYS = (
+    harness_model_key("claude-code"),
+    harness_model_key("opencode"),
+    harness_model_key("antigravity-cli"),
+)
+
+KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS, *HARNESS_MODEL_KEYS)
 
 
 def for_role(conn, role: str, override: str = "") -> str:
@@ -74,6 +89,20 @@ def write(conn, values: dict) -> dict:
     if wanted:
         state.put_settings(conn, wanted)
     return read(conn)
+
+
+def for_harness(conn, harness_id: str, override: str = "") -> str:
+    """Which model this harness should run with. The run's own, the stored
+    one for this harness, or empty for the CLI's default.
+
+    Resolved here rather than at each call site for the same reason as
+    `for_role`: a caller that forgot the fallback would run whatever the
+    environment said. Empty is a real answer here, not a gap — every one of
+    these CLIs has a default model, and naming one the reader never chose
+    would be the guess this refuses to make.
+    """
+    stored = read(conn)
+    return override.strip() or stored.get(harness_model_key(harness_id), "") or ""
 
 
 def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> dict:
@@ -127,7 +156,13 @@ def choices(conn, app_state_path=None) -> dict:
 
     chosen = read(conn)
     installed = [
-        {"id": one.id, "label": one.label, "path": harness.locate(one)}
+        {
+            "id": one.id, "label": one.label, "path": harness.locate(one),
+            "llm": for_harness(conn, one.id),
+            "llms": harness.models_for(one),
+            "llm_hint": one.model_hint,
+            "llm_selectable": bool(one.model_flag),
+        }
         for one in harness.available()
     ]
     unusable = [

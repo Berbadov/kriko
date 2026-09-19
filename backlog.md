@@ -789,24 +789,39 @@ retries and drops, a clear terminal state. The `emit` stage machinery in
 `app/web/tasks.py` already carries most of this; the gap is what the screen
 does with it.
 
-**§2.6 — benchmark scoping**, on `app/bench.py`: which models, harnesses,
-providers, stages, categories, repetitions; estimate first; saved configs.
+**~~§2.6 — benchmark scoping.~~ DONE 2026-09-19 — see `done.md`.** Every axis
+is a button now (planes/protocols/searches/LLMs multi-chips, scale presets,
+steppers, pack dropdown), estimate stays a separate press that refuses to
+guess, saved grids persist. Strict validation rejects unknown planes,
+protocols and searches; LLM names stay open by design (custom gateways).
 
 **§2.7 — verify Tavily, Exa and the OpenAI LLM path by hand** with real keys,
-including every error path, wired into §2.4's accounting.
+including every error path, wired into §2.4's accounting. **Mechanism done
+2026-09-19**: Settings has a per-provider Test button running a cheap live
+call server-side (`POST /api/keys/test`, counted in the operations feed with
+tokens/priced USD), with distinct errors for bad key/timeout/garbage/empty.
+Still needs the reader's keys pressed on a real install — mocks prove the
+contract, only live keys prove the wire. The frozen `kriko.exe`
+`ModuleNotFoundError: No module named 'kriko'` was root-caused the same day
+(stale/foreign install; the tree's wheel carries both tops) and the frozen
+layout is now guarded (declared console imports + a spec test).
 
-**§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity. **Partly
-done 2026-09-18**: Antigravity CLI (`agy`) is verified end to end on the real
+**§2.8 — add Mistral Vibe Code and Gemini/Antigravity** at parity. **Mostly
+done 2026-09-19**: Antigravity CLI (`agy`) is verified end to end on the real
 machine — `-p` prompt, `stream-json` events, `--model` selection, usage
 metering, disposable working directory, and permission denials that fail loudly
-with the allow-rule fix instead of silent empty research. Still open: Mistral
-Vibe and Gemini CLI are registered with download links but gated `unusable`
-until their headless flags, sandbox files and output parsing are verified
-against real binaries (Vibe's tool names and agent schema are undocumented;
-Gemini's `--allowed-tools` is deprecated upstream and its sandbox schema would
-force an auth method). A missing CLI now shows download + install command +
-which account it bills to, plus the `KRIKO_HARNESS_DIRS` manual path, on both
-the Agents card and Settings.
+with the allow-rule fix instead of silent empty research. **Per-harness model
+choice is now real**: claude offers opus/sonnet/haiku (verified in `--help`),
+agy lists its installed models live (`agy models`), opencode takes
+provider/name per its docs, each stored per harness with per-run override on
+top, on Settings, the run card and the brief. Still open: Mistral Vibe and
+Gemini CLI are registered with download links but gated `unusable` until their
+headless flags, sandbox files and output parsing are verified against real
+binaries (Vibe's tool names and agent schema are undocumented; Gemini's
+`--allowed-tools` is deprecated upstream and its sandbox schema would force an
+auth method). A missing CLI now shows download + install command + which
+account it bills to, plus the `KRIKO_HARNESS_DIRS` manual path, on both the
+Agents card and Settings.
 
 **~~§2.9 — remove Terminal.~~ DONE — see `done.md`.** Confirmed with the reader as the *in-app PTY
 panel* — `ui/src/lib/shell/TerminalPanel.svelte`, `web/routers/terminal.py`,
@@ -844,6 +859,16 @@ pipeline, the run pipeline.
 `arabam.com` and `mobile.de`/`autoscout24`. Both authored through the existing
 agent path, not hand-written. sahibinden's static manifest block comes out in
 the same change.
+
+*2026-09-19:* the reload half is closed — the Sites screen now shows the
+browser's activation verdict per site (`active`, `needs_permission` with the
+Grant step, `unknown`), instead of "readable" for a panel that would never
+appear. The second adapters are **blocked, not shipped**: arabam.com search
+pages 403 automation and the repo's own fetch path returns empty; mobile.de
+the same. An unverified adapter is worse than none, so authoring stays with
+the reader's own browser via site_register. The dynamic injection mechanism
+(registerContentScripts over adapter sites + optional permission grant) is
+already in the extension and covered by tests.
 
 ---
 
