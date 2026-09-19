@@ -84,7 +84,10 @@ def main() -> None:
         os.environ.get("TAURI_SIGNING_PUBLIC_KEY", ""),
         args.version,
     )
-    args.config.write_text(json.dumps(updated, indent=4) + "\n", encoding="utf-8")
+    # Bytes, not text: `write_text` translates newlines to the platform's own
+    # on Windows, so every hand build dirtied tauri.conf.json with CRLF while
+    # passing silently everywhere else. Same bug as the lockup test had.
+    args.config.write_bytes((json.dumps(updated, indent=4) + "\n").encode("utf-8"))
     print(
         "updater enabled: " + updated["plugins"]["updater"]["endpoints"][0]
         if "updater" in updated["plugins"]
