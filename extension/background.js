@@ -16,6 +16,7 @@
 //     what a label means, it belongs in the pack's adapter JSON.
 
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
+const LOADED_CONTENT_DIGEST = "";
 
 //: How many rows one search may return to the panel. The engine allows up to
 //: 50; a floating panel beside a listing is a list somebody scans, and the
@@ -264,6 +265,7 @@ function _ownVersion() {
 async function _fetchApp(url, init) {
   const stamped = { ...(init || {}) };
   stamped.headers = { ...(stamped.headers || {}), [VERSION_HEADER]: _ownVersion() };
+  if (LOADED_CONTENT_DIGEST) stamped.headers["X-Kriko-Extension-Digest"] = LOADED_CONTENT_DIGEST;
   try {
     const response = await fetch(url, stamped);
     void _noteMinimum(response);
@@ -1187,7 +1189,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Missing route" });
       return false;
     }
-    openInApp(route, request.payload?.fallbackUrl)
+    apiBase().then((base) => openInApp(route, request.payload?.fallbackUrl || `${base}/#/${route}`))
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
@@ -1236,6 +1238,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async
+  }
+
+  if (request.type === "RESEARCH_PRODUCT") {
+    const input = request.payload || {};
+    const subject_id = String(input.subject_id || "").trim();
+    const q = String(input.q || "").trim();
+    if (!subject_id && !q) {
+      sendResponse({ ok: false, error: "Enter a product name or select a subject." });
+      return false;
+    }
+    const body = subject_id ? { subject_id } : { q, allow_draft: input.allow_draft === true };
+    if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
+    _postApp("/api/extension/research-plane", body)
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, code: error.code, error: error.message }));
+    return true;
+  }
+
+  if (request.type === "CANCEL_JOB") {
+    const jobId = request.payload?.job_id;
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    _postApp(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {})
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
   }
 
   if (request.type === "RESEARCH_SUBJECT") {

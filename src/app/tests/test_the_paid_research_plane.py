@@ -190,6 +190,72 @@ def test_a_paid_run_that_names_no_budget_still_gets_one():
     assert tasks._budget({"backend": "agent"}) == 0.0
 
 
+@pytest.mark.parametrize("stop_at", ["before", "search", "fetch", "extract", "repair"])
+def test_paid_calls_stop_at_safe_boundaries(stop_at):
+    from app.web.jobs import Cancelled
+    from kriko.research.base import Document
+
+    calls = []
+    stopping = stop_at == "before"
+
+    def check():
+        if stopping:
+            raise Cancelled()
+
+    def search(query, limit):
+        nonlocal stopping
+        calls.append("search")
+        stopping = stop_at == "search"
+        return [{"url": "https://example.test/one"}, {"url": "https://example.test/two"}]
+
+    def fetch(url):
+        nonlocal stopping
+        calls.append("fetch")
+        stopping = stop_at == "fetch"
+        return "supported quote"
+
+    def complete(prompt):
+        calls.append("complete")
+        return "[]"
+
+    researcher = ApiResearcher(search, fetch, complete, check_cancelled=check)
+    task = _task(queries=("first", "second"))
+    with pytest.raises(Cancelled):
+        if stop_at in {"before", "search", "fetch"}:
+            researcher.gather(task)
+        else:
+            stopping = True
+            if stop_at == "extract":
+                researcher.extract(task, Document(url="https://example.test/one", text="quote"))
+            else:
+                researcher.repair(task, [{"title": "x"}], {})
+    assert "complete" not in calls
+    assert calls == {
+        "before": [], "search": ["search"], "fetch": ["search", "fetch"],
+        "extract": [], "repair": [],
+    }[stop_at]
+    if stop_at == "fetch":
+        assert researcher._documents[0].text == "supported quote"
+
+
+@pytest.mark.parametrize("stop", [tasks.Cancelled, BudgetExceeded])
+def test_repair_does_not_swallow_stops(stop):
+    from types import SimpleNamespace
+    from app.bench import _Silent
+
+    def repair(*args):
+        raise stop("stop")
+
+    with pytest.raises(stop):
+        tasks._repair(
+            None, "s1", "probe",
+            {"rejected": [{"title": "x", "fix": "body"}]}, [{"title": "x"}],
+            researcher=SimpleNamespace(repair=repair), task=_task(),
+            emit=SimpleNamespace(event=lambda *a, **k: None),
+            progress=_Silent(), retain=[],
+        )
+
+
 def test_the_budget_stops_the_run_rather_than_warning_about_it():
     """Overshoot it and the plane raises, mid-gather, with money left unspent.
 

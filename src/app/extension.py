@@ -29,7 +29,9 @@ extension on every app update. `~/.kriko` outlives the binary — the same
 argument that put the two SQLite files there.
 """
 
+import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -71,6 +73,8 @@ SHIPPED = (
 VERSION_HEADER = "x-kriko-extension"
 MINIMUM_HEADER = "x-kriko-minimum-extension"
 MINIMUM_VERSION = "0.3.0"
+DIGEST_HEADER = "x-kriko-extension-digest"
+_DIGEST_STAMP = re.compile(rb'const LOADED_CONTENT_DIGEST = "[a-f0-9]*";')
 
 
 def parse_version(text: str) -> tuple[int, ...]:
@@ -172,6 +176,35 @@ def version(source: Path) -> str:
         return ""
 
 
+def content_files(source: Path) -> list[str]:
+    files = []
+    for name in SHIPPED:
+        entry = source / name
+        if entry.is_file():
+            files.append(name)
+        elif entry.is_dir():
+            files.extend(path.relative_to(source).as_posix()
+                         for path in sorted(entry.rglob("*")) if path.is_file())
+    return sorted(files)
+
+
+def content_digest(source: Path) -> str:
+    try:
+        if not (source / "manifest.json").is_file():
+            return ""
+        digest = hashlib.sha256()
+        for name in content_files(source):
+            digest.update(name.encode("utf-8") + b"\0")
+            content = (source / name).read_bytes()
+            if name == "background.js":
+                content = _DIGEST_STAMP.sub(b'const LOADED_CONTENT_DIGEST = "";', content)
+            digest.update(content)
+            digest.update(b"\0")
+        return digest.hexdigest()
+    except OSError:
+        return ""
+
+
 def stage(source: Path, target: Path) -> list[str]:
     """Copy the extension to `target`, replacing whatever is there.
 
@@ -197,6 +230,10 @@ def stage(source: Path, target: Path) -> list[str]:
         else:
             shutil.copy2(src, dst)
         written.append(name)
+    background = target / "background.js"
+    if background.is_file():
+        stamp = f'const LOADED_CONTENT_DIGEST = "{content_digest(target)}";'.encode("ascii")
+        background.write_bytes(_DIGEST_STAMP.sub(stamp, background.read_bytes()))
     return written
 
 

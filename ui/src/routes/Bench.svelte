@@ -6,7 +6,7 @@
     import { api } from "../lib/api";
     import { follow } from "../lib/jobs";
     import { formatInterval, formatPct, formatUsd, hallucinationSeverity, pointsByLlm } from "../lib/bench";
-    import type { Bench, Job } from "../lib/types";
+    import type { Bench, BenchEstimate, BenchRequest, Job } from "../lib/types";
 
     const load = () => api.bench();
     let promise = $state(load());
@@ -14,6 +14,27 @@
     let startFailure = $state<unknown>(null);
     let runningJobId = $state("");
     let stopFollow: (() => void) | undefined;
+    let config = $state<BenchRequest>({ planes: "harness", cases: 3, max_documents: 3, budget_usd: 0.2, reps: 1 });
+    let estimate = $state<BenchEstimate | null>(null);
+    let estimatedConfig = $state("");
+    let configs = $state<Record<string, BenchRequest>>({});    let gridName = $state("");
+    const estimateCurrent = $derived(estimatedConfig === JSON.stringify(config));
+
+    async function preview() {
+        startFailure = null;
+        const snapshot = JSON.stringify(config);
+        try {
+            estimate = await api.estimateBench(JSON.parse(snapshot));
+            estimatedConfig = snapshot;
+        } catch (cause) { startFailure = cause; }
+    }
+
+    async function savedGrids(save = false) {
+        try {
+            const result = save ? await api.saveBenchConfig(gridName, config) : await api.benchConfigs();
+            configs = result.configs;
+        } catch (cause) { startFailure = cause; }
+    }
 
     function watchJob(job: Job) {
         runningJobId = job.job_id;
@@ -40,7 +61,7 @@
         starting = true;
         startFailure = null;
         try {
-            const { job_id } = await api.startBench({});
+            const { job_id } = await api.startBench(config);
             const job = await api.job(job_id);
             watchJob(job);
         } catch (cause) {
@@ -51,6 +72,10 @@
     }
 
     $effect(() => {
+        // A configs call that fails costs the saved list and nothing else:
+        // the reader's grids are a convenience, and a screen that threw on
+        // them would take the whole page down with it.
+        api.benchConfigs().then((r) => (configs = r.configs ?? {})).catch(() => {});
         void findRunningJob();
         return () => stopFollow?.();
     });
@@ -65,6 +90,51 @@
 </p>
 
 {#if startFailure}<Failure error={startFailure} retry={start} />{/if}
+
+<section class="card" aria-label="Scope the grid">
+    <h3>Scope the grid</h3>
+    <p class="meta">Every axis multiplies. Empty fields mean whatever this machine would pick.</p>
+    <form onsubmit={(event) => (event.preventDefault(), start())}>
+        <label>Planes <input bind:value={config.planes} placeholder="harness, api" /></label>
+        <label>Pack <input bind:value={config.pack_id} /></label>
+        <label>Cases <input type="number" min="1" max="50" bind:value={config.cases} /></label>
+        <label>Sources per case <input type="number" min="1" max="20" bind:value={config.max_documents} /></label>
+        <label>Reps <input type="number" min="1" max="10" bind:value={config.reps} /></label>
+        <label>Ceiling $ <input type="number" min="0" max="20" step="0.01" bind:value={config.budget_usd} /></label>
+        <label>LLMs <input bind:value={config.llms} placeholder="gpt-4o-mini, claude-haiku-4-5" /></label>
+        <label>Search <input bind:value={config.searches} placeholder="exa, tavily" /></label>
+        <label>Protocols <input bind:value={config.protocols} placeholder="standard" /></label>
+    </form>
+    <div class="row">
+        <button onclick={preview} disabled={starting || !!runningJobId}>Estimate</button>
+        <button onclick={start} disabled={starting || !!runningJobId}>
+            {starting ? "Starting…" : "Run benchmark"}
+        </button>
+    </div>
+    {#if estimate}
+        <p class="meta" class:unmeasured={!estimateCurrent}>
+            {estimate.runs} measurement(s){estimate.usd === null ? "" : `, about $${estimate.usd.toFixed(2)}`}
+            {estimate.note ? ` — ${estimate.note}` : ""}
+        </p>
+    {/if}
+    {#if Object.keys(configs).length}
+        <details>
+            <summary>Saved grids</summary>
+            <ul class="strip">
+                {#each Object.entries(configs) as [name, saved] (name)}
+                    <li class="krow">
+                        <span class="klabel">{name}</span>
+                        <span class="meta">{saved.cases} case(s), planes {saved.planes || "all"}</span>
+                        <button class="ghost" onclick={() => (config = { ...saved })}>Load</button>
+                        <button class="ghost" onclick={() => { api.forgetBenchConfig(name).then((r) => (configs = r.configs)); }}>Forget</button>
+                    </li>
+                {/each}
+            </ul>
+        </details>
+    {/if}
+    <label>Save this grid as <input bind:value={gridName} /><button class="ghost" disabled={!gridName} onclick={() => savedGrids(true)}>Save</button></label>
+</section>
+
 {#if runningJobId}
     <p class="state loading">
         A benchmark is running — <a href="#/activity">watch it on Activity</a>. The
@@ -82,8 +152,6 @@
                     : 's'} would run against every configured LLM and protocol — minutes of
                     work, and real spend on a paid plane. Press Run to measure the first
                     round."
-                actionLabel={starting ? "Starting…" : "Run benchmark"}
-                onAction={starting ? undefined : start}
             />
         {:else}
             <table>

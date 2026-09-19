@@ -35,6 +35,50 @@ const EXEMPT = new Set([
 ]);
 const COLOUR = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
 
+const declarations = (css: string): Record<string, string> => Object.fromEntries(
+    [...stripComments(css).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)]
+        .map(([, name, value]) => [name, value.trim()]),
+);
+
+function colour(tokens: Record<string, string>, name: string): string {
+    const value = tokens[name];
+    expect(value, name).toBeDefined();
+    const alias = value.match(/^var\((--[a-z0-9-]+)\)$/);
+    return alias ? colour(tokens, alias[1]) : value;
+}
+
+function luminance(hex: string): number {
+    expect(hex).toMatch(/^#[0-9a-f]{6}$/i);
+    const [r, g, b] = [1, 3, 5].map((start) => {
+        const channel = parseInt(hex.slice(start, start + 2), 16) / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const slate = SHEETS["./themes/slate.css"].split("@media");
+const darkSlate = declarations(slate[0]);
+const palettes = {
+    panel: declarations(SHEETS["./themes/panel.css"]),
+    lemonade: declarations(SHEETS["./themes/lemonade.css"]),
+    "slate dark": darkSlate,
+    "slate light": { ...darkSlate, ...declarations(slate[1]) },
+};
+
+describe.each(Object.entries(palettes))("navigation contrast in %s", (_name, tokens) => {
+    it.each([
+        ["--dim", "--n-1", 4.5],
+        ["--text", "--panel-2", 4.5],
+        ["--accent", "--accent-soft", 4.5],
+        ["--accent-ink", "--accent", 4.5],
+        ["--accent", "--n-1", 3],
+    ] as const)("keeps %s legible against %s", (ink, ground, minimum) => {
+        const a = luminance(colour(tokens, ink));
+        const b = luminance(colour(tokens, ground));
+        expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(minimum);
+    });
+});
+
 describe("the stylesheets", () => {
     it("names a colour only in tokens.css, and in print.css on paper", () => {
         const offenders: string[] = [];

@@ -63,7 +63,13 @@ for (const [path, source] of Object.entries(SOURCES)) {
     const where = path.replace(/^\.\.\//, "");
     for (const [, name] of body.matchAll(/["'`]#\/([a-z][a-z0-9-]*)/g))
         links.push({ where, name, how: "a literal hash" });
-    for (const [, name] of body.matchAll(/(?:toHash|hashWith)\([^)]*?["']([a-z][a-z0-9-]*)["']/g))
+    // `toHash(name, ...)` names the route first; `hashWith(query, name, ...)`
+    // names it after the query object — and the query may itself hold quoted
+    // strings (`author: "new"`), which are values, not views. One regex for
+    // both read "new" as a route the app never renders.
+    for (const [, name] of body.matchAll(/toHash\(\s*["']([a-z][a-z0-9-]*)["']/g))
+        links.push({ where, name, how: "a hash built in code" });
+    for (const [, name] of body.matchAll(/hashWith\(\{[^}]*\}[^)]*?["']([a-z][a-z0-9-]*)["']/g))
         links.push({ where, name, how: "a hash built in code" });
     if (path.endsWith("nextStep.ts"))
         for (const [, name] of body.matchAll(/^\s+route: "([a-z][a-z0-9-]*)",$/gm))

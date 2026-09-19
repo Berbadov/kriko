@@ -35,6 +35,7 @@
     let job = $state<Job | null>(null);
     let error = $state<unknown>(null);
     let copied = $state("");
+    let harness = $state("");
     /* Which planes this machine can run, so the button that starts one is only
      * offered when it would work. Best-effort: a planes call that fails costs
      * the reader the button and never the brief. */
@@ -64,6 +65,7 @@
                 subject_id: subjectId,
                 pack_id: packId,
                 backend,
+                ...(harness ? { harness } : {}),
             });
             job = await api.job(job_id);
             follow(job_id, (update) => (job = update));
@@ -141,6 +143,15 @@
                  a button whose failure message is "install something" is a
                  worse answer than the sentence under the disabled card. -->
             {#if harnessPlane?.ready}
+                <label>Agent
+                    <select bind:value={harness} disabled={!!job && !job.done}>
+                        <option value="">Use preference ({harnessPlane.selected_harness || 'automatic'})</option>
+                        {#each harnessPlane.harnesses ?? [] as one (one.id)}
+                            <option value={one.id}>{one.label}</option>
+                        {/each}
+                    </select>
+                </label>
+                {#if harnessPlane.reason}<p class="meta">{harnessPlane.reason}</p>{/if}
                 <button
                     disabled={!!job && !job.done}
                     onclick={() => start("harness")}

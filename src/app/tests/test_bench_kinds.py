@@ -237,6 +237,28 @@ def stored_claim(store):
     return store
 
 
+def test_validation_checks_cancellation_before_each_fetch(settings, stored_claim, monkeypatch):
+    from app import factcheck
+    from app.web.jobs import Cancelled
+
+    checks = 0
+    fetched = []
+
+    def check():
+        nonlocal checks
+        checks += 1
+        if checks == 2:
+            raise Cancelled()
+
+    monkeypatch.setattr(factcheck, "check_source", lambda *a, **k: fetched.append(a))
+    with pytest.raises(Cancelled):
+        bench.run_case(
+            settings, {"subject_id": "sa", "pack_id": "probe", "kind": "validation"},
+            plane="api", check_cancelled=check,
+        )
+    assert fetched == []
+
+
 def test_validation_confirms_a_quote_still_on_its_page(settings, stored_claim):
     def opener(request, timeout=0):
         class _Resp:

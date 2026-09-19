@@ -1,8 +1,10 @@
 <script lang="ts">
+    import { tick } from "svelte";
+    import { route, setQuery } from "../lib/router";
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
-    import { follow, isLive, stateWord } from "../lib/jobs";
+    import { canCancel, follow, isLive, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
@@ -13,6 +15,7 @@
     let open = $state<string | null>(null);
     let root = $state("");
     let busy = $state(false);
+    let cancelPending = $state<string[]>([]);
 
     // One follower per live job, kept in a map so a re-render does not open a
     // second stream for the same row.
@@ -68,6 +71,20 @@
     // three steps and three different authorities, which is why nothing here
     // reaches the store.
     let category = $state("");
+    let authoring: HTMLDetailsElement;
+    let categoryInput: HTMLInputElement;
+
+    $effect(() => {
+        if ($route.query.author !== "new") return;
+        authoring.open = true;
+        let active = true;
+        void tick().then(() => {
+            if (!active) return;
+            categoryInput.focus();
+            setQuery("author", undefined);
+        });
+        return () => { active = false; };
+    });
 
     async function authorPack() {
         if (!category.trim()) return;
@@ -107,11 +124,15 @@
     }
 
     async function cancel(job: Job) {
+        if (!canCancel(job) || cancelPending.includes(job.job_id)) return;
+        cancelPending = [...cancelPending, job.job_id];
         try {
             await api.cancelJob(job.job_id);
             replace(await api.job(job.job_id));
         } catch (cause) {
             error = cause;
+        } finally {
+            cancelPending = cancelPending.filter((id) => id !== job.job_id);
         }
     }
 
@@ -164,10 +185,11 @@
 <h2>Runs</h2>
 <p class="lede">
     Research and pack builds run here, not in a terminal. A job keeps its log and
-    its result, so a restart or a closed tab loses nothing.
+    saved results. Cancellation stops at a safe checkpoint; an in-flight request
+    may finish. Only checkpointed results survive a restart.
 </p>
 
-<details class="authoring">
+<details class="authoring" bind:this={authoring}>
     <summary>Start a new pack</summary>
     <p class="meta">
         Name a category in a few words and your own coding agent writes the whole
@@ -182,6 +204,7 @@
         <label class="field grow">
             <span>What is the category?</span>
             <input
+                bind:this={categoryInput}
                 bind:value={category}
                 placeholder="cordless drills, espresso machines, e-bikes"
             />
@@ -247,7 +270,10 @@
                 aria-expanded={open === job.job_id}>Log</button
             >
             {#if isLive(job)}
-                <button onclick={() => cancel(job)}>Cancel</button>
+                <button
+                    disabled={!canCancel(job) || cancelPending.includes(job.job_id)}
+                    onclick={() => cancel(job)}
+                >{job.state === "cancelling" || cancelPending.includes(job.job_id) ? "Stopping…" : "Cancel"}</button>
             {:else}
                 <button onclick={() => retry(job)}>Run again</button>
             {/if}

@@ -85,6 +85,15 @@
     // than guessing until the app has actually answered.
     researchPlane: null,
     researchPlaneRequested: false,
+    researchPlaneError: "",
+    researchOpen: false,
+    researchTarget: null,
+    researchName: "",
+    researchContext: "",
+    researchJob: null,
+    researchMessage: "",
+    researchState: "",
+    cancelling: false,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -518,12 +527,13 @@
     state.researchPlaneRequested = true;
     chrome.runtime.sendMessage({ type: "RESEARCH_PLANE" }, (response) => {
       if (chrome.runtime.lastError || !response || !response.ok) {
-        // Left null. The cost line stays hidden rather than asserting a
-        // plane the app never confirmed — silence here is honest, a guess is
-        // not.
+        state.researchPlaneError = response?.error || "Cannot read research costs. Open Kriko and retry.";
+        renderResearch();
         return;
       }
       state.researchPlane = response.plane || null;
+      state.researchPlaneError = "";
+      renderResearch();
       // Skip the redraw while a run is in flight: renderGaps rebuilds the gap
       // card from scratch, and rebuilding out from under an active poll would
       // orphan the button pollResearchJob is updating by direct reference.
@@ -552,86 +562,158 @@
   // Nothing known about a subject the packs *do* recognise. That is the one
   // emptiness worth a button: the gap is identified, so filling it is a job
   // the app can start rather than a shrug.
-  function researchSubject(subject, buttonEl) {
-    state.researching = subject.subject_id;
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      buttonEl.textContent = "Starting…";
+  function researchSubject(subject) {
+    if (state.researching) {
+      state.researchOpen = true;
+      renderResearch();
+      return;
     }
-    const plane = state.researchPlane;
-    const backend = plane ? plane.backend : "agent";
-    const budget_usd = backend === "api" ? Number(plane.budget_usd || 0) : 0;
-    chrome.runtime.sendMessage(
-      {
-        type: "RESEARCH_SUBJECT",
-        payload: {
-          subject_id: subject.subject_id,
-          pack_id: subject.pack_id,
-          backend,
-          budget_usd,
-        },
-      },
-      (response) => {
-        const failed = chrome.runtime.lastError || (response && !response.ok);
-        if (failed) {
-          state.researching = null;
-          if (buttonEl) {
-            buttonEl.disabled = false;
-            buttonEl.textContent = "Could not start — retry";
-          }
-          return;
-        }
-        const jobId = response.job && response.job.job_id;
-        if (!jobId) {
-          state.researching = null;
-          if (buttonEl) {
-            buttonEl.disabled = false;
-            buttonEl.textContent = "Running in Kriko";
-          }
-          return;
-        }
-        if (buttonEl) buttonEl.textContent = "Researching…";
-        pollResearchJob(jobId, buttonEl);
+    state.researchTarget = subject?.subject_id ? subject : null;
+    state.researchName = subject?.label || state.searchQuery || state.listingMeta?.title || document.title || "";
+    state.researchContext = "";
+    state.researchOpen = true;
+    state.researchJob = null;
+    state.researchState = "";
+    state.researchMessage = "";
+    requestResearchPlane();
+    renderResearch();
+  }
+
+  function startResearch(allowDraft = false) {
+    if (state.researching || !state.researchPlane) return;
+    const subject_id = state.researchTarget?.subject_id;
+    const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" — ");
+    if (!subject_id && !q) return;
+    const cap = Number(state.researchPlane.budget_usd);
+    if (!allowDraft && state.researchPlane.backend === "api" && !(cap > 0)) return;
+    state.researching = subject_id || q;
+    state.researchState = "starting";
+    state.researchMessage = "Starting…";
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
+      ...(subject_id ? { subject_id } : { q, allow_draft: allowDraft }),
+      ...(cap > 0 ? { cap } : {}),
+    } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
+        state.researching = null;
+        state.researchState = "failed";
+        state.researchMessage = response?.error || "Could not start. Open Kriko and retry.";
+        renderResearch();
+        return;
       }
-    );
+      state.researchJob = response.job;
+      state.researchState = "queued";
+      state.researchMessage = "Queued";
+      renderResearch();
+      pollResearchJob(response.job.job_id);
+    });
+  }
+
+  function cancelResearch() {
+    const jobId = state.researchJob?.job_id;
+    if (!jobId || !state.researching || state.cancelling) return;
+    state.cancelling = true;
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "CANCEL_JOB", payload: { job_id: jobId } }, (response) => {
+      if (state.researchJob?.job_id !== jobId || !state.researching) return;
+      if (chrome.runtime.lastError || !response?.ok) {
+        state.cancelling = false;
+        state.researchMessage = response?.error || "Could not cancel. Try again.";
+      } else if (response.job?.state === "cancelled") {
+        state.researching = null;
+        state.cancelling = false;
+        state.researchState = "cancelled";
+        state.researchMessage = "Research cancelled.";
+      } else {
+        state.researchMessage = "Cancellation requested…";
+      }
+      renderResearch();
+    });
+  }
+
+  function renderResearch() {
+    const slot = bodyEl?.querySelector(".lite-research-slot");
+    if (!slot) return;
+    if (!state.researchOpen) { slot.innerHTML = ""; return; }
+    const busy = Boolean(state.researching);
+    const target = state.researchTarget;
+    const draft = state.researchJob?.kind === "pack_author";
+    const cost = costLine();
+    slot.innerHTML = `
+      <section class="lite-research" data-state="${escapeHtml(state.researchState)}">
+        <strong>Research this product</strong>
+        ${target ? `<p>${escapeHtml(target.label || target.subject_id)}</p>` : `
+          <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
+          <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
+        <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
+        ${!target ? `<p>A product-specific draft is not automatically installed knowledge. Creating a draft uses your coding-agent subscription, not API research.</p>` : ""}
+        <p class="lite-research-status" role="status">${escapeHtml(state.researchMessage)}</p>
+        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>Research ${target ? "selected subject" : "in installed packs"}</button>
+          ${!target ? `<button type="button" class="lite-research-draft" ${!state.researchPlane ? "disabled" : ""}>Create product-specific draft</button>` : ""}` : ""}
+        ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
+        ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
+        ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
+      </section>`;
+    const name = slot.querySelector(".lite-research-name");
+    if (name) {
+      name.value = state.researchName;
+      name.addEventListener("input", () => { state.researchName = name.value; });
+    }
+    const context = slot.querySelector(".lite-research-context");
+    if (context) {
+      context.value = state.researchContext;
+      context.addEventListener("input", () => { state.researchContext = context.value; });
+    }
+    slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
+    slot.querySelector(".lite-research-draft")?.addEventListener("click", () => startResearch(true));
+    slot.querySelector(".lite-research-cancel")?.addEventListener("click", cancelResearch);
+    slot.querySelector(".lite-research-output")?.addEventListener("click", () => {
+      const route = `jobs/${encodeURIComponent(state.researchJob.job_id)}`;
+      openInApp(route, appUrlFor(route));
+    });
+    slot.querySelector(".lite-research-cost-retry")?.addEventListener("click", () => {
+      state.researchPlaneRequested = false;
+      state.researchPlaneError = "";
+      requestResearchPlane();
+    });
   }
 
   // Progress shown in the gap card itself — the panel stays put, and the
   // reader watches the run land without ever leaving the listing they were
   // reading. Polled rather than pushed: the panel has no open connection to
   // the app, and a job id is cheap to ask about again.
-  function pollResearchJob(jobId, buttonEl) {
+  function pollResearchJob(jobId) {
+    if (state.researchJob?.job_id !== jobId || !state.researching) return;
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
-      const failed = chrome.runtime.lastError || !response || !response.ok || !response.job;
-      if (failed) {
-        state.researching = null;
-        if (buttonEl) {
-          buttonEl.disabled = false;
-          buttonEl.textContent = "Could not check progress — retry";
-        }
+      if (state.researchJob?.job_id !== jobId || !state.researching) return;
+      if (chrome.runtime.lastError || !response?.ok || !response.job) {
+        state.researchMessage = "Cannot check progress. The job may still be running; open its exact output below or cancel.";
+        renderResearch();
+        setTimeout(() => pollResearchJob(jobId), 3000);
         return;
       }
       const job = response.job;
-      if (!job.done) {
-        if (buttonEl) {
-          const pct = Math.round((job.progress || 0) * 100);
-          buttonEl.textContent = job.message ? job.message : `Researching… ${pct}%`;
-        }
-        setTimeout(() => pollResearchJob(jobId, buttonEl), 1000);
+      state.researchJob = { ...state.researchJob, ...job, job_id: jobId };
+      state.researchState = job.state;
+      const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
+      if (!done) {
+        const pct = Math.max(0, Math.min(100, Math.round((job.progress || 0) * 100)));
+        state.researchMessage = `${job.message || job.state || "Researching"} · ${pct}%`;
+        renderResearch();
+        setTimeout(() => pollResearchJob(jobId), 1000);
         return;
       }
       state.researching = null;
-      if (buttonEl) {
-        buttonEl.disabled = false;
-        buttonEl.textContent =
-          job.state === "succeeded" ? "Done — refreshing…" : "Research failed — retry";
-      }
-      if (job.state === "succeeded") {
-        // The subject just gained claims (or didn't — a run can land with
-        // nothing found). Either way the only honest next step is to ask the
-        // app again rather than have this panel guess at what changed.
-        requestCached();
-      }
+      state.cancelling = false;
+      state.researchMessage = job.state === "cancelled" ? "Research cancelled."
+        : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
+          ? "Product-specific draft ready. It has not been installed. Open the exact draft output below."
+          : job.result?.brief && !job.result?.documents
+            ? "Brief ready. Open the research job to continue with your agent."
+            : "Research completed. Open the research job for findings.")
+        : job.state === "interrupted" ? "Research interrupted by an app restart."
+        : `Research failed. ${job.error || job.message || "Open the job for details."}`;
+      renderResearch();
     });
   }
 
@@ -777,6 +859,11 @@
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
+    panel.querySelector(".lite-find-product").addEventListener("click", openSearch);
+    panel.querySelector(".lite-research-product").addEventListener("click", () => {
+      const subjects = (state.result?.subjects || []).filter((one) => one.kind === "product");
+      researchSubject(subjects.length === 1 ? subjects[0] : null);
+    });
 
     // Initial render
     renderBody();
@@ -971,7 +1058,12 @@
           </button>
           <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
+        <div class="lite-product-actions">
+          <button type="button" class="lite-find-product">Find in installed packs</button>
+          <button type="button" class="lite-research-product">Research this product</button>
+        </div>
         <div class="lite-search-slot"></div>
+        <div class="lite-research-slot"></div>
         <div class="lite-verdict-slot"></div>
         <div class="lite-claims-head-slot"></div>
         <section class="lite-claims"></section>
@@ -1258,7 +1350,7 @@
   function actionLabel(action, step) {
     if (action === "install") return "Open Kriko";
     if (action === "research") {
-      return step && step.subject_id ? "Research it" : "Find it by name";
+      return "Research this product";
     }
     if (action === "confirm") return "Not this one — search";
     return "";
@@ -1424,6 +1516,12 @@
         appUrlFor(`subject/${encodeURIComponent(row.subject_id)}`),
       ));
       box.appendChild(item);
+      const research = document.createElement("button");
+      research.type = "button";
+      research.className = "lite-search-research";
+      research.textContent = `Research ${row.label || row.subject_id}`;
+      research.addEventListener("click", () => researchSubject(row));
+      box.appendChild(research);
     }
   }
 
@@ -1543,10 +1641,10 @@
   }
 
   function takeNextStep(action, step, button) {
-    if (action === "research" && step && step.subject_id) {
+    if (action === "research") {
       const subject = (state.result.subjects || [])
-        .find((one) => one.subject_id === step.subject_id);
-      if (subject) return researchSubject(subject, button);
+        .find((one) => one.subject_id === step?.subject_id);
+      return researchSubject(subject || (step?.subject_id ? step : null));
     }
     if (action === "install") {
       // No pack here covers this kind of product at all, which is not
@@ -1901,6 +1999,7 @@
     renderCta();
     renderStatus();
     renderSearch();
+    renderResearch();
     renderVerdict();
     renderClaimsHeader();
     renderClaimsList();

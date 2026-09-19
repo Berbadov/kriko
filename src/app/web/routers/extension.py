@@ -10,10 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 
 from app import extension, keys, sites
 from app.web import state
-from app.web.deps import get_app_state, get_store
+from app.web.deps import get_app_state, get_jobs, get_store
+from app.web.routers.research import resolve_research_subject
 from app.web.settings import EXTENSION_PORT
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
@@ -76,6 +78,14 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         "version": extension.version(source) if source else "",
         "staged": staged,
         "staged_version": extension.version(target) if staged else "",
+        "content_digest": extension.content_digest(source) if source else "",
+        "staged_content_digest": extension.content_digest(target) if staged else "",
+        "staged_files": extension.content_files(target) if staged else [],
+        "loaded_files": [
+            {"origin": row["origin"], **getattr(request.app.state, "extension_digests", {}).get(
+                row["origin"], {"content_digest": "", "version": row.get("version", "")})}
+            for row in sightings
+        ],
         "path": str(target),
         # The extension cannot be told a port, so it hardcodes this one. If
         # something else on the machine holds it the extension will install
@@ -153,6 +163,60 @@ def research_plane(request: Request) -> dict:
     }
 
 
+class ExtensionResearchRequest(BaseModel):
+    q: str = Field("", max_length=500)
+    subject_id: str = Field("", max_length=200)
+    model: str = Field("", max_length=200)
+    search: str = Field("", max_length=64)
+    cap: float | None = Field(None, gt=0, allow_inf_nan=False)
+    allow_draft: bool = Field(False, strict=True)
+
+
+@router.post("/research-plane")
+def start_research_plane(
+    body: ExtensionResearchRequest, request: Request,
+    store=Depends(get_store), runner=Depends(get_jobs),
+) -> dict:
+    try:
+        subject = resolve_research_subject(store, q=body.q, subject_id=body.subject_id)
+    except HTTPException as exc:
+        if exc.status_code != 404 or not body.allow_draft or not body.q.strip():
+            raise
+        from app.providers import harness
+
+        available = harness.available()
+        if not available:
+            raise HTTPException(503, (
+                "Product drafts require an available coding-agent CLI. Install or "
+                "connect a supported harness in Agents, then retry. No API research "
+                "was started."
+            )) from exc
+        selected = available[0].id
+        params = {
+            "category": body.q.strip(), "product_only": True,
+            "harness": selected, "backend": "harness",
+        }
+        return {
+            "job_id": runner.submit("pack_author", params), "kind": "pack_author",
+            "backend": "harness", "harness": selected,
+            "cost_basis": "subscription", "budget_usd": None,
+            "note": "Uses your harness subscription; no per-token budget guarantee. "
+                    "Creates a draft only. Review and install it from Knowledge.",
+        }
+    plane = research_plane(request)
+    budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
+                 EXTENSION_RESEARCH_BUDGET_USD)
+    params = {
+        **subject, "backend": plane["backend"],
+        "model": body.model, "search": body.search,
+        "budget_usd": budget if plane["backend"] == "api" else 0.0,
+    }
+    return {
+        "job_id": runner.submit("research", params), "kind": "research",
+        **subject, **plane, "budget_usd": params["budget_usd"],
+    }
+
+
 def _running_version(sightings: list[dict]) -> str:
     for row in sightings:  # newest contact first
         if row.get("version"):
@@ -181,7 +245,11 @@ def stage(request: Request) -> dict:
         written = extension.stage(source, target)
     except OSError as cause:
         raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
-    return {"path": str(target), "written": written, "version": extension.version(target)}
+    return {
+        "path": str(target), "written": written, "version": extension.version(target),
+        "content_digest": extension.content_digest(target),
+        "files": extension.content_files(target),
+    }
 
 
 @router.post("/reveal")

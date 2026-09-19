@@ -2,8 +2,11 @@ import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import Planes from "./Planes.svelte";
 import { stubFetch, stubFetchFailing } from "./stub-fetch";
+import type { ResearchPlane } from "./types";
 
 const planes = (apiReady: boolean) => ({
+    // The server may add fields the older fixtures never knew; the type is
+    // the contract, not the literals below it.
     "/api/research-planes": {
         planes: [
             {
@@ -12,6 +15,48 @@ const planes = (apiReady: boolean) => ({
                 what: "Kriko starts the coding agent you already pay for.",
                 ready: true,
                 needs_keys: false,
+                selected_harness: "claude-code",
+                harnesses: [
+                    { id: "claude-code", label: "Claude Code", command: "claude" },
+                ],
+                looked_for: ["claude", "opencode"],
+                unusable: [
+                    {
+                        id: "opencode",
+                        label: "opencode",
+                        command: "opencode",
+                        why: "no flag restricts which tools the agent may use",
+                    },
+                ],
+            },
+            {
+                id: "agent",
+                cost_basis: "subscription",
+                what: "Your coding agent does the reading, through the MCP server.",
+                ready: true,
+                needs_keys: false,
+            },
+            {
+                id: "api",
+                cost_basis: "per_token",
+                what: "Kriko searches and reads by itself, unattended.",
+                ready: apiReady,
+                needs_keys: true,
+            },
+        ] as ResearchPlane[],
+        // What an unnamed run resolves to here. The reader met the cost of not
+        // knowing this: the default was the plane that fetches nothing.
+        default: "harness",
+    },
+    "/api/research-planes-unused": {
+        planes: [
+            {
+                id: "harness",
+                cost_basis: "subscription",
+                what: "Kriko starts the coding agent you already pay for.",
+                ready: true,
+                needs_keys: false,
+                selected_harness: "claude-code",
                 harnesses: [
                     { id: "claude-code", label: "Claude Code", command: "claude" },
                 ],
@@ -188,5 +233,43 @@ describe("the three research planes", () => {
         expect(
             await screen.findByText(/no flag restricts which tools/),
         ).toBeInTheDocument();
+    });
+
+    it("names a missing agent with where to get it and what it bills to", async () => {
+        const empty = planes(true);
+        empty["/api/research-planes"].planes[0] = {
+            id: "harness",
+            cost_basis: "subscription",
+            what: "Kriko starts the coding agent you already pay for.",
+            ready: false,
+            needs_keys: false,
+            selected_harness: "",
+            harnesses: [],
+            looked_for: ["claude", "opencode", "agy"],
+            unusable: [],
+            missing: [
+                {
+                    id: "antigravity-cli",
+                    label: "Antigravity CLI",
+                    command: "agy",
+                    download_url: "https://antigravity.google/download",
+                    install_hint:
+                        "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+                    needs_account: "a Google account",
+                },
+            ],
+            dirs_env: "KRIKO_HARNESS_DIRS",
+            search_dirs: ["C:/Users/me/.local/bin"],
+        };
+        stubFetch(empty);
+        const { container } = render(Planes);
+        // A download that leaves the app, the install command, and the
+        // account the runs bill to — a missing CLI is ordinary, and the card
+        // lists the way out rather than just the absence.
+        expect(await screen.findByText("Run my agent")).toBeTruthy();
+        const link = container.querySelector('a[href="https://antigravity.google/download"]');
+        expect(link).toBeTruthy();
+        expect(await screen.findByText(/a Google account/)).toBeTruthy();
+        expect(await screen.findByText(/KRIKO_HARNESS_DIRS/)).toBeTruthy();
     });
 });

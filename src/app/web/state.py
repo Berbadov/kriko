@@ -1719,12 +1719,14 @@ def create_job(conn: sqlite3.Connection, kind: str, params: dict) -> str:
     return job_id
 
 
-def start_job(conn: sqlite3.Connection, job_id: str) -> None:
-    conn.execute(
-        "UPDATE jobs SET state = ?, started_at = ? WHERE job_id = ?",
-        (RUNNING, _now(), job_id),
+def start_job(conn: sqlite3.Connection, job_id: str) -> bool:
+    cursor = conn.execute(
+        "UPDATE jobs SET state = ?, started_at = ?"
+        " WHERE job_id = ? AND state = ? AND cancel_requested = 0",
+        (RUNNING, _now(), job_id, QUEUED),
     )
     conn.commit()
+    return bool(cursor.rowcount)
 
 
 def update_job(
@@ -1746,7 +1748,7 @@ def update_job(
         sets.append("progress = ?")
         args.append(max(0.0, min(1.0, progress)))
     if message is not None:
-        sets.append("message = ?")
+        sets.append("message = CASE WHEN state = 'cancelling' THEN message ELSE ? END")
         args.append(message)
     if line is not None:
         sets.append("log = log || ?")
@@ -1766,20 +1768,30 @@ def finish_job(
     result: dict | None = None,
     message: str = "",
 ) -> None:
-    conn.execute(
-        "UPDATE jobs SET state = ?, finished_at = ?, progress = ?,"
-        "       message = COALESCE(NULLIF(?, ''), message), result_json = ?"
-        " WHERE job_id = ?",
-        (
-            state,
-            _now(),
-            1.0 if state == SUCCEEDED else 0.0,
-            message,
-            json.dumps(result, default=str) if result is not None else None,
-            job_id,
-        ),
-    )
-    conn.commit()
+    with conn:
+        conn.execute(
+            "UPDATE jobs SET state = ?, finished_at = ?, progress = ?,"
+            "       message = COALESCE(NULLIF(?, ''), message), result_json = ?"
+            " WHERE job_id = ? AND state IN (?, ?, ?)",
+            (
+                state,
+                _now(),
+                1.0 if state == SUCCEEDED else 0.0,
+                message,
+                json.dumps(result, default=str) if result is not None else None,
+                job_id, QUEUED, RUNNING, CANCELLING,
+            ),
+        )
+        if state == SUCCEEDED:
+            conn.execute(
+                "UPDATE jobs SET state = ?, message = ?, result_json = ?"
+                " WHERE job_id = ? AND state = ? AND cancel_requested = 1",
+                (
+                    CANCELLED, "stopped; completed result retained",
+                    json.dumps({**(result or {}), "partial": True}, default=str),
+                    job_id, SUCCEEDED,
+                ),
+            )
 
 
 def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
@@ -1789,33 +1801,22 @@ def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
     one is only *asked*: the flag is a row the handler reads between steps,
     because killing a thread mid-write is how a half-installed pack happens.
     """
-    row = get_job(conn, job_id)
-    if row is None:
-        return None
-    if row["state"] == QUEUED:
-        finish_job(conn, job_id, CANCELLED, message="cancelled before it started")
-        return CANCELLED
-    if row["state"] in (RUNNING, CANCELLING):
-        # Idempotent on purpose. A reader who presses a button that appears to
-        # do nothing presses it again, and a second press must not queue a
-        # second teardown or reset the clock on the first.
-        #
-        # The state guard is in the WHERE clause rather than in the `if` above,
-        # because the worker is running while this executes: between reading
-        # the row and writing it, the job can finish. Without it a second press
-        # arriving in that window writes `cancelling` over `cancelled` and the
-        # run is left looking alive forever — a spinner nobody can clear, which
-        # is worse than the unresponsive button it was meant to fix.
-        done = conn.execute(
-            "UPDATE jobs SET cancel_requested = 1, state = ?, message = ?"
-            " WHERE job_id = ? AND state IN (?, ?)",
-            (CANCELLING, "stopping…", job_id, RUNNING, CANCELLING),
+    with conn:
+        conn.execute(
+            "UPDATE jobs SET cancel_requested = 1,"
+            " state = CASE WHEN state = ? THEN ? ELSE ? END,"
+            " finished_at = CASE WHEN state = ? THEN ? ELSE finished_at END,"
+            " message = CASE WHEN state = ? THEN ? ELSE ? END"
+            " WHERE job_id = ? AND state IN (?, ?, ?)",
+            (
+                QUEUED, CANCELLED, CANCELLING, QUEUED, _now(),
+                QUEUED, "cancelled before it started",
+                "stopping at the next safe checkpoint; an in-flight request may finish",
+                job_id, QUEUED, RUNNING, CANCELLING,
+            ),
         )
-        conn.commit()
-        if not done.rowcount:
-            return (get_job(conn, job_id) or {}).get("state") or CANCELLED
-        return CANCELLING
-    return row["state"]
+        row = conn.execute("SELECT state FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+    return row["state"] if row else None
 
 
 def save_partial(conn: sqlite3.Connection, job_id: str, result: dict) -> None:
@@ -1887,7 +1888,8 @@ def work_in_flight(conn: sqlite3.Connection) -> int:
     therefore asks first and skips.
     """
     return conn.execute(
-        "SELECT COUNT(*) FROM jobs WHERE state IN (?, ?)", (QUEUED, RUNNING)
+        "SELECT COUNT(*) FROM jobs WHERE state IN (?, ?, ?)",
+        (QUEUED, RUNNING, CANCELLING)
     ).fetchone()[0]
 
 

@@ -24,6 +24,11 @@
      */
 
     let promise = $state(api.researchPlanes());
+    let llm = $state("");
+    let harness = $state("");
+    let search = $state("");
+    const selection = () => ({ llm, harness, search });
+    const refresh = () => (promise = api.researchPlanes(selection()));
     let rows = $state(5);
     let budget = $state(0.2);
     let job = $state<Job | null>(null);
@@ -36,6 +41,7 @@
         try {
             const started = await api.runAgenda({
                 rows,
+                ...selection(),
                 backend: plane.id,
                 // Sent only on the plane that spends. The free plane's honest
                 // budget is zero, and zero means unlimited to the charger —
@@ -75,8 +81,15 @@
         <strong>Activity → Runs</strong>.
     </p>
 
-    <Async {promise} loading="Reading…" retry={() => (promise = api.researchPlanes())}>
-        {#snippet children(data)}
+    <details>
+        <summary>This run's choices</summary>
+        <p class="meta">Empty uses Settings. LLM and search apply only to the paid plane; agent applies only to the harness plane.</p>
+        <label>LLM <input bind:value={llm} onchange={refresh} /></label>
+        <label>Agent ID <input bind:value={harness} onchange={refresh} /></label>
+        <label>Search <select bind:value={search} onchange={refresh}><option value="">Use preference</option><option value="exa">Exa</option><option value="tavily">Tavily</option></select></label>
+    </details>
+    <Async {promise} loading="Reading…" retry={refresh}>
+        {#snippet children(data: { planes: ResearchPlane[]; default?: string })}
             <div class="planes">
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
@@ -101,11 +114,14 @@
                             {/if}
                         </div>
                         <p class="meta">{plane.what}</p>
+                        {#if plane.reason}<p class="state">{plane.reason}</p>{/if}
+                        {#if plane.llm}<p class="meta">Using <code>{plane.llm}</code> with {plane.search || 'no search provider'}.</p>{/if}
 
-                        {#each (plane.harnesses ?? []).slice(0, 1) as found (found.id)}
+                        {#each (plane.harnesses ?? []).filter((one) => one.id === plane.selected_harness) as found (found.id)}
                             <p class="meta">
                                 Using <strong>{found.label}</strong>
                                 (<code>{found.command}</code>).
+                                {#if found.needs_account}<br />Bills to {found.needs_account}.{/if}
                             </p>
                         {/each}
 
@@ -156,15 +172,39 @@
                                 </p>
                             {/if}
                         {:else if plane.id === "harness"}
-                            <!-- The names, not a count: "no agent found" is
-                                 only actionable if the reader can see which
-                                 commands were looked for. -->
+                            <!-- The way out, not just the absence: what to
+                                 install, the command that installs it, and
+                                 which account it bills to — every headless
+                                 run spends a subscription, quota or key the
+                                 reader already holds, and "no marginal cost"
+                                 is only true once they know which one. -->
                             <p class="meta">
                                 No coding-agent command line found on this
                                 machine. Looked for
                                 <code>{(plane.looked_for ?? []).join(", ")}</code>.
-                                Install one and this card turns on.
                             </p>
+                            {#if (plane.missing ?? []).length}
+                                <ul>
+                                    {#each plane.missing ?? [] as one (one.id)}
+                                        <li>
+                                            <strong>{one.label}</strong>
+                                            {#if one.download_url}
+                                                <a href={one.download_url} target="_blank" rel="noreferrer">download</a>
+                                            {/if}
+                                            {#if one.install_hint}<br /><code>{one.install_hint}</code>{/if}
+                                            {#if one.needs_account}<br /><span class="meta">{one.needs_account}.</span>{/if}
+                                        </li>
+                                    {/each}
+                                </ul>
+                            {/if}
+                            {#if plane.dirs_env}
+                                <p class="meta">
+                                    Already installed somewhere unusual? Point
+                                    <code>{plane.dirs_env}</code> at its folder and press
+                                    Verify on Agents → Connect. Searched without it:
+                                    <code>{(plane.search_dirs ?? []).join(", ")}</code>.
+                                </p>
+                            {/if}
                         {:else}
                             <p class="meta">
                                 Needs both keys before it can run.

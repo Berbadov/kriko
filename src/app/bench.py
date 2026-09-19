@@ -29,9 +29,11 @@ becomes a fact rather than an impression.
 import shutil
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
+from app.web.jobs import Cancelled
 from kriko.store.db import connect
 
 #: How many cases a run uses when nobody says. Three is enough to see a
@@ -135,6 +137,7 @@ def run_case(
     search: str = "",
     model: str = "",
     opener=None,
+    check_cancelled: Callable[[], None] | None = None,
 ) -> dict:
     """One case, measured — dispatched on the case's `kind` (B126 §3/§9).
 
@@ -154,22 +157,26 @@ def run_case(
     a validation run does needs no network in a test, exactly as
     `app/factcheck.py` (which this borrows) already allows.
     """
+    if check_cancelled is not None:
+        check_cancelled()
     kind = str(case.get("kind") or "specific")
     if kind == "bulk":
         return _run_bulk(
             settings, case, plane=plane, protocol=protocol,
             max_documents=max_documents, budget_usd=budget_usd,
             batch_id=batch_id, search=search, model=model,
+            check_cancelled=check_cancelled,
         )
     if kind == "validation":
         return _run_validation(
             settings, case, plane=plane, protocol=protocol, batch_id=batch_id,
-            opener=opener,
+            opener=opener, check_cancelled=check_cancelled,
         )
     return _run_specific(
         settings, case, plane=plane, protocol=protocol,
         max_documents=max_documents, budget_usd=budget_usd,
         batch_id=batch_id, search=search, model=model,
+        check_cancelled=check_cancelled,
     )
 
 
@@ -190,6 +197,7 @@ def _spend_columns(protocol: str) -> tuple[dict, str]:
 def _run_specific(
     settings, case: dict, *, plane: str, protocol: str, max_documents: int,
     budget_usd: float, batch_id: str, search: str = "", model: str = "",
+    check_cancelled: Callable[[], None] | None = None,
 ) -> dict:
     """One subject, the ordinary research operation — precision/recall per
     claim (B126 §3). The original shape of this benchmark, before `bulk` and
@@ -228,7 +236,8 @@ def _run_specific(
             app_state_path=sandbox / "app.sqlite",
             analysis_log_path=sandbox / "analyses.jsonl",
         )
-        progress = _Silent()
+        progress = _Silent(check_cancelled)
+        progress.check()
         started = time.perf_counter()
         try:
             result = tasks.research(
@@ -249,6 +258,8 @@ def _run_specific(
                 },
                 progress,
             )
+        except Cancelled:
+            raise
         except Exception as exc:  # noqa: BLE001 — a failed case is a measurement
             row["ms"] = int((time.perf_counter() - started) * 1000)
             row["error"] = f"{type(exc).__name__}: {exc}"
@@ -287,6 +298,7 @@ def _run_specific(
 def _run_bulk(
     settings, case: dict, *, plane: str, protocol: str, max_documents: int,
     budget_usd: float, batch_id: str, search: str = "", model: str = "",
+    check_cancelled: Callable[[], None] | None = None,
 ) -> dict:
     """An agenda run over N subjects — throughput, and whether quality
     *degrades with volume* (B126 §3), the failure a single-case benchmark
@@ -335,11 +347,14 @@ def _run_bulk(
     priced = 0
     started = time.perf_counter()
     for subject_id in subject_ids:
+        if check_cancelled is not None:
+            check_cancelled()
         sub_case = {**case, "subject_id": subject_id, "kind": "specific"}
         one = _run_specific(
             settings, sub_case, plane=plane, protocol=protocol,
             max_documents=max_documents, budget_usd=budget_usd,
             batch_id=batch_id, search=search, model=model,
+            check_cancelled=check_cancelled,
         )
         if one.get("error"):
             # "A claimed uninstalled" and "the plane failed" look the same
@@ -386,6 +401,7 @@ def _run_bulk(
 
 def _run_validation(
     settings, case: dict, *, plane: str, protocol: str, batch_id: str, opener=None,
+    check_cancelled: Callable[[], None] | None = None,
 ) -> dict:
     """Re-check claims already in the store against their retained documents
     and a fresh fetch (B126 §3) — drift, and whether the plane can say "this
@@ -400,7 +416,6 @@ def _run_validation(
     claim's title against the gold entries, not the fresh page's content.
     """
     from app import factcheck, gold
-    from kriko.store.db import connect
 
     row = {
         "batch_id": batch_id,
@@ -451,6 +466,8 @@ def _run_validation(
 
     rechecked = []
     for claim in claims:
+        if check_cancelled is not None:
+            check_cancelled()
         verdict = factcheck.check_source(claim["quote"], claim["url"], opener=opener)
         rechecked.append({
             "claim_id": claim["claim_id"], "title": claim["title"],
@@ -473,15 +490,12 @@ def _run_validation(
 
 
 class _Silent:
-    """A `Progress` that keeps the lines and cancels nothing.
+    job_id = ""
 
-    The benchmark is its own job; a nested one would need a second row and a
-    second worker, and `tasks.research` only ever asks for `log`, `set` and
-    `check`.
-    """
-
-    def __init__(self):
+    def __init__(self, check_cancelled: Callable[[], None] | None = None):
         self.lines: list[str] = []
+        self.result: dict = {}
+        self._check_cancelled = check_cancelled
 
     def log(self, line: str) -> None:
         self.lines.append(line)
@@ -491,10 +505,18 @@ class _Silent:
 
     @property
     def cancelled(self) -> bool:
+        try:
+            self.check()
+        except Cancelled:
+            return True
         return False
 
     def check(self) -> None:
-        pass
+        if self._check_cancelled is not None:
+            self._check_cancelled()
+
+    def partial(self, result: dict) -> None:
+        self.result = dict(result)
 
 
 #: Why a measured run failed, as a class rather than as a sentence. B124.

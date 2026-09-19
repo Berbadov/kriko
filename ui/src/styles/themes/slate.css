@@ -92,7 +92,10 @@
         --panel-item: #f7f8fb;
         --line-soft: #ebeef3;
 
-        --accent: #2563eb;
+        /* #2563eb measured 4.47:1 against --accent-soft, just under the
+         * 4.5 the navigation-contrast test requires for accent ink on tinted
+         * rows. One step darker; still between --accent-hi and --accent-lo. */
+        --accent: #215fe6;
         --accent-ink: #ffffff;
         --accent-soft: #e7effd;
 

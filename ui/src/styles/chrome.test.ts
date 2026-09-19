@@ -50,6 +50,42 @@ function ruleContaining(fragment: string, sheet: string = CSS): string {
     return sheet.slice(open + 1, close);
 }
 
+describe("shared control styling", () => {
+    it("uses the ring as a width and the accent as its colour", () => {
+        for (const selector of [".rail-action:focus-visible", ".brand:focus-visible"]) {
+            expect(block(selector)).toContain("outline: var(--ring) solid var(--accent)");
+            expect(block(selector)).toContain("outline-offset: var(--ring)");
+        }
+        expect(ruleContaining(".nav-link:focus-visible,")).toContain(
+            "outline: var(--ring) solid var(--accent)",
+        );
+    });
+
+    it("uses semantic secondary ink for navigation labels and figures", () => {
+        for (const selector of [".nav-link", ".nav-figure", ".nav-title"]) {
+            expect(block(selector)).toContain("color: var(--dim)");
+        }
+    });
+
+    it("pairs compact type with its own leading rather than inherited body leading", () => {
+        const css = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+        const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+        const compact = rules.filter(([, , body]) => /font-size:\s*var\(--t-(xs|sm)\)/.test(body));
+        expect(compact.length).toBeGreaterThan(20);
+        for (const [, selector, body] of compact) {
+            const size = body.match(/font-size:\s*var\(--t-(xs|sm)\)/)![1];
+            expect(body, selector.trim()).toContain(`line-height: var(--lh-${size})`);
+        }
+    });
+
+    it("spaces shared forms without changing prose asks", () => {
+        expect(block("form.ask")).toContain("gap: var(--s-3)");
+        expect(block("form.ask")).toContain("display: grid");
+        expect(block("form.ask > .field")).toContain("width: 100%");
+        expect(block(".ask")).not.toContain("display: grid");
+    });
+});
+
 describe("the rail", () => {
     it("is actually reading the sheet", () => {
         expect(CSS?.length ?? 0).toBeGreaterThan(200);

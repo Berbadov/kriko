@@ -339,11 +339,15 @@ const GAP_ENTRY = {
   },
 };
 
-test("a subject the packs know but hold nothing on becomes a research button", () => {
+test("a subject the packs know but hold nothing on opens a consent form, not a run", () => {
   // The difference that matters: "nothing matched" is a pack adapter problem
   // the reader cannot act on, while a subject that resolved with zero claims
-  // is a *named* gap. Naming it is what makes it researchable in one click.
-  const p = loadPanel();
+  // is a *named* gap. The press names it in a consent form — research spends
+  // the reader's subscription, so it never starts on the first click.
+  const p = loadPanel({ workerResponse: {
+    ok: true, plane: { backend: "agent", budget_usd: 0 },
+    job: { job_id: "j1", kind: "research", state: "running" },
+  } });
   p.openPanel();
   p.deliverEntry(GAP_ENTRY);
 
@@ -352,10 +356,20 @@ test("a subject the packs know but hold nothing on becomes a research button", (
   assert.match(gap.textContent, /VW Golf 1\.6 TDI/);
 
   p.click(".lite-gap-btn");
-  const ask = p.sent.find((m) => m.type === "RESEARCH_SUBJECT");
-  assert.ok(ask, "research was requested");
+  assert.equal(
+    p.sent.filter((m) => m.type === "RESEARCH_PRODUCT").length, 0,
+    "no run starts on the first press",
+  );
+  const form = p.shadow().querySelector(".lite-research");
+  assert.ok(form, "the consent form opened");
+  assert.match(form.textContent, /VW Golf 1\.6 TDI/);
+
+  p.click(".lite-research-start");
+  const ask = p.sent.find((m) => m.type === "RESEARCH_PRODUCT");
+  assert.ok(ask, "research was requested on the second, explicit press");
   assert.equal(ask.payload.subject_id, "s9");
-  assert.equal(ask.payload.pack_id, "org.kriko.cars");
+  assert.ok(!("allow_draft" in (ask.payload || {})),
+            "a known subject never drafts by accident");
 });
 
 test("a subject that already has claims is not offered as a gap", () => {
@@ -534,11 +548,12 @@ test("a page nothing covers offers the app rather than a search", () => {
                "Open Kriko");
 });
 
-test("research with nothing to research on says what it will actually do", () => {
+test("research with nothing to research on opens a named form, not a run", () => {
   // `research` arrives with a subject_id when there is something to run
   // against and without one when there is not. The second cannot start a run,
-  // so it opens search — and a button labelled "Research it" that opens a
-  // search field is a button the reader stops trusting.
+  // so it opens the research form with a name field — and a button labelled
+  // "Research it" that opens a form is a button the reader stops trusting,
+  // which is why the button says what the form is for.
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...ENTRY, result: {
@@ -548,7 +563,14 @@ test("research with nothing to research on says what it will actually do", () =>
       say: "The nearest thing installed is Something else." } } });
 
   assert.equal(verdict(p).querySelector(".lite-verdict-btn").textContent,
-               "Find it by name");
+               "Research this product");
+  p.click(".lite-verdict-btn");
+  assert.ok(p.shadow().querySelector(".lite-research"),
+            "the research form opened");
+  assert.equal(
+    p.sent.filter((m) => m.type === "RESEARCH_PRODUCT").length, 0,
+    "no run starts before the reader presses Research in the form",
+  );
 });
 
 test("an engine that says nothing about the verdict draws no banner", () => {
