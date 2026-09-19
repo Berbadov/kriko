@@ -9,7 +9,7 @@ long work is a row here rather than a request that hangs.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
@@ -42,7 +42,7 @@ class BenchRequest(BaseModel):
     #: same terms as the others: only when asked for. Sweeping the whole
     #: catalogue by default would multiply the bill by however many models the
     #: reader happens to have priced.
-    models: str = ""
+    models: str = Field("", validation_alias=AliasChoices("models", "llms"))
     #: Comma-separated search providers to sweep. Already honoured by the job;
     #: it was simply not reachable from here, so "which providers" could not
     #: be scoped from the screen that runs the benchmark.
@@ -171,7 +171,10 @@ def read_configs(conn=Depends(get_app_state)) -> dict:
         saved = json.loads(raw)
     except ValueError:
         saved = {}
-    return {"configs": saved if isinstance(saved, dict) else {}}
+    return {"configs": {
+        name: {("llms" if key == "models" else key): value for key, value in config.items()}
+        for name, config in saved.items() if isinstance(config, dict)
+    } if isinstance(saved, dict) else {}}
 
 
 class SaveConfig(BaseModel):
@@ -189,7 +192,7 @@ def save_config(body: SaveConfig, conn=Depends(get_app_state)) -> dict:
             400, f"{MAX_SAVED} saved grids is the limit — delete one first")
     saved[body.name] = body.config.model_dump()
     state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
-    return {"configs": saved}
+    return read_configs(conn)
 
 
 @router.delete("/bench/configs/{name}")
@@ -199,7 +202,7 @@ def forget_config(name: str, conn=Depends(get_app_state)) -> dict:
     saved = read_configs(conn)["configs"]
     saved.pop(name, None)
     state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
-    return {"configs": saved}
+    return read_configs(conn)
 
 
 @router.post("/bench")

@@ -222,6 +222,7 @@ button.small,
 .tab.small {
     padding: var(--s-1) var(--s-2);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 nav a.tab {
     text-decoration: none;
@@ -248,6 +249,7 @@ nav a.tab {
 }
 .field label {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     color: var(--dim);
 }
 .field.grow {
@@ -313,11 +315,13 @@ select:focus {
 .card h3 {
     margin: 0 0 var(--s-1);
     font-size: var(--t-base);
+    line-height: var(--lh-base);
     font-weight: 600;
 }
 .meta {
     color: var(--dim);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 
 .sev {
@@ -325,6 +329,7 @@ select:focus {
     padding: 1px var(--s-2);
     border-radius: 999px;
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -351,6 +356,7 @@ select:focus {
 
 .badge {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     padding: 1px var(--s-2);
     border-radius: 999px;
     border: 1px solid var(--line);
@@ -399,6 +405,7 @@ summary {
     cursor: pointer;
     color: var(--dim);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 summary:hover {
     color: var(--accent);
@@ -408,6 +415,7 @@ summary:hover {
     padding-left: var(--s-5);
     color: var(--dim);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 .why li {
     margin: 2px 0;
@@ -418,6 +426,7 @@ blockquote {
     border-left: var(--ring) solid var(--line);
     color: var(--dim);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 blockquote.refutes {
     border-color: var(--medium);
@@ -428,6 +437,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 th,
 td {
@@ -439,6 +449,7 @@ th {
     color: var(--dim);
     font-weight: 500;
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 th.num,
 td.num {
@@ -475,6 +486,7 @@ pre {
     padding: var(--s-3);
     overflow-x: auto;
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     white-space: pre-wrap;
 }
 
@@ -485,6 +497,7 @@ pre {
 }
 .flag {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     color: var(--medium);
 }
 .stats {
@@ -510,6 +523,7 @@ pre {
 .stat span {
     color: var(--dim);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 .state {
     padding: var(--s-3) var(--s-4);
@@ -562,6 +576,7 @@ pre {
     padding: var(--s-1) 0;
     border-bottom: 1px solid var(--line);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 
 /* ── the history rail ────────────────────────────────────────────── */
@@ -611,6 +626,7 @@ pre {
 .modes button {
     text-transform: capitalize;
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     padding: var(--s-1) var(--s-2);
 }
 
@@ -626,6 +642,7 @@ pre {
 }
 .group-head {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--dim);
@@ -649,6 +666,7 @@ pre {
 }
 .check {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     color: var(--dim);
     white-space: nowrap;
     cursor: pointer;
@@ -685,6 +703,7 @@ pre {
     padding: var(--s-2);
     border-radius: var(--radius-sm);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     white-space: pre-wrap;
 }
 li.gap {
@@ -751,6 +770,7 @@ li.gap {
 }
 .brand-text .meta {
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
 }
 /* Brand and primary action share the rail's first row, so `.rail` keeps its
  * three-row grid whether or not the action is rendered — an empty grid row
@@ -777,6 +797,7 @@ li.gap {
     color: var(--accent-ink);
     font-family: var(--font-display);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
     font-weight: 600;
     letter-spacing: -0.01em;
     text-decoration: none;
@@ -799,8 +820,8 @@ li.gap {
     box-shadow: 0 0 0 var(--n-4);
 }
 .rail-action:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline: var(--ring) solid var(--accent);
+    outline-offset: var(--ring);
 }
 @media (prefers-reduced-motion: reduce) {
     .rail-action,
@@ -819,8 +840,9 @@ li.gap {
     gap: var(--s-2);
     font-family: var(--font-mono);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     font-variant-numeric: tabular-nums;
-    color: var(--n-6);
+    color: var(--dim);
 }
 .nav-figure-text {
     white-space: nowrap;
@@ -901,6 +923,7 @@ li.gap {
 .nav-title {
     margin: 0 var(--s-2) var(--s-2);
     font-size: var(--t-xs);
+    line-height: var(--lh-xs);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--dim);
@@ -917,7 +940,7 @@ li.gap {
     padding: var(--s-2) var(--s-2);
     border-radius: var(--radius-sm);
     text-decoration: none;
-    color: var(--n-8);
+    color: var(--dim);
     transition:
         background var(--dur-fast) ease,
         color var(--dur-fast) ease;
@@ -966,8 +989,8 @@ li.gap {
 /* Keyboard focus has to be visible on the element people navigate with. */
 .nav-link:focus-visible,
 .brand:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline: var(--ring) solid var(--accent);
+    outline-offset: var(--ring);
 }
 .nav-link.active {
     background: var(--accent-soft);
@@ -1112,6 +1135,7 @@ li.gap {
     margin: var(--s-2) 0 0;
     color: var(--dim);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
     max-width: var(--measure);
 }
 .verdict-bar {
@@ -1248,6 +1272,7 @@ table.compare td {
 }
 table.compare thead th {
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
     color: var(--dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1299,6 +1324,7 @@ table.compare thead th {
     align-items: baseline;
     margin: 0 0 var(--s-3);
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 .context-pair {
     white-space: nowrap;
@@ -1316,6 +1342,7 @@ table.compare thead th {
     width: 100%;
     font-family: ui-monospace, monospace;
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
 }
 
 /* ── what the seller said ───────────────────────────────────────────────── */
@@ -1339,6 +1366,7 @@ button.link-ish {
     color: var(--accent);
     font: inherit;
     font-size: var(--t-sm);
+    line-height: var(--lh-sm);
     text-decoration: underline;
     cursor: pointer;
 }
@@ -1475,6 +1503,14 @@ details.authoring summary {
 details.authoring > .meta {
     max-width: var(--measure);
     margin-block: var(--s-2);
+}
+form.ask {
+    display: grid;
+    gap: var(--s-3);
+    justify-items: start;
+}
+form.ask > .field {
+    width: 100%;
 }
 form.ask.stack {
     display: flex;

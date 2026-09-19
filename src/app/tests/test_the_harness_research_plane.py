@@ -224,13 +224,18 @@ def test_every_offered_harness_has_a_tool_grant():
     `--agent`, naming a profile (`_ensure_opencode_agent`) whose own
     `permission:` block denies `bash`/`edit` and allows only
     `webfetch`/`websearch` — the same shape as `.opencode/agents/
-    kriko_research.md` already ships in this repo.
+    kriko_research.md` already ships in this repo. `agy` has no verified
+    allowlist flag, so its restriction is the headless permission policy
+    itself (anything that would ask is auto-denied), a working directory
+    that vanishes with the run, and a denial that fails the run loudly
+    rather than researching nothing on the reader's quota.
     """
     for one in harness_mod.KNOWN:
         has_grant = (
             "--allowedTools" in one.args
             or "--allowed-tools" in one.args
             or "--agent" in one.args
+            or one.protocol == "agy"
         )
         assert has_grant or one.unusable, (
             f"{one.id} is offered with no way to restrict its tools"
@@ -652,7 +657,7 @@ def test_a_cmd_shim_is_only_spawned_through_the_shell_on_windows():
     platform, and it must not fire anywhere else (`shell=True` on POSIX would
     run the wrong thing entirely: the first argument as a shell string)."""
     needs = HarnessResearcher._needs_shell
-    assert needs(["C:\\npm\\claude.cmd", "-p"]) is False, "not on this test's own OS"
+    assert needs(["C:\\npm\\claude.cmd", "-p"]) is (os.name == "nt")
 
 
 def test_a_cmd_shim_needs_the_shell_and_an_exe_does_not(monkeypatch):
@@ -1238,8 +1243,9 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
     marker = tmp_path / "grandchild-alive"
     grandchild = tmp_path / "grandchild.py"
     grandchild.write_text(
-        f"open({str(marker)!r}, 'w').close()\n"
-        "import time\ntime.sleep(60)\n",
+        "import os, pathlib, time\n"
+        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()))\n"
+        "time.sleep(60)\n",
         encoding="utf-8",
     )
     parent = tmp_path / "parent.py"
@@ -1293,9 +1299,30 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
 def _grandchild_running(script: Path) -> bool:
     import subprocess as sp
 
-    return bool(
-        sp.run(["pgrep", "-f", str(script)], capture_output=True, text=True).stdout.strip()
-    )
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        pid = int((script.parent / "grandchild-alive").read_text())
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        kernel.WaitForSingleObject.restype = wintypes.DWORD
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(0x00100000, False, pid)
+        if not handle:
+            assert ctypes.get_last_error() == 87
+            return False
+        try:
+            status = kernel.WaitForSingleObject(handle, 0)
+            assert status in (0, 258)
+            return status == 258
+        finally:
+            kernel.CloseHandle(handle)
+    result = sp.run(["pgrep", "-f", str(script)], capture_output=True, text=True)
+    assert result.returncode in (0, 1), result.stderr
+    return result.returncode == 0
 
 
 def test_a_cli_that_never_finishes_is_killed_and_said_so(tmp_path):
@@ -1373,3 +1400,163 @@ def test_a_cli_that_cannot_stream_still_runs(monkeypatch):
         lambda _: "--output-format <format>  (choices: \"json\", \"stream-json\")",
     )
     assert "stream-json" in harness_mod.command_for(one)
+
+
+# ── Antigravity CLI: the verified third headless option ──────────────────────
+#
+# Verified 2026-09-18 against the real `agy` on the reader's own machine, not
+# against docs: `-p` takes the prompt as its value (an empty one eats the next
+# flag, and piped stdin is ignored), `--output-format stream-json` emits
+# `init`/`step_update`/`result` events with usage, `--model` selects per run,
+# and anything needing approval is auto-denied headless with `denied_actions`
+# on the result. Each of those is a test below, so a future edit that assumes
+# claude-shaped behaviour for every CLI trips here first.
+
+
+def _agy_cli(tmp_path: Path, lines: list) -> harness_mod.Harness:
+    """A CLI that answers like `agy -p ... --output-format stream-json`.
+
+    A real subprocess: the prompt-by-flag wiring and the event shape are the
+    parts most likely to be wrong, and a patched call tests neither.
+    """
+    script = tmp_path / f"agy-{len(lines)}.py"
+    script.write_text(
+        "import json, sys\n"
+        "flag = sys.argv.index('-p')\n"
+        f"lines = {json.dumps([json.dumps(one) for one in lines])}\n"
+        "lines = [line.replace('__PROMPT__', sys.argv[flag + 1]) for line in lines]\n"
+        "sys.stdout.write('\\n'.join(lines) + '\\n')\n",
+        encoding="utf-8",
+    )
+    return harness_mod.Harness(
+        "fake-agy", "Fake Agy", sys.executable, (str(script),),
+        protocol="agy", prompt_argument=False, prompt_flag="-p",
+        required=("--output-format",), model_flag="--model",
+        structured=True,
+    )
+
+
+def _agy_result(response: str, **over) -> dict:
+    result = {
+        "status": "SUCCESS",
+        "response": response,
+        "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+        "num_turns": 2,
+    }
+    result.update(over)
+    return {"event": "result", "result": result}
+
+
+def test_agy_takes_the_prompt_as_a_flag_value(tmp_path, monkeypatch):
+    """No `--`, no stdin: the prompt is `-p`'s value, and nothing else works.
+
+    `--` is a claude convention this CLI never promised, and piped stdin is
+    silently ignored there — a run that researches nothing on the reader's
+    quota is the failure this rules out."""
+    monkeypatch.setattr(
+        harness_mod, "declared", lambda _: frozenset({"--output-format", "--model"})
+    )
+    one = _agy_cli(tmp_path, [_agy_result("__PROMPT__")])
+    researcher = HarnessResearcher(one, timeout=30)
+    assert researcher.ask("the whole brief") == "the whole brief"
+    assert researcher.tokens_used == 15
+
+
+def test_agy_denied_tools_fail_loudly_not_empty(tmp_path, monkeypatch):
+    """Exit 0, an empty reply, and `denied_actions` is a failed run, not an
+    empty one: downstream would otherwise report "researched, found nothing"."""
+    monkeypatch.setattr(
+        harness_mod, "declared", lambda _: frozenset({"--output-format", "--model"})
+    )
+    one = _agy_cli(
+        tmp_path,
+        [_agy_result("", denied_actions=[{"action": "read_url", "display_name": "ReadUrlContent"}])],
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    with pytest.raises(RuntimeError, match="cannot approve tool permissions") as exc:
+        researcher.ask("anything")
+    assert "allow rule" in str(exc.value)
+    assert "--dangerously-skip-permissions" in str(exc.value)
+
+
+def test_agy_events_are_narrated():
+    """The job log watches an agy run the way it watches a claude one."""
+    assert harness_mod.narrate({"event": "init"}) == "started"
+    tool = {
+        "event": "step_update",
+        "step_update": {
+            "step_type": "tool",
+            "tool_info": {"name": "search_web", "parameters": {"query": "dq200 problems"}},
+        },
+    }
+    assert "dq200 problems" in harness_mod.narrate(tool)
+    failed = {
+        "event": "step_update",
+        "step_update": {
+            "step_type": "tool", "state": "ERROR",
+            "tool_info": {"name": "x", "error": {"message": "denied"}},
+        },
+    }
+    assert "failed" in harness_mod.narrate(failed)
+    done = {"event": "result", "result": {"num_turns": 3, "usage": {"input_tokens": 1}}}
+    assert "3 turn(s)" in harness_mod.narrate(done)
+
+
+def test_agy_refuses_an_oversized_prompt_rather_than_sending_it_nowhere(
+    tmp_path, monkeypatch
+):
+    """Past the command-line cap there is no stdin fallback for this CLI, so
+    the run must refuse up front rather than research an empty prompt."""
+    monkeypatch.setattr(harness_mod, "MAX_PROMPT_ARGUMENT", 10)
+    monkeypatch.setattr(
+        harness_mod, "declared", lambda _: frozenset({"--output-format", "--model"})
+    )
+    one = _agy_cli(tmp_path, [_agy_result("unreachable")])
+    researcher = HarnessResearcher(one, timeout=30)
+    with pytest.raises(RuntimeError, match="cannot take this prompt"):
+        researcher.ask("a prompt that is longer than ten characters")
+
+
+def test_unverified_headless_entries_are_not_driven(monkeypatch):
+    """`vibe` and `gemini` name real CLIs whose sandbox files, tool names and
+    output parsing Kriko has never run against — so they are listed with the
+    reason, never spawned, even on a machine that has them."""
+    monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
+    monkeypatch.setattr(
+        harness_mod, "declared",
+        lambda _: frozenset({"--output", "--agent", "--enabled-tools", "--prompt",
+                             "--output-format", "--approval-mode", "--allowed-tools",
+                             "--model"}),
+    )
+    for ident in ("mistral-vibe", "gemini-cli"):
+        one = next(h for h in harness_mod.KNOWN if h.id == ident)
+        assert one.unusable, f"{ident} must carry its unverified reason"
+        with pytest.raises(NoHarness):
+            harness_mod.command_for(one)
+    assert all(
+        h.id in ("mistral-vibe", "gemini-cli")
+        for h in harness_mod.found_but_unusable()
+    )
+
+
+def test_the_planes_endpoint_names_missing_clis_with_a_way_out(tmp_path, monkeypatch):
+    """A missing CLI is the ordinary state, not an error: the card lists what
+    to install, the command, what account it bills to — and the manual path
+    for a CLI that is installed where Kriko did not look."""
+    from fastapi.testclient import TestClient
+
+    from app.web.app import create_app
+
+    monkeypatch.setattr(harness_mod, "available", lambda: [])
+    _seed(tmp_path)
+    client = TestClient(create_app(_settings(tmp_path)))
+    row = next(
+        p for p in client.get("/api/research-planes").json()["planes"]
+        if p["id"] == "harness"
+    )
+    assert row["ready"] is False
+    assert row["missing"], "a card with no way out is just an absence"
+    for one in row["missing"]:
+        assert one["download_url"] and one["install_hint"] and one["needs_account"]
+    assert row["dirs_env"] == "KRIKO_HARNESS_DIRS"
+    assert row["search_dirs"]

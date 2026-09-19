@@ -102,7 +102,10 @@ def _stopped(kept: dict) -> str:
         if isinstance(value, int) and not isinstance(value, bool) and value
     )
     said = "stopped" + (f" during {stage}" if stage else "")
-    return f"{said} — kept {counts}" if counts else f"{said}; what was finished is kept"
+    return (
+        f"{said} — recorded {counts}; see retained results"
+        if counts else f"{said}; see retained results"
+    )
 
 
 class JobRunner:
@@ -142,10 +145,9 @@ class JobRunner:
         progress = Progress(job_id, conn)
         try:
             # The row may have been cancelled while it sat in the queue.
-            row = state.get_job(conn, job_id)
-            if row is None or row["state"] != state.QUEUED:
+            if not state.start_job(conn, job_id):
                 return
-            state.start_job(conn, job_id)
+            progress.check()
             # The same row the MCP door writes (B122), so the feed is "what is
             # this installation doing", not "what did the agent ask". A job and
             # a tool call are both operations; that they are started by
@@ -157,7 +159,10 @@ class JobRunner:
                 kind=operations.kind_of(kind),
                 arguments=params,
             ) as outcome:
+                progress.check()
                 result = self.handlers[kind](self.settings, params, progress)
+                progress.partial(result)
+                progress.check()
                 outcome["response"] = operations.summarise(result)
                 outcome["usd"], outcome["tokens"] = operations.metered(result)
             # No message, so `finish_job`'s COALESCE keeps the handler's own

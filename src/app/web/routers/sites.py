@@ -49,6 +49,7 @@ class ActivationReport(BaseModel):
 
 class RegisterRequest(BaseModel):
     url: str = Field("", max_length=2000)
+    harness: str = Field("", max_length=64)
     #: Whose identity keys the adapter maps into. Empty means "whichever pack
     #: the agent judges this site sells the products of", which it states in
     #: the adapter it writes.
@@ -143,7 +144,7 @@ def register_site(
     if not url and wanted not in known:
         url = f"https://{wanted}/"
     job_id = request.app.state.jobs.submit(
-        "site_register", {"host": wanted, "url": url, "pack_id": body.pack_id}
+        "site_register", {**body.model_dump(), "host": wanted, "url": url}
     )
     state.set_site_request(conn, wanted, state="working", detail="")
     return {"job_id": job_id, "kind": "site_register", "host": wanted}

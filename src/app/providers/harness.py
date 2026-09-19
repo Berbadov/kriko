@@ -52,7 +52,9 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
+from contextlib import contextmanager
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -147,6 +149,10 @@ class Harness:
     #: being filled with a guess.
     structured: bool = True
     env: dict = field(default_factory=dict)
+    protocol: str = "claude"
+    model_flag: str = ""
+    required: tuple[str, ...] = ()
+    capabilities: tuple[str, ...] = ()
     #: What to run instead of `args` when this machine's CLI does not list
     #: `needs_in_help` among the things it can do. The streaming vector is the
     #: one this plane wants (see `_claude_args`); this is the one that still
@@ -179,11 +185,27 @@ class Harness:
     #: the failure the reader pasted, on a run that had worked minutes before.
     #: An argument cannot be lost in transit.
     prompt_argument: bool = True
+    #: A flag that takes the prompt as its value (`-p` for `agy`), for a CLI
+    #: with no `--` separator convention. Takes precedence over both prompt
+    #: paths above; stdin is never used for it, because a prompt on stdin is
+    #: silently ignored there rather than read — a run that researches nothing
+    #: on the reader's quota is the failure this rules out.
+    prompt_flag: str = ""
+    #: Where to get it, in the reader's words. Shown when the CLI is missing,
+    #: so a dead link here is worse than none — only official install pages.
+    download_url: str = ""
+    #: The one command that installs it, for the missing-harness card.
+    install_hint: str = ""
+    #: What account it bills to. Every headless plane spends *something* —
+    #: a subscription, a quota, a key — and "no marginal cost" is only true
+    #: once the reader knows which one they already pay.
+    needs_account: str = ""
     #: Where this CLI installs itself, relative to the reader's home, for when
     #: `PATH` does not carry it. See `locate`.
     homes: tuple[str, ...] = (
         ".local/bin",
         "AppData/Local/Programs",
+        "AppData/Local/agy/bin",
         "AppData/Roaming/npm",
         ".npm-global/bin",
         "node_modules/.bin",
@@ -226,6 +248,9 @@ KNOWN = (
         "Claude Code",
         "claude",
         _claude_args(),
+        download_url="https://code.claude.com/docs",
+        install_hint="winget install Anthropic.ClaudeCode",
+        needs_account="a Claude subscription or API billing; log in once with an interactive `claude` session first",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -251,7 +276,54 @@ KNOWN = (
         "opencode",
         "opencode",
         ("run", "--agent", "kriko-harness"),
+        download_url="https://opencode.ai/download",
+        install_hint="curl -fsSL https://opencode.ai/install | bash",
+        needs_account="a model account or API key of your own (or a free/local model)",
         structured=False,
+    ),
+    Harness(
+        "antigravity-cli",
+        "Antigravity CLI",
+        "agy",
+        ("--output-format", "stream-json"),
+        download_url="https://antigravity.google/download",
+        install_hint="curl -fsSL https://antigravity.google/cli/install.sh | bash",
+        needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `agy` session first",
+        protocol="agy",
+        prompt_argument=False,
+        prompt_flag="-p",
+        required=("--output-format",),
+        preferred=("--disable-slash-commands",),
+        model_flag="--model",
+        capabilities=("headless", "streaming", "web-search", "model-selection"),
+    ),
+    Harness(
+        "mistral-vibe", "Mistral Vibe", "vibe",
+        ("--output", "streaming", "--agent", "kriko-research",
+         "--enabled-tools", "web_search", "--enabled-tools", "web_fetch"),
+        download_url="https://docs.mistral.ai/vibe/code/cli/install-setup",
+        install_hint="curl -LsSf https://mistral.ai/vibe/install.sh | bash",
+        needs_account="a Mistral account or API key; sign in once with an interactive `vibe` session first",
+        protocol="vibe", prompt_argument=False,
+        required=("--output", "--agent", "--enabled-tools", "--prompt"),
+        capabilities=("headless", "streaming", "web-search", "web-fetch"),
+        unusable=("not yet verified against the real CLI — its tool names, "
+                  "sandbox file and streaming output are untested, so Kriko "
+                  "will not drive it until they are"),
+    ),
+    Harness(
+        "gemini-cli", "Gemini CLI", "gemini",
+        ("--output-format", "stream-json", "--approval-mode", "default",
+         "--allowed-tools", "google_web_search,web_fetch"),
+        download_url="https://geminicli.com/docs/get-started/installation",
+        install_hint="npm install -g @google/gemini-cli",
+        needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `gemini` session first",
+        protocol="gemini", model_flag="--model", prompt_argument=False,
+        required=("--output-format", "--approval-mode", "--allowed-tools", "--prompt"),
+        capabilities=("headless", "streaming", "web-search", "web-fetch", "model-selection"),
+        unusable=("not yet verified against the real CLI — `--allowed-tools` "
+                  "is deprecated upstream and the sandbox file it would run "
+                  "under is untested, so Kriko will not drive it until they are"),
     ),
 )
 
@@ -390,7 +462,7 @@ def declared(executable: str) -> frozenset[str]:
     return _DECLARED.get(executable, frozenset())
 
 
-def command_for(one: Harness) -> list[str]:
+def command_for(one: Harness, *, model: str = "") -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
     A function rather than a line inside `_run` because the gate that matters
@@ -405,7 +477,13 @@ def command_for(one: Harness) -> list[str]:
     if one.needs_in_help and one.plain_args:
         if one.needs_in_help not in helptext(executable):
             args = one.plain_args
-    return [executable, *args, *(f for f in one.preferred if f in supported)]
+    missing = set(one.required) - supported
+    if one.unusable or missing:
+        raise NoHarness(one.unusable or f"{one.label} lacks required flags: {', '.join(sorted(missing))}")
+    if model and (not one.model_flag or one.model_flag not in supported):
+        raise NoHarness(f"{one.label} does not declare per-run model selection")
+    return [executable, *args, *(f for f in one.preferred if f in supported),
+            *([one.model_flag, model] if model else [])]
 
 
 # ── The output contract ──────────────────────────────────────────────────────
@@ -532,6 +610,8 @@ def _envelope(stdout: str) -> dict:
     except ValueError:
         parsed = None
     if isinstance(parsed, dict):
+        if parsed.get("event") == "result" and isinstance(parsed.get("result"), dict):
+            return parsed["result"]
         return parsed
     if isinstance(parsed, list):
         objects = [item for item in parsed if isinstance(item, dict)]
@@ -553,6 +633,14 @@ def _envelope(stdout: str) -> dict:
         # event carrying `result`, `usage`, `total_cost_usd` and `is_error`.
         if one.get("type") == "result":
             return one
+        # Antigravity's print mode speaks a different dialect: the envelope
+        # is `{"event": "result", "result": {...}}`, with the reply under
+        # `response` and usage beside it. Unwrapped here so `_meter` and
+        # `_unwrap` below can read either CLI without knowing which answered.
+        if one.get("event") == "result" and isinstance(one.get("result"), dict):
+            return one["result"]
+        if one.get("event") is not None:
+            continue
         last = last or one
     return last
 
@@ -571,6 +659,17 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
     `errors`, then the text it managed to produce, then stderr.
     """
     parts: list[str] = []
+    denied = envelope.get("denied_actions")
+    if isinstance(denied, list) and denied:
+        names = []
+        for item in denied:
+            name = item.get("display_name") if isinstance(item, dict) else str(item)
+            if name and name not in names:
+                names.append(str(name))
+        parts.append(
+            "headless mode cannot approve tool permissions, and this run needed "
+            + ", ".join(names)
+        )
     subtype = envelope.get("subtype")
     if isinstance(subtype, str) and subtype.strip() and subtype != "success":
         parts.append(subtype.strip())
@@ -651,6 +750,61 @@ def _tool_line(name: str, args: dict | None) -> str:
     return f"{name} {_short(detail, 100)}".strip()
 
 
+def _narrate_agy(event: dict) -> str:
+    """One Antigravity print-mode event, as a job-log line — or `""`.
+
+    Verified against the real CLI's `--output-format stream-json`: `init`
+    carries the session, `step_update` carries each finished step (a tool call
+    with its arguments, a model reply, or a tool error), and `result` carries
+    the reply with usage. Anything else is machinery.
+    """
+    kind = event.get("event")
+    if kind == "init":
+        return "started"
+    if kind == "step_update":
+        step = event.get("step_update")
+        if not isinstance(step, dict):
+            return ""
+        if step.get("step_type") == "tool":
+            info = step.get("tool_info")
+            name = ""
+            detail = ""
+            if isinstance(info, dict):
+                name = str(info.get("name") or info.get("tool_name") or "")
+                params = info.get("parameters")
+                if isinstance(params, dict):
+                    detail = str(
+                        params.get("Url") or params.get("url")
+                        or params.get("query") or params.get("prompt") or ""
+                    )
+            name = name or str(step.get("tool_name") or "")
+            said = f"{name} {_short(detail, 100)}".strip()
+            if step.get("state") == "ERROR":
+                error = info.get("error") if isinstance(info, dict) else None
+                message = ""
+                if isinstance(error, dict):
+                    message = str(error.get("message") or "")
+                return "a tool call failed: " + _short(
+                    message or said or "unknown tool error", 160)
+            return said
+        if step.get("step_type") == "agent_response":
+            return _short(str(step.get("text_delta") or ""), 200)
+        return ""
+    if kind == "result":
+        result = event.get("result")
+        if not isinstance(result, dict):
+            return ""
+        said = "finished"
+        turns = result.get("num_turns")
+        if isinstance(turns, int) and not isinstance(turns, bool):
+            said += f" after {turns} turn(s)"
+        tokens = _tokens(result.get("usage") or {})
+        if tokens:
+            said += f", {tokens} tokens on the subscription's account"
+        return said
+    return ""
+
+
 def narrate(event: dict) -> str:
     """One stream event, as a line for the job log — or `""` for machinery.
 
@@ -664,6 +818,8 @@ def narrate(event: dict) -> str:
     """
     if not isinstance(event, dict):
         return ""
+    if event.get("event") is not None:
+        return _narrate_agy(event)
     kind = event.get("type")
     if kind in QUIET_EVENTS:
         return ""
@@ -727,9 +883,16 @@ HINTS = (
      "the agent ran out of turns before it reported. This is Kriko's to fix, "
      "not yours -- please send the log."),
     (("enoent", "not recognized", "cannot find the path"),
-     "the CLI could not start. Check that `claude` runs in the terminal in "
-     "this app; if it is installed somewhere unusual, set KRIKO_HARNESS_DIRS "
-     "to its folder. The Agents screen names the binary Kriko found."),
+     "the CLI could not start. Check that it runs in a terminal; if it is "
+     "installed somewhere unusual, set KRIKO_HARNESS_DIRS to its folder. "
+     "The Agents screen names the binary Kriko found and where it looked."),
+    (("cannot approve tool permissions", "permission check failed",
+       "denied_actions", "request-review"),
+     "headless mode cannot answer a permission prompt, so the tool was "
+     "auto-denied. Add an allow rule for it under permissions.allow in the "
+     "CLI's own settings file, or run the research on another plane from "
+     "the Agents screen. Never use --dangerously-skip-permissions for this: "
+     "it approves every tool, not just the web search this run needs."),
 )
 
 
@@ -760,7 +923,10 @@ class HarnessResearcher(AgentResearcher):
     name = "harness"
     cost_basis = "subscription"
 
-    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS):
+    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS, model: str = ""):
+        self.requested_model = model
+        self._run_env: dict[str, str] = {}
+        self._run_cwd: str | None = None
         self.harness = harness
         self.timeout = timeout
         #: Read duck-typed by `app/web/tasks.py`. `None` until a run happens,
@@ -935,12 +1101,92 @@ class HarnessResearcher(AgentResearcher):
         nothing until the process is over; `on_line` (or `self.on_action`) now
         receives one line per action the agent takes, while it takes it.
         """
+        with self._workspace():
+            return self._invoke(prompt, on_line)
+
+    @contextmanager
+    def _workspace(self):
+        if self.harness.protocol not in ("vibe", "gemini", "agy"):
+            yield
+            return
+        with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
+            root = Path(directory)
+            home = root / "home"
+            work = root / "work"
+            home.mkdir()
+            work.mkdir()
+            self._run_cwd = str(work)
+            if self.harness.protocol == "agy":
+                # A neutral working directory only. The CLI reads its login
+                # and permission policy from the reader's own config, which
+                # Kriko never rewrites — so a file the agent writes lands in
+                # a directory that vanishes with the run, while nothing about
+                # the reader's own setup is touched.
+                try:
+                    yield
+                finally:
+                    self._run_cwd = None
+                return
+            self._run_env = {"HOME": str(home), "USERPROFILE": str(home)}
+            if self.harness.protocol == "vibe":
+                config = home / ".vibe"
+                (config / "agents").mkdir(parents=True)
+                (config / "config.toml").write_text(
+                    'enable_update_checks = false\nenable_telemetry = false\n'
+                    'mcp_servers = []\ndisabled_skills = ["*"]\n', encoding="utf-8"
+                )
+                (config / "agents" / "kriko-research.toml").write_text(
+                    'enabled_tools = ["web_search", "web_fetch"]\n'
+                    'mcp_servers = []\ndisabled_skills = ["*"]\n'
+                    '[tools.web_search]\npermission = "always"\n'
+                    '[tools.web_fetch]\npermission = "always"\n', encoding="utf-8"
+                )
+                self._run_env["VIBE_HOME"] = str(config)
+            else:
+                config = home / ".gemini"
+                config.mkdir()
+                (config / "settings.json").write_text(json.dumps({
+                    "tools": {"core": ["google_web_search", "web_fetch"],
+                              "allowed": ["google_web_search", "web_fetch"]},
+                    "mcpServers": {},
+                    "hooksConfig": {"enabled": False},
+                    "skills": {"enabled": False},
+                    "context": {"fileName": [], "includeDirectoryTree": False},
+                    "general": {"enableAutoUpdate": False},
+                    "security": {"auth": {"selectedType": "gemini-api-key"}},
+                }), encoding="utf-8")
+                self._run_env["GEMINI_CLI_HOME"] = str(home)
+            try:
+                yield
+            finally:
+                self._run_env = {}
+                self._run_cwd = None
+
+    def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
-        command = command_for(self.harness)
+        command = command_for(self.harness, model=self.requested_model)
+        if self.harness.protocol in ("vibe", "gemini"):
+            command.extend(["--prompt", ""])
         say = on_line if on_line is not None else self.on_action
 
-        if self.harness.prompt_argument and len(prompt) <= MAX_PROMPT_ARGUMENT:
+        if self.harness.prompt_flag:
+            # A CLI whose prompt is a flag's value, with no `--` convention
+            # and no stdin prompt to fall back on (verified: piped input is
+            # ignored, and an empty `-p` eats the next flag as its value).
+            if not prompt.strip():
+                raise RuntimeError(f"{self.harness.label} needs a non-empty prompt")
+            if len(prompt) > MAX_PROMPT_ARGUMENT:
+                raise RuntimeError(
+                    f"{self.harness.label} cannot take this prompt "
+                    f"({len(prompt)} characters); shorten the brief and retry"
+                )
+            code, stdout, stderr = self._stream(
+                [*command, self.harness.prompt_flag, prompt],
+                subprocess.DEVNULL,
+                say,
+            )
+        elif self.harness.prompt_argument and len(prompt) <= MAX_PROMPT_ARGUMENT:
             # `--` first: it ends option parsing, so a variadic option cannot
             # eat the prompt and the prompt cannot be read as an option.
             code, stdout, stderr = self._stream(
@@ -1008,8 +1254,8 @@ class HarnessResearcher(AgentResearcher):
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
-                env={**os.environ, **self.harness.env},
-                cwd=os.path.expanduser("~"),
+                env={**os.environ, **self.harness.env, **self._run_env},
+                cwd=self._run_cwd or os.path.expanduser("~"),
                 shell=self._needs_shell(command),
                 # POSIX only (Windows accepts and ignores it — see
                 # `subprocess._execute_child`'s `unused_start_new_session`).
@@ -1138,7 +1384,7 @@ class HarnessResearcher(AgentResearcher):
         time this runs is the good outcome, not a failure to report.
         """
         try:
-            if os.name == "nt":
+            if sys.platform == "win32":
                 subprocess.run(
                     ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                     capture_output=True, timeout=10,
@@ -1230,9 +1476,12 @@ class HarnessResearcher(AgentResearcher):
             return stdout
 
         self._meter(envelope)
-        if envelope.get("is_error"):
+        status = envelope.get("status")
+        if envelope.get("is_error") or (
+            status is not None and status != "SUCCESS"
+        ):
             # Same treatment as a non-zero exit, because it is the same
-            # failure: `claude -p` reports a refusal, a limit or a billing
+            # failure: the CLI reports a refusal, a limit or a billing
             # stop in the envelope and exits 0 about it.
             reason = _why(envelope, stdout, "")[:500]
             hint = _hint(reason)
@@ -1241,6 +1490,20 @@ class HarnessResearcher(AgentResearcher):
                 + (f" -- {hint}" if hint else "")
             )
         result = envelope.get("result")
+        if not isinstance(result, str):
+            result = envelope.get("response")
+        if isinstance(result, str) and not result.strip():
+            denied = envelope.get("denied_actions")
+            if isinstance(denied, list) and denied:
+                # Verified shape: exit 0, empty reply, and the tools the run
+                # needed listed as denied. An empty gather downstream would
+                # read as "researched, found nothing" — it was neither.
+                reason = _why(envelope, stdout, "")[:500]
+                hint = _hint(reason)
+                raise RuntimeError(
+                    f"{self.harness.label} answered nothing: {reason}"
+                    + (f" -- {hint}" if hint else "")
+                )
         return result if isinstance(result, str) else stdout
 
 

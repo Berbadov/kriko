@@ -50,6 +50,134 @@ def store(settings):
     return conn
 
 
+def test_silent_progress_never_writes_job_state(monkeypatch):
+    from app.web.jobs import Cancelled
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("sandbox progress wrote app job state")
+
+    def stop():
+        raise Cancelled()
+
+    monkeypatch.setattr(state, "update_job", forbidden)
+    monkeypatch.setattr(state, "save_partial", forbidden)
+    progress = bench._Silent(stop)
+    progress.log("line")
+    progress.set(0.5, "halfway")
+    progress.partial({"documents": 1})
+    assert progress.job_id == ""
+    assert progress.result == {"documents": 1}
+    assert progress.lines == ["line"]
+    assert progress.cancelled
+    with pytest.raises(Cancelled):
+        progress.check()
+
+
+@pytest.mark.parametrize("phase", ["fetch", "extract"])
+def test_research_cancellation_retains_actual_documents_and_findings(settings, store, monkeypatch, phase):
+    from app.web import tasks
+    from app.web.jobs import Cancelled
+    from kriko.research import ApiResearcher, ResearchTask
+    import json
+
+    stopping = False
+
+    def check():
+        if stopping:
+            raise Cancelled()
+
+    def fetch(url):
+        nonlocal stopping
+        stopping = phase == "fetch"
+        return "The specific component fails."
+
+    def complete(prompt):
+        nonlocal stopping
+        stopping = True
+        return json.dumps([{
+            "title": "Component failure", "quote": "The specific component fails.",
+            "body": "A specific failure explanation.",
+        }])
+
+    researcher = ApiResearcher(
+        lambda *a: [{"url": "https://example.test/one"}], fetch, complete,
+    )
+    monkeypatch.setattr(tasks, "_researcher", lambda params: researcher)
+    monkeypatch.setattr(tasks, "plan_task", lambda *a, **k: ResearchTask(
+        subject_id="sa", subject_label="Thing a", subject_kind="product",
+        pack_id="probe", queries=("query",),
+    ))
+    progress = bench._Silent(check)
+    with pytest.raises(Cancelled):
+        tasks.research(settings, {"subject_id": "sa", "backend": "api"}, progress)
+    assert progress.result["retained_documents"][0]["text"] == "The specific component fails."
+    if phase == "extract":
+        assert progress.result["pending_findings"][0]["title"] == "Component failure"
+    assert store.execute("SELECT COUNT(*) FROM claims").fetchone()[0] == 0
+
+
+def test_real_agent_case_exercises_complete_progress_interface(settings, store):
+    row = bench.run_case(settings, bench.cases(store)[0], plane="agent")
+    assert not row.get("error"), row
+    assert row["documents"] == 0
+    assert not settings.app_state_path.exists()
+
+
+@pytest.mark.parametrize("kind", ["specific", "bulk"])
+def test_case_forwards_cancellation_without_recording_failure(settings, store, monkeypatch, kind):
+    from app.web import tasks
+    from app.web.jobs import Cancelled
+
+    stopping = False
+    calls = []
+
+    def check():
+        if stopping:
+            raise Cancelled()
+
+    def research(measured, params, progress):
+        nonlocal stopping
+        calls.append(params["subject_id"])
+        progress.partial({"documents": 1})
+        stopping = True
+        progress.check()
+
+    monkeypatch.setattr(tasks, "research", research)
+    case = {**bench.cases(store)[0], "kind": kind, "subject_ids": ["sa", "sb"]}
+    with pytest.raises(Cancelled):
+        bench.run_case(settings, case, plane="api", check_cancelled=check)
+    assert calls == ["sa"]
+    assert not settings.app_state_path.exists()
+
+
+def test_bench_job_retains_finished_cases_when_next_case_stops(settings, store, monkeypatch):
+    from app.web import tasks
+    from app.web.jobs import Cancelled
+
+    progress = bench._Silent()
+    calls = []
+
+    def run_case(settings, case, **kwargs):
+        assert kwargs["check_cancelled"] == progress.check
+        calls.append(case["subject_id"])
+        if len(calls) == 2:
+            raise Cancelled()
+        return {"subject_id": case["subject_id"], "subject": case["label"]}
+
+    monkeypatch.setattr(bench, "run_case", run_case)
+    with pytest.raises(Cancelled):
+        tasks.bench(settings, {"planes": "api", "cases": 3}, progress)
+    assert calls == ["sa", "sb"]
+    assert progress.result["measurements"] == 1
+    assert len(progress.result["rows"]) == 1
+    conn = state.connect(settings.app_state_path)
+    try:
+        assert len(state.bench_runs(conn)) == 1
+        assert state.list_jobs(conn) == []
+    finally:
+        conn.close()
+
+
 def test_the_cases_come_off_the_store_rather_than_out_of_python(store):
     """A hand-written list of subjects would name cars, go stale the week a
     pack changed, and mean nothing for a pack that is not `cars`."""

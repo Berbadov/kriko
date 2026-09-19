@@ -4,7 +4,12 @@
     import Failure from "../lib/Failure.svelte";
     import type { Adapter, ExtensionLaunched, ExtensionStatus } from "../lib/types";
 
-    let status = $state<ExtensionStatus | null>(null);
+    type FreshExtensionStatus = ExtensionStatus & {
+        content_digest?: string;
+        staged_content_digest?: string;
+        loaded_files?: { origin: string; version: string; content_digest: string }[];
+    };
+    let status = $state<FreshExtensionStatus | null>(null);
     // Which sites the installed packs can read. It belongs on this screen
     // rather than an author one: "will it do anything on the page I am
     // looking at" is the reader's actual question about an extension, and
@@ -107,6 +112,11 @@
             !!status.staged_version &&
             status.staged_version !== status.version,
     );
+    const filesOutdated = $derived(Boolean(status?.staged && status.content_digest &&
+        status.staged_content_digest && status.content_digest !== status.staged_content_digest));
+    const reloadNeeded = $derived(Boolean(status?.loaded_files?.some((loaded) =>
+        loaded.version === status?.staged_version && loaded.content_digest &&
+        status?.staged_content_digest && loaded.content_digest !== status.staged_content_digest)));
 </script>
 
 <h2>Browser extension</h2>
@@ -171,6 +181,23 @@
                 </p>
             {/if}
 
+            {#if reloadNeeded}
+                <p class="state warn"><strong>Reload needed.</strong> The browser loaded different files at the same version. Reload Kriko on your browser's extensions page, then reload listing tabs.</p>
+            {/if}
+            {#if filesOutdated && !outdated}
+                <p class="state warn">The staged files differ from this build even though the versions match. Press Add again, then reload the extension and listing tabs.</p>
+            {/if}
+            {#if status.content_digest}
+                <details>
+                    <summary>Extension file freshness (SHA-256)</summary>
+                    <p>Bundled: <code class="path">{status.content_digest}</code></p>
+                    <p>Staged: <code class="path">{status.staged_content_digest || "Not staged"}</code></p>
+                    {#each status.loaded_files || [] as loaded (loaded.origin)}
+                        <p>{loaded.origin}: <code class="path">{loaded.content_digest || "Loaded digest unknown — reload the staged extension and open a listing"}</code></p>
+                    {/each}
+                    <p class="meta">Loaded hashes describe the worker build, not scripts already running in listing tabs. Reload those tabs after reloading the extension.</p>
+                </details>
+            {/if}
             {#if outdated}
                 <p class="state warn">
                     The loaded folder holds extension {status.staged_version}; this app
