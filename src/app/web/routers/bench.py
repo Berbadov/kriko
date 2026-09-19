@@ -143,6 +143,10 @@ def estimate_bench(
     from app import bench
 
     params = body.model_dump()
+    try:
+        bench.validate(params)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
     found = bench.cases(store, pack_id=params.get("pack_id") or "",
                         limit=int(params.get("cases") or bench.DEFAULT_CASES))
     return bench.estimate(conn, params, len(found))
@@ -207,5 +211,11 @@ def forget_config(name: str, conn=Depends(get_app_state)) -> dict:
 
 @router.post("/bench")
 def start_bench(body: BenchRequest, runner=Depends(get_jobs)) -> dict:
+    from app import bench
+
+    try:
+        bench.validate(body.model_dump())
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
     job_id = runner.submit("bench", body.model_dump())
     return {"job_id": job_id, "kind": "bench"}

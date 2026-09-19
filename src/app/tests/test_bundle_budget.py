@@ -53,7 +53,13 @@ import pytest
 #: back on 2026-09-16** when that panel was removed (§2.9): a budget raised for
 #: one library and left raised after it goes is not a budget, it is a ratchet
 #: that only turns one way. Back to 280,000, which today's 251 KB sits inside.
-BUDGET = {".js": 280_000, ".css": 60_000}
+#:
+#: Raised .js from 280,000 to 282,000 on 2026-09-19: no new dependency, just
+#: controls — the benchmark scope grid as buttons instead of text fields, the
+#: per-harness LLM dropdowns, the provider self-test buttons, and the Sites
+#: activation rows. 280,406 bytes of ordinary feature work, not a library
+#: arriving unweighed.
+BUDGET = {".js": 282_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

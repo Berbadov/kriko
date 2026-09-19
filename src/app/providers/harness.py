@@ -191,6 +191,18 @@ class Harness:
     #: silently ignored there rather than read — a run that researches nothing
     #: on the reader's quota is the failure this rules out.
     prompt_flag: str = ""
+    #: The flag is documented but not in the top-level `--help`, so the
+    #: declared-flag check in `command_for` cannot see it. `opencode --help`
+    #: describes the TUI; `--model` belongs to `opencode run`. Set only with
+    #: the docs to point at.
+    model_unlisted: bool = False
+    #: What to offer in the model dropdown besides a free-text field. `None`
+    #: means "ask the CLI itself" (`models_for` knows how); a tuple means the
+    #: aliases the CLI documents. Either way the reader can always type past
+    #: the list — the CLI judges the name, not Kriko.
+    model_choices: tuple[str, ...] | None = None
+    #: One line saying what a valid name looks like, for the dropdown's hint.
+    model_hint: str = ""
     #: Where to get it, in the reader's words. Shown when the CLI is missing,
     #: so a dead link here is worse than none — only official install pages.
     download_url: str = ""
@@ -251,6 +263,9 @@ KNOWN = (
         download_url="https://code.claude.com/docs",
         install_hint="winget install Anthropic.ClaudeCode",
         needs_account="a Claude subscription or API billing; log in once with an interactive `claude` session first",
+        model_flag="--model",
+        model_choices=("opus", "sonnet", "haiku"),
+        model_hint="an alias (opus, sonnet, haiku) or a full name — the CLI judges it, not Kriko",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -280,6 +295,9 @@ KNOWN = (
         install_hint="curl -fsSL https://opencode.ai/install | bash",
         needs_account="a model account or API key of your own (or a free/local model)",
         structured=False,
+        model_flag="--model",
+        model_unlisted=True,
+        model_hint="provider/name, as `opencode models` lists them",
     ),
     Harness(
         "antigravity-cli",
@@ -295,6 +313,7 @@ KNOWN = (
         required=("--output-format",),
         preferred=("--disable-slash-commands",),
         model_flag="--model",
+        model_hint="an id from `agy models`",
         capabilities=("headless", "streaming", "web-search", "model-selection"),
     ),
     Harness(
@@ -462,6 +481,49 @@ def declared(executable: str) -> frozenset[str]:
     return _DECLARED.get(executable, frozenset())
 
 
+#: `provider/model` lines, the shape `opencode models` prints. Anything else
+#: on a line — headers, counts, blank lines — is not a model and is dropped.
+_MODEL_LINE = re.compile(r"^\s*([^/\s]+/[^/\s#]+?)\s*(?:#.*)?$")
+
+
+def models_for(one: Harness) -> list[str]:
+    """The models this machine's copy of the CLI offers, or `[]`.
+
+    Asked, never assumed: `agy models` and `opencode models` list what is
+    actually installed and authenticated, while the documented claude aliases
+    are offered as-is with the CLI judging the name at run time. Anything
+    failing — missing CLI, slow answer, unparseable output — reads as "no
+    list", and the dropdown degrades to a free-text field with the hint. A
+    model list must never be why a run does not start.
+    """
+    if one.unusable:
+        return []
+    if one.model_choices is not None:
+        return list(one.model_choices)
+    executable = locate(one)
+    if not executable:
+        return []
+    try:
+        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
+            [executable, "models"], capture_output=True, text=True, timeout=30,
+        )
+    except Exception:  # noqa: BLE001 — see the docstring
+        return []
+    if done.returncode != 0:
+        return []
+    out = []
+    for line in (done.stdout or "").splitlines():
+        if one.id == "antigravity-cli":
+            cell = line.split("\t")[0].split()[0] if line.split() else ""
+            if cell and cell.lower() not in ("id", "model", "name") and cell not in out:
+                out.append(cell)
+            continue
+        match = _MODEL_LINE.match(line)
+        if match and match.group(1) not in out:
+            out.append(match.group(1))
+    return out
+
+
 def command_for(one: Harness, *, model: str = "") -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
@@ -480,10 +542,12 @@ def command_for(one: Harness, *, model: str = "") -> list[str]:
     missing = set(one.required) - supported
     if one.unusable or missing:
         raise NoHarness(one.unusable or f"{one.label} lacks required flags: {', '.join(sorted(missing))}")
-    if model and (not one.model_flag or one.model_flag not in supported):
+    if model and not one.model_flag:
+        raise NoHarness(f"{one.label} has no verified per-run model switch — model choices for it are refused, never silently run as the default")
+    if model and not one.model_unlisted and one.model_flag not in supported:
         raise NoHarness(f"{one.label} does not declare per-run model selection")
     return [executable, *args, *(f for f in one.preferred if f in supported),
-            *([one.model_flag, model] if model else [])]
+            *([one.model_flag, model] if model and one.model_flag else [])]
 
 
 # ── The output contract ──────────────────────────────────────────────────────

@@ -346,4 +346,6 @@ export const api = {
         del<{ configs: Record<string, T.BenchRequest> }>(`/api/bench/configs/${seg(name)}`),
     startBench: (body: T.BenchRequest = {}) =>
         postJson<{ job_id: string; kind: string }>("/api/bench", body),
+    testKey: (providerId: string) =>
+        postJson<T.ProviderTest>("/api/keys/test", { provider: providerId }),
 };

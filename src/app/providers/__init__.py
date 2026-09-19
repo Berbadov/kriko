@@ -183,7 +183,7 @@ def _preferred_model(app_state_path) -> str:
 
 
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
-                       app_state_path=None):
+                       app_state_path=None, model: str = ""):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
 
     The sibling of `api_researcher` in shape and its opposite in cost: this one
@@ -226,8 +226,24 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
         raise harness.NoHarness(
             f"no coding-agent CLI on PATH (looked for: {names})"
         )
+    # Resolved against the harness that will actually run, not the one that
+    # was preferred: a model chosen for claude handed to agy would be a name
+    # from the wrong namespace running as if it were right.
+    if not model.strip() and app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        try:
+            conn = state.connect(app_state_path)
+        except Exception:  # noqa: BLE001 — see `_preferred_model`
+            conn = None
+        if conn is not None:
+            try:
+                model = prefs.for_harness(conn, found.id)
+            finally:
+                conn.close()
     researcher = harness.HarnessResearcher(
-        found, timeout=timeout or harness.TIMEOUT_SECONDS
+        found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
     )
     if note:
         # Duck-typed, read by `app/web/tasks.py` when the run gathers nothing

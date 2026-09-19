@@ -6,6 +6,46 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-19 — per-harness LLMs, benchmark buttons, provider self-test, site activation
+
+Four reader items, each finished to the mechanism:
+
+**Models inside the harnesses.** Not one global field: claude offers its
+documented aliases, agy lists what `agy models` actually prints on this
+machine, opencode takes provider/name per its documented `--model`. Stored
+per harness, overridden per run, CLI default when empty — and three
+namespaces means no cross-harness fallback, ever. The run card, the brief and
+Settings all offer the same dropdown; a harness with no verified switch says
+so instead of pretending. The frontend calls the field `llm`, because one of
+the words it would otherwise use is a pack's identity key and the repo has a
+gate that says so — which caught the first version of this change.
+
+**Benchmark as buttons.** Planes, protocols, searches and LLMs are
+multi-chips, scale is three presets, everything else steppers and dropdowns;
+the only typing left is the saved grid's name. Estimate and Run are separate
+presses. Unknown planes/protocols/searches are refused (422); unknown LLM
+names sweep deliberately, for custom gateways. JS budget raised 280,000 →
+282,000 with the sentence the test demands.
+
+**Providers prove themselves.** Settings gained a Test button per provider: a
+cheap live call, server-side so keys never leave, counted in the operations
+feed with tokens and priced USD, every error path distinct. The frozen
+`kriko.exe` import error was traced to a stale/foreign install (this tree's
+wheel is sound) and the frozen spec now declares its console imports with a
+test holding it.
+
+**Site activation on screen.** The extension already reconciled dynamic sites
+and reported activation; the app stored it; nobody showed it. The Sites
+screen now renders the verdict per site, including the Grant step only the
+extension can perform. arabam.com and mobile.de were probed and both refuse
+automation (403/empty fetch), so no adapter ships — authoring stays with the
+reader's browser via the existing agent path.
+
+Verified: focused suites green, full vitest 537/537, svelte-check/ruff/mypy
+clean, bundle rebuilt. Full backend: the same 21 pre-existing Windows-host
+reds as the previous pass — every one in a file this pass never touched —
+plus two this pass caught and fixed (vocabulary gate, JS budget).
+
 ### 2026-09-18 — the 0.10.0 completion audit (agent options, Cancel, panel research, styling)
 
 The 0.10.0 merge claimed 20 of 23 items. Three of the twenty were preferences

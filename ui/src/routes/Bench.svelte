@@ -8,30 +8,140 @@
     import { formatInterval, formatPct, formatUsd, hallucinationSeverity, pointsByLlm } from "../lib/bench";
     import type { Bench, BenchEstimate, BenchRequest, Job } from "../lib/types";
 
+    type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
+    type SearchChoice = { id: string; label: string; ready: boolean };
+    type PrefsView = { models?: { offered?: OfferedLlm[] }; search_providers?: SearchChoice[] };
+    type ScalePreset = { id: string; label: string; max_documents: number; blurb: string };
+
+    const PLANE_CHOICES = ["harness", "agent", "api"];
+    const SCALE_PRESETS: ScalePreset[] = [
+        { id: "quick", label: "Quick", max_documents: 3, blurb: "3 sources per case" },
+        { id: "standard", label: "Standard", max_documents: 7, blurb: "7 sources per case" },
+        { id: "deep", label: "Deep", max_documents: 15, blurb: "15 sources per case" },
+    ];
+    const SEARCH_FALLBACK: SearchChoice[] = [
+        { id: "exa", label: "Exa", ready: true },
+        { id: "tavily", label: "Tavily", ready: true },
+    ];
+    const BUDGET_STEP = 0.05;
+    const BUDGET_MIN = 0;
+    const BUDGET_MAX = 20;
+    const REPS_MIN = 1;
+    const REPS_MAX = 10;
+    const CASES_MIN = 1;
+    const CASES_MAX = 50;
+
     const load = () => api.bench();
     let promise = $state(load());
+    let benchData = $state<Bench | null>(null);
+    let prefsView = $state<PrefsView | null>(null);
     let starting = $state(false);
     let startFailure = $state<unknown>(null);
+    let estimateError = $state<unknown>(null);
     let runningJobId = $state("");
     let stopFollow: (() => void) | undefined;
-    let config = $state<BenchRequest>({ planes: "harness", cases: 3, max_documents: 3, budget_usd: 0.2, reps: 1 });
+    let planesSel = $state<string[]>(["harness"]);
+    let llmsSel = $state<string[]>([]);
+    let searchesSel = $state<string[]>([]);
+    let protocolsSel = $state<string[]>([]);
+    let scaleId = $state("quick");
+    let packId = $state("");
+    let casesCount = $state(3);
+    let repsCount = $state(1);
+    let budgetVal = $state(0.2);
     let estimate = $state<BenchEstimate | null>(null);
-    let estimatedConfig = $state("");
-    let configs = $state<Record<string, BenchRequest>>({});    let gridName = $state("");
-    const estimateCurrent = $derived(estimatedConfig === JSON.stringify(config));
+    let estimatedKey = $state("");
+    let configs = $state<Record<string, BenchRequest>>({});
+    let gridName = $state("");
+    let touched = $state(false);
+    let estimateTimer: ReturnType<typeof setTimeout> | undefined;
 
-    async function preview() {
-        startFailure = null;
-        const snapshot = JSON.stringify(config);
+    const docsForScale = (id: string) => SCALE_PRESETS.find((one) => one.id === id)?.max_documents ?? 3;
+    const requestBody = $derived<BenchRequest>({
+        planes: planesSel.join(", "),
+        pack_id: packId,
+        cases: casesCount,
+        max_documents: docsForScale(scaleId),
+        budget_usd: budgetVal,
+        protocols: protocolsSel.join(", "),
+        reps: repsCount,
+        llms: llmsSel.join(", "),
+        searches: searchesSel.join(", "),
+    });
+    const requestKey = $derived(JSON.stringify(requestBody));
+    const estimateCurrent = $derived(estimatedKey === requestKey);
+    const protocolOptions = $derived(benchData?.protocols ?? []);
+    const packOptions = $derived([...new Set((benchData?.cases ?? []).map((one) => String((one as Record<string, unknown>).pack_id ?? "")).filter(Boolean))]);
+    const offeredLlms = $derived(prefsView?.models?.offered ?? []);
+    const searchOptions = $derived(prefsView?.search_providers?.length ? prefsView.search_providers : SEARCH_FALLBACK);
+
+    function toggle(sel: string[], value: string): string[] {
+        touched = true;
+        return sel.includes(value) ? sel.filter((one) => one !== value) : [...sel, value];
+    }
+
+    function splitList(value: unknown): string[] {
+        if (Array.isArray(value)) return value.map(String).map((one) => one.trim()).filter(Boolean);
+        return String(value ?? "").split(",").map((one) => one.trim()).filter(Boolean);
+    }
+
+    function clampCount(value: unknown, lo: number, hi: number, fallback: number): number {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        return Math.min(hi, Math.max(lo, Math.round(parsed)));
+    }
+
+    function loadGrid(name: string) {
+        const saved = configs[name];
+        if (!saved) return;
+        const raw = saved as unknown as Record<string, unknown>;
+        planesSel = splitList(raw.planes);
+        llmsSel = splitList(raw.llms ?? raw.models);
+        searchesSel = splitList(raw.searches ?? raw.search);
+        protocolsSel = splitList(raw.protocols);
+        packId = String(raw.pack_id ?? "");
+        casesCount = clampCount(raw.cases, CASES_MIN, CASES_MAX, 3);
+        repsCount = clampCount(raw.reps, REPS_MIN, REPS_MAX, 1);
+        const dollars = Number(raw.budget_usd);
+        budgetVal = Number.isFinite(dollars) ? Math.min(BUDGET_MAX, Math.max(BUDGET_MIN, Math.round(dollars * 100) / 100)) : 0.2;
+        const docs = Number(raw.max_documents ?? 3);
+        const exact = SCALE_PRESETS.find((one) => one.max_documents === docs);
+        scaleId = exact?.id ?? (docs <= 3 ? "quick" : docs <= 7 ? "standard" : "deep");
+        touched = true;
+    }
+
+    function bumpReps(delta: number) {
+        touched = true;
+        repsCount = Math.min(REPS_MAX, Math.max(REPS_MIN, repsCount + delta));
+    }
+
+    function bumpCases(delta: number) {
+        touched = true;
+        casesCount = Math.min(CASES_MAX, Math.max(CASES_MIN, casesCount + delta));
+    }
+
+    function bumpBudget(delta: number) {
+        touched = true;
+        budgetVal = Math.min(BUDGET_MAX, Math.max(BUDGET_MIN, Math.round((budgetVal + delta) * 100) / 100));
+    }
+
+    async function preview(explicit: boolean) {
+        if (explicit) estimateError = null;
+        const snapshot = JSON.stringify(requestBody);
         try {
-            estimate = await api.estimateBench(JSON.parse(snapshot));
-            estimatedConfig = snapshot;
-        } catch (cause) { startFailure = cause; }
+            const result = await api.estimateBench(JSON.parse(snapshot));
+            if (typeof (result as BenchEstimate)?.runs === "number") {
+                estimate = result as BenchEstimate;
+                estimatedKey = snapshot;
+            }
+        } catch (cause) {
+            if (explicit) estimateError = cause;
+        }
     }
 
     async function savedGrids(save = false) {
         try {
-            const result = save ? await api.saveBenchConfig(gridName, config) : await api.benchConfigs();
+            const result = save ? await api.saveBenchConfig(gridName, requestBody) : await api.benchConfigs();
             configs = result.configs;
         } catch (cause) { startFailure = cause; }
     }
@@ -61,7 +171,7 @@
         starting = true;
         startFailure = null;
         try {
-            const { job_id } = await api.startBench(config);
+            const { job_id } = await api.startBench(JSON.parse(JSON.stringify(requestBody)));
             const job = await api.job(job_id);
             watchJob(job);
         } catch (cause) {
@@ -72,12 +182,22 @@
     }
 
     $effect(() => {
-        // A configs call that fails costs the saved list and nothing else:
-        // the reader's grids are a convenience, and a screen that threw on
-        // them would take the whole page down with it.
+        api.bench().then((data) => (benchData = data)).catch(() => {});
+        api.prefs().then((data) => (prefsView = data as unknown as PrefsView)).catch(() => {});
         api.benchConfigs().then((r) => (configs = r.configs ?? {})).catch(() => {});
         void findRunningJob();
         return () => stopFollow?.();
+    });
+
+    $effect(() => {
+        if (!touched) return;
+        const key = requestKey;
+        clearTimeout(estimateTimer);
+        estimateTimer = setTimeout(() => {
+            void preview(false).then(() => undefined, () => undefined).finally(() => undefined);
+            void key;
+        }, 350);
+        return () => clearTimeout(estimateTimer);
     });
 </script>
 
@@ -93,30 +213,106 @@
 
 <section class="card" aria-label="Scope the grid">
     <h3>Scope the grid</h3>
-    <p class="meta">Every axis multiplies. Empty fields mean whatever this machine would pick.</p>
-    <form onsubmit={(event) => (event.preventDefault(), start())}>
-        <label>Planes <input bind:value={config.planes} placeholder="harness, api" /></label>
-        <label>Pack <input bind:value={config.pack_id} /></label>
-        <label>Cases <input type="number" min="1" max="50" bind:value={config.cases} /></label>
-        <label>Sources per case <input type="number" min="1" max="20" bind:value={config.max_documents} /></label>
-        <label>Reps <input type="number" min="1" max="10" bind:value={config.reps} /></label>
-        <label>Ceiling $ <input type="number" min="0" max="20" step="0.01" bind:value={config.budget_usd} /></label>
-        <label>LLMs <input bind:value={config.llms} placeholder="gpt-4o-mini, claude-haiku-4-5" /></label>
-        <label>Search <input bind:value={config.searches} placeholder="exa, tavily" /></label>
-        <label>Protocols <input bind:value={config.protocols} placeholder="standard" /></label>
-    </form>
+    <p class="meta">Every axis multiplies. Nothing selected means whatever this machine would pick.</p>
+    <fieldset>
+        <legend>Planes</legend>
+        <div class="chips">
+            {#each PLANE_CHOICES as plane (plane)}
+                <button type="button" aria-pressed={planesSel.includes(plane)} onclick={() => (planesSel = toggle(planesSel, plane))}>{plane}</button>
+            {/each}
+        </div>
+        {#if !planesSel.length}<p class="meta">None selected — whatever this machine can run.</p>{/if}
+    </fieldset>
+    <fieldset>
+        <legend>Pack</legend>
+        <select aria-label="Pack" value={packId} onchange={(event) => { touched = true; packId = event.currentTarget.value; }}>
+            <option value="">Every pack</option>
+            {#each packOptions as pack (pack)}
+                <option value={pack}>{pack}</option>
+            {/each}
+        </select>
+    </fieldset>
+    <fieldset>
+        <legend>Scale</legend>
+        <div class="chips">
+            {#each SCALE_PRESETS as preset (preset.id)}
+                <button type="button" aria-pressed={scaleId === preset.id} title={preset.blurb} onclick={() => { touched = true; scaleId = preset.id; }}>{preset.label}</button>
+            {/each}
+        </div>
+        <p class="meta">{SCALE_PRESETS.find((one) => one.id === scaleId)?.blurb ?? ""}</p>
+    </fieldset>
+    <fieldset>
+        <legend>Cases</legend>
+        <div class="stepper">
+            <button type="button" aria-label="Fewer cases" disabled={casesCount <= CASES_MIN} onclick={() => bumpCases(-1)}>−</button>
+            <output aria-live="polite">{casesCount}</output>
+            <button type="button" aria-label="More cases" disabled={casesCount >= CASES_MAX} onclick={() => bumpCases(1)}>+</button>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Repetitions</legend>
+        <div class="stepper">
+            <button type="button" aria-label="Fewer repetitions" disabled={repsCount <= REPS_MIN} onclick={() => bumpReps(-1)}>−</button>
+            <output aria-live="polite">{repsCount}</output>
+            <button type="button" aria-label="More repetitions" disabled={repsCount >= REPS_MAX} onclick={() => bumpReps(1)}>+</button>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>Ceiling per case</legend>
+        <div class="stepper">
+            <button type="button" aria-label="Lower ceiling" disabled={budgetVal <= BUDGET_MIN} onclick={() => bumpBudget(-BUDGET_STEP)}>−</button>
+            <output aria-live="polite">${budgetVal.toFixed(2)}</output>
+            <button type="button" aria-label="Raise ceiling" disabled={budgetVal >= BUDGET_MAX} onclick={() => bumpBudget(BUDGET_STEP)}>+</button>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>LLMs</legend>
+        {#if offeredLlms.length}
+            <div class="chips">
+                {#each offeredLlms as one (one.id)}
+                    <button type="button" disabled={!!one.unusable} title={one.unusable || one.provider} aria-pressed={llmsSel.includes(one.id)} onclick={() => (llmsSel = toggle(llmsSel, one.id))}>{one.label}</button>
+                {/each}
+            </div>
+            {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
+        {:else}
+            <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
+        {/if}
+    </fieldset>
+    <fieldset>
+        <legend>Search</legend>
+        <div class="chips">
+            {#each searchOptions as one (one.id)}
+                <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
+            {/each}
+        </div>
+        {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
+    </fieldset>
+    <fieldset>
+        <legend>Protocols</legend>
+        {#if protocolOptions.length}
+            <div class="chips">
+                {#each protocolOptions as one (one.name)}
+                    <button type="button" aria-pressed={protocolsSel.includes(one.name)} onclick={() => (protocolsSel = toggle(protocolsSel, one.name))}>{one.name}</button>
+                {/each}
+            </div>
+            {#if !protocolsSel.length}<p class="meta">None selected — whatever the plane would choose.</p>{/if}
+        {:else}
+            <p class="meta">No protocols measured yet — the plane chooses.</p>
+        {/if}
+    </fieldset>
     <div class="row">
-        <button onclick={preview} disabled={starting || !!runningJobId}>Estimate</button>
+        <button onclick={() => preview(true)} disabled={starting || !!runningJobId}>Estimate</button>
         <button onclick={start} disabled={starting || !!runningJobId}>
             {starting ? "Starting…" : "Run benchmark"}
         </button>
     </div>
-    {#if estimate}
+    {#if estimate && typeof estimate.runs === "number"}
         <p class="meta" class:unmeasured={!estimateCurrent}>
-            {estimate.runs} measurement(s){estimate.usd === null ? "" : `, about $${estimate.usd.toFixed(2)}`}
+            {estimate.runs} measurement(s){estimate.usd === null || estimate.usd === undefined ? " — not yet measured here" : `, about $${estimate.usd.toFixed(2)}`}
             {estimate.note ? ` — ${estimate.note}` : ""}
         </p>
     {/if}
+    {#if estimateError}<p class="state">The estimate failed — the grid above is unchanged.</p>{/if}
     {#if Object.keys(configs).length}
         <details>
             <summary>Saved grids</summary>
@@ -125,7 +321,7 @@
                     <li class="krow">
                         <span class="klabel">{name}</span>
                         <span class="meta">{saved.cases} case(s), planes {saved.planes || "all"}</span>
-                        <button class="ghost" onclick={() => (config = { ...saved })}>Load</button>
+                        <button class="ghost" onclick={() => loadGrid(name)}>Load</button>
                         <button class="ghost" onclick={() => { api.forgetBenchConfig(name).then((r) => (configs = r.configs)); }}>Forget</button>
                     </li>
                 {/each}
@@ -237,5 +433,21 @@
     }
     .row {
         margin-block-start: var(--s-4);
+    }
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    .chips button[aria-pressed="true"] {
+        outline: 2px solid currentColor;
+    }
+    .stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    fieldset {
+        margin-block: 0.7rem;
     }
 </style>

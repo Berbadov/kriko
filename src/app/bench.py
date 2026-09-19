@@ -645,6 +645,57 @@ def verdict(rows: list[dict]) -> dict:
     return {"planes": sorted(planes.values(), key=lambda one: one["plane"])}
 
 
+KNOWN_PLANES = ("harness", "agent", "api")
+
+
+def split_axis(params: dict, *names: str) -> list[str]:
+    for name in names:
+        raw = params.get(name)
+        if raw is None:
+            continue
+        if isinstance(raw, (list, tuple)):
+            items = [str(one).strip() for one in raw]
+        else:
+            items = [one.strip() for one in str(raw).split(",")]
+        found: list[str] = []
+        for one in items:
+            if one and one not in found:
+                found.append(one)
+        if found:
+            return found
+    return []
+
+
+def validate(params: dict) -> dict:
+    from app import keys
+    from app import protocols
+
+    planes = split_axis(params, "planes")
+    unknown_planes = [one for one in planes if one not in KNOWN_PLANES]
+    if unknown_planes:
+        raise ValueError(f"unknown plane(s): {', '.join(unknown_planes)}")
+    protocols_asked = split_axis(params, "protocols")
+    unknown_protocols = [
+        one for one in protocols_asked if one not in protocols.BY_NAME
+    ]
+    if unknown_protocols:
+        raise ValueError(f"unknown protocol(s): {', '.join(unknown_protocols)}")
+    searches_asked = split_axis(params, "searches", "search")
+    unknown_searches = [
+        one for one in searches_asked if one not in keys.SEARCH_PROVIDERS
+    ]
+    if unknown_searches:
+        raise ValueError(
+            f"unknown search provider(s): {', '.join(unknown_searches)}"
+        )
+    return {
+        "planes": planes,
+        "protocols": protocols_asked,
+        "searches": searches_asked,
+        "models": split_axis(params, "models", "model", "llms", "llm"),
+    }
+
+
 def grid(params: dict, case_count: int) -> dict:
     """How many measurements a request asks for, and along which axes.
 
@@ -657,21 +708,15 @@ def grid(params: dict, case_count: int) -> dict:
     never "all of them". A benchmark that swept every axis by default is one
     nobody presses twice.
     """
-    def axis(*names) -> list[str]:
-        for name in names:
-            raw = str(params.get(name) or "")
-            found = [one.strip() for one in raw.split(",") if one.strip()]
-            if found:
-                return found
-        return [""]
-
-    planes = axis("planes") if params.get("planes") else ["(this machine's)"]
+    planes = split_axis(params, "planes") or ["(this machine's)"]
     axes = {
         "cases": max(1, case_count),
         "planes": len(planes),
-        "protocols": len(axis("protocols")),
-        "searches": len(axis("searches", "search")),
-        "models": len(axis("models", "model")),
+        "protocols": len(split_axis(params, "protocols") or [""]),
+        "searches": len(split_axis(params, "searches", "search") or [""]),
+        "models": len(
+            split_axis(params, "models", "model", "llms", "llm") or [""]
+        ),
         "reps": max(1, min(int(params.get("reps") or 1), 10)),
     }
     total = 1
@@ -694,12 +739,12 @@ def estimate(conn, params: dict, case_count: int) -> dict:
     """
     from app import costs
 
+    validate(params)
     shape = grid(params, case_count)
     per_run = costs.estimate(conn, plane="api")
     usd, tokens = per_run.get("usd"), per_run.get("tokens")
     priced = shape["runs"]
-    planes = [one.strip() for one in str(params.get("planes") or "").split(",")
-              if one.strip()]
+    planes = split_axis(params, "planes")
     if planes and "api" not in planes:
         # Nothing paid in this grid at all.
         return {**shape, "usd": 0.0, "tokens": 0, "basis": per_run.get("basis", 0),

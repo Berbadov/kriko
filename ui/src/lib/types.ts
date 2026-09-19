@@ -548,6 +548,9 @@ export type Site = {
     /** pack | local — a pack author's, or one this copy learned. */
     source: string;
     superseded?: boolean;
+    /** Whether the panel will actually appear there — an adapter existing
+     *  and a browser permitting injection are two different facts. */
+    activation?: { host: string; state: string; detail: string; pattern?: string };
 };
 
 export type SiteRequest = {
@@ -571,9 +574,26 @@ export type LlmChoice = {
     unusable: string; known: boolean; note?: string;
 };
 
+/** One installed coding-agent CLI and its LLM choice. `llm` throughout:
+ *  the frontend may not name a pack's identity keys. */
+export type HarnessModel = {
+    id: string;
+    label: string;
+    command: string;
+    path?: string;
+    needs_account?: string;
+    /** The stored per-harness LLM, or "" for the CLI default. */
+    llm?: string;
+    /** What the CLI itself offers, or [] when it named nothing. */
+    llms?: string[];
+    llm_hint?: string;
+    /** False where Kriko has no verified per-run switch yet. */
+    llm_selectable?: boolean;
+};
+
 export type Prefs = {
     chosen: { preferred_harness: string; llm_model: string; search_provider: string; llm_model_extract?: string; llm_model_plan?: string; llm_model_synthesise?: string; llm_model_validate?: string };
-    harnesses: { id: string; label: string; path: string }[];
+    harnesses: HarnessModel[];
     unusable: { id: string; label: string; why: string }[];
     missing: {
         id: string;
@@ -788,7 +808,7 @@ export type ResearchPlane = {
     llm?: string;
     search?: string;
     /** The harness plane only: which coding-agent CLIs were found here. */
-    harnesses?: { id: string; label: string; command: string; needs_account?: string }[];
+    harnesses?: HarnessModel[];
     /** The harness plane only: the commands that were looked for, so a card
      *  that cannot run names the thing to install. */
     looked_for?: string[];
@@ -1084,3 +1104,17 @@ export type BenchRequest = Partial<{
 }>;
 
 export type BenchEstimate = { runs: number; usd: number | null; tokens: number | null; basis: number; note: string; axes: Record<string, number> };
+
+export type ProviderTest = {
+    provider: string;
+    ok: boolean;
+    latency_ms: number;
+    error: string;
+    detail: string;
+    results: number | null;
+    tokens_in: number | null;
+    tokens_out: number | null;
+    tokens: number | null;
+    usd: number | null;
+    llm: string;
+};
