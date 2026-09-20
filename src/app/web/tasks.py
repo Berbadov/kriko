@@ -1648,15 +1648,17 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
             app_conn, host=host, spec=checked, source="agent",
             pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),
         )
-        state.set_site_request(app_conn, host, state="done",
-                               detail=f"{len(checked.get('fields') or {})} field(s)")
+        state.set_site_request(
+            app_conn, host, state="done",
+            detail=f"{len(checked.get('identity') or {})} identity key(s), "
+                   f"{len(checked.get('context') or {})} context")
     finally:
         app_conn.close()
 
     progress.set(
         1.0,
-        f"{host} can be read now — {len(checked.get('fields') or {})} field(s). "
-        f"Open a listing there and press the extension button."
+        f"{host} can be read now — {len(checked.get('identity') or {})} "
+        f"identity key(s). Open a listing there and press the extension button."
     )
     return {"host": host, "adapter": checked, "url": url}
 

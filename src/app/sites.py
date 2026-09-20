@@ -57,6 +57,115 @@ def host_of(url: str) -> str:
     return text if HOSTNAME.match(text) else ""
 
 
+#: The rule keys `kriko/adapters.py` actually interprets. Anything else in a
+#: rule is inert — it neither reads a field nor raises, which is the worst of
+#: both. Kept next to the fold below so the two cannot drift.
+RULE_KEYS = ("labels", "from", "vocabulary", "segment", "split",
+             "parse", "min", "max")
+
+
+def _rule(key: str, raw) -> dict | None:
+    """One field's rule, in the vocabulary the engine reads. None if inert.
+
+    A rule the engine cannot act on is dropped rather than kept, because a
+    stored adapter full of rules that read nothing is indistinguishable, from
+    every screen in the app, from one that works.
+    """
+    if not isinstance(raw, dict):
+        return None
+    out = {k: raw[k] for k in RULE_KEYS if k in raw}
+    labels = [str(one).strip() for one in (out.get("labels") or []) if str(one).strip()]
+    if labels:
+        out["labels"] = labels
+    else:
+        out.pop("labels", None)
+    if out.get("segment") not in ("first", "last"):
+        out.pop("segment", None)
+        out.pop("split", None)
+    if out.get("parse") != "int_range":
+        out.pop("parse", None)
+        out.pop("min", None)
+        out.pop("max", None)
+    if str(out.get("from") or "") not in ("title", "description", "url"):
+        out.pop("from", None)
+        out.pop("vocabulary", None)
+    # No labels and no text source means nothing on the page could ever match.
+    # The page title plus the packs' own identity vocabulary is the engine's
+    # one answer to that, and it is the same one `packs/cars` uses for `make`
+    # and `model` — so fall back to it rather than storing a dead rule.
+    if not out.get("labels") and not out.get("from"):
+        out["from"] = "title"
+        out["vocabulary"] = key
+    return out or None
+
+
+def normalise(spec: dict) -> dict:
+    """An adapter in the one shape `kriko/adapters.py` reads. Never raises.
+
+    **This is the seam that made a registered site read nothing.** The engine
+    interprets `identity` and `context`; the brief this module hands an agent
+    asked for `fields` and `title_patterns`, and nothing anywhere ever read
+    either. So an adapter would validate, store, list on the Sites screen,
+    earn a host permission and inject a content script — and then resolve an
+    empty identity on every page, because the only two keys with meaning were
+    absent. Both surfaces reported success. The reader got no panel.
+
+    The brief now asks for the engine's own vocabulary. This fold stays
+    because adapters written under the old one are already stored in people's
+    `app.sqlite`, and a migration that needed a reader to notice and re-run a
+    registration is the human-in-the-data-path this project refuses. Applied
+    on read, an old row heals itself the next time anything looks at it.
+    """
+    if not isinstance(spec, dict):
+        return {}
+    out = dict(spec)
+    identity = dict(out.get("identity") or {})
+    context = dict(out.get("context") or {})
+
+    # `fields` was the old brief's single bucket: it drew no line between what
+    # names the product and what merely describes it. Identity is the safe
+    # side — a key the packs declare as identity is one; anything else the
+    # engine still carries through as context.
+    for key, raw in (out.pop("fields", None) or {}).items():
+        name = str(key or "").strip().lower()
+        if not name or name in identity or name in context:
+            continue
+        rule = _rule(name, raw)
+        if rule is not None:
+            identity[name] = rule
+
+    out.pop("title_patterns", None)  # never interpreted; `from: title` is
+
+    out["identity"] = {k: r for k, r in (
+        (str(k).strip().lower(), _rule(str(k).strip().lower(), v))
+        for k, v in identity.items()) if k and r is not None}
+    out["context"] = {k: r for k, r in (
+        (str(k).strip().lower(), _rule(str(k).strip().lower(), v))
+        for k, v in context.items()) if k and r is not None}
+    out["subject_kind"] = str(out.get("subject_kind") or "product")
+    return out
+
+
+def local_rows(app_conn) -> list[dict]:
+    """This installation's learned adapters, every one of them normalised.
+
+    One read path on purpose. Three call sites used to read `local_adapters`
+    straight off the table — the lookup, the Sites screen and the extension's
+    own `/api/adapters` — and a fold applied in two of them would have been a
+    site that works in the browser and not in the app, or the reverse.
+    """
+    if app_conn is None:
+        return []
+    from app.web import state
+
+    out = []
+    for row in state.local_adapters(app_conn):
+        one = dict(row)
+        one["spec"] = normalise(one.get("spec") or {})
+        out.append(one)
+    return out
+
+
 def check(spec: dict, *, host: str = "") -> dict:
     """The adapter, normalised, or `SiteRefused` saying what is wrong with it.
 
@@ -88,14 +197,19 @@ def check(spec: dict, *, host: str = "") -> dict:
             )
     if not match:
         match = [f"*://*.{site}/*"]
-    fields = spec.get("fields")
-    if not isinstance(fields, (dict, list)) or not fields:
+    # Normalised *before* the emptiness test, because "has rules" has to mean
+    # "has rules the engine will act on". The old test asked whether a `fields`
+    # key was present, which every adapter that read nothing also passed.
+    folded = normalise(spec)
+    if not folded.get("identity"):
         raise SiteRefused(
-            "no `fields`. An adapter with no rules reads nothing from the page, "
-            "which is the same as not having one"
+            "no `identity` rules the engine can act on. An adapter that names "
+            "no identity key resolves every page to nothing, which is the same "
+            "as not having one — give each key either `labels` the page shows "
+            "or `from: \"title\"`"
         )
     return {
-        **spec,
+        **folded,
         "id": str(spec.get("id") or f"local.{site}"),
         "site": site,
         "match": match,
@@ -115,14 +229,10 @@ def adapter_for(store, app_conn, url: str):
     host = host_of(url)
     if not host or app_conn is None:
         return None
-    from app.web import state
-
-    for row in state.local_adapters(app_conn):
-        spec = row.get("spec") or {}
+    for row in local_rows(app_conn):
         if row["host"] != host:
             continue
-        spec = {**spec, "pack_id": row.get("pack_id") or "", "local": True}
-        return spec
+        return {**row["spec"], "pack_id": row.get("pack_id") or "", "local": True}
     return None
 
 
@@ -230,9 +340,7 @@ def registered(store, app_conn) -> list[dict]:
     known = {one["site"] for one in out}
     if app_conn is None:
         return out
-    from app.web import state
-
-    for row in state.local_adapters(app_conn):
+    for row in local_rows(app_conn):
         if row["host"] in known:
             # A pack now ships one for this host: the local copy is redundant
             # rather than wrong, and saying so is more use than hiding it.
@@ -276,25 +384,59 @@ describing the template rather than one advert). Then write the adapter.
 ```json
 {{"id": "local.{site}",
   "site": "{site}",
+  "subject_kind": "product",
   "match": ["*://*.{site}/*"],
-  "fields": {{"<identity key>": {{"labels": ["the words the page uses"],
-                               "selector": "a CSS selector, if the page has one"}}}},
-  "title_patterns": ["regexes over the page title, when the labels are absent"]
+  "identity": {{
+    "<identity key>": {{"labels": ["the words the page puts next to the value"]}},
+    "<identity key>": {{"from": "title", "vocabulary": "<identity key>"}}
+  }},
+  "context": {{
+    "<context key>": {{"labels": ["km", "mileage"],
+                     "parse": "int_range", "min": 0, "max": 2000000}}
+  }}
 }}
 ```
 
-The identity keys are **not yours to invent**. This installation's packs
-declare them, and a value mapped to a key no pack knows is a lookup that
-resolves to nothing. The keys available here:
+## The rule vocabulary — these keys and no others
+
+Anything else you write is **ignored silently**: it will not read a field and
+it will not raise, so an adapter full of invented keys looks exactly like one
+that works. There are seven.
+
+* `labels` — the words the page prints beside the value. This is the main
+  mechanism; prefer it to everything below.
+* `from` — `"title"`, `"description"` or `"url"`. Read from that text instead,
+  when the page has no label. Only consulted if no label matched.
+* `vocabulary` — with `from`, look in that text for any value the installed
+  packs already know for this key. This is how a make or a brand is read out
+  of a title without either being written down here.
+* `segment` — `"first"` or `"last"`, with optional `split` (default `"/"`),
+  when one cell packs several facts: `"Otomatik / Onden Cekis"`.
+* `parse` — only `"int_range"`, with `min` and `max`. Use it for every number.
+  It strips thousands separators and **discards a value outside the range**,
+  which is what stops "1.461 cm3" being read as a mileage.
+
+There is no `selector` and no `title_patterns`. CSS selectors are not part of
+the format — a site's class names change every few months and its labels
+rarely do, which is why labels are the whole design.
+
+## identity vs context
+
+`identity` decides *which product this is*, and its keys are **not yours to
+invent** — this installation's packs declare them, and a value mapped to a key
+no pack knows is a lookup that resolves to nothing. The keys available here:
 
 {keys}
 
+`context` is everything else worth knowing about this particular one — the
+mileage, the year, the free text. Its keys are yours to name.
+
 ## What matters
 
-* **Labels over selectors.** A site's class names change every few months; the
-  word next to the value changes rarely. Give both where you can, labels first.
 * **The page's own language.** If the site is Turkish, the labels are Turkish.
   Write what is on the page, not a translation of it.
+* **Give several spellings.** `labels` is a list; a site writing a field two
+  ways in two languages is ordinary.
 * **Do not guess a field you could not find.** A missing key resolves less
   precisely; a wrong one resolves to the wrong product, and the reader is then
   shown risks for something else entirely.

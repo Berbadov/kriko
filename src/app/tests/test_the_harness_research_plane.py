@@ -1518,25 +1518,46 @@ def test_agy_refuses_an_oversized_prompt_rather_than_sending_it_nowhere(
 
 
 def test_unverified_headless_entries_are_not_driven(monkeypatch):
-    """`vibe` and `gemini` name real CLIs whose sandbox files, tool names and
-    output parsing Kriko has never run against — so they are listed with the
-    reason, never spawned, even on a machine that has them."""
+    """An entry Kriko has not run against says so and is never spawned.
+
+    The rule, not the roster. This used to name `vibe` and `gemini`, because
+    those were the two unverified rows on the day it was written — so
+    *verifying* one of them failed the test, which makes it a gate that
+    punishes the work it exists to encourage. `mistral-vibe` has since been
+    run against the real CLI (2.25.5: the builtin `auto-approve` agent,
+    `--enabled-tools` as the sandbox, `--trust`, streaming history entries)
+    and is driven now; `gemini-cli` still has not been.
+
+    What must stay true is the *pairing*: an unusable row carries a reason
+    and refuses to build a command, and a usable one builds one. Neither
+    half names a CLI, so onboarding the next one costs a row in `KNOWN` and
+    no edit here.
+    """
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(
         harness_mod, "declared",
         lambda _: frozenset({"--output", "--agent", "--enabled-tools", "--prompt",
+                             "--trust", "--max-price", "--max-turns",
                              "--output-format", "--approval-mode", "--allowed-tools",
                              "--model"}),
     )
-    for ident in ("mistral-vibe", "gemini-cli"):
-        one = next(h for h in harness_mod.KNOWN if h.id == ident)
-        assert one.unusable, f"{ident} must carry its unverified reason"
+    unverified = [h for h in harness_mod.KNOWN if h.unusable]
+    assert unverified, (
+        "every known CLI now claims to be verified — which is either true, "
+        "and this test should go, or a row lost its reason by accident"
+    )
+    for one in unverified:
+        assert one.unusable.strip(), f"{one.id} must carry its unverified reason"
         with pytest.raises(NoHarness):
             harness_mod.command_for(one)
-    assert all(
-        h.id in ("mistral-vibe", "gemini-cli")
-        for h in harness_mod.found_but_unusable()
-    )
+    assert {h.id for h in harness_mod.found_but_unusable()} == {
+        h.id for h in unverified
+    }
+    # The other half: a row with no reason must actually be drivable, or
+    # "verified" would mean nothing more than a blank field.
+    for one in harness_mod.KNOWN:
+        if not one.unusable:
+            assert harness_mod.command_for(one)[0].endswith(one.executable)
 
 
 def test_the_planes_endpoint_names_missing_clis_with_a_way_out(tmp_path, monkeypatch):

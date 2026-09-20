@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "./Async.svelte";
+    import Pick from "./Pick.svelte";
     import Failure from "./Failure.svelte";
     import { api } from "./api";
     import type { Costs, Prefs } from "./types";
@@ -53,6 +54,18 @@
     const unusableOf = (data: Prefs) => data?.unusable ?? [];
     const searchersOf = (data: Prefs) => data?.search_providers ?? [];
     const spentOf = (data: Costs) => data?.spent?.planes ?? [];
+    /* The LLM catalogue as `Pick` wants it. Named here for the reason
+     * `estimates` is: the snippet body types its argument loosely, and a
+     * mapping written inline twice would need its cast twice. An LLM with no
+     * key is offered and unpickable rather than hidden — that it exists and
+     * cannot be used is a fact about this installation worth seeing. */
+    const llmOptions = (data: Prefs) =>
+        (data.models?.offered ?? []).map((one) => ({
+            value: one.id,
+            label: one.label,
+            note: one.unusable || one.provider,
+            disabled: !!one.unusable,
+        }));
 
     const money = (usd: number | null | undefined) =>
         usd === null || usd === undefined ? "not measured" : `$${usd.toFixed(4)}`;
@@ -114,36 +127,66 @@
                     {#if one.llm_selectable}
                         <label class="field">
                             {one.label} LLM
-                            <input
-                                list={`p-harness-llms-${one.id}`}
+                            <Pick
                                 value={one.llm ?? ""}
-                                placeholder="CLI default"
-                                onchange={(event) =>
+                                options={(one.llms ?? []).map((name) => ({ value: name }))}
+                                emptyLabel="CLI default"
+                                hint={one.llm_hint}
+                                onpick={(chosen) =>
                                     save({
                                         [`harness_model_${one.id.replace(/-/g, "_")}`]:
-                                            event.currentTarget.value,
+                                            chosen,
                                     })}
                             />
                         </label>
-                        <datalist id={`p-harness-llms-${one.id}`}>
-                            {#each one.llms ?? [] as name (name)}
-                                <option value={name}>{name}</option>
-                            {/each}
-                        </datalist>
                         <p class="meta">
                             {#if (one.llms ?? []).length}
-                                Offered by the CLI itself; anything else typed is
-                                sent as-is and judged by the CLI.
+                                These are the names this CLI itself reported.
+                                "Something else…" sends whatever you type
+                                straight through — the CLI judges the name,
+                                not Kriko.
                             {:else}
-                                The CLI named nothing — type any {one.llm_hint || "name"}.
+                                This CLI named nothing, so there is nothing to
+                                list. Pick "Something else…" and type {one.llm_hint
+                                    || "a name it accepts"}.
                             {/if}
-                            {#if one.llm_hint && (one.llms ?? []).length}{one.llm_hint}.{/if}
-                            Empty uses the CLI default.
+                            Left alone, it uses the CLI's own default.
                         </p>
                     {:else}
                         <p class="meta">
                             {one.label} runs its own default — Kriko has no
                             verified per-run switch for it yet.
+                        </p>
+                    {/if}
+
+                    <!-- The second dial, and the cheap one. Dropping a survey
+                         run from high to low costs a fraction of what
+                         switching the LLM does and changes nothing about
+                         which account pays — so it belongs next to the LLM,
+                         not buried a screen away.
+
+                         Drawn only where this machine's CLI declares the flag
+                         in its own --help: a control whose every choice fails
+                         on argument parsing is worse than no control. -->
+                    {#if (one.efforts ?? []).length}
+                        <label class="field">
+                            {one.label} effort
+                            <Pick
+                                value={one.effort ?? ""}
+                                options={(one.efforts ?? []).map((name) => ({ value: name }))}
+                                emptyLabel="CLI default"
+                                hint={one.effort_hint}
+                                onpick={(chosen) =>
+                                    save({
+                                        [`harness_effort_${one.id.replace(/-/g, "_")}`]:
+                                            chosen,
+                                    })}
+                            />
+                        </label>
+                        <p class="meta">
+                            How hard it thinks, per run. Lower is cheaper and
+                            faster; this CLI names {(one.efforts ?? []).join(", ")}.
+                            Left alone, it uses its own default.
                         </p>
                     {/if}
                 {/each}
@@ -172,22 +215,18 @@
 
             <div class="field">
                 <label for="p-llm">LLM</label>
-                <input
+                <Pick
                     id="p-llm"
-                    list="p-llms"
                     value={data.chosen?.llm_model ?? ''}
-                    placeholder={data.models?.default ?? ''}
-                    onchange={(event) => save({ llm_model: event.currentTarget.value })}
+                    options={llmOptions(data)}
+                    emptyLabel={`Default (${data.models?.default ?? '—'})`}
+                    hint="Any id the provider accepts. Prices for one Kriko has never seen are unknown, which is not the same as free."
+                    onpick={(chosen) => save({ llm_model: chosen })}
                 />
                 <p class="meta">
                     {data.models?.note ?? ''} Currently: <code>{data.models?.current ?? '—'}</code>.
                 </p>
             </div>
-            <datalist id="p-llms">
-                {#each data.models?.offered ?? [] as one (one.id)}
-                    <option value={one.id}>{one.label} — {one.unusable || one.provider}</option>
-                {/each}
-            </datalist>
             {#if data.effective}
                 <p class="meta">Paid extraction uses <code>{data.effective.llm}</code> with {data.effective.search || 'no search provider'}.</p>
                 {#if data.effective.reason}<p class="state">{data.effective.reason}</p>{/if}
@@ -207,7 +246,13 @@
                 {#each data.roles ?? [] as role (role.id)}
                     <label class="field">
                         {role.id} — {role.note}
-                        <input list="p-llms" value={role.chosen} disabled={!role.active} placeholder={data.models?.current ?? ''} onchange={(event) => save({ [`llm_model_${role.id}`]: event.currentTarget.value })} />
+                        <Pick
+                            value={role.chosen}
+                            disabled={!role.active}
+                            options={llmOptions(data)}
+                            emptyLabel={`Use the LLM above (${data.models?.current ?? '—'})`}
+                            onpick={(chosen) => save({ [`llm_model_${role.id}`]: chosen })}
+                        />
                     </label>
                     <p class="meta">{role.active ? `Uses ${role.effective}; a per-run choice wins.` : role.inactive_reason}</p>
                 {/each}
