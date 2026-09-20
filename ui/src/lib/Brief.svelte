@@ -1,6 +1,8 @@
 <script lang="ts">
     import { api } from "./api";
     import Failure from "./Failure.svelte";
+    import Pick from "./Pick.svelte";
+    import Scale from "./Scale.svelte";
     import { follow, stateWord } from "./jobs";
     import { hashWith } from "./router";
     import type { Job, ResearchPlane } from "./types";
@@ -37,6 +39,12 @@
     let copied = $state("");
     let harness = $state("");
     let llm = $state("");
+    /* How much reading this run is worth. Empty means the server's default,
+     * which is what every run did before the dial reached this screen — the
+     * brief itself is free and instant either way, so nothing here waits on
+     * `/api/scales` answering. */
+    let scale = $state("");
+    let maxDocuments = $state(0);
     /* Which planes this machine can run, so the button that starts one is only
      * offered when it would work. Best-effort: a planes call that fails costs
      * the reader the button and never the brief. */
@@ -68,6 +76,14 @@
                 backend,
                 ...(harness ? { harness } : {}),
                 ...(backend === "harness" && llm ? { llm } : {}),
+                // Only on a run that actually reads. The `agent` plane
+                // gathers nothing by design, so a depth sent with it would
+                // be a number with no effect — which is how a control comes
+                // to look broken.
+                ...(backend === "harness" && scale ? { scale } : {}),
+                ...(backend === "harness" && maxDocuments
+                    ? { max_documents: maxDocuments }
+                    : {}),
             });
             job = await api.job(job_id);
             follow(job_id, (update) => (job = update));
@@ -157,19 +173,23 @@
                 </label>
                 {#if chosenHarness?.llm_selectable}
                     <label>LLM
-                        <input
-                            list="brief-harness-llms"
+                        <Pick
                             bind:value={llm}
                             disabled={!!job && !job.done}
-                            placeholder={chosenHarness.llm || "CLI default"}
+                            options={(chosenHarness.llms ?? []).map((name) => ({ value: name }))}
+                            emptyLabel={chosenHarness.llm
+                                ? `Preference (${chosenHarness.llm})`
+                                : "CLI default"}
+                            hint={chosenHarness.llm_hint}
                         />
                     </label>
-                    <datalist id="brief-harness-llms">
-                        {#each chosenHarness.llms ?? [] as name (name)}
-                            <option value={name}>{name}</option>
-                        {/each}
-                    </datalist>
                 {/if}
+                <Scale
+                    bind:scale
+                    bind:maxDocuments
+                    disabled={!!job && !job.done}
+                    label="How much to read"
+                />
                 {#if harnessPlane.reason}<p class="meta">{harnessPlane.reason}</p>{/if}
                 <button
                     disabled={!!job && !job.done}

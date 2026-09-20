@@ -243,6 +243,15 @@ export const api = {
         putJson<T.Prefs>("/api/prefs", values),
     /** What it has cost, and what the next run is likely to. */
     costs: () => get<T.Costs>("/api/costs"),
+    /** Every position on the depth dial, with this installation's estimate.
+     *
+     *  Fetched rather than restated. `app/scale.py` owns the numbers, and the
+     *  one place that had copied them — the benchmark screen's own preset
+     *  list — is the hand-maintained correspondence this repository keeps
+     *  catching going stale (`SIBLING_CODE_FAMILIES`, `_MAKE_MAP`, the site's
+     *  own words in `extension/`). A dial whose label and whose number can
+     *  disagree is a dial that eventually lies about what it will spend. */
+    scales: () => get<T.Scales>("/api/scales"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),

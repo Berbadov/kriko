@@ -82,6 +82,14 @@ TIMEOUT_SECONDS = 600.0
 #: research ceiling would have killed a healthy run and called it a hang.
 AUTHOR_TIMEOUT_SECONDS = 2400.0
 
+#: How long a *question to a CLI about itself* may take — `--help`, `models`.
+#: Short on purpose: the Agents screen asks all of these on load, so the worst
+#: case a reader waits is this times the number of CLIs installed, and a probe
+#: that is slow is already telling us its answer will not be worth waiting for.
+#: A probe that times out reads as "declares nothing extra", which costs the
+#: reader the hygiene flags and never the plane.
+HELP_TIMEOUT_SECONDS = 12.0
+
 
 def _lines(stream, tick: float):
     """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
@@ -191,6 +199,37 @@ class Harness:
     #: silently ignored there rather than read — a run that researches nothing
     #: on the reader's quota is the failure this rules out.
     prompt_flag: str = ""
+    #: An environment variable that names the model, for a CLI with no
+    #: per-run `--model` flag. `vibe` is the case: its model is a *config*
+    #: field (`active_model`) and its config layer reads `VIBE_*` out of the
+    #: environment — so the choice is per-run after all, just not as an
+    #: argument. Consulted only when `model_flag` is empty, because a flag is
+    #: the CLI's own answer and an env var is read off its config schema.
+    model_env: str = ""
+    #: The flag that caps what one run may spend, and the flag that caps how
+    #: many assistant turns it may take. Empty means this CLI offers no such
+    #: ceiling, and the only ones are Kriko's own — the prompt's source
+    #: budget, and `TIMEOUT_SECONDS`.
+    #:
+    #: **This is the scale dial reaching the CLI.** Before it, a Quick run and
+    #: a Deep run differed only in how many of the agent's findings were
+    #: *kept*: the agent had already read thirty pages either way, on the
+    #: reader's subscription. A ceiling the CLI itself enforces is the only
+    #: one that saves anything, which is the whole of "I don't want my agent
+    #: to search 30 sources, maybe I want 3".
+    budget_flag: str = ""
+    turns_flag: str = ""
+    #: How many assistant turns one source is worth, for `turns_flag`. A run
+    #: allowed seven sources needs turns for the searches, the reads and the
+    #: report, so this is deliberately generous: the flag is a runaway stop,
+    #: not a budget, and a run killed one turn short of its report has spent
+    #: everything and returned nothing.
+    turns_per_source: int = 4
+    #: True when this CLI must run under a `HOME` Kriko builds rather than the
+    #: reader's own. See `_workspace` — it is how a permission policy is
+    #: granted for the length of one run without ever rewriting a file the
+    #: reader owns.
+    sandbox_home: bool = False
     #: The flag is documented but not in the top-level `--help`, so the
     #: declared-flag check in `command_for` cannot see it. `opencode --help`
     #: describes the TUI; `--model` belongs to `opencode run`. Set only with
@@ -203,6 +242,18 @@ class Harness:
     model_choices: tuple[str, ...] | None = None
     #: One line saying what a valid name looks like, for the dropdown's hint.
     model_hint: str = ""
+    #: How hard the CLI should think, per run. A second dial beside the model
+    #: and a cheaper one to turn: dropping a survey run from `high` to `low`
+    #: costs a fraction of what switching the model does and changes nothing
+    #: about which account pays. Passed only when `--help` declares the flag —
+    #: the same rule `preferred` follows, because a reader on an older build
+    #: must lose the dial rather than the plane.
+    effort_flag: str = ""
+    #: The levels this CLI documents. Read out of its own `--help`, never
+    #: invented: `claude` lists five and `agy` three, and a level neither of
+    #: them accepts is a run that dies on argument parsing.
+    effort_choices: tuple[str, ...] = ()
+    effort_hint: str = ""
     #: Where to get it, in the reader's words. Shown when the CLI is missing,
     #: so a dead link here is worse than none — only official install pages.
     download_url: str = ""
@@ -266,6 +317,15 @@ KNOWN = (
         model_flag="--model",
         model_choices=("opus", "sonnet", "haiku"),
         model_hint="an alias (opus, sonnet, haiku) or a full name — the CLI judges it, not Kriko",
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high", "xhigh", "max"),
+        effort_hint="how hard to think — `claude --help` lists these five",
+        # `--max-budget-usd <amount>`, and its help says "only works with
+        # --print", which is the only mode this plane runs in. The scale dial
+        # reached one CLI before this line; the reader's whole point was not
+        # spending tokens they did not choose to spend, and the harness they
+        # are trying *not* to spend on was the one with no ceiling.
+        budget_flag="--max-budget-usd",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -292,12 +352,43 @@ KNOWN = (
         "opencode",
         ("run", "--agent", "kriko-harness"),
         download_url="https://opencode.ai/download",
-        install_hint="curl -fsSL https://opencode.ai/install | bash",
         needs_account="a model account or API key of your own (or a free/local model)",
         structured=False,
         model_flag="--model",
         model_unlisted=True,
         model_hint="provider/name, as `opencode models` lists them",
+        # The bash installer is the right line on macOS and Linux and is not
+        # runnable on the reader's machine, which is Windows. A hint nobody
+        # can paste is a hint that teaches the reader the screen is decorative.
+        install_hint=(
+            "npm install -g opencode-ai"
+            if os.name == "nt"
+            else "curl -fsSL https://opencode.ai/install | bash"
+        ),
+        # Its own installer puts the binary in `~/.opencode/bin`, and Windows
+        # installs land under `%LOCALAPPDATA%\Programs\opencode`. Neither is
+        # on the `PATH` a desktop shell inherits at login — which is the whole
+        # reason `locate` looks past `PATH` at all.
+        # Its own installer puts the binary in `~/.opencode/bin`, and npm's
+        # global install puts a shim in `%APPDATA%\npm`. Neither is on the
+        # `PATH` a desktop shell inherits at login, which is the whole reason
+        # `locate` looks past `PATH`.
+        #
+        # **`AppData/Local/Programs` is deliberately not here, and the default
+        # list is why this row needs its own.** Windows paths are
+        # case-insensitive, so that directory matched
+        # `…/Programs/OpenCode/OpenCode.exe` — an unrelated Electron
+        # application with the same name — and Kriko then ran a GUI app with
+        # `--help` and waited for it. A fallback guess that is wrong must cost
+        # nothing, and a guess that matches the wrong binary costs everything.
+        homes=(
+            ".opencode/bin",
+            ".local/bin",
+            "AppData/Roaming/npm",
+            ".npm-global/bin",
+            "node_modules/.bin",
+            "bin",
+        ),
     ),
     Harness(
         "antigravity-cli",
@@ -314,21 +405,78 @@ KNOWN = (
         preferred=("--disable-slash-commands",),
         model_flag="--model",
         model_hint="an id from `agy models`",
-        capabilities=("headless", "streaming", "web-search", "model-selection"),
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high"),
+        effort_hint="reasoning effort — `agy --help` names these three",
+        capabilities=("headless", "streaming", "web-search", "web-fetch",
+                      "model-selection"),
+        # **This is the reader's "I can only use Claude Code, not
+        # Antigravity".** Verified against the real CLI: `agy` runs headless
+        # with `permission_mode: request-review`, under which `search_web`
+        # needs no approval and `read_url_content` does. Nobody can answer a
+        # prompt in print mode, so every run searched six times, tried to read
+        # its first page, was auto-denied, and returned an empty reply after
+        # spending 80k tokens of the reader's quota. Exit code 0 throughout.
+        #
+        # The grant is one line in the CLI's own settings file — and Kriko
+        # writes it into a `HOME` that lasts for the run rather than into the
+        # reader's, for the reason the whole `_workspace` exists: a research
+        # plane may not leave a permission behind it. Verified that the login
+        # survives, because `agy` keeps its token in the OS keyring rather
+        # than under `HOME`.
+        sandbox_home=True,
+        turns_flag="",
+        budget_flag="",
     ),
+    # Verified against Mistral Vibe 2.25.5. Every argument below is one the
+    # CLI's own `--help` declares, and every value was read off the installed
+    # package rather than guessed:
+    #
+    # * `--agent auto-approve` is a **builtin** (`vibe.core.agents.models`
+    #   `BUILTIN_AGENTS`), so there is no profile file to write and nothing
+    #   to keep in step with a schema Kriko does not own. The earlier vector
+    #   named `kriko-research`, a custom agent — which is why this row could
+    #   never be verified: the file it needed had a shape nobody had read.
+    # * `--enabled-tools` "in programmatic mode (-p) … disables all other
+    #   tools", so naming the two web tools *is* the sandbox. The names are
+    #   the snake_case of the tool classes (`WebSearch`, `WebFetch` in
+    #   `vibe/core/tools/builtins/`), which is how `BaseTool` derives them.
+    # * `--trust` is the CLI's own documented answer to "use this for
+    #   non-interactive automation": without it the run stops on a trust
+    #   prompt that headless mode cannot answer — `agy`'s failure again.
+    # * `--output streaming` prints one JSON history entry per message, which
+    #   is what `narrate` turns into the job log and `_unwrap` reads the reply
+    #   out of. It carries no usage, so this plane's cost columns stay NULL
+    #   rather than being filled with a guess.
     Harness(
         "mistral-vibe", "Mistral Vibe", "vibe",
-        ("--output", "streaming", "--agent", "kriko-research",
+        ("--output", "streaming", "--agent", "auto-approve", "--trust",
          "--enabled-tools", "web_search", "--enabled-tools", "web_fetch"),
         download_url="https://docs.mistral.ai/vibe/code/cli/install-setup",
-        install_hint="curl -LsSf https://mistral.ai/vibe/install.sh | bash",
-        needs_account="a Mistral account or API key; sign in once with an interactive `vibe` session first",
+        install_hint=(
+            "pip install mistral-vibe"
+            if os.name == "nt"
+            else "curl -LsSf https://mistral.ai/vibe/install.sh | bash"
+        ),
+        needs_account="a Mistral account or API key (MISTRAL_API_KEY); run `vibe --setup` once first",
         protocol="vibe", prompt_argument=False,
         required=("--output", "--agent", "--enabled-tools", "--prompt"),
-        capabilities=("headless", "streaming", "web-search", "web-fetch"),
-        unusable=("not yet verified against the real CLI — its tool names, "
-                  "sandbox file and streaming output are untested, so Kriko "
-                  "will not drive it until they are"),
+        capabilities=("headless", "streaming", "web-search", "web-fetch",
+                      "model-selection", "budget", "turn-cap"),
+        # No `--model` flag exists. The model is a config field, and the
+        # config's environment layer reads `VIBE_*` with a nested delimiter —
+        # so `VIBE_ACTIVE_MODEL` is the per-run switch, read off
+        # `vibe/core/config/layers/environment.py` rather than invented.
+        model_env="VIBE_ACTIVE_MODEL",
+        model_choices=("mistral-medium-3-5", "mistral-large-latest",
+                       "mistral-small-latest", "devstral-small"),
+        model_hint="a Mistral model alias — the CLI judges it, not Kriko",
+        # The only CLI here that will stop itself on money. Both are
+        # documented as applying "only … in programmatic mode with -p",
+        # which is the mode this plane runs in and no other.
+        budget_flag="--max-price",
+        turns_flag="--max-turns",
+        sandbox_home=True,
     ),
     Harness(
         "gemini-cli", "Gemini CLI", "gemini",
@@ -338,6 +486,7 @@ KNOWN = (
         install_hint="npm install -g @google/gemini-cli",
         needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `gemini` session first",
         protocol="gemini", model_flag="--model", prompt_argument=False,
+        sandbox_home=True,
         required=("--output-format", "--approval-mode", "--allowed-tools", "--prompt"),
         capabilities=("headless", "streaming", "web-search", "web-fetch", "model-selection"),
         unusable=("not yet verified against the real CLI — `--allowed-tools` "
@@ -442,6 +591,66 @@ _HELP: dict[str, str] = {}
 _OPTION = re.compile(r"--[a-z][a-z0-9-]+")
 
 
+def _ask(executable: str, *argv: str) -> str:
+    """Run a CLI's own self-description and come back, whatever it does.
+
+    **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
+    a theory either: `locate` once matched an unrelated Electron application
+    called OpenCode, Kriko ran it with `--help`, and the probe never
+    returned. `run` kills the process it started when the timeout fires and
+    then calls `communicate()`, which waits for the *pipes* to close — and a
+    GUI app's surviving children hold them open forever. The timeout expires
+    and the function still does not come back.
+
+    So: `Popen`, a timer that kills the whole tree, and pipes drained in
+    threads. Same three pieces as `_stream`, for the same reason, one
+    question smaller — a process asked what flags it has must always be
+    answerable, because every screen that lists the planes waits on it.
+
+    `""` on anything going wrong, which reads as "said nothing": a probe is
+    never why a plane is unavailable.
+    """
+    out: list[str] = []
+    try:
+        proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+            [executable, *argv],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
+            start_new_session=True,
+        )
+    except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
+        return ""
+    killed = threading.Event()
+
+    def _give_up() -> None:
+        killed.set()
+        HarnessResearcher._kill_tree(proc)
+
+    timer = threading.Timer(HELP_TIMEOUT_SECONDS, _give_up)
+    timer.start()
+    reader = threading.Thread(
+        target=HarnessResearcher._drain, args=(proc.stdout, out), daemon=True
+    )
+    reader.start()
+    try:
+        proc.wait(timeout=HELP_TIMEOUT_SECONDS * 2)
+    except Exception:  # noqa: BLE001
+        HarnessResearcher._kill_tree(proc)
+    finally:
+        timer.cancel()
+    # Bounded: the drain thread may still be running against a pipe held open
+    # by a child nothing can reach, and this must return regardless.
+    reader.join(timeout=1.0)
+    try:
+        if proc.stdout is not None:
+            proc.stdout.close()
+    except Exception:  # noqa: BLE001
+        pass
+    return "" if killed.is_set() else "".join(out)
+
+
 def helptext(executable: str) -> str:
     """What `--help` printed, cached. `""` on any failure.
 
@@ -453,13 +662,7 @@ def helptext(executable: str) -> str:
     """
     if executable in _HELP:
         return _HELP[executable]
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "--help"], capture_output=True, text=True, timeout=30
-        )
-        text = (done.stdout or "") + (done.stderr or "")
-    except Exception:  # noqa: BLE001 — see `declared`
-        text = ""
+    text = _ask(executable, "--help")
     _HELP[executable] = text
     _DECLARED[executable] = frozenset(_OPTION.findall(text))
     return text
@@ -486,6 +689,23 @@ def declared(executable: str) -> frozenset[str]:
 _MODEL_LINE = re.compile(r"^\s*([^/\s]+/[^/\s#]+?)\s*(?:#.*)?$")
 
 
+def efforts_for(one: Harness) -> list[str]:
+    """The effort levels this machine's CLI will accept, or `[]`.
+
+    Gated on the flag being *declared*, not on the roster row naming it: the
+    levels are documented in the same `--help` the flag is, so a build old
+    enough to lack `--effort` should offer no levels rather than a dropdown
+    whose every entry fails. `[]` means the screen hides the control, which is
+    the honest rendering of "this CLI has no such dial".
+    """
+    if one.unusable or not one.effort_flag:
+        return []
+    executable = locate(one)
+    if not executable:
+        return []
+    return list(one.effort_choices) if one.effort_flag in declared(executable) else []
+
+
 def models_for(one: Harness) -> list[str]:
     """The models this machine's copy of the CLI offers, or `[]`.
 
@@ -503,16 +723,14 @@ def models_for(one: Harness) -> list[str]:
     executable = locate(one)
     if not executable:
         return []
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "models"], capture_output=True, text=True, timeout=30,
-        )
-    except Exception:  # noqa: BLE001 — see the docstring
-        return []
-    if done.returncode != 0:
-        return []
-    out = []
-    for line in (done.stdout or "").splitlines():
+    # Through `_ask` for the reason `helptext` is: this runs a binary
+    # `locate` only *guessed* at, and a wrong guess must cost a dropdown
+    # rather than the screen. The exit code is not read — a CLI that printed
+    # a list and then exited non-zero over a telemetry ping has still
+    # answered the question, and the line filter below rejects anything that
+    # is not a model name.
+    out: list[str] = []
+    for line in _ask(executable, "models").splitlines():
         if one.id == "antigravity-cli":
             cell = line.split("\t")[0].split()[0] if line.split() else ""
             if cell and cell.lower() not in ("id", "model", "name") and cell not in out:
@@ -524,7 +742,34 @@ def models_for(one: Harness) -> list[str]:
     return out
 
 
-def command_for(one: Harness, *, model: str = "") -> list[str]:
+def scale_args(one: Harness, *, max_documents: int = 0, budget_usd: float = 0.0,
+               supported: frozenset[str] | None = None) -> list[str]:
+    """The ceilings this CLI can be told about, for this run.
+
+    Separate from `command_for` because it answers a different question —
+    that one asks *can this vector start*, this one asks *how much of the
+    reader's account may it spend* — and because a caller with no scale (the
+    CLI's own path, a pack-authoring run) should be able to skip it entirely
+    rather than pass two zeroes through three layers.
+
+    A flag this machine's CLI does not declare is dropped rather than
+    refused: losing a ceiling is a worse run, and losing the plane over it
+    would be the `--verbose` mistake again. Zero means "no ceiling asked
+    for", which is how every caller that has nothing to say says nothing.
+    """
+    executable = locate(one) or one.executable
+    supported = declared(executable) if supported is None else supported
+    out: list[str] = []
+    if budget_usd and one.budget_flag and one.budget_flag in supported:
+        out += [one.budget_flag, f"{float(budget_usd):.2f}"]
+    if max_documents and one.turns_flag and one.turns_flag in supported:
+        turns = max(4, int(max_documents) * max(1, one.turns_per_source))
+        out += [one.turns_flag, str(turns)]
+    return out
+
+
+def command_for(one: Harness, *, model: str = "", effort: str = "",
+                max_documents: int = 0, budget_usd: float = 0.0) -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
     A function rather than a line inside `_run` because the gate that matters
@@ -542,12 +787,22 @@ def command_for(one: Harness, *, model: str = "") -> list[str]:
     missing = set(one.required) - supported
     if one.unusable or missing:
         raise NoHarness(one.unusable or f"{one.label} lacks required flags: {', '.join(sorted(missing))}")
-    if model and not one.model_flag:
+    if model and not one.model_flag and not one.model_env:
         raise NoHarness(f"{one.label} has no verified per-run model switch — model choices for it are refused, never silently run as the default")
-    if model and not one.model_unlisted and one.model_flag not in supported:
+    if model and one.model_flag and not one.model_unlisted and one.model_flag not in supported:
         raise NoHarness(f"{one.label} does not declare per-run model selection")
+    # Refused rather than dropped, on the same reasoning as the model above: a
+    # reader who asked for `low` and silently got the CLI's default has been
+    # billed for a choice they did not make, and the run looks identical.
+    if effort and (not one.effort_flag or one.effort_flag not in supported):
+        raise NoHarness(
+            f"{one.label} has no per-run effort switch on this machine — "
+            f"effort choices for it are refused, never silently run as the default")
     return [executable, *args, *(f for f in one.preferred if f in supported),
-            *([one.model_flag, model] if model and one.model_flag else [])]
+            *([one.model_flag, model] if model and one.model_flag else []),
+            *([one.effort_flag, effort] if effort else []),
+            *scale_args(one, max_documents=max_documents,
+                        budget_usd=budget_usd, supported=supported)]
 
 
 # ── The output contract ──────────────────────────────────────────────────────
@@ -556,6 +811,20 @@ def command_for(one: Harness, *, model: str = "") -> list[str]:
 #: what is worth keeping — it is written for an agent holding Kriko's MCP
 #: tools, so the only thing it needs replacing is the *reporting* step.
 CONTRACT = """
+## What you may use (this run)
+
+**Only the web search and web fetch tools.** Do not read files, list
+directories, run shell commands, or look at the working directory — it is an
+empty temporary folder created for this run and there is nothing in it. This
+is a reading task about the world, not a task about a codebase, and the usual
+first move of orienting yourself in the workspace is wasted here.
+
+That is not advice. On some of the command-line agents this runs on, a tool
+call that is refused **ends the whole run with an empty answer** — and the
+refusal is automatic, because nothing is watching to approve it. One
+`ls`-shaped reflex therefore costs the entire run, on an account somebody
+pays for, and returns nothing at all. Search, read pages, and report.
+
 ## How to report findings (this run)
 
 You have no Kriko tools in this session. Do not attempt to call
@@ -592,6 +861,39 @@ there is nothing to gain by editing it after the fact.
 If you found nothing at all, print `{"findings": []}`. Print nothing after the
 fence.
 """
+
+def budget_clause(max_documents: int) -> str:
+    """How much reading this run is worth, said before the agent starts.
+
+    The brief says what to look for; nothing said *how much*. So the dial the
+    reader set — three sources, or fifteen — reached the agent as nothing at
+    all, and the plane whose whole promise is "it costs you only what your
+    subscription already costs" spent the same amount at every setting.
+
+    Written as a ceiling with a floor under it, because the failure to avoid
+    is an agent that reads two pages, finds nothing, and reports an empty
+    findings list as though the subject were clean. A budget is permission to
+    stop early, not an instruction to.
+
+    `""` for zero, which reads as "nobody set one" — the CLI path's case, and
+    every caller's before the dial existed.
+    """
+    if not max_documents:
+        return ""
+    return (
+        "\n## How much to read (this run)\n\n"
+        f"Read **at most {max_documents} source page(s)** and run at most "
+        f"{max(2, max_documents)} searches. This is a ceiling the reader set, "
+        "and it is the whole cost of this run to them — stop when you reach "
+        "it, even if the next search looks promising, and say so in your "
+        "reply rather than going over.\n\n"
+        "Spend the budget on the *best* sources rather than the first ones: "
+        "one page you read properly and quoted is worth more here than three "
+        "skimmed. If the budget runs out before you are confident, report "
+        "what you have and say what you would have read next — a short honest "
+        "run is a result, and an invented claim outlives you in the pack.\n"
+    )
+
 
 _FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.S)
 
@@ -843,6 +1145,12 @@ def _narrate_agy(event: dict) -> str:
                     )
             name = name or str(step.get("tool_name") or "")
             said = f"{name} {_short(detail, 100)}".strip()
+            # One line per tool call, not two. The CLI reports each step
+            # twice — ACTIVE when it starts, DONE when it finishes — with the
+            # same name and the same arguments, so narrating both printed
+            # every search the agent ran immediately below itself.
+            if step.get("state") == "ACTIVE":
+                return ""
             if step.get("state") == "ERROR":
                 error = info.get("error") if isinstance(info, dict) else None
                 message = ""
@@ -852,7 +1160,11 @@ def _narrate_agy(event: dict) -> str:
                     message or said or "unknown tool error", 160)
             return said
         if step.get("step_type") == "agent_response":
-            return _short(str(step.get("text_delta") or ""), 200)
+            # Nothing, on purpose: `text_delta` is a *fragment* of the reply,
+            # a few characters wide, and a line of the job log is a whole
+            # thought. `HarnessResearcher._say` owns the joining up, because
+            # it is the only thing here with somewhere to keep a buffer.
+            return ""
         return ""
     if kind == "result":
         result = event.get("result")
@@ -866,6 +1178,41 @@ def _narrate_agy(event: dict) -> str:
         if tokens:
             said += f", {tokens} tokens on the subscription's account"
         return said
+    return ""
+
+
+def _narrate_vibe(event: dict) -> str:
+    """One Mistral Vibe history entry, as a job-log line — or `""`.
+
+    Its stream is the session's own history rather than a feed of events, so
+    the three entry types worth a line are the three a reader would watch
+    for: what the agent said, what it ran, and what broke. Read off
+    `vibe/app_server/models.py` (`PublicMessageEntry`, `PublicEffectEntry`),
+    camelCase on the wire.
+
+    Only *completed* entries. An entry is emitted again on every update while
+    it generates, so narrating the in-flight ones would fill the job log with
+    the same sentence growing one word at a time.
+    """
+    status = str(event.get("generationStatus") or "").lower()
+    if status and status != "completed":
+        return ""
+    kind = event.get("type")
+    if kind == "message":
+        if event.get("role") != "assistant":
+            return ""
+        parts = [
+            str(block.get("text") or "")
+            for block in event.get("content") or ()
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return _short(" ".join(one for one in parts if one.strip()), 200)
+    if kind == "effect":
+        title = _short(str(event.get("title") or ""), 140)
+        state = str(event.get("state") or "").lower()
+        if state in ("failed", "error"):
+            return "a tool call failed: " + (title or "unknown tool error")
+        return title
     return ""
 
 
@@ -884,6 +1231,12 @@ def narrate(event: dict) -> str:
         return ""
     if event.get("event") is not None:
         return _narrate_agy(event)
+    # Vibe's entries are the only ones carrying a session id and a generation
+    # status, which is a cheaper tell than threading the harness through every
+    # caller of this function — and a wrong guess here costs a log line, never
+    # a run.
+    if event.get("sessionId") is not None and event.get("generationStatus") is not None:
+        return _narrate_vibe(event)
     kind = event.get("type")
     if kind in QUIET_EVENTS:
         return ""
@@ -987,12 +1340,30 @@ class HarnessResearcher(AgentResearcher):
     name = "harness"
     cost_basis = "subscription"
 
-    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS, model: str = ""):
+    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS,
+                 model: str = "", effort: str = ""):
         self.requested_model = model
+        #: How hard to think, this run. Beside the model rather than folded
+        #: into it: the two are chosen independently, and a survey run is the
+        #: same model at a lower effort far more often than it is a different
+        #: model.
+        self.requested_effort = effort
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
         self.harness = harness
         self.timeout = timeout
+        #: The scale, as the CLI will be told it. Set from the task by
+        #: `gather`, and settable directly by a caller with no task —
+        #: `tasks.pack_author` is one, and a pack-authoring run has a budget
+        #: too. `0` on either means "no ceiling asked for", which is what
+        #: every caller said before the dial reached this far.
+        #:
+        #: They live on the instance rather than travelling as arguments
+        #: because `ask()` and `gather()` are two entry points to one spawn,
+        #: and a ceiling that applied to only one of them would be a ceiling
+        #: the reader could not predict.
+        self.max_documents = 0
+        self.budget_usd = 0.0
         #: Read duck-typed by `app/web/tasks.py`. `None` until a run happens,
         #: which is the difference between "spent nothing" and "cannot count".
         self.tokens_used: int | None = None
@@ -1034,6 +1405,8 @@ class HarnessResearcher(AgentResearcher):
         #: The lines this run narrated, in order. Kept so a caller that was not
         #: watching live can still ask what happened.
         self.actions: list[str] = []
+        #: Reply text that has arrived but is not yet a sentence. See `_say`.
+        self._said_partial = ""
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -1043,7 +1416,20 @@ class HarnessResearcher(AgentResearcher):
     # ── gather ───────────────────────────────────────────────────────────────
 
     def gather(self, task: ResearchTask) -> list[Document]:
-        prompt = self.brief(task) + "\n" + CONTRACT
+        # The scale reaches the agent as a sentence and the CLI as a flag,
+        # and it has to be both. Truncating the reply afterwards — which is
+        # all `raw[: max_documents * 8]` below ever did — saves the reader
+        # nothing: by then the agent has already run thirty searches on their
+        # subscription and only the bookkeeping is smaller. A budget is worth
+        # something only if it is stated before the spending.
+        self.max_documents = max(0, int(task.max_documents or 0))
+        # Carried even though this plane bills a subscription rather than a
+        # card: `vibe` is the one CLI here that will stop *itself* on a
+        # dollar figure, and a ceiling the reader set should reach every CLI
+        # that has somewhere to put it. Where there is nowhere, `scale_args`
+        # drops it.
+        self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
+        prompt = self.brief(task) + "\n" + budget_clause(self.max_documents) + CONTRACT
         reply = self._run(prompt)
         payload = _payload(reply)
         reported = payload.get("queries")
@@ -1170,7 +1556,7 @@ class HarnessResearcher(AgentResearcher):
 
     @contextmanager
     def _workspace(self):
-        if self.harness.protocol not in ("vibe", "gemini", "agy"):
+        if not self.harness.sandbox_home:
             yield
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
@@ -1180,32 +1566,57 @@ class HarnessResearcher(AgentResearcher):
             home.mkdir()
             work.mkdir()
             self._run_cwd = str(work)
-            if self.harness.protocol == "agy":
-                # A neutral working directory only. The CLI reads its login
-                # and permission policy from the reader's own config, which
-                # Kriko never rewrites — so a file the agent writes lands in
-                # a directory that vanishes with the run, while nothing about
-                # the reader's own setup is touched.
-                try:
-                    yield
-                finally:
-                    self._run_cwd = None
-                return
             self._run_env = {"HOME": str(home), "USERPROFILE": str(home)}
-            if self.harness.protocol == "vibe":
+            if self.harness.protocol == "agy":
+                # **The run's own permission policy, and nobody else's.**
+                #
+                # `agy` headless is `permission_mode: request-review`:
+                # `search_web` runs unasked and `read_url_content` does not,
+                # and print mode cannot answer a prompt — so it soft-denies,
+                # and the run ends having searched six times, read nothing,
+                # and returned an empty string after spending the reader's
+                # quota. That was every Antigravity run there has ever been.
+                #
+                # The grant belongs in the CLI's own settings file, whose
+                # path (`~/.gemini/antigravity-cli/settings.json`) and rule
+                # grammar (`read_url(*)`, one of `command|read_file|
+                # write_file|read_url|mcp|execute_url|unsandboxed`) were read
+                # off the binary and then verified by running it. Writing it
+                # under a `HOME` that vanishes with the run is the difference
+                # between a plane that works and a plane that leaves a
+                # standing permission on the reader's machine: Kriko grants
+                # exactly what this run needs, for exactly as long as it runs.
+                #
+                # The login survives because `agy` keeps its token in the OS
+                # keyring, not under `HOME`. Verified, not assumed — a
+                # sandbox that silently logged the reader out would look
+                # exactly like the bug it replaced.
+                config = home / ".gemini" / "antigravity-cli"
+                config.mkdir(parents=True)
+                (config / "settings.json").write_text(json.dumps({
+                    "permissions": {"allow": ["read_url(*)"]},
+                }), encoding="utf-8")
+            elif self.harness.protocol == "vibe":
+                # Only the things that are nobody's business on a research
+                # run: update checks, telemetry, the reader's MCP servers and
+                # skills. The *tool* sandbox is `--enabled-tools`, which the
+                # CLI documents as disabling everything it does not name in
+                # programmatic mode — so there is no agent profile to write
+                # and no schema of Mistral's for Kriko to keep in step with.
                 config = home / ".vibe"
-                (config / "agents").mkdir(parents=True)
+                config.mkdir(parents=True)
                 (config / "config.toml").write_text(
                     'enable_update_checks = false\nenable_telemetry = false\n'
                     'mcp_servers = []\ndisabled_skills = ["*"]\n', encoding="utf-8"
                 )
-                (config / "agents" / "kriko-research.toml").write_text(
-                    'enabled_tools = ["web_search", "web_fetch"]\n'
-                    'mcp_servers = []\ndisabled_skills = ["*"]\n'
-                    '[tools.web_search]\npermission = "always"\n'
-                    '[tools.web_fetch]\npermission = "always"\n', encoding="utf-8"
-                )
                 self._run_env["VIBE_HOME"] = str(config)
+                # The CLI reads its key from the environment, and the
+                # environment this run inherits is the reader's own. Carried
+                # across explicitly because `_stream` merges `_run_env` last:
+                # an empty value here would blank a key that was working.
+                for name in ("MISTRAL_API_KEY", "VIBE_API_KEY"):
+                    if os.environ.get(name):
+                        self._run_env[name] = os.environ[name]
             else:
                 config = home / ".gemini"
                 config.mkdir()
@@ -1229,9 +1640,21 @@ class HarnessResearcher(AgentResearcher):
     def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
-        command = command_for(self.harness, model=self.requested_model)
+        command = command_for(
+            self.harness,
+            model=self.requested_model,
+            effort=self.requested_effort,
+            max_documents=self.max_documents,
+            budget_usd=self.budget_usd,
+        )
         if self.harness.protocol in ("vibe", "gemini"):
             command.extend(["--prompt", ""])
+        # A model named for a CLI that has no flag for one. `_workspace` has
+        # already built `_run_env` by the time this runs, and `_stream` merges
+        # it over the inherited environment — so this is the same per-run
+        # switch `--model` is, expressed the only way this CLI offers.
+        if self.requested_model and not self.harness.model_flag and self.harness.model_env:
+            self._run_env[self.harness.model_env] = self.requested_model
         say = on_line if on_line is not None else self.on_action
 
         if self.harness.prompt_flag:
@@ -1507,6 +1930,13 @@ class HarnessResearcher(AgentResearcher):
         translate, so its own words are the narration. One that answers in
         JSON is translated by `narrate`, and a line that is neither is
         machinery: partial frames, blank lines, a banner.
+
+        **The reply arrives in pieces, and a log line is not a piece.**
+        Antigravity streams its answer as `text_delta` fragments a few
+        characters long — "em OR issue", "\\"findings\\": [ { \\"titl", "e\\":
+        " — so narrating each one turned a run's log into forty lines of
+        shredded JSON. `_say` joins them back into sentences; everything
+        else passes straight through.
         """
         if not self.harness.structured:
             return _short(line, 200)
@@ -1514,7 +1944,41 @@ class HarnessResearcher(AgentResearcher):
             event = json.loads(line)
         except ValueError:
             return ""
-        return narrate(event) if isinstance(event, dict) else ""
+        if not isinstance(event, dict):
+            return ""
+        return self._say(event, narrate(event))
+
+    #: The longest run of streamed reply text held back waiting for a
+    #: sentence to end. Past it the buffer is logged as it stands: an agent
+    #: printing a long JSON fence has no sentence endings in it at all, and
+    #: a log that says nothing for two minutes is the silence B121 fixed.
+    SAY_BUFFER = 240
+
+    def _say(self, event: dict, said: str) -> str:
+        """`said`, once it is a whole thought rather than a fragment.
+
+        Only the model's own prose is buffered. A tool call, a failure and
+        the result line are each already one complete statement, and holding
+        them back would delay the very lines a reader is watching for.
+        """
+        step = event.get("step_update")
+        streaming = (
+            isinstance(step, dict)
+            and step.get("step_type") == "agent_response"
+        )
+        if not streaming:
+            # Anything else flushes what the reply had accumulated first, so
+            # the log keeps the order things actually happened in.
+            held, self._said_partial = self._said_partial, ""
+            held = _short(held, 200)
+            return f"{held} {said}".strip() if held and said else (said or held)
+        self._said_partial += str(step.get("text_delta") or "")
+        done = step.get("state") == "DONE"
+        ended = self._said_partial.rstrip().endswith((".", "!", "?", "}", "```"))
+        if not done and not ended and len(self._said_partial) < self.SAY_BUFFER:
+            return ""
+        held, self._said_partial = self._said_partial, ""
+        return _short(held, 200)
 
     def _meter(self, envelope: dict) -> None:
         """Stamp what the reply admits to spending. Read duck-typed by
@@ -1527,6 +1991,48 @@ class HarnessResearcher(AgentResearcher):
         if isinstance(cost, (int, float)) and not isinstance(cost, bool):
             self.cost_usd = float(cost)
 
+    def _unwrap_vibe(self, stdout: str) -> str:
+        """Mistral Vibe's reply, out of its stream of history entries.
+
+        `--output streaming` prints one `PublicHistoryEntry` per line and
+        **no result object at the end** — there is nothing shaped like
+        `{"result": …}` for `_envelope` to find, so without this the whole
+        NDJSON stream would be handed to `_payload` as prose and the fence
+        inside it would already be JSON-escaped past recognition.
+
+        Every completed assistant message, joined in order: the fence is in
+        the last one, and a model that split its reply across two messages
+        should not lose it to a rule that only read the final line. Entries
+        are camelCase on the wire (`alias_generator=to_camel` on the CLI's
+        own `ProtocolModel`), which is why `generationStatus` is spelled the
+        way it is.
+
+        Nothing here meters. The stream carries no usage, so this plane's
+        cost columns stay NULL — "cannot count" rather than a guess.
+        """
+        said: list[str] = []
+        for line in (stdout or "").splitlines():
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict) or entry.get("type") != "message":
+                continue
+            if entry.get("role") != "assistant":
+                continue
+            status = str(entry.get("generationStatus") or "").lower()
+            if status and status != "completed":
+                continue
+            for block in entry.get("content") or ():
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text = str(block.get("text") or "")
+                    if text.strip():
+                        said.append(text)
+        # The raw stream when nothing parsed, for the same reason `_unwrap`
+        # hands back prose it could not read: the fence may still be in it,
+        # and losing a completed run to a shape change would be absurd.
+        return "\n".join(said) if said else stdout
+
     def _unwrap(self, stdout: str) -> str:
         """The assistant's text out of the CLI's JSON envelope, plus the usage.
 
@@ -1535,6 +2041,8 @@ class HarnessResearcher(AgentResearcher):
         reply that is not JSON at all is handed back as prose rather than
         discarded — the findings fence may still be in it.
         """
+        if self.harness.protocol == "vibe":
+            return self._unwrap_vibe(stdout)
         envelope = _envelope(stdout)
         if not envelope:
             return stdout

@@ -259,3 +259,24 @@
         <p class="meta">{absenceNote(result)}</p>
     </details>
 {/if}
+
+<!-- B113 phase 3. The browser panel legitimately shows two blocks this screen
+     cannot — both read off the reader's own listing page, and neither ever
+     sent to the engine, because the engine has no schema for them and
+     acquiring one would be a category-shaped thing inside a core that must
+     stay generic.
+
+     That is the right design, and it is also invisible: a reader comparing the
+     two surfaces sees the panel showing more and reasonably concludes one of
+     them is broken. So the rule is the answer here, not the symptom. -->
+<details class="absence">
+    <summary class="meta">Does the browser panel show more than this?</summary>
+    <p class="meta">
+        On a listing page it does, deliberately. The panel also draws what it
+        reads from that page itself — the seller's own condition and equipment
+        blocks — which never reaches Kriko's store and so cannot appear here.
+        Everything on this screen is what is <em>known</em> about the product:
+        that is the part which travels between installations, and the part a
+        pack can be held to.
+    </p>
+</details>
