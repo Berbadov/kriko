@@ -2,6 +2,7 @@
     import Async from "../lib/Async.svelte";
     import BenchChart from "../lib/BenchChart.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
+    import Scale from "../lib/Scale.svelte";
     import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
     import { follow } from "../lib/jobs";
@@ -11,14 +12,12 @@
     type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
     type SearchChoice = { id: string; label: string; ready: boolean };
     type PrefsView = { models?: { offered?: OfferedLlm[] }; search_providers?: SearchChoice[] };
-    type ScalePreset = { id: string; label: string; max_documents: number; blurb: string };
-
     const PLANE_CHOICES = ["harness", "agent", "api"];
-    const SCALE_PRESETS: ScalePreset[] = [
-        { id: "quick", label: "Quick", max_documents: 3, blurb: "3 sources per case" },
-        { id: "standard", label: "Standard", max_documents: 7, blurb: "7 sources per case" },
-        { id: "deep", label: "Deep", max_documents: 15, blurb: "15 sources per case" },
-    ];
+    /* The depth presets used to be copied here — three of the four, with
+     * their source counts written out. `app/scale.py` owns them, `Scale`
+     * fetches them, and this screen keeps only the *number*, which is what
+     * a benchmark request actually carries. One less correspondence for
+     * somebody to keep in step by hand. */
     const SEARCH_FALLBACK: SearchChoice[] = [
         { id: "exa", label: "Exa", ready: true },
         { id: "tavily", label: "Tavily", ready: true },
@@ -45,6 +44,15 @@
     let searchesSel = $state<string[]>([]);
     let protocolsSel = $state<string[]>([]);
     let scaleId = $state("quick");
+    /* The resolved source count, which the benchmark sends rather than the
+     * preset name: a run has to record what it actually read, and a name
+     * whose meaning can change between versions is not that. */
+    let scaleDocs = $state(0);
+    /* What the chosen position resolves to, preset or override. This is the
+     * value the request carries, because a benchmark row has to record what
+     * it actually read rather than the name of a preset whose meaning can
+     * change between versions. */
+    let scaleResolved = $state(3);
     let packId = $state("");
     let casesCount = $state(3);
     let repsCount = $state(1);
@@ -56,12 +64,11 @@
     let touched = $state(false);
     let estimateTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const docsForScale = (id: string) => SCALE_PRESETS.find((one) => one.id === id)?.max_documents ?? 3;
     const requestBody = $derived<BenchRequest>({
         planes: planesSel.join(", "),
         pack_id: packId,
         cases: casesCount,
-        max_documents: docsForScale(scaleId),
+        max_documents: scaleResolved || 3,
         budget_usd: budgetVal,
         protocols: protocolsSel.join(", "),
         reps: repsCount,
@@ -104,9 +111,12 @@
         repsCount = clampCount(raw.reps, REPS_MIN, REPS_MAX, 1);
         const dollars = Number(raw.budget_usd);
         budgetVal = Number.isFinite(dollars) ? Math.min(BUDGET_MAX, Math.max(BUDGET_MIN, Math.round(dollars * 100) / 100)) : 0.2;
+        // A saved grid records the count it ran at, which is the durable
+        // fact; the preset name it came from is not, so this restores the
+        // number and lets `Scale` show it as the override it is.
         const docs = Number(raw.max_documents ?? 3);
-        const exact = SCALE_PRESETS.find((one) => one.max_documents === docs);
-        scaleId = exact?.id ?? (docs <= 3 ? "quick" : docs <= 7 ? "standard" : "deep");
+        scaleDocs = Number.isFinite(docs) && docs > 0 ? Math.min(50, docs) : 3;
+        scaleId = "custom";
         touched = true;
     }
 
@@ -214,92 +224,109 @@
 <section class="card" aria-label="Scope the grid">
     <h3>Scope the grid</h3>
     <p class="meta">Every axis multiplies. Nothing selected means whatever this machine would pick.</p>
-    <fieldset>
-        <legend>Planes</legend>
-        <div class="chips">
-            {#each PLANE_CHOICES as plane (plane)}
-                <button type="button" aria-pressed={planesSel.includes(plane)} onclick={() => (planesSel = toggle(planesSel, plane))}>{plane}</button>
-            {/each}
-        </div>
-        {#if !planesSel.length}<p class="meta">None selected — whatever this machine can run.</p>{/if}
-    </fieldset>
-    <fieldset>
-        <legend>Pack</legend>
-        <select aria-label="Pack" value={packId} onchange={(event) => { touched = true; packId = event.currentTarget.value; }}>
-            <option value="">Every pack</option>
-            {#each packOptions as pack (pack)}
-                <option value={pack}>{pack}</option>
-            {/each}
-        </select>
-    </fieldset>
-    <fieldset>
-        <legend>Scale</legend>
-        <div class="chips">
-            {#each SCALE_PRESETS as preset (preset.id)}
-                <button type="button" aria-pressed={scaleId === preset.id} title={preset.blurb} onclick={() => { touched = true; scaleId = preset.id; }}>{preset.label}</button>
-            {/each}
-        </div>
-        <p class="meta">{SCALE_PRESETS.find((one) => one.id === scaleId)?.blurb ?? ""}</p>
-    </fieldset>
-    <fieldset>
-        <legend>Cases</legend>
-        <div class="stepper">
-            <button type="button" aria-label="Fewer cases" disabled={casesCount <= CASES_MIN} onclick={() => bumpCases(-1)}>−</button>
-            <output aria-live="polite">{casesCount}</output>
-            <button type="button" aria-label="More cases" disabled={casesCount >= CASES_MAX} onclick={() => bumpCases(1)}>+</button>
-        </div>
-    </fieldset>
-    <fieldset>
-        <legend>Repetitions</legend>
-        <div class="stepper">
-            <button type="button" aria-label="Fewer repetitions" disabled={repsCount <= REPS_MIN} onclick={() => bumpReps(-1)}>−</button>
-            <output aria-live="polite">{repsCount}</output>
-            <button type="button" aria-label="More repetitions" disabled={repsCount >= REPS_MAX} onclick={() => bumpReps(1)}>+</button>
-        </div>
-    </fieldset>
-    <fieldset>
-        <legend>Ceiling per case</legend>
-        <div class="stepper">
-            <button type="button" aria-label="Lower ceiling" disabled={budgetVal <= BUDGET_MIN} onclick={() => bumpBudget(-BUDGET_STEP)}>−</button>
-            <output aria-live="polite">${budgetVal.toFixed(2)}</output>
-            <button type="button" aria-label="Raise ceiling" disabled={budgetVal >= BUDGET_MAX} onclick={() => bumpBudget(BUDGET_STEP)}>+</button>
-        </div>
-    </fieldset>
-    <fieldset>
-        <legend>LLMs</legend>
-        {#if offeredLlms.length}
+    <!-- Two halves, because they are two different decisions and the screen
+         used to present eight flat fieldsets in a column that answered
+         neither. What a sweep *varies over* multiplies the run count; how
+         *big* each run is multiplies its cost. A reader adjusting one is not
+         thinking about the other. -->
+    <div class="grid">
+        <div class="group">
+            <h3>What to compare</h3>
+            <p class="meta">Every selection here multiplies the number of
+                measurements. Leaving one empty means "whatever this
+                installation would have chosen anyway".</p>
+        <fieldset>
+            <legend>Planes</legend>
             <div class="chips">
-                {#each offeredLlms as one (one.id)}
-                    <button type="button" disabled={!!one.unusable} title={one.unusable || one.provider} aria-pressed={llmsSel.includes(one.id)} onclick={() => (llmsSel = toggle(llmsSel, one.id))}>{one.label}</button>
+                {#each PLANE_CHOICES as plane (plane)}
+                    <button type="button" aria-pressed={planesSel.includes(plane)} onclick={() => (planesSel = toggle(planesSel, plane))}>{plane}</button>
                 {/each}
             </div>
-            {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
-        {:else}
-            <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
-        {/if}
-    </fieldset>
-    <fieldset>
-        <legend>Search</legend>
-        <div class="chips">
-            {#each searchOptions as one (one.id)}
-                <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
-            {/each}
-        </div>
-        {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
-    </fieldset>
-    <fieldset>
-        <legend>Protocols</legend>
-        {#if protocolOptions.length}
+            {#if !planesSel.length}<p class="meta">None selected — whatever this machine can run.</p>{/if}
+        </fieldset>
+        <fieldset>
+            <legend>Pack</legend>
+            <select aria-label="Pack" value={packId} onchange={(event) => { touched = true; packId = event.currentTarget.value; }}>
+                <option value="">Every pack</option>
+                {#each packOptions as pack (pack)}
+                    <option value={pack}>{pack}</option>
+                {/each}
+            </select>
+        </fieldset>
+        <fieldset>
+            <legend>LLMs</legend>
+            {#if offeredLlms.length}
+                <div class="chips">
+                    {#each offeredLlms as one (one.id)}
+                        <button type="button" disabled={!!one.unusable} title={one.unusable || one.provider} aria-pressed={llmsSel.includes(one.id)} onclick={() => (llmsSel = toggle(llmsSel, one.id))}>{one.label}</button>
+                    {/each}
+                </div>
+                {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
+            {:else}
+                <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
+            {/if}
+        </fieldset>
+        <fieldset>
+            <legend>Search</legend>
             <div class="chips">
-                {#each protocolOptions as one (one.name)}
-                    <button type="button" aria-pressed={protocolsSel.includes(one.name)} onclick={() => (protocolsSel = toggle(protocolsSel, one.name))}>{one.name}</button>
+                {#each searchOptions as one (one.id)}
+                    <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
                 {/each}
             </div>
-            {#if !protocolsSel.length}<p class="meta">None selected — whatever the plane would choose.</p>{/if}
-        {:else}
-            <p class="meta">No protocols measured yet — the plane chooses.</p>
-        {/if}
-    </fieldset>
+            {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
+        </fieldset>
+        <fieldset>
+            <legend>Protocols</legend>
+            {#if protocolOptions.length}
+                <div class="chips">
+                    {#each protocolOptions as one (one.name)}
+                        <button type="button" aria-pressed={protocolsSel.includes(one.name)} onclick={() => (protocolsSel = toggle(protocolsSel, one.name))}>{one.name}</button>
+                    {/each}
+                </div>
+                {#if !protocolsSel.length}<p class="meta">None selected — whatever the plane would choose.</p>{/if}
+            {:else}
+                <p class="meta">No protocols measured yet — the plane chooses.</p>
+            {/if}
+        </fieldset>
+        </div>
+        <div class="group">
+            <h3>How much of it</h3>
+            <p class="meta">How deep each run reads, how many subjects it
+                reads, and where it stops. This is the half that decides the
+                bill.</p>
+        <Scale
+            bind:scale={scaleId}
+            bind:maxDocuments={scaleDocs}
+            bind:resolved={scaleResolved}
+            multiplier={casesCount * repsCount}
+            label="Scale"
+        />
+        <fieldset>
+            <legend>Cases</legend>
+            <div class="stepper">
+                <button type="button" aria-label="Fewer cases" disabled={casesCount <= CASES_MIN} onclick={() => bumpCases(-1)}>−</button>
+                <output aria-live="polite">{casesCount}</output>
+                <button type="button" aria-label="More cases" disabled={casesCount >= CASES_MAX} onclick={() => bumpCases(1)}>+</button>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Repetitions</legend>
+            <div class="stepper">
+                <button type="button" aria-label="Fewer repetitions" disabled={repsCount <= REPS_MIN} onclick={() => bumpReps(-1)}>−</button>
+                <output aria-live="polite">{repsCount}</output>
+                <button type="button" aria-label="More repetitions" disabled={repsCount >= REPS_MAX} onclick={() => bumpReps(1)}>+</button>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Ceiling per case</legend>
+            <div class="stepper">
+                <button type="button" aria-label="Lower ceiling" disabled={budgetVal <= BUDGET_MIN} onclick={() => bumpBudget(-BUDGET_STEP)}>−</button>
+                <output aria-live="polite">${budgetVal.toFixed(2)}</output>
+                <button type="button" aria-label="Raise ceiling" disabled={budgetVal >= BUDGET_MAX} onclick={() => bumpBudget(BUDGET_STEP)}>+</button>
+            </div>
+        </fieldset>
+        </div>
+    </div>
     <div class="row">
         <button onclick={() => preview(true)} disabled={starting || !!runningJobId}>Estimate</button>
         <button onclick={start} disabled={starting || !!runningJobId}>
@@ -433,6 +460,20 @@
     }
     .row {
         margin-block-start: var(--s-4);
+    }
+    /* Two columns where there is room for two, one where there is not. The
+       halves are independent decisions, so nothing here depends on their
+       order — which is what lets them stack on a narrow window without the
+       screen reading as a different form. */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--s-4);
+        align-items: start;
+        margin-block: var(--s-3);
+    }
+    .group > h3 {
+        margin-block: 0 0.2rem;
     }
     .chips {
         display: flex;
