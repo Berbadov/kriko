@@ -218,13 +218,12 @@ def test_nothing_chosen_behaves_exactly_as_before(client):
     the one way nobody would notice.
     """
     body = client.get("/api/prefs").json()
-    assert body["chosen"] == {
-        "preferred_harness": "", "llm_model": "", "search_provider": "",
-        "llm_model_plan": "", "llm_model_extract": "",
-        "llm_model_synthesise": "", "llm_model_validate": "",
-        "harness_model_claude_code": "", "harness_model_opencode": "",
-        "harness_model_antigravity_cli": "",
-    }
+    # Against `prefs.KEYS` rather than a list written out here. The per-harness
+    # keys are derived from the roster now — they were a hand-written tuple
+    # that had gone stale and silently dropped Mistral Vibe's model on write —
+    # so a literal copy in this file would be the same bug one layer out, and
+    # would fail the day a harness is added rather than the day one breaks.
+    assert body["chosen"] == dict.fromkeys(prefs.KEYS, "")
 
 
 def test_a_choice_survives_being_made(client):
@@ -233,13 +232,8 @@ def test_a_choice_survives_being_made(client):
     # Merged, never replaced: setting one must not clear the others.
     client.put("/api/prefs", json={"search_provider": "tavily"})
     chosen = client.get("/api/prefs").json()["chosen"]
-    assert chosen == {
-        "preferred_harness": "", "llm_model": "qwen3.5-27b",
-        "search_provider": "tavily",
-        "llm_model_plan": "", "llm_model_extract": "",
-        "llm_model_synthesise": "", "llm_model_validate": "",
-        "harness_model_claude_code": "", "harness_model_opencode": "",
-        "harness_model_antigravity_cli": "",
+    assert chosen == dict.fromkeys(prefs.KEYS, "") | {
+        "llm_model": "qwen3.5-27b", "search_provider": "tavily",
     }
 
 

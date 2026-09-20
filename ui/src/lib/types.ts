@@ -255,6 +255,31 @@ export type Job = {
     finished_at: string | null;
 };
 
+/* One position on the depth dial, as `app/scale.py` defines it.
+ *
+ * `usd` and `tokens` are `null` where this installation has never measured a
+ * run of that shape — inherited from `costs.estimate`, which refuses to
+ * invent a number, and rendered as "not measured" rather than as zero. A
+ * promise about somebody's money that the app cannot keep is worse than none.
+ *
+ * `custom` reports `max_documents: 0`, meaning "your own number" — the screen
+ * offers a field, and an explicit count wins over whatever a preset proposes.
+ */
+export type Scale = {
+    id: string;
+    label: string;
+    note: string;
+    max_documents: number;
+    context_chars: number;
+    batch_size: number;
+    usd: number | null;
+    tokens: number | null;
+    basis: number;
+    cap_usd: number;
+};
+
+export type Scales = { scales: Scale[]; default: string };
+
 export type RunSelection = { llm?: string; harness?: string; search?: string };
 
 export type ResearchRequest = RunSelection & {
@@ -263,6 +288,11 @@ export type ResearchRequest = RunSelection & {
     backend?: string;
     budget_usd?: number;
     max_documents?: number;
+    /** `quick` | `standard` | `deep` | `custom`. The server owns the numbers
+     *  behind each name (`app/scale.py`) — a client that restated them would
+     *  be the hand-maintained correspondence this repository keeps catching.
+     *  An explicit `max_documents` wins over whatever the preset proposes. */
+    scale?: string;
 };
 
 export type ClaimHealth = {
@@ -589,6 +619,12 @@ export type HarnessModel = {
     llm_hint?: string;
     /** False where Kriko has no verified per-run switch yet. */
     llm_selectable?: boolean;
+    /** The stored effort level, or "" for the CLI's own default. */
+    effort?: string;
+    /** The levels this machine's CLI declares in its own --help. `[]` means
+     *  it has no such dial and the control is not drawn at all. */
+    efforts?: string[];
+    effort_hint?: string;
 };
 
 export type Prefs = {
@@ -903,6 +939,9 @@ export type AgendaRunRequest = RunSelection & {
     backend?: string;
     budget_usd?: number;
     max_documents?: number;
+    /** See `ResearchRequest.scale`. An agenda run multiplies the per-subject
+     *  cost by the number of rows, so it is the screen that most needs one. */
+    scale?: string;
 };
 
 /* A pack an agent wrote, waiting for the reader to install or throw away.

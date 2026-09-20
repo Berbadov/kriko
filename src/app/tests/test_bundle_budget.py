@@ -59,7 +59,14 @@ import pytest
 #: per-harness LLM dropdowns, the provider self-test buttons, and the Sites
 #: activation rows. 280,406 bytes of ordinary feature work, not a library
 #: arriving unweighed.
-BUDGET = {".js": 282_000, ".css": 60_000}
+#: Raised .js from 282,000 to 290,000 on 2026-09-20. Again no dependency —
+#: four controls and one compatibility fold, all of them things that were
+#: previously text the reader had to type or a defect they could not see:
+#: `Pick.svelte` (a real `<select>` with an escape hatch, replacing five
+#: `<input list=…>` datalists), `Scale.svelte` (the depth dial, on three
+#: screens that had no depth control at all), the per-harness effort dropdown,
+#: and the Bench regroup. 286,429 bytes.
+BUDGET = {".js": 290_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

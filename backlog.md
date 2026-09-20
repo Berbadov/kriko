@@ -747,6 +747,51 @@ Two specific confusions already live in the tree and are worth fixing by name:
 
 ---
 
+## The adapters nobody read *(2026-09-20)* — **closed, uncommitted**
+
+    biggest block: new packs are not working, new added sites arent working
+    too
+
+Both were one defect wearing two coats, and neither raised anything anywhere.
+
+**§A.1 — a registered site read nothing.** `sites.BRIEF` asked an agent for
+`fields` and `title_patterns`; `kriko/adapters.py` reads `identity` and
+`context`. Nothing in the tree ever read the first pair. So an adapter
+validated, stored, listed on the Sites screen, earned a host permission and
+injected a content script — and then resolved an empty identity on every page,
+while `declared_labels()` returned `[]` so the content script was not even told
+which labels to look for. Measured on the reader's own `arabam.com` row: six
+correctly chosen identity keys, `adapt()` returning `{}`. Closed by
+`sites.normalise()` (a fold applied on read, so a stored row heals itself
+rather than needing the reader to notice and re-register), `sites.local_rows()`
+as the single read path for all three consumers, a `check()` that tests for
+rules the engine will *act* on rather than for a key's presence, and a brief
+rewritten to the engine's real seven-key vocabulary.
+
+**§A.2 — an authored pack could never gain an adapter.** `author()` learned to
+write one; `amend()` did not, and `_subjects()` refused a reply with no
+subjects before anything else ran — so an adapter-only amendment died as
+"everything in the reply is already in this draft". Every pack this
+installation holds was authored before the adapter block existed, so every one
+of them was invisible in the browser with no route out. Closed: `amend` carries
+adapters, `draft_state` reports them, and `amend_brief` asks for one when the
+draft has none.
+
+**§A.3 — the dials.** `--effort` is declared by both `claude` (low, medium,
+high, xhigh, max) and `agy` (low, medium, high) and was never passed; added as
+`Harness.effort_flag`/`effort_choices` + `efforts_for()`, probed against the
+real `--help` and refused rather than silently dropped where unsupported.
+`claude` also declares `--max-budget-usd`, so the scale dial now reaches the
+one harness the reader is explicitly trying *not* to spend on — it previously
+reached only Mistral Vibe. `prefs.HARNESS_MODEL_KEYS` was a hand-written tuple
+of three that omitted Mistral Vibe, so a model chosen for it was dropped on
+write; both key families are now derived from `harness.KNOWN`. And
+`llm_selectable` keyed on `model_flag` alone, hiding the model picker for Vibe,
+whose switch is `VIBE_ACTIVE_MODEL`.
+
+Held by `src/app/tests/test_the_sites_that_read_nothing.py` (23 tests), which
+pins the old behaviour first so the fixes cannot read as refactors.
+
 ## The 0.10.0 work order *(2026-09-16; corrected 2026-09-18)* — P0 + §2.1–§2.6 + §2.9 + §3.2–§3.4 closed, §2.10/§3.5 part-done, 4 open
 
 A 23-item reader work order. §1.1, §1.2, §1.3, §1.4, §1.6 and §1.7 are in
@@ -814,12 +859,35 @@ with the allow-rule fix instead of silent empty research. **Per-harness model
 choice is now real**: claude offers opus/sonnet/haiku (verified in `--help`),
 agy lists its installed models live (`agy models`), opencode takes
 provider/name per its docs, each stored per harness with per-run override on
-top, on Settings, the run card and the brief. Still open: Mistral Vibe and
-Gemini CLI are registered with download links but gated `unusable` until their
-headless flags, sandbox files and output parsing are verified against real
-binaries (Vibe's tool names and agent schema are undocumented; Gemini's
-`--allowed-tools` is deprecated upstream and its sandbox schema would force an
-auth method). A missing CLI now shows download + install command + which
+top, on Settings, the run card and the brief. **Mistral Vibe verified and driven 2026-09-20** against the real
+CLI (2.25.5): the builtin `auto-approve` agent rather than a custom profile
+nobody had read, `--enabled-tools web_search web_fetch` as the sandbox (the
+CLI documents it as disabling everything it does not name in programmatic
+mode), `--trust` for the trust prompt headless mode cannot answer, and
+`--output streaming` read back out of its history entries — it prints no
+result object at the end, so `_unwrap` grew a branch that joins the completed
+assistant messages. Its model is `VIBE_ACTIVE_MODEL` (it has no `--model`;
+the config's environment layer is the per-run switch), and it is the one CLI
+here that will stop *itself* on money: `--max-price` and `--max-turns` now
+carry the scale dial.
+
+**And Antigravity was not actually working.** Verified end to end above, but
+never against a run that needed to *read* a page: headless, `agy` allows
+`search_web` unasked and auto-denies `read_url_content`, so every research
+run searched, tried its first page, was refused, and exited **0** with an
+empty reply after ~80k tokens of the reader's quota. Fixed 2026-09-20 by
+running it under a `HOME` Kriko builds for the run, holding
+`~/.gemini/antigravity-cli/settings.json` with `permissions.allow:
+["read_url(*)"]` — the grant lasts one run and the reader's own config is
+never touched (the login survives; `agy` keeps its token in the OS keyring).
+The second half was the prompt: the agent's opening move was a shell command
+to look at its empty working directory, and on this CLI one denied call ends
+the run, so `CONTRACT` now forbids every non-web tool and says why.
+
+Still open: Gemini CLI is registered with a download link and gated
+`unusable` until its headless flags and sandbox schema are verified against a
+real binary (`--allowed-tools` is deprecated upstream and its sandbox schema
+would force an auth method). A missing CLI now shows download + install command + which
 account it bills to, plus the `KRIKO_HARNESS_DIRS` manual path, on both the
 Agents card and Settings.
 
@@ -833,6 +901,24 @@ Engine half 2026-09-16 (`kriko/lookup/find.py`), panel half 2026-09-17. Every
 result carries its identity, and `#/subject/<id>` is where a row goes.
 
 **§2.11 — expose what is currently hardcoded**, with progressive disclosure.
+**Partly done 2026-09-20.** The depth dial reached nothing: `app/scale.py` had
+four presets and a per-preset estimate, `/api/research` had taken a `scale`
+field for as long, and the only screen that offered depth was the benchmark —
+with a *hardcoded copy* of three of the four presets. So Quick and Deep sent
+the same prompt and differed only in how many findings were kept afterwards,
+having already read thirty pages either way. `ui/src/lib/Scale.svelte` is one
+control fetching `/api/scales`, used on the research brief, the agenda run and
+the benchmark (whose copy is deleted); the harness plane states the ceiling to
+the agent before it spends anything (`harness.budget_clause`) and passes it to
+the CLIs that can enforce it. Still open: the rest of §2.11's knobs.
+
+**§2.12 — choose a model by choosing it** *(new 2026-09-20, done)*. Every
+model and agent field was an `<input list=…>` — a text box with a datalist,
+which offers nothing until you find a chevron, accepts any typo, and shows no
+list at all on some browsers. Five of them, on four screens. `ui/src/lib/
+Pick.svelte` is a real `<select>` over the names the CLI itself reported, with
+a "Something else…" entry that opens a field, because the CLI judges a model
+name and not Kriko.
 
 **~~§3.1 — rebuild the extension.~~ DONE — see `done.md`.** Four commits: the
 `risks`/`claims` rename and three dead render paths out; the palette generated
@@ -840,6 +926,18 @@ from the app's theme (B113 phases 0–2, first run a provable no-op); severity
 derived; then the panel — four verdict states, search, and the no-adapter
 state. B113's remaining phase 3 (saying in the *app* that the panel draws two
 blocks from the reader's page which never reach the engine) is not done.
+
+**And the other half of "new packs cannot be recognised in the web extension"
+was authoring, fixed 2026-09-20.** `packdraft.WRITABLE_DIRS` has allowed
+`adapters/*.json` since drafts existed and `app/packauthor.py` never once
+asked an agent for one — so every pack an agent wrote had subjects, claims,
+and no way for the extension to recognise a page. The reader stood on a
+listing for the product they had just authored a pack about and the panel had
+nothing to say. `packauthor.CONTRACT` now asks for adapters and says a pack
+without one is invisible in the browser; `_adapters()` checks them the way
+`app/sites.py` does — strict about `site` (a bare hostname, because it becomes
+a host permission) and about identity keys the pack declared, permissive about
+labels — and drops a bad one rather than losing the whole authoring run.
 
 **~~§3.2/§3.3 — left panel and design system.~~ MOSTLY DONE — see `done.md`.**
 Icon set complete, live numbers and a sparkline on three rows, and the primary
