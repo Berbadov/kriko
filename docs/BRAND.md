@@ -11,7 +11,7 @@ python packaging/render_lockup.py
 ```
 logo-mark.svg (16x16)       -> extension/assets/icons/icon-{16,32,48,128}.png
 logo-mark.svg               -> ui/public/mark.svg
-logo-mark-large.svg (64x64) -> tauri/src-tauri/icons/icon.png (1024px)
+logo-mark-large.svg (64x64) -> packaging/icon-master.png (1024px)
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup.svg
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 ```
@@ -33,7 +33,7 @@ the right of those arrows is output.
 |---|---|---|
 | A browser toolbar icon | `extension/assets/icons/icon-*.png` | rendered |
 | A favicon, or the rail | `ui/public/mark.svg` | rendered |
-| The app icon everything else derives from | `tauri/src-tauri/icons/icon.png` | rendered |
+| The app icon everything else derives from | `packaging/icon-master.png` | rendered |
 | The logo with the name | `extension/assets/logo-lockup.svg` | rendered |
 | The logo on a ground that is not ours | `extension/assets/logo-lockup-mono.svg` | rendered |
 | To change the mark at 48px and below | `extension/assets/logo-mark.svg` | **a source** |
