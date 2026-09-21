@@ -54,7 +54,7 @@ def _write_candidate_cache(make, model, gen, candidates) -> Path:
     ]
     assert all(isinstance(doc, Document) for _, doc in candidates)
     path = _cache_path(make, model, gen)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
 
@@ -66,7 +66,7 @@ def _read_candidate_cache(make, model, gen):
     path = _cache_path(make, model, gen)
     if not path.exists():
         return None
-    rows = json.loads(path.read_text())
+    rows = json.loads(path.read_text(encoding="utf-8"))
     out = []
     for row in rows:
         claim = CandidateClaim(**row["claim"])
@@ -104,7 +104,7 @@ def _find_data_file(subdir: str, make: str, model: str, gen: str) -> Path | None
 
 def _build_variant_descriptors(variants_path: Path) -> list[tuple[str, str]]:
     """Return [(variant_id, human-readable description), ...] from variants YAML."""
-    rows = yaml.safe_load(variants_path.read_text()) or []
+    rows = yaml.safe_load(variants_path.read_text(encoding="utf-8")) or []
     result = []
     for r in rows:
         desc = (
@@ -123,7 +123,7 @@ def _build_variant_descriptors(variants_path: Path) -> list[tuple[str, str]]:
 
 def _build_variant_fuels(variants_path: Path) -> dict[str, str]:
     """Return {variant_id: fuel} so grounding can stay within a claim's fuel."""
-    rows = yaml.safe_load(variants_path.read_text()) or []
+    rows = yaml.safe_load(variants_path.read_text(encoding="utf-8")) or []
     return {r["id"]: r.get("fuel") for r in rows if r.get("fuel")}
 
 
@@ -131,21 +131,21 @@ def _load_pending_entries(make: str, model: str, gen: str) -> list[dict]:
     path = CURATED_DIR / f"{make}_{model}_{gen}.yaml"
     if not path.exists():
         return []
-    entries = yaml.safe_load(path.read_text()) or []
+    entries = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     return [e for e in entries if e.get("status", "pending") == "pending"]
 
 
 def _mark_processed(make: str, model: str, gen: str, processed_ids: set[str]) -> None:
     """Update status=processed for the given video_ids/URLs in the curated YAML."""
     path = CURATED_DIR / f"{make}_{model}_{gen}.yaml"
-    entries = yaml.safe_load(path.read_text()) or []
+    entries = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     today = str(date.today())
     for entry in entries:
         key = entry.get("video_id") or entry.get("url") or ""
         if key in processed_ids:
             entry["status"] = "processed"
             entry["processed_at"] = today
-    path.write_text(yaml.dump(entries, allow_unicode=True, sort_keys=False))
+    path.write_text(yaml.dump(entries, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
 
 def run(
@@ -322,7 +322,7 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
 
     matching_variant_ids: list[str] = []
     for path in sorted(fitment_dir.glob("*.yaml")):
-        rows = yaml.safe_load(path.read_text()) or []
+        rows = yaml.safe_load(path.read_text(encoding="utf-8")) or []
         for row in rows:
             if row.get(field) == part_id:
                 matching_variant_ids.append(row["variant_id"])
@@ -333,7 +333,7 @@ def _load_all_variants_for_part(part_id: str, part_type: str) -> list[tuple[str,
     # Load descriptors from variants YAMLs
     all_variants: dict[str, dict] = {}
     for path in sorted(variants_dir.glob("*.yaml")):
-        for row in yaml.safe_load(path.read_text()) or []:
+        for row in yaml.safe_load(path.read_text(encoding="utf-8")) or []:
             all_variants[row["id"]] = row
 
     result = []
@@ -396,7 +396,7 @@ def run_part(
     if make and model:
         variants_path = DATA_DIR / "variants" / f"{make}_{model}.yaml"
         if variants_path.exists():
-            variants = yaml.safe_load(variants_path.read_text()) or []
+            variants = yaml.safe_load(variants_path.read_text(encoding="utf-8")) or []
             ensure_part_stub(part_id, part_type, make, model, variants, dry_run=dry_run)
 
     variant_descriptors = _load_all_variants_for_part(part_id, part_type)
@@ -411,7 +411,7 @@ def run_part(
     for vid, _ in variant_descriptors:
         # Load fuel from all variant YAMLs
         for path in sorted((DATA_DIR / "variants").glob("*.yaml")):
-            for row in yaml.safe_load(path.read_text()) or []:
+            for row in yaml.safe_load(path.read_text(encoding="utf-8")) or []:
                 if row["id"] == vid:
                     variant_fuels[vid] = row.get("fuel", "")
 

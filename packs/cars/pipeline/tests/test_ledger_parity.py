@@ -13,10 +13,10 @@ def test_compare_reports_matched_and_missing(tmp_path):
             {"title": "DQ381 mechatronic solenoid wear", "domain": "transmission"},
             {"title": "DQ200 hydraulic pressure failure", "domain": "transmission"},
         ],
-    }))
+    }), encoding="utf-8")
     (new / "dq381.yaml").write_text(yaml.dump([
         {"title": "Mechatronic solenoid wear on DQ381", "domain": "transmission"},
-    ]))
+    ]), encoding="utf-8")
     report = parity.compare([old], new)
     assert "matched: 1" in report
     assert "DQ200 hydraulic pressure failure" in report  # only-in-existing, listed
@@ -32,13 +32,13 @@ def test_shared_source_url_matches_rewritten_titles(tmp_path):
          "domain": "transmission",
          "sources": [{"source_url": "https://aboutthecars.com/vw/dq200/",
                       "quote": "clutch wear"}]},
-    ]}))
+    ]}), encoding="utf-8")
     (new / "dq200.yaml").write_text(yaml.dump([
         {"title": "Dry clutch packs wear out early in stop-and-go traffic",
          "domain": "transmission",
          "sources": [{"source_url": "https://aboutthecars.com/vw/dq200",
                       "quote": "clutch wear"}]},
-    ]))
+    ]), encoding="utf-8")
     report = parity.compare([old], new)
     assert "matched: 1" in report
     assert "only in existing YAML (0)" in report
@@ -55,13 +55,13 @@ def test_url_match_requires_domain_agreement(tmp_path):
          "domain": "engine",
          "sources": [{"source_url": "https://x.test/golf7-problems",
                       "quote": "chain stretch"}]},
-    ]}))
+    ]}), encoding="utf-8")
     (new / "dq200.yaml").write_text(yaml.dump([
         {"title": "Mechatronic unit failure",
          "domain": "transmission",
          "sources": [{"source_url": "https://x.test/golf7-problems",
                       "quote": "mechatronic"}]},
-    ]))
+    ]), encoding="utf-8")
     report = parity.compare([old], new)
     assert "matched: 0" in report
     assert "only in existing YAML (1)" in report
@@ -78,13 +78,13 @@ def test_moved_claim_reported_as_move_not_loss(tmp_path):
          "domain": "transmission",
          "sources": [{"source_url": "https://x.test/dsg-comparison",
                       "quote": "dq200 pressure"}]},
-    ]}))
+    ]}), encoding="utf-8")
     (new / "dq200.yaml").write_text(yaml.dump([
         {"title": "Hydraulic pressure circuit failure",
          "domain": "transmission",
          "sources": [{"source_url": "https://x.test/dsg-comparison",
                       "quote": "dq200 pressure"}]},
-    ]))
+    ]), encoding="utf-8")
     report = parity.compare([old], new)
     assert "matched: 0" in report
     assert "[dq381 -> dq200] DQ200 hydraulic pressure failure" in report

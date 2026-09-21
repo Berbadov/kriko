@@ -72,7 +72,7 @@ def test_staging_again_removes_what_the_extension_stopped_shipping(tmp_path):
     client = _client(tmp_path)
     client.post("/api/extension/stage")
     stale = tmp_path / "extension" / "leftover.js"
-    stale.write_text("// from an older version")
+    stale.write_text("// from an older version", encoding="utf-8")
 
     client.post("/api/extension/stage")
 

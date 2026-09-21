@@ -185,7 +185,7 @@ def test_backfill_cache_dir(tmp_path):
                 }
             ]
         )
-    )
+    , encoding="utf-8")
     docs, ev = ingest.backfill_cache_dir(conn, cache)
     assert (docs, ev) == (1, 1)
     row = conn.execute(
@@ -223,7 +223,7 @@ def test_backfill_claims_dir(tmp_path):
                 }
             ]
         )
-    )
+    , encoding="utf-8")
     docs, ev = ingest.backfill_claims_dir(conn, claims)
     assert (docs, ev) == (1, 1)
     # Verify stored row's field mapping
@@ -241,7 +241,7 @@ def test_backfill_skips_malformed_files(tmp_path):
     cache = tmp_path / "cache"
     cache.mkdir()
     # Corrupt JSON file
-    (cache / "part_bad_engine_candidates.json").write_text("{not json")
+    (cache / "part_bad_engine_candidates.json").write_text("{not json", encoding="utf-8")
     # Valid file
     (cache / "part_dq381_transmission_candidates.json").write_text(
         json.dumps(
@@ -264,7 +264,7 @@ def test_backfill_skips_malformed_files(tmp_path):
                 }
             ]
         )
-    )
+    , encoding="utf-8")
     # Should skip malformed file and ingest valid file
     docs, ev = ingest.backfill_cache_dir(conn, cache)
     assert (docs, ev) == (1, 1)

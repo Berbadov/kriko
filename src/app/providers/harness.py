@@ -1961,11 +1961,12 @@ class HarnessResearcher(AgentResearcher):
         the result line are each already one complete statement, and holding
         them back would delay the very lines a reader is watching for.
         """
-        step = event.get("step_update")
-        streaming = (
-            isinstance(step, dict)
-            and step.get("step_type") == "agent_response"
-        )
+        raw = event.get("step_update")
+        # Narrowed here rather than in the guard below: the `not streaming`
+        # branch returns, so everything after it reads `step` as a mapping
+        # and a type checker cannot see that through a bool.
+        step = raw if isinstance(raw, dict) else {}
+        streaming = step.get("step_type") == "agent_response"
         if not streaming:
             # Anything else flushes what the reply had accumulated first, so
             # the log keeps the order things actually happened in.

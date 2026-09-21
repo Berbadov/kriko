@@ -144,7 +144,7 @@ def test_the_named_tools_exist_on_the_server():
     """The three names the UI shows are the three an agent cannot work without."""
     from app import mcp_server
 
-    body = Path(mcp_server.__file__).read_text()
+    body = Path(mcp_server.__file__).read_text(encoding="utf-8")
     for tool in ("research_brief", "coverage_gaps", "submit_findings"):
         assert f"def {tool}" in body, f"{tool} is advertised but not implemented"
 
@@ -177,7 +177,7 @@ def test_connecting_writes_a_config_the_harness_can_read(tmp_path, monkeypatch):
 
     assert client.post("/api/agent-targets/claude-code/connect").json()["state"] == "connected"
 
-    written = json.loads((home / ".claude.json").read_text())["mcpServers"]["kriko"]
+    written = json.loads((home / ".claude.json").read_text(encoding="utf-8"))["mcpServers"]["kriko"]
     assert written == client.get("/api/agent-config").json()["mcp_json"]["mcpServers"]["kriko"]
 
 
@@ -202,12 +202,12 @@ def test_a_config_the_reader_broke_is_refused_and_left_alone(tmp_path, monkeypat
 
     home = tmp_path / "home"
     home.mkdir()
-    (home / ".claude.json").write_text("{broken")
+    (home / ".claude.json").write_text("{broken", encoding="utf-8")
     monkeypatch.setattr(agentconfig, "_home", lambda: home)
 
     response = _client(tmp_path).post("/api/agent-targets/claude-code/connect")
     assert response.status_code == 409
-    assert (home / ".claude.json").read_text() == "{broken"
+    assert (home / ".claude.json").read_text(encoding="utf-8") == "{broken"
 
 
 def test_verify_actually_starts_the_thing_it_advertised(tmp_path):

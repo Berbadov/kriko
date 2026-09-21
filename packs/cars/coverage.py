@@ -151,7 +151,7 @@ def _load_parts(parts_dir: Path) -> dict[str, dict]:
     if not parts_dir.exists():
         return parts
     for path in sorted(parts_dir.rglob("*.yaml")):
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         part_id = data.get("part_id")
         if part_id:
             parts[part_id] = data
@@ -163,7 +163,7 @@ def _load_rows(directory: Path) -> list[dict]:
     if not directory.exists():
         return rows
     for path in sorted(directory.glob("*.yaml")):
-        rows.extend(yaml.safe_load(path.read_text()) or [])
+        rows.extend(yaml.safe_load(path.read_text(encoding="utf-8")) or [])
     return rows
 
 
