@@ -97,7 +97,7 @@ def test_the_shipped_extension_clears_its_own_floor():
     # A release that ships an extension its own app refuses is a packaging
     # bug that no other test would catch, and the reader would meet it as
     # "reload the extension" advice that cannot help.
-    manifest = json.loads((BACKGROUND / "manifest.json").read_text("utf-8"))
+    manifest = json.loads((BACKGROUND / "manifest.json").read_text(encoding="utf-8"))
     shipped = extension.parse_version(manifest["version"])
     assert shipped >= extension.parse_version(extension.MINIMUM_VERSION)
 
@@ -175,7 +175,7 @@ def test_both_headers_are_spelled_the_same_on_both_sides():
     # strings, and a rename in either one is silent: the extension keeps
     # working, the app keeps answering, and the version is simply never
     # learned. Same reasoning as the sidecar's `KRIKO_PORT` handshake test.
-    source = (BACKGROUND / "background.js").read_text("utf-8")
+    source = (BACKGROUND / "background.js").read_text(encoding="utf-8")
     for header in (extension.VERSION_HEADER, extension.MINIMUM_HEADER):
         found = re.findall(rf'"({header})"', source, re.IGNORECASE)
         assert found, f"background.js never names {header}"
@@ -187,7 +187,7 @@ def test_the_dashboard_holds_no_version_floor_either():
     # the floor moves.
     ui = Path(__file__).resolve().parents[3] / "ui" / "src"
     for name in ("routes/Extension.svelte", "lib/types.ts"):
-        source = (ui / name).read_text("utf-8")
+        source = (ui / name).read_text(encoding="utf-8")
         quoted = re.escape(extension.MINIMUM_VERSION)
         assert not re.search(rf'["\']{quoted}["\']', source), (
             f"{name} states a version floor; the rule lives in app/extension.py"
@@ -198,6 +198,6 @@ def test_the_extension_holds_no_version_floor_of_its_own():
     # The comparison lives in the extension; the *rule* lives here. A floor
     # written in both would be the compatibility matrix this design exists to
     # avoid, and the copies would disagree without failing.
-    source = (BACKGROUND / "background.js").read_text("utf-8")
+    source = (BACKGROUND / "background.js").read_text(encoding="utf-8")
     quoted = re.escape(extension.MINIMUM_VERSION)
     assert not re.search(rf'["\']{quoted}["\']', source)

@@ -55,8 +55,35 @@ def name_of(requirement: str) -> str:
 _MARKER = re.compile(r"sys_platform\s*(==|!=)\s*['\"]([^'\"]+)['\"]$")
 
 
-def applies_here(requirement: str) -> bool:
-    """Does this requirement's marker match the machine relock runs on?
+#: Written into the lock by `main`, and read back out by the guard. The lock
+#: is one machine's resolve — `closure()` drops what is not installed here, so
+#: a Linux run pins ptyprocess and omits pywinpty, colorama and pywin32, and a
+#: Windows run does the reverse. That is deliberate and the header explains it.
+#: What was missing is the lock saying *which* run it was: without it the guard
+#: could only ask "does this root apply on the machine running the tests", and
+#: so every Windows host reported `pywinpty` as an unlocked dependency that the
+#: Linux resolve had correctly left out — a fact the file did not carry,
+#: asserted from the one machine that could not know it.
+_RESOLVED_ON = re.compile(r"^#\s*resolved-on:\s*(\S+)\s*$", re.MULTILINE)
+
+
+def resolved_on(text: str) -> str:
+    """The platform whose environment produced this lock, or `sys.platform`.
+
+    Falling back to the running platform keeps a lock written before this
+    marker existed readable: it behaves exactly as it did rather than failing
+    to parse. The fallback stops mattering the first time anyone regenerates.
+    """
+    match = _RESOLVED_ON.search(text)
+    return match.group(1) if match else sys.platform
+
+
+def applies_here(requirement: str, platform: str = sys.platform) -> bool:
+    """Does this requirement's marker match the given platform?
+
+    Defaults to the machine relock runs on, which is what generation wants.
+    The guard passes `resolved_on(lock)` instead, because the question it is
+    actually asking is whether the *lock's* platform should have pinned this.
 
     `pywinpty`/`ptyprocess` are marked with `sys_platform`, the only marker
     this project uses. A root that does not apply here cannot appear in a
@@ -73,7 +100,7 @@ def applies_here(requirement: str) -> bool:
     if not match:
         return True
     op, value = match.groups()
-    return (sys.platform == value) if op == "==" else (sys.platform != value)
+    return (platform == value) if op == "==" else (platform != value)
 
 
 def closure(roots: list[str]) -> dict[str, str | None]:
@@ -112,11 +139,15 @@ def header() -> str:
     """
     text = LOCK.read_text(encoding="utf-8")
     match = HEADER_END.search(text)
-    return text[: match.start()] if match else text
+    text = text[: match.start()] if match else text
+    # The previous run's marker is stripped rather than kept: it is generated,
+    # not authored, and carrying it forward would leave two of them disagreeing.
+    return _RESOLVED_ON.sub("", text).rstrip("\n") + "\n"
 
 
 def main() -> int:
     sys.stdout.write(header())
+    sys.stdout.write(f"# resolved-on: {sys.platform}\n")
     sys.stdout.write("\n".join(pins()) + "\n")
     return 0
 

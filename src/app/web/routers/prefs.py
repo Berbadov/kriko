@@ -9,12 +9,17 @@ happens.
 """
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 from app import costs, prefs, scale
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
+
+
+#: The longest a stored preference may be. One bound for all of them: every
+#: value here is a short name — a harness id, a model id, an effort level.
+VALUE_MAX = 200
 
 
 class PrefsWrite(BaseModel):
@@ -23,26 +28,24 @@ class PrefsWrite(BaseModel):
     Not a required set: a reader with one CLI installed should never have to
     name it, and an installation that has never opened this screen must behave
     exactly as it did before the screen existed.
+
+    **The accepted keys are `prefs.KEYS`, not a list written out here.** They
+    used to be a hand-written eleven, and that list named three harnesses out
+    of five with no effort key at all — so a model chosen for Mistral Vibe or
+    Gemini CLI was dropped by this schema before `prefs.write` ever saw it, and
+    the effort dial was dead end to end. Nothing reported a failure: the screen
+    re-renders from this endpoint's own reply, so it said "Saved." and then
+    showed "CLI default" again.
+
+    `app/prefs.py` derives its keys from the harness roster for exactly this
+    reason — the stale copy simply lived one layer up, which is the failure
+    mode `CLAUDE.md`'s scalability rule is about. Accepting extras and
+    filtering to `prefs.KEYS` in the handler keeps the vocabulary just as
+    closed as spelling it out did (`prefs.write` filters to the same set), and
+    a harness added to the roster is storable the moment it exists.
     """
 
-    preferred_harness: str | None = Field(None, max_length=64)
-    llm_model: str | None = Field(None, max_length=200)
-    search_provider: str | None = Field(None, max_length=64)
-    #: One per stage of a run, each falling back to `llm_model`. Spelled out
-    #: rather than accepted as a free-form mapping, because a settings writer
-    #: that took arbitrary keys would let a browser on localhost write any
-    #: row it liked into this installation's settings — the same reasoning
-    #: `app/keys.py` gives for naming its providers instead of accepting
-    #: `KEY=value`.
-    llm_model_plan: str | None = Field(None, max_length=200)
-    llm_model_extract: str | None = Field(None, max_length=200)
-    llm_model_synthesise: str | None = Field(None, max_length=200)
-    llm_model_validate: str | None = Field(None, max_length=200)
-    #: One per harness that takes a model, each falling back to the CLI's own
-    #: default. Spelled out for the same reason as the stage keys above.
-    harness_model_claude_code: str | None = Field(None, max_length=200)
-    harness_model_opencode: str | None = Field(None, max_length=200)
-    harness_model_antigravity_cli: str | None = Field(None, max_length=200)
+    model_config = ConfigDict(extra="allow")
 
 
 @router.get("/prefs")
@@ -52,8 +55,16 @@ def read_prefs(conn=Depends(get_app_state)) -> dict:
 
 @router.put("/prefs")
 def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
-    written = {key: value for key, value in body.model_dump().items()
-               if value is not None}
+    """Store what the reader chose, and answer with what is now stored.
+
+    The filter to `prefs.KEYS` is what keeps the key space closed now that the
+    schema accepts extras — a browser on localhost still cannot write a row
+    this installation does not define. The length bound moves here with it,
+    since there is no per-field `max_length` left to carry it.
+    """
+    written = {key: str(value)[:VALUE_MAX]
+               for key, value in body.model_dump().items()
+               if value is not None and key in prefs.KEYS}
     prefs.write(conn, written)
     return prefs.choices(conn)
 

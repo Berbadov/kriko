@@ -1325,7 +1325,8 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # *here* is that the expensive research has not happened yet. Nothing waits
     # on the answer: see `app/disambiguate.py` for why non-blocking is not a
     # compromise but the automation principle holding.
-    scope = _disambiguate(settings, researcher, category, params, progress)
+    scope, asked, asked_why = _disambiguate(
+        settings, researcher, category, params, progress)
 
     progress.set(0.15, f"{researcher.search_provider} is reading up on {category}")
     progress.log(f"category: {category}")
@@ -1368,6 +1369,14 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     )
     written["category"] = category
     written["scope"] = scope
+    # Carried into the *final* result, not left in the partial one: a
+    # succeeding run replaces its partial result wholesale, so questions kept
+    # only there are visible on a cancelled run and on no other. They outlive
+    # this run on purpose — the answers make the *next* run exact, which is
+    # why `_with_attention` offers them beside "run it again".
+    if asked:
+        written["questions"] = asked
+        written["why"] = asked_why
     if written.get("uncovered"):
         # Said in the job's own last line, because a partial pack the reader
         # knows about is a next step and one they do not is a wrong answer
@@ -1533,14 +1542,24 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
             "summary": summarise(accepted, rejected)}
 
 
-def _disambiguate(settings, researcher, subject, params, progress) -> dict:
+def _disambiguate(settings, researcher, subject, params,
+                  progress) -> tuple[dict, list, str]:
     """One short call: is this name one product or several?
 
-    Returns the scope record — what was settled, and which parts of it were
-    *assumed* rather than confirmed. Never raises and never waits: a
-    disambiguation that failed must cost the reader a question, not the run
-    behind it, so every failure path here returns the same empty scope the run
-    had before this existed.
+    Returns `(scope, questions, why)` — the scope record (what was settled,
+    and which parts of it were *assumed* rather than confirmed), plus the
+    questions themselves so the caller can carry them into its own result.
+
+    The questions are returned rather than left in `progress.partial` because
+    a succeeding run's final result *replaces* the partial one (`finish_job`
+    in `app/web/jobs.py`). Anything written here and not carried out by the
+    caller therefore exists only until the run succeeds — which is every run
+    a reader actually waits for. That is how a fully-built question mechanism
+    came to reach the screen as log prose and nothing else.
+
+    Never raises and never waits: a disambiguation that failed must cost the
+    reader a question, not the run behind it, so every failure path here
+    returns the same empty scope the run had before this existed.
     """
     from app import disambiguate
 
@@ -1559,11 +1578,11 @@ def _disambiguate(settings, researcher, subject, params, progress) -> dict:
     except Exception as exc:  # noqa: BLE001 — a lost question, never a lost run
         progress.log(f"could not check the name for ambiguity ({exc}) — "
                      f"carrying on without asking")
-        return {}
+        return {}, [], ""
 
     if not found["ambiguous"]:
         progress.log(f"“{subject}” names one product — nothing to ask")
-        return disambiguate.scope(found)
+        return disambiguate.scope(found), [], ""
 
     # Written to the job row so a client can render them *while the run
     # continues*. The reader answering is a refinement, not a gate.
@@ -1578,7 +1597,7 @@ def _disambiguate(settings, researcher, subject, params, progress) -> dict:
     said = disambiguate.sentence(scope)
     if said:
         progress.log(said)
-    return scope
+    return scope, found["questions"], found["why"]
 
 
 def site_register(settings, params: dict, progress: Progress) -> dict:

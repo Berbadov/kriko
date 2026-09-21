@@ -189,7 +189,7 @@ def test_the_shipped_list_matches_what_the_manifest_actually_references(tmp_path
     an extension the browser refuses to load."""
     source = extension.source_dir()
     assert source is not None
-    manifest = json.loads((source / "manifest.json").read_text("utf-8"))
+    manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
 
     referenced = set()
     for script in manifest.get("content_scripts", []):
@@ -227,7 +227,7 @@ def test_a_staged_page_can_load_everything_it_asks_for(tmp_path):
 
     broken = []
     for page in sorted(staged.rglob("*.html")):
-        text = page.read_text("utf-8")
+        text = page.read_text(encoding="utf-8")
         for ref in re.findall(r'(?:src|href)="([^"#?:]+)"', text):
             if ref.startswith("/"):
                 continue
