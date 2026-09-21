@@ -209,10 +209,16 @@ export const api = {
         get<T.Operations>(`/api/operations?limit=${limit}&after_id=${after}`),
     submissions: (limit = 30) =>
         get<T.Submissions>(`/api/submissions?limit=${limit}`),
-    retryJob: (jobId: string) =>
+    /* Run it again — optionally carrying answers to what it asked last time.
+     *
+     * Answers ride on the *retry* rather than on a reply endpoint because
+     * there is no paused run to reply to: the identification pass never
+     * blocked (see `app/disambiguate.py`). Posting `{}` is still the plain
+     * "run it again", which is what every existing caller does. */
+    retryJob: (jobId: string, answers: Record<string, string> = {}) =>
         postJson<{ job_id: string; kind: string }>(
             `/api/jobs/${seg(jobId)}/retry`,
-            {},
+            { answers },
         ),
     checked: (lookupId: string) =>
         get<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`),

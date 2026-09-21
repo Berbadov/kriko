@@ -153,14 +153,6 @@
     .scale {
         margin-block: var(--s-3);
     }
-    .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-    }
-    .chips button[aria-pressed="true"] {
-        outline: 2px solid currentColor;
-    }
     .sources {
         display: inline-flex;
         align-items: center;

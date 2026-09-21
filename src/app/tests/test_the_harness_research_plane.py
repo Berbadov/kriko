@@ -1244,7 +1244,7 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
     grandchild = tmp_path / "grandchild.py"
     grandchild.write_text(
         "import os, pathlib, time\n"
-        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()))\n"
+        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()), encoding='utf-8')\n"
         "time.sleep(60)\n",
         encoding="utf-8",
     )

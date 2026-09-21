@@ -3,6 +3,7 @@
   "private": true,
   "description": "Tests for the Sahibinden listing scraper and extension panel.",
   "scripts": {
+    "_comment_test": "Double quotes, not single. npm runs this through cmd.exe on Windows, which does not strip single quotes -- so node was handed a pattern containing literal ' characters, matched nothing, and reported `tests 0 / fail 0` with exit 0. The gate's node leg was green and vacuous on the only host that runs the gate, hiding all 157 of these tests. tools/gate.sh now also fails a run that reports zero tests, because a passing suite and an empty one must not look alike.",
     "test": "node --test --test-force-exit \"extension/tests/**/*.test.js\""
   },
   "devDependencies": {

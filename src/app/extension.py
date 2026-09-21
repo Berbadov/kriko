@@ -171,7 +171,7 @@ def version(source: Path) -> str:
     import json
 
     try:
-        return str(json.loads((source / "manifest.json").read_text("utf-8")).get("version", ""))
+        return str(json.loads((source / "manifest.json").read_text(encoding="utf-8")).get("version", ""))
     except Exception:
         return ""
 
@@ -338,10 +338,22 @@ _MAC = (
     "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
 )
+#: `%LOCALAPPDATA%` first, and not as an afterthought: a Chrome installed by
+#: someone without administrator rights — the ordinary case on a work machine —
+#: lands there and never appears under `Program Files`, so a list that knows
+#: only the machine-wide paths tells that reader "no Chromium here" while
+#: Chrome is open in front of them. Chromium itself was missing outright, and
+#: it ships its binary as `chrome.exe` too, which is why the PATH names below
+#: carry both spellings.
 _WINDOWS = (
+    r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"%LOCALAPPDATA%\Chromium\Application\chrome.exe",
+    r"C:\Program Files\Chromium\Application\chrome.exe",
+    r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe",
     r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
 )
 
@@ -349,7 +361,12 @@ _WINDOWS = (
 def _candidates() -> list[str]:
     """Names and paths to try, in order of "what the reader probably uses"."""
     if sys.platform.startswith("win"):
-        return list(_WINDOWS) + ["chrome.exe", "msedge.exe", "brave.exe"]
+        # An unset variable expands to itself, which leaves a path that simply
+        # does not exist — and `find_chromium` already drops those — so the
+        # expansion needs no guard of its own.
+        return [os.path.expandvars(one) for one in _WINDOWS] + [
+            "chrome.exe", "chromium.exe", "msedge.exe", "brave.exe",
+        ]
     if sys.platform == "darwin":
         return list(_MAC) + list(_LINUX)
     return list(_LINUX)
