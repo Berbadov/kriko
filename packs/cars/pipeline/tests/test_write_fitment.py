@@ -65,9 +65,9 @@ def test_live_catalog_fitment_covers_every_variant():
     root = Path(__file__).resolve().parents[4] / "packs" / "cars" / "data"
     for variants_path in sorted((root / "variants").glob("*.yaml")):
         fitment_path = root / "fitment" / variants_path.name
-        variant_ids = {r["id"] for r in yaml.safe_load(variants_path.read_text())}
+        variant_ids = {r["id"] for r in yaml.safe_load(variants_path.read_text(encoding="utf-8"))}
         fitted_ids = {
-            r["variant_id"] for r in yaml.safe_load(fitment_path.read_text()) or []
+            r["variant_id"] for r in yaml.safe_load(fitment_path.read_text(encoding="utf-8")) or []
         }
         missing = variant_ids - fitted_ids
         assert not missing, (

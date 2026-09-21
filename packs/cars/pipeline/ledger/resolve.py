@@ -27,7 +27,7 @@ def _iter_part_ids():
     both component_registry() and known_part_ids() derive from."""
     for path in sorted(_PARTS_DIR.glob("**/*.yaml")):
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
         part_id = data.get("part_id")

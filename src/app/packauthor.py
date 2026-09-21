@@ -693,7 +693,7 @@ def _adapters(payload: dict, table: dict[str, list[str]]) -> list[dict]:
     for raw in (payload.get("adapters") or [])[:MAX_ADAPTERS]:
         if not isinstance(raw, dict):
             continue
-        site = sites.host_of(raw.get("site"))
+        site = sites.host_of(str(raw.get("site") or ""))
         if not site or site in seen:
             continue
         kind = _clean_id(raw.get("subject_kind") or next(iter(table), ""),
@@ -715,7 +715,7 @@ def _adapters(payload: dict, table: dict[str, list[str]]) -> list[dict]:
             ]
             if not labels:
                 continue
-            kept = {"labels": labels}
+            kept: dict[str, object] = {"labels": labels}
             # Only the two modifiers the engine's reader understands. An
             # unknown key here would be a rule that silently does nothing,
             # which is worse than a field the adapter never mentions.
@@ -1126,7 +1126,7 @@ def amend_brief(draft_state: dict, note: str = "") -> str:
     # where nothing recognises what they are looking at.
     adapters = draft_state.get("adapters") or []
     site_section = (
-        f"""
+        """
 ## This pack cannot be recognised in a browser yet
 
 It ships **no adapter**, so a reader standing on a listing page for one of
