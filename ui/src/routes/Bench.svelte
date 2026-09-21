@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import BenchChart from "../lib/BenchChart.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
@@ -329,13 +330,13 @@
     </div>
     <div class="row">
         <button onclick={() => preview(true)} disabled={starting || !!runningJobId}>Estimate</button>
-        <button onclick={start} disabled={starting || !!runningJobId}>
+        <button class="primary" onclick={start} disabled={starting || !!runningJobId}>
             {starting ? "Starting…" : "Run benchmark"}
         </button>
     </div>
     {#if estimate && typeof estimate.runs === "number"}
         <p class="meta" class:unmeasured={!estimateCurrent}>
-            {estimate.runs} measurement(s){estimate.usd === null || estimate.usd === undefined ? " — not yet measured here" : `, about $${estimate.usd.toFixed(2)}`}
+            {count(estimate.runs, "measurement")}{estimate.usd === null || estimate.usd === undefined ? " — not yet measured here" : `, about $${estimate.usd.toFixed(2)}`}
             {estimate.note ? ` — ${estimate.note}` : ""}
         </p>
     {/if}
@@ -347,7 +348,7 @@
                 {#each Object.entries(configs) as [name, saved] (name)}
                     <li class="krow">
                         <span class="klabel">{name}</span>
-                        <span class="meta">{saved.cases} case(s), planes {saved.planes || "all"}</span>
+                        <span class="meta">{count(saved.cases ?? 0, "case")}, planes {saved.planes || "all"}</span>
                         <button class="ghost" onclick={() => loadGrid(name)}>Load</button>
                         <button class="ghost" onclick={() => { api.forgetBenchConfig(name).then((r) => (configs = r.configs)); }}>Forget</button>
                     </li>
@@ -440,7 +441,7 @@
             </div>
 
             <div class="row">
-                <button onclick={start} disabled={starting || !!runningJobId}>
+                <button class="primary" onclick={start} disabled={starting || !!runningJobId}>
                     {starting ? "Starting…" : "Run benchmark again"}
                 </button>
             </div>
