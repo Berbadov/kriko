@@ -239,6 +239,50 @@ def test_a_case_writes_nothing_to_the_real_store(settings, store, monkeypatch):
     assert store.execute("SELECT COUNT(*) FROM claims").fetchone()[0] == 0
 
 
+def test_a_case_measures_the_readers_settings_rather_than_a_fresh_install(
+    settings, store, monkeypatch
+):
+    """The other half of the sandbox, and the half that was missing.
+
+    Isolating writes is right; starting the sandbox's `app.sqlite` *empty* was
+    not, because that is where preferences live. A benchmark run then read no
+    preference at all and measured the defaults — so choosing a harness and
+    pressing Benchmark reported numbers from a harness the reader had not
+    chosen, with nothing on screen to say so.
+    """
+    from app.web import tasks
+
+    conn = state.connect(settings.app_state_path)
+    state.put_settings(conn, {"harness": "codex", "harness_model_codex": "gpt-5-probe"})
+    conn.close()
+
+    seen = {}
+
+    def fake_research(measured_settings, params, progress):
+        inner = state.connect(measured_settings.app_state_path)
+        seen.update(state.all_settings(inner))
+        # Still a copy, not the reader's own file — the isolation this rides
+        # on must not be what pays for the fix.
+        assert measured_settings.app_state_path != settings.app_state_path
+        state.put_settings(inner, {"harness": "scribbled-by-the-benchmark"})
+        inner.close()
+        return {"documents": 0, "accepted": [], "rejected": [], "tokens_used": 0}
+
+    monkeypatch.setattr(tasks, "research", fake_research)
+    bench.run_case(settings, bench.cases(store)[0], plane="harness")
+
+    assert seen.get("harness") == "codex", (
+        "the benchmark ran against an empty app.sqlite, so it measured the "
+        "defaults rather than what the reader chose"
+    )
+    assert seen.get("harness_model_codex") == "gpt-5-probe"
+
+    after = state.connect(settings.app_state_path)
+    kept = state.all_settings(after)
+    after.close()
+    assert kept["harness"] == "codex", "a benchmark wrote back into the reader's settings"
+
+
 def test_a_plane_that_cannot_run_is_a_measurement_not_a_crash(
     settings, store, monkeypatch
 ):

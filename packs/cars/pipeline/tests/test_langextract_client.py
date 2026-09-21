@@ -12,7 +12,7 @@ from packs.cars.pipeline.langextract_client import GOLD_PATH, few_shot_examples
 
 def test_few_shot_examples_only_includes_correct_verdicts():
     few_shot_examples.cache_clear()
-    entries = yaml.safe_load(GOLD_PATH.read_text()) or []
+    entries = yaml.safe_load(GOLD_PATH.read_text(encoding="utf-8")) or []
     expected_correct = sum(1 for e in entries if e.get("verdict") == "correct" and e.get("quote", "").strip())
 
     examples = few_shot_examples()

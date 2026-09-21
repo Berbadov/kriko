@@ -264,11 +264,11 @@ def _keys(text: str, name: str) -> set[str]:
 
 
 def test_the_panel_words_every_verdict_and_invents_none():
-    assert _keys(PANEL.read_text(), "FACT_WORD") == set(factcheck.VERDICTS)
+    assert _keys(PANEL.read_text(encoding="utf-8"), "FACT_WORD") == set(factcheck.VERDICTS)
 
 
 def test_the_report_words_and_tones_every_verdict():
-    text = REPORT.read_text()
+    text = REPORT.read_text(encoding="utf-8")
     # Tone as well as wording: an untoned verdict falls back to neutral, so a
     # new "retracted" would arrive looking like a footnote.
     assert _keys(text, "FACT_WORD") == set(factcheck.VERDICTS)
@@ -279,6 +279,6 @@ def test_the_extension_asks_the_app_rather_than_judging_a_page_itself():
     """The panel's button must be a message to this app, not a fetch of its
     own: a content script that read the cited page directly would be doing it
     with the reader's cookies on a domain they never chose to visit."""
-    background = (ROOT / "extension" / "background.js").read_text()
+    background = (ROOT / "extension" / "background.js").read_text(encoding="utf-8")
     assert "CHECK_FACTS" in background
     assert "/api/factcheck" in background

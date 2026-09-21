@@ -283,7 +283,7 @@ def _fake_cli(tmp_path: Path, envelope: dict, *, exit_code: int = 0) -> harness_
     script = tmp_path / "fake_cli.py"
     script.write_text(
         "import pathlib, sys\n"
-        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text())\n"
+        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text(encoding='utf-8'))\n"
         f"sys.exit({exit_code})\n",
         encoding="utf-8",
     )
@@ -444,7 +444,7 @@ def _fake_stream(tmp_path: Path, messages: list, *, exit_code: int = 0):
     script = tmp_path / "fake_stream.py"
     script.write_text(
         "import pathlib, sys\n"
-        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text())\n"
+        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text(encoding='utf-8'))\n"
         f"sys.exit({exit_code})\n",
         encoding="utf-8",
     )
@@ -1244,7 +1244,7 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
     grandchild = tmp_path / "grandchild.py"
     grandchild.write_text(
         "import os, pathlib, time\n"
-        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()))\n"
+        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()), encoding='utf-8')\n"
         "time.sleep(60)\n",
         encoding="utf-8",
     )
@@ -1303,7 +1303,7 @@ def _grandchild_running(script: Path) -> bool:
         import ctypes
         from ctypes import wintypes
 
-        pid = int((script.parent / "grandchild-alive").read_text())
+        pid = int((script.parent / "grandchild-alive").read_text(encoding="utf-8"))
         kernel = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel.OpenProcess.restype = wintypes.HANDLE

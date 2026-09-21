@@ -88,7 +88,7 @@ def test_validate_part_flags_sibling_contaminated_claim():
     }
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "dq381.yaml"
-        path.write_text(yaml.dump(data))
+        path.write_text(yaml.dump(data), encoding="utf-8")
         errors = validate_part(path)
     assert any("sibling" in e.lower() for e in errors)
 

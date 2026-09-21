@@ -36,19 +36,19 @@ def test_write_variants_yaml_scaffolds_draft_rows(tmp_path, monkeypatch):
     assert all(r["model"] == "testmodel" for r in rows)
     assert all(r["generation"] == "2" for r in rows)
 
-    written = yaml.safe_load((tmp_path / "testmake_testmodel_2.yaml").read_text())
+    written = yaml.safe_load((tmp_path / "testmake_testmodel_2.yaml").read_text(encoding="utf-8"))
     assert written == rows
 
 
 def test_write_variants_yaml_never_overwrites_existing_file(tmp_path, monkeypatch):
     monkeypatch.setattr(discover_mod, "VARIANTS_DIR", tmp_path)
     path = tmp_path / "testmake_testmodel_2.yaml"
-    path.write_text(yaml.dump([{"id": "hand-curated", "power_min_hp": 100}]))
+    path.write_text(yaml.dump([{"id": "hand-curated", "power_min_hp": 100}]), encoding="utf-8")
 
     rows = write_variants_yaml("testmake", "testmodel_2", _catalog())
 
     assert rows == []
-    assert yaml.safe_load(path.read_text()) == [{"id": "hand-curated", "power_min_hp": 100}]
+    assert yaml.safe_load(path.read_text(encoding="utf-8")) == [{"id": "hand-curated", "power_min_hp": 100}]
 
 
 def test_write_variants_yaml_dry_run_does_not_write(tmp_path, monkeypatch):

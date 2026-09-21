@@ -48,13 +48,13 @@ def adapters() -> list[tuple[str, dict]]:
     """
     found = []
     for path in sorted((REPO / "packs").glob("*/adapters/*.json")):
-        found.append((path.parent.parent.name, json.loads(path.read_text())))
+        found.append((path.parent.parent.name, json.loads(path.read_text(encoding="utf-8"))))
     return found
 
 
 def injected_patterns() -> list[str]:
     """Every URL pattern the manifest will inject a content script for."""
-    manifest = json.loads(MANIFEST.read_text())
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     patterns = []
     for block in manifest.get("content_scripts", []):
         patterns.extend(block.get("matches", []))
@@ -69,7 +69,7 @@ def grantable_patterns() -> list[str]:
     it in the options page, which is the browser's rule about reading a third
     party's pages and not ours to route around.
     """
-    manifest = json.loads(MANIFEST.read_text())
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     return list(manifest.get("optional_host_permissions", []))
 
 
@@ -137,7 +137,7 @@ def test_the_panel_stylesheet_reaches_every_site_the_scripts_do(pack_id, adapter
     so no page can probe it to learn the extension's id — that pairing is
     asserted on the extension side, in `background_sites.test.js`.
     """
-    manifest = json.loads(MANIFEST.read_text())
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     reachable = []
     for block in manifest.get("web_accessible_resources", []):
         if any(r.endswith("hover_lite.css") for r in block.get("resources", [])):

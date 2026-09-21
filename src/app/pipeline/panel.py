@@ -106,7 +106,7 @@ def catalog_section(data_dir: Path) -> list[str]:
     for p in sorted((data_dir / "parts").rglob("*.yaml")):
         try:
             import yaml
-            data = yaml.safe_load(p.read_text()) or {}
+            data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
         except Exception:
             continue
         if isinstance(data, dict) and data.get("part_id"):
@@ -127,7 +127,7 @@ def activity_section(conn, lines_out: int = 5) -> list[str]:
         lines.append(f"  {r['started_at']} {r['stage']:<12} {r['llm'] or '-':<20} "
                      f"{r['calls']} calls {_money(r['usd'])}")
     if REMEDIATION_LOG.exists():
-        rows = [json.loads(l) for l in REMEDIATION_LOG.read_text().splitlines() if l.strip()]
+        rows = [json.loads(l) for l in REMEDIATION_LOG.read_text(encoding="utf-8").splitlines() if l.strip()]
         if rows:
             last = rows[-1]
             lines.append(f"  last remediation ({last.get('ts', '?')}): "

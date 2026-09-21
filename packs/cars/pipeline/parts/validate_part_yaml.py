@@ -80,7 +80,7 @@ def _domain_family_agrees(domain: str, subsystem: str) -> bool:
 def validate_part(path: Path) -> list[str]:
     errors: list[str] = []
     try:
-        data = yaml.safe_load(path.read_text())
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         return [f"{path}: YAML parse error: {e}"]
 
@@ -286,7 +286,7 @@ def validate_all(paths: list[Path]) -> int:
 
         # Cross-file duplicate check
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
         for claim in data.get("claims", []) or []:

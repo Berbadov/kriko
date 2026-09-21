@@ -16,7 +16,10 @@ dependency to explain.
 
     python packaging/render_icon.py
 
-Writes `tauri/src-tauri/icons/icon.png`. CI's `tauri icon` step does the rest.
+Writes `tauri/src-tauri/icons/icon.png`, the 1024px master every other size is
+derived from, and `icon.ico`, which is the one derived file that has to exist
+*before* the shell will compile on Windows rather than when it is bundled. The
+packaging step's `tauri icon` writes the remaining sizes from the same master.
 """
 
 import re
@@ -37,6 +40,27 @@ WEB_TARGET = REPO / "ui" / "public" / "mark.svg"
 #: 16 * 64. Tauri's largest derived icon is 1024, and an exact multiple keeps
 #: every smaller one a whole number of source pixels.
 SCALE = 64
+
+#: The Windows icon, and the one file `cargo check` cannot proceed without on
+#: a Windows host — `tauri-build` generates a Win32 resource from it before
+#: rustc reads a line, so its absence is not a missing *icon*, it is the whole
+#: shell failing to compile.
+#:
+#: Every other derived size comes from `tauri icon`, which `desktop.yml` runs
+#: and which needs the Tauri CLI and a network to install it. `tools/gate.sh`
+#: has neither on purpose. That left the tauri leg unrunnable on exactly the
+#: machine that builds the installers — and an unrunnable cargo check is how a
+#: `main.rs` that could not be parsed shipped in B83. So this one file is
+#: derived here instead, by the renderer that already exists: an ICO is a
+#: 6-byte directory, one 16-byte entry per image, and then PNGs, which is a
+#: container, not a rasteriser, and stays inside this file's no-dependencies
+#: rule. `tauri icon` still overwrites it at bundle time; the two agree
+#: because both start from `icon.png`'s source.
+ICO_TARGET = REPO / "tauri" / "src-tauri" / "icons" / "icon.ico"
+#: Scale per stored image. Windows picks the nearest at display time, so the
+#: set is the conventional one — and every entry is a whole multiple of the
+#: 16-cell grid, for the same reason `EXTENSION_ICONS` is.
+ICO_SIZES = (1, 2, 3, 4, 8, 16)
 
 RECT = re.compile(
     r'<rect\s+x="(\d+)"\s+y="(\d+)"\s+width="(\d+)"\s+height="(\d+)"\s+fill="#([0-9A-Fa-f]{6})"'
@@ -87,6 +111,38 @@ def png(pixels: list[list[tuple[int, int, int, int]]], scale: int) -> bytes:
         + chunk(b"IEND", b"")
     )
 
+
+
+def ico(pixels: list[list[tuple[int, int, int, int]]], scales: tuple[int, ...]) -> bytes:
+    """The same grid as a Windows ICO holding one PNG per scale.
+
+    PNG-in-ICO rather than the older BMP-with-AND-mask form: Windows has read
+    it since Vista, it is what `tauri icon` writes, and it means the images
+    here are byte-identical to the ones `png()` produces everywhere else —
+    there is one renderer, not a second one for this format.
+    """
+    images = [png(pixels, scale) for scale in scales]
+    header = struct.pack("<HHH", 0, 1, len(images))
+    offset = len(header) + 16 * len(images)
+    directory, body = b"", b""
+    for scale, image in zip(scales, images):
+        side = len(pixels) * scale
+        directory += struct.pack(
+            "<BBBBHHII",
+            # 0 means 256 — the field is one byte, so the largest size a
+            # directory entry can name outright is 255.
+            side if side < 256 else 0,
+            side if side < 256 else 0,
+            0,  # not a palette
+            0,  # reserved
+            1,  # colour planes
+            32,  # bits per pixel — RGBA, as `png()` writes
+            len(image),
+            offset,
+        )
+        body += image
+        offset += len(image)
+    return header + directory + body
 
 
 #: The extension's toolbar icons, and the scale each is rendered at. Every
@@ -208,10 +264,20 @@ def roles_from_png(data: bytes, side: int) -> list[str]:
 def main() -> None:
     svg = SOURCE.read_text(encoding="utf-8")
     side, pixels = grid(svg)
+    TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(png(pixels, SCALE))
+    ICO_TARGET.write_bytes(ico(pixels, ICO_SIZES))
     WEB_TARGET.parent.mkdir(parents=True, exist_ok=True)
-    WEB_TARGET.write_text(svg, encoding="utf-8")
+    # `newline=""` for the reason `tauri.conf.json` is written as bytes: the
+    # default translates every `\n` to `\r\n` on Windows, so running the render
+    # there rewrote all 37 lines of a file whose content had not changed. A
+    # no-op diff that appears whenever one particular host runs a tool is worse
+    # than noise — it teaches the reader of the diff to skip the file, and this
+    # is the file that is supposed to fail loudly when the mark drifts.
+    WEB_TARGET.write_text(svg, encoding="utf-8", newline="")
     print(f"{SOURCE.name} ({side}x{side}) -> {TARGET} ({side * SCALE}px)")
+    print(f"{SOURCE.name} -> {ICO_TARGET} "
+          f"({', '.join(f'{side * one}px' for one in ICO_SIZES)})")
     print(f"{SOURCE.name} -> {WEB_TARGET}")
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     for size, scale in sorted(EXTENSION_ICONS.items()):
