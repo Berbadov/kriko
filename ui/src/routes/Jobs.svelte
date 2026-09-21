@@ -216,7 +216,7 @@
                 placeholder="cordless drills, espresso machines, e-bikes"
             />
         </label>
-        <button type="submit" disabled={busy || !category.trim()}>
+        <button class="primary" type="submit" disabled={busy || !category.trim()}>
             Have my agent write it
         </button>
     </form>
@@ -338,7 +338,7 @@
                     </div>
                 {/each}
                 <p class="row">
-                    <button type="submit">Answer and run again</button>
+                    <button class="primary" type="submit">Answer and run again</button>
                 </p>
             </form>
         {/if}

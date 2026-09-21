@@ -2,6 +2,7 @@
     import EmptyState from "./EmptyState.svelte";
     import Failure from "./Failure.svelte";
     import { api } from "./api";
+    import { count } from "./plural";
     import { collect, humanize } from "./fields";
     import type { LookupResult, Pack, Subject, SubjectDetail, Term } from "./types";
 
@@ -173,7 +174,7 @@
                     <li>
                         <button class="ghost" onclick={() => pick(match)}>
                             {match.label}
-                            <span class="meta">{match.kind} · {match.claims} claim(s)</span>
+                            <span class="meta">{match.kind} · {count(match.claims, "claim")}</span>
                         </button>
                     </li>
                 {/each}
@@ -227,7 +228,7 @@
         {/if}
 
         <div class="row">
-            <button onclick={ask} disabled={busy || missing.length > 0}>
+            <button class="primary" onclick={ask} disabled={busy || missing.length > 0}>
                 {busy ? "Looking…" : "What goes wrong with this one?"}
             </button>
             <button class="ghost" onclick={clear}>Clear</button>
