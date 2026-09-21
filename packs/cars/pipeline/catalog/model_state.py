@@ -42,7 +42,7 @@ def _load(path: Path) -> list[dict]:
     if not path.exists():
         return []
     try:
-        data = yaml.safe_load(path.read_text()) or []
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     except yaml.YAMLError:
         return []
     return [r for r in data if isinstance(r, dict)] if isinstance(data, list) else []
@@ -53,7 +53,7 @@ def _catalog_parts(data_dir: Path) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for path in sorted((data_dir / "parts").rglob("*.yaml")):
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
         if not isinstance(data, dict) or not data.get("part_id"):

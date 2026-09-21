@@ -27,13 +27,13 @@ claims:
 def data(tmp_path):
     for sub in ("variants", "fitment", "parts/engine", "parts/transmission"):
         (tmp_path / sub).mkdir(parents=True)
-    (tmp_path / "parts" / "engine" / "k9k.yaml").write_text(PART_STUB)
-    (tmp_path / "parts" / "transmission" / "dc4.yaml").write_text(PART_WITH_CLAIMS)
+    (tmp_path / "parts" / "engine" / "k9k.yaml").write_text(PART_STUB, encoding="utf-8")
+    (tmp_path / "parts" / "transmission" / "dc4.yaml").write_text(PART_WITH_CLAIMS, encoding="utf-8")
     return tmp_path
 
 
 def _write_variants(data, rows):
-    (data / "variants" / "renault_megane_4.yaml").write_text(yaml.dump(rows))
+    (data / "variants" / "renault_megane_4.yaml").write_text(yaml.dump(rows), encoding="utf-8")
 
 
 def test_missing_scaffold_reports_no_variants(data):
@@ -114,7 +114,7 @@ def test_list_models_summarizes_each_catalogued_model(data):
     _write_variants(data, [{"id": "a", "engine_family": "k9k"},
                            {"id": "b", "engine_family": "k9k", "draft": True}])
     (data / "variants" / "volkswagen_golf_7.yaml").write_text(
-        yaml.dump([{"id": "g", "engine_family": "nope"}]))
+        yaml.dump([{"id": "g", "engine_family": "nope"}]), encoding="utf-8")
     models = model_state.list_models(data)
     assert [m["model_key"] for m in models] == ["renault_megane_4",
                                                 "volkswagen_golf_7"]
@@ -125,7 +125,7 @@ def test_list_models_summarizes_each_catalogued_model(data):
 
 
 def test_list_models_ignores_a_malformed_file(data):
-    (data / "variants" / "broken.yaml").write_text("{[not yaml")
+    (data / "variants" / "broken.yaml").write_text("{[not yaml", encoding="utf-8")
     _write_variants(data, [{"id": "a"}])
     assert [m["model_key"] for m in model_state.list_models(data)] == [
         "renault_megane_4"]

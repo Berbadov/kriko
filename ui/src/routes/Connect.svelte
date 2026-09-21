@@ -168,7 +168,7 @@
                                 the skill on disk is older than this install
                             </span>
                             <button
-                                class="quiet"
+                                class="ghost"
                                 disabled={busy === target.id}
                                 onclick={() => refreshSkill(target)}>Update the skill</button
                             >

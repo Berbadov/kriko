@@ -32,7 +32,7 @@ def _load(dirs: list[Path]) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     for d in dirs:
         for p in sorted(d.glob("**/*.yaml")):
-            data = yaml.safe_load(p.read_text()) or []
+            data = yaml.safe_load(p.read_text(encoding="utf-8")) or []
             claims = data if isinstance(data, list) else data.get("claims") or []
             out.setdefault(p.stem, []).extend(
                 c for c in claims if isinstance(c, dict) and c.get("title"))

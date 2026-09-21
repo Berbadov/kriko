@@ -116,7 +116,22 @@ def list_planes(
                     "llm": prefs.for_harness(conn, h.id),
                     "llms": harness_mod.models_for(h),
                     "llm_hint": h.model_hint,
-                    "llm_selectable": bool(h.model_flag),
+                    # `model_env` counts, for the reason `app/prefs.py` gives
+                    # at the same expression: Mistral Vibe has no `--model`,
+                    # its switch is an environment variable. Keyed on the flag
+                    # alone, Settings offered the picker and both *run* screens
+                    # hid it — so the harness a reader added to stop spending
+                    # Claude tokens could not be given a model where it is
+                    # actually launched. Two copies of one expression is how
+                    # they came to disagree; a test now asserts the two
+                    # endpoints answer the same for every harness.
+                    "llm_selectable": bool(h.model_flag or h.model_env),
+                    # The second dial, served here too. Settings could set an
+                    # effort and neither run screen could, which made it a
+                    # preference the reader had to leave the run to change.
+                    "effort": prefs.effort_for_harness(conn, h.id),
+                    "efforts": harness_mod.efforts_for(h),
+                    "effort_hint": h.effort_hint,
                 }
                 for h in installed
             ]

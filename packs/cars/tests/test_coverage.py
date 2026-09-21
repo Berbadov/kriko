@@ -38,7 +38,7 @@ SERVABLE_STATUSES = coverage.servable_statuses()
 
 def _write(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.dump(obj, sort_keys=False))
+    path.write_text(yaml.dump(obj, sort_keys=False), encoding="utf-8")
 
 
 def _variant(vid, **over):

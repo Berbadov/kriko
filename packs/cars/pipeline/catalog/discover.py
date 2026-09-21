@@ -353,11 +353,11 @@ def _cache_path(make: str, model: str) -> Path:
 
 def _load_cache(make: str, model: str) -> dict | None:
     p = _cache_path(make, model)
-    return json.loads(p.read_text()) if p.exists() else None
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
 
 def _save_cache(make: str, model: str, data: dict) -> None:
-    _cache_path(make, model).write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    _cache_path(make, model).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ── Fitment YAML update ───────────────────────────────────────────────────────
@@ -379,7 +379,7 @@ def _match_specs_to_variants(
         log.warning("Variants YAML not found: %s", variants_path)
         return []
 
-    variants: list[dict] = yaml.safe_load(variants_path.read_text()) or []
+    variants: list[dict] = yaml.safe_load(variants_path.read_text(encoding="utf-8")) or []
     fitment_rows: list[dict] = []
 
     for v in variants:
@@ -610,7 +610,7 @@ def write_variants_yaml(
         return rows
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.dump(rows, allow_unicode=True, sort_keys=False))
+    path.write_text(yaml.dump(rows, allow_unicode=True, sort_keys=False), encoding="utf-8")
     print(
         f"  Wrote {len(rows)} DRAFT variant row(s) to {path} — fill in "
         f"power_min_hp/power_max_hp/year_from/year_to and remove 'draft: true' "
@@ -641,7 +641,7 @@ def write_fitment_yaml(
     # fields like cooling_code/electrical_code), but hand-curated extra keys are kept.
     existing: list[dict] = []
     if path.exists():
-        existing = yaml.safe_load(path.read_text()) or []
+        existing = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     existing_map: dict[str, dict] = {r["variant_id"]: r for r in existing}
 
     updated = []
@@ -656,7 +656,7 @@ def write_fitment_yaml(
             updated.append(r)
             new_count += 1
 
-    path.write_text(yaml.dump(updated, allow_unicode=True, sort_keys=False))
+    path.write_text(yaml.dump(updated, allow_unicode=True, sort_keys=False), encoding="utf-8")
     print(f"  Wrote {len(updated)} fitment rows to {path} ({new_count} new).")
     return updated
 

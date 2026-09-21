@@ -150,7 +150,11 @@ def list_jobs(
     limit: int = Query(30, ge=1, le=200),
     app_state=Depends(get_app_state),
 ):
-    return {"items": state.list_jobs(app_state, limit)}
+    # Decorated here too, not only on the single-job read: the Jobs screen
+    # builds its list from this, so without it a reload is what makes an
+    # unanswered question disappear.
+    return {"items": [_with_attention(row)
+                      for row in state.list_jobs(app_state, limit)]}
 
 
 def _with_attention(row: dict) -> dict:
@@ -197,8 +201,26 @@ def cancel_job(job_id: str, runner=Depends(get_jobs)):
     return {"job_id": job_id, "state": outcome}
 
 
+class RetryRequest(BaseModel):
+    """What the reader adds when running it again.
+
+    `answers` is the return path for `_with_attention`'s questions, keyed by
+    question id. It is optional and the body itself is optional, so the plain
+    "run it again" button keeps posting nothing — this endpoint gained a way
+    to carry answers without gaining a requirement to.
+
+    Deliberately a *new run* rather than a resumption of the old one: the
+    identification pass never blocked on the answer (see `app/disambiguate.py`),
+    so there is no paused run to resume. The answers make the next run exact,
+    which is the only thing they were ever able to do.
+    """
+
+    answers: dict[str, str] = Field(default_factory=dict)
+
+
 @router.post("/jobs/{job_id}/retry")
-def retry_job(job_id: str, app_state=Depends(get_app_state), runner=Depends(get_jobs)):
+def retry_job(job_id: str, body: RetryRequest | None = None,
+              app_state=Depends(get_app_state), runner=Depends(get_jobs)):
     """Run the same work again, as a new row.
 
     A new job rather than a reset of the old one: the failed attempt's log is
@@ -217,6 +239,12 @@ def retry_job(job_id: str, app_state=Depends(get_app_state), runner=Depends(get_
         raise HTTPException(409, f"job {job_id} is still {row['state']}")
     params = dict(row["params"] or {})
     params["retry_of"] = job_id
+    # Merged onto whatever the first run was given, so answering one question
+    # does not discard the answers of an earlier round.
+    given = {key: value for key, value in (body.answers if body else {}).items()
+             if str(value).strip()}
+    if given:
+        params["answers"] = {**(params.get("answers") or {}), **given}
     return _submit(runner, row["kind"], params)
 
 
@@ -244,10 +272,16 @@ async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
                     return
                 # Only send on change, so an idle job costs one comparison per
                 # tick instead of a message the browser has to re-render.
-                fingerprint = (row["state"], row["progress"], row["message"], len(row["log"]))
+                # The result is in the fingerprint because the questions ride
+                # in it: a `progress.partial` that changes nothing else is
+                # exactly the tick worth pushing, and without this the live
+                # watcher — the reader actually waiting on the run — is the
+                # one client that never learns it was asked anything.
+                fingerprint = (row["state"], row["progress"], row["message"],
+                               len(row["log"]), len(str(row["result"])))
                 if fingerprint != last:
                     last = fingerprint
-                    yield f"data: {json.dumps(row)}\n\n"
+                    yield f"data: {json.dumps(_with_attention(row))}\n\n"
                 if row["done"]:
                     return
                 await asyncio.sleep(POLL_SECONDS)
