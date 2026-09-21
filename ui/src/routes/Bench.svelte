@@ -475,14 +475,6 @@
     .group > h3 {
         margin-block: 0 0.2rem;
     }
-    .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-    }
-    .chips button[aria-pressed="true"] {
-        outline: 2px solid currentColor;
-    }
     .stepper {
         display: inline-flex;
         align-items: center;

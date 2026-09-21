@@ -184,20 +184,6 @@
 </Async>
 
 <style>
-    .strip {
-        display: flex;
-        gap: var(--s-4);
-        list-style: none;
-        padding: 0;
-        margin-block: var(--s-3);
-    }
-    .strip strong {
-        font-size: var(--t-lg);
-        line-height: var(--lh-lg);
-    }
-    .strip li.warn strong {
-        color: var(--medium);
-    }
     .reasons,
     .batches {
         margin-block: var(--s-5);

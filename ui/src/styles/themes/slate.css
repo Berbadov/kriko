@@ -10,6 +10,13 @@
  * `--high`/`--medium`/`--low` used to survive into light and read as neon.
  */
 :root[data-theme="slate"] {
+    /* The OS half of the palette. Without it a `<select>`'s dropdown, a date
+     * picker and a scrollbar are drawn by the platform in *light* chrome over
+     * this near-black ground — the one part of the app no stylesheet here can
+     * reach, and the reason the controls read as raw. It is one line because
+     * the browser's own dark defaults are the right answer; what was missing
+     * was telling it which half we are in. */
+    color-scheme: dark;
     /* neutrals — 0 is the page ground, 9 is the strongest text */
     --n-0: #0f1115;
     --n-1: #14171d;
@@ -79,6 +86,9 @@
 
 @media (prefers-color-scheme: light) {
     :root[data-theme="slate"] {
+        /* Declared for the same reason panel declares dark: the platform
+         * draws select popups and scrollbars itself, and it needs telling. */
+        color-scheme: light;
         --n-0: #f6f7f9;
         --n-1: #ffffff;
         --n-2: #ffffff;
