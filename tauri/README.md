@@ -92,8 +92,7 @@ packaging/freeze.sh                              # freeze + ten smoke checks
 
 triple=$(rustc -Vv | sed -n 's/host: //p')       # Tauri wants the triple suffix
 cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$triple"
-npm --prefix tauri ci && npm --prefix tauri run tauri icon src-tauri/icons/icon.png
-git checkout -- tauri/src-tauri/icons/icon.png   # `tauri icon` rewrites its own source
+npm --prefix tauri ci && npm --prefix tauri run tauri icon ../packaging/icon-master.png
 
 cd tauri/src-tauri
 cargo metadata --locked --format-version 1 >/dev/null   # the lock is the pin

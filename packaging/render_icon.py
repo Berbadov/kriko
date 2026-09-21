@@ -37,7 +37,16 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "extension" / "assets" / "logo-mark.svg"
-TARGET = REPO / "tauri" / "src-tauri" / "icons" / "icon.png"
+#: The 1024px master, and deliberately *not* inside `tauri/src-tauri/icons/`.
+#: The build runs `tauri icon <master>`, which writes every derived size into
+#: that directory — including a re-encoded `icon.png`. When the master lived
+#: there it was both the input and one of the outputs, so every installer
+#: build silently overwrote the committed file (20,697 bytes in, 18,403 out)
+#: and left the tree dirty with a PNG nobody had edited. Same defect as the
+#: CRLF one below, one layer out: a generated file that comes back changed
+#: teaches people to ignore its diff. Here it would also have failed
+#: `test_the_committed_icon_is_what_the_mark_renders_to` on the next run.
+TARGET = REPO / "packaging" / "icon-master.png"
 #: The same mark, served to the frontend as the rail brand and the favicon.
 #: A copy rather than an import because `ui/` may not reach outside itself —
 #: Vite only bundles what lives under `ui/` — and a copy that is produced by
