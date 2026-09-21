@@ -422,7 +422,7 @@
             <!-- The correction verb. A generator you cannot correct is a slot
                  machine; a tool you can is worth keeping. -->
             <button
-                class="quiet"
+                class="ghost"
                 onclick={() =>
                     (amending = amending === draft.slug ? null : draft.slug)}
                 aria-expanded={amending === draft.slug}
@@ -435,13 +435,13 @@
                  and it has to survive a reload or it is not a dismissal. -->
             {#if draft.installed_as}
                 <button
-                    class="quiet"
+                    class="ghost"
                     onclick={() => hideDraft(draft)}
                     disabled={draftBusy === draft.slug}>Hide this</button
                 >
             {/if}
             <button
-                class="quiet"
+                class="ghost"
                 onclick={() => discardDraft(draft)}
                 disabled={draftBusy === draft.slug}>Throw it away</button
             >
@@ -548,7 +548,7 @@
              to remove a claim on the strength of one fetch. -->
         <div class="field">
             <label for="k-verify">Evidence</label>
-            <button id="k-verify" class="quiet" onclick={() => verifyPack(packFilter)}>
+            <button id="k-verify" class="ghost" onclick={() => verifyPack(packFilter)}>
                 Verify the knowledge here
             </button>
         </div>
@@ -917,19 +917,6 @@
     .count {
         margin: 0 0 var(--s-2);
     }
-    .klist {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    .krow {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        flex-wrap: wrap;
-        border-bottom: 1px solid var(--line);
-        padding: var(--s-1) 0;
-    }
     /* The whole row is the affordance, not a link buried in it: the reader's
      * target here is a name, and a 6px chevron is a worse target than the
      * 40rem of row the name sits in. */
@@ -953,15 +940,6 @@
         width: 1rem;
         text-align: center;
         color: var(--dim);
-    }
-    .kmain {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        flex: 1;
-    }
-    .klabel {
-        overflow-wrap: anywhere;
     }
     .badge.warn {
         background: var(--medium-soft);

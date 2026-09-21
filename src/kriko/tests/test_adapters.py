@@ -452,7 +452,7 @@ def test_the_cars_panel_declares_a_state_before_it_declares_a_narrower_one():
 
     repo = Path(__file__).resolve().parents[3]
     spec = json.loads(
-        (repo / "packs" / "cars" / "adapters" / "sahibinden.json").read_text("utf-8")
+        (repo / "packs" / "cars" / "adapters" / "sahibinden.json").read_text(encoding="utf-8")
     )
     states = spec["local_panel"]["states"]
     for i, state in enumerate(states):

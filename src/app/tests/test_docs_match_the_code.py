@@ -35,7 +35,7 @@ DOCS = ROOT / "docs"
 
 def read(*names: str) -> str:
     """Everything named, concatenated. Which file says it is not the point."""
-    return "\n".join((ROOT / name).read_text("utf-8") for name in names)
+    return "\n".join((ROOT / name).read_text(encoding="utf-8") for name in names)
 
 
 @pytest.fixture(scope="module")
@@ -142,7 +142,7 @@ def test_every_api_surface_has_an_endpoint_in_the_docs(prose, tmp_path):
 def test_the_documentation_map_names_files_that_exist():
     """CLAUDE.md's table is the entry point to every other document, so a row
     pointing at a moved file sends the next session to nothing."""
-    claude = (ROOT / "CLAUDE.md").read_text("utf-8")
+    claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
     # Only what is written as a path. A bare backticked filename in prose is
     # a *name* — the historical row names `handover.md` and `SCAFFOLD.md`
     # inside a parenthetical about the directory holding them, and reading

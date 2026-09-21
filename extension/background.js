@@ -227,7 +227,22 @@ async function apiBase() {
 
 function globToRegExp(pattern) {
   const escaped = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp("^" + escaped.replace(/\\\*/g, ".*") + "$", "i");
+  const body = escaped
+    // Chrome's own host rule, which this hand-rolled matcher never had: in a
+    // match pattern `*.example.com` means "example.com **or** any subdomain
+    // of it". Read as a plain glob it means "a subdomain of it", and the bare
+    // host then matches nothing.
+    //
+    // That is why a newly added site read nothing at all. `sites.py` writes
+    // `*://*.<site>/*` for every adapter it generates, and Chrome — which
+    // applies the real semantics — duly injected the content script on
+    // `https://<site>/...`. The page was scraped and handed here, where
+    // `adapterFor` found no adapter for the very URL Chrome had matched, and
+    // the panel opened knowing nothing. Two matchers disagreeing is the whole
+    // bug; this is the side that was wrong.
+    .replace(/:\/\/\\\*\\\./g, "://(?:[^/]+\\.)?")
+    .replace(/\\\*/g, ".*");
+  return new RegExp("^" + body + "$", "i");
 }
 
 function adapterFor(url, adapters) {

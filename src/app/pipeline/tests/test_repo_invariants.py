@@ -37,6 +37,20 @@ for _root in (SRC / "kriko", SRC / "app", REPO / "packs"):
 # A cross-package import at the start of a line, with or without indentation:
 # both `from backend.x import y` and `import backend.x as z`, top-level or
 # deferred inside a function body.
+def _rel(path: Path) -> str:
+    """A repo-relative path, in the one separator this file compares against.
+
+    Every literal here is written with `/`, and on Windows `relative_to`
+    hands back the other one. Two of these gates compared the two dialects
+    and so could only ever pass on a POSIX host: the pipeline-layer check
+    excused `src/app/pipeline/` and matched nothing, and the testpaths
+    check asked whether `src\app` was among `src/app` and said no. Both
+    then reported a violation the tree did not have, on the only machine
+    that runs the gate at all.
+    """
+    return path.relative_to(REPO).as_posix()
+
+
 def _imports_of(package: str, tree: Path) -> list[str]:
     pattern = re.compile(rf"^\s*(?:from|import)\s+{package}\b")
     hits = []
@@ -45,7 +59,7 @@ def _imports_of(package: str, tree: Path) -> list[str]:
             continue
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if pattern.match(line):
-                hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+                hits.append(f"{_rel(path)}:{n}: {line.strip()}")
     return hits
 
 
@@ -159,7 +173,7 @@ def test_pytest_testpaths_covers_every_test_directory():
     configured = set(cfg["pytest"]["testpaths"].split())
 
     found = {
-        str(d.parent.relative_to(REPO))
+        _rel(d.parent)
         for d in list(REPO.glob("*/tests")) + list(REPO.glob("src/*/tests"))
         if d.is_dir() and any(d.glob("test_*.py"))
     }
@@ -265,7 +279,7 @@ def test_ui_contains_no_pack_vocabulary():
             continue
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if pattern.search(line):
-                hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+                hits.append(f"{_rel(path)}:{n}: {line.strip()}")
     assert not hits, (
         "pack vocabulary in ui/src — build the field from the pack's own rows "
         "(/api/identity-keys, /api/packs/{id}/vocabulary) instead:\n" + "\n".join(hits)
@@ -338,7 +352,7 @@ def test_the_shell_holds_no_engine_logic():
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             code = line.split("//")[0]
             assert not forbidden.search(code), (
-                f"{path.relative_to(REPO)}:{number} puts engine vocabulary in "
+                f"{_rel(path)}:{number} puts engine vocabulary in "
                 f"the shell: {line.strip()!r}. Rust owns the sidecar's "
                 f"lifetime and nothing else — see tauri/README.md."
             )
@@ -489,7 +503,7 @@ def test_every_data_file_under_src_is_declared_as_package_data():
         if not any(
             path in set(base.glob(pattern)) for base, pattern in globs
         ):
-            undeclared.append(str(path.relative_to(REPO)))
+            undeclared.append(_rel(path))
 
     assert undeclared == [], (
         "these files live under src/ but no package-data rule ships them, so a "
@@ -521,14 +535,36 @@ def test_the_catalog_is_never_scanned_in_directory_order():
                 continue
             lines = path.read_text(encoding="utf-8").splitlines()
             tree = ast.parse("\n".join(lines))
-            sorted_args = {
-                id(node.args[0])
-                for node in ast.walk(tree)
-                if isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id in ("sorted", "min", "max", "len", "any", "all")
-                and node.args
-            }
+            # A scan is excused when the order it returns cannot reach the
+            # result. Two shapes do that, and this only used to see the first:
+            #
+            #   sorted(p.glob("*"))                    the scan IS the argument
+            #   sorted(f(p) for p in root.glob("*"))   the scan feeds it
+            #
+            # The second is the one people actually write, and it was being
+            # reported as a violation while already sorted — so the honest fix
+            # for it looked like adding `# any-order:` to a line that did not
+            # need it, which is how an opt-out marker stops meaning anything.
+            # A set or dict comprehension is the third shape: order cannot
+            # survive into a set, so `{p.stem for p in root.glob("*")}` is
+            # order-free by construction rather than by assertion.
+            order_free = ("sorted", "min", "max", "len", "any", "all",
+                          "set", "frozenset", "sum")
+            sorted_args = set()
+            for node in ast.walk(tree):
+                subtrees = []
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id in order_free
+                    and node.args
+                ):
+                    subtrees.append(node.args[0])
+                elif isinstance(node, (ast.SetComp, ast.DictComp)):
+                    subtrees.extend(gen.iter for gen in node.generators)
+                for subtree in subtrees:
+                    for inner in ast.walk(subtree):
+                        sorted_args.add(id(inner))
             for node in ast.walk(tree):
                 if (
                     isinstance(node, ast.Call)
@@ -540,7 +576,7 @@ def test_the_catalog_is_never_scanned_in_directory_order():
                     if "any-order:" in line:
                         continue
                     offenders.append(
-                        f"{path.relative_to(REPO)}:{node.lineno}: {line.strip()}"
+                        f"{_rel(path)}:{node.lineno}: {line.strip()}"
                     )
     assert offenders == [], (
         "these scans depend on directory order — wrap them in sorted(), or "
@@ -862,7 +898,7 @@ def test_the_extension_speaks_no_sites_own_language():
         for n, line in enumerate(source.splitlines(), 1):
             words = [c for c in line if ord(c) > 127 and c.isalpha()]
             if words:
-                offenders.append(f"{path.relative_to(REPO)}:{n}: {''.join(words)}")
+                offenders.append(f"{_rel(path)}:{n}: {''.join(words)}")
     # A gate that found no files to read is a gate that has stopped working.
     assert scanned >= 4, f"only {scanned} script(s) scanned — is the rglob right?"
     assert not offenders, (
@@ -911,58 +947,111 @@ def test_the_shipped_panel_declares_what_the_interpreter_reads():
     )
 
 
-# Every way a Path hands you text or takes it. `open()` is not in the list
-# because `io.open` has its own signature and almost every one in this tree is
-# a binary or a NamedTemporaryFile; the pathlib pair is where the defect lived.
-_TEXT_IO = ("read_text", "write_text")
-
-
-def test_no_file_is_read_in_the_platform_s_default_encoding():
-    """`path.read_text()` means cp1252 on a Turkish Windows box.
-
-    Not a style rule — a crash. `packs/cars/data/parts/engine/k9k.yaml` holds
-    a curly quote inside a claim's prose, and on 2026-09-20 every test that
-    loaded the catalog on this machine died with `UnicodeDecodeError: charmap
-    codec can't decode byte 0x9d`. Sixty of them at once. The files are valid
-    UTF-8; `read_text()` simply asks the OS what encoding to guess with, and
-    on Windows outside the en-US default it guesses wrong.
-
-    It never showed up in CI because CI is Linux, where the guess happens to
-    be UTF-8 — so the whole class was invisible to every gate we had, on
-    exactly the platform the reader runs. That is the shape of bug this file
-    exists for: it cannot be caught by testing behaviour, only by reading the
-    tree.
-
-    Writing is the same bug pointed the other way. A pack authored on this
-    machine would have had its non-ASCII prose written as cp1252 bytes into a
-    file the next reader opens as UTF-8, and a claim would come back mojibake
-    with nothing having raised.
-    """
-    offenders = []
-    for where in ("src", "packs", "tools", "packaging"):
-        for path in sorted((REPO / where).rglob("*.py")):
-            try:
-                tree = ast.parse(path.read_text(encoding="utf-8"))
-            except (SyntaxError, UnicodeDecodeError):
+def _text_calls_without_encoding(tree: ast.AST) -> list[tuple[int, str]]:
+    """Every text-mode file call in `tree` that never names an encoding."""
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Attribute):
+            name = func.attr
+        elif isinstance(func, ast.Name):
+            name = func.id
+        else:
+            continue
+        if name not in {"read_text", "write_text", "open"}:
+            continue
+        if any(kw.arg == "encoding" for kw in node.keywords):
+            continue
+        if name == "open":
+            # `open` is the one name here that other objects also answer to,
+            # and the first version of this gate reported three calls nobody
+            # could act on: `os.open`, which returns a file descriptor and has
+            # no encoding to pass, and two `provenance.open(researcher)` -- a
+            # method that happens to share the word. A gate whose findings are
+            # mostly noise gets its whole output skimmed, so it has to be able
+            # to tell a file open from a homonym.
+            #
+            # The tell is the mode: a real one is `open(path, "a")` or
+            # `path.open("a")` or no argument at all. A call whose first
+            # argument is some other expression is somebody else's `open`.
+            builtin = isinstance(func, ast.Name)
+            if not builtin and isinstance(func.value, ast.Name) and func.value.id == "os":
                 continue
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.Call):
-                    continue
-                func = node.func
-                if not isinstance(func, ast.Attribute):
-                    continue
-                if func.attr not in _TEXT_IO:
-                    continue
-                positional = len(node.args) >= (2 if func.attr == "write_text" else 1)
-                if positional or any(kw.arg == "encoding" for kw in node.keywords):
-                    continue
-                offenders.append(
-                    f"{path.relative_to(REPO)}:{node.lineno}  .{func.attr}()"
-                )
+            args = node.args[1:] if builtin else node.args
+            mode = None
+            if args and isinstance(args[0], ast.Constant) and isinstance(args[0].value, str):
+                mode = args[0].value
+            for kw in node.keywords:
+                if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                    mode = str(kw.value.value)
+            if not builtin and mode is None and (node.args or node.keywords):
+                continue
+            # Binary mode has no encoding to name, and `read_bytes`/`write_bytes`
+            # never reach here at all. Only a text-mode open is a finding -- but
+            # a mode we cannot read statically stays one, because the default
+            # is text.
+            if mode and "b" in mode:
+                continue
+        found.append((node.lineno, name))
+    return found
+
+
+def test_no_text_file_is_read_or_written_in_the_platform_encoding():
+    """`read_text`/`write_text`/`open` must always name their encoding.
+
+    Without `encoding=`, Python uses `locale.getencoding()` — UTF-8 on the CI
+    images and on macOS, **cp1252 on a Turkish or Western-European Windows
+    install**. Every byte this project stores is UTF-8: pack YAML, adapters,
+    briefs, fixtures, the Turkish site vocabulary in `local_panel`. So the
+    same call that passes everywhere else raises `UnicodeDecodeError` on the
+    one machine the app is actually built and shipped from.
+
+    That is not hypothetical. Sixty-six tests failed on the Windows host with
+    `'charmap' codec can't decode byte 0x9d`, and clearing them took two
+    hundred and ten call sites. Those edits were the patch; this is the
+    mechanism, because the next unencoded call would have been written the
+    same week and nothing would have said so until a reader's install fell
+    over.
+
+    The rule is a rule, not a preference: pass `encoding="utf-8"` explicitly,
+    or use `read_bytes`/`write_bytes` when the payload is not text. Bytes are
+    also how you avoid the other half of this, which no source gate can see —
+    `write_text` translates a newline to CRLF on Windows, and a file written
+    that way reads as a whole-file diff to everyone else.
+    """
+    # Files git tracks, not every `.py` under the root. An exclusion list is
+    # the wrong shape for this: it named `.venv` and this host also has a
+    # `.venv-win`, so the gate spent its time reading pytest's and
+    # PyInstaller's vendored source and failed on *their* unencoded `open()`
+    # calls -- findings nobody in this repo can act on, in files nobody here
+    # wrote. Every name such a list could learn is another name it can miss,
+    # and "what this project is answerable for" is already recorded exactly
+    # once, by git.
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z", "*.py"],
+        cwd=REPO,
+        capture_output=True,
+        check=True,
+    ).stdout.decode().split("\0")
+
+    offenders = []
+    for name in sorted(filter(None, tracked)):
+        path = REPO / name
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            # Not this guard's business to report: the suite could not import
+            # the file either way, and whatever does report it will say so
+            # more clearly than an encoding gate would.
+            continue
+        for lineno, name in _text_calls_without_encoding(tree):
+            offenders.append(f"{_rel(path)}:{lineno}  {name}()")
 
     assert not offenders, (
-        "these read or write text in whatever encoding the OS guesses, which "
-        "is cp1252 on a non-en-US Windows box and UTF-8 in CI — so they work "
-        "everywhere we test and crash where the reader runs. Pass "
-        'encoding="utf-8":\n  ' + "\n  ".join(offenders)
+        "these calls use the platform's default encoding, which is cp1252 on "
+        "the Windows host this app ships from, while every file they touch is "
+        'UTF-8. Pass encoding="utf-8", or read_bytes/write_bytes if the '
+        "payload is not text:\n  " + "\n  ".join(offenders)
     )
