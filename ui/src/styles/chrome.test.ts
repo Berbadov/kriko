@@ -252,6 +252,42 @@ describe("the work column", () => {
         expect(block("body", BASE)).toMatch(/overflow-wrap:\s*anywhere/);
     });
 
+    it("does not style a radio as if it were a text field", () => {
+        /* `min-width: 150px` on a bare `input` selector gave every radio and
+         * checkbox a 150px-wide box with the glyph at its left edge — in
+         * Settings the dot sat ~100px from the label it belonged to. The
+         * text-field rule must name text fields. */
+        const field = block(
+            'input:not([type="radio"]):not([type="checkbox"]),\nselect,\ntextarea',
+        );
+        expect(field).toMatch(/min-width:\s*150px/);
+
+        // And the toggles get their own rule, sized intrinsically.
+        const toggle = block('input[type="radio"],\ninput[type="checkbox"]');
+        expect(toggle).not.toMatch(/min-width/);
+        // The app's gold, not the operating system's blue.
+        expect(toggle).toMatch(/accent-color:\s*var\(--accent\)/);
+    });
+
+    it("does not draw a focus ring around the whole screen", () => {
+        /* `.view` takes focus programmatically on every route change so a
+         * screen reader starts at the new screen. Chrome matches
+         * `:focus-visible` on a programmatic focus, so the universal focus rule
+         * painted a 2px accent rectangle around the entire content column — on
+         * every screen, from the first navigation onward. It was the largest
+         * and brightest element in the app and nobody had asked for it.
+         *
+         * jsdom computes no focus ring and renders no box, so only the
+         * declaration can be held to account — the same trade the header
+         * explains. */
+        expect(block(".view:focus,\n.view:focus-visible", BASE)).toMatch(
+            /outline:\s*none/,
+        );
+        // And the rule it overrides is still there: suppressing the container's
+        // ring must not have been done by deleting everyone else's.
+        expect(block(":focus-visible", BASE)).toMatch(/outline:.*var\(--accent\)/);
+    });
+
     it("undoes both scrollers on paper", () => {
         // A fixed-height clipping frame prints as one page of a ten-page
         // report. The screen rules and the print rules are one change.

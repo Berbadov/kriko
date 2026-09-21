@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count } from "./plural";
     import { api } from "./api";
     import type { Scale } from "./types";
 
@@ -122,7 +123,7 @@
         <p class="meta">
             {chosen?.note ?? ""}
             {#if sources}
-                <br />Up to {sources} source(s) per subject{multiplier > 1
+                <br />Up to {count(sources, "source")} per subject{multiplier > 1
                     ? ` × ${multiplier}`
                     : ""}.
             {/if}

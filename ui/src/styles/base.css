@@ -86,6 +86,25 @@ pre {
     outline-offset: 1px;
 }
 
+/* …but never on the route container.
+ *
+ * `.view` carries `tabindex="-1"` so a route change can land focus at the top
+ * of the new screen — otherwise a screen reader and the keyboard stay where
+ * the old screen left them (App.svelte, `focusTheView`). Chrome matches
+ * `:focus-visible` on a *programmatic* focus, so the rule above painted a 2px
+ * accent rectangle around the entire content column: on every screen, from the
+ * first navigation until the reader happened to click something.
+ *
+ * It was the largest and brightest element in the app, and it was a focus ring
+ * nobody had asked for. A ring is a promise that keystrokes go here; the
+ * container takes no keystrokes, so it gets no ring. Every control inside it
+ * still draws its own, which is the half that was ever load-bearing.
+ */
+.view:focus,
+.view:focus-visible {
+    outline: none;
+}
+
 hr {
     border: 0;
     border-top: 1px solid var(--line);

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "./api";
+    import { count } from "./plural";
     import Failure from "./Failure.svelte";
     import Pick from "./Pick.svelte";
     import Scale from "./Scale.svelte";
@@ -149,7 +150,7 @@
             </p>
         {:else}
             <p class="meta">
-                Read {documents} source(s) on the <code>{plane}</code> plane. Every
+                Read {count(documents ?? 0, "source")} on the <code>{plane}</code> plane. Every
                 finding went through the same grounding check as one an agent
                 submits by hand, and the whole run can be taken back out from
                 <strong>Activity → Runs</strong>.
@@ -211,7 +212,7 @@
 
         {#if kept || refused}
             <p class="state {kept ? 'ok' : 'empty'}">
-                {kept} claim(s) kept, {refused} refused.
+                {count(kept, "claim")} kept, {refused} refused.
             </p>
         {/if}
 

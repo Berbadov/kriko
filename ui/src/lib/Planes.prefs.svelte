@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count, word } from "./plural";
     import Async from "./Async.svelte";
     import Pick from "./Pick.svelte";
     import Failure from "./Failure.svelte";
@@ -277,7 +278,7 @@
                 </li>
                 <li>
                     <strong>{data.spent?.runs ?? 0}</strong>
-                    <span class="meta">run(s)</span>
+                    <span class="meta">{word(data.spent?.runs ?? 0, "run")}</span>
                 </li>
             </ul>
 
@@ -288,7 +289,7 @@
                             <div class="kmain">
                                 <span class="klabel">{row.plane} · {row.llm || "—"}</span>
                                 <span class="meta">
-                                    {row.runs} run(s), {row.priced} of them priced
+                                    {count(row.runs, "run")}, {row.priced} of them priced
                                 </span>
                             </div>
                             <span class="meta">
