@@ -17,7 +17,7 @@ GOLD = Path(__file__).parent.parent / "gold" / "gold.yaml"
 
 
 def main() -> int:
-    entries = yaml.safe_load(GOLD.read_text()) or []
+    entries = yaml.safe_load(GOLD.read_text(encoding="utf-8")) or []
     budget = Budget()
     client = verdict._client()
     failures = 0

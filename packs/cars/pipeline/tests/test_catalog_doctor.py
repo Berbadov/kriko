@@ -18,10 +18,10 @@ def _catalog(tmp_path, variants, fitment=None):
     (tmp_path / "fitment").mkdir()
     (tmp_path / "parts").mkdir()
     (tmp_path / "variants" / "volkswagen_golf_8.yaml").write_text(
-        yaml.dump(variants, allow_unicode=True, sort_keys=False))
+        yaml.dump(variants, allow_unicode=True, sort_keys=False), encoding="utf-8")
     if fitment is not None:
         (tmp_path / "fitment" / "volkswagen_golf_8.yaml").write_text(
-            yaml.dump(fitment, allow_unicode=True, sort_keys=False))
+            yaml.dump(fitment, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return tmp_path
 
 
@@ -49,7 +49,7 @@ def test_diagnose_finds_the_trim_shaped_lineup(tmp_path):
 def test_repair_merges_renames_and_normalizes(tmp_path):
     data = _catalog(tmp_path, [_row(), _row(id="life_1_5_tsi_150")])
     doctor.repair(data)
-    rows = yaml.safe_load((data / "variants" / "volkswagen_golf_8.yaml").read_text())
+    rows = yaml.safe_load((data / "variants" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8"))
     assert len(rows) == 1
     assert rows[0]["id"] == "golf8_ea211evo2_150"
     assert rows[0]["engine_family"] == "ea211_evo2"
@@ -59,10 +59,10 @@ def test_repair_merges_renames_and_normalizes(tmp_path):
 def test_repair_is_idempotent(tmp_path):
     data = _catalog(tmp_path, [_row(), _row(id="life_1_5_tsi_150")])
     doctor.repair(data)
-    before = (data / "variants" / "volkswagen_golf_8.yaml").read_text()
+    before = (data / "variants" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8")
     second = doctor.repair(data)
     assert second.rewritten == []
-    assert (data / "variants" / "volkswagen_golf_8.yaml").read_text() == before
+    assert (data / "variants" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8") == before
 
 
 def test_unresearchable_code_fails_open_as_draft(tmp_path):
@@ -70,7 +70,7 @@ def test_unresearchable_code_fails_open_as_draft(tmp_path):
     data = _catalog(tmp_path, [_row(transmission="automatic",
                                     transmission_code="7-speed DSG")])
     doctor.repair(data)
-    rows = yaml.safe_load((data / "variants" / "volkswagen_golf_8.yaml").read_text())
+    rows = yaml.safe_load((data / "variants" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8"))
     assert rows[0]["draft"] is True
     assert rows[0]["id"].endswith("_auto")
     remaining = doctor.diagnose(data)
@@ -87,7 +87,7 @@ def test_repair_preserves_a_remapped_fitment_row(tmp_path):
                               "transmission_code": "manual",
                               "electrical_code": "", "body_code": ""}])
     doctor.repair(data)
-    rows = yaml.safe_load((data / "fitment" / "volkswagen_golf_8.yaml").read_text())
+    rows = yaml.safe_load((data / "fitment" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8"))
     assert rows[0]["engine_family"] == "ea211"
 
 
@@ -100,7 +100,7 @@ def test_repair_follows_renames_into_fitment_and_prunes_orphans(tmp_path):
                               "engine_family": "ea211", "transmission_code": "manual",
                               "electrical_code": "", "body_code": ""}])
     doctor.repair(data)
-    rows = yaml.safe_load((data / "fitment" / "volkswagen_golf_8.yaml").read_text())
+    rows = yaml.safe_load((data / "fitment" / "volkswagen_golf_8.yaml").read_text(encoding="utf-8"))
     assert [r["variant_id"] for r in rows] == ["golf8_ea211evo2_150"]
     assert rows[0]["engine_family"] == "ea211"
 

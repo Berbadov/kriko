@@ -143,7 +143,7 @@ def test_the_manifest_covers_every_platform_it_was_given(tmp_path):
 
     out = tmp_path / "release" / "latest.json"
     _run(artifacts, out, "0.4.0")
-    manifest = json.loads(out.read_text())
+    manifest = json.loads(out.read_text(encoding="utf-8"))
     assert manifest["version"] == "0.4.0"
     assert sorted(manifest["platforms"]) == [
         "darwin-aarch64",
@@ -164,7 +164,7 @@ def test_one_missing_platform_still_publishes_the_others(tmp_path):
     (artifacts / "Kriko.AppImage.sig").write_text("s", encoding="utf-8")
     out = tmp_path / "release" / "latest.json"
     _run(artifacts, out, "0.4.0")
-    assert list(json.loads(out.read_text())["platforms"]) == ["linux-x86_64"]
+    assert list(json.loads(out.read_text(encoding="utf-8"))["platforms"]) == ["linux-x86_64"]
 
 
 def test_a_signature_with_no_bundle_is_fatal(tmp_path):
@@ -204,7 +204,7 @@ def _run(artifacts, out, version, check=True):
 
 def test_the_shell_asks_before_it_restarts_the_app():
     """An update that closes the window unasked is a bug, not a feature."""
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     assert "blocking_show" in main_rs, "the shell installs without asking"
     assert "app.restart()" in main_rs
     # The old engine holds the store's WAL lock; restarting around it is the
@@ -224,7 +224,7 @@ def test_the_shell_asks_before_it_restarts_the_app():
 
 def test_the_workflow_never_hard_requires_the_signing_secret():
     """A fork with no secret must still get installers out of a tag."""
-    workflow = (REPO / ".github" / "workflows" / "desktop.yml").read_text()
+    workflow = (REPO / ".github" / "workflows" / "desktop.yml").read_text(encoding="utf-8")
     assert "TAURI_SIGNING_PRIVATE_KEY" in workflow
     assert "configure_updater.py" in workflow
     # The manifest step is conditional on a .sig actually existing.
@@ -269,7 +269,7 @@ def test_the_updater_plugin_is_never_required_to_start_the_app():
     allowed to shrug at, exactly as `offer_update` already shrugs at a missing
     endpoint.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     builder, setup = main_rs.split("fn main()", 1)[1].split(".setup(", 1)
     assert "tauri_plugin_updater" not in builder, (
         "the updater is registered on the builder — a build with no signing "
@@ -298,7 +298,7 @@ def test_a_shell_plugin_failure_can_never_be_a_panic():
     build — but nothing whose configuration is written at *package* time may
     be initialized where the only failure mode is a silent process exit.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     builder = main_rs.split("fn main()", 1)[1].split(".setup(", 1)[0]
     configured_at_build_time = ("updater",)
     for name in configured_at_build_time:
@@ -307,7 +307,7 @@ def test_a_shell_plugin_failure_can_never_be_a_panic():
 
 def test_ci_launches_the_shell_and_not_only_builds_it():
     """A green bundle job is not evidence that the app opens; v0.2.4 was both."""
-    workflow = (REPO / ".github" / "workflows" / "desktop.yml").read_text()
+    workflow = (REPO / ".github" / "workflows" / "desktop.yml").read_text(encoding="utf-8")
     assert "smoke_app.py" in workflow, (
         "nothing in CI starts the shell — the failure this catches is a panic "
         "on a stderr no double-click has"

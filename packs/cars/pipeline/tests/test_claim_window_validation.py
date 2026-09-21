@@ -36,7 +36,7 @@ def _write_part(tmp_path: Path, applies_when) -> Path:
         "claims": [claim],
     }
     path = tmp_path / "testwindow.yaml"
-    path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
+    path.write_text(yaml.dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return path
 
 

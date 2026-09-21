@@ -3,7 +3,7 @@
   "private": true,
   "description": "Tests for the Sahibinden listing scraper and extension panel.",
   "scripts": {
-    "test": "node --test --test-force-exit 'extension/tests/**/*.test.js'"
+    "test": "node --test --test-force-exit \"extension/tests/**/*.test.js\""
   },
   "devDependencies": {
     "jsdom": "^26.0.0"

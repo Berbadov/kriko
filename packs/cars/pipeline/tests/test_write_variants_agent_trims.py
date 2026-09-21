@@ -154,16 +154,16 @@ def catalog(tmp_path, monkeypatch):
 def test_injected_trims_write_variants_and_fitment(catalog):
     variants, fitment = catalog
     wv.run("renault", "megane_4", trims=[_trim()])
-    text = (variants / "renault_megane_4.yaml").read_text()
+    text = (variants / "renault_megane_4.yaml").read_text(encoding="utf-8")
     assert "meg4_k9k_110" in text
-    assert "meg4_k9k_110" in (fitment / "renault_megane_4.yaml").read_text()
+    assert "meg4_k9k_110" in (fitment / "renault_megane_4.yaml").read_text(encoding="utf-8")
 
 
 def test_injected_trims_need_no_hardcoded_entry(catalog):
     """The whole point: a model absent from TR_MARKET_TRIMS still onboards."""
     assert "renault_brandnew" not in wv.TR_MARKET_TRIMS
     wv.run("renault", "brandnew", trims=[_trim(id="bn_1")])
-    assert "bn_1" in (catalog[0] / "renault_brandnew.yaml").read_text()
+    assert "bn_1" in (catalog[0] / "renault_brandnew.yaml").read_text(encoding="utf-8")
 
 
 def test_run_without_trims_still_reads_the_hardcoded_table(catalog):
