@@ -74,14 +74,15 @@ ui/.svelte-kit/
 !ui/package-lock.json
 
 # The desktop shell's build products. The Rust target directory is ~2GB, the
-# frozen sidecar is per-OS, and `tauri icon` generates every icon from the one
-# source PNG that *is* committed (tauri/src-tauri/icons/icon.png).
+# frozen sidecar is per-OS, and `tauri icon` generates every icon in
+# src-tauri/icons/ from packaging/icon-master.png -- including icon.png,
+# which is why the master is not in that directory. It used to be, and the
+# command re-encoded its own input on every build.
 tauri/node_modules/
 tauri/src-tauri/target/
 tauri/src-tauri/binaries/
 tauri/src-tauri/gen/
 tauri/src-tauri/icons/*
-!tauri/src-tauri/icons/icon.png
 build/
 
 # Something in this working tree drops files with non-UTF-8 names (an

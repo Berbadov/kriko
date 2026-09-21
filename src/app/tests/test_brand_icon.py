@@ -168,6 +168,36 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
         )
 
 
+def test_the_master_is_not_somewhere_the_build_writes_over_it():
+    """`tauri icon <master>` fills `tauri/src-tauri/icons/`, icon.png included.
+
+    The master lived in that directory until 2026-09-21, which made it both
+    the command's input and one of its outputs: every installer build
+    re-encoded the committed file (20,697 bytes in, 18,403 out) and left the
+    tree dirty with a PNG nobody had edited. `tauri/README.md` carried a line
+    that restored it from git by hand afterwards, which is a person standing
+    in for a path change -- and one the packaging script never ran at all.
+
+    The next gate run would have failed `test_the_committed_icon_is_what_the_
+    mark_renders_to`, so the cost of forgetting was a red suite on work that
+    was correct. Checked here rather than trusted, because the build that
+    overwrites it is hand-run on a different machine.
+    """
+    root = Path(__file__).resolve().parents[3]
+    generated = root / "tauri" / "src-tauri" / "icons"
+    assert generated not in render_icon.TARGET.parents, (
+        f"{render_icon.TARGET.relative_to(root)} is inside the directory "
+        f"`tauri icon` generates into, so the build overwrites the master it "
+        f"was given. Keep the master outside it"
+    )
+    build = (root / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    where = render_icon.TARGET.relative_to(root).as_posix()
+    assert where.rsplit("/", 1)[-1] in build, (
+        f"packaging/build_desktop.ps1 does not name {where}, so the installer "
+        f"is built from an icon this script never rendered"
+    )
+
+
 def test_the_master_is_large_enough_for_every_icon_tauri_derives():
     """`tauri icon` derives up to 1024; a smaller master upscales and blurs."""
     header = render_icon.TARGET.read_bytes()[16:24]
