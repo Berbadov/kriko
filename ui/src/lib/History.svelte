@@ -1,6 +1,7 @@
 <script lang="ts">
     import EmptyState from "./EmptyState.svelte";
     import { api } from "./api";
+    import { count } from "./plural";
     import { hashWith, route } from "./router";
     import type { HistoryItem } from "./types";
 
@@ -40,12 +41,23 @@
             <ul>
                 {#each items as item (item.lookup_id)}
                     <li>
-                        <a href={link("result", item.lookup_id)}>{item.label}</a>
+                        <a class="history-title" href={link("result", item.lookup_id)}
+                            >{item.label}</a
+                        >
                         <span class="meta"
-                            >{item.claim_count} claim(s) · {item.source}{#if page} ·
+                            >{count(item.claim_count, "claim")} · {item.source}{#if page} ·
                                 {item.created_at}{/if}</span
                         >
-                        <button class="ghost" onclick={() => forget(item)}>Forget</button>
+                        <!-- `small`, and titled rather than captioned in the rail: one
+                             full-size button per row turned a seven-item list into a
+                             column of seven buttons taller than the screen it sat
+                             beside. The word stays for the page view, where there is
+                             room for it and no other control to confuse it with. -->
+                        <button
+                            class="ghost small history-forget"
+                            title="Forget this check"
+                            onclick={() => forget(item)}>Forget</button
+                        >
                     </li>
                 {/each}
             </ul>

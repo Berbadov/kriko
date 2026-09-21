@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "../lib/api";
+    import { count } from "../lib/plural";
     import Failure from "../lib/Failure.svelte";
     import { signalNote, tieNote } from "../lib/health";
     import type { ClaimHealth, HealthTree } from "../lib/types";
@@ -93,7 +94,7 @@
             <article class="card">
                 <h3>
                     {tree.label ?? "Subject"}
-                    <span class="badge">{tree.claims.length} claim(s)</span>
+                    <span class="badge">{count(tree.claims.length, "claim")}</span>
                 </h3>
                 {#each tree.claims as node (node.health.claim_id)}
                     {@const asked = node.health.claim_id === askedClaimId}
@@ -102,7 +103,7 @@
                             {#if asked}<span class="badge">Asked about</span>{/if}
                             {node.health.title}
                             <span class="meta">
-                                {node.health.independent_sources} source(s) · {node.health
+                                {count(node.health.independent_sources, "source")} · {node.health
                                     .best_tier}
                             </span>
                         </summary>

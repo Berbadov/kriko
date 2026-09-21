@@ -85,7 +85,7 @@ describe("the provider self-test", () => {
         const buttons = await screen.findAllByRole("button", { name: "Test" });
         await fireEvent.click(buttons[0]);
         expect(await screen.findByText(/ok in 41 ms/)).toBeInTheDocument();
-        expect(await screen.findByText(/1 result\(s\)/)).toBeInTheDocument();
+        expect(await screen.findByText(/1 result/)).toBeInTheDocument();
     });
 
     it("reports the exact provider error distinctly", async () => {

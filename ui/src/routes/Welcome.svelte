@@ -94,7 +94,7 @@
                 </ul>
                 <p class="meta">from {updates.index_url}</p>
                 <div class="row">
-                    <button onclick={install} disabled={busy}>
+                    <button class="primary" onclick={install} disabled={busy}>
                         {busy ? "Installing…" : "Install and get started"}
                     </button>
                 </div>
