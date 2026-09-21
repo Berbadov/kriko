@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import Keys from "../lib/Keys.svelte";
     import PlanePrefs from "../lib/Planes.prefs.svelte";
@@ -174,7 +175,7 @@
                             {:else if check.ok}
                                 <p class="state fact-ok" role="status">
                                     ok in {check.latency_ms} ms{#if check.results !== null}
-                                        · {check.results} result(s){/if}{#if check.tokens !== null}
+                                        · {count(check.results, "result")}{/if}{#if check.tokens !== null}
                                         · {check.tokens} tokens{/if}
                                 </p>
                             {:else if check.error}
