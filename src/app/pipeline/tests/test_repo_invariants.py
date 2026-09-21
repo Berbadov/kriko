@@ -307,7 +307,7 @@ def test_the_shell_and_the_sidecar_agree_on_the_handshake():
     """
     from app.sidecar import PORT_LINE
 
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', main_rs)
     assert declared, "main.rs no longer declares PORT_LINE"
     assert declared.group(1) == PORT_LINE, (
@@ -335,7 +335,7 @@ def test_the_shell_holds_no_engine_logic():
         re.IGNORECASE,
     )
     for path in rust:
-        for number, line in enumerate(path.read_text().splitlines(), start=1):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             code = line.split("//")[0]
             assert not forbidden.search(code), (
                 f"{path.relative_to(REPO)}:{number} puts engine vocabulary in "
@@ -350,7 +350,7 @@ def test_the_boot_screen_can_render_a_failure():
     The boot page is plain HTML with no build step for the same reason: it has
     to render when everything else is broken.
     """
-    page = (TAURI / "shell-ui" / "index.html").read_text()
+    page = (TAURI / "shell-ui" / "index.html").read_text(encoding="utf-8")
     assert "kriko://failed" in page, "the boot screen ignores the failure event"
     # The stderr goes through textContent. It is a subprocess's output, so an
     # innerHTML assignment carrying it would be an injection with a very short
@@ -362,7 +362,7 @@ def test_the_boot_screen_can_render_a_failure():
         if "innerHTML" in line.split("//")[0] and 'innerHTML = ""' not in line
     ]
     assert injectable == [], f"stderr must not reach innerHTML: {injectable}"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     assert "kriko://failed" in main_rs, "the shell never emits a failure"
     assert "kill_engine" in main_rs, (
         "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
@@ -380,14 +380,14 @@ def test_the_extension_and_the_server_agree_on_a_port():
     """
     from app.web.settings import EXTENSION_PORT
 
-    worker = (REPO / "extension" / "background.js").read_text()
+    worker = (REPO / "extension" / "background.js").read_text(encoding="utf-8")
     found = re.search(r"DEFAULT_API_BASE\s*=\s*.http://127\.0\.0\.1:(\d+)", worker)
     assert found, "extension/background.js no longer declares DEFAULT_API_BASE"
     assert int(found.group(1)) == EXTENSION_PORT, (
         f"the extension talks to port {found.group(1)} and the server binds "
         f"{EXTENSION_PORT}. Nothing would report the mismatch."
     )
-    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
     assert "EXTENSION_PORT" in sidecar, (
         "the sidecar no longer binds the extension's fixed port — the desktop "
         "app would only be on an OS-chosen one, which the extension cannot know"
@@ -404,8 +404,8 @@ def test_the_shell_tells_the_sidecar_to_die_with_it():
     only is silent: argparse would reject it and the window would never open.
     """
     flag = "--exit-with-parent"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
-    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
     assert flag in main_rs, f"the shell does not pass {flag} — an orphan survives a crash"
     assert flag in sidecar, f"the sidecar does not accept {flag} — it would fail to start"
 
@@ -418,7 +418,7 @@ def test_a_sidecar_that_cannot_start_still_gets_a_window():
     "does not open", with no window and no message. Every failure path has to
     reach `emit_failure`, which shows the window itself.
     """
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     body = main_rs.split("fn start_engine")[1].split("\nfn ")[0]
     assert "emit_failure" in body, (
         "start_engine can fail without showing the window — the process would "
@@ -434,11 +434,11 @@ def test_the_windows_installer_stops_a_running_engine_first():
     stops with Abort/Retry/Ignore, all three of which are wrong. So the
     installer kills it, and the name it kills has to be the name Tauri ships.
     """
-    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text())
+    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
     hooks = config["bundle"]["windows"]["nsis"]["installerHooks"]
     script = TAURI / "src-tauri" / hooks
     assert script.exists(), f"{hooks} is configured but missing"
-    text = script.read_text()
+    text = script.read_text(encoding="utf-8")
 
     binaries = config["bundle"]["externalBin"]
     name = Path(binaries[0]).name
@@ -467,7 +467,7 @@ def test_every_data_file_under_src_is_declared_as_package_data():
     """
     import tomllib
 
-    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text())
+    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     declared = pyproject["tool"]["setuptools"]["package-data"]
 
     # Build the set of (package, glob) rules as concrete path prefixes.
@@ -519,7 +519,7 @@ def test_the_catalog_is_never_scanned_in_directory_order():
         for path in sorted(root.rglob("*.py")):
             if "tests" in path.parts or "__pycache__" in path.parts:
                 continue
-            lines = path.read_text().splitlines()
+            lines = path.read_text(encoding="utf-8").splitlines()
             tree = ast.parse("\n".join(lines))
             sorted_args = {
                 id(node.args[0])
@@ -618,7 +618,7 @@ def test_the_app_stays_standalone():
 
     # A Postgres driver in the dependencies means something intends to talk to
     # a server, whatever the docs say.
-    pyproject = (REPO / "pyproject.toml").read_text().lower()
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8").lower()
     for driver in ("psycopg", "asyncpg", "sqlalchemy", "alembic"):
         assert driver not in pyproject, (
             f"{driver} is a dependency again — the store is SQLite, and the "
@@ -649,7 +649,7 @@ def test_the_app_wears_the_extension_palette():
     )
     assert generated.returncode == 0, generated.stderr or generated.stdout
 
-    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text()
+    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text(encoding="utf-8")
 
     for family in ("ibm plex sans", "ibm plex mono"):
         assert family in theme.lower(), (
@@ -660,7 +660,7 @@ def test_the_app_wears_the_extension_palette():
     # preference, not an identity.
     assert 'DEFAULT_THEME: Theme = "panel"' in (
         REPO / "ui" / "src" / "lib" / "theme.ts"
-    ).read_text(), "the app no longer opens wearing the extension's palette"
+    ).read_text(encoding="utf-8"), "the app no longer opens wearing the extension's palette"
 
 
 def test_both_clients_call_it_the_same_thing_on_screen():
@@ -677,8 +677,8 @@ def test_both_clients_call_it_the_same_thing_on_screen():
     saying "8 known risks, 7 serious" over the same eight rows. Caught by
     looking at the two windows, which is not a mechanism.
     """
-    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text()
-    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text()
+    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text(encoding="utf-8")
+    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text(encoding="utf-8")
 
     said = re.search(r'"known risk"', app)
     assert said, (
@@ -908,4 +908,61 @@ def test_the_shipped_panel_declares_what_the_interpreter_reads():
     assert honoured - shipped == set(), (
         f"the interpreter reads keys nothing ships, so no test exercises "
         f"them: {sorted(honoured - shipped)}"
+    )
+
+
+# Every way a Path hands you text or takes it. `open()` is not in the list
+# because `io.open` has its own signature and almost every one in this tree is
+# a binary or a NamedTemporaryFile; the pathlib pair is where the defect lived.
+_TEXT_IO = ("read_text", "write_text")
+
+
+def test_no_file_is_read_in_the_platform_s_default_encoding():
+    """`path.read_text()` means cp1252 on a Turkish Windows box.
+
+    Not a style rule — a crash. `packs/cars/data/parts/engine/k9k.yaml` holds
+    a curly quote inside a claim's prose, and on 2026-09-20 every test that
+    loaded the catalog on this machine died with `UnicodeDecodeError: charmap
+    codec can't decode byte 0x9d`. Sixty of them at once. The files are valid
+    UTF-8; `read_text()` simply asks the OS what encoding to guess with, and
+    on Windows outside the en-US default it guesses wrong.
+
+    It never showed up in CI because CI is Linux, where the guess happens to
+    be UTF-8 — so the whole class was invisible to every gate we had, on
+    exactly the platform the reader runs. That is the shape of bug this file
+    exists for: it cannot be caught by testing behaviour, only by reading the
+    tree.
+
+    Writing is the same bug pointed the other way. A pack authored on this
+    machine would have had its non-ASCII prose written as cp1252 bytes into a
+    file the next reader opens as UTF-8, and a claim would come back mojibake
+    with nothing having raised.
+    """
+    offenders = []
+    for where in ("src", "packs", "tools", "packaging"):
+        for path in sorted((REPO / where).rglob("*.py")):
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except (SyntaxError, UnicodeDecodeError):
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if not isinstance(func, ast.Attribute):
+                    continue
+                if func.attr not in _TEXT_IO:
+                    continue
+                positional = len(node.args) >= (2 if func.attr == "write_text" else 1)
+                if positional or any(kw.arg == "encoding" for kw in node.keywords):
+                    continue
+                offenders.append(
+                    f"{path.relative_to(REPO)}:{node.lineno}  .{func.attr}()"
+                )
+
+    assert not offenders, (
+        "these read or write text in whatever encoding the OS guesses, which "
+        "is cp1252 on a non-en-US Windows box and UTF-8 in CI — so they work "
+        "everywhere we test and crash where the reader runs. Pass "
+        'encoding="utf-8":\n  ' + "\n  ".join(offenders)
     )

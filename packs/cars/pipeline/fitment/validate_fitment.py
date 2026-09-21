@@ -30,14 +30,14 @@ def _load_variants(make_model: str) -> dict[str, dict]:
     path = VARIANTS_DIR / f"{make_model}.yaml"
     if not path.exists():
         return {}
-    rows = yaml.safe_load(path.read_text()) or []
+    rows = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     return {r["id"]: r for r in rows}
 
 
 def validate_fitment_file(fitment_path: Path) -> list[str]:
     errors: list[str] = []
     try:
-        rows = yaml.safe_load(fitment_path.read_text()) or []
+        rows = yaml.safe_load(fitment_path.read_text(encoding="utf-8")) or []
     except yaml.YAMLError as e:
         return [f"{fitment_path}: YAML parse error: {e}"]
 

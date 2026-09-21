@@ -148,7 +148,7 @@ def test_vocabulary_fails_open_on_mis_shaped_gates_file(tmp_path, monkeypatch):
     vocab_dir.mkdir()
     (vocab_dir / "gates.yaml").write_text(
         "noise:\n  - pattern_typo: not a pattern key\n"
-    )
+    , encoding="utf-8")
     monkeypatch.setattr(extraction, "PACK_ROOT", tmp_path)
 
     extraction._vocabulary.cache_clear()

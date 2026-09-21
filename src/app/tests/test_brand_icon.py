@@ -27,13 +27,37 @@ import render_icon  # noqa: E402
 
 
 def test_the_committed_icon_is_what_the_mark_renders_to():
-    """Edit the SVG without re-rendering and this fails, which is the point."""
-    side, pixels = render_icon.grid(
-        render_icon.SOURCE.read_text(encoding="utf-8")
+    """Edit the SVG without re-rendering and this fails, which is the point.
+
+    Against the *large* mark since 0.10.1. The master used to be the 16-cell
+    grid scaled 64x, which made the app icon eight hard blocks with a 64px
+    cell — the reader's "pixelated and very ugly". The grid still renders
+    everything at 128px and below, where it is the right answer.
+    """
+    units, shapes = render_icon.outlines(
+        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
     )
-    assert render_icon.TARGET.read_bytes() == render_icon.png(
-        pixels, render_icon.SCALE
+    assert render_icon.TARGET.read_bytes() == render_icon.smooth_png(
+        shapes, units, render_icon.MASTER
     )
+
+
+def test_the_app_icon_is_actually_antialiased():
+    """The regression this pair of files exists to prevent.
+
+    A mark rendered from the grid has exactly three colours at any size, and
+    that is what made the icon look like a screenshot of itself. A real
+    rasterisation of the same letter carries a fringe along every diagonal, so
+    counting distinct colours tells the two apart without anybody eyeballing a
+    PNG — which is the only reason this defect survived as long as it did.
+    """
+    width, height, pixels = render_icon.decode(render_icon.TARGET.read_bytes())
+    seen = {pixels[i : i + 3] for i in range(0, len(pixels), 4)}
+    assert len(seen) > 32, (
+        f"the master has only {len(seen)} distinct colours, so its diagonals "
+        "are steps rather than edges — it is being rendered from the grid"
+    )
+    assert width == height == render_icon.MASTER
 
 
 def test_the_frontend_serves_the_same_mark():
@@ -116,7 +140,14 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
     stylesheet. A mark using anything else would sit on the rail as a foreign
     object, which is exactly how the lemon read.
     """
-    svg = render_icon.SOURCE.read_text(encoding="utf-8").lower()
+    # Both marks. They are one design in two drawings, and a colour changed in
+    # only one of them is the drift that having two files could otherwise
+    # cost — the small tile and the app icon quietly stopping being the same
+    # product.
+    svg = "\n".join(
+        one.read_text(encoding="utf-8").lower()
+        for one in (render_icon.SOURCE, render_icon.LARGE_SOURCE)
+    )
     theme = (
         Path(__file__).resolve().parents[3]
         / "ui/src/styles/themes/panel.css"
@@ -127,7 +158,10 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
         ("the letter", "#e7e9ed", "--n-9"),
         ("the joint", "#e8c04b", "--accent"),
     ):
-        assert colour in svg, f"{label} is no longer {colour} in the mark"
+        assert svg.count(colour) >= 2, (
+            f"{label} is {colour} in one mark and not the other — the tile and "
+            f"the app icon have stopped being the same product"
+        )
         assert f"{token}: {colour}" in theme, (
             f"{label} is {colour} in the mark but the panel theme's {token} "
             f"has moved — one of the two needs to follow the other"

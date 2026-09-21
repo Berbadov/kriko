@@ -392,7 +392,7 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
         text = ""
         while time.time() < deadline:
             if log_path.exists():
-                text = log_path.read_text()
+                text = log_path.read_text(encoding="utf-8")
                 if "terminal session failed to start" in text:
                     break
             time.sleep(0.1)
@@ -406,7 +406,7 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
 
 def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
     """stdout is the transport in MCP mode, so nothing else may write to it."""
-    source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()
+    source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text(encoding="utf-8")
     body = source.split("def main(")[1]
     dispatch = body.index("return serve_mcp")
     announce = body.index('print(f"{PORT_LINE}')

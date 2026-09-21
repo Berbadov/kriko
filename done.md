@@ -6,6 +6,43 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-21 — the mark at 1024px, and three gates that were green on nothing
+
+**The icon was pixelated because it was a 16x16 drawing scaled up.** The mark
+is a pixel grid, and a pixel grid is right at 16, 32 and 48 — nearest-neighbour
+integer scale, crisp cells. Tauri derives every Windows icon from
+`icons/icon.png`, and that file was the same grid blown up, so the installer,
+the taskbar and the app rail all showed a blurred letter. There are now two
+sources: `logo-mark.svg` (16x16, the tile) and `logo-mark-large.svg` (64-unit
+viewBox, `rect` and `polygon` only), rasterised to a 1024px master by a 4x
+supersampled scanline filler in `packaging/render_icon.py`. Same K, same three
+colours, and a test reads both files so a colour cannot change in one of them.
+`docs/BRAND.md` says which size comes from which source.
+
+**`path.read_text()` means cp1252 on a Turkish Windows box.** Not a style
+point — a crash. `k9k.yaml` holds a curly quote in a claim's prose, and sixty
+tests died at once with `UnicodeDecodeError: charmap codec`. Every gate we had
+missed it because CI is Linux, where the guess happens to be UTF-8, so the
+class was invisible on exactly the platform the reader runs. 111 call sites
+took an explicit `encoding="utf-8"` (48 reads, 63 writes — writing is the same
+bug pointed the other way: a pack authored here would ship mojibake with
+nothing raising), and
+`test_no_file_is_read_in_the_platform_s_default_encoding` walks the tree's AST
+so it cannot come back. `pytest packs` went from ~60 crashes to 349 passing.
+
+**`write_text` translates "
+" to "
+" on Windows**, so both brand render
+scripts rewrote every line of files whose content had not changed — the third
+sighting of the defect behind `aa795e6` and `bea9e88`. `newline=""` on all
+four writes.
+
+**`npm test` ran zero tests on Windows and exited 0.** The glob was
+single-quoted, and npm runs scripts through cmd.exe, where `'...'` is literal.
+Double quotes: both shells strip them, node globs. 150 tests where the gate
+had been reporting green on none of them.
+
+
 ### 2026-09-19 — per-harness LLMs, benchmark buttons, provider self-test, site activation
 
 Four reader items, each finished to the mechanism:
