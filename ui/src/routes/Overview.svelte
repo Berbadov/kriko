@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { word } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
@@ -186,7 +187,7 @@
                             <a href={link("health")}>{claim.title}</a>
                             <span class="meta"
                                 >{claim.subject_label} · {claim.independent_sources}
-                                independent source(s) · best {claim.best_tier}</span
+                                independent {word(claim.independent_sources, "source")} · best {claim.best_tier}</span
                             >
                         </li>
                     {/each}
