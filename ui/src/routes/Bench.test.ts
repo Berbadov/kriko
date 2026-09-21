@@ -252,7 +252,7 @@ describe("Bench", () => {
         expect(last["reps"]).toBe(2);
         expect(last["budget_usd"]).toBe(0.25);
         expect(last["max_documents"]).toBe(15);
-        expect(await screen.findByText(/96 measurement\(s\)/)).toBeInTheDocument();
+        expect(await screen.findByText(/96 measurements/)).toBeInTheDocument();
     });
 
     it("loads a saved grid into the choice controls", async () => {
