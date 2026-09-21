@@ -67,12 +67,41 @@ function extractInfoListByLabelScan(knownLabels) {
     if (!text || text.length > 32) continue;
     if (!wanted.has(foldLabel(text)) || details[text]) continue;
 
-    // The value sits next to the label — as a sibling, or as the parent's other
-    // half when both are wrapped (…<span>Yıl</span><span>2014</span>…).
-    const sibling = node.nextElementSibling;
-    const value = cleanText(sibling && sibling.textContent);
-    if (value && value !== text) {
+    // The value sits next to the label. The comment here has always said "as a
+    // sibling, or as the parent's other half when both are wrapped", but only
+    // the first of those was ever written, so a row shaped
+    // `<div><span>Yıl</span></div><div>2014</div>` — the label wrapped one
+    // level deeper than the value — read as nothing at all. Three shapes, in
+    // the order of how directly they answer:
+    const candidates = [
+      // 1. The plain sibling element: …<span>Yıl</span><span>2014</span>…
+      node.nextElementSibling && node.nextElementSibling.textContent,
+      // 2. Loose text right after the label, with no element around it:
+      //    …<span>Yıl</span> 2014… — common wherever the value was never
+      //    meant to be styled separately.
+      node.nextSibling && node.nextSibling.nodeType === 3
+        ? node.nextSibling.textContent
+        : "",
+      // 3. The parent's other half, which is what the comment promised: the
+      //    label is wrapped and the value is the rest of the row. Taking the
+      //    parent's text and subtracting the label leaves the value, so long
+      //    as the parent holds this label and nothing else of its own.
+      node.parentElement && node.parentElement.nextElementSibling
+        ? node.parentElement.nextElementSibling.textContent
+        : "",
+    ];
+
+    for (const candidate of candidates) {
+      const value = cleanText(candidate);
+      // A candidate equal to the label is the same node read twice, and one
+      // that *contains* it is a wrapper we have climbed into rather than a
+      // value — both mean this shape was the wrong guess, not that the row is
+      // empty. Length-capped for the same reason `text` is: a whole column
+      // caught by rule 3 is not a value.
+      if (!value || value === text || value.length > 200) continue;
+      if (foldLabel(value).includes(foldLabel(text))) continue;
       details[text] = value;
+      break;
     }
   }
   return details;
@@ -127,8 +156,25 @@ function extractInfoList(knownLabels) {
     }
   }
 
-  if (Object.keys(details).length === 0) {
-    return extractInfoListByLabelScan(knownLabels);
+  // The label scan runs every time, and what the selectors above found wins
+  // where both spoke.
+  //
+  // It used to run only when `details` was still empty, and that is why a
+  // newly added site read almost nothing. The selectors above name one site's
+  // own class names — `classifiedInfoList`, `classifiedInfo`,
+  // `.classified-properties`. On any other site none of them match, so the
+  // whole of `details` came down to the one generic branch, `dl dt`; and a
+  // page with a single stray `<dl>` in a footer or a cookie notice filled
+  // `details` with one junk pair, which counted as success and suppressed the
+  // only scan that reads the labels the *pack* declared. One wrong row, and
+  // the real ones never looked for.
+  //
+  // Merging rather than choosing also drops the premise that a page has
+  // exactly one shape. A listing carrying half its facts in a table and half
+  // in labelled spans used to yield whichever half was found first.
+  const scanned = extractInfoListByLabelScan(knownLabels);
+  for (const [label, value] of Object.entries(scanned)) {
+    if (!details[label]) details[label] = value;
   }
 
   return details;

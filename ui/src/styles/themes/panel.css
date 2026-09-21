@@ -26,6 +26,13 @@
  */
 :root,
 :root[data-theme="panel"] {
+    /* The OS half of the palette. Without it a `<select>`'s dropdown, a date
+     * picker and a scrollbar are drawn by the platform in *light* chrome over
+     * this near-black ground — the one part of the app no stylesheet here can
+     * reach, and the reason the controls read as raw. It is one line because
+     * the browser's own dark defaults are the right answer; what was missing
+     * was telling it which half we are in. */
+    color-scheme: dark;
     /* neutrals — the panel's own ramp, 0 the ground and 9 the strongest text.
      * The middle steps are the panel's surfaces rather than an even ramp: this
      * palette is five hand-chosen greys, not a generated scale. */

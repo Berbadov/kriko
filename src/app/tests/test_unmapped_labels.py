@@ -142,7 +142,7 @@ def test_the_table_is_the_interfaces_and_not_the_engines(tmp_path):
     """
     from kriko.store.db import SCHEMA_PATH
 
-    assert "unmapped_labels" not in SCHEMA_PATH.read_text()
+    assert "unmapped_labels" not in SCHEMA_PATH.read_text(encoding="utf-8")
     assert "unmapped_labels" in state.SCHEMA
 
 

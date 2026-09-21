@@ -253,6 +253,36 @@ export type Job = {
     created_at: string;
     started_at: string | null;
     finished_at: string | null;
+    /* Set by `_with_attention` in `app/web/routers/jobs.py` when the run put
+     * something to the reader. Null is the ordinary case. */
+    attention: Attention | null;
+};
+
+/* One thing the identification pass could not settle on its own.
+ *
+ * It did not wait for the answer — `app/disambiguate.py` states a default and
+ * carries on, because a run that blocks on a person is a run nobody finishes.
+ * So `default` is what it actually used, and an answer here changes the *next*
+ * run rather than this one.
+ */
+export type Question = {
+    id: string;
+    ask: string;
+    /* Which part of the scope this settles. Empty means `id` is the key. */
+    key: string;
+    /* At most eight, and possibly none — then it is a free-text answer. */
+    options: string[];
+    /* What the run assumed. Never empty: a question without one would have
+     * had to block, so `normalise` drops it. */
+    default: string;
+    because: string;
+};
+
+export type Attention = {
+    kind: string;
+    count: number;
+    say: string;
+    questions: Question[];
 };
 
 /* One position on the depth dial, as `app/scale.py` defines it.

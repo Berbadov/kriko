@@ -16,6 +16,12 @@
     let root = $state("");
     let busy = $state(false);
     let cancelPending = $state<string[]>([]);
+    /* What the reader has typed back, per job and then per question id.
+     *
+     * Kept here rather than on the row because the row is replaced wholesale
+     * every time the stream ticks — a draft held on `job` would be erased
+     * twice a second by the thing that is supposed to be showing it. */
+    let answers = $state<Record<string, Record<string, string>>>({});
 
     // One follower per live job, kept in a map so a re-render does not open a
     // second stream for the same row.
@@ -147,7 +153,8 @@
      */
     async function retry(job: Job) {
         try {
-            const { job_id } = await api.retryJob(job.job_id);
+            const { job_id } = await api.retryJob(job.job_id, answers[job.job_id] ?? {});
+            delete answers[job.job_id];
             const fresh = await api.job(job_id);
             replace(fresh);
             watch(fresh);
@@ -278,6 +285,63 @@
                 <button onclick={() => retry(job)}>Run again</button>
             {/if}
         </p>
+        {#if job.attention?.questions?.length}
+            <!-- The answer form, and the reason this screen changed shape.
+                 The questions were only ever written into the run log, so a
+                 mechanism that already knew how to ask, normalise and re-apply
+                 an answer reached the reader as a paragraph of prose with
+                 nothing to type into. Rendering them as controls is the whole
+                 of the fix on this side.
+
+                 Not a modal, and it blocks nothing: the run already finished
+                 on its own assumptions. Answering changes the *next* run,
+                 which is why the submit is the retry rather than a "send". -->
+            <form
+                class="asked"
+                onsubmit={(event) => { event.preventDefault(); retry(job); }}
+            >
+                <p class="meta">{job.attention.say}</p>
+                {#each job.attention.questions as question (question.id)}
+                    <div class="field">
+                        <label for="{job.job_id}-{question.id}">{question.ask}</label>
+                        {#if question.options.length}
+                            <select
+                                id="{job.job_id}-{question.id}"
+                                value={answers[job.job_id]?.[question.id] ?? ""}
+                                onchange={(event) => {
+                                    answers[job.job_id] ??= {};
+                                    answers[job.job_id][question.id] = event.currentTarget.value;
+                                }}
+                            >
+                                <!-- The assumption is the first option and the
+                                     selected one, so leaving the form alone
+                                     re-runs exactly what already ran. -->
+                                <option value="">It assumed {question.default}</option>
+                                {#each question.options as option (option)}
+                                    <option value={option}>{option}</option>
+                                {/each}
+                            </select>
+                        {:else}
+                            <input
+                                id="{job.job_id}-{question.id}"
+                                placeholder="It assumed {question.default}"
+                                value={answers[job.job_id]?.[question.id] ?? ""}
+                                oninput={(event) => {
+                                    answers[job.job_id] ??= {};
+                                    answers[job.job_id][question.id] = event.currentTarget.value;
+                                }}
+                            />
+                        {/if}
+                        {#if question.because}
+                            <p class="meta">{question.because}</p>
+                        {/if}
+                    </div>
+                {/each}
+                <p class="row">
+                    <button type="submit">Answer and run again</button>
+                </p>
+            </form>
+        {/if}
         {#if open === job.job_id}
             <pre class="log">{job.log || "nothing logged yet"}</pre>
             {#if job.result}

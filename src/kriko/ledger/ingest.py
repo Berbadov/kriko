@@ -52,7 +52,7 @@ def backfill_cache_dir(
     for path in sorted(cache_dir.glob("*_candidates.json")):
         hint = path.stem.removeprefix("part_").removesuffix("_candidates")
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, ValueError) as exc:
             print(f"  skipping malformed {path.name}: {exc}")
             continue
@@ -92,7 +92,7 @@ def backfill_claims_dir(conn, claims_dir: Path) -> tuple[int, int]:
     ev_added = 0
     for path in sorted(claims_dir.glob("*.yaml")):
         try:
-            data = yaml.safe_load(path.read_text())
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
         except yaml.YAMLError as exc:
             print(f"  skipping malformed {path.name}: {exc}")
             continue
