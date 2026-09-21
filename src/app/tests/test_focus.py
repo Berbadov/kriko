@@ -112,7 +112,7 @@ def test_the_shell_and_the_engine_agree_on_the_stdout_line():
     still succeeds, the SPA still navigates, and the app just never comes to
     the front — which reads as the same dead button this replaced.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     assert f'const FOCUS_LINE: &str = "{focus.FOCUS_LINE}";' in main_rs
     # And it must actually be acted on, not merely declared.
     assert "if line.contains(FOCUS_LINE) {\n                        show_window" in main_rs
@@ -185,7 +185,7 @@ def test_the_shell_declares_its_supervision_when_it_spawns_the_sidecar():
     and the extension opens a browser tab beside the running app — exactly
     the bug this whole path exists to fix, and nothing else would fail.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     assert '.args(["--exit-with-parent", "--supervised"])' in main_rs
 
 

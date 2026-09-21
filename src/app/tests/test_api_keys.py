@@ -92,7 +92,7 @@ def test_a_blank_value_does_not_erase_a_stored_key(tmp_path):
     path = tmp_path / "env"
     keys.save({"exa": FIXTURE}, path)
     keys.save({"openai": "other-key", "exa": ""}, path)
-    assert keys.parse(path.read_text())["EXA_API_KEY"] == FIXTURE
+    assert keys.parse(path.read_text(encoding="utf-8"))["EXA_API_KEY"] == FIXTURE
 
 
 def test_the_file_is_parsed_the_way_every_other_tool_parses_one(tmp_path):
@@ -108,8 +108,8 @@ def test_the_file_is_parsed_the_way_every_other_tool_parses_one(tmp_path):
         'export EXA_API_KEY="quoted"\n'
         "not-an-assignment\n"
         "OPENAI_API_KEY = spaced \n"
-    )
-    parsed = keys.parse(path.read_text())
+    , encoding="utf-8")
+    parsed = keys.parse(path.read_text(encoding="utf-8"))
     assert parsed["EXA_API_KEY"] == "quoted"
     assert parsed["OPENAI_API_KEY"] == "spaced"
 
@@ -248,7 +248,7 @@ def test_only_declared_providers_can_be_written(tmp_path):
     refused = client.put("/api/keys", json={"values": {"LD_PRELOAD": "/tmp/x.so"}})
     assert refused.status_code == 400
     written = tmp_path / "env"
-    assert not written.exists() or "LD_PRELOAD" not in written.read_text()
+    assert not written.exists() or "LD_PRELOAD" not in written.read_text(encoding="utf-8")
 
 
 def test_each_provider_states_what_it_receives(tmp_path):

@@ -73,7 +73,7 @@ def test_lost_source_urls_collects_only_claims_with_urls(tmp_path, monkeypatch):
         "claims": [{"claim_key": "new_c", "title": "fresh title", "domain": "engine",
                     "severity": "medium", "status": "review", "rationale": "r",
                     "inspection_advice": "a", "sources": []}],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     legacy_parts = tmp_path / "parts"
     (legacy_parts / "engine").mkdir(parents=True)
     (legacy_parts / "engine" / "eng1.yaml").write_text(_yaml.dump({
@@ -88,7 +88,7 @@ def test_lost_source_urls_collects_only_claims_with_urls(tmp_path, monkeypatch):
              "severity": "medium", "status": "review", "rationale": "r",
              "inspection_advice": "a", "sources": []},
         ],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     (tmp_path / "claims").mkdir()
 
     conn = db.connect(tmp_path / "l.db")
@@ -104,7 +104,7 @@ def test_ingest_lost_sources_fetches_and_ingests(tmp_path, monkeypatch):
     export_dir.mkdir()
     (export_dir / "eng1.yaml").write_text(_yaml.dump({
         "part_id": "eng1", "part_type": "engine", "claims": [],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     legacy_parts = tmp_path / "parts"
     (legacy_parts / "engine").mkdir(parents=True)
     (legacy_parts / "engine" / "eng1.yaml").write_text(_yaml.dump({
@@ -113,7 +113,7 @@ def test_ingest_lost_sources_fetches_and_ingests(tmp_path, monkeypatch):
                     "severity": "medium", "status": "review", "rationale": "r",
                     "inspection_advice": "a",
                     "sources": [{"source_url": "https://example.com/x"}]}],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     (tmp_path / "claims").mkdir()
 
     monkeypatch.setattr("packs.cars.pipeline.ledger.acquire._fetch_page",
@@ -144,11 +144,11 @@ def _gap_catalog(tmp_path):
         "transmission": "automatic", "transmission_code": "tc1",
         "electrical_code": "elec1", "body_code": "body1",
         "year_from": 2020, "market": "TR", "notes": "n",
-    }], sort_keys=False))
+    }], sort_keys=False), encoding="utf-8")
     (f / "t.yaml").write_text(yaml.dump([{
         "variant_id": "t1_auto", "engine_family": "eng1",
         "transmission_code": "tc1", "electrical_code": "elec1", "body_code": "body1",
-    }], sort_keys=False))
+    }], sort_keys=False), encoding="utf-8")
     for ptype in ("engine", "electrical", "body"):
         (p / ptype).mkdir(exist_ok=True)
     (p / "engine" / "eng1.yaml").write_text(yaml.dump({
@@ -156,18 +156,18 @@ def _gap_catalog(tmp_path):
         "claims": [{"claim_key": "c1", "title": "t", "domain": "engine",
                     "severity": "low", "status": "verified", "rationale": "r",
                     "inspection_advice": "a", "sources": []}],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     for pid, ptype in (("elec1", "electrical"), ("body1", "body")):
         (p / ptype / f"{pid}.yaml").write_text(yaml.dump({
             "part_id": pid, "part_type": ptype,
             "claims": [{"claim_key": f"c_{pid}", "title": "t", "domain": ptype,
                         "severity": "low", "status": "verified", "rationale": "r",
                         "inspection_advice": "a", "sources": []}],
-        }, sort_keys=False))
+        }, sort_keys=False), encoding="utf-8")
     (p / "transmission").mkdir()
     (p / "transmission" / "tc1.yaml").write_text(yaml.dump({
         "part_id": "tc1", "part_type": "transmission", "claims": [],
-    }, sort_keys=False))
+    }, sort_keys=False), encoding="utf-8")
     return v, f, p
 
 
@@ -201,7 +201,7 @@ def test_run_researches_gap_parts_and_logs_telemetry(tmp_path, monkeypatch):
     assert stats["extracted"] == 4
     assert stats["verdicts"] == 3
     assert stats["exported"] == 1
-    line = json.loads((tmp_path / "logs" / "remediation.jsonl").read_text())
+    line = json.loads((tmp_path / "logs" / "remediation.jsonl").read_text(encoding="utf-8"))
     assert line["parts"] == [{"part_id": "tc1", "part_type": "transmission"}]
     assert line["findings"] >= 1
     conn.close()

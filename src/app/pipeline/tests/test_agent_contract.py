@@ -29,7 +29,7 @@ def test_every_tool_the_contract_grants_exists_on_the_server():
 
 
 def test_the_contract_names_the_tools_the_agent_must_call():
-    body = render.CONTRACT.read_text()
+    body = render.CONTRACT.read_text(encoding="utf-8")
     # The car-shaped tools are gone; a category is data now, so a tool per
     # category was a tool per data edit.
     for tool in ("research_brief", "submit_findings", "coverage_gaps", "list_packs"):

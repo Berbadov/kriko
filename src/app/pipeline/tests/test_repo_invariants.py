@@ -37,6 +37,20 @@ for _root in (SRC / "kriko", SRC / "app", REPO / "packs"):
 # A cross-package import at the start of a line, with or without indentation:
 # both `from backend.x import y` and `import backend.x as z`, top-level or
 # deferred inside a function body.
+def _rel(path: Path) -> str:
+    """A repo-relative path, in the one separator this file compares against.
+
+    Every literal here is written with `/`, and on Windows `relative_to`
+    hands back the other one. Two of these gates compared the two dialects
+    and so could only ever pass on a POSIX host: the pipeline-layer check
+    excused `src/app/pipeline/` and matched nothing, and the testpaths
+    check asked whether `src\app` was among `src/app` and said no. Both
+    then reported a violation the tree did not have, on the only machine
+    that runs the gate at all.
+    """
+    return path.relative_to(REPO).as_posix()
+
+
 def _imports_of(package: str, tree: Path) -> list[str]:
     pattern = re.compile(rf"^\s*(?:from|import)\s+{package}\b")
     hits = []
@@ -45,7 +59,7 @@ def _imports_of(package: str, tree: Path) -> list[str]:
             continue
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if pattern.match(line):
-                hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+                hits.append(f"{_rel(path)}:{n}: {line.strip()}")
     return hits
 
 
@@ -159,7 +173,7 @@ def test_pytest_testpaths_covers_every_test_directory():
     configured = set(cfg["pytest"]["testpaths"].split())
 
     found = {
-        str(d.parent.relative_to(REPO))
+        _rel(d.parent)
         for d in list(REPO.glob("*/tests")) + list(REPO.glob("src/*/tests"))
         if d.is_dir() and any(d.glob("test_*.py"))
     }
@@ -265,7 +279,7 @@ def test_ui_contains_no_pack_vocabulary():
             continue
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if pattern.search(line):
-                hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+                hits.append(f"{_rel(path)}:{n}: {line.strip()}")
     assert not hits, (
         "pack vocabulary in ui/src — build the field from the pack's own rows "
         "(/api/identity-keys, /api/packs/{id}/vocabulary) instead:\n" + "\n".join(hits)
@@ -307,7 +321,7 @@ def test_the_shell_and_the_sidecar_agree_on_the_handshake():
     """
     from app.sidecar import PORT_LINE
 
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', main_rs)
     assert declared, "main.rs no longer declares PORT_LINE"
     assert declared.group(1) == PORT_LINE, (
@@ -335,10 +349,10 @@ def test_the_shell_holds_no_engine_logic():
         re.IGNORECASE,
     )
     for path in rust:
-        for number, line in enumerate(path.read_text().splitlines(), start=1):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             code = line.split("//")[0]
             assert not forbidden.search(code), (
-                f"{path.relative_to(REPO)}:{number} puts engine vocabulary in "
+                f"{_rel(path)}:{number} puts engine vocabulary in "
                 f"the shell: {line.strip()!r}. Rust owns the sidecar's "
                 f"lifetime and nothing else — see tauri/README.md."
             )
@@ -350,7 +364,7 @@ def test_the_boot_screen_can_render_a_failure():
     The boot page is plain HTML with no build step for the same reason: it has
     to render when everything else is broken.
     """
-    page = (TAURI / "shell-ui" / "index.html").read_text()
+    page = (TAURI / "shell-ui" / "index.html").read_text(encoding="utf-8")
     assert "kriko://failed" in page, "the boot screen ignores the failure event"
     # The stderr goes through textContent. It is a subprocess's output, so an
     # innerHTML assignment carrying it would be an injection with a very short
@@ -362,7 +376,7 @@ def test_the_boot_screen_can_render_a_failure():
         if "innerHTML" in line.split("//")[0] and 'innerHTML = ""' not in line
     ]
     assert injectable == [], f"stderr must not reach innerHTML: {injectable}"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     assert "kriko://failed" in main_rs, "the shell never emits a failure"
     assert "kill_engine" in main_rs, (
         "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
@@ -380,14 +394,14 @@ def test_the_extension_and_the_server_agree_on_a_port():
     """
     from app.web.settings import EXTENSION_PORT
 
-    worker = (REPO / "extension" / "background.js").read_text()
+    worker = (REPO / "extension" / "background.js").read_text(encoding="utf-8")
     found = re.search(r"DEFAULT_API_BASE\s*=\s*.http://127\.0\.0\.1:(\d+)", worker)
     assert found, "extension/background.js no longer declares DEFAULT_API_BASE"
     assert int(found.group(1)) == EXTENSION_PORT, (
         f"the extension talks to port {found.group(1)} and the server binds "
         f"{EXTENSION_PORT}. Nothing would report the mismatch."
     )
-    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
     assert "EXTENSION_PORT" in sidecar, (
         "the sidecar no longer binds the extension's fixed port — the desktop "
         "app would only be on an OS-chosen one, which the extension cannot know"
@@ -404,8 +418,8 @@ def test_the_shell_tells_the_sidecar_to_die_with_it():
     only is silent: argparse would reject it and the window would never open.
     """
     flag = "--exit-with-parent"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
-    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
+    sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
     assert flag in main_rs, f"the shell does not pass {flag} — an orphan survives a crash"
     assert flag in sidecar, f"the sidecar does not accept {flag} — it would fail to start"
 
@@ -418,7 +432,7 @@ def test_a_sidecar_that_cannot_start_still_gets_a_window():
     "does not open", with no window and no message. Every failure path has to
     reach `emit_failure`, which shows the window itself.
     """
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text()
+    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
     body = main_rs.split("fn start_engine")[1].split("\nfn ")[0]
     assert "emit_failure" in body, (
         "start_engine can fail without showing the window — the process would "
@@ -434,11 +448,11 @@ def test_the_windows_installer_stops_a_running_engine_first():
     stops with Abort/Retry/Ignore, all three of which are wrong. So the
     installer kills it, and the name it kills has to be the name Tauri ships.
     """
-    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text())
+    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
     hooks = config["bundle"]["windows"]["nsis"]["installerHooks"]
     script = TAURI / "src-tauri" / hooks
     assert script.exists(), f"{hooks} is configured but missing"
-    text = script.read_text()
+    text = script.read_text(encoding="utf-8")
 
     binaries = config["bundle"]["externalBin"]
     name = Path(binaries[0]).name
@@ -467,7 +481,7 @@ def test_every_data_file_under_src_is_declared_as_package_data():
     """
     import tomllib
 
-    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text())
+    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     declared = pyproject["tool"]["setuptools"]["package-data"]
 
     # Build the set of (package, glob) rules as concrete path prefixes.
@@ -489,7 +503,7 @@ def test_every_data_file_under_src_is_declared_as_package_data():
         if not any(
             path in set(base.glob(pattern)) for base, pattern in globs
         ):
-            undeclared.append(str(path.relative_to(REPO)))
+            undeclared.append(_rel(path))
 
     assert undeclared == [], (
         "these files live under src/ but no package-data rule ships them, so a "
@@ -519,16 +533,38 @@ def test_the_catalog_is_never_scanned_in_directory_order():
         for path in sorted(root.rglob("*.py")):
             if "tests" in path.parts or "__pycache__" in path.parts:
                 continue
-            lines = path.read_text().splitlines()
+            lines = path.read_text(encoding="utf-8").splitlines()
             tree = ast.parse("\n".join(lines))
-            sorted_args = {
-                id(node.args[0])
-                for node in ast.walk(tree)
-                if isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id in ("sorted", "min", "max", "len", "any", "all")
-                and node.args
-            }
+            # A scan is excused when the order it returns cannot reach the
+            # result. Two shapes do that, and this only used to see the first:
+            #
+            #   sorted(p.glob("*"))                    the scan IS the argument
+            #   sorted(f(p) for p in root.glob("*"))   the scan feeds it
+            #
+            # The second is the one people actually write, and it was being
+            # reported as a violation while already sorted — so the honest fix
+            # for it looked like adding `# any-order:` to a line that did not
+            # need it, which is how an opt-out marker stops meaning anything.
+            # A set or dict comprehension is the third shape: order cannot
+            # survive into a set, so `{p.stem for p in root.glob("*")}` is
+            # order-free by construction rather than by assertion.
+            order_free = ("sorted", "min", "max", "len", "any", "all",
+                          "set", "frozenset", "sum")
+            sorted_args = set()
+            for node in ast.walk(tree):
+                subtrees = []
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id in order_free
+                    and node.args
+                ):
+                    subtrees.append(node.args[0])
+                elif isinstance(node, (ast.SetComp, ast.DictComp)):
+                    subtrees.extend(gen.iter for gen in node.generators)
+                for subtree in subtrees:
+                    for inner in ast.walk(subtree):
+                        sorted_args.add(id(inner))
             for node in ast.walk(tree):
                 if (
                     isinstance(node, ast.Call)
@@ -540,7 +576,7 @@ def test_the_catalog_is_never_scanned_in_directory_order():
                     if "any-order:" in line:
                         continue
                     offenders.append(
-                        f"{path.relative_to(REPO)}:{node.lineno}: {line.strip()}"
+                        f"{_rel(path)}:{node.lineno}: {line.strip()}"
                     )
     assert offenders == [], (
         "these scans depend on directory order — wrap them in sorted(), or "
@@ -618,7 +654,7 @@ def test_the_app_stays_standalone():
 
     # A Postgres driver in the dependencies means something intends to talk to
     # a server, whatever the docs say.
-    pyproject = (REPO / "pyproject.toml").read_text().lower()
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8").lower()
     for driver in ("psycopg", "asyncpg", "sqlalchemy", "alembic"):
         assert driver not in pyproject, (
             f"{driver} is a dependency again — the store is SQLite, and the "
@@ -649,7 +685,7 @@ def test_the_app_wears_the_extension_palette():
     )
     assert generated.returncode == 0, generated.stderr or generated.stdout
 
-    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text()
+    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text(encoding="utf-8")
 
     for family in ("ibm plex sans", "ibm plex mono"):
         assert family in theme.lower(), (
@@ -660,7 +696,7 @@ def test_the_app_wears_the_extension_palette():
     # preference, not an identity.
     assert 'DEFAULT_THEME: Theme = "panel"' in (
         REPO / "ui" / "src" / "lib" / "theme.ts"
-    ).read_text(), "the app no longer opens wearing the extension's palette"
+    ).read_text(encoding="utf-8"), "the app no longer opens wearing the extension's palette"
 
 
 def test_both_clients_call_it_the_same_thing_on_screen():
@@ -677,8 +713,8 @@ def test_both_clients_call_it_the_same_thing_on_screen():
     saying "8 known risks, 7 serious" over the same eight rows. Caught by
     looking at the two windows, which is not a mechanism.
     """
-    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text()
-    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text()
+    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text(encoding="utf-8")
+    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text(encoding="utf-8")
 
     said = re.search(r'"known risk"', app)
     assert said, (
@@ -862,7 +898,7 @@ def test_the_extension_speaks_no_sites_own_language():
         for n, line in enumerate(source.splitlines(), 1):
             words = [c for c in line if ord(c) > 127 and c.isalpha()]
             if words:
-                offenders.append(f"{path.relative_to(REPO)}:{n}: {''.join(words)}")
+                offenders.append(f"{_rel(path)}:{n}: {''.join(words)}")
     # A gate that found no files to read is a gate that has stopped working.
     assert scanned >= 4, f"only {scanned} script(s) scanned — is the rglob right?"
     assert not offenders, (
@@ -908,4 +944,86 @@ def test_the_shipped_panel_declares_what_the_interpreter_reads():
     assert honoured - shipped == set(), (
         f"the interpreter reads keys nothing ships, so no test exercises "
         f"them: {sorted(honoured - shipped)}"
+    )
+
+
+def _text_calls_without_encoding(tree: ast.AST) -> list[tuple[int, str]]:
+    """Every text-mode file call in `tree` that never names an encoding."""
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Attribute):
+            name = func.attr
+        elif isinstance(func, ast.Name):
+            name = func.id
+        else:
+            continue
+        if name not in {"read_text", "write_text", "open"}:
+            continue
+        if any(kw.arg == "encoding" for kw in node.keywords):
+            continue
+        if name == "open":
+            # Binary mode has no encoding to name, and `read_bytes`/`write_bytes`
+            # never reach here at all. Only a text-mode open is a finding — but
+            # a mode we cannot read statically stays one, because the default
+            # is text.
+            mode = ""
+            if len(node.args) > 1 and isinstance(node.args[1], ast.Constant):
+                mode = str(node.args[1].value)
+            for kw in node.keywords:
+                if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                    mode = str(kw.value.value)
+            if "b" in mode:
+                continue
+        found.append((node.lineno, name))
+    return found
+
+
+def test_no_text_file_is_read_or_written_in_the_platform_encoding():
+    """`read_text`/`write_text`/`open` must always name their encoding.
+
+    Without `encoding=`, Python uses `locale.getencoding()` — UTF-8 on the CI
+    images and on macOS, **cp1252 on a Turkish or Western-European Windows
+    install**. Every byte this project stores is UTF-8: pack YAML, adapters,
+    briefs, fixtures, the Turkish site vocabulary in `local_panel`. So the
+    same call that passes everywhere else raises `UnicodeDecodeError` on the
+    one machine the app is actually built and shipped from.
+
+    That is not hypothetical. Sixty-six tests failed on the Windows host with
+    `'charmap' codec can't decode byte 0x9d`, and clearing them took two
+    hundred and ten call sites. Those edits were the patch; this is the
+    mechanism, because the next unencoded call would have been written the
+    same week and nothing would have said so until a reader's install fell
+    over.
+
+    The rule is a rule, not a preference: pass `encoding="utf-8"` explicitly,
+    or use `read_bytes`/`write_bytes` when the payload is not text. Bytes are
+    also how you avoid the other half of this, which no source gate can see —
+    `write_text` translates a newline to CRLF on Windows, and a file written
+    that way reads as a whole-file diff to everyone else.
+    """
+    offenders = []
+    for path in sorted(REPO.rglob("*.py")):
+        if any(
+            part in {".git", "node_modules", ".venv", "build", "dist", ".claude"}
+            for part in path.parts
+        ):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            # Not this guard's business to report: the suite could not import
+            # the file either way, and whatever does report it will say so
+            # more clearly than an encoding gate would.
+            continue
+        for lineno, name in _text_calls_without_encoding(tree):
+            offenders.append(f"{_rel(path).as_posix()}:{lineno}  {name}()")
+
+    assert not offenders, (
+        "these calls use the platform's default encoding, which is cp1252 on "
+        "the Windows host this app ships from, while every file they touch is "
+        'UTF-8. Pass encoding="utf-8", or read_bytes/write_bytes if the '
+        "payload is not text:\n  " + "\n  ".join(offenders)
     )

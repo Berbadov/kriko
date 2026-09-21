@@ -21,7 +21,7 @@ from app.providers import harness
 def _fake_cli(directory, name):
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / name
-    path.write_text("#!/bin/sh\nexit 0\n")
+    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IEXEC)
     return path
 
