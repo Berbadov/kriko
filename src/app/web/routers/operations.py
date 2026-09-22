@@ -38,19 +38,45 @@ POLL_SECONDS = 0.5
 MAX_SECONDS = 3600
 
 
+def _watched(watch: str) -> list[int]:
+    """The ids a caller says it is still watching, from one query parameter.
+
+    Comma-separated rather than repeated, because this rides on every poll and
+    a URL is the cheapest place to put a handful of integers. Anything that is
+    not a number is dropped rather than refused: a stale or truncated list must
+    degrade into a slightly staler feed, never into a 422 that stops the feed
+    altogether.
+    """
+    out: list[int] = []
+    for piece in (watch or "").split(","):
+        piece = piece.strip()
+        if piece.isdigit():
+            out.append(int(piece))
+    return out[: state.MAX_WATCHED]
+
+
 @router.get("/operations")
 def list_operations(
     limit: int = Query(50, ge=1, le=500),
     after_id: int = Query(0, ge=0),
+    watch: str = Query(""),
     conn=Depends(get_app_state),
 ) -> dict:
-    items = state.operations(conn, limit=limit, after_id=after_id)
+    items = state.operations(
+        conn, limit=limit, after_id=after_id, watching=_watched(watch)
+    )
     return {
         "items": items,
         "running": state.running_operations(conn),
         # The newest id the caller has now seen, so a poller that missed the
         # stream can carry on from a number rather than from a timestamp.
-        "last_id": max((one["op_id"] for one in items), default=after_id),
+        # Only *new* rows may move it: a re-read row is one the caller already
+        # holds, and letting it push the cursor forward would be harmless today
+        # and wrong the first time the two ever disagree.
+        "last_id": max(
+            (one["op_id"] for one in items if one["op_id"] > after_id),
+            default=after_id,
+        ),
     }
 
 
@@ -72,14 +98,41 @@ async def stream_operations(
     async def events():
         conn = state.connect(request_jobs.settings.app_state_path)
         cursor = after_id
+        # Every row this connection has sent that was `running` when it went,
+        # against what it looked like when it went. The stream owns this rather
+        # than the client, because a client listening over SSE has no way to
+        # ask for anything — and because a reconnect starts a fresh set, which
+        # is correct: the new connection re-reads from its own cursor and
+        # learns the same rows again.
+        watching: dict[int, str] = {}
         try:
             waited = 0.0
             while waited < MAX_SECONDS:
-                rows = state.operations(conn, limit=200, after_id=cursor)
+                rows = state.operations(
+                    conn, limit=200, after_id=cursor, watching=sorted(watching)
+                )
+                sent = False
                 for row in rows:
-                    cursor = row["op_id"]
-                    yield f"data: {json.dumps(row, default=str)}\n\n"
-                if not rows:
+                    op_id = row["op_id"]
+                    body = json.dumps(row, default=str)
+                    if op_id > cursor:
+                        cursor = op_id
+                    elif watching.get(op_id) in (None, body):
+                        # Either not ours to re-send, or unchanged since we
+                        # last did. A row re-sent every half second because it
+                        # is merely still running would turn a live feed into a
+                        # busy one, which is a different kind of unreadable.
+                        continue
+                    if row["state"] == "running":
+                        watching[op_id] = body
+                    else:
+                        # It has an ending now — the thing this stream existed
+                        # to deliver and never did. Send it once more, then
+                        # stop watching it.
+                        watching.pop(op_id, None)
+                    sent = True
+                    yield f"data: {body}\n\n"
+                if not sent:
                     # A comment frame, so a proxy between here and the browser
                     # does not decide an idle stream is a dead one.
                     yield ": waiting\n\n"

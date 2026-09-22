@@ -732,6 +732,26 @@ export type Operation = {
     ms: number | null;
     started_at: string;
     ended_at: string;
+    /** The job this operation *is*, when it came in by the `job` door.
+     *
+     * Empty for every other door, and that emptiness is load-bearing: a job
+     * belongs to the runner in this process and can be stopped from the feed
+     * watching it, while an MCP call belongs to the process that made it and
+     * cannot. The Stop button is offered on exactly the rows that carry one. */
+    job_id?: string;
+    /** What that job is saying right now — its named stage, live.
+     *
+     * An operation row says nothing between opening and closing, so a long run
+     * was a line that sat there for forty minutes. The job underneath it was
+     * naming its stage the whole time; this is the feed finally asking. Null
+     * for a door that has no job. */
+    note?: string | null;
+    /** How far along that job claims to be, 0–1. Null where there is no job. */
+    progress?: number | null;
+    /** The job's own state, which outlives the operation's: a cancelled job is
+     *  not a failed one, and colouring a deliberate stop like a crash teaches
+     *  the reader to ignore the colour. */
+    job_state?: string | null;
 };
 
 export type Operations = {

@@ -479,7 +479,15 @@ CREATE TABLE IF NOT EXISTS operations (
     -- the second. Added after the table existed, hence no default beyond
     -- NULL (see `add_missing_columns`).
     usd          REAL,
-    tokens       INTEGER
+    tokens       INTEGER,
+    -- The job this operation *is*, when it came in by the `job` door. Empty
+    -- for every other door, and that emptiness is the point: an MCP call
+    -- belongs to the process that made it and this installation cannot stop
+    -- it, while a job belongs to the runner in this process and can be
+    -- cancelled from the feed that is watching it. The feed needed a way to
+    -- tell those two apart before it could offer the button on only one.
+    -- Added after the table existed (see `add_missing_columns`).
+    job_id       TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS operations_started ON operations (op_id DESC);
 
@@ -1488,6 +1496,7 @@ def open_operation(
     subject_id: str = "",
     pack_id: str = "",
     request: str = "",
+    job_id: str = "",
 ) -> int:
     """Start an operation row. Returns its id.
 
@@ -1498,8 +1507,8 @@ def open_operation(
     """
     cursor = conn.execute(
         "INSERT INTO operations (door, kind, name, subject_id, pack_id, state,"
-        " request_json, started_at) VALUES (?,?,?,?,?,'running',?,?)",
-        (door, kind, name, subject_id, pack_id, request, _now()),
+        " request_json, started_at, job_id) VALUES (?,?,?,?,?,'running',?,?,?)",
+        (door, kind, name, subject_id, pack_id, request, _now(), job_id),
     )
     conn.commit()
     assert cursor.lastrowid is not None
@@ -1533,26 +1542,92 @@ def close_operation(
     conn.commit()
 
 
+#: The most rows a caller may ask to be re-read at once. A feed watches only
+#: what is still open, and an installation with two hundred simultaneously
+#: running operations has a different problem than a long query.
+MAX_WATCHED = 200
+
+#: Every operation, plus what the job behind it is saying *now*.
+#:
+#: An operation row is opened before the work and closed after it, and between
+#: those two writes it says nothing at all — so a forty-minute research run was
+#: a line on the Live screen that sat there, stateless, for forty minutes. The
+#: `jobs` row underneath it has been carrying a named stage and a fraction the
+#: whole time; the feed simply never asked. One LEFT JOIN, so a row that is a
+#: job arrives already saying which stage it is in.
+#:
+#: The join is on `job_id`, which is empty for every other door — an MCP call
+#: has no job and gets NULLs, which is the truth about it and not a gap.
+_OPERATION_SELECT = (
+    "SELECT o.*, j.message AS note, j.progress AS progress, "
+    "j.state AS job_state FROM operations o "
+    "LEFT JOIN jobs j ON j.job_id = o.job_id AND o.job_id <> ''"
+)
+
+
 def operations(
-    conn: sqlite3.Connection, *, limit: int = 50, after_id: int = 0
+    conn: sqlite3.Connection,
+    *,
+    limit: int = 50,
+    after_id: int = 0,
+    watching: Sequence[int] = (),
 ) -> list[dict]:
-    """The newest operations, or everything since `after_id`.
+    """The newest operations, everything since `after_id`, and anything the
+    caller is still watching.
 
     Two shapes from one function because a feed needs both: a page on open,
     then the tail on every poll. `after_id` returns *ascending* ids so a
     consumer can append and remember the last one.
+
+    **`watching` is the third shape, and it is the one that was missing.** A
+    row is written twice — opened `running` before the work, closed `ok` or
+    `failed` after it — and that second write is an UPDATE to a row whose id is
+    already behind the cursor. A feed following ids alone therefore received
+    every operation's *beginning* and none of its ending, so every row on
+    screen said "running" until the reader reloaded the page. On the one screen
+    whose whole job is answering "is it doing anything right now", the answer
+    was permanently, quietly yes.
+
+    So a caller hands back the ids it still believes are open and gets their
+    current state. Bounded by `MAX_WATCHED`, and sorted in with the new rows so
+    a consumer appends in one pass. Re-reading is cheap: the set is only what
+    is open, which for a healthy installation is nought or one.
     """
+    limit = max(1, min(limit, 500))
     if after_id:
         rows = conn.execute(
-            "SELECT * FROM operations WHERE op_id > ? ORDER BY op_id LIMIT ?",
-            (after_id, max(1, min(limit, 500))),
+            f"{_OPERATION_SELECT} WHERE o.op_id > ? ORDER BY o.op_id LIMIT ?",
+            (after_id, limit),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM operations ORDER BY op_id DESC LIMIT ?",
-            (max(1, min(limit, 500)),),
+            f"{_OPERATION_SELECT} ORDER BY o.op_id DESC LIMIT ?",
+            (limit,),
         ).fetchall()
-    return [dict(row) for row in rows]
+    found = [dict(row) for row in rows]
+    watched = [int(one) for one in watching][:MAX_WATCHED]
+    if watched:
+        seen = {one["op_id"] for one in found}
+        again = conn.execute(
+            f"{_OPERATION_SELECT} WHERE o.op_id IN "
+            f"({','.join('?' * len(watched))})",
+            watched,
+        ).fetchall()
+        found += [dict(row) for row in again if row["op_id"] not in seen]
+        # Ascending, because a caller that asked for a tail is appending. The
+        # first page is the newest-first exception it has always been, and
+        # re-reading a row while holding that page is not a thing a caller
+        # does.
+        if after_id:
+            found.sort(key=lambda one: one["op_id"])
+    return found
+
+
+def operation(conn: sqlite3.Connection, op_id: int) -> dict | None:
+    row = conn.execute(
+        f"{_OPERATION_SELECT} WHERE o.op_id = ?", (op_id,)
+    ).fetchone()
+    return dict(row) if row else None
 
 
 def running_operations(conn: sqlite3.Connection) -> int:
