@@ -204,9 +204,17 @@ export const api = {
             { claim_key: claimKey, note },
         ),
     /** The operations feed. `after` is an id: 0 means "the newest page",
-     *  anything else means "everything since". See `lib/operations.ts`. */
-    operations: (limit = 50, after = 0) =>
-        get<T.Operations>(`/api/operations?limit=${limit}&after_id=${after}`),
+     *  anything else means "everything since". See `lib/operations.ts`.
+     *
+     *  `watch` is the ids the caller still believes are open. Without it the
+     *  feed only ever hears an operation *begin*: a row is written twice, and
+     *  the second write is an update to a row whose id is already behind the
+     *  cursor, so every line on screen said "running" until a reload. */
+    operations: (limit = 50, after = 0, watch: number[] = []) =>
+        get<T.Operations>(
+            `/api/operations?limit=${limit}&after_id=${after}` +
+                (watch.length ? `&watch=${watch.join(",")}` : ""),
+        ),
     submissions: (limit = 30) =>
         get<T.Submissions>(`/api/submissions?limit=${limit}`),
     /* Run it again — optionally carrying answers to what it asked last time.

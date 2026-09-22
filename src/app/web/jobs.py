@@ -158,6 +158,11 @@ class JobRunner:
                 name=kind,
                 kind=operations.kind_of(kind),
                 arguments=params,
+                # So the feed can reach back to the job: its live message, its
+                # log, and the one thing the feed could not do before — stop
+                # it. Only this door carries one, which is exactly the
+                # distinction the button needs.
+                job_id=job_id,
             ) as outcome:
                 progress.check()
                 result = self.handlers[kind](self.settings, params, progress)
