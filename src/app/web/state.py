@@ -1176,9 +1176,10 @@ def mark_signals(conn: sqlite3.Connection, limit: int = 50) -> dict:
 # ── submissions ─ what a researcher sent, and what survived ────────
 
 
-#: How a submission reached the acceptance path. Two doors, and the constant
-#: exists so a third one cannot be added without naming itself here.
-DOORS = ("mcp", "job")
+#: How a submission reached the acceptance path. The constant exists so a new
+#: door cannot be added without naming itself here — `cli` did, when
+#: `kriko submit` (`app/agentops.py`) became the door that does not need MCP.
+DOORS = ("mcp", "job", "cli")
 
 
 def record_submission(

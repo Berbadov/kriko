@@ -30,13 +30,10 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from app import agenda as _agenda
-from app import operations
-from app.findings import accept_findings, log_submission
+from app import agentops, operations
 from kriko.lookup.tree import health_json, tree_json
 from kriko.lookup.tree import subject_tree as _subject_tree
 from kriko.lookup.tree import weakest_claims as _weakest_claims
-from kriko.research import get_researcher, plan_task
 from kriko.store import packstore
 from kriko.store.db import connect
 
@@ -322,12 +319,7 @@ def research_brief(subject_id: str, pack_id: str) -> dict:
     about what is worth keeping — without a line of code knowing either.
     """
     with _store() as conn:
-        task = plan_task(conn, subject_id, pack_id)
-        return {
-            "subject": task.subject_label,
-            "queries": list(task.rendered_queries()),
-            "brief": get_researcher().brief(task),
-        }
+        return agentops.brief(conn, subject_id, pack_id)
 
 
 @tool()
@@ -357,21 +349,10 @@ def research_agenda(pack_id: str = "", limit: int = 20) -> dict:
     different searches, and a single number cannot tell them apart.
     """
     with _store() as conn:
-        app_state = None
-        try:
-            from app.web import state as _state
-
-            app_state = _state.connect(_app_state_path())
-        except Exception:
-            app_state = None
-        try:
-            return _agenda.compute(
-                conn, app_state=app_state, log_path=_log_path(),
-                pack_id=pack_id, limit=limit,
-            )
-        finally:
-            if app_state is not None:
-                app_state.close()
+        return agentops.agenda(
+            conn, app_state_path=_app_state_path(), log_path=_log_path(),
+            pack_id=pack_id, limit=limit,
+        )
 
 
 @tool()
@@ -468,22 +449,14 @@ def submit_findings(
     claims did not survive, rather than discovering later that half its work
     vanished.
     """
-    kept: list[dict] = []
+    # The refusals in this payload are what an author tunes the skill against,
+    # so `agentops.submit` logs them to app.sqlite as well as returning them.
     with _store() as conn:
-        verdicts = accept_findings(conn, subject_id, pack_id, findings, retain=kept)
-    # Logged after the store connection closes, and to a different file: the
-    # refusals in this payload are what an author tunes the skill against, and
-    # they were previously returned to the agent and then lost.
-    log_submission(
-        _app_state_path(),
-        door="mcp",
-        subject_id=subject_id,
-        pack_id=pack_id,
-        verdicts=verdicts,
-        queries=queries,
-        documents=kept,
-    )
-    return verdicts
+        return agentops.submit(
+            conn, app_state_path=_app_state_path(), door="mcp",
+            subject_id=subject_id, pack_id=pack_id,
+            findings=findings, queries=queries,
+        )
 
 
 # ── writes: authoring a pack, in a directory the reader owns ─────────────
