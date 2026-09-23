@@ -292,8 +292,12 @@ the gate's taste, not the truth.
   acceptance path on a throwaway copy of the store, all on CPU through Ollama.
 - `qwen3.5:4b` returned nothing until two changes: a 16k context
   (`PARAMETER num_ctx 16384`) and thinking turned off
-  (`reasoning_effort: "none"`). After that it produced one grounded finding on
-  each of the 3 pages it finished before the run was stopped.
+  (`reasoning_effort: "none"`). After that, on an RTX 3060 Laptop GPU (6 GB,
+  the model fully in VRAM), it took 49 s for all six pages. It proposed 8
+  findings, 7 of them grounded, and the pack gate accepted 3. The other 4
+  failed "nothing ties this to a specific configuration": a prompt that pushes
+  engine and gearbox codes into each finding is the next thing to try. On the
+  CPU the same work took about 10× longer.
 - `granite4.2:3b` returned `[]` on all six pages with the same settings. With
   the default context, one of its five proposals passed; the rest were
   unquotable, a JSON object instead of a list, or a URL without its scheme.
