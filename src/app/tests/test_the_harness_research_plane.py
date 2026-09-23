@@ -224,17 +224,27 @@ def test_every_offered_harness_has_a_tool_grant():
     `--agent`, naming a profile (`_ensure_opencode_agent`) whose own
     `permission:` block denies `bash`/`edit` and allows only
     `webfetch`/`websearch` — the same shape as `.opencode/agents/
-    kriko_research.md` already ships in this repo. `agy` has no verified
+    kriko_research.md` already ships in this repo. `copilot` restricts via
+    `--available-tools`, which is the strongest of the four: it is a whole
+    tool set rather than an allowlist layered over one, so a tool left out
+    of it does not exist for that run at all. `agy` has no verified
     allowlist flag, so its restriction is the headless permission policy
     itself (anything that would ask is auto-denied), a working directory
     that vanishes with the run, and a denial that fails the run loudly
     rather than researching nothing on the reader's quota.
+
+    The list of spellings below is the one hand-enumerated thing here, and
+    it is allowed to be: a flag name is a fixed fact about a CLI, not data
+    that grows with pack coverage. What must not be hand-enumerated is
+    *which harness is exempt* — that is why the escape hatch is `unusable`,
+    a field the row itself declares, rather than an id checked for here.
     """
     for one in harness_mod.KNOWN:
         has_grant = (
             "--allowedTools" in one.args
             or "--allowed-tools" in one.args
             or "--agent" in one.args
+            or "--available-tools" in one.args
             or one.protocol == "agy"
         )
         assert has_grant or one.unusable, (
@@ -1534,13 +1544,18 @@ def test_unverified_headless_entries_are_not_driven(monkeypatch):
     no edit here.
     """
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
-    monkeypatch.setattr(
-        harness_mod, "declared",
-        lambda _: frozenset({"--output", "--agent", "--enabled-tools", "--prompt",
-                             "--trust", "--max-price", "--max-turns",
-                             "--output-format", "--approval-mode", "--allowed-tools",
-                             "--model"}),
+    # Every flag any row names, derived from the rows rather than typed out
+    # here. A hand-written set was the fifth row's tripwire: `github-copilot`
+    # arrived declaring flags this list had never heard of, and the test
+    # failed on its own stub rather than on anything about the code.
+    every_flag = frozenset(
+        word
+        for one in harness_mod.KNOWN
+        for word in (*one.args, *one.required, one.model_flag or "",
+                     one.effort_flag or "", one.prompt_flag or "")
+        if word.startswith("-")
     )
+    monkeypatch.setattr(harness_mod, "declared", lambda _: every_flag)
     unverified = [h for h in harness_mod.KNOWN if h.unusable]
     assert unverified, (
         "every known CLI now claims to be verified — which is either true, "

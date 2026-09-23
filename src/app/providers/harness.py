@@ -161,6 +161,13 @@ class Harness:
     model_flag: str = ""
     required: tuple[str, ...] = ()
     capabilities: tuple[str, ...] = ()
+    #: One paragraph appended to `CONTRACT`, for a CLI whose tool set differs
+    #: from what the shared contract assumes. The contract says "only the web
+    #: search and web fetch tools" because every CLI here had both — and the
+    #: first one that has only `web_fetch` would otherwise be sent looking for
+    #: a tool it does not own. Per-harness prose, never per-category: nothing
+    #: here may name a product, a make or a subject.
+    contract_note: str = ""
     #: What to run instead of `args` when this machine's CLI does not list
     #: `needs_in_help` among the things it can do. The streaming vector is the
     #: one this plane wants (see `_claude_args`); this is the one that still
@@ -477,6 +484,78 @@ KNOWN = (
         budget_flag="--max-price",
         turns_flag="--max-turns",
         sandbox_home=True,
+    ),
+    # Verified against GitHub Copilot CLI 1.0.48 on the reader's own machine,
+    # which is where this row came from: `copilot` was on PATH, answered
+    # `--help`, ran a prompt and returned a reply — and Kriko had no row for
+    # it, so the Agents screen said three agents where there were four. That
+    # is the whole of the reader's "detected harnesses aren't including all".
+    #
+    # Every value below was read off the installed CLI rather than a doc page:
+    #
+    # * `--output-format json` is **JSONL, one object per line** (its own help
+    #   says so), ending in a `{"type": "result", "exitCode": n}` line. The
+    #   reply is in the `assistant.message` events, which is why this needs
+    #   its own protocol rather than reusing `claude`'s `result.result`.
+    # * `--allow-all-tools` is what its help gives as the non-interactive
+    #   example, and without it a headless run stops on a permission prompt
+    #   nobody can answer — `agy`'s failure, one CLI further on. `--no-ask-user`
+    #   closes the other door, the `ask_user` tool.
+    # * `--available-tools web_fetch` is the sandbox: its help reads "only
+    #   these tools will be available to the model", so naming one name is
+    #   the grant. Asked to name its own tools, this CLI listed `powershell`,
+    #   `write_powershell`, `create`, `edit`, `sql` and a dozen more — every
+    #   one of which a research run must not have.
+    # * **It has no web *search* tool.** `web_fetch` is the only reading tool
+    #   it owns, which is why `capabilities` does not claim search and why
+    #   this is the one row that carries a `contract_note`.
+    # * `--disable-builtin-mcps` drops its GitHub MCP server, and
+    #   `--no-custom-instructions` the reader's own instruction files: the
+    #   same hygiene `--safe-mode` buys on Claude Code.
+    Harness(
+        "github-copilot", "GitHub Copilot CLI", "copilot",
+        ("--output-format", "json", "--allow-all-tools", "--no-ask-user",
+         "--available-tools", "web_fetch",
+         "--disable-builtin-mcps", "--no-custom-instructions",
+         "--no-auto-update", "--no-color", "--log-level", "none"),
+        download_url="https://docs.github.com/copilot/how-tos/copilot-cli",
+        install_hint=(
+            "winget install GitHub.Copilot"
+            if os.name == "nt"
+            else "npm install -g @github/copilot"
+        ),
+        needs_account="a GitHub Copilot subscription; run `copilot login` once first",
+        protocol="copilot", prompt_argument=False, prompt_flag="-p",
+        required=("--output-format", "--allow-all-tools", "--available-tools"),
+        model_flag="--model", model_unlisted=True,
+        model_hint=(
+            "a model id your Copilot plan includes — it refuses an unavailable "
+            "one by name before spending anything"
+        ),
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high", "xhigh"),
+        effort_hint="reasoning effort — `copilot --help` names these four",
+        capabilities=("headless", "streaming", "web-fetch", "model-selection"),
+        contract_note=(
+            "\n**This agent has no web search tool — only `web_fetch`.** Where "
+            "the brief says to search, fetch a search engine's own results page "
+            "instead (a plain HTML endpoint, not a JavaScript one), read the "
+            "links off it, and fetch the pages worth reading. Everything else "
+            "about the contract above is unchanged: report what you actually "
+            "read, quote it verbatim, and invent nothing.\n"
+        ),
+        # winget puts the shim under `Links`, the payload under `Packages`,
+        # and npm's global install somewhere else again. None of the three is
+        # reliably on the `PATH` a desktop shell inherits at login.
+        homes=(
+            "AppData/Local/Microsoft/WinGet/Links",
+            "AppData/Local/copilot/bin",
+            "AppData/Roaming/npm",
+            ".npm-global/bin",
+            "node_modules/.bin",
+            ".local/bin",
+            "bin",
+        ),
     ),
     Harness(
         "gemini-cli", "Gemini CLI", "gemini",
@@ -1108,9 +1187,14 @@ def _tool_line(name: str, args: dict | None) -> str:
     args = args if isinstance(args, dict) else {}
     query = args.get("query") or args.get("q")
     url = args.get("url")
-    if name == "WebSearch" and query:
+    # Folded, because the same two tools are spelled four ways across these
+    # CLIs — `WebSearch`/`WebFetch`, `web_search`/`web_fetch` — and a reader
+    # watching the log should not be able to tell which CLI is running from
+    # whether the line says "fetched" or prints a function name.
+    plain = name.replace("_", "").replace("-", "").lower()
+    if plain == "websearch" and query:
         return f'searched "{_short(query, 120)}"'
-    if name == "WebFetch" and url:
+    if plain == "webfetch" and url:
         return f"fetched {_short(url, 120)}"
     detail = query or url or ""
     return f"{name} {_short(detail, 100)}".strip()
@@ -1216,6 +1300,48 @@ def _narrate_vibe(event: dict) -> str:
     return ""
 
 
+def _narrate_copilot(event: dict) -> str:
+    """One GitHub Copilot CLI event, as a job-log line — or `""`.
+
+    Its stream is `{"type": "<noun>.<verb>", "data": {...}}`, and almost all
+    of it is bookkeeping: the MCP and skill inventories are printed three
+    times before the first token, and every sentence arrives twice — once as
+    a run of `assistant.message_delta` frames and once whole, as
+    `assistant.message`. So this reads the whole ones and drops the frames,
+    which is the same choice `_narrate_vibe` makes for the same reason.
+
+    The failure lines are worth as much as the actions. `model.call_failure`
+    is how "the requested model is not supported" reaches a reader — the CLI
+    retries it twice, ends the turn and exits 1 — and without it the run
+    reads as a silent minute followed by an exit code.
+    """
+    kind = str(event.get("type") or "")
+    data = event.get("data")
+    data = data if isinstance(data, dict) else {}
+    if kind == "assistant.message":
+        lines = [
+            _tool_line(str(request.get("name") or ""), request.get("arguments"))
+            for request in data.get("toolRequests") or ()
+            if isinstance(request, dict)
+        ]
+        said = str(data.get("content") or "").strip()
+        if said:
+            lines.append(_short(said, 200))
+        return "; ".join(one for one in lines if one)
+    if kind == "model.call_failure":
+        return "the model call failed: " + _short(
+            str(data.get("errorMessage") or data.get("statusCode") or ""), 160
+        )
+    if kind == "session.error":
+        return "a tool call failed: " + _short(str(data.get("message") or ""), 160)
+    if kind == "session.tools_updated":
+        model = str(data.get("model") or "").strip()
+        return f"started {model}" if model else ""
+    if kind == "result":
+        return "finished" if not event.get("exitCode") else ""
+    return ""
+
+
 def narrate(event: dict) -> str:
     """One stream event, as a line for the job log — or `""` for machinery.
 
@@ -1237,6 +1363,13 @@ def narrate(event: dict) -> str:
     # a run.
     if event.get("sessionId") is not None and event.get("generationStatus") is not None:
         return _narrate_vibe(event)
+    # Copilot's events are the only ones whose `type` is dotted and whose
+    # payload sits under `data` — the same kind of cheap tell, and a wrong
+    # guess here still costs a log line rather than a run. `result` is the
+    # one type it shares with Claude Code's stream, and that one carries no
+    # `data`, so it falls through to the branch below that already reads it.
+    if isinstance(event.get("type"), str) and "." in event["type"] and "data" in event:
+        return _narrate_copilot(event)
     kind = event.get("type")
     if kind in QUIET_EVENTS:
         return ""
@@ -1429,7 +1562,8 @@ class HarnessResearcher(AgentResearcher):
         # that has somewhere to put it. Where there is nowhere, `scale_args`
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
-        prompt = self.brief(task) + "\n" + budget_clause(self.max_documents) + CONTRACT
+        prompt = (self.brief(task) + "\n" + budget_clause(self.max_documents)
+                  + CONTRACT + self.harness.contract_note)
         reply = self._run(prompt)
         payload = _payload(reply)
         reported = payload.get("queries")
@@ -2034,6 +2168,52 @@ class HarnessResearcher(AgentResearcher):
         # and losing a completed run to a shape change would be absurd.
         return "\n".join(said) if said else stdout
 
+    def _unwrap_copilot(self, stdout: str) -> str:
+        """Copilot's reply, out of its JSONL event stream.
+
+        Its terminal `{"type": "result"}` line carries an exit code, a session
+        id and a usage block — and **no reply text at all**. The answer is in
+        the `assistant.message` events before it, one per whole message, so
+        this joins them in order for the reason `_unwrap_vibe` does: a model
+        that split its findings fence across two messages must not lose it to
+        a rule that read only the last one.
+
+        A failure reported at exit 0 is refused here, the same as everywhere
+        else in this file. `session.error` is how a model refusal or a tool
+        error arrives, and the CLI has been seen to print one, end the turn
+        and still exit 0 about it.
+
+        Nothing here meters: the usage block counts premium requests and
+        milliseconds, not tokens, so this plane's cost columns stay NULL
+        rather than being filled with a number that means something else.
+        """
+        said: list[str] = []
+        failure = ""
+        for line in (stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            data = event.get("data")
+            data = data if isinstance(data, dict) else {}
+            if event.get("type") == "assistant.message":
+                text = str(data.get("content") or "")
+                if text.strip():
+                    said.append(text)
+            elif event.get("type") == "session.error":
+                failure = failure or str(data.get("message") or "").strip()
+            elif event.get("type") == "model.call_failure":
+                failure = failure or str(data.get("errorMessage") or "").strip()
+        if not said and failure:
+            hint = _hint(failure)
+            raise RuntimeError(
+                f"{self.harness.label} reported an error: {failure[:500]}"
+                + (f" -- {hint}" if hint else "")
+            )
+        return "\n".join(said) if said else stdout
+
     def _unwrap(self, stdout: str) -> str:
         """The assistant's text out of the CLI's JSON envelope, plus the usage.
 
@@ -2044,6 +2224,8 @@ class HarnessResearcher(AgentResearcher):
         """
         if self.harness.protocol == "vibe":
             return self._unwrap_vibe(stdout)
+        if self.harness.protocol == "copilot":
+            return self._unwrap_copilot(stdout)
         envelope = _envelope(stdout)
         if not envelope:
             return stdout
