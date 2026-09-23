@@ -54,6 +54,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 import threading
 from collections.abc import Callable
@@ -199,6 +200,23 @@ class Harness:
     #: silently ignored there rather than read — a run that researches nothing
     #: on the reader's quota is the failure this rules out.
     prompt_flag: str = ""
+    #: How this CLI is told that more messages will arrive on stdin while it
+    #: is running — the difference between a note nobody reads and a reply the
+    #: agent acts on.
+    #:
+    #: **This is what B120 left open, and it is not free.** Every other prompt
+    #: path here was moved *off* stdin (see `prompt_argument`): a pipe that
+    #: crosses a `claude.cmd` shim into node is the B125 scar, and it failed
+    #: silently. Streaming input puts the prompt back on that pipe, because a
+    #: CLI reading messages has no other place to read the first one from. The
+    #: trade is accepted only where it buys something — a run the reader can
+    #: actually answer — and only when the CLI *declares* the flag, with the
+    #: ordinary one-shot vector still there for every other run. The silent
+    #: half of the scar is closed by `CONVERSATION_START_SECONDS`: a child
+    #: that never speaks is abandoned in a minute rather than in the timeout,
+    #: and the run is retried the old way.
+    reply_flag: str = ""
+    reply_value: str = ""
     #: An environment variable that names the model, for a CLI with no
     #: per-run `--model` flag. `vibe` is the case: its model is a *config*
     #: field (`active_model`) and its config layer reads `VIBE_*` out of the
@@ -326,6 +344,15 @@ KNOWN = (
         # spending tokens they did not choose to spend, and the harness they
         # are trying *not* to spend on was the one with no ceiling.
         budget_flag="--max-budget-usd",
+        # `--input-format stream-json`, whose help says "only works with
+        # --print" — which is the mode this plane already runs in, so the
+        # conversational vector is the streaming one plus this flag and
+        # nothing else. Probed as a *flag* rather than by looking for
+        # "stream-json" in the help text, because that word is also in
+        # `--output-format`'s line and would have said yes on a CLI that only
+        # streams outward.
+        reply_flag="--input-format",
+        reply_value="stream-json",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -1070,6 +1097,25 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
 #: `_run`) is accepted because the alternative is not running at all.
 MAX_PROMPT_ARGUMENT = 24000
 
+#: How long a conversational run may say *nothing at all* before it is
+#: abandoned and retried the ordinary way.
+#:
+#: The other half of the B125 scar. That failure was a prompt that never
+#: crossed the `cmd.exe` shim, and its cost was not the loss — it was that the
+#: CLI shrugged and ran with no prompt, so the reader paid for a run that
+#: researched nothing and read like a success. Streaming input cannot do that:
+#: with no message there is nothing to run, so the child simply waits. Which
+#: would make the same broken pipe a twenty-minute hang instead, and that is
+#: what this number is for. `claude -p --output-format stream-json` prints its
+#: `system`/`init` event before it makes an API call, so a minute of total
+#: silence is not a slow model, it is a pipe that did not arrive.
+CONVERSATION_START_SECONDS = 60.0
+
+#: How long a turn that ended on a question holds the pipe open for an answer.
+#: The worker is single, so this is time every queued job waits too: long
+#: enough to read a question and type a word, not long enough to go and look.
+ANSWER_WAIT_SECONDS = 180.0
+
 #: How much of a run's raw output is kept in memory. The reply is parsed from
 #: this, so it has to hold the last `result` event — which is the last line —
 #: and it is bounded for the reason `termpty.SCROLLBACK` is: a process that
@@ -1089,6 +1135,30 @@ MAX_NARRATED = 400
 QUIET_EVENTS = frozenset(
     {"stream_event", "active_goal", "autocompact_state", "rate_limit_event"}
 )
+
+
+def _is_result(line: str) -> bool:
+    """Whether one stream-json line is the event that ends a turn."""
+    try:
+        event = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    return isinstance(event, dict) and event.get("type") == "result"
+
+
+def _asks(line: str) -> bool:
+    """Whether a turn's `result` ended on a question to the reader.
+
+    Deliberately literal. A question mark is the one signal every model gives
+    when it wants something back, and guessing at intent beyond that would
+    hold the job worker for runs that were simply done.
+    """
+    try:
+        event = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    text = event.get("result") if isinstance(event, dict) else None
+    return isinstance(text, str) and text.rstrip().endswith("?")
 
 
 def _short(text: str, limit: int = 160) -> str:
@@ -1393,12 +1463,38 @@ class HarnessResearcher(AgentResearcher):
         #: which costs the run nothing — the CLI's own case, and every run
         #: before `pack_author`/`pack_amend`/`site_register` were given one.
         self.check_cancelled: Callable[[], None] | None = None
+        #: What the reader has said to this run since it was last asked.
+        #:
+        #: Set beside `check_cancelled` and read in the same tick, because the
+        #: two are the same mechanism pointed in opposite directions: one asks
+        #: whether to stop, this asks whether anything has been said. B120
+        #: shipped the outward half — the run streams what it is doing — and
+        #: named what was left: "a run that stops to ask a question still
+        #: cannot be answered ... this is a window rather than a
+        #: conversation." This is the inward half.
+        #:
+        #: `None` means nobody can answer, and then the child's stdin stays
+        #: exactly what it was — `DEVNULL`, or the temp file holding a prompt
+        #: too long for argv. That default matters: B125 is the scar from
+        #: handing a CLI a *pipe* on stdin it did not expect, which on Windows
+        #: crosses a `cmd.exe` and produced "no stdin data received in 3s". A
+        #: pipe is opened only when someone is actually there to write to it.
+        self.replies: Callable[[], list[str]] | None = None
         #: How often to look up from a silent stream and ask whether the reader
         #: has stopped this. Half a second: the reader's own measure is "did
         #: pressing stop stop it", and anything under a second reads as yes,
         #: while a tick this size costs one queue timeout per half-second of a
         #: run that is otherwise waiting on a network.
         self._cancel_tick = 0.5
+        #: True while a run is talking to a child that reads *messages*, so a
+        #: reply has to be framed rather than typed. Set per attempt, because
+        #: the same researcher may fall back to the one-shot vector mid-run.
+        self._conversing = False
+        #: Whether the last `_stream` ever produced a line. Only conversational
+        #: runs consult it: a child reading its prompt from a pipe that never
+        #: arrived is silent rather than wrong, and silence is the only symptom
+        #: it has.
+        self._spoke = False
         #: The run's raw output, bounded. The reply is parsed out of this, and
         #: it is what a failure quotes its tail of.
         self.transcript = ""
@@ -1657,6 +1753,34 @@ class HarnessResearcher(AgentResearcher):
             self._run_env[self.harness.model_env] = self.requested_model
         say = on_line if on_line is not None else self.on_action
 
+        self._conversing = False
+        if self._can_converse():
+            # The whole point of this branch: the child reads messages for as
+            # long as it runs, so the brief is the first one and the reader's
+            # answer is the next. Every other path here hands over a prompt
+            # and then talks to a process that cannot hear.
+            self._conversing = True
+            code, stdout, stderr = self._stream(
+                [*command, self.harness.reply_flag, self.harness.reply_value],
+                subprocess.DEVNULL,
+                say,
+                opening=self._frame(prompt),
+            )
+            if not self._spoke:
+                # It never said a word — the pipe, not the model. Fall through
+                # to the ordinary vector rather than failing the job: a run the
+                # reader cannot answer is worth far more than no run at all,
+                # and this is the one case where we know which of the two we
+                # are looking at.
+                self._conversing = False
+                self._echo(
+                    f"{self.harness.label} did not start in conversational "
+                    "mode; running it the ordinary way, so this run cannot "
+                    "be answered"
+                )
+            else:
+                return self._finish(code, stdout, stderr)
+
         if self.harness.prompt_flag:
             # A CLI whose prompt is a flag's value, with no `--` convention
             # and no stdin prompt to fall back on (verified: piped input is
@@ -1689,6 +1813,16 @@ class HarnessResearcher(AgentResearcher):
             finally:
                 os.remove(stdin_path)
 
+        return self._finish(code, stdout, stderr)
+
+    def _finish(self, code: int, stdout: str, stderr: str) -> str:
+        """What a completed spawn means, whichever vector produced it.
+
+        Lifted out of `_invoke` when the conversational vector gave it a
+        second exit to read. One reading of an exit code, in one place — the
+        alternative was two, and the second one would have been the one that
+        forgot to meter.
+        """
         if code != 0:
             envelope = _envelope(stdout) if self.harness.structured else {}
             # Metered before raising. A run that failed on its fourth search
@@ -1705,7 +1839,126 @@ class HarnessResearcher(AgentResearcher):
             return stdout
         return self._unwrap(stdout)
 
-    def _stream(self, command, stdin_read, say) -> tuple[int, str, str]:
+    def _can_converse(self) -> bool:
+        """Whether this run can be *answered*, rather than merely noted.
+
+        Three things have to hold, and each is a way this has already gone
+        wrong. Somebody must be able to answer (`replies`), or the pipe buys
+        nothing and costs the B125 risk for free. There must be a framing we
+        know how to write, which is `protocol`'s business and not the
+        executable's name. And the flag must be declared by the CLI *on this
+        machine*: the reader's `claude` is not this one, and a vector an older
+        build has never heard of is a run that dies on argument parsing rather
+        than a run that merely cannot be answered.
+        """
+        if self.replies is None or not self.harness.reply_flag:
+            return False
+        if self.harness.protocol != "claude":
+            return False
+        try:
+            return self.harness.reply_flag in declared(locate(self.harness))
+        except Exception:  # noqa: BLE001 - a plain run, not a lost one
+            return False
+
+    def _frame(self, text: str) -> str:
+        """One message, in the shape the CLI reads them in.
+
+        `stream-json` going in is the same envelope it uses coming out: one
+        JSON object per line, `type` naming what it is. This is the user's
+        turn — which is what the opening brief and every later reply both are.
+        The CLI does not distinguish them, and neither does this.
+        """
+        return json.dumps(
+            {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": text}],
+                },
+            },
+            ensure_ascii=False,
+        )
+
+    def _close_stdin(self, proc) -> None:
+        """Tell the child nothing more is coming. Never fatal."""
+        if proc.stdin is None:
+            return
+        try:
+            proc.stdin.close()
+        except (OSError, ValueError):
+            pass
+
+    def _deliver(self, proc) -> bool:
+        """Hand the child whatever the reader has said, if anything.
+
+        True when at least one line reached the pipe.
+
+        Called on the silent tick rather than on a line, because a run that
+        has stopped to ask something is precisely a run producing no output —
+        waiting for a line before checking for an answer would mean the answer
+        only ever arrived after the thing it was answering had moved on.
+
+        Never fatal. A child that closed its stdin, or died between the tick
+        and the write, is not a reason to lose a run of real research; the
+        reader sees the reply was not taken up because the run carries on
+        saying what it was saying.
+        """
+        # A closed stdin is a finished turn (see `_stream`). Asking for the
+        # replies anyway would mark them taken and then drop them on the
+        # floor — the one outcome worse than not delivering them.
+        if self.replies is None:
+            return False
+        if not self._conversing:
+            # Nobody on the other end can hear it. Taken anyway, and said so
+            # in the transcript, so the reader's line is neither left waiting
+            # for a pipe that will never exist nor reported as heard.
+            try:
+                lines = self.replies()
+            except Exception:  # noqa: BLE001
+                return False
+            for line in lines:
+                self._echo(
+                    f"you: {_short(line)} (not heard: {self.harness.label} "
+                    "cannot take a reply mid-run)"
+                )
+            return False
+        if proc.stdin is None or proc.stdin.closed:
+            return False
+        try:
+            lines = self.replies()
+        except Exception:  # noqa: BLE001 - narration must never end a run
+            return False
+        delivered = False
+        for line in lines:
+            try:
+                body = line.rstrip("\n")
+                proc.stdin.write(
+                    (self._frame(body) if self._conversing else body) + "\n"
+                )
+                proc.stdin.flush()
+            except (OSError, ValueError):
+                return delivered
+            delivered = True
+            self._echo(f"you: {_short(line)}")
+        return delivered
+
+    def _echo(self, line: str) -> None:
+        """Put the reader's own line in the transcript they are watching.
+
+        Not `_narrate`, which turns a *CLI event* into a sentence — this line
+        did not come from the CLI. But it belongs in the same list, because an
+        answer that is not in the transcript leaves the hole B120 named one
+        turn later: the log would show the question and the run carrying on,
+        with no record of what changed its mind.
+        """
+        self.actions.append(line)
+        if self.on_action is not None:
+            try:
+                self.on_action(line)
+            except Exception:  # noqa: BLE001 - a worse log, not a lost run
+                pass
+
+    def _stream(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
         """Run the CLI, reading its output line by line as it is produced.
 
         Three threads' worth of care for one subprocess, and each one is
@@ -1731,10 +1984,17 @@ class HarnessResearcher(AgentResearcher):
         research to it would be absurd.
         """
         self.transcript = ""
+        self._spoke = False
         try:
             proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
                 command,
-                stdin=stdin_read,
+                # A pipe only for a conversation. A one-shot CLI cannot hear a
+                # line mid-run, and an open pipe to one is all risk: a CLI that
+                # reads a non-tty stdin to EOF (`claude -p` does, for three
+                # seconds; plenty of scripts do forever) waits on a pipe we
+                # have no reason to close. See `self.replies` for why DEVNULL
+                # is load-bearing rather than merely conservative.
+                stdin=subprocess.PIPE if opening else stdin_read,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -1758,7 +2018,27 @@ class HarnessResearcher(AgentResearcher):
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
 
+        # The opening message, before anything else is read. A conversational
+        # child has no prompt until this lands — it is the run, not a preamble
+        # to it — so a failure here is fatal rather than narrated, and the
+        # caller retries the ordinary way.
+        if opening:
+            try:
+                assert proc.stdin is not None
+                proc.stdin.write(opening.rstrip("\n") + "\n")
+                proc.stdin.flush()
+            except (OSError, ValueError, AssertionError) as exc:
+                self._kill_tree(proc)
+                raise RuntimeError(
+                    f"{self.harness.label} would not take the brief on stdin"
+                ) from exc
+
+        began = time.monotonic()
         said: list[str] = []
+        # The same list, not a copy: `_echo` appends the reader's replies to
+        # `self.actions` mid-run, and the `self.actions = said` at the end
+        # would otherwise replace the transcript with one that never heard them.
+        self.actions = said
         errors: list[str] = []
         drain = threading.Thread(
             target=self._drain, args=(proc.stderr, errors), daemon=True
@@ -1774,6 +2054,9 @@ class HarnessResearcher(AgentResearcher):
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
         narrated = 0
+        #: When a turn ended on a question, and how long its answer may take.
+        waiting_since: float | None = None
+        waiting_for = 0.0
         assert proc.stdout is not None
         try:
             for line in _lines(proc.stdout, self._cancel_tick):
@@ -1787,8 +2070,52 @@ class HarnessResearcher(AgentResearcher):
                     # no to.
                     if self.check_cancelled is not None:
                         self.check_cancelled()
+                    # A conversational child that has not said one word is a
+                    # pipe that did not arrive, not a model thinking hard: the
+                    # `init` event comes before the first API call. Give up
+                    # early so the caller can run it the ordinary way, rather
+                    # than holding the job worker for the whole timeout.
+                    if (opening and not self._spoke
+                            and time.monotonic() - began > CONVERSATION_START_SECONDS):
+                        self._kill_tree(proc)
+                        break
+                    if self._deliver(proc):
+                        # An answer to the question it ended on: that is the
+                        # next turn starting, so the wait below is over.
+                        waiting_since = None
+                    elif (waiting_since is not None
+                            and time.monotonic() - waiting_since > waiting_for):
+                        self._echo("no answer came; the run ends here")
+                        self._close_stdin(proc)
+                        waiting_since = None
                     continue
+                self._spoke = True
                 self._keep(line)
+                # A child reading messages does not exit when its turn ends —
+                # it waits for the next one, and stdout stays open while it
+                # waits. The `result` event is the end of the turn, so it is
+                # the moment to say nothing more is coming; without this the
+                # loop above reads a pipe that never closes.
+                #
+                # Unless the turn ended on a question. An agent in `-p` does
+                # not stop mid-turn to ask — it finishes the turn *with* the
+                # question — so closing here would be the one-shot run again,
+                # with the reader's answer arriving at a pipe nobody reads. It
+                # gets a bounded wait instead, never past the run's own
+                # timeout: a timeout discards the run, and a run that asked
+                # and heard nothing still has everything it found.
+                if self._conversing and proc.stdin is not None and _is_result(line):
+                    left = self.timeout - (time.monotonic() - began) - 10.0
+                    waiting_for = min(ANSWER_WAIT_SECONDS, left)
+                    if self._deliver(proc):
+                        # A reply that was waiting is the next turn; whether
+                        # the pipe closes is decided at *that* turn's end.
+                        pass
+                    elif _asks(line) and waiting_for > 0:
+                        waiting_since = time.monotonic()
+                        self._echo("waiting for your answer")
+                    else:
+                        self._close_stdin(proc)
                 # Checked before narration, every line: a run an agent has
                 # gone quiet on (nothing left to say for `MAX_NARRATED` lines,
                 # or a CLI that streams no text) must still be interruptible.
@@ -1823,6 +2150,15 @@ class HarnessResearcher(AgentResearcher):
                     say(spoken)
                 except Exception:  # noqa: BLE001 — see the docstring
                     say = None
+            # stdout has ended, so nothing more can be asked and nothing more
+            # can be answered. Closing tells a child that is politely waiting
+            # for one more line that there will not be one — without it a run
+            # whose stdin we opened could sit past its own output forever.
+            if proc.stdin is not None:
+                try:
+                    proc.stdin.close()
+                except (OSError, ValueError):
+                    pass
             proc.wait()
         finally:
             timer.cancel()

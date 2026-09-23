@@ -66,7 +66,10 @@ import pytest
 #: `<input list=…>` datalists), `Scale.svelte` (the depth dial, on three
 #: screens that had no depth control at all), the per-harness effort dropdown,
 #: and the Bench regroup. 286,429 bytes.
-BUDGET = {".js": 290_000, ".css": 60_000}
+#: Raised .js from 290,000 to 296,000 on 2026-09-22. No dependency again —
+#: the live interactions: the reply box on a running job, and the stage line
+#: and live-feed aside the panel renders. 291,601 bytes.
+BUDGET = {".js": 296_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

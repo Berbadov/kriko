@@ -336,6 +336,17 @@ export const api = {
         request<{ job_id: string; state: string }>(`/api/jobs/${seg(jobId)}/cancel`, {
             method: "POST",
         }),
+    /** Say something to a job that is still running.
+     *
+     * `delivered` is false when the run ended while the reader was typing —
+     * not a failure, and not something to show as one, but not something to
+     * report as landed either. */
+    sayToJob: (jobId: string, text: string) =>
+        request<{ job_id: string; delivered: boolean }>(`/api/jobs/${seg(jobId)}/say`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ text }),
+        }),
     forget: (lookupId: string) =>
         request<{ deleted: boolean }>(`/api/history/${seg(lookupId)}`, {
             method: "DELETE",

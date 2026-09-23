@@ -6,6 +6,26 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-23 — live interactions: a run the reader can answer, and a panel that shows it working
+
+**A reply box on a running job, and a reply that reaches the agent.** `POST
+/api/jobs/{id}/say` writes a `job_messages` row; the handler reads it between
+steps (`Progress.replies`). The first cut stopped there, and a line written to
+a one-shot `claude -p` goes into a stdin nothing reads. So a CLI that declares
+`--input-format` now runs conversationally: brief as the first stream-json
+message, each reply as the next. A reply typed mid-turn is queued behind it,
+the way Claude Code does it. A turn that *ends* on a question holds the pipe
+open for up to `ANSWER_WAIT_SECONDS`, and the run is never kept past its own
+timeout. A child that is silent for `CONVERSATION_START_SECONDS` is re-run the
+ordinary way (B125). Proven live on Windows through the `.cmd` shim: a reply
+sent during turn one came back as turn two in 7.7s. Other harnesses (vibe,
+gemini, opencode, agy) still take a reply only as a note: none of them
+declares a streaming input.
+
+**The panel's research card follows a run live** (stage line and feed aside,
+`hover_lite_live.test.js`). The Jobs view's reply input was controlled by hand
+because a `bind:` onto an empty slot was reset by the next poll.
+
 ### 2026-09-21 — the mark at 1024px, and three gates that were green on nothing
 
 **The icon was pixelated because it was a 16x16 drawing scaled up.** The mark

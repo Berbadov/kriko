@@ -70,6 +70,20 @@ class Progress:
         if self.cancelled:
             raise Cancelled()
 
+    def replies(self) -> list[str]:
+        """What the reader has said to this run since the last time we asked.
+
+        The other direction of `log`, and the one that was missing. A harness
+        run streams its thinking out and took nothing in, so a run that paused
+        on a question was a window: the reader could watch it be stuck and
+        could only stop it. Each line is handed over exactly once.
+
+        Empty is the overwhelmingly common answer, and it costs one indexed
+        read — cheap enough to ask between steps, which is the only place it
+        can be asked, for the same reason `check` is.
+        """
+        return state.take_job_messages(self._conn, self.job_id)
+
     def partial(self, result: dict) -> None:
         """Keep what is finished so far, in case the reader stops here.
 

@@ -94,6 +94,21 @@
     researchMessage: "",
     researchState: "",
     cancelling: false,
+    /* Which step the run in flight has reached.
+     *
+     * Written by the worker as each step begins. Until now this line was a
+     * constant sentence that named two things the engine does not do, which
+     * is worse than a spinner: a spinner admits it knows nothing. `null`
+     * means no run is in flight or none has reported yet. */
+    stage: null,
+    /* What the rest of Kriko is doing, and whether anyone has asked.
+     *
+     * The panel is the one surface a reader is on *because* they are not in
+     * the app, so a run their own agent started was invisible to them
+     * exactly when it mattered. `null` means not asked yet, `[]` means asked
+     * and nothing is running — a real answer, and a different one. */
+    live: null,
+    liveTimer: null,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -721,6 +736,10 @@
     setPipeline("analyzing");
     state.errorMsg = null;
     state.errorCode = null;
+    // Cleared, not kept: the previous run's last stage was "Done", and a
+    // fresh run that opens by saying it has finished is the old problem
+    // wearing the new words.
+    state.stage = null;
     renderBody();
     renderCounts();
 
@@ -794,8 +813,16 @@
   // setAccessLevel(TRUSTED_AND_UNTRUSTED_CONTEXTS) — without it this listener
   // never fires (issue #28).
   const STORAGE_KEY = "kriko_result_" + window.location.href;
+  const STAGE_KEY = "kriko_stage_" + window.location.href;
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "session") return;
+    // The stage first: it is written before the result it narrates, and a
+    // change event carrying both should not paint the answer and then the
+    // sentence that says the answer is still coming.
+    if (STAGE_KEY in changes && changes[STAGE_KEY].newValue) {
+      state.stage = changes[STAGE_KEY].newValue;
+      renderStatus();
+    }
     if (!(STORAGE_KEY in changes)) return;
     const next = changes[STORAGE_KEY].newValue;
     if (!next) return;
@@ -874,6 +901,11 @@
     // the panel shows progress instead of an empty state.
     requestCached({ triggerIfMissing: true });
 
+    // Only while the panel is on screen. A closed panel that kept asking
+    // would be a request a second, forever, on every tab left open.
+    stopLive();
+    pollLive();
+
     // Strip the mount flag so future state changes don't re-trigger the entry
     // animation.
     setTimeout(() => { if (panel) delete panel.dataset.mounting; }, 280);
@@ -881,6 +913,7 @@
 
   function unmount() {
     if (!hostEl) return;
+    stopLive();
     try { hostEl.remove(); } catch (_) {}
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
@@ -1062,6 +1095,7 @@
           <button type="button" class="lite-find-product">Find in installed packs</button>
           <button type="button" class="lite-research-product">Research this product</button>
         </div>
+        <div class="lite-live-slot"></div>
         <div class="lite-search-slot"></div>
         <div class="lite-research-slot"></div>
         <div class="lite-verdict-slot"></div>
@@ -1301,13 +1335,116 @@
     if (densityBtn) densityBtn.dataset.spinning = isAnalyzing ? "1" : "0";
   }
 
+  /* The step a run is on, in words that are true.
+   *
+   * What stood here was one fixed sentence naming two steps the engine does
+   * not have — it read as progress and carried none, which is the precise
+   * complaint: a run that *looks* alive without *being* legible. These four
+   * are the worker's actual steps, and a step this panel has no name for is
+   * shown as itself rather than smoothed into a nicer lie.
+   */
+  const STAGE_WORDS = {
+    adapters: "Checking which pack reads this site",
+    reading: "Reading this page",
+    asking: "Asking Kriko what is known",
+    cached: "Reusing the answer already stored",
+    done: "Done",
+    failed: "Could not finish",
+  };
+
+  function stageSentence(stage) {
+    if (!stage || !stage.name) return "Starting…";
+    const words = STAGE_WORDS[stage.name] || stage.name;
+    return stage.detail ? `${words} · ${stage.detail}` : `${words}…`;
+  }
+
+  /* ─── What the rest of Kriko is doing ──────────────────────────────────
+   *
+   * The app has a screen for this and the reader is not on it — they are
+   * here, on a listing, which is the whole reason the extension exists. So a
+   * research run their own coding agent started against the very product in
+   * front of them was invisible from the one surface they were looking at.
+   *
+   * Deliberately small, and shown only while something is actually running.
+   * This is a window onto the feed, not a second copy of it: no details, no
+   * payloads, no Stop. What a run *produced* is the app's to show, and the
+   * panel already has a button that opens it.
+   */
+  const DOOR_WORDS = {
+    mcp: "your agent",
+    job: "the app",
+    extension: "this extension",
+    app: "the app",
+    cli: "the command line",
+  };
+
+  function renderLive() {
+    const slot = bodyEl?.querySelector(".lite-live-slot");
+    if (!slot) return;
+    // `null` is "not asked yet" and must not paint an empty answer.
+    const going = (state.live || []).filter((one) => one.state === "running");
+    if (!going.length) {
+      slot.innerHTML = "";
+      return;
+    }
+    slot.innerHTML = `
+      <div class="lite-live">
+        <div class="lite-live-head">Also running now</div>
+        <ul class="lite-live-list"></ul>
+      </div>
+    `;
+    const list = slot.querySelector(".lite-live-list");
+    for (const row of going) {
+      const item = document.createElement("li");
+      const who = DOOR_WORDS[row.door] || row.door;
+      // The stage when the row has one. A job carries its own live message;
+      // an agent's tool call does not, and inventing one for it is what the
+      // status line above this was doing wrong.
+      const note = row.note
+        ? `${row.note}${row.progress ? ` · ${Math.round(row.progress * 100)}%` : ""}`
+        : "";
+      item.textContent = note
+        ? `${row.name} · ${who} · ${note}`
+        : `${row.name} · ${who}`;
+      list.appendChild(item);
+    }
+  }
+
+  /** Ask what is running, and keep asking while the panel is open.
+   *
+   * Polled rather than streamed, for the reason `pollResearchJob` is: the
+   * panel holds no open connection to the app, and a content script that did
+   * would hold it open on every listing page the reader leaves in a tab. */
+  function pollLive() {
+    if (!state.visible) { stopLive(); return; }
+    chrome.runtime.sendMessage({ type: "OPERATIONS", payload: { limit: 6 } }, (response) => {
+      if (!state.visible) return;
+      if (chrome.runtime.lastError || !response?.ok) {
+        // An unreachable app is not worth a banner here: the analysis path
+        // above already says so, loudly, and this section is an aside. It
+        // falls quiet instead, which is what "nothing is running" looks like
+        // and is the honest reading of "cannot tell".
+        state.live = [];
+      } else {
+        state.live = Array.isArray(response.feed?.items) ? response.feed.items : [];
+      }
+      renderLive();
+      if (state.visible) state.liveTimer = setTimeout(pollLive, 2000);
+    });
+  }
+
+  function stopLive() {
+    if (state.liveTimer) clearTimeout(state.liveTimer);
+    state.liveTimer = null;
+  }
+
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
       statusEl.textContent = IDLE_HINT;
       statusEl.style.display = "";
     } else if (state.pipeline === "analyzing") {
-      statusEl.textContent = "Resolving engine family · retrieving transcripts…";
+      statusEl.textContent = stageSentence(state.stage);
       statusEl.style.display = "";
     } else if (state.pipeline === "result") {
       // The claim list below says everything; a status line repeating it is
@@ -1999,6 +2136,7 @@
     renderCta();
     renderStatus();
     renderSearch();
+    renderLive();
     renderResearch();
     renderVerdict();
     renderClaimsHeader();
