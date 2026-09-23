@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import { api } from "./api";
     import { demandWord, kindTone, kindWord, promptFor, rowName } from "./agenda";
     import type { Agenda, AgendaRow } from "./types";
@@ -43,7 +44,7 @@
 </script>
 
 <article class="card">
-    <h3>What to research next</h3>
+    <h3><Icon name="agenda" /> What to research next</h3>
     {#if failed}
         <p class="meta">
             The ordering could not be worked out. Connecting a harness still works — an
