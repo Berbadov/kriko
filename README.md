@@ -225,6 +225,20 @@ cheap model can break and be told "OK":
 A rejection names what would fix the row, and the contract forbids retrying it
 reworded — fix the substance or report the gap.
 
+**MCP is one door, not the only one.** The same three operations are commands,
+for any agent that can run a shell and for the days the MCP connection does
+not come up:
+
+```bash
+python -m app.cli agenda --pack cars               # what to research next
+python -m app.cli brief <subject_id> --pack cars   # what to look for, and the queries
+python -m app.cli submit <subject_id> findings.json --pack cars   # or `-` for stdin
+```
+
+They call the functions the MCP tools call (`src/app/agentops.py`), so a claim
+submitted here is checked by the same grounding rule and the same pack gate, and
+the operations feed labels it "the command line".
+
 **The other two planes.** A paid API researcher (`backend: "api"`, with a
 `budget_usd`) exists for unattended runs and is never the default: a tool that
 starts spending because a key happened to be in the environment is a tool people
@@ -259,6 +273,72 @@ catalog repair pass (`catalog.doctor --fix`), and gate evaluation — is
 \* DW5/DW6 (7/6-speed wet EDC) part files exist but are **unresearched stubs**. Rather than
 fixing those two by hand, the gap is owned by the auto-remediation loop (backlog B19) — see
 the generalization principle for why per-model fixes don't exist here.
+
+---
+
+## To do — research, not release
+
+Ideas worth a month and no promises. None of these is a release item. Each one
+records what was actually measured on 2026-09-23, so nobody has to redo the
+first afternoon.
+
+**Small local models as extractors, then fine-tuned ones.** The goal is to build
+packs at no cost and without spending a subscription's limits. The first step is
+the benchmark (B126), because without it nobody can tell whether a model is
+good. The accepted ledger is the obvious training set, but it holds unverified
+claims that `accept_findings` weights at 0.6, so a model trained on it learns
+the gate's taste, not the truth.
+- *Measured:* six real evidence pages, the real extraction prompt, and the real
+  acceptance path on a throwaway copy of the store, all on CPU through Ollama.
+- `qwen3.5:4b` returned nothing until two changes: a 16k context
+  (`PARAMETER num_ctx 16384`) and thinking turned off
+  (`reasoning_effort: "none"`). After that, on an RTX 3060 Laptop GPU (6 GB,
+  the model fully in VRAM), it took 49 s for all six pages. It proposed 8
+  findings, 7 of them grounded, and the pack gate accepted 3. The other 4
+  failed "nothing ties this to a specific configuration": a prompt that pushes
+  engine and gearbox codes into each finding is the next thing to try. On the
+  CPU the same work took about 10× longer.
+- `granite4.2:3b` returned `[]` on all six pages with the same settings. With
+  the default context, one of its five proposals passed; the rest were
+  unquotable, a JSON object instead of a list, or a URL without its scheme.
+- *What the engine needs before this can work:*
+  - `app.providers.llm.completer` can pass neither `num_ctx` nor
+    `reasoning_effort`, so a local model is misconfigured the moment it is
+    plugged in.
+  - `_read` accepts only a bare JSON array. Any other shape, such as an object,
+    is silently dropped.
+  - Per-model confidence has to come from the benchmark rather than from which
+    door the claim came through.
+
+**Laya / Jev as the principle filter: an optional add-on, installed
+separately.** The alternative is the orthodox, lower-compute way (the pack's
+deterministic `gate_terms`), and it stays the default. Readers choose.
+- *Measured:* zero-shot, on 40 cars claims, scored against the pack's own gate
+  vocabulary.
+
+  | Checkpoint | AUC | Agreement | CPU per claim |
+  |---|---|---|---|
+  | english | 0.61 | 21/40 | 1.5 s |
+  | multilingual | 0.53 | 21/40 | 1.3 s |
+  | typed-decisions | 0.46 | 21/40 | 2.3 s |
+
+  All three score at chance, which matches Laya's own description: a fast base
+  to specialise, not a zero-shot judge. Making it useful means a labelled set
+  per pack and a fine-tune per pack. That is the month.
+
+**MCP is demoted, then deleted.** The command line now offers the same three
+operations (`agenda`, `brief`, `submit`) through the same functions. The MCP
+server becomes a thin wrapper, and it goes away once the operations feed shows
+nothing coming in through it.
+
+**Obscura as a fetcher: tested, not adopted.** On 20 real evidence URLs it
+grounded the same 6 quotes as the built-in reader. It read 2 pages the reader
+could not, and neither contained the quote. It timed out on 2 pages the reader
+handled, and it was about 3× slower (median 5.6 s against 1.7 s). It fetches;
+it does not search, so it does not replace Tavily or Exa. If a site ever needs
+JavaScript rendering, the most it could be is a fallback behind a flag, pinned
+to a version. The same test surfaced B140: half the cars quotes are stored
+wrapped in quotation marks, so they cannot be re-proven against their page.
 
 ---
 
