@@ -177,6 +177,96 @@ def cmd_lookup(args, store) -> int:
     return 0
 
 
+def _siblings(args) -> tuple[Path, Path]:
+    """`app.sqlite` and the analyses log for the store this command opened.
+
+    Derived beside the store, as `mcp_server` derives them, so `--store`
+    pointed at a copy never writes into the reader's real history.
+    `KRIKO_ANALYSES_LOG` still wins, because the app itself honours it.
+    """
+    import os
+
+    store_path = Path(args.store) if args.store else DEFAULT_STORE
+    app_state = store_path.parent / "app.sqlite"
+    override = os.environ.get("KRIKO_ANALYSES_LOG")
+    if override:
+        return app_state, Path(override)
+    if args.store:
+        return app_state, store_path.parent / "logs" / "analyses.jsonl"
+    from app.web.settings import default_analysis_log
+
+    return app_state, Path(default_analysis_log())
+
+
+def _agent_op(args, name: str, arguments: dict, body):
+    """Run one research operation through the CLI door and print its JSON.
+
+    Recorded in the operations feed exactly like an MCP call, under
+    `door="cli"`, so the app shows a harness driving `kriko submit` the same
+    way it shows one driving the MCP tool.
+    """
+    from app import operations
+
+    app_state, _ = _siblings(args)
+    with operations.record(app_state, door="cli", name=name,
+                           arguments=arguments) as outcome:
+        result = body()
+        outcome["response"] = operations.summarise(result)
+    print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+    return 0
+
+
+def cmd_agenda(args, store) -> int:
+    from app import agentops
+
+    app_state, log_path = _siblings(args)
+    return _agent_op(
+        args, "research_agenda", {"pack_id": args.pack, "limit": args.limit},
+        lambda: agentops.agenda(store, app_state_path=app_state, log_path=log_path,
+                                pack_id=args.pack, limit=args.limit),
+    )
+
+
+def cmd_brief(args, store) -> int:
+    from app import agentops
+
+    return _agent_op(
+        args, "research_brief", {"subject_id": args.subject_id, "pack_id": args.pack},
+        lambda: agentops.brief(store, args.subject_id, args.pack),
+    )
+
+
+def cmd_submit(args, store) -> int:
+    """`kriko submit SUBJECT --pack P findings.json` (or `-` for stdin).
+
+    The file is either a list of findings or `{"findings": [...], "queries":
+    [...]}` — the second shape is `submit_findings`' own arguments, so an
+    agent that learnt the MCP tool writes the same JSON here.
+    """
+    from app import agentops
+
+    raw = sys.stdin.read() if args.findings == "-" else Path(args.findings).read_text(
+        encoding="utf-8")
+    payload = json.loads(raw)
+    if isinstance(payload, list):
+        findings, queries = payload, list(args.query or [])
+    elif isinstance(payload, dict) and isinstance(payload.get("findings"), list):
+        findings = payload["findings"]
+        queries = list(payload.get("queries") or []) + list(args.query or [])
+    else:
+        raise ValueError("findings must be a JSON list, or an object with a "
+                         "'findings' list")
+    app_state, _ = _siblings(args)
+    return _agent_op(
+        args, "submit_findings",
+        {"subject_id": args.subject_id, "pack_id": args.pack,
+         "findings": findings, "queries": queries},
+        lambda: agentops.submit(store, app_state_path=app_state, door="cli",
+                                subject_id=args.subject_id, pack_id=args.pack,
+                                findings=findings, queries=queries or None),
+    )
+
+
 def cmd_tui(args, store) -> int:
     """The operator console. Imported here, not at module scope.
 
@@ -630,6 +720,31 @@ def build_parser() -> argparse.ArgumentParser:
                    help="narrow | standard | wide (repeatable; default: whatever "
                         "the plane would choose from past measurements)")
     p.set_defaults(fn=cmd_bench)
+
+    # ── the research door for agents: JSON in, JSON out, same acceptance
+    # path as the MCP tools of the same names (`app/agentops.py`).
+
+    p = sub.add_parser("agenda", help="what to research next, ranked (JSON)")
+    p.add_argument("--pack", default="", help="only this pack")
+    p.add_argument("--limit", type=int, default=20)
+    p.set_defaults(fn=cmd_agenda)
+
+    p = sub.add_parser("brief", help="what to research about one subject (JSON)")
+    p.add_argument("subject_id")
+    p.add_argument("--pack", required=True, help="the pack the subject is in")
+    p.set_defaults(fn=cmd_brief)
+
+    p = sub.add_parser(
+        "submit", help="file findings for one subject; ungrounded ones are refused")
+    p.add_argument("subject_id")
+    p.add_argument("findings",
+                   help="JSON file: a list of findings, or {findings, queries}; "
+                        "'-' reads stdin. Each finding: title, domain, severity, "
+                        "quote, source_url, document_text, rationale")
+    p.add_argument("--pack", required=True, help="the pack the subject is in")
+    p.add_argument("--query", action="append", default=[],
+                   help="a search you ran to find these (repeatable)")
+    p.set_defaults(fn=cmd_submit)
 
     p = sub.add_parser("tui", help="operator console: planes, agenda, jobs, shell")
     p.add_argument("--url", default="",

@@ -1249,6 +1249,31 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
+### B140 — Half the cars pack's quotes cannot be re-proven: they are stored in quotation marks `[G3]`
+Found 2026-09-23 while testing Obscura as a fetcher. Of 20 sampled
+`(url, quote)` evidence pairs, 14 were not on their own page with *either*
+fetcher, and most of those begin with a literal `"`. Counted across the
+source: **398 of 730** `quote:` values in `packs/*/data/**/*.yaml` open with a
+quotation mark, 395 are wrapped at both ends — all in `cars` (drill: 0 of 5).
+In the installed store it is 395 of 719 `org.kriko.cars` evidence rows. On 9
+fetched pages, 0 of the wrapped quotes grounded as stored and 5 grounded once
+the outer marks were stripped (the other 4: the page has changed or the quote
+was never on it — the B120 re-proof question).
+
+The cause is the path, not a model: `packs/cars/build.py` `_emit_claim_evidence`
+copies `quote` into `evidence` unchecked, because a build has no page to check
+it against. Everything that comes in through `app/findings.accept_findings`
+is strict-substring checked and would have refused these. So the one rule the
+evidence chain rests on holds at every door except the oldest one.
+
+**Mechanism, not a data edit:** (1) the builder unwraps one matched pair of
+enclosing marks (`"…"`, `“…”`, `'…'`) before minting `evidence_id` — a quote
+wrapped in marks is a quotation *of* the text, not the text; (2) a ratchet
+test that no pack's YAML `quote:` is so wrapped, so a third pack cannot
+reintroduce it; (3) bump the cars pack version, since `evidence_id` and
+`content_digest` change. Then the 4-in-9 residue is B120's job: re-fetch,
+re-prove, and fail open (downrank or drop) what no longer grounds.
+
 ### B34 — Re-wire or drop the two orphaned gate capabilities from the deleted `gates.py` `[G2]`
 This pass (`2a88372`) removed `packs/cars/pipeline/agent/gates.py` after re-wiring it —
 `check_evidence`'s vocabulary became `packs/cars/vocabulary/gates.yaml` rows, its
