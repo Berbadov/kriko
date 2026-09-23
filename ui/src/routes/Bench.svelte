@@ -10,7 +10,12 @@
 
     type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
     type SearchChoice = { id: string; label: string; ready: boolean };
-    type PrefsView = { models?: { offered?: OfferedLlm[] }; search_providers?: SearchChoice[] };
+    type HarnessLlms = { id: string; label: string; llms?: string[]; llm_selectable?: boolean };
+    type PrefsView = {
+        models?: { offered?: OfferedLlm[] };
+        search_providers?: SearchChoice[];
+        harnesses?: HarnessLlms[];
+    };
     type ScalePreset = { id: string; label: string; max_documents: number; blurb: string };
 
     const PLANE_CHOICES = ["harness", "agent", "api"];
@@ -73,6 +78,12 @@
     const protocolOptions = $derived(benchData?.protocols ?? []);
     const packOptions = $derived([...new Set((benchData?.cases ?? []).map((one) => String((one as Record<string, unknown>).pack_id ?? "")).filter(Boolean))]);
     const offeredLlms = $derived(prefsView?.models?.offered ?? []);
+    // The harness plane's LLMs are its CLIs' own names — `claude --help`,
+    // `agy models` — not the paid catalogue's. Each runs only on the plane
+    // that names it (`bench.pairs` on the server).
+    const harnessLlms = $derived(
+        (prefsView?.harnesses ?? []).filter((one) => one.llm_selectable && (one.llms ?? []).length),
+    );
     const searchOptions = $derived(prefsView?.search_providers?.length ? prefsView.search_providers : SEARCH_FALLBACK);
 
     function toggle(sel: string[], value: string): string[] {
@@ -267,16 +278,25 @@
     </fieldset>
     <fieldset>
         <legend>LLMs</legend>
+        {#each harnessLlms as one (one.id)}
+            <p class="meta">{one.label} — named by the CLI, runs on the harness plane</p>
+            <div class="chips">
+                {#each one.llms ?? [] as name (name)}
+                    <button type="button" disabled={!planesSel.includes("harness")} title={planesSel.includes("harness") ? one.label : "select the harness plane"} aria-pressed={llmsSel.includes(name)} onclick={() => (llmsSel = toggle(llmsSel, name))}>{name}</button>
+                {/each}
+            </div>
+        {/each}
         {#if offeredLlms.length}
+            {#if harnessLlms.length}<p class="meta">Catalogue — runs on the paid plane</p>{/if}
             <div class="chips">
                 {#each offeredLlms as one (one.id)}
                     <button type="button" disabled={!!one.unusable} title={one.unusable || one.provider} aria-pressed={llmsSel.includes(one.id)} onclick={() => (llmsSel = toggle(llmsSel, one.id))}>{one.label}</button>
                 {/each}
             </div>
-            {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
-        {:else}
+        {:else if !harnessLlms.length}
             <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
         {/if}
+        {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
     </fieldset>
     <fieldset>
         <legend>Search</legend>

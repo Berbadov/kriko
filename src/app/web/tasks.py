@@ -1883,18 +1883,23 @@ def bench(settings, params: dict, progress: Progress) -> dict:
     app_conn = state.connect(settings.app_state_path)
     rows = []
     try:
+        # Each LLM on the plane that names it (`bench.pairs`): crossing the
+        # harness CLIs' names with the paid catalogue's made runs that could
+        # only fail.
+        runs_of = bench_mod.pairs(
+            chosen, [one for one in models_asked if one], bench_mod.llm_owners(),
+        )
         total = (
-            len(found) * len(chosen) * len(protocols_asked)
-            * len(searches_asked) * len(models_asked) * reps
+            len(found) * len(runs_of) * len(protocols_asked)
+            * len(searches_asked) * reps
         )
         done = 0
         for case in found:
-            for plane in chosen:
+            for plane, model_for_plane in runs_of:
                 for protocol, search, model, rep in [
-                    (one, engine, which, index)
+                    (one, engine, model_for_plane, index)
                     for one in protocols_asked
                     for engine in searches_asked
-                    for which in models_asked
                     for index in range(1, reps + 1)
                 ]:
                     progress.check()

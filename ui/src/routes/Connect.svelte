@@ -5,6 +5,7 @@
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
+    import { copyText, copyWord } from "../lib/clipboard";
     import type {
         AgentConfig,
         AgentSkill,
@@ -31,7 +32,7 @@
     let loadError = $state<unknown>(null);
     let busy = $state("");
     let showManual = $state(false);
-    let copied = $state(false);
+    let copied = $state<"" | "yes" | "blocked">("");
 
     async function refresh() {
         try {
@@ -81,12 +82,7 @@
     const snippet = $derived(data ? JSON.stringify(data[1].mcp_json, null, 2) : "");
 
     async function copy() {
-        try {
-            await navigator.clipboard.writeText(snippet);
-            copied = true;
-        } catch {
-            copied = false; // a denied clipboard is not an error worth a banner
-        }
+        copied = (await copyText(snippet)) ? "yes" : "blocked";
     }
 
     // Written and working are different failures with different fixes: a
@@ -265,7 +261,7 @@
         </p>
         {#if showManual}
             <pre>{snippet}</pre>
-            <button onclick={copy}>{copied ? "Copied" : "Copy"}</button>
+            <button onclick={copy}>{copied ? copyWord(copied === "yes") : "Copy"}</button>
         {:else}
             <button onclick={() => (showManual = true)}>Show the config block</button>
         {/if}
