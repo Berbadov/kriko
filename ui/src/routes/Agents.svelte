@@ -1,6 +1,5 @@
 <script lang="ts">
     import Connect from "./Connect.svelte";
-    import PlanePrefs from "../lib/Planes.prefs.svelte";
 
     /* The agent side of this app.
      *
@@ -14,14 +13,16 @@
      * one-time setup step is an operator's job, not a screen the reader keeps.
      *
      * Wiring is the one thing left, so it is the only thing rendered.
+     *
+     * This screen also used to render the whole of `Planes.prefs.svelte`
+     * above `Connect`, which put a search provider, an LLM catalogue and two
+     * cost tables above the page's own heading — every one of them a
+     * decision about the paid plane, on the screen about agents. The reader
+     * called the result "all separate" and was describing exactly that.
+     * `Connect` now renders `Agents.prefs.svelte` itself, in the one place
+     * it belongs: directly under the list of agents it is about. The rest
+     * stayed in Settings, where the other spending choices are.
      */
 </script>
-
-<!-- Which agent, before how it is wired.
-     "No preferred agent thingy" was a fair reading of this screen: the choice
-     existed, in Settings, which is not where anyone goes to think about
-     agents. A preference about agents belongs on the agents screen; it is the
-     same panel rendered in both places rather than two that can disagree. -->
-<PlanePrefs />
 
 <Connect />

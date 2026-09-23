@@ -1,5 +1,7 @@
 <script lang="ts">
     import Agenda from "../lib/Agenda.svelte";
+    import AgentPrefs from "../lib/Agents.prefs.svelte";
+    import Icon from "../lib/Icon.svelte";
     import Planes from "../lib/Planes.svelte";
     import Schedule from "../lib/Schedule.svelte";
     import Failure from "../lib/Failure.svelte";
@@ -118,7 +120,7 @@
     };
 </script>
 
-<h2>Connect an agent</h2>
+<h2><Icon name="connect" size={22} /> Connect an agent</h2>
 
 <article class="card">
     <p class="meta">
@@ -133,7 +135,7 @@
     <Failure error={loadError} retry={refresh} />
 {:else if data}
     <article class="card">
-        <h3>Harnesses on this machine</h3>
+        <h3><Icon name="plug" /> Harnesses on this machine</h3>
         <ul>
             {#each data[0].targets as target (target.id)}
                 <li class="target">
@@ -190,8 +192,14 @@
         </p>
     </article>
 
+    <!-- Straight after the list, because the reader has just read "these
+         are the agents on this machine" and the next question is which one
+         drives and what it drives with. Before Verify, because a preference
+         chosen after the check is a check that tested the other one. -->
+    <AgentPrefs />
+
     <article class="card">
-        <h3>Does it actually run?</h3>
+        <h3><Icon name="ok" /> Does it actually run?</h3>
         <p class="meta">
             Starts the same command the config names and waits for it to introduce
             itself. This is the half a written config cannot tell you: a moved virtual
@@ -223,7 +231,7 @@
     <Schedule />
 
     <article class="card">
-        <h3>What the agent is told</h3>
+        <h3><Icon name="skill" /> What the agent is told</h3>
         {#if data[2].body}
             <p class="meta">
                 Installed alongside the config, and rebuilt from the packs you have
@@ -258,7 +266,7 @@
     </article>
 
     <article class="card">
-        <h3>Another harness</h3>
+        <h3><Icon name="agents" /> Another harness</h3>
         <p class="meta">
             Anything that speaks MCP works — the validation lives in the server, so no
             client can bypass it. Paste this into its config.
@@ -273,6 +281,12 @@
 {/if}
 
 <style>
+    h2,
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
     .target {
         display: flex;
         align-items: center;

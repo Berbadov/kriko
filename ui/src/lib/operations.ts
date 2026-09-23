@@ -121,7 +121,7 @@ export const stoppable = (row: Operation): boolean =>
  *
  * `started_at` is the server's UTC stamp. It is parsed as UTC explicitly: the
  * column has no zone marker, and a browser left to guess reads it as local
- * time, which on this reader's machine would make every running operation
+ * time, which in this reader's time zone would make every running operation
  * appear to have started three hours in the future.
  */
 export const since = (row: Operation, now: number = Date.now()): number | null => {
