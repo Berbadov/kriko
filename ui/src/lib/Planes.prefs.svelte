@@ -1,17 +1,27 @@
 <script lang="ts">
     import { count, word } from "./plural";
+    import AgentPrefs from "./Agents.prefs.svelte";
     import Async from "./Async.svelte";
+    import Icon from "./Icon.svelte";
     import Pick from "./Pick.svelte";
     import Failure from "./Failure.svelte";
     import { api } from "./api";
     import type { Costs, Prefs } from "./types";
 
-    /* Which agent, which LLM, which search provider — and what it costs.
+    /* Which LLM, which search provider — and what it all costs.
      *
-     * All three existed as facts rather than decisions: the harness plane took
-     * the first CLI it found, the paid plane took whatever LLM_MODEL said, and
-     * search meant Exa because Exa was the only provider with code. Each is a
-     * fine default and a poor rule.
+     * The agent half moved to `Agents.prefs.svelte`, which this file renders
+     * above its own section so Settings still shows every choice in one
+     * place. It moved because it is a different decision: which CLI drives,
+     * and what that CLI's own dials are set to, is answered per agent and
+     * billed to a subscription, while everything left here is answered once
+     * and billed per token. In one undivided column they read as a pile —
+     * the reader's word for it was "separate".
+     *
+     * All of these existed as facts rather than decisions: the harness plane
+     * took the first CLI it found, the paid plane took whatever LLM_MODEL
+     * said, and search meant Exa because Exa was the only provider with
+     * code. Each is a fine default and a poor rule.
      *
      * One word is deliberately absent from this file, in prose and in labels:
      * the one a pack uses as an identity key. `test_ui_contains_no_pack_
@@ -51,8 +61,6 @@
     // browser that reconnected mid-upgrade — answers with fewer fields than
     // this build knows about. A screen that throws on a missing key takes the
     // whole Settings page with it.
-    const harnessesOf = (data: Prefs) => data?.harnesses ?? [];
-    const unusableOf = (data: Prefs) => data?.unusable ?? [];
     const searchersOf = (data: Prefs) => data?.search_providers ?? [];
     const spentOf = (data: Costs) => data?.spent?.planes ?? [];
     /* The LLM catalogue as `Pick` wants it. Named here for the reason
@@ -72,12 +80,14 @@
         usd === null || usd === undefined ? "not measured" : `$${usd.toFixed(4)}`;
 </script>
 
+<AgentPrefs />
+
 <section>
-    <h3>Which agent, which LLM, which search</h3>
+    <h3><Icon name="search" /> Which LLM, which search</h3>
     <p class="meta">
-        Every one of these falls back to what this machine offers when it is left
-        empty, so an installation that never opens this panel behaves exactly as it
-        did.
+        What the paid plane reads the web with, and what it thinks with. Both fall
+        back to what this machine offers when left empty, so an installation that
+        never opens this panel behaves exactly as it did.
     </p>
 
     {#if failure}<Failure error={failure} />{/if}
@@ -85,116 +95,7 @@
     <Async promise={prefs} loading="Reading your choices…">
         {#snippet children(data)}
             <div class="field">
-                <label for="p-harness">Preferred agent</label>
-                <select
-                    id="p-harness"
-                    value={data.chosen?.preferred_harness ?? ''}
-                    onchange={(event) =>
-                        save({ preferred_harness: event.currentTarget.value })}
-                >
-                    <option value="">Whichever is installed</option>
-                    {#each harnessesOf(data) as one (one.id)}
-                        <option value={one.id}>{one.label}</option>
-                    {/each}
-                </select>
-                {#if !harnessesOf(data).length}
-                    <p class="meta">
-                        No coding-agent CLI was found on this machine. The harness plane
-                        is what runs research at no marginal cost, so this is worth
-                        fixing before the paid one.
-                    </p>
-                    {#each data?.missing ?? [] as one (one.id)}
-                        <p class="meta">
-                            <strong>{one.label}</strong>
-                            {#if one.download_url}
-                                — <a href={one.download_url} target="_blank" rel="noreferrer">download</a>
-                            {/if}
-                            {#if one.install_hint}<br /><code>{one.install_hint}</code>{/if}
-                            {#if one.needs_account}<br />{one.needs_account}.{/if}
-                        </p>
-                    {/each}
-                    {#if data?.dirs_env}
-                        <p class="meta">
-                            Installed somewhere unusual? Set <code>{data.dirs_env}</code> to its
-                            folder and reload this panel — Kriko searches PATH, that variable,
-                            then the usual install folders.
-                        </p>
-                    {/if}
-                {/if}
-                {#each unusableOf(data) as one (one.id)}
-                    <p class="meta">{one.label} is installed and not used: {one.why}</p>
-                {/each}
-                {#each harnessesOf(data) as one (one.id)}
-                    {#if one.llm_selectable}
-                        <label class="field">
-                            {one.label} LLM
-                            <Pick
-                                value={one.llm ?? ""}
-                                options={(one.llms ?? []).map((name) => ({ value: name }))}
-                                emptyLabel="CLI default"
-                                hint={one.llm_hint}
-                                onpick={(chosen) =>
-                                    save({
-                                        [`harness_model_${one.id.replace(/-/g, "_")}`]:
-                                            chosen,
-                                    })}
-                            />
-                        </label>
-                        <p class="meta">
-                            {#if (one.llms ?? []).length}
-                                These are the names this CLI itself reported.
-                                "Something else…" sends whatever you type
-                                straight through — the CLI judges the name,
-                                not Kriko.
-                            {:else}
-                                This CLI named nothing, so there is nothing to
-                                list. Pick "Something else…" and type {one.llm_hint
-                                    || "a name it accepts"}.
-                            {/if}
-                            Left alone, it uses the CLI's own default.
-                        </p>
-                    {:else}
-                        <p class="meta">
-                            {one.label} runs its own default — Kriko has no
-                            verified per-run switch for it yet.
-                        </p>
-                    {/if}
-
-                    <!-- The second dial, and the cheap one. Dropping a survey
-                         run from high to low costs a fraction of what
-                         switching the LLM does and changes nothing about
-                         which account pays — so it belongs next to the LLM,
-                         not buried a screen away.
-
-                         Drawn only where this machine's CLI declares the flag
-                         in its own --help: a control whose every choice fails
-                         on argument parsing is worse than no control. -->
-                    {#if (one.efforts ?? []).length}
-                        <label class="field">
-                            {one.label} effort
-                            <Pick
-                                value={one.effort ?? ""}
-                                options={(one.efforts ?? []).map((name) => ({ value: name }))}
-                                emptyLabel="CLI default"
-                                hint={one.effort_hint}
-                                onpick={(chosen) =>
-                                    save({
-                                        [`harness_effort_${one.id.replace(/-/g, "_")}`]:
-                                            chosen,
-                                    })}
-                            />
-                        </label>
-                        <p class="meta">
-                            How hard it thinks, per run. Lower is cheaper and
-                            faster; this CLI names {(one.efforts ?? []).join(", ")}.
-                            Left alone, it uses its own default.
-                        </p>
-                    {/if}
-                {/each}
-            </div>
-
-            <div class="field">
-                <label for="p-search">Search provider</label>
+                <label for="p-search"><Icon name="search" size={15} /> Search provider</label>
                 <select
                     id="p-search"
                     value={data.chosen?.search_provider ?? ''}
@@ -215,7 +116,7 @@
             </div>
 
             <div class="field">
-                <label for="p-llm">LLM</label>
+                <label for="p-llm"><Icon name="llm" size={15} /> LLM</label>
                 <Pick
                     id="p-llm"
                     value={data.chosen?.llm_model ?? ''}
@@ -264,7 +165,7 @@
 </section>
 
 <section>
-    <h3>What it has cost</h3>
+    <h3><Icon name="cost" /> What it has cost</h3>
     <Async promise={costs} loading="Adding it up…">
         {#snippet children(data)}
             <ul class="strip" aria-label="Spend">
@@ -322,6 +223,11 @@
 </section>
 
 <style>
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
     .field {
         margin-block: 0.9rem;
     }
