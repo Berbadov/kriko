@@ -385,6 +385,11 @@ class _Progress:
     def check(self) -> None:
         pass
 
+    def replies(self) -> list[str]:
+        # Nothing was said to this run. Present because the real `Progress`
+        # has it and a handler wires it to the researcher unconditionally.
+        return []
+
 
 # ── choosing a model, with what you need to choose it ───────────────────
 #

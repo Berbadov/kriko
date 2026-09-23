@@ -486,6 +486,11 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             researcher.on_action = progress.log
         if hasattr(researcher, "check_cancelled"):
             researcher.check_cancelled = progress.check
+        # The return path — see the same pair in the handlers below. Guarded
+        # like its neighbours because not every researcher is a harness, and a
+        # plane that cannot be spoken to simply is not given a way to listen.
+        if hasattr(researcher, "replies"):
+            researcher.replies = progress.replies
         if provenance is not None:
             provenance.open(researcher)
         brief = researcher.brief(task)
@@ -1318,6 +1323,10 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # to say something before it finished.
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
+    # The return path. Same wiring, opposite direction: `check` asks whether
+    # the reader wants this stopped, `replies` asks whether they have said
+    # anything to it. A run that pauses on a question was previously a window.
+    researcher.replies = progress.replies
     # ── the cheap pass, before the expensive one ─────────────────────────
     #
     # "It never asks me anything." A pack built on the wrong variant is worse
@@ -1427,6 +1436,10 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
     )
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
+    # The return path. Same wiring, opposite direction: `check` asks whether
+    # the reader wants this stopped, `replies` asks whether they have said
+    # anything to it. A run that pauses on a question was previously a window.
+    researcher.replies = progress.replies
     progress.set(0.1, f"extending {state_of.get('name') or slug}")
     progress.log(
         f"{len(state_of.get('subjects') or [])} subject(s) already; "
@@ -1637,6 +1650,10 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
     )
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
+    # The return path. Same wiring, opposite direction: `check` asks whether
+    # the reader wants this stopped, `replies` asks whether they have said
+    # anything to it. A run that pauses on a question was previously a window.
+    researcher.replies = progress.replies
     progress.set(0.1, f"reading {host}")
     progress.log(f"site: {host} — {url}")
 
