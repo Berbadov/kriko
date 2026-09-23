@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "./Async.svelte";
+    import Icon from "./Icon.svelte";
     import { api } from "./api";
     import { remedyFor } from "./failure";
     import type { Schedule } from "./types";
@@ -92,7 +93,7 @@
 </script>
 
 <article class="card">
-    <h3>On a schedule</h3>
+    <h3><Icon name="schedule" /> On a schedule</h3>
     <p class="meta">
         Off until you turn it on. Once on, Kriko walks the top of the agenda by
         itself and every run lands in <strong>Activity → Runs</strong>, undoable,
@@ -220,6 +221,11 @@
 </article>
 
 <style>
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
     .switch {
         gap: var(--s-2);
         margin-block: var(--s-3);
