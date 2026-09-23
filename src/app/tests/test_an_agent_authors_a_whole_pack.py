@@ -344,6 +344,11 @@ class _Recorder:
     def check(self):
         pass
 
+    def replies(self):
+        # Nothing was said to this run. Present because the real `Progress` has
+        # it and a handler wires it to the researcher unconditionally.
+        return []
+
     def partial(self, result):
         # Real `Progress` writes this to the job row so a cancel keeps what was
         # finished. Held here so a test can assert on the checkpoints too.

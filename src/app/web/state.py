@@ -82,6 +82,31 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 CREATE INDEX IF NOT EXISTS jobs_created_at ON jobs (created_at DESC);
 
+-- What the reader said *to* a job while it was running.
+--
+-- `cancel_requested` above is the same mechanism with one bit of vocabulary:
+-- a row the running handler reads between steps, because the handler is a
+-- thread in this process and the request arrives on another. B120 left the
+-- general case open — "a run that stops to ask a question still cannot be
+-- answered ... this is a window rather than a conversation" — and the reason
+-- it stayed open is that there was nowhere to put the answer. This is that
+-- place, and it is a table rather than a queue for the reason the job row is
+-- a table: a reply typed a second before the app restarted should not vanish,
+-- and a reader who cannot tell whether their answer was delivered will type
+-- it again.
+--
+-- `taken_at` rather than a delete: what the reader said is part of the run's
+-- record, and a transcript that shows the question but not the answer is the
+-- same window B120 complained about, one turn later.
+CREATE TABLE IF NOT EXISTS job_messages (
+    msg_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id     TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    taken_at   TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS job_messages_job ON job_messages (job_id, msg_id);
+
 CREATE TABLE IF NOT EXISTS claim_checks (
     lookup_id  TEXT NOT NULL,
     claim_key  TEXT NOT NULL,
@@ -1892,6 +1917,53 @@ def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
         )
         row = conn.execute("SELECT state FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
     return row["state"] if row else None
+
+
+def say_to_job(conn: sqlite3.Connection, job_id: str, body: str) -> bool:
+    """Put a line where a running job will read it.
+
+    Returns whether there was a job still running to hear it. Answering a run
+    that has already ended is not an error the reader made — they were reading
+    a question that had just stopped mattering — but it must not look like it
+    landed, because the whole value of a reply is that the run acts on it.
+    """
+    body = (body or "").strip()
+    if not body:
+        return False
+    with conn:
+        row = conn.execute(
+            "SELECT state FROM jobs WHERE job_id = ?", (job_id,)
+        ).fetchone()
+        if row is None or row["state"] not in (QUEUED, RUNNING, CANCELLING):
+            return False
+        conn.execute(
+            "INSERT INTO job_messages (job_id, body, created_at) VALUES (?,?,?)",
+            (job_id, body, _now()),
+        )
+    return True
+
+
+def take_job_messages(conn: sqlite3.Connection, job_id: str) -> list[str]:
+    """Everything said to this job that it has not yet been handed.
+
+    Marked taken in the same transaction as the read, so a handler that asks
+    twice in quick succession cannot be given the same answer twice and type
+    it into the run twice — which, for a harness, means paying for it twice.
+    """
+    with conn:
+        rows = conn.execute(
+            "SELECT msg_id, body FROM job_messages"
+            " WHERE job_id = ? AND taken_at = '' ORDER BY msg_id",
+            (job_id,),
+        ).fetchall()
+        if not rows:
+            return []
+        conn.execute(
+            "UPDATE job_messages SET taken_at = ? WHERE msg_id IN "
+            f"({','.join('?' * len(rows))})",
+            (_now(), *[row["msg_id"] for row in rows]),
+        )
+    return [row["body"] for row in rows]
 
 
 def save_partial(conn: sqlite3.Connection, job_id: str, result: dict) -> None:

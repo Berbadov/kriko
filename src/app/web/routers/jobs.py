@@ -201,6 +201,34 @@ def cancel_job(job_id: str, runner=Depends(get_jobs)):
     return {"job_id": job_id, "state": outcome}
 
 
+class SayRequest(BaseModel):
+    """A line for a job that is still running."""
+
+    text: str = ""
+
+
+@router.post("/jobs/{job_id}/say")
+def say_to_job(job_id: str, body: SayRequest, app_state=Depends(get_app_state)):
+    """Answer a run while it is running.
+
+    The gap B120 named and left open: the prompt went in once and the
+    transcript came out, so a run that paused on a question could be watched
+    and stopped and nothing else. This is the reply path, and it is the same
+    shape as cancel — a row the running handler reads between steps, because
+    the handler is a thread in this process and this request arrives on
+    another.
+
+    `delivered: false` rather than a 409 when the run has already ended. The
+    reader was answering a question that stopped mattering while they typed;
+    that is not a mistake to refuse them for, but they must not be told it
+    landed.
+    """
+    if state.get_job(app_state, job_id) is None:
+        raise HTTPException(404, f"no such job: {job_id}")
+    delivered = state.say_to_job(app_state, job_id, body.text)
+    return {"job_id": job_id, "delivered": delivered}
+
+
 class RetryRequest(BaseModel):
     """What the reader adds when running it again.
 

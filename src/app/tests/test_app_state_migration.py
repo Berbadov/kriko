@@ -198,4 +198,9 @@ BACK_THEN = {
     # of them afterwards has to carry a default.
     "research_runs.started_at", "research_run_claims.run_id",
     "research_run_claims.pack_id", "research_run_claims.claim_id",
+    # 2026-09-22, and the excuse holds one more time: `job_messages` arrived
+    # whole, so an older file gets all of it from `CREATE TABLE IF NOT
+    # EXISTS`. `taken_at` already carries a default because it is the one
+    # column a later reply path would want to add in place.
+    "job_messages.job_id", "job_messages.body", "job_messages.created_at",
 }

@@ -685,6 +685,8 @@ def test_the_cmd_shim_is_actually_handed_to_popen_with_shell_true(monkeypatch, t
         stderr = iter(())
         returncode = 0
         pid = 4321
+        # A real Popen always has one, whatever it was pointed at.
+        stdin = None
 
         def wait(self):
             return None
@@ -885,6 +887,10 @@ class _Recorder:
 
     def check(self):
         pass
+
+    def replies(self):
+        # Nobody answered this run. See `Progress.replies`.
+        return []
 
     def partial(self, result):
         # Real `Progress` writes this to the job row so a cancel keeps what was
