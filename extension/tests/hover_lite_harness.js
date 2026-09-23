@@ -22,6 +22,10 @@ function loadPanel({
   // because a search reply has its own shape and nearly every test that cares
   // about one does not care about the rest.
   searchResponse = { ok: true, items: [] },
+  // What the worker answers the live-feed poll with. Its own option because
+  // the feed is an aside: nearly every test wants it empty, and the two that
+  // do not want it to be the only thing they are about.
+  operationsResponse = { ok: true, feed: { items: [] } },
 } = {}) {
   const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
 
@@ -55,6 +59,7 @@ function loadPanel({
           if (typeof callback !== "function") return;
           if (message.type === "ANALYZE") return callback(analyzeResponse);
           if (message.type === "SEARCH") return callback(searchResponse);
+          if (message.type === "OPERATIONS") return callback(operationsResponse);
           callback(workerResponse);
         },
         getURL: (p) => p,
@@ -77,6 +82,16 @@ function loadPanel({
     for (const fn of runtimeListeners) fn({ type: "TOGGLE_HOVER_LITE" });
   }
 
+  // Mirror of background.js writing a worker stage to chrome.storage.session
+  // as it begins one. The panel's status line is built from these, so a test
+  // here is a test that the reader is told what is actually happening rather
+  // than a sentence someone wrote once.
+  function deliverStage(name, detail = "") {
+    const key = "kriko_stage_" + dom.window.location.href;
+    const value = { name, detail, at: Date.now() };
+    for (const fn of storageListeners) fn({ [key]: { newValue: value } }, "session");
+  }
+
   // Mirror of background.js writing the result to chrome.storage.session.
   function deliverEntry(entry) {
     const key = "kriko_result_" + dom.window.location.href;
@@ -97,6 +112,19 @@ function loadPanel({
     const root = shadow();
     const el = root && root.querySelector(".lite-error");
     return el ? el.textContent.trim() : null;
+  }
+
+  function statusText() {
+    const root = shadow();
+    const el = root && root.querySelector(".lite-status");
+    return el ? el.textContent.trim() : null;
+  }
+
+  function liveRows() {
+    const root = shadow();
+    if (!root) return [];
+    return [...root.querySelectorAll(".lite-live-list li")]
+      .map((one) => one.textContent.trim());
   }
 
   function footer() {
@@ -124,10 +152,17 @@ function loadPanel({
     return el;
   }
 
-  /** Run everything queued, in order, including anything queued while running. */
+  /* Runs what is queued *now*, not what running it queues.
+   *
+   * The distinction is the difference between a helper and a hang: a timer
+   * that reschedules itself -- the live-feed poll does, once every two
+   * seconds in a browser -- grew the array faster than the loop walked it,
+   * and the whole file stopped for as long as anything would wait. Snapshot
+   * first, so one flush is one tick of wall clock. */
   function flushTimers() {
-    for (let i = 0; i < timers.length; i += 1) {
-      const fn = timers[i];
+    const pending = timers.slice();
+    for (let i = 0; i < pending.length; i += 1) {
+      const fn = pending[i];
       timers[i] = null;
       if (fn) fn();
     }
@@ -142,8 +177,9 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverEntry, footer, listing, claims, click, type,
-           shadow, sent, errorText, pipeline, flushTimers };
+  return { dom, openPanel, deliverEntry, deliverStage, footer, listing, claims,
+           click, type, shadow, sent, errorText, pipeline, flushTimers,
+           statusText, liveRows };
 }
 
 module.exports = { loadPanel };
