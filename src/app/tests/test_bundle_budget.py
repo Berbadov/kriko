@@ -66,10 +66,16 @@ import pytest
 #: `<input list=…>` datalists), `Scale.svelte` (the depth dial, on three
 #: screens that had no depth control at all), the per-harness effort dropdown,
 #: and the Bench regroup. 286,429 bytes.
-#: Raised .js from 290,000 to 296,000 on 2026-09-22. No dependency again —
-#: the live interactions: the reply box on a running job, and the stage line
-#: and live-feed aside the panel renders. 291,601 bytes.
-BUDGET = {".js": 296_000, ".css": 60_000}
+#: Raised .js from 290,000 to 300,000 on 2026-09-22. No dependency again, and
+#: the two things that arrived are both answers to one report — "they look all
+#: separate, and detected harnesses aren't including the all". First, the glyph
+#: table left `shell/NavIcon.svelte` for `lib/Icon.svelte` and grew eleven
+#: entries (agent, llm, effort, search, cost, fetch, agenda, plug, skill,
+#: schedule, ok, warn, download), which is inline path data rather than an icon
+#: font precisely so that it costs bytes here and no request at runtime.
+#: Second, `Agents.prefs.svelte`: the per-agent card that replaced an
+#: undivided run of eight `.field` divs. 293,105 bytes.
+BUDGET = {".js": 300_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

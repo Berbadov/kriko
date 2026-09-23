@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "./Async.svelte";
+    import Icon from "./Icon.svelte";
     import { api } from "./api";
     import { remedyFor } from "./failure";
     import { follow, stateWord } from "./jobs";
@@ -83,10 +84,21 @@
         api: "Kriko itself",
     };
     const nameOf = (plane: ResearchPlane) => NAMES[plane.id] ?? plane.id;
+
+    /* A glyph per plane, on the same closed set of ids `NAMES` is keyed off:
+     * a terminal for the CLI Kriko starts, a book for the brief you carry to
+     * your own agent, a chip for the one that spends tokens. An id with no
+     * glyph draws an empty box of the same size rather than shifting the
+     * title out of line. */
+    const GLYPHS: Record<string, string> = {
+        harness: "agent",
+        agent: "skill",
+        api: "llm",
+    };
 </script>
 
 <article class="card">
-    <h3>Build knowledge</h3>
+    <h3><Icon name="knowledge" /> Build knowledge</h3>
     <p class="meta">
         Three planes, the same claims at the end of all of them: whatever either one finds
         goes through the same grounding check and the same acceptance path, tagged
@@ -146,6 +158,7 @@
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
                         <div class="plane-head">
+                            <Icon name={GLYPHS[plane.id] ?? ""} size={19} />
                             <strong>{nameOf(plane)}</strong>
                             <!-- The engine's own word, printed as well as
                                  translated: `per_token` is what the code says
@@ -291,6 +304,11 @@
 </article>
 
 <style>
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
     .planes {
         display: grid;
         gap: var(--s-3);
