@@ -1347,6 +1347,62 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
+*From B141 on, every item follows `docs/DOCTRINE.md` §1: the reader's words
+quoted, **Where**, **Done when**, **Not this**, **Owner**.
+`test_every_new_backlog_item_says_when_it_is_done` enforces the **Done when**.*
+
+### B141 — Research limits as sliders, on every research button `[G5]`
+**Asked:** "the page count limiter, effort limiter, context limiter slides for
+agent research", and "sliders on every research button" (2026-09-24).
+**Where:** beside every control that starts a research run, visible without
+expanding anything: Agents → each plane's **Research the top N**; Knowledge → a
+subject's **Research** → **Run my agent on this**; Activity → **Have my agent
+write it**; and any research button added later (a test fails if a component
+that calls a research endpoint does not render the limits).
+**Done when:** each of those buttons has three sliders (sources to read, effort,
+context size), each shows its current value, and a run started after moving
+them shows the chosen values in its job log and actually stops at them: at most
+N sources fetched, the harness command line carrying that effort, and the
+extraction step reading at most that much context per source.
+**Not this:** buttons or chips (today's "How deep" 3/7/15), a dropdown (today's
+effort pick on the agent card), or a control inside a collapsed section (today's
+"This run's choices"). And not Settings only: the reader chose per button.
+**Owner:** free.
+**Found 2026-09-24:** sources exist as chips plus a number box, collapsed;
+effort is a per-agent dropdown and `AgendaRunRequest` takes no per-run effort;
+context size has no control and no per-run parameter at all (it exists only
+inside the benchmark's protocols, `app/protocols.py`). The request was never
+written into this file, which is how all three drifted.
+
+### B142 — CI on the reader's Windows machine, through a self-hosted runner `[G5]`
+**Asked:** implied by "many implementations haven't worked the first try"
+(2026-09-24); the doctrine's rule 2.4 needs it.
+**Where:** GitHub → the repo's Actions; `ci.yml` and `desktop.yml` restored.
+**Done when:** a PR opened on any branch gets a green or red check from a job
+that ran on the Windows machine, with its log readable on the PR, and the
+installer smoke steps of `desktop.yml` run on a tag.
+**Not this:** a hosted runner (no minutes), or a check that goes red without a
+runner ever being allocated (the 2026-09-08 to 09-13 failure `CLAUDE.md`
+describes).
+**Owner:** the reader (registering a runner is a one-time step on their PC),
+then free for the workflow edits.
+**Note:** GitHub does not bill minutes on self-hosted runners. Whether this
+account's billing block still lets jobs start on one is the first thing to find
+out; if it does not, this item says so and stops.
+
+### B143 — Journey checks: the end result of each reader task, asserted `[G5]`
+**Asked:** "some buttons do something but not working good or not giving the
+final result" (2026-09-24).
+**Where:** `tools/journeys/`, run by `tools/walk.sh --journeys`, and on the
+Windows runner once B142 exists.
+**Done when:** each journey in `docs/DOCTRINE.md` §4 exists, runs against the
+real app, and fails when its end result does not happen. Proven by breaking
+each one once (e.g. stopping the extension from checking in) and watching it go
+red.
+**Not this:** another "did the page change" check; `tools/walk.sh` already does
+that and it is what let "opens a browser with no extension" count as working.
+**Owner:** free.
+
 ### B140 — Half the cars pack's quotes cannot be re-proven: they are stored in quotation marks `[G3]`
 Found 2026-09-23 while testing Obscura as a fetcher. Of 20 sampled
 `(url, quote)` evidence pairs, 14 were not on their own page with *either*
