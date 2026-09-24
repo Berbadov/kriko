@@ -20,8 +20,8 @@ enforced by a test is.
 The first act on any request is a backlog entry, in this shape:
 
 ```
-### B### — <the reader's words, not a paraphrase>
-**Asked:** "<quoted>" (date)
+### B### — <a short title, ideally the reader's own phrase>
+**Asked:** "<the reader's words, verbatim — never a paraphrase>" (date)
 **Where:** <the exact screen(s) and place, e.g. "every research button:
   Knowledge → a subject's Research, Agents → Research the top 5">
 **Done when:** <what the reader can see or do, stated so a check can decide it>
@@ -54,6 +54,9 @@ An item is **done** only when all four hold:
    real CLIs) whenever the change touches something that differs there:
    packaging, the shell, the extension, a harness, a file path, an encoding.
    Linux Chromium and stand-in CLIs are a rehearsal, not the performance.
+   A cloud session cannot do this check. Until the Windows runner (B142)
+   exists, it falls to the reader or the hand build, and the PR says "not yet
+   checked on Windows" rather than implying it was.
 
 "Shipped" is a fifth step: in an installer the reader has double-clicked
 (`CLAUDE.md`, app-first rule 4).
@@ -107,7 +110,9 @@ when" line does. The first list:
 8. Register a site → the extension reads it.
 
 A feature is not done until its journey exists and passes, on Windows where
-rule 2.4 applies.
+rule 2.4 applies. **Until `tools/journeys/` exists (B143):** the PR walks the
+journey by hand instead: the steps taken, and the end result observed at the
+last step, with a screenshot of it. That walkthrough is the proof.
 
 ## 5. Every PR carries its own proof
 
@@ -134,10 +139,13 @@ the worst judge of that, because it knows what it meant.
   session sees it is taken.
 - **Small enough to merge within a day.** One request per PR. "20 of 23 items"
   in one PR hides the wrong one behind the nineteen right ones.
-- **Merge to `main` daily.** A branch older than a day is merged, or rebased on
-  `main` and merged, or closed. Nothing is started on top of unmerged work.
+- **A PR to `main` the same day, merged daily.** The reader merges, as
+  `CONTRIBUTING.md` says: nothing reaches `main` without the author asking. So
+  an agent opens its PR the day it starts and says it is ready; a branch older
+  than a day is merged, rebased on `main`, or closed. Nothing is started on top
+  of unmerged work.
 - **Line endings are LF.** A Windows editor that writes CRLF turns a one-line
-  change into a whole-file conflict.
+  change into a whole-file conflict. `.gitattributes` makes git store LF.
 
 ## 7. When it does not work, say so
 
@@ -155,7 +163,9 @@ the worst judge of that, because it knows what it meant.
 - [ ] The reader saw the entry before the work started.
 - [ ] A failing check existed before the fix (for a bug).
 - [ ] The "Done when" result was observed, on the screen named in **Where**.
-- [ ] Checked on Windows if it touches anything that differs there.
+- [ ] Checked on Windows if it touches anything that differs there, or the PR
+      says it was not.
+- [ ] Its journey check passes, or (until B143) the PR walks it by hand.
 - [ ] `tools/gate.sh` green; `tools/walk.sh` shows no errors on the touched screens.
 - [ ] The PR carries the quote, the observation and a screenshot.
 - [ ] A second agent reviewed it against the request.
