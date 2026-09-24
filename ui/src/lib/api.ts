@@ -238,7 +238,8 @@ export const api = {
     forgetSite: (host: string) =>
         del<{ host: string; forgotten: boolean }>(`/api/sites/${seg(host)}`),
     /** What the reader chose: which agent, which LLM, which search. */
-    prefs: () => get<T.Prefs>("/api/prefs"),
+    /** `fresh` re-asks every CLI for its LLM list instead of the cached one. */
+    prefs: (fresh = false) => get<T.Prefs>(fresh ? "/api/prefs?fresh=true" : "/api/prefs"),
     savePrefs: (values: Partial<Record<string, string>>) =>
         putJson<T.Prefs>("/api/prefs", values),
     /** What it has cost, and what the next run is likely to. */

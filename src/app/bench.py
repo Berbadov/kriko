@@ -696,33 +696,71 @@ def validate(params: dict) -> dict:
     }
 
 
-def grid(params: dict, case_count: int) -> dict:
+def llm_owners() -> dict[str, set[str]]:
+    """Which plane each LLM name belongs to, as this machine names them.
+
+    The harness plane's names come from its CLIs (`harness.models_for`), the
+    paid plane's from the catalogue. Two namespaces, and a sweep that crossed
+    them sent `opus` to the completion endpoint and `gpt-4o-mini` to
+    `claude --model` — two runs per pair that could only fail, billed as
+    measurements.
+    """
+    from app import modelcatalogue
+    from app.providers import harness
+
+    owners: dict[str, set[str]] = {}
+    for names in harness.models_for_each(harness.available()).values():
+        for name in names:
+            owners.setdefault(name, set()).add("harness")
+    for name in modelcatalogue.load():
+        owners.setdefault(name, set()).add("api")
+    return owners
+
+
+def pairs(planes: list[str], models: list[str],
+          owners: dict[str, set[str]] | None = None) -> list[tuple[str, str]]:
+    """`(plane, llm)` for every run a sweep makes, before cases and reps.
+
+    A name one plane owns runs on that plane only; a name nobody owns (a
+    gateway's, a model released this morning) runs on every plane, as it
+    always did. A plane left with none of the named LLMs runs once on its
+    default — empty on an axis means "whatever this installation would pick".
+    """
+    owners = owners or {}
+    out: list[tuple[str, str]] = []
+    for plane in planes:
+        mine = [m for m in models if not owners.get(m) or plane in owners[m]]
+        out += [(plane, m) for m in (mine or [""])]
+    return out
+
+
+def grid(params: dict, case_count: int,
+         owners: dict[str, set[str]] | None = None) -> dict:
     """How many measurements a request asks for, and along which axes.
 
     Every axis here multiplies, which is the whole reason the reader asked to
-    scope this: cases × planes × protocols × searches × models × reps. Three
-    cases, two planes and three protocols at two reps is thirty-six runs, and
-    nothing on the screen said so before pressing.
+    scope this: cases × (plane, LLM) pairs × protocols × searches × reps.
+    Three cases, two planes and three protocols at two reps is thirty-six
+    runs, and nothing on the screen said so before pressing.
 
     Empty on an axis means "one — whatever this installation would pick",
     never "all of them". A benchmark that swept every axis by default is one
     nobody presses twice.
     """
     planes = split_axis(params, "planes") or ["(this machine's)"]
+    models = split_axis(params, "models", "model", "llms", "llm")
+    runs_of = pairs(planes, models, owners)
     axes = {
         "cases": max(1, case_count),
         "planes": len(planes),
         "protocols": len(split_axis(params, "protocols") or [""]),
         "searches": len(split_axis(params, "searches", "search") or [""]),
-        "models": len(
-            split_axis(params, "models", "model", "llms", "llm") or [""]
-        ),
+        "models": len(models or [""]),
         "reps": max(1, min(int(params.get("reps") or 1), 10)),
     }
-    total = 1
-    for value in axes.values():
-        total *= value
-    return {"axes": axes, "runs": total}
+    per_pair = axes["cases"] * axes["protocols"] * axes["searches"] * axes["reps"]
+    return {"axes": axes, "runs": per_pair * len(runs_of),
+            "paid_runs": per_pair * sum(1 for plane, _ in runs_of if plane == "api")}
 
 
 def estimate(conn, params: dict, case_count: int) -> dict:
@@ -740,7 +778,7 @@ def estimate(conn, params: dict, case_count: int) -> dict:
     from app import costs
 
     validate(params)
-    shape = grid(params, case_count)
+    shape = grid(params, case_count, llm_owners())
     per_run = costs.estimate(conn, plane="api")
     usd, tokens = per_run.get("usd"), per_run.get("tokens")
     priced = shape["runs"]
@@ -750,7 +788,7 @@ def estimate(conn, params: dict, case_count: int) -> dict:
         return {**shape, "usd": 0.0, "tokens": 0, "basis": per_run.get("basis", 0),
                 "note": "no paid plane in this grid — nothing to spend"}
     if planes:
-        priced = shape["runs"] // max(1, len(planes))
+        priced = shape["paid_runs"]
     return {
         **shape,
         "usd": round(usd * priced, 4) if isinstance(usd, (int, float)) else None,

@@ -128,6 +128,30 @@ Every form field comes from `/api/identity-keys/{pack_id}` and
 domain-freedom has to survive the trip to the DOM, and TypeScript is where it is
 easiest to break unnoticed.
 
+### Pressing every button: `tools/walk.sh`
+
+The component tests render one piece with a stubbed fetch, so they cannot see a
+screen that takes six seconds or a button that does nothing. `tools/walk.sh`
+can. It starts the app on a throwaway home (never `~/.kriko`) with the
+first-party packs built fresh, opens every screen the rail lists in a headless
+Chromium, presses every button on each (from a fresh load each time), and
+writes `.walk/walk.md`: per screen the load time, console errors and failed or
+`>= 400` requests; per button whether it errored, never settled, was slow
+(`KRIKO_WALK_SLOW_MS`, default 1000) or changed nothing at all.
+
+```bash
+tools/walk.sh             # every screen, ~15 minutes
+tools/walk.sh agents      # only addresses containing "agents"
+KRIKO_WALK_REAL_CLIS=1 tools/walk.sh agents   # your own claude/agy/opencode
+```
+
+By default `tools/walk/bin` goes ahead of `PATH`: stand-in `claude`, `agy` and
+`opencode` that answer instantly and spend nothing, and whose `models` take two
+seconds like the real ones. Buttons named quit, uninstall, delete, remove,
+forget, reset, revoke or undo are listed and never pressed. It needs Playwright
+(`npm i -g playwright && npx playwright install chromium`); it is not a
+dependency of the repo and not part of the gate.
+
 ## Checking for dead code
 
 A grep for a dotted module path (`packs.cars.pipeline.catalog.model_state`)
