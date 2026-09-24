@@ -5,6 +5,7 @@
     import EmptyState from "../lib/EmptyState.svelte";
     import Health from "./Health.svelte";
     import { api } from "../lib/api";
+    import { count } from "../lib/plural";
     import { severityWord } from "../lib/report";
     import type {
         Gap,
@@ -353,7 +354,7 @@
     <ul class="statstrip enter" aria-label="What this install holds">
         <li>
             <strong>{status.enabled_packs}</strong>
-            <span class="meta">of {status.counts.packs} pack(s) on</span>
+            <span class="meta">of {count(status.counts.packs, "pack")} on</span>
         </li>
         <li><strong>{status.counts.subjects}</strong><span class="meta">subjects</span></li>
         <li><strong>{status.counts.claims}</strong><span class="meta">claims</span></li>
@@ -369,7 +370,7 @@
         <div>
             <strong>{pack.name} is installed but switched off</strong>
             <span class="meta">
-                It holds {pack.claims} claim(s) about {pack.subjects} subject(s), and
+                It holds {count(pack.claims, "claim")} about {count(pack.subjects, "subject")}, and
                 answers none of them while it is off — which is why the lists below are
                 empty rather than broken.
             </span>
@@ -401,7 +402,7 @@
                     It does not load yet: {draft.error}. Tell the agent that, and it
                     can fix the file it wrote.
                 {:else}
-                    {draft.pack_id} {draft.version} · {draft.files.length} file(s) in
+                    {draft.pack_id} {draft.version} · {count(draft.files.length, "file")} in
                     {draft.root}.
                     {#if draft.installed_as}
                         It is in your store — the draft is kept so you can cover
@@ -422,7 +423,7 @@
             <!-- The correction verb. A generator you cannot correct is a slot
                  machine; a tool you can is worth keeping. -->
             <button
-                class="quiet"
+                class="ghost"
                 onclick={() =>
                     (amending = amending === draft.slug ? null : draft.slug)}
                 aria-expanded={amending === draft.slug}
@@ -435,13 +436,13 @@
                  and it has to survive a reload or it is not a dismissal. -->
             {#if draft.installed_as}
                 <button
-                    class="quiet"
+                    class="ghost"
                     onclick={() => hideDraft(draft)}
                     disabled={draftBusy === draft.slug}>Hide this</button
                 >
             {/if}
             <button
-                class="quiet"
+                class="ghost"
                 onclick={() => discardDraft(draft)}
                 disabled={draftBusy === draft.slug}>Throw it away</button
             >
@@ -548,7 +549,7 @@
              to remove a claim on the strength of one fetch. -->
         <div class="field">
             <label for="k-verify">Evidence</label>
-            <button id="k-verify" class="quiet" onclick={() => verifyPack(packFilter)}>
+            <button id="k-verify" class="ghost" onclick={() => verifyPack(packFilter)}>
                 Verify the knowledge here
             </button>
         </div>
@@ -757,8 +758,8 @@
     {:else}
         <p class="meta count">
             {visible.length === filtered.length
-                ? `${filtered.length} subject(s)`
-                : `${visible.length} of ${filtered.length} subject(s)`}
+                ? count(filtered.length, "subject")
+                : `${visible.length} of ${count(filtered.length, "subject")}`}
         </p>
         <ul class="klist">
             {#each visible as subject (subject.subject_id)}
@@ -776,7 +777,7 @@
                             <span class="meta">{subject.kind} · {subject.pack_id}</span>
                         </span>
                         <span class="badge" class:warn={subject.claims === 0}>
-                            {subject.claims} claim(s)
+                            {count(subject.claims, "claim")}
                         </span>
                     </button>
                     <button
@@ -917,19 +918,6 @@
     .count {
         margin: 0 0 var(--s-2);
     }
-    .klist {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    .krow {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        flex-wrap: wrap;
-        border-bottom: 1px solid var(--line);
-        padding: var(--s-1) 0;
-    }
     /* The whole row is the affordance, not a link buried in it: the reader's
      * target here is a name, and a 6px chevron is a worse target than the
      * 40rem of row the name sits in. */
@@ -953,15 +941,6 @@
         width: 1rem;
         text-align: center;
         color: var(--dim);
-    }
-    .kmain {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        flex: 1;
-    }
-    .klabel {
-        overflow-wrap: anywhere;
     }
     .badge.warn {
         background: var(--medium-soft);

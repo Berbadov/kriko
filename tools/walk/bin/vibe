@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# A stand-in `vibe` (Mistral Vibe); see `agy` beside it.
+if [ "${1:-}" = "--help" ]; then
+    printf '%s\n' "usage: vibe [options]" "  --output <mode>" "  --agent <name>" "  --trust" \
+        "  --enabled-tools <tool>" "  -p, --prompt <text>" "  --max-price <usd>" "  --max-turns <n>"
+    exit 0
+fi
+echo '{"role":"assistant","content":"{\"findings\": []}"}'

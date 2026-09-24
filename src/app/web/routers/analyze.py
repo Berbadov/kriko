@@ -87,7 +87,7 @@ def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
             "local_panel": local_panel(row.get("spec") or {}),
             "local": True,
         }
-        for row in state.local_adapters(app_state)
+        for row in sites.local_rows(app_state)
     ]
 
 

@@ -38,7 +38,7 @@ def _search_code(part_id: str) -> str:
 def _part_meta(part_id: str) -> dict:
     """Load part YAML metadata (display_name, known_also_as, etc.)."""
     for path in sorted(PARTS_DIR.rglob(f"{part_id}.yaml")):
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         if data.get("part_id") == part_id:
             return data
     return {}
@@ -158,7 +158,7 @@ def ensure_part_stub(
     stub_path.parent.mkdir(parents=True, exist_ok=True)
     stub_path.write_text(
         yaml.dump({**scaffold, "claims": []}, allow_unicode=True, sort_keys=False)
-    )
+    , encoding="utf-8")
     print(f"  Created part stub: {stub_path.relative_to(REPO_ROOT)}")
 
 
@@ -195,7 +195,7 @@ def _find_make_model_for_part(part_id: str, part_type: str) -> tuple[str, str]:
             make = stem_parts[0]
             model = "_".join(stem_parts[1:])
             try:
-                rows = yaml.safe_load(path.read_text()) or []
+                rows = yaml.safe_load(path.read_text(encoding="utf-8")) or []
                 for row in rows:
                     if row.get(field) == part_id:
                         return make, model

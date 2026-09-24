@@ -50,6 +50,63 @@ button says "Clipboard blocked" when both fail; the agenda row shows the text.
 Not mine and still red on the base: `test_brand_icon.py`'s two tests (the
 committed master is 512 px, the test wants 1024).
 
+### 2026-09-23 — live interactions: a run the reader can answer, and a panel that shows it working
+
+**A reply box on a running job, and a reply that reaches the agent.** `POST
+/api/jobs/{id}/say` writes a `job_messages` row; the handler reads it between
+steps (`Progress.replies`). The first cut stopped there, and a line written to
+a one-shot `claude -p` goes into a stdin nothing reads. So a CLI that declares
+`--input-format` now runs conversationally: brief as the first stream-json
+message, each reply as the next. A reply typed mid-turn is queued behind it,
+the way Claude Code does it. A turn that *ends* on a question holds the pipe
+open for up to `ANSWER_WAIT_SECONDS`, and the run is never kept past its own
+timeout. A child that is silent for `CONVERSATION_START_SECONDS` is re-run the
+ordinary way (B125). Proven live on Windows through the `.cmd` shim: a reply
+sent during turn one came back as turn two in 7.7s. Other harnesses (vibe,
+gemini, opencode, agy) still take a reply only as a note: none of them
+declares a streaming input.
+
+**The panel's research card follows a run live** (stage line and feed aside,
+`hover_lite_live.test.js`). The Jobs view's reply input was controlled by hand
+because a `bind:` onto an empty slot was reset by the next poll.
+
+### 2026-09-21 — the mark at 1024px, and three gates that were green on nothing
+
+**The icon was pixelated because it was a 16x16 drawing scaled up.** The mark
+is a pixel grid, and a pixel grid is right at 16, 32 and 48 — nearest-neighbour
+integer scale, crisp cells. Tauri derives every Windows icon from
+`icons/icon.png`, and that file was the same grid blown up, so the installer,
+the taskbar and the app rail all showed a blurred letter. There are now two
+sources: `logo-mark.svg` (16x16, the tile) and `logo-mark-large.svg` (64-unit
+viewBox, `rect` and `polygon` only), rasterised to a 1024px master by a 4x
+supersampled scanline filler in `packaging/render_icon.py`. Same K, same three
+colours, and a test reads both files so a colour cannot change in one of them.
+`docs/BRAND.md` says which size comes from which source.
+
+**`path.read_text()` means cp1252 on a Turkish Windows box.** Not a style
+point — a crash. `k9k.yaml` holds a curly quote in a claim's prose, and sixty
+tests died at once with `UnicodeDecodeError: charmap codec`. Every gate we had
+missed it because CI is Linux, where the guess happens to be UTF-8, so the
+class was invisible on exactly the platform the reader runs. 111 call sites
+took an explicit `encoding="utf-8"` (48 reads, 63 writes — writing is the same
+bug pointed the other way: a pack authored here would ship mojibake with
+nothing raising), and
+`test_no_file_is_read_in_the_platform_s_default_encoding` walks the tree's AST
+so it cannot come back. `pytest packs` went from ~60 crashes to 349 passing.
+
+**`write_text` translates "
+" to "
+" on Windows**, so both brand render
+scripts rewrote every line of files whose content had not changed — the third
+sighting of the defect behind `aa795e6` and `bea9e88`. `newline=""` on all
+four writes.
+
+**`npm test` ran zero tests on Windows and exited 0.** The glob was
+single-quoted, and npm runs scripts through cmd.exe, where `'...'` is literal.
+Double quotes: both shells strip them, node globs. 150 tests where the gate
+had been reporting green on none of them.
+
+
 ### 2026-09-19 — per-harness LLMs, benchmark buttons, provider self-test, site activation
 
 Four reader items, each finished to the mechanism:

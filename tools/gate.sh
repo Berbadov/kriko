@@ -24,7 +24,43 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# A venv puts its interpreter in `bin/` on POSIX and in `Scripts/` on Windows,
+# and this script hardcoded the first. So `tools/gate.sh` exited 127 on the
+# Windows host — the one machine every installer since 0.5.0 has been built on,
+# and the only one where the app is actually assembled and run.
+#
+# That is this file's own premise failing. `ci.yml` was deleted because a gate
+# that cannot get a runner teaches people to scroll past a red tick; a gate
+# that dies on `No such file or directory` before its first check is the same
+# thing with fewer steps. Probe for the interpreter instead of asserting where
+# it lives. `PYTHON=` still overrides, and still wins.
+# The second place to look is the main checkout. A git worktree has no `.venv`
+# of its own and is not supposed to — the interpreter and its packages are the
+# same ones either way — so a gate that only looks beside itself refuses to run
+# in exactly the place this project does its isolated work.
+if [ -z "${PYTHON:-}" ]; then
+    main_checkout=""
+    if common_dir=$(git rev-parse --git-common-dir 2>/dev/null); then
+        main_checkout=$(cd "$common_dir/.." 2>/dev/null && pwd) || main_checkout=""
+    fi
+    for candidate in \
+        .venv/bin/python .venv/Scripts/python.exe \
+        ${main_checkout:+"$main_checkout/.venv/bin/python"} \
+        ${main_checkout:+"$main_checkout/.venv/Scripts/python.exe"}
+    do
+        if [ -x "$candidate" ]; then PYTHON="$candidate"; break; fi
+    done
+fi
 PYTHON="${PYTHON:-.venv/bin/python}"
+if [ ! -x "$PYTHON" ]; then
+    echo "gate.sh: no interpreter at '$PYTHON'." >&2
+    echo "Create the venv (see CONTRIBUTING.md) or set PYTHON=/path/to/python." >&2
+    exit 1
+fi
+# Exported, not merely set: `tools/smoke_wheel.sh` is a separate process and
+# was left to repeat the probe above — which it did not, so it asserted
+# `.venv/bin/python` and could not start on Windows. One probe, one answer.
+export PYTHON
 only="${1:-all}"
 ran=0
 
@@ -81,7 +117,20 @@ fi
 if [ "$only" = all ] || [ "$only" = node ]; then
     ran=1
     step "node (scraper + extension panel)"
-    npm test
+    # Not just `npm test`. `node --test` exits 0 when its pattern matches no
+    # files, and the pattern was single-quoted — which cmd.exe does not strip,
+    # so on the Windows host that runs this gate the leg printed `tests 0 /
+    # pass 0 / fail 0` and passed, hiding 157 real tests including every one
+    # that covers the extension reading a page. The quoting is fixed in
+    # package.json; this is the part that makes the *next* such mistake loud.
+    # An empty suite and a passing suite must not produce the same tick.
+    node_out=$(npm test 2>&1)
+    printf '%s\n' "$node_out"
+    node_count=$(printf '%s' "$node_out" | sed -n 's/.*[^a-z]tests \([0-9][0-9]*\).*/\1/p' | tail -1)
+    if [ "${node_count:-0}" -lt 1 ]; then
+        echo "the node suite ran ${node_count:-no} tests — a glob that matches nothing is not a pass." >&2
+        exit 1
+    fi
 fi
 
 if [ "$only" = all ] || [ "$only" = ui ]; then
@@ -150,22 +199,60 @@ if [ "$only" = all ] || [ "$only" = tauri ]; then
             return 1
         }
 
+        # tauri.conf.json declares the sidecar as an external binary, and its
+        # build script refuses to run when the file for the triple being built
+        # is absent. That is correct — it is what stops an installer shipping
+        # without an engine — so a *check* has to place an empty stand-in and
+        # take it away again.
+        #
+        # This used to happen for the gnu cross-target only, which made the
+        # native leg unrunnable on Windows: the host triple there is
+        # `x86_64-pc-windows-msvc`, whose stub nothing created, so the leg died
+        # on `resource path binaries\kriko-sidecar-x86_64-pc-windows-msvc.exe
+        # doesn't exist` before rustc read a line. Same shape as the `bin/` vs
+        # `Scripts/` bug this file opens with: written for a Linux host, run on
+        # the Windows one that actually builds the installer. Stub whichever
+        # triple the check is about, and ask rustc what the host's is rather
+        # than assuming.
+        _tauri_check_with_stub() {
+            local triple="$1" target_flag="$2" desc="$3" stub created=0 result=0
+            stub="$CRATE/binaries/kriko-sidecar-$triple"
+            case "$triple" in *windows*) stub="$stub.exe" ;; esac
+            if [ -n "$triple" ] && [ ! -e "$stub" ]; then
+                mkdir -p "$(dirname "$stub")"
+                : > "$stub"
+                created=1
+            fi
+            _tauri_cargo_check "$target_flag" "$desc" || result=$?
+            [ "$created" = 1 ] && rm -f "$stub"
+            return "$result"
+        }
+
+        HOST_TRIPLE=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p')
+
+        # `icons/` is gitignored but for the 1024px master, because every other
+        # size is generated at packaging time by `tauri icon` — which needs the
+        # Tauri CLI, which needs a network this gate does not have. One of those
+        # generated files is not a bundling detail though: `tauri-build` turns
+        # `icon.ico` into a Win32 resource *before* rustc runs, so on a Windows
+        # host its absence is not a missing icon, it is `cargo check` refusing
+        # to start. `render_icon.py` derives that one file from the same master,
+        # offline and deterministically, which is what makes this leg runnable
+        # on the machine that actually builds installers.
+        if [ ! -e "$CRATE/icons/icon.ico" ]; then
+            "$PYTHON" packaging/render_icon.py >/dev/null
+        fi
+
         step "cargo check (tauri/src-tauri, native)"
         result=0
-        _tauri_cargo_check "" "the native cargo check" || result=$?
+        _tauri_check_with_stub "$HOST_TRIPLE" "" "the native cargo check" || result=$?
         [ "$result" = 1 ] && exit 1
 
         step "cargo check (tauri/src-tauri, windows cross-target)"
-        STUB="$CRATE/binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe"
-        created=0
-        if [ ! -e "$STUB" ]; then
-            mkdir -p "$(dirname "$STUB")"
-            touch "$STUB"
-            created=1
-        fi
         result=0
-        _tauri_cargo_check "--target x86_64-pc-windows-gnu" "the windows cross-target cargo check" || result=$?
-        [ "$created" = 1 ] && rm -f "$STUB"
+        _tauri_check_with_stub "x86_64-pc-windows-gnu" \
+            "--target x86_64-pc-windows-gnu" \
+            "the windows cross-target cargo check" || result=$?
         [ "$result" = 1 ] && exit 1
     fi
 fi

@@ -253,7 +253,62 @@ export type Job = {
     created_at: string;
     started_at: string | null;
     finished_at: string | null;
+    /* Set by `_with_attention` in `app/web/routers/jobs.py` when the run put
+     * something to the reader. Null is the ordinary case. */
+    attention: Attention | null;
 };
+
+/* One thing the identification pass could not settle on its own.
+ *
+ * It did not wait for the answer — `app/disambiguate.py` states a default and
+ * carries on, because a run that blocks on a person is a run nobody finishes.
+ * So `default` is what it actually used, and an answer here changes the *next*
+ * run rather than this one.
+ */
+export type Question = {
+    id: string;
+    ask: string;
+    /* Which part of the scope this settles. Empty means `id` is the key. */
+    key: string;
+    /* At most eight, and possibly none — then it is a free-text answer. */
+    options: string[];
+    /* What the run assumed. Never empty: a question without one would have
+     * had to block, so `normalise` drops it. */
+    default: string;
+    because: string;
+};
+
+export type Attention = {
+    kind: string;
+    count: number;
+    say: string;
+    questions: Question[];
+};
+
+/* One position on the depth dial, as `app/scale.py` defines it.
+ *
+ * `usd` and `tokens` are `null` where this installation has never measured a
+ * run of that shape — inherited from `costs.estimate`, which refuses to
+ * invent a number, and rendered as "not measured" rather than as zero. A
+ * promise about somebody's money that the app cannot keep is worse than none.
+ *
+ * `custom` reports `max_documents: 0`, meaning "your own number" — the screen
+ * offers a field, and an explicit count wins over whatever a preset proposes.
+ */
+export type Scale = {
+    id: string;
+    label: string;
+    note: string;
+    max_documents: number;
+    context_chars: number;
+    batch_size: number;
+    usd: number | null;
+    tokens: number | null;
+    basis: number;
+    cap_usd: number;
+};
+
+export type Scales = { scales: Scale[]; default: string };
 
 export type RunSelection = { llm?: string; harness?: string; search?: string };
 
@@ -263,6 +318,11 @@ export type ResearchRequest = RunSelection & {
     backend?: string;
     budget_usd?: number;
     max_documents?: number;
+    /** `quick` | `standard` | `deep` | `custom`. The server owns the numbers
+     *  behind each name (`app/scale.py`) — a client that restated them would
+     *  be the hand-maintained correspondence this repository keeps catching.
+     *  An explicit `max_documents` wins over whatever the preset proposes. */
+    scale?: string;
 };
 
 export type ClaimHealth = {
@@ -589,6 +649,12 @@ export type HarnessModel = {
     llm_hint?: string;
     /** False where Kriko has no verified per-run switch yet. */
     llm_selectable?: boolean;
+    /** The stored effort level, or "" for the CLI's own default. */
+    effort?: string;
+    /** The levels this machine's CLI declares in its own --help. `[]` means
+     *  it has no such dial and the control is not drawn at all. */
+    efforts?: string[];
+    effort_hint?: string;
 };
 
 export type Prefs = {
@@ -666,6 +732,26 @@ export type Operation = {
     ms: number | null;
     started_at: string;
     ended_at: string;
+    /** The job this operation *is*, when it came in by the `job` door.
+     *
+     * Empty for every other door, and that emptiness is load-bearing: a job
+     * belongs to the runner in this process and can be stopped from the feed
+     * watching it, while an MCP call belongs to the process that made it and
+     * cannot. The Stop button is offered on exactly the rows that carry one. */
+    job_id?: string;
+    /** What that job is saying right now — its named stage, live.
+     *
+     * An operation row says nothing between opening and closing, so a long run
+     * was a line that sat there for forty minutes. The job underneath it was
+     * naming its stage the whole time; this is the feed finally asking. Null
+     * for a door that has no job. */
+    note?: string | null;
+    /** How far along that job claims to be, 0–1. Null where there is no job. */
+    progress?: number | null;
+    /** The job's own state, which outlives the operation's: a cancelled job is
+     *  not a failed one, and colouring a deliberate stop like a crash teaches
+     *  the reader to ignore the colour. */
+    job_state?: string | null;
 };
 
 export type Operations = {
@@ -903,6 +989,9 @@ export type AgendaRunRequest = RunSelection & {
     backend?: string;
     budget_usd?: number;
     max_documents?: number;
+    /** See `ResearchRequest.scale`. An agenda run multiplies the per-subject
+     *  cost by the number of rows, so it is the screen that most needs one. */
+    scale?: string;
 };
 
 /* A pack an agent wrote, waiting for the reader to install or throw away.
