@@ -69,7 +69,8 @@ paste test output here
 
 - [ ] One request in this PR, and the branch is less than a day old (or rebased on `main`)
 - [ ] `tools/walk.sh` shows no errors on the screens this touches
-- [ ] Its journey check exists and passes (docs/DOCTRINE.md §4)
+- [ ] Its journey check passes, or (until `tools/journeys/` exists, B143) the
+      steps and the end result are walked by hand above (docs/DOCTRINE.md §4)
 
 ### Tracking
 
