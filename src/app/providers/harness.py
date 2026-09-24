@@ -83,6 +83,14 @@ TIMEOUT_SECONDS = 600.0
 #: research ceiling would have killed a healthy run and called it a hang.
 AUTHOR_TIMEOUT_SECONDS = 2400.0
 
+#: How long a *question to a CLI about itself* may take — `--help`, `models`.
+#: Short on purpose: the Agents screen asks all of these on load, so the worst
+#: case a reader waits is this times the number of CLIs installed, and a probe
+#: that is slow is already telling us its answer will not be worth waiting for.
+#: A probe that times out reads as "declares nothing extra", which costs the
+#: reader the hygiene flags and never the plane.
+HELP_TIMEOUT_SECONDS = 12.0
+
 
 def _lines(stream, tick: float):
     """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
@@ -154,6 +162,13 @@ class Harness:
     model_flag: str = ""
     required: tuple[str, ...] = ()
     capabilities: tuple[str, ...] = ()
+    #: One paragraph appended to `CONTRACT`, for a CLI whose tool set differs
+    #: from what the shared contract assumes. The contract says "only the web
+    #: search and web fetch tools" because every CLI here had both — and the
+    #: first one that has only `web_fetch` would otherwise be sent looking for
+    #: a tool it does not own. Per-harness prose, never per-category: nothing
+    #: here may name a product, a make or a subject.
+    contract_note: str = ""
     #: What to run instead of `args` when this machine's CLI does not list
     #: `needs_in_help` among the things it can do. The streaming vector is the
     #: one this plane wants (see `_claude_args`); this is the one that still
@@ -192,6 +207,54 @@ class Harness:
     #: silently ignored there rather than read — a run that researches nothing
     #: on the reader's quota is the failure this rules out.
     prompt_flag: str = ""
+    #: How this CLI is told that more messages will arrive on stdin while it
+    #: is running — the difference between a note nobody reads and a reply the
+    #: agent acts on.
+    #:
+    #: **This is what B120 left open, and it is not free.** Every other prompt
+    #: path here was moved *off* stdin (see `prompt_argument`): a pipe that
+    #: crosses a `claude.cmd` shim into node is the B125 scar, and it failed
+    #: silently. Streaming input puts the prompt back on that pipe, because a
+    #: CLI reading messages has no other place to read the first one from. The
+    #: trade is accepted only where it buys something — a run the reader can
+    #: actually answer — and only when the CLI *declares* the flag, with the
+    #: ordinary one-shot vector still there for every other run. The silent
+    #: half of the scar is closed by `CONVERSATION_START_SECONDS`: a child
+    #: that never speaks is abandoned in a minute rather than in the timeout,
+    #: and the run is retried the old way.
+    reply_flag: str = ""
+    reply_value: str = ""
+    #: An environment variable that names the model, for a CLI with no
+    #: per-run `--model` flag. `vibe` is the case: its model is a *config*
+    #: field (`active_model`) and its config layer reads `VIBE_*` out of the
+    #: environment — so the choice is per-run after all, just not as an
+    #: argument. Consulted only when `model_flag` is empty, because a flag is
+    #: the CLI's own answer and an env var is read off its config schema.
+    model_env: str = ""
+    #: The flag that caps what one run may spend, and the flag that caps how
+    #: many assistant turns it may take. Empty means this CLI offers no such
+    #: ceiling, and the only ones are Kriko's own — the prompt's source
+    #: budget, and `TIMEOUT_SECONDS`.
+    #:
+    #: **This is the scale dial reaching the CLI.** Before it, a Quick run and
+    #: a Deep run differed only in how many of the agent's findings were
+    #: *kept*: the agent had already read thirty pages either way, on the
+    #: reader's subscription. A ceiling the CLI itself enforces is the only
+    #: one that saves anything, which is the whole of "I don't want my agent
+    #: to search 30 sources, maybe I want 3".
+    budget_flag: str = ""
+    turns_flag: str = ""
+    #: How many assistant turns one source is worth, for `turns_flag`. A run
+    #: allowed seven sources needs turns for the searches, the reads and the
+    #: report, so this is deliberately generous: the flag is a runaway stop,
+    #: not a budget, and a run killed one turn short of its report has spent
+    #: everything and returned nothing.
+    turns_per_source: int = 4
+    #: True when this CLI must run under a `HOME` Kriko builds rather than the
+    #: reader's own. See `_workspace` — it is how a permission policy is
+    #: granted for the length of one run without ever rewriting a file the
+    #: reader owns.
+    sandbox_home: bool = False
     #: The flag is documented but not in the top-level `--help`, so the
     #: declared-flag check in `command_for` cannot see it. `opencode --help`
     #: describes the TUI; `--model` belongs to `opencode run`. Set only with
@@ -206,6 +269,18 @@ class Harness:
     model_source: str = ""
     #: One line saying what a valid name looks like, for the dropdown's hint.
     model_hint: str = ""
+    #: How hard the CLI should think, per run. A second dial beside the model
+    #: and a cheaper one to turn: dropping a survey run from `high` to `low`
+    #: costs a fraction of what switching the model does and changes nothing
+    #: about which account pays. Passed only when `--help` declares the flag —
+    #: the same rule `preferred` follows, because a reader on an older build
+    #: must lose the dial rather than the plane.
+    effort_flag: str = ""
+    #: The levels this CLI documents. Read out of its own `--help`, never
+    #: invented: `claude` lists five and `agy` three, and a level neither of
+    #: them accepts is a run that dies on argument parsing.
+    effort_choices: tuple[str, ...] = ()
+    effort_hint: str = ""
     #: Where to get it, in the reader's words. Shown when the CLI is missing,
     #: so a dead link here is worse than none — only official install pages.
     download_url: str = ""
@@ -269,6 +344,24 @@ KNOWN = (
         model_flag="--model",
         model_source="help",
         model_hint="an alias or a full name, as `claude --help` names them — the CLI judges it, not Kriko",
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high", "xhigh", "max"),
+        effort_hint="how hard to think — `claude --help` lists these five",
+        # `--max-budget-usd <amount>`, and its help says "only works with
+        # --print", which is the only mode this plane runs in. The scale dial
+        # reached one CLI before this line; the reader's whole point was not
+        # spending tokens they did not choose to spend, and the harness they
+        # are trying *not* to spend on was the one with no ceiling.
+        budget_flag="--max-budget-usd",
+        # `--input-format stream-json`, whose help says "only works with
+        # --print" — which is the mode this plane already runs in, so the
+        # conversational vector is the streaming one plus this flag and
+        # nothing else. Probed as a *flag* rather than by looking for
+        # "stream-json" in the help text, because that word is also in
+        # `--output-format`'s line and would have said yes on a CLI that only
+        # streams outward.
+        reply_flag="--input-format",
+        reply_value="stream-json",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -295,13 +388,44 @@ KNOWN = (
         "opencode",
         ("run", "--agent", "kriko-harness"),
         download_url="https://opencode.ai/download",
-        install_hint="curl -fsSL https://opencode.ai/install | bash",
         needs_account="a model account or API key of your own (or a free/local model)",
         structured=False,
         model_flag="--model",
         model_unlisted=True,
         model_source="models",
         model_hint="provider/name, as `opencode models` lists them",
+        # The bash installer is the right line on macOS and Linux and is not
+        # runnable on the reader's machine, which is Windows. A hint nobody
+        # can paste is a hint that teaches the reader the screen is decorative.
+        install_hint=(
+            "npm install -g opencode-ai"
+            if os.name == "nt"
+            else "curl -fsSL https://opencode.ai/install | bash"
+        ),
+        # Its own installer puts the binary in `~/.opencode/bin`, and Windows
+        # installs land under `%LOCALAPPDATA%\Programs\opencode`. Neither is
+        # on the `PATH` a desktop shell inherits at login — which is the whole
+        # reason `locate` looks past `PATH` at all.
+        # Its own installer puts the binary in `~/.opencode/bin`, and npm's
+        # global install puts a shim in `%APPDATA%\npm`. Neither is on the
+        # `PATH` a desktop shell inherits at login, which is the whole reason
+        # `locate` looks past `PATH`.
+        #
+        # **`AppData/Local/Programs` is deliberately not here, and the default
+        # list is why this row needs its own.** Windows paths are
+        # case-insensitive, so that directory matched
+        # `…/Programs/OpenCode/OpenCode.exe` — an unrelated Electron
+        # application with the same name — and Kriko then ran a GUI app with
+        # `--help` and waited for it. A fallback guess that is wrong must cost
+        # nothing, and a guess that matches the wrong binary costs everything.
+        homes=(
+            ".opencode/bin",
+            ".local/bin",
+            "AppData/Roaming/npm",
+            ".npm-global/bin",
+            "node_modules/.bin",
+            "bin",
+        ),
     ),
     Harness(
         "antigravity-cli",
@@ -319,21 +443,150 @@ KNOWN = (
         model_flag="--model",
         model_source="models",
         model_hint="an id from `agy models`",
-        capabilities=("headless", "streaming", "web-search", "model-selection"),
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high"),
+        effort_hint="reasoning effort — `agy --help` names these three",
+        capabilities=("headless", "streaming", "web-search", "web-fetch",
+                      "model-selection"),
+        # **This is the reader's "I can only use Claude Code, not
+        # Antigravity".** Verified against the real CLI: `agy` runs headless
+        # with `permission_mode: request-review`, under which `search_web`
+        # needs no approval and `read_url_content` does. Nobody can answer a
+        # prompt in print mode, so every run searched six times, tried to read
+        # its first page, was auto-denied, and returned an empty reply after
+        # spending 80k tokens of the reader's quota. Exit code 0 throughout.
+        #
+        # The grant is one line in the CLI's own settings file — and Kriko
+        # writes it into a `HOME` that lasts for the run rather than into the
+        # reader's, for the reason the whole `_workspace` exists: a research
+        # plane may not leave a permission behind it. Verified that the login
+        # survives, because `agy` keeps its token in the OS keyring rather
+        # than under `HOME`.
+        sandbox_home=True,
+        turns_flag="",
+        budget_flag="",
     ),
+    # Verified against Mistral Vibe 2.25.5. Every argument below is one the
+    # CLI's own `--help` declares, and every value was read off the installed
+    # package rather than guessed:
+    #
+    # * `--agent auto-approve` is a **builtin** (`vibe.core.agents.models`
+    #   `BUILTIN_AGENTS`), so there is no profile file to write and nothing
+    #   to keep in step with a schema Kriko does not own. The earlier vector
+    #   named `kriko-research`, a custom agent — which is why this row could
+    #   never be verified: the file it needed had a shape nobody had read.
+    # * `--enabled-tools` "in programmatic mode (-p) … disables all other
+    #   tools", so naming the two web tools *is* the sandbox. The names are
+    #   the snake_case of the tool classes (`WebSearch`, `WebFetch` in
+    #   `vibe/core/tools/builtins/`), which is how `BaseTool` derives them.
+    # * `--trust` is the CLI's own documented answer to "use this for
+    #   non-interactive automation": without it the run stops on a trust
+    #   prompt that headless mode cannot answer — `agy`'s failure again.
+    # * `--output streaming` prints one JSON history entry per message, which
+    #   is what `narrate` turns into the job log and `_unwrap` reads the reply
+    #   out of. It carries no usage, so this plane's cost columns stay NULL
+    #   rather than being filled with a guess.
     Harness(
         "mistral-vibe", "Mistral Vibe", "vibe",
-        ("--output", "streaming", "--agent", "kriko-research",
+        ("--output", "streaming", "--agent", "auto-approve", "--trust",
          "--enabled-tools", "web_search", "--enabled-tools", "web_fetch"),
         download_url="https://docs.mistral.ai/vibe/code/cli/install-setup",
-        install_hint="curl -LsSf https://mistral.ai/vibe/install.sh | bash",
-        needs_account="a Mistral account or API key; sign in once with an interactive `vibe` session first",
+        install_hint=(
+            "pip install mistral-vibe"
+            if os.name == "nt"
+            else "curl -LsSf https://mistral.ai/vibe/install.sh | bash"
+        ),
+        needs_account="a Mistral account or API key (MISTRAL_API_KEY); run `vibe --setup` once first",
         protocol="vibe", prompt_argument=False,
         required=("--output", "--agent", "--enabled-tools", "--prompt"),
-        capabilities=("headless", "streaming", "web-search", "web-fetch"),
-        unusable=("not yet verified against the real CLI — its tool names, "
-                  "sandbox file and streaming output are untested, so Kriko "
-                  "will not drive it until they are"),
+        capabilities=("headless", "streaming", "web-search", "web-fetch",
+                      "model-selection", "budget", "turn-cap"),
+        # No `--model` flag exists. The model is a config field, and the
+        # config's environment layer reads `VIBE_*` with a nested delimiter —
+        # so `VIBE_ACTIVE_MODEL` is the per-run switch, read off
+        # `vibe/core/config/layers/environment.py` rather than invented.
+        model_env="VIBE_ACTIVE_MODEL",
+        # No list either: `vibe` has no `models` command and its `--help`
+        # names none, so the field is free text rather than a list typed here.
+        model_hint="a Mistral model alias — the CLI judges it, not Kriko",
+        # The only CLI here that will stop itself on money. Both are
+        # documented as applying "only … in programmatic mode with -p",
+        # which is the mode this plane runs in and no other.
+        budget_flag="--max-price",
+        turns_flag="--max-turns",
+        sandbox_home=True,
+    ),
+    # Verified against GitHub Copilot CLI 1.0.48 on the reader's own machine,
+    # which is where this row came from: `copilot` was on PATH, answered
+    # `--help`, ran a prompt and returned a reply — and Kriko had no row for
+    # it, so the Agents screen said three agents where there were four. That
+    # is the whole of the reader's "detected harnesses aren't including all".
+    #
+    # Every value below was read off the installed CLI rather than a doc page:
+    #
+    # * `--output-format json` is **JSONL, one object per line** (its own help
+    #   says so), ending in a `{"type": "result", "exitCode": n}` line. The
+    #   reply is in the `assistant.message` events, which is why this needs
+    #   its own protocol rather than reusing `claude`'s `result.result`.
+    # * `--allow-all-tools` is what its help gives as the non-interactive
+    #   example, and without it a headless run stops on a permission prompt
+    #   nobody can answer — `agy`'s failure, one CLI further on. `--no-ask-user`
+    #   closes the other door, the `ask_user` tool.
+    # * `--available-tools web_fetch` is the sandbox: its help reads "only
+    #   these tools will be available to the model", so naming one name is
+    #   the grant. Asked to name its own tools, this CLI listed `powershell`,
+    #   `write_powershell`, `create`, `edit`, `sql` and a dozen more — every
+    #   one of which a research run must not have.
+    # * **It has no web *search* tool.** `web_fetch` is the only reading tool
+    #   it owns, which is why `capabilities` does not claim search and why
+    #   this is the one row that carries a `contract_note`.
+    # * `--disable-builtin-mcps` drops its GitHub MCP server, and
+    #   `--no-custom-instructions` the reader's own instruction files: the
+    #   same hygiene `--safe-mode` buys on Claude Code.
+    Harness(
+        "github-copilot", "GitHub Copilot CLI", "copilot",
+        ("--output-format", "json", "--allow-all-tools", "--no-ask-user",
+         "--available-tools", "web_fetch",
+         "--disable-builtin-mcps", "--no-custom-instructions",
+         "--no-auto-update", "--no-color", "--log-level", "none"),
+        download_url="https://docs.github.com/copilot/how-tos/copilot-cli",
+        install_hint=(
+            "winget install GitHub.Copilot"
+            if os.name == "nt"
+            else "npm install -g @github/copilot"
+        ),
+        needs_account="a GitHub Copilot subscription; run `copilot login` once first",
+        protocol="copilot", prompt_argument=False, prompt_flag="-p",
+        required=("--output-format", "--allow-all-tools", "--available-tools"),
+        model_flag="--model", model_unlisted=True, model_source="help",
+        model_hint=(
+            "a model id your Copilot plan includes — it refuses an unavailable "
+            "one by name before spending anything"
+        ),
+        effort_flag="--effort",
+        effort_choices=("low", "medium", "high", "xhigh"),
+        effort_hint="reasoning effort — `copilot --help` names these four",
+        capabilities=("headless", "streaming", "web-fetch", "model-selection"),
+        contract_note=(
+            "\n**This agent has no web search tool — only `web_fetch`.** Where "
+            "the brief says to search, fetch a search engine's own results page "
+            "instead (a plain HTML endpoint, not a JavaScript one), read the "
+            "links off it, and fetch the pages worth reading. Everything else "
+            "about the contract above is unchanged: report what you actually "
+            "read, quote it verbatim, and invent nothing.\n"
+        ),
+        # winget puts the shim under `Links`, the payload under `Packages`,
+        # and npm's global install somewhere else again. None of the three is
+        # reliably on the `PATH` a desktop shell inherits at login.
+        homes=(
+            "AppData/Local/Microsoft/WinGet/Links",
+            "AppData/Local/copilot/bin",
+            "AppData/Roaming/npm",
+            ".npm-global/bin",
+            "node_modules/.bin",
+            ".local/bin",
+            "bin",
+        ),
     ),
     Harness(
         "gemini-cli", "Gemini CLI", "gemini",
@@ -343,6 +596,7 @@ KNOWN = (
         install_hint="npm install -g @google/gemini-cli",
         needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `gemini` session first",
         protocol="gemini", model_flag="--model", prompt_argument=False,
+        sandbox_home=True,
         required=("--output-format", "--approval-mode", "--allowed-tools", "--prompt"),
         capabilities=("headless", "streaming", "web-search", "web-fetch", "model-selection"),
         unusable=("not yet verified against the real CLI — `--allowed-tools` "
@@ -447,6 +701,66 @@ _HELP: dict[str, str] = {}
 _OPTION = re.compile(r"--[a-z][a-z0-9-]+")
 
 
+def _ask(executable: str, *argv: str) -> str:
+    """Run a CLI's own self-description and come back, whatever it does.
+
+    **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
+    a theory either: `locate` once matched an unrelated Electron application
+    called OpenCode, Kriko ran it with `--help`, and the probe never
+    returned. `run` kills the process it started when the timeout fires and
+    then calls `communicate()`, which waits for the *pipes* to close — and a
+    GUI app's surviving children hold them open forever. The timeout expires
+    and the function still does not come back.
+
+    So: `Popen`, a timer that kills the whole tree, and pipes drained in
+    threads. Same three pieces as `_stream`, for the same reason, one
+    question smaller — a process asked what flags it has must always be
+    answerable, because every screen that lists the planes waits on it.
+
+    `""` on anything going wrong, which reads as "said nothing": a probe is
+    never why a plane is unavailable.
+    """
+    out: list[str] = []
+    try:
+        proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+            [executable, *argv],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
+            start_new_session=True,
+        )
+    except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
+        return ""
+    killed = threading.Event()
+
+    def _give_up() -> None:
+        killed.set()
+        HarnessResearcher._kill_tree(proc)
+
+    timer = threading.Timer(HELP_TIMEOUT_SECONDS, _give_up)
+    timer.start()
+    reader = threading.Thread(
+        target=HarnessResearcher._drain, args=(proc.stdout, out), daemon=True
+    )
+    reader.start()
+    try:
+        proc.wait(timeout=HELP_TIMEOUT_SECONDS * 2)
+    except Exception:  # noqa: BLE001
+        HarnessResearcher._kill_tree(proc)
+    finally:
+        timer.cancel()
+    # Bounded: the drain thread may still be running against a pipe held open
+    # by a child nothing can reach, and this must return regardless.
+    reader.join(timeout=1.0)
+    try:
+        if proc.stdout is not None:
+            proc.stdout.close()
+    except Exception:  # noqa: BLE001
+        pass
+    return "" if killed.is_set() else "".join(out)
+
+
 def helptext(executable: str) -> str:
     """What `--help` printed, cached. `""` on any failure.
 
@@ -458,13 +772,7 @@ def helptext(executable: str) -> str:
     """
     if executable in _HELP:
         return _HELP[executable]
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "--help"], capture_output=True, text=True, timeout=30
-        )
-        text = (done.stdout or "") + (done.stderr or "")
-    except Exception:  # noqa: BLE001 — see `declared`
-        text = ""
+    text = _ask(executable, "--help")
     _HELP[executable] = text
     _DECLARED[executable] = frozenset(_OPTION.findall(text))
     return text
@@ -524,24 +832,50 @@ def _from_help(text: str, flag: str) -> list[str]:
             if re.match(r"^\s*-", following) or not following.strip():
                 break
             block.append(following)
-        for name in _QUOTED.findall(" ".join(block)):
+        joined = " ".join(block)
+        names = _QUOTED.findall(joined)
+        if not names:
+            # "(low, medium, high, xhigh, max)": a bare parenthesised list.
+            for group in re.findall(r"\(([^()]*,[^()]*)\)", joined):
+                names += [w for w in re.split(r"\s*(?:,|\bor\b)\s*", group)
+                          if re.fullmatch(r"[A-Za-z0-9][\w.:/-]*", w)]
+        for name in names:
             if name not in out:
                 out.append(name)
         break
     return out
 
+def efforts_for(one: Harness) -> list[str]:
+    """The effort levels this machine's CLI will accept, or `[]`.
+
+    Gated on the flag being *declared*, not on the roster row naming it: the
+    levels are documented in the same `--help` the flag is, so a build old
+    enough to lack `--effort` should offer no levels rather than a dropdown
+    whose every entry fails. `[]` means the screen hides the control, which is
+    the honest rendering of "this CLI has no such dial".
+    """
+    if one.unusable or not one.effort_flag:
+        return []
+    executable = locate(one)
+    if not executable:
+        return []
+    if one.effort_flag not in declared(executable):
+        return []
+    # The CLI's own list first — `claude --help` prints "(low, medium, high,
+    # xhigh, max)" beside the flag — and the row's copy of it only where the
+    # help names none, so a build that adds a level offers it the day it ships.
+    return _from_help(helptext(executable), one.effort_flag) or list(one.effort_choices)
+
 
 def _from_models_command(one: Harness, executable: str) -> list[str]:
-    try:
-        done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "models"], capture_output=True, text=True, timeout=20,
-        )
-    except Exception:  # noqa: BLE001 — see `models_for`
-        return []
-    if done.returncode != 0:
-        return []
+    # Through `_ask` for the reason `helptext` is: this runs a binary
+    # `locate` only *guessed* at, and a wrong guess must cost a dropdown
+    # rather than the screen. The exit code is not read — a CLI that printed
+    # a list and then exited non-zero over a telemetry ping has still
+    # answered the question, and the line filter below rejects anything that
+    # is not a model name.
     out: list[str] = []
-    for line in (done.stdout or "").splitlines():
+    for line in _ask(executable, "models").splitlines():
         if one.id == "antigravity-cli":
             cell = line.split("\t")[0].split()[0] if line.split() else ""
             if cell and cell.lower() not in ("id", "model", "name") and cell not in out:
@@ -630,7 +964,34 @@ def warm_models() -> None:
     ).start()
 
 
-def command_for(one: Harness, *, model: str = "") -> list[str]:
+def scale_args(one: Harness, *, max_documents: int = 0, budget_usd: float = 0.0,
+               supported: frozenset[str] | None = None) -> list[str]:
+    """The ceilings this CLI can be told about, for this run.
+
+    Separate from `command_for` because it answers a different question —
+    that one asks *can this vector start*, this one asks *how much of the
+    reader's account may it spend* — and because a caller with no scale (the
+    CLI's own path, a pack-authoring run) should be able to skip it entirely
+    rather than pass two zeroes through three layers.
+
+    A flag this machine's CLI does not declare is dropped rather than
+    refused: losing a ceiling is a worse run, and losing the plane over it
+    would be the `--verbose` mistake again. Zero means "no ceiling asked
+    for", which is how every caller that has nothing to say says nothing.
+    """
+    executable = locate(one) or one.executable
+    supported = declared(executable) if supported is None else supported
+    out: list[str] = []
+    if budget_usd and one.budget_flag and one.budget_flag in supported:
+        out += [one.budget_flag, f"{float(budget_usd):.2f}"]
+    if max_documents and one.turns_flag and one.turns_flag in supported:
+        turns = max(4, int(max_documents) * max(1, one.turns_per_source))
+        out += [one.turns_flag, str(turns)]
+    return out
+
+
+def command_for(one: Harness, *, model: str = "", effort: str = "",
+                max_documents: int = 0, budget_usd: float = 0.0) -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
     A function rather than a line inside `_run` because the gate that matters
@@ -648,12 +1009,22 @@ def command_for(one: Harness, *, model: str = "") -> list[str]:
     missing = set(one.required) - supported
     if one.unusable or missing:
         raise NoHarness(one.unusable or f"{one.label} lacks required flags: {', '.join(sorted(missing))}")
-    if model and not one.model_flag:
+    if model and not one.model_flag and not one.model_env:
         raise NoHarness(f"{one.label} has no verified per-run model switch — model choices for it are refused, never silently run as the default")
-    if model and not one.model_unlisted and one.model_flag not in supported:
+    if model and one.model_flag and not one.model_unlisted and one.model_flag not in supported:
         raise NoHarness(f"{one.label} does not declare per-run model selection")
+    # Refused rather than dropped, on the same reasoning as the model above: a
+    # reader who asked for `low` and silently got the CLI's default has been
+    # billed for a choice they did not make, and the run looks identical.
+    if effort and (not one.effort_flag or one.effort_flag not in supported):
+        raise NoHarness(
+            f"{one.label} has no per-run effort switch on this machine — "
+            f"effort choices for it are refused, never silently run as the default")
     return [executable, *args, *(f for f in one.preferred if f in supported),
-            *([one.model_flag, model] if model and one.model_flag else [])]
+            *([one.model_flag, model] if model and one.model_flag else []),
+            *([one.effort_flag, effort] if effort else []),
+            *scale_args(one, max_documents=max_documents,
+                        budget_usd=budget_usd, supported=supported)]
 
 
 # ── The output contract ──────────────────────────────────────────────────────
@@ -662,6 +1033,20 @@ def command_for(one: Harness, *, model: str = "") -> list[str]:
 #: what is worth keeping — it is written for an agent holding Kriko's MCP
 #: tools, so the only thing it needs replacing is the *reporting* step.
 CONTRACT = """
+## What you may use (this run)
+
+**Only the web search and web fetch tools.** Do not read files, list
+directories, run shell commands, or look at the working directory — it is an
+empty temporary folder created for this run and there is nothing in it. This
+is a reading task about the world, not a task about a codebase, and the usual
+first move of orienting yourself in the workspace is wasted here.
+
+That is not advice. On some of the command-line agents this runs on, a tool
+call that is refused **ends the whole run with an empty answer** — and the
+refusal is automatic, because nothing is watching to approve it. One
+`ls`-shaped reflex therefore costs the entire run, on an account somebody
+pays for, and returns nothing at all. Search, read pages, and report.
+
 ## How to report findings (this run)
 
 You have no Kriko tools in this session. Do not attempt to call
@@ -698,6 +1083,39 @@ there is nothing to gain by editing it after the fact.
 If you found nothing at all, print `{"findings": []}`. Print nothing after the
 fence.
 """
+
+def budget_clause(max_documents: int) -> str:
+    """How much reading this run is worth, said before the agent starts.
+
+    The brief says what to look for; nothing said *how much*. So the dial the
+    reader set — three sources, or fifteen — reached the agent as nothing at
+    all, and the plane whose whole promise is "it costs you only what your
+    subscription already costs" spent the same amount at every setting.
+
+    Written as a ceiling with a floor under it, because the failure to avoid
+    is an agent that reads two pages, finds nothing, and reports an empty
+    findings list as though the subject were clean. A budget is permission to
+    stop early, not an instruction to.
+
+    `""` for zero, which reads as "nobody set one" — the CLI path's case, and
+    every caller's before the dial existed.
+    """
+    if not max_documents:
+        return ""
+    return (
+        "\n## How much to read (this run)\n\n"
+        f"Read **at most {max_documents} source page(s)** and run at most "
+        f"{max(2, max_documents)} searches. This is a ceiling the reader set, "
+        "and it is the whole cost of this run to them — stop when you reach "
+        "it, even if the next search looks promising, and say so in your "
+        "reply rather than going over.\n\n"
+        "Spend the budget on the *best* sources rather than the first ones: "
+        "one page you read properly and quoted is worth more here than three "
+        "skimmed. If the budget runs out before you are confident, report "
+        "what you have and say what you would have read next — a short honest "
+        "run is a result, and an invented claim outlives you in the pack.\n"
+    )
+
 
 _FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.S)
 
@@ -874,6 +1292,25 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
 #: `_run`) is accepted because the alternative is not running at all.
 MAX_PROMPT_ARGUMENT = 24000
 
+#: How long a conversational run may say *nothing at all* before it is
+#: abandoned and retried the ordinary way.
+#:
+#: The other half of the B125 scar. That failure was a prompt that never
+#: crossed the `cmd.exe` shim, and its cost was not the loss — it was that the
+#: CLI shrugged and ran with no prompt, so the reader paid for a run that
+#: researched nothing and read like a success. Streaming input cannot do that:
+#: with no message there is nothing to run, so the child simply waits. Which
+#: would make the same broken pipe a twenty-minute hang instead, and that is
+#: what this number is for. `claude -p --output-format stream-json` prints its
+#: `system`/`init` event before it makes an API call, so a minute of total
+#: silence is not a slow model, it is a pipe that did not arrive.
+CONVERSATION_START_SECONDS = 60.0
+
+#: How long a turn that ended on a question holds the pipe open for an answer.
+#: The worker is single, so this is time every queued job waits too: long
+#: enough to read a question and type a word, not long enough to go and look.
+ANSWER_WAIT_SECONDS = 180.0
+
 #: How much of a run's raw output is kept in memory. The reply is parsed from
 #: this, so it has to hold the last `result` event — which is the last line —
 #: and it is bounded for the reason `termpty.SCROLLBACK` is: a process that
@@ -895,6 +1332,30 @@ QUIET_EVENTS = frozenset(
 )
 
 
+def _is_result(line: str) -> bool:
+    """Whether one stream-json line is the event that ends a turn."""
+    try:
+        event = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    return isinstance(event, dict) and event.get("type") == "result"
+
+
+def _asks(line: str) -> bool:
+    """Whether a turn's `result` ended on a question to the reader.
+
+    Deliberately literal. A question mark is the one signal every model gives
+    when it wants something back, and guessing at intent beyond that would
+    hold the job worker for runs that were simply done.
+    """
+    try:
+        event = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    text = event.get("result") if isinstance(event, dict) else None
+    return isinstance(text, str) and text.rstrip().endswith("?")
+
+
 def _short(text: str, limit: int = 160) -> str:
     """One line, trimmed. A log line that wraps four times is not a log line."""
     flat = " ".join(str(text or "").split())
@@ -912,9 +1373,14 @@ def _tool_line(name: str, args: dict | None) -> str:
     args = args if isinstance(args, dict) else {}
     query = args.get("query") or args.get("q")
     url = args.get("url")
-    if name == "WebSearch" and query:
+    # Folded, because the same two tools are spelled four ways across these
+    # CLIs — `WebSearch`/`WebFetch`, `web_search`/`web_fetch` — and a reader
+    # watching the log should not be able to tell which CLI is running from
+    # whether the line says "fetched" or prints a function name.
+    plain = name.replace("_", "").replace("-", "").lower()
+    if plain == "websearch" and query:
         return f'searched "{_short(query, 120)}"'
-    if name == "WebFetch" and url:
+    if plain == "webfetch" and url:
         return f"fetched {_short(url, 120)}"
     detail = query or url or ""
     return f"{name} {_short(detail, 100)}".strip()
@@ -949,6 +1415,12 @@ def _narrate_agy(event: dict) -> str:
                     )
             name = name or str(step.get("tool_name") or "")
             said = f"{name} {_short(detail, 100)}".strip()
+            # One line per tool call, not two. The CLI reports each step
+            # twice — ACTIVE when it starts, DONE when it finishes — with the
+            # same name and the same arguments, so narrating both printed
+            # every search the agent ran immediately below itself.
+            if step.get("state") == "ACTIVE":
+                return ""
             if step.get("state") == "ERROR":
                 error = info.get("error") if isinstance(info, dict) else None
                 message = ""
@@ -958,7 +1430,11 @@ def _narrate_agy(event: dict) -> str:
                     message or said or "unknown tool error", 160)
             return said
         if step.get("step_type") == "agent_response":
-            return _short(str(step.get("text_delta") or ""), 200)
+            # Nothing, on purpose: `text_delta` is a *fragment* of the reply,
+            # a few characters wide, and a line of the job log is a whole
+            # thought. `HarnessResearcher._say` owns the joining up, because
+            # it is the only thing here with somewhere to keep a buffer.
+            return ""
         return ""
     if kind == "result":
         result = event.get("result")
@@ -972,6 +1448,83 @@ def _narrate_agy(event: dict) -> str:
         if tokens:
             said += f", {tokens} tokens on the subscription's account"
         return said
+    return ""
+
+
+def _narrate_vibe(event: dict) -> str:
+    """One Mistral Vibe history entry, as a job-log line — or `""`.
+
+    Its stream is the session's own history rather than a feed of events, so
+    the three entry types worth a line are the three a reader would watch
+    for: what the agent said, what it ran, and what broke. Read off
+    `vibe/app_server/models.py` (`PublicMessageEntry`, `PublicEffectEntry`),
+    camelCase on the wire.
+
+    Only *completed* entries. An entry is emitted again on every update while
+    it generates, so narrating the in-flight ones would fill the job log with
+    the same sentence growing one word at a time.
+    """
+    status = str(event.get("generationStatus") or "").lower()
+    if status and status != "completed":
+        return ""
+    kind = event.get("type")
+    if kind == "message":
+        if event.get("role") != "assistant":
+            return ""
+        parts = [
+            str(block.get("text") or "")
+            for block in event.get("content") or ()
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return _short(" ".join(one for one in parts if one.strip()), 200)
+    if kind == "effect":
+        title = _short(str(event.get("title") or ""), 140)
+        state = str(event.get("state") or "").lower()
+        if state in ("failed", "error"):
+            return "a tool call failed: " + (title or "unknown tool error")
+        return title
+    return ""
+
+
+def _narrate_copilot(event: dict) -> str:
+    """One GitHub Copilot CLI event, as a job-log line — or `""`.
+
+    Its stream is `{"type": "<noun>.<verb>", "data": {...}}`, and almost all
+    of it is bookkeeping: the MCP and skill inventories are printed three
+    times before the first token, and every sentence arrives twice — once as
+    a run of `assistant.message_delta` frames and once whole, as
+    `assistant.message`. So this reads the whole ones and drops the frames,
+    which is the same choice `_narrate_vibe` makes for the same reason.
+
+    The failure lines are worth as much as the actions. `model.call_failure`
+    is how "the requested model is not supported" reaches a reader — the CLI
+    retries it twice, ends the turn and exits 1 — and without it the run
+    reads as a silent minute followed by an exit code.
+    """
+    kind = str(event.get("type") or "")
+    data = event.get("data")
+    data = data if isinstance(data, dict) else {}
+    if kind == "assistant.message":
+        lines = [
+            _tool_line(str(request.get("name") or ""), request.get("arguments"))
+            for request in data.get("toolRequests") or ()
+            if isinstance(request, dict)
+        ]
+        said = str(data.get("content") or "").strip()
+        if said:
+            lines.append(_short(said, 200))
+        return "; ".join(one for one in lines if one)
+    if kind == "model.call_failure":
+        return "the model call failed: " + _short(
+            str(data.get("errorMessage") or data.get("statusCode") or ""), 160
+        )
+    if kind == "session.error":
+        return "a tool call failed: " + _short(str(data.get("message") or ""), 160)
+    if kind == "session.tools_updated":
+        model = str(data.get("model") or "").strip()
+        return f"started {model}" if model else ""
+    if kind == "result":
+        return "finished" if not event.get("exitCode") else ""
     return ""
 
 
@@ -990,6 +1543,19 @@ def narrate(event: dict) -> str:
         return ""
     if event.get("event") is not None:
         return _narrate_agy(event)
+    # Vibe's entries are the only ones carrying a session id and a generation
+    # status, which is a cheaper tell than threading the harness through every
+    # caller of this function — and a wrong guess here costs a log line, never
+    # a run.
+    if event.get("sessionId") is not None and event.get("generationStatus") is not None:
+        return _narrate_vibe(event)
+    # Copilot's events are the only ones whose `type` is dotted and whose
+    # payload sits under `data` — the same kind of cheap tell, and a wrong
+    # guess here still costs a log line rather than a run. `result` is the
+    # one type it shares with Claude Code's stream, and that one carries no
+    # `data`, so it falls through to the branch below that already reads it.
+    if isinstance(event.get("type"), str) and "." in event["type"] and "data" in event:
+        return _narrate_copilot(event)
     kind = event.get("type")
     if kind in QUIET_EVENTS:
         return ""
@@ -1093,12 +1659,30 @@ class HarnessResearcher(AgentResearcher):
     name = "harness"
     cost_basis = "subscription"
 
-    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS, model: str = ""):
+    def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS,
+                 model: str = "", effort: str = ""):
         self.requested_model = model
+        #: How hard to think, this run. Beside the model rather than folded
+        #: into it: the two are chosen independently, and a survey run is the
+        #: same model at a lower effort far more often than it is a different
+        #: model.
+        self.requested_effort = effort
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
         self.harness = harness
         self.timeout = timeout
+        #: The scale, as the CLI will be told it. Set from the task by
+        #: `gather`, and settable directly by a caller with no task —
+        #: `tasks.pack_author` is one, and a pack-authoring run has a budget
+        #: too. `0` on either means "no ceiling asked for", which is what
+        #: every caller said before the dial reached this far.
+        #:
+        #: They live on the instance rather than travelling as arguments
+        #: because `ask()` and `gather()` are two entry points to one spawn,
+        #: and a ceiling that applied to only one of them would be a ceiling
+        #: the reader could not predict.
+        self.max_documents = 0
+        self.budget_usd = 0.0
         #: Read duck-typed by `app/web/tasks.py`. `None` until a run happens,
         #: which is the difference between "spent nothing" and "cannot count".
         self.tokens_used: int | None = None
@@ -1128,18 +1712,46 @@ class HarnessResearcher(AgentResearcher):
         #: which costs the run nothing — the CLI's own case, and every run
         #: before `pack_author`/`pack_amend`/`site_register` were given one.
         self.check_cancelled: Callable[[], None] | None = None
+        #: What the reader has said to this run since it was last asked.
+        #:
+        #: Set beside `check_cancelled` and read in the same tick, because the
+        #: two are the same mechanism pointed in opposite directions: one asks
+        #: whether to stop, this asks whether anything has been said. B120
+        #: shipped the outward half — the run streams what it is doing — and
+        #: named what was left: "a run that stops to ask a question still
+        #: cannot be answered ... this is a window rather than a
+        #: conversation." This is the inward half.
+        #:
+        #: `None` means nobody can answer, and then the child's stdin stays
+        #: exactly what it was — `DEVNULL`, or the temp file holding a prompt
+        #: too long for argv. That default matters: B125 is the scar from
+        #: handing a CLI a *pipe* on stdin it did not expect, which on Windows
+        #: crosses a `cmd.exe` and produced "no stdin data received in 3s". A
+        #: pipe is opened only when someone is actually there to write to it.
+        self.replies: Callable[[], list[str]] | None = None
         #: How often to look up from a silent stream and ask whether the reader
         #: has stopped this. Half a second: the reader's own measure is "did
         #: pressing stop stop it", and anything under a second reads as yes,
         #: while a tick this size costs one queue timeout per half-second of a
         #: run that is otherwise waiting on a network.
         self._cancel_tick = 0.5
+        #: True while a run is talking to a child that reads *messages*, so a
+        #: reply has to be framed rather than typed. Set per attempt, because
+        #: the same researcher may fall back to the one-shot vector mid-run.
+        self._conversing = False
+        #: Whether the last `_stream` ever produced a line. Only conversational
+        #: runs consult it: a child reading its prompt from a pipe that never
+        #: arrived is silent rather than wrong, and silence is the only symptom
+        #: it has.
+        self._spoke = False
         #: The run's raw output, bounded. The reply is parsed out of this, and
         #: it is what a failure quotes its tail of.
         self.transcript = ""
         #: The lines this run narrated, in order. Kept so a caller that was not
         #: watching live can still ask what happened.
         self.actions: list[str] = []
+        #: Reply text that has arrived but is not yet a sentence. See `_say`.
+        self._said_partial = ""
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -1149,7 +1761,21 @@ class HarnessResearcher(AgentResearcher):
     # ── gather ───────────────────────────────────────────────────────────────
 
     def gather(self, task: ResearchTask) -> list[Document]:
-        prompt = self.brief(task) + "\n" + CONTRACT
+        # The scale reaches the agent as a sentence and the CLI as a flag,
+        # and it has to be both. Truncating the reply afterwards — which is
+        # all `raw[: max_documents * 8]` below ever did — saves the reader
+        # nothing: by then the agent has already run thirty searches on their
+        # subscription and only the bookkeeping is smaller. A budget is worth
+        # something only if it is stated before the spending.
+        self.max_documents = max(0, int(task.max_documents or 0))
+        # Carried even though this plane bills a subscription rather than a
+        # card: `vibe` is the one CLI here that will stop *itself* on a
+        # dollar figure, and a ceiling the reader set should reach every CLI
+        # that has somewhere to put it. Where there is nowhere, `scale_args`
+        # drops it.
+        self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
+        prompt = (self.brief(task) + "\n" + budget_clause(self.max_documents)
+                  + CONTRACT + self.harness.contract_note)
         reply = self._run(prompt)
         payload = _payload(reply)
         reported = payload.get("queries")
@@ -1276,7 +1902,7 @@ class HarnessResearcher(AgentResearcher):
 
     @contextmanager
     def _workspace(self):
-        if self.harness.protocol not in ("vibe", "gemini", "agy"):
+        if not self.harness.sandbox_home:
             yield
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
@@ -1286,32 +1912,57 @@ class HarnessResearcher(AgentResearcher):
             home.mkdir()
             work.mkdir()
             self._run_cwd = str(work)
-            if self.harness.protocol == "agy":
-                # A neutral working directory only. The CLI reads its login
-                # and permission policy from the reader's own config, which
-                # Kriko never rewrites — so a file the agent writes lands in
-                # a directory that vanishes with the run, while nothing about
-                # the reader's own setup is touched.
-                try:
-                    yield
-                finally:
-                    self._run_cwd = None
-                return
             self._run_env = {"HOME": str(home), "USERPROFILE": str(home)}
-            if self.harness.protocol == "vibe":
+            if self.harness.protocol == "agy":
+                # **The run's own permission policy, and nobody else's.**
+                #
+                # `agy` headless is `permission_mode: request-review`:
+                # `search_web` runs unasked and `read_url_content` does not,
+                # and print mode cannot answer a prompt — so it soft-denies,
+                # and the run ends having searched six times, read nothing,
+                # and returned an empty string after spending the reader's
+                # quota. That was every Antigravity run there has ever been.
+                #
+                # The grant belongs in the CLI's own settings file, whose
+                # path (`~/.gemini/antigravity-cli/settings.json`) and rule
+                # grammar (`read_url(*)`, one of `command|read_file|
+                # write_file|read_url|mcp|execute_url|unsandboxed`) were read
+                # off the binary and then verified by running it. Writing it
+                # under a `HOME` that vanishes with the run is the difference
+                # between a plane that works and a plane that leaves a
+                # standing permission on the reader's machine: Kriko grants
+                # exactly what this run needs, for exactly as long as it runs.
+                #
+                # The login survives because `agy` keeps its token in the OS
+                # keyring, not under `HOME`. Verified, not assumed — a
+                # sandbox that silently logged the reader out would look
+                # exactly like the bug it replaced.
+                config = home / ".gemini" / "antigravity-cli"
+                config.mkdir(parents=True)
+                (config / "settings.json").write_text(json.dumps({
+                    "permissions": {"allow": ["read_url(*)"]},
+                }), encoding="utf-8")
+            elif self.harness.protocol == "vibe":
+                # Only the things that are nobody's business on a research
+                # run: update checks, telemetry, the reader's MCP servers and
+                # skills. The *tool* sandbox is `--enabled-tools`, which the
+                # CLI documents as disabling everything it does not name in
+                # programmatic mode — so there is no agent profile to write
+                # and no schema of Mistral's for Kriko to keep in step with.
                 config = home / ".vibe"
-                (config / "agents").mkdir(parents=True)
+                config.mkdir(parents=True)
                 (config / "config.toml").write_text(
                     'enable_update_checks = false\nenable_telemetry = false\n'
                     'mcp_servers = []\ndisabled_skills = ["*"]\n', encoding="utf-8"
                 )
-                (config / "agents" / "kriko-research.toml").write_text(
-                    'enabled_tools = ["web_search", "web_fetch"]\n'
-                    'mcp_servers = []\ndisabled_skills = ["*"]\n'
-                    '[tools.web_search]\npermission = "always"\n'
-                    '[tools.web_fetch]\npermission = "always"\n', encoding="utf-8"
-                )
                 self._run_env["VIBE_HOME"] = str(config)
+                # The CLI reads its key from the environment, and the
+                # environment this run inherits is the reader's own. Carried
+                # across explicitly because `_stream` merges `_run_env` last:
+                # an empty value here would blank a key that was working.
+                for name in ("MISTRAL_API_KEY", "VIBE_API_KEY"):
+                    if os.environ.get(name):
+                        self._run_env[name] = os.environ[name]
             else:
                 config = home / ".gemini"
                 config.mkdir()
@@ -1335,10 +1986,50 @@ class HarnessResearcher(AgentResearcher):
     def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
-        command = command_for(self.harness, model=self.requested_model)
+        command = command_for(
+            self.harness,
+            model=self.requested_model,
+            effort=self.requested_effort,
+            max_documents=self.max_documents,
+            budget_usd=self.budget_usd,
+        )
         if self.harness.protocol in ("vibe", "gemini"):
             command.extend(["--prompt", ""])
+        # A model named for a CLI that has no flag for one. `_workspace` has
+        # already built `_run_env` by the time this runs, and `_stream` merges
+        # it over the inherited environment — so this is the same per-run
+        # switch `--model` is, expressed the only way this CLI offers.
+        if self.requested_model and not self.harness.model_flag and self.harness.model_env:
+            self._run_env[self.harness.model_env] = self.requested_model
         say = on_line if on_line is not None else self.on_action
+
+        self._conversing = False
+        if self._can_converse():
+            # The whole point of this branch: the child reads messages for as
+            # long as it runs, so the brief is the first one and the reader's
+            # answer is the next. Every other path here hands over a prompt
+            # and then talks to a process that cannot hear.
+            self._conversing = True
+            code, stdout, stderr = self._stream(
+                [*command, self.harness.reply_flag, self.harness.reply_value],
+                subprocess.DEVNULL,
+                say,
+                opening=self._frame(prompt),
+            )
+            if not self._spoke:
+                # It never said a word — the pipe, not the model. Fall through
+                # to the ordinary vector rather than failing the job: a run the
+                # reader cannot answer is worth far more than no run at all,
+                # and this is the one case where we know which of the two we
+                # are looking at.
+                self._conversing = False
+                self._echo(
+                    f"{self.harness.label} did not start in conversational "
+                    "mode; running it the ordinary way, so this run cannot "
+                    "be answered"
+                )
+            else:
+                return self._finish(code, stdout, stderr)
 
         if self.harness.prompt_flag:
             # A CLI whose prompt is a flag's value, with no `--` convention
@@ -1372,6 +2063,16 @@ class HarnessResearcher(AgentResearcher):
             finally:
                 os.remove(stdin_path)
 
+        return self._finish(code, stdout, stderr)
+
+    def _finish(self, code: int, stdout: str, stderr: str) -> str:
+        """What a completed spawn means, whichever vector produced it.
+
+        Lifted out of `_invoke` when the conversational vector gave it a
+        second exit to read. One reading of an exit code, in one place — the
+        alternative was two, and the second one would have been the one that
+        forgot to meter.
+        """
         if code != 0:
             envelope = _envelope(stdout) if self.harness.structured else {}
             # Metered before raising. A run that failed on its fourth search
@@ -1388,7 +2089,126 @@ class HarnessResearcher(AgentResearcher):
             return stdout
         return self._unwrap(stdout)
 
-    def _stream(self, command, stdin_read, say) -> tuple[int, str, str]:
+    def _can_converse(self) -> bool:
+        """Whether this run can be *answered*, rather than merely noted.
+
+        Three things have to hold, and each is a way this has already gone
+        wrong. Somebody must be able to answer (`replies`), or the pipe buys
+        nothing and costs the B125 risk for free. There must be a framing we
+        know how to write, which is `protocol`'s business and not the
+        executable's name. And the flag must be declared by the CLI *on this
+        machine*: the reader's `claude` is not this one, and a vector an older
+        build has never heard of is a run that dies on argument parsing rather
+        than a run that merely cannot be answered.
+        """
+        if self.replies is None or not self.harness.reply_flag:
+            return False
+        if self.harness.protocol != "claude":
+            return False
+        try:
+            return self.harness.reply_flag in declared(locate(self.harness))
+        except Exception:  # noqa: BLE001 - a plain run, not a lost one
+            return False
+
+    def _frame(self, text: str) -> str:
+        """One message, in the shape the CLI reads them in.
+
+        `stream-json` going in is the same envelope it uses coming out: one
+        JSON object per line, `type` naming what it is. This is the user's
+        turn — which is what the opening brief and every later reply both are.
+        The CLI does not distinguish them, and neither does this.
+        """
+        return json.dumps(
+            {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": text}],
+                },
+            },
+            ensure_ascii=False,
+        )
+
+    def _close_stdin(self, proc) -> None:
+        """Tell the child nothing more is coming. Never fatal."""
+        if proc.stdin is None:
+            return
+        try:
+            proc.stdin.close()
+        except (OSError, ValueError):
+            pass
+
+    def _deliver(self, proc) -> bool:
+        """Hand the child whatever the reader has said, if anything.
+
+        True when at least one line reached the pipe.
+
+        Called on the silent tick rather than on a line, because a run that
+        has stopped to ask something is precisely a run producing no output —
+        waiting for a line before checking for an answer would mean the answer
+        only ever arrived after the thing it was answering had moved on.
+
+        Never fatal. A child that closed its stdin, or died between the tick
+        and the write, is not a reason to lose a run of real research; the
+        reader sees the reply was not taken up because the run carries on
+        saying what it was saying.
+        """
+        # A closed stdin is a finished turn (see `_stream`). Asking for the
+        # replies anyway would mark them taken and then drop them on the
+        # floor — the one outcome worse than not delivering them.
+        if self.replies is None:
+            return False
+        if not self._conversing:
+            # Nobody on the other end can hear it. Taken anyway, and said so
+            # in the transcript, so the reader's line is neither left waiting
+            # for a pipe that will never exist nor reported as heard.
+            try:
+                lines = self.replies()
+            except Exception:  # noqa: BLE001
+                return False
+            for line in lines:
+                self._echo(
+                    f"you: {_short(line)} (not heard: {self.harness.label} "
+                    "cannot take a reply mid-run)"
+                )
+            return False
+        if proc.stdin is None or proc.stdin.closed:
+            return False
+        try:
+            lines = self.replies()
+        except Exception:  # noqa: BLE001 - narration must never end a run
+            return False
+        delivered = False
+        for line in lines:
+            try:
+                body = line.rstrip("\n")
+                proc.stdin.write(
+                    (self._frame(body) if self._conversing else body) + "\n"
+                )
+                proc.stdin.flush()
+            except (OSError, ValueError):
+                return delivered
+            delivered = True
+            self._echo(f"you: {_short(line)}")
+        return delivered
+
+    def _echo(self, line: str) -> None:
+        """Put the reader's own line in the transcript they are watching.
+
+        Not `_narrate`, which turns a *CLI event* into a sentence — this line
+        did not come from the CLI. But it belongs in the same list, because an
+        answer that is not in the transcript leaves the hole B120 named one
+        turn later: the log would show the question and the run carrying on,
+        with no record of what changed its mind.
+        """
+        self.actions.append(line)
+        if self.on_action is not None:
+            try:
+                self.on_action(line)
+            except Exception:  # noqa: BLE001 - a worse log, not a lost run
+                pass
+
+    def _stream(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
         """Run the CLI, reading its output line by line as it is produced.
 
         Three threads' worth of care for one subprocess, and each one is
@@ -1414,10 +2234,17 @@ class HarnessResearcher(AgentResearcher):
         research to it would be absurd.
         """
         self.transcript = ""
+        self._spoke = False
         try:
             proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
                 command,
-                stdin=stdin_read,
+                # A pipe only for a conversation. A one-shot CLI cannot hear a
+                # line mid-run, and an open pipe to one is all risk: a CLI that
+                # reads a non-tty stdin to EOF (`claude -p` does, for three
+                # seconds; plenty of scripts do forever) waits on a pipe we
+                # have no reason to close. See `self.replies` for why DEVNULL
+                # is load-bearing rather than merely conservative.
+                stdin=subprocess.PIPE if opening else stdin_read,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -1441,7 +2268,27 @@ class HarnessResearcher(AgentResearcher):
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
 
+        # The opening message, before anything else is read. A conversational
+        # child has no prompt until this lands — it is the run, not a preamble
+        # to it — so a failure here is fatal rather than narrated, and the
+        # caller retries the ordinary way.
+        if opening:
+            try:
+                assert proc.stdin is not None
+                proc.stdin.write(opening.rstrip("\n") + "\n")
+                proc.stdin.flush()
+            except (OSError, ValueError, AssertionError) as exc:
+                self._kill_tree(proc)
+                raise RuntimeError(
+                    f"{self.harness.label} would not take the brief on stdin"
+                ) from exc
+
+        began = time.monotonic()
         said: list[str] = []
+        # The same list, not a copy: `_echo` appends the reader's replies to
+        # `self.actions` mid-run, and the `self.actions = said` at the end
+        # would otherwise replace the transcript with one that never heard them.
+        self.actions = said
         errors: list[str] = []
         drain = threading.Thread(
             target=self._drain, args=(proc.stderr, errors), daemon=True
@@ -1457,6 +2304,9 @@ class HarnessResearcher(AgentResearcher):
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
         narrated = 0
+        #: When a turn ended on a question, and how long its answer may take.
+        waiting_since: float | None = None
+        waiting_for = 0.0
         assert proc.stdout is not None
         try:
             for line in _lines(proc.stdout, self._cancel_tick):
@@ -1470,8 +2320,52 @@ class HarnessResearcher(AgentResearcher):
                     # no to.
                     if self.check_cancelled is not None:
                         self.check_cancelled()
+                    # A conversational child that has not said one word is a
+                    # pipe that did not arrive, not a model thinking hard: the
+                    # `init` event comes before the first API call. Give up
+                    # early so the caller can run it the ordinary way, rather
+                    # than holding the job worker for the whole timeout.
+                    if (opening and not self._spoke
+                            and time.monotonic() - began > CONVERSATION_START_SECONDS):
+                        self._kill_tree(proc)
+                        break
+                    if self._deliver(proc):
+                        # An answer to the question it ended on: that is the
+                        # next turn starting, so the wait below is over.
+                        waiting_since = None
+                    elif (waiting_since is not None
+                            and time.monotonic() - waiting_since > waiting_for):
+                        self._echo("no answer came; the run ends here")
+                        self._close_stdin(proc)
+                        waiting_since = None
                     continue
+                self._spoke = True
                 self._keep(line)
+                # A child reading messages does not exit when its turn ends —
+                # it waits for the next one, and stdout stays open while it
+                # waits. The `result` event is the end of the turn, so it is
+                # the moment to say nothing more is coming; without this the
+                # loop above reads a pipe that never closes.
+                #
+                # Unless the turn ended on a question. An agent in `-p` does
+                # not stop mid-turn to ask — it finishes the turn *with* the
+                # question — so closing here would be the one-shot run again,
+                # with the reader's answer arriving at a pipe nobody reads. It
+                # gets a bounded wait instead, never past the run's own
+                # timeout: a timeout discards the run, and a run that asked
+                # and heard nothing still has everything it found.
+                if self._conversing and proc.stdin is not None and _is_result(line):
+                    left = self.timeout - (time.monotonic() - began) - 10.0
+                    waiting_for = min(ANSWER_WAIT_SECONDS, left)
+                    if self._deliver(proc):
+                        # A reply that was waiting is the next turn; whether
+                        # the pipe closes is decided at *that* turn's end.
+                        pass
+                    elif _asks(line) and waiting_for > 0:
+                        waiting_since = time.monotonic()
+                        self._echo("waiting for your answer")
+                    else:
+                        self._close_stdin(proc)
                 # Checked before narration, every line: a run an agent has
                 # gone quiet on (nothing left to say for `MAX_NARRATED` lines,
                 # or a CLI that streams no text) must still be interruptible.
@@ -1506,6 +2400,15 @@ class HarnessResearcher(AgentResearcher):
                     say(spoken)
                 except Exception:  # noqa: BLE001 — see the docstring
                     say = None
+            # stdout has ended, so nothing more can be asked and nothing more
+            # can be answered. Closing tells a child that is politely waiting
+            # for one more line that there will not be one — without it a run
+            # whose stdin we opened could sit past its own output forever.
+            if proc.stdin is not None:
+                try:
+                    proc.stdin.close()
+                except (OSError, ValueError):
+                    pass
             proc.wait()
         finally:
             timer.cancel()
@@ -1613,6 +2516,13 @@ class HarnessResearcher(AgentResearcher):
         translate, so its own words are the narration. One that answers in
         JSON is translated by `narrate`, and a line that is neither is
         machinery: partial frames, blank lines, a banner.
+
+        **The reply arrives in pieces, and a log line is not a piece.**
+        Antigravity streams its answer as `text_delta` fragments a few
+        characters long — "em OR issue", "\\"findings\\": [ { \\"titl", "e\\":
+        " — so narrating each one turned a run's log into forty lines of
+        shredded JSON. `_say` joins them back into sentences; everything
+        else passes straight through.
         """
         if not self.harness.structured:
             return _short(line, 200)
@@ -1620,7 +2530,42 @@ class HarnessResearcher(AgentResearcher):
             event = json.loads(line)
         except ValueError:
             return ""
-        return narrate(event) if isinstance(event, dict) else ""
+        if not isinstance(event, dict):
+            return ""
+        return self._say(event, narrate(event))
+
+    #: The longest run of streamed reply text held back waiting for a
+    #: sentence to end. Past it the buffer is logged as it stands: an agent
+    #: printing a long JSON fence has no sentence endings in it at all, and
+    #: a log that says nothing for two minutes is the silence B121 fixed.
+    SAY_BUFFER = 240
+
+    def _say(self, event: dict, said: str) -> str:
+        """`said`, once it is a whole thought rather than a fragment.
+
+        Only the model's own prose is buffered. A tool call, a failure and
+        the result line are each already one complete statement, and holding
+        them back would delay the very lines a reader is watching for.
+        """
+        step = event.get("step_update")
+        # Narrowed in the `if` itself rather than through a boolean: a name
+        # holding the result of `isinstance` tells a reader what is true but
+        # tells a type-checker nothing, and the two `step.get` calls below are
+        # only safe because of it.
+        if not (isinstance(step, dict)
+                and step.get("step_type") == "agent_response"):
+            # Anything else flushes what the reply had accumulated first, so
+            # the log keeps the order things actually happened in.
+            held, self._said_partial = self._said_partial, ""
+            held = _short(held, 200)
+            return f"{held} {said}".strip() if held and said else (said or held)
+        self._said_partial += str(step.get("text_delta") or "")
+        done = step.get("state") == "DONE"
+        ended = self._said_partial.rstrip().endswith((".", "!", "?", "}", "```"))
+        if not done and not ended and len(self._said_partial) < self.SAY_BUFFER:
+            return ""
+        held, self._said_partial = self._said_partial, ""
+        return _short(held, 200)
 
     def _meter(self, envelope: dict) -> None:
         """Stamp what the reply admits to spending. Read duck-typed by
@@ -1633,6 +2578,94 @@ class HarnessResearcher(AgentResearcher):
         if isinstance(cost, (int, float)) and not isinstance(cost, bool):
             self.cost_usd = float(cost)
 
+    def _unwrap_vibe(self, stdout: str) -> str:
+        """Mistral Vibe's reply, out of its stream of history entries.
+
+        `--output streaming` prints one `PublicHistoryEntry` per line and
+        **no result object at the end** — there is nothing shaped like
+        `{"result": …}` for `_envelope` to find, so without this the whole
+        NDJSON stream would be handed to `_payload` as prose and the fence
+        inside it would already be JSON-escaped past recognition.
+
+        Every completed assistant message, joined in order: the fence is in
+        the last one, and a model that split its reply across two messages
+        should not lose it to a rule that only read the final line. Entries
+        are camelCase on the wire (`alias_generator=to_camel` on the CLI's
+        own `ProtocolModel`), which is why `generationStatus` is spelled the
+        way it is.
+
+        Nothing here meters. The stream carries no usage, so this plane's
+        cost columns stay NULL — "cannot count" rather than a guess.
+        """
+        said: list[str] = []
+        for line in (stdout or "").splitlines():
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict) or entry.get("type") != "message":
+                continue
+            if entry.get("role") != "assistant":
+                continue
+            status = str(entry.get("generationStatus") or "").lower()
+            if status and status != "completed":
+                continue
+            for block in entry.get("content") or ():
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text = str(block.get("text") or "")
+                    if text.strip():
+                        said.append(text)
+        # The raw stream when nothing parsed, for the same reason `_unwrap`
+        # hands back prose it could not read: the fence may still be in it,
+        # and losing a completed run to a shape change would be absurd.
+        return "\n".join(said) if said else stdout
+
+    def _unwrap_copilot(self, stdout: str) -> str:
+        """Copilot's reply, out of its JSONL event stream.
+
+        Its terminal `{"type": "result"}` line carries an exit code, a session
+        id and a usage block — and **no reply text at all**. The answer is in
+        the `assistant.message` events before it, one per whole message, so
+        this joins them in order for the reason `_unwrap_vibe` does: a model
+        that split its findings fence across two messages must not lose it to
+        a rule that read only the last one.
+
+        A failure reported at exit 0 is refused here, the same as everywhere
+        else in this file. `session.error` is how a model refusal or a tool
+        error arrives, and the CLI has been seen to print one, end the turn
+        and still exit 0 about it.
+
+        Nothing here meters: the usage block counts premium requests and
+        milliseconds, not tokens, so this plane's cost columns stay NULL
+        rather than being filled with a number that means something else.
+        """
+        said: list[str] = []
+        failure = ""
+        for line in (stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            data = event.get("data")
+            data = data if isinstance(data, dict) else {}
+            if event.get("type") == "assistant.message":
+                text = str(data.get("content") or "")
+                if text.strip():
+                    said.append(text)
+            elif event.get("type") == "session.error":
+                failure = failure or str(data.get("message") or "").strip()
+            elif event.get("type") == "model.call_failure":
+                failure = failure or str(data.get("errorMessage") or "").strip()
+        if not said and failure:
+            hint = _hint(failure)
+            raise RuntimeError(
+                f"{self.harness.label} reported an error: {failure[:500]}"
+                + (f" -- {hint}" if hint else "")
+            )
+        return "\n".join(said) if said else stdout
+
     def _unwrap(self, stdout: str) -> str:
         """The assistant's text out of the CLI's JSON envelope, plus the usage.
 
@@ -1641,6 +2674,10 @@ class HarnessResearcher(AgentResearcher):
         reply that is not JSON at all is handed back as prose rather than
         discarded — the findings fence may still be in it.
         """
+        if self.harness.protocol == "vibe":
+            return self._unwrap_vibe(stdout)
+        if self.harness.protocol == "copilot":
+            return self._unwrap_copilot(stdout)
         envelope = _envelope(stdout)
         if not envelope:
             return stdout

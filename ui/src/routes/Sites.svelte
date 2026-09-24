@@ -116,7 +116,7 @@
                             </div>
                             {#if site.source === "local"}
                                 <button
-                                    class="quiet"
+                                    class="ghost"
                                     onclick={() => forget(site.site)}
                                     disabled={busy === site.site}>Forget it</button
                                 >

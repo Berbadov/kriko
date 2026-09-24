@@ -139,7 +139,7 @@ def main(argv=None) -> int:
             import yaml as _yaml
 
             for f in sorted((DATA_DIR / "parts").rglob(f"{args.part}.yaml")):
-                part_type = (_yaml.safe_load(f.read_text()) or {}).get("part_type")
+                part_type = (_yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("part_type")
                 break
         if not part_type:
             raise SystemExit(

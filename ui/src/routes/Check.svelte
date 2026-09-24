@@ -86,7 +86,7 @@
         />
     </div>
     <div class="row">
-        <button onclick={checkUrl} disabled={busy}>
+        <button class="primary" onclick={checkUrl} disabled={busy}>
             {busy ? "Checking…" : "Check this listing"}
         </button>
     </div>
