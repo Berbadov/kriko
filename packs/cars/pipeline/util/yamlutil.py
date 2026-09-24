@@ -21,7 +21,7 @@ def load_yaml(path: Path) -> dict:
     """
     loader = getattr(yaml, "CSafeLoader", None) or yaml.SafeLoader
     try:
-        data = yaml.load(path.read_text(), Loader=loader)
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=loader)
     except yaml.YAMLError:
         return {}
     return data if isinstance(data, dict) else {}

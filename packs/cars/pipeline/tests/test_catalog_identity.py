@@ -51,7 +51,7 @@ def test_manual_boxes_are_never_rejected():
 
 def test_known_part_codes_are_read_off_the_catalog(tmp_path):
     (tmp_path / "parts" / "engine").mkdir(parents=True)
-    (tmp_path / "parts" / "engine" / "ea888.yaml").write_text("part_id: ea888\n")
+    (tmp_path / "parts" / "engine" / "ea888.yaml").write_text("part_id: ea888\n", encoding="utf-8")
     assert identity.known_part_codes(tmp_path) == {"ea888"}
 
 
@@ -118,5 +118,5 @@ def test_catalog_on_disk_has_no_unresolvable_overlaps():
     import yaml
     rows = []
     for path in sorted((identity.DATA_DIR / "variants").glob("*.yaml")):
-        rows.extend(yaml.safe_load(path.read_text()) or [])
+        rows.extend(yaml.safe_load(path.read_text(encoding="utf-8")) or [])
     assert identity.find_overlaps(rows) == []

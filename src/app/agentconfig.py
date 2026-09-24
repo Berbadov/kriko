@@ -43,7 +43,17 @@ SERVER_KEY = "mcpServers"
 #: the `env` block we hand it, or replaces it outright, is exactly the
 #: uncertainty B131 was filed on — so these are carried explicitly in every
 #: config this module writes, never left to that assumption either way.
-_WINDOWS_ENV_KEYS = ("SystemRoot", "TEMP", "TMP", "ComSpec", "PATH")
+#: `USERPROFILE` (with `HOMEDRIVE`/`HOMEPATH` behind it, which is how Windows
+#: answers `~` when the first is unset) joined the list once a harness that
+#: replaces the environment was actually tried: the store resolves
+#: `Path.home() / ".kriko"` at import, so without it the sidecar raises
+#: `RuntimeError: Could not determine home directory` on the way up — the same
+#: "cannot connect to the server: kriko" the keys above were added for, one
+#: variable further in and equally invisible to the reader.
+_WINDOWS_ENV_KEYS = (
+    "SystemRoot", "TEMP", "TMP", "ComSpec", "PATH",
+    "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
+)
 
 
 def platform_env(
@@ -83,6 +93,28 @@ def _home() -> Path:
     return Path(os.path.expanduser("~"))
 
 
+def _appdata() -> Path | None:
+    """Windows' roaming app-data root — the module's *second* home.
+
+    A function rather than an `os.environ` read at the call site, and named
+    alongside `_home` on purpose. Everything this module writes goes under one
+    of these two roots, and until now only one of them could be redirected: the
+    one-click tests pointed `_home` at a tmp directory and believed that meant
+    no test could touch the author's real configs, while Claude Desktop's path
+    went straight to the live `%APPDATA%` underneath them. On Windows that made
+    the promise false for one target out of four — the one whose config a test
+    could therefore overwrite.
+
+    Falls back to the conventional location when the variable is unset, which
+    is also what makes redirecting `_home` alone enough on a machine that has
+    no `%APPDATA%` at all.
+    """
+    base = os.environ.get("APPDATA")
+    if base:
+        return Path(base)
+    return _home() / "AppData" / "Roaming"
+
+
 def _claude_desktop_path() -> Path | None:
     """Claude Desktop stores its config in the platform's app-data directory.
 
@@ -94,8 +126,8 @@ def _claude_desktop_path() -> Path | None:
     if sys.platform == "darwin":
         return home / "Library/Application Support/Claude/claude_desktop_config.json"
     if sys.platform == "win32":
-        base = os.environ.get("APPDATA")
-        return Path(base) / "Claude/claude_desktop_config.json" if base else None
+        base = _appdata()
+        return base / "Claude/claude_desktop_config.json" if base else None
     return home / ".config/Claude/claude_desktop_config.json"
 
 

@@ -46,7 +46,7 @@ def _staged(tmp_path):
     """
     staged = tmp_path / "extension"
     staged.mkdir(exist_ok=True)
-    (staged / "manifest.json").write_text('{"version": "0.4.0"}')
+    (staged / "manifest.json").write_text('{"version": "0.4.0"}', encoding="utf-8")
     return staged
 
 
@@ -75,7 +75,7 @@ def test_a_browser_is_found_by_looking_where_they_are(tmp_path, monkeypatch):
     vocabulary the scalability principle allows as a constant.
     """
     fake = tmp_path / "chrome"
-    fake.write_text("#!/bin/sh\n")
+    fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setattr(extension, "_candidates", lambda: [str(fake)])
 

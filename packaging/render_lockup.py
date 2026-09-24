@@ -125,8 +125,11 @@ def render() -> tuple[str, str]:
 
 def main() -> None:
     full, mono = render()
-    LOCKUP.write_text(full, encoding="utf-8")
-    MONO.write_text(mono, encoding="utf-8")
+    # newline="" for the reason render_icon.py gives: on Windows write_text
+    # turns every "\n" into "\r\n", and a generated file that comes back dirty
+    # on one platform teaches people to ignore its diff.
+    LOCKUP.write_text(full, encoding="utf-8", newline="")
+    MONO.write_text(mono, encoding="utf-8", newline="")
     print(f"{MARK.name} + {WORD} -> {LOCKUP}")
     print(f"{MARK.name} + {WORD} -> {MONO}")
 

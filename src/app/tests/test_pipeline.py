@@ -353,7 +353,7 @@ def test_the_pipeline_tables_are_interface_state_not_engine_schema(app_state, co
 
     from kriko.store.db import SCHEMA_PATH
 
-    assert "pipeline_runs" not in SCHEMA_PATH.read_text()
+    assert "pipeline_runs" not in SCHEMA_PATH.read_text(encoding="utf-8")
 
 
 # ── the API ──────────────────────────────────────────────────────────────
@@ -556,7 +556,7 @@ def test_every_stage_a_handler_opens_is_a_real_stage():
     from app.web.pipeline import STAGES
 
     handlers = Path(__file__).resolve().parents[1] / "web" / "tasks.py"
-    opened = set(re.findall(r'open_stage\(\s*"([a-z_]+)"', handlers.read_text()))
+    opened = set(re.findall(r'open_stage\(\s*"([a-z_]+)"', handlers.read_text(encoding="utf-8")))
     assert opened, "no stages opened at all — this test is watching nothing"
     unknown = sorted(opened - set(STAGES))
     assert not unknown, (
@@ -575,7 +575,7 @@ def test_every_stage_named_on_an_event_is_a_real_stage():
     from app.web.pipeline import STAGES
 
     handlers = Path(__file__).resolve().parents[1] / "web" / "tasks.py"
-    named = set(re.findall(r'stage=\s*"([a-z_]+)"', handlers.read_text()))
+    named = set(re.findall(r'stage=\s*"([a-z_]+)"', handlers.read_text(encoding="utf-8")))
     unknown = sorted(named - set(STAGES))
     assert not unknown, f"{unknown} are not pipeline stages"
 

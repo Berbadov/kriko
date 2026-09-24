@@ -163,6 +163,6 @@ def test_rewrite_replaces_the_lineup(gdir):
 
 def test_written_file_is_plain_yaml(gdir):
     g.write_generations("audi", "q2", [_gen()], gdir)
-    raw = yaml.safe_load((gdir / "audi_q2.yaml").read_text())
+    raw = yaml.safe_load((gdir / "audi_q2.yaml").read_text(encoding="utf-8"))
     assert raw["make"] == "audi"
     assert isinstance(raw["generations"], list)

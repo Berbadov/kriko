@@ -226,6 +226,12 @@ nothing you print is executed.
  "languages": ["en"],
  "markets": ["EU"],
  "identity": {"product": ["brand", "series"], "platform": ["brand", "family"]},
+ "adapters": [
+   {"site": "example.com", "subject_kind": "product",
+    "match": ["*://*.example.com/*product*"],
+    "identity": {"brand": {"labels": ["brand", "manufacturer"], "from": "title"},
+                 "series": {"labels": ["model", "model no"]}}}
+ ],
  "principle": "markdown: what this pack surfaces, and what it does not",
  "templates": ["{label} common problems", "{label} {brand} reliability forum"],
  "domains": [{"id": "mechanical", "label": "Mechanical"}],
@@ -263,6 +269,36 @@ Rules the writer enforces, so getting them wrong costs you the run:
   detect.
 * `name` is refused if it reads as a description — over six words, or carrying
   "common problems", "issues", "faults", "guide".
+
+### `adapters` — how a listing page for this category is read
+
+Without one, this pack is invisible in the browser. Kriko's extension shows a
+panel on a product or listing page by reading that page's own label/value pairs
+and asking the engine what is known about it; an **adapter** is the file that
+says which of that site's labels mean which of the identity keys you declared
+above. A pack with subjects and claims but no adapter answers questions nobody
+can ask from the page they are standing on.
+
+So: name the **one or two sites where this category is actually bought or
+listed**, in the market you set above, and map their field labels.
+
+* `site` is a bare hostname — no scheme, no path, no port, no wildcard. It
+  becomes a browser permission for that site, which is why it is the one field
+  here with teeth.
+* Every `match` pattern must be on that same site. Prefer a pattern that hits
+  product pages rather than the whole domain.
+* Every key in an adapter's `identity` must be one this pack declared for that
+  `subject_kind`. `labels` are the words the site prints, in the site's own
+  language and lowercase; list every spelling you know.
+* `from: "title"` means the value can be taken from the page title when no
+  labelled row carries it. `segment: "first"` takes the part before a `/` when
+  a site packs two facts into one row.
+* Guess honestly and say so in `notes`. An adapter that names the wrong label
+  reads nothing and is a data edit to fix; one that claims the wrong `site`
+  is a permission the reader did not mean to give, and is refused here.
+
+Omit `adapters` entirely for a category with no listing site worth naming —
+that is an honest answer, and better than inventing a domain.
 
 Print the whole object in one fence. If you are running out of room, cut
 *claims* rather than the line-up: a named subject with no claims is an honest
@@ -617,6 +653,104 @@ def _pack_name(payload: dict, category: str, pack_id: str) -> str:
     return name
 
 
+#: The most sites one authored pack may claim to read. A category is bought on
+#: one or two marketplaces that matter; a pack naming ten is guessing, and each
+#: name it guesses is a host permission the reader is asked to grant.
+MAX_ADAPTERS = 4
+
+#: And the most labels one field may list. Generous — a site that writes a
+#: field four ways in two languages is ordinary — and bounded, because a label
+#: list is matched against every row on the page.
+MAX_LABELS = 24
+
+
+def _adapters(payload: dict, table: dict[str, list[str]]) -> list[dict]:
+    """The site adapters an authored pack ships, checked. Never a refusal.
+
+    **This is why an authored pack could not be seen in the browser.** The
+    boundary for shipping one has been open since drafts existed —
+    `packdraft.WRITABLE_DIRS` has always allowed `adapters/*.json` — and
+    nothing ever asked an agent for one, so every pack an agent wrote had
+    subjects, claims, and no way for the extension to recognise a page. The
+    reader stood on a product listing, pressed the button, and got nothing,
+    having just authored a pack about exactly that product.
+
+    Strict about `site` and `match`, permissive about the rest, which is the
+    same split `app/sites.py` makes and for the same reason: `site` becomes a
+    host permission and an injection target in somebody's browser, while a
+    wrong label is merely an adapter that reads a field poorly. So a bad
+    hostname drops the adapter; a label Kriko cannot judge is kept.
+
+    Dropped, never raised. A pack is subjects and claims; an adapter is how
+    one client happens to reach it. Losing the whole authoring run — twenty
+    minutes of somebody's subscription — over a malformed optional block
+    would be the wrong trade, and the omission is visible in the draft.
+    """
+    from app import sites
+
+    out: list[dict] = []
+    seen: set[str] = set()
+    for raw in (payload.get("adapters") or [])[:MAX_ADAPTERS]:
+        if not isinstance(raw, dict):
+            continue
+        site = sites.host_of(str(raw.get("site") or ""))
+        if not site or site in seen:
+            continue
+        kind = _clean_id(raw.get("subject_kind") or next(iter(table), ""),
+                         what="subject kind") if table else ""
+        # An adapter for a kind this pack never declared has no identity keys
+        # it could legally name, so it could only ever read nothing.
+        if kind not in table:
+            continue
+        allowed = set(table[kind])
+        identity = {}
+        for key, rule in (raw.get("identity") or {}).items():
+            name = str(key or "").strip().lower()
+            if name not in allowed or not isinstance(rule, dict):
+                continue
+            labels = [
+                _text(one).lower()
+                for one in (rule.get("labels") or [])[:MAX_LABELS]
+                if _text(one)
+            ]
+            if not labels:
+                continue
+            kept: dict[str, object] = {"labels": labels}
+            # Only the two modifiers the engine's reader understands. An
+            # unknown key here would be a rule that silently does nothing,
+            # which is worse than a field the adapter never mentions.
+            if str(rule.get("from") or "") == "title":
+                kept["from"] = "title"
+            if str(rule.get("segment") or "") in ("first", "last"):
+                kept["segment"] = str(rule["segment"])
+            identity[name] = kept
+        if not identity:
+            continue
+        match = [_text(one) for one in (raw.get("match") or []) if _text(one)]
+        # The same rule `sites.check` applies: an adapter may not claim a site
+        # it is not for. A pattern that fails it is dropped rather than the
+        # adapter, and the default below still reaches the right host.
+        match = [one for one in match
+                 if sites.host_of(one) == site or site in one]
+        out.append({
+            "id": f"{site.split('.')[0]}",
+            "site": site,
+            "subject_kind": kind,
+            "match": match or [f"*://*.{site}/*"],
+            "identity": identity,
+            "_comment": [
+                "Written by the agent that authored this pack, from what it "
+                "knew about the site rather than from reading one of its "
+                "pages. Declarative: it says which of the site's labels mean "
+                "which identity key, and holds no code — a pack may never "
+                "ship JavaScript into a content script.",
+                "A label that reads nothing is a data edit, not a release.",
+            ],
+        })
+        seen.add(site)
+    return out
+
+
 def _coverage(payload: dict, known: dict, quarantined: list[dict] | None = None) -> dict:
     """The line-up, and what of it this draft does not cover.
 
@@ -709,6 +843,7 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
             "report would silently read as zero instead"
         )
 
+    adapters = _adapters(payload, table)
     subjects, known, quarantined = _subjects(table, payload, lineup_raw)
     claims = _claims(table, payload, known)
     gaps = _coverage(payload, known, quarantined)
@@ -749,6 +884,15 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
                         text=yaml.safe_dump(gaps, allow_unicode=True,
                                             sort_keys=False)),
     ]
+    # One file per site, after the rest: a pack is its subjects and claims,
+    # and an adapter is how one client reaches them. A pack with none is
+    # complete knowledge that no browser panel can find, which is worth
+    # saying in the return value rather than leaving as an absence.
+    for adapter in adapters:
+        written.append(packdraft.write(
+            store_path, slug=draft.slug,
+            path=f"adapters/{adapter['site'].replace('.', '_')}.json",
+            text=json.dumps(adapter, indent=2, ensure_ascii=False) + "\n"))
     return {
         "slug": draft.slug,
         "pack_id": pack_id,
@@ -758,6 +902,11 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         "subjects": len(yaml.safe_load(subjects) or []),
         "claims": len(yaml.safe_load(claims) or []),
         "identity": table,
+        # Which sites this pack can be *seen* on. Reported because a pack with
+        # no adapter is knowledge the browser panel can never reach, and that
+        # is a gap a reader should learn from the run rather than from
+        # pressing the extension button on a page and getting nothing.
+        "adapters": [one["site"] for one in adapters],
         "notes": _text(payload.get("notes")),
         # Returned as well as written, because the job's last line is where a
         # reader learns the pack is partial — and a partial pack they know
@@ -971,6 +1120,34 @@ def amend_brief(draft_state: dict, note: str = "") -> str:
         "everything under 'Not covered yet' below" if uncovered
         else "whatever the line-up is still missing"
     )
+    # The one gap that no count on this brief would otherwise reveal. A pack
+    # with subjects, claims and no adapter looks finished everywhere except
+    # the place the reader actually stands — a product page in their browser,
+    # where nothing recognises what they are looking at.
+    adapters = draft_state.get("adapters") or []
+    site_section = (
+        """
+## This pack cannot be recognised in a browser yet
+
+It ships **no adapter**, so a reader standing on a listing page for one of
+these products gets nothing: the extension has no rule saying which of that
+page's labels mean which identity key. Knowledge nobody can reach is the one
+failure this pack cannot see in its own numbers.
+
+If there is a well-known listing or retail site for this category, add one —
+`adapters` in the JSON below. Name the site's real labels, in the site's own
+language. If there genuinely is no such site, say so in `notes` and add
+nothing; a wrong adapter is worse than none.
+"""
+        if not adapters else
+        f"""
+## Sites this pack can already be read on
+
+{_bullets(adapters)}
+
+Adding another is welcome; these are not to be changed.
+"""
+    )
     return f"""# Extend an existing Kriko pack: {draft_state.get('name') or ''}
 
 This pack already exists as a draft. You are **adding to it**, not rewriting
@@ -991,6 +1168,7 @@ wrong one.
 
 {_indent(draft_state.get('principle') or '(none recorded)')}
 
+{site_section}
 ## Already covered — do not repeat these
 
 {_bullets(covered) or '(nothing yet)'}
@@ -1036,6 +1214,23 @@ repeat is ignored rather than duplicated.
               "out_of_scope": ["..."]},
  "notes": "what you read"}
 ```
+
+You may also add an adapter, which is how a browser recognises one of these
+products on a listing page:
+
+```json
+{"adapters": [
+   {"site": "example.com",
+    "subject_kind": "<a kind this pack declares>",
+    "match": ["*://*.example.com/*"],
+    "identity": {"<an identity key this pack declares>": {
+        "labels": ["the words that site prints next to the value"]}}}]}
+```
+
+`site` is a **bare hostname** — no scheme, no path, no wildcard — because it
+becomes a permission in somebody's browser. Only `labels`, `from: "title"` and
+`segment: "first"`/`"last"` are understood inside a rule; anything else is
+dropped. An adapter for a site this pack already has is ignored.
 
 Every `identity` key must be one this pack already declares, and every `domain`
 one it already lists — you are adding rows to a table whose columns are fixed.
@@ -1107,6 +1302,12 @@ def draft_state(store_path, slug: str) -> dict:
         "claims": len(claims if isinstance(claims, list) else []),
         "uncovered": list((coverage or {}).get("uncovered") or []),
         "lineup": list((coverage or {}).get("lineup") or []),
+        # Which listing sites this draft can already be recognised on. The
+        # screen shows it and the amend brief asks for one when it is empty —
+        # a pack with no adapter is complete knowledge no browser can reach,
+        # and that is invisible from every other number on this object.
+        "adapters": sorted(path.stem.replace("_", ".")
+                           for path in (root / "adapters").glob("*.json")),
     }
 
 
@@ -1153,7 +1354,30 @@ def amend(store_path, slug: str, reply: str) -> dict:
     for one in (payload.get("lineup") or []):
         if _text(one):
             amend_lineup.append(_text(one))
-    added_subjects_yaml, known, quarantined = _subjects(table, payload, amend_lineup)
+    # **A pack authored before `_adapters` existed has no other way to get an
+    # adapter**, and every pack this installation holds is such a pack: the
+    # authoring run gained the block, `amend` did not, so a draft that shipped
+    # no adapter could never gain one and stayed invisible in the browser for
+    # the rest of its life. Existing files are never overwritten, on the same
+    # rule as subjects and claims — an amendment adds.
+    #
+    # Adapters first, because whether this reply carries one decides whether a
+    # reply with no *subjects* is a failure. `_subjects` refuses an empty list
+    # outright — correct when subjects are the only thing an amendment can
+    # add, and wrong the moment one can add an adapter instead. A pack that
+    # already covers its whole line-up and only needs to be recognisable in a
+    # browser has nothing to say under `subjects`, and that was being read as
+    # "the agent returned nothing".
+    have_sites = {path.stem.replace("_", ".")
+                  for path in (root / "adapters").glob("*.json")}
+    fresh_adapters = [one for one in _adapters(payload, table)
+                      if one["site"] not in have_sites]
+
+    if payload.get("subjects") or payload.get("claims") or not fresh_adapters:
+        added_subjects_yaml, known, quarantined = _subjects(
+            table, payload, amend_lineup)
+    else:
+        added_subjects_yaml, known, quarantined = "[]", {}, []
     added_subjects = yaml.safe_load(added_subjects_yaml) or []
     seen = {
         _identity_key(row.get("kind"), row.get("identity"))
@@ -1179,7 +1403,7 @@ def amend(store_path, slug: str, reply: str) -> dict:
         ) not in have
     ]
 
-    if not fresh and not fresh_claims:
+    if not fresh and not fresh_claims and not fresh_adapters:
         if quarantined and not added_subjects:
             raise PackRefused(
                 "every subject in the reply was quarantined rather than "
@@ -1188,9 +1412,9 @@ def amend(store_path, slug: str, reply: str) -> dict:
                 )
             )
         raise PackRefused(
-            "every subject and claim in the reply is already in this draft. "
-            "Nothing was written — the request may already be covered, or the "
-            "agent echoed the list it was shown"
+            "every subject, claim and adapter in the reply is already in "
+            "this draft. Nothing was written — the request may already be "
+            "covered, or the agent echoed the list it was shown"
         )
 
     written = []
@@ -1206,6 +1430,12 @@ def amend(store_path, slug: str, reply: str) -> dict:
             text=_preamble(root / "data" / "claims.yaml")
             + yaml.safe_dump(list(claims) + fresh_claims, allow_unicode=True,
                              sort_keys=False)))
+
+    for adapter in fresh_adapters:
+        written.append(packdraft.write(
+            store_path, slug=slug,
+            path=f"adapters/{adapter['site'].replace('.', '_')}.json",
+            text=json.dumps(adapter, indent=2, ensure_ascii=False) + "\n"))
 
     # The line-up grows and the gap shrinks, in one place, so a second amend
     # asks for what is still missing rather than for what was just done.
@@ -1240,6 +1470,7 @@ def amend(store_path, slug: str, reply: str) -> dict:
         "files": written,
         "subjects_added": len(fresh),
         "claims_added": len(fresh_claims),
+        "adapters_added": [one["site"] for one in fresh_adapters],
         "subjects": len(subjects) + len(fresh),
         "claims": len(claims) + len(fresh_claims),
         "uncovered": coverage["uncovered"],

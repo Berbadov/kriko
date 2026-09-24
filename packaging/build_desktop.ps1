@@ -305,7 +305,11 @@ try {
     Step "Icons"
     npm --prefix tauri ci --no-audit --no-fund
     Assert-LastExitCode "npm ci (tauri)"
-    npm --prefix tauri run tauri icon src-tauri/icons/icon.png
+    # The master lives outside src-tauri/icons/ because this command
+    # *writes into* that directory, icon.png included. Pointed at a
+    # file in there it consumed and replaced its own input, dirtying a
+    # committed PNG on every build. See packaging/render_icon.py.
+    npm --prefix tauri run tauri icon ../packaging/icon-master.png
     Assert-LastExitCode "tauri icon"
 
     # Self-update is a build-time decision, because the key that makes it

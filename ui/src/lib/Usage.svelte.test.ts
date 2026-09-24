@@ -148,7 +148,7 @@ describe("what this installation has used", () => {
         render(Usage);
         await waitFor(() =>
             expect(
-                screen.getByText(/2 line\(s\) of the analyses log/),
+                screen.getByText(/2 lines of the analyses log/),
             ).toBeInTheDocument(),
         );
     });

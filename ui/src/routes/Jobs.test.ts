@@ -221,4 +221,55 @@ describe("Jobs", () => {
         const link = screen.getByRole("link", { name: "Find a gap" }) as HTMLAnchorElement;
         expect(link.getAttribute("href")).toBe("#/coverage");
     });
+
+    // ── answering a run that is still going ──────────────────────────────
+
+    it("offers a reply box on a live run and posts what was typed", async () => {
+        const fetchMock = stub({
+            "/api/jobs": { items: [JOB] },
+            "/api/jobs/j1": JOB,
+            "/api/jobs/j1/say": { job_id: "j1", delivered: true },
+        });
+        render(Jobs);
+
+        const box = await screen.findByLabelText("Reply to this run");
+        await fireEvent.input(box, { target: { value: "the second one" } });
+        await fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+        await waitFor(() => {
+            const call = fetchMock.mock.calls.find(([path]) => String(path).endsWith("/say"));
+            expect(call).toBeTruthy();
+            expect(JSON.parse(String(call![1]!.body))).toEqual({ text: "the second one" });
+        });
+        // Emptied, because the next thing the reader types is a second reply
+        // and not an edit of the first.
+        await waitFor(() => expect((box as HTMLInputElement).value).toBe(""));
+        expect(await screen.findByText("Sent.")).toBeInTheDocument();
+    });
+
+    it("does not offer a reply box on a run that is over", async () => {
+        const done = { ...JOB, state: "succeeded", done: true, finished_at: "2026-09-01T10:05:00+00:00" };
+        stub({ "/api/jobs": { items: [done] }, "/api/jobs/j1": done });
+        render(Jobs);
+
+        await screen.findByText(/research/);
+        expect(screen.queryByLabelText("Reply to this run")).toBeNull();
+    });
+
+    it("says so when the run ended while the reader was typing", async () => {
+        // `delivered: false` rather than an error, so the panel has to say
+        // the words itself — silence here reads as "sent".
+        stub({
+            "/api/jobs": { items: [JOB] },
+            "/api/jobs/j1": JOB,
+            "/api/jobs/j1/say": { job_id: "j1", delivered: false },
+        });
+        render(Jobs);
+
+        const box = await screen.findByLabelText("Reply to this run");
+        await fireEvent.input(box, { target: { value: "too late" } });
+        await fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+        expect(await screen.findByText(/Nothing was sent/)).toBeInTheDocument();
+    });
 });

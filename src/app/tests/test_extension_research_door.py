@@ -62,7 +62,7 @@ def test_the_research_prompt_is_built_only_from_resolved_subjects_with_no_claims
     instead) would be a second, independent path that could show the button
     with no subject behind it.
     """
-    text = PANEL.read_text()
+    text = PANEL.read_text(encoding="utf-8")
     match = re.search(r"function renderGaps\(\)\s*\{(.*?)\n  \}", text, re.S)
     assert match, "renderGaps() is gone or was renamed"
     body = match.group(1)
@@ -76,7 +76,7 @@ def test_the_worker_never_offers_research_with_no_subject_id():
     """`RESEARCH_SUBJECT` refuses with nothing to research, on the worker's
     own side too — a defence in depth for the same rule, since the panel is
     not the only thing that could send this message."""
-    text = WORKER.read_text()
+    text = WORKER.read_text(encoding="utf-8")
     match = re.search(
         r'request\.type === "RESEARCH_SUBJECT"\)\s*\{(.*?)\n  \}', text, re.S
     )
@@ -90,7 +90,7 @@ def test_the_worker_never_offers_research_with_no_subject_id():
 
 
 def test_the_panel_names_the_cost_for_both_planes_before_the_button_is_clicked():
-    text = PANEL.read_text()
+    text = PANEL.read_text(encoding="utf-8")
     match = re.search(r"function costLine\(\)\s*\{(.*?)\n  \}", text, re.S)
     assert match, "costLine() is gone or was renamed"
     body = match.group(1)
@@ -106,11 +106,11 @@ def test_the_panel_asks_the_app_which_plane_is_configured_before_naming_a_cost()
     """The cost line must come from the app's own answer, not a guess baked
     into the extension — a guess is exactly the failure mode the design calls
     out (a panel that quietly bills someone)."""
-    text = PANEL.read_text()
+    text = PANEL.read_text(encoding="utf-8")
     assert "RESEARCH_PLANE" in text
     assert "requestResearchPlane" in text
 
-    worker = WORKER.read_text()
+    worker = WORKER.read_text(encoding="utf-8")
     assert '"RESEARCH_PLANE"' in worker
     assert "/api/extension/research-plane" in worker
 
@@ -145,7 +145,7 @@ def test_the_research_plane_endpoint_reports_a_capped_spend_once_both_keys_exist
     (tmp_path / "app.sqlite").parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / "env").write_text(
         "EXA_API_KEY=FIXTURE-SEARCH-KEY\nOPENAI_API_KEY=FIXTURE-LLM-KEY\n"
-    )
+    , encoding="utf-8")
     client = _client(tmp_path)
     body = client.get("/api/extension/research-plane").json()
     assert body["backend"] == "api"
@@ -161,7 +161,7 @@ def test_the_research_plane_endpoint_never_returns_a_key(tmp_path):
     (tmp_path / "env").write_text(
         "EXA_API_KEY=FIXTURE-DO-NOT-LEAK-1234\n"
         "OPENAI_API_KEY=FIXTURE-DO-NOT-LEAK-5678\n"
-    )
+    , encoding="utf-8")
     client = _client(tmp_path)
     response = client.get("/api/extension/research-plane")
     assert "FIXTURE-DO-NOT-LEAK" not in response.text
@@ -176,7 +176,7 @@ def test_clicking_research_posts_to_api_research_and_does_not_raise_the_app():
     inline polling (`JOB_STATUS`), so the handler must post the job and stop:
     raising the app here would be a navigation the design explicitly rules
     out ("it does not navigate away")."""
-    text = WORKER.read_text()
+    text = WORKER.read_text(encoding="utf-8")
     match = re.search(
         r'request\.type === "RESEARCH_SUBJECT"\)\s*\{(.*?)\n  \}', text, re.S
     )
@@ -190,10 +190,10 @@ def test_clicking_research_posts_to_api_research_and_does_not_raise_the_app():
 
 
 def test_the_panel_polls_job_status_for_inline_progress():
-    text = PANEL.read_text()
+    text = PANEL.read_text(encoding="utf-8")
     assert "JOB_STATUS" in text
     assert "pollResearchJob" in text
-    worker = WORKER.read_text()
+    worker = WORKER.read_text(encoding="utf-8")
     match = re.search(r'request\.type === "JOB_STATUS"\)\s*\{(.*?)\n  \}', worker, re.S)
     assert match, "the JOB_STATUS handler is gone or was renamed"
     assert "/api/jobs/" in match.group(1)
