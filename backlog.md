@@ -1420,6 +1420,50 @@ red.
 that and it is what let "opens a browser with no extension" count as working.
 **Owner:** free.
 
+### B144 — "Go with step 1": the extension tested in a real browser, on saved pages of the big retail sites `[G5]`
+**Asked:** "an environment for the agents to test app … the app and extension
+itself", then "Go with step 1, cover all big retail sites, trendyol in turkiye
+and the others in Europe and USA" (2026-09-24). Windows first, then macOS;
+Linux builds are skippable.
+**Where:** `tools/journeys/extension.mjs`, run by `tools/walk.sh --journeys`
+(B143), with the saved pages in `extension/tests/pages/<site>/`.
+**Done when:**
+1. A cloud agent can run one command that starts the app, opens Chromium with
+   the unpacked extension loaded, serves each saved page at its real address,
+   and reports per page what the reader would see.
+2. For a site with an adapter (Sahibinden today) the journey fails unless the
+   panel appears and shows the app's answer for that listing.
+3. For a site with no adapter yet (every retail site today) the journey fails
+   unless the extension says so on the page and the site appears on the app's
+   **Sites** screen, which is B132's "does something everywhere" promise.
+4. The library holds at least one product page per site below, captured from
+   a real browser on the reader's PC by `tools/capture_pages.mjs`, with its
+   address and capture date.
+   - Türkiye: Trendyol, Hepsiburada, n11, Amazon.com.tr.
+   - Europe: Amazon (.de, .co.uk, .fr, .it, .es), MediaMarkt, Otto, Zalando,
+     bol.com, Cdiscount, Fnac, Allegro, Argos, Currys.
+   - USA: Amazon.com, Walmart, Target, Best Buy, eBay.
+5. Each check is shown red once, e.g. with the extension's check-in blocked.
+
+**Not this:**
+- synthetic pages written by hand, which test markup no real site has;
+- live sites fetched at test time, which refuse the cloud and change daily;
+- a pass that only means "the page loaded".
+
+**Owner:** this session for items 1–3 and 5. Item 4 needs one capture run on
+the reader's PC (the sites block datacenter addresses: Trendyol answers
+"blocked malicious bot", Amazon a captcha, eBay, MediaMarkt, Zalando,
+Hepsiburada, Argos and Currys 403).
+
+**Note:**
+- The grant for a non-Sahibinden site is a click only a person can make
+  (`permissions.request` needs a user gesture), so the journey pre-grants it in
+  a test copy of the manifest and says so in its output. That one step stays
+  untested until the Windows runner (B142) can click it.
+- Retail sites need a pack whose products they sell before the panel can show
+  risks there. Until then, "the extension says it cannot read this yet" is the
+  correct end result, not a failure.
+
 ### B140 — Half the cars pack's quotes cannot be re-proven: they are stored in quotation marks `[G3]`
 Found 2026-09-23 while testing Obscura as a fetcher. Of 20 sampled
 `(url, quote)` evidence pairs, 14 were not on their own page with *either*
