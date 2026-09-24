@@ -78,12 +78,22 @@ def test_the_lock_exists_and_is_pins(locked):
 def test_every_runtime_root_is_locked(locked):
     """Read off `pyproject.toml`, so a new dependency cannot skip the lock.
 
-    A root marked for the other platform (`pywinpty`, on this Linux machine)
-    is filtered the same way `closure()` filters it out of the pins — it is
-    not missing, it just does not apply here.
+    A root marked for the other platform is filtered the same way `closure()`
+    filtered it out of the pins when the lock was generated — it is not
+    missing, it just did not apply *there*.
+
+    "There", not "here": the filter follows the lock's own `resolved-on` line
+    rather than the platform this test is running on. The two agree on the
+    machine that regenerated the lock and differ everywhere else, and using the
+    running one meant a Windows host reported `pywinpty` unlocked — a pin that
+    a Linux resolve cannot produce and that pip supplies instead, exactly as
+    the lock's own header says it does.
     """
+    platform = relock.resolved_on(LOCK.read_text(encoding="utf-8"))
     roots = [
-        relock.name_of(dep) for dep in relock.runtime_roots() if relock.applies_here(dep)
+        relock.name_of(dep)
+        for dep in relock.runtime_roots()
+        if relock.applies_here(dep, platform)
     ]
     assert roots, "pyproject declares no runtime dependencies"
     assert [root for root in roots if root not in locked] == []

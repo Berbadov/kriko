@@ -81,8 +81,8 @@ def run(make: str, model: str, gen: str) -> None:
             print(e)
         sys.exit(1)
 
-    variants_path.write_text(_make_variants_content(make, model, gen))
-    curated_path.write_text("[]\n")
+    variants_path.write_text(_make_variants_content(make, model, gen), encoding="utf-8")
+    curated_path.write_text("[]\n", encoding="utf-8")
 
     print(f"Created {variants_path.relative_to(REPO_ROOT)}")
     print(f"Created {curated_path.relative_to(REPO_ROOT)}")

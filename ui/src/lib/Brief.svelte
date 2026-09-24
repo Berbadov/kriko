@@ -1,7 +1,9 @@
 <script lang="ts">
     import { api } from "./api";
+    import { count } from "./plural";
     import Failure from "./Failure.svelte";
-    import HarnessLlm from "./HarnessLlm.svelte";
+    import Pick from "./Pick.svelte";
+    import Scale from "./Scale.svelte";
     import { copyText, copyWord } from "./clipboard";
     import { follow, stateWord } from "./jobs";
     import { hashWith } from "./router";
@@ -39,6 +41,12 @@
     let copied = $state("");
     let harness = $state("");
     let llm = $state("");
+    /* How much reading this run is worth. Empty means the server's default,
+     * which is what every run did before the dial reached this screen — the
+     * brief itself is free and instant either way, so nothing here waits on
+     * `/api/scales` answering. */
+    let scale = $state("");
+    let maxDocuments = $state(0);
     /* Which planes this machine can run, so the button that starts one is only
      * offered when it would work. Best-effort: a planes call that fails costs
      * the reader the button and never the brief. */
@@ -70,6 +78,14 @@
                 backend,
                 ...(harness ? { harness } : {}),
                 ...(backend === "harness" && llm ? { llm } : {}),
+                // Only on a run that actually reads. The `agent` plane
+                // gathers nothing by design, so a depth sent with it would
+                // be a number with no effect — which is how a control comes
+                // to look broken.
+                ...(backend === "harness" && scale ? { scale } : {}),
+                ...(backend === "harness" && maxDocuments
+                    ? { max_documents: maxDocuments }
+                    : {}),
             });
             job = await api.job(job_id);
             follow(job_id, (update) => (job = update));
@@ -130,7 +146,7 @@
             </p>
         {:else}
             <p class="meta">
-                Read {documents} source(s) on the <code>{plane}</code> plane. Every
+                Read {count(documents ?? 0, "source")} on the <code>{plane}</code> plane. Every
                 finding went through the same grounding check as one an agent
                 submits by hand, and the whole run can be taken back out from
                 <strong>Activity → Runs</strong>.
@@ -154,18 +170,23 @@
                 </label>
                 {#if chosenHarness?.llm_selectable}
                     <label>LLM
-                        <HarnessLlm
-                            label="LLM"
-                            llms={chosenHarness.llms ?? []}
+                        <Pick
                             bind:value={llm}
-                            hint={chosenHarness.llm_hint}
                             disabled={!!job && !job.done}
-                            defaultLabel={chosenHarness.llm
-                                ? `Use preference (${chosenHarness.llm})`
+                            options={(chosenHarness.llms ?? []).map((name) => ({ value: name }))}
+                            emptyLabel={chosenHarness.llm
+                                ? `Preference (${chosenHarness.llm})`
                                 : "CLI default"}
+                            hint={chosenHarness.llm_hint}
                         />
                     </label>
                 {/if}
+                <Scale
+                    bind:scale
+                    bind:maxDocuments
+                    disabled={!!job && !job.done}
+                    label="How much to read"
+                />
                 {#if harnessPlane.reason}<p class="meta">{harnessPlane.reason}</p>{/if}
                 <button
                     disabled={!!job && !job.done}
@@ -187,7 +208,7 @@
 
         {#if kept || refused}
             <p class="state {kept ? 'ok' : 'empty'}">
-                {kept} claim(s) kept, {refused} refused.
+                {count(kept, "claim")} kept, {refused} refused.
             </p>
         {/if}
 

@@ -176,6 +176,7 @@ class ExtensionResearchRequest(BaseModel):
 def start_research_plane(
     body: ExtensionResearchRequest, request: Request,
     store=Depends(get_store), runner=Depends(get_jobs),
+    conn=Depends(get_app_state),
 ) -> dict:
     try:
         subject = resolve_research_subject(store, q=body.q, subject_id=body.subject_id)
@@ -191,7 +192,25 @@ def start_research_plane(
                 "connect a supported harness in Agents, then retry. No API research "
                 "was started."
             )) from exc
-        selected = available[0].id
+        # Decided once, here, and then both reported and obeyed.
+        #
+        # Passing `available[0].id` was passing it *explicitly*, and an
+        # explicit harness beats the stored one — so the reader who chose
+        # another agent precisely to stop spending Claude tokens got Claude
+        # Code every time the extension researched a product, while this reply
+        # named the choice it had just overridden. The order below is the fix
+        # for that: the stored preference wins whenever it names something
+        # actually installed.
+        #
+        # Leaving the *job* empty and letting `harness_researcher` work it out
+        # again is not the fix, though — it is the same decision made twice
+        # from two copies of one rule, so the reply can promise one agent while
+        # the run uses another the day the two copies drift. Sending `selected`
+        # is what this reply already claims happened.
+        from app import prefs
+
+        stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
+        selected = stored if stored in {one.id for one in available} else available[0].id
         params = {
             "category": body.q.strip(), "product_only": True,
             "harness": selected, "backend": "harness",

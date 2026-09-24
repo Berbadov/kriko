@@ -145,9 +145,9 @@ tools/walk.sh agents      # only addresses containing "agents"
 KRIKO_WALK_REAL_CLIS=1 tools/walk.sh agents   # your own claude/agy/opencode
 ```
 
-By default `tools/walk/bin` goes ahead of `PATH`: stand-in `claude`, `agy` and
-`opencode` that answer instantly and spend nothing, and whose `models` take two
-seconds like the real ones. Buttons named quit, uninstall, delete, remove,
+By default `tools/walk/bin` goes ahead of `PATH`: stand-in `claude`, `agy`,
+`opencode`, `copilot` and `vibe` that answer instantly and spend nothing, and
+whose `models` take two seconds like the real ones. Buttons named quit, uninstall, delete, remove,
 forget, reset, revoke or undo are listed and never pressed. It needs Playwright
 (`npm i -g playwright && npx playwright install chromium`); it is not a
 dependency of the repo and not part of the gate.

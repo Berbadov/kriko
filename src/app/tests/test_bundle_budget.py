@@ -59,13 +59,23 @@ import pytest
 #: per-harness LLM dropdowns, the provider self-test buttons, and the Sites
 #: activation rows. 280,406 bytes of ordinary feature work, not a library
 #: arriving unweighed.
-#:
-#: Raised .js from 282,000 to 286,000 on 2026-09-23: again no dependency. The
-#: shared LLM picker (a select of what each CLI names, replacing three
-#: text-box-and-datalist copies), the harness LLM chips on Benchmark, the
-#: Re-ask button, and one clipboard helper with a fallback for five copy
-#: buttons that failed silently. 284,4xx bytes.
-BUDGET = {".js": 286_000, ".css": 60_000}
+#: Raised .js from 282,000 to 290,000 on 2026-09-20. Again no dependency —
+#: four controls and one compatibility fold, all of them things that were
+#: previously text the reader had to type or a defect they could not see:
+#: `Pick.svelte` (a real `<select>` with an escape hatch, replacing five
+#: `<input list=…>` datalists), `Scale.svelte` (the depth dial, on three
+#: screens that had no depth control at all), the per-harness effort dropdown,
+#: and the Bench regroup. 286,429 bytes.
+#: Raised .js from 290,000 to 300,000 on 2026-09-22. No dependency again, and
+#: the two things that arrived are both answers to one report — "they look all
+#: separate, and detected harnesses aren't including the all". First, the glyph
+#: table left `shell/NavIcon.svelte` for `lib/Icon.svelte` and grew eleven
+#: entries (agent, llm, effort, search, cost, fetch, agenda, plug, skill,
+#: schedule, ok, warn, download), which is inline path data rather than an icon
+#: font precisely so that it costs bytes here and no request at runtime.
+#: Second, `Agents.prefs.svelte`: the per-agent card that replaced an
+#: undivided run of eight `.field` divs. 293,105 bytes.
+BUDGET = {".js": 300_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count } from "./plural";
     import type { Mode } from "./mode";
     import Grounding from "./Grounding.svelte";
     import {
@@ -160,7 +161,7 @@
         <details>
             <summary class="meta">
                 {author
-                    ? `${claim.sources.length} source(s)`
+                    ? count(claim.sources.length, "source")
                     : `Where this comes from — ${sourceSummary(claim)}`}
             </summary>
             {#each claim.sources as source}

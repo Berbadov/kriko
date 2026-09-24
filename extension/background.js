@@ -23,6 +23,31 @@ const LOADED_CONTENT_DIGEST = "";
 //: right answer to "I cannot see it" is a better query rather than more rows.
 const SEARCH_LIMIT = 12;
 const STORAGE_KEY_PREFIX = "kriko_result_";
+
+/* Where a run says what it is doing, while it is doing it.
+ *
+ * Separate from the result key on purpose: the result is written once, at the
+ * end, and the panel's whole complaint was that the several seconds before
+ * that were a spinner and an invented sentence. A stage is written as each
+ * step begins, so the panel can say which step it is on rather than guessing.
+ *
+ * Session storage rather than a message, for the reason the result uses it: a
+ * `runtime.sendMessage` broadcast does not reach a content script, and the
+ * panel is one.
+ */
+const STAGE_KEY_PREFIX = "kriko_stage_";
+
+/** Record which step a run has reached. Never throws: a run must not fail
+ *  because the thing narrating it did. */
+async function _stage(url, name, detail = "") {
+  try {
+    await chrome.storage.session.set({
+      [STAGE_KEY_PREFIX + url]: { name, detail, at: Date.now() },
+    });
+  } catch (_) {
+    // Storage full, or the worker torn down mid-write. The run continues.
+  }
+}
 const LOCAL_CACHE_KEY_PREFIX = "kriko_cached_result_";
 const RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ADAPTERS_TTL_MS = 5 * 60 * 1000;
@@ -227,7 +252,22 @@ async function apiBase() {
 
 function globToRegExp(pattern) {
   const escaped = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp("^" + escaped.replace(/\\\*/g, ".*") + "$", "i");
+  const body = escaped
+    // Chrome's own host rule, which this hand-rolled matcher never had: in a
+    // match pattern `*.example.com` means "example.com **or** any subdomain
+    // of it". Read as a plain glob it means "a subdomain of it", and the bare
+    // host then matches nothing.
+    //
+    // That is why a newly added site read nothing at all. `sites.py` writes
+    // `*://*.<site>/*` for every adapter it generates, and Chrome — which
+    // applies the real semantics — duly injected the content script on
+    // `https://<site>/...`. The page was scraped and handed here, where
+    // `adapterFor` found no adapter for the very URL Chrome had matched, and
+    // the panel opened knowing nothing. Two matchers disagreeing is the whole
+    // bug; this is the side that was wrong.
+    .replace(/:\/\/\\\*\\\./g, "://(?:[^/]+\\.)?")
+    .replace(/\\\*/g, ".*");
+  return new RegExp("^" + body + "$", "i");
 }
 
 function adapterFor(url, adapters) {
@@ -968,6 +1008,7 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
   let scrape = null;
 
   try {
+    await _stage(url, "adapters", "");
     const adapters = await fetchAdapters();
     const adapter = adapterFor(url, adapters);
     if (!adapter) {
@@ -980,6 +1021,10 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       throw noAdapter;
     }
 
+    // Named after the pack that will read it, not after the mechanism: the
+    // reader knows which site they are on, and "reading this page" is the
+    // step they can see happening in front of them.
+    await _stage(url, "reading", adapter.pack_id || "");
     const scrapeStartedAt = _now();
     const reply = await _requestScrape(
       tabId, adapter.labels || [], adapter.local_panel || {}
@@ -993,11 +1038,16 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     const signature = _scrapeSignature(scrape);
     const cachedEntry = await _readCachedAnalysis(url, signature);
     if (cachedEntry) {
+      // Worth saying. An answer that arrives in 30 ms looks like nothing
+      // happened, and a reader who pressed Refresh wants to know whether
+      // they got a fresh answer or the one they already had.
+      await _stage(url, "cached", "");
       await chrome.storage.session.set({ [storageKey]: cachedEntry });
       await _updateBadgeForResult(cachedEntry.result, tabId);
       return cachedEntry.result;
     }
 
+    await _stage(url, "asking", "");
     const result = toViewModel(
       await requestAnalysis(scrape, timings), await apiBase());
 
@@ -1013,6 +1063,10 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       fetchedAt: Date.now(),
     };
 
+    // The terminal stage, written before the result so the panel never sees
+    // an answer while the narration still claims to be asking for it.
+    await _stage(url, "done",
+      String(Array.isArray(result.claims) ? result.claims.length : 0));
     await chrome.storage.session.set({ [storageKey]: entry });
     await _writeCachedAnalysis(url, entry);
     await _updateBadgeForResult(result, tabId);
@@ -1027,6 +1081,7 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       error: error.message || "Unknown error",
       fetchedAt: Date.now(),
     };
+    await _stage(url, "failed", error.message || "");
     if (error.code) errEntry.code = error.code;
     if (scrape) errEntry.listing = scrape.listing || {};
     await chrome.storage.session.set({ [storageKey]: errEntry });
@@ -1348,6 +1403,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     _getApp(`/api/jobs/${encodeURIComponent(jobId)}`)
       .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  /* What the rest of Kriko is doing, right now.
+   *
+   * The panel could see its own run and nothing else — so a reader whose
+   * coding agent was mid-research on the very car they were looking at had
+   * no way to know it from the page they were on, and the app's Live screen
+   * (which does know) is the one place they are not, precisely because they
+   * are here reading a listing.
+   *
+   * Read-only, and through `_getApp` like every other question: the panel
+   * shows the feed, it does not join it. The extension's own run appears in
+   * it anyway, by the `extension` door, written by the app.
+   */
+  if (request.type === "OPERATIONS") {
+    const limit = Number(request.payload?.limit) || 6;
+    _getApp(`/api/operations?limit=${encodeURIComponent(limit)}`)
+      .then((feed) => sendResponse({ ok: true, feed }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, error: error.message }));
     return true; // async

@@ -183,7 +183,7 @@ def _preferred_model(app_state_path) -> str:
 
 
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
-                       app_state_path=None, model: str = ""):
+                       app_state_path=None, model: str = "", effort: str = ""):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
 
     The sibling of `api_researcher` in shape and its opposite in cost: this one
@@ -242,8 +242,32 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                 model = prefs.for_harness(conn, found.id)
             finally:
                 conn.close()
+    # Resolved against the harness that will actually run, on the same
+    # reasoning as the model above: `xhigh` is a level claude accepts and agy
+    # does not, so a level chosen for one handed to the other is an argument
+    # error rather than a cheaper run.
+    if not effort.strip() and app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        try:
+            conn = state.connect(app_state_path)
+        except Exception:  # noqa: BLE001 — see `_preferred_model`
+            conn = None
+        if conn is not None:
+            try:
+                effort = prefs.effort_for_harness(conn, found.id)
+            finally:
+                conn.close()
+    # A level this machine's CLI will not take is dropped, not raised. The
+    # reader chose it for a harness that is no longer the one running, or on a
+    # build whose `--help` has since changed, and losing the run over a dial
+    # would be worse than losing the dial.
+    if effort.strip() and effort.strip() not in harness.efforts_for(found):
+        effort = ""
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
+        effort=effort.strip(),
     )
     if note:
         # Duck-typed, read by `app/web/tasks.py` when the run gathers nothing

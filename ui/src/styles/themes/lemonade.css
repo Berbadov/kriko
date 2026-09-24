@@ -15,6 +15,9 @@
  * where the originals fall under 4.5:1.
  */
 :root[data-theme="lemonade"] {
+    /* Declared for the same reason panel declares dark: the platform draws
+     * select popups and scrollbars itself, and it needs telling. */
+    color-scheme: light;
     /* neutrals — cream ground up to ink, same direction as slate's light mode */
     --n-0: #fbf8f1; /* cream-50 — the page */
     --n-1: #fffef8;

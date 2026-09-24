@@ -225,6 +225,81 @@ def test_the_api_serves_the_feed_and_a_cursor(settings):
     assert client.get(f"/api/operations?after_id={first['last_id']}").json()["items"] == []
 
 
+def test_the_feed_is_told_when_an_operation_ends(settings, conn):
+    """The bug that made every row on the Live screen say `running` forever.
+
+    A row is written twice — opened before the work, closed after it — and the
+    close is an UPDATE to a row whose id is already behind the reader's cursor.
+    A feed that follows ids alone therefore gets every operation's beginning
+    and none of its ending, so the one screen whose entire job is answering
+    "is it doing anything right now" answered yes permanently, for work that
+    had finished seconds after it appeared.
+
+    The fix is that the caller says what it is still watching, and gets those
+    rows back whatever their id."""
+    client = TestClient(create_app(settings))
+    with operations.record(settings.app_state_path, door="mcp", name="lookup"):
+        open_now = client.get("/api/operations").json()["items"][0]
+        assert open_now["state"] == "running"
+    op_id = open_now["op_id"]
+
+    # What the feed did before: ask for what is after the cursor, hear nothing,
+    # and go on showing a finished operation as running.
+    assert client.get(f"/api/operations?after_id={op_id}").json()["items"] == []
+
+    # And what it does now, having said which row it still believes is open.
+    again = client.get(f"/api/operations?after_id={op_id}&watch={op_id}").json()
+    (closed,) = again["items"]
+    assert closed["op_id"] == op_id
+    assert closed["state"] == "ok"
+    assert closed["ms"] is not None
+    # A re-read row is one the caller already has: it must not drag the cursor
+    # forward, or a row arriving in the same tick would be skipped.
+    assert again["last_id"] == op_id
+
+
+def test_watching_a_row_that_is_also_new_does_not_double_it(settings):
+    """Belt and braces on the merge: the two queries overlap by design when a
+    caller watches a row whose id is also past its cursor, and a feed that
+    appended the same operation twice would be a worse bug than the one this
+    fixes."""
+    client = TestClient(create_app(settings))
+    with operations.record(settings.app_state_path, door="mcp", name="lookup"):
+        pass
+    op_id = client.get("/api/operations").json()["items"][0]["op_id"]
+    items = client.get(f"/api/operations?after_id={op_id - 1}&watch={op_id}").json()["items"]
+    assert [one["op_id"] for one in items] == [op_id]
+
+
+def test_a_watch_list_of_nonsense_is_a_feed_not_a_refusal(settings):
+    """It rides on every poll, so it degrades rather than breaks: a truncated
+    or stale cursor list must cost freshness, never the whole feed."""
+    client = TestClient(create_app(settings))
+    answer = client.get("/api/operations?watch=abc,,-4,%20")
+    assert answer.status_code == 200
+
+
+def test_only_a_job_operation_says_which_job_it_is(settings):
+    """The feed may offer to stop a job, because a job belongs to the runner in
+    this process. It may not offer to stop an MCP call, which belongs to the
+    process that made it — and `job_id` is how a row says which it is."""
+    client = TestClient(create_app(settings))
+    with operations.record(settings.app_state_path, door="mcp", name="lookup"):
+        pass
+    (tool_call,) = client.get("/api/operations").json()["items"]
+    assert tool_call["job_id"] == ""
+
+    client.post("/api/research", json={"subject_id": "nope"})
+    job = None
+    for _ in range(200):
+        rows = client.get("/api/operations").json()["items"]
+        job = next((one for one in rows if one["door"] == "job"), None)
+        if job and job["state"] != "running":
+            break
+    assert job is not None
+    assert job["job_id"]
+
+
 def test_a_job_is_an_operation_too(settings):
     """A run and a tool call are the same kind of thing through two doors, and
     a feed that showed only one of them would hide exactly the comparison it

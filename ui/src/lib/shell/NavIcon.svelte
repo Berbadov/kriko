@@ -1,101 +1,18 @@
 <script lang="ts">
-    /* One 20px glyph per destination, inline.
+    /* One 20px glyph per destination in the rail.
      *
-     * Inline and not an icon font, a sprite sheet or a CDN set, for three
-     * reasons that all point the same way: the app has to work with no
-     * network (it is the whole premise), the static bundle is served from
-     * FastAPI so every extra file is another path to get wrong, and an icon
-     * font renders as a box on first paint before it loads — on the one
-     * element the reader uses to find their way around.
-     *
-     * Stroke-based on `currentColor` so the link's own colour drives it and
-     * the active and hover states need no second rule. `aria-hidden`: the
-     * label beside it already says where the link goes, and a screen reader
-     * announcing "compare, compare" is worse than silence.
-     *
-     * Unknown names render nothing rather than a placeholder. A destination
-     * added without a glyph should look unfinished to us and normal to the
-     * reader, not stamped with a question mark.
+     * The table itself lives in `lib/Icon.svelte` now — it stopped being a
+     * rail-only concern the moment the Agents screen wanted the same
+     * glyphs, and two copies of path data is two copies to keep in step.
+     * What stays here is the one thing the rail owns: the `.nav-icon`
+     * class, which `styles/components.css` dims until the row matters and
+     * brightens on hover and on the active link. Keeping this wrapper means
+     * that rule, and `NavGroup`'s single use of `<NavIcon {name} />`, did
+     * not have to change at all.
      */
+    import Icon from "../Icon.svelte";
+
     let { name }: { name: string } = $props();
-
-    // Path data, keyed by route name. A closed vocabulary of this app's own
-    // screens — not pack data, which is why it may live in the frontend.
-    const PATHS: Record<string, string[]> = {
-        // a magnifier over a document: look something up
-        check: ["M4 4h9l3 3v4", "M4 4v16h6", "M14 14.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0", "M19.5 19.5 22 22"],
-        // a clock: what you asked before
-        history: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M12 7v5l3.5 2"],
-        // two columns side by side
-        compare: ["M4 4h7v16H4z", "M13 4h7v16h-7z", "M4 9h7", "M13 13h7"],
-        // a question mark on a sheet
-        questions: ["M5 3h14v18H5z", "M9.5 8.5a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.9", "M12 16.5v.01"],
-        // a puzzle piece: the browser half
-        extension: [
-            "M9 4h2a1.5 1.5 0 0 1 3 0h2a1 1 0 0 1 1 1v3a1.5 1.5 0 0 0 0 3v3a1 1 0 0 1-1 1h-3a1.5 1.5 0 0 0-3 0H7a1 1 0 0 1-1-1v-3a1.5 1.5 0 0 0 0-3V5a1 1 0 0 1 1-1z",
-        ],
-        // a gauge: the state of the whole store at a glance
-        overview: ["M3.5 17a9 9 0 1 1 17 0", "M12 17l4.5-5"],
-        // stacked shelves: browse what is known
-        knowledge: ["M4 5h16", "M4 12h16", "M4 19h16", "M8 5v14"],
-        // boxes: installed packs
-        packs: ["M12 3 3.5 7.5 12 12l8.5-4.5z", "M3.5 7.5v9L12 21l8.5-4.5v-9", "M12 12v9"],
-        // a play triangle inside a ring: work that is running
-        jobs: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M10 8.5 15.5 12 10 15.5z"],
-        // a funnel with drops below it: sources in, claims out
-        pipeline: ["M4 5h16l-6 7v6l-4 2v-8z", "M17.5 17.5v.01", "M20.5 20.5v.01"],
-        // an inbox tray: what came in through the door
-        submissions: ["M3.5 13.5 6 5h12l2.5 8.5v5h-17z", "M3.5 13.5h4l1.5 2.5h6l1.5-2.5h4"],
-        // a pulse trace: what this installation has been doing
-        activity: ["M3 12h4l2.5-6 4 12 2.5-6h5"],
-        // two nodes joined, with the second doubled: an agent on the other
-        // end, and the console you drive it from
-        agents: [
-            "M6.5 9a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0",
-            "M14 15a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0",
-            "M11 10.5 14.5 13.5",
-            "M4 19h5",
-        ],
-        // a prompt caret
-        console: ["M3.5 5h17v14h-17z", "M7 10l2.5 2L7 14", "M12.5 14.5h4"],
-        // two nodes joined: an agent on the other end
-        connect: ["M6.5 9a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0", "M14 15a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0", "M11 10.5 14.5 13.5"],
-        // sliders, not a cog: these are preferences, not machinery
-        settings: ["M4 8h9", "M17 8h3", "M4 16h4", "M12 16h8", "M15 8a2 2 0 1 0-4 0a2 2 0 1 0 4 0", "M10 16a2 2 0 1 0-4 0a2 2 0 1 0 4 0"],
-        // an i in a ring
-        about: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M12 11v6", "M12 8v.01"],
-        // a globe with a horizon: the sites out there this install can read
-        sites: ["M12 3a9 9 0 1 0 9 9a9 9 0 1 0-9-9", "M3.5 10h17", "M3.5 14.5h17", "M12 3c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9", "M12 3C9.5 5.4 8.2 8.4 8.2 12s1.3 6.6 3.8 9"],
-        // a ruler with a measured span under it: the benchmark measures, it
-        // does not run — a stopwatch would promise the wrong thing
-        bench: ["M3 6h18v5H3z", "M7 6v2.5", "M11 6v3.5", "M15 6v2.5", "M19 6v3.5", "M4 15.5h16", "M4 14v3", "M20 14v3"],
-        // a lifebuoy-ish first-run marker
-        welcome: ["M12 3 14.4 9.1 21 9.6l-5 4.2 1.6 6.4L12 16.8 6.4 20.2 8 13.8l-5-4.2 6.6-.5z"],
-    };
-
-    const paths = $derived(PATHS[name] ?? []);
 </script>
 
-{#if paths.length}
-    <svg
-        class="nav-icon"
-        viewBox="0 0 24 24"
-        width="18"
-        height="18"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.6"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        focusable="false"
-    >
-        {#each paths as d (d)}
-            <path {d} />
-        {/each}
-    </svg>
-{:else}
-    <!-- Reserve the same box so a glyph-less destination does not shift the
-         label out of the column every other link lines up in. -->
-    <span class="nav-icon" aria-hidden="true"></span>
-{/if}
+<Icon {name} class="nav-icon" />

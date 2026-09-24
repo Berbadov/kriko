@@ -20,6 +20,7 @@
 # Regenerate deliberately, never as a side effect — `python
 # tools/relock.py` prints this file from the current environment, and
 # `src/app/tests/test_dependencies_are_locked.py` fails if the two disagree.
+# resolved-on: linux
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.1
