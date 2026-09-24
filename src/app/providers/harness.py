@@ -54,6 +54,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 import threading
 from collections.abc import Callable
@@ -196,11 +197,13 @@ class Harness:
     #: describes the TUI; `--model` belongs to `opencode run`. Set only with
     #: the docs to point at.
     model_unlisted: bool = False
-    #: What to offer in the model dropdown besides a free-text field. `None`
-    #: means "ask the CLI itself" (`models_for` knows how); a tuple means the
-    #: aliases the CLI documents. Either way the reader can always type past
-    #: the list — the CLI judges the name, not Kriko.
-    model_choices: tuple[str, ...] | None = None
+    #: Where this CLI's model names come from — never from Kriko. `"help"`
+    #: reads the names the `--model` line of `--help` quotes (Claude Code has
+    #: no `models` command, and its help is revised with every model it
+    #: ships); `"models"` runs `<cli> models` and reads its list. Empty means
+    #: the CLI offers no list and the field is free text. Either way the reader
+    #: can type past the list — the CLI judges the name, not Kriko.
+    model_source: str = ""
     #: One line saying what a valid name looks like, for the dropdown's hint.
     model_hint: str = ""
     #: Where to get it, in the reader's words. Shown when the CLI is missing,
@@ -264,8 +267,8 @@ KNOWN = (
         install_hint="winget install Anthropic.ClaudeCode",
         needs_account="a Claude subscription or API billing; log in once with an interactive `claude` session first",
         model_flag="--model",
-        model_choices=("opus", "sonnet", "haiku"),
-        model_hint="an alias (opus, sonnet, haiku) or a full name — the CLI judges it, not Kriko",
+        model_source="help",
+        model_hint="an alias or a full name, as `claude --help` names them — the CLI judges it, not Kriko",
         # `--strict-mcp-config` with no `--mcp-config` is zero MCP servers;
         # `--safe-mode` drops the rest of the reader's configuration — their
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
@@ -297,6 +300,7 @@ KNOWN = (
         structured=False,
         model_flag="--model",
         model_unlisted=True,
+        model_source="models",
         model_hint="provider/name, as `opencode models` lists them",
     ),
     Harness(
@@ -313,6 +317,7 @@ KNOWN = (
         required=("--output-format",),
         preferred=("--disable-slash-commands",),
         model_flag="--model",
+        model_source="models",
         model_hint="an id from `agy models`",
         capabilities=("headless", "streaming", "web-search", "model-selection"),
     ),
@@ -485,33 +490,57 @@ def declared(executable: str) -> frozenset[str]:
 #: on a line — headers, counts, blank lines — is not a model and is dropped.
 _MODEL_LINE = re.compile(r"^\s*([^/\s]+/[^/\s#]+?)\s*(?:#.*)?$")
 
+#: A name quoted in help text: `'opus'`, `"claude-fable-5"`.
+_QUOTED = re.compile(r"""['"`]([A-Za-z0-9][\w.:/\[\]-]*)['"`]""")
 
-def models_for(one: Harness) -> list[str]:
-    """The models this machine's copy of the CLI offers, or `[]`.
+#: How long a listing is trusted. A CLI's model list changes when the CLI is
+#: updated or the reader signs in, not between two clicks, and asking it costs
+#: a process start that `agy models` stretches to seconds — which, paid on
+#: every read *and every save* of the Agents screen, is what made choosing a
+#: model feel like the app had hung. An empty answer is trusted for less: it
+#: is usually "not signed in yet", which the reader is about to fix.
+MODELS_TTL = 600.0
+_MODELS_TTL_EMPTY = 60.0
+_MODELS: dict[tuple[str, str, float], tuple[float, list[str]]] = {}
+_MODELS_LOCK = threading.Lock()
+_ASKING: dict[str, threading.Lock] = {}
 
-    Asked, never assumed: `agy models` and `opencode models` list what is
-    actually installed and authenticated, while the documented claude aliases
-    are offered as-is with the CLI judging the name at run time. Anything
-    failing — missing CLI, slow answer, unparseable output — reads as "no
-    list", and the dropdown degrades to a free-text field with the hint. A
-    model list must never be why a run does not start.
+
+def _from_help(text: str, flag: str) -> list[str]:
+    """The names the `flag` entry of a `--help` quotes, in the order it quotes them.
+
+    Only that entry: the rest of the help quotes other things (`'text'`,
+    `'stream-json'`), and a format name offered as a model is the kind of
+    wrong that reads as right. The entry runs from the flag's own line to the
+    next line that starts another option.
     """
-    if one.unusable:
-        return []
-    if one.model_choices is not None:
-        return list(one.model_choices)
-    executable = locate(one)
-    if not executable:
-        return []
+    out: list[str] = []
+    lines = text.splitlines()
+    for at, line in enumerate(lines):
+        if not re.match(rf"^\s*(?:-\w,\s*)?{re.escape(flag)}\b", line):
+            continue
+        block = [line]
+        for following in lines[at + 1:]:
+            if re.match(r"^\s*-", following) or not following.strip():
+                break
+            block.append(following)
+        for name in _QUOTED.findall(" ".join(block)):
+            if name not in out:
+                out.append(name)
+        break
+    return out
+
+
+def _from_models_command(one: Harness, executable: str) -> list[str]:
     try:
         done = subprocess.run(  # noqa: S603 - fixed executable, no shell
-            [executable, "models"], capture_output=True, text=True, timeout=30,
+            [executable, "models"], capture_output=True, text=True, timeout=20,
         )
-    except Exception:  # noqa: BLE001 — see the docstring
+    except Exception:  # noqa: BLE001 — see `models_for`
         return []
     if done.returncode != 0:
         return []
-    out = []
+    out: list[str] = []
     for line in (done.stdout or "").splitlines():
         if one.id == "antigravity-cli":
             cell = line.split("\t")[0].split()[0] if line.split() else ""
@@ -522,6 +551,83 @@ def models_for(one: Harness) -> list[str]:
         if match and match.group(1) not in out:
             out.append(match.group(1))
     return out
+
+
+def _stamp(executable: str) -> float:
+    """When this binary last changed — an update is a new cache entry."""
+    try:
+        return os.stat(executable).st_mtime
+    except OSError:
+        return 0.0
+
+
+def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
+    """The models this machine's copy of the CLI offers, or `[]`.
+
+    Asked, never assumed: `agy models` and `opencode models` list what is
+    actually installed and authenticated, and `claude --help` names the
+    aliases its own build knows — a list written here would have gone stale
+    the day a model shipped, which is exactly how it did. Anything failing —
+    missing CLI, slow answer, unparseable output — reads as "no list", and the
+    dropdown degrades to a free-text field with the hint. A model list must
+    never be why a run does not start.
+
+    Cached per binary (path and modification time, so an updated CLI is asked
+    again) for `MODELS_TTL`; `fresh` asks regardless.
+    """
+    if one.unusable or not one.model_source:
+        return []
+    executable = locate(one)
+    if not executable:
+        return []
+    key = (one.id, executable, _stamp(executable))
+    # One ask per CLI at a time: a screen read that lands while the startup
+    # warm-up is still asking waits for that answer instead of asking again.
+    with _MODELS_LOCK:
+        asking = _ASKING.setdefault(one.id, threading.Lock())
+    with asking:
+        with _MODELS_LOCK:
+            cached = _MODELS.get(key)
+        if cached and not fresh:
+            at, names = cached
+            if time.monotonic() - at < (MODELS_TTL if names else _MODELS_TTL_EMPTY):
+                return list(names)
+        if one.model_source == "help":
+            # `--help` is cached for the process, and a binary that changed
+            # under it (an update) or a reader pressing Re-ask needs it read
+            # again — its flags as much as its names.
+            with _MODELS_LOCK:
+                changed = any(k[:2] == key[:2] and k != key for k in _MODELS)
+            if fresh or changed:
+                _HELP.pop(executable, None)
+                _DECLARED.pop(executable, None)
+            names = _from_help(helptext(executable), one.model_flag)
+        else:
+            names = _from_models_command(one, executable)
+        with _MODELS_LOCK:
+            _MODELS[key] = (time.monotonic(), names)
+    return list(names)
+
+
+def models_for_each(harnesses: list[Harness], *, fresh: bool = False) -> dict[str, list[str]]:
+    """`models_for` over several CLIs at once — concurrently, because each is a
+    process start and a screen showing three harnesses should wait for the
+    slowest one, not for their sum."""
+    if not harnesses:
+        return {}
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=len(harnesses)) as pool:
+        lists = pool.map(lambda one: models_for(one, fresh=fresh), harnesses)
+        return dict(zip((one.id for one in harnesses), lists, strict=True))
+
+
+def warm_models() -> None:
+    """Ask every installed CLI for its list once, in the background, so the
+    first visit to the Agents screen does not pay for it."""
+    threading.Thread(
+        target=lambda: models_for_each(available()), name="kriko-models-warm", daemon=True,
+    ).start()
 
 
 def command_for(one: Harness, *, model: str = "") -> list[str]:

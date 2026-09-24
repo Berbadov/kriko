@@ -119,3 +119,19 @@ def no_attaching_to_the_readers_own_engine(monkeypatch):
 
     monkeypatch.setattr(client, "DEFAULT_PORTS", ())
     monkeypatch.delenv("KRIKO_URL", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_test_asks_a_real_provider_for_its_models(monkeypatch):
+    """A test may not call a vendor's `/models` with whatever key it set.
+
+    Same shape as the guards above. `/api/prefs` starts a background
+    `modeldiscovery.refresh` whenever a completion key is present, and plenty
+    of tests set a fake one — which would send it to api.openai.com. A test
+    that wants discovery calls `modeldiscovery.ask` with its own `opener`.
+    """
+    from app import modeldiscovery
+
+    monkeypatch.setattr(modeldiscovery, "refresh", lambda: {})
+    monkeypatch.setattr(modeldiscovery, "_refresh_in_background", lambda: None)
+    monkeypatch.setattr(modeldiscovery, "_CACHE", {})

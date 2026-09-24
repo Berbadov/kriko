@@ -1570,10 +1570,92 @@ def test_the_planes_endpoint_names_missing_clis_with_a_way_out(tmp_path, monkeyp
 # as if it were right; the resolver below exists so it never is.
 
 
-def test_claude_and_agy_models_come_from_the_clis_themselves():
-    """Aliases for claude (documented), a live list for agy (measured)."""
+#: `claude --help`'s own `--model` entry, 2.1.281, verbatim.
+_CLAUDE_HELP = """
+  --fallback-model <model>              Enable automatic fallback to specified
+                                        model(s) when the default model is
+                                        overloaded or not available.
+  --model <model>                       Model for the current session. Provide
+                                        an alias for the latest model (e.g.
+                                        'fable', 'opus', or 'sonnet') or a
+                                        model's full name (e.g.
+                                        'claude-fable-5').
+  -n, --name <name>                     Set a display name for this session
+  --output-format <format>              "text", "json" or "stream-json"
+"""
+
+
+def test_claude_models_are_read_off_its_own_help_not_written_here(monkeypatch):
+    """No list lives in Kriko: a written one offered `haiku` after the CLI had
+    stopped naming it, and never offered the model the CLI did name."""
     claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
-    assert harness_mod.models_for(claude) == ["opus", "sonnet", "haiku"]
+    monkeypatch.setattr(harness_mod, "locate", lambda one: "/usr/bin/claude")
+    monkeypatch.setattr(harness_mod, "helptext", lambda _: _CLAUDE_HELP)
+    monkeypatch.setattr(harness_mod, "_MODELS", {})
+    assert harness_mod.models_for(claude) == ["fable", "opus", "sonnet", "claude-fable-5"]
+
+
+def test_an_updated_or_reasked_claude_has_its_help_read_again(monkeypatch):
+    """`--help` is cached for the process; an update must not keep old names."""
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    reads = []
+
+    def read(executable):
+        if executable not in harness_mod._HELP:
+            reads.append(executable)
+            harness_mod._HELP[executable] = _CLAUDE_HELP
+        return harness_mod._HELP[executable]
+
+    stamp = [1.0]
+    monkeypatch.setattr(harness_mod, "locate", lambda one: "/usr/bin/claude")
+    monkeypatch.setattr(harness_mod, "helptext", read)
+    monkeypatch.setattr(harness_mod, "_stamp", lambda _: stamp[0])
+    monkeypatch.setattr(harness_mod, "_MODELS", {})
+    monkeypatch.setattr(harness_mod, "_HELP", {})
+    monkeypatch.setattr(harness_mod, "_DECLARED", {})
+    harness_mod.models_for(claude)
+    harness_mod.models_for(claude)
+    assert len(reads) == 1, "a cached list asked again"
+    stamp[0] = 2.0
+    harness_mod.models_for(claude)
+    assert len(reads) == 2, "an updated binary kept its old help"
+    harness_mod.models_for(claude, fresh=True)
+    assert len(reads) == 3, "Re-ask did not read the help again"
+
+
+def test_a_help_with_no_model_entry_names_nothing():
+    assert harness_mod._from_help("  --output-format <f>  'text' or 'json'", "--model") == []
+
+
+def test_model_lists_are_cached_and_asked_concurrently(monkeypatch):
+    """The Agents screen paid every CLI's `models` on every read and every
+    save, one after another: two 3-second CLIs made a dropdown take 6s."""
+    import time as clock
+
+    calls = []
+
+    def slow(one, executable):
+        calls.append(one.id)
+        clock.sleep(0.3)
+        return [f"{one.id}/x"]
+
+    two = [h for h in harness_mod.KNOWN if h.model_source == "models"]
+    assert len(two) >= 2
+    monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
+    monkeypatch.setattr(harness_mod, "_from_models_command", slow)
+    monkeypatch.setattr(harness_mod, "_MODELS", {})
+    started = clock.monotonic()
+    first = harness_mod.models_for_each(two)
+    assert clock.monotonic() - started < 0.3 * len(two)
+    assert first == {h.id: [f"{h.id}/x"] for h in two}
+    harness_mod.models_for_each(two)
+    assert len(calls) == len(two), "the second read asked the CLIs again"
+    harness_mod.models_for_each(two, fresh=True)
+    assert len(calls) == 2 * len(two)
+
+
+def test_agy_models_come_from_the_cli_itself():
+    """A live list for agy (measured)."""
     agy = next(h for h in harness_mod.KNOWN if h.id == "antigravity-cli")
     if not harness_mod.locate(agy):
         pytest.skip("no agy on this machine")

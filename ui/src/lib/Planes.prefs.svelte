@@ -1,6 +1,7 @@
 <script lang="ts">
     import Async from "./Async.svelte";
     import Failure from "./Failure.svelte";
+    import HarnessLlm from "./HarnessLlm.svelte";
     import { api } from "./api";
     import type { Costs, Prefs } from "./types";
 
@@ -39,6 +40,21 @@
         }
     }
 
+    // After signing in to a CLI or updating it: its list is cached for ten
+    // minutes, because asking costs a process start per CLI.
+    let asking = $state(false);
+    async function reask() {
+        asking = true;
+        failure = null;
+        try {
+            prefs = Promise.resolve(await api.prefs(true));
+        } catch (thrown) {
+            failure = thrown;
+        } finally {
+            asking = false;
+        }
+    }
+
     // Typed out of the payload rather than inline: `Async`'s snippet hands
     // the body an `unknown`, and a cast at the point of use would be a cast
     // per row instead of one per screen.
@@ -52,6 +68,13 @@
     const harnessesOf = (data: Prefs) => data?.harnesses ?? [];
     const unusableOf = (data: Prefs) => data?.unusable ?? [];
     const searchersOf = (data: Prefs) => data?.search_providers ?? [];
+    const offeredOf = (data: Prefs) => data?.models?.offered ?? [];
+    // The reason beside the name, because "why can I not pick Opus" has an
+    // answer and a bare id withholds it.
+    const paidLabel = (data: Prefs, id: string) => {
+        const one = offeredOf(data).find((row) => row.id === id);
+        return one ? `${one.label}${one.unusable ? ` — ${one.unusable}` : ""}` : id;
+    };
     const spentOf = (data: Costs) => data?.spent?.planes ?? [];
 
     const money = (usd: number | null | undefined) =>
@@ -110,44 +133,48 @@
                 {#each unusableOf(data) as one (one.id)}
                     <p class="meta">{one.label} is installed and not used: {one.why}</p>
                 {/each}
-                {#each harnessesOf(data) as one (one.id)}
-                    {#if one.llm_selectable}
-                        <label class="field">
-                            {one.label} LLM
-                            <input
-                                list={`p-harness-llms-${one.id}`}
+            </div>
+
+            {#if harnessesOf(data).length}
+                <div class="llms" role="group" aria-labelledby="p-llms-head">
+                    <div class="llms-head">
+                        <span id="p-llms-head" class="label">Each agent's LLM</span>
+                        <span class="meta">as that agent's own CLI names them</span>
+                        {#if harnessesOf(data).some((one) => one.llm_selectable)}
+                            <button class="ghost small" disabled={asking} onclick={reask}>
+                                {asking ? "Asking…" : "Re-ask the CLIs"}
+                            </button>
+                        {/if}
+                    </div>
+                    {#each harnessesOf(data) as one (one.id)}
+                        <label for={`p-llm-${one.id}`}>{one.label}</label>
+                        {#if one.llm_selectable}
+                            <HarnessLlm
+                                id={`p-llm-${one.id}`}
+                                label={`${one.label} LLM`}
+                                llms={one.llms ?? []}
                                 value={one.llm ?? ""}
-                                placeholder="CLI default"
-                                onchange={(event) =>
+                                hint={one.llm_hint}
+                                onchange={(value) =>
                                     save({
-                                        [`harness_model_${one.id.replace(/-/g, "_")}`]:
-                                            event.currentTarget.value,
+                                        [`harness_model_${one.id.replace(/-/g, "_")}`]: value,
                                     })}
                             />
-                        </label>
-                        <datalist id={`p-harness-llms-${one.id}`}>
-                            {#each one.llms ?? [] as name (name)}
-                                <option value={name}>{name}</option>
-                            {/each}
-                        </datalist>
-                        <p class="meta">
-                            {#if (one.llms ?? []).length}
-                                Offered by the CLI itself; anything else typed is
-                                sent as-is and judged by the CLI.
-                            {:else}
-                                The CLI named nothing — type any {one.llm_hint || "name"}.
-                            {/if}
-                            {#if one.llm_hint && (one.llms ?? []).length}{one.llm_hint}.{/if}
-                            Empty uses the CLI default.
-                        </p>
-                    {:else}
-                        <p class="meta">
-                            {one.label} runs its own default — Kriko has no
-                            verified per-run switch for it yet.
-                        </p>
-                    {/if}
-                {/each}
-            </div>
+                            <span class="meta">
+                                {#if (one.llms ?? []).length}
+                                    {(one.llms ?? []).length} offered
+                                {:else}
+                                    none listed — Other… takes {one.llm_hint || "any name"}
+                                {/if}
+                            </span>
+                        {:else}
+                            <span class="meta wide-cell">
+                                runs its own default — no verified per-run switch yet
+                            </span>
+                        {/if}
+                    {/each}
+                </div>
+            {/if}
 
             <div class="field">
                 <label for="p-search">Search provider</label>
@@ -171,13 +198,16 @@
             </div>
 
             <div class="field">
-                <label for="p-llm">LLM</label>
-                <input
+                <label for="p-llm">Paid-plane LLM</label>
+                <HarnessLlm
                     id="p-llm"
-                    list="p-llms"
-                    value={data.chosen?.llm_model ?? ''}
-                    placeholder={data.models?.default ?? ''}
-                    onchange={(event) => save({ llm_model: event.currentTarget.value })}
+                    label="Paid-plane LLM"
+                    llms={offeredOf(data).map((one) => one.id)}
+                    labelOf={(id) => paidLabel(data, id)}
+                    value={data.chosen?.llm_model ?? ""}
+                    defaultLabel={`Default (${data.models?.default ?? "the endpoint's"})`}
+                    hint="any name your completion endpoint accepts"
+                    onchange={(value) => save({ llm_model: value })}
                 />
                 <p class="meta">
                     {data.models?.note ?? ''} Currently: <code>{data.models?.current ?? '—'}</code>.
@@ -278,6 +308,44 @@
 <style>
     .field {
         margin-block: 0.9rem;
+    }
+    .field :global(select) {
+        align-self: flex-start;
+    }
+    .llms {
+        display: grid;
+        grid-template-columns: max-content max-content 1fr;
+        gap: var(--s-2) var(--s-4);
+        align-items: center;
+        margin-block: 0.9rem;
+    }
+    .llms-head {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: var(--s-3);
+        align-items: baseline;
+    }
+    .llms-head button {
+        margin-inline-start: auto;
+    }
+    .llms .label,
+    .llms label {
+        font-size: var(--t-xs);
+        color: var(--dim);
+    }
+    .llms .label {
+        font-weight: 600;
+    }
+    .wide-cell {
+        grid-column: 2 / -1;
+    }
+    @media (max-width: 640px) {
+        .llms {
+            grid-template-columns: 1fr;
+        }
+        .wide-cell {
+            grid-column: auto;
+        }
     }
     h4 {
         margin-block: 1rem 0.4rem;

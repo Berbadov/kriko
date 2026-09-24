@@ -1,6 +1,8 @@
 <script lang="ts">
     import { api } from "./api";
     import Failure from "./Failure.svelte";
+    import HarnessLlm from "./HarnessLlm.svelte";
+    import { copyText, copyWord } from "./clipboard";
     import { follow, stateWord } from "./jobs";
     import { hashWith } from "./router";
     import type { Job, ResearchPlane } from "./types";
@@ -89,12 +91,7 @@
         .catch(() => (planes = []));
 
     async function copy(what: string, text: string) {
-        try {
-            await navigator.clipboard.writeText(text);
-            copied = what;
-        } catch {
-            copied = ""; // a denied clipboard is not an error worth a banner
-        }
+        copied = (await copyText(text)) ? what : `${what}:blocked`;
     }
 </script>
 
@@ -157,18 +154,17 @@
                 </label>
                 {#if chosenHarness?.llm_selectable}
                     <label>LLM
-                        <input
-                            list="brief-harness-llms"
+                        <HarnessLlm
+                            label="LLM"
+                            llms={chosenHarness.llms ?? []}
                             bind:value={llm}
+                            hint={chosenHarness.llm_hint}
                             disabled={!!job && !job.done}
-                            placeholder={chosenHarness.llm || "CLI default"}
+                            defaultLabel={chosenHarness.llm
+                                ? `Use preference (${chosenHarness.llm})`
+                                : "CLI default"}
                         />
                     </label>
-                    <datalist id="brief-harness-llms">
-                        {#each chosenHarness.llms ?? [] as name (name)}
-                            <option value={name}>{name}</option>
-                        {/each}
-                    </datalist>
                 {/if}
                 {#if harnessPlane.reason}<p class="meta">{harnessPlane.reason}</p>{/if}
                 <button
@@ -179,12 +175,12 @@
                 </button>
             {/if}
             <button class="ghost" onclick={() => copy("brief", brief)}>
-                {copied === "brief" ? "Copied" : "Copy the brief"}
+                {copied === "brief" ? copyWord(true) : copied === "brief:blocked" ? copyWord(false) : "Copy the brief"}
             </button>
             <a class="tab" href={hashWith({}, "connect")}>Connect an agent</a>
             {#if queries.length}
                 <button class="ghost" onclick={() => copy("queries", queries.join("\n"))}>
-                    {copied === "queries" ? "Copied" : `Copy ${queries.length} queries`}
+                    {copied === "queries" ? copyWord(true) : copied === "queries:blocked" ? copyWord(false) : `Copy ${queries.length} queries`}
                 </button>
             {/if}
         </div>

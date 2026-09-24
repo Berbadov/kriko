@@ -46,8 +46,10 @@ class PrefsWrite(BaseModel):
 
 
 @router.get("/prefs")
-def read_prefs(conn=Depends(get_app_state)) -> dict:
-    return prefs.choices(conn)
+def read_prefs(fresh: bool = False, conn=Depends(get_app_state)) -> dict:
+    """`fresh` re-asks each CLI for its model list instead of using the cache —
+    the button a reader presses after signing in or updating a CLI."""
+    return prefs.choices(conn, fresh=fresh)
 
 
 @router.put("/prefs")
