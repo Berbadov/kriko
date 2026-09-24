@@ -1,0 +1,3 @@
+# Store text as LF, whatever the editor wrote. Windows editors writing CRLF
+# turned one-line changes into whole-file conflicts (docs/DOCTRINE.md, section 6).
+* text=auto eol=lf

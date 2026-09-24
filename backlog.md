@@ -1351,14 +1351,21 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 quoted, **Where**, **Done when**, **Not this**, **Owner**.
 `test_every_new_backlog_item_says_when_it_is_done` enforces the **Done when**.*
 
-### B141 — Research limits as sliders, on every research button `[G5]`
+### B141 — "Sliders on every research button": sources, effort, context `[G5]`
 **Asked:** "the page count limiter, effort limiter, context limiter slides for
 agent research", and "sliders on every research button" (2026-09-24).
 **Where:** beside every control that starts a research run, visible without
-expanding anything: Agents → each plane's **Research the top N**; Knowledge → a
-subject's **Research** → **Run my agent on this**; Activity → **Have my agent
-write it**; and any research button added later (a test fails if a component
-that calls a research endpoint does not render the limits).
+expanding anything:
+- Agents → each plane's **Research the top N** (`ui/src/lib/Planes.svelte`);
+- Knowledge → a subject's **Research** → **Run my agent on this**
+  (`ui/src/lib/Brief.svelte`);
+- Activity → Runs → **Have my agent write it** (`ui/src/routes/Jobs.svelte`),
+  which today sits inside the collapsed "Start a new pack": the button and its
+  sliders move out of it, or the section opens by default;
+- the browser extension's research buttons (`extension/hover_lite/hover_lite.js`,
+  posting to `/api/extension/research-plane` and `/api/research`);
+- any research button added later. A test fails if a component in `ui/src` or
+  `extension/` that calls a research endpoint does not render the limits.
 **Done when:** each of those buttons has three sliders (sources to read, effort,
 context size), each shows its current value, and a run started after moving
 them shows the chosen values in its job log and actually stops at them: at most
@@ -1368,13 +1375,23 @@ extraction step reading at most that much context per source.
 effort pick on the agent card), or a control inside a collapsed section (today's
 "This run's choices"). And not Settings only: the reader chose per button.
 **Owner:** free.
-**Found 2026-09-24:** sources exist as chips plus a number box, collapsed;
-effort is a per-agent dropdown and `AgendaRunRequest` takes no per-run effort;
-context size has no control and no per-run parameter at all (it exists only
-inside the benchmark's protocols, `app/protocols.py`). The request was never
-written into this file, which is how all three drifted.
+**Found 2026-09-24** (checked against the code by a second agent):
+- *Sources:* the "How deep" chips (3/7/15, `ui/src/lib/Scale.svelte`), with the
+  exact number behind a "Set an exact number" button. The run does honour it.
+- *Effort:* only a per-agent dropdown (`ui/src/lib/Agents.prefs.svelte`).
+  Neither `AgendaRunRequest` (`routers/research.py`) nor `ResearchRequest`
+  (`routers/jobs.py`) takes a per-run effort.
+- *Context:* **exists and is ignored.** `app/scale.py` bundles `context_chars`
+  into every preset (Quick 8,000 / Standard 12,000 / Deep 20,000) and
+  `scale.applied()` accepts an override, but `tasks.py` passes only
+  `max_documents` on; the API plane's context comes from `app/protocols.py` or
+  `kriko/research/base.py`'s default of 12,000. So "How deep" shows a context
+  size the run does not use: wire that through, do not add a second parameter.
+- *Extension:* `ExtensionResearchRequest` (`routers/extension.py`) takes none of
+  the three.
+- The request was never written into this file, which is how all three drifted.
 
-### B142 — CI on the reader's Windows machine, through a self-hosted runner `[G5]`
+### B142 — "Haven't worked the first try": CI on the reader's Windows machine `[G5]`
 **Asked:** implied by "many implementations haven't worked the first try"
 (2026-09-24); the doctrine's rule 2.4 needs it.
 **Where:** GitHub → the repo's Actions; `ci.yml` and `desktop.yml` restored.
@@ -1390,7 +1407,7 @@ then free for the workflow edits.
 account's billing block still lets jobs start on one is the first thing to find
 out; if it does not, this item says so and stops.
 
-### B143 — Journey checks: the end result of each reader task, asserted `[G5]`
+### B143 — "Not giving the final result": journey checks that assert it `[G5]`
 **Asked:** "some buttons do something but not working good or not giving the
 final result" (2026-09-24).
 **Where:** `tools/journeys/`, run by `tools/walk.sh --journeys`, and on the
