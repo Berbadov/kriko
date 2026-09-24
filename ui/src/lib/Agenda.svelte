@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "./api";
+    import { copyText, copyWord } from "./clipboard";
     import { demandWord, kindTone, kindWord, promptFor, rowName } from "./agenda";
     import type { Agenda, AgendaRow } from "./types";
 
@@ -20,6 +21,7 @@
     let data = $state<Agenda | null>(null);
     let failed = $state(false);
     let copied = $state("");
+    let blocked = $state("");
 
     // Tolerant on purpose: an agenda is a head start, not a prerequisite. A
     // screen that could not compute one must still connect a harness.
@@ -33,12 +35,9 @@
         `${row.kind} ${row.subject_id} ${row.claim_id ?? ""} ${row.identity ?? ""}`;
 
     async function copy(row: AgendaRow) {
-        try {
-            await navigator.clipboard.writeText(promptFor(row));
-            copied = keyOf(row);
-        } catch {
-            copied = ""; // a denied clipboard is not an error worth a banner
-        }
+        const ok = await copyText(promptFor(row));
+        copied = ok ? keyOf(row) : "";
+        blocked = ok ? "" : keyOf(row);
     }
 </script>
 
@@ -69,8 +68,12 @@
                     </div>
                     <p class="meta">{row.why}</p>
                     <button class="link-ish" onclick={() => copy(row)}>
-                        {copied === keyOf(row) ? "Copied" : "Copy as a prompt"}
+                        {copied === keyOf(row) ? copyWord(true)
+                            : blocked === keyOf(row) ? copyWord(false) : "Copy as a prompt"}
                     </button>
+                    {#if blocked === keyOf(row)}
+                        <textarea class="copy-fallback" readonly rows="4">{promptFor(row)}</textarea>
+                    {/if}
                 </li>
             {/each}
         </ul>
@@ -86,3 +89,13 @@
         </p>
     {/if}
 </article>
+
+<style>
+    .copy-fallback {
+        display: block;
+        width: 100%;
+        margin-top: 0.4rem;
+        font: inherit;
+        font-size: 0.85em;
+    }
+</style>

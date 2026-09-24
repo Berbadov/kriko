@@ -6,6 +6,50 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-23 — the Agents screen, pressed in a browser
+
+*"Set a runner and check each function/button is working as intended and is
+fast. Writing LLM names by ourselves instead of pulling from the harnesses."*
+
+**A runner.** `tools/walk.sh` + `tools/walk/walk.mjs`: every screen the rail
+lists, every button on it, in a real Chromium against the real server on a
+throwaway home, timed. See CONTRIBUTING. Its runs over the 14 screens measured
+the slowness below and found the dead copy buttons.
+
+**LLM names come from the CLIs.** Claude Code's list was a tuple in
+`harness.py` — `opus, sonnet, haiku` — while the installed CLI names
+`fable, opus, sonnet` and `claude-fable-5` in its own `--model` help. It is read
+off that help now (`model_source="help"`); agy and opencode keep asking their
+`models` command. The paid plane got the same treatment: `modelcatalogue.
+offered` always took a `discovered` mapping that nothing passed, so
+`app/modeldiscovery.py` asks each keyed provider's `GET /models` (in the
+background, cached an hour; a settings page never waits on it).
+
+**Fast.** `/api/prefs` and `/api/research-planes` ran every CLI's `models`
+serially on every read *and every save*: with two installed CLIs, choosing a
+dropdown value took 6 s. Now cached per binary (path + mtime, ten minutes),
+asked concurrently, warmed at startup, and shared by concurrent callers: 8 ms
+after warm-up. **Re-ask the CLIs** forces a fresh ask.
+
+**A picker, not a text box.** One `HarnessLlm` select — the CLI's names,
+"CLI default", "Other…" for anything else — replaces three input+datalist
+copies (Agents/Settings, the run card, the brief), and the paid-plane LLM uses
+it too. The per-agent rows are a compact grid.
+
+**Benchmark.** Its LLM chips were only the paid catalogue; the harness CLIs'
+names are chips now too. And the sweep crossed every LLM with every plane, so
+`opus` went to the completion endpoint and `gpt-4o-mini` to `claude --model`;
+`bench.pairs` runs each name on the plane that names it (unknown names still
+sweep every plane) and the estimate counts the same pairs.
+
+**Copy buttons.** Five of them swallowed a refused clipboard and changed
+nothing on screen — the walk found 19 dead "Copy as a prompt" buttons on
+Agents. One `copyText` helper falls back to `execCommand("copy")` and the
+button says "Clipboard blocked" when both fail; the agenda row shows the text.
+
+Not mine and still red on the base: `test_brand_icon.py`'s two tests (the
+committed master is 512 px, the test wants 1024).
+
 ### 2026-09-19 — per-harness LLMs, benchmark buttons, provider self-test, site activation
 
 Four reader items, each finished to the mechanism:

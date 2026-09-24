@@ -90,3 +90,6 @@ build/
 # test_every_tracked_path_is_checkoutable_on_windows_and_macos. Ignored by
 # their literal bytes so no `git add -A` can pick one up again.
 0¤d
+
+# tools/walk.sh output
+.walk/

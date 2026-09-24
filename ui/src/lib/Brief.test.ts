@@ -150,9 +150,11 @@ describe("Brief", () => {
         }) as typeof fetch;
         try {
             render(Brief, PROPS);
-            const box = (await screen.findByPlaceholderText("CLI default")) as HTMLInputElement;
+            // A select of what the CLI named, not a text box to type into.
+            const box = (await screen.findByRole("combobox", { name: "LLM" })) as HTMLSelectElement;
+            expect([...box.options].map((one) => one.value)).toContain("sonnet");
             box.value = "sonnet";
-            box.dispatchEvent(new Event("input", { bubbles: true }));
+            box.dispatchEvent(new Event("change", { bubbles: true }));
             (await screen.findByRole("button", { name: "Run my agent on this" })).click();
             await waitFor(() =>
                 expect(

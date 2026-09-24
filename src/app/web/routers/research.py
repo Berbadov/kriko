@@ -103,6 +103,7 @@ def list_planes(
             # even drivable. A model dropdown without this is a guess with
             # a text field — the reader asked for Sonnet vs Haiku vs Opus
             # *by name*, and the names live with the CLI, not in Kriko.
+            lists = harness_mod.models_for_each(installed)
             row["harnesses"] = [
                 {
                     "id": h.id,
@@ -114,7 +115,7 @@ def list_planes(
                     # may not name a pack's identity keys, and one of them
                     # is "model" (see SERVED_AS in routers/bench.py).
                     "llm": prefs.for_harness(conn, h.id),
-                    "llms": harness_mod.models_for(h),
+                    "llms": lists.get(h.id, []),
                     "llm_hint": h.model_hint,
                     "llm_selectable": bool(h.model_flag),
                 }

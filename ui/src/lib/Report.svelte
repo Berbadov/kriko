@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from "./api";
+    import { copyText } from "./clipboard";
     import ClaimCard from "./ClaimCard.svelte";
     import type { Mode } from "./mode";
     import {
@@ -145,14 +146,9 @@
 
     async function handOver() {
         const text = asMarkdown(result, { heading, notes, handled });
-        try {
-            await navigator.clipboard.writeText(text);
-            copied = "Copied as Markdown.";
-            fallback = "";
-        } catch {
-            copied = "";
-            fallback = text;
-        }
+        const ok = await copyText(text);
+        copied = ok ? "Copied as Markdown." : "";
+        fallback = ok ? "" : text;
     }
 </script>
 

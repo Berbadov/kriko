@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
+    import { copyText, copyWord } from "../lib/clipboard";
     import Failure from "../lib/Failure.svelte";
     import type { Adapter, ExtensionLaunched, ExtensionStatus } from "../lib/types";
 
@@ -89,13 +90,8 @@
     }
 
     async function copy(text: string, what: string) {
-        try {
-            await navigator.clipboard.writeText(text);
-            copied = what;
-            setTimeout(() => (copied = ""), 2000);
-        } catch {
-            copied = ""; // a denied clipboard is not a failure of this page
-        }
+        copied = (await copyText(text)) ? what : `${what}:blocked`;
+        setTimeout(() => (copied = ""), 2500);
     }
 
     function ago(seconds: number | null): string {
@@ -283,7 +279,7 @@
                         Open the folder
                     </button>
                     <button onclick={() => copy(status!.path, "path")}>
-                        {copied === "path" ? "Copied" : "Copy the path"}
+                        {copied === "path" ? copyWord(true) : copied === "path:blocked" ? copyWord(false) : "Copy the path"}
                     </button>
                 {/if}
             </p>
@@ -306,7 +302,7 @@
                                     onclick={() => copy(browser.url, browser.id)}
                                     title="Copy — browsers refuse to open these from an app"
                                 >
-                                    {copied === browser.id ? "copied" : browser.url}
+                                    {copied === browser.id ? "copied" : copied === `${browser.id}:blocked` ? "clipboard blocked" : browser.url}
                                 </button>
                             {/each}
                         </span>

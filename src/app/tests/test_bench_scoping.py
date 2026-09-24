@@ -86,3 +86,20 @@ def test_only_the_paid_half_of_a_mixed_grid_is_priced(conn):
     paid_only = bench.estimate(conn, {"planes": "api"}, case_count=4)
     assert mixed["runs"] == 8
     assert mixed["usd"] == paid_only["usd"]
+
+
+def test_each_llm_runs_on_the_plane_that_names_it():
+    """`opus` is Claude Code's, `gpt-4o-mini` is the catalogue's: crossing
+    them made two runs per pair that could only fail. A name nobody owns
+    still sweeps every plane, and a plane left without one runs its default."""
+    from app import bench
+
+    owners = {"opus": {"harness"}, "gpt-4o-mini": {"api"}}
+    assert bench.pairs(["harness", "api"], ["opus", "gpt-4o-mini", "my-gw/x"], owners) == [
+        ("harness", "opus"), ("harness", "my-gw/x"),
+        ("api", "gpt-4o-mini"), ("api", "my-gw/x"),
+    ]
+    assert bench.pairs(["harness", "api"], ["opus"], owners) == [("harness", "opus"), ("api", "")]
+    assert bench.pairs(["api"], [], owners) == [("api", "")]
+    shape = bench.grid({"planes": "harness,api", "llms": "opus,gpt-4o-mini", "reps": 2}, 3, owners)
+    assert shape["runs"] == 3 * 2 * 2 and shape["paid_runs"] == 3 * 2
