@@ -1055,3 +1055,28 @@ def test_no_text_file_is_read_or_written_in_the_platform_encoding():
         'UTF-8. Pass encoding="utf-8", or read_bytes/write_bytes if the '
         "payload is not text:\n  " + "\n  ".join(offenders)
     )
+
+
+def test_every_new_backlog_item_says_when_it_is_done():
+    """docs/DOCTRINE.md §1: a request is written down with what counts as done.
+
+    Three requests of 2026-09 (the research limiters) never reached the
+    backlog and drifted into chips, a dropdown and nothing. From B141 on, an
+    item without a **Done when:** line is not an item yet. Earlier ones are
+    history and are left as they are.
+    """
+    import re
+
+    text = (REPO / "backlog.md").read_text(encoding="utf-8", errors="replace")
+    heads = list(re.finditer(r"^### B(\d+)\b.*$", text, re.M))
+    missing = []
+    for at, head in enumerate(heads):
+        if int(head.group(1)) < 141:
+            continue
+        end = heads[at + 1].start() if at + 1 < len(heads) else len(text)
+        body = text[head.end():end].split("\n## ", 1)[0]
+        if "**Done when:**" not in body:
+            missing.append(head.group(0).strip())
+    assert not missing, (
+        "backlog items with no **Done when:** line — write what the reader will "
+        "be able to see, per docs/DOCTRINE.md §1:\n  " + "\n  ".join(missing))

@@ -1,10 +1,30 @@
-## What changed
+## The request
 
-<!-- One or two sentences. The commit messages carry the detail. -->
+<!-- Backlog id, and the reader's words quoted. See docs/DOCTRINE.md §1. -->
+B### — "…"
 
-## Why
+**Done when:** <copied from the backlog entry>
 
-<!-- The problem, not the solution. If this fixes a bug, what produced the bug? -->
+## What was observed
+
+<!-- Not "tests pass". What you saw happen, on which screen, and where:
+     here (Linux, stand-in CLIs) or on the reader's Windows machine.
+     docs/DOCTRINE.md §2. -->
+
+**Checked on:** here / Windows
+
+<!-- A screenshot of the screen named in the entry's "Where"
+     (tools/walk.sh writes them to .walk/), or the journey check's output. -->
+
+## What it does not do yet
+
+<!-- Stated, never left for the reader to find. "Nothing" is an answer. -->
+
+## Review against the request
+
+<!-- A second agent that did not write this, reading only the backlog entry,
+     the proof above and the diff: does it do what was asked, where it was
+     asked? Paste its verdict. docs/DOCTRINE.md §5. -->
 
 ---
 
@@ -44,6 +64,12 @@ an unticked box is fine if you say why.
 ```
 paste test output here
 ```
+
+### Before merge
+
+- [ ] One request in this PR, and the branch is less than a day old (or rebased on `main`)
+- [ ] `tools/walk.sh` shows no errors on the screens this touches
+- [ ] Its journey check exists and passes (docs/DOCTRINE.md §4)
 
 ### Tracking
 

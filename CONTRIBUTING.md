@@ -43,7 +43,10 @@ failed to connect everywhere else.
 ## Before you start
 
 Read [`backlog.md`](backlog.md). It and [`done.md`](done.md) are the single source
-of truth for project status — not issues, not this file. Finished work moves from
+of truth for project status — not issues, not this file.
+
+Then read [`docs/DOCTRINE.md`](docs/DOCTRINE.md): how a request is written down,
+what "done" means, which test proves what, and what a PR must carry as proof. Finished work moves from
 one to the other with a date and a commit hash.
 
 ## Branches
