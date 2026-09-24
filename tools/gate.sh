@@ -73,7 +73,7 @@ if [ "$only" = all ] || [ "$only" = py ]; then
     # contain, each caught at build time on the Windows host -- hours after the
     # commit that caused it. It costs a second here.
     step "the four version strings agree"
-    "$PYTHON" tools/bump.py --show
+    "$PYTHON" tools/bump.py --show --strict
     # B138: ruff before pytest, so a lint failure is cheap to see and does not
     # wait behind a ~80s test run. Config (the curated rule set, and every
     # per-file ignore with its reason) lives in pyproject.toml, not here.
