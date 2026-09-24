@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count as plural } from "./plural";
     import Async from "./Async.svelte";
     import { api } from "./api";
     import type { Usage, UsageTotals } from "./types";
@@ -175,7 +176,7 @@
 
             {#if data.analyses.malformed}
                 <p class="state warn">
-                    {data.analyses.malformed} line(s) of the analyses log could not be
+                    {plural(data.analyses.malformed, "line")} of the analyses log could not be
                     read and were skipped. Nothing else is affected — the log is
                     append-only and a bad line costs only itself.
                 </p>

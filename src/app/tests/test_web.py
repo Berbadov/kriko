@@ -841,7 +841,7 @@ def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monk
 
     assert written.endswith("SKILL.md")
     assert "Only the expensive." in (tmp_path / "home" / ".claude/skills"
-                                     / "kriko-research" / "SKILL.md").read_text()
+                                     / "kriko-research" / "SKILL.md").read_text(encoding="utf-8")
 
 
 def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, monkeypatch):

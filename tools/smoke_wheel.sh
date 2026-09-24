@@ -35,6 +35,26 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# The same probe `tools/gate.sh` opens with, and for the same reason: a venv
+# puts its interpreter in `bin/` on POSIX and `Scripts/` on Windows, and a
+# worktree has no `.venv` of its own. This script asserted `bin/` — so on the
+# Windows host that builds every installer, the one check that looks at the
+# shipped artifact could not start. `gate.sh` exports PYTHON when it calls us,
+# so in the normal path this loop does not run; it is here for the direct
+# invocation the header documents.
+if [ -z "${PYTHON:-}" ]; then
+    main_checkout=""
+    if common_dir=$(git rev-parse --git-common-dir 2>/dev/null); then
+        main_checkout=$(cd "$common_dir/.." 2>/dev/null && pwd) || main_checkout=""
+    fi
+    for candidate in \
+        .venv/bin/python .venv/Scripts/python.exe \
+        ${main_checkout:+"$main_checkout/.venv/bin/python"} \
+        ${main_checkout:+"$main_checkout/.venv/Scripts/python.exe"}
+    do
+        if [ -x "$candidate" ]; then PYTHON="$candidate"; break; fi
+    done
+fi
 PYTHON="${PYTHON:-.venv/bin/python}"
 WORK="${TMPDIR:-/tmp}/kriko-smoke-$$"
 trap 'rm -rf "$WORK"' EXIT
@@ -42,7 +62,26 @@ trap 'rm -rf "$WORK"' EXIT
 say() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 bad() { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
-command -v uv >/dev/null 2>&1 || bad "uv is not on PATH; tools/setup.sh installs it"
+[ -x "$PYTHON" ] || bad "no interpreter at '$PYTHON'; see CONTRIBUTING.md or set PYTHON="
+
+# `uv` when it is there, pip and the stdlib when it is not. Requiring uv made
+# this gate unrunnable rather than strict: it is installed by `tools/setup.sh`,
+# which the Windows host never ran, so the leg exited before building anything
+# and took the three legs after it down with it. Nothing here needs uv's
+# resolver — we build one wheel and install it into an empty environment, both
+# of which pip and `venv` do — so the requirement was a convenience that had
+# become a stop.
+#
+# `--no-build-isolation` on the pip path because setuptools and wheel are
+# already in the interpreter this runs from, and the gate is offline by design;
+# isolation would go to the network for what is on the machine.
+if command -v uv >/dev/null 2>&1; then
+    BUILDER=uv
+else
+    BUILDER=pip
+    "$PYTHON" -c "import setuptools, wheel" 2>/dev/null \
+        || bad "neither uv nor setuptools+wheel are available; tools/setup.sh installs them"
+fi
 
 mkdir -p "$WORK"
 
@@ -58,7 +97,12 @@ rm -rf build src/*.egg-info
 echo "  build/ and src/*.egg-info"
 
 say "building the wheel"
-uv build --wheel --out-dir "$WORK/dist" >/dev/null
+if [ "$BUILDER" = uv ]; then
+    uv build --wheel --out-dir "$WORK/dist" >/dev/null
+else
+    "$PYTHON" -m pip wheel --no-deps --no-build-isolation \
+        --wheel-dir "$WORK/dist" . >/dev/null
+fi
 WHEEL=$(ls "$WORK"/dist/*.whl)
 echo "  $(basename "$WHEEL")"
 
@@ -92,16 +136,24 @@ print("  kriko and app are both in it, with the store's DDL and the "
 PY
 
 say "installing it somewhere with nothing else on the path"
-uv venv --python "$("$PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" \
-    "$WORK/venv" >/dev/null 2>&1
-VIRTUAL_ENV="$WORK/venv" uv pip install --quiet "$WHEEL" >/dev/null
+if [ "$BUILDER" = uv ]; then
+    uv venv --python "$("$PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" \
+        "$WORK/venv" >/dev/null 2>&1
+    VIRTUAL_ENV="$WORK/venv" uv pip install --quiet "$WHEEL" >/dev/null
+else
+    "$PYTHON" -m venv "$WORK/venv" >/dev/null
+fi
+# The new environment has the same split its parent does, and hardcoding one
+# half of it is the bug this script was carrying twice.
+if [ -d "$WORK/venv/Scripts" ]; then VENV_BIN="$WORK/venv/Scripts"; else VENV_BIN="$WORK/venv/bin"; fi
+[ "$BUILDER" = uv ] || "$VENV_BIN/python" -m pip install --quiet "$WHEEL" >/dev/null
 
 say "does it import"
 # `cd /` so the checkout's own `src/` cannot be what answers. Without this the
 # test passes on a tree that ships nothing at all.
-(cd / && "$WORK/venv/bin/python" -c "import kriko, app; print('  both import')")
+(cd / && "$VENV_BIN/python" -c "import kriko, app; print('  both import')")
 
 say "does the command run"
-(cd / && "$WORK/venv/bin/kriko" --version | sed 's/^/  /')
+(cd / && "$VENV_BIN/kriko" --version | sed 's/^/  /')
 
 printf '\n\033[32m── the shipped artifact works\033[0m\n'

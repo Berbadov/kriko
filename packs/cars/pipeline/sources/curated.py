@@ -83,7 +83,7 @@ class CuratedSource:
             log.debug("No curated sources for %s %s (looked at %s)", make, model, path)
             return []
 
-        entries = yaml.safe_load(path.read_text()) or []
+        entries = yaml.safe_load(path.read_text(encoding="utf-8")) or []
         if pending_only:
             entries = [e for e in entries if e.get("status", "pending") == "pending"]
         docs: list[Document] = []

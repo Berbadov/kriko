@@ -64,7 +64,7 @@ class Repair:
 def _load(path: Path) -> list[dict]:
     if not path.exists():
         return []
-    data = yaml.safe_load(path.read_text()) or []
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     return [r for r in data if isinstance(r, dict)] if isinstance(data, list) else []
 
 
@@ -229,13 +229,13 @@ def repair(data_dir: Path | None = None, dry_run: bool = False) -> Repair:
         if not (changed or fitment_changed) or dry_run:
             continue
 
-        header = "\n".join(l for l in path.read_text().splitlines()
+        header = "\n".join(l for l in path.read_text(encoding="utf-8").splitlines()
                            if l.startswith("#"))
         path.write_text((header + "\n\n" if header else "")
-                        + yaml.dump(final, allow_unicode=True, sort_keys=False))
+                        + yaml.dump(final, allow_unicode=True, sort_keys=False), encoding="utf-8")
         if fitment_changed:
             fitment_path.write_text(
-                yaml.dump(want_fitment, allow_unicode=True, sort_keys=False))
+                yaml.dump(want_fitment, allow_unicode=True, sort_keys=False), encoding="utf-8")
         result.rewritten.append(key)
 
     return result

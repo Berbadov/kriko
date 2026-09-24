@@ -38,7 +38,7 @@ def test_the_spec_uses_the_helper_rather_than_its_own_collection():
     """A second copy of this decision in the spec would drift silently."""
     spec = (
         Path(__file__).resolve().parents[3] / "packaging" / "kriko-sidecar.spec"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert "mcp_submodules()" in spec
     assert "collect_submodules(" not in spec, (
         "the spec collects submodules itself again — put the decision in "

@@ -18,6 +18,29 @@ from app.web.routers.agent import command_for
 from app.web.settings import Settings
 
 
+def agentconfig_module():
+    from app import agentconfig
+
+    return agentconfig
+
+
+def _redirect_roots(monkeypatch, home: Path) -> None:
+    """Point every root this module writes under at a throwaway directory.
+
+    One call rather than one `setattr` per root, because the thing being
+    prevented is a root that nobody remembered to redirect. `_home` was
+    redirected everywhere below and `%APPDATA%` was not, so on Windows the
+    Claude Desktop target read — and Connect would have written — the author's
+    real config, under a comment promising exactly that could not happen.
+    A fifth target tomorrow is covered by editing this function, or it is
+    covered already.
+    """
+    agentconfig = agentconfig_module()
+    monkeypatch.setattr(agentconfig, "_home", lambda: home)
+    monkeypatch.setenv("APPDATA", str(home / "AppData" / "Roaming"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
+
+
 def _client(tmp_path):
     return TestClient(
         create_app(
@@ -115,7 +138,17 @@ def test_a_frozen_app_advertises_itself_and_not_an_interpreter(monkeypatch, tmp_
     assert entry["command"].endswith("kriko-sidecar")
     assert entry["args"][0] == "--mcp"
     assert "-m" not in entry["args"], "a frozen app has no interpreter to pass -m to"
-    assert entry["env"] == {}, "PYTHONPATH means nothing to a frozen binary"
+    # `== {}` until B131, and it was the right assertion right up until the
+    # env block stopped being only PYTHONPATH. A frozen onefile on Windows
+    # needs `SystemRoot` to load its own DLLs and `TEMP` to unpack itself, both
+    # before `--mcp` is read — so an empty block there is the bug, not the
+    # goal, and the test below is the one that proves it. What must stay gone
+    # is the interpreter's own variable, and that is what this now says.
+    assert "PYTHONPATH" not in entry["env"], "PYTHONPATH means nothing to a frozen binary"
+    assert set(entry["env"]) <= set(agentconfig_module()._WINDOWS_ENV_KEYS), (
+        "a frozen binary is handed the platform's survival keys and nothing else: "
+        f"{sorted(entry['env'])}"
+    )
 
 
 def test_on_windows_the_written_command_carries_its_own_survival_kit(monkeypatch, tmp_path):
@@ -128,11 +161,20 @@ def test_on_windows_the_written_command_carries_its_own_survival_kit(monkeypatch
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setenv("SystemRoot", "C:\\Windows")
     monkeypatch.setenv("TEMP", "C:\\Users\\r\\AppData\\Local\\Temp")
+    monkeypatch.setenv("USERPROFILE", "C:\\Users\\r")
 
     interpreted = command_for(tmp_path / "knowledge.sqlite")
     assert interpreted["env"]["SystemRoot"] == "C:\\Windows"
     assert interpreted["env"]["TEMP"]
     assert "PYTHONPATH" in interpreted["env"], "still needed to find app.sidecar"
+    # Asserted here rather than only in the handshake test above, because the
+    # handshake can only fail on Windows and this branch is read on every host.
+    # The store resolves `Path.home() / ".kriko"` while it is still being
+    # imported, so a config missing this dies on the way up — no frame, no
+    # error the reader ever sees, just "cannot connect to the server: kriko".
+    assert interpreted["env"]["USERPROFILE"] == "C:\\Users\\r", (
+        "the sidecar resolves ~/.kriko at import and cannot start without a home"
+    )
 
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", "C:\\Program Files\\Kriko\\kriko-sidecar.exe")
@@ -144,23 +186,25 @@ def test_the_named_tools_exist_on_the_server():
     """The three names the UI shows are the three an agent cannot work without."""
     from app import mcp_server
 
-    body = Path(mcp_server.__file__).read_text()
+    body = Path(mcp_server.__file__).read_text(encoding="utf-8")
     for tool in ("research_brief", "coverage_gaps", "submit_findings"):
         assert f"def {tool}" in body, f"{tool} is advertised but not implemented"
 
 
 # ── the one-click path ──────────────────────────────────────────────────
 #
-# `_home` is redirected in every one of these. A test that wires the machine
-# it is running on would pass and then silently edit the author's own
-# ~/.claude.json, which is precisely the damage this feature has to be trusted
-# not to do.
+# Every root is redirected in every one of these, through `_redirect_roots`.
+# A test that wires the machine it is running on would pass and then silently
+# edit the author's own ~/.claude.json, which is precisely the damage this
+# feature has to be trusted not to do — and redirecting `_home` alone was not
+# enough to keep that promise on Windows, where `%APPDATA%` is a second root.
 
 
 def test_every_known_harness_is_listed_with_its_state(tmp_path, monkeypatch):
     from app import agentconfig
 
-    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
+    del agentconfig
+    _redirect_roots(monkeypatch, tmp_path / "home")
     body = _client(tmp_path).get("/api/agent-targets").json()
 
     assert {t["id"] for t in body["targets"]} >= {"claude-code", "cursor"}
@@ -177,7 +221,7 @@ def test_connecting_writes_a_config_the_harness_can_read(tmp_path, monkeypatch):
 
     assert client.post("/api/agent-targets/claude-code/connect").json()["state"] == "connected"
 
-    written = json.loads((home / ".claude.json").read_text())["mcpServers"]["kriko"]
+    written = json.loads((home / ".claude.json").read_text(encoding="utf-8"))["mcpServers"]["kriko"]
     assert written == client.get("/api/agent-config").json()["mcp_json"]["mcpServers"]["kriko"]
 
 
@@ -202,12 +246,12 @@ def test_a_config_the_reader_broke_is_refused_and_left_alone(tmp_path, monkeypat
 
     home = tmp_path / "home"
     home.mkdir()
-    (home / ".claude.json").write_text("{broken")
+    (home / ".claude.json").write_text("{broken", encoding="utf-8")
     monkeypatch.setattr(agentconfig, "_home", lambda: home)
 
     response = _client(tmp_path).post("/api/agent-targets/claude-code/connect")
     assert response.status_code == 409
-    assert (home / ".claude.json").read_text() == "{broken"
+    assert (home / ".claude.json").read_text(encoding="utf-8") == "{broken"
 
 
 def test_verify_actually_starts_the_thing_it_advertised(tmp_path):

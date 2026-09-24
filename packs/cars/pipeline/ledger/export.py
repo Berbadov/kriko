@@ -137,7 +137,7 @@ def _catalog_part_headers() -> dict[str, dict]:
     headers: dict[str, dict] = {}
     for path in sorted(_CATALOG_PARTS_DIR.glob("**/*.yaml")):
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
         part_id = data.get("part_id")
@@ -497,7 +497,7 @@ def export_all(conn, out_dir: Path) -> list[Path]:
         errors: list[str] = []
         for _attempt in range(2):
             path.write_text(yaml.dump(
-                {**file_data, "claims": kept}, allow_unicode=True, sort_keys=False))
+                {**file_data, "claims": kept}, allow_unicode=True, sort_keys=False), encoding="utf-8")
             errors = validate_part(path)
             if not errors:
                 break
