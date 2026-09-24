@@ -6,7 +6,7 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
-### 2026-09-24 — the implementing and testing doctrine
+### 2026-09-24 — the implementing and testing doctrine (`b4b37e0`, reviewed and corrected in the next commit)
 
 *"Many implementations haven't worked the first try … let's determine the
 implementing and testing doctrine. I mean it, we lack that."*

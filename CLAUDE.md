@@ -25,7 +25,8 @@ substitute for reading it:
    a list from memory.
 4. **Every PR carries its proof** (the quote, what was observed, a screenshot),
    and a second agent reviews it against the request.
-5. **One area per agent, merged to `main` daily.**
+5. **One area per agent, a PR the same day, merged daily** (by the reader;
+   nothing reaches `main` without the author asking).
 
 ## TEMPORARY — the app-first phase *(2026-09-01, delete when it ends)*
 
