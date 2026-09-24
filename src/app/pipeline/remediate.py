@@ -154,7 +154,7 @@ def ingest_lost_sources(conn, export_dir: Path, data_dir: Path) -> int:
 
 def _log_telemetry(stats: dict) -> None:
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with LOG_PATH.open("a") as fh:
+    with LOG_PATH.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(stats, sort_keys=True) + "\n")
 
 

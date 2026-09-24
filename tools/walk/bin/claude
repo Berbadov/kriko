@@ -8,6 +8,10 @@ Usage: claude [options] [command] [prompt]
   --output-format <format>              "text", "json" or "stream-json"
   --verbose                             Verbose output
   --allowedTools <tools...>             Tools to allow
+  --effort <level>                      Effort level for the current session
+                                        (low, medium, high, xhigh, max)
+  --input-format <format>               "text" or "stream-json"
+  --max-budget-usd <amount>             Maximum spend
   --model <model>                       Model for the current session. Provide
                                         an alias for the latest model (e.g.
                                         'walk-alpha' or 'walk-beta') or a

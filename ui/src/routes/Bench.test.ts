@@ -77,6 +77,20 @@ const WITH_OPTIONS: BenchPayload = {
     ],
 };
 
+/* The depth dial is served, not hardcoded, since `Scale.svelte`. These are
+ * the four positions `app/scale.py` defines, as `/api/scales` returns them —
+ * a fixture rather than a copy of the production numbers, so this file does
+ * not become the stale correspondence the component exists to remove. */
+const SCALES = {
+    default: "standard",
+    scales: [
+        { id: "quick", label: "Quick", note: "a look", max_documents: 3, context_chars: 8000, batch_size: 3, usd: null, tokens: null, basis: 0, cap_usd: 0.3 },
+        { id: "standard", label: "Standard", note: "the default", max_documents: 7, context_chars: 12000, batch_size: 2, usd: null, tokens: null, basis: 0, cap_usd: 1 },
+        { id: "deep", label: "Deep", note: "a proper read", max_documents: 15, context_chars: 20000, batch_size: 1, usd: null, tokens: null, basis: 0, cap_usd: 3 },
+        { id: "custom", label: "Custom", note: "your own numbers", max_documents: 0, context_chars: 0, batch_size: 0, usd: null, tokens: null, basis: 0, cap_usd: 1 },
+    ],
+};
+
 const PREFS = {
     models: {
         offered: [
@@ -159,6 +173,7 @@ describe("Bench", () => {
             "/api/prefs": PREFS,
             "/api/jobs": { items: [] },
             "/api/bench/configs": { configs: {} },
+            "/api/scales": SCALES,
         });
         render(Bench);
         for (const plane of ["harness", "agent", "api"]) {
@@ -210,6 +225,9 @@ describe("Bench", () => {
                 if (String(path) === "/api/bench") {
                     return new Response(JSON.stringify(WITH_OPTIONS));
                 }
+                if (String(path) === "/api/scales") {
+                    return new Response(JSON.stringify(SCALES));
+                }
                 return new Response("not stubbed", { status: 500 });
             }),
         );
@@ -234,7 +252,7 @@ describe("Bench", () => {
         expect(last["reps"]).toBe(2);
         expect(last["budget_usd"]).toBe(0.25);
         expect(last["max_documents"]).toBe(15);
-        expect(await screen.findByText(/96 measurement\(s\)/)).toBeInTheDocument();
+        expect(await screen.findByText(/96 measurements/)).toBeInTheDocument();
     });
 
     it("loads a saved grid into the choice controls", async () => {
@@ -251,13 +269,17 @@ describe("Bench", () => {
                     },
                 },
             },
+            "/api/scales": SCALES,
         });
         render(Bench);
         await fireEvent.click(await screen.findByRole("button", { name: "Load" }));
         await waitFor(() =>
             expect(screen.getByRole("button", { name: "api" })).toHaveAttribute("aria-pressed", "true"),
         );
-        expect(screen.getByRole("button", { name: "Deep" })).toHaveAttribute("aria-pressed", "true");
+        // A grid records how many sources it read, not which preset name was
+        // pressed to get there — so it reloads as an exact count.
+        expect(screen.getByRole("button", { name: "Custom" })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByLabelText("Sources")).toHaveValue(15);
         expect(screen.getByRole("button", { name: "Model A" })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByRole("button", { name: "Tavily" })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByRole("button", { name: "wide" })).toHaveAttribute("aria-pressed", "true");

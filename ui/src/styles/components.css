@@ -263,7 +263,24 @@ nav a.tab {
     color: var(--high);
 }
 
-input,
+/* `input` is two controls wearing one tag name.
+ *
+ * This rule describes a *text field*: a box you type into, wide enough to hold
+ * an answer, with a panel fill and inner padding. A radio and a checkbox share
+ * the tag and share nothing else — they are a 13px glyph whose whole job is to
+ * sit next to its label. Given `min-width: 150px` they became 150px-wide boxes
+ * with the glyph pinned to the left edge, so in Settings the dot sat roughly a
+ * hundred pixels from the words it belonged to, and the theme picker read as
+ * three rows of debris. The padding and the panel fill landed on them too.
+ *
+ * So the text-field rule names text fields, and the toggles get the rule they
+ * actually wanted: intrinsic size, and `accent-color` so the checked state is
+ * the app's gold rather than the operating system's blue. Excluding by type is
+ * the mechanism — a sixth checkbox added tomorrow is covered by existing, which
+ * is the point of fixing this here instead of in the five components that had
+ * one.
+ */
+input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
     font: inherit;
@@ -274,10 +291,61 @@ textarea {
     padding: var(--s-2) var(--s-3);
     min-width: 150px;
 }
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--accent);
+    flex: none;
+    margin: 0;
+    /* Slightly over the 13px default: these are the primary control on their
+     * row, and at default size a reader aiming for one hits the label instead —
+     * which works, but only because every one of them is wrapped in a label. */
+    width: 1rem;
+    height: 1rem;
+}
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+    /* A field that does not answer the pointer reads as a painted rectangle.
+     * Buttons here have had a hover since the port; the fields never did,
+     * which is most of why the two halves of a form looked like they came
+     * from different applications. */
+    border-color: var(--accent);
+}
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
     outline: var(--ring) solid var(--accent);
     outline-offset: -1px;
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+    /* The same treatment `button:disabled` gets, and for the same reason: a
+     * control that cannot be used must stop looking usable. Without it a
+     * disabled select was indistinguishable from an empty one, so the reader
+     * whose harness offers no model saw a picker that simply did nothing. */
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-style: dashed;
+}
+
+/* A group of controls that answer one question — the benchmark screen's
+ * dials, the scale chips. Browsers give `fieldset` a 2px groove border and a
+ * legend that straddles it, which is the only place in this app a control
+ * still wore 1996; eight of them shipped unstyled. Reset to nothing, then
+ * given the same label voice `.field label` uses, so a fieldset and a field
+ * stack together instead of one framing the other. */
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+legend {
+    padding: 0;
+    font-size: var(--t-xs);
+    line-height: var(--lh-xs);
+    color: var(--dim);
 }
 
 .wide {
@@ -605,6 +673,54 @@ pre {
     gap: 2px;
     justify-items: start;
     margin-bottom: var(--s-3);
+}
+
+/* The rail is a list of things to go back to, not a list of things to delete.
+ *
+ * Stacked, every row was three full-width blocks: an accent-coloured, underlined
+ * link at body size that wrapped to three lines on a real listing title, a line
+ * of meta, and a full-size button. Seven checks made a column of seven buttons
+ * taller than the window beside it, and the loudest thing in a 16rem rail was
+ * the word "Forget" repeated down it.
+ *
+ * Two columns instead: the title takes the width it has and stops at two lines,
+ * the control sits on the right at the size of the thing it does. Nothing is
+ * hidden behind a hover — a reader who cannot hover must still be able to clear
+ * their history — it is only sized like the secondary action it is.
+ */
+.history:not(.page) li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--s-2);
+    align-items: start;
+}
+.history:not(.page) .history-title,
+.history:not(.page) .meta {
+    grid-column: 1;
+}
+.history:not(.page) .history-forget {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+}
+/* Body-size accent underline is how a link asks to be read first. A title in
+ * the rail labels a row that is already a link, so it reads as text and earns
+ * the accent on hover. Two lines is the cap: a real listing title carries make,
+ * model, trim, year, city and mileage, and unclamped it pushed the next check
+ * off the bottom of the screen. */
+.history:not(.page) .history-title {
+    color: var(--text);
+    font-size: var(--t-sm);
+    line-height: var(--lh-sm);
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.history:not(.page) .history-title:hover {
+    color: var(--accent);
+    text-decoration: underline;
 }
 @media (max-width: 900px) {
     .with-history {
@@ -1608,4 +1724,125 @@ kbd {
 }
 .agenda li > button.link-ish {
     margin-top: var(--s-1);
+}
+
+/* ── layouts five screens already borrowed ────────────────────────── */
+/* These were written inside `Knowledge.svelte` and `Submissions.svelte`, and
+ * then *used* by Sites, Submissions, Operations, Bench and the preferences
+ * pane. A Svelte `<style>` is scoped, so every one of those was markup
+ * asking for a rule that could not reach it: a `.klist` outside Knowledge is
+ * a `<ul>` with bullets and browser padding, and a `.strip` outside
+ * Submissions is a vertical list where a row of figures was drawn. That is
+ * the bulk of "the components are ugly" — not a palette problem but five
+ * layouts that only paint on one screen each.
+ *
+ * Promoted verbatim rather than redesigned: the point is that the other four
+ * screens now look like the one they were copied from. */
+.klist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.krow {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    padding: var(--s-1) 0;
+}
+.krow:last-child {
+    border-bottom: 0;
+}
+.kmain {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.klabel {
+    overflow-wrap: anywhere;
+}
+
+/* A row of figures — "14 accepted, 2 refused". Horizontal is the whole
+ * point: the numbers are meant to be compared to each other. */
+.strip {
+    display: flex;
+    gap: var(--s-4);
+    list-style: none;
+    padding: 0;
+    margin-block: var(--s-3);
+    flex-wrap: wrap;
+}
+.strip strong {
+    font-size: var(--t-lg);
+    line-height: var(--lh-lg);
+}
+.strip li.warn strong {
+    color: var(--medium);
+}
+
+/* One choice out of a few, as buttons rather than a select. Defined twice
+ * identically before this — in `Scale.svelte` and in `Bench.svelte` — which
+ * is how the two drifted apart in the first place. */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+.chips button[aria-pressed="true"] {
+    /* Was `outline: 2px solid currentColor`, and `currentColor` on a ghost
+     * button is `--dim`: the *selected* chip was outlined in the app's
+     * quietest grey, so the one chip that had to be legible at a glance was
+     * the one drawn faintest. */
+    border-color: var(--accent);
+    background: var(--accent-lo);
+    color: var(--text);
+}
+
+/* The sentence under a screen's title that says what the screen is for.
+ * Seven screens marked one and no rule existed, so all seven rendered as
+ * another paragraph of body text — the page opening with two paragraphs of
+ * equal weight and no visible hierarchy. */
+.lede {
+    max-width: var(--measure);
+    margin: 0 0 var(--s-4);
+    color: var(--dim);
+    font-size: var(--t-sm);
+    line-height: var(--lh-sm);
+}
+
+/* A run that asked the reader something. Marked, because a question drawn
+ * like the rest of the row is a question nobody answers — which is the state
+ * this shipped in, one step further back: the questions were log prose. */
+.asked {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: var(--s-3);
+    margin-block: var(--s-3);
+    display: grid;
+    gap: var(--s-3);
+    max-width: var(--measure);
+}
+.asked > .meta {
+    margin: 0;
+}
+
+/* Saying something to a run that is still going.
+ *
+ * Deliberately quieter than `.asked` above, and the difference is which way
+ * the question went. `.asked` is the run asking *us*, so it is bordered and
+ * hard to walk past. This is us volunteering something unprompted — offered
+ * on every live run because nothing tells us one is waiting — so it sits on
+ * the row as a line rather than a panel. */
+form.say {
+    display: flex;
+    gap: var(--s-2);
+    align-items: center;
+    margin-block: var(--s-3);
+    max-width: var(--measure);
+}
+form.say > input {
+    flex: 1 1 auto;
+    min-width: 0;
 }

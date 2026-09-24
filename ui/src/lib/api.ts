@@ -204,15 +204,29 @@ export const api = {
             { claim_key: claimKey, note },
         ),
     /** The operations feed. `after` is an id: 0 means "the newest page",
-     *  anything else means "everything since". See `lib/operations.ts`. */
-    operations: (limit = 50, after = 0) =>
-        get<T.Operations>(`/api/operations?limit=${limit}&after_id=${after}`),
+     *  anything else means "everything since". See `lib/operations.ts`.
+     *
+     *  `watch` is the ids the caller still believes are open. Without it the
+     *  feed only ever hears an operation *begin*: a row is written twice, and
+     *  the second write is an update to a row whose id is already behind the
+     *  cursor, so every line on screen said "running" until a reload. */
+    operations: (limit = 50, after = 0, watch: number[] = []) =>
+        get<T.Operations>(
+            `/api/operations?limit=${limit}&after_id=${after}` +
+                (watch.length ? `&watch=${watch.join(",")}` : ""),
+        ),
     submissions: (limit = 30) =>
         get<T.Submissions>(`/api/submissions?limit=${limit}`),
-    retryJob: (jobId: string) =>
+    /* Run it again — optionally carrying answers to what it asked last time.
+     *
+     * Answers ride on the *retry* rather than on a reply endpoint because
+     * there is no paused run to reply to: the identification pass never
+     * blocked (see `app/disambiguate.py`). Posting `{}` is still the plain
+     * "run it again", which is what every existing caller does. */
+    retryJob: (jobId: string, answers: Record<string, string> = {}) =>
         postJson<{ job_id: string; kind: string }>(
             `/api/jobs/${seg(jobId)}/retry`,
-            {},
+            { answers },
         ),
     checked: (lookupId: string) =>
         get<{ checked: string[] }>(`/api/lookups/${seg(lookupId)}/checked`),
@@ -244,6 +258,15 @@ export const api = {
         putJson<T.Prefs>("/api/prefs", values),
     /** What it has cost, and what the next run is likely to. */
     costs: () => get<T.Costs>("/api/costs"),
+    /** Every position on the depth dial, with this installation's estimate.
+     *
+     *  Fetched rather than restated. `app/scale.py` owns the numbers, and the
+     *  one place that had copied them — the benchmark screen's own preset
+     *  list — is the hand-maintained correspondence this repository keeps
+     *  catching going stale (`SIBLING_CODE_FAMILIES`, `_MAKE_MAP`, the site's
+     *  own words in `extension/`). A dial whose label and whose number can
+     *  disagree is a dial that eventually lies about what it will spend. */
+    scales: () => get<T.Scales>("/api/scales"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
@@ -313,6 +336,17 @@ export const api = {
     cancelJob: (jobId: string) =>
         request<{ job_id: string; state: string }>(`/api/jobs/${seg(jobId)}/cancel`, {
             method: "POST",
+        }),
+    /** Say something to a job that is still running.
+     *
+     * `delivered` is false when the run ended while the reader was typing —
+     * not a failure, and not something to show as one, but not something to
+     * report as landed either. */
+    sayToJob: (jobId: string, text: string) =>
+        request<{ job_id: string; delivered: boolean }>(`/api/jobs/${seg(jobId)}/say`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ text }),
         }),
     forget: (lookupId: string) =>
         request<{ deleted: boolean }>(`/api/history/${seg(lookupId)}`, {

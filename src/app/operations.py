@@ -155,7 +155,15 @@ def summarise(value) -> str:
 
 
 @contextmanager
-def record(app_state_path, *, door: str, name: str, kind: str = "", arguments=None):
+def record(
+    app_state_path,
+    *,
+    door: str,
+    name: str,
+    kind: str = "",
+    arguments=None,
+    job_id: str = "",
+):
     """Open a row, run the body, close the row. Never raises on its own account.
 
     Used as a context manager so an exception inside the body is recorded as a
@@ -177,6 +185,11 @@ def record(app_state_path, *, door: str, name: str, kind: str = "", arguments=No
             subject_id=str((arguments or {}).get("subject_id") or ""),
             pack_id=str((arguments or {}).get("pack_id") or ""),
             request=summarise(arguments or {}),
+            # Empty for every door but `job`, and that emptiness is what tells
+            # the feed which running rows it may offer to stop: a job belongs
+            # to the runner in this process, an MCP call belongs to the process
+            # that made it.
+            job_id=job_id,
         )
     except Exception:  # noqa: BLE001 — see the module docstring
         conn, op_id = None, 0

@@ -33,6 +33,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
+from app.web import state
 from app.web.jobs import Cancelled
 from kriko.store.db import connect
 
@@ -67,6 +68,43 @@ def _copy_store(source_path, dest_path) -> None:
     finally:
         checkpoint.close()
     shutil.copy(source_path, dest_path)
+
+
+def _copy_settings(source_path, dest_path) -> None:
+    """Carry the reader's preferences into the sandbox's own `app.sqlite`.
+
+    A benchmark runs against a scratch `app.sqlite` so its history rows do not
+    land in the reader's, and that part is right. What was wrong is that the
+    scratch file started *empty* — and preferences live in `app.sqlite`, not
+    in the engine's store. So every benchmark silently measured the defaults
+    while the caller's comment below said an unset model meant "whichever this
+    installation would pick". It did not. It meant "whichever a fresh install
+    would pick", which is the one configuration the reader is provably not
+    running.
+
+    The visible shape of that: choose a harness, press Benchmark, and the
+    numbers come back from a different harness than the one on screen.
+
+    Copying rather than sharing keeps both halves: reads see the real
+    settings, writes stay in the scratch file. A source with no settings yet,
+    or none at all, is not an error — a fresh install has nothing to carry,
+    and a benchmark is not the place to say so.
+    """
+    source_path = Path(source_path)
+    if not source_path.exists():
+        return
+    read = state.connect(source_path)
+    try:
+        values = state.all_settings(read)
+    finally:
+        read.close()
+    if not values:
+        return
+    write = state.connect(Path(dest_path))
+    try:
+        state.put_settings(write, values)
+    finally:
+        write.close()
 
 
 def gold_cases(conn, *, pack_id: str = "", limit: int = DEFAULT_CASES) -> list[dict]:
@@ -230,6 +268,7 @@ def _run_specific(
     with tempfile.TemporaryDirectory(prefix="kriko-bench-") as scratch:
         sandbox = Path(scratch)
         _copy_store(settings.store_path, sandbox / "knowledge.sqlite")
+        _copy_settings(settings.app_state_path, sandbox / "app.sqlite")
         measured = replace(
             settings,
             store_path=sandbox / "knowledge.sqlite",

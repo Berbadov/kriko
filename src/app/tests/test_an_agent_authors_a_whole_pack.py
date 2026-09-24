@@ -129,7 +129,7 @@ def test_a_domain_a_claim_used_and_forgot_to_declare_is_declared_anyway(tmp_path
     pack = dict(PACK, domains=[])
     written = packauthor.author(_store(tmp_path), _reply(pack), category="drills")
     draft = packdraft.open_draft(_store(tmp_path), written["slug"])
-    terms = yaml.safe_load((draft.root / "vocabulary" / "terms.yaml").read_text())
+    terms = yaml.safe_load((draft.root / "vocabulary" / "terms.yaml").read_text(encoding="utf-8"))
 
     declared = {row["term_id"] for row in terms if row["role"] == "domain"}
     assert "mechanical" in declared
@@ -160,7 +160,7 @@ def test_a_claim_is_ranked_as_proposed_rather_than_evidenced(tmp_path):
     """
     written = packauthor.author(_store(tmp_path), _reply(PACK), category="drills")
     draft = packdraft.open_draft(_store(tmp_path), written["slug"])
-    claims = yaml.safe_load((draft.root / "data" / "claims.yaml").read_text())
+    claims = yaml.safe_load((draft.root / "data" / "claims.yaml").read_text(encoding="utf-8"))
 
     assert claims[0]["detection"] == "reported"
     assert claims[0]["confidence"] == 0.5
@@ -319,7 +319,7 @@ def _fake_cli(tmp_path, reply_text: str):
     script.write_text(
         "import pathlib, sys\n"
         f"sys.stdin.read()\n"
-        f"sys.stdout.write(pathlib.Path({str(envelope)!r}).read_text())\n",
+        f"sys.stdout.write(pathlib.Path({str(envelope)!r}).read_text(encoding='utf-8'))\n",
         encoding="utf-8")
     return harness_mod.Harness(
         "fake", "Fake CLI", sys.executable, (str(script), "-p"), structured=True)
@@ -343,6 +343,11 @@ class _Recorder:
 
     def check(self):
         pass
+
+    def replies(self):
+        # Nothing was said to this run. Present because the real `Progress` has
+        # it and a handler wires it to the researcher unconditionally.
+        return []
 
     def partial(self, result):
         # Real `Progress` writes this to the job row so a cancel keeps what was

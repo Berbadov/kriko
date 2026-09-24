@@ -113,8 +113,16 @@ def bump(version: str) -> int:
         new, count = pattern.subn(rf"\g<1>{version}\g<3>", text, count=1)
         if count != 1:
             raise SystemExit(f"no version line found in {path}")
-        full.write_text(new, encoding="utf-8")
-        print(f"{path} → {version}")
+        # Bytes, keeping whatever newlines the file already had. `write_text`
+        # on Windows translates "\n" into "\r\n", so setting one version line
+        # rewrote all 382 of pyproject.toml's and left five files dirty in a
+        # diff nobody could read — the same defect `aa795e6` fixed for
+        # tauri.conf.json, here in the one tool that touches every version
+        # string at once. `read_text` already normalised the newlines it
+        # returned, so writing the bytes back preserves the file instead of
+        # converting it.
+        full.write_bytes(new.encode("utf-8"))
+        print(f"{path} -> {version}")
 
     if installed() != version:
         print(

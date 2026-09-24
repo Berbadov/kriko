@@ -11,8 +11,8 @@ would have passed the whole time.
 """
 
 import logging
-import os
 import stat
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -29,17 +29,40 @@ def clean_handlers():
     logs.reset_for_tests()
 
 
+def _skip_unless_write_can_be_denied(directory) -> None:
+    """Skip where the OS will not let a chmod take write permission away.
+
+    Three tests below need exactly one condition: a directory this process
+    cannot write into. Two platforms decline to express it — root, for whom
+    the mode bits are advisory, and Windows, where `chmod` on a directory
+    changes nothing and `os.geteuid` is not even defined. The guard here
+    named only the first, so on the Windows host that runs the gate all three
+    died with an `AttributeError` before reaching an assertion, and the reason
+    the suite was red there had nothing to do with logging.
+
+    Probed rather than named after a platform: what these tests need is that
+    the denial *took*, and trying to write answers that directly — on this OS,
+    as this user, under whatever the filesystem actually enforces.
+    """
+    probe = Path(directory) / ".probe-write-denied"
+    try:
+        probe.write_text("x", encoding="utf-8")
+    except OSError:
+        return
+    probe.unlink()
+    pytest.skip("this OS does not let a chmod deny writing to a directory")
+
+
 def test_probe_names_the_reason_not_just_a_no(tmp_path):
     """"Cannot write" is not actionable; a path and an errno are."""
     blocked = tmp_path / "blocked"
     blocked.mkdir()
     blocked.chmod(stat.S_IRUSR | stat.S_IXUSR)
     try:
+        _skip_unless_write_can_be_denied(blocked)
         why = logs.probe(blocked / "app.log")
     finally:
         blocked.chmod(stat.S_IRWXU)
-    if os.geteuid() == 0:
-        pytest.skip("root can write anywhere, which is not the case under test")
     assert why is not None
     assert "app.log" in why or "Permission" in why
 
@@ -56,11 +79,10 @@ def test_resolve_falls_back_rather_than_refusing(tmp_path):
     blocked.chmod(stat.S_IRUSR | stat.S_IXUSR)
     good = tmp_path / "good" / "analyses.jsonl"
     try:
+        _skip_unless_write_can_be_denied(blocked)
         path, why = logs.resolve_writable(blocked / "analyses.jsonl", good)
     finally:
         blocked.chmod(stat.S_IRWXU)
-    if os.geteuid() == 0:
-        pytest.skip("root can write anywhere, which is not the case under test")
     assert path == good
     assert why is not None
 
@@ -97,12 +119,11 @@ def test_health_names_the_log_file(tmp_path):
 
 def test_health_reports_an_unwritable_analysis_log(tmp_path):
     """The regression under test: a swallowed write and a green suite."""
-    if os.geteuid() == 0:
-        pytest.skip("root can write anywhere, which is not the case under test")
     blocked = tmp_path / "blocked"
     blocked.mkdir()
     blocked.chmod(stat.S_IRUSR | stat.S_IXUSR)
     try:
+        _skip_unless_write_can_be_denied(blocked)
         client = TestClient(create_app(Settings(
             store_path=tmp_path / "k.sqlite",
             app_state_path=tmp_path / "a.sqlite",
