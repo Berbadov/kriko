@@ -6,6 +6,27 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 ---
 
+### 2026-09-24 — the implementing and testing doctrine (`b4b37e0`, reviewed and corrected in the next commit)
+
+*"Many implementations haven't worked the first try … let's determine the
+implementing and testing doctrine. I mean it, we lack that."*
+
+`docs/DOCTRINE.md`, linked first in `CLAUDE.md` and from `CONTRIBUTING.md`. It
+fixes three answers that had none: what was asked (a backlog entry quoting the
+reader, with **Where** / **Done when** / **Not this**, read back before code),
+what counts as done (the end result observed, on the screen named, on `main`,
+and on Windows when it differs there), and who checks (proof in the PR, and a
+second agent reviewing against the request). Also: which kind of test proves
+what, reproduce-before-fix, ask tools for their facts, one area per agent and a
+daily merge.
+
+The PR template now asks for the quoted request, what was observed, a
+screenshot and the review verdict. `test_every_new_backlog_item_says_when_it_is_done`
+fails the suite on an item from B141 on without **Done when** (shown red, then
+green). B141 (the research-limit sliders, which had never been written down),
+B142 (a self-hosted Windows runner) and B143 (journey checks) are the first
+items in the new shape.
+
 ### 2026-09-23 — the Agents screen, pressed in a browser
 
 *"Set a runner and check each function/button is working as intended and is
