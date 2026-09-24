@@ -90,7 +90,7 @@ def load(home: Path | None = None) -> dict[str, dict]:
     """
     for path in ([catalogue_path(home)] if home else []) + [default_path()]:
         try:
-            raw = tomllib.loads(Path(path).read_text("utf-8"))
+            raw = tomllib.loads(Path(path).read_text(encoding="utf-8"))
         except (OSError, tomllib.TOMLDecodeError):
             continue
         out: dict[str, dict] = {}

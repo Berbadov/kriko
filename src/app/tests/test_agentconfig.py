@@ -22,7 +22,7 @@ SERVER = {"type": "stdio", "command": "/usr/bin/kriko", "args": ["--mcp", "--sto
 
 
 def read(target):
-    return json.loads(target.path.read_text())
+    return json.loads(target.path.read_text(encoding="utf-8"))
 
 
 # ── status ──────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ def test_a_harness_that_was_never_configured_is_absent_not_an_error(target):
 
 
 def test_an_entry_naming_this_store_reads_as_connected(target):
-    target.path.write_text(json.dumps({"mcpServers": {"kriko": SERVER}}))
+    target.path.write_text(json.dumps({"mcpServers": {"kriko": SERVER}}), encoding="utf-8")
     row = agentconfig.status_of(target, server_name="kriko", store_path="/s/k.sqlite")
     assert row["state"] == "connected"
 
@@ -46,13 +46,13 @@ def test_an_entry_naming_a_different_store_is_stale_not_connected(target):
     findings into a store this window never reads. Reporting it as connected
     would leave the reader with nothing to notice.
     """
-    target.path.write_text(json.dumps({"mcpServers": {"kriko": SERVER}}))
+    target.path.write_text(json.dumps({"mcpServers": {"kriko": SERVER}}), encoding="utf-8")
     row = agentconfig.status_of(target, server_name="kriko", store_path="/other/k.sqlite")
     assert row["state"] == "stale"
 
 
 def test_a_config_someone_broke_by_hand_is_reported_not_raised(target):
-    target.path.write_text("{ this is not json")
+    target.path.write_text("{ this is not json", encoding="utf-8")
     row = agentconfig.status_of(target, server_name="kriko", store_path="/s/k.sqlite")
     assert row["state"] == "unreadable"
     assert "JSON" in row["detail"]
@@ -61,7 +61,7 @@ def test_a_config_someone_broke_by_hand_is_reported_not_raised(target):
 def test_the_harness_a_reader_uses_is_not_hidden_by_one_they_do_not(tmp_path, monkeypatch):
     """One bad config must not cost the reader the other three rows."""
     monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path)
-    (tmp_path / ".claude.json").write_text("nonsense{")
+    (tmp_path / ".claude.json").write_text("nonsense{", encoding="utf-8")
     rows = [
         agentconfig.status_of(t, server_name="kriko", store_path="/s/k.sqlite")
         for t in agentconfig.targets()
@@ -82,7 +82,7 @@ def test_connecting_leaves_every_other_server_and_setting_untouched(target):
         "mcpServers": {"other": {"command": "keep-me"}},
         "theme": "dark",
         "apiKeyHelper": "~/.secrets/get",
-    }))
+    }), encoding="utf-8")
     agentconfig.connect(target, server_name="kriko", server=SERVER)
 
     config = read(target)
@@ -109,10 +109,10 @@ def test_vs_code_gets_the_key_it_actually_reads(tmp_path):
 def test_a_config_that_cannot_be_parsed_is_refused_rather_than_overwritten(target):
     """Their file, their contents. Replacing what we cannot read is the one
     outcome worse than not connecting."""
-    target.path.write_text('{"mcpServers": {"other": ')
+    target.path.write_text('{"mcpServers": {"other": ', encoding="utf-8")
     with pytest.raises(ValueError):
         agentconfig.connect(target, server_name="kriko", server=SERVER)
-    assert target.path.read_text() == '{"mcpServers": {"other": '
+    assert target.path.read_text(encoding="utf-8") == '{"mcpServers": {"other": '
 
 
 def test_no_temp_file_survives_a_successful_write(target):

@@ -224,17 +224,27 @@ def test_every_offered_harness_has_a_tool_grant():
     `--agent`, naming a profile (`_ensure_opencode_agent`) whose own
     `permission:` block denies `bash`/`edit` and allows only
     `webfetch`/`websearch` — the same shape as `.opencode/agents/
-    kriko_research.md` already ships in this repo. `agy` has no verified
+    kriko_research.md` already ships in this repo. `copilot` restricts via
+    `--available-tools`, which is the strongest of the four: it is a whole
+    tool set rather than an allowlist layered over one, so a tool left out
+    of it does not exist for that run at all. `agy` has no verified
     allowlist flag, so its restriction is the headless permission policy
     itself (anything that would ask is auto-denied), a working directory
     that vanishes with the run, and a denial that fails the run loudly
     rather than researching nothing on the reader's quota.
+
+    The list of spellings below is the one hand-enumerated thing here, and
+    it is allowed to be: a flag name is a fixed fact about a CLI, not data
+    that grows with pack coverage. What must not be hand-enumerated is
+    *which harness is exempt* — that is why the escape hatch is `unusable`,
+    a field the row itself declares, rather than an id checked for here.
     """
     for one in harness_mod.KNOWN:
         has_grant = (
             "--allowedTools" in one.args
             or "--allowed-tools" in one.args
             or "--agent" in one.args
+            or "--available-tools" in one.args
             or one.protocol == "agy"
         )
         assert has_grant or one.unusable, (
@@ -283,7 +293,7 @@ def _fake_cli(tmp_path: Path, envelope: dict, *, exit_code: int = 0) -> harness_
     script = tmp_path / "fake_cli.py"
     script.write_text(
         "import pathlib, sys\n"
-        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text())\n"
+        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text(encoding='utf-8'))\n"
         f"sys.exit({exit_code})\n",
         encoding="utf-8",
     )
@@ -444,7 +454,7 @@ def _fake_stream(tmp_path: Path, messages: list, *, exit_code: int = 0):
     script = tmp_path / "fake_stream.py"
     script.write_text(
         "import pathlib, sys\n"
-        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text())\n"
+        f"sys.stdout.write(pathlib.Path({str(reply)!r}).read_text(encoding='utf-8'))\n"
         f"sys.exit({exit_code})\n",
         encoding="utf-8",
     )
@@ -685,6 +695,8 @@ def test_the_cmd_shim_is_actually_handed_to_popen_with_shell_true(monkeypatch, t
         stderr = iter(())
         returncode = 0
         pid = 4321
+        # A real Popen always has one, whatever it was pointed at.
+        stdin = None
 
         def wait(self):
             return None
@@ -885,6 +897,10 @@ class _Recorder:
 
     def check(self):
         pass
+
+    def replies(self):
+        # Nobody answered this run. See `Progress.replies`.
+        return []
 
     def partial(self, result):
         # Real `Progress` writes this to the job row so a cancel keeps what was
@@ -1244,7 +1260,7 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
     grandchild = tmp_path / "grandchild.py"
     grandchild.write_text(
         "import os, pathlib, time\n"
-        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()))\n"
+        f"pathlib.Path({str(marker)!r}).write_text(str(os.getpid()), encoding='utf-8')\n"
         "time.sleep(60)\n",
         encoding="utf-8",
     )
@@ -1303,7 +1319,7 @@ def _grandchild_running(script: Path) -> bool:
         import ctypes
         from ctypes import wintypes
 
-        pid = int((script.parent / "grandchild-alive").read_text())
+        pid = int((script.parent / "grandchild-alive").read_text(encoding="utf-8"))
         kernel = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel.OpenProcess.restype = wintypes.HANDLE
@@ -1518,25 +1534,51 @@ def test_agy_refuses_an_oversized_prompt_rather_than_sending_it_nowhere(
 
 
 def test_unverified_headless_entries_are_not_driven(monkeypatch):
-    """`vibe` and `gemini` name real CLIs whose sandbox files, tool names and
-    output parsing Kriko has never run against — so they are listed with the
-    reason, never spawned, even on a machine that has them."""
+    """An entry Kriko has not run against says so and is never spawned.
+
+    The rule, not the roster. This used to name `vibe` and `gemini`, because
+    those were the two unverified rows on the day it was written — so
+    *verifying* one of them failed the test, which makes it a gate that
+    punishes the work it exists to encourage. `mistral-vibe` has since been
+    run against the real CLI (2.25.5: the builtin `auto-approve` agent,
+    `--enabled-tools` as the sandbox, `--trust`, streaming history entries)
+    and is driven now; `gemini-cli` still has not been.
+
+    What must stay true is the *pairing*: an unusable row carries a reason
+    and refuses to build a command, and a usable one builds one. Neither
+    half names a CLI, so onboarding the next one costs a row in `KNOWN` and
+    no edit here.
+    """
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
-    monkeypatch.setattr(
-        harness_mod, "declared",
-        lambda _: frozenset({"--output", "--agent", "--enabled-tools", "--prompt",
-                             "--output-format", "--approval-mode", "--allowed-tools",
-                             "--model"}),
+    # Every flag any row names, derived from the rows rather than typed out
+    # here. A hand-written set was the fifth row's tripwire: `github-copilot`
+    # arrived declaring flags this list had never heard of, and the test
+    # failed on its own stub rather than on anything about the code.
+    every_flag = frozenset(
+        word
+        for one in harness_mod.KNOWN
+        for word in (*one.args, *one.required, one.model_flag or "",
+                     one.effort_flag or "", one.prompt_flag or "")
+        if word.startswith("-")
     )
-    for ident in ("mistral-vibe", "gemini-cli"):
-        one = next(h for h in harness_mod.KNOWN if h.id == ident)
-        assert one.unusable, f"{ident} must carry its unverified reason"
+    monkeypatch.setattr(harness_mod, "declared", lambda _: every_flag)
+    unverified = [h for h in harness_mod.KNOWN if h.unusable]
+    assert unverified, (
+        "every known CLI now claims to be verified — which is either true, "
+        "and this test should go, or a row lost its reason by accident"
+    )
+    for one in unverified:
+        assert one.unusable.strip(), f"{one.id} must carry its unverified reason"
         with pytest.raises(NoHarness):
             harness_mod.command_for(one)
-    assert all(
-        h.id in ("mistral-vibe", "gemini-cli")
-        for h in harness_mod.found_but_unusable()
-    )
+    assert {h.id for h in harness_mod.found_but_unusable()} == {
+        h.id for h in unverified
+    }
+    # The other half: a row with no reason must actually be drivable, or
+    # "verified" would mean nothing more than a blank field.
+    for one in harness_mod.KNOWN:
+        if not one.unusable:
+            assert harness_mod.command_for(one)[0].endswith(one.executable)
 
 
 def test_the_planes_endpoint_names_missing_clis_with_a_way_out(tmp_path, monkeypatch):

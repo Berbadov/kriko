@@ -161,7 +161,7 @@ def _add_verdict(conn, v):
 def test_export_writes_part_dict_shape(populated, tmp_path):
     _add_verdict(populated, _verdict())
     paths = export.export_all(populated, tmp_path / "out")
-    doc = yaml.safe_load(paths[0].read_text())
+    doc = yaml.safe_load(paths[0].read_text(encoding="utf-8"))
     # part-dict shape sync.py expects (part_id == filename stem)
     assert paths[0].name == "dq381.yaml"
     assert doc["part_id"] == "dq381"
@@ -184,7 +184,7 @@ def test_export_grounds_mileage_gate(populated, tmp_path):
     _add_verdict(populated, _verdict(
         rationale_en="Solenoid wear typically appears after 80,000 km."))
     paths = export.export_all(populated, tmp_path / "out")
-    c = yaml.safe_load(paths[0].read_text())["claims"][0]
+    c = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]
     assert c["applies_when"]["min_mileage_km"] == 80000
     assert c["kind"] == "known_issue"
 
@@ -195,7 +195,7 @@ def test_export_reclassifies_maintenance_claim(populated, tmp_path):
         rationale_en="The DSG fluid must be changed every 40,000-60,000 km "
                      "to prevent failure."))
     paths = export.export_all(populated, tmp_path / "out")
-    c = yaml.safe_load(paths[0].read_text())["claims"][0]
+    c = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]
     assert c["kind"] == "maintenance"
     assert c["maintenance"]["interval_km"] == 40000      # biased low
     assert c["maintenance"]["evidence_keywords"]
@@ -262,7 +262,7 @@ def test_export_grounds_year_window_from_quotes(populated, tmp_path):
                  quote="The fault affects 2019 builds onward and was fixed in 2022.")
     _add_verdict(populated, _verdict())
     export.export_all(populated, tmp_path / "out")
-    doc = yaml.safe_load((tmp_path / "out" / "dq200.yaml").read_text())
+    doc = yaml.safe_load((tmp_path / "out" / "dq200.yaml").read_text(encoding="utf-8"))
     c = doc["claims"][0]
     assert c["applies_when"]["applies_year_from"] == 2019
     assert c["applies_when"]["applies_year_to"] == 2022
@@ -283,7 +283,7 @@ def test_invalid_cluster_is_skipped_not_fatal(populated, tmp_path, capsys):
     assert "DTC code in title" in out
     # the valid dq200 cluster still exported despite the invalid dq381 one
     assert len(paths) == 1
-    doc = yaml.safe_load(paths[0].read_text())
+    doc = yaml.safe_load(paths[0].read_text(encoding="utf-8"))
     assert [c["title"] for c in doc["claims"]] == ["DQ200 mechatronic unit failure"]
 
 
@@ -319,7 +319,7 @@ def test_refuted_by_index_marks_that_source_as_refuting(populated, tmp_path):
     two evidence rows are ordered by `e.id`, so index 2 is the b.test row."""
     _add_verdict(populated, _verdict(refuted_by=[2]))
     paths = export.export_all(populated, tmp_path / "out")
-    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    sources = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]["sources"]
     by_domain = {s["source_domain"]: s for s in sources}
     assert by_domain["a.test"]["stance"] == "supports"
     assert by_domain["b.test"]["stance"] == "refutes"
@@ -352,7 +352,7 @@ def test_two_pages_on_the_same_domain_are_not_both_independent(tmp_path):
     _add_verdict(conn, _verdict())
 
     paths = export.export_all(conn, tmp_path / "out")
-    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    sources = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]["sources"]
     assert len(sources) == 2
     flags = sorted(s["independent"] for s in sources)
     assert flags == [False, True]
@@ -383,7 +383,7 @@ def test_published_at_survives_into_exported_source(tmp_path):
     _add_verdict(conn, _verdict())
 
     paths = export.export_all(conn, tmp_path / "out")
-    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    sources = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]["sources"]
     assert sources[0]["published_at"] == "2021-05-03"
 
 
@@ -392,7 +392,7 @@ def test_published_at_blank_when_never_discovered(populated, tmp_path):
     must be an honest "", never a stand-in for retrieved_at/fetched_at."""
     _add_verdict(populated, _verdict())
     paths = export.export_all(populated, tmp_path / "out")
-    sources = yaml.safe_load(paths[0].read_text())["claims"][0]["sources"]
+    sources = yaml.safe_load(paths[0].read_text(encoding="utf-8"))["claims"][0]["sources"]
     assert all(s["published_at"] == "" for s in sources)
     assert all(s["published_at"] != s["retrieved_at"] for s in sources)
 
@@ -435,7 +435,7 @@ def test_two_fetches_of_the_same_url_collapse_to_one_source(tmp_path):
     _add_verdict(conn, _verdict())
 
     paths = export.export_all(conn, tmp_path / "out")
-    doc = yaml.safe_load(paths[0].read_text())
+    doc = yaml.safe_load(paths[0].read_text(encoding="utf-8"))
     sources = doc["claims"][0]["sources"]
     assert len(sources) == 1, f"expected one collapsed source, got {sources}"
     assert sources[0]["retrieved_at"] == later

@@ -20,6 +20,7 @@ import urllib.request
 
 import pytest
 
+from app.agentconfig import platform_env
 from app.sidecar import EXTRA_LINE, PORT_LINE, reserve
 
 
@@ -46,11 +47,27 @@ def test_an_explicit_port_is_honoured():
 
 
 def _env(tmp_path):
+    """A deliberately bare environment, plus whatever the platform insists on.
+
+    Bare is the point — these tests spawn the sidecar the way the shell does
+    and must not inherit an authoring machine's settings. But "bare" is a
+    platform-specific idea, and the literals here described one platform: on
+    Windows a process handed no `SystemRoot` never reaches its first line, and
+    one with no `USERPROFILE` dies resolving `~/.kriko` a moment later. Nine
+    tests in this file reported a silent sidecar on the only host that runs the
+    gate, and the sidecar was never the thing that was broken.
+
+    `platform_env` rather than a second list: the app already had to answer
+    "what does a child need before our code runs" in order to write MCP configs
+    that start, and one answer kept in one place cannot drift from the one the
+    reader's harness is handed.
+    """
     return {
+        "PATH": "/usr/bin:/bin",
+        **platform_env(),
         "KRIKO_STORE": str(tmp_path / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(tmp_path / "app.sqlite"),
         "KRIKO_ANALYSES_LOG": str(tmp_path / "analyses.jsonl"),
-        "PATH": "/usr/bin:/bin",
         "PYTHONPATH": "src",
     }
 
@@ -367,7 +384,16 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
     log_path = tmp_path / "app.log"
     env = _env(tmp_path)
     env["KRIKO_LOG"] = str(log_path)
-    env["SHELL"] = str(tmp_path / "no-such-shell")
+    # Whichever variable `termpty` actually reads on this platform — `SHELL` on
+    # POSIX, `COMSPEC` on Windows. Setting only the first pointed a broken shell
+    # at a host that was never going to look there, so the session started
+    # perfectly, reported no failure, and the test read that as the logging gap
+    # it exists to catch having reopened.
+    missing = str(tmp_path / "no-such-shell")
+    env["SHELL"] = missing
+    for key in [k for k in env if k.upper() == "COMSPEC"]:
+        del env[key]
+    env["COMSPEC"] = missing
     process = subprocess.Popen(
         [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
         stdout=subprocess.PIPE,
@@ -392,7 +418,7 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
         text = ""
         while time.time() < deadline:
             if log_path.exists():
-                text = log_path.read_text()
+                text = log_path.read_text(encoding="utf-8")
                 if "terminal session failed to start" in text:
                     break
             time.sleep(0.1)
@@ -406,7 +432,7 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
 
 def test_mcp_mode_prints_no_handshake_of_its_own(tmp_path):
     """stdout is the transport in MCP mode, so nothing else may write to it."""
-    source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text()
+    source = (Path(__file__).resolve().parents[1] / "sidecar.py").read_text(encoding="utf-8")
     body = source.split("def main(")[1]
     dispatch = body.index("return serve_mcp")
     announce = body.index('print(f"{PORT_LINE}')

@@ -16,6 +16,12 @@
     let root = $state("");
     let busy = $state(false);
     let cancelPending = $state<string[]>([]);
+    /* What the reader has typed back, per job and then per question id.
+     *
+     * Kept here rather than on the row because the row is replaced wholesale
+     * every time the stream ticks — a draft held on `job` would be erased
+     * twice a second by the thing that is supposed to be showing it. */
+    let answers = $state<Record<string, Record<string, string>>>({});
 
     // One follower per live job, kept in a map so a re-render does not open a
     // second stream for the same row.
@@ -136,6 +142,45 @@
         }
     }
 
+    /* Saying something to a run that is still going.
+     *
+     * The questions below this are the *structured* path: the run stopped,
+     * wrote a question with options, and the form re-applies the answer to a
+     * fresh attempt. This is the unstructured one, and it is what B120 left
+     * open — a harness run streams its thinking out and took nothing in, so a
+     * run that paused on something the pack's own question schema never
+     * anticipated could be watched and stopped and nothing else.
+     *
+     * Per job id, because two runs may be live at once and a draft typed
+     * against one must not appear under the other. */
+    let saying = $state<Record<string, string>>({});
+    let sayPending = $state<Record<string, boolean>>({});
+    let sayNote = $state<Record<string, string>>({});
+
+    async function say(job: Job) {
+        const text = (saying[job.job_id] || "").trim();
+        if (!text || sayPending[job.job_id]) return;
+        sayPending = { ...sayPending, [job.job_id]: true };
+        try {
+            const answer = await api.sayToJob(job.job_id, text);
+            // Cleared only on delivery. A run that ended mid-sentence should
+            // leave the reader holding what they wrote, not silently eat it.
+            if (answer.delivered) {
+                saying = { ...saying, [job.job_id]: "" };
+                sayNote = { ...sayNote, [job.job_id]: "Sent." };
+            } else {
+                sayNote = {
+                    ...sayNote,
+                    [job.job_id]: "This run had already finished. Nothing was sent.",
+                };
+            }
+        } catch (cause) {
+            error = cause;
+        } finally {
+            sayPending = { ...sayPending, [job.job_id]: false };
+        }
+    }
+
     /** Run a finished job's work again.
      *
      * A failure here is usually a network that was down or a source that was
@@ -147,7 +192,8 @@
      */
     async function retry(job: Job) {
         try {
-            const { job_id } = await api.retryJob(job.job_id);
+            const { job_id } = await api.retryJob(job.job_id, answers[job.job_id] ?? {});
+            delete answers[job.job_id];
             const fresh = await api.job(job_id);
             replace(fresh);
             watch(fresh);
@@ -209,7 +255,7 @@
                 placeholder="cordless drills, espresso machines, e-bikes"
             />
         </label>
-        <button type="submit" disabled={busy || !category.trim()}>
+        <button class="primary" type="submit" disabled={busy || !category.trim()}>
             Have my agent write it
         </button>
     </form>
@@ -278,6 +324,92 @@
                 <button onclick={() => retry(job)}>Run again</button>
             {/if}
         </p>
+        {#if isLive(job)}
+            <!-- Offered on every live run rather than only when one has
+                 asked something, because nothing tells us it asked: the
+                 question is a sentence in the agent's own output, not a
+                 field. A box that appears only when we are sure is a box
+                 that is never there when it is needed. -->
+            <form class="say" onsubmit={(event) => { event.preventDefault(); say(job); }}>
+                <!-- Written out rather than `bind:`, for the same reason the
+                     question form below is: the backing record starts empty,
+                     and a binding onto a slot that does not exist yet is
+                     cleared again by the next poll — which lands every second
+                     on exactly the runs this box is offered on. -->
+                <input
+                    aria-label="Reply to this run"
+                    placeholder="Answer this run…"
+                    value={saying[job.job_id] ?? ""}
+                    oninput={(event) => {
+                        saying = { ...saying, [job.job_id]: event.currentTarget.value };
+                    }}
+                    disabled={sayPending[job.job_id]}
+                />
+                <button type="submit" disabled={sayPending[job.job_id] || !(saying[job.job_id] || "").trim()}
+                    >{sayPending[job.job_id] ? "Sending…" : "Send"}</button
+                >
+            </form>
+            {#if sayNote[job.job_id]}
+                <p class="meta" aria-live="polite">{sayNote[job.job_id]}</p>
+            {/if}
+        {/if}
+        {#if job.attention?.questions?.length}
+            <!-- The answer form, and the reason this screen changed shape.
+                 The questions were only ever written into the run log, so a
+                 mechanism that already knew how to ask, normalise and re-apply
+                 an answer reached the reader as a paragraph of prose with
+                 nothing to type into. Rendering them as controls is the whole
+                 of the fix on this side.
+
+                 Not a modal, and it blocks nothing: the run already finished
+                 on its own assumptions. Answering changes the *next* run,
+                 which is why the submit is the retry rather than a "send". -->
+            <form
+                class="asked"
+                onsubmit={(event) => { event.preventDefault(); retry(job); }}
+            >
+                <p class="meta">{job.attention.say}</p>
+                {#each job.attention.questions as question (question.id)}
+                    <div class="field">
+                        <label for="{job.job_id}-{question.id}">{question.ask}</label>
+                        {#if question.options.length}
+                            <select
+                                id="{job.job_id}-{question.id}"
+                                value={answers[job.job_id]?.[question.id] ?? ""}
+                                onchange={(event) => {
+                                    answers[job.job_id] ??= {};
+                                    answers[job.job_id][question.id] = event.currentTarget.value;
+                                }}
+                            >
+                                <!-- The assumption is the first option and the
+                                     selected one, so leaving the form alone
+                                     re-runs exactly what already ran. -->
+                                <option value="">It assumed {question.default}</option>
+                                {#each question.options as option (option)}
+                                    <option value={option}>{option}</option>
+                                {/each}
+                            </select>
+                        {:else}
+                            <input
+                                id="{job.job_id}-{question.id}"
+                                placeholder="It assumed {question.default}"
+                                value={answers[job.job_id]?.[question.id] ?? ""}
+                                oninput={(event) => {
+                                    answers[job.job_id] ??= {};
+                                    answers[job.job_id][question.id] = event.currentTarget.value;
+                                }}
+                            />
+                        {/if}
+                        {#if question.because}
+                            <p class="meta">{question.because}</p>
+                        {/if}
+                    </div>
+                {/each}
+                <p class="row">
+                    <button class="primary" type="submit">Answer and run again</button>
+                </p>
+            </form>
+        {/if}
         {#if open === job.job_id}
             <pre class="log">{job.log || "nothing logged yet"}</pre>
             {#if job.result}

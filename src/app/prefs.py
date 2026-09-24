@@ -44,17 +44,43 @@ def harness_model_key(harness_id: str) -> str:
     return f"harness_model_{harness_id}".replace("-", "_")
 
 
-#: One key per harness that can take a model. Optional like the rest: empty
-#: means the CLI's own default, which is the only honest fallback — a claude
-#: alias is not an opencode provider/model id, so falling back across
-#: harnesses would be a guess in a namespace that is not ours.
-HARNESS_MODEL_KEYS = (
-    harness_model_key("claude-code"),
-    harness_model_key("opencode"),
-    harness_model_key("antigravity-cli"),
-)
+def harness_effort_key(harness_id: str) -> str:
+    """Where this harness's effort level is stored.
 
-KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS, *HARNESS_MODEL_KEYS)
+    A second dial beside the model, and a separate key rather than a field on
+    the model's value, because the two are chosen independently: a reader
+    surveying cheaply picks the same model and drops the effort, and a reader
+    checking one expensive answer does the reverse.
+    """
+    return f"harness_effort_{harness_id}".replace("-", "_")
+
+
+#: One key per harness that can take a model, and one for its effort.
+#:
+#: **Derived from the roster, not listed here.** The hand-written tuple this
+#: replaces named three harnesses and Mistral Vibe was not one of them — so a
+#: model chosen for the harness the reader added specifically to stop spending
+#: Claude tokens was dropped on write and silently ran as the CLI's default.
+#: That is the failure mode `CLAUDE.md`'s scalability rule is about: a list
+#: somebody has to remember to extend, whose staleness raises nothing.
+#:
+#: Every harness gets both keys regardless of what it supports. Which dials a
+#: *screen* offers is `models_for`/`efforts_for`'s answer and depends on the
+#: machine; which keys are storable is a fixed shape, and gating storage on a
+#: probe would mean a preference that vanishes when a CLI is uninstalled.
+def _harness_ids() -> tuple[str, ...]:
+    # Deferred: `app.providers.harness` is a heavier import than this module
+    # wants at definition time, and nothing here needs it before first use.
+    from app.providers import harness as harness_mod
+
+    return tuple(one.id for one in harness_mod.KNOWN)
+
+
+HARNESS_MODEL_KEYS = tuple(harness_model_key(one) for one in _harness_ids())
+HARNESS_EFFORT_KEYS = tuple(harness_effort_key(one) for one in _harness_ids())
+
+KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS)
 
 
 def for_role(conn, role: str, override: str = "") -> str:
@@ -103,6 +129,18 @@ def for_harness(conn, harness_id: str, override: str = "") -> str:
     """
     stored = read(conn)
     return override.strip() or stored.get(harness_model_key(harness_id), "") or ""
+
+
+def effort_for_harness(conn, harness_id: str, override: str = "") -> str:
+    """How hard this harness should think. The run's own, the stored one, or
+    empty for the CLI's default.
+
+    Empty is a real answer, exactly as it is for the model: every one of these
+    CLIs has a default effort, and naming a level the reader never chose would
+    bill them for a decision they did not make.
+    """
+    stored = read(conn)
+    return override.strip() or stored.get(harness_effort_key(harness_id), "") or ""
 
 
 def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> dict:
@@ -163,7 +201,17 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             "llm": for_harness(conn, one.id),
             "llms": lists.get(one.id, []),
             "llm_hint": one.model_hint,
-            "llm_selectable": bool(one.model_flag),
+            # `model_env` counts. Mistral Vibe has no `--model` — its switch is
+            # an environment variable its own config layer reads — so keying
+            # this on the flag alone hid the picker for the one harness the
+            # reader added specifically to stop spending Claude tokens.
+            "llm_selectable": bool(one.model_flag or one.model_env),
+            # The second dial. `efforts_for` probes this machine's `--help`,
+            # so a CLI that has no such flag reports `[]` and the screen shows
+            # no control rather than one whose every choice fails.
+            "effort": effort_for_harness(conn, one.id),
+            "efforts": harness.efforts_for(one),
+            "effort_hint": one.effort_hint,
         }
         for one in found
     ]
