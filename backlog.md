@@ -1347,6 +1347,123 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 
 ## P1
 
+*From B141 on, every item follows `docs/DOCTRINE.md` §1: the reader's words
+quoted, **Where**, **Done when**, **Not this**, **Owner**.
+`test_every_new_backlog_item_says_when_it_is_done` enforces the **Done when**.*
+
+### B141 — "Sliders on every research button": sources, effort, context `[G5]`
+**Asked:** "the page count limiter, effort limiter, context limiter slides for
+agent research", and "sliders on every research button" (2026-09-24).
+**Where:** beside every control that starts a research run, visible without
+expanding anything:
+- Agents → each plane's **Research the top N** (`ui/src/lib/Planes.svelte`);
+- Knowledge → a subject's **Research** → **Run my agent on this**
+  (`ui/src/lib/Brief.svelte`);
+- Activity → Runs → **Have my agent write it** (`ui/src/routes/Jobs.svelte`),
+  which today sits inside the collapsed "Start a new pack": the button and its
+  sliders move out of it, or the section opens by default;
+- the browser extension's research buttons (`extension/hover_lite/hover_lite.js`,
+  posting to `/api/extension/research-plane` and `/api/research`);
+- any research button added later. A test fails if a component in `ui/src` or
+  `extension/` that calls a research endpoint does not render the limits.
+**Done when:** each of those buttons has three sliders (sources to read, effort,
+context size), each shows its current value, and a run started after moving
+them shows the chosen values in its job log and actually stops at them: at most
+N sources fetched, the harness command line carrying that effort, and the
+extraction step reading at most that much context per source.
+**Not this:** buttons or chips (today's "How deep" 3/7/15), a dropdown (today's
+effort pick on the agent card), or a control inside a collapsed section (today's
+"This run's choices"). And not Settings only: the reader chose per button.
+**Owner:** free.
+**Found 2026-09-24** (checked against the code by a second agent):
+- *Sources:* the "How deep" chips (3/7/15, `ui/src/lib/Scale.svelte`), with the
+  exact number behind a "Set an exact number" button. The run does honour it.
+- *Effort:* only a per-agent dropdown (`ui/src/lib/Agents.prefs.svelte`).
+  Neither `AgendaRunRequest` (`routers/research.py`) nor `ResearchRequest`
+  (`routers/jobs.py`) takes a per-run effort.
+- *Context:* **exists and is ignored.** `app/scale.py` bundles `context_chars`
+  into every preset (Quick 8,000 / Standard 12,000 / Deep 20,000) and
+  `scale.applied()` accepts an override, but `tasks.py` passes only
+  `max_documents` on; the API plane's context comes from `app/protocols.py` or
+  `kriko/research/base.py`'s default of 12,000. So "How deep" shows a context
+  size the run does not use: wire that through, do not add a second parameter.
+- *Extension:* `ExtensionResearchRequest` (`routers/extension.py`) takes none of
+  the three.
+- The request was never written into this file, which is how all three drifted.
+
+### B142 — "Haven't worked the first try": CI on the reader's Windows machine `[G5]`
+**Asked:** implied by "many implementations haven't worked the first try"
+(2026-09-24); the doctrine's rule 2.4 needs it.
+**Where:** GitHub → the repo's Actions; `ci.yml` and `desktop.yml` restored.
+**Done when:** a PR opened on any branch gets a green or red check from a job
+that ran on the Windows machine, with its log readable on the PR, and the
+installer smoke steps of `desktop.yml` run on a tag.
+**Not this:** a hosted runner (no minutes), or a check that goes red without a
+runner ever being allocated (the 2026-09-08 to 09-13 failure `CLAUDE.md`
+describes).
+**Owner:** the reader (registering a runner is a one-time step on their PC),
+then free for the workflow edits.
+**Note:** GitHub does not bill minutes on self-hosted runners. Whether this
+account's billing block still lets jobs start on one is the first thing to find
+out; if it does not, this item says so and stops.
+
+### B143 — "Not giving the final result": journey checks that assert it `[G5]`
+**Asked:** "some buttons do something but not working good or not giving the
+final result" (2026-09-24).
+**Where:** `tools/journeys/`, run by `tools/walk.sh --journeys`, and on the
+Windows runner once B142 exists.
+**Done when:** each journey in `docs/DOCTRINE.md` §4 exists, runs against the
+real app, and fails when its end result does not happen. Proven by breaking
+each one once (e.g. stopping the extension from checking in) and watching it go
+red.
+**Not this:** another "did the page change" check; `tools/walk.sh` already does
+that and it is what let "opens a browser with no extension" count as working.
+**Owner:** free.
+
+### B144 — "Go with step 1": the extension tested in a real browser, on saved pages of the big retail sites `[G5]`
+**Asked:** "an environment for the agents to test app … the app and extension
+itself", then "Go with step 1, cover all big retail sites, trendyol in turkiye
+and the others in Europe and USA" (2026-09-24). Windows first, then macOS;
+Linux builds are skippable.
+**Where:** `tools/journeys/extension.mjs`, run by `tools/walk.sh --journeys`
+(B143), with the saved pages in `extension/tests/pages/<site>/`.
+**Done when:**
+1. A cloud agent can run one command that starts the app, opens Chromium with
+   the unpacked extension loaded, serves each saved page at its real address,
+   and reports per page what the reader would see.
+2. For a site with an adapter (Sahibinden today) the journey fails unless the
+   panel appears and shows the app's answer for that listing.
+3. For a site with no adapter yet (every retail site today) the journey fails
+   unless the extension says so on the page and the site appears on the app's
+   **Sites** screen, which is B132's "does something everywhere" promise.
+4. The library holds at least one product page per site below, captured from
+   a real browser on the reader's PC by `tools/capture_pages.mjs`, with its
+   address and capture date.
+   - Türkiye: Trendyol, Hepsiburada, n11, Amazon.com.tr.
+   - Europe: Amazon (.de, .co.uk, .fr, .it, .es), MediaMarkt, Otto, Zalando,
+     bol.com, Cdiscount, Fnac, Allegro, Argos, Currys.
+   - USA: Amazon.com, Walmart, Target, Best Buy, eBay.
+5. Each check is shown red once, e.g. with the extension's check-in blocked.
+
+**Not this:**
+- synthetic pages written by hand, which test markup no real site has;
+- live sites fetched at test time, which refuse the cloud and change daily;
+- a pass that only means "the page loaded".
+
+**Owner:** this session for items 1–3 and 5. Item 4 needs one capture run on
+the reader's PC (the sites block datacenter addresses: Trendyol answers
+"blocked malicious bot", Amazon a captcha, eBay, MediaMarkt, Zalando,
+Hepsiburada, Argos and Currys 403).
+
+**Note:**
+- The grant for a non-Sahibinden site is a click only a person can make
+  (`permissions.request` needs a user gesture), so the journey pre-grants it in
+  a test copy of the manifest and says so in its output. That one step stays
+  untested until the Windows runner (B142) can click it.
+- Retail sites need a pack whose products they sell before the panel can show
+  risks there. Until then, "the extension says it cannot read this yet" is the
+  correct end result, not a failure.
+
 ### B140 — Half the cars pack's quotes cannot be re-proven: they are stored in quotation marks `[G3]`
 Found 2026-09-23 while testing Obscura as a fetcher. Of 20 sampled
 `(url, quote)` evidence pairs, 14 were not on their own page with *either*

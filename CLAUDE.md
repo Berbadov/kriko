@@ -10,6 +10,24 @@ exists to keep it true. See `docs/USAGE.md` (operation), `docs/INTERNALS.md`
 (architecture), `docs/historical/pipeline_postmortem.md` (early knowledge-pipeline
 history, pre-pivot — historical only).
 
+## The doctrine — read `docs/DOCTRINE.md` before any work *(2026-09-24)*
+
+How a request becomes something the reader has. The short form, which is not a
+substitute for reading it:
+
+1. **Write the request down first**, in the backlog, quoting the reader, with
+   **Where** (the exact screen) and **Done when** (what they can see). Read it
+   back to them before any code. No "Done when", no start.
+2. **Done means observed**: the end result happened (not "something
+   changed"), on the screen named, on `main`, and on Windows when the change
+   touches anything that differs there.
+3. **Reproduce first, then fix.** Ask outside tools for their facts; never type
+   a list from memory.
+4. **Every PR carries its proof** (the quote, what was observed, a screenshot),
+   and a second agent reviews it against the request.
+5. **One area per agent, a PR the same day, merged daily** (by the reader;
+   nothing reaches `main` without the author asking).
+
 ## TEMPORARY — the app-first phase *(2026-09-01, delete when it ends)*
 
 Until a Windows install opens, runs an analysis, and the reader says so, the
@@ -336,6 +354,7 @@ original reasoning.
 | `packs/<name>/README.md` | What that pack covers, and its own product principle | current |
 | `CLAUDE.md` | Principles + working rules for Claude sessions | current |
 | `CONTRIBUTING.md` | The loop (setup/gate/bump), branches, commits, the gate | current |
+| `docs/DOCTRINE.md` | How a request becomes done: the backlog entry, what "done" means, which test proves what, PR proof, parallel agents | current — read first |
 | `backlog.md` / `done.md` | Task tracking — single source of truth for status | current |
 | `docs/ARCHITECTURE.md` | Reading map — where to start, what each package owns | current |
 | `docs/USAGE.md` | Operating the stack + growing the knowledge base | current |
