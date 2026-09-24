@@ -452,7 +452,7 @@ def test_the_screen_words_every_kind_and_invents_none():
     keys compared. Same regex approach as `test_factcheck.py`, and the same
     trade: a fragile pattern with a loud assert beats a JS parser dependency.
     """
-    text = (ROOT / "ui" / "src" / "lib" / "agenda.ts").read_text()
+    text = (ROOT / "ui" / "src" / "lib" / "agenda.ts").read_text(encoding="utf-8")
     for name in ("KIND_WORD", "KIND_TONE"):
         match = re.search(name + r"[^{]*\{(.*?)\}", text, re.S)
         assert match, f"no {name} map in agenda.ts — was it renamed?"

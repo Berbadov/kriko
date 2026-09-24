@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Brief from "./Brief.svelte";
 import { stubFetch } from "./stub-fetch";
@@ -150,11 +150,16 @@ describe("Brief", () => {
         }) as typeof fetch;
         try {
             render(Brief, PROPS);
-            // A select of what the CLI named, not a text box to type into.
-            const box = (await screen.findByRole("combobox", { name: "LLM" })) as HTMLSelectElement;
-            expect([...box.options].map((one) => one.value)).toContain("sonnet");
-            box.value = "sonnet";
-            box.dispatchEvent(new Event("change", { bubbles: true }));
+            // Chosen, not typed. The control was an `<input list=…>` and is a
+            // real `<select>` since `Pick.svelte` — which is the whole point
+            // of the change, so the test drives it the way a reader does.
+            const box = (await screen.findByRole("combobox", {
+                name: "LLM",
+            })) as HTMLSelectElement;
+            expect([...box.options].map((one) => one.value)).toEqual(
+                expect.arrayContaining(["opus", "sonnet", "haiku"]),
+            );
+            await fireEvent.change(box, { target: { value: "sonnet" } });
             (await screen.findByRole("button", { name: "Run my agent on this" })).click();
             await waitFor(() =>
                 expect(

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { count } from "../lib/plural";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
@@ -113,7 +114,7 @@
 
 <div class="row">
     <input type="file" accept=".kpack,application/octet-stream" bind:files />
-    <button onclick={install}>Install pack</button>
+    <button class="primary" onclick={install}>Install pack</button>
 </div>
 <section class="card">
     <h3>Updates</h3>
@@ -254,7 +255,7 @@
                         {:else}
                             <p class="state empty">No retained revisions.</p>
                         {/if}
-                        <p class="meta">{life.events.length} lifecycle event(s)</p>
+                        <p class="meta">{count(life.events.length, "lifecycle event")}</p>
                         {#each life.events.slice(-5).reverse() as event}
                             <div class="event">
                                 <strong>{event.action}</strong> · {event.created_at}

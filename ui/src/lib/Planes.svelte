@@ -1,9 +1,11 @@
 <script lang="ts">
     import Async from "./Async.svelte";
-    import HarnessLlm from "./HarnessLlm.svelte";
+    import Icon from "./Icon.svelte";
     import { api } from "./api";
     import { remedyFor } from "./failure";
     import { follow, stateWord } from "./jobs";
+    import Pick from "./Pick.svelte";
+    import Scale from "./Scale.svelte";
     import type { Job, ResearchPlane } from "./types";
 
     /* The two ways this installation grows its own knowledge, side by side.
@@ -32,6 +34,12 @@
     const refresh = () => (promise = api.researchPlanes(selection()));
     let rows = $state(5);
     let budget = $state(0.2);
+    /* How deep each of those rows goes. The agenda is the screen that most
+     * needs this: whatever one subject costs, this multiplies it by `rows`,
+     * so the difference between Quick and Deep here is the difference
+     * between a run and an afternoon. */
+    let scale = $state("");
+    let maxDocuments = $state(0);
     let job = $state<Job | null>(null);
     let failed = $state("");
     let stop: (() => void) | undefined;
@@ -44,6 +52,11 @@
                 rows,
                 ...selection(),
                 backend: plane.id,
+                // Every plane that reads honours the depth. The `agent`
+                // plane gathers nothing by design, so it is the one where a
+                // number would have no effect — the server ignores it there
+                // either way, and sending it would only imply otherwise.
+                ...(plane.id === "agent" ? {} : { scale, ...(maxDocuments ? { max_documents: maxDocuments } : {}) }),
                 // Sent only on the plane that spends. The free plane's honest
                 // budget is zero, and zero means unlimited to the charger —
                 // which is why the server floors it on the paid plane rather
@@ -71,10 +84,21 @@
         api: "Kriko itself",
     };
     const nameOf = (plane: ResearchPlane) => NAMES[plane.id] ?? plane.id;
+
+    /* A glyph per plane, on the same closed set of ids `NAMES` is keyed off:
+     * a terminal for the CLI Kriko starts, a book for the brief you carry to
+     * your own agent, a chip for the one that spends tokens. An id with no
+     * glyph draws an empty box of the same size rather than shifting the
+     * title out of line. */
+    const GLYPHS: Record<string, string> = {
+        harness: "agent",
+        agent: "skill",
+        api: "llm",
+    };
 </script>
 
 <article class="card">
-    <h3>Build knowledge</h3>
+    <h3><Icon name="knowledge" /> Build knowledge</h3>
     <p class="meta">
         Three planes, the same claims at the end of all of them: whatever either one finds
         goes through the same grounding check and the same acceptance path, tagged
@@ -106,31 +130,35 @@
                 </label>
                 <label>
                     LLM
-                    {#if activeHarness}
-                        {#if activeHarness.llm_selectable}
-                            <HarnessLlm
-                                label="LLM"
-                                llms={activeHarness.llms ?? []}
-                                bind:value={llm}
-                                hint={activeHarness.llm_hint}
-                                defaultLabel={activeHarness.llm
-                                    ? `Use preference (${activeHarness.llm})`
-                                    : "CLI default"}
-                                onchange={refresh}
-                            />
-                        {:else}
-                            <span class="meta">no LLM switch on this agent</span>
-                        {/if}
-                    {:else}
-                        <input bind:value={llm} onchange={refresh} placeholder="paid-plane LLM" />
-                    {/if}
+                    <Pick
+                        bind:value={llm}
+                        onpick={refresh}
+                        disabled={!!activeHarness && !activeHarness.llm_selectable}
+                        options={(activeHarness?.llms ?? []).map((name) => ({ value: name }))}
+                        emptyLabel={activeHarness
+                            ? activeHarness.llm_selectable
+                                ? activeHarness.llm
+                                    ? `Preference (${activeHarness.llm})`
+                                    : "CLI default"
+                                : "no LLM switch on this agent"
+                            : "Use preference"}
+                        hint={activeHarness?.llm_hint ?? ""}
+                    />
                 </label>
-                <label>Search <select bind:value={search} onchange={refresh}><option value="">Use preference</option><option value="exa">Exa</option><option value="tavily">Tavily</option></select></label>
+                <label>
+                    Search
+                    <select bind:value={search} onchange={refresh}>
+                        <option value="">Use preference</option>
+                        <option value="exa">Exa</option>
+                        <option value="tavily">Tavily</option>
+                    </select>
+                </label>
             </details>
             <div class="planes">
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
                         <div class="plane-head">
+                            <Icon name={GLYPHS[plane.id] ?? ""} size={19} />
                             <strong>{nameOf(plane)}</strong>
                             <!-- The engine's own word, printed as well as
                                  translated: `per_token` is what the code says
@@ -202,6 +230,14 @@
                                 {/if}
                                 <button type="submit">Research the top {rows}</button>
                             </form>
+                            {#if plane.id !== "agent"}
+                                <Scale
+                                    bind:scale
+                                    bind:maxDocuments
+                                    multiplier={rows}
+                                    label="How much to read per subject"
+                                />
+                            {/if}
                             {#if plane.id === "api"}
                                 <p class="meta">
                                     One ceiling for the whole run, not per subject, and a
@@ -268,6 +304,11 @@
 </article>
 
 <style>
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
     .planes {
         display: grid;
         gap: var(--s-3);

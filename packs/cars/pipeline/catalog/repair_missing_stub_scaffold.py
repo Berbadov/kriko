@@ -48,14 +48,14 @@ def main() -> None:
     path = Path(args.file)
     if not path.is_absolute():
         path = REPO_ROOT / args.file
-    data = yaml.safe_load(path.read_text()) or {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
     if "part_id" in data:
         print(f"{args.file}: already has part_id={data['part_id']!r} — nothing to repair")
         return
 
     variants_path = VARIANTS_DIR / f"{args.make}_{args.model}.yaml"
-    variants = yaml.safe_load(variants_path.read_text()) if variants_path.exists() else []
+    variants = yaml.safe_load(variants_path.read_text(encoding="utf-8")) if variants_path.exists() else []
 
     scaffold = generate_part_scaffold(args.part_id, args.part_type, args.make, args.model, variants or [])
     merged = {**scaffold, "claims": data.get("claims", [])}
@@ -66,7 +66,7 @@ def main() -> None:
     print(f"  claims: {len(merged['claims'])} preserved")
 
     if args.apply:
-        path.write_text(yaml.dump(merged, allow_unicode=True, sort_keys=False))
+        path.write_text(yaml.dump(merged, allow_unicode=True, sort_keys=False), encoding="utf-8")
     else:
         print("\nDry run — no files written. Re-run with --apply to write changes.")
 

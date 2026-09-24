@@ -35,6 +35,11 @@ class _CancelsAfterAsk:
         if self._asked:
             raise Cancelled()
 
+    def replies(self):
+        # Nothing was said to this run. Present because the real `Progress` has
+        # it and a handler wires it to the researcher unconditionally.
+        return []
+
     def note_ask_happened(self):
         self._asked = True
 

@@ -109,7 +109,7 @@ def few_shot_examples() -> tuple[data.ExampleData, ...]:
     Cached — rebuild by calling few_shot_examples.cache_clear() if gold.yaml
     changes within a process lifetime (tests do this).
     """
-    entries = yaml.safe_load(GOLD_PATH.read_text()) or []
+    entries = yaml.safe_load(GOLD_PATH.read_text(encoding="utf-8")) or []
     examples = []
     for entry in entries:
         if entry.get("verdict") != "correct":

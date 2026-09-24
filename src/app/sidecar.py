@@ -68,9 +68,23 @@ def reserve(host: str, port: int) -> tuple[socket.socket, int]:
 
     Binding before the announcement is the whole point: the port in the printed
     line is a port already held, not one hoped for.
+
+    Which is why the option below is chosen per platform rather than set once.
+    `SO_REUSEADDR` means opposite things on the two: on POSIX it waives the
+    TIME_WAIT wait so a restarted sidecar can take its own port back, but on
+    Windows it means *take this address even though someone else is bound to
+    it* — so the one line meant to guarantee we hold the port was, on the only
+    platform this app ships an installer for, permission to announce a port
+    somebody else is serving. The shell would then poll `/api/health` against a
+    stranger, and the reader would watch it hang or open onto a window talking
+    to the wrong process. `SO_EXCLUSIVEADDRUSE` is the Windows spelling of what
+    this function has always claimed to do, and it fails the bind loudly.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    if sys.platform == "win32":
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    else:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, port))
     sock.listen(128)
     return sock, sock.getsockname()[1]
