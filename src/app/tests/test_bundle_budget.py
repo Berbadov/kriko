@@ -59,7 +59,13 @@ import pytest
 #: per-harness LLM dropdowns, the provider self-test buttons, and the Sites
 #: activation rows. 280,406 bytes of ordinary feature work, not a library
 #: arriving unweighed.
-BUDGET = {".js": 282_000, ".css": 60_000}
+#:
+#: Raised .js from 282,000 to 286,000 on 2026-09-23: again no dependency. The
+#: shared LLM picker (a select of what each CLI names, replacing three
+#: text-box-and-datalist copies), the harness LLM chips on Benchmark, the
+#: Re-ask button, and one clipboard helper with a fallback for five copy
+#: buttons that failed silently. 284,4xx bytes.
+BUDGET = {".js": 286_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the

@@ -294,6 +294,14 @@ def main(argv=None) -> int:
     # first Windows CI run showed as the exact failure this design exists to
     # prevent — `KRIKO_PORT 58378` printed, then nothing ever listening on it.
     # A socket object needs no re-creation on any platform.
+    # Each CLI's and each keyed provider's LLM list, asked once in the
+    # background: `agy models` takes seconds, and the Agents screen should not
+    # be the one that pays for it.
+    # Here rather than in the lifespan so a test client never spawns a CLI.
+    from app import modeldiscovery
+    from app.providers import harness
+    harness.warm_models()
+    modeldiscovery.cached()  # starts a background ask of each keyed provider
     config = uvicorn.Config(
         create_app(Settings.from_env(**overrides)),
         log_level="warning",

@@ -445,6 +445,14 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     overrides = {"store_path": Path(args.store)} if args.store else {}
+    # Each CLI's and each keyed provider's LLM list, asked once in the
+    # background: `agy models` takes seconds, and the Agents screen should not
+    # be the one that pays for it.
+    # Here rather than in the lifespan so a test client never spawns a CLI.
+    from app import modeldiscovery
+    from app.providers import harness
+    harness.warm_models()
+    modeldiscovery.cached()  # starts a background ask of each keyed provider
     uvicorn.run(
         create_app(Settings.from_env(**overrides)),
         host=args.host,

@@ -141,7 +141,7 @@ def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> 
     }
 
 
-def choices(conn, app_state_path=None) -> dict:
+def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     """What could be chosen here, and what is chosen now.
 
     Everything is discovered rather than listed: the harnesses from what is
@@ -150,26 +150,28 @@ def choices(conn, app_state_path=None) -> dict:
     hardcoded model list would be stale within a release and wrong for anyone
     pointing `LLM_BASE_URL` at their own gateway.
     """
-    from app import keys
+    from app import keys, modeldiscovery
     from app.providers import harness, llm
     from app.web.settings import KRIKO_HOME
 
     chosen = read(conn)
+    found = harness.available()
+    lists = harness.models_for_each(found, fresh=fresh)
     installed = [
         {
             "id": one.id, "label": one.label, "path": harness.locate(one),
             "llm": for_harness(conn, one.id),
-            "llms": harness.models_for(one),
+            "llms": lists.get(one.id, []),
             "llm_hint": one.model_hint,
             "llm_selectable": bool(one.model_flag),
         }
-        for one in harness.available()
+        for one in found
     ]
     unusable = [
         {"id": one.id, "label": one.label, "why": one.unusable}
         for one in harness.found_but_unusable()
     ]
-    have = {one.id for one in harness.available()}
+    have = {one.id for one in found}
     missing = [
         {
             "id": one.id, "label": one.label, "command": one.executable,
@@ -206,6 +208,9 @@ def choices(conn, app_state_path=None) -> dict:
             "offered": modelcatalogue.offered(
                 KRIKO_HOME,
                 ready={one["id"] for one in keys.status() if one["present"]},
+                # What each keyed provider lists today, beside the catalogue.
+                # Never waited on here unless `fresh`: see modeldiscovery.
+                discovered=modeldiscovery.cached(fresh=fresh),
             ),
             # Where the reader edits prices. Named rather than described,
             # because "editable config" is only true if they can find it.

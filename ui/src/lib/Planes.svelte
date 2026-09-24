@@ -1,5 +1,6 @@
 <script lang="ts">
     import Async from "./Async.svelte";
+    import HarnessLlm from "./HarnessLlm.svelte";
     import { api } from "./api";
     import { remedyFor } from "./failure";
     import { follow, stateWord } from "./jobs";
@@ -105,22 +106,25 @@
                 </label>
                 <label>
                     LLM
-                    <input
-                        list="run-harness-llms"
-                        bind:value={llm}
-                        onchange={refresh}
-                        placeholder={activeHarness
-                            ? (activeHarness.llm_selectable
-                                ? (activeHarness.llm || "CLI default")
-                                : "no LLM switch on this agent")
-                            : "paid-plane LLM"}
-                    />
+                    {#if activeHarness}
+                        {#if activeHarness.llm_selectable}
+                            <HarnessLlm
+                                label="LLM"
+                                llms={activeHarness.llms ?? []}
+                                bind:value={llm}
+                                hint={activeHarness.llm_hint}
+                                defaultLabel={activeHarness.llm
+                                    ? `Use preference (${activeHarness.llm})`
+                                    : "CLI default"}
+                                onchange={refresh}
+                            />
+                        {:else}
+                            <span class="meta">no LLM switch on this agent</span>
+                        {/if}
+                    {:else}
+                        <input bind:value={llm} onchange={refresh} placeholder="paid-plane LLM" />
+                    {/if}
                 </label>
-                <datalist id="run-harness-llms">
-                    {#each activeHarness?.llms ?? [] as name (name)}
-                        <option value={name}>{name}</option>
-                    {/each}
-                </datalist>
                 <label>Search <select bind:value={search} onchange={refresh}><option value="">Use preference</option><option value="exa">Exa</option><option value="tavily">Tavily</option></select></label>
             </details>
             <div class="planes">
