@@ -1,170 +1,69 @@
 # Architecture — a reading map
 
-Kriko is a local-first, open knowledge engine for manufactured products: it
-answers "what is known to go wrong with *this specific one*" from installed
-knowledge **packs** (`cars` is pack #1). The one invariant that explains the
-whole layout: **`kriko/` knows no category.** It has no `make`, no
-`engine_code`, no `fuel` — only a generic pack store, lookup, ranking, and
-research interface. That is what makes adding a product category a data
-change (a new `packs/<name>/` directory) rather than an engine change. See
-`src/kriko/tests/test_core_is_domain_free.py`, which enforces it by walking
-`kriko/`'s AST.
+Kriko is a local-first knowledge engine for manufactured products: it answers "what is known to go wrong with *this specific one*" from installed packs (`cars` is pack #1). One invariant explains the layout: **`kriko/` knows no category** — no `make`, no `engine_code`, no `fuel`. Adding a category is a data change (`packs/<name>/`), not an engine change. Enforced by `src/kriko/tests/test_core_is_domain_free.py`, which walks `kriko/`'s AST.
 
 ## The fan
 
-Dependencies point down and in, never up or sideways (copied from
-`CLAUDE.md`'s layering principle — if this drifts from that copy, `CLAUDE.md`
-is the source of truth):
+Dependencies point down and in, never up or sideways (if this drifts from `CLAUDE.md`'s layering principle, `CLAUDE.md` wins):
 
-```
-ui/        the frontend — Svelte + Vite source, built into src/app/web/static/.
-           Talks to app/ over HTTP; imports no Python. Holds no pack
-           vocabulary (enforced by test_repo_invariants.py).
-   |
-   v
-app/       interfaces — cli, web dashboard, mcp server, operator TUI.
-   |
-   v
-kriko/      the engine — pack store, generic lookup, ranking, research
-   ^        interface. Imports NONE of the others. Knows no category.
-   |
-packs/      one directory per product category: data, vocabulary, trust
-   |        tiers, builder, and that category's own coverage report.
-   |        This is the thing a third party authors.
-   v
-packs/cars/pipeline/  evidence ledger + grounded extraction — turns sources into
-            claims a pack can ship.
-
-app/pipeline/        pipeline drivers — ledger_run, remediate, panel, process.
-            May import packs/cars/pipeline/ and packs/. Nothing imports app/pipeline/.
+```mermaid
+flowchart TD
+    UI["ui/ — frontend, HTTP only"] --> APP["app/ — CLI, web, MCP, TUI"]
+    APP --> K["kriko/ — engine, imports none of the others"]
+    PACKS["packs/ — one dir per category"] --> K
+    APP --> PL["app/pipeline/ — ledger drivers"]
+    PL --> PP["packs/cars/pipeline/ — evidence ledger"]
 ```
 
 ## Package → what it owns → read this first
 
 | Package | Owns | File to read first |
 |---|---|---|
-| `ui/` | The app's Svelte source; `npm --prefix ui run build` writes the committed bundle in `src/app/web/static/` | `ui/src/lib/shell/nav.ts` (the route table both the rail and the router read) |
-| `src/app/` | Interfaces: CLI, FastAPI web dashboard, MCP server for research agents, operator TUI | `src/app/cli.py` |
-| `src/app/pipeline/` | Pipeline drivers that orchestrate the ledger and packs/cars pipeline | `src/app/pipeline/ledger_run.py` |
-| `src/kriko/` | The engine: pack store, generic lookup/ranking, gate vocabulary, research interface — no category knowledge | `src/kriko/store/packstore.py` |
-| `packs/` | One directory per product category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
-| `packs/cars/pipeline/` | Evidence ledger + grounded extraction that turns scraped sources into claims for the cars pack | `packs/cars/pipeline/ledger/acquire.py` |
-| `extension/` | Chrome extension: scrapes a listing page, its background worker calls the web API, renders the risk card | `extension/content.js` |
+| `ui/` | Svelte source; `npm --prefix ui run build` writes `src/app/web/static/` | `ui/src/lib/shell/nav.ts` (route table for rail + router) |
+| `src/app/` | Interfaces: CLI, FastAPI dashboard, MCP server, operator TUI | `src/app/cli.py` |
+| `src/app/pipeline/` | Pipeline drivers orchestrating the ledger and cars pipeline | `src/app/pipeline/ledger_run.py` |
+| `src/kriko/` | Engine: pack store, generic lookup/ranking, gates, research interface | `src/kriko/store/packstore.py` |
+| `packs/` | One dir per category — data, vocabulary, trust tiers, builder | `packs/drill/README.md` (smallest complete example) |
+| `packs/cars/pipeline/` | Evidence ledger + grounded extraction for the cars pack | `packs/cars/pipeline/ledger/acquire.py` |
+| `extension/` | Scrapes listings; background worker calls the web API, renders risk cards | `extension/content.js` |
 
 ### `ui/` — the frontend
 
-Svelte 5 + Vite, built into `src/app/web/static/`. Hash-routed, no framework
-router. The shell is a grouped rail (`lib/shell/`) over a route table in
-`lib/shell/nav.ts` — one list both halves read, so a destination cannot exist
-in the navigation and not in the router.
-
-- `styles/` — `tokens.css` (the only file naming a colour), `base.css`,
-  `components.css`, `print.css`. Class-based, no component `<style>` blocks.
-- `lib/` — the typed API client, pure derivation (`report.ts`, `verdict.ts`,
-  `compare.ts`, `health.ts`, `fields.ts`) and shared components. Derivation is
-  pure so it is tested without a DOM.
-- `routes/` — one component per destination.
-
-The report surface is deliberately the only editorial one: a 68ch measure,
-reading leading, and a print sheet. Everything else is instrument.
+Svelte 5 + Vite, built into `src/app/web/static/`. Hash-routed shell over the route table in `lib/shell/nav.ts`. `styles/` holds the only colour file (`tokens.css`); `lib/` the typed API client plus pure derivation (`report.ts`, `verdict.ts`, `compare.ts`, `health.ts`, `fields.ts`); `routes/` one component per destination. Only the report surface is editorial (68ch, print sheet).
 
 ## Chasing X? read these
 
-**How a listing becomes risk cards** (end-to-end request path):
-1. `extension/content.js:423-428` — scrapes the page and messages the
-   extension's background worker (`chrome.runtime.sendMessage({type:
-   "ANALYZE", ...})`). A content script cannot make a cross-origin request to
-   the local web API itself under Manifest V3, so it hands the URL to the
-   background service worker instead.
-2. `extension/background.js:266-268` (`requestAnalysis()`) — makes the actual
-   `POST /api/analyze` call.
-3. `src/app/web/routers/analyze.py:88` (`analyze()`) — turns the scrape into
-   a `Query` via `kriko.adapters.adapt()`, then calls `kriko.lookup.lookup()`.
-4. `src/kriko/adapters.py` — pack-supplied label/parse rules turn raw scraped
-   text into typed identity/context fields (no JS from a pack is ever run).
-5. `src/kriko/lookup/__init__.py:97` (`lookup()`) — matches the subject, scores
-   and ranks its claims, returns a `LookupResult`.
+**Listing → risk cards:** `extension/content.js:423-428` (scrape, message background) → `extension/background.js:266-268` (`requestAnalysis()`, `POST /api/analyze`) → `src/app/web/routers/analyze.py:88` (scrape → `Query` via `kriko.adapters.adapt()`, then `kriko.lookup.lookup()`) → `src/kriko/adapters.py` (label/parse rules) → `src/kriko/lookup/__init__.py:97`.
 
-**Why a claim did or did not show:**
-- `src/kriko/lookup/rank.py:137` (`relevance()`) and `:162` (`explain()`) — the
-  scoring/explanation math.
-- `src/kriko/lookup/conditions.py:103` (`evaluate()`) — whether the claim's
-  mileage/year/config conditions match this subject.
-- `src/kriko/gates.py:91` (`structural_reasons()`) and `:137` (`is_specific()`) —
-  whether the claim clears the product-principle bar at all.
-- `lookup/tree.py` — the same rows `rank.py` scores, read the other way: how
-  well supported is each claim? Four separate signals, lexicographic
-  ordering, no score.
+**Why a claim did/didn't show:** `src/kriko/lookup/rank.py:137` (`relevance()`) and `:162` (`explain()`); `src/kriko/lookup/conditions.py:103` (`evaluate()`); `src/kriko/gates.py:91` (`structural_reasons()`) and `:137` (`is_specific()`); `lookup/tree.py` (support read, no score). Ranked-low → `tree.py`, then `src/app/web/routers/health.py`.
 
-**Why is this claim ranked so low / who says so?** → `src/kriko/lookup/tree.py`,
-then `src/app/web/routers/health.py`.
+**What a pack contains:** `docs/PACK_CONTRACT.md`; `packs/drill/`; `src/kriko/pack/manifest.py:37` (`load()`).
 
-**What a pack contains:**
-- `docs/PACK_CONTRACT.md` — the contract, in prose.
-- `packs/drill/` — the smallest pack that satisfies it end to end.
-- `src/kriko/pack/manifest.py:37` (`load()`) — what a pack's manifest file
-  (`packs/drill/pack.toml` for the reference example) must declare.
+**Build + install:** `src/kriko/pack/build.py:481` (`build()`, `_emit_*` stages); `src/kriko/store/packstore.py:176` (`install()`) and `:377` (`activate()`); `packs/cars/build.py:863` (cars' own build — a parallel "migration, not the general pack builder" for legacy YAML shapes).
 
-**How a pack is built and installed:**
-- `src/kriko/pack/build.py:481` (`build()`) — compiles a pack directory
-  (vocabulary + data + trust + gates) into one SQLite file; a short sequence
-  of `_emit_*` stages.
-- `src/kriko/store/packstore.py:176` (`install()`) and `:377` (`activate()`) —
-  loads a built pack file into the store as a new revision.
-- `packs/cars/build.py:863` (`build()`) — the cars pack's own build. It does
-  **not** call into `src/kriko/pack/build.py` — its own docstring is explicit
-  that this is "a migration, not the general pack builder": the legacy car
-  YAML shapes predate the standard pack layout, so this script reads them
-  directly and writes the same `_emit_*`-shaped rows itself. The two
-  builders are parallel implementations that share a naming convention, not
-  a caller and a callee.
+**Evidence:** `packs/cars/pipeline/ledger/acquire.py` (fetch); `packs/cars/pipeline/ledger/ingest.py` (~40-line adapter over `src/kriko/ledger/db.py`); `src/kriko/ledger/extraction.py` + `chunking.py` (shared grounded-extraction machinery); `src/app/pipeline/ledger_run.py` (`acquire`, `remediate`, `all`, `extract`, `report`).
 
-**Where evidence comes from:**
-- `packs/cars/pipeline/ledger/acquire.py` — pulls raw source pages;
-  `packs/cars/pipeline/ledger/ingest.py` stores them (a ~40-line adapter over
-  `src/kriko/ledger/db.py`).
-- `src/kriko/ledger/extraction.py` and `src/kriko/ledger/chunking.py` — the
-  category-agnostic grounded-extraction machinery packs/cars/pipeline reuses
-  rather than forking.
-- `src/app/pipeline/ledger_run.py` — the CLI driver that runs ingest → extract →
-  cluster → verdict end to end (`acquire`, `remediate`, `all`, `extract`,
-  `report` subcommands).
-
-**What Kriko refuses to store:**
-- `src/app/mcp_server.py:262` (`submit_findings()`) — the one place external
-  findings enter the store; grounds every quote against its source text
-  before a claim is even considered.
-- `src/kriko/gates.py` — `gate_reason()` and `structural_reasons()`, the generic
-  gate engine that refuses routine/generic/unanchored findings.
-- `packs/cars/vocabulary/gates.yaml` — the cars pack's own gate vocabulary
-  (what counts as "routine" or "generic" for a car) that `src/kriko/gates.py`
-  evaluates. A different pack ships its own gate vocabulary file at the same
-  relative location instead.
+**Refusals:** `src/app/mcp_server.py:262` (`submit_findings()` — grounds every quote first); `src/kriko/gates.py` (`gate_reason()`, `structural_reasons()`); `packs/cars/vocabulary/gates.yaml` (cars' own routine/generic vocabulary).
 
 ## Entry points
-
-Every `python -m` target in the tree:
 
 | Command | What it does |
 |---|---|
 | `kriko` (`python -m app.cli`) | CLI — pack install/build/list, lookup queries |
 | `kriko tui` / `kriko-sidecar --tui` | Operator console — planes, agenda, jobs, shell (see `docs/INTERNALS.md`) |
-| `python -m app.mcp_server` | MCP server for research agents (`submit_findings`, `lookup`, …) |
+| `python -m app.mcp_server` | MCP server for research agents |
 | `python -m app.pipeline.ledger_run` | Ledger pipeline: acquire, extract, cluster, verdict, remediate, report |
 | `python -m app.pipeline.panel` | Ledger review/inspection panel |
 | `python -m app.pipeline.process` | End-to-end onboarding driver for one part/model |
-| `python -m app.web` | FastAPI web dashboard (`http://127.0.0.1:8787`) |
-| `python -m packs.cars.build` | Builds the cars pack (also reachable via `app.cli build packs/cars`) |
+| `python -m app.web` | FastAPI dashboard (`http://127.0.0.1:8787`) |
+| `python -m packs.cars.build` | Builds the cars pack (also `app.cli build packs/cars`) |
 | `python -m packs.cars.coverage` | Cars pack coverage report |
-| `packs/cars/pipeline/catalog/{discover,doctor,write_variants,repair_missing_stub_scaffold}.py` | Catalog maintenance: discovery, health check, variant/stub generation |
-| `packs/cars/pipeline/fitment/validate_fitment.py`, `packs/cars/pipeline/parts/validate_part_yaml.py` | Validate fitment/part YAML against the schema |
-| `packs/cars/pipeline/ledger/{eval_verdict,parity}.py`, `packs/cars/pipeline/sources/curated.py`, `packs/cars/pipeline/scaffold.py`, `packs/cars/pipeline/agent/render.py` | Remaining one-off ledger/scaffold/render tools — run each with `--help` |
+| `packs/cars/pipeline/catalog/{discover,doctor,write_variants,repair_missing_stub_scaffold}.py` | Catalog discovery, health, variant/stub generation |
+| `packs/cars/pipeline/fitment/validate_fitment.py`, `packs/cars/pipeline/parts/validate_part_yaml.py` | Validate fitment/part YAML |
+| `packs/cars/pipeline/ledger/{eval_verdict,parity}.py`, `packs/cars/pipeline/sources/curated.py`, `packs/cars/pipeline/scaffold.py`, `packs/cars/pipeline/agent/render.py` | One-off ledger/scaffold/render tools (`--help`) |
 
 ## How to run things
 
-- Use the repo venv, not a bare `python`: `.venv/bin/python`.
-- Run the whole test suite with no arguments: `.venv/bin/python -m pytest`
-  (`pytest.ini` pins `testpaths`; see `CONTRIBUTING.md`).
-- Build and install the cars pack: `python -m app.cli build packs/cars`
-  then `python -m app.cli packs` to confirm it's installed (see
-  `docs/USAGE.md` for the full onboarding walkthrough).
+- Repo venv, not bare `python`: `.venv/bin/python`.
+- Full suite, no args: `.venv/bin/python -m pytest` (`pytest.ini` pins `testpaths`; see `CONTRIBUTING.md`).
+- Cars pack: `python -m app.cli build packs/cars`, then `python -m app.cli packs` (full walkthrough: `docs/USAGE.md`).
