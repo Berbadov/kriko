@@ -17,7 +17,7 @@ app/             CLI, web dashboard, MCP server, job runner, sidecar
   └─ app/pipeline/  ledger and remediation drivers
                     └─ packs/     category data, builders, vocabulary, coverage
 kriko/           generic pack store, lookup, ranking, ledger primitives
-extension/       Chrome client for the cars pack adapter
+extension/       Chrome client for pack adapters (cars pack adapter ships first)
 ```
 
 `kriko/` imports no other package; `packs/` doesn't import `app/`. Enforced
@@ -115,8 +115,8 @@ through `subject_tree()`/`weakest_claims()`/`Query.lang`/`/api/query`
 `icons.js`) + step-1 local blocks. `buildCriticalAlerts` walks
 `listing.panel.alerts` in order (fired-ids for `unless`; per-rule `say`
 templates; names/tones/hints from `panel.states`/`panel.measures`; title-less
-*original* state counted, never shown). `local_panel.test.js` reads the
-shipped `packs/cars/adapters/sahibinden.json` — copies can't go stale
+*original* state counted, never shown). `local_panel.test.js` reads e.g. the
+shipped `packs/cars/adapters/sahibinden.json` (example adapter — Sahibinden ships first, any site can get one) — copies can't go stale
 unnoticed.
 
 ---
