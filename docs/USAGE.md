@@ -1,6 +1,6 @@
 # Kriko — Usage Guide
 
-Kriko is a local-first knowledge engine for manufactured products. It ships as a desktop app; the `cars` pack surfaces known reliability risks for used cars on Sahibinden.com through a Chrome extension. This guide covers running it and growing the knowledge base.
+Kriko is a local-first knowledge engine for manufactured products. It ships as a desktop app; packs surface known reliability risks for used products on listing sites through a Chrome extension — the `cars` pack (example pack #1) covers used cars, Sahibinden adapter ships first (any site can get one). This guide covers running it and growing the knowledge base.
 
 ```mermaid
 flowchart LR
@@ -43,7 +43,7 @@ Stop with Ctrl-C. No Docker: `test_the_app_stays_standalone` (in `src/app/pipeli
 
 1. Open Chrome → `chrome://extensions` → enable **Developer mode**
 2. Click **Load unpacked** → select `~/kriko/extension/`
-3. Visit any Sahibinden.com listing for a supported car (Renault Megane IV)
+3. Visit any supported listing — e.g. a Sahibinden.com listing for a car in the example cars pack (Renault Megane IV)
 4. The Kriko panel appears automatically after ~1.5 seconds
 
 After an app update, *Add again* plus the browser's **Reload** is the repair. The extension talks to `127.0.0.1:8787` only — neither `python -m app.web` nor the desktop app takes a different port. If something else holds 8787, the desktop app logs to stderr and opens anyway; stop the other listener.
@@ -304,7 +304,7 @@ sqlite3 ~/.kriko/knowledge.sqlite \
 python -m app.pipeline.panel
 ```
 
-`GET /debug/analyses?limit=20&model=golf` mirrors the JSONL over HTTP but is **off (404) by default** — set `ENABLE_DEBUG_ENDPOINT=true` in `deploy/.env` only temporarily.
+`GET /debug/analyses?limit=20&model=golf` (golf: example — cars pack) mirrors the JSONL over HTTP but is **off (404) by default** — set `ENABLE_DEBUG_ENDPOINT=true` in `deploy/.env` only temporarily.
 
 ## 8. Eval the LLM gates (optional)
 
