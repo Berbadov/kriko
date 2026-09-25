@@ -1,241 +1,73 @@
+> TL;DR (archived 2026-09-25): Design (2026-08-21, executed same day — five phases landed)
+for repo disorder: commit the 50-file dirty tree in 6 commits (fixing the 760-passed/1-failed
+baseline's comment-scanner harness bug), `git rm --cached` runtime artifacts (6.9 MB ledger.db,
+7.8 MB `sahibinden_example/`), delete 7 dead leaf modules (21→13), move stale docs to
+`docs/historical/`, then new Phase 5 breaking the backend↔knowledge import cycle via `ops/`
+layering (one-way deps, `git mv`, Dockerfile/MCP/package.json reference fixes).
+
 # Codebase organisation — design
 
-**Date:** 2026-08-21
-**Branch:** `feat/agent-model-onboarding`
-**Status:** executed 2026-08-21 — all five phases landed; see done.md
-**Revised:** 2026-08-21 — Phase 5 (dependency-cycle refactor) added
+**Date:** 2026-08-21 · **Branch:** `feat/agent-model-onboarding` · **Status:** executed 2026-08-21 — all five phases landed; see done.md · **Revised:** Phase 5 (dependency-cycle refactor) added same day.
 
 ## Problem
 
-Five distinct kinds of disorder, at different layers:
-
-1. `knowledge/` root holds 21 loose modules — live pipeline code mixed with spent
-   one-off migration scripts, two of which are per-model patches that the
-   generalization principle in `CLAUDE.md` forbids.
-2. `knowledge/ledger.db` is tracked *and* listed in `.gitignore`. Gitignore does not
-   untrack; the 6.9 MB binary re-diffs on every commit and appears in three recent ones.
-3. ~50 uncommitted files spanning four unrelated features share one working tree.
-4. Root clutter: `sahibinden_example/` (7.8 MB, 152 tracked files, zero references),
-   `local.db`, `thoughts/`, root-owned `logs/`. `.pytest_cache` is not gitignored.
-5. Four docs that `CLAUDE.md` itself marks "historical — do not follow" sit beside
-   current ones in `docs/`.
+Five disorders: (1) `knowledge/` root: 21 loose modules (live code + spent one-offs, incl. two per-model patches violating `CLAUDE.md` generalisation); (2) `knowledge/ledger.db` tracked *and* gitignored — 6.9 MB binary re-diffs every commit (×3 recent); (3) ~50 uncommitted files across four features; (4) root clutter: `sahibinden_example/` (7.8 MB, 152 files, zero refs), `local.db`, `thoughts/`, root-owned `logs/`, un-ignored `.pytest_cache`; (5) four `CLAUDE.md`-marked-historical docs beside current ones.
 
 ## Baseline
 
-`python -m pytest -q` → **760 passed, 1 failed** (2026-08-21).
-
-The single failure is a test-harness bug, not a product bug.
-`knowledge/tests/test_hub_web.py::test_every_element_the_script_reaches_for_exists_on_the_page`
-regex-scans `hub.js` for `$('#id')` selectors without stripping comments. The new
-`hub.js:7` comment documents a past bug using an illustrative `$('#missing')`
-selector, which the scanner reads as live code.
-
-Every phase below must hold **760 passed** and drive the failure count to zero.
+`pytest -q` → **760 passed, 1 failed** (2026-08-21). The failure is a harness bug: `test_every_element_the_script_reaches_for_exists_on_the_page` regex-scans `hub.js` `$('#id')` selectors without stripping comments; `hub.js:7`'s illustrative `$('#missing')` comment trips it. Every phase must hold 760 passed and drive failures to zero.
 
 ## Non-goals
 
-- No history rewrite. `git rm --cached` stops future churn; historical blobs stay in
-  `.git`. Shrinking the pack is a separate, deliberate decision.
-- No *renaming*. `discover.py` existing twice with unrelated meanings, and the vague
-  `auto.py` / `process.py`, are real readability problems but are left alone — Phase 5
-  moves files without also changing what they are called, so every move stays
-  greppable. Renames are follow-up work.
-- Phase 5 relocates modules to break the dependency cycle (added 2026-08-21 after the
-  original "no relocation" scope proved unable to address the intuitiveness problem).
-  Phases 1-4 still change no import paths; all churn is isolated to Phase 5.
-- No splitting of the large files (`hub/web.py` 1151 lines, `hover_lite.js` 1084,
-  `hub/static/hub.js` 935). Its own project, after this lands.
-- `.opencode/` and `opencode.json` untouched — another harness's config.
+- No history rewrite (`git rm --cached` stops churn; blobs stay; pack-shrinking is separate).
+- No *renames* (duplicate `discover.py`, vague `auto.py`/`process.py` stay — Phase 5 moves without renaming so moves stay greppable; renames are follow-up).
+- Phases 1–4 change no import paths; Phase 5 isolates all churn. No big-file splits (`hub/web.py` 1151, `hover_lite.js` 1084, `hub.js` 935 — separate project). `.opencode/`/`opencode.json` untouched.
 
 ## Phase 1 — commit the dirty tree
 
-Six commits, each diff read before staging. Runtime artifacts are excluded here and
-handled in Phase 2.
-
-| # | Commit | Files |
-|---|--------|-------|
-| 1 | source tiers | `knowledge/sources/tiers.py`, `catalog/source_tiers.yaml`, `tests/test_source_tiers.py` |
-| 2 | catalog registry + generations | `catalog/registry.py`, `components.yaml`, `generations/` |
-| 3 | part YAML v3 | `parts/migrate_v3.py`, `parts/validate_part_yaml.py`, 24 × `backend/data/parts/**/*.yaml` |
-| 4 | serving payload v2 | `backend/api/main.py`, `api/schemas.py`, `core/resolver.py`, `db/models.py`, `db/schema.sql`, `sync.py`, `tests/test_serving_gold.py`, `tests/test_serving_payload_v2.py`, `tests/fixtures/serving_gold/`, `tests/test_sync_consequence.py`, `tests/test_sync_validation_gate.py`, `deploy/Dockerfile`, `docs/INTERNALS.md` |
-| 5 | hover_lite UI | `extension_ui/hover_lite/{hover_lite.js,hover_lite.css,risk_card.js}` |
-| 6 | hub picker + comment-scanner fix | `knowledge/hub/static/{hub.js,style.css}`, `hub/tests/{harness.js,picker.test.js}`, `knowledge/tests/test_hub_web.py` |
-
-Commit 6 fixes the baseline failure: strip `//` line comments and `/* */` blocks from
-the script text before scanning for selectors. The guard keeps its value (it still
-catches genuinely absent elements) and stops penalising explanatory comments.
-
-If any group's diff turns out to span features, it is split further rather than
-force-fitted into the table.
+Six commits, each diff read before staging (runtime artifacts excluded → Phase 2): (1) source tiers (`sources/tiers.py`, `catalog/source_tiers.yaml`, test); (2) catalog registry + generations; (3) part YAML v3 (`migrate_v3.py`, validator, 24 part YAMLs); (4) serving payload v2 (`main.py`, schemas, resolver, models, schema.sql, sync, gold/payload tests, fixtures, Dockerfile, INTERNALS); (5) hover_lite UI (js/css/risk_card); (6) hub picker + **comment-scanner fix** (strip `//` + `/* */` before scanning — keeps guard value, stops penalising comments). Split further if a group spans features.
 
 ## Phase 2 — git hygiene
 
-1. `git rm --cached` for the tracked runtime artifacts: `knowledge/ledger.db`,
-   `knowledge/hub/runs.jsonl`.
-2. `git rm --cached -r sahibinden_example/` — 152 files, 7.8 MB, zero code references.
-   Kept on disk and gitignored, not deleted: it is a useful scraper reference sample.
-3. `.gitignore` additions: `.pytest_cache/`, `knowledge/catalog/cache/`,
-   `knowledge/hub/runs.jsonl`, `sahibinden_example/`.
-4. `local.db` is already ignored and untracked — no action.
+`git rm --cached`: `knowledge/ledger.db`, `knowledge/hub/runs.jsonl`, `sahibinden_example/` (kept on disk + gitignored as scraper reference — not deleted). `.gitignore` += `.pytest_cache/`, `knowledge/catalog/cache/`, `runs.jsonl`, `sahibinden_example/`. (`local.db` already ignored.)
 
 ## Phase 3 — knowledge/ dead-code removal (21 → 13 modules)
 
-Delete seven leaf modules. Each has zero importers; every apparent reference is a
-self-reference inside its own docstring. Each imports *from* live modules and is
-imported by nothing, so no dependency edge is severed.
-
-Five of the seven were already listed for deletion in
-`docs/superpowers/plans/2026-07-07-evidence-ledger-stage1.md:2328`; that plan was
-only half executed (its `purge_*.py` targets are gone, these were left behind).
-
-| Module | Why dead |
-|---|---|
-| `downgrade_unsourced_claims.py` | one-off retroactive fix; on the July delete list |
-| `find_cross_file_duplicates.py` | one-off report; `docs/design_flaws.md:55` calls its existence the symptom |
-| `generalize_titles.py` | one-off title rewrite; logic now in the extraction path |
-| `merge_ea888_power_tunes.py` | **per-model patch** — violates the generalization principle |
-| `normalize_domains.py` | one-off; `domains.normalize_domain` is the live mechanism |
-| `fix_sibling_contamination.py` | **per-model patch**; `stoplists.mentions_sibling_code` is the live mechanism |
-| `verify_agent.py` | `docs/handover.md:4` states this flow "is not how Kriko works today" |
-
-Retained at `knowledge/` root (13): `auto`, `consequence_tier`, `dedup`, `discover`,
-`domains`, `extract`, `ground_mileage_threshold`, `ground_year_window`,
-`langextract_client`, `process`, `scaffold`, `stoplists`, `yamlutil`.
-
-`scaffold.py` is retained despite `docs/SCAFFOLD.md` being marked historical —
-`README.md:153` still documents it as the bootstrap entry point. Reconciling those
-two is follow-up work, not part of this cleanup.
-
-Full suite runs after deletion to confirm 760 still pass.
+Seven leaf modules, zero importers (apparent refs are self-docstring mentions); each imports *from* live code, imported *by* nothing: `downgrade_unsourced_claims`, `find_cross_file_duplicates` (existence called the symptom in `design_flaws.md:55`), `generalize_titles` (logic in extraction path), `merge_ea888_power_tunes` (**per-model patch**), `normalize_domains` (`domains.normalize_domain` is live), `fix_sibling_contamination` (**per-model patch**; `stoplists.mentions_sibling_code` live), `verify_agent` (`handover.md:4` says that flow is dead). Five were on the July ledger-plan delete list (half-executed). Retained 13 incl. `scaffold.py` (`README.md:153` still documents it — reconciling with historical `SCAFFOLD.md` is follow-up). Suite re-run: 760 pass.
 
 ## Phase 4 — docs and stale artifacts
 
-1. `docs/historical/` gets the two "do not follow" docs: `SCAFFOLD.md`, `handover.md`.
-
-   **Revised during execution:** `pipeline_postmortem.md` stays in `docs/`. It is
-   marked "historical" but not "do not follow", and three live files cite it as a
-   standing convention — `knowledge/parts/search_templates.py:54`,
-   `knowledge/tests/test_langextract_client.py:3`, `docs/design_flaws.md:155`. A
-   postmortem people still reason from is reference material, not an artefact.
-2. `CLAUDE.md`'s documentation-map table lists a fourth, `kriko_build_plan.md`, which
-   does not exist anywhere in the tree — a dangling reference. Drop that row and
-   update the other three to their new `docs/historical/` paths.
-3. `thoughts/` moves to `docs/historical/thoughts/` (6 files, all 2026-07-05/22,
-   superseded by `docs/superpowers/`).
-
-   **Revised during execution:** the spec originally said untrack and gitignore.
-   `done.md:316` cites `thoughts/ledger_acceptance_parity_2026-07-22.txt` as the
-   evidence artefact for a completed item, so untracking it would leave a dangling
-   citation in the project record for anyone cloning the repo. Moved and re-pointed
-   instead.
-4. Record the outcome in `done.md` per the project's tracking convention.
+1. `SCAFFOLD.md`, `handover.md` → `docs/historical/`. **Revised in execution:** `pipeline_postmortem.md` **stays** — marked historical but cited as live convention by `search_templates.py:54`, `test_langextract_client.py:3`, `design_flaws.md:155`.
+2. Drop the dangling `kriko_build_plan.md` row from `CLAUDE.md`'s doc map (file doesn't exist); repoint the other three to `docs/historical/`.
+3. `thoughts/` (6 files, 2026-07-05/22) → `docs/historical/thoughts/`. **Revised:** moved + re-pointed, not untracked — `done.md:316` cites the ledger-acceptance artefact, and untracking would dangle the citation.
+4. Record in `done.md`.
 
 ## Verification
 
-- Full `pytest -q` after phases 1, 3 and 4 — 760 passed, 0 failed.
-- `git status --porcelain` empty at the end, apart from deliberately ignored artifacts.
-- `python -c "import knowledge.process, knowledge.auto, knowledge.extract"` after
-  Phase 3 as a fast import-graph smoke check.
-- `git ls-files | wc -l` before/after, to quantify the tracked-file reduction.
+`pytest -q` after phases 1, 3, 4 (760/0); `git status --porcelain` empty (modulo ignored); import smoke (`knowledge.process/auto/extract`); `git ls-files | wc -l` before/after.
 
 ## Phase 5 — break the backend/knowledge dependency cycle
 
 ### The problem
 
-`backend/` and `knowledge/` import each other. 12 of the 18 cross-boundary imports are
-written inside function bodies rather than at module top — the standard workaround for
-`ImportError: partially initialized module`. Each deferred import is a patch over the
-same structural break, applied one call site at a time. There is no layering, so there
-is no mental model of what sits on top of what.
-
-The root cause is one misfiled directory. `backend/tools/{coverage,demand,replay,analyses}.py`
-are operator analysis tools, not serving code — verified: nothing in `backend/api`,
-`backend/core`, `backend/db` or `backend/sync.py` imports them, while the pipeline, hub,
-ledger and MCP server import `backend.tools.coverage` from six separate call sites.
-They were filed under `backend/` because they read the serving database, but reading a
-database does not make a module part of the server.
+18 cross-boundary imports (14 in `knowledge/` — 11 deferred in function bodies — plus 4 in `backend/`, 1 deferred), each a workaround for `partially initialized module`. Root cause: one misfiled directory — `backend/tools/{coverage,demand,replay,analyses}.py` are operator tools (nothing serving imports them; pipeline/hub/ledger/MCP import them from 6 sites) filed under `backend/` for reading the DB.
 
 ### Target layering
 
-Dependencies flow one way only:
-
-```
-  ops/       hub, mcp, reports (coverage/demand/replay/analyses),
-  layer 3    swap, remediate — operates and inspects the layers below
-     |
-     v
-  backend/   sync ETL, api, resolver, db, matcher
-  layer 2    ingests the catalog, serves risk to the extension
-     |
-     v
-  knowledge/ catalog, extraction, ledger, parts, sources
-  layer 1    produces the YAML catalog — imports nothing above it
-```
-
-`backend/` importing `knowledge/` stays legal and unchanged (layer 2 -> layer 1); it is
-`knowledge/` reaching up into `backend/` that must stop.
+One-way layering — `ops/` (hub, mcp, reports, swap, remediate) → `backend/` (sync ETL, api, resolver, db, matcher) → `knowledge/` (catalog, extraction, ledger, parts, sources). `backend/`→`knowledge/` stays legal; `knowledge/`→`backend/` must stop.
 
 ### Moves
 
-| From | To | Why |
-|---|---|---|
-| `backend/tools/{coverage,demand,replay,analyses}.py` | `ops/reports/` | operator tooling; unused by the serving path; source of 6 of the 11 deferred imports |
-| `knowledge/hub/` | `ops/hub/` | operator web dashboard — layer 3 behaviour |
-| `knowledge/mcp/` | `ops/mcp/` | operator control surface — layer 3 behaviour |
-| `knowledge/ledger/{swap,remediate}.py` | `ops/` | acceptance-parity harness; needs `backend.api.main`, which only layer 3 may import |
-| `knowledge/ledger/panel.py` | `ops/` | read-only pipeline + cost dashboard; imports `backend.tools.coverage`, so leaving it in layer 1 would make it import *upward into `ops/`* after the move — a worse violation than today's |
-| `knowledge/process.py` | `ops/` | orchestrates `backend.sync` — layer 3 behaviour |
-| `backend/core/title_sim.py` | `knowledge/title_sim.py` | pure string utility; `knowledge/dedup.py` needs `title_tokens`, and layer 1 may not import layer 2 |
-| `backend/tests/test_{coverage_tool,demand,observability}.py` | `ops/tests/` | follow the code they cover |
-| `knowledge/tests/test_ledger_{panel,swap,remediate}.py` | `ops/tests/` | follow the code they cover |
+`git mv`, history preserved: `backend/tools/*` → `ops/reports/`; `knowledge/{hub,mcp}/` → `ops/`; `knowledge/ledger/{swap,remediate,panel}.py` → `ops/` (panel imports `backend.tools.coverage`, so staying would invert the violation); `knowledge/process.py` → `ops/` (orchestrates `backend.sync`); `backend/core/title_sim.py` → `knowledge/title_sim.py` (pure strings; layer 1 can't import layer 2); both sides' affected tests follow their code.
 
 ### Non-Python references that break (verified, all must be updated in the same commit)
 
-These are invisible to import-graph analysis and each fails only at runtime:
-
-1. **`.mcp.json:6`** — `"args": ["-m", "knowledge.mcp.server"]` becomes `ops.mcp.server`.
-   This is how the kriko MCP server is wired into Claude Code; the server must be
-   restarted after the change or its tools break mid-session.
-2. **`opencode.json:6`** — hardcodes the same module path. Same edit.
-3. **`package.json:6`** — the `npm test` glob `'knowledge/hub/tests/**/*.test.js'`
-   becomes `'ops/hub/tests/**/*.test.js'`. Missing this silently stops running the hub
-   tests rather than failing.
-4. **`deploy/Dockerfile`** — copies a deliberate stdlib-only slice of `knowledge/`.
-   `title_sim.py` moving into `knowledge/` requires a new
-   `COPY knowledge/title_sim.py ./knowledge/title_sim.py` line, because
-   `backend/core/resolver.py` and `backend/sync.py` both import it and both ship in the
-   image. Without it the container builds clean and fails at request time.
-   `backend/tools/` leaving `backend/` needs no Dockerfile change (line 10 copies
-   `backend/` wholesale; the image simply gets smaller).
-5. **Prose references** in `backend/api/main.py:160`, `backend/observability.py:9`,
-   `backend/config.py:29`, `backend/sync.py:46` cite `backend/tools/...` paths in
-   comments. Stale comments, not breakage, but updated with the move.
+`.mcp.json:6` + `opencode.json:6` module paths (`knowledge.mcp.server`→`ops.mcp.server`; restart the MCP server after); `package.json:6` test glob (`knowledge/hub`→`ops/hub`; missing it silently drops hub tests); `deploy/Dockerfile` gains `COPY knowledge/title_sim.py` (resolver + sync ship in-image and import it; builds clean, fails at request time without it); prose path comments in `main.py:160`, `observability.py:9`, `config.py:29`, `sync.py:46`.
 
 ### Execution order
 
-1. Create `ops/` with `__init__.py`; move `backend/tools/` -> `ops/reports/` via
-   `git mv`, update the ~11 importers. Run suite.
-2. Move `hub/` and `mcp/`; update `.mcp.json`, `opencode.json`, `package.json`. Run
-   suite **and** `npm test`.
-3. Move `swap.py`, `remediate.py`, `panel.py`, `process.py`; update importers including
-   `knowledge/auto.py:273,358`. Run suite.
-4. Move `title_sim.py`; update `backend/sync.py:26`, `backend/core/resolver.py:47`,
-   `backend/tests/test_resolver_dedup.py:9`, `knowledge/dedup.py:11`; add the Dockerfile
-   COPY line. Run suite.
-5. Update the architecture section of `docs/INTERNALS.md` and the documentation map in
-   `CLAUDE.md` to describe the three layers.
-
-Each step is its own commit, gated on the full suite. `git mv` preserves history.
+(1) `backend/tools/`→`ops/reports/` + ~11 importers, suite; (2) hub + mcp + the three config files, suite + `npm test`; (3) swap/remediate/panel/process incl. `auto.py:273,358`, suite; (4) title_sim + 4 importers + Dockerfile line, suite; (5) INTERNALS architecture + CLAUDE.md doc map. Each step its own gated commit.
 
 ### Definition of done
 
-- `grep -rnE "^[[:space:]]*(from|import) backend" --include='*.py' knowledge/` returns
-  nothing. Both forms must be checked: `knowledge/ledger/swap.py:284` uses
-  `import backend.sync as sync_mod`, which a `from backend`-only grep misses.
-- Baseline for that grep today: **14 hits in `knowledge/` (11 of them deferred inside
-  function bodies), plus 4 in `backend/` (1 deferred)** — 18 cross-boundary imports, 12
-  of them cycle workarounds. Target: 14 -> 0 upward, 4 downward retained and hoisted to
-  module top.
-- 760 tests pass; `npm test` passes.
-- `docker build -f deploy/Dockerfile .` succeeds and the built image can import
-  `backend.core.resolver`.
+`grep -rnE "^[[:space:]]*(from|import) backend" knowledge/` empty (check both import forms — `swap.py:284` uses `import backend.sync`); 14 upward → 0, 4 downward retained and hoisted to top; 760 + `npm test` green; image builds and imports `backend.core.resolver`.
