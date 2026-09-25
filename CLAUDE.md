@@ -1,6 +1,6 @@
 # Kriko — working notes for Claude
 
-Local-first, open knowledge engine for manufactured products. Answers "what is known to go wrong with *this specific one*" from installed **packs**; `cars` is pack #1 (used cars on Sahibinden, via Chrome extension).
+Local-first, open knowledge engine for manufactured products. Answers "what is known to go wrong with *this specific one*" from installed **packs** on any listing site; ships with `cars` as the first pack and Sahibinden as the first site adapter (via Chrome extension).
 
 The engine knows nothing about cars. A new category is a data change — a pack directory — never an engine change (goal **G6**; every principle below keeps it true). See `docs/USAGE.md` (operation), `docs/INTERNALS.md` (architecture), `docs/historical/pipeline_postmortem.md` (pre-pivot history only).
 
