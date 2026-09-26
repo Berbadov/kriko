@@ -191,7 +191,7 @@
     async function check() {
         checking = true;
         try {
-            updates = await api.packUpdates();
+            updates = await api.packUpdates(true);
         } catch (e) {
             updates = { index_url: "", error: remedyFor(e).headline, packs: [] };
         } finally {
@@ -262,7 +262,13 @@
         {#if updates?.index_url}<span class="meta">{updates.index_url}</span>{/if}
     </div>
     {#if updates?.error}
-        <p class="state error">Could not reach the pack index: {updates.error}</p>
+        <p class="state error">{updates.error}</p>
+        {#if updates.error_detail}
+            <details>
+                <summary class="meta">Show the details</summary>
+                <p class="meta">{updates.error_detail}</p>
+            </details>
+        {/if}
     {/if}
     {#if updates && !updates.error}
         {#if !updates.packs.length}

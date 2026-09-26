@@ -84,14 +84,60 @@ const del = <R>(path: string) => request<R>(path, { method: "DELETE" });
 
 const seg = encodeURIComponent;
 
+/**
+ * A per-navigation memo for the handful of endpoints nearly every screen
+ * reads on mount — status, settings, packs. Without this, App.svelte, the
+ * mode/theme initializers, the rail's instruments and NextStep each fetch
+ * their own copy of the same fact independently, so one route load turned
+ * into 3-5 identical round trips to the same endpoint (B145 perf-1/uicode-4).
+ *
+ * A short TTL, not a subscription: nothing here needs to be told the instant
+ * settings changes, and a store that every one of those modules had to
+ * subscribe to and unwrap would be a bigger change for the same effect. A
+ * failed fetch is evicted immediately rather than cached, so a transient
+ * error does not get replayed to every other caller for the rest of the
+ * window.
+ */
+const CACHE_TTL_MS = 3000;
+const _cache = new Map<string, { promise: Promise<unknown>; at: number }>();
+
+function cached<R>(key: string, fetcher: () => Promise<R>): Promise<R> {
+    const now = Date.now();
+    const hit = _cache.get(key);
+    if (hit && now - hit.at < CACHE_TTL_MS) return hit.promise as Promise<R>;
+    const promise = fetcher();
+    promise.catch(() => _cache.delete(key));
+    _cache.set(key, { promise, at: now });
+    return promise;
+}
+
+/** Drop a cached fetch so the next caller sees what was just written, rather
+ *  than the memo of what was there before. */
+function invalidate(key: string) {
+    _cache.delete(key);
+}
+
+/**
+ * Test-only escape hatch. A suite that stubs a fresh `fetch` per test and then
+ * calls `api.status()`/`api.settings()`/`api.packs()` more than once inside the
+ * cache's TTL window would otherwise see the first test's stubbed response
+ * replayed into the second test — a real symptom this same cache would produce
+ * in the app if the reader's settings changed and the rail kept showing the
+ * old ones. Call this from `afterEach`/`beforeEach` wherever a suite exercises
+ * these endpoints more than once.
+ */
+export function clearApiCache() {
+    _cache.clear();
+}
+
 export const api = {
     health: () => get<T.Health>("/api/health"),
-    status: () => get<T.Status>("/api/status"),
+    status: () => cached("status", () => get<T.Status>("/api/status")),
     activity: (limit = 20) =>
         get<{ items: T.ActivityItem[]; malformed: number }>(
             `/api/activity?limit=${limit}`,
         ),
-    packs: () => get<T.Pack[]>("/api/packs"),
+    packs: () => cached("packs", () => get<T.Pack[]>("/api/packs")),
     kinds: () => get<T.Kind[]>("/api/kinds"),
     agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
     agentTargets: () => get<T.AgentTargets>("/api/agent-targets"),
@@ -188,9 +234,12 @@ export const api = {
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
-    settings: () => get<Record<string, unknown>>("/api/settings"),
+    settings: () => cached("settings", () => get<Record<string, unknown>>("/api/settings")),
     putSettings: (values: Record<string, unknown>) =>
-        postJson<Record<string, unknown>>("/api/settings", { values }),
+        postJson<Record<string, unknown>>("/api/settings", { values }).then((r) => {
+            invalidate("settings");
+            return r;
+        }),
     /** Every re-check this app has done, in one request: a report shows
      * forty claims, and forty requests to say "not checked yet" is not a
      * feature. */
@@ -372,13 +421,24 @@ export const api = {
     setEnabled: (packId: string, enabled: boolean) =>
         request<unknown>(`/api/packs/${seg(packId)}/enabled?enabled=${enabled}`, {
             method: "POST",
+        }).then((r) => {
+            invalidate("packs");
+            return r;
         }),
     activate: (packId: string, revision: string) =>
         request<unknown>(
             `/api/packs/${seg(packId)}/activate?revision=${encodeURIComponent(revision)}`,
             { method: "POST" },
-        ),
-    packUpdates: () => get<T.PackUpdates>("/api/packs/updates"),
+        ).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
+    /** `fresh` bypasses the server's own cache (see `check_pack_updates` in
+     *  `app/web/routers/jobs.py`) — used only by an explicit "Check for
+     *  updates" press. Every other caller takes the cached answer, which
+     *  is what keeps this off the critical path of a page load. */
+    packUpdates: (fresh = false) =>
+        get<T.PackUpdates>(`/api/packs/updates${fresh ? "?fresh=true" : ""}`),
     updatePacks: (packId?: string) =>
         postJson<{ job_id: string; kind: string }>("/api/packs/update", {
             pack_id: packId ?? null,
@@ -391,9 +451,15 @@ export const api = {
                 headers: { "X-Filename": file.name },
                 body: file,
             },
-        ),
+        ).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
     uninstallPack: (packId: string) =>
-        request<unknown>(`/api/packs/${seg(packId)}`, { method: "DELETE" }),
+        request<unknown>(`/api/packs/${seg(packId)}`, { method: "DELETE" }).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
     bench: () => get<T.Bench>("/api/bench"),
     estimateBench: (body: T.BenchRequest) => postJson<T.BenchEstimate>("/api/bench/estimate", body),
     benchConfigs: () => get<{ configs: Record<string, T.BenchRequest> }>("/api/bench/configs"),

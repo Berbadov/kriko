@@ -190,11 +190,17 @@ def _packs_behind(store, claims) -> list[dict]:
     return [{"pack_id": r["pack_id"], "version": r["version"]} for r in rows]
 
 
-def _record_analysis(request, body, mapped, result) -> None:
-    """One row in the operations feed for one analysis. Never raises."""
+def _record_analysis(request, app_state, body, mapped, result) -> None:
+    """One row in the operations feed for one analysis. Never raises.
+
+    Takes the endpoint's own `app_state` connection (B145 apicode-2) rather
+    than a path: this runs on every analysis, and a second connect-plus-
+    two-commits on top of the one the handler already opened was costing more
+    than the lookup it was recording.
+    """
     try:
         with operations.record(
-            request.app.state.settings.app_state_path,
+            conn=app_state,
             door="extension" if body.origin == "extension" else "app",
             kind="lookup",
             name="analyze",
@@ -391,7 +397,7 @@ def analyze(
     # rather than around it: the work is a local lookup measured in
     # milliseconds, so a `running` row would never be seen, and a recorder that
     # can raise must not stand between a page and its claims.
-    _record_analysis(request, body, mapped, result)
+    _record_analysis(request, app_state, body, mapped, result)
 
     payload["lookup_id"] = state.record_lookup(
         app_state,
