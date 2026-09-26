@@ -1,3 +1,4 @@
+import { humanize } from "./fields";
 import type { Claim, LookupResult } from "./types";
 
 /** Severity is one of the engine's few closed vocabularies (`rank.py`'s
@@ -150,24 +151,76 @@ export function emptyReason(result: LookupResult): string {
             "or install a pack that covers it."
         );
     }
+    // "Several products match" is not "we found nothing" (check-3): the
+    // details given narrow the field to more than one candidate, and the
+    // reader's next step is picking one of them, not hearing that the packs
+    // are thin. `result.subjects` already carries the candidates.
+    if (result.method === "ambiguous") {
+        const n = result.subjects?.length ?? 0;
+        return (
+            (n
+                ? `${n} products match these details`
+                : "Several products match these details") +
+            " — add another identifying detail to narrow it down to one."
+        );
+    }
     return (
         "This one was identified, but the installed packs hold nothing " +
         "about it yet. That is a coverage gap, not a clean bill of health."
     );
 }
 
+/** Enum values a reader has never seen, spelled out. Owned entirely here so a
+ * new value the engine invents falls back to a readable (if generic)
+ * sentence rather than a raw enum leaking onto the page (shell-18). */
+const METHOD_WORD: Record<string, string> = {
+    exact: "Matched exactly on the details given",
+    identity: "Matched exactly on the details given",
+    ambiguous: "Matched loosely — more than one variant fits",
+    near: "Matched closely, but not exactly",
+    no_match: "Not matched",
+};
+const COVERAGE_WORD: Record<string, string> = {
+    RISKS_FOUND: "risks found",
+    MATCHED_WITH_DATA: "risks found",
+    MATCHED_NO_DATA: "nothing known yet",
+    NOT_MATCHED: "",
+};
+
 /** The header line, in words rather than in enum values. */
 export function confidenceNote(result: LookupResult): string {
-    const exact = result.method === "exact" || result.method === "identity";
-    const how = exact
-        ? "Matched exactly on the details given"
-        : `Matched by ${(result.method || "unknown").replace(/_/g, " ")}`;
-    const covered =
+    const how =
+        METHOD_WORD[result.method] ??
+        `Matched by ${(result.method || "unknown").replace(/_/g, " ")}`;
+    const coverageWord =
         result.coverage && result.coverage !== "NOT_MATCHED"
-            ? `, coverage ${result.coverage.toLowerCase().replace(/_/g, " ")}`
+            ? (COVERAGE_WORD[result.coverage] ??
+                  result.coverage.toLowerCase().replace(/_/g, " "))
             : "";
-    return `${how}${covered}.`;
+    return coverageWord ? `${how}, coverage ${coverageWord}.` : `${how}.`;
 }
+
+/** The internal source word, in the reader's language (check-23). Owned here
+ * rather than duplicated in every place a history row or a Result footer
+ * prints one. */
+const SOURCE_WORD: Record<string, string> = {
+    ask: "described",
+    analyze: "from a listing",
+};
+
+export const sourceWord = (source: string): string => SOURCE_WORD[source] ?? source;
+
+/** A local date and time, not the raw ISO stamp the server stores it as. */
+export const localTime = (iso: string): string => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(undefined, {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(d);
+};
 
 export const askLine = (claim: Claim): string =>
     claim.advice?.trim() ||
@@ -233,13 +286,21 @@ export function asMarkdown(
     const notes = options.notes ?? {};
     const done = new Set(options.handled ?? []);
     const lines: string[] = [`# ${options.heading || "Known risks"}`, ""];
+    lines.push(`_Asked ${localTime(new Date().toISOString())}_`, "");
+    // The figures this was answered for (check-29): a reader looking at this
+    // on paper has no other way to know what product it describes.
+    const contextLine = Object.entries(result.context ?? {})
+        .filter(([, v]) => String(v).trim())
+        .map(([k, v]) => `${humanize(k)} ${v}${result.context_units?.[k] ? ` ${result.context_units[k]}` : ""}`)
+        .join(", ");
+    if (contextLine) lines.push(`_Answered for ${contextLine}_`, "");
     lines.push(confidenceNote(result), "");
     if (!result.claims.length) {
         lines.push(emptyReason(result), "");
         return lines.join("\n");
     }
     for (const group of groupByDomain(result.claims)) {
-        lines.push(`## ${group.domain}`, "");
+        lines.push(`## ${humanize(group.domain)}`, "");
         for (const claim of group.claims) {
             const key = claimKey(claim);
             lines.push(
