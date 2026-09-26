@@ -16,8 +16,10 @@ function loadContentScript(html, url = "https://www.sahibinden.com/ilan/vasita-o
     location: dom.window.location,
     console,
     // The script auto-triggers an analysis on load; keep the timer a no-op so
-    // loading it in a test does not fire a request.
-    setTimeout: () => 0,
+    // loading it in a test does not fire a request, but record the delay it
+    // was asked for so a test can hold extension-13's fix in place (the
+    // auto-trigger must not go back to adding seconds of its own).
+    setTimeout: (fn, delay) => { sandbox.__lastTimeoutDelay = delay; return 0; },
     clearTimeout: () => {},
     fetch: () => Promise.resolve({ json: () => Promise.resolve({}) }),
     MutationObserver: dom.window.MutationObserver,
