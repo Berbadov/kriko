@@ -5,6 +5,7 @@
     import Usage from "../lib/Usage.svelte";
     import Pipeline from "./Pipeline.svelte";
     import Submissions from "./Submissions.svelte";
+    import { setQuery } from "../lib/router";
 
     /* One screen for "what has this installation been doing".
      *
@@ -52,16 +53,47 @@
     $effect.pre(() => {
         lens = asLens(initial);
     });
+
+    // A tab click used to change only local state (shell-9, ops-9): reload,
+    // Back and a pasted link all disagreed with what was on screen. Writing
+    // it into the query makes the lens shareable and reload-stable the same
+    // way Knowledge's lens is; `replaceState` (setQuery), not a navigation —
+    // switching lenses is not leaving Activity, so it must not push a Back
+    // entry per tab click.
+    function choose(id: Lens) {
+        lens = id;
+        setQuery("lens", id);
+    }
+
+    // WAI-ARIA tabs: only the selected tab is in the Tab order, and
+    // Left/Right/Home/End move both focus and the selection (ops-21).
+    function onTabKey(event: KeyboardEvent, index: number) {
+        const move = (to: number) => {
+            const next = LENSES[(to + LENSES.length) % LENSES.length];
+            choose(next.id);
+            document.getElementById(`activity-tab-${next.id}`)?.focus();
+        };
+        if (event.key === "ArrowRight") move(index + 1);
+        else if (event.key === "ArrowLeft") move(index - 1);
+        else if (event.key === "Home") move(0);
+        else if (event.key === "End") move(LENSES.length - 1);
+        else return;
+        event.preventDefault();
+    }
 </script>
 
 <div class="lenses" role="tablist" aria-label="Activity">
-    {#each LENSES as candidate (candidate.id)}
+    {#each LENSES as candidate, index (candidate.id)}
         <button
+            id="activity-tab-{candidate.id}"
             class="tab"
             role="tab"
             aria-selected={lens === candidate.id}
+            aria-controls="activity-panel"
+            tabindex={lens === candidate.id ? 0 : -1}
             class:active={lens === candidate.id}
-            onclick={() => (lens = candidate.id)}>{candidate.label}</button
+            onclick={() => choose(candidate.id)}
+            onkeydown={(event) => onTabKey(event, index)}>{candidate.label}</button
         >
     {/each}
 </div>
@@ -70,6 +102,7 @@
      same-shaped one. Each of these three fetches on init; a swap in place
      would show the previous lens's rows under the new lens's heading for as
      long as the request takes. -->
+<div role="tabpanel" id="activity-panel" aria-label="Activity">
 {#key lens}
     {#if lens === "live"}
         <Operations />
@@ -88,3 +121,4 @@
         <Submissions />
     {/if}
 {/key}
+</div>

@@ -50,6 +50,24 @@
     $effect.pre(() => {
         lens = asLens(initial);
     });
+    const LENS_IDS: Lens[] = ["all", "gaps", "weak", "marked"];
+
+    // WAI-ARIA tabs: Left/Right/Home/End move both focus and the selection —
+    // the same mechanism ops-21 gave Activity's lens tabs (knowledge-28).
+    function onLensKey(event: KeyboardEvent, index: number) {
+        const move = (to: number) => {
+            const next = LENS_IDS[(to + LENS_IDS.length) % LENS_IDS.length];
+            lens = next;
+            document.getElementById(`knowledge-tab-${next}`)?.focus();
+        };
+        if (event.key === "ArrowRight") move(index + 1);
+        else if (event.key === "ArrowLeft") move(index - 1);
+        else if (event.key === "Home") move(0);
+        else if (event.key === "End") move(LENS_IDS.length - 1);
+        else return;
+        event.preventDefault();
+    }
+
     let query = $state("");
     let packFilter = $state("");
     let shown = $state(25);
@@ -487,39 +505,60 @@
     <Failure error={draftError} />
 {/if}
 
+
+<!-- WAI-ARIA tabs, the same contract Activity's lens tabs now carry
+     (ops-21/knowledge-28): only the selected tab is in the Tab order, and
+     Left/Right/Home/End move both focus and the selection. -->
 <div class="lenses" role="tablist" aria-label="Lens">
     <button
+        id="knowledge-tab-all"
         class="tab"
         role="tab"
         aria-selected={lens === "all"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "all" ? 0 : -1}
         class:active={lens === "all"}
-        onclick={() => (lens = "all")}>What is here</button
+        onclick={() => (lens = "all")}
+        onkeydown={(event) => onLensKey(event, 0)}>What is here</button
     >
     <button
+        id="knowledge-tab-gaps"
         class="tab"
         role="tab"
         aria-selected={lens === "gaps"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "gaps" ? 0 : -1}
         class:active={lens === "gaps"}
         onclick={() => (lens = "gaps")}
+        onkeydown={(event) => onLensKey(event, 1)}
         >What is missing{gaps.length ? ` (${gaps.length})` : ""}</button
     >
     <button
+        id="knowledge-tab-weak"
         class="tab"
         role="tab"
         aria-selected={lens === "weak"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "weak" ? 0 : -1}
         class:active={lens === "weak"}
-        onclick={() => (lens = "weak")}>What is thin</button
+        onclick={() => (lens = "weak")}
+        onkeydown={(event) => onLensKey(event, 2)}>What is thin</button
     >
     <button
+        id="knowledge-tab-marked"
         class="tab"
         role="tab"
         aria-selected={lens === "marked"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "marked" ? 0 : -1}
         class:active={lens === "marked"}
         onclick={() => (lens = "marked")}
+        onkeydown={(event) => onLensKey(event, 3)}
         >What readers said{marks?.items.length ? ` (${marks.items.length})` : ""}</button
     >
 </div>
 
+<div role="tabpanel" id="knowledge-panel" aria-label="Knowledge">
 {#if lens === "all" || lens === "gaps"}
     <div class="row filters">
         <div class="field">
@@ -858,6 +897,7 @@
         {/if}
     {/if}
 {/await}
+</div>
 
 <style>
     .statstrip {
