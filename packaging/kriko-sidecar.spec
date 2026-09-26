@@ -22,14 +22,19 @@
 # has already been wrong once — collecting all of `mcp` pulls in `mcp.cli`,
 # which raises "typer is required" and fails the freeze on every runner.
 #
-# `datas` — four things in this repo are read from disk rather than imported,
+# `datas` — five things in this repo are read from disk rather than imported,
 # and every one is invisible to PyInstaller's import graph: the built frontend
 # (src/app/web/static/, or the app 404s on its own UI), the store's DDL
 # (src/kriko/store/schema.sql, or every query raises FileNotFoundError), the
-# browser extension, and the first-party packs. The DDL was found by running
-# this build, not by reading the code — see
+# browser extension, the first-party packs, and the shipped model catalogue
+# (src/app/models.toml, or install_default() throws FileNotFoundError on every
+# frozen startup and every screen that prices a run shows "cost unknown"). The
+# DDL was found by running this build, not by reading the code; models.toml
+# was the same story one release later — see
 # test_every_data_file_under_src_is_declared_as_package_data, which now fails
-# if another one appears under src/.
+# if another one appears under src/, and
+# test_the_frozen_spec_bundles_every_data_file_it_reads_from_disk, which reads
+# this file's own `datas` list and fails if it drops behind that set.
 #
 # `winpty-agent.exe` — the same class of gap, one layer further: not source
 # and not read by `import`, it is spawned by `winpty.dll` via `CreateProcess`
@@ -122,6 +127,7 @@ a = Analysis(
     datas=[
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
+        (str(ROOT / "src" / "app" / "models.toml"), "app"),
         (str(EXTENSION), "app/extension_src"),
         *((str(pack), "app/packs_bundled") for pack in PACKS),
     ],
