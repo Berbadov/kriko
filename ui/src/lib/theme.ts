@@ -41,9 +41,21 @@ export const theme = writable<Theme>(DEFAULT_THEME);
  * preference — so the attribute is what paints the app at all, not merely a
  * hook a test can read.
  */
+const THEME_STORAGE_KEY = "kriko-theme";
+
 export function applyTheme(next: Theme): void {
     document.documentElement.dataset.theme = next;
     theme.set(next);
+    try {
+        // Mirrored so the inline script in index.html can paint the right
+        // theme on the very first frame, before the bundle has even started
+        // the `/api/settings` round trip initTheme() below waits on
+        // (shell-5). Browser storage, so it can fail (private window,
+        // blocked site data) without taking the app down with it.
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+        // Worst case: back to the pre-fix flash, never a crash.
+    }
 }
 
 export async function initTheme(): Promise<Theme> {
