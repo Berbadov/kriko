@@ -2018,6 +2018,27 @@ def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
     return _job(row) if row else None
 
 
+def live_retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
+    """A not-yet-finished job whose `retry_of` names `job_id`, if one exists.
+
+    ops-5/ops-m1: two concurrent `POST /retry` on the same job with no
+    server-side guard both create a child — a double-click with no client
+    guard, or any two automation callers racing the same endpoint, always
+    produces two live retries of one run. `retry_job` checks this before
+    submitting a new one so the endpoint is idempotent regardless of what
+    called it.
+    """
+    for row in conn.execute(
+        "SELECT * FROM jobs WHERE state NOT IN (?, ?, ?, ?)"
+        " ORDER BY created_at DESC, rowid DESC",
+        tuple(TERMINAL),
+    ).fetchall():
+        job = _job(row)
+        if job["params"].get("retry_of") == job_id:
+            return job
+    return None
+
+
 def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     rows = conn.execute(
         "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC LIMIT ?",

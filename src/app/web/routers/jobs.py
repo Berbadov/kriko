@@ -272,6 +272,11 @@ def retry_job(job_id: str, body: RetryRequest | None = None,
         raise HTTPException(404, f"no such job: {job_id}")
     if not row["done"]:
         raise HTTPException(409, f"job {job_id} is still {row['state']}")
+    # Idempotent regardless of caller (ops-5/ops-m1): a retry already live
+    # for this job is the answer, not a second child of it.
+    existing = state.live_retry_of(app_state, job_id)
+    if existing is not None:
+        return {"job_id": existing["job_id"], "kind": existing["kind"]}
     params = dict(row["params"] or {})
     params["retry_of"] = job_id
     # Merged onto whatever the first run was given, so answering one question
