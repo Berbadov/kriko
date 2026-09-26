@@ -246,7 +246,7 @@ describe("Jobs", () => {
         // The gap screen is where the other door into this list is, so the
         // empty state names it instead of leaving the reader on a form.
         const link = screen.getByRole("link", { name: "Find a gap" }) as HTMLAnchorElement;
-        expect(link.getAttribute("href")).toBe("#/coverage");
+        expect(link.getAttribute("href")).toBe("#/knowledge");
     });
 
     // ── answering a run that is still going ──────────────────────────────
