@@ -298,6 +298,16 @@ def test_an_unknown_subject_is_a_404(client):
     assert client.get("/api/subjects/nope").status_code == 404
 
 
+def test_a_percent_in_the_search_box_matches_literally_not_every_subject(client):
+    # `%` and `_` are LIKE wildcards. Typed into Search they are two ordinary
+    # characters a reader might paste from a model number — "%" must not read
+    # as "match anything" and return the whole catalog (knowledge-18).
+    assert client.get("/api/subjects?q=%25").json() == []
+    assert client.get("/api/subjects?q=_").json() == []
+    # The escape must not break matching what is actually there.
+    assert client.get("/api/subjects?q=DHP484").json()
+
+
 def test_the_brief_endpoint_carries_the_packs_principle(client):
     subjects = client.get("/api/subjects?q=DHP484").json()
     brief = client.get(f"/api/subjects/{subjects[0]['subject_id']}/brief").json()

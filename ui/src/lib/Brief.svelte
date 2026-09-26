@@ -56,7 +56,14 @@
     // Result fields, read defensively: the job's result is a plain dict from
     // the handler and a version skew must degrade to "no brief yet", never to
     // a component that throws while rendering a success.
-    const result = $derived((job?.result ?? {}) as Record<string, unknown>);
+    const liveResult = $derived((job?.result ?? {}) as Record<string, unknown>);
+    // Starting a new run used to null `job` out immediately, which blanked
+    // the brief the reader was reading a moment before the new one has
+    // anything to show (knowledge-6) — kept until the new run has its own.
+    let lastResult = $state<Record<string, unknown> | null>(null);
+    const result = $derived(
+        typeof liveResult.brief === "string" ? liveResult : (lastResult ?? liveResult),
+    );
     const brief = $derived(typeof result.brief === "string" ? result.brief : "");
     const queries = $derived(
         Array.isArray(result.queries) ? (result.queries as string[]) : [],
@@ -70,6 +77,7 @@
 
     async function start(backend = "agent") {
         error = "";
+        if (typeof liveResult.brief === "string") lastResult = liveResult;
         job = null;
         try {
             const { job_id } = await api.research({
@@ -226,7 +234,7 @@
         <pre class="brief-body">{brief}</pre>
     {:else if job && job.done}
         <p class="state empty">
-            This run produced no brief. Its log is below, and the Runs screen keeps it.
+            This run produced no brief. Its log is below, and Activity → Runs keeps it.
         </p>
     {:else}
         <p class="skeleton" style="height: 6rem">Planning the research…</p>
