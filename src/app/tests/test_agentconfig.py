@@ -7,6 +7,8 @@ good when it points at the wrong store — are all silent.
 """
 
 import json
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -142,3 +144,36 @@ def test_platform_env_never_writes_a_key_the_environment_did_not_have():
     harness config — that is worse than omitting the key."""
     env = agentconfig.platform_env("win32", {})
     assert env == {}
+
+
+# ── redirecting HOME must also redirect Claude Desktop's path (research-1) ──
+
+
+def test_a_redirected_home_redirects_claude_desktop_too(tmp_path, monkeypatch):
+    """A HOME-redirected test run must never resolve to the real %APPDATA%.
+
+    Before this fix, `_appdata()` trusted an inherited `APPDATA` env var
+    unconditionally, so a caller that redirects `HOME`/`USERPROFILE` alone (as
+    every one-click test and `tools/walk.sh` does) still got the operator's
+    real roaming folder back for Claude Desktop specifically — the one target
+    out of four whose isolation that left broken.
+    """
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path)
+    monkeypatch.setenv("APPDATA", str(Path("C:/Users/someone-else/AppData/Roaming")))
+    monkeypatch.setattr(sys, "platform", "win32")
+    base = agentconfig._appdata()
+    assert base is not None
+    assert tmp_path in base.parents or base == tmp_path / "AppData" / "Roaming"
+
+
+def test_a_real_appdata_under_the_real_home_is_still_honoured(tmp_path, monkeypatch):
+    """The fix must not break the ordinary, non-redirected case.
+
+    On a real machine `%APPDATA%` sits under the real home, and that value —
+    not a recomputed one — is still what gets used.
+    """
+    monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path)
+    real_appdata = tmp_path / "AppData" / "Roaming"
+    monkeypatch.setenv("APPDATA", str(real_appdata))
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert agentconfig._appdata() == real_appdata
