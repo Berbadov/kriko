@@ -173,12 +173,43 @@ def _event(conn, pack_id, action, row=None, *, details=None) -> None:
     )
 
 
-def install(conn: sqlite3.Connection, pack_path) -> str:
+def _version_tuple(version: str) -> tuple:
+    """A dotted version as a comparable tuple, numeric where it can be.
+
+    Not a full semver parser — packs are not required to use semver — but
+    good enough to tell "0.1.1 is older than 0.1.2" from "these are two
+    unrelated strings", which is all a downgrade check needs.
+    """
+    parts = []
+    for piece in str(version).split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append((int(digits) if digits else 0, piece))
+    return tuple(parts)
+
+
+class DowngradeRefused(ValueError):
+    """Installing this artifact would replace a newer revision with an older one."""
+
+    def __init__(self, pack_id: str, installed: str, offered: str):
+        self.pack_id = pack_id
+        self.installed = installed
+        self.offered = offered
+        super().__init__(
+            f"pack {pack_id!r} {installed!r} is installed; {offered!r} is older"
+        )
+
+
+def install(conn: sqlite3.Connection, pack_path, *, allow_downgrade: bool = False) -> str:
     """Install a new immutable revision, or update the active revision.
 
     Reinstalling the same digest is a no-op. A different digest for the same
     pack version is rejected: versions are immutable identifiers, not labels
     that can silently be republished.
+
+    An artifact whose version is *lower* than what is active is also refused
+    unless the caller says ``allow_downgrade`` — installing an older build was
+    silently accepted before, which downgraded the active pack with no
+    warning and recorded it as an ordinary "update" (knowledge-13).
     """
     pack_path = Path(pack_path)
     if not pack_path.exists():
@@ -223,6 +254,13 @@ def install(conn: sqlite3.Connection, pack_path) -> str:
                 f"pack {pack_id!r} digest {incoming['content_digest']!r} "
                 "is already associated with another version"
             )
+        if (
+            not allow_downgrade
+            and current
+            and current["content_digest"] != incoming["content_digest"]
+            and _version_tuple(incoming["version"]) < _version_tuple(current["version"])
+        ):
+            raise DowngradeRefused(pack_id, current["version"], incoming["version"])
 
         with conn:
             if current and current["content_digest"] == incoming["content_digest"]:
@@ -267,9 +305,9 @@ def install(conn: sqlite3.Connection, pack_path) -> str:
         conn.execute("DETACH DATABASE pack")
 
 
-def update(conn: sqlite3.Connection, pack_path) -> str:
+def update(conn: sqlite3.Connection, pack_path, *, allow_downgrade: bool = False) -> str:
     """Explicit spelling for a revision-changing install."""
-    return install(conn, pack_path)
+    return install(conn, pack_path, allow_downgrade=allow_downgrade)
 
 
 def _find_revision(conn, pack_id: str, selector=None):
