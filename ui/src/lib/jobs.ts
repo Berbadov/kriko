@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { nudge } from "./shell/instruments";
 import type { Job } from "./types";
 
 /** How often the fallback re-reads a job. Matches the server's stream poll. */
@@ -13,11 +14,20 @@ export const POLL_MS = 700;
  * otherwise leave a job looking frozen forever, so a failed stream falls back
  * rather than giving up. The row is the source of truth either way, which is
  * what makes falling back safe.
+ *
+ * Every screen that starts or watches a job goes through here, which is why
+ * this is also where the rail's figures get told: `nudge()` on the first
+ * event and again on the last one, so "a job started" and "a job finished"
+ * reach the rail the moment this screen learns it rather than on the rail's
+ * own 30s clock (B145 ops-7). Every other tick is left to that clock — a
+ * `running` count does not need per-token precision, only to not stay wrong
+ * for half a minute after a run ends.
  */
 export function follow(jobId: string, onUpdate: (job: Job) => void): () => void {
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let source: EventSource | undefined;
+    let first = true;
 
     const stop = () => {
         stopped = true;
@@ -25,11 +35,17 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
         source?.close();
     };
 
+    const relay = (job: Job) => {
+        if (first || job.done) nudge();
+        first = false;
+        onUpdate(job);
+    };
+
     const poll = async () => {
         if (stopped) return;
         try {
             const job = await api.job(jobId);
-            onUpdate(job);
+            relay(job);
             if (job.done) return stop();
         } catch {
             // A job that has been forgotten is not an error worth looping on.
@@ -46,7 +62,7 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
     source = new EventSource(`/api/jobs/${encodeURIComponent(jobId)}/stream`);
     source.onmessage = (event) => {
         const job = JSON.parse(event.data) as Job;
-        onUpdate(job);
+        relay(job);
         if (job.done) stop();
     };
     source.onerror = () => {
