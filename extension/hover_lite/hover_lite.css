@@ -240,7 +240,7 @@
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.2px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   text-align: right;
 }
 .lite-footer[hidden] { display: none; }
@@ -313,7 +313,7 @@
 }
 .lite-rc-factverdict {
   font-size: 10px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .lite-rc-factverdict[data-verdict="quoted"] { color: var(--low-ink); }
 .lite-rc-factverdict[data-verdict="missing"] { color: var(--med-ink); }
@@ -330,7 +330,7 @@
 .lite-rc-mark-label {
   font-size: 10px;
   letter-spacing: 0.2px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   margin-right: 2px;
 }
 .lite-rc-markbtn {
@@ -1330,7 +1330,7 @@
   font-size: 10.5px;
   color: var(--fg-muted);
 }
-.lite-weighed-how { color: var(--fg-faint); }
+.lite-weighed-how { color: var(--fg-muted); }
 /* The two readings that point at different bugs, and the reason this block
    exists: a key reading `conflict` is usually the page, a key reading `absent`
    is usually the adapter. Colour is a hint — the word is always beside it. */
@@ -1464,7 +1464,7 @@
   font-size: 10.5px;
   color: var(--fg-body);
 }
-.lite-search-id-key { color: var(--fg-faint); }
+.lite-search-id-key { color: var(--fg-muted); }
 .lite-search-id-key::after { content: "="; }
 /* A site nothing reads. Grey, not red — the reader did not do anything wrong,
    and an extension that paints a warning over an ordinary web page is an
