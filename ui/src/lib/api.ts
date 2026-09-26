@@ -120,6 +120,10 @@ export const api = {
         del<{ removed: boolean }>(`/api/marks/${seg(packId)}/${seg(claimId)}`),
     subjects: (q: string, limit = 60) =>
         get<T.Subject[]>(`/api/subjects?limit=${limit}&q=${encodeURIComponent(q)}`),
+    search: (q: string, packId: string, limit = 8) =>
+        get<{ items: T.SearchHit[] }>(
+            `/api/search?limit=${limit}&pack_id=${seg(packId)}&q=${encodeURIComponent(q)}`,
+        ).then((r) => r.items),
     weakest: (limit = 40) =>
         get<{ claims: T.ClaimHealth[] }>(`/api/health/weakest?limit=${limit}`),
     healthSubject: (subjectId: string) =>
@@ -167,7 +171,8 @@ export const api = {
     discardPackDraft: (slug: string) =>
         del<{ slug: string }>(`/api/packs/drafts/${seg(slug)}`),
     lookup: (body: T.LookupRequest) => postJson<T.LookupResult>("/api/lookup", body),
-    analyze: (body: T.AnalyzeRequest) => postJson<T.AnalyzeResult>("/api/analyze", body),
+    analyze: (body: T.AnalyzeRequest) =>
+        postJson<T.AnalyzeResult | T.UnreadPage>("/api/analyze", body),
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),

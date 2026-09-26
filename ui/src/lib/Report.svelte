@@ -144,6 +144,17 @@
     let copied = $state("");
     let fallback = $state("");
 
+    // "Compare with another" only means something once another saved check
+    // exists (check-33); otherwise it is a link to an empty state telling
+    // the reader to come back once they have run one.
+    let hasOthers = $state(false);
+    $effect(() => {
+        if (!lookupId) return;
+        api.history(2)
+            .then((h) => (hasOthers = h.items.some((i) => i.lookup_id !== lookupId)))
+            .catch(() => {});
+    });
+
     async function handOver() {
         const text = asMarkdown(result, { heading, notes, handled });
         const ok = await copyText(text);
@@ -188,7 +199,7 @@
         {/if}
         <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
         <button class="ghost" onclick={handOver}>Copy for a mechanic</button>
-        {#if lookupId}
+        {#if lookupId && hasOthers}
             <a
                 class="ghost button-like"
                 href={hashWith({ mode: $route.query.mode, left: lookupId }, "compare")}

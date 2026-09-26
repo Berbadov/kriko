@@ -8,9 +8,12 @@ const ONE_PACK = {
         { pack_id: "p1", name: "Pack One", version: "1", enabled: 1, subjects: 3, claims: 4, evidence: 2, digest: "d" },
     ],
     "/api/kinds": [{ kind: "widget", pack_id: "p1" }],
+    // `required` is server-computed now (check-2): the server parses
+    // `match_json`, which is YAML, and hands the form a plain bool rather
+    // than a string the form used to `JSON.parse` itself.
     "/api/identity-keys/p1": [
-        { key: "alpha_key", match_json: '{"required": true}' },
-        { key: "beta_key", match_json: "{}" },
+        { key: "alpha_key", match_json: "required: true", required: true },
+        { key: "beta_key", match_json: "{}", required: false },
     ],
     "/api/packs/p1/vocabulary": { context_key: [{ term_id: "usage_hours", unit: "h" }] },
     "/api/subjects": [],

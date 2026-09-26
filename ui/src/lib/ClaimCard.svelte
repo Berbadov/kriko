@@ -60,6 +60,15 @@
     $effect(() => {
         draft = note;
     });
+
+    // Focus lands on BODY when the note field opens (check-26): the button
+    // that revealed it disappears from the DOM, and nothing takes its place
+    // as the focused element. A Svelte action, not an autofocus attribute,
+    // because the field is conditionally rendered rather than present at
+    // load — autofocus only fires on initial parse.
+    function focusOnMount(node: HTMLElement) {
+        node.focus();
+    }
 </script>
 
 <article class="card risk" class:done={checked}>
@@ -79,6 +88,7 @@
                 <input
                     type="checkbox"
                     {checked}
+                    aria-label={`Handled: ${claim.title}`}
                     onchange={(event) => onCheck(event.currentTarget.checked)}
                 />
                 Handled
@@ -93,16 +103,22 @@
     {#if onNote}
         {#if showNote}
             <label class="note-field">
-                <span class="meta">What the seller said</span>
+                <span class="meta">What the seller said, about "{claim.title}"</span>
                 <textarea
                     rows="2"
                     bind:value={draft}
                     placeholder="e.g. done at 140,000 — receipt promised"
                     onblur={() => draft !== note && onNote(draft)}
+                    use:focusOnMount
                 ></textarea>
             </label>
         {:else}
-            <button type="button" class="link-ish" onclick={() => (noteOpen = true)}>
+            <button
+                type="button"
+                class="link-ish"
+                aria-label={`Add what the seller said about "${claim.title}"`}
+                onclick={() => (noteOpen = true)}
+            >
                 Add what the seller said
             </button>
         {/if}
@@ -123,7 +139,17 @@
                 {#if factCheck.detail}<span class="meta">{factCheck.detail}</span>{/if}
             {/if}
             {#if checkable}
-                <button type="button" class="link-ish" disabled={checkingFacts}
+                <button
+                    type="button"
+                    class="link-ish"
+                    disabled={checkingFacts}
+                    aria-label={`${
+                        checkingFacts
+                            ? "Reading the source…"
+                            : factCheck
+                              ? "Check again"
+                              : "Check the source"
+                    }: ${claim.title}`}
                     onclick={onCheckFacts}
                 >
                     {checkingFacts
