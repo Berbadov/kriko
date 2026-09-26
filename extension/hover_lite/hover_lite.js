@@ -67,6 +67,11 @@
     // Set only by an explicit press. The automatic run at page load leaves it
     // alone, because nobody asked it anything.
     noAdapter: false,
+    // Whether some installed pack reads this *site* at all, vs this specific
+    // page just not being one it recognises (a category page, a search
+    // results page). Same NO_ADAPTER code either way — the reader's next
+    // step is completely different, so the panel needs to tell them apart.
+    hostKnown: false,
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
@@ -207,11 +212,17 @@
       .filter((v) => v !== null && v !== undefined && v !== "")
       .join(" ");
 
+    // extension-11 (B145 audit): every context entry printed as a "fact",
+    // including the seller's own free-text sentence — a unit is the pack's
+    // own signal that a value is a measured fact rather than prose, so only
+    // entries the pack declared a unit for (even "" for a bare count) belong
+    // in this line.
+    //
     // A number with a unit is a magnitude and reads better grouped
     // ("190,000 km"); a number without one is as likely to be a year, where
     // grouping would render 2014 as "2,014".
     const facts = Object.entries(context)
-      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .filter(([key, v]) => v !== null && v !== undefined && v !== "" && key in units)
       .map(([key, value]) => {
         const unit = units[key];
         if (typeof value === "number" && unit) {
@@ -400,20 +411,34 @@
 
   // Apply entry helper
   function applyEntry(entry) {
-    // An answer of any kind means something read this page after all.
-    state.noAdapter = false;
     if (!entry) return;
     if (entry.listing || (entry.ok && entry.result)) {
       state.listingMeta = deriveListingMeta(entry);
     }
     if (entry.ok && entry.result) {
+      // An answer means something read this page after all.
+      state.noAdapter = false;
+      state.errorCode = null;
       state.result = entry.result;
       state.errorMsg = null;
       setPipeline("result");
       state.openIds = new Set();
     } else if (entry.ok === false) {
-      state.errorMsg = entry.error || "Analysis failed.";
-      setPipeline("error");
+      // extension-5/extension-8 (B145 audit): the stored-result path (a page
+      // reloaded onto a cached entry, or the panel reopened) used to ignore
+      // `entry.code` entirely, so NO_ADAPTER rendered as a red error and
+      // APP_NOT_RUNNING hid the settings button the live ANALYZE path already
+      // knows to show. Both paths now read the same code.
+      state.errorCode = entry.code || null;
+      if (entry.code === "NO_ADAPTER") {
+        state.noAdapter = true;
+        state.hostKnown = Boolean(entry.hostKnown);
+        setPipeline("idle");
+      } else {
+        state.noAdapter = false;
+        state.errorMsg = entry.error || "Analysis failed.";
+        setPipeline("error");
+      }
     }
     if (state.mounted) renderBody();
     if (state.mounted) renderCounts();
@@ -518,19 +543,41 @@
         // feedback when there is no app to raise — so success needs no toast
         // and this panel grows no notification system for it.
         //
-        // A refusal is different: the only way to get one is for this
-        // extension to have built a route the app cannot navigate to, which
-        // is a defect in *our* code and belongs where a developer will find
-        // it rather than in front of the reader.
+        // Two kinds of failure reach here, and only one is for the reader.
+        // APP_NOT_RUNNING is the engine simply not being up — that is not a
+        // defect, it is the current state of the world, and the reader
+        // should see it in place rather than get a silent no-op. Anything
+        // else means this extension built a route the app refused, which is
+        // a defect in *our* code and belongs where a developer will find it.
         if (chrome.runtime.lastError || (response && !response.ok)) {
-          console.warn(
-            "Kriko: could not open the app on",
-            route,
-            chrome.runtime.lastError?.message || response?.error
-          );
+          const message = chrome.runtime.lastError?.message || response?.error;
+          if (response?.code === "APP_NOT_RUNNING") {
+            showFooterStatus(message);
+          } else {
+            console.warn("Kriko: could not open the app on", route, message);
+          }
         }
       }
     );
+  }
+
+  // A one-line status shown next to the footer's app buttons, for a failure
+  // the reader caused nothing wrong to see (the app just isn't running).
+  // Cleared after a few seconds so it doesn't linger past the next action.
+  let footerStatusTimer = null;
+  function showFooterStatus(message) {
+    if (!footerEl) return;
+    let statusEl = footerEl.querySelector(".lite-footer-status");
+    if (!statusEl) {
+      statusEl = document.createElement("span");
+      statusEl.className = "lite-footer-status";
+      footerEl.append(statusEl);
+    }
+    statusEl.textContent = message;
+    clearTimeout(footerStatusTimer);
+    footerStatusTimer = setTimeout(() => {
+      statusEl.remove();
+    }, 4000);
   }
 
   // Which plane this installation is configured for, and what it costs.
@@ -732,7 +779,7 @@
     });
   }
 
-  function triggerAnalyze() {
+  function triggerAnalyze(fresh) {
     setPipeline("analyzing");
     state.errorMsg = null;
     state.errorCode = null;
@@ -746,8 +793,13 @@
     // background.js asks content.js for a fresh scrape, POSTs it to
     // /api/analyze, writes the full entry (result + the local-only listing
     // extras) to chrome.storage.session, and returns the result here.
+    //
+    // `fresh` (extension-3, B145 audit) is set only when the reader pressed
+    // a "Refresh analysis" control themselves — not on the automatic run at
+    // page load — and tells background.js to skip its own result cache
+    // rather than hand back the same answer for up to 6 hours.
     chrome.runtime.sendMessage(
-      { type: "ANALYZE", payload: { url: window.location.href } },
+      { type: "ANALYZE", payload: { url: window.location.href, fresh: Boolean(fresh) } },
       (response) => {
         if (chrome.runtime.lastError) {
           setPipeline("error");
@@ -773,6 +825,7 @@
             setPipeline("idle");
             state.errorMsg = null;
             state.noAdapter = true;
+            state.hostKnown = Boolean(response.hostKnown);
             renderBody();
             return;
           }
@@ -881,8 +934,11 @@
     panel.addEventListener("pointerup", onPointerUp);
     panel.addEventListener("pointercancel", onPointerUp);
 
-    ctaBtn.addEventListener("click", triggerAnalyze);
-    densityBtn.addEventListener("click", triggerAnalyze);
+    // A press of either control is the reader asking again on purpose, so
+    // both bypass the cache; the automatic run at page load calls
+    // triggerAnalyze() directly with no argument and gets the cache.
+    ctaBtn.addEventListener("click", () => triggerAnalyze(true));
+    densityBtn.addEventListener("click", () => triggerAnalyze(true));
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
@@ -952,7 +1008,11 @@
   const SNAP_PAD = 14;
 
   function panelHeight() {
-    return Math.max(520, Math.min(window.innerHeight - PAD_DOCK * 2, window.innerHeight - 32));
+    // extension-12 (B145 audit): a 520px floor made the panel taller than a
+    // 620x520 window (the documented minimum), cutting the footer off — the
+    // panel is meant to fit inside the viewport at a 16px inset, at any
+    // height, and .lite-body already scrolls when there isn't room.
+    return Math.max(240, window.innerHeight - PAD_DOCK * 2);
   }
 
   function initialPosition() {
@@ -1156,7 +1216,7 @@
 
     const metaLine = lm.facts
       .map((fact) => `<span>${escapeHtml(fact)}</span>`)
-      .join('<span class="sep">·</span>');
+      .join('<span class="sep" aria-hidden="true">·</span>');
 
     slot.innerHTML = `
       <div class="lite-listing">
@@ -1671,6 +1731,22 @@
       const card = document.createElement("div");
       card.className = "lite-verdict";
       card.dataset.verdict = "no-adapter";
+      // A site with an installed adapter and a page that adapter doesn't
+      // recognise (a category page, a search page) is not "nothing reads
+      // this site" — that copy, and the offer to go write an adapter, is
+      // only true when no pack has this host at all.
+      if (state.hostKnown) {
+        card.innerHTML = `
+          <div class="lite-verdict-head">
+            <span class="lite-verdict-word">Not a listing</span>
+          </div>
+          <p class="lite-verdict-say">Kriko reads listings on this site, but
+            this page isn't one. Open a specific car's listing and analyze
+            that.</p>
+        `;
+        slot.appendChild(card);
+        return;
+      }
       card.innerHTML = `
         <div class="lite-verdict-head">
           <span class="lite-verdict-word">Not read here</span>
@@ -1874,12 +1950,16 @@
       return;
     }
 
+    // The no-adapter card above already says everything there is to say;
+    // "hit Analyze" under it reads as Kriko not noticing its own answer.
+    if (state.noAdapter) return;
+
     if (state.pipeline === "idle" || !state.result) {
       const empty = document.createElement("div");
       empty.className = "lite-empty";
       empty.innerHTML = `
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
-        <div>No analysis yet. Hit <b>Analyze current page</b> — typical run is under 2&nbsp;s.</div>
+        <div>No analysis yet. Press <b>Analyze current page</b>.</div>
       `;
       claimsListEl.appendChild(empty);
       return;
@@ -1908,12 +1988,16 @@
 
     // Group for display, by the claim's own domain. Global claim indices into
     // state.result.claims are preserved so toggleOne/setAllOpen keep working.
-    const domainLabels = {
-      engine: "Engine", transmission: "Transmission", emissions: "Emissions",
-      electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
-      suspension: "Suspension", brakes: "Brakes", exhaust: "Exhaust",
-      interior: "Interior", "body/structure": "Body", steering: "Steering",
-    };
+    // A domain is whatever string the answering pack's claim carries — engine
+    // parts today, drill bits or anything else tomorrow. Title-casing each
+    // word is a generic text transform, not a lookup keyed on car vocabulary
+    // (extension-22, B145 audit): the old fixed map of engine/transmission/
+    // emissions/... only ever covered the cars pack, and silently fell back
+    // to a half-capitalized string for every domain a future pack invented.
+    function titleCaseDomain(domain) {
+      return domain.replace(/[a-z]+/gi, (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1));
+    }
 
     // Grouped by the claim's own domain. There used to be a branch above this
     // one reading a `subsystems` array off the result, with a `display_tr`
@@ -1929,7 +2013,7 @@
       });
       groups = Object.entries(byDomain).map(([domain, items]) => ({
         iconDomain: domain,
-        label: domainLabels[domain] || domain.charAt(0).toUpperCase() + domain.slice(1),
+        label: titleCaseDomain(domain),
         items,
       }));
     }
@@ -1955,7 +2039,7 @@
           <span class="lite-domain-name">${escapeHtml(label)}</span>
           <span class="lite-domain-count">${items.length}</span>
           <span class="lite-domain-sev">${sevHtml.join('')}</span>
-          <span class="lite-domain-toggle">&minus;</span>
+          <span class="lite-domain-toggle" aria-hidden="true">&minus;</span>
         </button>
         <div class="lite-domain-body"></div>
       `;
@@ -2029,7 +2113,14 @@
     // (the backend only resolves subject_ids when something matched), so this
     // filter already excludes it — there is no separate check to remember or
     // forget here.
-    const gaps = (state.result.subjects || []).filter((s) => !s.claims);
+    // A subject with zero *direct* claims is not a gap when claims reached
+    // through its parts are already on screen — extension-4 (B145 audit): the
+    // gap card used to say "no knowledge for this car" directly under 8
+    // risks, because `subject.claims` only ever counts direct hits and never
+    // the claims the panel reached through part expansion.
+    const gaps = (state.result.claims || []).length
+      ? []
+      : (state.result.subjects || []).filter((s) => !s.claims);
     if (!gaps.length) return;
 
     // Ask what this would cost before drawing a single button — the sentence

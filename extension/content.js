@@ -551,10 +551,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // file's. The background worker holds the adapter list; here we only report
 // that a page finished loading and let it decide.
 (function autoTrigger() {
+  // extension-13 (B145 audit): this file only runs at document_idle, so the
+  // page is already settled by the time we get here — the 1.5s wait on top
+  // of that was pure added latency, pushing the automatic answer past the
+  // "under 2s" promise the panel makes. A short tick (not zero) still lets
+  // the DOM finish painting before content.js starts reading it.
   setTimeout(() => {
     chrome.runtime.sendMessage({
       type: "PAGE_LOADED",
       payload: { url: window.location.href, host: window.location.hostname },
     });
-  }, 1500);
+  }, 150);
 })();
