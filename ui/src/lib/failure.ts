@@ -88,12 +88,25 @@ export function remedyFor(error: unknown): Remedy {
         };
     }
     if (error.status === 422 || error.status === 400) {
+        // `technical` is always "<status>: <message>" (`ApiError`'s own
+        // constructor), so the field name a pydantic validation error left
+        // in `<message>` is everything after that fixed prefix. A pydantic
+        // error is rendered "field: reason" by `api.ts`'s `explain` — a
+        // second ": " past the prefix means it names an actual field and
+        // bound, which is a better remedy than the generic listing copy
+        // below and is what a bench/pack-author 422 (a source count over the
+        // route's own limit, a category too short) actually is.
+        const body = technical.replace(/^\d+: /, "");
+        const named = /^[a-zA-Z_.\[\]0-9]+: /.test(body);
         return {
-            headline: "The engine could not use what it was given",
-            next:
-                "This is usually a listing it could read nothing from. Try "
-                + "again with the page's own address, or paste the fields by "
-                + "hand.",
+            headline: named
+                ? "One of the values isn't allowed"
+                : "The engine could not use what it was given",
+            next: named
+                ? body
+                : "This is usually a listing it could read nothing from. Try "
+                    + "again with the page's own address, or paste the fields by "
+                    + "hand.",
             retryable: false,
             technical,
         };
