@@ -2258,6 +2258,12 @@ class HarnessResearcher(AgentResearcher):
         """
         self.transcript = ""
         self._spoke = False
+        # See `_new_job_object`: on Windows this is what lets a cancel reach
+        # a descendant `taskkill /T` cannot, because its parent already
+        # exited. `None` on POSIX, where `start_new_session`/`killpg` already
+        # cover the tree — every caller of `_kill_tree` below treats it the
+        # same way regardless of which platform gave it.
+        job = self._new_job_object()
         try:
             proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
                 command,
@@ -2290,6 +2296,7 @@ class HarnessResearcher(AgentResearcher):
             raise NoHarness(
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
+        self._assign_job(job, proc)
 
         # The opening message, before anything else is read. A conversational
         # child has no prompt until this lands — it is the run, not a preamble
@@ -2312,7 +2319,7 @@ class HarnessResearcher(AgentResearcher):
                         stderr_tail = proc.stderr.read().strip()
                 except (OSError, ValueError):
                     pass
-                self._kill_tree(proc)
+                self._kill_tree(proc, job)
                 detail = f": {stderr_tail}" if stderr_tail else ""
                 raise RuntimeError(
                     f"{self.harness.label} would not take the brief on stdin{detail}"
@@ -2334,7 +2341,7 @@ class HarnessResearcher(AgentResearcher):
 
         def _give_up() -> None:
             expired.set()
-            self._kill_tree(proc)
+            self._kill_tree(proc, job)
 
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
@@ -2362,7 +2369,7 @@ class HarnessResearcher(AgentResearcher):
                     # than holding the job worker for the whole timeout.
                     if (opening and not self._spoke
                             and time.monotonic() - began > CONVERSATION_START_SECONDS):
-                        self._kill_tree(proc)
+                        self._kill_tree(proc, job)
                         break
                     if self._deliver(proc):
                         # An answer to the question it ended on: that is the
@@ -2460,15 +2467,34 @@ class HarnessResearcher(AgentResearcher):
             # blocked `readline` holds, so a teardown in the other order waits
             # out the very process it is trying to abandon.
             if proc.poll() is None:
-                self._kill_tree(proc)
-            drain.join(timeout=5.0)
-            for pipe in (proc.stdout, proc.stderr):
-                if pipe is None:
-                    continue
+                self._kill_tree(proc, job)
+            if sys.platform == "win32" and job is not None:
                 try:
-                    pipe.close()
+                    import ctypes
+
+                    ctypes.windll.kernel32.CloseHandle(job)  # type: ignore[attr-defined]
                 except Exception:  # noqa: BLE001
                     pass
+            drain.join(timeout=5.0)
+            # A pipe a surviving grandchild still holds open blocks `close()`
+            # forever on Windows (see the module docstring's job-object note)
+            # — the job kill above should have left nothing holding one, but
+            # "should have" is not a guarantee this worker thread may act on.
+            # Closing on a daemon thread means a pipe that still won't let go
+            # leaks a handle, never wedges the one worker every other job is
+            # waiting behind.
+            def _close_pipes() -> None:
+                for pipe in (proc.stdout, proc.stderr):
+                    if pipe is None:
+                        continue
+                    try:
+                        pipe.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+
+            closer = threading.Thread(target=_close_pipes, daemon=True)
+            closer.start()
+            closer.join(timeout=5.0)
 
         self.actions = said
         if expired.is_set():
@@ -2478,7 +2504,102 @@ class HarnessResearcher(AgentResearcher):
         return proc.returncode or 0, self.transcript, "".join(errors)
 
     @staticmethod
-    def _kill_tree(proc) -> None:
+    def _new_job_object():
+        """Windows only: a Job Object the child is placed into at spawn time.
+
+        `taskkill /T` walks the *live* parent-pid chain, so it misses any
+        descendant whose parent has already exited by the time the kill
+        runs — and a conversing harness always has one: the shim that reads
+        the reply off stdin outlives the CLI it was piping into. A process
+        placed in a job with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` stays a
+        member of that job for its whole life regardless of what its own
+        parent does, so `TerminateJobObject` reaches it — an orphan is still
+        in the job even when it is no longer in anyone's process tree.
+
+        Returns `None` on POSIX (where `killpg` already does this job) and
+        whenever the Windows API call itself fails, so every caller treats
+        "no job object" as "fall back to `taskkill`" rather than a fault.
+        """
+        if sys.platform != "win32":
+            return None
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+            job = kernel32.CreateJobObjectW(None, None)
+            if not job:
+                return None
+
+            class _BASIC(ctypes.Structure):
+                _fields_ = [
+                    ("PerProcessUserTimeLimit", ctypes.c_int64),
+                    ("PerJobUserTimeLimit", ctypes.c_int64),
+                    ("LimitFlags", ctypes.c_uint32),
+                    ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t),
+                    ("ActiveProcessLimit", ctypes.c_uint32),
+                    ("Affinity", ctypes.c_size_t),
+                    ("PriorityClass", ctypes.c_uint32),
+                    ("SchedulingClass", ctypes.c_uint32),
+                ]
+
+            class _IO_COUNTERS(ctypes.Structure):
+                _fields_ = [(name, ctypes.c_uint64) for name in (
+                    "ReadOperationCount", "WriteOperationCount",
+                    "OtherOperationCount", "ReadTransferCount",
+                    "WriteTransferCount", "OtherTransferCount",
+                )]
+
+            class _EXTENDED(ctypes.Structure):
+                _fields_ = [
+                    ("BasicLimitInformation", _BASIC),
+                    ("IoInfo", _IO_COUNTERS),
+                    ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t),
+                    ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t),
+                ]
+
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+            JobObjectExtendedLimitInformation = 9
+            info = _EXTENDED()
+            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            ok = kernel32.SetInformationJobObject(
+                job, JobObjectExtendedLimitInformation,
+                ctypes.byref(info), ctypes.sizeof(info),
+            )
+            if not ok:
+                kernel32.CloseHandle(job)
+                return None
+            return job
+        except Exception:  # noqa: BLE001 — no job object is a fallback, not a fault
+            return None
+
+    @staticmethod
+    def _assign_job(job, proc) -> None:
+        """Put `proc` in `job`, best-effort, right after `Popen` returns.
+
+        Has to happen before the child can spawn anything of its own — a
+        grandchild started after this point inherits its parent's job
+        membership automatically (Windows does not offer an opt-in; only an
+        opt-out, `CREATE_BREAKAWAY_FROM_JOB`, which nothing here sets), which
+        is the whole reason a job object catches what `taskkill /T` misses.
+        """
+        if job is None:
+            return
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+            handle = getattr(proc, "_handle", None)
+            if handle is None:
+                return
+            kernel32.AssignProcessToJobObject(job, int(handle))
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _kill_tree(proc, job=None) -> None:
         """End the whole process, not just the one pid this object holds.
 
         `_needs_shell` means the pid here is sometimes `cmd.exe`, whose real
@@ -2487,10 +2608,24 @@ class HarnessResearcher(AgentResearcher):
         reader's subscription in the background, invisibly, past the
         deadline this exists to enforce. `start_new_session=True` on spawn is
         what makes a tree kill possible on POSIX (`killpg` reaches the whole
-        session); on Windows `taskkill /T` is the documented way to end one.
-        Every step is best-effort — a process that is already gone by the
-        time this runs is the good outcome, not a failure to report.
+        session).
+
+        On Windows, `job` (from `_new_job_object`/`_assign_job`) is tried
+        first: `TerminateJobObject` kills every process ever assigned to it,
+        orphaned or not, which is what a conversing CLI's surviving
+        descendant needs (see `_new_job_object`'s docstring). `taskkill /T`
+        still runs afterwards as a belt for a process this job never held —
+        one spawned before assignment raced it, say. Every step is
+        best-effort — a process that is already gone by the time this runs
+        is the good outcome, not a failure to report.
         """
+        if sys.platform == "win32" and job is not None:
+            try:
+                import ctypes
+
+                ctypes.windll.kernel32.TerminateJobObject(job, 1)  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                pass
         try:
             if sys.platform == "win32":
                 subprocess.run(
