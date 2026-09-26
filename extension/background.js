@@ -279,6 +279,29 @@ function adapterFor(url, adapters) {
   return null;
 }
 
+// Whether *some* installed adapter reads this site at all, even though none
+// of its patterns matched this exact page. A pack's match pattern is a glob
+// like `*sahibinden.com/ilan/*` — the domain fragment before the first `/` is
+// as much "which site" as this extension can read without hardcoding a
+// site's own shape (the scalability principle: no site vocabulary here).
+// Distinguishing this from "no pack reads this site" is extension-5/6 (B145
+// audit): a site Kriko does read should never say "nothing installed knows
+// how to read this site".
+function hostHasAnyAdapter(url, adapters) {
+  let hostname;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return false;
+  }
+  return (adapters || []).some((adapter) =>
+    (adapter.match || []).some((pattern) => {
+      const domainFragment = pattern.split("/")[0].replace(/\*/g, "");
+      return domainFragment && hostname.includes(domainFragment);
+    })
+  );
+}
+
 // A refused connection and a 500 are different problems with different fixes,
 // and until now both arrived as one red banner. `fetch` rejects rather than
 // resolving when nothing is listening, so the two are only distinguishable
@@ -857,10 +880,17 @@ function _stableHash(value) {
 // Hashing the scrape itself, rather than a hand-listed set of fields, is what
 // keeps this honest: a page gaining a field the pack has since learned to read
 // changes the hash and re-asks, instead of serving a stale answer forever.
-function _scrapeSignature(scrape) {
+//
+// The adapters' own identity — pack_id and version, already fetched to find
+// this adapter — goes in alongside the scrape (extension-3, B145 audit): a
+// pack update ships new claims for the same listing, and a signature built
+// from the scrape alone can't see that anything changed, so the 6-hour local
+// cache kept serving the pre-update answer regardless.
+function _scrapeSignature(scrape, adapters) {
   return _stableHash({
     title: scrape?.title || "",
     fields: scrape?.fields || {},
+    packs: (adapters || []).map((a) => `${a.pack_id}@${a.version || ""}`).sort(),
   });
 }
 
@@ -977,16 +1007,20 @@ async function requestAnalysis(scrape, timings = {}) {
 
 // ── the run ─────────────────────────────────────────────────────────────
 
-async function runAnalysisForTab(tabId, url) {
+async function runAnalysisForTab(tabId, url, { fresh = false } = {}) {
   const storageKey = STORAGE_KEY_PREFIX + url;
+  // A press of Refresh while another run for this same URL is already in
+  // flight still waits for that run rather than starting a second one —
+  // `fresh` only means "don't hand back what's already stored", not "don't
+  // share an in-flight request".
   const existingRun = inFlightByStorageKey.get(storageKey);
-  if (existingRun) {
+  if (existingRun && !fresh) {
     const result = await existingRun;
     await _updateBadgeForResult(result, tabId);
     return result;
   }
 
-  const runPromise = _runAnalysisForTab(tabId, url, storageKey);
+  const runPromise = _runAnalysisForTab(tabId, url, storageKey, { fresh });
   inFlightByStorageKey.set(storageKey, runPromise);
   try {
     return await runPromise;
@@ -997,7 +1031,7 @@ async function runAnalysisForTab(tabId, url) {
   }
 }
 
-async function _runAnalysisForTab(tabId, url, storageKey) {
+async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}) {
   const timings = {};
   const totalStartedAt = _now();
   const runId = nextRunId++;
@@ -1018,6 +1052,7 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
       // fall quiet instead of showing a red banner on every ordinary page.
       const noAdapter = new Error("No installed pack can read this page.");
       noAdapter.code = "NO_ADAPTER";
+      noAdapter.hostKnown = hostHasAnyAdapter(url, adapters);
       throw noAdapter;
     }
 
@@ -1035,8 +1070,14 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     }
     scrape = reply.payload;
 
-    const signature = _scrapeSignature(scrape);
-    const cachedEntry = await _readCachedAnalysis(url, signature);
+    const signature = _scrapeSignature(scrape, adapters);
+    // extension-3 (B145 audit): "Refresh analysis" re-asked nothing — every
+    // press with the same scrape and packs served the 6-hour cache entry, so
+    // there was no way to re-ask the engine short of waiting it out. `fresh`
+    // is the one bit that says "no, actually ask", and it skips only the
+    // cache read; the write below still happens, so the new answer becomes
+    // the cache for the *next*, non-fresh, request.
+    const cachedEntry = fresh ? null : await _readCachedAnalysis(url, signature);
     if (cachedEntry) {
       // Worth saying. An answer that arrives in 30 ms looks like nothing
       // happened, and a reader who pressed Refresh wants to know whether
@@ -1058,7 +1099,13 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     const entry = {
       ok: true,
       result,
-      listing: scrape.listing || {},
+      // extension-8/extension-11 (B145 audit): the scrape's own title
+      // (content.js reads it straight off the page, `scrape.title`) never
+      // reached the panel's `listing` object, which is why the header fell
+      // back to joining raw identity values or, with the engine down, to
+      // "Untitled listing" — the page's own h1 was sitting right there in
+      // the same scrape.
+      listing: { ...(scrape.listing || {}), title: scrape.title || "" },
       signature,
       fetchedAt: Date.now(),
     };
@@ -1083,10 +1130,19 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     };
     await _stage(url, "failed", error.message || "");
     if (error.code) errEntry.code = error.code;
-    if (scrape) errEntry.listing = scrape.listing || {};
+    if (error.hostKnown) errEntry.hostKnown = true;
+    if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
     await chrome.storage.session.set({ [storageKey]: errEntry });
-    await chrome.action.setBadgeText({ text: "!", tabId });
-    await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
+    // NO_ADAPTER is not a failure — it's most pages on the internet, which is
+    // exactly why the badge used to paint a red "!" on every non-listing page
+    // of the one site Kriko *does* read (extension-5, B145 audit). A page
+    // this extension was never going to have an opinion on gets no badge.
+    if (error.code === "NO_ADAPTER") {
+      await chrome.action.setBadgeText({ text: "", tabId });
+    } else {
+      await chrome.action.setBadgeText({ text: "!", tabId });
+      await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
+    }
     throw error;
   }
 }
@@ -1185,6 +1241,19 @@ async function openInApp(route, fallbackUrl) {
     delivery = "unreachable";
   }
 
+  // "unreachable" means the transport itself failed — there is no engine on
+  // the other end, so a fallback tab would only open onto a dead local port
+  // (ERR_CONNECTION_REFUSED) with nothing for the reader to do about it. The
+  // fallback tab stays reserved for "no_shell": the engine answered, it just
+  // has no window to raise.
+  if (delivery === "unreachable") {
+    return {
+      ok: false,
+      code: "APP_NOT_RUNNING",
+      error: "Kriko is not running. Open the Kriko app, then try again.",
+    };
+  }
+
   if (fallbackUrl) {
     await chrome.tabs.create({ url: fallbackUrl });
     return { ok: true, raised: false, fallback: true, delivery };
@@ -1212,13 +1281,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         tabId = tabs[0]?.id;
       }
       if (!tabId) throw new Error("No active tab found.");
-      return runAnalysisForTab(tabId, url);
+      return runAnalysisForTab(tabId, url, { fresh: Boolean(request.payload?.fresh) });
     };
 
     run()
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({
-        ok: false, code: error.code, error: error.message }));
+        ok: false, code: error.code, hostKnown: Boolean(error.hostKnown),
+        error: error.message }));
 
     return true; // async
   }

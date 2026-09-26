@@ -26,6 +26,7 @@ from kriko.adapters import (
 )
 from kriko.lookup import lookup
 from kriko.lookup.query import Query
+from kriko.store import packstore
 
 log = logging.getLogger(__name__)
 
@@ -56,13 +57,19 @@ _SOURCE_FOR_ORIGIN = {"app": "analyze", "extension": "extension"}
 def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
     """Which sites the installed packs can read, and what they match on.
 
-    The extension uses this to know where it is worth scraping at all.
+    The extension uses this to know where it is worth scraping at all, and —
+    since the pack's own version rides here — whether an answer it cached
+    against an earlier version of that pack is worth trusting (extension-3,
+    B145 audit): a stored answer keyed on the scrape alone can't tell a pack
+    update happened, and kept serving the pre-update claims for hours.
     """
+    pack_versions = {row["pack_id"]: row["version"] for row in packstore.installed_packs(store)}
     return [
         {
             "id": a.get("id"),
             "site": a.get("site"),
             "pack_id": a["pack_id"],
+            "version": pack_versions.get(a["pack_id"], ""),
             "match": a.get("match", []),
             "labels": declared_labels(a),
             # The panel the extension draws over the reader's own page. It
