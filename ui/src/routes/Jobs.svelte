@@ -4,7 +4,7 @@
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
-    import { canCancel, follow, isLive, stateWord } from "../lib/jobs";
+    import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
@@ -98,8 +98,15 @@
         return () => { active = false; };
     });
 
+    // The server's own field (`app/web/routers/jobs.py`'s AuthorRequest)
+    // requires two characters — below that, `x` reached the server and came
+    // back a 422 the reader had no way to anticipate (ops-4). Matching the
+    // bound here means the button simply will not fire a request that could
+    // not succeed.
+    const CATEGORY_MIN = 2;
+
     async function authorPack() {
-        if (!category.trim()) return;
+        if (category.trim().length < CATEGORY_MIN) return;
         busy = true;
         error = null;
         try {
@@ -217,21 +224,7 @@
     const subjectOf = (job: Job) =>
         String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
 
-    /** What kind of work a row was, in the reader's words.
-     *
-     * A map rather than a ternary because there are now three kinds and the
-     * third one — an agent writing a whole pack — read as "Build", which is
-     * the one thing it deliberately does not do.
-     */
-    const KINDS: Record<string, string> = {
-        research: "Research",
-        agenda_run: "Research",
-        research_undo: "Undo",
-        pack_author: "New pack",
-        pack_build: "Build",
-        pack_update: "Update",
-    };
-    const kindWord = (job: Job) => KINDS[job.kind] ?? job.kind;
+    const kindWord = (job: Job) => libKindWord(job.kind);
 </script>
 
 <!-- "Runs", which is what the rail has always called it. The heading said
@@ -265,10 +258,17 @@
                 placeholder="cordless drills, espresso machines, e-bikes"
             />
         </label>
-        <button class="primary" type="submit" disabled={busy || !category.trim()}>
+        <button
+            class="primary"
+            type="submit"
+            disabled={busy || category.trim().length < CATEGORY_MIN}
+        >
             Have my agent write it
         </button>
     </form>
+    {#if category.trim().length > 0 && category.trim().length < CATEGORY_MIN}
+        <p class="meta">At least {CATEGORY_MIN} characters.</p>
+    {/if}
     <p class="meta">
         Needs a coding-agent command-line tool installed — the same one the
         Research plane uses, and it costs nothing beyond the subscription you
@@ -280,7 +280,7 @@
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
         <span>Build a pack from a directory</span>
-        <input bind:value={root} placeholder="packs/drill" />
+        <input bind:value={root} placeholder="e.g. packs/drill" />
     </label>
     <button type="submit" disabled={busy || !root.trim()}>Build and install</button>
 </form>
@@ -294,9 +294,9 @@
         title="No runs yet"
         detail="Long work is a row here rather than a request that hangs — research
                 and pack builds both land on this screen, and their log outlives
-                the page. Start one above, or from a gap on Coverage."
+                the page. Start one above, or from a gap on Knowledge."
         actionLabel="Find a gap"
-        actionHref="#/coverage"
+        actionHref="#/knowledge"
     />
 {/if}
 
