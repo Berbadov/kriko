@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" role="img" aria-label="Product listing flows through Kriko to known risks">
+  <style>
+    text { font-family: sans-serif; }
+    .box { fill: #15171C; stroke: #3A3F4A; stroke-width: 1.5; rx: 10; }
+    .accent { fill: none; stroke: #E8C04B; stroke-width: 2; marker-end: url(#arrow); }
+    .title { fill: #E7E9ED; font-size: 15px; font-weight: bold; }
+    .sub { fill: #9AA0AB; font-size: 12px; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8" fill="none" stroke="#E8C04B" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect x="10" y="50" width="220" height="120" rx="10" fill="#15171C" stroke="#3A3F4A" stroke-width="1.5"/>
+  <text x="30" y="80" class="title">Product listing</text>
+  <text x="30" y="102" class="sub">2015 Golf 1.6 TDI DSG</text>
+  <text x="30" y="120" class="sub">190,000 km</text>
+  <text x="30" y="138" class="sub">read by extension adapter</text>
+  <rect x="270" y="50" width="220" height="120" rx="10" fill="#15171C" stroke="#E8C04B" stroke-width="2"/>
+  <text x="290" y="80" class="title">Kriko lookup</text>
+  <text x="290" y="102" class="sub">identity match (exact / scored)</text>
+  <text x="290" y="120" class="sub">rank claims by relevance</text>
+  <text x="290" y="138" class="sub">local only: ~/.kriko</text>
+  <rect x="530" y="50" width="220" height="120" rx="10" fill="#15171C" stroke="#3A3F4A" stroke-width="1.5"/>
+  <text x="550" y="80" class="title">Known risks</text>
+  <text x="550" y="102" class="sub">[high] CP4.1 pump failure</text>
+  <text x="550" y="120" class="sub">[high] DQ250 G509 sensor</text>
+  <text x="550" y="138" class="sub">each with check + sources</text>
+  <line x1="230" y1="110" x2="268" y2="110" class="accent"/>
+  <line x1="490" y1="110" x2="528" y2="110" class="accent"/>
+</svg>
