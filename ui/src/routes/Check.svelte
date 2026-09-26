@@ -100,8 +100,8 @@
     <h2>Check one before you buy it</h2>
     <p class="hero-sub">
         Paste a listing and Kriko reports what is known to go wrong with that exact
-        one — from the packs installed on this machine, with no account and nothing
-        sent anywhere.
+        one — from the packs installed on this machine, with no account, and the
+        listing itself never leaves this machine.
     </p>
     <div class="field wide">
         <label for="listing-url">Paste the listing's web address</label>
