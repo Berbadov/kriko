@@ -45,7 +45,12 @@ export type PackUpdate = {
 
 export type PackUpdates = {
     index_url: string;
+    /** A sentence the reader can act on ("the pack index has nothing
+     *  published yet"), never a Python exception's class name. */
     error: string | null;
+    /** The raw exception text `error` was built from, for a bug report — a
+     *  detail, never the headline. */
+    error_detail?: string | null;
     checked_at?: string;
     packs: PackUpdate[];
 };

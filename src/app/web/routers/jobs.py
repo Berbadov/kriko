@@ -134,10 +134,17 @@ def start_build(body: BuildRequest, runner=Depends(get_jobs)):
 @router.get("/packs/updates")
 def check_pack_updates(
     index_url: str | None = Query(default=None),
+    fresh: bool = Query(default=False),
     runner=Depends(get_jobs),
 ):
-    """Is anything newer? Answered in the request — it is one small fetch."""
-    return tasks.check_updates(runner.settings, index_url or "")
+    """Is anything newer? Answered in the request — it is one small fetch.
+
+    `fresh` is the reader's own "Check for updates" press; every other caller
+    (the hint bar on every screen) leaves it false and gets the server's
+    cached answer instead of paying for a round trip to a remote index on
+    every navigation — see `tasks.check_updates`.
+    """
+    return tasks.check_updates(runner.settings, index_url or "", fresh=fresh)
 
 
 @router.post("/packs/update")

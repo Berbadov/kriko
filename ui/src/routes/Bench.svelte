@@ -204,7 +204,13 @@
     }
 
     $effect(() => {
-        api.bench().then((data) => (benchData = data)).catch(() => {});
+        // `benchData` used to be its own `api.bench()` call, fetching the same
+        // JSON that `promise`/`<Async>` was already reading for the table below
+        // it — one screen, two round trips to one endpoint (B145 perf-2/
+        // ops-15). Deriving it from `promise` keeps the choice-list computeds
+        // (`protocolOptions`, `packOptions`) fed without a second request, and
+        // still re-derives on a retry because `promise` is reassigned there.
+        promise.then((data) => (benchData = data)).catch(() => {});
         api.prefs().then((data) => (prefsView = data as unknown as PrefsView)).catch(() => {});
         api.benchConfigs().then((r) => (configs = r.configs ?? {})).catch(() => {});
         void findRunningJob();

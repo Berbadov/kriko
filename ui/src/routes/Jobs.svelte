@@ -51,11 +51,36 @@
         }
     };
 
+    // A job started from another screen, another agent, or the API never
+    // appeared here until the reader reloaded (B145 ops-8): `load` only ran
+    // once, on mount, so a row this screen had never seen had no way in. This
+    // re-reads the list on a slow clock and merges in anything new by id —
+    // never touching a row already in `jobs`, so a stream mid-flight for a job
+    // this screen is already following is not clobbered by a stale list read.
+    const REFRESH_MS = 4000;
+    let refresher: ReturnType<typeof setInterval> | undefined;
+
+    const checkForNew = async () => {
+        try {
+            const seen = new Set(jobs.map((job) => job.job_id));
+            const fetched = (await api.jobs()).items ?? [];
+            const arrived = fetched.filter((job) => !seen.has(job.job_id));
+            if (arrived.length) {
+                jobs = [...arrived, ...jobs];
+                arrived.forEach(watch);
+            }
+        } catch {
+            // A missed poll is not worth surfacing; the next one retries.
+        }
+    };
+
     $effect(() => {
         void load();
+        refresher = setInterval(() => void checkForNew(), REFRESH_MS);
         return () => {
             stops.forEach((stop) => stop());
             stops.clear();
+            if (refresher) clearInterval(refresher);
         };
     });
 
