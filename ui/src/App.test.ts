@@ -27,8 +27,11 @@ describe("App", () => {
         window.location.hash = "#/coverage?mode=buyer";
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByText(/author view/i)).toBeInTheDocument();
+        expect(await screen.findByText(/for pack authors/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "author" })).toBeInTheDocument();
+        expect(
+            screen.getByRole("button", { name: "Switch to author mode" }),
+        ).toBeInTheDocument();
     });
 
     it("names an unknown route rather than showing a blank workspace", async () => {

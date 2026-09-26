@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Knowledge from "./Knowledge.svelte";
 import { stubFetch } from "../lib/stub-fetch";
@@ -85,6 +85,23 @@ describe("Knowledge", () => {
         // The title is stored on the mark rather than looked up, so it still
         // reads after the pack that held the claim is uninstalled.
         expect(screen.getByRole("button", { name: "Forget" })).toBeInTheDocument();
+    });
+
+    it("moves the lens with arrow keys, the same roving-tabindex contract Activity's tabs carry (knowledge-28)", async () => {
+        serve();
+        render(Knowledge, {});
+        const all = await screen.findByRole("tab", { name: /What is here/ });
+        expect(all).toHaveAttribute("tabindex", "0");
+        const gaps = screen.getByRole("tab", { name: /What is missing/ });
+        expect(gaps).toHaveAttribute("tabindex", "-1");
+        await fireEvent.keyDown(all, { key: "ArrowRight" });
+        expect(gaps).toHaveAttribute("aria-selected", "true");
+        expect(gaps).toHaveAttribute("tabindex", "0");
+        expect(gaps).toHaveFocus();
+        const marked = screen.getByRole("tab", { name: /What readers said/ });
+        await fireEvent.keyDown(gaps, { key: "End" });
+        expect(marked).toHaveAttribute("aria-selected", "true");
+        expect(marked).toHaveFocus();
     });
 
     it("explains where verdicts come from when there are none", async () => {

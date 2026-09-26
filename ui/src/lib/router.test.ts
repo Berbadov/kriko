@@ -40,4 +40,13 @@ describe("parseHash", () => {
         expect(hashWith({ mode: undefined }, "check")).toBe("#/check");
         expect(hashWith({ mode: "" }, "check")).toBe("#/check");
     });
+
+    it("keeps a malformed %-escape raw instead of throwing and blanking the app", () => {
+        expect(() => parseHash("#/subject/%E0%A4%A")).not.toThrow();
+        expect(parseHash("#/subject/%E0%A4%A")).toEqual({
+            name: "subject",
+            params: ["%E0%A4%A"],
+            query: {},
+        });
+    });
 });
