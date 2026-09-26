@@ -1989,7 +1989,19 @@ def bench(settings, params: dict, progress: Progress) -> dict:
     finally:
         app_conn.close()
 
-    progress.set(1.0, f"{len(rows)} measurement(s) across {len(chosen)} plane(s)")
+    failed = sum(1 for row in rows if row.get("error"))
+    message = f"{len(rows)} measurement(s) across {len(chosen)} plane(s)"
+    if failed:
+        message += f", {failed} failed"
+    progress.set(1.0, message)
+    if rows and failed == len(rows):
+        # ops-1: every case in this run raised before it could be scored. A
+        # `succeeded` job with an empty readout ("No benchmark runs yet")
+        # reads as nothing having run at all — the reader needs the red
+        # state, not a quiet miscount. The rows themselves are still on the
+        # job's own partial result (state.partial_of), so nothing measured
+        # is lost by failing loudly here.
+        raise RuntimeError(f"every case failed — {rows[0]['error']}")
     return {
         "batch_id": batch_id,
         "cases": [case["subject_id"] for case in found],
