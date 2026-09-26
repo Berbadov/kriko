@@ -14,6 +14,7 @@ endpoint to the network, so the default host is not a preference.
 """
 
 import logging
+import os
 import sys
 import traceback
 from contextlib import asynccontextmanager
@@ -445,6 +446,14 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     overrides = {"store_path": Path(args.store)} if args.store else {}
+    # `KRIKO_EXTENSION_BOUND` is what /api/health's `extension_port_bound`
+    # reads (settings.py:150), and until now only src/app/sidecar.py set it —
+    # a plain `python -m app.web` (this function) never did, so About and
+    # Extension both asserted "something else took port 8787" on a server
+    # that had simply never tried to bind it, because nobody had probed. Set
+    # it honestly: this process holds EXTENSION_PORT exactly when it is the
+    # port it was asked to serve on.
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == EXTENSION_PORT else "0"
     # Each CLI's and each keyed provider's LLM list, asked once in the
     # background: `agy models` takes seconds, and the Agents screen should not
     # be the one that pays for it.
