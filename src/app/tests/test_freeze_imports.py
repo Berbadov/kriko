@@ -44,3 +44,19 @@ def test_the_spec_uses_the_helper_rather_than_its_own_collection():
         "the spec collects submodules itself again — put the decision in "
         "packaging/freeze_imports.py where a test can reach it"
     )
+
+
+def test_the_binary_carries_no_tests_and_no_pipeline_extra():
+    """0.10.3 froze pytest, trafilatura and numpy and doubled to 66 MB.
+
+    Nothing failed: each was an optional import PyInstaller followed because
+    the build venv happened to have the `pipeline` and `dev` extras.
+    """
+    pytest.importorskip("PyInstaller")
+    assert not [name for name in freeze_imports.kriko_submodules() if ".tests" in name]
+    for name in ("pytest", "_pytest", "trafilatura", "numpy", "PIL", "mistralai"):
+        assert name in freeze_imports.FROZEN_EXCLUDES, name
+    spec = (
+        Path(__file__).resolve().parents[3] / "packaging" / "kriko-sidecar.spec"
+    ).read_text(encoding="utf-8")
+    assert "excludes=list(FROZEN_EXCLUDES)" in spec
