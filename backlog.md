@@ -1376,6 +1376,26 @@ tray, first run).
 **Not this:** a report with no fixes; fixes proven only by unit tests; a
 redesign of the app's layout or navigation the reader did not ask for.
 **Owner:** this session (2026-09-25).
+**Findings (done-when 1, 2026-09-26):** 200, in
+[`docs/audits/2026-09-26-b145-audit.md`](docs/audits/2026-09-26-b145-audit.md):
+3 blockers, 50 major, 114 minor, 33 polish. Eleven areas, one finder each and
+a second agent that reproduced every finding independently; 8 are marked
+unclear and are re-checked before they are fixed. The blockers:
+- **check-1** — "Check this listing" never answers: every Sahibinden URL gets
+  a false "No installed pack recognised this one", and that empty answer is
+  saved to history.
+- **shell-1** — in any window shorter than about 750px, including the app's
+  own 620x520 minimum, the rail is clipped: Agents, Benchmark, Settings, About
+  and the Buyer/Author switch cannot be reached.
+- **ops-2** — cancelling a harness research run on Windows never completes,
+  and it wedges the single job worker until the app restarts.
+Among the majors: the frozen sidecar ships without `app/models.toml`, so every
+installed app has an empty model catalogue (desktop-1). Every screen makes
+16–28 requests, including a GitHub pack-index fetch that 404s and can block
+the landing screen for 15s (perf-3, desktop-2). "Check for updates" always
+shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
+(knowledge-4). The extension badges every non-listing page with a red "!"
+(extension-5).
 
 ### B141 — "Sliders on every research button": sources, effort, context `[G5]`
 **Asked:** "the page count limiter, effort limiter, context limiter slides for
