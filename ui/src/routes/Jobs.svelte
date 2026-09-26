@@ -249,10 +249,17 @@
     >
         <label class="field grow">
             <span>What is the category?</span>
+            <!-- svelte-ignore a11y_autofocus -- deliberate: App.svelte's
+                 focusTheView() reads this attribute to decide who gets focus
+                 on navigation, rather than racing its own container-focus
+                 fallback against this component's own tick().then() (shell-4).
+                 It only carries the attribute while ?author=new is present,
+                 which is itself the reader having just asked for this form. -->
             <input
                 bind:this={categoryInput}
                 bind:value={category}
                 placeholder="cordless drills, espresso machines, e-bikes"
+                autofocus={$route.query.author === "new"}
             />
         </label>
         <button class="primary" type="submit" disabled={busy || !category.trim()}>

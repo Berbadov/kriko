@@ -100,7 +100,19 @@
          a primary action that opens a page they cannot use is worse than no
          action. -->
     {#if mode === "author"}
-        <a class="rail-action" href={hashWith({ mode, author: "new" }, "jobs")}>
+        <!-- Spelled out to "activity" with lens:"runs", not the "jobs"
+             alias: the alias resolves to the same lens regardless, but a
+             reader who had switched Activity's lens tab (which now writes
+             its own ?lens=) leaves that value in the hash, and a link
+             identical to the one already there does not fire a
+             hashchange — the rail's own primary action went dead the
+             second time it was clicked from another lens (shell-4). Naming
+             the lens here means this href always differs from a hash that
+             is anywhere but Runs. -->
+        <a
+            class="rail-action"
+            href={hashWith({ mode, author: "new", lens: "runs" }, "activity")}
+        >
             <span class="rail-action-plus" aria-hidden="true">+</span>
             Start a new pack
         </a>
@@ -121,6 +133,7 @@
                 <button
                     class="tab"
                     class:active={mode === candidate}
+                    aria-pressed={mode === candidate}
                     onclick={() => setMode(candidate as Mode)}>{candidate}</button
                 >
             {/each}
