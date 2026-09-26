@@ -89,10 +89,15 @@ describe("the rail's primary action", () => {
         render(Sidebar, { mode: "author" });
         const action = screen.getByRole("link", { name: /Start a new pack/ });
         expect(action).toBeInTheDocument();
+        // Spelled out to "activity"/lens:"runs" rather than the "jobs"
+        // alias (shell-4): a link identical to the hash already there does
+        // not fire a hashchange, and a reader who had switched lens tabs
+        // (which now write their own ?lens=) left a hash this action's old,
+        // bare "?author=new" would not have differed from.
         expect(parseHash(action.getAttribute("href") ?? "")).toEqual({
-            name: "jobs",
+            name: "activity",
             params: [],
-            query: { mode: "author", author: "new" },
+            query: { mode: "author", author: "new", lens: "runs" },
         });
         // Outside `.rail-nav` on purpose: a rail lists where you are, and this
         // is a do. Inside it, it reads as the fourteenth destination.
@@ -126,8 +131,23 @@ describe("the new-pack destination", () => {
         const input = screen.getByLabelText("What is the category?");
         await waitFor(() => expect(input).toHaveFocus());
         expect(input.closest("details")).toHaveAttribute("open");
-        expect(parseHash(window.location.hash).query).toEqual({ mode: "author" });
+        expect(parseHash(window.location.hash).query).toEqual({
+            mode: "author",
+            lens: "runs",
+        });
         expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+    });
+
+    it("still differs from a hash a lens tab switch already changed (shell-4)", () => {
+        // The rail action's href must not equal a hash a reader could
+        // already be on — a tab click that had rewritten ?lens= to
+        // something other than "runs" used to leave the rail action a
+        // no-op, because setting the hash to what it already was fires no
+        // hashchange at all.
+        window.history.replaceState(null, "", "#/activity?mode=author&lens=live");
+        render(Sidebar, { mode: "author" });
+        const href = screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href");
+        expect(href).not.toBe(window.location.hash);
     });
 
     it("reopens the form on the same route without clearing a draft", async () => {
