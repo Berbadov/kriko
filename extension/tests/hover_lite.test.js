@@ -8,6 +8,8 @@
 // wrong" is only possible if the panel says which one spoke.
 const test = require("node:test");
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { loadPanel } = require("./hover_lite_harness.js");
 
@@ -85,7 +87,12 @@ test("the header shows what the engine understood, not what the page said", () =
   p.deliverEntry(ENTRY);
 
   const text = p.listing().textContent;
-  assert.match(text, /2014/);
+  // extension-11 (B145 audit): a fact prints only when the pack declared a
+  // unit for it. `build_year` has none here — the reader already sees the
+  // year in the identity line, and printing it again as a bare "2014" in the
+  // facts row was the same fact twice, the second time indistinguishable
+  // from a raw count.
+  assert.doesNotMatch(text, /2014/);
   assert.match(text, /190,000 km/);
   assert.match(text, /Dizel/);
   assert.match(text, /volkswagen golf/i);
@@ -257,6 +264,22 @@ const CLAIM = {
   domain: "engine",
 };
 
+test("a domain group's heading is a text transform, not a lookup keyed on car parts", () => {
+  // extension-22 (B145 audit, named must-fix): the panel used to hold a
+  // fixed engine/transmission/emissions/... map and fell back to a
+  // half-capitalized string for anything outside it. A pack the engine has
+  // never seen (a drill's "chuck/bearing" domain, say) must render its
+  // heading exactly as well as the cars pack's own domains do.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [
+    { ...CLAIM, domain: "chuck/bearing" },
+  ] } });
+
+  const text = p.claims().textContent;
+  assert.match(text, /Chuck\/Bearing/);
+});
+
 test("a verdict on a claim reaches the app with the claim's own id", () => {
   // The panel is where a reader is actually looking at the car, so it is the
   // only place a verdict is cheap to collect. It travels by claim_id: a
@@ -378,6 +401,21 @@ test("a subject that already has claims is not offered as a gap", () => {
   p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
     claims: [CLAIM],
     subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 4 }] } });
+
+  assert.equal(p.shadow().querySelector(".lite-gap"), null);
+});
+
+test("a subject reached only through its parts is not offered as a gap either", () => {
+  // extension-4 (B145 audit): `subject.claims` only ever counts claims
+  // reached *directly*, so a car whose 8 risks all reach it through a shared
+  // part still has `claims: 0` on the subject itself. The gap card used to
+  // read "couldn't find the knowledge" directly under those 8 risks — this
+  // asserts the panel trusts what's already on screen over that count.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
+    claims: [CLAIM],
+    subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 0 }] } });
 
   assert.equal(p.shadow().querySelector(".lite-gap"), null);
 });
@@ -679,6 +717,50 @@ test("pressing Analyze on a site nothing reads says so, and offers the fix", () 
   p.click(".lite-verdict-btn");
   assert.equal(p.sent.filter((m) => m.type === "OPEN_IN_APP").pop().payload.route,
                "sites");
+});
+
+test("a known site's page that just isn't a listing gets a quieter card, no 'Add this site'", () => {
+  // extension-5/extension-6/extension-8: a category page on a site Kriko
+  // already reads is not "nothing installed knows how to read this site" —
+  // that copy, and the offer to go write an adapter, belongs only to a host
+  // no pack has at all. `hostKnown` is background.js's own determination
+  // (any installed adapter's domain matches this hostname), so the panel
+  // never re-derives it from a site name.
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER", hostKnown: true } });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "no-adapter");
+  assert.match(box.textContent.replace(/\s+/g, " "), /isn't one/);
+  assert.equal(box.querySelector(".lite-verdict-btn"), null);
+});
+
+test("the empty state doesn't promise a run time it doesn't always keep", () => {
+  // extension-13 (B145 audit): the copy claimed "under 2s" while the
+  // automatic run actually landed around 3.2s (a 1.5s fixed delay in
+  // content.js on top of the real work). Fixed the delay in content.js;
+  // this half drops the broken promise from the panel's own words instead
+  // of chasing a number that will drift again. Checked at the source level
+  // because reaching the idle empty state through the harness means racing
+  // the same auto-trigger this fix is about.
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
+  assert.doesNotMatch(source, /under 2/);
+  assert.match(source, /No analysis yet/);
+});
+
+test("pressing Refresh asks background.js to bypass its own cache", () => {
+  // extension-3 (B145 audit): the panel used to send a plain ANALYZE
+  // whichever control fired it, so background.js's 6-hour result cache
+  // answered a deliberate Refresh press exactly like the silent run at page
+  // load — there was no way to tell it "no, actually ask this time".
+  const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const asked = p.sent.filter((m) => m.type === "ANALYZE").pop();
+  assert.equal(asked.payload.fresh, true);
 });
 
 test("it is not a red banner, because the reader did nothing wrong", () => {
