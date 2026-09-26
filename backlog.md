@@ -1351,6 +1351,32 @@ The 50 ingested EU Safety Gate rows stay in `ledger.db` as history, but:
 quoted, **Where**, **Done when**, **Not this**, **Owner**.
 `test_every_new_backlog_item_says_when_it_is_done` enforces the **Done when**.*
 
+### B145 — "A seamless experience and ready to ship": every screen audited, every finding fixed `[G5]`
+**Asked:** "We need to identify each performance issues, broken
+buttons/functions, bad designs and everything. It should be a seamless
+experience and ready to ship product as a final result." (2026-09-25)
+**Where:** every screen the app's rail lists (`ui/src/routes/`: Overview,
+Check, Result, Compare, Knowledge, Packs, Agents, Activity/Jobs, Operations,
+Pipeline, Questions, Submissions, Sites, Extension, Connect, Health, Bench,
+Settings, About, Welcome), the shell around them (sidebar, palette, theme), the
+browser extension's panel and popup, and the installed Windows app (window,
+tray, first run).
+**Done when:**
+1. The audit's findings are listed under this entry: each performance problem,
+   broken button or function, and design defect, with its screen and how it
+   was reproduced.
+2. Each finding is either fixed, with the check that failed before the fix and
+   passes after it, or moved to its own backlog item with the reason it could
+   not ship here.
+3. `tools/walk.sh`, run on this Windows machine, reports no console errors, no
+   failed or 5xx requests, no button that errors, never settles or does
+   nothing visible, and no screen that takes 1 s or more to settle.
+4. An installer built from the fixed tree is on the reader's desktop, and a
+   double-clicked install of it opens and runs an analysis.
+**Not this:** a report with no fixes; fixes proven only by unit tests; a
+redesign of the app's layout or navigation the reader did not ask for.
+**Owner:** this session (2026-09-25).
+
 ### B141 — "Sliders on every research button": sources, effort, context `[G5]`
 **Asked:** "the page count limiter, effort limiter, context limiter slides for
 agent research", and "sliders on every research button" (2026-09-24).
