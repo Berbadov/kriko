@@ -3,6 +3,7 @@
     import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
     import { follow } from "../lib/jobs";
+    import { JobFailedError } from "../lib/failure";
 
     let { onDone }: { onDone: () => void } = $props();
 
@@ -14,7 +15,10 @@
     // status Failure needs to write one (B72).
     let failure = $state<unknown>(null);
 
-    const offer = api.packUpdates();
+    // A first run is a deliberate ask, not a background hint — this is the
+    // one screen where a slow or unreachable index earns paying for a real
+    // network round trip rather than taking a cached "not checked yet".
+    const offer = api.packUpdates(true);
 
     // Installing is a job, because a download outlives the request — the same
     // path Packs uses, so a pack installed here has the same provenance as one
@@ -33,7 +37,7 @@
                     log = job.message || job.log.split("\n").slice(-1)[0] || "";
                     if (!job.done) return;
                     if (job.state === "failed")
-                        failure = new Error(job.message || "Install failed.");
+                        failure = new JobFailedError(job.message || "The pack could not be downloaded.");
                     resolve();
                 });
             });
@@ -73,9 +77,15 @@
         {#snippet children(updates)}
             {#if updates.error}
                 <p class="state no-match">
-                    The pack index could not be reached — {updates.error}. You can install
-                    a pack from a file instead, or skip and do it later from Packs.
+                    {updates.error} You can install a pack from a file instead, or skip
+                    and do it later from Packs.
                 </p>
+                {#if updates.error_detail}
+                    <details>
+                        <summary class="meta">Show the details</summary>
+                        <p class="meta">{updates.error_detail}</p>
+                    </details>
+                {/if}
             {:else if !updates.packs.length}
                 <p class="state empty">
                     The index offers no packs right now. Skip for now; Packs will check
