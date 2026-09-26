@@ -273,3 +273,33 @@ describe("Jobs", () => {
         expect(await screen.findByText(/Nothing was sent/)).toBeInTheDocument();
     });
 });
+
+describe("noticing runs started elsewhere", () => {
+    it("picks up a job that appears in the list after mount, without a reload", async () => {
+        // B145 ops-8: the list was only ever read once, on mount, so a run
+        // started from Packs, an agent, or the API stayed invisible here
+        // until the reader reloaded the screen.
+        vi.useFakeTimers();
+        let call = 0;
+        const fetchMock = vi.fn(async (path: string) => {
+            if (String(path).startsWith("/api/jobs/j2")) {
+                return new Response(JSON.stringify({
+                    ...JOB, job_id: "j2", message: "started elsewhere",
+                }));
+            }
+            if (String(path).startsWith("/api/jobs")) {
+                call += 1;
+                const items =
+                    call === 1 ? [] : [{ ...JOB, job_id: "j2", message: "started elsewhere" }];
+                return new Response(JSON.stringify({ items }));
+            }
+            throw new Error(`unstubbed ${path}`);
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        render(Jobs);
+        await screen.findByText("No runs yet");
+        await vi.advanceTimersByTimeAsync(4000);
+        expect(await screen.findByText(/started elsewhere/)).toBeInTheDocument();
+        vi.useRealTimers();
+    });
+});

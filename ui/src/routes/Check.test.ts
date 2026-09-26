@@ -61,10 +61,14 @@ describe("Check", () => {
         expect(await screen.findByText(/No link\?/)).toBeInTheDocument();
     });
 
-    it("says what the page does, and that nothing leaves the machine", async () => {
+    it("says what the page does, and that the listing never leaves the machine", async () => {
+        // B145 check-22: the old copy said "nothing sent anywhere", which was
+        // false the moment a background pack-update check touched the network
+        // (NextStep mounts on this screen too). The claim this makes is one the
+        // app actually keeps: the listing itself is never transmitted.
         stubFetch(ROUTES);
         render(Check);
-        expect(await screen.findByText(/nothing sent anywhere/)).toBeInTheDocument();
+        expect(await screen.findByText(/never leaves this machine/)).toBeInTheDocument();
     });
 
     it("hosts the staged form rather than owning a flat one", async () => {
