@@ -3,6 +3,11 @@ import type * as T from "./types";
 export class ApiError extends Error {
     /** The server's own last stack frames, when it sent any. */
     public trace: string[] = [];
+    /** The raw `detail`, when the server sent a structured one rather than a
+     * plain string — a caller that needs a field off it (a downgrade's
+     * `installed`/`offered`) reads this instead of parsing prose back out of
+     * `message`. */
+    public detail: unknown = undefined;
 
     constructor(
         public status: number,
@@ -23,7 +28,7 @@ export class ApiError extends Error {
  * nothing. A local app has one reader and no log viewer: whatever this returns
  * is the entire diagnosis available to them.
  */
-function explain(body: string): { message: string; trace: string[] } {
+function explain(body: string): { message: string; trace: string[]; detail: unknown } {
     try {
         const parsed = JSON.parse(body) as {
             detail?: unknown;
@@ -33,20 +38,27 @@ function explain(body: string): { message: string; trace: string[] } {
         const trace = Array.isArray(parsed.trace)
             ? parsed.trace.map(String)
             : [];
-        if (typeof detail === "string" && detail) return { message: detail, trace };
-        if (detail !== undefined) return { message: JSON.stringify(detail), trace };
-        return { message: body, trace };
+        if (typeof detail === "string" && detail) return { message: detail, trace, detail };
+        if (detail && typeof detail === "object" && "message" in detail) {
+            const withMessage = detail as { message: unknown };
+            if (typeof withMessage.message === "string") {
+                return { message: withMessage.message, trace, detail };
+            }
+        }
+        if (detail !== undefined) return { message: JSON.stringify(detail), trace, detail };
+        return { message: body, trace, detail: undefined };
     } catch {
-        return { message: body, trace: [] };
+        return { message: body, trace: [], detail: undefined };
     }
 }
 
 async function request<R>(path: string, init?: RequestInit): Promise<R> {
     const response = await fetch(path, init);
     if (!response.ok) {
-        const { message, trace } = explain(await response.text());
+        const { message, trace, detail } = explain(await response.text());
         const error = new ApiError(response.status, message);
         error.trace = trace;
+        error.detail = detail;
         throw error;
     }
     return (await response.json()) as R;
@@ -371,12 +383,17 @@ export const api = {
         postJson<{ job_id: string; kind: string }>("/api/packs/update", {
             pack_id: packId ?? null,
         }),
-    installPack: (file: File) =>
-        request<{ pack: T.Pack; revision: T.Revision }>("/api/packs/install", {
-            method: "POST",
-            headers: { "X-Filename": file.name },
-            body: file,
-        }),
+    installPack: (file: File, allowDowngrade = false) =>
+        request<{ pack: T.Pack; revision: T.Revision }>(
+            `/api/packs/install${allowDowngrade ? "?allow_downgrade=true" : ""}`,
+            {
+                method: "POST",
+                headers: { "X-Filename": file.name },
+                body: file,
+            },
+        ),
+    uninstallPack: (packId: string) =>
+        request<unknown>(`/api/packs/${seg(packId)}`, { method: "DELETE" }),
     bench: () => get<T.Bench>("/api/bench"),
     estimateBench: (body: T.BenchRequest) => postJson<T.BenchEstimate>("/api/bench/estimate", body),
     benchConfigs: () => get<{ configs: Record<string, T.BenchRequest> }>("/api/bench/configs"),

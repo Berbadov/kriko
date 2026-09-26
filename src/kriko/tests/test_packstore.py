@@ -146,6 +146,26 @@ def test_install_is_idempotent(store, tmp_path):
     assert _rows(store, "claims") == before
 
 
+def test_installing_an_older_version_is_refused_unless_allowed(store, tmp_path):
+    """Installing dist/drill.kpack after a newer build must not silently roll
+    the active pack back (knowledge-13) — the reader gets no warning that
+    "Installed Cordless drills 0.1.1" replaced a 0.1.2 they already had."""
+    packstore.install(store, _pack(tmp_path, "p", [], version="0.1.2", digest="a" * 64))
+    older = _pack(tmp_path, "p", [], version="0.1.1", digest="b" * 64)
+
+    with pytest.raises(packstore.DowngradeRefused):
+        packstore.install(store, older)
+    assert store.execute(
+        "SELECT version FROM packs WHERE pack_id = 'p'"
+    ).fetchone()[0] == "0.1.2"
+
+    # Asking for it explicitly still works.
+    packstore.install(store, older, allow_downgrade=True)
+    assert store.execute(
+        "SELECT version FROM packs WHERE pack_id = 'p'"
+    ).fetchone()[0] == "0.1.1"
+
+
 def test_two_packs_asserting_the_same_fact_keep_one_row_each(store, tmp_path):
     """Identical content hashes, but the rows do NOT collapse across packs.
 

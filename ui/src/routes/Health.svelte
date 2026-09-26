@@ -1,14 +1,21 @@
 <script lang="ts">
+    import { tick } from "svelte";
     import { api } from "../lib/api";
     import { count } from "../lib/plural";
     import Failure from "../lib/Failure.svelte";
     import { signalNote, tieNote } from "../lib/health";
+    import { hashWith } from "../lib/router";
     import type { ClaimHealth, HealthTree } from "../lib/types";
 
     // Its own page once, now one lens inside Knowledge. The heading is a
     // prop rather than always-on because a second <h2> inside a screen that
     // already has one reads as two pages stacked.
-    let { heading = true }: { heading?: boolean } = $props();
+    //
+    // `focusClaimId`: a link from elsewhere (Overview's "Thinnest evidence")
+    // names a claim rather than dumping the reader on the top of the list —
+    // see openFocused below.
+    let { heading = true, focusClaimId = "" }: { heading?: boolean; focusClaimId?: string } =
+        $props();
 
     let claims = $state<ClaimHealth[]>([]);
     let tree = $state<HealthTree | null>(null);
@@ -17,6 +24,10 @@
     // know what the reader can do about it, and a string has already
     // thrown that away.
     let failure = $state<unknown>(null);
+    // Evidence's own failure, kept apart from the table's: a broken tree
+    // fetch must not blank out the 40 rows the reader can still read.
+    let treeFailure = $state<unknown>(null);
+    let cardEl = $state<HTMLElement | null>(null);
 
     async function load() {
         try {
@@ -28,11 +39,29 @@
     }
 
     async function openTree(claim: ClaimHealth) {
+        tree = null;
+        treeFailure = null;
         askedClaimId = claim.claim_id;
-        tree = await api.healthSubject(claim.subject_id);
+        try {
+            tree = await api.healthSubject(claim.subject_id);
+        } catch (e) {
+            treeFailure = e;
+            return;
+        }
+        // Pressing Evidence used to render the card after the whole table —
+        // off the bottom of a 40-row list, so the button looked dead. Scroll
+        // it into view and move focus there, the same as opening it any
+        // other way.
+        await tick();
+        cardEl?.scrollIntoView({ block: "start" });
+        cardEl?.focus();
     }
 
-    const ready = load();
+    const ready = load().then(() => {
+        if (!focusClaimId) return;
+        const claim = claims.find((c) => c.claim_id === focusClaimId);
+        if (claim) void openTree(claim);
+    });
 </script>
 
 {#if heading}<h2>Claim health</h2>{/if}
@@ -42,7 +71,7 @@
     signal is its own column.
     <em>Independence and stance are flags the pack author supplied, not verified facts.</em>
     Claims with no sources at all are not listed here — that is a coverage question, answered
-    by the Coverage tab, not a weakness one.
+    by <a href={hashWith({ lens: "gaps" }, "knowledge")}>What is missing</a>, not a weakness one.
 </p>
 {#if tieNote(claims)}<p class="meta">{tieNote(claims)}</p>{/if}
 
@@ -83,7 +112,7 @@
                                 <span class="meta">{claim.best_trust.toFixed(2)}</span>
                             </td>
                             <td class="signal {claim.oldest_retrieved_at ? '' : 'stale'}">
-                                {claim.oldest_retrieved_at ?? "unknown"}
+                                {claim.oldest_retrieved_at || "unknown"}
                             </td>
                             <td><button onclick={() => openTree(claim)}>Evidence</button></td>
                         </tr>
@@ -92,8 +121,15 @@
             </table>
         </div>
 
+        {#if treeFailure}
+            <Failure error={treeFailure} retry={() => {
+                const claim = claims.find((c) => c.claim_id === askedClaimId);
+                if (claim) void openTree(claim);
+            }} />
+        {/if}
+
         {#if tree}
-            <article class="card">
+            <article class="card" bind:this={cardEl} tabindex="-1">
                 <h3>
                     {tree.label ?? "Subject"}
                     <span class="badge">{count(tree.claims.length, "claim")}</span>
@@ -116,7 +152,7 @@
                                     <footer class="meta">
                                         {row.domain} · {row.tier} · {row.stance}{row.independent
                                             ? ""
-                                            : " · not independent"} · retrieved {row.retrieved_at ??
+                                            : " · not independent"} · retrieved {row.retrieved_at ||
                                             "unknown"}
                                     </footer>
                                 </blockquote>
