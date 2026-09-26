@@ -66,4 +66,24 @@ describe("the next step", () => {
         expect(nextStep({ ...OK, gaps: 1 })?.title).toContain("1 subject with");
         expect(nextStep({ ...OK, gaps: 4 })?.title).toContain("4 subjects with");
     });
+
+    it("in buyer mode, never offers a step whose destination is an author view (check-7)", () => {
+        // Every one of these would otherwise land a buyer on "connect is an
+        // author view" or "packs is an author view" — a dead end reached by
+        // clicking exactly what the bar told them to.
+        expect(nextStep({ ...OK, packs: 0 }, "buyer")?.id).not.toBe("install-pack");
+        expect(nextStep({ ...OK, enabled: 0 }, "buyer")?.id).not.toBe("enable-pack");
+        expect(nextStep({ ...OK, agentsConnected: 0 }, "buyer")?.id).not.toBe(
+            "connect-agent",
+        );
+        expect(nextStep({ ...OK, updatable: 2 }, "buyer")?.id).not.toBe(
+            "update-packs",
+        );
+        expect(nextStep({ ...OK, gaps: 9 }, "buyer")?.id).not.toBe("close-gaps");
+        // The buyer-facing steps still work.
+        expect(nextStep({ ...OK, checks: 0 }, "buyer")?.id).toBe("first-check");
+        expect(nextStep({ ...OK, extensionConnected: false }, "buyer")?.id).toBe(
+            "install-extension",
+        );
+    });
 });
