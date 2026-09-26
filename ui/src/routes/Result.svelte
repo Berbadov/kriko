@@ -9,9 +9,17 @@
 
     // Derived rather than captured: the App keys this component so a new id
     // remounts it anyway, but a prop that changes must refetch, not go stale.
-    const stored = $derived(api.getLookup(lookupId));
+    //
+    // Guarded on a non-empty id: #/result with nothing after it coerced
+    // `undefined` into the string "undefined" at the fetch boundary and hit
+    // `/api/lookup/undefined`, a 404 and a console error for a screen that
+    // has its own empty-history message right below (uicode-1).
+    const stored = $derived(lookupId ? api.getLookup(lookupId) : null);
 </script>
 
+{#if !lookupId || !stored}
+    <p class="state empty">That lookup is no longer in your history.</p>
+{:else}
 {#await stored}
     <p class="state loading">Loading…</p>
 {:then result}
@@ -31,3 +39,4 @@
         <Failure {error} />
     {/if}
 {/await}
+{/if}
