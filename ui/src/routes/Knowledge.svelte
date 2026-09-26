@@ -907,11 +907,6 @@
         display: block;
         max-width: var(--measure);
     }
-    .lenses {
-        display: flex;
-        gap: var(--s-2);
-        margin-bottom: var(--s-3);
-    }
     .filters {
         margin-bottom: var(--s-3);
     }

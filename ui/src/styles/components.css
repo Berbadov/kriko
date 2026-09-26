@@ -32,6 +32,13 @@
 .shell {
     display: grid;
     grid-template-columns: var(--rail) minmax(0, 1fr);
+    /* Without an explicit row, the grid's one implicit row is `auto` and
+     * sizes to the rail's own content (its nav plus its foot), not to the
+     * viewport — so at any window shorter than that content the rail grows
+     * past 100dvh and clips the mode switch and the last nav links with no
+     * way to reach them (shell-1). Constraining the row is what lets the
+     * rail's own `minmax(0, 1fr)` nav row (below) actually scroll instead. */
+    grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "rail work";
     height: 100vh;
     height: 100dvh;
@@ -55,6 +62,10 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-gutter: stable;
+    /* Lets a component's own container query (e.g. .history.page li's,
+     * check-8) key off the space it actually has — the rail's width, not
+     * the whole window — rather than a media query that can't see the rail. */
+    container-type: inline-size;
 }
 /* A content scroller draws the design system's bar, not the platform's.
  *
@@ -130,6 +141,19 @@
  * "darker than the face" in whichever direction that theme's ground runs.
  */
 button,
+.tab,
+[role="tab"],
+th {
+    /* These are labels, not prose: base.css's break-word still lets a
+     * cramped flex/table cell shrink them below their min-content width and
+     * split a word one letter per line (shell-3/settings-9's "Evide/nce",
+     * "Wh/at is/her/e"). A button or a column header never has "somewhere
+     * else" to wrap a word to, so it keeps its label whole and lets the
+     * container scroll or wrap the whole control instead (min-width below,
+     * .lenses's flex-wrap, and each table's own overflow-x). */
+    white-space: nowrap;
+}
+button,
 .tab {
     font: inherit;
     font-weight: 500;
@@ -140,6 +164,7 @@ button,
     border-bottom-color: var(--btn-lo);
     border-radius: var(--radius-sm);
     padding: var(--s-2) var(--s-4);
+    min-width: max-content;
     cursor: pointer;
     box-shadow: var(--shadow-1);
     /* `transform` last and cheapest: the press must not wait on colour. */
@@ -224,7 +249,13 @@ button.small,
     font-size: var(--t-sm);
     line-height: var(--lh-sm);
 }
-nav a.tab {
+a.tab,
+a.primary,
+a.button {
+    /* Scoped to `nav a.tab` alone, this only undid the underline for the
+     * rail's own links — any a.tab or a.primary drawn as a button anywhere
+     * else (Extension, History, Result) kept the plain-link underline next
+     * to real <button>s that have none (shell-12). */
     text-decoration: none;
     display: inline-block;
 }
@@ -290,6 +321,12 @@ textarea {
     border-radius: var(--radius-sm);
     padding: var(--s-2) var(--s-3);
     min-width: 150px;
+    /* Without this a native select sizes to its longest <option>, and a
+     * model-picker's options carry a full "no {provider} key — add one on
+     * Settings" note — wide enough to push the field, and the page, past
+     * the 620px window (settings-8/m2). The row it sits in already gives it
+     * all the width it can have; capping here keeps that promise. */
+    max-width: 100%;
 }
 input[type="radio"],
 input[type="checkbox"] {
@@ -394,6 +431,7 @@ legend {
 
 .sev {
     display: inline-block;
+    white-space: nowrap;
     padding: 1px var(--s-2);
     border-radius: 999px;
     font-size: var(--t-xs);
@@ -527,6 +565,17 @@ td.num {
 /* A dismissed row stays on screen, struck through: a row that disappears
    under the cursor gives the reader no way to tell "dismissed" from
    "misclicked", and the delete it stands for is already durable. */
+/* Was scoped CSS inside Knowledge.svelte, so Activity's identical-looking
+ * `class="lenses"` tablist matched nothing there (shell-14/ops-23): no gap
+ * between tabs, no space above the heading below. One rule, every screen.
+ * flex-wrap lets the row wrap to a second line at narrow widths instead of
+ * squeezing each tab below its nowrap label's width (uicode-m1). */
+.lenses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin-bottom: var(--s-3);
+}
 tr.gone td {
     text-decoration: line-through;
     opacity: 0.5;
@@ -536,7 +585,7 @@ tr.gone td {
 td button.link-ish {
     margin-top: 0;
 }
-tr.concern td {
+tr.concern td:first-child {
     border-left: 3px solid var(--high);
 }
 .signal {
@@ -787,6 +836,13 @@ pre {
     white-space: nowrap;
     cursor: pointer;
 }
+/* Questions.svelte wraps a whole question sentence in `.check` — the
+ * checkbox's own short label is meant to stay on one line, but the nowrap it
+ * inherited reached the question text too, running it a full window's
+ * width past the edge (shell-2). */
+.check .sheet-ask {
+    white-space: normal;
+}
 .ask {
     margin: var(--s-2) 0 var(--s-1);
     padding: var(--s-2) var(--s-3);
@@ -848,6 +904,7 @@ li.gap {
     grid-area: rail;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
     gap: var(--s-5);
     padding: var(--s-4) var(--s-3);
     border-right: 1px solid var(--line);
@@ -1184,6 +1241,12 @@ li.gap {
     padding-left: 0;
 }
 .history.page li {
+    /* The two `auto` columns (meta, Forget) take their max-content width
+     * first and leave the `1fr` title column whatever is left over — at
+     * 620px, with the rail still holding 240 of it, that was about 10px, so
+     * a URL title wrapped one or two characters per line (check-8). The
+     * container query below drops to a single column and lets the title
+     * take the full row once there truly isn't room for three across. */
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: baseline;
     gap: var(--s-3);
@@ -1191,6 +1254,14 @@ li.gap {
     padding: var(--s-2) 0;
     border-bottom: 1px solid var(--line);
     margin-bottom: 0;
+}
+@container (max-width: 32rem) {
+    .history.page li {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .history.page li .meta {
+        grid-column: 1 / -1;
+    }
 }
 
 /* ── the worklist ─────────────────────────────────────────────────── */
@@ -1579,8 +1650,22 @@ button.link-ish {
 .row.slots {
     flex-wrap: wrap;
 }
+.row.slots .field {
+    flex: 1 1 14rem;
+    min-width: 0;
+    max-width: 100%;
+}
+.row.slots select {
+    /* A native select sizes to its widest <option>, and Compare's options
+     * are full listing URLs — with no cap it pushed the whole row, and the
+     * page, sideways (check-9). */
+    width: 100%;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
 /* Four columns plus the risk name outgrows a narrow window; the table scrolls
-   inside its own box rather than pushing the page sideways. */
+   inside its own box rather than pushing the page sideways. Also used by the
+   Knowledge claim-health table (knowledge-8), which has the same problem. */
 .table-scroll {
     overflow-x: auto;
 }
