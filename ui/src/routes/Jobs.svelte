@@ -4,7 +4,7 @@
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
-    import { canCancel, follow, isLive, stateWord } from "../lib/jobs";
+    import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
@@ -16,6 +16,12 @@
     let root = $state("");
     let busy = $state(false);
     let cancelPending = $state<string[]>([]);
+    // ops-5: `retry` had no pending guard at all, and a double-click sent two
+    // `POST /retry` before the first had come back — the server is now
+    // idempotent (it hands back the same child), but the button should not
+    // rely on that: a reader pressing it twice wants one run, not a lucky
+    // dedupe.
+    let retryPending = $state<string[]>([]);
     /* What the reader has typed back, per job and then per question id.
      *
      * Kept here rather than on the row because the row is replaced wholesale
@@ -117,8 +123,15 @@
         return () => { active = false; };
     });
 
+    // The server's own field (`app/web/routers/jobs.py`'s AuthorRequest)
+    // requires two characters — below that, `x` reached the server and came
+    // back a 422 the reader had no way to anticipate (ops-4). Matching the
+    // bound here means the button simply will not fire a request that could
+    // not succeed.
+    const CATEGORY_MIN = 2;
+
     async function authorPack() {
-        if (!category.trim()) return;
+        if (category.trim().length < CATEGORY_MIN) return;
         busy = true;
         error = null;
         try {
@@ -216,6 +229,8 @@
      * most useful thing on this screen and a retry must not overwrite it.
      */
     async function retry(job: Job) {
+        if (retryPending.includes(job.job_id)) return;
+        retryPending = [...retryPending, job.job_id];
         try {
             const { job_id } = await api.retryJob(job.job_id, answers[job.job_id] ?? {});
             delete answers[job.job_id];
@@ -225,6 +240,8 @@
             open = job_id;
         } catch (cause) {
             error = cause;
+        } finally {
+            retryPending = retryPending.filter((id) => id !== job.job_id);
         }
     }
 
@@ -232,21 +249,7 @@
     const subjectOf = (job: Job) =>
         String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
 
-    /** What kind of work a row was, in the reader's words.
-     *
-     * A map rather than a ternary because there are now three kinds and the
-     * third one — an agent writing a whole pack — read as "Build", which is
-     * the one thing it deliberately does not do.
-     */
-    const KINDS: Record<string, string> = {
-        research: "Research",
-        agenda_run: "Research",
-        research_undo: "Undo",
-        pack_author: "New pack",
-        pack_build: "Build",
-        pack_update: "Update",
-    };
-    const kindWord = (job: Job) => KINDS[job.kind] ?? job.kind;
+    const kindWord = (job: Job) => libKindWord(job.kind);
 </script>
 
 <!-- "Runs", which is what the rail has always called it. The heading said
@@ -287,10 +290,17 @@
                 autofocus={$route.query.author === "new"}
             />
         </label>
-        <button class="primary" type="submit" disabled={busy || !category.trim()}>
+        <button
+            class="primary"
+            type="submit"
+            disabled={busy || category.trim().length < CATEGORY_MIN}
+        >
             Have my agent write it
         </button>
     </form>
+    {#if category.trim().length > 0 && category.trim().length < CATEGORY_MIN}
+        <p class="meta">At least {CATEGORY_MIN} characters.</p>
+    {/if}
     <p class="meta">
         Needs a coding-agent command-line tool installed — the same one the
         Research plane uses, and it costs nothing beyond the subscription you
@@ -302,7 +312,7 @@
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
         <span>Build a pack from a directory</span>
-        <input bind:value={root} placeholder="packs/drill" />
+        <input bind:value={root} placeholder="e.g. packs/drill" />
     </label>
     <button type="submit" disabled={busy || !root.trim()}>Build and install</button>
 </form>
@@ -316,9 +326,9 @@
         title="No runs yet"
         detail="Long work is a row here rather than a request that hangs — research
                 and pack builds both land on this screen, and their log outlives
-                the page. Start one above, or from a gap on Coverage."
+                the page. Start one above, or from a gap on Knowledge."
         actionLabel="Find a gap"
-        actionHref="#/coverage"
+        actionHref="#/knowledge"
     />
 {/if}
 
@@ -353,7 +363,10 @@
                     onclick={() => cancel(job)}
                 >{job.state === "cancelling" || cancelPending.includes(job.job_id) ? "Stopping…" : "Cancel"}</button>
             {:else}
-                <button onclick={() => retry(job)}>Run again</button>
+                <button
+                    disabled={retryPending.includes(job.job_id)}
+                    onclick={() => retry(job)}
+                >{retryPending.includes(job.job_id) ? "Starting…" : "Run again"}</button>
             {/if}
         </p>
         {#if isLive(job)}
