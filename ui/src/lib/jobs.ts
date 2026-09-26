@@ -4,6 +4,29 @@ import type { Job } from "./types";
 /** How often the fallback re-reads a job. Matches the server's stream poll. */
 export const POLL_MS = 700;
 
+/** What kind of work a job was, in the reader's words.
+ *
+ * A map rather than a ternary because there are several kinds and "Build" —
+ * the literal name of one of them — is also what an agent authoring a whole
+ * pack would read as if it kept `pack_author`'s own word.
+ *
+ * Lives here rather than in Jobs.svelte alone (ops-10) because Activity's
+ * Live lens renders the same jobs and, until this moved, printed their raw
+ * `kind` strings ("research", "pack_author") instead of these words — one
+ * map kept in step is the point, not two that drift.
+ */
+export const KINDS: Record<string, string> = {
+    research: "Research",
+    agenda_run: "Research",
+    research_undo: "Undo",
+    pack_author: "New pack",
+    pack_build: "Build",
+    pack_update: "Update",
+    bench: "Benchmark",
+};
+
+export const kindWord = (kind: string): string => KINDS[kind] ?? kind;
+
 /**
  * Follow one job until it finishes, and return the way to stop watching.
  *
