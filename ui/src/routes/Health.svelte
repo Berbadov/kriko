@@ -54,41 +54,43 @@
     {:else if !claims.length}
         <p class="state empty">No sourced claims installed yet.</p>
     {:else}
-        <table>
-            <thead>
-                <tr>
-                    <th>Claim</th><th>Contradicted</th><th>Independent sources</th>
-                    <th>Best source</th><th>Last retrieved</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each claims as claim (claim.claim_id)}
-                    <tr class={claim.refuted_by > 0 ? "concern" : ""}>
-                        <td>
-                            {claim.title}
-                            <div class="meta">{claim.subject_label} · {claim.pack_id}</div>
-                            {#if signalNote(claim)}
-                                <div class="meta">{signalNote(claim)}</div>
-                            {/if}
-                        </td>
-                        <td class="num signal">
-                            {#if claim.refuted_by > 0}
-                                <span class="badge">{claim.refuted_by} refuting</span>
-                            {:else}—{/if}
-                        </td>
-                        <td class="num signal">{claim.independent_sources}</td>
-                        <td class="signal">
-                            {claim.best_tier}
-                            <span class="meta">{claim.best_trust.toFixed(2)}</span>
-                        </td>
-                        <td class="signal {claim.oldest_retrieved_at ? '' : 'stale'}">
-                            {claim.oldest_retrieved_at ?? "unknown"}
-                        </td>
-                        <td><button onclick={() => openTree(claim)}>Evidence</button></td>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th><th>Contradicted</th><th>Independent sources</th>
+                        <th>Best source</th><th>Last retrieved</th><th></th>
                     </tr>
-                {/each}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {#each claims as claim (claim.claim_id)}
+                        <tr class={claim.refuted_by > 0 ? "concern" : ""}>
+                            <td>
+                                {claim.title}
+                                <div class="meta">{claim.subject_label} · {claim.pack_id}</div>
+                                {#if signalNote(claim)}
+                                    <div class="meta">{signalNote(claim)}</div>
+                                {/if}
+                            </td>
+                            <td class="num signal">
+                                {#if claim.refuted_by > 0}
+                                    <span class="badge">{claim.refuted_by} refuting</span>
+                                {:else}—{/if}
+                            </td>
+                            <td class="num signal">{claim.independent_sources}</td>
+                            <td class="signal">
+                                {claim.best_tier}
+                                <span class="meta">{claim.best_trust.toFixed(2)}</span>
+                            </td>
+                            <td class="signal {claim.oldest_retrieved_at ? '' : 'stale'}">
+                                {claim.oldest_retrieved_at ?? "unknown"}
+                            </td>
+                            <td><button onclick={() => openTree(claim)}>Evidence</button></td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
 
         {#if tree}
             <article class="card">
