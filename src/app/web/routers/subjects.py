@@ -24,8 +24,12 @@ def list_subjects(
         clauses.append("s.kind = ?")
         args.append(kind)
     if q:
-        clauses.append("LOWER(s.label) LIKE ?")
-        args.append(f"%{q.lower()}%")
+        # `%` and `_` are LIKE wildcards, not the literal characters a reader
+        # typed — unescaped, a search for "%" reads as "match anything" and
+        # returns every subject instead of none.
+        escaped = q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        clauses.append("LOWER(s.label) LIKE ? ESCAPE '\\'")
+        args.append(f"%{escaped}%")
     return [
         dict(r)
         for r in store.execute(

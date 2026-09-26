@@ -180,7 +180,7 @@ export type Subject = {
     claims: number;
 };
 
-export type Gap = { subject_id: string; label: string; kind: string };
+export type Gap = { subject_id: string; label: string; kind: string; pack_id: string };
 
 /** A reader's verdict on one claim.
  *
