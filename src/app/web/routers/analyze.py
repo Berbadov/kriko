@@ -8,14 +8,15 @@ JSON file in a pack.
 
 import logging
 from typing import Literal
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app import matching, operations, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
-from app.web.routers.history import label_for  # noqa: F401
+from app.web.routers.history import label_for
 from app.web.observability import log_analysis_jsonl
 from kriko.adapters import (
     adapt,
@@ -223,7 +224,20 @@ def analyze(
     # design: a published adapter always wins over a local guess.
     spec = sites.adapter_for(store, app_state, body.url)
     if spec is None:
-        raise HTTPException(404, f"no installed pack has an adapter for {body.url}")
+        # Not a 404 (check-21): a listing site nothing reads is an expected,
+        # frequent answer — the reader's first paste is as likely to be a
+        # site with no adapter as one with — and raising for it meant every
+        # normal case of this logged a console error the same as a dead
+        # server would. `readable_sites` lets the client name what does work
+        # by its title instead of a bare `pack_id`.
+        return {
+            "readable": False,
+            "reason": "no_adapter",
+            "readable_sites": [
+                {"site": a["site"], "pack_id": a["pack_id"]}
+                for a in list_adapters(store, app_state)
+            ],
+        }
 
     # The vocabulary is the packs' own identity rows. It is what lets the
     # adapter read an identity value straight out of a page title when the
@@ -237,6 +251,27 @@ def analyze(
         description=body.description,
         vocabulary=identity_vocabulary(store),
     )
+
+    # An adapter matching the URL is not the same as the page having been
+    # read: the extension sends fields scraped from the DOM, but a bare URL
+    # (typed or pasted into Check) has none, so `adapt` has nothing to map
+    # and `mapped.identity` comes back empty. Running the lookup anyway asks
+    # "what is known about no product in particular" and gets back
+    # `no_match` — which reads, wrongly, as "no pack covers this kind of
+    # product at all". This is a distinct, expected outcome, so it is
+    # reported as one rather than run through the lookup and recorded to
+    # history as an empty check.
+    if not body.fields and not mapped.identity:
+        return {
+            "readable": False,
+            "reason": "page_not_read",
+            "adapter": mapped.adapter_id,
+            "next_step": (
+                "Kriko cannot open listing pages by itself. Open this ad "
+                "with the browser extension, or describe it by hand."
+            ),
+        }
+
     result = lookup(
         store,
         Query(
@@ -361,11 +396,42 @@ def analyze(
     payload["lookup_id"] = state.record_lookup(
         app_state,
         source=_SOURCE_FOR_ORIGIN[body.origin],
-        label=body.title.strip() or body.url,
+        label=_analyze_label(store, body, mapped, result),
         request=body.model_dump(),
         response=payload,
     )
+    # The Result heading and "Open the listing" link both need the URL by
+    # itself, not folded into a label string (check-15).
+    payload["url"] = body.url
     return payload
+
+
+def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
+    """A short title, not the raw 150-character URL (check-15).
+
+    A page's own <title> (`body.title`) is usually a listing site's own
+    boilerplate, not a product name, so it is preferred only when the
+    adapter found nothing to identify the product by. When it did, that
+    identity is the readable name; otherwise this falls back to naming the
+    site the listing came from, which is still shorter and more honest than
+    printing the address itself.
+
+    As in query.py's `_history_label`, the label is read straight off the
+    matched subject's own row rather than off a claim: ranking can surface
+    claims written against a related subject, so the matched subject need
+    not own any claim of its own.
+    """
+    if result.resolution.method in ("exact", "identity") and result.resolution.subject_ids:
+        row = store.execute(
+            "SELECT label FROM subjects WHERE subject_id = ?",
+            (result.resolution.subject_ids[0],),
+        ).fetchone()
+        if row and row["label"]:
+            return row["label"]
+    if mapped.identity:
+        return label_for(mapped.identity)
+    host = urlparse(body.url).netloc.removeprefix("www.") or body.url
+    return f"Listing on {host}"
 
 
 @router.post("/diagnose/identity")

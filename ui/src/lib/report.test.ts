@@ -115,6 +115,21 @@ describe("emptyReason", () => {
         expect(emptyReason({ method: "exact", claims: [], coverage: "NO_RISKS" }))
             .toMatch(/coverage gap, not a clean bill of health/);
     });
+
+    it("says several products matched, not that this one was identified with no data (check-3)", () => {
+        expect(
+            emptyReason({
+                method: "ambiguous",
+                claims: [],
+                coverage: "MATCHED_NO_DATA",
+                subjects: ["a", "b", "c"],
+            }),
+        ).toBe(
+            "3 products match these details — add another identifying detail to narrow it down to one.",
+        );
+        expect(emptyReason({ method: "ambiguous", claims: [], coverage: "MATCHED_NO_DATA" }))
+            .not.toMatch(/identified/);
+    });
 });
 
 describe("wording", () => {
@@ -201,7 +216,9 @@ describe("asMarkdown", () => {
             handled: ["c1"],
         });
         expect(text).toContain("# A thing");
-        expect(text).toContain("## mech");
+        // Humanized, not the raw domain id (check-29): "## mech" read as an
+        // internal word rather than a heading a mechanic would recognise.
+        expect(text).toContain("## Mech");
         expect(text).toContain("**Ask:** Ask for the receipt.");
         expect(text).toContain("**Answer:** done at 140k, no receipt");
         expect(text).toContain("*Dealt with.*");
