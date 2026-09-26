@@ -148,6 +148,33 @@ describe("Jobs", () => {
         expect(screen.getByText("the source timed out")).toBeInTheDocument();
     });
 
+    it("disables Run again while the retry request is in flight", async () => {
+        // ops-5: `retry` had no pending guard, so a double-click sent two
+        // `POST /retry` before the first had come back.
+        const failed = {
+            ...JOB, state: "failed", done: true,
+            message: "the source timed out",
+            finished_at: "2026-09-01T10:05:00+00:00",
+        };
+        let release!: (response: Response) => void;
+        const fetchMock = vi.fn((path: string) => {
+            if (path.endsWith("/retry")) {
+                return new Promise<Response>((resolve) => { release = resolve; });
+            }
+            return Promise.resolve(new Response(JSON.stringify(
+                path.split("?")[0] === "/api/jobs" ? { items: [failed] } : failed,
+            )));
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        render(Jobs);
+        const button = await screen.findByRole("button", { name: "Run again" });
+        await fireEvent.click(button);
+        await waitFor(() => expect(screen.getByRole("button", { name: "Starting…" })).toBeDisabled());
+        await fireEvent.click(screen.getByRole("button", { name: "Starting…" }));
+        expect(fetchMock.mock.calls.filter(([path]) => String(path).endsWith("/retry")).length).toBe(1);
+        release(new Response(JSON.stringify({ job_id: "j2", kind: "research" })));
+    });
+
     it("does not offer to re-run a job that is still going", async () => {
         stub({ "/api/jobs": { items: [JOB] }, "/api/jobs/j1": JOB });
         render(Jobs);
