@@ -4,6 +4,14 @@ import Bench from "./Bench.svelte";
 import { stubFetch, stubFetchFailing } from "../lib/stub-fetch";
 import type { Bench as BenchPayload } from "../lib/types";
 
+// `vi.stubGlobal` inside `stubFetch` replaces `fetch` with a `vi.fn`, so a
+// caller who wants to count requests reads it back through the global
+// rather than the return value `stubFetch` throws away.
+const fetchCalls = (path: string) =>
+    (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.filter(
+        ([p]) => p === path,
+    ).length;
+
 const EMPTY: BenchPayload = {
     runs: [],
     verdict: {},
@@ -131,6 +139,21 @@ describe("Bench", () => {
         expect(
             await screen.findByRole("img", { name: /model-a: cost per accepted claim/ }),
         ).toBeInTheDocument();
+    });
+
+    it("reads /api/bench once, not once for the table and again for the choice lists", async () => {
+        // B145 perf-2/ops-15: the choice-list computeds (protocol and pack
+        // options) used to come from their own `api.bench()` call — the same
+        // JSON the table just fetched a moment before. `waitFor` only proves
+        // the count reached 1 at some point, so this waits out a few more
+        // ticks past that and checks it never grew — the failure this
+        // catches is a second, delayed call the first assertion would miss.
+        stubFetch({ "/api/bench": WITH_OPTIONS, "/api/jobs": { items: [] } });
+        render(Bench);
+        await screen.findByText("No benchmark runs yet");
+        await waitFor(() => expect(fetchCalls("/api/bench")).toBeGreaterThanOrEqual(1));
+        await new Promise((r) => setTimeout(r, 50));
+        expect(fetchCalls("/api/bench")).toBe(1);
     });
 
     it("starts a run and points the reader at Activity to watch it", async () => {
