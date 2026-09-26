@@ -16,6 +16,12 @@
     let root = $state("");
     let busy = $state(false);
     let cancelPending = $state<string[]>([]);
+    // ops-5: `retry` had no pending guard at all, and a double-click sent two
+    // `POST /retry` before the first had come back — the server is now
+    // idempotent (it hands back the same child), but the button should not
+    // rely on that: a reader pressing it twice wants one run, not a lucky
+    // dedupe.
+    let retryPending = $state<string[]>([]);
     /* What the reader has typed back, per job and then per question id.
      *
      * Kept here rather than on the row because the row is replaced wholesale
@@ -191,6 +197,8 @@
      * most useful thing on this screen and a retry must not overwrite it.
      */
     async function retry(job: Job) {
+        if (retryPending.includes(job.job_id)) return;
+        retryPending = [...retryPending, job.job_id];
         try {
             const { job_id } = await api.retryJob(job.job_id, answers[job.job_id] ?? {});
             delete answers[job.job_id];
@@ -200,6 +208,8 @@
             open = job_id;
         } catch (cause) {
             error = cause;
+        } finally {
+            retryPending = retryPending.filter((id) => id !== job.job_id);
         }
     }
 
@@ -321,7 +331,10 @@
                     onclick={() => cancel(job)}
                 >{job.state === "cancelling" || cancelPending.includes(job.job_id) ? "Stopping…" : "Cancel"}</button>
             {:else}
-                <button onclick={() => retry(job)}>Run again</button>
+                <button
+                    disabled={retryPending.includes(job.job_id)}
+                    onclick={() => retry(job)}
+                >{retryPending.includes(job.job_id) ? "Starting…" : "Run again"}</button>
             {/if}
         </p>
         {#if isLive(job)}
