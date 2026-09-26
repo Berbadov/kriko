@@ -42,8 +42,8 @@
     --n-3: #1b1e24; /* --bg-surface — sunk surfaces, inputs */
     --n-4: #2c313a; /* --border    — hairlines */
     --n-5: #4d5460; /* --fg-faint */
-    --n-6: #6b727e; /* --fg-subtle */
-    --n-7: #7e858f; /* --fg-muted  — secondary text */
+    --n-6: #858c97; /* --fg-subtle */
+    --n-7: #9199a3; /* --fg-muted  — secondary text */
     --n-8: #c2c7cf; /* --fg-body */
     --n-9: #e7e9ed; /* --fg        — headings */
     /* Two surfaces beside the ramp rather than in it, because inserting them
