@@ -2,16 +2,26 @@
     import Describe from "../lib/Describe.svelte";
     import Failure from "../lib/Failure.svelte";
     import Report from "../lib/Report.svelte";
-    import { ApiError, api } from "../lib/api";
+    import { api } from "../lib/api";
     import type { Mode } from "../lib/mode";
     import { navigate } from "../lib/router";
-    import type { Adapter, LookupResult } from "../lib/types";
+    import type { LookupResult, Pack } from "../lib/types";
 
     let { mode = "buyer" }: { mode?: Mode } = $props();
 
     let url = $state("");
-    let adapters = $state<Adapter[]>([]);
+    let packTitles = $state<Record<string, string>>({});
+    let readableSites = $state<{ site: string; pack_id: string }[]>([]);
     let unreadable = $state(false);
+    // Distinct from `unreadable` too: the box holds text that is not a web
+    // address at all, so "no installed pack can read that site" is the
+    // wrong sentence — there is no site to read (check-21).
+    let notAUrl = $state(false);
+    // Distinct from `unreadable`: the site *is* covered, but a pasted URL
+    // has no page for the adapter to read (check-1). Conflating the two
+    // told the reader "no pack covers this kind of product at all", which is
+    // false and worse than saying nothing.
+    let notRead = $state(false);
     let pageFields = $state<{ label: string; value: string }[]>([]);
     let result = $state<LookupResult | null>(null);
     // Two different things, deliberately two variables. `hint` is a sentence
@@ -24,16 +34,31 @@
     let busy = $state(false);
 
     async function load() {
-        adapters = await api.adapters().catch(() => [] as Adapter[]);
+        const packs = await api.packs().catch(() => [] as Pack[]);
+        packTitles = Object.fromEntries(packs.map((p) => [p.pack_id, p.name || p.pack_id]));
     }
 
     async function checkUrl() {
         hint = "";
         error = null;
         unreadable = false;
+        notRead = false;
+        notAUrl = false;
         result = null;
-        if (!url.trim()) {
+        if (busy) return;
+        const trimmed = url.trim();
+        if (!trimmed) {
             hint = "Paste the listing's web address first.";
+            return;
+        }
+        // Validated before the request, not after a 404 (check-21): "not a
+        // url" and "a url nothing reads" are different problems with
+        // different remedies, and this app knows which one it is without
+        // asking the server.
+        try {
+            new URL(trimmed);
+        } catch {
+            notAUrl = true;
             return;
         }
         busy = true;
@@ -42,19 +67,22 @@
                 pageFields.filter((f) => f.label.trim()).map((f) => [f.label.trim(), f.value]),
             );
             const data = await api.analyze({
-                url: url.trim(),
+                url: trimmed,
                 title: "",
                 description: "",
                 fields,
             });
-            if (data.lookup_id) navigate("result", data.lookup_id);
-            else result = data;
+            if (data.readable === false) {
+                if (data.reason === "no_adapter") {
+                    unreadable = true;
+                    readableSites = data.readable_sites ?? [];
+                } else {
+                    notRead = true;
+                }
+            } else if (data.lookup_id) navigate("result", data.lookup_id);
+            else result = data as LookupResult;
         } catch (e) {
-            // A 404 here is not an error the reader caused: it means no
-            // installed pack ships an adapter for that site, which has its own
-            // answer and its own next step.
-            if (e instanceof ApiError && e.status === 404) unreadable = true;
-            else error = e;
+            error = e;
         } finally {
             busy = false;
         }
@@ -93,14 +121,24 @@
 </section>
 
 {#await ready then}
+    {#if notRead}
+        <div class="state no-match">
+            <strong>Kriko cannot open listing pages by itself.</strong>
+            <p class="meta">
+                Open this ad in your browser with the extension installed, or describe
+                it by hand below.
+            </p>
+        </div>
+    {/if}
+
     {#if unreadable}
         <div class="state no-match">
             <strong>No installed pack can read that site.</strong>
-            {#if adapters.length}
+            {#if readableSites.length}
                 <p class="meta">Readable right now:</p>
                 <ul class="meta">
-                    {#each adapters as adapter (adapter.id)}
-                        <li>{adapter.site} — {adapter.pack_id}</li>
+                    {#each readableSites as site (site.site)}
+                        <li>{site.site} — {packTitles[site.pack_id] ?? site.pack_id}</li>
                     {/each}
                 </ul>
             {:else}
@@ -116,6 +154,8 @@
     <div aria-live="polite">
         {#if hint}
             <p class="state no-match">{hint}</p>
+        {:else if notAUrl}
+            <p class="state no-match">That is not a web address.</p>
         {:else if error}
             <Failure {error} />
         {:else if result}
@@ -123,7 +163,7 @@
         {/if}
     </div>
 
-    <details class="alt-path" open={unreadable}>
+    <details class="alt-path" open={unreadable || notRead}>
         <summary><h3>No link? Describe it instead</h3></summary>
         <Describe {onResult} />
     </details>

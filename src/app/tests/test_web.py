@@ -343,12 +343,32 @@ def test_a_scraped_page_becomes_a_query_through_the_packs_adapter(client):
     assert [c["title"] for c in body["claims"]] == ["Cell imbalance trips protection"]
 
 
-def test_a_site_no_installed_pack_can_read_is_a_404_not_an_empty_answer(client):
-    """Silence would look identical to "this product has no known issues"."""
+def test_a_site_no_installed_pack_can_read_says_so_not_an_empty_answer(client):
+    """Silence would look identical to "this product has no known issues" — and
+    a site nothing reads is an expected, frequent answer (check-21), not a
+    server error, so it comes back 200 with a reason rather than a 404."""
     r = client.post(
         "/api/analyze", json={"url": "https://elsewhere.invalid/item/1", "fields": {}}
     )
-    assert r.status_code == 404
+    assert r.status_code == 200
+    body = r.json()
+    assert body["readable"] is False
+    assert body["reason"] == "no_adapter"
+
+
+def test_a_bare_url_with_no_scraped_fields_says_the_page_was_not_read(client):
+    """A pasted URL alone (check-1): the adapter matches the site, but there is
+    no scraped DOM to map, so `mapped.identity` is empty. Running the lookup
+    anyway would ask "what is known about no product in particular" and come
+    back `no_match` — indistinguishable from "no pack covers this category"."""
+    r = client.post(
+        "/api/analyze",
+        json={"url": "https://toolshop.invalid/item/dhp484", "fields": {}},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["readable"] is False
+    assert body["reason"] == "page_not_read"
 
 
 def test_analysis_is_visible_in_recent_activity(client):
@@ -677,7 +697,13 @@ def test_an_analysis_records_which_door_it_came_in_by(client):
     tell an answer their browser produced from one they asked for here — which
     is the first thing you want to know when a result surprises you.
     """
-    body = {"url": "https://toolshop.invalid/item/dhp484", "fields": {}}
+    # A field is required (check-1): an adapter matched but nothing scraped
+    # is now reported as "page not read" rather than run through the lookup,
+    # so this needs at least one field to reach the door-tracking it tests.
+    body = {
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484"},
+    }
     client.post("/api/analyze", json={**body, "origin": "extension"})
     client.post("/api/analyze", json=body)
 
@@ -685,6 +711,33 @@ def test_an_analysis_records_which_door_it_came_in_by(client):
     # read only the two this test just wrote.
     items = client.get("/api/history").json()["items"][:2]
     assert [item["source"] for item in items] == ["analyze", "extension"]
+
+
+def test_an_analysis_labels_history_by_the_matched_subject_not_the_url(client):
+    """check-15: the history row and Result heading used to be the raw,
+    150-character listing address. Once the adapter resolved a product, the
+    row should say what was found, not where it was pasted from."""
+    client.post(
+        "/api/analyze",
+        json={
+            "url": "https://toolshop.invalid/item/dhp484",
+            "fields": {"Model No": "DHP484"},
+        },
+    )
+    label = client.get("/api/history").json()["items"][0]["label"]
+    assert label == "Makita DHP484"
+
+
+def test_a_lookup_is_labelled_by_the_matched_subject_when_exact(client):
+    """check-14: identity values joined in alphabetical key order read as
+    value soup ("brand makita model DHP484"); the subject's own label reads
+    as a product name."""
+    client.post(
+        "/api/lookup",
+        json={"kind": "product", "identity": {"brand": "makita", "model": "DHP484"}},
+    )
+    label = client.get("/api/history").json()["items"][0]["label"]
+    assert label == "Makita DHP484"
 
 
 def test_an_unknown_origin_is_refused_rather_than_recorded(client):
