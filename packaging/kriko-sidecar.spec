@@ -56,7 +56,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, SPECPATH)
-from freeze_imports import CONSOLE_MODULES, kriko_submodules, mcp_submodules
+from freeze_imports import CONSOLE_MODULES, FROZEN_EXCLUDES, kriko_submodules, mcp_submodules
 
 ROOT = Path(SPECPATH).parent
 STATIC = ROOT / "src" / "app" / "web" / "static"
@@ -152,9 +152,8 @@ a = Analysis(
     + kriko_submodules(),
     hookspath=[],
     runtime_hooks=[],
-    # The research API plane and the whole pipeline are optional extras; a
-    # reader installing packs must not carry mistralai or yt-dlp.
-    excludes=["tkinter", "matplotlib", "mistralai", "yt_dlp", "textual", "langextract"],
+    # See FROZEN_EXCLUDES for why each is here.
+    excludes=list(FROZEN_EXCLUDES),
     noarchive=False,
 )
 pyz = PYZ(a.pure)

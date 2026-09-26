@@ -15,6 +15,29 @@ Windows identically, and nothing in the ordinary test suite could have said so.
 #: serve tools over stdio, and collecting them is what broke the freeze.
 MCP_EXCLUDED_PREFIXES = ("mcp.cli",)
 
+#: What the build venv has installed and the binary must not carry. PyInstaller
+#: follows an optional import exactly as it follows a real one, so a venv with
+#: the `pipeline` and `dev` extras froze trafilatura (and dateparser, babel),
+#: pytest, and numpy and PIL behind them — 0.10.3's sidecar came out at 66 MB
+#: against 0.10.2's 35. Every one of these is either imported inside a
+#: `try`/fallback (`app.providers.fetch`, pygments' image formatter, anyio's
+#: pytest plugin) or only by test modules.
+FROZEN_EXCLUDES = (
+    "tkinter",
+    "matplotlib",
+    # The research API plane and the whole pipeline are optional extras; a
+    # reader installing packs must not carry mistralai or yt-dlp.
+    "mistralai",
+    "yt_dlp",
+    "textual",
+    "langextract",
+    "trafilatura",
+    "pytest",
+    "_pytest",
+    "numpy",
+    "PIL",
+)
+
 CONSOLE_MODULES = (
     "app.cli",
     "app.tui",
@@ -45,4 +68,4 @@ def mcp_submodules() -> list[str]:
 def kriko_submodules() -> list[str]:
     from PyInstaller.utils.hooks import collect_submodules
 
-    return collect_submodules("kriko")
+    return collect_submodules("kriko", filter=lambda name: ".tests" not in name)
