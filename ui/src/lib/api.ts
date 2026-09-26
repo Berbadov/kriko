@@ -39,6 +39,27 @@ function explain(body: string): { message: string; trace: string[]; detail: unkn
             ? parsed.trace.map(String)
             : [];
         if (typeof detail === "string" && detail) return { message: detail, trace, detail };
+        // A 422 from pydantic sends `detail` as a list of {loc, msg, type} —
+        // one per field that failed. Read as "field: reason" it names exactly
+        // what to change; read as JSON.stringify it is `[{"loc":["body",...`,
+        // which named nothing more than the generic "422" already did.
+        if (Array.isArray(detail) && detail.length) {
+            const readable = detail
+                .map((one) => {
+                    if (
+                        one && typeof one === "object" && "msg" in one
+                        && typeof (one as { msg: unknown }).msg === "string"
+                    ) {
+                        const loc = (one as { loc?: unknown }).loc;
+                        const field = Array.isArray(loc) ? String(loc.at(-1)) : "";
+                        const msg = (one as { msg: string }).msg;
+                        return field ? `${field}: ${msg}` : msg;
+                    }
+                    return JSON.stringify(one);
+                })
+                .join("; ");
+            return { message: readable, trace, detail };
+        }
         if (detail && typeof detail === "object" && "message" in detail) {
             const withMessage = detail as { message: unknown };
             if (typeof withMessage.message === "string") {
