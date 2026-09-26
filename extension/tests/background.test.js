@@ -206,8 +206,11 @@ test("the result is written to session storage under the listing url", async () 
   const entry = state.session["kriko_result_" + SCRAPE.url];
   assert.equal(entry.ok, true);
   assert.deepEqual(entry.result, result);
-  // The panel renders the damage and equipment panels from this.
-  assert.deepEqual(entry.listing, SCRAPE.listing);
+  // The panel renders the damage and equipment panels from this, and
+  // (extension-8/extension-11, B145 audit) the page's own title, which the
+  // scrape already carried separately from `listing` and which the stored
+  // entry used to drop on the floor.
+  assert.deepEqual(entry.listing, { ...SCRAPE.listing, title: SCRAPE.title });
 });
 
 test("the badge counts high-severity claims", async () => {
@@ -450,15 +453,20 @@ test("no shell attached opens the tab the reader asked for", async () => {
   assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
 });
 
-test("nothing running still falls back to a tab", async () => {
+test("nothing running is reported, not opened in a dead tab", async () => {
+  // extension-2 (B145 audit): a *transport* failure means there is no engine
+  // on the other end at all, so the old fallback opened a browser tab onto
+  // ERR_CONNECTION_REFUSED — a tab with nothing on it and nothing the reader
+  // can do about it. "no_shell" (above) is different: the engine answered,
+  // it just has no window to raise, and a tab is the right answer there.
   const h = loadBackground({ offline: true });
   const got = await send(h, {
     type: "OPEN_IN_APP",
     payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
   });
-  assert.equal(got.ok, true);
-  assert.equal(got.delivery, "unreachable");
-  assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
+  assert.equal(got.ok, false);
+  assert.equal(got.code, "APP_NOT_RUNNING");
+  assert.deepEqual(h.state.tabsCreated, []);
 });
 
 test("a route the app refuses is reported, not opened in a tab", async () => {
@@ -528,6 +536,41 @@ test("a doubtful answer arrives as doubtful, with what was weighed", async () =>
   assert.equal(result.verdict, "probably");
   assert.equal(result.considered.length, 1);
   assert.equal(result.next_step.action, "confirm");
+});
+
+test("a second Refresh reuses the cache, but a fresh one re-asks the engine", async () => {
+  // extension-3 (B145 audit): every request served the 6-hour local cache
+  // once the scrape and installed packs matched, with no way to say "no,
+  // ask again" — even the reader pressing Refresh got the stale answer, and
+  // even a stopped engine never showed up in it.
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const postsAfterFirst = h.state.requests.filter((r) => r.method === "POST").length;
+
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  assert.equal(
+    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst,
+    "an ordinary re-run served the cache and asked nothing new"
+  );
+
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url, { fresh: true });
+  assert.equal(
+    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst + 1,
+    "fresh:true skipped the cache and asked the engine again"
+  );
+});
+
+test("a pack update changes the cache signature even when the scrape has not", async () => {
+  // The signature used to hash only the scrape, so a pack shipping a new
+  // claim for the same listing could not reach it: the cache would keep
+  // serving the pre-update answer for up to 6 hours. `_scrapeSignature` now
+  // takes the adapters list too, so a version bump on the same scrape must
+  // change what comes out.
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  const before = h.sandbox._scrapeSignature(SCRAPE, ADAPTERS);
+  const after = h.sandbox._scrapeSignature(
+    SCRAPE, ADAPTERS.map((a) => ({ ...a, version: "0.2.0" })));
+  assert.notEqual(before, after);
 });
 
 test("a missing verdict is empty rather than invented", async () => {
