@@ -514,6 +514,49 @@ def test_every_data_file_under_src_is_declared_as_package_data():
     )
 
 
+def test_the_frozen_spec_bundles_every_data_file_it_reads_from_disk():
+    """`app/models.toml` was declared in pyproject.toml but not in the spec.
+
+    The previous test only reads pyproject.toml's package-data, which is what a
+    wheel install uses — it has no view of packaging/kriko-sidecar.spec's own
+    `datas` list, which is what the frozen PyInstaller build actually ships.
+    `app/models.toml` was in the former and missing from the latter, so every
+    editable install and every wheel install had a model catalogue and every
+    frozen desktop build did not: `install_default()` raised FileNotFoundError
+    on first startup and every screen that prices a run showed "cost unknown".
+
+    So this one reads the spec file itself (as text — it is not import-safe
+    off Windows, since it does `import winpty` under `sys.platform == "win32"`)
+    and checks that a fixed set of paths this codebase is known to read from
+    disk at runtime — the ones the spec's own comment documents — each appear
+    somewhere in its `datas` list.
+    """
+    spec_text = (REPO / "packaging" / "kriko-sidecar.spec").read_text(encoding="utf-8")
+    datas_start = spec_text.index("datas=[")
+    datas_end = spec_text.index("]", datas_start)
+    datas_block = spec_text[datas_start:datas_end]
+
+    # Each of these must appear as a distinctive fragment inside `datas=[...]` —
+    # either the STATIC/EXTENSION variable the spec builds from ROOT, or the
+    # literal filename for a path built inline (as models.toml's fix does).
+    required = {
+        "STATIC": "the built frontend",
+        "schema.sql": "the store's DDL",
+        "models.toml": "the shipped model catalogue",
+        "EXTENSION": "the browser extension",
+    }
+    missing = [
+        f"{fragment} ({why})"
+        for fragment, why in required.items()
+        if fragment not in datas_block
+    ]
+    assert missing == [], (
+        "packaging/kriko-sidecar.spec's `datas` list is missing files this "
+        "codebase reads from disk at runtime, so the frozen sidecar would "
+        "start with them absent:\n  " + "\n  ".join(missing)
+    )
+
+
 def test_the_catalog_is_never_scanned_in_directory_order():
     """`Path.glob` returns directory order, which is a property of the disk.
 
