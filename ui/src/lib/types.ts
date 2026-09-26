@@ -3,6 +3,11 @@ export type Status = {
     packs: number;
     enabled_packs: number;
     counts: Record<string, number>;
+    // Same tables, restricted to enabled packs — a disabled pack's claims
+    // never reach a lookup, so a header quoting the all-packs total reads as
+    // a bigger knowledge base than the reader can actually get an answer
+    // from (knowledge-36).
+    counts_enabled?: Record<string, number>;
 };
 
 export type ActivityItem = {

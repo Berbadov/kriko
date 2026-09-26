@@ -382,9 +382,9 @@
             <strong>{status.enabled_packs}</strong>
             <span class="meta">of {count(status.counts.packs, "pack")} on</span>
         </li>
-        <li><strong>{status.counts.subjects}</strong><span class="meta">subjects</span></li>
-        <li><strong>{status.counts.claims}</strong><span class="meta">claims</span></li>
-        <li><strong>{status.counts.evidence}</strong><span class="meta">sources</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).subjects}</strong><span class="meta">subjects</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).claims}</strong><span class="meta">claims</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).evidence}</strong><span class="meta">sources</span></li>
         <li class={gaps.length ? "warn" : ""}>
             <strong>{gaps.length}</strong><span class="meta">nothing known</span>
         </li>
