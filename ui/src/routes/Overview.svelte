@@ -109,7 +109,7 @@
             </ul>
 
             <div class="stats">
-                {#each [["Packs", d.status.packs], ["Enabled", d.status.enabled_packs], ["Subjects", d.status.counts.subjects ?? 0], ["Claims", d.status.counts.claims ?? 0]] as [label, value] (label)}
+                {#each [["Packs", d.status.packs], ["Enabled", d.status.enabled_packs], ["Subjects", (d.status.counts_enabled ?? d.status.counts).subjects ?? 0], ["Claims", (d.status.counts_enabled ?? d.status.counts).claims ?? 0]] as [label, value] (label)}
                     <div class="stat"><strong>{value}</strong><span>{label}</span></div>
                 {/each}
             </div>
