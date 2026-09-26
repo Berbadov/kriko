@@ -1,5 +1,23 @@
 import { ApiError } from "./api";
 
+/**
+ * A job that ran and failed, as opposed to a request that never reached the
+ * server. `remedyFor` treats every non-`ApiError` as the engine having gone
+ * away (see `OFFLINE` below), which was right for a `fetch` rejection and
+ * wrong for this: Welcome's "Install and get started" used to wrap a failed
+ * job's own message in a plain `Error`, so a 404 from the pack index read as
+ * "close the Kriko window and open it again" — advice that fixes nothing,
+ * because the engine answered fine; the *download* is what failed (B145
+ * settings-2). Anything that runs a job and shows its failure through
+ * `Failure` should throw this instead of a bare `Error`.
+ */
+export class JobFailedError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "JobFailedError";
+    }
+}
+
 /** What a failed request means, and what the reader can do about it.
  *
  * B72: every error surface in this app named an exception. "Could not load
@@ -47,6 +65,14 @@ const OFFLINE: Omit<Remedy, "technical"> = {
 
 export function remedyFor(error: unknown): Remedy {
     const technical = error instanceof Error ? error.message : String(error);
+    if (error instanceof JobFailedError) {
+        return {
+            headline: "That didn't finish",
+            next: technical || "Try again, or use a file instead.",
+            retryable: true,
+            technical,
+        };
+    }
     if (!(error instanceof ApiError)) {
         // A TypeError from `fetch`, or anything else that never reached the
         // server. Treated as offline rather than as a bug, because that is

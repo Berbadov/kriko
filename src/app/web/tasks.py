@@ -1114,28 +1114,44 @@ def _installed_rows(conn):
     ).fetchall()
 
 
-def check_updates(settings, index_url: str = "") -> dict:
-    """Compare what is installed against what the index offers.
+#: How long a check's answer is good for. Every screen that shows a hint
+#: about pack updates asks on every navigation (B145 perf-3/knowledge-2); this
+#: is what turns "one real fetch to a remote index per navigation" into "one
+#: real fetch per five minutes", which is the difference between an endpoint
+#: that is fast on repeat visits and one that never gets fast at all. Keyed by
+#: URL, not global, so a reader who points this at their own index during
+#: development never sees another URL's stale answer.
+_UPDATES_CACHE_TTL = 300
+_updates_cache: dict[str, tuple[float, list, str | None, str | None, str]] = {}
 
-    Synchronous and cheap — one small JSON fetch — so it is a request rather
-    than a job. Network failure is reported as a value, not raised: "we could
-    not reach the index" is a legitimate answer to "is anything newer", and a
-    500 would make the Packs screen look broken when only the network is.
+
+def _friendly_index_error(exc: Exception) -> str:
+    """A sentence, not a protocol code — see B145 apicode-1/knowledge-21.
+
+    `HTTPError: HTTP Error 404: Not Found` is accurate and useless to a reader
+    with no terminal: it names a status they cannot act on. Distinguishing
+    "nothing published" from "nothing reachable" is the one thing worth
+    keeping, because the remedy differs (wait for a release vs. check the
+    network); everything else collapses to one plain sentence. The exception
+    itself keeps travelling as `error_detail`, for whoever files the bug.
     """
-    url = index_url or settings.pack_index_url
-    conn = connect(settings.store_path)
-    try:
-        rows = _installed_rows(conn)
-    finally:
-        conn.close()
+    import urllib.error
 
-    try:
-        candidates = packsource.fetch_index(url)
-    except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
+    if isinstance(exc, urllib.error.HTTPError) and exc.code == 404:
+        return "The pack index has nothing published yet."
+    if isinstance(exc, (urllib.error.URLError, OSError)):
+        return "The pack download site could not be reached."
+    return "Could not check for pack updates."
+
+
+def _updates_payload(url: str, rows, candidates: list, error: str | None,
+                      error_detail: str | None, checked_at: str) -> dict:
+    if error:
         return {
             "index_url": url,
-            "error": f"{type(exc).__name__}: {exc}",
-            "checked_at": _now(),
+            "error": error,
+            "error_detail": error_detail,
+            "checked_at": checked_at,
             "packs": [
                 {
                     "pack_id": row["pack_id"],
@@ -1183,7 +1199,57 @@ def check_updates(settings, index_url: str = "") -> dict:
         for c in candidates
         if c.pack_id not in known
     ]
-    return {"index_url": url, "error": None, "checked_at": _now(), "packs": payload}
+    return {
+        "index_url": url,
+        "error": None,
+        "error_detail": None,
+        "checked_at": checked_at,
+        "packs": payload,
+    }
+
+
+def check_updates(settings, index_url: str = "", *, fresh: bool = False) -> dict:
+    """Compare what is installed against what the index offers.
+
+    Synchronous and cheap — one small JSON fetch, and only when the cache
+    below is cold or `fresh` is asked for — so it is a request rather than a
+    job. Network failure is reported as a value, not raised: "we could not
+    reach the index" is a legitimate answer to "is anything newer", and a 500
+    would make the Packs screen look broken when only the network is.
+
+    `fresh=False` (every screen's own background hint) reuses the last answer
+    for this URL within `_UPDATES_CACHE_TTL`, so the remote fetch that used to
+    happen on every navigation now happens at most once per window — see
+    B145 perf-3, knowledge-2, knowledge-19. `fresh=True` is the reader's own
+    "Check for updates" press: it always pays for the round trip, and its
+    answer refills the cache for every other screen too.
+    """
+    import time
+
+    url = index_url or settings.pack_index_url
+    conn = connect(settings.store_path)
+    try:
+        rows = _installed_rows(conn)
+    finally:
+        conn.close()
+
+    cached = _updates_cache.get(url)
+    if not fresh and cached is not None and time.monotonic() - cached[0] < _UPDATES_CACHE_TTL:
+        _, candidates, error, error_detail, checked_at = cached
+        return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
+
+    try:
+        candidates = packsource.fetch_index(url)
+        error = None
+        error_detail = None
+    except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
+        candidates = []
+        error = _friendly_index_error(exc)
+        error_detail = f"{type(exc).__name__}: {exc}"
+
+    checked_at = _now()
+    _updates_cache[url] = (time.monotonic(), candidates, error, error_detail, checked_at)
+    return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
 
 
 def pack_update(settings, params: dict, progress: Progress) -> dict:
@@ -1196,7 +1262,13 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
     only = params.get("pack_id") or ""
     index_url = params.get("index_url") or settings.pack_index_url
     progress.set(0.05, f"reading {index_url}")
-    candidates = packsource.fetch_index(index_url)
+    try:
+        candidates = packsource.fetch_index(index_url)
+    except Exception as exc:  # noqa: BLE001 — a sentence, not a protocol code
+        # Same mapping as `check_updates`: this job's failure message is what
+        # settings-2's Welcome screen shows the reader verbatim, and a raw
+        # HTTPError read as "the engine died" (B145 settings-2).
+        raise RuntimeError(_friendly_index_error(exc)) from exc
     progress.log(f"index offers {len(candidates)} pack(s)")
 
     conn = connect(settings.store_path)
