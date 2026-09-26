@@ -249,7 +249,12 @@ describe("the work column", () => {
     it("never lets an unbroken long string push the layout wider than the window", () => {
         // Inherited, so this is one declaration for every card, title and raw
         // URL in the app rather than a per-component fix repeated twenty times.
-        expect(block("body", BASE)).toMatch(/overflow-wrap:\s*anywhere/);
+        // `break-word` (not `anywhere`): `anywhere` also shrinks every
+        // flex/table child's min-content width to one character, which is
+        // what let button labels, tab labels and table headers split
+        // mid-word once their box got tight (B145 shell-3/uicode-m1).
+        // `break-word` still breaks a URL with nowhere else to go.
+        expect(block("body", BASE)).toMatch(/overflow-wrap:\s*break-word/);
     });
 
     it("does not style a radio as if it were a text field", () => {
