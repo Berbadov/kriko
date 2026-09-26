@@ -43,6 +43,7 @@
     let starting = $state(false);
     let startFailure = $state<unknown>(null);
     let estimateError = $state<unknown>(null);
+    let forgetError = $state<unknown>(null);
     let runningJobId = $state("");
     let stopFollow: (() => void) | undefined;
     let planesSel = $state<string[]>(["harness"]);
@@ -323,6 +324,7 @@
             bind:resolved={scaleResolved}
             multiplier={casesCount * repsCount}
             label="Scale"
+            maxSources={20}
         />
         <fieldset>
             <legend>Cases</legend>
@@ -372,18 +374,30 @@
                         <span class="klabel">{name}</span>
                         <span class="meta">{count(saved.cases ?? 0, "case")}, planes {saved.planes || "all"}</span>
                         <button class="ghost" onclick={() => loadGrid(name)}>Load</button>
-                        <button class="ghost" onclick={() => { api.forgetBenchConfig(name).then((r) => (configs = r.configs)); }}>Forget</button>
+                        <button
+                            class="ghost"
+                            onclick={() => {
+                                forgetError = null;
+                                api
+                                    .forgetBenchConfig(name)
+                                    .then((r) => (configs = r.configs))
+                                    .catch((cause) => (forgetError = cause));
+                            }}>Forget</button
+                        >
                     </li>
                 {/each}
             </ul>
         </details>
+    {/if}
+    {#if forgetError}
+        <p class="state">Could not forget that grid — it is still listed. {String(forgetError)}</p>
     {/if}
     <label>Save this grid as <input bind:value={gridName} /><button class="ghost" disabled={!gridName} onclick={() => savedGrids(true)}>Save</button></label>
 </section>
 
 {#if runningJobId}
     <p class="state loading">
-        A benchmark is running — <a href="#/activity">watch it on Activity</a>. The
+        A benchmark is running — <a href="#/activity?lens=live">watch it on Activity</a>. The
         numbers below are from the last completed run.
     </p>
 {/if}

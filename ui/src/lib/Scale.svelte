@@ -42,6 +42,11 @@
          *  cases times repetitions — and only the caller knows by how much. */
         multiplier = 1,
         label = "How deep",
+        /** The custom-sources ceiling this caller's server route actually
+         *  enforces. Bench's own request schema caps at 20 while research's
+         *  caps at 50 — hardcoding one number here meant the input let the
+         *  reader type a value the request would then 422 on. */
+        maxSources = 50,
     }: {
         scale?: string;
         maxDocuments?: number;
@@ -49,6 +54,7 @@
         disabled?: boolean;
         multiplier?: number;
         label?: string;
+        maxSources?: number;
     } = $props();
 
     let offered = $state<Scale[]>([]);
@@ -107,14 +113,14 @@
                 <input
                     type="number"
                     min="1"
-                    max="50"
+                    max={maxSources}
                     {disabled}
                     value={maxDocuments || ""}
                     placeholder={String(chosen?.max_documents || 7)}
                     onchange={(event) =>
                         (maxDocuments = Math.max(
                             0,
-                            Math.min(50, Number(event.currentTarget.value) || 0),
+                            Math.min(maxSources, Number(event.currentTarget.value) || 0),
                         ))}
                 />
             </label>
