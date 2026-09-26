@@ -46,70 +46,92 @@ export type Step = {
     action: string;
 };
 
-export function nextStep(s: Signals): Step | null {
+/** In dependency order — see the module comment. Each step is checked in
+ * order and the first whose signal is true is offered. `authorOnly` says
+ * whether the step's destination requires author mode: a buyer skips those
+ * rather than being handed a link that only opens a "this is an author view"
+ * gate, which was check-7 — the bar sending buyers to a dead end. */
+type Candidate = Step & { authorOnly: boolean };
+
+function candidates(s: Signals): Candidate[] {
+    const list: Candidate[] = [];
     if (s.packs === 0)
-        return {
+        list.push({
             id: "install-pack",
             title: "The engine has no knowledge yet",
             detail: "A pack is what Kriko answers from. Nothing else here works until one is installed.",
             route: "packs",
             action: "Open Packs",
-        };
+            authorOnly: true,
+        });
     if (s.enabled === 0)
-        return {
+        list.push({
             id: "enable-pack",
             title: "Every installed pack is disabled",
             detail: "A disabled pack is still on disk but answers nothing, so a check returns no claims.",
             route: "packs",
             action: "Open Packs",
-        };
+            authorOnly: true,
+        });
     if (s.checks === 0)
-        return {
+        list.push({
             id: "first-check",
             title: "Run a check",
             detail: "Describe one thing you are about to buy and see what the installed packs already know about it.",
             route: "check",
             action: "New check",
-        };
+            authorOnly: false,
+        });
     // Above connecting an agent and below the first check, for the same
     // reason: the extension is what the reader came for — Kriko on the listing
     // they are actually looking at — while an agent is how the knowledge gets
     // maintained. Ask for the thing that pays off today first.
     if (s.extensionConnected === false)
-        return {
+        list.push({
             id: "install-extension",
             title: "Kriko is not on your listing pages yet",
             detail: "The browser extension reads the ad you are looking at and asks this app about that exact one. Adding it takes a minute.",
             route: "extension",
             action: "Add the extension",
-        };
+            authorOnly: false,
+        });
     // Only once the app has been used for what it is for. Connecting an agent
     // is how the knowledge grows, and that is a second question — asking it
     // before the first answer has been read is asking someone to maintain a
     // thing they have not yet seen work.
     if (s.agentsKnown > 0 && s.agentsConnected === 0)
-        return {
+        list.push({
             id: "connect-agent",
             title: "No agent can reach this store",
             detail: "Coverage gaps are filled by an agent holding the research protocol. Kriko can write the config itself.",
             route: "connect",
             action: "Connect an agent",
-        };
+            authorOnly: true,
+        });
     if (s.updatable > 0)
-        return {
+        list.push({
             id: "update-packs",
             title: `${s.updatable} pack update${s.updatable === 1 ? "" : "s"} waiting`,
             detail: "Knowledge moves weekly. Updating is a job, and it does not touch your history.",
             route: "packs",
             action: "Open Packs",
-        };
+            authorOnly: true,
+        });
     if (s.gaps > 0)
-        return {
+        list.push({
             id: "close-gaps",
             title: `${s.gaps} subject${s.gaps === 1 ? "" : "s"} with nothing known`,
             detail: "A pack names these but holds no claim for them. A connected agent can research them.",
             route: "coverage",
             action: "Open Coverage",
-        };
-    return null;
+            authorOnly: true,
+        });
+    return list;
+}
+
+export function nextStep(s: Signals, mode: "buyer" | "author" = "author"): Step | null {
+    const offered = candidates(s).find((c) => mode === "author" || !c.authorOnly);
+    if (!offered) return null;
+    const { authorOnly: _authorOnly, ...step } = offered;
+    return step;
 }

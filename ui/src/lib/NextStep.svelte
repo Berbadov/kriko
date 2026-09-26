@@ -1,7 +1,10 @@
 <script lang="ts">
     import { api } from "./api";
+    import type { Mode } from "./mode";
     import { nextStep, type Step } from "./nextStep";
     import { hashWith, route } from "./router";
+
+    let { mode = "author" as Mode }: { mode?: Mode } = $props();
 
     // Guidance must never be an error surface. Every call here is optional and
     // every failure resolves to a neutral value: if the engine is unwell the
@@ -53,9 +56,15 @@
             // to readers whose extension had worked for weeks.
             extensionConnected:
                 extension && extension.available ? extension.ever_connected : null,
-        });
+        }, mode);
     };
-    void load();
+    // Re-run when the mode switch flips: a buyer step and an author step can
+    // point at different routes for the same signals (check-7), and staying
+    // on the load that ran before the switch would keep offering a dead end.
+    $effect(() => {
+        mode;
+        void load();
+    });
 
     function dismiss() {
         if (!step) return;
@@ -67,7 +76,7 @@
     }
 </script>
 
-{#if step && step.id !== dismissedId}
+{#if step && step.id !== dismissedId && step.route !== $route.name}
     <aside class="nextstep enter" aria-label="Suggested next step">
         <div>
             <strong>{step.title}</strong>
