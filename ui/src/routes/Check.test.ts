@@ -15,8 +15,8 @@ const ROUTES: Record<string, unknown> = {
     ],
     "/api/kinds": [{ kind: "product", pack_id: "tools" }],
     "/api/identity-keys/tools": [
-        { key: "brand", match_json: '{"required": true}' },
-        { key: "model", match_json: "{}" },
+        { key: "brand", match_json: "required: true", required: true },
+        { key: "model", match_json: "{}", required: false },
     ],
     "/api/packs/tools/vocabulary": { context_key: [] },
     "/api/subjects": [],
@@ -41,7 +41,17 @@ describe("Check", () => {
     });
 
     it("names the sites it can read when the pasted host is not one", async () => {
-        stubFetch({ ...ROUTES, "/api/analyze": { status: 404, body: "no adapter" } });
+        // A site nothing reads is a 200 now, not a 404 (check-21): it is an
+        // expected, frequent answer, and `readable_sites` is what lets the
+        // page name what does work instead of a bare pack id.
+        stubFetch({
+            ...ROUTES,
+            "/api/analyze": {
+                readable: false,
+                reason: "no_adapter",
+                readable_sites: [{ site: "example.test", pack_id: "tools" }],
+            },
+        });
         render(Check);
         await fireEvent.input(await screen.findByLabelText(/web address/i), {
             target: { value: "https://unknown.test/x" },

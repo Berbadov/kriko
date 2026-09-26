@@ -3,6 +3,7 @@
     import Report from "../lib/Report.svelte";
     import { ApiError, api } from "../lib/api";
     import type { Mode } from "../lib/mode";
+    import { localTime, sourceWord } from "../lib/report";
     import type { StoredLookup } from "../lib/types";
 
     let { lookupId, mode = "buyer" }: { lookupId: string; mode?: Mode } = $props();
@@ -29,7 +30,12 @@
         {lookupId}
         heading={result.label}
     />
-    <p class="meta">Asked {result.created_at} · {result.source}</p>
+    <p class="meta">
+        Asked {localTime(result.created_at)} · {sourceWord(result.source)}
+        {#if result.source === "analyze" && typeof result.request.url === "string"}
+            · <a href={result.request.url} target="_blank" rel="noopener">Open the listing</a>
+        {/if}
+    </p>
 {:catch error}
     {#if error instanceof ApiError && error.status === 404}
         <p class="state empty">That lookup is no longer in your history.</p>
