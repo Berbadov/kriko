@@ -74,14 +74,21 @@
         }
     }
 
+    let revealNote = $state("");
+
     async function reveal() {
         busy = "reveal";
         actionError = null;
+        revealNote = "";
         try {
             const done = await api.revealExtension();
-            // A machine with no file manager is not an error worth a banner —
-            // the path is on screen and copyable, which is what they need.
-            actionError = new Error(done.error);
+            // The server answers 200 with `{path, error}` even when the file
+            // manager could not be opened — that is not a request failure, so
+            // it must not go through Failure (whose OFFLINE remedy tells the
+            // reader to restart the app over an empty `error: ""`, on every
+            // single successful press). A non-empty `error` is a quiet note
+            // next to the path, which is on screen and copyable regardless.
+            if (done.error) revealNote = done.error;
         } catch (cause) {
             actionError = cause;
         } finally {
@@ -286,6 +293,7 @@
             {#if status.staged}
                 <p><code class="path">{status.path}</code></p>
             {/if}
+            {#if revealNote}<p class="state warn">{revealNote} — the path above can be copied.</p>{/if}
             {#if actionError}<Failure error={actionError} />{/if}
         </article>
 

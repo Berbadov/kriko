@@ -25,6 +25,13 @@
      * button that silently fails is worse than an explained absence.
      */
 
+    /** Called after a key is actually saved or forgotten — not on every
+     * render — so a parent screen showing the same provider elsewhere (the
+     * "Check a provider key" list, the LLM/search selects) can refresh
+     * itself instead of reading stale `present`/`hint` until the next
+     * reload (settings-4). */
+    let { onChange = () => {} }: { onChange?: () => void } = $props();
+
     let promise = $state(api.keys());
     /** Per provider, and cleared on save — never seeded from the server. */
     let drafts = $state<Record<string, string>>({});
@@ -47,6 +54,7 @@
             drafts[provider.id] = "";
             said = `${provider.label} saved`;
             refresh();
+            onChange();
         } catch (cause) {
             // B79: the remedy, not the exception. A reader who cannot save a
             // key needs to know whether the engine is up, not what threw.
@@ -63,6 +71,7 @@
             await api.forgetKey(provider.id);
             said = `${provider.label} forgotten`;
             refresh();
+            onChange();
         } catch (cause) {
             said = remedyFor(cause).headline;
         } finally {
