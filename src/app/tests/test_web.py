@@ -191,6 +191,27 @@ def test_status_and_activity_are_control_plane_snapshots(client):
     assert client.get("/api/activity").json() == {"items": [], "malformed": 0}
 
 
+def test_status_counts_enabled_drop_a_disabled_packs_rows(client):
+    """knowledge-36: disabling a pack must not still count its claims.
+
+    A disabled pack's claims never reach a lookup, so a header that quotes the
+    same subjects/claims total whether the pack is on or off overstates what
+    the reader can actually get an answer about right now.
+    """
+    before = client.get("/api/status").json()["counts_enabled"]
+    assert before["claims"] > 0
+
+    (pack,) = client.get("/api/packs").json()
+    client.post(f"/api/packs/{pack['pack_id']}/enabled", params={"enabled": False})
+
+    after = client.get("/api/status").json()["counts_enabled"]
+    assert after["claims"] == 0
+    assert after["subjects"] == 0
+    # The raw, all-packs totals are unchanged — this is a second, narrower
+    # count, not a replacement for the first.
+    assert client.get("/api/status").json()["counts"]["claims"] == before["claims"]
+
+
 # ── packs ────────────────────────────────────────────────────────────────
 
 
@@ -296,6 +317,16 @@ def test_subject_detail_shows_attributes_relations_and_claims(client):
 
 def test_an_unknown_subject_is_a_404(client):
     assert client.get("/api/subjects/nope").status_code == 404
+
+
+def test_a_percent_in_the_search_box_matches_literally_not_every_subject(client):
+    # `%` and `_` are LIKE wildcards. Typed into Search they are two ordinary
+    # characters a reader might paste from a model number — "%" must not read
+    # as "match anything" and return the whole catalog (knowledge-18).
+    assert client.get("/api/subjects?q=%25").json() == []
+    assert client.get("/api/subjects?q=_").json() == []
+    # The escape must not break matching what is actually there.
+    assert client.get("/api/subjects?q=DHP484").json()
 
 
 def test_the_brief_endpoint_carries_the_packs_principle(client):
