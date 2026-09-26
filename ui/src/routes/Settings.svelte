@@ -55,6 +55,17 @@
 
     let keysPromise = $state(api.keys());
     let checks = $state<Record<string, Check>>({});
+    // Bumped whenever a key is saved or forgotten (settings-4): the "Check a
+    // provider key" list, the search-provider select and the LLM panel below
+    // each hold their own copy of the same facts and none of them re-fetch
+    // on their own when a sibling component changes the underlying key.
+    let keysVersion = $state(0);
+
+    function onKeysChanged() {
+        keysPromise = api.keys();
+        checks = {};
+        keysVersion += 1;
+    }
 
     const blank = (providerId: string, busy: boolean): Check => ({
         provider: providerId,
@@ -139,7 +150,7 @@
 
 <!-- Before "what is remembered", because it is the one thing on this page
      that is *not* in app.sqlite, and the section below says so. -->
-<Keys />
+<Keys onChange={onKeysChanged} />
 
 <section>
     <h3>Check a provider key</h3>
@@ -194,7 +205,7 @@
 <!-- Which agent, which LLM, which search provider — and what the runs have
      actually cost. Under the keys because a choice between providers only
      means something once a key exists for one of them. -->
-<PlanePrefs />
+<PlanePrefs {keysVersion} />
 
 <section>
     <h3>What is remembered</h3>

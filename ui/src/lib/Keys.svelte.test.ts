@@ -133,4 +133,35 @@ describe("the research keys section", () => {
         expect(await screen.findByText(/Research keys/)).toBeTruthy();
         expect(await screen.findByRole("button", { name: /again|retry/i })).toBeTruthy();
     });
+
+    // settings-4: a parent screen (Settings.svelte) shows the same providers
+    // in "Check a provider key" and in the LLM/search panels, each with its
+    // own fetch of the same facts. Without a signal, those go stale until a
+    // reload the moment this component's own save/forget succeeds.
+    it("calls onChange after a key is actually saved", async () => {
+        stubFetch(both(false));
+        const onChange = vi.fn();
+        const { container } = render(Keys, { onChange });
+        await screen.findByText("Exa");
+
+        const input = container.querySelector("input") as HTMLInputElement;
+        input.value = SECRET;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        const form = container.querySelector("form") as HTMLFormElement;
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("calls onChange after a key is forgotten", async () => {
+        stubFetch(both(true));
+        const onChange = vi.fn();
+        render(Keys, { onChange });
+        const forget = await screen.findByText("Forget it");
+        forget.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+    });
 });
