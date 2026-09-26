@@ -2278,9 +2278,21 @@ class HarnessResearcher(AgentResearcher):
                 proc.stdin.write(opening.rstrip("\n") + "\n")
                 proc.stdin.flush()
             except (OSError, ValueError, AssertionError) as exc:
+                # A broken pipe here means the child died before reading the
+                # opening message — the reason is on its stderr, not in this
+                # exception, and until this read the reader saw only "would
+                # not take the brief on stdin" with nothing to act on
+                # (knowledge-6).
+                stderr_tail = ""
+                try:
+                    if proc.stderr is not None and proc.poll() is not None:
+                        stderr_tail = proc.stderr.read().strip()
+                except (OSError, ValueError):
+                    pass
                 self._kill_tree(proc)
+                detail = f": {stderr_tail}" if stderr_tail else ""
                 raise RuntimeError(
-                    f"{self.harness.label} would not take the brief on stdin"
+                    f"{self.harness.label} would not take the brief on stdin{detail}"
                 ) from exc
 
         began = time.monotonic()

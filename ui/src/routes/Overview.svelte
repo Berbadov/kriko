@@ -184,7 +184,9 @@
                 <ul class="worklist">
                     {#each d.weakest as claim (claim.claim_id)}
                         <li>
-                            <a href={link("health")}>{claim.title}</a>
+                            <a href={hashWith({ mode: $route.query.mode, lens: "weak" }, "knowledge", claim.claim_id)}
+                                >{claim.title}</a
+                            >
                             <span class="meta"
                                 >{claim.subject_label} · {claim.independent_sources}
                                 independent {word(claim.independent_sources, "source")} · best {claim.best_tier}</span

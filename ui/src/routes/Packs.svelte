@@ -1,7 +1,7 @@
 <script lang="ts">
     import { count } from "../lib/plural";
     import { remedyFor } from "../lib/failure";
-    import { api } from "../lib/api";
+    import { api, ApiError } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
     import { follow, stateWord } from "../lib/jobs";
@@ -12,11 +12,27 @@
     // the status, which a string has already discarded.
     let failure = $state<unknown>(null);
     let installMessage = $state("");
+    let installFailure = $state<unknown>(null);
     let installState = $state("results");
     let files = $state<FileList | null>(null);
+    // Set only while a downgrade is pending confirmation — the offered file
+    // is older than what is installed, and the server has already refused it
+    // once (knowledge-13). Installing anyway resends the same file with
+    // `allow_downgrade`.
+    let downgradeOffer = $state<{ file: File; installed: string; offered: string } | null>(
+        null,
+    );
     let lifecycle = $state<
         Record<string, { revisions: Revision[]; events: PackEvent[] }>
     >({});
+    // Which pack an action is in flight for, so a second click while the
+    // first request is still in the air does nothing (knowledge-12).
+    let busy = $state<Record<string, boolean>>({});
+    // Per-pack failure from Disable/Enable, Activate or Lifecycle, kept apart
+    // from the screen-level `failure` — one pack's request failing must not
+    // blank out every other pack's card (knowledge-4).
+    let actionError = $state<Record<string, unknown>>({});
+    let confirmUninstall = $state("");
 
     async function refresh() {
         try {
@@ -27,38 +43,134 @@
         }
     }
 
-    async function install() {
-        const file = files?.[0];
+    async function install(allowDowngrade = false) {
+        const file = downgradeOffer?.file ?? files?.[0];
         if (!file) {
             installState = "error";
             installMessage = "Choose a .kpack file first.";
             return;
         }
         installState = "loading";
+        installFailure = null;
         installMessage = `Installing ${file.name}…`;
         try {
-            const data = await api.installPack(file);
+            const data = await api.installPack(file, allowDowngrade);
             installState = "results";
             installMessage = `Installed ${data.pack.name} ${data.pack.version}`;
+            downgradeOffer = null;
             await refresh();
         } catch (e) {
+            if (
+                e instanceof ApiError
+                && e.status === 409
+                && e.detail
+                && typeof e.detail === "object"
+                && (e.detail as { kind?: string }).kind === "downgrade_refused"
+            ) {
+                const detail = e.detail as { installed?: string; offered?: string };
+                downgradeOffer = {
+                    file,
+                    installed: detail.installed ?? "the installed version",
+                    offered: detail.offered ?? "this file",
+                };
+                installState = "error";
+                installMessage = "";
+                return;
+            }
             installState = "error";
             installMessage = remedyFor(e).headline;
+            installFailure = e;
         }
     }
 
     async function toggle(pack: Pack) {
-        await api.setEnabled(pack.pack_id, !pack.enabled);
-        await refresh();
+        if (busy[pack.pack_id]) return;
+        busy = { ...busy, [pack.pack_id]: true };
+        actionError = { ...actionError, [pack.pack_id]: null };
+        try {
+            await api.setEnabled(pack.pack_id, !pack.enabled);
+            await refresh();
+        } catch (e) {
+            actionError = { ...actionError, [pack.pack_id]: e };
+        } finally {
+            busy = { ...busy, [pack.pack_id]: false };
+        }
     }
 
     async function loadLifecycle(packId: string) {
-        const [revisions, events] = await Promise.all([
-            api.revisions(packId),
-            api.events(packId),
-        ]);
-        lifecycle = { ...lifecycle, [packId]: { revisions, events } };
+        if (lifecycle[packId]) {
+            // Pressed again: close it rather than refetching what is already
+            // on screen (knowledge-32).
+            const { [packId]: _drop, ...rest } = lifecycle;
+            lifecycle = rest;
+            return;
+        }
+        if (busy[packId]) return;
+        busy = { ...busy, [packId]: true };
+        actionError = { ...actionError, [packId]: null };
+        try {
+            const [revisions, events] = await Promise.all([
+                api.revisions(packId),
+                api.events(packId),
+            ]);
+            lifecycle = { ...lifecycle, [packId]: { revisions, events } };
+        } catch (e) {
+            actionError = { ...actionError, [packId]: e };
+        } finally {
+            busy = { ...busy, [packId]: false };
+        }
     }
+
+    async function activateRevision(pack: Pack, revisionId: string) {
+        const key = `${pack.pack_id}:${revisionId}`;
+        if (busy[key]) return;
+        busy = { ...busy, [key]: true };
+        actionError = { ...actionError, [pack.pack_id]: null };
+        try {
+            await api.activate(pack.pack_id, revisionId);
+            await refresh();
+            delete lifecycle[pack.pack_id];
+            await loadLifecycle(pack.pack_id);
+        } catch (e) {
+            actionError = { ...actionError, [pack.pack_id]: e };
+        } finally {
+            busy = { ...busy, [key]: false };
+        }
+    }
+
+    async function uninstall(pack: Pack) {
+        if (confirmUninstall !== pack.pack_id) {
+            // First click asks; it does not act — an uninstall drops the
+            // pack's rows and cannot be undone from here (knowledge-23).
+            confirmUninstall = pack.pack_id;
+            return;
+        }
+        confirmUninstall = "";
+        if (busy[pack.pack_id]) return;
+        busy = { ...busy, [pack.pack_id]: true };
+        actionError = { ...actionError, [pack.pack_id]: null };
+        try {
+            await api.uninstallPack(pack.pack_id);
+            await refresh();
+        } catch (e) {
+            actionError = { ...actionError, [pack.pack_id]: e };
+        } finally {
+            busy = { ...busy, [pack.pack_id]: false };
+        }
+    }
+
+    const dateFmt = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+    });
+    function formatWhen(iso: string): string {
+        const d = new Date(iso);
+        return Number.isNaN(d.getTime()) ? iso : dateFmt.format(d);
+    }
+    // Full value stays in `title` for anyone who needs to paste it whole;
+    // the row shows enough to tell two revisions apart, not sixty-four hex
+    // characters (knowledge-32).
+    const short = (id: string) => (id.length > 10 ? `${id.slice(0, 10)}…` : id);
 
     // Updating is two operations, deliberately: checking is a cheap request
     // whose answer is a table, installing is a job whose progress outlives the
@@ -113,9 +225,29 @@
 <h2>Installed packs</h2>
 
 <div class="row">
-    <input type="file" accept=".kpack,application/octet-stream" bind:files />
-    <button class="primary" onclick={install}>Install pack</button>
+    <input
+        type="file"
+        accept=".kpack,application/octet-stream"
+        bind:files
+        onchange={() => {
+            downgradeOffer = null;
+            installFailure = null;
+        }}
+    />
+    <button class="primary" disabled={!files?.length || installState === "loading"} onclick={() => install()}>
+        Install pack
+    </button>
 </div>
+{#if installFailure}
+    <Failure error={installFailure} retry={() => install()} />
+{/if}
+{#if downgradeOffer}
+    <p class="state error">
+        {downgradeOffer.installed} is installed; {downgradeOffer.offered} is older.
+        <button onclick={() => install(true)}>Install anyway</button>
+        <button class="ghost" onclick={() => (downgradeOffer = null)}>Cancel</button>
+    </p>
+{/if}
 <section class="card">
     <h3>Updates</h3>
     <div class="row">
@@ -200,17 +332,45 @@
                 <h3>{pack.name} <span class="badge">{pack.version}</span></h3>
                 <p class="meta">
                     {pack.pack_id} · {pack.subjects} subjects · {pack.claims} claims · {pack.evidence}
-                    evidence · digest {pack.digest}
+                    evidence · digest <span title={pack.digest}>{short(pack.digest)}</span>
                 </p>
                 <div class="row">
-                    <button onclick={() => toggle(pack)}>
+                    <button
+                        aria-label="{pack.enabled ? 'Disable' : 'Enable'} {pack.name}"
+                        disabled={busy[pack.pack_id]}
+                        onclick={() => toggle(pack)}
+                    >
                         {pack.enabled ? "Disable" : "Enable"}
                     </button>
-                    <button class="ghost" onclick={() => loadLifecycle(pack.pack_id)}>
-                        Lifecycle
+                    <button
+                        class="ghost"
+                        aria-label="Lifecycle for {pack.name}"
+                        disabled={busy[pack.pack_id]}
+                        onclick={() => loadLifecycle(pack.pack_id)}
+                    >
+                        {lifecycle[pack.pack_id] ? "Hide lifecycle" : "Lifecycle"}
                     </button>
+                    <button
+                        class="ghost"
+                        aria-label="Uninstall {pack.name}"
+                        disabled={busy[pack.pack_id]}
+                        onclick={() => uninstall(pack)}
+                    >
+                        {confirmUninstall === pack.pack_id ? "Really uninstall?" : "Uninstall"}
+                    </button>
+                    {#if confirmUninstall === pack.pack_id}
+                        <button class="ghost" onclick={() => (confirmUninstall = "")}>
+                            Cancel
+                        </button>
+                    {/if}
                     {#if !pack.enabled}<span class="meta">disabled</span>{/if}
                 </div>
+                {#if actionError[pack.pack_id]}
+                    <Failure
+                        error={actionError[pack.pack_id]}
+                        retry={() => (actionError = { ...actionError, [pack.pack_id]: null })}
+                    />
+                {/if}
                 {#if lifecycle[pack.pack_id]}
                     {@const life = lifecycle[pack.pack_id]}
                     <details open>
@@ -228,23 +388,21 @@
                                         <tr>
                                             <td>
                                                 {revision.version}
-                                                <span class="meta"
-                                                    >{revision.content_digest.slice(0, 12)}</span
+                                                <span class="meta" title={revision.content_digest}
+                                                    >{short(revision.content_digest)}</span
                                                 >
                                             </td>
-                                            <td class="meta">{revision.installed_at}</td>
+                                            <td class="meta">{formatWhen(revision.installed_at)}</td>
                                             <td>{revision.active ? "active" : "retained"}</td>
                                             <td>
                                                 {#if !revision.active}
                                                     <button
-                                                        onclick={async () => {
-                                                            await api.activate(
-                                                                pack.pack_id,
-                                                                revision.revision_id,
-                                                            );
-                                                            await refresh();
-                                                            await loadLifecycle(pack.pack_id);
-                                                        }}>Activate</button
+                                                        disabled={busy[
+                                                            `${pack.pack_id}:${revision.revision_id}`
+                                                        ]}
+                                                        onclick={() =>
+                                                            activateRevision(pack, revision.revision_id)}
+                                                        >Activate</button
                                                     >
                                                 {/if}
                                             </td>
@@ -258,8 +416,10 @@
                         <p class="meta">{count(life.events.length, "lifecycle event")}</p>
                         {#each life.events.slice(-5).reverse() as event}
                             <div class="event">
-                                <strong>{event.action}</strong> · {event.created_at}
-                                <span class="meta">{event.revision_id}</span>
+                                <strong>{event.action}</strong> · {formatWhen(event.created_at)}
+                                <span class="meta" title={event.revision_id}
+                                    >{short(event.revision_id)}</span
+                                >
                             </div>
                         {/each}
                     </details>
