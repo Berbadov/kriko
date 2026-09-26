@@ -8,10 +8,23 @@ export type Route = {
 
 export const DEFAULT_ROUTE = "check";
 
+/** A route segment can be anything a reader pastes into the address bar.
+ * decodeURIComponent throws on a malformed %-escape, and an uncaught throw
+ * here would blank the whole app (the store that renders the rail never
+ * gets a value) — so a segment that doesn't decode is kept raw and falls
+ * through to the ordinary "No such view" state instead. */
+const decodeSegment = (segment: string): string => {
+    try {
+        return decodeURIComponent(segment);
+    } catch {
+        return segment;
+    }
+};
+
 export function parseHash(hash: string): Route {
     const [path, search = ""] = hash.replace(/^#\/?/, "").split("?");
     const query = Object.fromEntries(new URLSearchParams(search));
-    const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
+    const parts = path.split("/").filter(Boolean).map(decodeSegment);
     if (!parts.length) return { name: DEFAULT_ROUTE, params: [], query };
     return { name: parts[0], params: parts.slice(1), query };
 }
