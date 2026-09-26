@@ -915,11 +915,32 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
     if not executable:
         return []
     key = (one.id, executable, _stamp(executable))
-    # One ask per CLI at a time: a screen read that lands while the startup
-    # warm-up is still asking waits for that answer instead of asking again.
     with _MODELS_LOCK:
-        asking = _ASKING.setdefault(one.id, threading.Lock())
-    with asking:
+        cached = _MODELS.get(key)
+    if cached and not fresh:
+        at, names = cached
+        if time.monotonic() - at < (MODELS_TTL if names else _MODELS_TTL_EMPTY):
+            return list(names)
+    # One ask per CLI at a time, but a reader's own request never queues
+    # behind one already in flight: `warm_models()` starts this same probe on
+    # a background thread at startup precisely so the first visit to the
+    # Agents screen does not pay its cost, and a request that blocked on this
+    # lock while that thread held it paid the identical ~2s anyway — the
+    # warm-up existed and did nothing for that first click. So a request that
+    # finds the lock held serves whatever is cached (possibly `[]`, on a CLI
+    # never asked before) rather than waiting for the in-flight ask, which
+    # will populate the cache for the *next* read regardless.
+    asking_new = threading.Lock()
+    with _MODELS_LOCK:
+        asking = _ASKING.setdefault(one.id, asking_new)
+    # `fresh` is always an explicit ask (a reader pressing Re-ask) and waits
+    # for a real answer. An ordinary read does not: it takes whatever is
+    # cached rather than queueing behind the in-flight probe.
+    if not asking.acquire(blocking=fresh):
+        with _MODELS_LOCK:
+            cached = _MODELS.get(key)
+        return list(cached[1]) if cached else []
+    try:
         with _MODELS_LOCK:
             cached = _MODELS.get(key)
         if cached and not fresh:
@@ -940,7 +961,9 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
             names = _from_models_command(one, executable)
         with _MODELS_LOCK:
             _MODELS[key] = (time.monotonic(), names)
-    return list(names)
+        return list(names)
+    finally:
+        asking.release()
 
 
 def models_for_each(harnesses: list[Harness], *, fresh: bool = False) -> dict[str, list[str]]:

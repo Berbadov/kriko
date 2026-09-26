@@ -29,9 +29,25 @@
      * engine's vocabulary rather than in a category's.
      */
 
+    /** Bumped by the parent whenever a key changes elsewhere on the page
+     * (settings-4) — the harness list itself does not depend on keys, but
+     * `needs_account` framing and the models a CLI reports can, and a reader
+     * who just saved a key should not need a reload to see it reflected. */
+    let { keysVersion = 0, onReask = () => {} }: {
+        keysVersion?: number;
+        onReask?: () => void;
+    } = $props();
+
     let prefs = $state<Promise<Prefs>>(api.prefs());
     let saved = $state("");
     let failure = $state<unknown>(null);
+
+    let seenKeysVersion = 0;
+    $effect(() => {
+        if (keysVersion === seenKeysVersion) return;
+        seenKeysVersion = keysVersion;
+        prefs = api.prefs();
+    });
 
     async function save(values: Record<string, string>) {
         failure = null;
@@ -47,11 +63,19 @@
     // After signing in to a CLI or updating it. Each CLI's list is cached for
     // ten minutes on the server, because asking costs a process start per CLI.
     let asking = $state(false);
+    let reasked = $state("");
     async function reask() {
         asking = true;
         failure = null;
+        reasked = "";
         try {
-            prefs = Promise.resolve(await api.prefs(true));
+            const data = await api.prefs(true);
+            prefs = Promise.resolve(data);
+            const listed = harnessesOf(data).filter((one) => (one.llms ?? []).length).length;
+            reasked = `Asked ${harnessesOf(data).length} CLIs — ${listed} listed LLMs`;
+            // The "Which LLM, which search" panel above pulls from the same
+            // /api/prefs and does not otherwise know this happened.
+            onReask();
         } catch (thrown) {
             failure = thrown;
         } finally {
@@ -106,6 +130,7 @@
                     <button class="ghost small reask" disabled={asking} onclick={reask}>
                         {asking ? "Asking the CLIs…" : "Re-ask the CLIs for their LLMs"}
                     </button>
+                    {#if reasked}<p class="state" role="status">{reasked}</p>{/if}
                 </div>
 
                 <div class="agentgrid">

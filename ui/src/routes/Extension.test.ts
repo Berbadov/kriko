@@ -279,3 +279,37 @@ describe("the one click", () => {
         ).toBeTruthy();
     });
 });
+
+describe("opening the folder (settings-1)", () => {
+    // The server answers 200 with `{path, error: ""}` on a genuine success —
+    // that must never read as a request failure, or every successful press
+    // shows "Kriko's engine stopped answering".
+    it("shows nothing extra on a successful reveal", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/reveal": { path: "/home/reader/.kriko/extension", error: "" },
+        });
+        render(Extension);
+        fireEvent.click(await screen.findByRole("button", { name: /Open the folder/ }));
+        await waitFor(() =>
+            expect(screen.queryByText(/engine stopped answering/)).toBeNull(),
+        );
+        expect(screen.queryByText(/Show the details/)).toBeNull();
+    });
+
+    // A genuine failure (a non-empty `error`) still gets a quiet note, not
+    // the restart-the-app remedy.
+    it("shows the server's own note on a genuine reveal failure", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/reveal": {
+                path: "/home/reader/.kriko/extension",
+                error: "No file manager found on this machine.",
+            },
+        });
+        render(Extension);
+        fireEvent.click(await screen.findByRole("button", { name: /Open the folder/ }));
+        expect(await screen.findByText(/No file manager found/)).toBeTruthy();
+        expect(screen.queryByText(/engine stopped answering/)).toBeNull();
+    });
+});
