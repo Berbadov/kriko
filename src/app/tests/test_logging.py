@@ -157,3 +157,24 @@ def test_an_unhandled_error_reaches_the_log_file(tmp_path):
     written = path.read_text(encoding="utf-8")
     assert "deliberate" in written
     assert "/api/_boom" in written
+
+
+def test_a_rollover_another_process_blocks_loses_no_line(tmp_path):
+    """Windows will not rename a file someone else holds open, and the stock
+    handler then dropped every record — the installed app wrote nothing into
+    a log sitting just over its rotation size. The open handle here stands in
+    for the other process; on a system that allows the rename it rotates."""
+    path = tmp_path / "app.log"
+    path.write_text("x" * (logs.MAX_BYTES + 10), encoding="utf-8")
+    with path.open("a", encoding="utf-8"):
+        assert logs.configure(path) == path
+        logging.getLogger("kriko.test").error("the line that matters")
+        logging.getLogger("kriko.test").error("and the one after it")
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+    written = "".join(
+        p.read_text(encoding="utf-8", errors="replace")
+        for p in tmp_path.glob("app.log*")
+    )
+    assert "the line that matters" in written
+    assert "and the one after it" in written
