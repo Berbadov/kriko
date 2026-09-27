@@ -1422,7 +1422,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "identity and state any variant assumptions explicitly. The product-only "
             "scope overrides any broader category or lineup instructions above. "
             "Keep the same output contract and evidence requirements. "
-            "Do not install anything."
+            "Do not install anything; Kriko decides that."
         )
     reply = researcher.ask(prompt)
     progress.check()
@@ -1442,11 +1442,13 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         progress.log(f"wrote {name}")
     if written["notes"]:
         progress.log(f"the author noted: {written['notes']}")
+    installed = _install_draft(settings, written, progress) if params.get("install") else ""
     progress.set(
         1.0,
         f"drafted {written['pack_id']} — {written['subjects']} subject(s), "
-        f"{written['claims']} claim(s). Nothing is installed yet: read it on "
-        f"Knowledge and press Install."
+        f"{written['claims']} claim(s). "
+        + ("Installed." if installed
+           else "Nothing is installed yet: read it on Knowledge and press Install.")
     )
     written["category"] = category
     written["scope"] = scope
@@ -1532,6 +1534,36 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
     }
+
+
+def _install_draft(settings, written: dict, progress: Progress) -> str:
+    """Install what was just drafted, the way the reader's Install press does.
+
+    Asked for by the reader for the listing's "Research this product" (B148):
+    "yes it should install itslef". The same build-then-install path as
+    `POST /api/packs/drafts/{slug}/install`, so nothing here is a second
+    definition of a valid pack. A draft that will not build or install stays
+    a draft and the log says why — fail open, never a failed run over work
+    that is still on disk to fix.
+    """
+    from app import packdraft
+
+    slug = written.get("slug") or ""
+    try:
+        artifact = packdraft.build_artifact(settings.store_path, slug)
+        store = connect(settings.store_path)
+        try:
+            pack_id = packstore.install(store, artifact)
+        finally:
+            store.close()
+        packdraft.mark_installed(settings.store_path, slug, pack_id)
+    except Exception as exc:  # noqa: BLE001 — the draft is kept either way
+        progress.log(f"kept as a draft, not installed: {exc}")
+        return ""
+    written["installed"] = True
+    written["pack_id"] = pack_id
+    progress.log(f"installed {pack_id}")
+    return pack_id
 
 
 def pack_amend(settings, params: dict, progress: Progress) -> dict:
