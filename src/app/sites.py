@@ -61,7 +61,7 @@ def host_of(url: str) -> str:
 #: rule is inert — it neither reads a field nor raises, which is the worst of
 #: both. Kept next to the fold below so the two cannot drift.
 RULE_KEYS = ("labels", "from", "vocabulary", "segment", "split",
-             "parse", "min", "max")
+             "parse", "min", "max", "known")
 
 
 def _rule(key: str, raw) -> dict | None:

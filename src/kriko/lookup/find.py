@@ -30,6 +30,9 @@ rather than to withhold it — a person who typed something is already telling
 you they want to see what there is.
 """
 
+import re
+import unicodedata
+
 #: How many subjects one query may return. Enough that a broad word is still
 #: useful, small enough that the panel is a list rather than a catalogue.
 LIMIT = 20
@@ -200,3 +203,108 @@ def _describe(conn, keys) -> dict[tuple, dict]:
         if entry is not None:
             entry["identity"][row["key"]] = row["value_text"]
     return out
+
+
+# ── the other direction: a page's name in, the subject it names out ────────
+#
+# `search` answers a person typing a few words: every word they typed must be
+# somewhere on the subject. A page's name runs the other way — "Apple iPhone 15
+# 128GB Black, Dual SIM" is mostly words no pack will ever hold — so here the
+# *subject's* name has to be inside the page's, never the page's inside the
+# subject's (B149: a product on a site nobody wrote an adapter for).
+
+def _tokens(text) -> list[str]:
+    folded = unicodedata.normalize("NFKD", str(text or "").casefold())
+    plain = "".join(c for c in folded if not unicodedata.combining(c))
+    return re.findall(r"[a-z0-9]+", plain)
+
+
+def _names_enough(tokens: list[str]) -> bool:
+    """Whether a phrase is specific enough to name a product on its own.
+
+    Two words are ("iPhone 15", "Renault Clio"). One word is only when it
+    looks like a model code — a letter-and-digit run such as "DHP484Z" —
+    because a single plain word ("Pro", "Drill") names a word, not a thing.
+    """
+    if len(tokens) >= 2:
+        return True
+    return (len(tokens) == 1 and len(tokens[0]) >= 4
+            and any(c.isdigit() for c in tokens[0])
+            and any(c.isalpha() for c in tokens[0]))
+
+
+def by_name(conn, name: str, *, pack_ids=None,
+            kinds=None, limit: int = 5) -> list[dict]:
+    """Subjects whose label or alias appears, whole, in a page's name.
+
+    Every subject kind is a candidate unless `kinds` narrows it: which kinds
+    a page can be is the pack's to say, not the engine's.
+
+    The longest phrase wins: "iPhone 15 Pro" inside a title beats "iPhone 15",
+    because the page said more than the shorter name does. Ties break on how
+    much the packs know about the subject, then on label, so the same page
+    lands on the same subject every visit.
+    """
+    page = set(_tokens(name))
+    if not page:
+        return []
+    packs = list(pack_ids) if pack_ids else [
+        row["pack_id"] for row in conn.execute(
+            "SELECT pack_id FROM packs WHERE enabled = 1")
+    ]
+    if not packs or (kinds is not None and not kinds):
+        return []
+    pmarks = ",".join("?" * len(packs))
+    kinds = list(kinds) if kinds is not None else [
+        row["kind"] for row in conn.execute(
+            f"SELECT DISTINCT kind FROM subjects WHERE pack_id IN ({pmarks})", packs)
+    ]
+    if not kinds:
+        return []
+    kmarks = ",".join("?" * len(kinds))
+    phrases = _rows(conn,
+        f"SELECT s.subject_id, s.pack_id, s.label AS phrase FROM subjects s"
+        f" WHERE s.pack_id IN ({pmarks}) AND s.kind IN ({kmarks})"
+        f" UNION ALL"
+        f" SELECT a.subject_id, a.pack_id, a.alias AS phrase"
+        f" FROM subject_aliases a JOIN subjects s USING (subject_id, pack_id)"
+        f" WHERE a.pack_id IN ({pmarks}) AND s.kind IN ({kmarks})",
+        (*packs, *kinds, *packs, *kinds))
+
+    best: dict[tuple, dict] = {}
+    for row in phrases:
+        words = _tokens(row["phrase"])
+        if not _names_enough(words) or not set(words) <= page:
+            continue
+        key = (row["subject_id"], row["pack_id"])
+        weight = sum(len(one) for one in words)
+        if key not in best or weight > best[key]["score"]:
+            best[key] = {"subject_id": row["subject_id"], "pack_id": row["pack_id"],
+                         "score": weight, "why": [row["phrase"]]}
+    if not best:
+        return []
+
+    detail = _describe(conn, list(best))
+    out = [{**row, **detail.get(key, {})} for key, row in best.items()]
+    out.sort(key=lambda one: (-one["score"], -one.get("claims", 0),
+                              one.get("label", ""), one["subject_id"]))
+    return out[:limit]
+
+
+def agreed_identity(hits: list[dict]) -> dict:
+    """The identity every equally-good `by_name` hit shares.
+
+    A name shared by several subjects (a family name every one of its
+    configurations carries equally well) names the family, not one of them.
+    Answering with the first subject's full identity would be reading a fact
+    the page never stated; answering with what all of them agree on is exactly
+    what the page said.
+    """
+    if not hits:
+        return {}
+    top = [one for one in hits if one["score"] == hits[0]["score"]]
+    agreed = dict(top[0].get("identity") or {})
+    for one in top[1:]:
+        theirs = one.get("identity") or {}
+        agreed = {k: v for k, v in agreed.items() if theirs.get(k) == v}
+    return agreed
