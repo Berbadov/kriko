@@ -469,6 +469,19 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
 (knowledge-4). The extension badges every non-listing page with a red "!"
 (extension-5).
 
+
+**2026-09-27, after the reader's "nothing works again or half works" on 0.10.3** (0.10.4, `b8e93f8`):
+- The one-click opened a separate profile that Chrome 153 will not load Kriko into
+  (measured: 4 built-in extension targets, no Kriko). It now opens the listing in the
+  browser Kriko has checked in from; the separate profile is only for a first install.
+- Bench/Vibe failed every case: a Python CLI decoded the piped brief as cp1252. Every
+  harness child gets `PYTHONUTF8=1`.
+- The installed app wrote no log: a rollover blocked by another handle dropped every
+  record. A failed rollover now keeps appending.
+- The gate was red on 4 leftover tests (0.10.3 was built without it); now green, 2043
+  Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
+Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
+
 ### B141 — "Sliders on every research button": sources, effort, context `[G5]`
 **Asked:** "the page count limiter, effort limiter, context limiter slides for agent research", and "sliders on every research button" (2026-09-24).
 **Where:** beside every control that starts a research run, visible without expanding anything:
