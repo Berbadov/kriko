@@ -126,8 +126,65 @@ async function toggleHoverLite(tab) {
 chrome.action.onClicked.addListener((tab) => { void onToolbarClick(tab); });
 
 async function onToolbarClick(tab) {
+  // Asked before anything is awaited: Chrome accepts `permissions.request`
+  // only inside the click's own gesture, and one `await` can spend it.
+  const asking = _askEverySiteOnce(tab);
   if (await toggleHoverLite(tab)) return true;
+  if (await _openPanelHere(tab)) {
+    void asking;
+    return true;
+  }
   return reportUnreadableSite(tab);
+}
+
+// ── any product page (B149) ─────────────────────────────────────────────
+//
+// The reader's words: *"new products aren't recognised, in new sites products
+// can't be grabbed"*, and their choice: grant once, and Kriko reads any
+// product page itself. One grant — `https://*/*`, already the manifest's
+// optional permission — asked for on the first toolbar click anywhere Kriko
+// does not already run. Once given, one registration puts the panel on every
+// https page; the page's own schema.org data and product name are what the
+// app reads, and a page that publishes no product stays silent.
+
+const EVERY_SITE = "https://*/*";
+const ANY_SITE_SCRIPT_ID = "kriko-anysite";
+let everySiteGranted = null;   // unknown until asked; the worker restarts often
+
+if (chrome.permissions && chrome.permissions.contains) {
+  chrome.permissions.contains({ origins: [EVERY_SITE] })
+    .then((yes) => { everySiteGranted = Boolean(yes); })
+    .catch(() => {});
+}
+
+function _askEverySiteOnce(tab) {
+  const url = String((tab && tab.url) || "");
+  if (everySiteGranted === true || !/^https:/i.test(url)) return null;
+  if (!chrome.permissions || !chrome.permissions.request) return null;
+  // Not on a site the package already runs on: the panel works there, and a
+  // prompt on the reader's usual site would be asking for nothing they need.
+  if (staticSiteHosts().has(_hostOf(url))) return null;
+  try {
+    return Promise.resolve(chrome.permissions.request({ origins: [EVERY_SITE] }))
+      .then((yes) => { everySiteGranted = Boolean(yes); return yes; })
+      .catch(() => false);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Put the panel on this one tab, now. `activeTab` makes the click itself the
+// grant for this tab, so this works whether or not the every-site ask was
+// accepted — declining costs the automatic answer, never the button.
+async function _openPanelHere(tab) {
+  const url = String((tab && tab.url) || "");
+  if (!tab || !tab.id || !/^https:/i.test(url) || !chrome.scripting) return false;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: SITE_SCRIPTS });
+  } catch (_) {
+    return false;    // a page Chrome keeps extensions out of (the web store, say)
+  }
+  return toggleHoverLite(tab);
 }
 
 async function reportUnreadableSite(tab) {
@@ -603,6 +660,7 @@ async function syncSites({ fresh = false } = {}) {
       code: error.code || "",
     };
     await _writeSiteStatus(record);
+    await _syncAnySite();     // needs no app: the grant is the browser's
     return record;
   }
 
@@ -676,7 +734,52 @@ async function syncSites({ fresh = false } = {}) {
   };
   await _writeSiteStatus(record);
   await _reportActivation(sites);
+  await _syncAnySite();
   return record;
+}
+
+// The every-site registration (B149), reconciled like the others. It skips
+// every host something else already injects on — the manifest's and each
+// `kriko-site-` registration's — so no page ever runs the panel twice.
+async function _syncAnySite() {
+  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return;
+  const granted = await _granted(EVERY_SITE);
+  everySiteGranted = granted;
+  let all = [];
+  try {
+    all = (await chrome.scripting.getRegisteredContentScripts()) || [];
+  } catch (_) {
+    return;
+  }
+  const current = all.find((s) => s.id === ANY_SITE_SCRIPT_ID);
+  const exclude = [
+    ...[...staticSiteHosts()].map((host) => `https://*.${host}/*`),
+    ...all.filter((s) => String(s.id).startsWith(SITE_SCRIPT_PREFIX))
+      .flatMap((s) => s.matches || []),
+  ].sort();
+  const same = current
+    && JSON.stringify([...(current.excludeMatches || [])].sort()) === JSON.stringify(exclude);
+  if (current && (!granted || !same)) {
+    try {
+      await chrome.scripting.unregisterContentScripts({ ids: [ANY_SITE_SCRIPT_ID] });
+    } catch (_) {
+      // Already gone.
+    }
+  }
+  if (!granted || same) return;
+  try {
+    await chrome.scripting.registerContentScripts([{
+      id: ANY_SITE_SCRIPT_ID,
+      matches: [EVERY_SITE],
+      excludeMatches: exclude,
+      js: SITE_SCRIPTS,
+      runAt: "document_idle",
+      allFrames: false,
+      persistAcrossSessions: true,
+    }]);
+  } catch (_) {
+    // The next sync tries again; the toolbar button works without it.
+  }
 }
 
 // Tell the app what the browser made of its sites.
@@ -991,6 +1094,9 @@ async function requestAnalysis(scrape, timings = {}) {
       title: scrape.title || "",
       description: scrape.description || "",
       fields: scrape.fields || {},
+      // The product's own name (B149): what a page on a site no adapter
+      // covers is recognised by, and what the panel offers to research.
+      product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
       // Which door this came in by. The app's history shows it, so a reader
       // can tell an answer their browser produced from one they asked for.
       origin: "extension",
@@ -1007,7 +1113,7 @@ async function requestAnalysis(scrape, timings = {}) {
 
 // ── the run ─────────────────────────────────────────────────────────────
 
-async function runAnalysisForTab(tabId, url, { fresh = false } = {}) {
+async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {}) {
   const storageKey = STORAGE_KEY_PREFIX + url;
   // A press of Refresh while another run for this same URL is already in
   // flight still waits for that run rather than starting a second one —
@@ -1020,7 +1126,7 @@ async function runAnalysisForTab(tabId, url, { fresh = false } = {}) {
     return result;
   }
 
-  const runPromise = _runAnalysisForTab(tabId, url, storageKey, { fresh });
+  const runPromise = _runAnalysisForTab(tabId, url, storageKey, { fresh, auto });
   inFlightByStorageKey.set(storageKey, runPromise);
   try {
     return await runPromise;
@@ -1031,7 +1137,7 @@ async function runAnalysisForTab(tabId, url, { fresh = false } = {}) {
   }
 }
 
-async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}) {
+async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto = false } = {}) {
   const timings = {};
   const totalStartedAt = _now();
   const runId = nextRunId++;
@@ -1045,30 +1151,40 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}
     await _stage(url, "adapters", "");
     const adapters = await fetchAdapters();
     const adapter = adapterFor(url, adapters);
-    if (!adapter) {
-      // Not an error the reader can act on — most pages are not listings —
-      // but not something to answer with an empty result either, which would
-      // read as "nothing is known about this car". Coded so the panel can
-      // fall quiet instead of showing a red banner on every ordinary page.
-      const noAdapter = new Error("No installed pack can read this page.");
-      noAdapter.code = "NO_ADAPTER";
-      noAdapter.hostKnown = hostHasAnyAdapter(url, adapters);
-      throw noAdapter;
-    }
+    // Not an error the reader can act on — most pages are not listings —
+    // but not something to answer with an empty result either, which would
+    // read as "nothing is known about this car". Coded so the panel can
+    // fall quiet instead of showing a red banner on every ordinary page.
+    const noAdapter = () => {
+      const quiet = new Error("No installed pack can read this page.");
+      quiet.code = "NO_ADAPTER";
+      quiet.hostKnown = hostHasAnyAdapter(url, adapters);
+      return quiet;
+    };
 
     // Named after the pack that will read it, not after the mechanism: the
     // reader knows which site they are on, and "reading this page" is the
     // step they can see happening in front of them.
-    await _stage(url, "reading", adapter.pack_id || "");
+    await _stage(url, "reading", (adapter && adapter.pack_id) || "");
     const scrapeStartedAt = _now();
+    // No site adapter is no longer the end (B149): every page is read for
+    // the product it publishes, and the app decides whether a pack knows it.
     const reply = await _requestScrape(
-      tabId, adapter.labels || [], adapter.local_panel || {}
+      tabId, (adapter && adapter.labels) || [], (adapter && adapter.local_panel) || {}
     );
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
+      if (!adapter) throw noAdapter();
       throw new Error("Unable to read this page.");
     }
     scrape = reply.payload;
+    if (!adapter) {
+      const product = scrape.product || {};
+      // A page load on a site nobody reads is quiet unless the page itself
+      // says it is a product; the reader pressing the button is asking, so
+      // a named page is worth asking about.
+      if (!product.name || (auto && !product.typed)) throw noAdapter();
+    }
 
     const signature = _scrapeSignature(scrape, adapters);
     // extension-3 (B145 audit): "Refresh analysis" re-asked nothing — every
@@ -1089,8 +1205,17 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}
     }
 
     await _stage(url, "asking", "");
-    const result = toViewModel(
-      await requestAnalysis(scrape, timings), await apiBase());
+    const raw = await requestAnalysis(scrape, timings);
+    if (raw && raw.readable === false) {
+      if (raw.reason === "unknown_product") {
+        const unknown = new Error("Kriko doesn't know this product yet.");
+        unknown.code = "UNKNOWN_PRODUCT";
+        unknown.productName = (raw.product && raw.product.name) || "";
+        throw unknown;
+      }
+      if (!adapter) throw noAdapter();
+    }
+    const result = toViewModel(raw, await apiBase());
 
     if (latestRunIdByStorageKey.get(storageKey) !== runId) {
       return result;    // a newer run has already answered for this listing
@@ -1131,6 +1256,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}
     await _stage(url, "failed", error.message || "");
     if (error.code) errEntry.code = error.code;
     if (error.hostKnown) errEntry.hostKnown = true;
+    if (error.productName) errEntry.productName = error.productName;
     if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
     await chrome.storage.session.set({ [storageKey]: errEntry });
     // NO_ADAPTER is not a failure — it's most pages on the internet, which is
@@ -1139,6 +1265,11 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false } = {}
     // this extension was never going to have an opinion on gets no badge.
     if (error.code === "NO_ADAPTER") {
       await chrome.action.setBadgeText({ text: "", tabId });
+    } else if (error.code === "UNKNOWN_PRODUCT") {
+      // Not a failure either: a product nothing installed covers yet, one
+      // click from being researched. A question, not an alarm.
+      await chrome.action.setBadgeText({ text: "?", tabId });
+      await chrome.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
     } else {
       await chrome.action.setBadgeText({ text: "!", tabId });
       await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
@@ -1288,7 +1419,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, hostKnown: Boolean(error.hostKnown),
-        error: error.message }));
+        productName: error.productName || "", error: error.message }));
 
     return true; // async
   }
@@ -1303,7 +1434,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Every page reports in; whether it is worth analysing is the installed
     // packs' answer, resolved inside the run.
-    runAnalysisForTab(tabId, url).catch(() => {});
+    runAnalysisForTab(tabId, url, { auto: true }).catch(() => {});
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
   }
