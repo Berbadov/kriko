@@ -381,3 +381,60 @@ describe("noticing runs started elsewhere", () => {
         vi.useRealTimers();
     });
 });
+
+describe("a run that asked something (B147)", () => {
+    const QUESTION = {
+        id: "engine_code",
+        ask: "Which engine code is it?",
+        key: "",
+        options: ["BUG", "CASA"],
+        default: "BUG",
+        because: "BUG was the common one that year.",
+    };
+    const ATTENTION = { kind: "questions", count: 1, say: "", questions: [QUESTION] };
+    const RESULT = { questions: [QUESTION], why: "two codes overlap", stopped_at: "disambiguation" };
+
+    it("says a picked answer to a live run at once, and shows it landed", async () => {
+        const job = { ...JOB, kind: "pack_author", result: RESULT, attention: ATTENTION };
+        const fetchMock = stub({
+            "/api/jobs": { items: [job] },
+            "/api/jobs/j1": job,
+            "/api/jobs/j1/say": { job_id: "j1", delivered: true },
+        });
+        render(Jobs);
+        await fireEvent.click(await screen.findByRole("radio", { name: "CASA" }));
+        expect(await screen.findByText("It heard you.")).toBeInTheDocument();
+        const said = fetchMock.mock.calls.find(([path]) => String(path).endsWith("/say"));
+        expect(JSON.parse(String(said?.[1]?.body)).text).toContain("CASA");
+        expect(screen.getByRole("radio", { name: "CASA" })).toHaveAttribute("aria-checked", "true");
+        // No retry offered on a run that is still going: it already heard.
+        expect(screen.queryByRole("button", { name: "Answer and run again" })).toBeNull();
+    });
+
+    it("never shows the question as raw JSON in the log", async () => {
+        const job = { ...JOB, state: "interrupted", done: true, result: RESULT, attention: ATTENTION };
+        stub({ "/api/jobs": { items: [job] }, "/api/jobs/j1": job });
+        render(Jobs);
+        await fireEvent.click(await screen.findByRole("button", { name: "Log" }));
+        expect(screen.queryByText(/"stopped_at"/)).toBeNull();
+        expect(screen.getByRole("radio", { name: /BUG/ })).toBeInTheDocument();
+    });
+
+    it("carries a picked answer on a finished run into the retry", async () => {
+        const job = { ...JOB, state: "interrupted", done: true, result: RESULT, attention: ATTENTION };
+        const fetchMock = stub({
+            "/api/jobs": { items: [job] },
+            "/api/jobs/j1": job,
+            "/api/jobs/j1/retry": { job_id: "j9", kind: "pack_author" },
+            "/api/jobs/j9": { ...job, job_id: "j9", state: "queued", done: false, attention: null },
+        });
+        render(Jobs);
+        await fireEvent.click(await screen.findByRole("radio", { name: "CASA" }));
+        expect(fetchMock.mock.calls.some(([path]) => String(path).endsWith("/say"))).toBe(false);
+        await fireEvent.click(screen.getByRole("button", { name: "Answer and run again" }));
+        await waitFor(() => {
+            const retried = fetchMock.mock.calls.find(([path]) => String(path).endsWith("/retry"));
+            expect(JSON.parse(String(retried?.[1]?.body)).answers).toEqual({ engine_code: "CASA" });
+        });
+    });
+});
