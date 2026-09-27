@@ -41,6 +41,19 @@
     let copied = $state("");
     let harness = $state("");
     let llm = $state("");
+    /* B146: effort beside the button, not two screens away on Agents. Saved as
+     * the agent's own preference (the key Agents writes), which the run reads,
+     * so the two screens can never disagree. Keyed by agent id here only so
+     * the select shows the choice before the planes list is re-read. */
+    let efforts = $state<Record<string, string>>({});
+    async function pickEffort(id: string, level: string) {
+        efforts = { ...efforts, [id]: level };
+        try {
+            await api.savePrefs({ [`harness_effort_${id.replace(/-/g, "_")}`]: level });
+        } catch (cause) {
+            error = cause;
+        }
+    }
     /* How much reading this run is worth. Empty means the server's default,
      * which is what every run did before the dial reached this screen — the
      * brief itself is free and instant either way, so nothing here waits on
@@ -187,6 +200,21 @@
                                 : "CLI default"}
                             hint={chosenHarness.llm_hint}
                         />
+                    </label>
+                {/if}
+                {#if chosenHarness && (chosenHarness.efforts ?? []).length}
+                    <label>Effort
+                        <select
+                            value={efforts[chosenHarness.id] ?? chosenHarness.effort ?? ""}
+                            disabled={!!job && !job.done}
+                            onchange={(event) =>
+                                pickEffort(chosenHarness.id, event.currentTarget.value)}
+                        >
+                            <option value="">CLI default</option>
+                            {#each chosenHarness.efforts ?? [] as level (level)}
+                                <option value={level}>{level}</option>
+                            {/each}
+                        </select>
                     </label>
                 {/if}
                 <Scale

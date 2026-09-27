@@ -32,6 +32,17 @@
     let search = $state("");
     const selection = () => ({ llm, harness, search });
     const refresh = () => (promise = api.researchPlanes(selection()));
+    /* Effort is the agent's saved preference (the key Agents writes), not a
+     * per-run field — so it is saved and the planes re-read, which is what
+     * makes this select and the one on Agents always agree. */
+    async function pickEffort(id: string, level: string) {
+        try {
+            await api.savePrefs({ [`harness_effort_${id.replace(/-/g, "_")}`]: level });
+        } catch (cause) {
+            failed = remedyFor(cause).headline;
+        }
+        refresh();
+    }
     let rows = $state(5);
     let budget = $state(0.2);
     /* How deep each of those rows goes. The agenda is the screen that most
@@ -112,13 +123,9 @@
             {@const harnessChoices = harnessPlane?.harnesses ?? []}
             {@const activeHarness =
                 harnessChoices.find((one) => one.id === (harness || harnessPlane?.selected_harness))}
-            <details>
-                <summary>This run's choices</summary>
-                <p class="meta">
-                    Empty uses Settings. On the paid plane the LLM is a
-                    completion LLM; on the harness plane it is that agent's
-                    own. The agent dropdown only affects the harness plane.
-                </p>
+            <!-- B146: this was a collapsed "This run's choices", which is where
+                 "I can't see the effort limit" came from. Open, in one row. -->
+            <div class="choices" role="group" aria-label="This run's choices">
                 <label>
                     Agent
                     <select bind:value={harness} onchange={refresh}>
@@ -153,7 +160,26 @@
                         <option value="tavily">Tavily</option>
                     </select>
                 </label>
-            </details>
+                {#if activeHarness && (activeHarness.efforts ?? []).length}
+                    <label>
+                        Effort
+                        <select
+                            value={activeHarness.effort ?? ""}
+                            onchange={(event) =>
+                                pickEffort(activeHarness.id, event.currentTarget.value)}
+                        >
+                            <option value="">CLI default</option>
+                            {#each activeHarness.efforts ?? [] as level (level)}
+                                <option value={level}>{level}</option>
+                            {/each}
+                        </select>
+                    </label>
+                {/if}
+            </div>
+            <p class="meta">
+                Empty uses your preferences. Agent, LLM and effort drive "Run my agent";
+                LLM and search drive "Kriko itself". Lower effort is faster and cheaper.
+            </p>
             <div class="planes">
                 {#each data.planes as plane (plane.id)}
                     <section class="plane" class:inert={!plane.ready}>
@@ -304,6 +330,20 @@
 </article>
 
 <style>
+    .choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2) var(--s-3);
+        margin-block: var(--s-3) var(--s-1);
+    }
+    .choices > label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        flex: 1 1 10rem;
+        max-width: 15rem;
+        font-size: 0.85rem;
+    }
     h3 {
         display: flex;
         align-items: center;

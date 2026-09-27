@@ -482,6 +482,16 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
+### B146 — "Agents are very slow, like it seems like they are stuck": runs that show they are alive, limits where runs start `[G5]`
+**Asked:** "ok, they seem to do better but agents are very slow, like it seems like they are stuck and im unable to see the options for resource and effort limit plus agent and settings section are very crowded and ugly." (2026-09-27, on 0.10.4)
+**Where:** Activity → Runs (a live run card; "Start a new pack"); Agents (the plane's **Research the top N**, the agent list); a subject's **Run my agent on this** (Brief); Settings.
+**Done when:**
+- a live run card shows an elapsed clock ticking each second and its last log line, and a CLI that prints nothing for 30 s logs "still working — Xm in";
+- agent, LLM, effort (and, for pack authoring, "Stop after") sit visible beside each of those run buttons, with nothing to expand;
+- Agents holds one row per agent (name, LLM, effort) and Settings no longer repeats the agent list, measured at 1200×800 (Agents 8 → 5 screens, Settings 6 → 4);
+- a harness failure's login hint names the CLI that failed (Vibe said "run `claude`").
+**Progress (2026-09-27):** all four landed on `b145/ship-ready` (`RunWith.svelte`, heartbeat in `harness.py`, `Agents.prefs.svelte` rows, `_hint(reason, harness)`); tests fail without each. Open: observed on the installed 0.10.5.
+
 ### B141 — "Sliders on every research button": sources, effort, context `[G5]`
 **Asked:** "the page count limiter, effort limiter, context limiter slides for agent research", and "sliders on every research button" (2026-09-24).
 **Where:** beside every control that starts a research run, visible without expanding anything:

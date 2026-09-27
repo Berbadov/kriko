@@ -239,6 +239,57 @@ describe("Jobs", () => {
         ).toBeDisabled();
     });
 
+    // B146: "im unable to see the options for resource and effort limit".
+    it("shows agent, effort and a time limit beside the new-pack button, and sends them", async () => {
+        const saved: Record<string, string>[] = [];
+        const fetchMock = stub({
+            "/api/jobs": { items: [] },
+            "/api/prefs": (_path: string, init?: RequestInit) => {
+                if (init?.method === "PUT") saved.push(JSON.parse(String(init.body)));
+                return {
+                    chosen: { preferred_harness: "", llm_model: "", search_provider: "" },
+                    harnesses: [
+                        { id: "claude-code", label: "Claude Code", command: "claude",
+                          llm: "", llms: ["sonnet"], llm_selectable: true,
+                          effort: "", efforts: ["low", "high"] },
+                        { id: "codex", label: "Codex", command: "codex", efforts: [] },
+                    ],
+                    unusable: [], missing: [],
+                };
+            },
+            "/api/packs/author": { job_id: "j9", kind: "pack_author" },
+            "/api/jobs/j9": { ...JOB, job_id: "j9", kind: "pack_author" },
+        });
+        render(Jobs);
+        // Visible without opening anything.
+        const agent = await screen.findByLabelText(/Agent/);
+        await fireEvent.change(screen.getByLabelText(/Effort/), { target: { value: "low" } });
+        await waitFor(() => expect(saved).toContainEqual({ harness_effort_claude_code: "low" }));
+        await fireEvent.change(agent, { target: { value: "codex" } });
+        // Codex declares no effort dial, so none is drawn for it.
+        expect(screen.queryByLabelText(/Effort/)).toBeNull();
+        await fireEvent.change(screen.getByLabelText(/Stop after/), { target: { value: "600" } });
+        await fireEvent.input(screen.getByLabelText("What is the category?"), {
+            target: { value: "e-bikes" },
+        });
+        await fireEvent.click(screen.getByRole("button", { name: "Have my agent write it" }));
+        await waitFor(() => {
+            const call = fetchMock.mock.calls.find(([path]) => String(path).includes("/api/packs/author"));
+            expect(JSON.parse(String(call![1]?.body))).toEqual({
+                category: "e-bikes", harness: "codex", timeout_seconds: 600,
+            });
+        });
+    });
+
+    it("shows how long a live run has been going and its latest log line", async () => {
+        const started = new Date(Date.now() - 372_000).toISOString();
+        const job = { ...JOB, started_at: started, log: "query: a\nstill working — 6m 12s in\n" };
+        stub({ "/api/jobs": { items: [job] }, "/api/jobs/j1": job });
+        render(Jobs);
+        expect(await screen.findByText(/^6m 1\ds$/)).toBeInTheDocument();
+        expect(screen.getByText("still working — 6m 12s in")).toBeInTheDocument();
+    });
+
     it("explains an empty run list, and points at where runs come from", async () => {
         stub({ "/api/jobs": { items: [] } });
         render(Jobs);

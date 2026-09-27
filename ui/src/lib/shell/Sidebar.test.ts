@@ -130,7 +130,9 @@ describe("the new-pack destination", () => {
         render(Jobs);
         const input = screen.getByLabelText("What is the category?");
         await waitFor(() => expect(input).toHaveFocus());
-        expect(input.closest("details")).toHaveAttribute("open");
+        // B146: the form is a section now, never collapsed.
+        expect(input.closest(".authoring")).not.toBeNull();
+        expect(input.closest("details")).toBeNull();
         expect(parseHash(window.location.hash).query).toEqual({
             mode: "author",
             lens: "runs",
@@ -156,16 +158,13 @@ describe("the new-pack destination", () => {
         render(Sidebar, { mode: "author" });
         render(Jobs);
         const input = screen.getByLabelText("What is the category?");
-        expect(input.closest("details")).not.toHaveAttribute("open");
         const action = screen.getByRole("link", { name: /Start a new pack/ });
         at(action.getAttribute("href")!);
         await waitFor(() => expect(input).toHaveFocus());
         await fireEvent.input(input, { target: { value: "espresso machines" } });
-        input.closest("details")!.open = false;
         action.focus();
         at(action.getAttribute("href")!);
         await waitFor(() => expect(input).toHaveFocus());
-        expect(input.closest("details")).toHaveAttribute("open");
         expect(input).toHaveValue("espresso machines");
     });
 });
