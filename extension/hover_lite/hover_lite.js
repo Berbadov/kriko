@@ -910,13 +910,18 @@
       state.cancelling = false;
       state.researchMessage = job.state === "cancelled" ? "Research cancelled."
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
-          ? `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko — not installed until you say so.`
+          ? (job.result?.installed
+            ? "Deeper research done and installed. Refreshing this listing…"
+            : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko — it could not install itself; open it there.`)
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
             : "Research completed. Open the research job for findings.")
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
       renderResearch();
+      // B148: the pack the deep run installed is knowledge now, so the
+      // listing is asked again and its cards arrive without a press.
+      if (job.state === "succeeded" && job.result?.installed) triggerAnalyze(true);
     });
   }
 
