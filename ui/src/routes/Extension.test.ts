@@ -240,7 +240,7 @@ describe("the one click", () => {
         });
         render(Extension);
         fireEvent.click(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         );
         expect(await screen.findByText(/Started \/usr\/bin\/chromium/)).toBeTruthy();
         // Said before the reader wonders why none of their logins are there.
@@ -263,7 +263,7 @@ describe("the one click", () => {
         });
         render(Extension);
         fireEvent.click(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         );
         expect(await screen.findByText(/No Chrome, Chromium, Brave or Edge/)).toBeTruthy();
         expect(screen.getByText(/Developer mode/)).toBeTruthy();
@@ -275,7 +275,7 @@ describe("the one click", () => {
         stubFetch({ "/api/extension": status() });
         render(Extension);
         expect(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         ).toBeTruthy();
     });
 });
