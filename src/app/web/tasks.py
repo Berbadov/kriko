@@ -1471,6 +1471,69 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     return written
 
 
+#: How long a quick look may take before it is not quick. Long enough for a
+#: few searches and three pages on a slow connection; short enough that the
+#: reader is still on the listing when it answers. (B148)
+QUICK_LOOK_TIMEOUT_SECONDS = 240
+
+
+def quick_look(settings, params: dict, progress: Progress) -> dict:
+    """A chat-speed answer for a product no pack knows yet. (B148)
+
+    The reader's words: "in normal claude or Mistral vibe chat they can search
+    web and answer instantly". The only door for an unknown product was a whole
+    pack authored from scratch, so the listing showed nothing for forty
+    minutes and then showed a draft. This is one short call at the lowest
+    effort the CLI takes; the deeper run (`deepen_job_id`) starts beside it.
+
+    Writes nothing to the store. The risks are a job result the panel renders,
+    each with the page and quote it claims — `quicklook.parse` drops the rest.
+    """
+    from app import quicklook
+    from app.providers import harness_researcher
+    from kriko.research import pack_asset
+
+    product = str(params.get("product") or "").strip()
+    if not product:
+        raise ValueError("name the product — the quick look has nothing else to go on")
+
+    principle = ""
+    pack_id = str(params.get("pack_id") or "")
+    if pack_id:
+        store = connect(settings.store_path)
+        try:
+            principle = pack_asset(store, pack_id, "research/principle.md")
+        finally:
+            store.close()
+
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
+        timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
+        # Low, whatever the reader's everyday dial says: this is the chat-speed
+        # pass. A CLI that does not declare `low` has it dropped rather than
+        # refused (`harness_researcher`), so the dial never costs the run.
+        effort="low",
+    )
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+
+    progress.set(0.1, f"a quick look at {product}")
+    reply = researcher.ask(quicklook.brief(product, principle))
+    progress.check()
+    found = quicklook.parse(reply)
+    kept = len(found["risks"])
+    progress.set(1.0, (
+        f"{kept} risk(s) found" if kept else "nothing it could source in the time")
+        + (f", {found['dropped']} unsourced dropped" if found["dropped"] else ""))
+    return {
+        "product": product,
+        **found,
+        "deepen_job_id": str(params.get("deepen_job_id") or ""),
+        "harness": getattr(getattr(researcher, "harness", None), "id", ""),
+    }
+
+
 def pack_amend(settings, params: dict, progress: Progress) -> dict:
     """Extend a draft that is nearly right, rather than authoring it again (B127).
 
@@ -2097,6 +2160,7 @@ HANDLERS = {
     "research_undo": research_undo,
     "pack_build": pack_build,
     "pack_author": pack_author,
+    "quick_look": quick_look,
     "pack_amend": pack_amend,
     "verify": verify,
     "site_register": site_register,

@@ -170,6 +170,9 @@ class ExtensionResearchRequest(BaseModel):
     search: str = Field("", max_length=64)
     cap: float | None = Field(None, gt=0, allow_inf_nan=False)
     allow_draft: bool = Field(False, strict=True)
+    #: The listing the reader is on, so the quick look can hold itself to the
+    #: pack whose site this is (its `research/principle.md`). Optional.
+    url: str = Field("", max_length=2000)
 
 
 @router.post("/research-plane")
@@ -215,12 +218,27 @@ def start_research_plane(
             "category": body.q.strip(), "product_only": True,
             "harness": selected, "backend": "harness",
         }
+        # Quick answer, then deepen (B148): the reader's choice. The draft is
+        # the deep half and starts first so the quick one can point at it;
+        # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
+        # id the panel follows.
+        deepen = runner.submit("pack_author", params)
+        pack_id = ""
+        if body.url:
+            from app import sites
+
+            spec = sites.adapter_for(store, conn, body.url)
+            pack_id = (spec or {}).get("pack_id", "") if isinstance(spec, dict) else ""
+        quick = runner.submit("quick_look", {
+            "product": body.q.strip(), "harness": selected,
+            "pack_id": pack_id, "deepen_job_id": deepen,
+        })
         return {
-            "job_id": runner.submit("pack_author", params), "kind": "pack_author",
+            "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
             "backend": "harness", "harness": selected,
             "cost_basis": "subscription", "budget_usd": None,
-            "note": "Uses your harness subscription; no per-token budget guarantee. "
-                    "Creates a draft only. Review and install it from Knowledge.",
+            "note": "Uses your harness subscription. A quick answer first; the "
+                    "deeper draft keeps going and waits for you in Knowledge.",
         }
     plane = research_plane(request)
     budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
