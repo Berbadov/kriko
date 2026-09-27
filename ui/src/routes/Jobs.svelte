@@ -4,6 +4,8 @@
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
+    import RunWith from "../lib/RunWith.svelte";
+    import { elapsed } from "../lib/time";
     import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
     import type { Job } from "../lib/types";
 
@@ -108,12 +110,34 @@
     // three steps and three different authorities, which is why nothing here
     // reaches the store.
     let category = $state("");
-    let authoring: HTMLDetailsElement;
     let categoryInput: HTMLInputElement;
+    /* B146: which agent, and how long it may take. The form used to be a
+     * collapsed <details> with none of these, so "how hard will it try, and
+     * when does it give up" had no answer anywhere near the button. */
+    let harness = $state("");
+    let timeout = $state(0);
+    const TIMEOUTS = [
+        { seconds: 0, label: "40 min (default)" },
+        { seconds: 600, label: "10 min" },
+        { seconds: 1200, label: "20 min" },
+        { seconds: 3600, label: "60 min" },
+    ];
+
+    /* A clock for live rows. A harness that is thinking prints nothing for
+     * minutes, and "running" with no sense of time read as stuck (B146). */
+    let now = $state(Date.now());
+    $effect(() => {
+        const ticker = setInterval(() => (now = Date.now()), 1000);
+        return () => clearInterval(ticker);
+    });
+    const lastLine = (job: Job) => {
+        const lines = String(job.log ?? "").trimEnd().split(/\r?\n/);
+        const last = lines[lines.length - 1]?.trim() ?? "";
+        return last && last !== job.message ? last : "";
+    };
 
     $effect(() => {
         if ($route.query.author !== "new") return;
-        authoring.open = true;
         let active = true;
         void tick().then(() => {
             if (!active) return;
@@ -135,7 +159,7 @@
         busy = true;
         error = null;
         try {
-            const { job_id } = await api.authorPack(category.trim());
+            const { job_id } = await api.authorPack(category.trim(), harness, timeout);
             const job = await api.job(job_id);
             replace(job);
             watch(job);
@@ -263,8 +287,8 @@
     may finish. Only checkpointed results survive a restart.
 </p>
 
-<details class="authoring" bind:this={authoring}>
-    <summary>Start a new pack</summary>
+<section class="card authoring">
+    <h3>Start a new pack</h3>
     <p class="meta">
         Name a category in a few words and your own coding agent writes the whole
         pack — what tells two of these apart, the bar a claim has to clear, what
@@ -295,19 +319,19 @@
             type="submit"
             disabled={busy || category.trim().length < CATEGORY_MIN}
         >
-            Have my agent write it
+            {busy ? "Starting…" : "Have my agent write it"}
         </button>
     </form>
+    <RunWith bind:harness bind:timeout timeouts={TIMEOUTS} disabled={busy} />
     {#if category.trim().length > 0 && category.trim().length < CATEGORY_MIN}
         <p class="meta">At least {CATEGORY_MIN} characters.</p>
     {/if}
     <p class="meta">
-        Needs a coding-agent command-line tool installed — the same one the
-        Research plane uses, and it costs nothing beyond the subscription you
-        already pay for. Without one, connect your agent under Agents and let it
-        use <code>draft_pack</code> instead.
+        Uses a coding-agent CLI you already have — no API cost. None installed?
+        Connect your agent under <a href="#/agents">Agents</a> and let it use
+        <code>draft_pack</code>.
     </p>
-</details>
+</section>
 
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
@@ -345,6 +369,11 @@
                 {#if isLive(job)}<span class="live-dot"></span>{/if}
                 {stateWord(job)}
             </span>
+            {#if isLive(job)}
+                <span class="meta clock" title="Time since this run started">
+                    {elapsed(job.started_at ?? job.created_at, now)}
+                </span>
+            {/if}
         </h3>
         {#if isLive(job)}
             <div class="bar" role="progressbar" aria-valuenow={percent(job)}>
@@ -352,6 +381,9 @@
             </div>
         {/if}
         <p class="meta">{job.message || "…"}</p>
+        {#if isLive(job) && lastLine(job)}
+            <p class="meta tail" title="Latest line of the log">{lastLine(job)}</p>
+        {/if}
         <p class="row">
             <button
                 onclick={() => (open = open === job.job_id ? null : job.job_id)}

@@ -600,6 +600,15 @@ def test_a_failure_kriko_recognises_names_the_next_action(tmp_path):
     assert "no headroom" in said
 
 
+def test_the_login_hint_names_the_cli_that_failed():
+    """B146: a Mistral Vibe login failure told the reader to run `claude`."""
+    vibe = next(one for one in harness_mod.KNOWN if one.id == "mistral-vibe")
+    said = harness_mod._hint("error: not logged in", vibe)
+    assert "`vibe`" in said and "Mistral Vibe" in said
+    assert "claude" not in said.lower()
+    assert "{" not in harness_mod._hint("usage limit reached")
+
+
 def test_a_failure_we_do_not_recognise_is_reported_without_a_guess(tmp_path):
     """No hint beats a wrong hint. The CLI's own words still get through."""
     fake = _fake_stream(
@@ -1411,6 +1420,33 @@ def test_narration_is_capped_and_says_that_it_stopped(tmp_path, monkeypatch):
     researcher.gather(_task())
     assert len(seen) == 6
     assert "not shown" in seen[-1]
+
+
+def test_a_silent_run_says_it_is_still_working(tmp_path, monkeypatch):
+    """B146: "agents are very slow, like it seems like they are stuck".
+
+    `claude -p` prints a message only once it is whole, so a long answer is
+    minutes of an empty log on a healthy run. The stand-in prints one line and
+    then says nothing until it is told the reader saw a heartbeat — nothing
+    creates that file except a "still working" line reaching the log."""
+    monkeypatch.setattr(harness_mod, "HEARTBEAT_SECONDS", 0.3)
+    heard = tmp_path / "heard"
+    one = _streaming_cli(
+        tmp_path, [_search_event("first"), _reply([])], wait_for=heard
+    )
+    seen: list[str] = []
+
+    def log(line: str) -> None:
+        seen.append(line)
+        if line.startswith("still working"):
+            heard.touch()
+
+    researcher = HarnessResearcher(one, timeout=30)
+    researcher.on_action = log
+    researcher.gather(_task())
+    beats = [line for line in seen if line.startswith("still working")]
+    assert beats, seen
+    assert "Fake CLI" in beats[0] and " in;" in beats[0]
 
 
 def test_a_cli_that_cannot_stream_still_runs(monkeypatch):

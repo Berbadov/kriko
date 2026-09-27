@@ -1,6 +1,5 @@
 <script lang="ts">
     import { count, word } from "./plural";
-    import AgentPrefs from "./Agents.prefs.svelte";
     import Async from "./Async.svelte";
     import Icon from "./Icon.svelte";
     import Pick from "./Pick.svelte";
@@ -56,13 +55,6 @@
         costs = api.costs();
     });
 
-    // Re-ask (in AgentPrefs, below) reads a fresh /api/prefs on its own CLI
-    // list; this panel's copy of the same endpoint does not otherwise know
-    // to re-read (settings-13).
-    function onAgentsReasked() {
-        prefs = api.prefs();
-    }
-
     async function save(values: Record<string, string>) {
         failure = null;
         try {
@@ -103,7 +95,13 @@
         usd === null || usd === undefined ? "not measured" : `$${usd.toFixed(4)}`;
 </script>
 
-<AgentPrefs {keysVersion} onReask={onAgentsReasked} />
+<!-- B146: the full per-agent list rendered here as well as on Agents — the
+     same four rows twice, on the two screens the reader called "very crowded".
+     It lives on Agents; this is the pointer. -->
+<p class="meta pointer">
+    <Icon name="agents" size={15} /> Which coding agent runs, with which LLM and
+    effort, is set under <a href="#/agents">Agents</a>.
+</p>
 
 <section>
     <h3><Icon name="search" /> Which LLM, which search</h3>

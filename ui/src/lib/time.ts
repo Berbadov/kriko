@@ -39,3 +39,18 @@ export function stamp(at: string): string {
         minute: "2-digit",
     });
 }
+
+/** How long ago `at` was, as "45s" or "6m 12s" — for a run that is still going.
+ *
+ * B146: a live run showed one static sentence for minutes, and "it seems like
+ * they are stuck" was how anyone would read it. A counter that
+ * advances every second is the cheapest proof that the run is alive. */
+export function elapsed(at: string | null | undefined, now: number = Date.now()): string {
+    const date = parse(at ?? "");
+    if (!date) return "";
+    const whole = Math.max(0, Math.floor((now - date.getTime()) / 1000));
+    if (whole < 60) return `${whole}s`;
+    const minutes = Math.floor(whole / 60);
+    if (minutes < 60) return `${minutes}m ${String(whole % 60).padStart(2, "0")}s`;
+    return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+}
