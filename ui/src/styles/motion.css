@@ -103,6 +103,12 @@
     animation: kriko-settle var(--dur-slower) var(--ease-out) both;
 }
 
+/* A run asking the reader something (B147): three breaths on the mark, then
+ * still — enough to be seen arriving, not a light left blinking. */
+.asked-mark {
+    animation: kriko-breathe 2s var(--ease) 3;
+}
+
 /* Every "Loading…" in the app, without editing nine components. A spinner
  * would be a new element in each of them; this is the sentence they already
  * render, breathing, which is enough to say the wait is the app's and not the
@@ -128,8 +134,19 @@
         background-color: var(--panel-2);
     }
     .live-dot,
-    .state.loading {
+    .state.loading,
+    .asked-mark {
         animation: none;
         opacity: 1;
+    }
+    /* B147: the question panel and its "heard you" line land, not rise. */
+    .asked,
+    .asked .told {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+    .asked .chip {
+        transition: none;
     }
 }

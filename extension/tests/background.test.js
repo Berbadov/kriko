@@ -47,6 +47,20 @@ test("cancellation posts to the existing job endpoint", async () => {
   assert.deepEqual(h.state.requests[0].body, {});
 });
 
+test("a run's question is answered through say, or retried with the answer (B147)", async () => {
+  const h = loadBackground({ routes: {
+    "/api/jobs/j1/say": { job_id: "j1", delivered: true },
+    "/api/jobs/j1/retry": { job_id: "j2", kind: "pack_author" },
+  } });
+  const said = await send(h, { type: "JOB_SAY", payload: { job_id: "j1", text: "CASA" } });
+  assert.equal(said.delivered, true);
+  assert.deepEqual(h.state.requests[0].body, { text: "CASA" });
+  const again = await send(h, { type: "JOB_RETRY",
+    payload: { job_id: "j1", answers: { engine_code: "CASA" } } });
+  assert.equal(again.job_id, "j2");
+  assert.deepEqual(h.state.requests[1].body, { answers: { engine_code: "CASA" } });
+});
+
 const MANIFEST = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "manifest.json"), "utf8"));
 

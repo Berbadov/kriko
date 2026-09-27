@@ -2225,6 +2225,12 @@ class HarnessResearcher(AgentResearcher):
             return False
         if proc.stdin is None or proc.stdin.closed:
             return False
+        # Not before the brief is through: two writers on one pipe interleave,
+        # and a reply spliced into the middle of the opening is two broken
+        # messages. Left unread, so it is delivered on the next tick instead.
+        opening_sent = getattr(self, "_opening_sent", None)
+        if opening_sent is not None and not opening_sent.is_set():
+            return False
         try:
             lines = self.replies()
         except Exception:  # noqa: BLE001 - narration must never end a run
@@ -2326,32 +2332,36 @@ class HarnessResearcher(AgentResearcher):
             ) from exc
         self._assign_job(job, proc)
 
-        # The opening message, before anything else is read. A conversational
-        # child has no prompt until this lands — it is the run, not a preamble
-        # to it — so a failure here is fatal rather than narrated, and the
-        # caller retries the ordinary way.
+        # The opening message. A conversational child has no prompt until this
+        # lands — it is the run, not a preamble to it.
+        #
+        # **Written on its own thread (B147).** It used to be written here,
+        # inline, before stdout had a reader. A brief larger than the pipe
+        # buffer (the pack author's is ~10 KB; Windows gives a pipe 4 KB)
+        # blocks the write until the child reads — and `claude` prints its
+        # `init` event, kilobytes of tool and skill names, *before* reading.
+        # Nobody was reading that, so the child blocked on stdout, the write
+        # blocked on stdin, and the run sat silent with no heartbeat, no
+        # cancel and not even the timeout timer started, until the reader
+        # closed the app. Ten minutes of one reader's evening, reproduced by
+        # `test_a_brief_larger_than_the_pipe_does_not_deadlock_a_chatty_child`.
+        self._opening_sent = None
+        opening_failed: list[BaseException] = []
         if opening:
-            try:
-                assert proc.stdin is not None
-                proc.stdin.write(opening.rstrip("\n") + "\n")
-                proc.stdin.flush()
-            except (OSError, ValueError, AssertionError) as exc:
-                # A broken pipe here means the child died before reading the
-                # opening message — the reason is on its stderr, not in this
-                # exception, and until this read the reader saw only "would
-                # not take the brief on stdin" with nothing to act on
-                # (knowledge-6).
-                stderr_tail = ""
+            sent = threading.Event()
+            self._opening_sent = sent
+
+            def _send_opening() -> None:
                 try:
-                    if proc.stderr is not None and proc.poll() is not None:
-                        stderr_tail = proc.stderr.read().strip()
-                except (OSError, ValueError):
-                    pass
-                self._kill_tree(proc, job)
-                detail = f": {stderr_tail}" if stderr_tail else ""
-                raise RuntimeError(
-                    f"{self.harness.label} would not take the brief on stdin{detail}"
-                ) from exc
+                    assert proc.stdin is not None
+                    proc.stdin.write(opening.rstrip("\n") + "\n")
+                    proc.stdin.flush()
+                except (OSError, ValueError, AssertionError) as exc:
+                    opening_failed.append(exc)
+                finally:
+                    sent.set()
+
+            threading.Thread(target=_send_opening, daemon=True).start()
 
         began = time.monotonic()
         said: list[str] = []
@@ -2541,6 +2551,15 @@ class HarnessResearcher(AgentResearcher):
             closer.join(timeout=5.0)
 
         self.actions = said
+        if opening_failed and not self._spoke:
+            # The child died before it read the brief. The reason is on its
+            # stderr, not in the broken-pipe exception (knowledge-6), and the
+            # caller retries the ordinary way on this error.
+            tail = "".join(errors).strip()
+            raise RuntimeError(
+                f"{self.harness.label} would not take the brief on stdin"
+                + (f": {tail}" if tail else "")
+            ) from opening_failed[0]
         if expired.is_set():
             raise TimeoutError(
                 f"{self.harness.label} did not finish within {int(self.timeout)}s"

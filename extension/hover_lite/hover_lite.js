@@ -97,6 +97,10 @@
     researchContext: "",
     researchJob: null,
     researchMessage: "",
+    // B147: what the reader picked for the run's own questions, and what
+    // became of saying it — per question id, for the chips to show.
+    researchAnswers: {},
+    researchTold: {},
     researchState: "",
     cancelling: false,
     /* Which step the run in flight has reached.
@@ -651,6 +655,8 @@
     state.researching = subject_id || q;
     state.researchState = "starting";
     state.researchMessage = "Starting…";
+    state.researchAnswers = {};
+    state.researchTold = {};
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: allowDraft }),
@@ -669,6 +675,53 @@
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
+  }
+
+  /* The run's question, answered with one click (B147).
+   *
+   * It used to reach the reader as a JSON dump in the app's log. A live run
+   * hears the answer now, through the same reply pipe as the app's box; a run
+   * that already ended is started again with the answer applied, and the
+   * panel follows the new run the way it followed the first. */
+  function answerQuestion(question, option) {
+    const job = state.researchJob;
+    if (!job?.job_id) return;
+    state.researchAnswers = { ...state.researchAnswers, [question.id]: option };
+    if (state.researching) {
+      state.researchTold = { ...state.researchTold, [question.id]: "Telling it..." };
+      renderResearch();
+      chrome.runtime.sendMessage({ type: "JOB_SAY", payload: {
+        job_id: job.job_id, text: `Answer to "${question.ask}": ${option}`,
+      } }, (response) => {
+        const heard = !chrome.runtime.lastError && response?.ok && response.delivered;
+        state.researchTold = { ...state.researchTold,
+          [question.id]: heard ? "It heard you." : "Not delivered. The run may have ended." };
+        renderResearch();
+      });
+      return;
+    }
+    const answers = state.researchAnswers;
+    state.researching = job.job_id;
+    state.researchState = "starting";
+    state.researchMessage = "Running again with your answer...";
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.ok || !response.job_id) {
+          state.researching = null;
+          state.researchState = "failed";
+          state.researchMessage = response?.error || "Could not run it again. Open Kriko and retry.";
+          renderResearch();
+          return;
+        }
+        state.researchJob = { job_id: response.job_id, kind: response.kind || job.kind };
+        state.researchAnswers = {};
+        state.researchTold = {};
+        state.researchState = "queued";
+        state.researchMessage = "Queued";
+        renderResearch();
+        pollResearchJob(response.job_id);
+      });
   }
 
   function cancelResearch() {
@@ -701,6 +754,7 @@
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
     const cost = costLine();
+    const asked = (state.researchJob?.attention?.questions || []).filter((q) => q && q.id);
     slot.innerHTML = `
       <section class="lite-research" data-state="${escapeHtml(state.researchState)}">
         <strong>Research this product</strong>
@@ -710,6 +764,19 @@
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
         ${!target ? `<p>A product-specific draft is not automatically installed knowledge. Creating a draft uses your coding-agent subscription, not API research.</p>` : ""}
         <p class="lite-research-status" role="status">${escapeHtml(state.researchMessage)}</p>
+        ${asked.length ? `<div class="lite-asked" aria-live="polite">
+          <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
+            ? "Your agent has a question. Pick an answer and it hears it now."
+            : "Your agent had a question and went with its guess. Pick an answer to run it again."}</p>
+          ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${escapeHtml(q.ask)}</legend>
+            ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
+              <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
+                aria-pressed="${state.researchAnswers[q.id] === o}">${escapeHtml(o)}${
+                o === q.default && !state.researchAnswers[q.id] ? ` <span class="lite-chip-note">its guess</span>` : ""}</button>`).join("")}</div>`
+              : `<p class="lite-told">Answer this one in Kriko: open the research job below.</p>`}
+            ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
+          </fieldset>`).join("")}
+        </div>` : ""}
         ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>Research ${target ? "selected subject" : "in installed packs"}</button>
           ${!target ? `<button type="button" class="lite-research-draft" ${!state.researchPlane ? "disabled" : ""}>Create product-specific draft</button>` : ""}` : ""}
         ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
@@ -729,6 +796,11 @@
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
     slot.querySelector(".lite-research-draft")?.addEventListener("click", () => startResearch(true));
     slot.querySelector(".lite-research-cancel")?.addEventListener("click", cancelResearch);
+    slot.querySelectorAll(".lite-chip").forEach((chip) => chip.addEventListener("click", () => {
+      const question = asked[Number(chip.dataset.q)];
+      const option = question?.options?.[Number(chip.dataset.o)];
+      if (question && option !== undefined) answerQuestion(question, option);
+    }));
     slot.querySelector(".lite-research-output")?.addEventListener("click", () => {
       const route = `jobs/${encodeURIComponent(state.researchJob.job_id)}`;
       openInApp(route, appUrlFor(route));
