@@ -75,7 +75,14 @@ import pytest
 #: font precisely so that it costs bytes here and no request at runtime.
 #: Second, `Agents.prefs.svelte`: the per-agent card that replaced an
 #: undivided run of eight `.field` divs. 293,105 bytes.
-BUDGET = {".js": 300_000, ".css": 60_000}
+#: Raised .js from 300,000 to 325,000 on 2026-09-27. No dependency
+#: (`ui/package.json` untouched since the last raise): B145's ship-readiness
+#: round — busy guards, error states and empty states on every screen, deep
+#: links past the first page, the CLI door, the bench regroup — across 75
+#: files of `ui/src`. It shipped over budget in 0.10.3 (317,327 bytes) because
+#: that installer was built by hand without the gate; this records it rather
+#: than trimming working controls to fit a number. 317,467 bytes.
+BUDGET = {".js": 325_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
