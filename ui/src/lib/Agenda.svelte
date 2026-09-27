@@ -31,6 +31,11 @@
         .catch(() => (failed = true));
 
     const rows = $derived(data?.rows ?? []);
+    /* B146: the whole agenda, uncapped, was three screens of this page. The
+     * top few are what an agent picks first; the rest wait behind a press. */
+    const SHOWN = 5;
+    let all = $state(false);
+    const visible = $derived(all ? rows : rows.slice(0, SHOWN));
 
     const keyOf = (row: AgendaRow): string =>
         `${row.kind} ${row.subject_id} ${row.claim_id ?? ""} ${row.identity ?? ""}`;
@@ -56,7 +61,7 @@
             <code>research_agenda</code>.
         </p>
         <ul class="agenda">
-            {#each rows as row (keyOf(row))}
+            {#each visible as row (keyOf(row))}
                 <li>
                     <div class="agenda-head">
                         <span class="badge" class:fact-warn={kindTone(row.kind) === "warn"}
@@ -66,18 +71,23 @@
                         {#if demandWord(row)}
                             <span class="meta">{demandWord(row)}</span>
                         {/if}
+                        <button class="link-ish copy" onclick={() => copy(row)}>
+                            {copied === keyOf(row) ? copyWord(true)
+                                : blocked === keyOf(row) ? copyWord(false) : "Copy as a prompt"}
+                        </button>
                     </div>
-                    <p class="meta">{row.why}</p>
-                    <button class="link-ish" onclick={() => copy(row)}>
-                        {copied === keyOf(row) ? copyWord(true)
-                            : blocked === keyOf(row) ? copyWord(false) : "Copy as a prompt"}
-                    </button>
+                    <p class="meta why">{row.why}</p>
                     {#if blocked === keyOf(row)}
                         <textarea class="copy-fallback" readonly rows="4">{promptFor(row)}</textarea>
                     {/if}
                 </li>
             {/each}
         </ul>
+        {#if rows.length > SHOWN}
+            <button class="ghost small" onclick={() => (all = !all)} aria-expanded={all}>
+                {all ? "Show the top " + SHOWN : "Show all " + rows.length}
+            </button>
+        {/if}
         {#if data?.note}
             <!-- A worse ordering, said out loud. Silence here would let a
                  fresh install's alphabetical list read as a considered one. -->
@@ -92,6 +102,18 @@
 </article>
 
 <style>
+    .agenda-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.3rem var(--s-2);
+    }
+    .copy {
+        margin-inline-start: auto;
+    }
+    .why {
+        margin: 0.15rem 0 0;
+    }
     .copy-fallback {
         display: block;
         width: 100%;

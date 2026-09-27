@@ -101,6 +101,12 @@ HELP_TIMEOUT_SECONDS = 12.0
 CHILD_ENCODING_ENV = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
 
 
+def _minutes(seconds: float) -> str:
+    """`75` → `1m 15s`; `40` → `40s`. For a log line a person reads."""
+    whole = int(seconds)
+    return f"{whole // 60}m {whole % 60:02d}s" if whole >= 60 else f"{whole}s"
+
+
 def _lines(stream, tick: float):
     """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
 
@@ -1356,6 +1362,13 @@ TRANSCRIPT_TAIL = 512 * 1024
 #: A real research run narrates a few dozen.
 MAX_NARRATED = 400
 
+#: How long a run may print nothing before its log says it is still alive.
+#: Reported as "they seem like they are stuck" (B146): `claude -p` in
+#: stream-json emits a message only once it is whole, so one long answer is
+#: minutes of an empty log on a run that is working normally. The line is the
+#: difference between "working" and "hung" that the reader could not see.
+HEARTBEAT_SECONDS = 30.0
+
 #: Events that are machinery rather than actions — session bookkeeping, the
 #: partial-token frames, the command list. Named rather than filtered by
 #: "anything I do not recognise", so a *new* event type shows up as a line
@@ -1637,13 +1650,13 @@ def narrate(event: dict) -> str:
 #: the reason `_why` extracted, lowercased, first hit wins.
 HINTS = (
     (("usage limit", "rate limit", "limit reached", "quota"),
-     "your Claude subscription has no headroom right now. Wait for the reset "
-     "the message names, or switch to another plane on the Agents screen."),
+     "{label}'s account has no headroom right now. Wait for the reset "
+     "the message names, or switch to another agent on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",
       "invalid api key", "oauth"),
-     "the CLI is not logged in, and only you can log it in -- no API call can "
+     "{label} is not logged in, and only you can log it in -- no API call can "
      "do it on its behalf. Open the terminal in this app (Ctrl+`), run "
-     "`claude`, and follow the login prompt (or type `/login`). Then press "
+     "`{cli}`, and follow its login prompt. Then press "
      "this again. Kriko Console in your Start menu opens the same shell "
      "without the app."),
     (("credit balance", "billing", "payment"),
@@ -1665,18 +1678,23 @@ HINTS = (
 )
 
 
-def _hint(reason: str) -> str:
+def _hint(reason: str, harness: "Harness | None" = None) -> str:
     """The next action for a failure class Kriko recognises, or nothing.
 
     A reason with no action attached is only half of what a reader needs.
     `Claude Code exited 1: error_during_execution` says what happened; it
     does not say whether to wait, log in, or report it — and a reader who has
     now watched this button fail in two releases has earned the second half.
+
+    Named for the CLI that failed (B146): the login hint said "run `claude`"
+    under a Mistral Vibe failure, which sends the reader to the wrong tool.
     """
     low = (reason or "").lower()
+    label = harness.label if harness else "The CLI"
+    cli = Path(harness.executable).stem if harness else "the CLI"
     for needles, hint in HINTS:
         if any(needle in low for needle in needles):
-            return hint
+            return hint.format(label=label, cli=cli)
     return ""
 
 
@@ -2113,7 +2131,7 @@ class HarnessResearcher(AgentResearcher):
             # only counts what succeeded is a plane whose cost column lies.
             self._meter(envelope)
             reason = _why(envelope, stdout, stderr)
-            hint = _hint(reason)
+            hint = _hint(reason, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} exited {code}: {reason}"
                 + (f" -- {hint}" if hint else "")
@@ -2356,6 +2374,9 @@ class HarnessResearcher(AgentResearcher):
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
         narrated = 0
+        #: When the child last printed anything, and when the log last heard
+        #: from this run at all (a line or a heartbeat) — see HEARTBEAT_SECONDS.
+        last_heard = last_line = began
         #: When a turn ended on a question, and how long its answer may take.
         waiting_since: float | None = None
         waiting_for = 0.0
@@ -2372,6 +2393,18 @@ class HarnessResearcher(AgentResearcher):
                     # no to.
                     if self.check_cancelled is not None:
                         self.check_cancelled()
+                    now = time.monotonic()
+                    if say is not None and now - last_heard >= HEARTBEAT_SECONDS:
+                        last_heard = now
+                        try:
+                            say(
+                                f"still working — {_minutes(now - began)} in; "
+                                f"{self.harness.label} is thinking and has not "
+                                f"printed anything new for "
+                                f"{_minutes(now - last_line)}"
+                            )
+                        except Exception:  # noqa: BLE001 — see the docstring
+                            say = None
                     # A conversational child that has not said one word is a
                     # pipe that did not arrive, not a model thinking hard: the
                     # `init` event comes before the first API call. Give up
@@ -2392,6 +2425,7 @@ class HarnessResearcher(AgentResearcher):
                         waiting_since = None
                     continue
                 self._spoke = True
+                last_heard = last_line = time.monotonic()
                 self._keep(line)
                 # A child reading messages does not exit when its turn ends —
                 # it waits for the next one, and stdout stays open while it
@@ -2839,7 +2873,7 @@ class HarnessResearcher(AgentResearcher):
             elif event.get("type") == "model.call_failure":
                 failure = failure or str(data.get("errorMessage") or "").strip()
         if not said and failure:
-            hint = _hint(failure)
+            hint = _hint(failure, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} reported an error: {failure[:500]}"
                 + (f" -- {hint}" if hint else "")
@@ -2871,7 +2905,7 @@ class HarnessResearcher(AgentResearcher):
             # failure: the CLI reports a refusal, a limit or a billing
             # stop in the envelope and exits 0 about it.
             reason = _why(envelope, stdout, "")[:500]
-            hint = _hint(reason)
+            hint = _hint(reason, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} reported an error: {reason}"
                 + (f" -- {hint}" if hint else "")
@@ -2886,7 +2920,7 @@ class HarnessResearcher(AgentResearcher):
                 # needed listed as denied. An empty gather downstream would
                 # read as "researched, found nothing" — it was neither.
                 reason = _why(envelope, stdout, "")[:500]
-                hint = _hint(reason)
+                hint = _hint(reason, self.harness)
                 raise RuntimeError(
                     f"{self.harness.label} answered nothing: {reason}"
                     + (f" -- {hint}" if hint else "")

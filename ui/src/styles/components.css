@@ -1688,22 +1688,31 @@ button.link-ish {
     gap: var(--s-2);
 }
 
-/* The authoring form, folded. A reader who came to watch a run should not
-   have to scroll past a five-field form to reach the list; a reader starting
-   a pack is doing it deliberately and will open it. */
-details.authoring {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+/* The authoring form. It was folded while it held five fields; it is one
+   field and a row of dials now, and folding hid exactly the agent, effort and
+   time-limit controls a reader looks for before pressing it (B146). */
+.authoring {
     padding: var(--s-3);
     margin-block: var(--s-4);
 }
-details.authoring summary {
-    cursor: pointer;
-    font-weight: 600;
+.authoring > h3 {
+    margin: 0 0 var(--s-1);
 }
-details.authoring > .meta {
+.authoring > .meta {
     max-width: var(--measure);
     margin-block: var(--s-2);
+}
+/* A live run's clock and last log line: the two signs it is not stuck. */
+.job .clock {
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: auto;
+}
+.job .tail {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 form.ask {
     display: grid;
