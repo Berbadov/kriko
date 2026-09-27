@@ -77,6 +77,7 @@ KINDS = {
     "research": "research",
     "agenda_run": "agenda",
     "pack_author": "author",
+    "quick_look": "research",
     "pack_amend": "author",
     "verify": "recheck",
     "pack_build": "author",

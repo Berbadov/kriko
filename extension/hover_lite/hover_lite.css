@@ -1506,3 +1506,13 @@
 .lite-verdict[data-verdict="no-adapter"] {
   border-left-color: var(--border);
 }
+
+/* B148: a quick look's cards, in the research slot, before the deep run ends. */
+.lite-quick { display: grid; gap: 8px; margin: 10px 0; }
+.lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
+.lite-quick-cards { display: grid; gap: 8px; }
+.lite-quick-src {
+  margin: 8px 0 0; padding: 6px 10px; border-left: 2px solid var(--accent);
+  color: var(--fg-body); font-size: 12px; font-style: italic;
+}
+.lite-quick-src a { color: var(--accent); font-style: normal; }

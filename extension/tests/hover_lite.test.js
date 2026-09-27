@@ -822,3 +822,43 @@ test("an answer clears it — something read the page after all", () => {
   p.deliverEntry(ENTRY);
   assert.equal(p.shadow().querySelector(".lite-verdict"), null);
 });
+
+test("an unknown product gets one button: quick cards now, then the deeper run (B148)", () => {
+  const RISK = { title: "Gearbox judder", body: "It judders.", advice: "Drive it cold.",
+    severity: "high", strength: "reported", source_count: 1, domain: "example.org", quick: true,
+    sources: [{ url: "https://example.org/a", domain: "example.org", quote: "it judders" }] };
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") {
+      return { ok: true, job: { job_id: "q1", kind: "quick_look", deepen_job_id: "d1" } };
+    }
+    if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
+      return { ok: true, job: { state: "succeeded", done: true, result: {
+        assumed: "the 1.6 diesel", risks: [RISK], dropped: 1, deepen_job_id: "d1" } } };
+    }
+    if (message.type === "JOB_STATUS") {
+      return { ok: true, job: { state: "running", done: false, progress: 0.2, message: "reading" } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  const buttons = [...p.shadow().querySelectorAll(".lite-research button")].map((b) => b.textContent.trim());
+  assert.ok(buttons.includes("Research this product"), buttons.join(" | "));
+  assert.equal(p.shadow().querySelector(".lite-research-draft"), null, "one button, not two");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  p.click(".lite-research-start");
+
+  const asked = p.sent.find((m) => m.type === "RESEARCH_PRODUCT");
+  assert.equal(asked.payload.allow_draft, true);
+  assert.equal(asked.payload.url, p.dom.window.location.href);
+  const slot = p.shadow().querySelector(".lite-research");
+  assert.match(slot.textContent, /Gearbox judder/);
+  assert.match(slot.textContent, /Taken as: the 1\.6 diesel/);
+  assert.match(slot.querySelector(".lite-quick-src").textContent, /it judders/);
+  assert.equal(slot.querySelector(".lite-quick-src a").getAttribute("href"), "https://example.org/a");
+  // The panel moved on to the deep run rather than stopping at "done".
+  assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"));
+  assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
+});

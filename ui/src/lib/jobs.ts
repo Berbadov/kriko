@@ -21,6 +21,7 @@ export const KINDS: Record<string, string> = {
     agenda_run: "Research",
     research_undo: "Undo",
     pack_author: "New pack",
+    quick_look: "Quick look",
     pack_build: "Build",
     pack_update: "Update",
     bench: "Benchmark",

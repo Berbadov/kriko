@@ -18,6 +18,13 @@ mysteries — see `JobRunner.recover`.
 cost-heavy and two concurrent builds writing the same pack directory is a bug
 we should not be able to express. Serial is the feature.
 
+**One exception: the quick lane.** A quick look (B148) is one short agent
+call that writes nothing to the store, and the reader is waiting on the
+listing for it. Queued behind a forty-minute pack author — which it is
+usually submitted *beside* — it would be the slowness it exists to fix. So
+kinds in `QUICK_KINDS` get their own small pool. Nothing in it writes a pack
+directory, which is the only reason the main lane is serial.
+
 **Cooperative cancel.** Cancel sets a flag the handler reads between steps.
 Killing a thread mid-write is how a half-installed pack happens, so a running
 job is asked to stop, never made to.
@@ -32,6 +39,11 @@ from dataclasses import dataclass
 
 from app import operations
 from app.web import state
+
+
+#: Kinds that never write the store or a pack directory, and are short enough
+#: that queueing them behind long work would defeat them.
+QUICK_KINDS = frozenset({"quick_look"})
 
 
 class Cancelled(Exception):
@@ -127,6 +139,7 @@ class JobRunner:
         self.settings = settings
         self.handlers = handlers
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kriko-job")
+        self._quick = ThreadPoolExecutor(max_workers=2, thread_name_prefix="kriko-quick")
         self._lock = threading.Lock()
 
     # Each job opens its own connection. sqlite3 connections belong to the
@@ -151,7 +164,8 @@ class JobRunner:
             job_id = state.create_job(conn, kind, params)
         finally:
             conn.close()
-        self._pool.submit(self._run, job_id, kind, params)
+        pool = self._quick if kind in QUICK_KINDS else self._pool
+        pool.submit(self._run, job_id, kind, params)
         return job_id
 
     def _run(self, job_id: str, kind: str, params: dict) -> None:
@@ -223,3 +237,4 @@ class JobRunner:
 
     def shutdown(self, wait: bool = False) -> None:
         self._pool.shutdown(wait=wait, cancel_futures=True)
+        self._quick.shutdown(wait=wait, cancel_futures=True)
