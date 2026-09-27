@@ -359,7 +359,9 @@ def launch(
     note = (
         "The window is a separate browser profile — it has to be, because a "
         "browser that is already running ignores an extension handed to it on "
-        "the command line. Your bookmarks and logins are not in it."
+        "the command line. Your bookmarks and logins are not in it. Recent "
+        "Chrome releases refuse to load an extension this way; if Status "
+        "stays waiting, the steps below are the install."
     )
 
     browser = extension.find_chromium()
@@ -384,12 +386,25 @@ def launch(
     # front of them: the status card polls, so it turns green here while they
     # are looking at the listing over there.
     landing = _landing(store, app_state, str(request.base_url))
-    error = extension.launch_with_extension(browser, target, profile, landing=landing)
+    # A browser that has checked in already has Kriko, loaded from `target`
+    # and refreshed by the `stage` above — so the listing opens *there*. The
+    # separate profile is only for a reader who has never installed it, and
+    # current Chrome refuses to load an extension into it (see
+    # `launch_with_extension`), which is why the manual steps stay on screen.
+    own = bool(state.extension_sightings(app_state))
+    if own:
+        note = (
+            "Opened in the browser Kriko already lives in — its files were "
+            "refreshed just now, so the listing gets this version."
+        )
+    error = extension.launch_with_extension(
+        browser, target, profile, landing=landing, own_profile=own
+    )
     return {
         "launched": not error,
         "browser": browser,
         "path": str(target),
-        "profile": str(profile),
+        "profile": "" if own else str(profile),
         "landing": landing,
         "note": note,
         "error": error,
