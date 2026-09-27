@@ -196,5 +196,29 @@
     }
     .key > .meta {
         max-width: var(--measure);
+        margin-block: var(--s-1);
+    }
+    /* B146: the paste field, Save and Forget on one line rather than a
+       panel inside the card — four keys were two screens of Settings. */
+    .key form.ask {
+        display: flex;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin: var(--s-1) 0 0;
+        padding: 0;
+        background: none;
+        border: 0;
+    }
+    .key form.ask > .field {
+        flex: 1 1 16rem;
+        width: auto;
+        margin: 0;
+    }
+    .key {
+        padding: var(--s-2) var(--s-3);
+    }
+    .keys {
+        gap: var(--s-2);
     }
 </style>

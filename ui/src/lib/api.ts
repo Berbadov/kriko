@@ -221,11 +221,13 @@ export const api = {
      * rather than a request: it spawns an agent that searches for minutes, and
      * the reply is worth outliving the page. Installs nothing.
      */
-    authorPack: (category: string, harness = "") =>
-        postJson<{ job_id: string; kind: string }>(
-            "/api/packs/author",
-            harness ? { category, harness } : { category },
-        ),
+    authorPack: (category: string, harness = "", timeoutSeconds = 0) =>
+        postJson<{ job_id: string; kind: string }>("/api/packs/author", {
+            category,
+            ...(harness ? { harness } : {}),
+            // 0 is the server's own ceiling; only a chosen limit goes on the wire.
+            ...(timeoutSeconds > 0 ? { timeout_seconds: timeoutSeconds } : {}),
+        }),
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),

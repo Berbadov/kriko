@@ -258,12 +258,13 @@
     .choice.on {
         border-color: var(--accent);
     }
+    /* Four short rows side by side where they fit (B146). */
     .checks {
         list-style: none;
         padding: 0;
         margin-block: var(--s-3);
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
         gap: var(--s-2);
     }
     .check {

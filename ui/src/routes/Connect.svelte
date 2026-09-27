@@ -118,14 +118,11 @@
 
 <h2><Icon name="connect" size={22} /> Connect an agent</h2>
 
-<article class="card">
-    <p class="meta">
-        Kriko gathers nothing on its own. It hands a coding agent a brief — what to look
-        for and what counts as evidence — and checks every quote against the page it came
-        from. Connecting writes this app's address into the harness's own config, so the
-        agent reads and writes <em>this</em> window's knowledge and not some other copy.
-    </p>
-</article>
+<p class="lede">
+    Kriko gathers nothing on its own: it hands a coding agent a brief and checks every
+    quote against the page it came from. Connecting writes this app's address into the
+    harness's own config, so the agent works on <em>this</em> window's knowledge.
+</p>
 
 {#if loadError}
     <Failure error={loadError} retry={refresh} />
@@ -137,7 +134,7 @@
                 <li class="target">
                     <span>
                         <strong>{target.label}</strong>
-                        <span class="meta">{target.path}</span>
+                        <span class="meta" title={target.path}>{target.path}</span>
                     </span>
                     <span class="badge state-{target.state}">{WORDS[target.state]}</span>
                     {#if target.state !== "unreadable"}
@@ -195,16 +192,16 @@
     <AgentPrefs />
 
     <article class="card">
-        <h3><Icon name="ok" /> Does it actually run?</h3>
+        <div class="cardhead">
+            <h3><Icon name="ok" /> Does it actually run?</h3>
+            <button disabled={verifying} onclick={verify}>
+                {verifying ? "Starting…" : "Verify"}
+            </button>
+        </div>
         <p class="meta">
-            Starts the same command the config names and waits for it to introduce
-            itself. This is the half a written config cannot tell you: a moved virtual
-            environment or a missing module fails here and nowhere else, and in a harness
-            it surfaces only as an agent that returns nothing.
+            Starts the command the config names and waits for it to answer — a moved
+            environment or missing module fails here, not silently inside a harness.
         </p>
-        <button disabled={verifying} onclick={verify}>
-            {verifying ? "Starting…" : "Verify"}
-        </button>
         {#if verdict?.ok}
             <p class="state ok">Answered as <code>{verdict.server}</code>.</p>
         {:else if verdict}
@@ -234,13 +231,13 @@
                 installed — so updating a pack updates what counts as a good finding,
                 without updating this app.
             </p>
-            <ol>
-                {#each data[2].steps as step (step.tool)}
-                    <li><code>{step.tool}</code> — {step.why}</li>
-                {/each}
-            </ol>
             <details>
-                <summary>Read the skill</summary>
+                <summary>The {data[2].steps.length} steps, and the skill itself</summary>
+                <ol>
+                    {#each data[2].steps as step (step.tool)}
+                        <li><code>{step.tool}</code> — {step.why}</li>
+                    {/each}
+                </ol>
                 <pre>{data[2].body}</pre>
             </details>
         {:else if disabled.length}
@@ -277,6 +274,16 @@
 {/if}
 
 <style>
+    .cardhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-2);
+        flex-wrap: wrap;
+    }
+    .cardhead h3 {
+        margin: 0;
+    }
     h2,
     h3 {
         display: flex;
@@ -291,10 +298,19 @@
         padding: var(--s-2) 0;
         border-bottom: 1px solid var(--line);
     }
-    .target span:first-child {
+    /* The name and path take the slack and the path truncates, so a long
+       config path (Claude Desktop's is under AppData\Roaming) no longer pushes
+       its Connect button onto a line of its own (B146). */
+    .target > span:first-child {
         display: flex;
         flex-direction: column;
-        min-width: 14rem;
+        flex: 1 1 14rem;
+        min-width: 0;
+    }
+    .target > span:first-child > .meta {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .state-connected {
         background: var(--low-soft);
