@@ -34,6 +34,7 @@ factory has a chance to fail.
 import logging
 import os
 import sys
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -46,6 +47,36 @@ MAX_BYTES = 1_000_000
 BACKUPS = 3
 
 _FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+
+#: How long to wait before trying a blocked rollover again.
+ROLLOVER_RETRY_SECONDS = 60.0
+
+
+class _RotatingFileHandler(RotatingFileHandler):
+    """A rollover that cannot happen is skipped, never a lost line.
+
+    Windows refuses to rename a file another process has open — a second
+    Kriko, an MCP server, the test suite. The stock handler then drops the
+    record, and every record after it, because each one retries the rename:
+    the reader's app.log sat at 1,000,415 bytes and the 0.10.3 install that
+    ran on 2026-09-27 wrote not one line into it. So a failed rename keeps
+    appending to the file as it is, and tries again a minute later.
+    """
+
+    _retry_at = 0.0
+
+    def shouldRollover(self, record):
+        if time.monotonic() < self._retry_at:
+            return False
+        return super().shouldRollover(record)
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except OSError:
+            self._retry_at = time.monotonic() + ROLLOVER_RETRY_SECONDS
+            if self.stream is None:
+                self.stream = self._open()
 
 #: Set once `configure()` has run, so `/api/health` can name the file and
 #: Settings can offer to reveal it. `None` means logging never came up, which
@@ -157,7 +188,7 @@ def configure(path: Path | None = None, level: int = logging.INFO) -> Path | Non
         return None
 
     try:
-        handler = RotatingFileHandler(
+        handler = _RotatingFileHandler(
             wanted, maxBytes=MAX_BYTES, backupCount=BACKUPS, encoding="utf-8"
         )
     except Exception as exc:  # pragma: no cover - probe passed, open failed
