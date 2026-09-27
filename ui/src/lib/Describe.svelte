@@ -59,7 +59,11 @@
     async function load() {
         packs = (await api.packs()).filter((p) => p.enabled);
         if (packs.length) {
-            packId = packs[0].pack_id;
+            // B146: opened on whichever pack sorted first, which put a
+            // one-subject pack ahead of the one holding almost every claim.
+            // The pack that knows the most is the likeliest question.
+            packId = packs.reduce((best, p) => ((p.claims ?? 0) > (best.claims ?? 0) ? p : best))
+                .pack_id;
             await loadPack();
         }
     }
