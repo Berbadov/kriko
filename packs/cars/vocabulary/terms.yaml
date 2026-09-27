@@ -172,7 +172,7 @@
 - {term_id: hybrid, role: enum_value, parent: fuel, label: {en: Hybrid, tr: Hibrit},
    aliases: [hibrit, hybrid electric, e-tech, mhev, phev]}
 - {term_id: electric, role: enum_value, parent: fuel, label: {en: Electric, tr: Elektrik},
-   aliases: [elektrik, elektrikli, ev, bev]}
+   aliases: [elektrik, elektrikli, ev, bev, electricity]}
 - {term_id: lpg, role: enum_value, parent: fuel, label: {en: LPG, tr: LPG},
    aliases: [lpg & benzin, benzin & lpg, lpgli]}
 

@@ -48,8 +48,15 @@ def _glob_match(pattern: str, url: str) -> bool:
     return re.fullmatch(escaped, url, re.IGNORECASE) is not None
 
 
-def load_adapters(conn, pack_ids=None) -> list[dict]:
-    """Every adapter shipped by the enabled packs."""
+def load_adapters(conn, pack_ids=None, *, any_site: bool = False) -> list[dict]:
+    """Every adapter shipped by the enabled packs.
+
+    Host adapters by default. An **any-site** adapter (`"any_site": true`)
+    reads the structured product data a page publishes for search engines
+    rather than one site's markup, so it has no `match` and must never be
+    listed as a site Kriko reads — it is asked only after every host adapter
+    has declined (B149). `any_site=True` returns those instead.
+    """
     rows = conn.execute(
         "SELECT a.pack_id, a.name, a.content FROM pack_assets a"
         " JOIN packs p USING (pack_id)"
@@ -62,6 +69,8 @@ def load_adapters(conn, pack_ids=None) -> list[dict]:
             spec = json.loads(row["content"])
         except json.JSONDecodeError:
             continue        # a broken adapter must not break every other site
+        if not isinstance(spec, dict) or bool(spec.get("any_site")) != any_site:
+            continue
         spec["pack_id"] = row["pack_id"]
         out.append(spec)
     return out
@@ -217,6 +226,13 @@ def _pick(rule: dict, fields: dict, extras: dict, blocked: frozenset = frozenset
             for key, value in candidates:
                 if any(match(w, key) for w in wanted):
                     got = _apply(rule, value)
+                    # `known`: the label's value counts only as a value the
+                    # packs already hold (B149). An any-site page labels its
+                    # brand whatever the product is; without this a page of
+                    # another category reads as this pack's product, under a
+                    # brand the pack has never heard of.
+                    if got is not None and rule.get("known") and rule.get("vocabulary"):
+                        got = _from_vocabulary(rule, got, vocabulary or {})
                     if got is not None:
                         return got
 
@@ -270,6 +286,37 @@ def adapt(spec: dict, fields: dict, *, url: str = "", title: str = "",
     return Adapted(adapter_id=spec.get("id", "?"),
                    kind=spec.get("subject_kind", "product"),
                    identity=identity, context=context, unmapped=unmapped)
+
+
+def adapt_any_site(conn, fields: dict, *, url: str = "", title: str = "",
+                   description: str = "", vocabulary: dict | None = None):
+    """The best any-site reading of a page, or None when no pack claims it.
+
+    Every pack's any-site adapter reads the page; one counts only when it read
+    every key its `requires` names. That is the whole guard against a page of
+    one category being read as another's product: a pack requires identity
+    values its own vocabulary knows, and a foreign page carries none. Among readings
+    that qualify, the one that read the most identity wins, then the first
+    pack by id so the answer does not reshuffle between two visits.
+    """
+    best = None
+    for spec in sorted(load_adapters(conn, any_site=True),
+                       key=lambda one: (one.get("pack_id", ""), one.get("id", ""))):
+        # `page_types`: the schema.org types this pack's products publish as.
+        # The first gate, before any label is read — a toy's shop page is a
+        # plain Product, whatever real thing its title names.
+        wanted = {str(t).casefold() for t in spec.get("page_types") or ()}
+        if wanted and str(fields.get("ld:@type", "")).casefold() not in wanted:
+            continue
+        mapped = adapt(spec, fields, url=url, title=title,
+                       description=description, vocabulary=vocabulary)
+        if not mapped.identity:
+            continue
+        if any(key not in mapped.identity for key in spec.get("requires") or ()):
+            continue
+        if best is None or len(mapped.identity) > len(best[1].identity):
+            best = (spec, mapped)
+    return best
 
 
 def local_panel(spec: dict) -> dict:

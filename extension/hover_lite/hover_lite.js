@@ -94,6 +94,9 @@
     researchOpen: false,
     researchTarget: null,
     researchName: "",
+    // B149: a product page nothing installed knows — the name the page gave
+    // it, which is what the reader would type into Research anyway.
+    unknownProduct: "",
     researchContext: "",
     researchJob: null,
     researchMessage: "",
@@ -425,6 +428,7 @@
     if (entry.ok && entry.result) {
       // An answer means something read this page after all.
       state.noAdapter = false;
+      state.unknownProduct = "";
       state.errorCode = null;
       state.result = entry.result;
       state.errorMsg = null;
@@ -437,7 +441,12 @@
       // APP_NOT_RUNNING hid the settings button the live ANALYZE path already
       // knows to show. Both paths now read the same code.
       state.errorCode = entry.code || null;
-      if (entry.code === "NO_ADAPTER") {
+      state.unknownProduct = "";
+      if (entry.code === "UNKNOWN_PRODUCT") {
+        state.noAdapter = false;
+        state.unknownProduct = entry.productName || document.title || "";
+        setPipeline("idle");
+      } else if (entry.code === "NO_ADAPTER") {
         state.noAdapter = true;
         state.hostKnown = Boolean(entry.hostKnown);
         setPipeline("idle");
@@ -955,6 +964,17 @@
           return;
         }
         if (response && !response.ok) {
+          state.unknownProduct = "";
+          if (response.code === "UNKNOWN_PRODUCT") {
+            // A product, read — just not one any installed pack knows. The
+            // answer is the research button with its name already in it.
+            setPipeline("idle");
+            state.errorMsg = null;
+            state.noAdapter = false;
+            state.unknownProduct = response.productName || document.title || "";
+            renderBody();
+            return;
+          }
           if (response.code === "NO_ADAPTER") {
             /* Nothing installed reads this site.
              *
@@ -1873,6 +1893,30 @@
     if (!slot) return;
     slot.innerHTML = "";
 
+    if (state.unknownProduct && state.pipeline !== "result") {
+      const card = document.createElement("div");
+      card.className = "lite-verdict";
+      card.dataset.verdict = "unknown-product";
+      card.innerHTML = `
+        <div class="lite-verdict-head">
+          <span class="lite-verdict-word">New to Kriko</span>
+        </div>
+        <p class="lite-verdict-say">Kriko doesn't know
+          <strong class="lite-unknown-name"></strong> yet. A quick look answers
+          here in a minute or two, and a deeper run keeps going after.</p>
+      `;
+      card.querySelector(".lite-unknown-name").textContent = state.unknownProduct;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn lite-unknown-research";
+      button.textContent = "Research this product";
+      button.addEventListener("click", () =>
+        researchSubject({ label: state.unknownProduct }));
+      card.appendChild(button);
+      slot.appendChild(card);
+      return;
+    }
+
     if (state.noAdapter && state.pipeline !== "result") {
       const card = document.createElement("div");
       card.className = "lite-verdict";
@@ -2098,7 +2142,7 @@
 
     // The no-adapter card above already says everything there is to say;
     // "hit Analyze" under it reads as Kriko not noticing its own answer.
-    if (state.noAdapter) return;
+    if (state.noAdapter || state.unknownProduct) return;
 
     if (state.pipeline === "idle" || !state.result) {
       const empty = document.createElement("div");

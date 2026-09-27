@@ -453,6 +453,133 @@ function extractEquipment(panel) {
   return grouped;
 }
 
+// ── the page's own account of its product ───────────────────────────────
+//
+// B149. On a site no pack has an adapter for, the label scan above has nothing
+// to look for, and the reader saw it as "Panel, but empty" or "Wrong product
+// read". Most product pages already say what they sell, in a vocabulary no
+// site owns: schema.org JSON-LD, written for search engines. AutoScout24's
+// listing carries a `Car` with its manufacturer, model, production date,
+// gearbox and odometer; MediaMarkt's a `Product` with its brand and GTIN.
+//
+// So this reads that, and only that — no site's class names, no site's words.
+// The properties go on the wire as `ld:<property>` fields, flattened one level
+// (`ld:vehicleEngine.fuelType`), and what they *mean* for a category is the
+// pack's any-site adapter's business, exactly as the page's labels are.
+
+// schema.org types that name a thing someone buys. A closed vocabulary of the
+// standard, not data that grows with coverage.
+const LD_PRODUCT_TYPES = new Set([
+  "product", "individualproduct", "productmodel",
+  "vehicle", "car", "motorcycle", "busorcoach", "motorizedbicycle",
+]);
+// The more specific of the two when a page nests one in the other, as
+// AutoScout24 does (a `Product` whose offer's `itemOffered` is the `Car`).
+const LD_VEHICLE_TYPES = new Set(["vehicle", "car", "motorcycle", "busorcoach", "motorizedbicycle"]);
+
+function _ldTypes(node) {
+  const raw = node && node["@type"];
+  return (Array.isArray(raw) ? raw : [raw])
+    .filter((one) => typeof one === "string")
+    .map((one) => one.replace(/^.*[/#:]/, "").toLowerCase());
+}
+
+// Every object in the JSON-LD blocks, depth-first. Pages wrap the product in
+// `@graph`, in an `Offer`'s `itemOffered`, in a `BuyAction`'s `object`; walking
+// everything finds it wherever it is put.
+function _ldNodes() {
+  const out = [];
+  const walk = (value, depth) => {
+    if (depth > 8 || value === null || typeof value !== "object") return;
+    if (Array.isArray(value)) { value.forEach((one) => walk(one, depth + 1)); return; }
+    out.push(value);
+    Object.values(value).forEach((one) => walk(one, depth + 1));
+  };
+  for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try { walk(JSON.parse(script.textContent || ""), 0); } catch (_) { /* a broken block is skipped */ }
+  }
+  return out;
+}
+
+// A property's value as page text: a string as it is, a number as digits, a
+// `Brand` or `Organization` by its name, a `QuantitativeValue` by its value.
+function _ldText(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return cleanText(value) || "";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return _ldText(value[0]);
+  if (typeof value === "object") {
+    if (value.name !== undefined) return _ldText(value.name);
+    if (value.value !== undefined) return _ldText(value.value);
+  }
+  return "";
+}
+
+const LD_SKIP = new Set(["@context", "@id", "image", "url", "offers", "review",
+  "aggregaterating", "description", "logo", "potentialaction", "sameas"]);
+
+function _ldFlatten(node, fields) {
+  for (const [key, value] of Object.entries(node)) {
+    if (LD_SKIP.has(key.toLowerCase())) continue;
+    const text = _ldText(value);
+    if (text && text.length <= 200 && !fields[`ld:${key}`]) fields[`ld:${key}`] = text;
+    // One level into a nested thing (an engine, an odometer reading), so its
+    // own properties are readable by name; its unit rides beside the value.
+    const inner = Array.isArray(value) ? value[0] : value;
+    if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+      for (const [sub, subValue] of Object.entries(inner)) {
+        if (sub.startsWith("@") || LD_SKIP.has(sub.toLowerCase())) continue;
+        const subText = _ldText(subValue);
+        const name = `ld:${key}.${sub}`;
+        if (subText && subText.length <= 200 && !fields[name]) fields[name] = subText;
+      }
+    }
+  }
+}
+
+function _metaContent(name) {
+  const node = document.querySelector(`meta[property="${name}"], meta[name="${name}"]`);
+  return cleanText(node && node.getAttribute("content")) || "";
+}
+
+// What the page says it sells: `fields` of `ld:*` values, the product's name,
+// and whether the page declared a product at all (`typed`) — which is what
+// lets an every-site script stay silent on every page that is not one.
+function readStructuredProduct() {
+  const nodes = _ldNodes();
+  const products = nodes.filter((n) => _ldTypes(n).some((t) => LD_PRODUCT_TYPES.has(t)));
+  const vehicle = products.find((n) => _ldTypes(n).some((t) => LD_VEHICLE_TYPES.has(t)));
+  const outer = products.find((n) => n !== vehicle) || null;
+  const chosen = [vehicle, outer].filter(Boolean);
+
+  const fields = {};
+  for (const node of chosen) _ldFlatten(node, fields);
+  if (chosen.length) {
+    fields["ld:@type"] = _ldTypes(chosen[0])[0] || "";
+    const crumbs = nodes.find((n) => _ldTypes(n).includes("breadcrumblist"));
+    const names = ((crumbs && crumbs.itemListElement) || [])
+      .map((item) => _ldText(item && (item.name !== undefined ? item.name : item.item)))
+      .filter(Boolean);
+    if (names.length) fields["ld:breadcrumb"] = names.join(" > ").slice(0, 300);
+  }
+
+  const heading = cleanText(document.querySelector("h1")?.textContent) || "";
+  const ogTitle = _metaContent("og:title");
+  // A vehicle's own name before the listing's: AutoScout24's outer `Product`
+  // is named "Mercedes-Benz for € 18,000". The heading before the share title,
+  // which carries the shop's suffix ("… | MediaMarkt").
+  const name = [
+    vehicle && _ldText(vehicle.name),
+    outer && _ldText(outer.name),
+    heading.length <= 160 ? heading : "",
+    ogTitle.split(" | ")[0],
+    (cleanText(document.title) || "").split(" | ")[0],
+  ].find((one) => one && one.length >= 3) || "";
+
+  const typed = chosen.length > 0 || /product/i.test(_metaContent("og:type"));
+  return { fields, name: name.slice(0, 200), typed };
+}
+
 // ── the scrape ──────────────────────────────────────────────────────────
 
 const DESCRIPTION_SELECTORS = [
@@ -473,7 +600,10 @@ function buildScrape(knownLabels, panel) {
   // The info list wins a collision. Both tables label a row "Engine Capacity"
   // on the English page and they disagree; deciding which is believable is a
   // range question, and ranges are the adapter's.
-  const fields = { ...technical, ...infoList };
+  // The page's structured data rides beside its labels, never over them: a
+  // label the pack declared is the better evidence where both speak (B149).
+  const structured = readStructuredProduct();
+  const fields = { ...structured.fields, ...technical, ...infoList };
 
   let description = null;
   for (const selector of DESCRIPTION_SELECTORS) {
@@ -486,6 +616,9 @@ function buildScrape(knownLabels, panel) {
     title: textBySelector("h1.classifiedTitle") || textBySelector("h1"),
     description,
     fields,
+    // What the page says it sells, for the panel to name a product no pack
+    // recognises, and `typed` for the worker to leave a non-product page alone.
+    product: { name: structured.name, typed: structured.typed },
     listing: {
       damage_info: extractDamageInfo(panel),
       equipment: extractEquipment(panel),

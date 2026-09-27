@@ -146,12 +146,103 @@ test("the labels the content script scans for come from the installed pack", asy
   assert.deepEqual(ask.message.labels, ADAPTERS[0].labels);
 });
 
-test("a site no installed pack can read is never scraped at all", async () => {
-  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+// ── a site no pack reads (B149) ─────────────────────────────────────────
+//
+// It used to be never scraped at all, which is the reader's "in new sites
+// products can't be grabbed". Now every page is read for the product it
+// publishes; only a page that names none stays silent.
+
+const ELSEWHERE = "https://elsewhere.invalid/x";
+const shopPage = (product) => ({
+  url: ELSEWHERE, title: "Shop", description: "",
+  fields: { "ld:@type": "product", "ld:brand": "Makita" }, listing: {}, product,
+});
+
+test("a page load on a site nobody reads, naming no product, asks the app nothing", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(shopPage({ name: "Shop", typed: false })),
+  });
   await assert.rejects(
-    () => h.sandbox.runAnalysisForTab(1, "https://elsewhere.invalid/x"));
-  assert.equal(h.state.tabMessages.length, 0);
+    () => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
+    (error) => error.code === "NO_ADAPTER");
   assert.ok(!h.state.requests.some((r) => r.method === "POST"));
+  assert.equal(h.state.badge[1], "", "an ordinary page gets no badge");
+});
+
+test("a product page on a site nobody reads is asked about by its name", async () => {
+  const h = loadBackground({
+    routes: routes(),
+    tabResponses: withTab(shopPage({ name: "Makita DHP484Z Combi Drill", typed: true })),
+  });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true });
+  const post = h.state.requests.find((r) => r.method === "POST");
+  assert.equal(post.body.product_name, "Makita DHP484Z Combi Drill");
+  assert.equal(post.body.fields["ld:brand"], "Makita");
+  const ask = h.state.tabMessages.find((m) => m.message.type === "GET_SCRAPE");
+  assert.deepEqual(ask.message.labels, [], "no site adapter, no site labels");
+});
+
+test("a product nothing installed knows comes back with its own name to research", async () => {
+  const h = loadBackground({
+    routes: routes({ readable: false, reason: "unknown_product",
+                     product: { name: "Bosch HSG 7584 B 1" } }),
+    tabResponses: withTab(shopPage({ name: "Bosch HSG 7584 B 1", typed: true })),
+  });
+  await assert.rejects(
+    () => h.sandbox.runAnalysisForTab(1, ELSEWHERE),
+    (error) => error.code === "UNKNOWN_PRODUCT" && error.productName === "Bosch HSG 7584 B 1");
+  const stored = h.state.session[`krikoAnalysis:${ELSEWHERE}`]
+    || Object.values(h.state.session).find((v) => v && v.code === "UNKNOWN_PRODUCT");
+  assert.equal(stored.code, "UNKNOWN_PRODUCT");
+  assert.equal(stored.productName, "Bosch HSG 7584 B 1");
+  assert.equal(h.state.badge[1], "?", "a question, not a red alarm");
+});
+
+test("the reader's click on an untyped page still asks, by the page's name", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(shopPage({ name: "Kelebek Duvar Sticker", typed: false })),
+  });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE);
+  const post = h.state.requests.find((r) => r.method === "POST");
+  assert.equal(post.body.product_name, "Kelebek Duvar Sticker");
+});
+
+// ── the toolbar click on a site Kriko has never run on ─────────────────
+
+test("the first click on an unknown site asks once for every site, then opens the panel there", async () => {
+  let injected = 0;
+  const h = loadBackground({
+    routes: routes(),
+    tabResponses: { TOGGLE_HOVER_LITE: () => { if (!injected) throw new Error("no receiver"); return { ok: true }; } },
+  });
+  const real = h.sandbox.chrome.scripting.executeScript;
+  h.sandbox.chrome.scripting.executeScript = async (opts) => {
+    if (opts && opts.files) injected += 1;
+    return real(opts);
+  };
+  await h.clickListeners[0]({ id: 7, url: "https://www.mediamarkt.example/p/1" });
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(h.state.permissionRequests, [["https://*/*"]]);
+  assert.equal(injected, 1, "the click is the grant for this tab: the panel goes in now");
+  assert.equal(h.state.tabMessages.filter((m) => m.message.type === "TOGGLE_HOVER_LITE").length, 2);
+});
+
+test("a click on the site the package already runs on never prompts", async () => {
+  const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } } });
+  await h.clickListeners[0]({ id: 7, url: "https://www.sahibinden.com/ilan/1" });
+  assert.deepEqual(h.state.permissionRequests, []);
+});
+
+test("once every site is granted, one registration covers them, skipping hosts already covered", async () => {
+  const h = loadBackground({ routes: routes(), grantedOrigins: ["https://*/*"] });
+  await h.sandbox.syncSites({ fresh: true });
+  const any = h.state.registered.find((s) => s.id === "kriko-anysite");
+  assert.ok(any, "no every-site registration");
+  assert.deepEqual(any.matches, ["https://*/*"]);
+  assert.ok(any.excludeMatches.includes("https://*.sahibinden.com/*"),
+    "the manifest's own site must not run the panel twice");
+  await h.sandbox.syncSites({ fresh: true });
+  assert.equal(h.state.registered.filter((s) => s.id === "kriko-anysite").length, 1);
 });
 
 // ── claims become the panel's view model ────────────────────────────────
