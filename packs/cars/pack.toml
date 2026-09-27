@@ -1,7 +1,7 @@
 [pack]
 id = "org.kriko.cars"
 name = "Used cars"
-version = "0.1.2"
+version = "0.1.3"
 license = "CC-BY-SA-4.0"
 publisher = "kriko"
 origin = "https://github.com/kriko/kriko"

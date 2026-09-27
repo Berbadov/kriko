@@ -19,13 +19,16 @@ from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for
 from app.web.observability import log_analysis_jsonl
 from kriko.adapters import (
+    Adapted,
     adapt,
+    adapt_any_site,
     declared_labels,
     identity_vocabulary,
     load_adapters,
     local_panel,
 )
 from kriko.lookup import lookup
+from kriko.lookup.find import agreed_identity, by_name
 from kriko.lookup.query import Query
 from kriko.store import packstore
 
@@ -43,6 +46,11 @@ class ScrapeRequest(BaseModel):
     description: str = ""
     lang: str = "en"
     limit: int = 8
+    #: The product's own name as the page states it (structured data, then the
+    #: heading, then the title), read by the extension on any site (B149). It
+    #: is what a page with no adapter is recognised by, and what the panel
+    #: offers to research when nothing installed knows it.
+    product_name: str = Field("", max_length=300)
     #: Which door this came in by. A closed vocabulary is safe here where a
     #: hardcoded make/model would not be: doors are a fixed property of the
     #: system, not data that grows with pack coverage.
@@ -229,6 +237,22 @@ def analyze(
     # about a site nobody shipped one for (`app/sites.py`). The order is the
     # design: a published adapter always wins over a local guess.
     spec = sites.adapter_for(store, app_state, body.url)
+    vocabulary = identity_vocabulary(store)
+    read_by = "site"
+    mapped = None
+    if spec is None:
+        spec, mapped, read_by = _read_any_site(store, body, vocabulary)
+    if spec is None and read_by == "unknown":
+        # The page named a product and nothing installed knows it (B149).
+        # Its own name travels back so the panel can offer to research
+        # exactly that, instead of "add this site" — the site was never the
+        # problem.
+        return {
+            "readable": False,
+            "reason": "unknown_product",
+            "product": {"name": _page_name(body)},
+            "url": body.url,
+        }
     if spec is None:
         # Not a 404 (check-21): a listing site nothing reads is an expected,
         # frequent answer — the reader's first paste is as likely to be a
@@ -249,14 +273,15 @@ def analyze(
     # adapter read an identity value straight out of a page title when the
     # page has no label for it, without a single value being written down in
     # either the engine or the adapter JSON.
-    mapped = adapt(
-        spec,
-        body.fields,
-        url=body.url,
-        title=body.title,
-        description=body.description,
-        vocabulary=identity_vocabulary(store),
-    )
+    if mapped is None:
+        mapped = adapt(
+            spec,
+            body.fields,
+            url=body.url,
+            title=body.title,
+            description=body.description,
+            vocabulary=vocabulary,
+        )
 
     # An adapter matching the URL is not the same as the page having been
     # read: the extension sends fields scraped from the DOM, but a bare URL
@@ -291,6 +316,11 @@ def analyze(
 
     payload = {
         "adapter": mapped.adapter_id,
+        # How the page was read: a site's own adapter, the structured product
+        # data any page publishes, or the product's name alone. The last is
+        # the weakest evidence, and the panel says so rather than showing a
+        # name match with a listing's confidence (B149).
+        "read_by": read_by,
         # Whose knowledge this is. With several packs installed and no central
         # authority deciding between them, the byline is not a detail — it is
         # how a reader tells a manufacturer bulletin from a forum consensus,
@@ -410,6 +440,47 @@ def analyze(
     # itself, not folded into a label string (check-15).
     payload["url"] = body.url
     return payload
+
+
+def _page_name(body: ScrapeRequest) -> str:
+    """The product's name as the page gave it, or the title's first part."""
+    name = (body.product_name or "").strip()
+    if not name:
+        name = (body.title or "").split(" | ")[0].strip()
+    return name[:300]
+
+
+def _read_any_site(store, body: ScrapeRequest, vocabulary):
+    """Read a page no site adapter claims: `(spec, mapped, read_by)`.
+
+    Two ways in, strongest first (B149). The packs' any-site adapters read the
+    schema.org product data the page publishes for search engines — a car's
+    make, model, year and mileage, when the page states them. Failing that,
+    the page's product name is matched against every subject's own name and
+    aliases, so a phone on a shop nobody wrote an adapter for still lands on
+    the phone.
+
+    `(None, None, "unknown")` when the page named a product nothing installed
+    knows; `(None, None, "")` when it named nothing at all, which keeps the old
+    `no_adapter` answer for a page that is not a product.
+    """
+    found = adapt_any_site(store, body.fields, url=body.url, title=body.title,
+                           description=body.description, vocabulary=vocabulary)
+    if found is not None:
+        spec, mapped = found
+        return spec, mapped, "any_site"
+
+    name = _page_name(body)
+    hits = by_name(store, name, limit=50) if name else []
+    identity = agreed_identity(hits)
+    if identity:
+        spec = {"id": "name", "pack_id": hits[0]["pack_id"]}
+        mapped = Adapted(adapter_id="name", kind=hits[0].get("kind", "product"),
+                         identity=identity)
+        return spec, mapped, "name"
+    if name and body.product_name:
+        return None, None, "unknown"
+    return None, None, ""
 
 
 def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:

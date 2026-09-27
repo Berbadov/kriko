@@ -1,0 +1,64 @@
+{
+  "id": "cars.any_site",
+  "site": "",
+  "any_site": true,
+  "subject_kind": "product",
+  "page_types": ["car", "vehicle", "motorcycle", "busorcoach", "motorizedbicycle"],
+  "requires": ["make", "model"],
+  "match": [],
+  "_comment": [
+    "Any car on any site (B149). A listing page publishes its car to search",
+    "engines as schema.org data — Car or Vehicle, with manufacturer, model,",
+    "productionDate, mileageFromOdometer, vehicleTransmission, fuelType — and",
+    "the extension flattens that to 'ld:<key>' labels on every https page.",
+    "Asked only when no site adapter matches the address. `known` makes a",
+    "label count only as a make or model this pack already holds, and",
+    "`requires` refuses a reading without both, so an unknown car falls",
+    "through to 'research this product' instead of a wrong answer."
+  ],
+  "identity": {
+    "make": {
+      "labels": ["ld:manufacturer", "ld:brand"],
+      "vocabulary": "make",
+      "known": true,
+      "from": "title"
+    },
+    "model": {
+      "labels": ["ld:model", "ld:name"],
+      "vocabulary": "model",
+      "known": true,
+      "from": "title"
+    },
+    "fuel": {
+      "labels": ["ld:vehicleEngine.fuelType", "ld:fuelType"],
+      "segment": "first"
+    },
+    "transmission": {
+      "labels": ["ld:vehicleTransmission"],
+      "segment": "first"
+    },
+    "build_year": {
+      "labels": ["ld:productionDate", "ld:vehicleModelDate", "ld:modelDate", "ld:dateVehicleFirstRegistered"],
+      "parse": "int_range",
+      "min": 1950,
+      "max": 2035
+    }
+  },
+  "context": {
+    "usage_km": {
+      "labels": ["ld:mileageFromOdometer"],
+      "parse": "int_range",
+      "min": 0,
+      "max": 2000000
+    },
+    "build_year": {
+      "labels": ["ld:productionDate", "ld:vehicleModelDate", "ld:modelDate", "ld:dateVehicleFirstRegistered"],
+      "parse": "int_range",
+      "min": 1950,
+      "max": 2035
+    }
+  },
+  "derive": [
+    {"op": "years_since", "from": "build_year", "key": "age_years"}
+  ]
+}

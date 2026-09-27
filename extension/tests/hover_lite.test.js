@@ -762,6 +762,46 @@ test("pressing Analyze on a site nothing reads says so, and offers the fix", () 
                "sites");
 });
 
+test("a product nothing installed knows gets its name and one research button (B149)", () => {
+  // The reader's "new products aren't recognised": the page was read, the
+  // product was named, and no pack holds it. The dead end used to be "Not
+  // read here / Add this site", which was untrue and offered the wrong fix.
+  const p = loadPanel({
+    analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Bosch HSG 7584 B 1" },
+    workerResponse: (message) => {
+      if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+      if (message.type === "ANALYZE") {
+        return { ok: false, code: "UNKNOWN_PRODUCT", productName: "Bosch HSG 7584 B 1" };
+      }
+      return { ok: true };
+    },
+  });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "unknown-product");
+  assert.match(box.textContent.replace(/\s+/g, " "), /doesn't know Bosch HSG 7584 B 1 yet/);
+  assert.doesNotMatch(box.textContent, /Add this site/);
+  assert.equal(p.errorText(), null, "not a red banner");
+
+  p.click(".lite-unknown-research");
+  assert.equal(p.shadow().querySelector(".lite-research-name").value, "Bosch HSG 7584 B 1",
+    "the name the page gave is already typed in");
+  assert.ok(p.shadow().querySelector(".lite-research-start"));
+});
+
+test("a stored unknown-product answer reopens on the same card (B149)", () => {
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" });
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "unknown-product");
+  assert.match(box.textContent, /Acme Phone 5/);
+  p.deliverEntry(ENTRY);
+  assert.equal(p.shadow().querySelector(".lite-verdict[data-verdict='unknown-product']"), null);
+});
+
 test("a known site's page that just isn't a listing gets a quieter card, no 'Add this site'", () => {
   // extension-5/extension-6/extension-8: a category page on a site Kriko
   // already reads is not "nothing installed knows how to read this site" —
