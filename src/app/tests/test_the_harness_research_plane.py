@@ -158,6 +158,28 @@ def test_a_prompt_too_long_for_a_command_line_still_goes_on_stdin(tmp_path, monk
     )
 
 
+def test_a_python_cli_reads_a_piped_brief_as_utf8(tmp_path, monkeypatch):
+    """Mistral Vibe read the brief's curly quote as `â€\\udc9d` and then died
+    writing it to its own log — every case of the reader's 2026-09-26 bench.
+    The stand-in decodes stdin exactly as a Python CLI does by default and
+    says what arrived, so the ANSI code page cannot come back unnoticed."""
+    monkeypatch.setattr(harness_mod, "MAX_PROMPT_ARGUMENT", 10)
+    script = tmp_path / "decode_stdin.py"
+    script.write_text(
+        "import json, sys\n"
+        "text = sys.stdin.read()\n"
+        "print(json.dumps({'type': 'result', 'result': ascii(text)}))\n",
+        encoding="utf-8",
+    )
+    one = harness_mod.Harness(
+        "fake", "Fake CLI", sys.executable, (str(script),), structured=True
+    )
+    researcher = HarnessResearcher(one, timeout=30)
+    assert researcher.ask("a brief with a ”quote” in it").strip() == ascii(
+        "a brief with a ”quote” in it"
+    )
+
+
 def test_no_harness_interpolates_the_prompt_into_its_arguments():
     """The B92 invariant, still: a prompt has no place *inside* a vector.
 

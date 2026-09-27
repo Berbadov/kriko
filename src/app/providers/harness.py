@@ -91,6 +91,15 @@ AUTHOR_TIMEOUT_SECONDS = 2400.0
 #: reader the hygiene flags and never the plane.
 HELP_TIMEOUT_SECONDS = 12.0
 
+#: Said to every CLI child, because we write to it in UTF-8 and read it back
+#: as UTF-8. A Python CLI on Windows otherwise decodes a piped stdin with the
+#: ANSI code page and `surrogateescape`: the brief's `”` (E2 80 9D) arrives as
+#: `â€\udc9d`, 0x9D being the one byte cp1252 leaves undefined. Mistral Vibe
+#: took that text and then died writing it to its own session log
+#: ("surrogates not allowed") — every case of the reader's bench on
+#: 2026-09-26. Harmless to a CLI that is not Python.
+CHILD_ENCODING_ENV = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
 
 def _lines(stream, tick: float):
     """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
@@ -728,6 +737,7 @@ def _ask(executable: str, *argv: str) -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
+            env={**os.environ, **CHILD_ENCODING_ENV},
             start_new_session=True,
         )
     except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
@@ -2280,7 +2290,7 @@ class HarnessResearcher(AgentResearcher):
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
-                env={**os.environ, **self.harness.env, **self._run_env},
+                env={**os.environ, **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
                 cwd=self._run_cwd or os.path.expanduser("~"),
                 shell=self._needs_shell(command),
                 # POSIX only (Windows accepts and ignores it — see
