@@ -1374,6 +1374,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
     const body = subject_id ? { subject_id } : { q, allow_draft: input.allow_draft === true };
+    // B148: the listing's own address, so the quick look is held to the bar
+    // of the pack whose site this is.
+    if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
     _postApp("/api/extension/research-plane", body)
       .then((job) => sendResponse({ ok: true, job }))
