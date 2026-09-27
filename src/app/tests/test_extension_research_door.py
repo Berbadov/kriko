@@ -539,7 +539,7 @@ def test_product_draft_reuses_author_gates_and_cancellation(
             "harness": "fixture-harness", "cost_basis": "subscription",
             "budget_usd": None,
             "note": "Uses your harness subscription. A quick answer first; the "
-                    "deeper draft keeps going and waits for you in Knowledge.",
+                    "deeper research keeps going and installs itself when done.",
         }
         assert started.wait(10)
         # B148: the quick look answers while the deep run is still holding the
@@ -563,7 +563,8 @@ def test_product_draft_reuses_author_gates_and_cancellation(
     assert "Do not install anything" in prompts[1]
     if outcome == "draft":
         assert row["state"] == "succeeded", row["message"]
-        assert row["result"]["installed"] is False
+        # B148: "yes it should install itslef" — this door installs the draft.
+        assert row["result"]["installed"] is True
         assert row["result"]["category"] == "Unknown Widget"
         draft = packdraft.open_draft(research_client.app.state.settings.store_path,
                                      row["result"]["slug"])
@@ -577,8 +578,12 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         assert "did not produce a usable pack" in row["message"]
     conn = connect(research_client.app.state.settings.store_path)
     try:
-        assert conn.execute("SELECT pack_id FROM packs").fetchall()[0][0] == "probe"
-        assert conn.execute("SELECT COUNT(*) FROM packs").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0] == 1
+        packs = sorted(r[0] for r in conn.execute("SELECT pack_id FROM packs"))
+        # Installed only when the run produced a pack; a refused or cancelled
+        # run leaves the store exactly as it was.
+        assert packs == (["probe", row["result"]["pack_id"]] if outcome == "draft"
+                         else ["probe"])
+        if outcome != "draft":
+            assert conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0] == 1
     finally:
         conn.close()

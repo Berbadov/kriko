@@ -492,7 +492,7 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 - the panel says the deeper run is still going and follows it;
 - a test proves the quick look is not queued behind a long job, and one proves an unsourced risk is dropped;
 - observed on the installed build.
-**Not this:** installing the deeper draft automatically. That is a trust-boundary change for the reader to decide.
+- **the deeper draft installs itself** when it builds — asked "should the deeper draft install itself?", the reader said: "yes it should install itslef" (2026-09-27) — and the listing re-analyses so its new cards appear without a press; a draft that does not build stays a draft and says why.
 **Progress (2026-09-27):** in code, gate green (2051 pytest, 576 UI, 181 extension). `quick_look` job (`app/quicklook.py`, `tasks.quick_look`) at effort `low`, 240 s ceiling, held to the listing's pack principle; `jobs.QUICK_KINDS` gives it its own two-worker lane. `POST /api/extension/research-plane` submits the draft then the quick look at one press and answers with both ids. The panel has one **Research this product** button, renders the quick risks as claim cards with their quote and link, then follows the draft run. Tests: `test_a_quick_kind_is_not_queued_behind_a_long_job`, `test_a_risk_without_a_page_and_a_quote_is_dropped`, the door test's quick-look assertions, and the panel test "an unknown product gets one button". Open: observed on the installed build.
 
 ### B147 — "Research this product works so slow": a run that goes silent after its question `[G5]`

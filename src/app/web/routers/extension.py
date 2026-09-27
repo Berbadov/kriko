@@ -217,6 +217,10 @@ def start_research_plane(
         params = {
             "category": body.q.strip(), "product_only": True,
             "harness": selected, "backend": "harness",
+            # The reader's answer, asked directly: "yes it should install
+            # itslef" (B148). Only this door asks for it; the app's own New
+            # pack form still leaves the press to the reader.
+            "install": True,
         }
         # Quick answer, then deepen (B148): the reader's choice. The draft is
         # the deep half and starts first so the quick one can point at it;
@@ -238,7 +242,7 @@ def start_research_plane(
             "backend": "harness", "harness": selected,
             "cost_basis": "subscription", "budget_usd": None,
             "note": "Uses your harness subscription. A quick answer first; the "
-                    "deeper draft keeps going and waits for you in Knowledge.",
+                    "deeper research keeps going and installs itself when done.",
         }
     plane = research_plane(request)
     budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
