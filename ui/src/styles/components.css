@@ -1464,9 +1464,38 @@ table.compare thead th {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* A link that stands in a row of buttons. B146: this rule used to stop at
+ * the underline, so "Question sheet" and "Compare with another" sat as bare
+ * text on a different baseline beside the real buttons. It wears the button
+ * face now — the same box, so the row lines up. */
 .button-like {
     display: inline-block;
     text-decoration: none;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--btn);
+    border: 1px solid var(--line);
+    border-top-color: var(--btn-hi);
+    border-bottom-color: var(--btn-lo);
+    border-radius: var(--radius-sm);
+    padding: var(--s-2) var(--s-4);
+    white-space: nowrap;
+    box-shadow: var(--shadow-1);
+}
+.button-like:hover {
+    background: var(--btn-hover);
+    border-color: var(--accent);
+}
+.button-like.ghost {
+    background: transparent;
+    box-shadow: none;
+    border-color: var(--line);
+    color: var(--dim);
+}
+.button-like.ghost:hover {
+    background: var(--btn);
+    border-color: var(--accent);
+    color: var(--text);
 }
 
 /* The one suggestion the app makes about itself. Panel-coloured rather than
