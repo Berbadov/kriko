@@ -241,6 +241,26 @@ def test_the_reader_is_told_it_is_a_separate_profile(tmp_path, monkeypatch):
     assert "profile" in body["note"].lower()
 
 
+def test_a_browser_that_has_kriko_gets_the_listing_itself(tmp_path, monkeypatch):
+    """The reader's 2026-09-27 "nothing works": their own Chrome had Kriko
+    loaded from the staged folder, and the button opened a separate profile
+    that Chrome 153 would not load it into. Once the extension has checked
+    in, the listing opens in the browser it lives in — no profile, no flags."""
+    spawned: list[list[str]] = []
+    monkeypatch.setattr(extension, "find_chromium", lambda: "/usr/bin/chrome")
+    monkeypatch.setattr(extension, "_spawn", spawned.append)
+
+    client = _client(tmp_path)
+    client.get("/api/adapters", headers={"Origin": "chrome-extension://abcdef"})
+    body = client.post("/api/extension/launch").json()
+
+    assert body["launched"] is True
+    assert body["profile"] == ""
+    assert spawned[0][0] == "/usr/bin/chrome"
+    assert not any(a.startswith("--") for a in spawned[0])
+    assert (tmp_path / "extension" / "manifest.json").is_file()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX session semantics")
 def test_the_browser_outlives_this_process_group(tmp_path):
     """A browser started in our process group dies with the sidecar.

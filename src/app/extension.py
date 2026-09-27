@@ -419,6 +419,7 @@ def launch_with_extension(
     profile: Path,
     landing: str = "",
     spawn=None,
+    own_profile: bool = False,
 ) -> str:
     """Open `browser` with the staged extension loaded. Returns "" or a reason.
 
@@ -426,9 +427,24 @@ def launch_with_extension(
     a browser in the test suite — the arguments *are* the behaviour here, and
     a test that started Chrome to check them would be untestable in CI and
     unbearable locally.
+
+    `own_profile` is for a reader whose browser already has Kriko: the landing
+    page opens there, in the profile that has it, and nothing else is passed.
+    Measured 2026-09-27 on Chrome 153: with every flag below, a fresh profile
+    loads four built-in extensions and not Kriko — the stopgap is gone, and
+    the separate window it opened was the reader's "nothing works". Their own
+    Chrome had Kriko loaded unpacked from `staged` all along, and `stage` had
+    just refreshed those files in place.
     """
     if not (staged / "manifest.json").is_file():
         return f"nothing staged at {staged} — the files have to be written first"
+
+    if own_profile:
+        try:
+            (spawn or _spawn)([browser, landing] if landing else [browser])
+        except OSError as cause:
+            return f"could not start {browser}: {cause}"
+        return ""
 
     argv = [
         browser,
