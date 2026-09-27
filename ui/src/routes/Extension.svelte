@@ -233,16 +233,17 @@
         <article class="card">
             <h3>One click</h3>
             <p class="meta">
-                Opens a new Chromium — Chrome, Chromium, Brave or Edge, whichever is on
-                this machine — with the extension already loaded, on a listing site your
-                packs can read. Open a listing there and Kriko's panel appears on the
-                page; the Status above turns green here while you do it.
+                Opens a listing site your packs can read — in the browser Kriko is
+                already installed in, or, if it has never checked in, in a new Chromium
+                window that tries to load it (recent Chrome refuses; the steps below
+                then). Open a listing and Kriko's panel appears on the page; the Status
+                above turns green here while you do it.
             </p>
             <p>
                 <button class="primary" disabled={busy === "launch"} onclick={launch}>
                     {busy === "launch"
                         ? "Opening a browser…"
-                        : "Open a browser with Kriko loaded"}
+                        : "Open a listing with Kriko"}
                 </button>
             </p>
             {#if launched}
@@ -258,9 +259,11 @@
                     </p>
                 {/if}
                 <p class="meta">{launched.note}</p>
-                <p class="meta">
-                    Its profile: <code class="path">{launched.profile}</code>
-                </p>
+                {#if launched.profile}
+                    <p class="meta">
+                        Its profile: <code class="path">{launched.profile}</code>
+                    </p>
+                {/if}
             {/if}
         </article>
 
