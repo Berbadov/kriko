@@ -60,7 +60,7 @@ function loadPanel({
           if (message.type === "ANALYZE") return callback(analyzeResponse);
           if (message.type === "SEARCH") return callback(searchResponse);
           if (message.type === "OPERATIONS") return callback(operationsResponse);
-          callback(workerResponse);
+          callback(typeof workerResponse === "function" ? workerResponse(message) : workerResponse);
         },
         getURL: (p) => p,
       },

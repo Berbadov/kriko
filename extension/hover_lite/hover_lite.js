@@ -101,6 +101,9 @@
     // became of saying it — per question id, for the chips to show.
     researchAnswers: {},
     researchTold: {},
+    // B148: the quick look's answer, kept while the deeper run goes on.
+    // `{ assumed, risks, dropped }` or null.
+    researchQuick: null,
     researchState: "",
     cancelling: false,
     /* Which step the run in flight has reached.
@@ -639,27 +642,32 @@
     state.researchContext = "";
     state.researchOpen = true;
     state.researchJob = null;
+    state.researchQuick = null;
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
     renderResearch();
   }
 
-  function startResearch(allowDraft = false) {
+  /* One button (B148). A name the packs know is researched into them; one
+   * they do not gets a quick look answered here in a minute or two, and the
+   * deeper draft run starts beside it. The reader used to choose between two
+   * buttons whose difference they had no way to know. */
+  function startResearch() {
     if (state.researching || !state.researchPlane) return;
     const subject_id = state.researchTarget?.subject_id;
     const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" — ");
     if (!subject_id && !q) return;
     const cap = Number(state.researchPlane.budget_usd);
-    if (!allowDraft && state.researchPlane.backend === "api" && !(cap > 0)) return;
     state.researching = subject_id || q;
     state.researchState = "starting";
-    state.researchMessage = "Starting…";
+    state.researchMessage = "Looking it up…";
     state.researchAnswers = {};
     state.researchTold = {};
+    state.researchQuick = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
-      ...(subject_id ? { subject_id } : { q, allow_draft: allowDraft }),
+      ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
       ...(cap > 0 ? { cap } : {}),
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
@@ -671,10 +679,39 @@
       }
       state.researchJob = response.job;
       state.researchState = "queued";
-      state.researchMessage = "Queued";
+      state.researchMessage = response.job.kind === "quick_look" ? "Looking it up…" : "Queued";
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
+  }
+
+  /* The quick look finished — well or not. Keep what it found, then follow
+   * the deeper run it started beside, so the panel keeps saying what is
+   * happening rather than ending on "done" while the real work goes on. */
+  function quickLookDone(job) {
+    const result = job.result || {};
+    state.researchQuick = {
+      assumed: result.assumed || "",
+      risks: Array.isArray(result.risks) ? result.risks : [],
+      dropped: Number(result.dropped) || 0,
+    };
+    const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
+    const found = state.researchQuick.risks.length;
+    const said = job.state === "succeeded"
+      ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look.`
+        : "The quick look found nothing it could source.")
+      : "The quick look did not finish.";
+    if (!deepen) {
+      state.researching = null;
+      state.researchMessage = said;
+      renderResearch();
+      return;
+    }
+    state.researchJob = { job_id: deepen, kind: "pack_author" };
+    state.researchState = "queued";
+    state.researchMessage = `${said} Digging deeper…`;
+    renderResearch();
+    pollResearchJob(deepen);
   }
 
   /* The run's question, answered with one click (B147).
@@ -762,8 +799,11 @@
           <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
           <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
-        ${!target ? `<p>A product-specific draft is not automatically installed knowledge. Creating a draft uses your coding-agent subscription, not API research.</p>` : ""}
         <p class="lite-research-status" role="status">${escapeHtml(state.researchMessage)}</p>
+        ${state.researchQuick?.risks.length ? `<div class="lite-quick">
+          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
+          <div class="lite-quick-cards"></div>
+        </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
             ? "Your agent has a question. Pick an answer and it hears it now."
@@ -777,8 +817,7 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
-        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>Research ${target ? "selected subject" : "in installed packs"}</button>
-          ${!target ? `<button type="button" class="lite-research-draft" ${!state.researchPlane ? "disabled" : ""}>Create product-specific draft</button>` : ""}` : ""}
+        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Research again" : "Research this product"}</button>` : ""}
         ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
         ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
         ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
@@ -794,7 +833,33 @@
       context.addEventListener("input", () => { state.researchContext = context.value; });
     }
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
-    slot.querySelector(".lite-research-draft")?.addEventListener("click", () => startResearch(true));
+    const quickCards = slot.querySelector(".lite-quick-cards");
+    (quickCards ? state.researchQuick.risks : []).forEach((risk, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = "lite-claim-anim";
+      wrap.style.animationDelay = (i * 70) + "ms";
+      const card = renderClaimCard(risk, { open: false, compact: state.compact });
+      card.querySelector(".lite-rc-toggle")?.addEventListener("click", () =>
+        updateClaimCard(card, { open: card.dataset.open !== "1" }));
+      // Where the line came from, in its own words: a quick look is not a
+      // stored claim, so the page and its quote are the only warrant it has.
+      const src = (risk.sources || [])[0];
+      const body = card.querySelector(".lite-rc-body");
+      if (src?.url && body) {
+        const cite = document.createElement("blockquote");
+        cite.className = "lite-quick-src";
+        cite.textContent = `\u201c${src.quote}\u201d `;
+        const link = document.createElement("a");
+        link.href = src.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = src.domain || src.url;
+        cite.appendChild(link);
+        body.appendChild(cite);
+      }
+      wrap.appendChild(card);
+      quickCards.appendChild(wrap);
+    });
     slot.querySelector(".lite-research-cancel")?.addEventListener("click", cancelResearch);
     slot.querySelectorAll(".lite-chip").forEach((chip) => chip.addEventListener("click", () => {
       const question = asked[Number(chip.dataset.q)];
@@ -837,11 +902,15 @@
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
       }
+      if (state.researchJob.kind === "quick_look" && job.state !== "cancelled") {
+        quickLookDone(job);
+        return;
+      }
       state.researching = null;
       state.cancelling = false;
       state.researchMessage = job.state === "cancelled" ? "Research cancelled."
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
-          ? "Product-specific draft ready. It has not been installed. Open the exact draft output below."
+          ? `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko — not installed until you say so.`
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
             : "Research completed. Open the research job for findings.")
