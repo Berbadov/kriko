@@ -1382,6 +1382,40 @@
 .lite-research[data-state="failed"] .lite-research-status { color: var(--high-ink); }
 .lite-research[data-state="cancelled"] .lite-research-status { color: var(--fg-muted); }
 .lite-research button { margin: 4px 4px 0 0; }
+/* B147: the run's question, as something to press. */
+.lite-asked {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(232,192,75,0.08);
+  animation: lite-gap-in var(--dur-med) var(--ease-out) both;
+}
+.lite-asked-lede { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; font-weight: 600; color: var(--fg); }
+.lite-asked-mark {
+  display: inline-grid; place-items: center; flex: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: var(--bg-item); font-size: 11px;
+  animation: lite-asked-breathe 2s ease-in-out 3;
+}
+.lite-asked-q { border: 0; padding: 0; margin: 0 0 6px; }
+.lite-asked-q legend { padding: 0; margin-bottom: 6px; color: var(--fg-body); }
+.lite-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lite-research .lite-chip {
+  margin: 0;
+  border-radius: 999px;
+  padding: 5px 12px;
+  transition: background-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
+}
+.lite-research .lite-chip:hover { transform: translateY(-1px); }
+.lite-research .lite-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg-item); }
+.lite-chip-note { font-size: 10px; opacity: .7; }
+.lite-told { margin: 6px 0 0; color: var(--fg-muted); animation: lite-gap-in var(--dur-med) var(--ease-out) both; }
+@keyframes lite-asked-breathe { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .lite-asked, .lite-asked-mark, .lite-told { animation: none; }
+  .lite-research .lite-chip { transition: none; }
+}
 .lite-search { margin-bottom: 14px; }
 .lite-search-bar {
   display: flex;

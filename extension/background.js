@@ -1394,6 +1394,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  /* A run's question answered from the panel (B147). A live run hears it
+   * through `/say` at once; a finished one is run again with the answer
+   * applied, the same `retry` the app's Runs screen submits. */
+  if (request.type === "JOB_SAY" || request.type === "JOB_RETRY") {
+    const jobId = request.payload?.job_id;
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    const say = request.type === "JOB_SAY";
+    const body = say
+      ? { text: String(request.payload.text || "") }
+      : { answers: request.payload.answers || {} };
+    _postApp(`/api/jobs/${encodeURIComponent(jobId)}/${say ? "say" : "retry"}`, body)
+      .then((answer) => sendResponse({ ok: true, ...answer }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (request.type === "RESEARCH_SUBJECT") {
     const { subject_id, pack_id, backend, budget_usd } = request.payload || {};
     if (!subject_id) {

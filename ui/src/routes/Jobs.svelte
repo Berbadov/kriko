@@ -7,7 +7,7 @@
     import RunWith from "../lib/RunWith.svelte";
     import { elapsed } from "../lib/time";
     import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
-    import type { Job } from "../lib/types";
+    import type { Job, Question } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
     // The exception, not a rendering of it: Failure reads the status to
@@ -269,6 +269,50 @@
         }
     }
 
+    /* One click on an answer (B147).
+     *
+     * The run that asked is usually still going: it stated a default and
+     * carried on. So a click on a *live* run is said to it at once, over the
+     * same pipe as the reply box, and the chip says whether it landed. On a
+     * finished run the click only picks; the submit is the retry that applies
+     * it. `told` is per job and question so a chip can show "sent" without
+     * the next poll wiping it. */
+    let told = $state<Record<string, "sending" | "sent" | "late">>({});
+
+    async function choose(job: Job, question: Question, option: string) {
+        answers[job.job_id] ??= {};
+        answers[job.job_id][question.id] = option;
+        if (isLive(job)) await tell(job, question);
+    }
+
+    async function tell(job: Job, question: Question) {
+        const value = (answers[job.job_id]?.[question.id] ?? "").trim();
+        const slot = `${job.job_id}/${question.id}`;
+        if (!value || told[slot] === "sending") return;
+        told = { ...told, [slot]: "sending" };
+        try {
+            const answer = await api.sayToJob(job.job_id, `Answer to "${question.ask}": ${value}`);
+            told = { ...told, [slot]: answer.delivered ? "sent" : "late" };
+        } catch (cause) {
+            delete told[slot];
+            told = { ...told };
+            error = cause;
+        }
+    }
+
+    async function answer(job: Job) {
+        if (!isLive(job)) return retry(job);
+        for (const question of job.attention?.questions ?? []) await tell(job, question);
+    }
+
+    const toldWord = (job: Job, question: Question) => {
+        const state = told[`${job.job_id}/${question.id}`];
+        return state === "sending" ? "Telling it…"
+            : state === "sent" ? "It heard you."
+            : state === "late" ? "The run had finished — press Answer and run again."
+            : "";
+    };
+
     const percent = (job: Job) => Math.round((job.progress ?? 0) * 100);
     const subjectOf = (job: Job) =>
         String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
@@ -431,45 +475,48 @@
             {/if}
         {/if}
         {#if job.attention?.questions?.length}
-            <!-- The answer form, and the reason this screen changed shape.
-                 The questions were only ever written into the run log, so a
-                 mechanism that already knew how to ask, normalise and re-apply
-                 an answer reached the reader as a paragraph of prose with
-                 nothing to type into. Rendering them as controls is the whole
-                 of the fix on this side.
-
-                 Not a modal, and it blocks nothing: the run already finished
-                 on its own assumptions. Answering changes the *next* run,
-                 which is why the submit is the retry rather than a "send". -->
+            <!-- B147: the question as something to press, not a dropdown under
+                 a paragraph with a raw JSON dump below it. On a live run a
+                 click reaches the agent now; on a finished one it shapes the
+                 retry. The panel slides in, so a question that arrives mid-run
+                 is seen rather than found. -->
             <form
                 class="asked"
-                onsubmit={(event) => { event.preventDefault(); retry(job); }}
+                aria-live="polite"
+                onsubmit={(event) => { event.preventDefault(); answer(job); }}
             >
-                <p class="meta">{job.attention.say}</p>
+                <p class="asked-lede">
+                    <span class="asked-mark" aria-hidden="true">?</span>
+                    {isLive(job)
+                        ? "Your agent has a question. Pick an answer and it hears it now."
+                        : "Your agent had a question and went with its own guess. Answer it and run again."}
+                </p>
                 {#each job.attention.questions as question (question.id)}
-                    <div class="field">
-                        <label for="{job.job_id}-{question.id}">{question.ask}</label>
+                    <fieldset class="field question">
+                        <legend>{question.ask}</legend>
                         {#if question.options.length}
-                            <select
-                                id="{job.job_id}-{question.id}"
-                                value={answers[job.job_id]?.[question.id] ?? ""}
-                                onchange={(event) => {
-                                    answers[job.job_id] ??= {};
-                                    answers[job.job_id][question.id] = event.currentTarget.value;
-                                }}
-                            >
-                                <!-- The assumption is the first option and the
-                                     selected one, so leaving the form alone
-                                     re-runs exactly what already ran. -->
-                                <option value="">It assumed {question.default}</option>
+                            <div class="chips" role="radiogroup" aria-label={question.ask}>
                                 {#each question.options as option (option)}
-                                    <option value={option}>{option}</option>
+                                    {@const picked = (answers[job.job_id]?.[question.id] ?? "") === option}
+                                    <button
+                                        type="button"
+                                        class="chip"
+                                        role="radio"
+                                        aria-checked={picked}
+                                        class:picked
+                                        onclick={() => choose(job, question, option)}
+                                    >
+                                        {option}
+                                        {#if option === question.default && !answers[job.job_id]?.[question.id]}
+                                            <span class="chip-note">its guess</span>
+                                        {/if}
+                                    </button>
                                 {/each}
-                            </select>
+                            </div>
                         {:else}
                             <input
-                                id="{job.job_id}-{question.id}"
-                                placeholder="It assumed {question.default}"
+                                aria-label={question.ask}
+                                placeholder="It guessed {question.default}"
                                 value={answers[job.job_id]?.[question.id] ?? ""}
                                 oninput={(event) => {
                                     answers[job.job_id] ??= {};
@@ -477,20 +524,29 @@
                                 }}
                             />
                         {/if}
-                        {#if question.because}
+                        {#if toldWord(job, question)}
+                            <p class="meta told">{toldWord(job, question)}</p>
+                        {:else if question.because}
                             <p class="meta">{question.because}</p>
                         {/if}
-                    </div>
+                    </fieldset>
                 {/each}
-                <p class="row">
-                    <button class="primary" type="submit">Answer and run again</button>
-                </p>
+                {#if !isLive(job) || job.attention.questions.some((q) => !q.options.length)}
+                    <p class="row">
+                        <button class="primary" type="submit" disabled={retryPending.includes(job.job_id)}>
+                            {isLive(job) ? "Tell the run" : "Answer and run again"}
+                        </button>
+                    </p>
+                {/if}
             </form>
         {/if}
         {#if open === job.job_id}
             <pre class="log">{job.log || "nothing logged yet"}</pre>
-            {#if job.result}
-                <pre class="log">{JSON.stringify(job.result, null, 2)}</pre>
+            {#if job.result && !job.attention?.questions?.length}
+                <details class="raw">
+                    <summary>What the run returned</summary>
+                    <pre class="log">{JSON.stringify(job.result, null, 2)}</pre>
+                </details>
             {/if}
         {/if}
     </article>
