@@ -395,6 +395,49 @@ test("a subject the packs know but hold nothing on opens a consent form, not a r
             "a known subject never drafts by accident");
 });
 
+const ASKED = { questions: [{ id: "engine_code", ask: "Which engine code is it?",
+  options: ["BUG", "CASA"], default: "BUG", because: "BUG was common." }] };
+
+function askingPanel(state) {
+  const p = loadPanel({ workerResponse: {
+    ok: true, plane: { backend: "agent", budget_usd: 0 },
+    job: { job_id: "j1", kind: "pack_author", state, done: state !== "running",
+           attention: ASKED },
+    delivered: true, job_id: "j2", kind: "pack_author",
+  } });
+  p.openPanel();
+  p.deliverEntry(GAP_ENTRY);
+  p.click(".lite-gap-btn");
+  p.click(".lite-research-start");
+  return p;
+}
+
+test("a live run's question is a row of answers, and a press reaches the run (B147)", () => {
+  const p = askingPanel("running");
+  const asked = p.shadow().querySelector(".lite-asked");
+  assert.ok(asked, "the question is on the panel, not only in the app's log");
+  assert.match(asked.textContent, /Which engine code is it\?/);
+  assert.doesNotMatch(p.shadow().textContent, /stopped_at|"questions"/);
+
+  const casa = [...asked.querySelectorAll(".lite-chip")].find((b) => /CASA/.test(b.textContent));
+  casa.click();
+  const said = p.sent.find((m) => m.type === "JOB_SAY");
+  assert.ok(said, "the answer was said to the running job");
+  assert.equal(said.payload.job_id, "j1");
+  assert.match(said.payload.text, /CASA/);
+  assert.match(p.shadow().querySelector(".lite-asked").textContent, /It heard you\./);
+});
+
+test("a finished run's question runs it again with the answer applied (B147)", () => {
+  const p = askingPanel("interrupted");
+  const casa = [...p.shadow().querySelectorAll(".lite-chip")].find((b) => /CASA/.test(b.textContent));
+  casa.click();
+  assert.equal(p.sent.filter((m) => m.type === "JOB_SAY").length, 0);
+  const retry = p.sent.find((m) => m.type === "JOB_RETRY");
+  assert.ok(retry, "the run was started again");
+  assert.deepEqual(retry.payload, { job_id: "j1", answers: { engine_code: "CASA" } });
+});
+
 test("a subject that already has claims is not offered as a gap", () => {
   const p = loadPanel();
   p.openPanel();

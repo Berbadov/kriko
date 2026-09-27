@@ -482,6 +482,18 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
+### B147 — "Research this product works so slow": a run that goes silent after its question `[G5]`
+**Asked:** "\" research this product\" button works so slow" — "In the app it takes minutes and maybe more agents are acting slow where as in normal claude or Mistral vibe chat they can search web and answer instatly. Literally i didnt finish a run beacuse of the bugs (answering bug isnt animated and interactive and returns this error { \"questions\": [ … ], \"stopped_at\": \"disambiguation\" })" (2026-09-27, on 0.10.5)
+**Where:** Activity → Runs, a "New pack" run started by **Research this product** (job `2479221ca673a120`, Audi Q7 3.0 TDI, 20:37–20:47 local).
+**Reproduced (2026-09-27):** that job's log ends at `category: …` after the disambiguation pass, with no `started`, no 30 s heartbeat and no line for ten minutes until the app was closed. The disambiguation brief is 2,378 bytes; the authoring brief is 9,714. `_stream` wrote the opening message to the child's stdin *before* starting the stdout reader, the stderr drain, the heartbeat or the cancel check — a brief larger than the pipe buffer blocks that write while the child blocks writing its own `init` event, and neither side reads again.
+**Done when:**
+- a conversational run whose brief is larger than the pipe buffer, against a child that prints a large event before reading, returns its answer (test fails on the old order);
+- while a run waits, the heartbeat and Cancel still work from the first second;
+- the question the run asked shows as the answer form on its card, never as the raw result JSON, including on a run that was interrupted or cancelled;
+- observed on the installed build: **Research this product** on an unknown product shows log lines within seconds of the question.
+**Not this:** making research itself cheaper (next item, asked separately).
+**Progress (2026-09-27):** (1) the opening message goes to stdin from its own thread, so the stdout reader, heartbeat and cancel run from the first second; `test_a_brief_larger_than_the_pipe_does_not_deadlock_a_chatty_child` hung past a 120 s kill before the fix and returns in about a second after it. (3) Runs shows the question as answer chips (`radiogroup`). On a live run a press is said to the run through `/say` ("It heard you."); on a finished or interrupted run it feeds **Answer and run again**. The raw result JSON is no longer printed under a run that asked something; any other result sits folded under "What the run returned". The extension panel's research box shows the same chips (`JOB_SAY` / `JOB_RETRY` via background.js), so the question is answered on the listing without opening the app. Open: (2) observed-on-installed, (4).
+
 ### B146 — "Agents are very slow, like it seems like they are stuck": runs that show they are alive, limits where runs start `[G5]`
 **Asked:** "ok, they seem to do better but agents are very slow, like it seems like they are stuck and im unable to see the options for resource and effort limit plus agent and settings section are very crowded and ugly." (2026-09-27, on 0.10.4)
 **Where:** Activity → Runs (a live run card; "Start a new pack"); Agents (the plane's **Research the top N**, the agent list); a subject's **Run my agent on this** (Brief); Settings.
