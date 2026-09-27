@@ -862,3 +862,24 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"));
   assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
 });
+
+test("a deep run that installed its pack refreshes the listing (B148)", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "d1", kind: "pack_author" } };
+    if (message.type === "JOB_STATUS") {
+      return { ok: true, job: { state: "succeeded", done: true,
+        result: { installed: true, pack_id: "mystery.car" } } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  const before = p.sent.filter((m) => m.type === "ANALYZE").length;
+  p.click(".lite-research-start");
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /installed/);
+  assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, before + 1,
+    "the listing was analysed again once the pack was in");
+});
