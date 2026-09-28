@@ -193,6 +193,9 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     from app.web.settings import KRIKO_HOME
 
     chosen = read(conn)
+    if fresh:
+        # "Check again" after installing a CLI must see it at once.
+        harness.forget_located()
     found = harness.available()
     lists = harness.models_for_each(found, fresh=fresh)
     installed = [

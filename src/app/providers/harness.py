@@ -692,7 +692,32 @@ def unshim(command: list[str]) -> list[str]:
     return [runtime, str(target), *command[1:]] if runtime else command
 
 
+#: B152.7: `locate` walks PATH x PATHEXT per CLI — ~7,800 filesystem probes
+#: for the roster on this machine, 200 ms a call — and Settings, the agent
+#: picker and every research start ask it. Kept for a few seconds, keyed on
+#: everything that changes the answer; `forget_located()` is the refresh.
+_LOCATED: dict[tuple, tuple[float, str]] = {}
+LOCATE_TTL_S = 20.0
+
+
+def forget_located() -> None:
+    _LOCATED.clear()
+
+
 def locate(one: Harness) -> str:
+    """`_locate`, remembered for `LOCATE_TTL_S` (see `_LOCATED`)."""
+    key = (one.executable, one.homes, os.environ.get("PATH", ""),
+           os.environ.get(DIRS_ENV, ""), str(Path.home()))
+    now = time.monotonic()
+    hit = _LOCATED.get(key)
+    if hit and now - hit[0] < LOCATE_TTL_S:
+        return hit[1]
+    found = _locate(one)
+    _LOCATED[key] = (now, found)
+    return found
+
+
+def _locate(one: Harness) -> str:
     """The full path to this CLI, or `""`.
 
     **`PATH` is not enough, and that is not a theory.** The sidecar is launched
@@ -960,7 +985,7 @@ def _stamp(executable: str) -> float:
         return 0.0
 
 
-def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
+def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> list[str]:
     """The models this machine's copy of the CLI offers, or `[]`.
 
     Asked, never assumed: `agy models` and `opencode models` list what is
@@ -972,7 +997,9 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
     never be why a run does not start.
 
     Cached per binary (path and modification time, so an updated CLI is asked
-    again) for `MODELS_TTL`; `fresh` asks regardless.
+    again) for `MODELS_TTL`; `fresh` asks regardless. Past the TTL the old
+    list is served and the ask runs `behind` (B152.7): an expired cache used
+    to make the next Settings visit wait ~7 s for every CLI to answer.
     """
     if one.unusable or not one.model_source:
         return []
@@ -982,9 +1009,15 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
     key = (one.id, executable, _stamp(executable))
     with _MODELS_LOCK:
         cached = _MODELS.get(key)
-    if cached and not fresh:
+    if cached and not fresh and not behind:
         at, names = cached
         if time.monotonic() - at < (MODELS_TTL if names else _MODELS_TTL_EMPTY):
+            return list(names)
+        if names:
+            threading.Thread(
+                target=lambda: models_for(one, behind=True),
+                name=f"kriko-models-{one.id}", daemon=True,
+            ).start()
             return list(names)
     # One ask per CLI at a time, but a reader's own request never queues
     # behind one already in flight: `warm_models()` starts this same probe on
