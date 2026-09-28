@@ -19,6 +19,12 @@
      * to say it is to print it.
      */
 
+    // null until the reader flips it; the {#await} below holds the stored value.
+    let closeNotice = $state<boolean | null>(null);
+    async function toggleCloseNotice(on: boolean) {
+        closeNotice = (await api.setCloseNotice(on)).close_notice;
+    }
+
     const MODE_WORDS: Record<string, string> = {
         buyer: "What to worry about, and what to ask — the default.",
         author: "The same answer plus why it ranked there, and which pack said so.",
@@ -151,6 +157,24 @@
 <!-- Before "what is remembered", because it is the one thing on this page
      that is *not* in app.sqlite, and the section below says so. -->
 <Keys onChange={onKeysChanged} />
+
+{#await api.window() then win}
+    {#if win.shell}
+        <section>
+            <h3>Closing the window</h3>
+            <label class="choice" class:on={closeNotice ?? win.close_notice}>
+                <input
+                    type="checkbox"
+                    checked={closeNotice ?? win.close_notice}
+                    onchange={(e) => toggleCloseNotice(e.currentTarget.checked)}
+                />
+                <span>Say that Kriko keeps running in the tray when I close the window</span>
+            </label>
+        </section>
+    {/if}
+{:catch}
+    <!-- No engine answer: nothing to switch, and the rest of Settings stands. -->
+{/await}
 
 <section>
     <h3>Check a provider key</h3>

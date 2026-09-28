@@ -82,7 +82,7 @@ import pytest
 #: files of `ui/src`. It shipped over budget in 0.10.3 (317,327 bytes) because
 #: that installer was built by hand without the gate; this records it rather
 #: than trimming working controls to fit a number. 317,467 bytes.
-BUDGET = {".js": 329_000, ".css": 60_000}
+BUDGET = {".js": 333_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
@@ -93,7 +93,7 @@ DEFERRED: tuple[str, ...] = ()
 #: What a reader waits on before the window can render — the entry chunk and
 #: its CSS, with every deferred leaf above excluded. 253 KB of JS and 42 KB of
 #: CSS today, against 574 KB before the terminal was deferred.
-FIRST_PAINT_BUDGET = 384_000
+FIRST_PAINT_BUDGET = 388_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.

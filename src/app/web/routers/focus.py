@@ -42,8 +42,11 @@ both navigate, and a window reopened later would replay an old jump.
 import re
 import time
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from app.web import state
+from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["focus"])
 
@@ -135,3 +138,57 @@ def take_focus(request: Request) -> dict:
         return {"route": None, "expired": True}
     return {"route": pending["route"]}
 
+
+
+# ── closing the window, asked in the window (B152) ──────────────────────────
+#
+# The shell used to answer the close button with a native message box: the
+# OS's own chrome, the OS's warning sound, every time, with no way to stop it.
+# The reader asked for a "don't show me again", a box that looks like Kriko,
+# and no sound — all three of which are the page's to draw, not Rust's. So the
+# shell now only *asks* the page (one `eval`), and the page answers here; this
+# prints one more stdout line for the shell to act on, exactly as `FOCUS_LINE`
+# does. The choice lives in `app.sqlite`: the window's origin carries a port
+# picked fresh each launch, so its localStorage would forget by morning.
+
+#: Must match `WINDOW_LINE` in `tauri/src-tauri/src/main.rs`.
+WINDOW_LINE = "KRIKO_WINDOW"
+#: The `settings` row that says the reader has seen the close notice enough.
+CLOSE_NOTICE_OFF = "close_notice_off"
+#: `ack` means "the page is showing its own notice" — the shell stops waiting
+#: to hide the window itself. `hide` and `quit` are the two answers.
+WINDOW_ACTIONS = ("ack", "hide", "quit")
+
+
+class WindowAction(BaseModel):
+    action: str = Field(pattern="^(" + "|".join(WINDOW_ACTIONS) + ")$")
+    #: Set with `hide`: stop asking on close from now on.
+    remember: bool = False
+
+
+@router.get("/window")
+def read_window(request: Request, conn=Depends(get_app_state)) -> dict:
+    return {
+        "shell": bool(request.app.state.settings.shell_attached),
+        "close_notice": not state.all_settings(conn).get(CLOSE_NOTICE_OFF, False),
+    }
+
+
+@router.post("/window")
+def window_action(body: WindowAction, request: Request, conn=Depends(get_app_state)) -> dict:
+    if body.remember:
+        state.put_settings(conn, {CLOSE_NOTICE_OFF: True})
+    print(f"{WINDOW_LINE} {body.action}", flush=True)
+    return {"action": body.action, "shell": bool(request.app.state.settings.shell_attached)}
+
+
+class CloseNotice(BaseModel):
+    on: bool
+
+
+@router.put("/window/close-notice")
+def set_close_notice(body: CloseNotice, conn=Depends(get_app_state)) -> dict:
+    """Settings' switch for it — and the way back from "don't show again".
+    Changes the setting only; nothing reaches the shell."""
+    state.put_settings(conn, {CLOSE_NOTICE_OFF: not body.on})
+    return {"close_notice": body.on}

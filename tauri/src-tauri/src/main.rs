@@ -31,6 +31,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -54,6 +55,17 @@ const PORT_LINE: &str = "KRIKO_PORT";
 /// never parsed here. Which screen to show is the SPA's business, and it
 /// collects that from `GET /api/focus` on its own.
 const FOCUS_LINE: &str = "KRIKO_FOCUS";
+/// The page's answer to the close button. Must match `WINDOW_LINE` in
+/// `src/app/web/routers/focus.py`; followed by `ack`, `hide` or `quit`.
+///
+/// The close button asks the page, not the OS: a native message box is the
+/// OS's chrome and the OS's warning sound, and "don't show this again" is an
+/// interface decision this file must not hold. The page draws the notice and
+/// posts its answer to the engine, which prints this line.
+const WINDOW_LINE: &str = "KRIKO_WINDOW";
+/// How long the page gets to answer a close before the shell hides the
+/// window itself — a boot or failure page has no one to answer.
+const CLOSE_ANSWER_WAIT: Duration = Duration::from_millis(1500);
 /// How long the engine gets to answer `/api/health` before we call it dead.
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -63,16 +75,11 @@ struct Engine {
     /// process exit. A `Mutex<Option<..>>` rather than a channel: killing is
     /// idempotent here and every exit path reaches for the same handle.
     child: Mutex<Option<CommandChild>>,
-    /// Whether the "it is still running" notice has been shown this run.
-    ///
-    /// Once per process, and deliberately not persisted. A reader who presses
-    /// X expecting the app to close needs telling that it did not — a hidden
-    /// window with a live engine is otherwise indistinguishable from a crash,
-    /// which is the same "a blank window is a bug" reasoning as rule 2. It is
-    /// not remembered across launches because the alternatives are worse: a
-    /// flag file would be a third piece of state beside the two SQLite files,
-    /// and asking the engine would put an interface decision in Rust.
-    hinted: Mutex<bool>,
+    /// Which close press this is, and the last one the page answered. A
+    /// close the page has not answered within `CLOSE_ANSWER_WAIT` is hidden
+    /// by the shell, so the X button can never do nothing.
+    close_asked: AtomicU64,
+    close_answered: AtomicU64,
 }
 
 fn emit_failure(app: &AppHandle, title: &str, detail: &str) {
@@ -95,25 +102,45 @@ fn show_window(app: &AppHandle) {
     }
 }
 
-/// Say once per run that closing the window did not close Kriko.
-fn hint_still_running(app: &AppHandle) {
+/// The close button: ask the page, and hide the window if it never answers.
+fn ask_page_to_close(window: &tauri::Window) {
+    let app = window.app_handle().clone();
     let Some(engine) = app.try_state::<Engine>() else { return };
-    let mut hinted = engine.hinted.lock().unwrap();
-    if *hinted {
-        return;
+    let asked = engine.close_asked.fetch_add(1, Ordering::SeqCst) + 1;
+    if let Some(page) = app.get_webview_window("main") {
+        let _ = page.eval("window.__krikoClose && window.__krikoClose()");
     }
-    *hinted = true;
-    // Non-blocking on purpose. This runs inside a window-event handler, and
-    // `blocking_show` there waits for a dialog on the same thread that would
-    // have to pump it.
-    app.dialog()
-        .message(concat!(
-            "Kriko is still running so the browser extension can reach it. ",
-            "Use the Kriko icon near the clock to open it again, or ",
-            "Quit Kriko to stop it.",
-        ))
-        .title("Kriko is still running")
-        .show(|_| {});
+    std::thread::spawn(move || {
+        std::thread::sleep(CLOSE_ANSWER_WAIT);
+        let Some(engine) = app.try_state::<Engine>() else { return };
+        if engine.close_answered.load(Ordering::SeqCst) < asked {
+            if let Some(page) = app.get_webview_window("main") {
+                let _ = page.hide();
+            }
+        }
+    });
+}
+
+/// What the page said to do with the window.
+fn window_answer(app: &AppHandle, line: &str) {
+    if let Some(engine) = app.try_state::<Engine>() {
+        let asked = engine.close_asked.load(Ordering::SeqCst);
+        engine.close_answered.store(asked, Ordering::SeqCst);
+    }
+    let action = line.split(WINDOW_LINE).nth(1).unwrap_or("").trim();
+    match action {
+        "hide" => {
+            if let Some(page) = app.get_webview_window("main") {
+                let _ = page.hide();
+            }
+        }
+        // The tray's Quit, in the same order and for the same reason.
+        "quit" => {
+            kill_engine(app);
+            app.exit(0);
+        }
+        _ => {}
+    }
 }
 
 /// The tray icon, which owns the engine's life now that closing the window
@@ -246,6 +273,9 @@ fn start_engine(app: AppHandle, engine: State<'_, Engine>) -> Result<(), String>
                     let line = String::from_utf8_lossy(&bytes).to_string();
                     if line.contains(FOCUS_LINE) {
                         show_window(&handle);
+                    }
+                    if line.contains(WINDOW_LINE) {
+                        window_answer(&handle, &line);
                     }
                     if port.is_none() {
                         if let Some(rest) = line.split(PORT_LINE).nth(1) {
@@ -435,8 +465,7 @@ fn main() {
             // window is not what they were using at that moment.
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
-                let _ = window.hide();
-                hint_still_running(window.app_handle());
+                ask_page_to_close(window);
             }
             // Kept even though nothing destroys the window any more: if
             // something ever does, the engine must not outlive it.
