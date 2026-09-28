@@ -1,9 +1,9 @@
 <script lang="ts">
     import Async from "../lib/Async.svelte";
     import Failure from "../lib/Failure.svelte";
-    import { api } from "../lib/api";
+    import { api, ApiError } from "../lib/api";
     import { follow } from "../lib/jobs";
-    import { JobFailedError } from "../lib/failure";
+    import { JobFailedError, PackInstallFailedError } from "../lib/failure";
 
     let { onDone }: { onDone: () => void } = $props();
 
@@ -50,15 +50,23 @@
     }
 
     async function chooseFile(event: Event) {
-        const file = (event.currentTarget as HTMLInputElement).files?.[0];
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
         if (!file) return;
+        // The browser only fires `change` when the input's value differs
+        // from what it already held, so choosing the same file a second
+        // time — the obvious thing to do after "that file didn't work,
+        // pick another" turns out to have been the same file by mistake —
+        // fired nothing at all (B145 settings-17). Clearing it here means
+        // the next pick, same file or not, is always a fresh value.
+        input.value = "";
         busy = true;
         failure = null;
         try {
             await api.installPack(file);
             onDone();
         } catch (e) {
-            failure = e;
+            failure = e instanceof ApiError ? new PackInstallFailedError(e) : e;
         } finally {
             busy = false;
         }

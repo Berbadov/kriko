@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { navigate } from "../router";
+    import { hashWith } from "../router";
     import type { Mode } from "../mode";
     import { destinationsFor } from "./nav";
 
@@ -34,17 +34,31 @@
     let cameFrom: HTMLElement | null = null;
 
     const all = $derived(destinationsFor(mode));
+    // A label match ranks ahead of a match buried in `also` or `group`, so
+    // typing "browse" and pressing Enter lands on the screen actually called
+    // Browse rather than on "Browser extension", which merely starts with
+    // the same letters further down the (unsorted) list.
+    const rank = (d: { label: string }, needle: string): number => {
+        const label = d.label.toLowerCase();
+        if (label === needle) return 0;
+        if (label.startsWith(needle)) return 1;
+        return 2;
+    };
+
     const hits = $derived(
         q.trim()
-            ? all.filter((d) =>
-                  // `d.also` is the vocabulary a merged screen absorbed —
-                  // "console", "jobs", "submissions". Searching without it
-                  // would mean the reorganisation made the app harder to
-                  // search than before it, which is the wrong direction.
-                  `${d.label} ${d.group} ${d.name} ${(d.also ?? []).join(" ")}`
-                      .toLowerCase()
-                      .includes(q.trim().toLowerCase()),
-              )
+            ? all
+                  .filter((d) =>
+                      // `d.also` is the vocabulary a merged screen absorbed —
+                      // "console", "jobs", "submissions". Searching without it
+                      // would mean the reorganisation made the app harder to
+                      // search than before it, which is the wrong direction.
+                      `${d.label} ${d.group} ${d.name} ${(d.also ?? []).join(" ")}`
+                          .toLowerCase()
+                          .includes(q.trim().toLowerCase()),
+                  )
+                  .slice()
+                  .sort((a, b) => rank(a, q.trim().toLowerCase()) - rank(b, q.trim().toLowerCase()))
             : all,
     );
 
@@ -78,10 +92,31 @@
         cameFrom = null;
     }
 
+    // Arrow keys move the cursor, but the list itself is only 45vh tall (it
+    // is capped so the palette never grows past the window) — at a short
+    // window that is well under the full option count, so without this the
+    // highlighted option scrolls out of view and Enter opens a destination
+    // the reader cannot see was selected.
+    function scrollActiveIntoView() {
+        if (!hits.length) return;
+        // Optional call, not just optional lookup: jsdom's HTMLElement has no
+        // scrollIntoView at all, and the tests run there — a bare `?.` on
+        // the element would still throw calling an undefined method.
+        document
+            .getElementById(`palette-${hits[cursor].name}`)
+            ?.scrollIntoView?.({ block: "nearest" });
+    }
+
+    // The rail's own links carry only the mode, never the screen's own
+    // filters (a lens, an id, a search term) — a jump from #/questions?id=X
+    // has no business landing on the next screen with ?id=X still attached.
+    // `navigate()` copies the whole current query, which is right for a link
+    // that means "same place, new mode"; the palette means "somewhere else
+    // entirely", so it builds the hash itself, the way the rail does.
     function go(name: string) {
         open = false;
         cameFrom = null;
-        navigate(name);
+        window.location.hash = hashWith({ mode }, name);
     }
 
     /** Tab, wrapped at the two ends.
@@ -142,6 +177,7 @@
             if (!hits.length) return;
             const step = event.key === "ArrowDown" ? 1 : -1;
             at = (cursor + step + hits.length) % hits.length;
+            scrollActiveIntoView();
             return;
         }
         if (event.key === "Enter") {

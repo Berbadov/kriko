@@ -714,6 +714,16 @@ def locate(one: Harness) -> str:
     """
     found = shutil.which(one.executable)
     if found:
+        # PATHEXT is conventionally spelled in upper case
+        # (".COM;.EXE;.BAT;.CMD") and `shutil.which` returns whatever case
+        # it matched in, so an npm-installed CLI resolves to "...\claude.CMD"
+        # next to every other path's lower-case suffix. Windows paths are
+        # case-insensitive either way, so this only matters where the path
+        # is shown to the reader (Settings → Your agents, settings-23).
+        if os.name == "nt":
+            stem, dot, suffix = found.rpartition(".")
+            if dot and suffix.lower() in ("com", "exe", "bat", "cmd"):
+                found = f"{stem}.{suffix.lower()}"
         return found
     home = Path.home()
     roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]

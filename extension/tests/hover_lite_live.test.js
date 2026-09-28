@@ -138,3 +138,20 @@ test("the feed keeps being asked while the panel is open", () => {
 
   assert.ok(asked() > first, "the poll stopped after one answer");
 });
+
+test("a tab left in the background stops asking, and asks again when looked at", () => {
+  const p = analyzing({ operationsResponse: RUNNING });
+  const asked = () => p.sent.filter((one) => one.type === "OPERATIONS").length;
+  const doc = p.dom.window.document;
+  let hidden = true;
+  Object.defineProperty(doc, "hidden", { configurable: true, get: () => hidden });
+
+  p.flushTimers();
+  const whileHidden = asked();
+  p.flushTimers();
+  assert.equal(asked(), whileHidden, "a hidden tab kept polling");
+
+  hidden = false;
+  doc.dispatchEvent(new p.dom.window.Event("visibilitychange"));
+  assert.ok(asked() > whileHidden, "coming back into view did not ask again");
+});

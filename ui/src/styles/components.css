@@ -1528,6 +1528,22 @@ table.compare thead th {
     white-space: nowrap;
 }
 
+/* At a short window (620x520, the extension's popup size) the two-line
+ * title-plus-detail layout above ate a third of the visible height on every
+ * screen (shell-13), pushing the screen's own first result below the fold.
+ * Below this height the detail line is dropped and everything sits on one
+ * row — still a hint, but one that costs a single line rather than three. */
+@media (max-height: 820px) {
+    .nextstep {
+        padding: var(--s-2) var(--s-3);
+        margin-bottom: var(--s-3);
+        flex-wrap: nowrap;
+    }
+    .nextstep .meta {
+        display: none;
+    }
+}
+
 /* ── what the answer was computed against ───────────────────────────────── */
 
 /* A strip, not a table: the reader's question here is "did it even have the

@@ -482,6 +482,28 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
+### B152 — "Just look into each and if they are usable implement and merge": the abandoned worktrees land, and the rest of the reader's list is a work order `[G5]`
+**Asked:** "ok lets tidy up this mess. just look into each and if they are usable implement and merge. let set a to do list after that lean into the performance issues, half working buttons. go monster mode; remember the previous things that ive said I told you to. take the control of the computer to test." (2026-09-28)
+**Where:** `.claude/worktrees/*` → branch `b145/ship-ready`; then the installed app and the extension panel.
+**Merged (worktree → what the reader sees):**
+- r2-settings: Welcome's pack-file picker names a wrong file as a wrong file (`PackInstallFailedError`, no Retry) and accepts the same file twice; a CLI found as `CLAUDE.EXE` is still found.
+- r2-extension: the panel stops polling in a background tab and resumes when looked at, backs off to 30 s when the app is down; a malformed app address is refused, not fetched; "Compare" appears only once two listings exist to compare; the manifest reads "Kriko", not a car product.
+- r2-shell: the palette ranks and scrolls to its selection and keeps the current mode; "Agents" everywhere a screen said something else; the Connect link keeps the mode.
+- r2-ops: a job's live log sends only new bytes after the first event; Bench's estimate clears its error on success.
+- screen-walker: `Async` keeps the last answer on screen while the next loads (a dropdown no longer vanishes under the pointer); two packs reading one site no longer crash Extension; radios and checkboxes lose the text-field box; the CLI writes `logs/analyses.jsonl` like the app; `ui/walker/walk.mjs` presses every control against a scratch copy of `~/.kriko`, with a PATH that finds no agent CLI.
+- Dropped: r2-ops' auto-open of an authoring `<details>` (HEAD's is a plain section); screen-walker's model-list cache (HEAD has one).
+**Done when:** the gate is green on `b145/ship-ready` with all of the above; the walker runs clean or its findings are rows below.
+**Work order (in this order, each observed on the installed build):**
+1. the extension's app requests time out (hung app ≠ app not running);
+2. the walker's findings: half-working buttons, slow screens;
+3. close warning: "don't show again", a styled box, no OS sound;
+4. instant updates: a card the agent adds appears in the app and the panel without a refresh;
+5. one theme for the extension and the app;
+6. a simpler UI (fewer screens, fewer words);
+7. re-time the slow agents after B151;
+8. docs: short, with diagrams;
+9. release.
+
 ### B151 — "We are not reading enough data from the page to identify the product. plus opencode isnt working at all": the listing's facts reach the agent, and every agent gets its whole brief `[G5]`
 **Asked:** "well, we are not reading enough data from the page to identify the product. plus opencode isnt working at all. other llms are taking too long to read. so much that i couldnt test the other features." (2026-09-28, on 0.10.9)
 **Where:** the extension panel on a Sahibinden car listing → **Research this product**, with each agent picked in Settings → Research; the run on Activity → Runs.

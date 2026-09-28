@@ -202,6 +202,24 @@ describe("adding the browser extension", () => {
         expect(screen.getByText(/matches \/listing\//)).toBeInTheDocument();
     });
 
+    it("lists two packs that read the same site under the same adapter id", async () => {
+        // An adapter id is unique within its pack, not across packs. Keyed on
+        // the id alone, the second pack covering a site threw
+        // each_key_duplicate and took the whole screen down — found by the
+        // screen walker, on an install with three packs for one site.
+        const one = { id: "a1", site: "example.invalid", match: [], labels: [] };
+        stubFetch({
+            "/api/extension": status({ staged: true }),
+            "/api/adapters": [
+                { ...one, pack_id: "org.kriko.cars" },
+                { ...one, pack_id: "org.kriko.other" },
+            ],
+        });
+        render(Extension);
+        expect(await screen.findByText("org.kriko.other")).toBeInTheDocument();
+        expect(screen.getAllByText("example.invalid")).toHaveLength(2);
+    });
+
     it("tells the reader the shortcut and where the address is changed", async () => {
         // Both are unfindable otherwise: a browser never advertises an
         // extension's keyboard command, and the options page lives two clicks

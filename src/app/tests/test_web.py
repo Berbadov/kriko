@@ -374,6 +374,22 @@ def test_a_scraped_page_becomes_a_query_through_the_packs_adapter(client):
     assert [c["title"] for c in body["claims"]] == ["Cell imbalance trips protection"]
 
 
+def test_compare_is_only_offered_once_there_are_two_saved_checks(client):
+    """extension-16: the panel's Compare button used to be built unconditionally,
+    opening onto Compare's own "needs two saved checks" empty state on the very
+    first analysis. `compare_ready` lets the extension withhold the button
+    instead of the app being the one to say no."""
+    body = {
+        "url": "https://toolshop.invalid/item/dhp484",
+        "title": "Makita DHP484 combi drill",
+        "fields": {"Model No": "DHP484"},
+    }
+    first = client.post("/api/analyze", json=body).json()
+    assert first["compare_ready"] is False
+    second = client.post("/api/analyze", json=body).json()
+    assert second["compare_ready"] is True
+
+
 def test_a_site_no_installed_pack_can_read_says_so_not_an_empty_answer(client):
     """Silence would look identical to "this product has no known issues" — and
     a site nothing reads is an expected, frequent answer (check-21), not a
