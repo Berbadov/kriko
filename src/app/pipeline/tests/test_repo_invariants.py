@@ -764,11 +764,27 @@ def test_both_clients_call_it_the_same_thing_on_screen():
         "ui/src/lib/verdict.ts no longer says \"known risk\" — if the app's "
         "word for the reader changed, the panel's has to change with it"
     )
-    for shown in ("${c.total} RISKS", "RISKS · ${total}"):
-        assert shown in panel, (
-            f"the panel no longer shows {shown!r}, but the app still counts "
-            f"'known risk'. One reader, one word."
+    assert "Risks · ${total}" in panel, (
+        "the panel no longer heads its list 'Risks · N', but the app still "
+        "counts 'known risk'. One reader, one word."
+    )
+
+    # B152.5: the severity words and the ask line are the app's, read off
+    # `report.ts` — so renaming one there fails here until the panel follows.
+    report = (REPO / "ui" / "src" / "lib" / "report.ts").read_text(encoding="utf-8")
+    block = re.search(r"SEVERITY_WORD[^{]*\{([^}]*)\}", report)
+    assert block, "ui/src/lib/report.ts no longer names SEVERITY_WORD"
+    words = re.findall(r':\s*"([^"]+)"', block.group(1))
+    assert len(words) == 3, words
+    for word in words:
+        assert f'<span class="lbl">{word.lower()}</span>' in panel, (
+            f"the app calls a severity {word!r}; the panel's counts bar does not"
         )
+    card = (REPO / "extension" / "hover_lite" / "claim_card.js").read_text(encoding="utf-8")
+    ask = (REPO / "ui" / "src" / "lib" / "ClaimCard.svelte").read_text(encoding="utf-8")
+    assert "What to ask" in ask and "What to ask" in card, (
+        "the app and the panel no longer head the buyer's question the same way"
+    )
 
 
 def test_no_two_tracked_files_differ_only_in_case():

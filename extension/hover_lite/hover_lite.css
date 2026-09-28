@@ -161,7 +161,7 @@
 }
 .lite-subtitle {
   margin: 5px 0 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10.5px;
   color: var(--fg-subtle);
   letter-spacing: 0.2px;
@@ -466,7 +466,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 9px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   border: 1px solid transparent;
 }
@@ -489,7 +489,7 @@
 .lite-count .lbl { color: #8a909b; letter-spacing: 0.5px; }
 .lite-counts-total {
   margin-left: auto;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   color: var(--fg-subtle);
   letter-spacing: 0.5px;
@@ -515,7 +515,7 @@
   white-space: normal;
 }
 .lite-listing-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11.5px;
   color: var(--fg-muted);
   display: flex;
@@ -531,7 +531,7 @@
   gap: 6px;
 }
 .lite-listing-engine {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   color: var(--low-ink);
   letter-spacing: 0.3px;
@@ -540,7 +540,7 @@
 .lite-km-tag {
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11.5px;
   padding: 2px 7px;
   background: var(--bg-item);
@@ -569,14 +569,14 @@
 .lite-alerts-head:focus-visible { outline: 2px solid var(--high-ink); outline-offset: -2px; }
 .lite-alerts-label {
   flex: 1;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--high-ink);
 }
 .lite-alerts-toggle {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 18px;
   line-height: 1;
   color: var(--high-ink);
@@ -649,7 +649,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   line-height: 1.5;
   color: var(--fg-muted);
@@ -659,7 +659,7 @@
 
 .lite-status {
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   color: var(--fg-muted);
   min-height: 16px;
@@ -681,7 +681,7 @@
   animation-delay: 40ms;
 }
 .lite-claims-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   color: var(--fg-muted);
   letter-spacing: 1px;
@@ -694,7 +694,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10.5px;
   letter-spacing: 0.5px;
   background: var(--bg-item);
@@ -799,7 +799,7 @@
 .lite-rc-meta {
   display: flex;
   align-items: center;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10.5px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
@@ -809,11 +809,10 @@
 
 /* Strength badge — confirmed (corroborated) vs reported (unverified report). */
 .lite-rc-strength {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-body);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  letter-spacing: 0;
   padding: 1.5px 6px;
   border-radius: 4px;
   border: 1px solid transparent;
@@ -844,7 +843,7 @@
   border-left: 1px solid var(--border);
   color: #9aa1ad;
   font-size: 20px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   transition: background var(--dur-fast), color var(--dur-fast);
 }
 .lite-rc-toggle:hover { background: #262a32; color: var(--fg); }
@@ -916,7 +915,7 @@
 }
 .lite-rc-insp-body { min-width: 0; flex: 1 1 auto; }
 .lite-rc-insp-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 9px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
@@ -941,7 +940,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
@@ -977,7 +976,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 9px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
@@ -1018,7 +1017,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10px;
   letter-spacing: 0.2px;
   border: 1px solid var(--border);
@@ -1259,7 +1258,7 @@
   gap: 8px;
 }
 .lite-verdict-word {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -1305,7 +1304,7 @@
 .lite-weighed > summary {
   cursor: pointer;
   color: var(--fg-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 10.5px;
   letter-spacing: 0.5px;
 }
@@ -1362,16 +1361,24 @@
 /* ─────────────────────────────────────────────
    Search — typing the name
    ───────────────────────────────────────────── */
-.lite-product-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+/* One row, in the panel's own face: `font: inherit` took the size of
+   whatever the panel sat inside, so these read larger than every other
+   control here (B152.5). */
+.lite-product-actions { display: flex; gap: 6px; margin: 8px 0 14px; }
+.lite-product-actions button { flex: 1 1 0; }
 .lite-product-actions button, .lite-research button, .lite-search-research {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 7px 9px;
   background: var(--bg-item);
   color: var(--fg);
-  font: inherit;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
+.lite-product-actions button:hover, .lite-research button:hover:not(:disabled),
+.lite-search-research:hover { background: #262a32; border-color: #3a414c; }
 .lite-research button:disabled { opacity: .55; cursor: default; }
 .lite-research {
   border: 1px solid var(--border);

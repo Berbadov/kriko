@@ -1365,17 +1365,17 @@
         <span class="lite-count" data-sev="high">
           <span class="dot"></span>
           <span class="num">${c.high}</span>
-          <span class="lbl">HIGH</span>
+          <span class="lbl">serious</span>
         </span>
         <span class="lite-count" data-sev="medium">
           <span class="dot"></span>
           <span class="num">${c.medium}</span>
-          <span class="lbl">MED</span>
+          <span class="lbl">worth checking</span>
         </span>
         <span class="lite-count" data-sev="low">
           <span class="dot"></span>
           <span class="num">${c.low}</span>
-          <span class="lbl">LOW</span>
+          <span class="lbl">minor</span>
         </span>
         <!-- "RISKS", not "CLAIMS", and that is not a leftover.
              The row is a claim everywhere it is *named* — the store, the
@@ -1388,9 +1388,13 @@
              is the case it was written for.
              (And no backticks in here — this comment is inside a template
              literal, which is how it broke the first time.) -->
-        <span class="lite-counts-total">${c.total} RISKS</span>
       </div>
     `;
+  }
+
+  function sameWords(a, b) {
+    const norm = (x) => String(x || "").toLowerCase().split(/\s+/).filter(Boolean).sort().join(" ");
+    return norm(a) === norm(b);
   }
 
   function renderListingHeader() {
@@ -1408,7 +1412,9 @@
         <div class="lite-listing-title">${escapeHtml(lm.title || "")}</div>
         ${lm.facts.length ? `<div class="lite-listing-meta">${metaLine}</div>` : ""}
         ${lm.identity_line
-            ? `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`
+            // The title already says it when the engine read the page the way
+            // the page reads; a second line repeating it is noise (B152.5).
+            ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
             : `<div class="lite-listing-engine" data-unresolved="1">Not recognised — no pack matched this page</div>`}
       </div>
     `;
@@ -2142,13 +2148,13 @@
     if (!head) {
       claimsHeadEl.innerHTML = `
         <div class="lite-claims-head">
-          <div class="lite-claims-label">RISKS · ${total}</div>
+          <div class="lite-claims-label">Risks · ${total}</div>
           <div class="lite-chip-group">
             <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
-              + EXPAND ALL
+              + Expand all
             </button>
             <button type="button" class="lite-chip lite-chip-collapse" data-on="${allClose ? "1" : "0"}">
-              − COLLAPSE ALL
+              − Collapse all
             </button>
           </div>
         </div>
@@ -2160,7 +2166,7 @@
 
     // Update in place
     const label = head.querySelector(".lite-claims-label");
-    if (label) label.textContent = `RISKS · ${total}`;
+    if (label) label.textContent = `Risks · ${total}`;
     const expandBtn   = head.querySelector(".lite-chip-expand");
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
