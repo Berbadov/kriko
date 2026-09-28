@@ -170,7 +170,7 @@
             {:else}
                 <p class="state empty">
                     Nothing has run here yet, so there is nothing to add up. The
-                    three planes are on <a href="#/agents">Agents → Your agents</a>.
+                    three planes are on <a href="#/agents">Agents</a>.
                 </p>
             {/if}
 

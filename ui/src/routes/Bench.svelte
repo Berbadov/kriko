@@ -24,9 +24,13 @@
      * fetches them, and this screen keeps only the *number*, which is what
      * a benchmark request actually carries. One less correspondence for
      * somebody to keep in step by hand. */
+    // ready starts false: this is what the two chips look like before prefs
+    // answer, not what they are once the key check has actually run
+    // (ops-12 — a keyless chip was clickable for the several hundred
+    // milliseconds /api/prefs takes to return).
     const SEARCH_FALLBACK: SearchChoice[] = [
-        { id: "exa", label: "Exa", ready: true },
-        { id: "tavily", label: "Tavily", ready: true },
+        { id: "exa", label: "Exa", ready: false },
+        { id: "tavily", label: "Tavily", ready: false },
     ];
     const BUDGET_STEP = 0.05;
     const BUDGET_MIN = 0;
@@ -40,6 +44,7 @@
     let promise = $state(load());
     let benchData = $state<Bench | null>(null);
     let prefsView = $state<PrefsView | null>(null);
+    let prefsLoaded = $state(false);
     let starting = $state(false);
     let startFailure = $state<unknown>(null);
     let estimateError = $state<unknown>(null);
@@ -70,6 +75,7 @@
     let gridName = $state("");
     let touched = $state(false);
     let estimateTimer: ReturnType<typeof setTimeout> | undefined;
+    let scaleMounted = false;
 
     const requestBody = $derived<BenchRequest>({
         planes: planesSel.join(", "),
@@ -156,6 +162,10 @@
             if (typeof (result as BenchEstimate)?.runs === "number") {
                 estimate = result as BenchEstimate;
                 estimatedKey = snapshot;
+                // A later estimate that succeeds outlives an earlier failure —
+                // the stale "the estimate failed" line otherwise sat next to a
+                // fresh, correct number (ops-14).
+                estimateError = null;
             }
         } catch (cause) {
             if (explicit) estimateError = cause;
@@ -212,10 +222,25 @@
         // (`protocolOptions`, `packOptions`) fed without a second request, and
         // still re-derives on a retry because `promise` is reassigned there.
         promise.then((data) => (benchData = data)).catch(() => {});
-        api.prefs().then((data) => (prefsView = data as unknown as PrefsView)).catch(() => {});
+        api.prefs()
+            .then((data) => (prefsView = data as unknown as PrefsView))
+            .catch(() => {})
+            .finally(() => (prefsLoaded = true));
         api.benchConfigs().then((r) => (configs = r.configs ?? {})).catch(() => {});
         void findRunningJob();
         return () => stopFollow?.();
+    });
+
+    $effect(() => {
+        // `Scale` binds scaleId/scaleDocs directly rather than going through
+        // `toggle`/`bump*`, so pressing Deep or Quick there never set
+        // `touched` and the estimate below it went stale (ops-14). Its own
+        // first fire on mount (fetching the default scale) is not a change
+        // the reader made, so it is not what flips this on.
+        void scaleId;
+        void scaleDocs;
+        if (scaleMounted) touched = true;
+        scaleMounted = true;
     });
 
     $effect(() => {
@@ -283,6 +308,9 @@
                         <button type="button" disabled={!planesSel.includes("harness")} title={planesSel.includes("harness") ? one.label : "select the harness plane"} aria-pressed={llmsSel.includes(name)} onclick={() => (llmsSel = toggle(llmsSel, name))}>{name}</button>
                     {/each}
                 </div>
+                {#if !planesSel.includes("harness")}
+                    <p class="meta">Select the harness plane above to use these.</p>
+                {/if}
             {/each}
             {#if offeredLlms.length}
                 {#if harnessLlms.length}<p class="meta">Catalogue — runs on the paid plane</p>{/if}
@@ -292,18 +320,30 @@
                     {/each}
                 </div>
                 {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
+            {:else if !prefsLoaded}
+                <p class="meta">Reading your providers…</p>
             {:else if !harnessLlms.length}
                 <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
             {/if}
         </fieldset>
         <fieldset>
             <legend>Search</legend>
-            <div class="chips">
-                {#each searchOptions as one (one.id)}
-                    <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
-                {/each}
-            </div>
-            {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
+            {#if !prefsLoaded}
+                <p class="meta">Reading your providers…</p>
+            {:else}
+                <div class="chips" aria-describedby="search-reasons">
+                    {#each searchOptions as one (one.id)}
+                        <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
+                    {/each}
+                </div>
+                {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
+                {#if searchOptions.some((one) => !one.ready)}
+                    <p class="meta" id="search-reasons">
+                        Needs a key for {searchOptions.filter((one) => !one.ready).map((one) => one.label).join(", ")} —
+                        <a href="#/settings">Settings → Research</a>.
+                    </p>
+                {/if}
+            {/if}
         </fieldset>
         <fieldset>
             <legend>Protocols</legend>
@@ -399,6 +439,7 @@
         <p class="state">Could not forget that grid — it is still listed. {String(forgetError)}</p>
     {/if}
     <label>Save this grid as <input bind:value={gridName} /><button class="ghost" disabled={!gridName} onclick={() => savedGrids(true)}>Save</button></label>
+    {#if !gridName}<p class="meta">Name this grid to save it.</p>{/if}
 </section>
 
 {#if runningJobId}
