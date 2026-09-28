@@ -2050,3 +2050,45 @@ form.say > input {
     flex: 1 1 auto;
     min-width: 0;
 }
+
+/* B152.6: the Result actions past the two a buyer uses fold under "More".
+ * The list opens inline in the same row — no floating menu to dismiss, and
+ * print hides the whole row anyway. */
+.more-actions {
+    display: contents;
+}
+.more-actions > summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: var(--t-base);
+    line-height: var(--lh-base);
+}
+.more-actions > summary::-webkit-details-marker {
+    display: none;
+}
+.more-actions > summary::after {
+    content: " ▾";
+}
+.more-actions[open] > summary::after {
+    content: " ▴";
+}
+.more-actions-list {
+    display: contents;
+}
+
+/* B152.6: seven Forget buttons down the Recent rail read as seven things to
+ * do. The rail's Forget shows on the row the pointer or focus is on; it is
+ * still a real, tabbable button, so the keyboard reaches it the same way. */
+.history:not(.page) li .history-forget {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+}
+.history:not(.page) li:hover .history-forget,
+.history:not(.page) li:focus-within .history-forget {
+    opacity: 1;
+}
+@media (hover: none) {
+    .history:not(.page) li .history-forget {
+        opacity: 1;
+    }
+}
