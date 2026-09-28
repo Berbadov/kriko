@@ -40,11 +40,7 @@ FRESH_SECONDS = 6 * 60 * 60
 
 
 def _target(request: Request) -> Path:
-    override = extension.env_override()
-    if override:
-        return override
-    home = extension.home_of(request.app.state.settings.store_path)
-    return extension.staged_dir(home)
+    return extension.target_for(request.app.state.settings.store_path)
 
 
 def _age(iso: str) -> float | None:
@@ -55,6 +51,16 @@ def _age(iso: str) -> float | None:
     if seen.tzinfo is None:
         seen = seen.replace(tzinfo=timezone.utc)
     return (datetime.now(timezone.utc) - seen).total_seconds()
+
+
+def _loaded_digest(request: Request, sightings: list[dict]) -> str:
+    """The file digest the most recently seen extension said it runs."""
+    loaded = getattr(request.app.state, "extension_digests", {})
+    for row in sightings:
+        digest = (loaded.get(row["origin"]) or {}).get("content_digest", "")
+        if digest:
+            return digest
+    return ""
 
 
 @router.get("")
@@ -121,6 +127,8 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         "compatibility": extension.compatibility(
             _running_version(sightings),
             extension.version(source) if source else "",
+            loaded_digest=_loaded_digest(request, sightings),
+            carried_digest=extension.content_digest(source) if source else "",
         ),
     }
 
@@ -194,7 +202,22 @@ def _listing_pack(store, conn, url: str, facts: dict, title: str) -> str:
 
     specs = sites.adapters_for(store, conn, url)
     found = best_reading(store, specs, facts, url=url, title=title) if specs else None
-    return (found[0].get("pack_id", "") or "") if found else ""
+    if not found:
+        return ""
+    spec, mapped = found
+    pack = spec.get("pack_id", "") or ""
+    if len({one.get("pack_id", "") for one in specs}) > 1 and pack:
+        # Several packs claim this site and the winner knows none of what it
+        # read: every reading tied and the first one won. That held a car
+        # listing's quick look to a phone pack's principle (B151); no pack's
+        # principle is the honest answer for a product no pack knows.
+        from kriko.adapters import _fold, identity_vocabulary
+
+        own = {key: {_fold(v) for v in values}
+               for key, values in identity_vocabulary(store, [pack]).items()}
+        if not any(_fold(value) in own.get(key, ()) for key, value in mapped.identity.items()):
+            return ""
+    return pack
 
 
 @router.post("/research-plane")
@@ -305,6 +328,7 @@ def stage(request: Request) -> dict:
         written = extension.stage(source, target)
     except OSError as cause:
         raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
+    request.app.state.extension_staged_digest = extension.content_digest(target)
     return {
         "path": str(target), "written": written, "version": extension.version(target),
         "content_digest": extension.content_digest(target),
@@ -394,6 +418,7 @@ def launch(
         extension.stage(source, target)
     except OSError as cause:
         raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
+    request.app.state.extension_staged_digest = extension.content_digest(target)
 
     home = extension.home_of(request.app.state.settings.store_path)
     profile = extension.profile_dir(home)

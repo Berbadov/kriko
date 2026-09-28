@@ -219,7 +219,7 @@
                 <p
                     class="state"
                     class:error={status.compatibility.state === "too_old"}
-                    class:warn={status.compatibility.state === "behind"}
+                    class:warn={status.compatibility.state === "behind" || status.compatibility.state === "stale_files"}
                 >
                     {status.compatibility.detail}
                 </p>

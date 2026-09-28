@@ -74,6 +74,10 @@ VERSION_HEADER = "x-kriko-extension"
 MINIMUM_HEADER = "x-kriko-minimum-extension"
 MINIMUM_VERSION = "0.3.0"
 DIGEST_HEADER = "x-kriko-extension-digest"
+#: The digest of the files on disk where the browser loads the extension from.
+#: An extension whose own stamp differs is running files that are no longer
+#: there, and reloads (B151).
+STAGED_HEADER = "x-kriko-staged-digest"
 _DIGEST_STAMP = re.compile(rb'const LOADED_CONTENT_DIGEST = "[a-f0-9]*";')
 
 
@@ -97,7 +101,8 @@ def parse_version(text: str) -> tuple[int, ...]:
     return tuple(parts)
 
 
-def compatibility(running: str, shipped: str = "") -> dict:
+def compatibility(running: str, shipped: str = "", *, loaded_digest: str = "",
+                  carried_digest: str = "") -> dict:
     """What to say about the extension the browser is actually running.
 
     Three states, not two. `unknown` is separate from `too_old` because they
@@ -113,6 +118,10 @@ def compatibility(running: str, shipped: str = "") -> dict:
         state = "too_old"
     elif shipped and have < parse_version(shipped):
         state = "behind"
+    elif loaded_digest and carried_digest and loaded_digest != carried_digest:
+        # Same version, different files: the reader's browser ran a
+        # `background.js` two releases old while this said "current" (B151).
+        state = "stale_files"
     else:
         state = "current"
     return {
@@ -132,6 +141,11 @@ def compatibility(running: str, shipped: str = "") -> dict:
             "behind": (
                 f"The extension in your browser is {running}; this app ships "
                 f"{shipped}. It still works. Reload it when convenient."
+            ),
+            "stale_files": (
+                "The extension in your browser is running older files than "
+                "this app carries. It reloads itself the next time it talks "
+                "to the app; if this stays, reload it from the Extension page."
             ),
             "current": "",
         }[state],
@@ -235,6 +249,30 @@ def stage(source: Path, target: Path) -> list[str]:
         stamp = f'const LOADED_CONTENT_DIGEST = "{content_digest(target)}";'.encode("ascii")
         background.write_bytes(_DIGEST_STAMP.sub(stamp, background.read_bytes()))
     return written
+
+
+def target_for(store_path: Path) -> Path:
+    """Where this installation stages the extension the browser loads."""
+    return env_override() or staged_dir(home_of(store_path))
+
+
+def refresh(source: Path | None, target: Path) -> bool:
+    """Restage when the app carries different files than the browser loads (B151).
+
+    An app update replaced the carried extension and left the staged copy —
+    the directory Chrome actually loads — as it was. The reader's browser ran
+    the old `background.js`, which sent the listing's name and none of its
+    facts, while every status on the page said "current": both ends reported
+    0.3.0 and nothing compared the files. Only a copy the reader already
+    staged is refreshed; staging for the first time stays their choice.
+    """
+    if source is None or not (target / "manifest.json").is_file():
+        return False
+    carried = content_digest(source)
+    if not carried or carried == content_digest(target):
+        return False
+    stage(source, target)
+    return True
 
 
 def reveal(path: Path) -> str:
