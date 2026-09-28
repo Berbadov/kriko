@@ -1353,24 +1353,20 @@ li.gap {
 /* Severity reaches the eye before the word does: a 3px rule down the card's
    leading edge, in the same three colours the verdict bar uses. Colour alone
    never carries it — the pill keeps the word for anyone who cannot see the
-   difference. */
+   difference. The card itself stays neutral, as the extension's does (B152.5):
+   a page of eight serious risks washed red read as an alarm, not a list, and
+   looked like a different product from the panel the reader came from. */
 .card.risk {
     border-left: 3px solid var(--line);
 }
 .card.risk:has(.sev.high) {
-    border-color: var(--high-border);
     border-left-color: var(--high);
-    background: var(--high-soft);
 }
 .card.risk:has(.sev.medium) {
-    border-color: var(--medium-border);
     border-left-color: var(--medium);
-    background: var(--medium-soft);
 }
 .card.risk:has(.sev.low) {
-    border-color: var(--low-border);
     border-left-color: var(--low);
-    background: var(--low-soft);
 }
 .card.risk.done {
     opacity: 0.55;
