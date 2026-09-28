@@ -193,7 +193,7 @@
             >
         {/if}
         <button class="ghost" onclick={handOver}>Copy for a mechanic</button>
-        <!-- B152.6 "make the ui more simpler": the two things a buyer does with
+        <!-- B152.6, a simpler answer: the two things a reader does with
              an answer stay in sight; the rest folds under More. The sweep
              stays open while it runs, so its progress is never hidden. -->
         <details class="more-actions" open={sweeping || undefined}>

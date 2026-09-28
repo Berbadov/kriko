@@ -516,6 +516,11 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 *Where:* the app's Result screen: the action row under the verdict, and the Recent rail beside it.
 *Done when:* the row shows only **Question sheet**, **Copy for a mechanic** and **More**. More opens inline to Check every source, Print / Save as PDF and Compare with another, and stays open while a sweep runs. The rail shows no Forget button until its row is hovered or focused (on touch, always). *Observed 2026-09-28:* vite dev, buyer mode shows three buttons, More opens to the other three, and the rail has no buttons at rest.
 
+**B152.7 — slow screens.** *Asked:* "lean into the performance issues, half working buttons."
+*Where:* every screen that reads `/api/prefs` (Settings, the agent picker, research start).
+*Reproduced 2026-09-28:* a walk of every route in the dev app found one slow call: `/api/prefs` at 7.2 s cold and 200 ms warm, while the other endpoints answer in 10 ms. Profile: `harness.locate` runs 23 `shutil.which` calls, ~7,800 filesystem probes; and once `MODELS_TTL` (10 min) runs out, the next read waits for every CLI's model list. No console errors, and no screen showed an error state.
+*Done when:* warm `/api/prefs` is under 20 ms, and an expired model list is served while it is re-asked in the background. Re-ask (`fresh`) still sees a newly installed CLI at once. *Observed:* `prefs.choices` measured 7 ms, then 5 ms, warm.
+
 ### B151 — "We are not reading enough data from the page to identify the product. plus opencode isnt working at all": the listing's facts reach the agent, and every agent gets its whole brief `[G5]`
 **Asked:** "well, we are not reading enough data from the page to identify the product. plus opencode isnt working at all. other llms are taking too long to read. so much that i couldnt test the other features." (2026-09-28, on 0.10.9)
 **Where:** the extension panel on a Sahibinden car listing → **Research this product**, with each agent picked in Settings → Research; the run on Activity → Runs.
