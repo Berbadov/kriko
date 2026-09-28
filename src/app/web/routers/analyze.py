@@ -439,6 +439,11 @@ def analyze(
     # The Result heading and "Open the listing" link both need the URL by
     # itself, not folded into a label string (check-15).
     payload["url"] = body.url
+    # Compare needs two saved checks to show anything; the panel's footer
+    # button should not exist before that, rather than opening the app to an
+    # empty-state screen (extension-16). Counted after this lookup was
+    # recorded, so the very check that makes two is the one that unlocks it.
+    payload["compare_ready"] = state.lookup_count(app_state) >= 2
     return payload
 
 

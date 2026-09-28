@@ -875,6 +875,17 @@ def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return out
 
 
+def lookup_count(conn: sqlite3.Connection) -> int:
+    """How many saved checks exist — Compare needs at least two of them.
+
+    A plain `COUNT(*)`, kept separate from `recent()` so a caller that only
+    needs the number (extension-16: whether to offer Compare at all) does not
+    pay for decoding every stored response first.
+    """
+    row = conn.execute("SELECT COUNT(*) AS n FROM lookups").fetchone()
+    return int(row["n"])
+
+
 def get_lookup(conn: sqlite3.Connection, lookup_id: str) -> dict | None:
     row = conn.execute(
         "SELECT * FROM lookups WHERE lookup_id = ?", (lookup_id,)

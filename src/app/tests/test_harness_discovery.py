@@ -78,3 +78,20 @@ def test_the_command_runs_the_binary_that_was_found(nowhere_on_path, monkeypatch
 
     claude = next(h for h in harness.KNOWN if h.id == "claude-code")
     assert harness.command_for(claude)[0] == str(cli)
+
+
+def test_a_pathext_match_is_shown_in_lower_case(monkeypatch):
+    """settings-23: `shutil.which` on Windows returns whatever case PATHEXT
+    is spelled in (conventionally upper case, ".COM;.EXE;.BAT;.CMD"), and
+    Settings prints `locate`'s return value verbatim — so an npm-installed
+    CLI read "...\\claude.CMD" next to every other path's lower-case
+    extension. Cosmetic (Windows paths are case-insensitive either way), but
+    the one path a reader actually looks at should not be the odd one out.
+    """
+    monkeypatch.setattr(harness.os, "name", "nt")
+    monkeypatch.setattr(
+        harness.shutil, "which", lambda executable: r"C:\Users\reader\claude.CMD"
+    )
+
+    claude = next(h for h in harness.KNOWN if h.id == "claude-code")
+    assert harness.locate(claude) == r"C:\Users\reader\claude.cmd"

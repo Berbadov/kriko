@@ -52,6 +52,11 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
     let timer: ReturnType<typeof setTimeout> | undefined;
     let source: EventSource | undefined;
     let first = true;
+    // ops-20: past the first tick the server sends only the log bytes this
+    // connection has not already had (`log_append`), not the whole thing
+    // again — this is what stitches it back into the full string every
+    // caller here still reads off `job.log`.
+    let logSoFar = "";
 
     const stop = () => {
         stopped = true;
@@ -85,7 +90,9 @@ export function follow(jobId: string, onUpdate: (job: Job) => void): () => void 
 
     source = new EventSource(`/api/jobs/${encodeURIComponent(jobId)}/stream`);
     source.onmessage = (event) => {
-        const job = JSON.parse(event.data) as Job;
+        const job = JSON.parse(event.data) as Job & { log_append?: boolean };
+        logSoFar = job.log_append ? logSoFar + (job.log ?? "") : job.log ?? "";
+        job.log = logSoFar;
         relay(job);
         if (job.done) stop();
     };

@@ -306,6 +306,17 @@ async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
                 yield f"event: error\ndata: {json.dumps({'error': 'no such job'})}\n\n"
                 return
             last = None
+            # ops-20: a long harness run's log grows to tens of kilobytes, and
+            # this loop used to put the whole thing on the wire every tick —
+            # the reader's own progress made their connection slower. The
+            # first event still carries the full row (a client that only just
+            # opened the stream has nothing to append to); every one after it
+            # carries only the log bytes this connection has not sent yet, and
+            # `follow()` reassembles the full string client-side. An old,
+            # not-yet-rebuilt bundle reads `job.log` on every event same as
+            # before — it just sees the tail rather than the whole log after
+            # the first tick, which is a shorter log, not a broken one.
+            sent_log = 0
             while True:
                 row = state.get_job(conn, job_id)
                 if row is None:  # forgotten mid-stream
@@ -321,7 +332,13 @@ async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
                                len(row["log"]), len(str(row["result"])))
                 if fingerprint != last:
                     last = fingerprint
-                    yield f"data: {json.dumps(_with_attention(row))}\n\n"
+                    payload = _with_attention(row)
+                    if sent_log:
+                        payload = dict(payload)
+                        payload["log"] = row["log"][sent_log:]
+                        payload["log_append"] = True
+                    sent_log = len(row["log"])
+                    yield f"data: {json.dumps(payload)}\n\n"
                 if row["done"]:
                     return
                 await asyncio.sleep(POLL_SECONDS)

@@ -1642,10 +1642,16 @@
    * panel holds no open connection to the app, and a content script that did
    * would hold it open on every listing page the reader leaves in a tab. */
   function pollLive() {
-    if (!state.visible) { stopLive(); return; }
+    // A tab left open in the background still counts as "visible" by our own
+    // bookkeeping (the panel is still mounted) — but nobody is looking, so a
+    // request every 2s there is pure cost. document.hidden catches exactly
+    // that case; the visibilitychange listener below resumes polling the
+    // moment the tab is looked at again.
+    if (!state.visible || document.hidden) { stopLive(); return; }
     chrome.runtime.sendMessage({ type: "OPERATIONS", payload: { limit: 6 } }, (response) => {
       if (!state.visible) return;
-      if (chrome.runtime.lastError || !response?.ok) {
+      const ok = !chrome.runtime.lastError && response?.ok;
+      if (!ok) {
         // An unreachable app is not worth a banner here: the analysis path
         // above already says so, loudly, and this section is an aside. It
         // falls quiet instead, which is what "nothing is running" looks like
@@ -1655,7 +1661,10 @@
         state.live = Array.isArray(response.feed?.items) ? response.feed.items : [];
       }
       renderLive();
-      if (state.visible) state.liveTimer = setTimeout(pollLive, 2000);
+      // A dead engine does not get asked every 2s until the next Analyze —
+      // that is a request a page load that never answers, forever. Back off
+      // to 30s; a live one keeps its snappier interval.
+      if (state.visible) state.liveTimer = setTimeout(pollLive, ok ? 2000 : 30000);
     });
   }
 
@@ -1663,6 +1672,12 @@
     if (state.liveTimer) clearTimeout(state.liveTimer);
     state.liveTimer = null;
   }
+
+  // The resume half of the `document.hidden` stop in `pollLive`: the tab
+  // coming back into view asks again at once instead of waiting for Analyze.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.visible && !state.liveTimer) pollLive();
+  });
 
   function renderStatus() {
     if (!statusEl) return;
