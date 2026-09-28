@@ -653,6 +653,45 @@ DIRS_ENV = "KRIKO_HARNESS_DIRS"
 _SUFFIXES = (("", ".exe", ".cmd", ".bat") if os.name == "nt" else ("",))
 
 
+#: The last line of an npm `cmd-shim` wrapper: the program it hands `%*` to,
+#: optionally after `"%_prog%"` (node) for a script target.
+_SHIM_TARGET = re.compile(
+    r'(?P<node>"%_prog%"\s+)?"%(?:dp0|~dp0)%\\?(?P<target>[^"]+)"\s+%\*', re.IGNORECASE
+)
+
+
+def unshim(command: list[str]) -> list[str]:
+    """The same command with npm's `.cmd` wrapper taken out of the way (B151).
+
+    A `.cmd` can only start through `cmd.exe`, and `cmd.exe` ends a command at
+    the first newline — so a multi-line brief passed as an argument arrived as
+    its first line. The reader's opencode received "# Quick look: what is
+    known to go wrong with this one?" and nothing else, every run, and sat
+    silent. npm's shims are one line that forwards `%*` to a real program; run
+    that program instead and every byte of the argument survives. Anything
+    that is not a recognisable shim is returned untouched and still goes
+    through `cmd.exe`, exactly as before.
+    """
+    if os.name != "nt" or not command or not command[0].lower().endswith((".cmd", ".bat")):
+        return command
+    shim = Path(command[0])
+    try:
+        text = shim.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return command
+    found = _SHIM_TARGET.search(text)
+    if not found:
+        return command
+    target = shim.parent / found.group("target").replace("\\", os.sep)
+    if not target.is_file():
+        return command
+    if not found.group("node"):
+        return [str(target), *command[1:]] if target.suffix.lower() == ".exe" else command
+    node = shim.parent / "node.exe"
+    runtime = str(node) if node.is_file() else shutil.which("node")
+    return [runtime, str(target), *command[1:]] if runtime else command
+
+
 def locate(one: Harness) -> str:
     """The full path to this CLI, or `""`.
 
@@ -1954,7 +1993,18 @@ class HarnessResearcher(AgentResearcher):
     @contextmanager
     def _workspace(self):
         if not self.harness.sandbox_home:
-            yield
+            # An empty directory to start in, even with the reader's own HOME
+            # (B151). The old default was `~`, and on the reader's machine `~`
+            # is a git repository: opencode snapshots its working tree before
+            # its first model call, so every run spent its budget hashing a
+            # home folder and printed nothing. A research run reads the web,
+            # never the disk it happens to start on.
+            with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
+                self._run_cwd = directory
+                try:
+                    yield
+                finally:
+                    self._run_cwd = None
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
             root = Path(directory)
@@ -2292,6 +2342,7 @@ class HarnessResearcher(AgentResearcher):
         """
         self.transcript = ""
         self._spoke = False
+        command = unshim(command)
         # See `_new_job_object`: on Windows this is what lets a cancel reach
         # a descendant `taskkill /T` cannot, because its parent already
         # exited. `None` on POSIX, where `start_new_session`/`killpg` already
