@@ -238,11 +238,6 @@ button.ghost:hover {
     color: var(--text);
     box-shadow: var(--shadow-1);
 }
-button.danger:hover {
-    border-color: var(--high);
-    color: var(--high);
-    background: var(--high-soft);
-}
 button.small,
 .tab.small {
     padding: var(--s-1) var(--s-2);
@@ -2063,14 +2058,8 @@ form.say > input {
     font-size: var(--t-base);
     line-height: var(--lh-base);
 }
-.more-actions > summary::-webkit-details-marker {
-    display: none;
-}
 .more-actions > summary::after {
     content: " ▾";
-}
-.more-actions[open] > summary::after {
-    content: " ▴";
 }
 .more-actions-list {
     display: contents;
