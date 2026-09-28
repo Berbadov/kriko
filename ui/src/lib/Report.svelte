@@ -192,23 +192,31 @@
                 >Question sheet</a
             >
         {/if}
-        <!-- Above Print, because it changes what gets printed. -->
-        {#if result.claims.some(canCheckFacts)}
-            <button class="ghost" disabled={sweeping} onclick={checkEverything}>
-                {sweeping
-                    ? `Reading the sources… ${swept} of ${result.claims.filter(canCheckFacts).length}`
-                    : "Check every source"}
-            </button>
-        {/if}
-        <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
         <button class="ghost" onclick={handOver}>Copy for a mechanic</button>
-        {#if lookupId && hasOthers}
-            <a
-                class="ghost button-like"
-                href={hashWith({ mode: $route.query.mode, left: lookupId }, "compare")}
-                >Compare with another</a
-            >
-        {/if}
+        <!-- B152.6 "make the ui more simpler": the two things a buyer does with
+             an answer stay in sight; the rest folds under More. The sweep
+             stays open while it runs, so its progress is never hidden. -->
+        <details class="more-actions" open={sweeping || undefined}>
+            <summary class="ghost button-like">More</summary>
+            <div class="more-actions-list">
+                <!-- Above Print, because it changes what gets printed. -->
+                {#if result.claims.some(canCheckFacts)}
+                    <button class="ghost" disabled={sweeping} onclick={checkEverything}>
+                        {sweeping
+                            ? `Reading the sources… ${swept} of ${result.claims.filter(canCheckFacts).length}`
+                            : "Check every source"}
+                    </button>
+                {/if}
+                <button class="ghost" onclick={() => window.print()}>Print / Save as PDF</button>
+                {#if lookupId && hasOthers}
+                    <a
+                        class="ghost button-like"
+                        href={hashWith({ mode: $route.query.mode, left: lookupId }, "compare")}
+                        >Compare with another</a
+                    >
+                {/if}
+            </div>
+        </details>
     </div>
     {#if copied}<p class="meta no-print">{copied}</p>{/if}
     {#if fallback}

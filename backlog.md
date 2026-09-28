@@ -512,6 +512,10 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 *Where:* the extension panel on a listing, next to the app's Result screen for the same lookup.
 *Done when:* both use the same words (**serious / worth checking / minor**, **Risks · N**, **What to ask**), the same sans type for labels (mono only for scores and ids), and the same card shape: a neutral card with a severity-coloured left edge, not a red wash in the app. The panel's product buttons sit on one row at the app's button size, and the identity line is hidden when it repeats the title word for word. *Observed 2026-09-28:* vite dev Result screen shows a neutral `rgb(21,23,28)` card with a red edge. The panel demo shows "8 serious / 0 worth checking / 0 minor", sans labels, and both buttons on one row.
 
+**B152.6 — a simpler answer.** *Asked:* "make the ui more simpler and working EVERYTHING."
+*Where:* the app's Result screen: the action row under the verdict, and the Recent rail beside it.
+*Done when:* the row shows only **Question sheet**, **Copy for a mechanic** and **More**. More opens inline to Check every source, Print / Save as PDF and Compare with another, and stays open while a sweep runs. The rail shows no Forget button until its row is hovered or focused (on touch, always). *Observed 2026-09-28:* vite dev, buyer mode shows three buttons, More opens to the other three, and the rail has no buttons at rest.
+
 ### B151 — "We are not reading enough data from the page to identify the product. plus opencode isnt working at all": the listing's facts reach the agent, and every agent gets its whole brief `[G5]`
 **Asked:** "well, we are not reading enough data from the page to identify the product. plus opencode isnt working at all. other llms are taking too long to read. so much that i couldnt test the other features." (2026-09-28, on 0.10.9)
 **Where:** the extension panel on a Sahibinden car listing → **Research this product**, with each agent picked in Settings → Research; the run on Activity → Runs.
