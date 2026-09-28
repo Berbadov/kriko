@@ -8,6 +8,7 @@
     import { initTheme } from "./lib/theme";
     import { watchFocus } from "./lib/focus";
     import { hashWith, route } from "./lib/router";
+    import CloseNotice from "./lib/shell/CloseNotice.svelte";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
@@ -168,6 +169,7 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
+    <CloseNotice />
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement

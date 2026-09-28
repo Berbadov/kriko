@@ -358,6 +358,12 @@ export const api = {
     scales: () => get<T.Scales>("/api/scales"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
+    // The close button's notice, drawn here instead of by the OS (B152).
+    window: () => get<{ shell: boolean; close_notice: boolean }>("/api/window"),
+    windowAction: (action: "ack" | "hide" | "quit", remember = false) =>
+        postJson<{ action: string; shell: boolean }>("/api/window", { action, remember }),
+    setCloseNotice: (on: boolean) =>
+        putJson<{ close_notice: boolean }>("/api/window/close-notice", { on }),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
     brief: (subjectId: string) =>
         get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),
