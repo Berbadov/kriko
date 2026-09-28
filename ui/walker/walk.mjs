@@ -70,7 +70,12 @@ function scratchHome() {
     const home = path.join(OUT, "home");
     const real = path.join(os.homedir(), ".kriko");
     fs.mkdirSync(home, { recursive: true });
-    if (fs.existsSync(real)) fs.cpSync(real, path.join(home, ".kriko"), { recursive: true });
+    // Not the browser profile: 200 MB of Chrome's own, locked while it runs,
+    // and nothing a screen reads.
+    if (fs.existsSync(real)) fs.cpSync(real, path.join(home, ".kriko"), {
+        recursive: true,
+        filter: (src) => !src.includes(`${path.sep}browser-profile`),
+    });
     return home;
 }
 
