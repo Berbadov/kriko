@@ -140,6 +140,11 @@ def test_the_phone_on_the_same_site_is_still_read_by_the_phone_pack(client):
         assert _listing_pack(store, None, URL, {"brand": "Apple", "series": "iPhone 15"},
                              "Apple iPhone 15") == "aaa.phones"
         assert _listing_pack(store, None, URL, PAGE, "Acme Roadster") == "zzz.machines"
+        # B151: nothing read that either pack knows — every reading ties, and
+        # the first pack in order is not an answer.
+        assert _listing_pack(store, None, URL, {}, "2011 Zephyr Tourer") == ""
+        assert _listing_pack(store, None, URL, {"brand": "Zephyr", "series": "Tourer"},
+                             "Zephyr Tourer") == ""
     finally:
         store.close()
 

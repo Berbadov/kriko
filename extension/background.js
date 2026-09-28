@@ -398,6 +398,7 @@ async function _fetchApp(url, init) {
   try {
     const response = await fetch(url, stamped);
     void _noteMinimum(response);
+    void _noteStaged(response);
     return response;
   } catch (cause) {
     const down = new Error(
@@ -419,6 +420,62 @@ async function _fetchApp(url, init) {
 // Stored rather than held in a variable: a service worker is killed after
 // about thirty seconds idle, and the options page a reader opens minutes
 // later is a fresh worker with no memory of any of this.
+// ── files on disk newer than the files running (B151) ───────────────────
+//
+// An unpacked extension runs what it read when it loaded, and an app update
+// rewrites the folder under it without telling Chrome. The reader's browser
+// ran a background.js two releases old — one that sent a listing's name and
+// none of its facts — while both ends said 0.3.0. The app now answers every
+// request with the digest of the files on disk; when that is not this
+// worker's own stamp, the worker reloads itself from them. Once per digest
+// per ten minutes, so a folder that cannot be read cannot loop.
+const STAGED_HEADER = "x-kriko-staged-digest";
+const SELF_RELOAD_KEY = "krikoSelfReload";
+const SELF_RELOAD_QUIET_MS = 10 * 60 * 1000;
+
+async function _noteStaged(response) {
+  let staged = "";
+  try {
+    staged = response.headers.get(STAGED_HEADER) || "";
+  } catch (_) {
+    return;
+  }
+  if (!staged || !LOADED_CONTENT_DIGEST || staged === LOADED_CONTENT_DIGEST) return;
+  try {
+    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const last = got && got[SELF_RELOAD_KEY];
+    if (last && last.digest === staged && Date.now() - last.at < SELF_RELOAD_QUIET_MS) return;
+    await chrome.storage.local.set({
+      [SELF_RELOAD_KEY]: { digest: staged, at: Date.now(), pending: true },
+    });
+    chrome.runtime.reload();
+  } catch (_) {
+    // A worker that cannot reload keeps working on the files it has.
+  }
+}
+
+// After a self-reload the listing tabs still hold the old content script,
+// cut off from this worker. Refresh them so the panel on screen is the new one.
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (!details || details.reason !== "update") return;
+  try {
+    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const last = got && got[SELF_RELOAD_KEY];
+    if (!last || !last.pending) return;
+    await chrome.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
+    const patterns = [];
+    for (const entry of chrome.runtime.getManifest().content_scripts || []) {
+      for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
+    }
+    if (!patterns.length) return;
+    for (const tab of await chrome.tabs.query({ url: patterns })) {
+      if (tab && tab.id !== undefined) chrome.tabs.reload(tab.id);
+    }
+  } catch (_) {
+    // Nothing to refresh is the common case.
+  }
+});
+
 function parseVersion(text) {
   const parts = [];
   for (const piece of String(text || "").split(".")) {

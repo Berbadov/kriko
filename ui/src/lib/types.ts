@@ -511,7 +511,7 @@ export type ExtensionSighting = {
 export type ExtensionCompatibility = {
     running_version: string;
     minimum_version: string;
-    state: "unknown" | "too_old" | "behind" | "current";
+    state: "unknown" | "too_old" | "behind" | "stale_files" | "current";
     detail: string;
 };
 export type ExtensionStatus = {

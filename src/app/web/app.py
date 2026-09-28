@@ -96,6 +96,19 @@ async def lifespan(app: FastAPI):
         app.state.seeded = []
         log.warning("could not install the bundled packs", exc_info=True)
 
+    # The extension the browser loads, brought up to the one this app carries
+    # (B151). The extension reloads itself when the digest below is not its
+    # own, so an app update reaches the browser without the reader's hands.
+    app.state.extension_staged_digest = ""
+    try:
+        target = ext.target_for(app.state.settings.store_path)
+        if ext.refresh(ext.source_dir(), target):
+            log.info("restaged the extension at %s", target)
+        if (target / "manifest.json").is_file():
+            app.state.extension_staged_digest = ext.content_digest(target)
+    except Exception:
+        log.warning("could not refresh the staged extension", exc_info=True)
+
     # The reader's own price list, put where they can edit it. Copied once and
     # never again, so a correction they made survives every update — and
     # guarded like everything else here: a missing price costs a cost report,
@@ -306,7 +319,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        response.headers["access-control-expose-headers"] = ext.MINIMUM_HEADER
+        staged = getattr(app.state, "extension_staged_digest", "")
+        if staged:
+            response.headers[ext.STAGED_HEADER] = staged
+        response.headers["access-control-expose-headers"] = (
+            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}")
         return response
 
     # ── who is allowed to ask ────────────────────────────────────────────
