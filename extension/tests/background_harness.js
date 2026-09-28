@@ -22,7 +22,7 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // between "pending" and "reading" is the whole of B69's consent story — so the
 // test has to be able to set it.
 function loadBackground({
-  routes = {}, tabResponses = {}, offline = false, statuses = {},
+  routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
   grantedOrigins = [], responseHeaders = {}, loadedDigest = "",
 } = {}) {
   const state = {
@@ -84,6 +84,8 @@ function loadBackground({
   const sandbox = {
     console: { log() {}, warn() {}, error() {} },
     setTimeout: (fn) => { fn(); return 0; },
+    clearTimeout() {},
+    AbortController,
     performance: { now: () => 0 },
     URL,
     chrome: {
@@ -168,6 +170,15 @@ function loadBackground({
     },
     fetch: async (url, init) => {
       if (offline) throw new TypeError("Failed to fetch");
+      // `hung`: an app that accepted the connection and never answers. Only
+      // the worker's own clock ends it (this harness's timers fire at once).
+      if (hung) {
+        return new Promise((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init.signal.aborted) fail();
+          else init.signal.addEventListener("abort", fail);
+        });
+      }
       const body = init && init.body ? JSON.parse(init.body) : null;
       // Headers too: what the worker *says about itself* on every request is
       // half the version handshake, and it is only visible here.
