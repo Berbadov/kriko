@@ -111,7 +111,7 @@
               <div class="lite-rc-insp">
                 <span class="lite-rc-insp-icon">${iconSvg("eye", { size: 13 })}</span>
                 <div class="lite-rc-insp-body">
-                  <div class="lite-rc-insp-label">Inspection</div>
+                  <div class="lite-rc-insp-label">What to ask</div>
                   ${escapeHtml(claim.advice)}
                 </div>
               </div>` : ""}
