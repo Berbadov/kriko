@@ -21,11 +21,14 @@
         mode = "buyer",
         lookupId = "",
         heading = "",
+        fresh = [],
     }: {
         result: LookupResult;
         mode?: Mode;
         lookupId?: string;
         heading?: string;
+        /** Claim keys that arrived while this answer was open (B152.4). */
+        fresh?: string[];
     } = $props();
 
     const groups = $derived(groupByDomain(result.claims));
@@ -246,6 +249,7 @@
                         factCheck={facts[factKey(claim)] ?? null}
                         checkingFacts={checking[factKey(claim)] ?? false}
                         onCheckFacts={() => checkFacts(claim)}
+                        fresh={fresh.includes(claimKey(claim))}
                     />
                 {/each}
             </section>

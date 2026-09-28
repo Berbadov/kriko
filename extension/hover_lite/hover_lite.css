@@ -758,6 +758,19 @@
   white-space: nowrap;
 }
 .lite-rc[data-open="1"] .lite-rc-title { white-space: normal; }
+/* A card an agent added while the answer was open (B152.4). */
+.lite-rc-new {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  vertical-align: 2px;
+}
 
 /* why_shown chips (serving payload v2) — small muted reasons under the card
    title: config match, mileage gate, detection suppression. */

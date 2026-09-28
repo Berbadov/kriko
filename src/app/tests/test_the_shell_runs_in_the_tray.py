@@ -104,24 +104,31 @@ def _arm(source: str, pattern: str) -> str:
 def test_closing_the_window_hides_it_rather_than_ending_the_process(main_rs):
     arm = _arm(main_rs, "tauri::WindowEvent::CloseRequested")
     assert "api.prevent_close()" in arm, "the X button must not close the window"
-    assert re.search(r"window\.hide\(\)", arm), "prevented but not hidden leaves a dead window up"
     assert "kill_engine" not in arm, (
         "the whole point of the tray is that the engine survives the window; "
         "killing it here restores the defect"
     )
-
-
-def test_the_reader_is_told_once_that_the_engine_is_still_running(main_rs):
-    arm = _arm(main_rs, "tauri::WindowEvent::CloseRequested")
-    assert "hint_still_running" in arm, (
-        "a window that vanishes with no explanation reads as a crash, and the "
-        "reader has no reason to look near the clock"
+    # B152.3: the page draws the notice and answers; the shell hides on "hide",
+    # and hides anyway when the page never answers (a hung page is no excuse
+    # for a window that will not close).
+    assert "ask_page_to_close" in arm, "the close has to reach the page's own box"
+    ask = _block(main_rs, "fn ask_page_to_close")
+    assert re.search(r"close_answered\.load", ask) and re.search(r"\.hide\(\)", ask), (
+        "an unanswered close leaves a window that cannot be closed"
     )
-    hint = _block(main_rs, "fn hint_still_running")
-    assert re.search(r"engine\.hinted\.lock\(\)", hint), "nothing records that it was shown"
-    assert re.search(r"if \*hinted\s*\{\s*return", hint) and "*hinted = true" in hint, (
-        "once per process, not once per close: a dialog on every X is the "
-        "kind of nag that gets an app uninstalled"
+    answer = _block(main_rs, "fn window_answer")
+    assert re.search(r'"hide"\s*=>\s*\{[^}]*\.hide\(\)', answer), "the page said hide; nothing hid"
+
+
+def test_the_reader_is_told_in_the_apps_own_box_not_an_os_dialog(main_rs):
+    # "more stylised warning box; and please no OS warning sound." A native
+    # message dialog is the sound; the notice lives in CloseNotice.svelte, with
+    # its "Don't show this again" remembered by the app, not the shell.
+    arm = _arm(main_rs, "tauri::WindowEvent::CloseRequested")
+    ask = _block(main_rs, "fn ask_page_to_close")
+    assert "__krikoClose" in ask
+    assert ".dialog()" not in arm + ask, (
+        "an OS dialog plays the system sound the reader asked to lose"
     )
 
 
