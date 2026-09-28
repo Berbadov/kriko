@@ -27,8 +27,15 @@ MAX_RISKS = 6
 SEVERITIES = ("high", "medium", "low")
 
 
-def brief(product: str, principle: str = "") -> str:
-    """The quick pass, as instructions. Fast on purpose: a few searches, no essay."""
+def brief(product: str, principle: str = "", page: dict | None = None) -> str:
+    """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
+
+    `page` is what the listing itself says (`app.pagefacts`, B150): the
+    variant is settled from it, not from the title alone.
+    """
+    from app import pagefacts
+
+    listing = pagefacts.block(page)
     bar = (
         f"\n## What is worth saying\n\nThe installed pack's own bar, verbatim:\n\n"
         f"{principle.strip()}\n"
@@ -37,7 +44,7 @@ def brief(product: str, principle: str = "") -> str:
     return f"""# Quick look: what is known to go wrong with this one?
 
     {product}
-
+{listing}
 Someone is looking at this exact product right now and wants to know what to
 worry about **before** they spend money on it. Answer the way a knowledgeable
 friend would in a chat: fast, specific, sourced.
