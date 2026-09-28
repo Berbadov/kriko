@@ -160,3 +160,12 @@ def no_test_asks_a_real_provider_for_its_models(monkeypatch):
     monkeypatch.setattr(modeldiscovery, "refresh", lambda: {})
     monkeypatch.setattr(modeldiscovery, "_refresh_in_background", lambda: None)
     monkeypatch.setattr(modeldiscovery, "_CACHE", {})
+
+
+@pytest.fixture(autouse=True)
+def every_test_finds_the_clis_afresh(monkeypatch):
+    """`harness.locate` remembers for a few seconds (B152.7); one test's fake
+    CLI on disk must not be another test's installed one."""
+    from app.providers import harness
+
+    monkeypatch.setattr(harness, "_LOCATED", {})
