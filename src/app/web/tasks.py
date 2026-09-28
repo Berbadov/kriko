@@ -1424,6 +1424,11 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "Keep the same output contract and evidence requirements. "
             "Do not install anything; Kriko decides that."
         )
+    # What the listing says (B150): the reader asked for the agents to
+    # settle the exact version from the page, not to ask them for it.
+    from app import pagefacts
+
+    prompt += pagefacts.block(params.get("page"))
     reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")
@@ -1521,7 +1526,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     researcher.check_cancelled = progress.check
 
     progress.set(0.1, f"a quick look at {product}")
-    reply = researcher.ask(quicklook.brief(product, principle))
+    reply = researcher.ask(quicklook.brief(product, principle, params.get("page")))
     progress.check()
     found = quicklook.parse(reply)
     kept = len(found["risks"])
@@ -1752,7 +1757,7 @@ def _disambiguate(settings, researcher, subject, params,
     progress.set(0.05, f"checking what “{subject}” actually means")
     try:
         found = disambiguate.parse(
-            researcher.ask(disambiguate.brief(subject, keys)))
+            researcher.ask(disambiguate.brief(subject, keys, params.get("page"))))
     except Cancelled:
         raise
     except Exception as exc:  # noqa: BLE001 — a lost question, never a lost run

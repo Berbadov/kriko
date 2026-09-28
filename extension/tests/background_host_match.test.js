@@ -100,3 +100,15 @@ test("adapterFor picks the adapter up on the bare host", () => {
     assert.equal(sandbox.adapterFor(`https://www.${SITE}/ilan/1`, [adapter]), adapter);
     assert.equal(sandbox.adapterFor("https://elsewhere.example/ilan/1", [adapter]), null);
 });
+
+test("two packs on one site: every adapter's labels are scraped (B150)", () => {
+    const { sandbox } = loadBackground();
+    const phones = { id: "market", pack_id: "a.phones", match: ["*market.example/ilan/*"],
+                     labels: ["brand"], local_panel: {} };
+    const cars = { id: "market", pack_id: "z.cars", match: ["*market.example/ilan/*"],
+                   labels: ["brand", "km"], local_panel: { damage: {} } };
+    const got = sandbox.adapterFor("https://market.example/ilan/1", [phones, cars]);
+    assert.deepEqual([...got.labels].sort(), ["brand", "km"]);
+    assert.deepEqual(got.local_panel, { damage: {} });
+    assert.equal(sandbox.adapterFor("https://market.example/ilan/1", [cars]), cars);
+});

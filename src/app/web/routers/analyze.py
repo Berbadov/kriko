@@ -22,6 +22,7 @@ from kriko.adapters import (
     Adapted,
     adapt,
     adapt_any_site,
+    best_reading,
     declared_labels,
     identity_vocabulary,
     load_adapters,
@@ -236,10 +237,9 @@ def analyze(
     # The packs' adapters first, then whatever this installation has learned
     # about a site nobody shipped one for (`app/sites.py`). The order is the
     # design: a published adapter always wins over a local guess.
-    spec = sites.adapter_for(store, app_state, body.url)
     vocabulary = identity_vocabulary(store)
+    spec, mapped = _read_site(store, app_state, body, vocabulary)
     read_by = "site"
-    mapped = None
     if spec is None:
         spec, mapped, read_by = _read_any_site(store, body, vocabulary)
     if spec is None and read_by == "unknown":
@@ -442,6 +442,20 @@ def analyze(
     return payload
 
 
+def _read_site(store, app_state, body: ScrapeRequest, vocabulary):
+    """The adapter that reads this page best, and its reading — or `(None, None)`.
+
+    Several packs may claim one site (B150); each reads the page and the
+    fullest reading of values its own pack knows wins, so a car listing is
+    read by the car pack's reader whatever else also sells on that site.
+    """
+    specs = sites.adapters_for(store, app_state, body.url)
+    found = best_reading(store, specs, body.fields, url=body.url,
+                         title=body.title, description=body.description,
+                         vocabulary=vocabulary)
+    return found if found else (None, None)
+
+
 def _page_name(body: ScrapeRequest) -> str:
     """The product's name as the page gave it, or the title's first part."""
     name = (body.product_name or "").strip()
@@ -536,7 +550,8 @@ def diagnose_identity(
     filled the reader's history with attempts would make the history useless
     exactly when they needed it.
     """
-    spec = sites.adapter_for(store, app_state, body.url)
+    vocabulary = identity_vocabulary(store)
+    spec, mapped = _read_site(store, app_state, body, vocabulary)
     if spec is None:
         # Not a 404. "Nothing here reads this site" is the single most common
         # answer this endpoint has, and it is a *finding* — the one that
@@ -560,14 +575,6 @@ def diagnose_identity(
             },
         }
 
-    mapped = adapt(
-        spec,
-        body.fields,
-        url=body.url,
-        title=body.title,
-        description=body.description,
-        vocabulary=identity_vocabulary(store),
-    )
     result = lookup(
         store,
         Query(kind=mapped.kind, identity=mapped.identity,

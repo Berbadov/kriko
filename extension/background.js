@@ -327,13 +327,22 @@ function globToRegExp(pattern) {
   return new RegExp("^" + body + "$", "i");
 }
 
+// Every adapter claiming this page, folded into one scrape request (B150).
+// Several packs may claim one site — a marketplace sells everything — and
+// which of them reads the page is the app's decision, made with the page in
+// hand. So the scrape asks for the union of their labels, and the page's own
+// panel comes from the first adapter that declares one: taking the first
+// match alone let an agent-written phone pack's reader decide what a car
+// listing's scrape looked for.
 function adapterFor(url, adapters) {
-  for (const adapter of adapters || []) {
-    if ((adapter.match || []).some((p) => globToRegExp(p).test(url))) {
-      return adapter;
-    }
-  }
-  return null;
+  const matching = (adapters || []).filter((adapter) =>
+    (adapter.match || []).some((p) => globToRegExp(p).test(url)));
+  if (!matching.length) return null;
+  if (matching.length === 1) return matching[0];
+  const labels = [...new Set(matching.flatMap((one) => one.labels || []))];
+  const withPanel = matching.find((one) =>
+    one.local_panel && Object.keys(one.local_panel).length);
+  return { ...matching[0], labels, local_panel: (withPanel || matching[0]).local_panel || {} };
 }
 
 // Whether *some* installed adapter reads this site at all, even though none
@@ -1137,6 +1146,40 @@ async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {
   }
 }
 
+// B150: "figure it out which more information agents needs by its own from
+// the product page — i may not know which engine code is this". The page's own
+// labelled facts are kept per listing so "Research this product" can send
+// them; the agent settles the exact version from them instead of asking.
+// Trimmed here as well as on the server: session storage is small.
+const PAGE_FACTS_PREFIX = "krikoFacts:";
+const PAGE_FACTS_MAX = 40;
+
+async function _keepPageFacts(url, scrape) {
+  try {
+    const facts = {};
+    for (const [label, value] of Object.entries((scrape && scrape.fields) || {})) {
+      if (Object.keys(facts).length >= PAGE_FACTS_MAX) break;
+      const k = String(label || "").slice(0, 80);
+      const v = String(value == null ? "" : value).slice(0, 200);
+      if (k && v) facts[k] = v;
+    }
+    const description = String((scrape && scrape.description) || "").slice(0, 1500);
+    await chrome.storage.session.set({ [PAGE_FACTS_PREFIX + url]: { facts, description } });
+  } catch (_) {
+    // A listing whose facts could not be kept still gets researched by name.
+  }
+}
+
+async function _pageFacts(url) {
+  try {
+    const key = PAGE_FACTS_PREFIX + url;
+    const got = await chrome.storage.session.get(key);
+    return (got && got[key]) || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto = false } = {}) {
   const timings = {};
   const totalStartedAt = _now();
@@ -1178,6 +1221,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       throw new Error("Unable to read this page.");
     }
     scrape = reply.payload;
+    await _keepPageFacts(url, scrape);
     if (!adapter) {
       const product = scrape.product || {};
       // A page load on a site nobody reads is quiet unless the page itself
@@ -1509,7 +1553,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // of the pack whose site this is.
     if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
-    _postApp("/api/extension/research-plane", body)
+    (body.url ? _pageFacts(body.url) : Promise.resolve(null))
+      .then((page) => {
+        // B150: what the listing says travels with its name.
+        if (page && page.facts && Object.keys(page.facts).length) body.facts = page.facts;
+        if (page && page.description) body.description = page.description;
+        return _postApp("/api/extension/research-plane", body);
+      })
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
