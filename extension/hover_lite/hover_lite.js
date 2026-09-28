@@ -567,7 +567,7 @@
         // a defect in *our* code and belongs where a developer will find it.
         if (chrome.runtime.lastError || (response && !response.ok)) {
           const message = chrome.runtime.lastError?.message || response?.error;
-          if (response?.code === "APP_NOT_RUNNING") {
+          if (response?.code === "APP_NOT_RUNNING" || response?.code === "APP_NOT_RESPONDING") {
             showFooterStatus(message);
           } else {
             console.warn("Kriko: could not open the app on", route, message);

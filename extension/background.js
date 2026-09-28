@@ -399,21 +399,43 @@ function _ownVersion() {
   }
 }
 
+// An app that is up but wedged used to hold a request — and the panel's
+// spinner — forever: `fetch` has no timeout of its own. Every call the
+// worker makes is local and answers in well under a second, and long work is
+// a job the app answers for at once, so a request still open after this is a
+// hung app, not a slow one. It says so, rather than "not running".
+const APP_TIMEOUT_MS = 30000;
+
 async function _fetchApp(url, init) {
   const stamped = { ...(init || {}) };
   stamped.headers = { ...(stamped.headers || {}), [VERSION_HEADER]: _ownVersion() };
   if (LOADED_CONTENT_DIGEST) stamped.headers["X-Kriko-Extension-Digest"] = LOADED_CONTENT_DIGEST;
+  const clock = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    clock.abort();
+  }, APP_TIMEOUT_MS);
+  if (stamped.signal) stamped.signal.addEventListener("abort", () => clock.abort(), { once: true });
+  stamped.signal = clock.signal;
   try {
     const response = await fetch(url, stamped);
     void _noteMinimum(response);
     void _noteStaged(response);
     return response;
   } catch (cause) {
-    const down = new Error(
-      "Kriko is not running. Open the Kriko app, then try again.");
-    down.code = "APP_NOT_RUNNING";
+    // Our own clock, and nothing else: a transport failure that happens to
+    // land after the timer is still "not running".
+    const hung = timedOut && cause && cause.name === "AbortError";
+    const down = hung
+      ? new Error("Kriko is open but did not answer in 30 seconds. Try again; "
+          + "if it keeps happening, quit Kriko from its tray icon and open it again.")
+      : new Error("Kriko is not running. Open the Kriko app, then try again.");
+    down.code = hung ? "APP_NOT_RESPONDING" : "APP_NOT_RUNNING";
     down.cause = cause;
     throw down;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -1483,6 +1505,7 @@ async function openInApp(route, fallbackUrl) {
       console.warn(`Kriko rejected the route ${route}:`, error.message);
       throw error;
     }
+    if (error.code === "APP_NOT_RESPONDING") return { ok: false, code: error.code, error: error.message };
     delivery = "unreachable";
   }
 

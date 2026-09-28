@@ -597,6 +597,21 @@ test("nothing running is reported, not opened in a dead tab", async () => {
   assert.deepEqual(h.state.tabsCreated, []);
 });
 
+test("an app that is open but never answers is named as hung, not as closed", async () => {
+  // fetch has no timeout of its own: a wedged app held the panel's spinner
+  // forever. The worker's clock ends it, and the reader is told the app is
+  // open-but-stuck — "open the Kriko app" would be advice they already took.
+  const h = loadBackground({ hung: true });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.ok, false);
+  assert.equal(got.code, "APP_NOT_RESPONDING");
+  assert.match(got.error, /did not answer/);
+  assert.deepEqual(h.state.tabsCreated, []);
+});
+
 test("a route the app refuses is reported, not opened in a tab", async () => {
   // A 422 can only mean this extension built a route the app cannot
   // navigate to. Opening a tab at that same bad route hides a defect in our
