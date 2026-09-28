@@ -227,13 +227,15 @@ def _record_analysis(request, app_state, body, mapped, result) -> None:
         pass
 
 
-@router.post("/analyze")
-def analyze(
-    request: Request,
-    body: ScrapeRequest,
-    store=Depends(get_store),
-    app_state=Depends(get_app_state),
-):
+def answer(store, app_state, body: ScrapeRequest):
+    """The analysis itself, recording nothing: `(payload, mapped, result)`.
+
+    `mapped` and `result` are `None` when the page could not be read — the
+    payload then says why. Split from `analyze` so a saved answer can be
+    re-answered in place when the knowledge under it changes (B152.4,
+    `routers/live.py`) without writing a second history row, operation or
+    log line for an analysis the reader did not ask for again.
+    """
     # The packs' adapters first, then whatever this installation has learned
     # about a site nobody shipped one for (`app/sites.py`). The order is the
     # design: a published adapter always wins over a local guess.
@@ -252,7 +254,7 @@ def analyze(
             "reason": "unknown_product",
             "product": {"name": _page_name(body)},
             "url": body.url,
-        }
+        }, None, None
     if spec is None:
         # Not a 404 (check-21): a listing site nothing reads is an expected,
         # frequent answer — the reader's first paste is as likely to be a
@@ -267,7 +269,7 @@ def analyze(
                 {"site": a["site"], "pack_id": a["pack_id"]}
                 for a in list_adapters(store, app_state)
             ],
-        }
+        }, None, None
 
     # The vocabulary is the packs' own identity rows. It is what lets the
     # adapter read an identity value straight out of a page title when the
@@ -301,7 +303,7 @@ def analyze(
                 "Kriko cannot open listing pages by itself. Open this ad "
                 "with the browser extension, or describe it by hand."
             ),
-        }
+        }, None, None
 
     result = lookup(
         store,
@@ -380,6 +382,19 @@ def analyze(
             for c in result.claims
         ],
     }
+    return payload, mapped, result
+
+
+@router.post("/analyze")
+def analyze(
+    request: Request,
+    body: ScrapeRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
+    payload, mapped, result = answer(store, app_state, body)
+    if mapped is None:
+        return payload
 
     # ── the one signal that a site changed its markup ────────────────────
     #

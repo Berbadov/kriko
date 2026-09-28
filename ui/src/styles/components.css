@@ -472,6 +472,12 @@ legend {
     color: var(--medium);
     border-color: var(--medium);
 }
+/* A card an agent added while the answer was open (B152.4). */
+.badge.fresh {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+}
 .badge.state-failed,
 .badge.state-interrupted {
     background: var(--high-soft);

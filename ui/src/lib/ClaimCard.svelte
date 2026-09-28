@@ -23,6 +23,7 @@
         factCheck = null,
         checkingFacts = false,
         onCheckFacts,
+        fresh = false,
     }: {
         claim: Claim;
         mode?: Mode;
@@ -33,6 +34,9 @@
         factCheck?: FactCheck | null;
         checkingFacts?: boolean;
         onCheckFacts?: () => void;
+        /** Arrived since the reader opened this answer (B152.4): an agent
+         *  wrote it while they were looking. */
+        fresh?: boolean;
     } = $props();
 
     // Offered on the card rather than only in the sources fold: "is this
@@ -71,10 +75,13 @@
     }
 </script>
 
-<article class="card risk" class:done={checked}>
+<article class="card risk" class:done={checked} class:enter={fresh} class:settled={fresh}>
     <header class="risk-head">
         <span class="sev {claim.severity}">{severityWord(claim.severity)}</span>
         <h3>{claim.title}</h3>
+        {#if fresh}
+            <span class="badge fresh" title="Added while this answer was open">New</span>
+        {/if}
         <!-- Out of the provenance fold and out of author mode. A disputed
              claim is exactly the one whose dispute the reader needs to see:
              folded twice, it reached nobody who was not already auditing. -->
