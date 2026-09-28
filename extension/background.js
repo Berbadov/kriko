@@ -992,6 +992,9 @@ function toViewModel(payload, appBase) {
     // a terminal), and opening a browser tab is then the honest best effort.
     // Sending the reader to a second browser tab while their app sits behind
     // the window was the bug; keeping the tab as a fallback is not.
+    // Which saved answer this is, so the panel can ask for it again when the
+    // knowledge under it moves (B152.4).
+    lookup_id: payload.lookup_id || "",
     app_route: payload.lookup_id ? `result/${payload.lookup_id}` : undefined,
     app_url: payload.lookup_id && appBase
       ? `${appBase}/#/result/${payload.lookup_id}`
@@ -1414,6 +1417,27 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
   }
 }
 
+/** The answer this listing already has, asked again of the knowledge as it
+ * is now (B152.4). The app answers the saved question in place — no new
+ * history row — and the entry in session storage is replaced, which is what
+ * repaints an open panel (its `storage.onChanged` listener). `null` when the
+ * app kept the old answer. */
+async function refreshAnswer(tabId, url, lookupId) {
+  const row = await _postApp(`/api/lookup/${encodeURIComponent(lookupId)}/refresh`, {});
+  if (!row || !row.refreshed || !row.response) return null;
+  const result = toViewModel(row.response, await apiBase());
+  const storageKey = STORAGE_KEY_PREFIX + url;
+  const got = await chrome.storage.session.get(storageKey);
+  const entry = got && got[storageKey];
+  if (entry && entry.ok) {
+    const next = { ...entry, result, fetchedAt: Date.now() };
+    await chrome.storage.session.set({ [storageKey]: next });
+    await _writeCachedAnalysis(url, next);
+  }
+  if (tabId) await _updateBadgeForResult(result, tabId);
+  return result;
+}
+
 // ── acting on the app, rather than only asking it ───────────────────────
 //
 // Everything above this line reads: the worker sends a page's labels and gets
@@ -1558,6 +1582,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         ok: false, code: error.code, hostKnown: Boolean(error.hostKnown),
         productName: error.productName || "", error: error.message }));
 
+    return true; // async
+  }
+
+  if (request.type === "REFRESH_ANSWER") {
+    const { url, lookupId } = request.payload || {};
+    if (!url || !lookupId) {
+      sendResponse({ ok: false, error: "Missing answer" });
+      return false;
+    }
+    refreshAnswer(sender.tab?.id, url, lookupId)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
     return true; // async
   }
 

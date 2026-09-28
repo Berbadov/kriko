@@ -26,12 +26,12 @@ class LookupRequest(BaseModel):
     limit: int = 8
 
 
-@router.post("/lookup")
-def run_lookup(
-    body: LookupRequest,
-    store=Depends(get_store),
-    app_state=Depends(get_app_state),
-):
+def answer(store, body: LookupRequest):
+    """The lookup itself, recording nothing: `(payload, result)`.
+
+    Split from `run_lookup` for the same reason `analyze.answer` is: a saved
+    answer re-answered in place (B152.4) must not become a new history row.
+    """
     result = lookup(
         store,
         Query(
@@ -87,6 +87,16 @@ def run_lookup(
             for c in result.claims
         ],
     }
+    return payload, result
+
+
+@router.post("/lookup")
+def run_lookup(
+    body: LookupRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
+    payload, result = answer(store, body)
 
     # Recorded after the answer is assembled, so a history write cannot cost
     # the reader their result — the same order the analysis log uses.

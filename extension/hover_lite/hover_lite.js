@@ -54,6 +54,10 @@
     openDetailRows: new Set(), // expanded rows inside listing details
     pipeline: "idle",          // idle | analyzing | result | error
     result: null,              // AnalyzeResponse
+    // B152.4: the knowledge clock last seen on the live poll, and the cards
+    // that arrived since this answer was first shown (marked "New").
+    knowledge: null,
+    freshKeys: new Set(),
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
@@ -419,6 +423,10 @@
     );
   }
 
+  function claimKeyOf(claim) {
+    return `${claim.pack_id || ""}:${claim.claim_id || claim.title || ""}`;
+  }
+
   // Apply entry helper
   function applyEntry(entry) {
     if (!entry) return;
@@ -426,6 +434,17 @@
       state.listingMeta = deriveListingMeta(entry);
     }
     if (entry.ok && entry.result) {
+      // The same answer, re-answered (B152.4): what it did not have before is
+      // new. A different answer starts with nothing marked.
+      const before = state.result;
+      if (before && before.lookup_id && before.lookup_id === entry.result.lookup_id) {
+        const had = new Set((before.claims || []).map(claimKeyOf));
+        for (const claim of entry.result.claims || []) {
+          if (!had.has(claimKeyOf(claim))) state.freshKeys.add(claimKeyOf(claim));
+        }
+      } else {
+        state.freshKeys = new Set();
+      }
       // An answer means something read this page after all.
       state.noAdapter = false;
       state.unknownProduct = "";
@@ -1659,6 +1678,11 @@
         state.live = [];
       } else {
         state.live = Array.isArray(response.feed?.items) ? response.feed.items : [];
+        const clock = response.feed?.knowledge;
+        if (clock) {
+          if (state.knowledge && clock !== state.knowledge) knowledgeMoved();
+          state.knowledge = clock;
+        }
       }
       renderLive();
       // A dead engine does not get asked every 2s until the next Analyze —
@@ -1666,6 +1690,32 @@
       // to 30s; a live one keeps its snappier interval.
       if (state.visible) state.liveTimer = setTimeout(pollLive, ok ? 2000 : 30000);
     });
+  }
+
+  /** Something wrote to the knowledge while this panel was open (B152.4):
+   * an agent's findings, a research run, a pack install. The answer on screen
+   * is asked again in place — background.js writes it to session storage and
+   * the listener below applies it — and a product nobody knew is asked about
+   * again, quietly, in case it is known now. */
+  function knowledgeMoved() {
+    if (state.pipeline === "result" && state.result && state.result.lookup_id) {
+      chrome.runtime.sendMessage({
+        type: "REFRESH_ANSWER",
+        payload: { url: window.location.href, lookupId: state.result.lookup_id },
+      }, () => { void chrome.runtime.lastError; });
+      return;
+    }
+    if (state.pipeline === "idle" && state.unknownProduct) {
+      chrome.runtime.sendMessage(
+        { type: "ANALYZE", payload: { url: window.location.href, fresh: true } },
+        (response) => {
+          if (chrome.runtime.lastError) return;
+          if (response && response.ok && response.result) {
+            state.unknownProduct = "";
+            applyEntry({ ok: true, result: response.result });
+          }
+        });
+    }
   }
 
   function stopLive() {
@@ -2257,6 +2307,15 @@
         wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
         delayCounter++;
         const card = renderClaimCard(claim, { open: state.openIds.has(idx), compact: state.compact });
+        if (state.freshKeys.has(claimKeyOf(claim))) {
+          const title = card.querySelector(".lite-rc-title");
+          const chip = document.createElement("span");
+          chip.className = "lite-rc-new";
+          chip.title = "Added while this answer was open";
+          chip.textContent = "New";
+          if (title) title.prepend(chip);
+          card.dataset.fresh = "1";
+        }
         const btn = card.querySelector(".lite-rc-toggle");
         btn.addEventListener("click", () => toggleOne(idx, card));
         // Re-assert any verdict this claim already carries: the list is

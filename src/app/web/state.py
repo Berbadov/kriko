@@ -836,6 +836,21 @@ def record_lookup(
     return lookup_id
 
 
+def replace_response(conn: sqlite3.Connection, lookup_id: str, response: dict) -> bool:
+    """Write a fresh answer over a saved one, keeping its id, time and label.
+
+    The re-answer of B152.4: the same question asked of knowledge that has
+    grown since. A new row per re-answer would fill history with copies of
+    one listing, which is what the reader would read as the app misbehaving.
+    """
+    cursor = conn.execute(
+        "UPDATE lookups SET response_json = ? WHERE lookup_id = ?",
+        (json.dumps(response, default=str), lookup_id),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def _decode(row: sqlite3.Row) -> dict:
     return {
         "lookup_id": row["lookup_id"],
