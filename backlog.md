@@ -504,6 +504,10 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 8. docs: short, with diagrams;
 9. release.
 
+**B152.4 — instant updates.** *Asked:* "Instant actions between the web extension and the app, like a card added by the agent we instantly see the new card, and many more action like this."
+*Where:* an open Result screen in the app, and the extension panel showing an answer on a listing, while an agent (MCP or a research job) writes to the knowledge.
+*Done when:* within about 2 s of any write to the knowledge store, both re-read their answer in place (no reload, no new history row), and a card that was not there before is marked **New**. `GET /api/knowledge/clock` is the one marker (`PRAGMA data_version` on one held read-only connection, so a write from any process counts), `POST /api/lookup/{id}/refresh` re-answers a saved lookup, and the extension's live poll carries the clock. Tests for each.
+
 ### B151 — "We are not reading enough data from the page to identify the product. plus opencode isnt working at all": the listing's facts reach the agent, and every agent gets its whole brief `[G5]`
 **Asked:** "well, we are not reading enough data from the page to identify the product. plus opencode isnt working at all. other llms are taking too long to read. so much that i couldnt test the other features." (2026-09-28, on 0.10.9)
 **Where:** the extension panel on a Sahibinden car listing → **Research this product**, with each agent picked in Settings → Research; the run on Activity → Runs.

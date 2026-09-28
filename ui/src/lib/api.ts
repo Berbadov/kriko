@@ -257,6 +257,11 @@ export const api = {
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
+    /** The saved question asked again of the knowledge as it is now (B152.4). */
+    refreshLookup: (lookupId: string) =>
+        postJson<T.StoredLookup & { refreshed: boolean; clock: string }>(
+            `/api/lookup/${seg(lookupId)}/refresh`, {}),
+    knowledgeClock: () => get<{ clock: string }>("/api/knowledge/clock"),
     settings: () => cached("settings", () => get<Record<string, unknown>>("/api/settings")),
     putSettings: (values: Record<string, unknown>) =>
         postJson<Record<string, unknown>>("/api/settings", { values }).then((r) => {

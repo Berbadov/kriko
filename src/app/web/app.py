@@ -30,6 +30,7 @@ from app import modelcatalogue
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline, schedule
 from app.web.jobs import JobRunner
+from app.web.knowledge_clock import KnowledgeClock
 from app.web.schedule import Scheduler
 from app.web.routers import (
     agenda,
@@ -44,6 +45,7 @@ from app.web.routers import (
     history,
     jobs,
     keys,
+    live,
     marks,
     operations,
     packs,
@@ -194,6 +196,7 @@ async def lifespan(app: FastAPI):
     # shutting down.
     app.state.schedule.stop(wait=2.0)
     app.state.jobs.shutdown()
+    app.state.knowledge_clock.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -248,6 +251,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         history.router,
         jobs.router,
         keys.router,
+        live.router,
         bench.router,
         marks.router,
         operations.router,
@@ -260,6 +264,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
     app.state.jobs = JobRunner(app.state.settings, HANDLERS)
+    # What the open answers watch to know the knowledge moved (B152.4).
+    app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
     # And the timer that presses the agenda button when nobody is here (B98).
     # Constructed for every app and *started* by the lifespan only when the
     # reader has turned it on — a test client, which enters the lifespan, must

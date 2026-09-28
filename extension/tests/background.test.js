@@ -755,3 +755,46 @@ test("research on a page never read sends its name alone (B150)", async () => {
   assert.deepEqual(h.state.requests[0].body,
     { q: "Example device", allow_draft: true, url: "https://shop.example/p/1" });
 });
+
+// ── B152.4: an answer that follows the knowledge ─────────────────────────
+
+test("a refreshed answer replaces the listing's entry, which is what repaints the panel", async () => {
+  const url = "https://market.invalid/listing/42";
+  const claim = {
+    claim_id: "c2", pack_id: "p", title: "Added by the agent", severity: "high",
+    domain: "mech", sources: [],
+  };
+  const h = loadBackground({
+    routes: {
+      "/api/lookup/abc/refresh": {
+        lookup_id: "abc", refreshed: true,
+        response: { lookup_id: "abc", claims: [claim], subjects: [], packs: [] },
+      },
+    },
+  });
+  h.state.session["kriko_result_" + url] = {
+    ok: true, result: { lookup_id: "abc", claims: [] }, listing: { title: "x" },
+  };
+  const got = await send(h, { type: "REFRESH_ANSWER", payload: { url, lookupId: "abc" } });
+  assert.equal(got.ok, true);
+  const entry = h.state.session["kriko_result_" + url];
+  assert.deepEqual(entry.result.claims.map((c) => c.title), ["Added by the agent"]);
+  assert.equal(entry.result.lookup_id, "abc");
+  // The listing extras from the scrape survive; only the answer changed.
+  assert.equal(entry.listing.title, "x");
+  const posted = h.state.requests.find((r) => r.url.endsWith("/api/lookup/abc/refresh"));
+  assert.equal(posted.method, "POST");
+});
+
+test("an answer the app kept as it was leaves the entry alone", async () => {
+  const url = "https://market.invalid/listing/42";
+  const h = loadBackground({
+    routes: { "/api/lookup/abc/refresh": { lookup_id: "abc", refreshed: false } },
+  });
+  const before = { ok: true, result: { lookup_id: "abc", claims: [] } };
+  h.state.session["kriko_result_" + url] = before;
+  const got = await send(h, { type: "REFRESH_ANSWER", payload: { url, lookupId: "abc" } });
+  assert.equal(got.ok, true);
+  assert.equal(got.result, null);
+  assert.equal(h.state.session["kriko_result_" + url], before);
+});
