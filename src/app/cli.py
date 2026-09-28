@@ -304,7 +304,7 @@ def cmd_bench(args, store) -> int:
         Settings(
             store_path=store_path,
             app_state_path=store_path.parent / "app.sqlite",
-            analysis_log_path=store_path.parent / "analyses.jsonl",
+            analysis_log_path=store_path.parent / "logs" / "analyses.jsonl",
         )
         if store_path
         else Settings()
@@ -434,7 +434,7 @@ def _connect_engine(args):
         Settings(
             store_path=store_path,
             app_state_path=store_path.parent / "app.sqlite",
-            analysis_log_path=store_path.parent / "analyses.jsonl",
+            analysis_log_path=store_path.parent / "logs" / "analyses.jsonl",
         )
         if store_path
         else None

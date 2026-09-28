@@ -366,7 +366,7 @@
             <h3>Sites the installed packs can read</h3>
             {#if adapters.length}
                 <ul>
-                    {#each adapters as adapter (adapter.id)}
+                    {#each adapters as adapter (adapter.pack_id + "/" + adapter.id)}
                         <li class="target">
                             <code>{adapter.site}</code>
                             <span class="meta">{adapter.pack_id}</span>

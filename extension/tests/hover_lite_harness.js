@@ -27,7 +27,7 @@ function loadPanel({
   // do not want it to be the only thing they are about.
   operationsResponse = { ok: true, feed: { items: [] } },
 } = {}) {
-  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
+  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url, pretendToBeVisual: true });
 
   const runtimeListeners = [];
   const storageListeners = [];

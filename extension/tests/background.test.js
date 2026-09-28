@@ -468,6 +468,18 @@ test("something that is not an address is refused, and the old one kept", async 
   assert.equal(h.state.local.krikoApiBaseUrl, "http://127.0.0.1:8787");
 });
 
+test("a phrase with no host in it is refused instead of becoming http://<phrase>", async () => {
+  // extension-20: the old normaliser prefixed http:// onto any string, so
+  // "not a url" was saved as "http://not a url" and blamed on the app being
+  // down instead of being told it was never a valid address.
+  const h = loadBackground({ routes: { "/api/health": {} } });
+  await send(h, { type: "SET_API_BASE", payload: { url: "http://127.0.0.1:8787" } });
+  const reply = await send(h, { type: "SET_API_BASE", payload: { url: "not a url" } });
+  assert.equal(reply.ok, false);
+  assert.match(reply.error, /not a url/i);
+  assert.equal(h.state.local.krikoApiBaseUrl, "http://127.0.0.1:8787");
+});
+
 test("changing the address drops the adapter list the old app gave us", async () => {
   const h = loadBackground({
     routes: routes(), tabResponses: withTab() });
@@ -499,7 +511,7 @@ test("the manifest ships that settings page", () => {
 
 test("a stored answer carries the two screens a reader acts from", async () => {
   const { result } = await analyse({
-    analysis: { ...ANALYSIS, lookup_id: "abc123" } });
+    analysis: { ...ANALYSIS, lookup_id: "abc123", compare_ready: true } });
   // Path segments, not query strings: `/api/focus` refuses a query on
   // purpose, so this is the only spelling that survives the handoff.
   assert.deepEqual(result.app_routes, {
@@ -512,6 +524,17 @@ test("a stored answer carries the two screens a reader acts from", async () => {
                "http://127.0.0.1:8787/#/questions?id=abc123");
   assert.equal(result.app_urls.compare,
                "http://127.0.0.1:8787/#/compare?left=abc123");
+});
+
+test("Compare is not offered before there are two saved checks (extension-16)", async () => {
+  // Compare's own empty state says "needs two saved checks", so a first-ever
+  // analysis handing back a compare route just opens the app to that dead
+  // end. The app tells us when there is something to compare against.
+  const { result } = await analyse({
+    analysis: { ...ANALYSIS, lookup_id: "abc123", compare_ready: false } });
+  assert.equal("compare" in result.app_routes, false);
+  assert.equal("compare" in (result.app_urls || {}), false);
+  assert.equal(result.app_routes.questions, "questions/abc123");
 });
 
 test("an answer the app did not store offers neither of them", async () => {

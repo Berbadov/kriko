@@ -294,10 +294,18 @@ function _normalizeBaseUrl(value) {
   if (!value || typeof value !== "string") return null;
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) return null;
-  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-    return `http://${trimmed}`;
+  const candidate = /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
+  // A prefix and a trim are not validation: "not a url" becomes a syntactically
+  // fine-looking "http://not a url" that then fails every request silently.
+  // Parsing it is the only way to tell "typo" from "an address Kriko can reach".
+  let parsed;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return null;
   }
-  return trimmed;
+  if (!/^https?:$/.test(parsed.protocol) || !parsed.hostname) return null;
+  return parsed.origin;
 }
 
 async function apiBase() {
@@ -979,17 +987,22 @@ function toViewModel(payload, appBase) {
       ? {
           result: `result/${payload.lookup_id}`,
           questions: `questions/${payload.lookup_id}`,
-          compare: `compare/${payload.lookup_id}`,
+          // Compare's own empty state already says "needs two saved checks",
+          // so offering the button before there are two is a button that
+          // opens straight into that dead end (extension-16).
+          ...(payload.compare_ready ? { compare: `compare/${payload.lookup_id}` } : {}),
         }
       : undefined,
-    // Same three, as browser URLs, for the same reason `app_url` exists: when
-    // no desktop shell is listening there is nothing to raise, and a tab is
-    // the honest best effort rather than a button that does nothing.
+    // Same, as browser URLs, for the same reason `app_url` exists: when no
+    // desktop shell is listening there is nothing to raise, and a tab is the
+    // honest best effort rather than a button that does nothing.
     app_urls: payload.lookup_id && appBase
       ? {
           result: `${appBase}/#/result/${payload.lookup_id}`,
           questions: `${appBase}/#/questions?id=${payload.lookup_id}`,
-          compare: `${appBase}/#/compare?left=${payload.lookup_id}`,
+          ...(payload.compare_ready
+            ? { compare: `${appBase}/#/compare?left=${payload.lookup_id}` }
+            : {}),
         }
       : undefined,
     // Subjects the listing resolved to, claims or not. The rows with zero

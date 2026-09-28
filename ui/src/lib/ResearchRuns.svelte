@@ -95,8 +95,8 @@
         {#snippet children(data)}
             {#if !data.runs.length}
                 <p class="state empty">
-                    No research has run here yet. The two planes are on
-                    <a href="#/agents">Agents → Your agents</a>.
+                    No research has run here yet. The three planes are on
+                    <a href="#/agents">Agents</a>.
                 </p>
             {:else}
                 <ul class="run-list">

@@ -18,6 +18,24 @@ export class JobFailedError extends Error {
     }
 }
 
+/**
+ * A `.kpack` file the reader chose that the engine refused, as opposed to a
+ * listing the extension could read nothing from. Both land as a plain 400
+ * from `request()`, and `remedyFor`'s generic 400/422 branch is written for
+ * the listing case ("paste the fields by hand") — read on Welcome's file
+ * picker it told a reader whose file was simply the wrong shape to go paste
+ * a listing's fields, which fixes nothing (B145 settings-16). Anything that
+ * installs a file the reader picked should throw this instead of the bare
+ * `ApiError`.
+ */
+export class PackInstallFailedError extends Error {
+    /** The engine's own reason, without the status prefix `request()` adds. */
+    constructor(refused: ApiError) {
+        super(refused.message.replace(/^\d+: /, ""));
+        this.name = "PackInstallFailedError";
+    }
+}
+
 /** What a failed request means, and what the reader can do about it.
  *
  * B72: every error surface in this app named an exception. "Could not load
@@ -70,6 +88,20 @@ export function remedyFor(error: unknown): Remedy {
             headline: "That didn't finish",
             next: technical || "Try again, or use a file instead.",
             retryable: true,
+            technical,
+        };
+    }
+    if (error instanceof PackInstallFailedError) {
+        return {
+            headline: "That file isn't a pack Kriko can install",
+            next:
+                technical
+                    || "Choose a different .kpack file, or install one from the "
+                        + "index above instead.",
+            // Retrying installs the exact same file again, which fails the
+            // exact same way — the remedy is a different file, not another
+            // attempt at this one (B145 settings-17).
+            retryable: false,
             technical,
         };
     }
