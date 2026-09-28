@@ -77,10 +77,54 @@ def load_adapters(conn, pack_ids=None, *, any_site: bool = False) -> list[dict]:
 
 
 def adapter_for(conn, url: str, pack_ids=None) -> dict | None:
-    for spec in load_adapters(conn, pack_ids):
-        if any(_glob_match(p, url) for p in spec.get("match", [])):
-            return spec
-    return None
+    found = adapters_for(conn, url, pack_ids)
+    return found[0] if found else None
+
+
+def adapters_for(conn, url: str, pack_ids=None) -> list[dict]:
+    """Every host adapter whose pattern matches `url`, in pack order.
+
+    More than one is ordinary: any pack may ship a reader for a site its
+    products are sold on, and a marketplace sells everything. Which of them
+    actually reads *this* page is `best_reading`'s question, asked with the
+    page in hand — the first match by pack id is not an answer (B150: an
+    agent-written pack's reader for one category was reading every product
+    of another category on its site).
+    """
+    return [spec for spec in load_adapters(conn, pack_ids)
+            if any(_glob_match(p, url) for p in spec.get("match", []))]
+
+
+def _fold(value) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value).casefold())
+
+
+def best_reading(conn, specs: list[dict], fields: dict, *, url: str = "",
+                 title: str = "", description: str = "",
+                 vocabulary: dict | None = None):
+    """The one of several adapters that reads this page best, as `(spec, mapped)`.
+
+    Each reads the page; the winner is the reading whose identity values its
+    *own* pack already holds (one pack's reader finds a "brand" on another
+    category's page, but not one its own pack knows), then the one that read the
+    most identity and context keys. A tie keeps the order given, so the same
+    page lands on the same reader every visit. None for no specs.
+    """
+    best, best_score = None, None
+    own: dict[str, dict] = {}
+    for spec in specs:
+        mapped = adapt(spec, fields, url=url, title=title,
+                       description=description, vocabulary=vocabulary)
+        pack = spec.get("pack_id", "")
+        if pack not in own:
+            own[pack] = {key: {_fold(v) for v in values} for key, values in
+                         identity_vocabulary(conn, [pack] if pack else None).items()}
+        known = sum(1 for key, value in mapped.identity.items()
+                    if _fold(value) in own[pack].get(key, ()))
+        score = (known, len(mapped.identity) + len(mapped.context))
+        if best_score is None or score > best_score:
+            best, best_score = (spec, mapped), score
+    return best
 
 
 def _number(raw: str, low=None, high=None):

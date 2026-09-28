@@ -690,3 +690,30 @@ test("a missing verdict is empty rather than invented", async () => {
   assert.equal(result.verdict, "");
   assert.equal(result.next_step, null);
 });
+
+// ── B150: the listing's facts travel with "Research this product" ───────
+
+test("research from a listing sends the page's own facts and description (B150)", async () => {
+  const h = loadBackground({
+    routes: { ...routes(), "/api/extension/research-plane": { job_id: "q1", kind: "quick_look" } },
+    tabResponses: withTab(),
+  });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  h.state.requests.length = 0;
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "2014 Volkswagen Golf", allow_draft: true, url: SCRAPE.url,
+  } });
+  const body = h.state.requests[0].body;
+  assert.deepEqual(body.facts, SCRAPE.fields);
+  assert.equal(body.description, SCRAPE.description);
+  assert.equal(body.url, SCRAPE.url);
+});
+
+test("research on a page never read sends its name alone (B150)", async () => {
+  const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "q1" } } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
+  } });
+  assert.deepEqual(h.state.requests[0].body,
+    { q: "Example device", allow_draft: true, url: "https://shop.example/p/1" });
+});

@@ -173,6 +173,28 @@ class ExtensionResearchRequest(BaseModel):
     #: The listing the reader is on, so the quick look can hold itself to the
     #: pack whose site this is (its `research/principle.md`). Optional.
     url: str = Field("", max_length=2000)
+    #: What the listing itself says (B150): its labelled facts and the
+    #: seller's text, so the agents settle the exact version from the page
+    #: rather than asking the reader for an engine code they may not know.
+    #: Trimmed by `app.pagefacts.clean`; both optional.
+    facts: dict[str, str] = Field(default_factory=dict)
+    description: str = Field("", max_length=5000)
+
+
+def _listing_pack(store, conn, url: str, facts: dict, title: str) -> str:
+    """The pack whose adapter reads this listing best, or "".
+
+    `adapter_for` took the first adapter whose globs hit, so a phone pack that
+    also claims a car site held a car's quick look to the phone principle
+    (B150). Every matching adapter reads the page; the fullest reading wins.
+    """
+    if not url:
+        return ""
+    from kriko.adapters import best_reading
+
+    specs = sites.adapters_for(store, conn, url)
+    found = best_reading(store, specs, facts, url=url, title=title) if specs else None
+    return (found[0].get("pack_id", "") or "") if found else ""
 
 
 @router.post("/research-plane")
@@ -210,8 +232,9 @@ def start_research_plane(
         # from two copies of one rule, so the reply can promise one agent while
         # the run uses another the day the two copies drift. Sending `selected`
         # is what this reply already claims happened.
-        from app import prefs
+        from app import pagefacts, prefs
 
+        page = pagefacts.clean(body.facts, body.description)
         stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
         selected = stored if stored in {one.id for one in available} else available[0].id
         params = {
@@ -221,21 +244,17 @@ def start_research_plane(
             # itslef" (B148). Only this door asks for it; the app's own New
             # pack form still leaves the press to the reader.
             "install": True,
+            "page": page,
         }
         # Quick answer, then deepen (B148): the reader's choice. The draft is
         # the deep half and starts first so the quick one can point at it;
         # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
         # id the panel follows.
         deepen = runner.submit("pack_author", params)
-        pack_id = ""
-        if body.url:
-            from app import sites
-
-            spec = sites.adapter_for(store, conn, body.url)
-            pack_id = (spec or {}).get("pack_id", "") if isinstance(spec, dict) else ""
+        pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
         quick = runner.submit("quick_look", {
             "product": body.q.strip(), "harness": selected,
-            "pack_id": pack_id, "deepen_job_id": deepen,
+            "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
         })
         return {
             "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
