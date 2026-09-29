@@ -482,39 +482,6 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
-### B154 — "claude code wasnt able to open any website as well as opencode … antigravity … failed quick look": each CLI gets the web access its run needs `[G5]`
-**Asked:** "oh god, claude code wasnt able to open any website as well as opencode, antigravity guy is slow but created a new pack and returned results very good but failed quick look. others arent straight up working; will test apis. web search on cc and opencode might be an external block?" (2026-09-29, on 0.10.13)
-**Where:** the extension panel on a listing → **Research this product**, with opencode or Antigravity picked in Settings → Agents; Activity → Runs for the failed run's log.
-**Reproduced (2026-09-29, installed 0.10.13):**
-- **opencode: not an external block.** opencode 2.0.16 asks, once, which web-search provider to use. A headless `opencode run` cannot answer, so every `websearch` call returned "Web search cancelled". Its `webfetch` works; hepsiburada's 403 was that site's answer. A project `opencode.json` of `{"websearch":{"provider":"exa"}}` in the run's folder made the same command search (reproduced by hand). `random` is not safe: it can land on Firecrawl, which returns nothing without a key.
-- **Antigravity: Kriko's bug.** The quick look asks for `effort="low"` on top of the reader's model `gemini-3.8-flash-medium`. The effort lives in agy's model id, so `--model gemini-3.8-flash-medium --effort low` conflicts and agy exits 1. The draft pack, without a forced effort, worked.
-- **Claude Code: external, per site.** WebSearch worked. TechPowerUp answers 403 to WebFetch's `Claude-User` agent (a browser agent gets 200; Claude's own domain check says it may fetch). reddit, rtings, ifixit and the maker's site answered. The run retried the same refusing site three times. Kriko does not change the agent a CLI fetches with; that is the site's call.
-- **And a second opencode cause, found while proving the first fix.** With `opencode.json` in the run folder, the harness run still said "Web search cancelled": opencode takes its project folder from `PWD` when one is set, and a Kriko started from a shell hands that shell's `PWD` down. The same run with `PWD` set to its own folder (or unset) searched via Exa. A double-clicked Kriko has no `PWD`, so the installed app hit only the first cause.
-**Observed (2026-09-29, source tree, real CLIs, from a shell whose `PWD` was the repo):**
-- opencode through `HarnessResearcher` on `muse-spark-1.3-contributor-free`: 7.9 s, one Exa search, three dyson.com URLs, no "cancelled". Before the `PWD` line: 10.2 s, "search cancelled".
-- Antigravity through `harness_researcher(model="gemini-3.8-flash-medium", effort="low")`, the quick look's own call: argv `--model gemini-3.8-flash-low` and no `--effort`; agy answered in 9.5 s.
-**Done when:**
-- With opencode picked, the run's log shows `websearch` results, not "Web search cancelled". The reader's own opencode config and database are unchanged; the grant is a file in Kriko's per-run folder, gone when the run ends.
-- With Antigravity picked and an effort-suffixed model, the quick look starts and returns. The effort is carried by the model id agy itself lists (`-low` sibling), never a second flag that contradicts it; a model with no listed sibling keeps the reader's pick and drops the flag.
-- Every brief tells the agent that a refused page (403, 401, 429) is that site's refusal and to move to another source, not retry it.
-- Tests for each. Observed on the installed build: one quick look per CLI in the panel, its log and its risks.
-**Not this:** spoofing a fetch user agent; changing a CLI's global config; hand lists of models or providers.
-**Review (second agent, PR #56):** approved. Acted on:
-- Three more briefs let an agent search or fetch without the line: amend, disambiguate, site register. It is now added at `HarnessResearcher._run`, the one door every CLI run passes (`with_refused_page`), so a new brief can't miss it.
-- `settle_effort` read any tail equal to a level as an effort. It now does so only when the CLI lists a sibling id at another level, so a `…-max` model on a dial that offers `max` keeps its flag. A cold, empty list still drops the flag: slower beats refused.
-- A run that isn't on the reader's literal pick says so in its log (`effort_settled`).
-- The PWD test now reads the spawned child's environment, not the dict.
-- The wording says "most likely refuse", since a 429 can clear.
-**Observed on the installed 0.10.14 (2026-09-29, `Kriko_0.10.14_x64-setup.exe /S`, double-clicked `Kriko.exe`):** one quick look per CLI for "Dyson V15 Detect Absolute", sent to `POST /api/extension/research-plane` with the body the panel sends (`extension/background.js:1691`). The deepen draft was cancelled at once, and the reader's pick was restored to `antigravity-cli` afterwards.
-- **Antigravity** (saved pick `gemini-3.8-flash-medium`, effort `medium`): the first log line is "Running gemini-3.8-flash-low: Antigravity CLI names the effort in the model id, so the low this run asked for is that id, not a second flag." Then `started`, three `search_web` calls and two `read_url_content` reads (rtings, techradar). It succeeded in 94 s with "4 risk(s) found", each sourced to rtings.com. On 0.10.13 this quick look exited before its first call.
-- **opencode** (`opencode/muse-spark-1.3-contributor-free`): "Got it — direct search is available, using that now", then "opening the top sources". It succeeded in 59 s with "5 risk(s) found", sourced to popularmechanics.com and idealhome.co.uk with verbatim quotes. No "Web search cancelled", and no opencode process left behind. The only one running is an `opencode serve --service` started at 12:31, before both runs; where it came from is unknown.
-- **Claude Code: not run.** A real run spends the reader's Claude subscription, which they asked not to burn. Its change is the refused-page line alone. `test_every_brief_a_cli_is_handed_says_it_once` shows that line reaching a spawned child's argv exactly once for every brief.
-- Seen, not this item: both results carry `"model": "<harness id>"` rather than the model that actually ran.
-**Open risk, not reproduced:**
-- The `opencode.json` is written for every opencode version. Only 2.0.16 was tried. An older build with a strict config schema could reject the `websearch` key.
-- It also sends Kriko's searches to Exa even if the reader chose another provider interactively.
-**Owner:** this session, branch `b154/cli-web-access`.
-
 ### B153 — "Agent operations are slow and not working properly": the agent runs on the API, not a CLI `[G5]`
 **Asked:** "Agent operations are slow and not working properly. check it and if you think they are ontologicvally unusable, work on api usage." (2026-09-29, on 0.10.12)
 **Where:** the extension panel on a listing → **Research this product** (the quick look, then the draft pack); Settings → Agents, where the agent is picked; Activity → Runs.
