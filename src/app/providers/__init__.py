@@ -258,6 +258,7 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     # would be worse than losing the dial.
     if effort.strip() and effort.strip() not in harness.efforts_for(found):
         effort = ""
+    model, effort = harness.settle_effort(found, model.strip(), effort.strip())
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
         effort=effort.strip(),
