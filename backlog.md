@@ -34,17 +34,17 @@ The rules in `CLAUDE.md` still hold, and several items depend on them:
 
 ## Decisions only the reader can make
 
-Each decision has a default, so no work waits on it. An item that depends on one names it.
+Each decision has a default, so no work waits on it. An item that depends on one names it. The reader confirmed D1, D3, D4 and D5 on 2026-09-29; D2, D6 and D7 stand as defaults until the reader says otherwise.
 
-| # | Question | Default until the reader says otherwise |
+| # | Question | Decision |
 |---|---|---|
-| D1 | What the UI calls a pack, the author role, and "analyze" | A pack is a "Catalog" on screen. The author role disappears with the Buyer/Author switch (B165). "Analyze" becomes "Check". Code, API and docs keep `pack`. |
-| D2 | Provider marks (Anthropic, Google, OpenAI and others) are trademarks | Each vendor's own published mark, small and monochrome, for each provider the app already detects. |
-| D3 | The local plane searches through OpenSERP, which is not installed here and has no Windows install story | Use OpenSERP when it answers. Otherwise fall back to Exa's free, keyless hosted search, so a local model alone is enough to run. Bundling OpenSERP waits on a license check. |
-| D4 | Does "remove every package" include the cars and drill packs that the installer seeds? | Yes on this machine, and they stay removed after a restart. The 1.0 installer still carries them for new installs. |
-| D5 | Removing "What to research next", "Build knowledge" and "On a schedule" leaves nothing that starts a top-N run | The top-N run and the schedule loop go, with their endpoints. Research starts per product: on the Run screen, from Browse, or from the extension. |
-| D6 | Where the benchmark's fixed test set lives | A versioned set shipped with the app. It is neither a pack nor stored in the knowledge store. The 2026-09-15 benchmark design is amended to match. |
-| D7 | "Harnesses on this machine" holds the only Connect and skill buttons | The section goes. Each agent's row in "Your agents" gains its connection state and one action. |
+| D1 | What the UI calls a pack, the author role, and "analyze" | **Decided (2026-09-29):** a pack is a "Catalog" on screen. The author role disappears with the Buyer/Author switch (B165). "Analyze" becomes "Check". Code, API and docs keep `pack`. |
+| D2 | Provider marks (Anthropic, Google, OpenAI and others) are trademarks | Default: each vendor's own published mark, small and monochrome, for each provider the app already detects. |
+| D3 | The local plane searches through OpenSERP, which is not installed here and has no Windows install story | **Decided (2026-09-29):** use OpenSERP when it answers. Otherwise fall back to Exa's free, keyless hosted search, so a local model alone is enough to run. Bundling OpenSERP waits on a license check. |
+| D4 | Does "remove every package" include the cars and drill packs that the installer seeds? | **Decided (2026-09-29):** yes on this machine, and they stay removed after a restart. The 1.0 installer still carries them for new installs. |
+| D5 | Removing "What to research next", "Build knowledge" and "On a schedule" leaves nothing that starts a top-N run | **Decided (2026-09-29):** the top-N run and the schedule loop go, with their endpoints. Research starts per product: on the Run screen, from Browse, or from the extension. |
+| D6 | Where the benchmark's fixed test set lives | Default: a versioned set shipped with the app. It is neither a pack nor stored in the knowledge store. The 2026-09-15 benchmark design is amended to match. |
+| D7 | "Harnesses on this machine" holds the only Connect and skill buttons | Default: the section goes. Each agent's row in "Your agents" gains its connection state and one action. |
 
 ## Phase 0: broken today
 
