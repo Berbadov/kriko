@@ -93,7 +93,12 @@ DEFERRED: tuple[str, ...] = ()
 #: What a reader waits on before the window can render — the entry chunk and
 #: its CSS, with every deferred leaf above excluded. 253 KB of JS and 42 KB of
 #: CSS today, against 574 KB before the terminal was deferred.
-FIRST_PAINT_BUDGET = 388_000
+#:
+#: Raised from 388,000 to 392,000 on 2026-09-29: #57's local research plane
+#: gave `Planes.svelte` its own card and readiness probe, with no new
+#: dependency. 332,077 bytes of JS and 56,361 of CSS, 388,438 in all; this
+#: records it rather than trimming the card to fit a number.
+FIRST_PAINT_BUDGET = 392_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
