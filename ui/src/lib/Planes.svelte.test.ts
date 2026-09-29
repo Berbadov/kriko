@@ -4,7 +4,7 @@ import Planes from "./Planes.svelte";
 import { stubFetch, stubFetchFailing } from "./stub-fetch";
 import type { ResearchPlane } from "./types";
 
-const planes = (apiReady: boolean) => ({
+const planes = (apiReady: boolean, localReady = true) => ({
     // The server may add fields the older fixtures never knew; the type is
     // the contract, not the literals below it.
     "/api/research-planes": {
@@ -42,6 +42,15 @@ const planes = (apiReady: boolean) => ({
                 what: "Kriko searches and reads by itself, unattended.",
                 ready: apiReady,
                 needs_keys: true,
+            },
+            {
+                id: "local",
+                cost_basis: "self_hosted",
+                what: "Kriko searches and reads with services on this machine.",
+                ready: localReady,
+                needs_keys: false,
+                inference_url: "http://127.0.0.1:8080",
+                serp_url: "http://127.0.0.1:7000",
             },
         ] as ResearchPlane[],
         // What an unnamed run resolves to here. The reader met the cost of not
@@ -84,6 +93,15 @@ const planes = (apiReady: boolean) => ({
                 ready: apiReady,
                 needs_keys: true,
             },
+            {
+                id: "local",
+                cost_basis: "self_hosted",
+                what: "Kriko searches and reads with services on this machine.",
+                ready: localReady,
+                needs_keys: false,
+                inference_url: "http://127.0.0.1:8080",
+                serp_url: "http://127.0.0.1:7000",
+            },
         ],
         // What an unnamed run resolves to here. The reader met the cost of not
         // knowing this: the default was the plane that fetches nothing.
@@ -102,13 +120,18 @@ const planes = (apiReady: boolean) => ({
     },
 });
 
-describe("the three research planes", () => {
-    it("shows all three, so the reader can see what their options are", async () => {
+describe("the four research planes", () => {
+    it("shows all four, so the reader can see what their options are", async () => {
         stubFetch(planes(true));
         render(Planes);
         expect(await screen.findByText("Run my agent")).toBeTruthy();
         expect(await screen.findByText("I'll run it myself")).toBeTruthy();
         expect(await screen.findByText("Kriko itself")).toBeTruthy();
+        expect(await screen.findByText("This machine")).toBeTruthy();
+        // The fourth plane's cost is neither a subscription nor a metered
+        // spend: it is this machine's own electricity, and the phrase says
+        // so rather than falling through to "costs per token".
+        expect(await screen.findByText("free, on this machine")).toBeTruthy();
         // Each plane's cost, in words a reader can act on rather than the
         // engine's own `cost_basis` alone. Two planes cost nothing marginal —
         // one drives an agent, one waits for you to — so that phrase is now
@@ -206,6 +229,17 @@ describe("the three research planes", () => {
         expect(JSON.parse(String((runs[0][1] as RequestInit).body)).backend).toBe(
             "harness",
         );
+    });
+
+    it("names the two services a not-ready local plane needs", async () => {
+        stubFetch(planes(true, false));
+        const { container } = render(Planes);
+        await screen.findByText("This machine");
+        // Inert, not hidden — and both endpoints named, because "not running"
+        // is only actionable next to the two commands to start.
+        expect(container.querySelector(".plane.inert")).toBeTruthy();
+        expect(container.textContent).toContain("http://127.0.0.1:8080");
+        expect(container.textContent).toContain("http://127.0.0.1:7000");
     });
 
     it("surfaces a failure instead of rendering an empty card", async () => {

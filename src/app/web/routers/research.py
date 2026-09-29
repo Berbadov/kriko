@@ -46,7 +46,52 @@ PLANE_WORDS = {
         "Kriko searches and reads by itself, unattended. Costs money per run, "
         "capped by a budget you set, and needs both keys below."
     ),
+    "local": (
+        "Kriko searches and reads with services on this machine — a local "
+        "SERP for search and a local inference server for reading. Costs "
+        "nothing and needs no keys; needs OpenSERP on 127.0.0.1:7000 and an "
+        "OpenAI-compatible server (llama-server, Ollama) on 127.0.0.1:8080."
+    ),
 }
+
+
+def local_endpoints() -> dict:
+    """Whether this machine's own services answer, and where they were sought.
+
+    The probe is one HEAD with a one-second timeout per service, in a thread,
+    because the planes screen is not allowed to hang on a service that is
+    down — which is the normal state of a box where OpenSERP has not been
+    started yet. The card stays up either way; `ready` only dims it, and the
+    two rows say which half is missing so the fix is one command.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    import urllib.request
+
+    from app.providers import llm, openserp
+
+    def _answers(url: str) -> bool:
+        try:
+            urllib.request.urlopen(url, timeout=1.0)
+            return True
+        except Exception:  # noqa: BLE001 - a down service is an answer, not an error
+            return False
+
+    inference = (llm._env("LLM_BASE_URL", "http://127.0.0.1:8080")).rstrip("/")
+    serp = openserp.DEFAULT_BASE_URL
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        inference_up = pool.submit(_answers, inference).result()
+        serp_up = pool.submit(_answers, serp).result()
+    missing = [
+        name for name, up in (("the inference server", inference_up),
+                              ("the SERP", serp_up)) if not up
+    ]
+    return {
+        "ready": inference_up and serp_up,
+        "reason": "" if not missing else "not running: " + " and ".join(missing),
+        "inference_url": inference,
+        "serp_url": serp,
+    }
 
 
 @router.get("/research-planes")
@@ -54,7 +99,7 @@ def list_planes(
     request: Request, llm: str = "", search: str = "", harness: str = "",
     conn=Depends(get_app_state),
 ) -> dict:
-    """The two ways knowledge gets built, and whether each one can run now.
+    """The planes knowledge gets built on, and whether each one can run now.
 
     Read off the researcher classes rather than restated in the frontend, for
     the same reason `/api/pipeline/runs` hands over its stage labels: a second
@@ -67,12 +112,12 @@ def list_planes(
     """
     from app.providers import harness as harness_mod
     from app.providers.harness import HarnessResearcher
-    from kriko.research import AgentResearcher, ApiResearcher
+    from kriko.research import AgentResearcher, ApiResearcher, LocalPlane
 
     selection = prefs.effective(conn, model=llm, search=search, harness=harness)
     installed = harness_mod.available()
     planes = []
-    for cls in (HarnessResearcher, AgentResearcher, ApiResearcher):
+    for cls in (HarnessResearcher, AgentResearcher, ApiResearcher, LocalPlane):
         row = {
             "id": cls.name,
             "cost_basis": cls.cost_basis,
@@ -87,6 +132,8 @@ def list_planes(
         if cls.name == "api":
             row.update(ready=selection["ready"], reason=selection["reason"],
                        llm=selection["llm"], search=selection["search"])
+        if cls.name == "local":
+            row.update(local_endpoints())
         if cls.name == "harness":
             row.update(ready=selection["harness_ready"],
                        selected_harness=selection["harness"],
