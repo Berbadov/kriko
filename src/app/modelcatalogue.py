@@ -81,28 +81,59 @@ def install_default(home: Path) -> Path:
     return target
 
 
+#: The table in `models.toml` that prices tools rather than models. Skipped by
+#: `load`, read by `tool_price`.
+TOOLS = "tools"
+
+
+def _read(path: Path) -> dict:
+    try:
+        return tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+
+
 def load(home: Path | None = None) -> dict[str, dict]:
-    """`model id -> row`, from the reader's catalogue, falling back to the shipped one.
+    """`model id -> row`: the reader's catalogue, over the shipped one.
+
+    **Merged, not either-or.** The reader's file is copied once and never
+    rewritten, so a row this program ships later — every Mistral model, on
+    2026-09-29 — would otherwise never reach an installation that already had
+    a catalogue, and its runs would read "cost unknown" for ever. The reader's
+    row still wins wherever both name a model: a corrected price is exactly
+    what the copy exists to keep.
 
     A catalogue that will not parse is not fatal. It costs the reader their
-    price column, never their run — so a broken edit degrades to "cost
-    unknown", which is the same honest answer an unlisted model gets.
+    own rows, never their run — so a broken edit degrades to the shipped
+    prices, and an unlisted model to "cost unknown".
     """
-    for path in ([catalogue_path(home)] if home else []) + [default_path()]:
-        try:
-            raw = tomllib.loads(Path(path).read_text(encoding="utf-8"))
-        except (OSError, tomllib.TOMLDecodeError):
-            continue
-        out: dict[str, dict] = {}
-        for provider, models in raw.items():
-            if not isinstance(models, dict):
+    out: dict[str, dict] = {}
+    for path in [default_path()] + ([catalogue_path(home)] if home else []):
+        for provider, models in _read(path).items():
+            if provider == TOOLS or not isinstance(models, dict):
                 continue
             for model_id, row in models.items():
                 if isinstance(row, dict):
                     out[str(model_id)] = {**row, "provider": str(provider)}
-        if out:
-            return out
-    return {}
+    return out
+
+
+def tool_price(provider: str, tool: str, home: Path | None = None) -> float | None:
+    """What one call of a provider's tool costs, or `None` where nobody knows.
+
+    Mistral's web search is billed per call on top of the tokens it adds, and
+    on a quick look it is most of the bill (four calls, $0.12, against well
+    under a cent of tokens). A meter that priced only tokens would call that
+    run free.
+    """
+    for path in ([catalogue_path(home)] if home else []) + [default_path()]:
+        row = ((_read(path).get(TOOLS) or {}).get(provider) or {}).get(tool)
+        if isinstance(row, dict):
+            try:
+                return float(row["usd_per_call"])
+            except (KeyError, TypeError, ValueError):
+                continue
+    return None
 
 
 def price(model: str, tokens_in: int, tokens_out: int,
@@ -123,16 +154,26 @@ def price(model: str, tokens_in: int, tokens_out: int,
         return None
 
 
+#: Who serves a model the catalogue has no row for, by its name alone. A
+#: closed vocabulary of vendor prefixes, not a model list: a model released
+#: tomorrow routes correctly the day it exists. Anything else is sent to the
+#: OpenAI-shaped adapter, the format every gateway speaks.
+_PREFIXES = (("claude-", "anthropic"), ("mistral-", "mistral"), ("magistral-", "mistral"))
+
+#: The providers with a completion adapter (`app/providers/__init__.py`).
+ADAPTERS = ("openai", "anthropic", "mistral")
+
+
 def provider_for(model: str, home: Path | None = None) -> str:
     row = load(home).get(model) or {}
-    return str(row.get("provider") or (
-        "anthropic" if model.startswith("claude-") else "openai"
-    ))
+    if row.get("provider"):
+        return str(row["provider"])
+    return next((who for prefix, who in _PREFIXES if model.startswith(prefix)), "openai")
 
 
 def _usable(provider: str, ready: set[str]) -> str:
     """"" when it can be used, or the reason it cannot — never silence."""
-    if provider not in ("openai", "anthropic"):
+    if provider not in ADAPTERS:
         return f"no completion adapter for {provider}"
     if provider in ready:
         return ""

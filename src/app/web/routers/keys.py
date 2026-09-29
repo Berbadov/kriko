@@ -182,6 +182,10 @@ def _completion_base(provider_id: str) -> str:
         from app.providers import anthropic_llm as anthropic_provider
 
         return (os.environ.get("ANTHROPIC_BASE_URL") or anthropic_provider.DEFAULT_BASE_URL).rstrip("/")
+    if provider_id == "mistral":
+        from app.providers import mistral
+
+        return mistral.base_url()
     from app.providers import llm as openai_provider
 
     return (os.environ.get("LLM_BASE_URL") or openai_provider.DEFAULT_BASE_URL).rstrip("/")
@@ -315,7 +319,15 @@ def _test_completion(provider_id: str, key: str) -> dict:
     else:
         from app.providers import llm as llm_provider
 
-        name = llm_provider.model_name()
+        # Mistral's own default, not `LLM_MODEL`: that names the OpenAI-shaped
+        # endpoint's model, and a Mistral key tested against `gpt-4o-mini`
+        # would fail for a reason that has nothing to do with the key.
+        if provider_id == "mistral":
+            from app.providers import mistral
+
+            name = mistral.DEFAULT_MODEL
+        else:
+            name = llm_provider.model_name()
         url = _completion_base(provider_id) + "/chat/completions"
         payload = {
             "model": name,
@@ -351,7 +363,7 @@ def _run_provider_test(provider_id: str) -> dict:
     try:
         if provider_id in ("exa", "tavily"):
             return _test_search(provider_id, key)
-        if provider_id in ("openai", "anthropic"):
+        if provider_id in keys.COMPLETION_PROVIDERS:
             return _test_completion(provider_id, key)
         return _refused(provider_id, 0, "unsupported", f"no self-test for {provider_id}")
     except Exception as exc:

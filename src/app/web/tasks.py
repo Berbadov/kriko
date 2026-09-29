@@ -60,7 +60,14 @@ DEFAULT_PRICE_PER_CALL = 0.01
 DEFAULT_BUDGET_USD = 0.20
 
 
-def default_backend() -> str:
+#: The first half of every "no agent" refusal. The API agent is named because
+#: it is the door a reader without a CLI has, and it runs only once picked.
+NO_AGENT = ("No agent to run: no coding-agent CLI on PATH, and the Mistral API "
+            "agent is not picked (Settings → Agents; it needs a Mistral key in "
+            "Settings → Research), so")
+
+
+def default_backend(app_state_path=None) -> str:
     """The plane a run gets when the caller names none.
 
     It used to be `agent` unconditionally, and `agent` fetches nothing by
@@ -69,16 +76,18 @@ def default_backend() -> str:
     and a `succeeded / 0 claim(s) kept`, which is the second time the reader
     reported the same experience: "run nothing again".
 
-    So: the best plane that is free *and* can actually gather. `harness` when
-    a CLI is on PATH, `agent` otherwise. `api` is still never chosen by
+    So: the best plane that can actually gather. `harness` when a CLI is on
+    PATH or the reader picked an API agent that has its key (B153), `agent`
+    otherwise. An API agent bills per token, so it runs only when picked and
+    always under a ceiling (`_budget`). `api` is still never chosen by
     omission — a tool that starts spending money because a key happened to be
     in the environment is a tool people stop trusting, and that reasoning was
     always about the paid plane rather than about defaulting to a no-op.
     """
     try:
-        from app.providers import harness
+        from app.providers import agent_ready
 
-        if harness.available():
+        if agent_ready(app_state_path):
             return "harness"
     except Exception:  # noqa: BLE001 - a missing CLI must never fail a run
         pass
@@ -93,7 +102,7 @@ def _researcher(params: dict):
     three callables, and `app/providers/` is where the sockets live — the
     engine owns none, so `kriko.research` could never have built this itself.
     """
-    backend = str(params.get("backend") or default_backend()).lower()
+    backend = str(params.get("backend") or default_backend(params.get("app_state_path"))).lower()
     if backend == "harness":
         # Same reason as the paid plane below, one layer out: this one spawns a
         # process, and `kriko/` owns no subprocesses any more than it owns
@@ -132,7 +141,41 @@ def _researcher(params: dict):
     )
 
 
-def _budget(params: dict) -> float:
+def _bills_per_token(params: dict, app_state_path=None) -> bool:
+    """Whether this run's plane charges the reader per token.
+
+    The paid plane always does. The harness plane does when the agent it
+    resolves to is an API agent (`app/providers/apiagent.py`), and then it
+    gets the paid plane's floor, because the bill is just as real.
+    """
+    path = app_state_path or params.get("app_state_path")
+    backend = str(params.get("backend") or default_backend(path)).lower()
+    if backend == "api":
+        return True
+    if backend != "harness":
+        return False
+    try:
+        from app.providers import bills_per_token
+
+        return bills_per_token(path, str(params.get("harness") or ""))
+    except Exception:  # noqa: BLE001 — a resolution error is the run's to report
+        return False
+
+
+def _cap_agent(researcher, params: dict) -> None:
+    """Give a per-token agent the ceiling its caller named.
+
+    For the jobs that `ask` rather than `gather` (a quick look, a draft): no
+    `ResearchTask` carries a budget to them. A CLI is left alone, since a
+    ceiling on a subscription would reach its budget flag and cap nothing
+    the reader pays for.
+    """
+    named = float(params.get("budget_usd") or 0.0)
+    if named > 0 and getattr(researcher, "cost_basis", "") == "per_token":
+        researcher.budget_usd = named
+
+
+def _budget(params: dict, app_state_path=None) -> float:
     """The ceiling, with the paid plane's floor applied.
 
     A caller may raise it or lower it; a caller may not leave the paid plane
@@ -149,7 +192,7 @@ def _budget(params: dict) -> float:
     the agenda among them. A choice nobody made must not cost anybody money.
     """
     named = float(params.get("budget_usd") or 0.0)
-    if str(params.get("backend") or default_backend()).lower() != "api":
+    if not _bills_per_token(params, app_state_path):
         return named
     if named > 0:
         return named
@@ -276,7 +319,7 @@ class _Provenance:
         self._path = getattr(settings, "app_state_path", None)
         self.run_id = run_id
         self._job_id = job_id or ""
-        self._budget = _budget(params)
+        self._budget = _budget(params, self._path)
         self._opened = False
         self._researcher = None
 
@@ -452,12 +495,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         from app.meter import Meter
         from app.web.settings import KRIKO_HOME
 
-        meter = Meter(home=KRIKO_HOME, cap_usd=_budget(params))
+        ceiling = _budget(params, getattr(settings, "app_state_path", None))
+        meter = Meter(home=KRIKO_HOME, cap_usd=ceiling)
         task = plan_task(
             conn,
             subject_id,
             pack_id,
-            budget_usd=_budget(params),
+            budget_usd=ceiling,
             max_documents=depth["max_documents"],
         )
         progress.set(0.1, f"planning {task.subject_label}")
@@ -777,6 +821,17 @@ DEFAULT_AGENDA_ROWS = 10
 DEFAULT_AGENDA_BUDGET_USD = 0.40
 
 
+def _uncounted(progress: Progress, row: dict, ceiling: float) -> float:
+    """What a billed row whose cost nobody counted is taken to have spent.
+
+    Its whole ceiling. Adding nothing would let the shared ceiling never trip,
+    and an unattended run would keep billing a model with no price row after
+    row; counting the most it could have spent ends the walk early instead.
+    """
+    progress.log(f"{row['subject_id']}: cost unknown — counted at its ${ceiling:.2f} ceiling")
+    return ceiling
+
+
 def agenda_run(settings, params: dict, progress: Progress) -> dict:
     """Work down the agenda, one subject at a time, under one shared ceiling.
 
@@ -806,9 +861,13 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
     from app import agenda as agenda_module
 
     limit = max(1, int(params.get("rows") or DEFAULT_AGENDA_ROWS))
-    backend = str(params.get("backend") or default_backend()).lower()
+    backend = str(params.get("backend") or default_backend(settings.app_state_path)).lower()
     ceiling = float(params.get("budget_usd") or 0.0)
-    if backend == "api" and ceiling <= 0:
+    # An API agent on the harness plane bills like the paid plane, so an
+    # unattended run of it gets the same shared ceiling rather than one
+    # default per row with no total.
+    billed = _bills_per_token(params, settings.app_state_path)
+    if ceiling <= 0 and billed:
         ceiling = DEFAULT_AGENDA_BUDGET_USD
 
     store = connect(settings.store_path)
@@ -886,8 +945,15 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
             # refuses one query — each is a row's problem, not the agenda's.
             progress.log(f"{row['subject_id']}: {type(error).__name__}: {error}")
             done.append({"subject_id": row["subject_id"], "error": str(error)})
+            if billed:
+                # It may have been billed before it failed, and nothing here
+                # can say how much — so it is counted at the most it could have.
+                spent_total += _uncounted(progress, row, remaining)
             continue
-        spent_total += float(result.get("spent_usd") or 0.0)
+        row_spent = result.get("spent_usd")
+        if billed and row_spent is None:
+            row_spent = _uncounted(progress, row, remaining)
+        spent_total += float(row_spent or 0.0)
         used = result.get("tokens_used")
         if isinstance(used, int):
             # Accumulated in a list rather than a running int so that "no row
@@ -933,7 +999,7 @@ def agenda_run(settings, params: dict, progress: Progress) -> dict:
         "kept": kept,
         "plane": backend,
         "budget_usd": ceiling or None,
-        "spent_usd": spent_total if backend == "api" else None,
+        "spent_usd": spent_total if billed else None,
         # The plane decides, not the loop: a total is reported when at least
         # one row could be counted, and stays None when none could.
         "tokens_used": sum(tokens_counted) if tokens_counted else None,
@@ -1359,7 +1425,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     reader's press, on a screen that lists what the agent wrote.
     """
     from app import packauthor
-    from app.providers import harness, harness_researcher
+    from app.providers import agent_ready, harness, harness_researcher
 
     category = str(params.get("category") or "").strip()
     if not category:
@@ -1367,15 +1433,15 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "name the category in a few words — 'cordless drills', 'espresso "
             "machines'. It is the only thing an agent cannot infer")
 
-    if not harness.available():
+    if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
         # Said in full rather than as "no harness": a reader whose opencode is
         # installed deserves to know why it is not being driven, and a reader
         # with neither deserves the other door rather than a dead end.
         blocked = "; ".join(one.unusable for one in harness.found_but_unusable())
         raise ValueError(
-            "no coding-agent CLI on PATH, so Kriko cannot author a pack by "
-            "itself. Install Claude Code, or hand the brief to your own agent "
-            "through the MCP server (Agents → Connect) and let it use "
+            f"{NO_AGENT} Kriko cannot author a pack by itself. Install a coding "
+            "agent, pick the Mistral API agent, or hand the brief to your own "
+            "agent through the MCP server (Agents → Connect) and let it use "
             "`draft_pack`."
             + (f" Found but not usable: {blocked}." if blocked else ""))
 
@@ -1390,6 +1456,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         timeout=float(
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
+    _cap_agent(researcher, params)
     # The forty-minute silence this job used to be (B121). A pack author is
     # the longest-running thing in the app and the one whose log most needed
     # to say something before it finished.
@@ -1457,6 +1524,8 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     )
     written["category"] = category
     written["scope"] = scope
+    if getattr(researcher, "cost_basis", "") == "per_token":
+        written["spent_usd"] = getattr(researcher, "spent", None)
     # Carried into the *final* result, not left in the partial one: a
     # succeeding run replaces its partial result wholesale, so questions kept
     # only there are visible on a cancelled run and on no other. They outlive
@@ -1522,22 +1591,32 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         # refused (`harness_researcher`), so the dial never costs the run.
         effort="low",
     )
+    _cap_agent(researcher, params)
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
 
     progress.set(0.1, f"a quick look at {product}")
     reply = researcher.ask(quicklook.brief(product, principle, params.get("page")))
     progress.check()
-    found = quicklook.parse(reply)
+    # The API agent keeps what its search returned per url; a CLI keeps
+    # nothing, and `None` tells the parser there is nothing to check against.
+    found = quicklook.parse(reply, getattr(researcher, "sources", None))
     kept = len(found["risks"])
+    spent = getattr(researcher, "spent", None)
+    billed = getattr(researcher, "cost_basis", "") == "per_token"
     progress.set(1.0, (
         f"{kept} risk(s) found" if kept else "nothing it could source in the time")
-        + (f", {found['dropped']} unsourced dropped" if found["dropped"] else ""))
+        + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
+        + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
     return {
         "product": product,
         **found,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
+        "model": str(getattr(researcher, "model", "") or ""),
+        "cost_basis": getattr(researcher, "cost_basis", "subscription"),
+        "spent_usd": spent if billed else None,
+        "tokens_used": getattr(researcher, "tokens_used", None),
     }
 
 
@@ -1585,7 +1664,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
     like.
     """
     from app import packauthor
-    from app.providers import harness, harness_researcher
+    from app.providers import agent_ready, harness, harness_researcher
 
     slug = str(params.get("slug") or "").strip()
     if not slug:
@@ -1593,11 +1672,11 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
     note = str(params.get("note") or "").strip()
 
     state_of = packauthor.draft_state(settings.store_path, slug)
-    if not harness.available():
+    if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
         raise ValueError(
-            "no coding-agent CLI on PATH, so Kriko cannot extend this draft by "
-            "itself. Hand the brief to your own agent through the MCP server "
-            "(Agents → Connect) — `amend_draft` gives you the same brief."
+            f"{NO_AGENT} Kriko cannot extend this draft by itself. Hand the "
+            "brief to your own agent through the MCP server (Agents → Connect) "
+            "— `amend_draft` gives you the same brief."
         )
 
     researcher = harness_researcher(
@@ -1606,6 +1685,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
         timeout=float(
             params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
     )
+    _cap_agent(researcher, params)
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
     # The return path. Same wiring, opposite direction: `check` asks whether
@@ -1819,6 +1899,9 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         preferred=str(params.get("harness") or ""),
         app_state_path=settings.app_state_path,
         timeout=float(params.get("timeout_seconds") or harness.TIMEOUT_SECONDS),
+        # A CLI that can fetch the page's markup, never the API agent: an
+        # adapter is selectors, and search text has no elements to select.
+        api=False,
     )
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
