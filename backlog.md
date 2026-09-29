@@ -505,6 +505,11 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 - A run that isn't on the reader's literal pick says so in its log (`effort_settled`).
 - The PWD test now reads the spawned child's environment, not the dict.
 - The wording says "most likely refuse", since a 429 can clear.
+**Observed on the installed 0.10.14 (2026-09-29, `Kriko_0.10.14_x64-setup.exe /S`, double-clicked `Kriko.exe`):** one quick look per CLI for "Dyson V15 Detect Absolute", sent to `POST /api/extension/research-plane` with the body the panel sends (`extension/background.js:1691`). The deepen draft was cancelled at once, and the reader's pick was restored to `antigravity-cli` afterwards.
+- **Antigravity** (saved pick `gemini-3.8-flash-medium`, effort `medium`): the first log line is "Running gemini-3.8-flash-low: Antigravity CLI names the effort in the model id, so the low this run asked for is that id, not a second flag." Then `started`, three `search_web` calls and two `read_url_content` reads (rtings, techradar). It succeeded in 94 s with "4 risk(s) found", each sourced to rtings.com. On 0.10.13 this quick look exited before its first call.
+- **opencode** (`opencode/muse-spark-1.3-contributor-free`): "Got it — direct search is available, using that now", then "opening the top sources". It succeeded in 59 s with "5 risk(s) found", sourced to popularmechanics.com and idealhome.co.uk with verbatim quotes. No "Web search cancelled", and no opencode process left behind. The only one running is the reader's own `opencode serve --service`, running since 12:31.
+- **Claude Code: not run.** A real run spends the reader's Claude subscription, which they asked not to burn. Its change is the refused-page line alone. `test_every_brief_a_cli_is_handed_says_it_once` shows that line reaching a spawned child's argv exactly once for every brief.
+- Seen, not this item: both results carry `"model": "<harness id>"` rather than the model that actually ran.
 **Open risk, not reproduced:**
 - The `opencode.json` is written for every opencode version. Only 2.0.16 was tried. An older build with a strict config schema could reject the `websearch` key.
 - It also sends Kriko's searches to Exa even if the reader chose another provider interactively.
