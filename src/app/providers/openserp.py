@@ -93,5 +93,5 @@ def searcher(base_url: str = "", engine: str = ""):
         stats["hits"] += len(out)
         return out
 
-    search.stats = stats
+    search.stats = stats  # type: ignore[attr-defined]
     return search
