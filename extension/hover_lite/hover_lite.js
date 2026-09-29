@@ -1584,6 +1584,11 @@
     iconWrap.classList.toggle("spin", isAnalyzing);
     ctaBtn.querySelector(".lite-cta-label").textContent = label;
     if (densityBtn) densityBtn.dataset.spinning = isAnalyzing ? "1" : "0";
+    // B152.8: once there is an answer the header's refresh icon is the one
+    // way to ask again; a second full-width "Refresh analysis" under it was
+    // the same control twice, pushing the risks down the panel.
+    const wrap = ctaBtn.closest(".lite-cta-wrap");
+    if (wrap) wrap.style.display = hasResult ? "none" : "";
   }
 
   /* The step a run is on, in words that are true.

@@ -923,3 +923,12 @@ test("a deep run that installed its pack refreshes the listing (B148)", () => {
   assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, before + 1,
     "the listing was analysed again once the pack was in");
 });
+
+test("an answer leaves one refresh control, the header's (B152.8)", () => {
+  const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  const wrap = p.shadow().querySelector(".lite-cta-wrap");
+  assert.equal(wrap.style.display, "none", "no second full-width Refresh under the header");
+  assert.ok(p.shadow().querySelector(".lite-btn-density"), "the header icon still asks again");
+});
