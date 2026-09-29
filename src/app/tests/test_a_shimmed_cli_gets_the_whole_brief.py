@@ -86,7 +86,8 @@ def test_a_multi_line_brief_crosses_the_shim_whole(tmp_path):
     one = harness_mod.Harness("fake", "Fake CLI", str(shim), (str(_echo(tmp_path)),),
                               structured=True)
     got = json.loads(HarnessResearcher(one, timeout=30).ask(BRIEF))
-    assert got["argv"][-1] == BRIEF
+    # Whole, plus the one line every CLI brief carries (B154).
+    assert got["argv"][-1] == harness_mod.with_refused_page(BRIEF)
 
 
 @windows
@@ -101,9 +102,9 @@ def test_a_brief_past_cmd_exes_limit_crosses_the_shim(tmp_path):
     one = harness_mod.Harness("fake", "Fake CLI", str(shim), (str(_echo(tmp_path)),),
                               structured=True)
     brief = BRIEF + "\n" + "x" * 12000
-    assert len(brief) < harness_mod.MAX_PROMPT_ARGUMENT
+    assert len(harness_mod.with_refused_page(brief)) < harness_mod.MAX_PROMPT_ARGUMENT
     got = json.loads(HarnessResearcher(one, timeout=30).ask(brief))
-    assert got["argv"][-1] == brief
+    assert got["argv"][-1] == harness_mod.with_refused_page(brief)
 
 
 def test_a_run_starts_in_an_empty_directory_not_the_readers_home(tmp_path):

@@ -25,6 +25,20 @@ documents that instruct agents — this one and the generated skill in
 
 from kriko.research.base import Document, Finding, ResearchTask
 
+#: Said in every brief that lets an agent fetch (B154). A run was seen asking
+#: one site three times for the page it had refused with a 403 the first time:
+#: a site that turns away the agent's fetcher usually does it every time, and
+#: the run spends its budget on the one source it cannot have. Imported by the
+#: other briefs that fetch (the quick look, the pack author) so there is one
+#: wording, and by the door that spawns agents, which adds it to any brief
+#: that lacks it.
+REFUSED_PAGE = (
+    "A page that answers 401, 403 or 429, or shows a captcha or an \"access "
+    "denied\" page, is that site refusing your fetcher, and it will most "
+    "likely refuse the same way again. Do not fetch it a second time: take the "
+    "same question to another source."
+)
+
 
 class AgentResearcher:
     """Research by instructing a harness. Marginal cost: zero."""
@@ -132,6 +146,8 @@ class AgentResearcher:
             ]
 
         lines += [
+            "",
+            REFUSED_PAGE,
             "",
             "## How to report findings",
             "",
