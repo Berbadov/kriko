@@ -1820,7 +1820,7 @@ dependencies = [
 
 [[package]]
 name = "kriko"
-version = "0.10.14"
+version = "0.10.15"
 dependencies = [
  "serde",
  "serde_json",
