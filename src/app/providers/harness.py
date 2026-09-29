@@ -61,7 +61,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from kriko.research.agent import AgentResearcher
+from kriko.research.agent import REFUSED_PAGE, AgentResearcher
 from kriko.research.base import Document, Finding, ResearchTask
 
 #: Everything the spawned agent is allowed to do. Read the module docstring
@@ -957,6 +957,51 @@ def efforts_for(one: Harness) -> list[str]:
     return _from_help(helptext(executable), one.effort_flag) or list(one.effort_choices)
 
 
+def settle_effort(one: Harness, model: str, effort: str) -> tuple[str, str]:
+    """`(model, effort)` this CLI will take together (B154).
+
+    `agy` spells effort twice: as `--effort` and as the tail of its model ids
+    (`gemini-3.8-flash-medium`). Asked for both, it refuses the pair — "--model
+    gemini-3.8-flash-medium conflicts with --effort=low" — which is how every
+    Antigravity quick look died, since the quick look asks for `low` on top of
+    whichever model the reader picked. A model whose tail is one of the CLI's
+    own levels already carries an effort, so the flag goes and the effort moves
+    into the id: the `-low` sibling when the CLI lists one, otherwise the
+    reader's model as picked. Both lists are the CLI's (`--help`, `agy
+    models`); a CLI whose ids carry no level passes through untouched.
+
+    **A tail that only looks like a level is not one.** An id is read as
+    carrying its effort only when the CLI lists a sibling that differs from it
+    by another level: `gemini-3.1-pro-high` beside `gemini-3.1-pro-low` does,
+    a lone `…-codex-max` on a CLI that one day adds `max` to its dial does not,
+    and keeps its flag. An empty list (a cold cache) drops the flag rather than
+    risk the refusal: a run at the reader's own level is slower, not failed.
+    """
+    base, _, tail = model.rpartition("-")
+    levels = efforts_for(one) if base and effort else []
+    if tail not in levels:
+        return model, effort
+    listed = models_for(one)
+    if listed and not ({f"{base}-{level}" for level in levels} - {model}) & set(listed):
+        return model, effort
+    sibling = f"{base}-{effort}"
+    return (sibling if sibling in listed else model), ""
+
+
+def with_refused_page(prompt: str) -> str:
+    """`prompt`, saying what a refused page means, once (B154).
+
+    Every brief a CLI is handed says it, whichever door wrote the brief: the
+    research, quick-look and pack-author briefs place it themselves, and review
+    found amend, disambiguate and site-register briefs that did not. Said at
+    the one door every CLI run passes, a brief written next month cannot
+    forget it.
+    """
+    if REFUSED_PAGE in prompt:
+        return prompt
+    return f"{prompt.rstrip()}\n\n{REFUSED_PAGE}\n"
+
+
 def _from_models_command(one: Harness, executable: str) -> list[str]:
     # Through `_ask` for the reason `helptext` is: this runs a binary
     # `locate` only *guessed* at, and a wrong guess must cost a dropdown
@@ -1800,6 +1845,11 @@ class HarnessResearcher(AgentResearcher):
         #: same model at a lower effort far more often than it is a different
         #: model.
         self.requested_effort = effort
+        #: One line for the run's log when `settle_effort` changed the
+        #: reader's pick (B154), set by `providers.harness_researcher`: a run
+        #: on `-low` where the reader chose `-medium`, or on `-high` with no
+        #: effort flag, should say so rather than be quietly slower or faster.
+        self.effort_settled = ""
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
         self.harness = harness
@@ -2040,6 +2090,7 @@ class HarnessResearcher(AgentResearcher):
         nothing until the process is over; `on_line` (or `self.on_action`) now
         receives one line per action the agent takes, while it takes it.
         """
+        prompt = with_refused_page(prompt)
         with self._workspace():
             return self._invoke(prompt, on_line)
 
@@ -2054,9 +2105,31 @@ class HarnessResearcher(AgentResearcher):
             # never the disk it happens to start on.
             with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
                 self._run_cwd = directory
+                # The folder said twice, because a CLI may believe either.
+                # opencode takes its project from `PWD` when one is set, and
+                # a Kriko started from a shell hands down that shell's `PWD`:
+                # the run then read the shell's folder (its `AGENTS.md`, its
+                # `opencode.json`) and not the one it was started in (B154).
+                self._run_env = {"PWD": directory}
+                if self.harness.id == "opencode":
+                    # **Why opencode "could not open any website" (B154).**
+                    # opencode 2.x asks, once, which provider its `websearch`
+                    # tool should use, and keeps the answer in its own
+                    # database. `opencode run` has nobody to ask, so every
+                    # search came back "Web search cancelled" while the agent
+                    # file allowed it. A project `opencode.json` in the folder
+                    # the run starts in answers the question for this run
+                    # only — the reader's config and database stay as found,
+                    # and the file goes with the folder. `exa`, because it
+                    # answers without a key of the reader's; `random` can
+                    # land on one that does not (Firecrawl) and return nothing.
+                    (Path(directory) / "opencode.json").write_text(json.dumps({
+                        "websearch": {"provider": "exa"},
+                    }), encoding="utf-8")
                 try:
                     yield
                 finally:
+                    self._run_env = {}
                     self._run_cwd = None
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
@@ -2066,7 +2139,7 @@ class HarnessResearcher(AgentResearcher):
             home.mkdir()
             work.mkdir()
             self._run_cwd = str(work)
-            self._run_env = {"HOME": str(home), "USERPROFILE": str(home)}
+            self._run_env = {"HOME": str(home), "USERPROFILE": str(home), "PWD": str(work)}
             if self.harness.protocol == "agy":
                 # **The run's own permission policy, and nobody else's.**
                 #
@@ -2156,6 +2229,8 @@ class HarnessResearcher(AgentResearcher):
         if self.requested_model and not self.harness.model_flag and self.harness.model_env:
             self._run_env[self.harness.model_env] = self.requested_model
         say = on_line if on_line is not None else self.on_action
+        if say is not None and self.effort_settled:
+            say(self.effort_settled)
 
         self._conversing = False
         if self._can_converse():

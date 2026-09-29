@@ -118,7 +118,7 @@ def test_a_brief_larger_than_the_pipe_does_not_deadlock_a_chatty_child(
     researcher.replies = _answers()  # what `pack_author` wires: a run that can be answered
     began = time.monotonic()
     reply = researcher.ask("b" * 200_000)
-    assert "read 200000" in reply
+    assert f"read {len(harness_mod.with_refused_page('b' * 200_000))}" in reply  # B154
     assert time.monotonic() - began < 20
 
 
@@ -129,11 +129,12 @@ def test_the_answer_reaches_the_agent_and_changes_what_it_says(
     researcher.replies = _answers("the 1.6 TDI")
 
     reply = researcher.ask("research this car")
+    brief = harness_mod.with_refused_page("research this car")  # B154
 
     # Both halves in the one answer: the brief it was started on, and the
     # thing it could only have learned from the reader mid-run. And it came
     # back at all — a child that waits for another turn did not hang the run.
-    assert "research this car|the 1.6 TDI" in reply
+    assert f"{brief}|the 1.6 TDI" in reply
     assert "you: the 1.6 TDI" in researcher.actions
 
 
@@ -155,7 +156,8 @@ def test_a_turn_that_ends_on_a_question_waits_for_the_answer(
     researcher.replies = replies
     researcher.on_action = heard.append
 
-    assert "research this car|the 1.6 TDI" in researcher.ask("research this car")
+    brief = harness_mod.with_refused_page("research this car")  # B154
+    assert f"{brief}|the 1.6 TDI" in researcher.ask("research this car")
 
 
 def test_a_question_nobody_answers_ends_the_run_with_what_it_had(
