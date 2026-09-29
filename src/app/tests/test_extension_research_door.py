@@ -204,7 +204,7 @@ def research_client(tmp_path, monkeypatch):
     from app import keys
     from kriko.store.db import connect
 
-    monkeypatch.setattr(keys, "ready", lambda path: True)
+    monkeypatch.setattr(keys, "ready", lambda *_, **__: True)
     conn = connect(tmp_path / "knowledge.sqlite")
     conn.execute(
         "INSERT INTO packs (pack_id, name, version, schema_version, built_at,"
@@ -299,8 +299,9 @@ def test_post_research_plane_uses_the_advertised_free_plane(
     from app.providers import harness
     from app.web.deps import get_jobs
 
-    monkeypatch.setattr(keys, "ready", lambda path: False)
-    monkeypatch.setattr(harness, "available", lambda: available)
+    monkeypatch.setattr(keys, "ready", lambda *_, **__: False)
+    # A list, as the real one returns: the pick is resolved against it.
+    monkeypatch.setattr(harness, "available", lambda: [harness.KNOWN[0]] if available else [])
     calls = []
 
     def submit(kind, params):
