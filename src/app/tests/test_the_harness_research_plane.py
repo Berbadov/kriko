@@ -154,7 +154,7 @@ def test_a_prompt_too_long_for_a_command_line_still_goes_on_stdin(tmp_path, monk
     )
     researcher = HarnessResearcher(one, timeout=30)
     assert researcher.ask("a prompt that is longer than ten characters").strip() == (
-        "a prompt that is longer than ten characters"
+        harness_mod.with_refused_page("a prompt that is longer than ten characters").strip()
     )
 
 
@@ -176,7 +176,7 @@ def test_a_python_cli_reads_a_piped_brief_as_utf8(tmp_path, monkeypatch):
     )
     researcher = HarnessResearcher(one, timeout=30)
     assert researcher.ask("a brief with a ”quote” in it").strip() == ascii(
-        "a brief with a ”quote” in it"
+        harness_mod.with_refused_page("a brief with a ”quote” in it")
     )
 
 
@@ -1498,7 +1498,9 @@ def _agy_cli(tmp_path: Path, lines: list) -> harness_mod.Harness:
         "import json, sys\n"
         "flag = sys.argv.index('-p')\n"
         f"lines = {json.dumps([json.dumps(one) for one in lines])}\n"
-        "lines = [line.replace('__PROMPT__', sys.argv[flag + 1]) for line in lines]\n"
+        # JSON-escaped: a real brief has quotes and newlines (B154).
+        "lines = [line.replace('__PROMPT__', json.dumps(sys.argv[flag + 1])[1:-1])"
+        " for line in lines]\n"
         "sys.stdout.write('\\n'.join(lines) + '\\n')\n",
         encoding="utf-8",
     )
@@ -1532,7 +1534,7 @@ def test_agy_takes_the_prompt_as_a_flag_value(tmp_path, monkeypatch):
     )
     one = _agy_cli(tmp_path, [_agy_result("__PROMPT__")])
     researcher = HarnessResearcher(one, timeout=30)
-    assert researcher.ask("the whole brief") == "the whole brief"
+    assert researcher.ask("the whole brief") == harness_mod.with_refused_page("the whole brief")
     assert researcher.tokens_used == 15
 
 

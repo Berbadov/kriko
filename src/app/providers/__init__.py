@@ -258,11 +258,23 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     # would be worse than losing the dial.
     if effort.strip() and effort.strip() not in harness.efforts_for(found):
         effort = ""
-    model, effort = harness.settle_effort(found, model.strip(), effort.strip())
+    picked = (model.strip(), effort.strip())
+    model, effort = harness.settle_effort(found, *picked)
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
         effort=effort.strip(),
     )
+    if (model, effort) != picked:
+        # `found.label` spells the effort in its model ids, and a flag beside
+        # one is refused. Said in the run's log, since the run is now on a
+        # model or a level the reader did not literally pick.
+        researcher.effort_settled = (
+            f"Running {model}: {found.label} names the effort in the model id, "
+            f"so the {picked[1]} this run asked for is that id, not a second flag."
+            if model != picked[0] else
+            f"Running {model} at its own level: {found.label} lists no "
+            f"{picked[1]} variant of it, and a second effort flag would be refused."
+        )
     if note:
         # Duck-typed, read by `app/web/tasks.py` when the run gathers nothing
         # to say *why* — the same slot `_empty_run_note` already reads. Not
