@@ -521,6 +521,10 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 *Reproduced 2026-09-28:* a walk of every route in the dev app found one slow call: `/api/prefs` at 7.2 s cold and 200 ms warm, while the other endpoints answer in 10 ms. Profile: `harness.locate` runs 23 `shutil.which` calls, ~7,800 filesystem probes; and once `MODELS_TTL` (10 min) runs out, the next read waits for every CLI's model list. No console errors, and no screen showed an error state.
 *Done when:* warm `/api/prefs` is under 20 ms, and an expired model list is served while it is re-asked in the background. Re-ask (`fresh`) still sees a newly installed CLI at once. *Observed:* `prefs.choices` measured 7 ms, then 5 ms, warm.
 
+**B152.8 — one refresh in the panel.** *Asked:* "make the ui more simpler and working EVERYTHING."
+*Where:* the extension panel showing an answer on a listing.
+*Done when:* with an answer on screen, the full-width **Refresh analysis** button is gone (the header's refresh icon asks again, bypassing the cache as before), and no empty band sits above **Risks · N**: an empty live-feed slot takes no room, and the product buttons carry no extra margin on top of the body's gap. Before an answer, **Analyze current page** stays.
+
 ### B151 — "We are not reading enough data from the page to identify the product. plus opencode isnt working at all": the listing's facts reach the agent, and every agent gets its whole brief `[G5]`
 **Asked:** "well, we are not reading enough data from the page to identify the product. plus opencode isnt working at all. other llms are taking too long to read. so much that i couldnt test the other features." (2026-09-28, on 0.10.9)
 **Where:** the extension panel on a Sahibinden car listing → **Research this product**, with each agent picked in Settings → Research; the run on Activity → Runs.

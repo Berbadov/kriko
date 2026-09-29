@@ -887,7 +887,8 @@
 .lite-details-slot:empty,
 .lite-counts-slot:empty,
 .lite-listing-slot:empty,
-.lite-alerts-slot:empty {
+.lite-alerts-slot:empty,
+.lite-live-slot:empty {
   display: none;
 }
 
@@ -1364,7 +1365,7 @@
 /* One row, in the panel's own face: `font: inherit` took the size of
    whatever the panel sat inside, so these read larger than every other
    control here (B152.5). */
-.lite-product-actions { display: flex; gap: 6px; margin: 8px 0 14px; }
+.lite-product-actions { display: flex; gap: 6px; }
 .lite-product-actions button { flex: 1 1 0; }
 .lite-product-actions button, .lite-research button, .lite-search-research {
   border: 1px solid var(--border);
