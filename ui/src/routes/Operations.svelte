@@ -3,6 +3,8 @@
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
+    import { kindWord } from "../lib/jobs";
+    import { clock as fmtClock } from "../lib/time";
     import {
         doorWord,
         followOperations,
@@ -146,7 +148,20 @@
         return text.length > 200 ? text.slice(0, 200) + "…" : text;
     };
 
-    const clock = (at: string) => (at || "").slice(11, 19) || (at || "").slice(0, 10);
+    const clock = (at: string) => fmtClock(at) || (at || "").slice(0, 10);
+
+    /** The request, laid out one field per line rather than as the single
+     *  compact line the server stores it in. Still the raw fields — knowing
+     *  every operation's params ahead of time is exactly the kind of closed
+     *  vocabulary the layering principle keeps out of this lens — but spaced
+     *  out onto its own lines it reads as a form rather than as a JSON dump. */
+    const detail = (json: string): string => {
+        try {
+            return JSON.stringify(JSON.parse(json), null, 2);
+        } catch {
+            return json;
+        }
+    };
 
     /** What a running row has to say for itself: the stage the job is in, and
      *  how far through. Both come off the joined `jobs` row, which is why a
@@ -211,7 +226,7 @@
                 <div class="kmain">
                     <span class="klabel">{row.name}</span>
                     <span class="meta">
-                        {doorWord(row.door)} · {row.kind}
+                        {doorWord(row.door)} · {kindWord(row.kind)}
                         {#if row.subject_id}· {row.subject_id}{/if}
                     </span>
                     {#if row.state === "running" && row.note}
@@ -235,7 +250,7 @@
                         {/if}
                     {/if}
                     {#if open === row.op_id}
-                        <pre class="detail">{row.request_json}</pre>
+                        <pre class="detail">{detail(row.request_json)}</pre>
                         {#if summary(row)}<pre class="detail">{summary(row)}</pre>{/if}
                     {/if}
                 </div>

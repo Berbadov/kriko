@@ -21,7 +21,7 @@ the source of truth; the stream is a way of reading it often.
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 
 from app.web import state
@@ -57,6 +57,7 @@ def _watched(watch: str) -> list[int]:
 
 @router.get("/operations")
 def list_operations(
+    request: Request,
     limit: int = Query(50, ge=1, le=500),
     after_id: int = Query(0, ge=0),
     watch: str = Query(""),
@@ -68,6 +69,10 @@ def list_operations(
     return {
         "items": items,
         "running": state.running_operations(conn),
+        # The knowledge clock (B152.4), carried on the feed the extension's
+        # panel already polls, so "a card was added" costs it no second
+        # request.
+        "knowledge": request.app.state.knowledge_clock.now(),
         # The newest id the caller has now seen, so a poller that missed the
         # stream can carry on from a number rather than from a timestamp.
         # Only *new* rows may move it: a re-read row is one the caller already

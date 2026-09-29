@@ -169,11 +169,40 @@ export const isAuthorOnly = (name: string): boolean =>
  * by name on the day it appears — a palette that has to be told about a new
  * route is a palette that is quietly one release behind.
  */
+/** The alias words that resolve to a route, on top of whatever the item
+ * already listed under `also`.
+ *
+ * ALIASES is the router's table, hand-maintained for the handful of retired
+ * names that must still open something; `also` is the palette's search
+ * vocabulary, hand-maintained for words that were never routes at all
+ * ("console"). The two lists drift apart the moment a name is added to one
+ * and not the other — that is shell-8: `coverage` and `health` open fine by
+ * URL but were unfindable by typing them here. Deriving every alias key that
+ * resolves to a route folds ALIASES into the search vocabulary instead of
+ * asking someone to keep both current by hand.
+ */
+// "console" resolves by URL (a bookmark to the old screen must still open
+// something) but is deliberately excluded from the palette's vocabulary: it
+// named an API-only prompt that a real terminal replaced, and finding Agents
+// by typing "console" would tell the reader a feature is here that is not.
+// Every other alias word is fair game — the retirement was of the *screen*,
+// not of the word someone reaching for it remembers.
+const NOT_SEARCH_VOCABULARY = new Set(["console"]);
+
+const aliasWordsFor = (name: string): string[] =>
+    Object.entries(ALIASES)
+        .filter(([word, target]) => target.name === name && !NOT_SEARCH_VOCABULARY.has(word))
+        .map(([word]) => word);
+
 export const destinationsFor = (
     mode: Mode,
 ): { name: string; label: string; group: string; also?: string[] }[] =>
     groupsFor(mode).flatMap((group) =>
-        group.items.map((item) => ({ ...item, group: group.title })),
+        group.items.map((item) => ({
+            ...item,
+            group: group.title,
+            also: [...new Set([...(item.also ?? []), ...aliasWordsFor(item.name)])],
+        })),
     );
 
 /** What the rail calls a route. Falls back to the name so an aliased or

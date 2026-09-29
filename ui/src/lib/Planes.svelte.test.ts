@@ -248,7 +248,7 @@ describe("the three research planes", () => {
         );
         // And the run's Agent choice is a dropdown of installed agents,
         // not a text field the reader has to spell an id into.
-        const agent = container.querySelector("details label select");
+        const agent = container.querySelector(".choices label select");
         expect(agent).toBeTruthy();
         expect(agent?.closest("label")?.textContent).toMatch(/Agent/);
     });

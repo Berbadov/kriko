@@ -3,6 +3,11 @@ export type Status = {
     packs: number;
     enabled_packs: number;
     counts: Record<string, number>;
+    // Same tables, restricted to enabled packs — a disabled pack's claims
+    // never reach a lookup, so a header quoting the all-packs total reads as
+    // a bigger knowledge base than the reader can actually get an answer
+    // from (knowledge-36).
+    counts_enabled?: Record<string, number>;
 };
 
 export type ActivityItem = {
@@ -40,7 +45,12 @@ export type PackUpdate = {
 
 export type PackUpdates = {
     index_url: string;
+    /** A sentence the reader can act on ("the pack index has nothing
+     *  published yet"), never a Python exception's class name. */
     error: string | null;
+    /** The raw exception text `error` was built from, for a bug report — a
+     *  detail, never the headline. */
+    error_detail?: string | null;
     checked_at?: string;
     packs: PackUpdate[];
 };
@@ -114,7 +124,7 @@ export type Agenda = {
 export type AgentVerify = { ok: boolean; server?: string; detail?: string };
 
 export type Kind = { kind: string; pack_id: string };
-export type IdentityKey = { key: string; match_json?: string };
+export type IdentityKey = { key: string; match_json?: string; required: boolean };
 export type Term = { term_id: string; unit: string };
 export type Vocabulary = { context_key?: Term[] } & Record<string, Term[] | undefined>;
 
@@ -157,15 +167,34 @@ export type LookupResult = {
      * has had" is asking about the stored one as often as the fresh one. */
     context?: Record<string, unknown>;
     context_units?: Record<string, string>;
+    /** Which subjects the resolution matched, echoed by `/api/lookup` for the
+     * same reason context is (check-13): an ambiguous match needs to say how
+     * many, and by what, rather than just that it was ambiguous. */
+    subjects?: string[];
 };
 
 export type AnalyzeResult = LookupResult & {
+    // Present, and always `true`, only so this discriminates against
+    // `UnreadPage`'s `readable: false` — TS cannot narrow a union on a field
+    // that is absent from one side of it.
+    readable?: true;
     adapter: string;
     packs: { pack_id: string; version: string }[];
     context_units: Record<string, string>;
     identity: Record<string, unknown>;
     context: Record<string, unknown>;
     unmapped_labels: string[];
+};
+
+// A distinct, expected shape (check-1): the adapter matched the URL's site,
+// but a pasted-in URL has no page for it to read, so there is nothing to
+// look up yet. Never call this a "no pack covers this" answer.
+export type UnreadPage = {
+    readable: false;
+    reason: "page_not_read" | "no_adapter";
+    adapter?: string | null;
+    next_step?: string;
+    readable_sites?: { site: string; pack_id: string }[];
 };
 
 export type Subject = {
@@ -180,7 +209,15 @@ export type Subject = {
     claims: number;
 };
 
-export type Gap = { subject_id: string; label: string; kind: string };
+export type Gap = { subject_id: string; label: string; kind: string; pack_id: string };
+
+/** One `/api/search` hit — a `Subject` plus the identity that tells two rows
+ * sharing a label apart, which is the entire reason `/api/search` exists
+ * over `/api/subjects?q=` (check-5). */
+export type SearchHit = Subject & {
+    identity: Record<string, string>;
+    why: string[];
+};
 
 /** A reader's verdict on one claim.
  *
@@ -474,7 +511,7 @@ export type ExtensionSighting = {
 export type ExtensionCompatibility = {
     running_version: string;
     minimum_version: string;
-    state: "unknown" | "too_old" | "behind" | "current";
+    state: "unknown" | "too_old" | "behind" | "stale_files" | "current";
     detail: string;
 };
 export type ExtensionStatus = {

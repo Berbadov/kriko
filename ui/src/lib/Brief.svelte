@@ -6,7 +6,7 @@
     import Scale from "./Scale.svelte";
     import { copyText, copyWord } from "./clipboard";
     import { follow, stateWord } from "./jobs";
-    import { hashWith } from "./router";
+    import { hashWith, route } from "./router";
     import type { Job, ResearchPlane } from "./types";
 
     /* The half of Research that was computed and thrown away.
@@ -41,6 +41,19 @@
     let copied = $state("");
     let harness = $state("");
     let llm = $state("");
+    /* B146: effort beside the button, not two screens away on Agents. Saved as
+     * the agent's own preference (the key Agents writes), which the run reads,
+     * so the two screens can never disagree. Keyed by agent id here only so
+     * the select shows the choice before the planes list is re-read. */
+    let efforts = $state<Record<string, string>>({});
+    async function pickEffort(id: string, level: string) {
+        efforts = { ...efforts, [id]: level };
+        try {
+            await api.savePrefs({ [`harness_effort_${id.replace(/-/g, "_")}`]: level });
+        } catch (cause) {
+            error = cause;
+        }
+    }
     /* How much reading this run is worth. Empty means the server's default,
      * which is what every run did before the dial reached this screen — the
      * brief itself is free and instant either way, so nothing here waits on
@@ -56,7 +69,14 @@
     // Result fields, read defensively: the job's result is a plain dict from
     // the handler and a version skew must degrade to "no brief yet", never to
     // a component that throws while rendering a success.
-    const result = $derived((job?.result ?? {}) as Record<string, unknown>);
+    const liveResult = $derived((job?.result ?? {}) as Record<string, unknown>);
+    // Starting a new run used to null `job` out immediately, which blanked
+    // the brief the reader was reading a moment before the new one has
+    // anything to show (knowledge-6) — kept until the new run has its own.
+    let lastResult = $state<Record<string, unknown> | null>(null);
+    const result = $derived(
+        typeof liveResult.brief === "string" ? liveResult : (lastResult ?? liveResult),
+    );
     const brief = $derived(typeof result.brief === "string" ? result.brief : "");
     const queries = $derived(
         Array.isArray(result.queries) ? (result.queries as string[]) : [],
@@ -70,6 +90,7 @@
 
     async function start(backend = "agent") {
         error = "";
+        if (typeof liveResult.brief === "string") lastResult = liveResult;
         job = null;
         try {
             const { job_id } = await api.research({
@@ -181,6 +202,21 @@
                         />
                     </label>
                 {/if}
+                {#if chosenHarness && (chosenHarness.efforts ?? []).length}
+                    <label>Effort
+                        <select
+                            value={efforts[chosenHarness.id] ?? chosenHarness.effort ?? ""}
+                            disabled={!!job && !job.done}
+                            onchange={(event) =>
+                                pickEffort(chosenHarness.id, event.currentTarget.value)}
+                        >
+                            <option value="">CLI default</option>
+                            {#each chosenHarness.efforts ?? [] as level (level)}
+                                <option value={level}>{level}</option>
+                            {/each}
+                        </select>
+                    </label>
+                {/if}
                 <Scale
                     bind:scale
                     bind:maxDocuments
@@ -198,7 +234,7 @@
             <button class="ghost" onclick={() => copy("brief", brief)}>
                 {copied === "brief" ? copyWord(true) : copied === "brief:blocked" ? copyWord(false) : "Copy the brief"}
             </button>
-            <a class="tab" href={hashWith({}, "connect")}>Connect an agent</a>
+            <a class="tab" href={hashWith({ mode: $route.query.mode }, "connect")}>Connect an agent</a>
             {#if queries.length}
                 <button class="ghost" onclick={() => copy("queries", queries.join("\n"))}>
                     {copied === "queries" ? copyWord(true) : copied === "queries:blocked" ? copyWord(false) : `Copy ${queries.length} queries`}
@@ -226,7 +262,7 @@
         <pre class="brief-body">{brief}</pre>
     {:else if job && job.done}
         <p class="state empty">
-            This run produced no brief. Its log is below, and the Runs screen keeps it.
+            This run produced no brief. Its log is below, and Activity → Runs keeps it.
         </p>
     {:else}
         <p class="skeleton" style="height: 6rem">Planning the research…</p>

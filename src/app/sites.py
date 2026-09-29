@@ -32,6 +32,7 @@ So an installation may learn a site by itself, and what it learns lives in
 import re
 
 from kriko.adapters import adapter_for as pack_adapter_for
+from kriko.adapters import adapters_for as pack_adapters_for
 from kriko.adapters import load_adapters
 
 #: A registrable hostname, and nothing else. The same expression the extension
@@ -61,7 +62,7 @@ def host_of(url: str) -> str:
 #: rule is inert — it neither reads a field nor raises, which is the worst of
 #: both. Kept next to the fold below so the two cannot drift.
 RULE_KEYS = ("labels", "from", "vocabulary", "segment", "split",
-             "parse", "min", "max")
+             "parse", "min", "max", "known")
 
 
 def _rule(key: str, raw) -> dict | None:
@@ -214,6 +215,17 @@ def check(spec: dict, *, host: str = "") -> dict:
         "site": site,
         "match": match,
     }
+
+
+def adapters_for(store, app_conn, url: str) -> list[dict]:
+    """Every adapter that claims this URL: the packs' own, or else this
+    installation's. Several packs may claim one site; the page decides which
+    of them reads it (`kriko.adapters.best_reading`)."""
+    found = pack_adapters_for(store, url)
+    if found:
+        return found
+    local = adapter_for(store, app_conn, url)
+    return [local] if local is not None else []
 
 
 def adapter_for(store, app_conn, url: str):

@@ -3,8 +3,8 @@
     import Failure from "./Failure.svelte";
     import { api } from "./api";
     import { count } from "./plural";
-    import { collect, humanize } from "./fields";
-    import type { LookupResult, Pack, Subject, SubjectDetail, Term } from "./types";
+    import { collect, contextLabel, humanize } from "./fields";
+    import type { LookupResult, Pack, SearchHit, Subject, SubjectDetail, Term } from "./types";
 
     let { onResult }: { onResult: (result: LookupResult) => void } = $props();
 
@@ -18,8 +18,9 @@
     let context = $state<Record<string, string>>({});
 
     let query = $state("");
-    let matches = $state<Subject[]>([]);
-    let searching = false;
+    let matches = $state<SearchHit[]>([]);
+    let searchSeq = 0;
+    let searchTimer: ReturnType<typeof setTimeout> | undefined;
     let error = $state<unknown>(null);
     let busy = $state(false);
     let more = $state(false);
@@ -34,16 +35,9 @@
     const missing = $derived(
         requiredKeys.filter((k) => !(identity[k.key] ?? "").trim()).map((k) => k.key),
     );
-
-    function required(key: { key: string; match_json?: string }): boolean {
-        // The pack declares which attributes select a subject; the form reads
-        // that rather than deciding for itself which fields matter.
-        try {
-            return Boolean(JSON.parse(key.match_json || "{}").required);
-        } catch {
-            return false;
-        }
-    }
+    const isEmpty = $derived(
+        !query && !Object.values(identity).some(Boolean) && !Object.values(context).some(Boolean),
+    );
 
     async function loadPack() {
         const [allKinds, keys, vocabulary] = await Promise.all([
@@ -53,7 +47,10 @@
         ]);
         kinds = allKinds.filter((k) => k.pack_id === packId).map((k) => k.kind);
         kind = kinds[0] ?? "";
-        identityKeys = keys.map((k) => ({ key: k.key, required: required(k) }));
+        // The server now parses `match_json` (written as YAML) itself and
+        // hands back a plain bool — the form used to `JSON.parse` it and
+        // silently treat every required key as optional (check-2).
+        identityKeys = keys;
         contextTerms = vocabulary.context_key ?? [];
         identity = {};
         context = {};
@@ -62,29 +59,63 @@
     async function load() {
         packs = (await api.packs()).filter((p) => p.enabled);
         if (packs.length) {
-            packId = packs[0].pack_id;
+            // B146: opened on whichever pack sorted first, which put a
+            // one-subject pack ahead of the one holding almost every claim.
+            // The pack that knows the most is the likeliest question.
+            packId = packs.reduce((best, p) => ((p.claims ?? 0) > (best.claims ?? 0) ? p : best))
+                .pack_id;
             await loadPack();
         }
     }
 
-    async function search() {
-        if (searching || query.trim().length < 2) {
+    // Debounced, and keyed by a request counter rather than a busy flag
+    // (check-4): a `searching` early-return dropped any keystroke that
+    // arrived mid-request and nothing re-ran the search once it finished, so
+    // the list could freeze on an earlier prefix. Only the most recent
+    // request may still write `matches` when it lands.
+    function search() {
+        clearTimeout(searchTimer);
+        if (query.trim().length < 2) {
             matches = [];
             return;
         }
-        searching = true;
-        try {
-            matches = (await api.subjects(query.trim(), 8)).filter(
-                (s) => s.pack_id === packId,
-            );
-        } finally {
-            searching = false;
+        const q = query.trim();
+        searchTimer = setTimeout(async () => {
+            const n = ++searchSeq;
+            // /api/search, not /api/subjects?q= (check-5): it matches
+            // aliases and identity values too, filters by pack on the
+            // server rather than after the limit, and — the point of
+            // switching — carries each hit's identity so two rows sharing a
+            // label can be told apart, and a reachable claim count computed
+            // through relations rather than a product row's own (always 0).
+            const r = await api.search(q, packId, 8);
+            if (n !== searchSeq) return; // a newer keystroke has already fired
+            matches = r;
+            activeMatch = -1;
+        }, 150);
+    }
+
+    // Arrow keys stayed in the input and Enter did nothing (check-26): a
+    // sighted mouse user could pick a result, a keyboard user could not.
+    // `activeMatch` is which row Down/Up have moved to; -1 means none yet.
+    let activeMatch = $state(-1);
+    function onSearchKey(event: KeyboardEvent) {
+        if (!matches.length) return;
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            activeMatch = (activeMatch + 1) % matches.length;
+        } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            activeMatch = (activeMatch - 1 + matches.length) % matches.length;
+        } else if (event.key === "Enter" && activeMatch >= 0) {
+            event.preventDefault();
+            pick(matches[activeMatch]);
         }
     }
 
     // Picking a known subject fills the identity keys from the store, which is
     // the whole point of searching first: the reader stops guessing spellings.
-    async function pick(subject: Subject) {
+    async function pick(subject: SearchHit) {
         query = subject.label;
         matches = [];
         const detail: SubjectDetail = await api.subject(subject.subject_id);
@@ -119,6 +150,7 @@
         query = "";
         matches = [];
         error = null;
+        more = false;
     }
 
     const ready = load();
@@ -150,7 +182,7 @@
                     <div class="field">
                         <label for="kind">Kind</label>
                         <select id="kind" bind:value={kind}>
-                            {#each kinds as k (k)}<option value={k}>{k}</option>{/each}
+                            {#each kinds as k (k)}<option value={k}>{humanize(k)}</option>{/each}
                         </select>
                     </div>
                 {/if}
@@ -163,18 +195,37 @@
                 id="subject-search"
                 bind:value={query}
                 oninput={search}
+                onkeydown={onSearchKey}
+                role="combobox"
+                aria-expanded={matches.length > 0}
+                aria-controls="subject-matches"
                 autocomplete="off"
                 placeholder="start typing…"
             />
         </div>
 
         {#if matches.length}
-            <ul class="matches">
-                {#each matches as match (match.subject_id)}
-                    <li>
-                        <button class="ghost" onclick={() => pick(match)}>
+            <ul class="matches" id="subject-matches" role="listbox">
+                {#each matches as match, i (match.subject_id)}
+                    <li role="option" aria-selected={i === activeMatch}>
+                        <button
+                            class="ghost"
+                            class:active={i === activeMatch}
+                            onclick={() => pick(match)}
+                        >
                             {match.label}
-                            <span class="meta">{match.kind} · {count(match.claims, "claim")}</span>
+                            {#if matches.filter((m) => m.label === match.label).length > 1}
+                                <span class="meta">
+                                    {Object.entries(match.identity)
+                                        .slice(0, 2)
+                                        .map(([k, v]) => `${humanize(k)} ${v}`)
+                                        .join(", ")}
+                                </span>
+                            {/if}
+                            <span class="meta">
+                                {match.kind}
+                                {#if match.claims}· {count(match.claims, "known risk")}{/if}
+                            </span>
                         </button>
                     </li>
                 {/each}
@@ -217,8 +268,8 @@
                     {#each contextTerms as term (term.term_id)}
                         <div class="field">
                             <label for="ctx-{term.term_id}">
-                                {humanize(term.term_id)}
-                                <span class="meta">{term.unit}</span>
+                                {contextLabel(term.term_id, term.unit)}
+                                {#if term.unit}<span class="meta">({term.unit})</span>{/if}
                             </label>
                             <input id="ctx-{term.term_id}" bind:value={context[term.term_id]} />
                         </div>
@@ -231,7 +282,7 @@
             <button class="primary" onclick={ask} disabled={busy || missing.length > 0}>
                 {busy ? "Looking…" : "What goes wrong with this one?"}
             </button>
-            <button class="ghost" onclick={clear}>Clear</button>
+            <button class="ghost" onclick={clear} disabled={isEmpty}>Clear</button>
             {#if missing.length}
                 <span class="meta">Still needed: {missing.map(humanize).join(", ")}</span>
             {/if}

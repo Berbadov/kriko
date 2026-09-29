@@ -298,6 +298,27 @@ def test_a_failed_job_can_be_run_again_without_losing_why_it_failed(client):
     assert client.get(f"/api/jobs/{first}").json()["state"] == state.FAILED
 
 
+def test_two_concurrent_retries_of_one_job_produce_one_child(client):
+    """ops-5/ops-m1: nothing in the endpoint itself refused a second retry
+    while the first was still queued or running — a double-click with no
+    client-side guard, or two raw API callers racing the endpoint, both
+    created a second `pack_author`/`research` job with the same `retry_of`.
+    """
+    first = client.post("/api/research", json={"subject_id": "nope"}).json()["job_id"]
+    for _ in range(400):
+        if client.get(f"/api/jobs/{first}").json()["done"]:
+            break
+        time.sleep(0.02)
+
+    once = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
+    twice = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
+    assert once == twice
+
+    live = [row for row in client.get("/api/jobs").json()["items"]
+            if row["params"].get("retry_of") == first]
+    assert len(live) == 1
+
+
 def test_retrying_a_job_that_is_still_going_is_refused(settings):
     """"Retry" on a running job means the reader wanted to cancel it.
 

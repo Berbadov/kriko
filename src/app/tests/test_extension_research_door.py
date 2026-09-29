@@ -480,6 +480,7 @@ def test_product_draft_reuses_author_gates_and_cancellation(
     from kriko.store.db import connect
 
     prompts = []
+    quick = []
     selected = []
     started = threading.Event()
     release = threading.Event()
@@ -499,6 +500,14 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         search_provider = "fixture-harness"
 
         def ask(self, prompt):
+            if prompt.startswith("# Quick look"):
+                quick.append(prompt)
+                return "```json" + chr(10) + json.dumps({"assumed": "the standard one", "risks": [
+                    {"title": "Gear wear", "why": "It wears.", "check": "",
+                     "severity": "high", "url": "https://example.org/a",
+                     "quote": "the gears wear"},
+                    {"title": "Unsourced", "why": "Trust me."},
+                ]}) + chr(10) + "```"
             prompts.append(prompt)
             if len(prompts) == 1:
                 return json.dumps({
@@ -520,17 +529,27 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         "q": " Unknown Widget ", "allow_draft": True,
         "model": "paid-model", "search": "paid-search", "cap": 0.01,
     })
-    job_id = response.json()["job_id"]
+    quick_id = response.json()["job_id"]
+    job_id = response.json()["deepen_job_id"]
     try:
         assert response.status_code == 200
         assert response.json() == {
-            "job_id": job_id, "kind": "pack_author", "backend": "harness",
+            "job_id": quick_id, "kind": "quick_look", "deepen_job_id": job_id,
+            "backend": "harness",
             "harness": "fixture-harness", "cost_basis": "subscription",
             "budget_usd": None,
-            "note": "Uses your harness subscription; no per-token budget guarantee. "
-                    "Creates a draft only. Review and install it from Knowledge.",
+            "note": "Uses your harness subscription. A quick answer first; the "
+                    "deeper research keeps going and installs itself when done.",
         }
         assert started.wait(10)
+        # B148: the quick look answers while the deep run is still holding the
+        # only main-lane worker — it was never queued behind it.
+        looked = _wait_research_job(research_client, quick_id)
+        assert looked["state"] == "succeeded", looked["message"]
+        assert looked["result"]["deepen_job_id"] == job_id
+        assert [r["title"] for r in looked["result"]["risks"]] == ["Gear wear"]
+        assert looked["result"]["dropped"] == 1
+        assert "Unknown Widget" in quick[0]
         if outcome == "cancelled":
             stopped = research_client.post(f"/api/jobs/{job_id}/cancel")
             assert stopped.json()["state"] == "cancelling"
@@ -544,7 +563,8 @@ def test_product_draft_reuses_author_gates_and_cancellation(
     assert "Do not install anything" in prompts[1]
     if outcome == "draft":
         assert row["state"] == "succeeded", row["message"]
-        assert row["result"]["installed"] is False
+        # B148: "yes it should install itslef" — this door installs the draft.
+        assert row["result"]["installed"] is True
         assert row["result"]["category"] == "Unknown Widget"
         draft = packdraft.open_draft(research_client.app.state.settings.store_path,
                                      row["result"]["slug"])
@@ -558,8 +578,12 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         assert "did not produce a usable pack" in row["message"]
     conn = connect(research_client.app.state.settings.store_path)
     try:
-        assert conn.execute("SELECT pack_id FROM packs").fetchall()[0][0] == "probe"
-        assert conn.execute("SELECT COUNT(*) FROM packs").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0] == 1
+        packs = sorted(r[0] for r in conn.execute("SELECT pack_id FROM packs"))
+        # Installed only when the run produced a pack; a refused or cancelled
+        # run leaves the store exactly as it was.
+        assert packs == (["probe", row["result"]["pack_id"]] if outcome == "draft"
+                         else ["probe"])
+        if outcome != "draft":
+            assert conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0] == 1
     finally:
         conn.close()

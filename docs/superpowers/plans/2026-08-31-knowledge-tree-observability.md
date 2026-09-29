@@ -1,3 +1,6 @@
+> TL;DR (archived 2026-09-25): Worst-first claim-health observability: new engine query `src/kriko/lookup/tree.py` (`weakest_claims`/`subject_tree`, lexicographic concern key over contradicted/uncorroborated/low-trust/stale — no scalar score), health router, MCP tool, dashboard Health tab, plus `retrieved_at` stamping by 3 producers.
+> Read-only, no `relevance()` change. Baseline 613 tests. Full file dumps trimmed below — see git history.
+
 # Knowledge-tree Observability Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -95,301 +98,9 @@ The fixtures here are built to exercise the four signals separately, because
 the whole point of the ordering is that no signal is hidden inside a weighted
 score. Two packs, because a cross-pack contradiction is the G6 case: two packs
 may disagree and both must survive, ranked.
-"""
-
-import textwrap
-
-import pytest
-
-from kriko.lookup.tree import (UNKNOWN_STALENESS, subject_tree,
-                               weakest_claims)
-from kriko.lookup.rank import tier_lookup, tier_of, trust_lookup
-from kriko.pack import build
-from kriko.store import ids, packstore
-from kriko.store.db import connect
-
-TERMS = """
-- {term_id: product, role: subject_kind}
-- {term_id: brand, role: attribute, datatype: text, match: {required: true}}
-- {term_id: model_name, role: attribute, datatype: text, match: {required: true}}
-- {term_id: mech, role: domain}
-"""
-
-TIERS = """
-domains:
-  maker.example.com: {tier: manufacturer}
-  spec.example.net: {tier: specialist}
-  forum.example.org: {tier: forum_ugc}
-"""
-
-ALPHA_TOML = """
-[pack]
-id = "alpha"
-name = "Alpha"
-version = "0.1.0"
-[identity]
-product = ["brand", "model_name"]
-"""
-
-ALPHA_SUBJECTS = """
-- kind: product
-  label: Widget 100
-  identity: {brand: acme, model_name: w100}
-"""
-
-# Four claims, each weak in exactly one way, so an ordering bug shows up as a
-# specific swap rather than as a vague reshuffle.
-ALPHA_CLAIMS = """
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: known_issue
-  domain: mech
-  severity: high
-  text: {en: {title: Refuted item, body: b, advice: a}}
-  evidence:
-    - {url: "https://maker.example.com/a", quote: It fails., retrieved_at: "2026-08-01"}
-    - {url: "https://spec.example.net/a", quote: It does not fail., stance: refutes, retrieved_at: "2026-08-01"}
-    - {url: "https://forum.example.org/a", quote: Mine failed., retrieved_at: "2026-08-01"}
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: known_issue
-  domain: mech
-  severity: high
-  text: {en: {title: Single forum item, body: b, advice: a}}
-  evidence:
-    - {url: "https://forum.example.org/b", quote: Happened to me., retrieved_at: "2026-08-01"}
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: known_issue
-  domain: mech
-  severity: high
-  text: {en: {title: Single maker item, body: b, advice: a}}
-  evidence:
-    - {url: "https://maker.example.com/c", quote: Service bulletin., retrieved_at: "2026-08-01"}
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: known_issue
-  domain: mech
-  severity: high
-  text: {en: {title: Well sourced item, body: b, advice: a}}
-  evidence:
-    - {url: "https://maker.example.com/d", quote: Bulletin., retrieved_at: "2026-08-02"}
-    - {url: "https://spec.example.net/d", quote: Teardown., retrieved_at: "2026-08-02"}
-    - {url: "https://forum.example.org/d", quote: Confirmed., retrieved_at: "2026-08-02"}
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: maintenance
-  domain: mech
-  severity: medium
-  text: {en: {title: Unsourced maintenance item, body: b, advice: a}}
-"""
-
-BETA_TOML = """
-[pack]
-id = "beta"
-name = "Beta"
-version = "0.1.0"
-[identity]
-product = ["brand", "model_name"]
-"""
-
-BETA_CLAIMS = """
-- subject: {kind: product, identity: {brand: acme, model_name: w100}}
-  kind: known_issue
-  domain: mech
-  severity: low
-  text: {en: {title: Beta item, body: b, advice: a}}
-  evidence:
-    - {url: "https://forum.example.org/z", quote: Beta saw it too., retrieved_at: "2026-07-01"}
-"""
-
-
-def _pack(tmp_path, name, *, toml, subjects, claims):
-    root = tmp_path / name
-    (root / "vocabulary").mkdir(parents=True)
-    (root / "data").mkdir(parents=True)
-    (root / "trust").mkdir(parents=True)
-    (root / "pack.toml").write_text(textwrap.dedent(toml), encoding="utf-8")
-    (root / "vocabulary" / "terms.yaml").write_text(TERMS, encoding="utf-8")
-    (root / "data" / "subjects.yaml").write_text(subjects, encoding="utf-8")
-    (root / "data" / "claims.yaml").write_text(claims, encoding="utf-8")
-    (root / "trust" / "source_tiers.yaml").write_text(TIERS, encoding="utf-8")
-    return build.build(root, tmp_path / f"{name}.kpack")
-
-
-SUBJECT = ids.subject_id("product", {"brand": "acme", "model_name": "w100"})
-
-
-@pytest.fixture
-def store(tmp_path):
-    conn = connect(tmp_path / "store.sqlite")
-    packstore.install(conn, _pack(tmp_path, "alpha", toml=ALPHA_TOML,
-                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
-    yield conn
-    conn.close()
-
-
-@pytest.fixture
-def two_packs(tmp_path):
-    conn = connect(tmp_path / "store.sqlite")
-    packstore.install(conn, _pack(tmp_path, "alpha", toml=ALPHA_TOML,
-                                  subjects=ALPHA_SUBJECTS, claims=ALPHA_CLAIMS))
-    packstore.install(conn, _pack(tmp_path, "beta", toml=BETA_TOML,
-                                  subjects=ALPHA_SUBJECTS, claims=BETA_CLAIMS))
-    yield conn
-    conn.close()
-
-
-def _titles(rows):
-    return [row.title for row in rows]
-
-
-# ── the ordering ─────────────────────────────────────────────────────────
-
-def test_a_refuted_claim_is_the_first_thing_on_the_list(store):
-    """Shipping a claim while holding a rebuttal is the sharpest concern."""
-    rows = weakest_claims(store)
-    assert rows[0].title == "Refuted item"
-    assert rows[0].refuted_by == 1
-
-
-def test_a_refuted_claim_outranks_an_uncorroborated_one(store):
-    """Three sources do not save it: contradiction is lexicographically first."""
-    rows = weakest_claims(store)
-    order = _titles(rows)
-    assert order.index("Refuted item") < order.index("Single forum item")
-
-
-def test_fewer_sources_ranks_above_more_sources(store):
-    order = _titles(weakest_claims(store))
-    assert order.index("Single maker item") < order.index("Well sourced item")
-
-
-def test_a_weaker_best_source_ranks_above_a_stronger_one(store):
-    """Same source count, so the tie breaks on the best tier's trust."""
-    order = _titles(weakest_claims(store))
-    assert order.index("Single forum item") < order.index("Single maker item")
-
-
-def test_the_sort_key_is_inspectable_not_implicit(store):
-    """`concern` is asserted directly — the order is a consequence, not the spec."""
-    by_title = {row.title: row for row in weakest_claims(store)}
-    assert by_title["Refuted item"].concern[0] == 0
-    assert by_title["Single forum item"].concern[0] == 1
-    assert by_title["Single forum item"].concern[1] == 1
-    assert by_title["Well sourced item"].concern[1] == 3
-    assert (by_title["Single forum item"].concern[2]
-            < by_title["Single maker item"].concern[2])
-
-
-def test_the_ordering_is_stable_across_calls(store):
-    assert _titles(weakest_claims(store)) == _titles(weakest_claims(store))
-
-
-def test_a_refuting_source_does_not_count_as_corroboration(store):
-    """Three evidence rows, one refuting: two supporting sources, not three."""
-    row = next(r for r in weakest_claims(store) if r.title == "Refuted item")
-    assert row.supporting_sources == 2
-    assert row.independent_sources == 2
-
-
-def test_the_best_tier_ignores_the_refuting_source(store):
-    """The rebuttal is specialist; the support is manufacturer and forum."""
-    row = next(r for r in weakest_claims(store) if r.title == "Refuted item")
-    assert row.best_tier == "manufacturer"
-
-
-# ── absence is not weakness ──────────────────────────────────────────────
-
-def test_a_claim_with_no_evidence_is_not_ranked_as_weak(store):
-    """Absence is what coverage_gaps answers. rank.py treats it trust-neutral."""
-    assert "Unsourced maintenance item" not in _titles(weakest_claims(store))
-
-
-def test_a_claim_with_no_evidence_still_appears_in_its_subject_tree(store):
-    tree = subject_tree(store, SUBJECT)
-    node = next(n for n in tree.claims
-                if n.health.title == "Unsourced maintenance item")
-    assert node.evidence == ()
-
-
-# ── unknown staleness is unknown, not stale ──────────────────────────────
-
-def test_a_missing_retrieval_date_sorts_last_not_first(store, tmp_path):
-    """An absent timestamp is not evidence of staleness.
-
-    Today every one of the cars pack's 193 sources has an empty
-    `retrieved_at`, so ranking blank as maximally stale would put the entire
-    catalog at the top of the list on a signal carrying no information.
-    """
-    conn = store
-    conn.execute("UPDATE sources SET retrieved_at = '' WHERE url LIKE '%/d'")
-    conn.commit()
-    row = next(r for r in weakest_claims(conn)
-               if r.title == "Well sourced item")
-    assert row.oldest_retrieved_at == ""
-    assert row.concern[3] == UNKNOWN_STALENESS
-
-
-def test_staleness_breaks_a_tie_when_everything_else_matches(store):
-    conn = store
-    conn.execute("UPDATE sources SET retrieved_at = '2020-01-01'"
-                 " WHERE url LIKE '%/c'")
-    conn.commit()
-    order = _titles(weakest_claims(conn))
-    assert order.index("Single maker item") < order.index("Well sourced item")
-
-
-# ── two packs ────────────────────────────────────────────────────────────
-
-def test_the_list_unions_across_enabled_packs(two_packs):
-    rows = weakest_claims(two_packs)
-    assert {"alpha", "beta"} <= {row.pack_id for row in rows}
-
-
-def test_a_subject_tree_reports_every_pack_that_speaks_to_it(two_packs):
-    tree = subject_tree(two_packs, SUBJECT)
-    assert set(tree.pack_ids) == {"alpha", "beta"}
-    assert "Beta item" in [node.health.title for node in tree.claims]
-
-
-def test_a_disabled_pack_disappears_from_the_list(two_packs):
-    packstore.set_enabled(two_packs, "beta", False)
-    rows = weakest_claims(two_packs)
-    assert "beta" not in {row.pack_id for row in rows}
-
-
-def test_an_explicit_pack_id_list_narrows_the_query(two_packs):
-    rows = weakest_claims(two_packs, ["alpha"])
-    assert {row.pack_id for row in rows} == {"alpha"}
-
-
-# ── empty and missing ────────────────────────────────────────────────────
-
-def test_an_empty_store_returns_an_empty_list_not_an_error(tmp_path):
-    conn = connect(tmp_path / "empty.sqlite")
-    assert weakest_claims(conn) == []
-    conn.close()
-
-
-def test_an_unknown_subject_returns_an_empty_tree_not_an_error(store):
-    tree = subject_tree(store, "no-such-subject")
-    assert tree.claims == ()
-    assert tree.label == ""
-
-
-def test_the_limit_is_honoured(store):
-    assert len(weakest_claims(store, limit=2)) == 2
-
-
-# ── one tier-resolution path, not two ────────────────────────────────────
-
-def test_the_tree_and_rank_agree_on_every_tier(store):
-    """A second tier-resolution path is exactly the duplication two earlier
-    passes existed to delete. This asserts there is only one."""
-    tiers = tier_lookup(store, ["alpha"])
-    trusts = trust_lookup(store, ["alpha"])
-    tree = subject_tree(store, SUBJECT)
-    seen = 0
-    for node in tree.claims:
-        for row in node.evidence:
-            expected = tier_of(row.domain, tiers)
-            assert row.tier == expected
+```
+*[... 295 lines trimmed - see git history]*
+```python
             assert row.trust == trusts[expected]
             seen += 1
     assert seen > 0
@@ -416,241 +127,9 @@ Create `src/kriko/lookup/tree.py`:
 other question, the one nothing could ask before: *how well supported is what
 we are telling them?*
 
-Four signals, reported separately and never collapsed into a score:
-contradiction, corroboration, the best source's trust, and how long ago we
-last saw the page. A weighted sum would need weights nobody can justify and
-would hide which signal fired, so the ordering is lexicographic instead — and
-the sort key is a public field, so a reader can disagree with the order by
-looking at it rather than by guessing.
-
-Computed at read time from the same rows `rank` uses, and reusing `rank`'s
-tier resolution rather than repeating it. Nothing here is written down: install
-a better source-tier table and the answer changes with no rebuild.
-"""
-
-from dataclasses import dataclass
-
-from kriko.lookup.rank import DEFAULT_TIER_TRUST, tier_lookup, tier_of, trust_lookup
-from kriko.store.packstore import enabled_pack_ids
-
-#: Sort value for a source with no retrieval date. An absent timestamp is not
-#: evidence of staleness, so unknown sorts LAST — least concerning — rather
-#: than first. Ranking blank as ancient would put every legacy row at the top
-#: of the list on a signal that carries no information at all.
-UNKNOWN_STALENESS = "9999"
-
-
-@dataclass(frozen=True)
-class EvidenceRow:
-    url: str
-    domain: str
-    quote: str
-    stance: str          # supports | refutes | qualifies
-    independent: bool
-    tier: str
-    trust: float
-    retrieved_at: str    # when WE last saw the page. '' = unknown.
-    published_at: str    # when the WORLD published it. Reported, never ranked.
-
-
-@dataclass(frozen=True)
-class ClaimHealth:
-    """One claim's identity plus the four signals, each still separate.
-
-    `independent` and `stance` are flags the *producer* supplied. They are
-    claims about the evidence, not verified facts, and any surface showing
-    them owes the reader that distinction.
-    """
-
-    claim_id: str
-    pack_id: str
-    subject_id: str
-    subject_label: str
-    title: str
-    kind: str
-    domain: str
-    component: str
-    subsystem: str
-    severity: str
-    refuted_by: int
-    supporting_sources: int
-    independent_sources: int
-    best_tier: str
-    best_trust: float
-    oldest_retrieved_at: str
-    newest_published_at: str
-
-    @property
-    def concern(self) -> tuple[int, int, float, str]:
-        """The lexicographic sort key, ascending on every element.
-
-        Contradicted first, then fewest independent sources, then weakest best
-        source, then stalest. Ascending throughout is what makes the ordering
-        explainable in one sentence, and adding a fifth signal later appends an
-        element instead of re-tuning four weights.
-        """
-        return (
-            0 if self.refuted_by else 1,
-            self.independent_sources,
-            self.best_trust,
-            self.oldest_retrieved_at or UNKNOWN_STALENESS,
-        )
-
-
-@dataclass(frozen=True)
-class ClaimNode:
-    health: ClaimHealth
-    evidence: tuple[EvidenceRow, ...]
-
-
-@dataclass(frozen=True)
-class SubjectTree:
-    subject_id: str
-    label: str
-    pack_ids: tuple[str, ...]
-    claims: tuple[ClaimNode, ...]
-
-
-_ROWS = """
-SELECT c.claim_id, c.pack_id, c.subject_id, c.kind, c.domain, c.severity,
-       c.component, c.subsystem,
-       s.label            AS subject_label,
-       COALESCE(t.title, '') AS title,
-       e.stance, e.independent,
-       COALESCE(src.domain, '')       AS source_domain,
-       COALESCE(src.url, '')          AS url,
-       COALESCE(e.quote, '')          AS quote,
-       COALESCE(src.retrieved_at, '') AS retrieved_at,
-       COALESCE(src.published_at, '') AS published_at
-  FROM claims c
-  JOIN packs p USING (pack_id)
-  JOIN subjects s ON s.subject_id = c.subject_id AND s.pack_id = c.pack_id
-  LEFT JOIN claim_text t ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id
-                        AND t.lang = ?
-  LEFT JOIN evidence e ON e.claim_id = c.claim_id AND e.pack_id = c.pack_id
-  LEFT JOIN sources src ON src.source_id = e.source_id
-                       AND src.pack_id = e.pack_id
- WHERE p.enabled = 1 AND c.pack_id IN ({marks}){extra}
-"""
-
-
-def _packs(conn, pack_ids):
-    return list(pack_ids) if pack_ids else enabled_pack_ids(conn)
-
-
-def _nodes(conn, pack_ids, *, subject_id=None, lang="en"):
-    """Every claim in scope, folded with its evidence. One query, one pass.
-
-    The fold happens in Python rather than SQL because tier resolution is not
-    expressible as a join: `tier_of` applies exact, parent-domain, substring
-    and default rules in order. Doing it here is what keeps a single
-    tier-resolution path in the codebase.
-    """
-    packs = _packs(conn, pack_ids)
-    if not packs:
-        return []
-
-    marks = ",".join("?" * len(packs))
-    extra = " AND c.subject_id = ?" if subject_id else ""
-    args = [lang, *packs] + ([subject_id] if subject_id else [])
-
-    tiers = tier_lookup(conn, packs)
-    trusts = trust_lookup(conn, packs)
-    unknown = DEFAULT_TIER_TRUST["unknown"]
-
-    grouped: dict[tuple[str, str], dict] = {}
-    for row in conn.execute(_ROWS.format(marks=marks, extra=extra), args):
-        key = (row["claim_id"], row["pack_id"])
-        bucket = grouped.setdefault(key, {"row": row, "evidence": []})
-        if row["url"] or row["quote"]:
-            tier = tier_of(row["source_domain"], tiers)
-            bucket["evidence"].append(EvidenceRow(
-                url=row["url"],
-                domain=row["source_domain"],
-                quote=row["quote"],
-                stance=row["stance"] or "supports",
-                independent=bool(row["independent"]),
-                tier=tier,
-                trust=trusts.get(tier, unknown),
-                retrieved_at=row["retrieved_at"],
-                published_at=row["published_at"],
-            ))
-
-    return [_node(bucket) for bucket in grouped.values()]
-
-
-def _node(bucket) -> ClaimNode:
-    row, evidence = bucket["row"], tuple(bucket["evidence"])
-
-    refuted_by = sum(1 for e in evidence if e.stance == "refutes")
-    supporting = [e for e in evidence if e.stance != "refutes"]
-
-    # Distinct URL, not distinct evidence row: two quotes off one page are one
-    # source, and counting rows would let a single chatty page look corroborated.
-    supporting_sources = len({e.url for e in supporting if e.url})
-    independent_sources = len({e.url for e in supporting if e.url and e.independent})
-
-    best = max((e for e in supporting), key=lambda e: e.trust, default=None)
-    retrieved = sorted(e.retrieved_at for e in supporting if e.retrieved_at)
-    published = sorted(e.published_at for e in supporting if e.published_at)
-
-    return ClaimNode(
-        health=ClaimHealth(
-            claim_id=row["claim_id"],
-            pack_id=row["pack_id"],
-            subject_id=row["subject_id"],
-            subject_label=row["subject_label"],
-            title=row["title"],
-            kind=row["kind"],
-            domain=row["domain"],
-            component=row["component"],
-            subsystem=row["subsystem"],
-            severity=row["severity"],
-            refuted_by=refuted_by,
-            supporting_sources=supporting_sources,
-            independent_sources=independent_sources,
-            best_tier=best.tier if best else "unknown",
-            best_trust=best.trust if best else 0.0,
-            oldest_retrieved_at=retrieved[0] if retrieved else "",
-            newest_published_at=published[-1] if published else "",
-        ),
-        evidence=evidence,
-    )
-
-
-def weakest_claims(conn, pack_ids=None, limit: int = 20) -> list[ClaimHealth]:
-    """The claims we ship that are least well supported, worst first.
-
-    Claims with **no** evidence at all are excluded, not ranked last: absence
-    of sources is what the coverage report answers, and `rank` deliberately
-    treats a source-free claim as trust-neutral rather than penalised — an
-    interval-based item is not less true for lacking a citation. They remain
-    visible in `subject_tree`, so nothing is hidden by this.
-    """
-    ranked = sorted(
-        (node.health for node in _nodes(conn, pack_ids) if node.evidence),
-        key=lambda health: (health.concern, health.claim_id),
-    )
-    return ranked[:limit]
-
-
-def subject_tree(conn, subject_id: str, pack_ids=None) -> SubjectTree:
-    """One subject, every claim about it, every piece of evidence under each.
-
-    Unions across packs: a subject with the same identity hashes to the same
-    id in every pack, so two packs contradicting each other about one product
-    show up here side by side rather than one silently winning.
-
-    An unknown subject is an empty tree, not an error. A fresh install knows
-    nothing and that is not a failure.
-    """
-    nodes = sorted(
-        _nodes(conn, pack_ids, subject_id=subject_id),
-        key=lambda node: (node.health.concern, node.health.claim_id),
-    )
-    return SubjectTree(
-        subject_id=subject_id,
-        label=nodes[0].health.subject_label if nodes else "",
+```
+*[... 235 lines trimmed - see git history]*
+```python
         pack_ids=tuple(sorted({node.health.pack_id for node in nodes})),
         claims=tuple(nodes),
     )
@@ -706,28 +185,9 @@ def test_a_submitted_finding_records_when_it_was_retrieved(store):
     Nothing else can supply this date: the agent read the page during the call.
     Left empty — as it was until 2026-08-31 — the staleness signal in
     kriko.lookup.tree is permanently blank and the health view ships a dead
-    column.
-    """
-    from kriko.store.db import connect
-
-    mcp_server.submit_findings(
-        subject_id=_subject(),
-        pack_id="tools",
-        findings=[{
-            "title": "Chuck jaws slip under load",
-            "rationale": "Reported repeatedly on the 18V platform above 400 hours.",
-            "domain": "mech",
-            "component": "chuck",
-            "severity": "high",
-            "quote": "The chuck lost grip on a 10mm bit within a year.",
-            "source_url": "https://forum.example.org/thread/1",
-        }],
-    )
-    conn = connect(store)
-    retrieved = conn.execute(
-        "SELECT retrieved_at FROM sources WHERE url = ?",
-        ("https://forum.example.org/thread/1",),
-    ).fetchone()[0]
+```
+*[... 22 lines trimmed - see git history]*
+```python
     conn.close()
     assert retrieved, "submit_findings must stamp retrieved_at"
     assert retrieved.startswith("20")
@@ -844,47 +304,10 @@ def test_the_liveness_probe_still_answers_after_the_health_router(client):
     """`/api/health` is the probe; `/api/health/weakest` is the new view."""
     assert client.get("/api/health").json()["ok"] is True
 
-
 def test_the_weakest_endpoint_lists_claims_worst_first(client):
-    body = client.get("/api/health/weakest").json()
-    assert body["claims"]
-    concerns = [tuple(c["concern"]) for c in body["claims"]]
-    assert concerns == sorted(concerns)
-
-
-def test_the_weakest_endpoint_reports_each_signal_separately(client):
-    claim = client.get("/api/health/weakest").json()["claims"][0]
-    for field in ("refuted_by", "independent_sources", "best_tier",
-                  "best_trust", "oldest_retrieved_at", "newest_published_at"):
-        assert field in claim
-
-
-def test_the_weakest_endpoint_honours_the_limit(client):
-    body = client.get("/api/health/weakest?limit=1").json()
-    assert len(body["claims"]) <= 1
-
-
-def test_the_weakest_endpoint_can_be_scoped_to_one_pack(client):
-    body = client.get("/api/health/weakest?pack_id=tools").json()
-    assert {c["pack_id"] for c in body["claims"]} <= {"tools"}
-
-
-def test_the_subject_endpoint_returns_the_tree_with_its_evidence(client):
-    subject = client.get("/api/subjects").json()[0]["subject_id"]
-    body = client.get(f"/api/health/subject/{subject}").json()
-    assert body["subject_id"] == subject
-    assert body["claims"]
-    assert "evidence" in body["claims"][0]
-    assert "health" in body["claims"][0]
-
-
-def test_an_unknown_subject_is_an_empty_tree_not_a_500(client):
-    body = client.get("/api/health/subject/nope").json()
-    assert body["claims"] == []
-
-
-def test_the_health_view_never_writes(client):
-    """Read-only by contract. If this view can mutate, it is not observability."""
+```
+*[... 39 lines trimmed - see git history]*
+```python
     before = client.get("/api/health/weakest").json()
     client.get("/api/health/weakest")
     assert client.get("/api/health/weakest").json() == before
@@ -909,53 +332,9 @@ The other side of the coverage report. `/api/packs/{id}/gaps` answers absence
 — subjects nobody has researched. This answers weakness — claims that are
 shipped on one forum post, or that we hold a rebuttal to. Both are needed: a
 researcher with no weakness view can only ever add, never repair.
-
-Read-only, and deliberately so. Nothing here writes, and no ranking the reader
-sees is changed by it.
-"""
-
-from dataclasses import asdict
-
-from fastapi import APIRouter, Depends
-
-from app.web.deps import get_store
-from kriko.lookup.tree import subject_tree, weakest_claims
-
-router = APIRouter(prefix="/api/health", tags=["health"])
-
-
-def _health(health) -> dict:
-    """A ClaimHealth as JSON, with its sort key alongside.
-
-    `concern` travels with the row on purpose: the order is only defensible if
-    the reader can see what produced it.
-    """
-    return {**asdict(health), "concern": list(health.concern)}
-
-
-@router.get("/weakest")
-def weakest(limit: int = 20, pack_id: str = "", store=Depends(get_store)):
-    packs = [pack_id] if pack_id else None
-    return {"claims": [_health(h)
-                       for h in weakest_claims(store, packs, limit=limit)]}
-
-
-@router.get("/subject/{subject_id}")
-def subject(subject_id: str, store=Depends(get_store)):
-    """An unknown subject is an empty tree, not a 404.
-
-    Unlike `/api/subjects/{id}`, which 404s because the caller asked for a
-    thing that does not exist, this endpoint answers a question about health —
-    and "nothing known" is a valid answer to it.
-    """
-    tree = subject_tree(store, subject_id)
-    return {
-        "subject_id": tree.subject_id,
-        "label": tree.label,
-        "pack_ids": list(tree.pack_ids),
-        "claims": [
-            {"health": _health(node.health),
-             "evidence": [asdict(row) for row in node.evidence]}
+```
+*[... 47 lines trimmed - see git history]*
+```python
             for node in tree.claims
         ],
     }
@@ -1024,19 +403,9 @@ def test_an_agent_can_read_back_the_evidence_shape_of_a_subject(store):
     A finding it just submitted rests on one forum post. An existing claim
     rests on three specialist sources. Nothing before this could show it that.
     """
-    tree = mcp_server.subject_health(subject_id=_subject())
-    assert tree["subject_id"] == _subject()
-    assert tree["claims"]
-    node = tree["claims"][0]
-    assert "concern" in node["health"]
-    assert {"refuted_by", "independent_sources", "best_tier"} <= set(node["health"])
-
-
-def test_the_weakest_tool_ranks_worst_first(store):
-    rows = mcp_server.weakest_claims()
-    concerns = [tuple(r["concern"]) for r in rows]
-    assert concerns == sorted(concerns)
-
+```
+*[... 13 lines trimmed - see git history]*
+```python
 
 def test_an_unknown_subject_is_an_empty_tree_over_mcp(store):
     assert mcp_server.subject_health(subject_id="nope")["claims"] == []
@@ -1061,38 +430,9 @@ def subject_health(subject_id: str, pack_id: str = "") -> dict:
 
     The read-back that lets an agent catch its own mistake. Each claim comes
     with four separate signals — how many sources refute it, how many
-    independent sources support it, the best source's trust tier, and when we
-    last saw the page — plus the evidence itself. No score: an agent that gets
-    one number cannot tell a weak claim from an old one.
-
-    `independent` and `stance` are flags whoever wrote the evidence supplied.
-    They are assertions about the sources, not verified facts.
-    """
-    packs = [pack_id] if pack_id else None
-    with _store() as conn:
-        tree = _subject_tree(conn, subject_id, packs)
-        return {
-            "subject_id": tree.subject_id,
-            "label": tree.label,
-            "pack_ids": list(tree.pack_ids),
-            "claims": [
-                {"health": {**asdict(node.health),
-                            "concern": list(node.health.concern)},
-                 "evidence": [asdict(row) for row in node.evidence]}
-                for node in tree.claims
-            ],
-        }
-
-
-@mcp.tool()
-def weakest_claims(pack_id: str = "", limit: int = 20) -> list[dict]:
-    """The shipped claims that are least well supported, worst first.
-
-    `coverage_gaps` answers what is missing; this answers what is thin. A
-    claim with no sources at all appears in neither — it is not weak evidence,
-    it is no evidence, and it belongs to the coverage report.
-    """
-    packs = [pack_id] if pack_id else None
+```
+*[... 32 lines trimmed - see git history]*
+```python
     with _store() as conn:
         return [{**asdict(h), "concern": list(h.concern)}
                 for h in _weakest_claims(conn, packs, limit=limit)]
@@ -1170,62 +510,9 @@ const SIGNAL_NOTE = {
     weak: "the best supporting source is a low-trust tier",
 };
 
-function healthRow(claim) {
-    const refuted = claim.refuted_by > 0;
-    const stale = claim.oldest_retrieved_at || "unknown";
-    const note = refuted
-        ? SIGNAL_NOTE.refuted
-        : claim.independent_sources <= 1
-          ? SIGNAL_NOTE.thin
-          : claim.best_trust < 0.5
-            ? SIGNAL_NOTE.weak
-            : "";
-    return `<tr class="${refuted ? "concern" : ""}">
-        <td>${esc(claim.title)}<div class="meta">${esc(claim.subject_label)} · ${esc(claim.pack_id)}</div>${note ? `<div class="meta">${esc(note)}</div>` : ""}</td>
-        <td class="num signal">${refuted ? `<span class="badge">${claim.refuted_by} refuting</span>` : "—"}</td>
-        <td class="num signal">${claim.independent_sources}</td>
-        <td class="signal">${esc(claim.best_tier)} <span class="meta">${claim.best_trust.toFixed(2)}</span></td>
-        <td class="signal ${claim.oldest_retrieved_at ? "" : "stale"}">${esc(stale)}</td>
-        <td><button data-tree="${esc(claim.subject_id)}">Evidence</button></td>
-    </tr>`;
-}
-
-async function renderHealth() {
-    const target = $("#health-list");
-    try {
-        const { claims } = await api("/api/health/weakest?limit=40");
-        if (!claims.length) {
-            target.innerHTML = `<p class="state empty">No sourced claims installed yet.</p>`;
-            return;
-        }
-        target.innerHTML = `<table><thead><tr>
-                <th>Claim</th><th>Contradicted</th><th>Independent sources</th>
-                <th>Best source</th><th>Last retrieved</th><th></th>
-            </tr></thead><tbody>${claims.map(healthRow).join("")}</tbody></table>
-            <div id="health-tree"></div>`;
-        $$("[data-tree]", target).forEach((button) =>
-            button.addEventListener("click", () =>
-                renderHealthTree(button.dataset.tree),
-            ),
-        );
-    } catch (error) {
-        showError("#health-list", error);
-    }
-}
-
-async function renderHealthTree(subjectId) {
-    const target = $("#health-tree");
-    try {
-        const tree = await api(
-            `/api/health/subject/${encodeURIComponent(subjectId)}`,
-        );
-        target.innerHTML = `<article class="card"><h3>${esc(tree.label || subjectId)} <span class="badge">${tree.claims.length} claim(s)</span></h3>${tree.claims
-            .map(
-                ({ health, evidence }) =>
-                    `<details><summary>${esc(health.title)} <span class="meta">${health.independent_sources} source(s) · ${esc(health.best_tier)}</span></summary>${evidence.length ? evidence.map((row) => `<blockquote class="${row.stance === "refutes" ? "refutes" : ""}">${esc(row.quote)}<footer class="meta">${esc(row.domain)} · ${esc(row.tier)} · ${esc(row.stance)}${row.independent ? "" : " · not independent"} · retrieved ${esc(row.retrieved_at || "unknown")}</footer></blockquote>`).join("") : `<p class="state empty">No sources — this claim rests on an interval or a rule, not a citation.</p>`}</details>`,
-            )
-            .join("")}</article>`;
-    } catch (error) {
+```
+*[... 56 lines trimmed - see git history]*
+```javascript
         showError("#health-tree", error);
     }
 }
@@ -1297,16 +584,9 @@ In `docs/INTERNALS.md`, add a section under the lookup material:
 supported is what we ship?* Four signals, never combined into a score —
 contradiction (`evidence.stance = 'refutes'`), corroboration (distinct
 independent supporting sources), the best source's trust tier, and staleness
-(`sources.retrieved_at`).
-
-Ordering is lexicographic and ascending on every element, exposed as
-`ClaimHealth.concern`, so the order is inspectable rather than implied by a
-weight nobody can justify. Two deliberate asymmetries:
-
-- **A claim with no evidence is not weak, it is uncovered.** It is excluded
-  from `weakest_claims()` and reported by the coverage report instead, matching
-  `rank.py`'s treatment of source-free interval claims as trust-neutral.
-- **An absent `retrieved_at` sorts LAST, not first.** No timestamp is not
+```
+*[... 10 lines trimmed - see git history]*
+```markdown
   evidence of staleness. Before 2026-08-31 all three producers wrote `''`
   here; they now derive it (`documents.fetched_at` in the ledger, the
   submission time over MCP), and legacy rows stay honestly blank.
@@ -1376,3 +656,4 @@ git push -u origin feat/knowledge-engine-pivot
 **Placeholder scan:** one intentional stub remains — the second test in Task 2 Step 1 asks the implementer to write the assertion against the existing `_pack` helper in `test_pack_build.py`, because that helper's signature is local to that file and inventing it here would be worse than naming it. Every other code block is complete.
 
 **Type consistency:** `ClaimHealth` field names are identical in Task 1's dataclass, Task 3's `asdict` serialisation, Task 4's tool and Task 5's `healthRow()` (`refuted_by`, `independent_sources`, `best_tier`, `best_trust`, `oldest_retrieved_at`, `subject_label`, `pack_id`, `subject_id`, `title`). `concern` is a 4-tuple in Python and a 4-element array in JSON everywhere. `EvidenceRow` fields match between `asdict` and the JS (`quote`, `domain`, `tier`, `stance`, `independent`, `retrieved_at`). Task 3's response shape (`{"health": …, "evidence": […]}`) is what Task 4 returns and what Task 5's `renderHealthTree()` destructures.
+

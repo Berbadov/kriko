@@ -58,6 +58,11 @@ describe("wording for what to research next", () => {
         expect(rowName(ROW())).toBe("A thing");
     });
 
+    it("reads a JSON identity as words, not as the JSON (B146)", () => {
+        const identity = JSON.stringify({ a: "Subaru", b: "Impreza", c: 2008, d: null });
+        expect(rowName(ROW({ label: "", identity }))).toBe("Subaru Impreza 2008");
+    });
+
     it("prints demand as words, and prints nothing when there is none", () => {
         expect(demandWord(ROW({ asked: 0 }))).toBe("");
         expect(demandWord(ROW({ asked: 1 }))).toBe("asked about once");

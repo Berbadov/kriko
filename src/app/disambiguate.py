@@ -55,13 +55,18 @@ SIGNALS = (
 )
 
 
-def brief(subject: str, keys: str = "") -> str:
+def brief(subject: str, keys: str = "", page: dict | None = None) -> str:
     """The identification pass, as instructions. One or two searches, no more.
 
     `keys` is the installed packs' own identity vocabulary, passed through so a
     question's answer lands on a key some pack can actually use. An answer
     mapped to a key nobody declares is a fact with nowhere to go.
+
+    `page` is what the listing itself says (`app.pagefacts`, B150).
     """
+    from app import pagefacts
+
+    listing = pagefacts.block(page)
     signals = "\n".join(f"* {one}" for one in SIGNALS)
     vocabulary = (
         f"\n\nWhere an answer corresponds to one of these keys, name it as "
@@ -71,7 +76,7 @@ def brief(subject: str, keys: str = "") -> str:
     return f"""# Is this product identity unambiguous?
 
     {subject}
-
+{listing}
 This is a *cheap* pass before an expensive one. One or two searches, no deep
 reading. Your only job is to decide whether the name above picks out one
 product or several, and if several, what a normal person could be asked to tell
@@ -91,7 +96,11 @@ If it is ambiguous, write **at most {MAX_QUESTIONS} questions**, in one batch.
 Each one must be:
 
 * **Concrete and answerable by a normal person** — the market they are in, a
-  model year or range, the engine or trim, the gearbox, what they use it for.
+  model year or range, the trim, the gearbox, what they use it for.
+  Never a technical fact they would have to look up — an engine or model
+  code, a part number, an output figure the page does not print. The reader
+  is a buyer, not a technician (B150): settle those yourself, from the
+  listing and a search, and put them in `established`.
   Never "what would you like me to focus on?", which asks the reader to do your
   job.
 * **Carried by a default and its reasoning.** The run does not wait for an

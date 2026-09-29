@@ -535,6 +535,13 @@ class _Silent:
         self.lines: list[str] = []
         self.result: dict = {}
         self._check_cancelled = check_cancelled
+        # tasks.py sets `researcher.replies = progress.replies` on any
+        # researcher that has the attribute at all — a harness researcher
+        # does, since it can be asked mid-run whether the reader answered a
+        # conversation. Bench never opens one, so there is nothing to give
+        # back, but the attribute has to exist or every harness-plane case
+        # raises `AttributeError` before it can be scored.
+        self.replies: Callable[[], list[str]] = lambda: []
 
     def log(self, line: str) -> None:
         self.lines.append(line)

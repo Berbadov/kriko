@@ -62,6 +62,16 @@
       : `Reported${srcN ? ` · ${srcN} source${srcN === 1 ? "" : "s"}` : ""}`;
     const strengthAttr = claim.strength || "reported";
 
+    // `why_shown` is the engine's own ranking diagnostics, not a buyer's
+    // vocabulary. Severity is already the card's icon and colour, and which
+    // pack answered is already the panel's footer — repeating either here as
+    // a chip is noise. What's worth a chip is why *this* claim reached *this*
+    // car (a shared part, a downrank) and it belongs in the body a reader
+    // opens on purpose, not on the collapsed title every card shows first.
+    const shownWhy = (claim.why_shown || []).filter(
+      (w) => !/ severity$/.test(w) && !/^from pack:/.test(w)
+    );
+
     const article = document.createElement("article");
     article.className = "lite-rc";
     article.dataset.sev = sev;
@@ -76,14 +86,10 @@
         </div>
         <div class="lite-rc-titlebox">
           <div class="lite-rc-title">${escapeHtml(claim.title)}</div>
-          ${claim.why_shown && claim.why_shown.length ? `
-            <div class="lite-rc-why">
-              ${claim.why_shown.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
-            </div>` : ""}
           <div class="lite-rc-meta">
             <span class="lite-rc-strength" data-strength="${escapeHtml(strengthAttr)}">${escapeHtml(strengthLabel)}</span>
-            <span class="sep"> · </span><span>${escapeHtml(claim.domain || "")}</span>
-            ${confText ? `<span class="sep"> · </span><span>conf ${confText}</span>` : ""}
+            <span class="sep" aria-hidden="true"> · </span><span>${escapeHtml(claim.domain || "")}</span>
+            ${confText ? `<span class="sep" aria-hidden="true"> · </span><span>conf ${confText}</span>` : ""}
           </div>
         </div>
         <button type="button" class="lite-rc-toggle"
@@ -97,11 +103,15 @@
         <div class="lite-rc-bodyclip">
           <div class="lite-rc-body">
             <p class="lite-rc-text">${escapeHtml(claim.body || "")}</p>
+            ${shownWhy.length ? `
+              <div class="lite-rc-why">
+                ${shownWhy.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
+              </div>` : ""}
             ${claim.advice ? `
               <div class="lite-rc-insp">
                 <span class="lite-rc-insp-icon">${iconSvg("eye", { size: 13 })}</span>
                 <div class="lite-rc-insp-body">
-                  <div class="lite-rc-insp-label">Inspection</div>
+                  <div class="lite-rc-insp-label">What to ask</div>
                   ${escapeHtml(claim.advice)}
                 </div>
               </div>` : ""}

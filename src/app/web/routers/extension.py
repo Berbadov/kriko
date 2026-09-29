@@ -40,11 +40,7 @@ FRESH_SECONDS = 6 * 60 * 60
 
 
 def _target(request: Request) -> Path:
-    override = extension.env_override()
-    if override:
-        return override
-    home = extension.home_of(request.app.state.settings.store_path)
-    return extension.staged_dir(home)
+    return extension.target_for(request.app.state.settings.store_path)
 
 
 def _age(iso: str) -> float | None:
@@ -55,6 +51,16 @@ def _age(iso: str) -> float | None:
     if seen.tzinfo is None:
         seen = seen.replace(tzinfo=timezone.utc)
     return (datetime.now(timezone.utc) - seen).total_seconds()
+
+
+def _loaded_digest(request: Request, sightings: list[dict]) -> str:
+    """The file digest the most recently seen extension said it runs."""
+    loaded = getattr(request.app.state, "extension_digests", {})
+    for row in sightings:
+        digest = (loaded.get(row["origin"]) or {}).get("content_digest", "")
+        if digest:
+            return digest
+    return ""
 
 
 @router.get("")
@@ -121,6 +127,8 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         "compatibility": extension.compatibility(
             _running_version(sightings),
             extension.version(source) if source else "",
+            loaded_digest=_loaded_digest(request, sightings),
+            carried_digest=extension.content_digest(source) if source else "",
         ),
     }
 
@@ -170,6 +178,46 @@ class ExtensionResearchRequest(BaseModel):
     search: str = Field("", max_length=64)
     cap: float | None = Field(None, gt=0, allow_inf_nan=False)
     allow_draft: bool = Field(False, strict=True)
+    #: The listing the reader is on, so the quick look can hold itself to the
+    #: pack whose site this is (its `research/principle.md`). Optional.
+    url: str = Field("", max_length=2000)
+    #: What the listing itself says (B150): its labelled facts and the
+    #: seller's text, so the agents settle the exact version from the page
+    #: rather than asking the reader for an engine code they may not know.
+    #: Trimmed by `app.pagefacts.clean`; both optional.
+    facts: dict[str, str] = Field(default_factory=dict)
+    description: str = Field("", max_length=5000)
+
+
+def _listing_pack(store, conn, url: str, facts: dict, title: str) -> str:
+    """The pack whose adapter reads this listing best, or "".
+
+    `adapter_for` took the first adapter whose globs hit, so a phone pack that
+    also claims a car site held a car's quick look to the phone principle
+    (B150). Every matching adapter reads the page; the fullest reading wins.
+    """
+    if not url:
+        return ""
+    from kriko.adapters import best_reading
+
+    specs = sites.adapters_for(store, conn, url)
+    found = best_reading(store, specs, facts, url=url, title=title) if specs else None
+    if not found:
+        return ""
+    spec, mapped = found
+    pack = spec.get("pack_id", "") or ""
+    if len({one.get("pack_id", "") for one in specs}) > 1 and pack:
+        # Several packs claim this site and the winner knows none of what it
+        # read: every reading tied and the first one won. That held a car
+        # listing's quick look to a phone pack's principle (B151); no pack's
+        # principle is the honest answer for a product no pack knows.
+        from kriko.adapters import _fold, identity_vocabulary
+
+        own = {key: {_fold(v) for v in values}
+               for key, values in identity_vocabulary(store, [pack]).items()}
+        if not any(_fold(value) in own.get(key, ()) for key, value in mapped.identity.items()):
+            return ""
+    return pack
 
 
 @router.post("/research-plane")
@@ -207,20 +255,36 @@ def start_research_plane(
         # from two copies of one rule, so the reply can promise one agent while
         # the run uses another the day the two copies drift. Sending `selected`
         # is what this reply already claims happened.
-        from app import prefs
+        from app import pagefacts, prefs
 
+        page = pagefacts.clean(body.facts, body.description)
         stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
         selected = stored if stored in {one.id for one in available} else available[0].id
         params = {
             "category": body.q.strip(), "product_only": True,
             "harness": selected, "backend": "harness",
+            # The reader's answer, asked directly: "yes it should install
+            # itslef" (B148). Only this door asks for it; the app's own New
+            # pack form still leaves the press to the reader.
+            "install": True,
+            "page": page,
         }
+        # Quick answer, then deepen (B148): the reader's choice. The draft is
+        # the deep half and starts first so the quick one can point at it;
+        # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
+        # id the panel follows.
+        deepen = runner.submit("pack_author", params)
+        pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
+        quick = runner.submit("quick_look", {
+            "product": body.q.strip(), "harness": selected,
+            "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
+        })
         return {
-            "job_id": runner.submit("pack_author", params), "kind": "pack_author",
+            "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
             "backend": "harness", "harness": selected,
             "cost_basis": "subscription", "budget_usd": None,
-            "note": "Uses your harness subscription; no per-token budget guarantee. "
-                    "Creates a draft only. Review and install it from Knowledge.",
+            "note": "Uses your harness subscription. A quick answer first; the "
+                    "deeper research keeps going and installs itself when done.",
         }
     plane = research_plane(request)
     budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
@@ -264,6 +328,7 @@ def stage(request: Request) -> dict:
         written = extension.stage(source, target)
     except OSError as cause:
         raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
+    request.app.state.extension_staged_digest = extension.content_digest(target)
     return {
         "path": str(target), "written": written, "version": extension.version(target),
         "content_digest": extension.content_digest(target),
@@ -353,13 +418,16 @@ def launch(
         extension.stage(source, target)
     except OSError as cause:
         raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
+    request.app.state.extension_staged_digest = extension.content_digest(target)
 
     home = extension.home_of(request.app.state.settings.store_path)
     profile = extension.profile_dir(home)
     note = (
         "The window is a separate browser profile — it has to be, because a "
         "browser that is already running ignores an extension handed to it on "
-        "the command line. Your bookmarks and logins are not in it."
+        "the command line. Your bookmarks and logins are not in it. Recent "
+        "Chrome releases refuse to load an extension this way; if Status "
+        "stays waiting, the steps below are the install."
     )
 
     browser = extension.find_chromium()
@@ -384,12 +452,25 @@ def launch(
     # front of them: the status card polls, so it turns green here while they
     # are looking at the listing over there.
     landing = _landing(store, app_state, str(request.base_url))
-    error = extension.launch_with_extension(browser, target, profile, landing=landing)
+    # A browser that has checked in already has Kriko, loaded from `target`
+    # and refreshed by the `stage` above — so the listing opens *there*. The
+    # separate profile is only for a reader who has never installed it, and
+    # current Chrome refuses to load an extension into it (see
+    # `launch_with_extension`), which is why the manual steps stay on screen.
+    own = bool(state.extension_sightings(app_state))
+    if own:
+        note = (
+            "Opened in the browser Kriko already lives in — its files were "
+            "refreshed just now, so the listing gets this version."
+        )
+    error = extension.launch_with_extension(
+        browser, target, profile, landing=landing, own_profile=own
+    )
     return {
         "launched": not error,
         "browser": browser,
         "path": str(target),
-        "profile": str(profile),
+        "profile": "" if own else str(profile),
         "landing": landing,
         "note": note,
         "error": error,

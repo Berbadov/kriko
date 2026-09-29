@@ -91,6 +91,21 @@ AUTHOR_TIMEOUT_SECONDS = 2400.0
 #: reader the hygiene flags and never the plane.
 HELP_TIMEOUT_SECONDS = 12.0
 
+#: Said to every CLI child, because we write to it in UTF-8 and read it back
+#: as UTF-8. A Python CLI on Windows otherwise decodes a piped stdin with the
+#: ANSI code page and `surrogateescape`: the brief's `”` (E2 80 9D) arrives as
+#: `â€\udc9d`, 0x9D being the one byte cp1252 leaves undefined. Mistral Vibe
+#: took that text and then died writing it to its own session log
+#: ("surrogates not allowed") — every case of the reader's bench on
+#: 2026-09-26. Harmless to a CLI that is not Python.
+CHILD_ENCODING_ENV = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
+
+def _minutes(seconds: float) -> str:
+    """`75` → `1m 15s`; `40` → `40s`. For a log line a person reads."""
+    whole = int(seconds)
+    return f"{whole // 60}m {whole % 60:02d}s" if whole >= 60 else f"{whole}s"
+
 
 def _lines(stream, tick: float):
     """`stream`'s lines, with a `None` every `tick` seconds it stays silent.
@@ -638,7 +653,71 @@ DIRS_ENV = "KRIKO_HARNESS_DIRS"
 _SUFFIXES = (("", ".exe", ".cmd", ".bat") if os.name == "nt" else ("",))
 
 
+#: The last line of an npm `cmd-shim` wrapper: the program it hands `%*` to,
+#: optionally after `"%_prog%"` (node) for a script target.
+_SHIM_TARGET = re.compile(
+    r'(?P<node>"%_prog%"\s+)?"%(?:dp0|~dp0)%\\?(?P<target>[^"]+)"\s+%\*', re.IGNORECASE
+)
+
+
+def unshim(command: list[str]) -> list[str]:
+    """The same command with npm's `.cmd` wrapper taken out of the way (B151).
+
+    A `.cmd` can only start through `cmd.exe`, and `cmd.exe` ends a command at
+    the first newline — so a multi-line brief passed as an argument arrived as
+    its first line. The reader's opencode received "# Quick look: what is
+    known to go wrong with this one?" and nothing else, every run, and sat
+    silent. npm's shims are one line that forwards `%*` to a real program; run
+    that program instead and every byte of the argument survives. Anything
+    that is not a recognisable shim is returned untouched and still goes
+    through `cmd.exe`, exactly as before.
+    """
+    if os.name != "nt" or not command or not command[0].lower().endswith((".cmd", ".bat")):
+        return command
+    shim = Path(command[0])
+    try:
+        text = shim.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return command
+    found = _SHIM_TARGET.search(text)
+    if not found:
+        return command
+    target = shim.parent / found.group("target").replace("\\", os.sep)
+    if not target.is_file():
+        return command
+    if not found.group("node"):
+        return [str(target), *command[1:]] if target.suffix.lower() == ".exe" else command
+    node = shim.parent / "node.exe"
+    runtime = str(node) if node.is_file() else shutil.which("node")
+    return [runtime, str(target), *command[1:]] if runtime else command
+
+
+#: B152.7: `locate` walks PATH x PATHEXT per CLI — ~7,800 filesystem probes
+#: for the roster on this machine, 200 ms a call — and Settings, the agent
+#: picker and every research start ask it. Kept for a few seconds, keyed on
+#: everything that changes the answer; `forget_located()` is the refresh.
+_LOCATED: dict[tuple, tuple[float, str]] = {}
+LOCATE_TTL_S = 20.0
+
+
+def forget_located() -> None:
+    _LOCATED.clear()
+
+
 def locate(one: Harness) -> str:
+    """`_locate`, remembered for `LOCATE_TTL_S` (see `_LOCATED`)."""
+    key = (one.executable, one.homes, os.environ.get("PATH", ""),
+           os.environ.get(DIRS_ENV, ""), str(Path.home()))
+    now = time.monotonic()
+    hit = _LOCATED.get(key)
+    if hit and now - hit[0] < LOCATE_TTL_S:
+        return hit[1]
+    found = _locate(one)
+    _LOCATED[key] = (now, found)
+    return found
+
+
+def _locate(one: Harness) -> str:
     """The full path to this CLI, or `""`.
 
     **`PATH` is not enough, and that is not a theory.** The sidecar is launched
@@ -660,6 +739,16 @@ def locate(one: Harness) -> str:
     """
     found = shutil.which(one.executable)
     if found:
+        # PATHEXT is conventionally spelled in upper case
+        # (".COM;.EXE;.BAT;.CMD") and `shutil.which` returns whatever case
+        # it matched in, so an npm-installed CLI resolves to "...\claude.CMD"
+        # next to every other path's lower-case suffix. Windows paths are
+        # case-insensitive either way, so this only matters where the path
+        # is shown to the reader (Settings → Your agents, settings-23).
+        if os.name == "nt":
+            stem, dot, suffix = found.rpartition(".")
+            if dot and suffix.lower() in ("com", "exe", "bat", "cmd"):
+                found = f"{stem}.{suffix.lower()}"
         return found
     home = Path.home()
     roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
@@ -728,6 +817,7 @@ def _ask(executable: str, *argv: str) -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
+            env={**os.environ, **CHILD_ENCODING_ENV},
             start_new_session=True,
         )
     except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
@@ -895,7 +985,7 @@ def _stamp(executable: str) -> float:
         return 0.0
 
 
-def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
+def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> list[str]:
     """The models this machine's copy of the CLI offers, or `[]`.
 
     Asked, never assumed: `agy models` and `opencode models` list what is
@@ -907,7 +997,9 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
     never be why a run does not start.
 
     Cached per binary (path and modification time, so an updated CLI is asked
-    again) for `MODELS_TTL`; `fresh` asks regardless.
+    again) for `MODELS_TTL`; `fresh` asks regardless. Past the TTL the old
+    list is served and the ask runs `behind` (B152.7): an expired cache used
+    to make the next Settings visit wait ~7 s for every CLI to answer.
     """
     if one.unusable or not one.model_source:
         return []
@@ -915,11 +1007,38 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
     if not executable:
         return []
     key = (one.id, executable, _stamp(executable))
-    # One ask per CLI at a time: a screen read that lands while the startup
-    # warm-up is still asking waits for that answer instead of asking again.
     with _MODELS_LOCK:
-        asking = _ASKING.setdefault(one.id, threading.Lock())
-    with asking:
+        cached = _MODELS.get(key)
+    if cached and not fresh and not behind:
+        at, names = cached
+        if time.monotonic() - at < (MODELS_TTL if names else _MODELS_TTL_EMPTY):
+            return list(names)
+        if names:
+            threading.Thread(
+                target=lambda: models_for(one, behind=True),
+                name=f"kriko-models-{one.id}", daemon=True,
+            ).start()
+            return list(names)
+    # One ask per CLI at a time, but a reader's own request never queues
+    # behind one already in flight: `warm_models()` starts this same probe on
+    # a background thread at startup precisely so the first visit to the
+    # Agents screen does not pay its cost, and a request that blocked on this
+    # lock while that thread held it paid the identical ~2s anyway — the
+    # warm-up existed and did nothing for that first click. So a request that
+    # finds the lock held serves whatever is cached (possibly `[]`, on a CLI
+    # never asked before) rather than waiting for the in-flight ask, which
+    # will populate the cache for the *next* read regardless.
+    asking_new = threading.Lock()
+    with _MODELS_LOCK:
+        asking = _ASKING.setdefault(one.id, asking_new)
+    # `fresh` is always an explicit ask (a reader pressing Re-ask) and waits
+    # for a real answer. An ordinary read does not: it takes whatever is
+    # cached rather than queueing behind the in-flight probe.
+    if not asking.acquire(blocking=fresh):
+        with _MODELS_LOCK:
+            cached = _MODELS.get(key)
+        return list(cached[1]) if cached else []
+    try:
         with _MODELS_LOCK:
             cached = _MODELS.get(key)
         if cached and not fresh:
@@ -940,7 +1059,9 @@ def models_for(one: Harness, *, fresh: bool = False) -> list[str]:
             names = _from_models_command(one, executable)
         with _MODELS_LOCK:
             _MODELS[key] = (time.monotonic(), names)
-    return list(names)
+        return list(names)
+    finally:
+        asking.release()
 
 
 def models_for_each(harnesses: list[Harness], *, fresh: bool = False) -> dict[str, list[str]]:
@@ -1323,6 +1444,13 @@ TRANSCRIPT_TAIL = 512 * 1024
 #: A real research run narrates a few dozen.
 MAX_NARRATED = 400
 
+#: How long a run may print nothing before its log says it is still alive.
+#: Reported as "they seem like they are stuck" (B146): `claude -p` in
+#: stream-json emits a message only once it is whole, so one long answer is
+#: minutes of an empty log on a run that is working normally. The line is the
+#: difference between "working" and "hung" that the reader could not see.
+HEARTBEAT_SECONDS = 30.0
+
 #: Events that are machinery rather than actions — session bookkeeping, the
 #: partial-token frames, the command list. Named rather than filtered by
 #: "anything I do not recognise", so a *new* event type shows up as a line
@@ -1604,13 +1732,13 @@ def narrate(event: dict) -> str:
 #: the reason `_why` extracted, lowercased, first hit wins.
 HINTS = (
     (("usage limit", "rate limit", "limit reached", "quota"),
-     "your Claude subscription has no headroom right now. Wait for the reset "
-     "the message names, or switch to another plane on the Agents screen."),
+     "{label}'s account has no headroom right now. Wait for the reset "
+     "the message names, or switch to another agent on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",
       "invalid api key", "oauth"),
-     "the CLI is not logged in, and only you can log it in -- no API call can "
+     "{label} is not logged in, and only you can log it in -- no API call can "
      "do it on its behalf. Open the terminal in this app (Ctrl+`), run "
-     "`claude`, and follow the login prompt (or type `/login`). Then press "
+     "`{cli}`, and follow its login prompt. Then press "
      "this again. Kriko Console in your Start menu opens the same shell "
      "without the app."),
     (("credit balance", "billing", "payment"),
@@ -1632,18 +1760,23 @@ HINTS = (
 )
 
 
-def _hint(reason: str) -> str:
+def _hint(reason: str, harness: "Harness | None" = None) -> str:
     """The next action for a failure class Kriko recognises, or nothing.
 
     A reason with no action attached is only half of what a reader needs.
     `Claude Code exited 1: error_during_execution` says what happened; it
     does not say whether to wait, log in, or report it — and a reader who has
     now watched this button fail in two releases has earned the second half.
+
+    Named for the CLI that failed (B146): the login hint said "run `claude`"
+    under a Mistral Vibe failure, which sends the reader to the wrong tool.
     """
     low = (reason or "").lower()
+    label = harness.label if harness else "The CLI"
+    cli = Path(harness.executable).stem if harness else "the CLI"
     for needles, hint in HINTS:
         if any(needle in low for needle in needles):
-            return hint
+            return hint.format(label=label, cli=cli)
     return ""
 
 
@@ -1903,7 +2036,18 @@ class HarnessResearcher(AgentResearcher):
     @contextmanager
     def _workspace(self):
         if not self.harness.sandbox_home:
-            yield
+            # An empty directory to start in, even with the reader's own HOME
+            # (B151). The old default was `~`, and on the reader's machine `~`
+            # is a git repository: opencode snapshots its working tree before
+            # its first model call, so every run spent its budget hashing a
+            # home folder and printed nothing. A research run reads the web,
+            # never the disk it happens to start on.
+            with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
+                self._run_cwd = directory
+                try:
+                    yield
+                finally:
+                    self._run_cwd = None
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
             root = Path(directory)
@@ -2080,7 +2224,7 @@ class HarnessResearcher(AgentResearcher):
             # only counts what succeeded is a plane whose cost column lies.
             self._meter(envelope)
             reason = _why(envelope, stdout, stderr)
-            hint = _hint(reason)
+            hint = _hint(reason, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} exited {code}: {reason}"
                 + (f" -- {hint}" if hint else "")
@@ -2174,6 +2318,12 @@ class HarnessResearcher(AgentResearcher):
             return False
         if proc.stdin is None or proc.stdin.closed:
             return False
+        # Not before the brief is through: two writers on one pipe interleave,
+        # and a reply spliced into the middle of the opening is two broken
+        # messages. Left unread, so it is delivered on the next tick instead.
+        opening_sent = getattr(self, "_opening_sent", None)
+        if opening_sent is not None and not opening_sent.is_set():
+            return False
         try:
             lines = self.replies()
         except Exception:  # noqa: BLE001 - narration must never end a run
@@ -2235,6 +2385,13 @@ class HarnessResearcher(AgentResearcher):
         """
         self.transcript = ""
         self._spoke = False
+        command = unshim(command)
+        # See `_new_job_object`: on Windows this is what lets a cancel reach
+        # a descendant `taskkill /T` cannot, because its parent already
+        # exited. `None` on POSIX, where `start_new_session`/`killpg` already
+        # cover the tree — every caller of `_kill_tree` below treats it the
+        # same way regardless of which platform gave it.
+        job = self._new_job_object()
         try:
             proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
                 command,
@@ -2251,7 +2408,7 @@ class HarnessResearcher(AgentResearcher):
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
-                env={**os.environ, **self.harness.env, **self._run_env},
+                env={**os.environ, **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
                 cwd=self._run_cwd or os.path.expanduser("~"),
                 shell=self._needs_shell(command),
                 # POSIX only (Windows accepts and ignores it — see
@@ -2267,21 +2424,38 @@ class HarnessResearcher(AgentResearcher):
             raise NoHarness(
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
+        self._assign_job(job, proc)
 
-        # The opening message, before anything else is read. A conversational
-        # child has no prompt until this lands — it is the run, not a preamble
-        # to it — so a failure here is fatal rather than narrated, and the
-        # caller retries the ordinary way.
+        # The opening message. A conversational child has no prompt until this
+        # lands — it is the run, not a preamble to it.
+        #
+        # **Written on its own thread (B147).** It used to be written here,
+        # inline, before stdout had a reader. A brief larger than the pipe
+        # buffer (the pack author's is ~10 KB; Windows gives a pipe 4 KB)
+        # blocks the write until the child reads — and `claude` prints its
+        # `init` event, kilobytes of tool and skill names, *before* reading.
+        # Nobody was reading that, so the child blocked on stdout, the write
+        # blocked on stdin, and the run sat silent with no heartbeat, no
+        # cancel and not even the timeout timer started, until the reader
+        # closed the app. Ten minutes of one reader's evening, reproduced by
+        # `test_a_brief_larger_than_the_pipe_does_not_deadlock_a_chatty_child`.
+        self._opening_sent = None
+        opening_failed: list[BaseException] = []
         if opening:
-            try:
-                assert proc.stdin is not None
-                proc.stdin.write(opening.rstrip("\n") + "\n")
-                proc.stdin.flush()
-            except (OSError, ValueError, AssertionError) as exc:
-                self._kill_tree(proc)
-                raise RuntimeError(
-                    f"{self.harness.label} would not take the brief on stdin"
-                ) from exc
+            sent = threading.Event()
+            self._opening_sent = sent
+
+            def _send_opening() -> None:
+                try:
+                    assert proc.stdin is not None
+                    proc.stdin.write(opening.rstrip("\n") + "\n")
+                    proc.stdin.flush()
+                except (OSError, ValueError, AssertionError) as exc:
+                    opening_failed.append(exc)
+                finally:
+                    sent.set()
+
+            threading.Thread(target=_send_opening, daemon=True).start()
 
         began = time.monotonic()
         said: list[str] = []
@@ -2299,11 +2473,14 @@ class HarnessResearcher(AgentResearcher):
 
         def _give_up() -> None:
             expired.set()
-            self._kill_tree(proc)
+            self._kill_tree(proc, job)
 
         timer = threading.Timer(self.timeout, _give_up)
         timer.start()
         narrated = 0
+        #: When the child last printed anything, and when the log last heard
+        #: from this run at all (a line or a heartbeat) — see HEARTBEAT_SECONDS.
+        last_heard = last_line = began
         #: When a turn ended on a question, and how long its answer may take.
         waiting_since: float | None = None
         waiting_for = 0.0
@@ -2320,6 +2497,18 @@ class HarnessResearcher(AgentResearcher):
                     # no to.
                     if self.check_cancelled is not None:
                         self.check_cancelled()
+                    now = time.monotonic()
+                    if say is not None and now - last_heard >= HEARTBEAT_SECONDS:
+                        last_heard = now
+                        try:
+                            say(
+                                f"still working — {_minutes(now - began)} in; "
+                                f"{self.harness.label} is thinking and has not "
+                                f"printed anything new for "
+                                f"{_minutes(now - last_line)}"
+                            )
+                        except Exception:  # noqa: BLE001 — see the docstring
+                            say = None
                     # A conversational child that has not said one word is a
                     # pipe that did not arrive, not a model thinking hard: the
                     # `init` event comes before the first API call. Give up
@@ -2327,7 +2516,7 @@ class HarnessResearcher(AgentResearcher):
                     # than holding the job worker for the whole timeout.
                     if (opening and not self._spoke
                             and time.monotonic() - began > CONVERSATION_START_SECONDS):
-                        self._kill_tree(proc)
+                        self._kill_tree(proc, job)
                         break
                     if self._deliver(proc):
                         # An answer to the question it ended on: that is the
@@ -2340,6 +2529,7 @@ class HarnessResearcher(AgentResearcher):
                         waiting_since = None
                     continue
                 self._spoke = True
+                last_heard = last_line = time.monotonic()
                 self._keep(line)
                 # A child reading messages does not exit when its turn ends —
                 # it waits for the next one, and stdout stays open while it
@@ -2425,17 +2615,45 @@ class HarnessResearcher(AgentResearcher):
             # blocked `readline` holds, so a teardown in the other order waits
             # out the very process it is trying to abandon.
             if proc.poll() is None:
-                self._kill_tree(proc)
-            drain.join(timeout=5.0)
-            for pipe in (proc.stdout, proc.stderr):
-                if pipe is None:
-                    continue
+                self._kill_tree(proc, job)
+            if sys.platform == "win32" and job is not None:
                 try:
-                    pipe.close()
+                    import ctypes
+
+                    ctypes.windll.kernel32.CloseHandle(job)  # type: ignore[attr-defined]
                 except Exception:  # noqa: BLE001
                     pass
+            drain.join(timeout=5.0)
+            # A pipe a surviving grandchild still holds open blocks `close()`
+            # forever on Windows (see the module docstring's job-object note)
+            # — the job kill above should have left nothing holding one, but
+            # "should have" is not a guarantee this worker thread may act on.
+            # Closing on a daemon thread means a pipe that still won't let go
+            # leaks a handle, never wedges the one worker every other job is
+            # waiting behind.
+            def _close_pipes() -> None:
+                for pipe in (proc.stdout, proc.stderr):
+                    if pipe is None:
+                        continue
+                    try:
+                        pipe.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+
+            closer = threading.Thread(target=_close_pipes, daemon=True)
+            closer.start()
+            closer.join(timeout=5.0)
 
         self.actions = said
+        if opening_failed and not self._spoke:
+            # The child died before it read the brief. The reason is on its
+            # stderr, not in the broken-pipe exception (knowledge-6), and the
+            # caller retries the ordinary way on this error.
+            tail = "".join(errors).strip()
+            raise RuntimeError(
+                f"{self.harness.label} would not take the brief on stdin"
+                + (f": {tail}" if tail else "")
+            ) from opening_failed[0]
         if expired.is_set():
             raise TimeoutError(
                 f"{self.harness.label} did not finish within {int(self.timeout)}s"
@@ -2443,7 +2661,102 @@ class HarnessResearcher(AgentResearcher):
         return proc.returncode or 0, self.transcript, "".join(errors)
 
     @staticmethod
-    def _kill_tree(proc) -> None:
+    def _new_job_object():
+        """Windows only: a Job Object the child is placed into at spawn time.
+
+        `taskkill /T` walks the *live* parent-pid chain, so it misses any
+        descendant whose parent has already exited by the time the kill
+        runs — and a conversing harness always has one: the shim that reads
+        the reply off stdin outlives the CLI it was piping into. A process
+        placed in a job with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` stays a
+        member of that job for its whole life regardless of what its own
+        parent does, so `TerminateJobObject` reaches it — an orphan is still
+        in the job even when it is no longer in anyone's process tree.
+
+        Returns `None` on POSIX (where `killpg` already does this job) and
+        whenever the Windows API call itself fails, so every caller treats
+        "no job object" as "fall back to `taskkill`" rather than a fault.
+        """
+        if sys.platform != "win32":
+            return None
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+            job = kernel32.CreateJobObjectW(None, None)
+            if not job:
+                return None
+
+            class _BASIC(ctypes.Structure):
+                _fields_ = [
+                    ("PerProcessUserTimeLimit", ctypes.c_int64),
+                    ("PerJobUserTimeLimit", ctypes.c_int64),
+                    ("LimitFlags", ctypes.c_uint32),
+                    ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t),
+                    ("ActiveProcessLimit", ctypes.c_uint32),
+                    ("Affinity", ctypes.c_size_t),
+                    ("PriorityClass", ctypes.c_uint32),
+                    ("SchedulingClass", ctypes.c_uint32),
+                ]
+
+            class _IO_COUNTERS(ctypes.Structure):
+                _fields_ = [(name, ctypes.c_uint64) for name in (
+                    "ReadOperationCount", "WriteOperationCount",
+                    "OtherOperationCount", "ReadTransferCount",
+                    "WriteTransferCount", "OtherTransferCount",
+                )]
+
+            class _EXTENDED(ctypes.Structure):
+                _fields_ = [
+                    ("BasicLimitInformation", _BASIC),
+                    ("IoInfo", _IO_COUNTERS),
+                    ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t),
+                    ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t),
+                ]
+
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+            JobObjectExtendedLimitInformation = 9
+            info = _EXTENDED()
+            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            ok = kernel32.SetInformationJobObject(
+                job, JobObjectExtendedLimitInformation,
+                ctypes.byref(info), ctypes.sizeof(info),
+            )
+            if not ok:
+                kernel32.CloseHandle(job)
+                return None
+            return job
+        except Exception:  # noqa: BLE001 — no job object is a fallback, not a fault
+            return None
+
+    @staticmethod
+    def _assign_job(job, proc) -> None:
+        """Put `proc` in `job`, best-effort, right after `Popen` returns.
+
+        Has to happen before the child can spawn anything of its own — a
+        grandchild started after this point inherits its parent's job
+        membership automatically (Windows does not offer an opt-in; only an
+        opt-out, `CREATE_BREAKAWAY_FROM_JOB`, which nothing here sets), which
+        is the whole reason a job object catches what `taskkill /T` misses.
+        """
+        if job is None:
+            return
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+            handle = getattr(proc, "_handle", None)
+            if handle is None:
+                return
+            kernel32.AssignProcessToJobObject(job, int(handle))
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _kill_tree(proc, job=None) -> None:
         """End the whole process, not just the one pid this object holds.
 
         `_needs_shell` means the pid here is sometimes `cmd.exe`, whose real
@@ -2452,10 +2765,24 @@ class HarnessResearcher(AgentResearcher):
         reader's subscription in the background, invisibly, past the
         deadline this exists to enforce. `start_new_session=True` on spawn is
         what makes a tree kill possible on POSIX (`killpg` reaches the whole
-        session); on Windows `taskkill /T` is the documented way to end one.
-        Every step is best-effort — a process that is already gone by the
-        time this runs is the good outcome, not a failure to report.
+        session).
+
+        On Windows, `job` (from `_new_job_object`/`_assign_job`) is tried
+        first: `TerminateJobObject` kills every process ever assigned to it,
+        orphaned or not, which is what a conversing CLI's surviving
+        descendant needs (see `_new_job_object`'s docstring). `taskkill /T`
+        still runs afterwards as a belt for a process this job never held —
+        one spawned before assignment raced it, say. Every step is
+        best-effort — a process that is already gone by the time this runs
+        is the good outcome, not a failure to report.
         """
+        if sys.platform == "win32" and job is not None:
+            try:
+                import ctypes
+
+                ctypes.windll.kernel32.TerminateJobObject(job, 1)  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                pass
         try:
             if sys.platform == "win32":
                 subprocess.run(
@@ -2659,7 +2986,7 @@ class HarnessResearcher(AgentResearcher):
             elif event.get("type") == "model.call_failure":
                 failure = failure or str(data.get("errorMessage") or "").strip()
         if not said and failure:
-            hint = _hint(failure)
+            hint = _hint(failure, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} reported an error: {failure[:500]}"
                 + (f" -- {hint}" if hint else "")
@@ -2691,7 +3018,7 @@ class HarnessResearcher(AgentResearcher):
             # failure: the CLI reports a refusal, a limit or a billing
             # stop in the envelope and exits 0 about it.
             reason = _why(envelope, stdout, "")[:500]
-            hint = _hint(reason)
+            hint = _hint(reason, self.harness)
             raise RuntimeError(
                 f"{self.harness.label} reported an error: {reason}"
                 + (f" -- {hint}" if hint else "")
@@ -2706,7 +3033,7 @@ class HarnessResearcher(AgentResearcher):
                 # needed listed as denied. An empty gather downstream would
                 # read as "researched, found nothing" — it was neither.
                 reason = _why(envelope, stdout, "")[:500]
-                hint = _hint(reason)
+                hint = _hint(reason, self.harness)
                 raise RuntimeError(
                     f"{self.harness.label} answered nothing: {reason}"
                     + (f" -- {hint}" if hint else "")
