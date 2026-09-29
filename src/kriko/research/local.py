@@ -32,7 +32,16 @@ from kriko.research.base import (
     STANDARD, Document, Fetched, Finding, ResearchTask, Spend,
 )
 from kriko.research.codes import resolve
-from kriko.research.politeness import LocalSearchError, PolitenessScheduler
+from kriko.research.politeness import (
+    LocalSearchError, PolitenessScheduler,
+)
+
+#: How long one call may spend waiting for its turn at the gate before the
+#: honest answer is a miss. A walking-pace queue of a few seconds is normal;
+#: a wait measured in minutes means every source is cooling down, and a run
+#: that keeps polling for a source that is not coming back is a run that
+#: hangs — the exact thing fail-fast exists to prevent.
+_MAX_GATE_WAIT = 60.0
 
 #: Reply shape the extractor must produce. Mirrors the paid plane's keys
 #: so a finding's provenance never depends on which plane wrote it.
@@ -127,46 +136,55 @@ class LocalPlane:
         return found.get(document.url, [])
 
     def _search_polite(self, query: str, limit: int) -> list[dict]:
-        if self._scheduler is None:
-            return self._search(query, limit) or []
-        source, delay = self._scheduler.acquire()
-        if not source:
-            return []
-        import time as _time
-        if delay > 0:
-            _time.sleep(min(delay, 5.0))
-        try:
-            return self._search(query, limit) or []
-        except LocalSearchError:
-            self._scheduler.report(source, blocked=True)
-            return []
-        except Exception:
-            self._scheduler.report(source, failed=True)
-            return []
-        finally:
-            self._scheduler.release()
+        return self._through_gate(
+            lambda: self._search(query, limit) or [])
 
     def _fetch_polite(self, url: str) -> tuple[str, str]:
         if self._scheduler is None:
             got = self._fetch(url)
             text = got.text if isinstance(got, Fetched) else (got or "")
             return text, (got.published_at if isinstance(got, Fetched) else "")
-        source, delay = self._scheduler.acquire()
-        if not source:
+        got = self._through_gate(lambda: self._fetch(url))
+        if got is None:
             return "", ""
+        text = got.text if isinstance(got, Fetched) else (got or "")
+        return text, (got.published_at if isinstance(got, Fetched) else "")
+
+    def _through_gate(self, attempt):
+        """One call through the politeness gate: wait, rotate, fail fast.
+
+        A "no source ready" answer is a *wait*, not a miss — the scheduler
+        caps its own sleep suggestion, so the loop below spends a few short
+        waits (checking cancellation between each) and never holds the run
+        hostage to a long queue. A challenge page is a rotation: mark the
+        source hot, give the slot back, and let the next acquire land on
+        somebody else. Only an unschedulable request — everything hot — ends
+        as a miss, which is the honest answer when every source is cooling
+        down and the caller has queries left.
+        """
+        if self._scheduler is None:
+            return attempt()
         import time as _time
-        if delay > 0:
-            _time.sleep(min(delay, 5.0))
-        try:
-            got = self._fetch(url)
-            self._scheduler.report(source)
-            text = got.text if isinstance(got, Fetched) else (got or "")
-            return text, (got.published_at if isinstance(got, Fetched) else "")
-        except Exception:
-            self._scheduler.report(source, failed=True)
-            return "", ""
-        finally:
-            self._scheduler.release()
+        deadline = _time.monotonic() + _MAX_GATE_WAIT
+        while _time.monotonic() < deadline:
+            self.check_cancelled()
+            source, delay = self._scheduler.acquire()
+            if not source:
+                _time.sleep(max(0.05, min(delay, 1.0)))
+                continue
+            try:
+                if delay > 0:
+                    _time.sleep(min(delay, 5.0))
+                return attempt()
+            except LocalSearchError:
+                self._scheduler.report(source, blocked=True)
+                return None
+            except Exception:
+                self._scheduler.report(source, failed=True)
+                return None
+            finally:
+                self._scheduler.release()
+        return None
 
     def _read(self, task: ResearchTask, batch: list[Document]) -> dict:
         limit = max(500, int(self.spend.context_chars))
