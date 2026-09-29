@@ -3,6 +3,11 @@ import type * as T from "./types";
 export class ApiError extends Error {
     /** The server's own last stack frames, when it sent any. */
     public trace: string[] = [];
+    /** The raw `detail`, when the server sent a structured one rather than a
+     * plain string — a caller that needs a field off it (a downgrade's
+     * `installed`/`offered`) reads this instead of parsing prose back out of
+     * `message`. */
+    public detail: unknown = undefined;
 
     constructor(
         public status: number,
@@ -23,7 +28,7 @@ export class ApiError extends Error {
  * nothing. A local app has one reader and no log viewer: whatever this returns
  * is the entire diagnosis available to them.
  */
-function explain(body: string): { message: string; trace: string[] } {
+function explain(body: string): { message: string; trace: string[]; detail: unknown } {
     try {
         const parsed = JSON.parse(body) as {
             detail?: unknown;
@@ -33,20 +38,48 @@ function explain(body: string): { message: string; trace: string[] } {
         const trace = Array.isArray(parsed.trace)
             ? parsed.trace.map(String)
             : [];
-        if (typeof detail === "string" && detail) return { message: detail, trace };
-        if (detail !== undefined) return { message: JSON.stringify(detail), trace };
-        return { message: body, trace };
+        if (typeof detail === "string" && detail) return { message: detail, trace, detail };
+        // A 422 from pydantic sends `detail` as a list of {loc, msg, type} —
+        // one per field that failed. Read as "field: reason" it names exactly
+        // what to change; read as JSON.stringify it is `[{"loc":["body",...`,
+        // which named nothing more than the generic "422" already did.
+        if (Array.isArray(detail) && detail.length) {
+            const readable = detail
+                .map((one) => {
+                    if (
+                        one && typeof one === "object" && "msg" in one
+                        && typeof (one as { msg: unknown }).msg === "string"
+                    ) {
+                        const loc = (one as { loc?: unknown }).loc;
+                        const field = Array.isArray(loc) ? String(loc.at(-1)) : "";
+                        const msg = (one as { msg: string }).msg;
+                        return field ? `${field}: ${msg}` : msg;
+                    }
+                    return JSON.stringify(one);
+                })
+                .join("; ");
+            return { message: readable, trace, detail };
+        }
+        if (detail && typeof detail === "object" && "message" in detail) {
+            const withMessage = detail as { message: unknown };
+            if (typeof withMessage.message === "string") {
+                return { message: withMessage.message, trace, detail };
+            }
+        }
+        if (detail !== undefined) return { message: JSON.stringify(detail), trace, detail };
+        return { message: body, trace, detail: undefined };
     } catch {
-        return { message: body, trace: [] };
+        return { message: body, trace: [], detail: undefined };
     }
 }
 
 async function request<R>(path: string, init?: RequestInit): Promise<R> {
     const response = await fetch(path, init);
     if (!response.ok) {
-        const { message, trace } = explain(await response.text());
+        const { message, trace, detail } = explain(await response.text());
         const error = new ApiError(response.status, message);
         error.trace = trace;
+        error.detail = detail;
         throw error;
     }
     return (await response.json()) as R;
@@ -72,14 +105,60 @@ const del = <R>(path: string) => request<R>(path, { method: "DELETE" });
 
 const seg = encodeURIComponent;
 
+/**
+ * A per-navigation memo for the handful of endpoints nearly every screen
+ * reads on mount — status, settings, packs. Without this, App.svelte, the
+ * mode/theme initializers, the rail's instruments and NextStep each fetch
+ * their own copy of the same fact independently, so one route load turned
+ * into 3-5 identical round trips to the same endpoint (B145 perf-1/uicode-4).
+ *
+ * A short TTL, not a subscription: nothing here needs to be told the instant
+ * settings changes, and a store that every one of those modules had to
+ * subscribe to and unwrap would be a bigger change for the same effect. A
+ * failed fetch is evicted immediately rather than cached, so a transient
+ * error does not get replayed to every other caller for the rest of the
+ * window.
+ */
+const CACHE_TTL_MS = 3000;
+const _cache = new Map<string, { promise: Promise<unknown>; at: number }>();
+
+function cached<R>(key: string, fetcher: () => Promise<R>): Promise<R> {
+    const now = Date.now();
+    const hit = _cache.get(key);
+    if (hit && now - hit.at < CACHE_TTL_MS) return hit.promise as Promise<R>;
+    const promise = fetcher();
+    promise.catch(() => _cache.delete(key));
+    _cache.set(key, { promise, at: now });
+    return promise;
+}
+
+/** Drop a cached fetch so the next caller sees what was just written, rather
+ *  than the memo of what was there before. */
+function invalidate(key: string) {
+    _cache.delete(key);
+}
+
+/**
+ * Test-only escape hatch. A suite that stubs a fresh `fetch` per test and then
+ * calls `api.status()`/`api.settings()`/`api.packs()` more than once inside the
+ * cache's TTL window would otherwise see the first test's stubbed response
+ * replayed into the second test — a real symptom this same cache would produce
+ * in the app if the reader's settings changed and the rail kept showing the
+ * old ones. Call this from `afterEach`/`beforeEach` wherever a suite exercises
+ * these endpoints more than once.
+ */
+export function clearApiCache() {
+    _cache.clear();
+}
+
 export const api = {
     health: () => get<T.Health>("/api/health"),
-    status: () => get<T.Status>("/api/status"),
+    status: () => cached("status", () => get<T.Status>("/api/status")),
     activity: (limit = 20) =>
         get<{ items: T.ActivityItem[]; malformed: number }>(
             `/api/activity?limit=${limit}`,
         ),
-    packs: () => get<T.Pack[]>("/api/packs"),
+    packs: () => cached("packs", () => get<T.Pack[]>("/api/packs")),
     kinds: () => get<T.Kind[]>("/api/kinds"),
     agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
     agentTargets: () => get<T.AgentTargets>("/api/agent-targets"),
@@ -120,6 +199,10 @@ export const api = {
         del<{ removed: boolean }>(`/api/marks/${seg(packId)}/${seg(claimId)}`),
     subjects: (q: string, limit = 60) =>
         get<T.Subject[]>(`/api/subjects?limit=${limit}&q=${encodeURIComponent(q)}`),
+    search: (q: string, packId: string, limit = 8) =>
+        get<{ items: T.SearchHit[] }>(
+            `/api/search?limit=${limit}&pack_id=${seg(packId)}&q=${encodeURIComponent(q)}`,
+        ).then((r) => r.items),
     weakest: (limit = 40) =>
         get<{ claims: T.ClaimHealth[] }>(`/api/health/weakest?limit=${limit}`),
     healthSubject: (subjectId: string) =>
@@ -138,11 +221,13 @@ export const api = {
      * rather than a request: it spawns an agent that searches for minutes, and
      * the reply is worth outliving the page. Installs nothing.
      */
-    authorPack: (category: string, harness = "") =>
-        postJson<{ job_id: string; kind: string }>(
-            "/api/packs/author",
-            harness ? { category, harness } : { category },
-        ),
+    authorPack: (category: string, harness = "", timeoutSeconds = 0) =>
+        postJson<{ job_id: string; kind: string }>("/api/packs/author", {
+            category,
+            ...(harness ? { harness } : {}),
+            // 0 is the server's own ceiling; only a chosen limit goes on the wire.
+            ...(timeoutSeconds > 0 ? { timeout_seconds: timeoutSeconds } : {}),
+        }),
     // Packs an agent drafted. It writes files and installs nothing, so the
     // install below is the only way one of these reaches the store.
     packDrafts: () => get<{ items: T.PackDraft[] }>("/api/packs/drafts"),
@@ -167,13 +252,22 @@ export const api = {
     discardPackDraft: (slug: string) =>
         del<{ slug: string }>(`/api/packs/drafts/${seg(slug)}`),
     lookup: (body: T.LookupRequest) => postJson<T.LookupResult>("/api/lookup", body),
-    analyze: (body: T.AnalyzeRequest) => postJson<T.AnalyzeResult>("/api/analyze", body),
+    analyze: (body: T.AnalyzeRequest) =>
+        postJson<T.AnalyzeResult | T.UnreadPage>("/api/analyze", body),
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
-    settings: () => get<Record<string, unknown>>("/api/settings"),
+    /** The saved question asked again of the knowledge as it is now (B152.4). */
+    refreshLookup: (lookupId: string) =>
+        postJson<T.StoredLookup & { refreshed: boolean; clock: string }>(
+            `/api/lookup/${seg(lookupId)}/refresh`, {}),
+    knowledgeClock: () => get<{ clock: string }>("/api/knowledge/clock"),
+    settings: () => cached("settings", () => get<Record<string, unknown>>("/api/settings")),
     putSettings: (values: Record<string, unknown>) =>
-        postJson<Record<string, unknown>>("/api/settings", { values }),
+        postJson<Record<string, unknown>>("/api/settings", { values }).then((r) => {
+            invalidate("settings");
+            return r;
+        }),
     /** Every re-check this app has done, in one request: a report shows
      * forty claims, and forty requests to say "not checked yet" is not a
      * feature. */
@@ -269,6 +363,12 @@ export const api = {
     scales: () => get<T.Scales>("/api/scales"),
     /** A route another process asked this window to show, consumed once. */
     focus: () => get<{ route: string | null }>("/api/focus"),
+    // The close button's notice, drawn here instead of by the OS (B152).
+    window: () => get<{ shell: boolean; close_notice: boolean }>("/api/window"),
+    windowAction: (action: "ack" | "hide" | "quit", remember = false) =>
+        postJson<{ action: string; shell: boolean }>("/api/window", { action, remember }),
+    setCloseNotice: (on: boolean) =>
+        putJson<{ close_notice: boolean }>("/api/window/close-notice", { on }),
     subject: (subjectId: string) => get<T.SubjectDetail>(`/api/subjects/${seg(subjectId)}`),
     brief: (subjectId: string) =>
         get<T.Brief>(`/api/subjects/${seg(subjectId)}/brief`),
@@ -355,22 +455,44 @@ export const api = {
     setEnabled: (packId: string, enabled: boolean) =>
         request<unknown>(`/api/packs/${seg(packId)}/enabled?enabled=${enabled}`, {
             method: "POST",
+        }).then((r) => {
+            invalidate("packs");
+            return r;
         }),
     activate: (packId: string, revision: string) =>
         request<unknown>(
             `/api/packs/${seg(packId)}/activate?revision=${encodeURIComponent(revision)}`,
             { method: "POST" },
-        ),
-    packUpdates: () => get<T.PackUpdates>("/api/packs/updates"),
+        ).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
+    /** `fresh` bypasses the server's own cache (see `check_pack_updates` in
+     *  `app/web/routers/jobs.py`) — used only by an explicit "Check for
+     *  updates" press. Every other caller takes the cached answer, which
+     *  is what keeps this off the critical path of a page load. */
+    packUpdates: (fresh = false) =>
+        get<T.PackUpdates>(`/api/packs/updates${fresh ? "?fresh=true" : ""}`),
     updatePacks: (packId?: string) =>
         postJson<{ job_id: string; kind: string }>("/api/packs/update", {
             pack_id: packId ?? null,
         }),
-    installPack: (file: File) =>
-        request<{ pack: T.Pack; revision: T.Revision }>("/api/packs/install", {
-            method: "POST",
-            headers: { "X-Filename": file.name },
-            body: file,
+    installPack: (file: File, allowDowngrade = false) =>
+        request<{ pack: T.Pack; revision: T.Revision }>(
+            `/api/packs/install${allowDowngrade ? "?allow_downgrade=true" : ""}`,
+            {
+                method: "POST",
+                headers: { "X-Filename": file.name },
+                body: file,
+            },
+        ).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
+    uninstallPack: (packId: string) =>
+        request<unknown>(`/api/packs/${seg(packId)}`, { method: "DELETE" }).then((r) => {
+            invalidate("packs");
+            return r;
         }),
     bench: () => get<T.Bench>("/api/bench"),
     estimateBench: (body: T.BenchRequest) => postJson<T.BenchEstimate>("/api/bench/estimate", body),

@@ -1,143 +1,77 @@
 # Installing Kriko on Windows
 
-Follow this top to bottom. It assumes nothing and asks you nothing.
+Top to bottom. If a step fails, **stop** and read the box under it.
 
-If a step fails, **stop there** and read the box under it — each failure below
-is one somebody has actually hit.
-
----
+```mermaid
+flowchart LR
+    I["Install into venv + check version"] --> E["Load unpacked extension"] --> V["Verify: panel + /api/health"]
+```
 
 ## 1. Check your Python
-
-Open PowerShell and run:
-
 ```powershell
 py -3.12 --version
 ```
 
-You want `Python 3.12.x` or newer. Kriko needs 3.13 or newer to run its own
-test suite, but 3.12 is enough to install and use it.
+Want 3.12+ (3.13+ for the test suite).
 
-> **`py` is not recognised** — Python is not installed. Get it from
-> [python.org/downloads](https://www.python.org/downloads/) and tick **Add
-> python.exe to PATH** in the installer.
-
----
+> **`py` is not recognised** — install from [python.org/downloads](https://www.python.org/downloads/) with **Add python.exe to PATH** ticked.
 
 ## 2. Install into its own place
-
-Do not install into your system Python. A virtual environment keeps Kriko's
-dependencies away from everything else, and makes uninstalling it one delete.
-
 ```powershell
 py -3.12 -m venv $HOME\kriko-env
 $HOME\kriko-env\Scripts\pip install --upgrade pip
 $HOME\kriko-env\Scripts\pip install kriko
 ```
 
-Installing from a checkout instead? Use the folder, not the name:
-
-```powershell
-$HOME\kriko-env\Scripts\pip install C:\path\to\kriko
-```
-
----
+From a checkout: `$HOME\kriko-env\Scripts\pip install C:\path\to\kriko`.
 
 ## 3. Check it worked
-
 ```powershell
 $HOME\kriko-env\Scripts\kriko --version
 ```
 
-You should see `kriko` and a version number. That command needs no data, no
-packs and no network, so if it works, the install is sound.
+No data, packs or network needed — a version number means a sound install.
 
 > ### `ModuleNotFoundError: No module named 'kriko'`
->
-> The command was installed and the code behind it was not. This is a
-> packaging fault, never something you did. Collect these three answers before
-> reporting it — they identify which of the three causes it is:
->
 > ```powershell
 > $HOME\kriko-env\Scripts\pip show -f kriko
 > $HOME\kriko-env\Scripts\python -c "import kriko, app; print('both import')"
 > where.exe kriko
 > ```
->
-> * **`pip show -f` lists no `kriko\` files** — the artifact is wrong.
-> * **Both import, but `kriko.exe` fails** — `where.exe kriko` is finding a
->   different install earlier on your PATH. Use the full path above.
-> * **`pip show` finds nothing at all** — it installed into another
->   interpreter. Redo step 2, using the full `$HOME\kriko-env\Scripts\` paths
->   rather than a bare `pip`.
-
----
+> * No `kriko\` files in `pip show -f` — bad artifact, report it.
+> * Both import but `kriko.exe` fails — another install earlier on PATH.
+> * `pip show` finds nothing — wrong interpreter; redo step 2 with full paths.
 
 ## 4. Start it
-
 ```powershell
 $HOME\kriko-env\Scripts\python -m app.web
 ```
 
-Leave that window open and go to **http://127.0.0.1:8787**.
-
-The terminal console is `$HOME\kriko-env\Scripts\kriko tui` instead, if you
-would rather not use a browser.
-
----
+Keep that window open; open **http://127.0.0.1:8787** (or `$HOME\kriko-env\Scripts\kriko tui` for a terminal UI).
 
 ## 5. Install the browser extension
 
-The extension is what puts Kriko on a listing page. It is not on the Chrome
-Web Store — you load it from disk.
+Not on the Web Store — load from disk:
 
-1. In the app, open **Browser extension** and press **Put the files somewhere
-   I can load them**. It tells you the folder. Copy that path.
-2. Open `chrome://extensions` in Chrome or Edge.
-3. Turn on **Developer mode** (top right).
-4. Press **Load unpacked** and pick the folder from step 1.
-5. Kriko appears in your extensions list. Pin it so the toolbar button is
-   visible.
-
-> **"Manifest file is missing or unreadable"** — you picked the wrong folder.
-> Pick the one *containing* `manifest.json`, not its parent.
-
+1. App → **Browser extension** → **Put the files somewhere I can load them**. Copy the shown folder path.
+2. `chrome://extensions` → **Developer mode** on → **Load unpacked** → that folder (the one *containing* `manifest.json`). Pin Kriko.
 ### Then grant it the sites
 
-This step is separate and it is not optional. Chrome only lets an extension
-ask for permission to read a site from inside the extension itself, so
-registering a site in the app is never enough on its own.
-
-1. Right-click the Kriko toolbar button → **Options**.
-2. Any site waiting on you is listed there. Press **Grant**.
-3. Chrome asks you to confirm. The panel works on that site from the next page
-   load.
-
-> **The panel does not appear on a site you added** — open the app's **Sites**
-> screen. Each site says what is stopping it: *needs permission* means do the
-> three steps above; *no adapter* means nothing can read that site yet.
-
----
+App-side registration is never enough — Chrome grants site permission only from inside the extension:
+1. Right-click Kriko toolbar button → **Options** → **Grant** each waiting site → confirm. Works from the next page load.
+2. Panel still missing? App → **Sites** tells why: *needs permission* (redo above) or *no adapter* (unreadable yet).
 
 ## 6. Uninstall
-
 ```powershell
 Remove-Item -Recurse $HOME\kriko-env
 ```
 
-Your knowledge and history live in `$HOME\.kriko` and are left alone. Delete
-that folder too if you want them gone.
-
----
+`$HOME\.kriko` (knowledge + history) survives; delete it too for a full wipe.
 
 ## Reporting a problem
-
-Include the output of:
-
 ```powershell
 $HOME\kriko-env\Scripts\kriko --version
 $HOME\kriko-env\Scripts\pip show -f kriko
 ```
 
-and, if the app started, what **http://127.0.0.1:8787/api/health** returns.
-Those three answer most of the questions anybody would ask you.
+Plus **http://127.0.0.1:8787/api/health**, if the app started.

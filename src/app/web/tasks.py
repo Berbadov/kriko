@@ -1114,28 +1114,44 @@ def _installed_rows(conn):
     ).fetchall()
 
 
-def check_updates(settings, index_url: str = "") -> dict:
-    """Compare what is installed against what the index offers.
+#: How long a check's answer is good for. Every screen that shows a hint
+#: about pack updates asks on every navigation (B145 perf-3/knowledge-2); this
+#: is what turns "one real fetch to a remote index per navigation" into "one
+#: real fetch per five minutes", which is the difference between an endpoint
+#: that is fast on repeat visits and one that never gets fast at all. Keyed by
+#: URL, not global, so a reader who points this at their own index during
+#: development never sees another URL's stale answer.
+_UPDATES_CACHE_TTL = 300
+_updates_cache: dict[str, tuple[float, list, str | None, str | None, str]] = {}
 
-    Synchronous and cheap — one small JSON fetch — so it is a request rather
-    than a job. Network failure is reported as a value, not raised: "we could
-    not reach the index" is a legitimate answer to "is anything newer", and a
-    500 would make the Packs screen look broken when only the network is.
+
+def _friendly_index_error(exc: Exception) -> str:
+    """A sentence, not a protocol code — see B145 apicode-1/knowledge-21.
+
+    `HTTPError: HTTP Error 404: Not Found` is accurate and useless to a reader
+    with no terminal: it names a status they cannot act on. Distinguishing
+    "nothing published" from "nothing reachable" is the one thing worth
+    keeping, because the remedy differs (wait for a release vs. check the
+    network); everything else collapses to one plain sentence. The exception
+    itself keeps travelling as `error_detail`, for whoever files the bug.
     """
-    url = index_url or settings.pack_index_url
-    conn = connect(settings.store_path)
-    try:
-        rows = _installed_rows(conn)
-    finally:
-        conn.close()
+    import urllib.error
 
-    try:
-        candidates = packsource.fetch_index(url)
-    except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
+    if isinstance(exc, urllib.error.HTTPError) and exc.code == 404:
+        return "The pack index has nothing published yet."
+    if isinstance(exc, (urllib.error.URLError, OSError)):
+        return "The pack download site could not be reached."
+    return "Could not check for pack updates."
+
+
+def _updates_payload(url: str, rows, candidates: list, error: str | None,
+                      error_detail: str | None, checked_at: str) -> dict:
+    if error:
         return {
             "index_url": url,
-            "error": f"{type(exc).__name__}: {exc}",
-            "checked_at": _now(),
+            "error": error,
+            "error_detail": error_detail,
+            "checked_at": checked_at,
             "packs": [
                 {
                     "pack_id": row["pack_id"],
@@ -1183,7 +1199,57 @@ def check_updates(settings, index_url: str = "") -> dict:
         for c in candidates
         if c.pack_id not in known
     ]
-    return {"index_url": url, "error": None, "checked_at": _now(), "packs": payload}
+    return {
+        "index_url": url,
+        "error": None,
+        "error_detail": None,
+        "checked_at": checked_at,
+        "packs": payload,
+    }
+
+
+def check_updates(settings, index_url: str = "", *, fresh: bool = False) -> dict:
+    """Compare what is installed against what the index offers.
+
+    Synchronous and cheap — one small JSON fetch, and only when the cache
+    below is cold or `fresh` is asked for — so it is a request rather than a
+    job. Network failure is reported as a value, not raised: "we could not
+    reach the index" is a legitimate answer to "is anything newer", and a 500
+    would make the Packs screen look broken when only the network is.
+
+    `fresh=False` (every screen's own background hint) reuses the last answer
+    for this URL within `_UPDATES_CACHE_TTL`, so the remote fetch that used to
+    happen on every navigation now happens at most once per window — see
+    B145 perf-3, knowledge-2, knowledge-19. `fresh=True` is the reader's own
+    "Check for updates" press: it always pays for the round trip, and its
+    answer refills the cache for every other screen too.
+    """
+    import time
+
+    url = index_url or settings.pack_index_url
+    conn = connect(settings.store_path)
+    try:
+        rows = _installed_rows(conn)
+    finally:
+        conn.close()
+
+    cached = _updates_cache.get(url)
+    if not fresh and cached is not None and time.monotonic() - cached[0] < _UPDATES_CACHE_TTL:
+        _, candidates, error, error_detail, checked_at = cached
+        return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
+
+    try:
+        candidates = packsource.fetch_index(url)
+        error = None
+        error_detail = None
+    except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
+        candidates = []
+        error = _friendly_index_error(exc)
+        error_detail = f"{type(exc).__name__}: {exc}"
+
+    checked_at = _now()
+    _updates_cache[url] = (time.monotonic(), candidates, error, error_detail, checked_at)
+    return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
 
 
 def pack_update(settings, params: dict, progress: Progress) -> dict:
@@ -1196,7 +1262,13 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
     only = params.get("pack_id") or ""
     index_url = params.get("index_url") or settings.pack_index_url
     progress.set(0.05, f"reading {index_url}")
-    candidates = packsource.fetch_index(index_url)
+    try:
+        candidates = packsource.fetch_index(index_url)
+    except Exception as exc:  # noqa: BLE001 — a sentence, not a protocol code
+        # Same mapping as `check_updates`: this job's failure message is what
+        # settings-2's Welcome screen shows the reader verbatim, and a raw
+        # HTTPError read as "the engine died" (B145 settings-2).
+        raise RuntimeError(_friendly_index_error(exc)) from exc
     progress.log(f"index offers {len(candidates)} pack(s)")
 
     conn = connect(settings.store_path)
@@ -1350,8 +1422,13 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "identity and state any variant assumptions explicitly. The product-only "
             "scope overrides any broader category or lineup instructions above. "
             "Keep the same output contract and evidence requirements. "
-            "Do not install anything."
+            "Do not install anything; Kriko decides that."
         )
+    # What the listing says (B150): the reader asked for the agents to
+    # settle the exact version from the page, not to ask them for it.
+    from app import pagefacts
+
+    prompt += pagefacts.block(params.get("page"))
     reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")
@@ -1370,11 +1447,13 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         progress.log(f"wrote {name}")
     if written["notes"]:
         progress.log(f"the author noted: {written['notes']}")
+    installed = _install_draft(settings, written, progress) if params.get("install") else ""
     progress.set(
         1.0,
         f"drafted {written['pack_id']} — {written['subjects']} subject(s), "
-        f"{written['claims']} claim(s). Nothing is installed yet: read it on "
-        f"Knowledge and press Install."
+        f"{written['claims']} claim(s). "
+        + ("Installed." if installed
+           else "Nothing is installed yet: read it on Knowledge and press Install.")
     )
     written["category"] = category
     written["scope"] = scope
@@ -1397,6 +1476,99 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             + " — press “Cover the gaps” on the draft to ask for them"
         )
     return written
+
+
+#: How long a quick look may take before it is not quick. Long enough for a
+#: few searches and three pages on a slow connection; short enough that the
+#: reader is still on the listing when it answers. (B148)
+QUICK_LOOK_TIMEOUT_SECONDS = 240
+
+
+def quick_look(settings, params: dict, progress: Progress) -> dict:
+    """A chat-speed answer for a product no pack knows yet. (B148)
+
+    The reader's words: "in normal claude or Mistral vibe chat they can search
+    web and answer instantly". The only door for an unknown product was a whole
+    pack authored from scratch, so the listing showed nothing for forty
+    minutes and then showed a draft. This is one short call at the lowest
+    effort the CLI takes; the deeper run (`deepen_job_id`) starts beside it.
+
+    Writes nothing to the store. The risks are a job result the panel renders,
+    each with the page and quote it claims — `quicklook.parse` drops the rest.
+    """
+    from app import quicklook
+    from app.providers import harness_researcher
+    from kriko.research import pack_asset
+
+    product = str(params.get("product") or "").strip()
+    if not product:
+        raise ValueError("name the product — the quick look has nothing else to go on")
+
+    principle = ""
+    pack_id = str(params.get("pack_id") or "")
+    if pack_id:
+        store = connect(settings.store_path)
+        try:
+            principle = pack_asset(store, pack_id, "research/principle.md")
+        finally:
+            store.close()
+
+    researcher = harness_researcher(
+        preferred=str(params.get("harness") or ""),
+        app_state_path=settings.app_state_path,
+        timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
+        # Low, whatever the reader's everyday dial says: this is the chat-speed
+        # pass. A CLI that does not declare `low` has it dropped rather than
+        # refused (`harness_researcher`), so the dial never costs the run.
+        effort="low",
+    )
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+
+    progress.set(0.1, f"a quick look at {product}")
+    reply = researcher.ask(quicklook.brief(product, principle, params.get("page")))
+    progress.check()
+    found = quicklook.parse(reply)
+    kept = len(found["risks"])
+    progress.set(1.0, (
+        f"{kept} risk(s) found" if kept else "nothing it could source in the time")
+        + (f", {found['dropped']} unsourced dropped" if found["dropped"] else ""))
+    return {
+        "product": product,
+        **found,
+        "deepen_job_id": str(params.get("deepen_job_id") or ""),
+        "harness": getattr(getattr(researcher, "harness", None), "id", ""),
+    }
+
+
+def _install_draft(settings, written: dict, progress: Progress) -> str:
+    """Install what was just drafted, the way the reader's Install press does.
+
+    Asked for by the reader for the listing's "Research this product" (B148):
+    "yes it should install itslef". The same build-then-install path as
+    `POST /api/packs/drafts/{slug}/install`, so nothing here is a second
+    definition of a valid pack. A draft that will not build or install stays
+    a draft and the log says why — fail open, never a failed run over work
+    that is still on disk to fix.
+    """
+    from app import packdraft
+
+    slug = written.get("slug") or ""
+    try:
+        artifact = packdraft.build_artifact(settings.store_path, slug)
+        store = connect(settings.store_path)
+        try:
+            pack_id = packstore.install(store, artifact)
+        finally:
+            store.close()
+        packdraft.mark_installed(settings.store_path, slug, pack_id)
+    except Exception as exc:  # noqa: BLE001 — the draft is kept either way
+        progress.log(f"kept as a draft, not installed: {exc}")
+        return ""
+    written["installed"] = True
+    written["pack_id"] = pack_id
+    progress.log(f"installed {pack_id}")
+    return pack_id
 
 
 def pack_amend(settings, params: dict, progress: Progress) -> dict:
@@ -1585,7 +1757,7 @@ def _disambiguate(settings, researcher, subject, params,
     progress.set(0.05, f"checking what “{subject}” actually means")
     try:
         found = disambiguate.parse(
-            researcher.ask(disambiguate.brief(subject, keys)))
+            researcher.ask(disambiguate.brief(subject, keys, params.get("page"))))
     except Cancelled:
         raise
     except Exception as exc:  # noqa: BLE001 — a lost question, never a lost run
@@ -1989,7 +2161,19 @@ def bench(settings, params: dict, progress: Progress) -> dict:
     finally:
         app_conn.close()
 
-    progress.set(1.0, f"{len(rows)} measurement(s) across {len(chosen)} plane(s)")
+    failed = sum(1 for row in rows if row.get("error"))
+    message = f"{len(rows)} measurement(s) across {len(chosen)} plane(s)"
+    if failed:
+        message += f", {failed} failed"
+    progress.set(1.0, message)
+    if rows and failed == len(rows):
+        # ops-1: every case in this run raised before it could be scored. A
+        # `succeeded` job with an empty readout ("No benchmark runs yet")
+        # reads as nothing having run at all — the reader needs the red
+        # state, not a quiet miscount. The rows themselves are still on the
+        # job's own partial result (state.partial_of), so nothing measured
+        # is lost by failing loudly here.
+        raise RuntimeError(f"every case failed — {rows[0]['error']}")
     return {
         "batch_id": batch_id,
         "cases": [case["subject_id"] for case in found],
@@ -2013,6 +2197,7 @@ HANDLERS = {
     "research_undo": research_undo,
     "pack_build": pack_build,
     "pack_author": pack_author,
+    "quick_look": quick_look,
     "pack_amend": pack_amend,
     "verify": verify,
     "site_register": site_register,

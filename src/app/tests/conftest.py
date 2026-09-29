@@ -30,6 +30,31 @@ import pytest
 FORBIDDEN = (Path.home() / ".kriko").resolve()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def the_app_log_is_not_the_readers(tmp_path_factory):
+    """The one redirect here, because no fixture *can* say where this lives.
+
+    `create_app` attaches a process-wide rotating handler at `KRIKO_LOG`, else
+    `~/.kriko/logs/app.log`, and `Settings` has no field for it. So every test
+    that built an app appended to the reader's log — and on Windows, where the
+    installed Kriko holds that file open, each rollover failed with WinError 32
+    inside `create_app` and the suite stalled there.
+    """
+    import os
+
+    from app import logs
+
+    before = os.environ.get("KRIKO_LOG")
+    os.environ["KRIKO_LOG"] = str(tmp_path_factory.mktemp("logs") / "app.log")
+    logs.reset_for_tests()
+    yield
+    logs.reset_for_tests()
+    if before is None:
+        os.environ.pop("KRIKO_LOG", None)
+    else:
+        os.environ["KRIKO_LOG"] = before
+
+
 @pytest.fixture(autouse=True)
 def no_writes_to_the_readers_home(monkeypatch):
     from app.web import state
@@ -135,3 +160,12 @@ def no_test_asks_a_real_provider_for_its_models(monkeypatch):
     monkeypatch.setattr(modeldiscovery, "refresh", lambda: {})
     monkeypatch.setattr(modeldiscovery, "_refresh_in_background", lambda: None)
     monkeypatch.setattr(modeldiscovery, "_CACHE", {})
+
+
+@pytest.fixture(autouse=True)
+def every_test_finds_the_clis_afresh(monkeypatch):
+    """`harness.locate` remembers for a few seconds (B152.7); one test's fake
+    CLI on disk must not be another test's installed one."""
+    from app.providers import harness
+
+    monkeypatch.setattr(harness, "_LOCATED", {})

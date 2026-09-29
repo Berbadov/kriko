@@ -77,6 +77,7 @@ KINDS = {
     "research": "research",
     "agenda_run": "agenda",
     "pack_author": "author",
+    "quick_look": "research",
     "pack_amend": "author",
     "verify": "recheck",
     "pack_build": "author",
@@ -156,8 +157,9 @@ def summarise(value) -> str:
 
 @contextmanager
 def record(
-    app_state_path,
+    app_state_path=None,
     *,
+    conn=None,
     door: str,
     name: str,
     kind: str = "",
@@ -169,14 +171,25 @@ def record(
     Used as a context manager so an exception inside the body is recorded as a
     `failed` operation and then re-raised untouched: the caller's error
     handling is not this module's business.
+
+    `conn`, when given, is an already-open app.sqlite connection this call
+    reuses instead of opening (and later closing) its own — pass `conn` from
+    a caller that already holds one (e.g. a FastAPI handler with
+    `Depends(get_app_state)`) rather than `app_state_path`. Every call site
+    used to pay for a second connect and two more commits on top of whatever
+    the caller already opened, which on `/api/analyze` — run on every single
+    lookup — cost more than the lookup itself (B145 apicode-2). A caller with
+    no live connection (the CLI, MCP, a background job) still passes
+    `app_state_path` and gets the original one-shot behaviour.
     """
     from app.web import state
 
-    conn = None
+    owns_conn = conn is None
     op_id = 0
     started = time.monotonic()
     try:
-        conn = state.connect(Path(app_state_path))
+        if owns_conn:
+            conn = state.connect(Path(app_state_path))
         op_id = state.open_operation(
             conn,
             door=door,
@@ -192,7 +205,9 @@ def record(
             job_id=job_id,
         )
     except Exception:  # noqa: BLE001 — see the module docstring
-        conn, op_id = None, 0
+        op_id = 0
+        if owns_conn:
+            conn = None
 
     outcome: _Outcome = {
         "state": "ok",
@@ -226,8 +241,8 @@ def record(
                 )
             except Exception:  # noqa: BLE001
                 pass
-            finally:
-                try:
-                    conn.close()
-                except Exception:  # noqa: BLE001
-                    pass
+        if owns_conn and conn is not None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass

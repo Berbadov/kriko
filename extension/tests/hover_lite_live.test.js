@@ -138,3 +138,53 @@ test("the feed keeps being asked while the panel is open", () => {
 
   assert.ok(asked() > first, "the poll stopped after one answer");
 });
+
+test("a tab left in the background stops asking, and asks again when looked at", () => {
+  const p = analyzing({ operationsResponse: RUNNING });
+  const asked = () => p.sent.filter((one) => one.type === "OPERATIONS").length;
+  const doc = p.dom.window.document;
+  let hidden = true;
+  Object.defineProperty(doc, "hidden", { configurable: true, get: () => hidden });
+
+  p.flushTimers();
+  const whileHidden = asked();
+  p.flushTimers();
+  assert.equal(asked(), whileHidden, "a hidden tab kept polling");
+
+  hidden = false;
+  doc.dispatchEvent(new p.dom.window.Event("visibilitychange"));
+  assert.ok(asked() > whileHidden, "coming back into view did not ask again");
+});
+
+// ── the answer follows the knowledge (B152.4) ──────────────────────────
+//
+// "like a card added by the agent we instantly see the new card." The live
+// poll carries the knowledge clock; when it moves, the open answer is asked
+// again in place, and a card that was not there before says so.
+
+const CLAIM = (title) => ({ pack_id: "p", claim_id: title, title, body: "", severity: "high" });
+const ANSWER = (claims) => ({
+  ok: true, listing: {},
+  result: { lookup_id: "abc", claims, coverage: "RISKS_FOUND", identity: {}, context: {},
+            packs: [{ pack_id: "p", version: "0.1.0" }] },
+});
+
+test("a moved knowledge clock asks for the open answer again, and a new card is marked New", () => {
+  const ops = { ok: true, feed: { items: [], knowledge: "a-0" } };
+  const p = loadPanel({ operationsResponse: ops });
+  p.openPanel();
+  p.deliverEntry(ANSWER([CLAIM("Old risk")]));
+  p.flushTimers();
+  assert.equal(p.sent.filter((m) => m.type === "REFRESH_ANSWER").length, 0);
+
+  ops.feed.knowledge = "a-1";
+  p.flushTimers();
+  const asked = p.sent.filter((m) => m.type === "REFRESH_ANSWER");
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].payload.lookupId, "abc");
+
+  p.deliverEntry(ANSWER([CLAIM("Old risk"), CLAIM("New risk")]));
+  const chips = [...p.shadow().querySelectorAll(".lite-rc-new")];
+  assert.equal(chips.length, 1);
+  assert.match(chips[0].closest("[data-fresh]").textContent, /New risk/);
+});

@@ -1,1043 +1,229 @@
-# Kriko — How It Works
+# Kriko — internals
 
-This document explains every mechanism in detail: data flow, key functions, file paths,
-and the invariants the system relies on. Read this before touching the pipeline.
+Data flow, file paths and the invariants the code relies on. Read before
+touching the pipeline. Package layering lives in
+[ARCHITECTURE.md](ARCHITECTURE.md) and `CLAUDE.md`; this page is the mechanism.
 
----
+## Request path (serving plane)
 
-## Architecture: Four Packages, a Frontend, and a Shell
-
-Dependencies form a fan. Interfaces and pipeline drivers sit above the generic
-engine; each category pack provides its own data, vocabulary, and evidence
-ledger/extraction machinery under `packs/<name>/pipeline/`.
-
-```
-tauri/           desktop shell (Rust) — owns the sidecar's lifetime, nothing else
-ui/              Svelte + Vite frontend source, built into src/app/web/static/
-app/             CLI, local web dashboard, MCP server, job runner, sidecar
-  └─ app/pipeline/  ledger and remediation drivers
-                    └─ packs/     category data, builders, vocabulary, coverage
-                                  └─ packs/cars/pipeline/  evidence ledger and
-                                     grounded extraction for the cars pack
-kriko/           generic pack store, lookup, ranking, and ledger primitives
-extension/       Chrome client for the cars pack adapter
-```
-
-`kriko/` imports none of the other packages. `packs/` does not import `app/` or
-`app/pipeline/`; only pipeline drivers coordinate the evidence pipeline and pack
-data. The structural rules are enforced by
-`src/app/pipeline/tests/test_repo_invariants.py`. The serving database is the local
-SQLite pack store; the evidence ledger is a separate SQLite build database.
-
-The cars source of truth is under `packs/cars/data/`. There is no `backend/`,
-Postgres sync, or Docker-only serving layer in the current architecture.
-
-The pack files are built into the serving SQLite store; the evidence ledger remains
-separate from that read path. `app/pipeline/` is where operations that span packs
-and their pipelines live; the generic ledger mechanics (chunking, ingest, cost
-budgeting) live in `src/kriko/ledger/`, with each pack injecting its own policy.
-
----
-
-## Serving Plane: Request Path
-
-### 1. Content script reads the page with the pack's own rules
-**`extension/content.js`** — `buildScrape(knownLabels, panel)`
-
-Two things come off a listing page, and they have different destinations.
-
-The **fields** are raw `label -> value` pairs, exactly as the page wrote them.
-The content script does not interpret them: which label means `fuel` is the
-adapter's job in `kriko/adapters.py`, and `knownLabels` (from
-`GET /api/adapters`) only tells the script which labels are worth digging for
-when the markup it recognises has moved.
-
-The **listing** half never goes on the wire (see step 2) and is what the panel
-draws over the reader's own page: `damage_info` (the body-damage silhouette),
-`equipment`, and `panel` — the presentation rules for both.
-
-```js
-{
-  url, title, description,
-  fields: { "Yakıt": "Benzinli", ... },   // uninterpreted, as printed
-  listing: { damage_info, equipment, panel },
-}
+```mermaid
+sequenceDiagram
+    participant C as extension/content.js
+    participant B as extension/background.js
+    participant A as routers/analyze.py
+    participant M as kriko/lookup/match.py
+    participant L as kriko/lookup
+    C->>B: buildScrape(knownLabels, panel)
+    B->>A: POST /api/analyze
+    A->>M: adapt scrape to Query, resolve subjects
+    M->>L: lookup(query, conn)
+    L-->>A: claims, only verified + is_current
+    A-->>B: risks + subsystems, always HTTP 200
+    B-->>C: render cards (cached by URL in chrome.storage.session)
 ```
 
-**The `local_panel` block.** Everything the script needs to read those two
-blocks is declared by the adapter, not written in JavaScript: the CSS
-selectors, the site's own words for each damage state, the English titles and
-hints the panel prints, the equipment categories, and the alert thresholds.
-`kriko.adapters.local_panel()` returns it opaque — the engine is not allowed
-to know the shape of someone else's markup any more than it is allowed to know
-their language — and `GET /api/adapters` carries it to the client as
-`local_panel` (`{}` for an adapter that declares none).
+Serving never calls an LLM: `/api/analyze` reads the store.
 
-Until 2026-09-10 this was Turkish regexes and hardcoded thresholds in
-`extension/content.js` and `extension/hover_lite/hover_lite.js`: the same
-failure mode as the pre-pivot `_MAKE_MAP`, in the one part of the tree no
-Python AST gate can read. `test_the_extension_speaks_no_sites_own_language`
-in `src/app/pipeline/tests/test_repo_invariants.py` now fails the suite on any
-non-ASCII *word* in `extension/` (a lone non-ASCII character is a character
-fold, which both `foldTerm`s legitimately need).
+| Step | File | Rule |
+|---|---|---|
+| Scrape | `extension/content.js` | Raw `label -> value`, uninterpreted. `knownLabels` (from `GET /api/adapters`) only says which labels are worth digging for; the adapter decides what a label means (`kriko/adapters.py`). |
+| Panel rules | adapter `local_panel` block | Selectors, damage words, thresholds ride in the adapter, opaque to the engine, never compiled from pack patterns into a `RegExp`. `test_the_extension_speaks_no_sites_own_language` fails non-ASCII words in `extension/`. |
+| Request | `extension/background.js` | Labels and panel travel per request, never cached. `listing` stays out of the request. |
+| Endpoint | `src/app/web/app.py` | Always 200; exceptions become `coverage_state: unavailable`. |
+| Identity | `src/kriko/lookup/match.py` | Match on attribute overlap, never `subject_id` equality. Narrowing is soft: an unmatched hint flags a contradiction, never `no_match`. Result is `Resolution` (`lookup/query.py`): `subject_ids`, `method` (`exact`/`ambiguous`/`no_match`), `notes`, `flags`. |
+| Claims | `src/kriko/lookup/__init__.py` | Reads `claim_variants`, only `verified` and `is_current`. |
+| Ranking | `src/app/web/routers/analyze.py` | severity (0.3 / 0.6 / 1.0) x mileage gate (1.0, or 0.7 unknown) x detection (0.35 for `detection: visual` components, else 1.0) x source trust (NULL neutral). Sorted by `relevance_score`, capped at `MAX_RISKS_PER_LISTING`. Every risk carries `why_shown`; the response adds `subsystems` next to the flat `risks`. |
+| Render | `extension/hover_lite/hover_lite.js` | Risk cards plus local blocks; alerts walk `listing.panel.alerts` in order, `unless: [rule-id]` is an else-branch as data. |
 
-It stays *data* for the same reason the rest of the adapter does: a pack that
-could ship JavaScript into a content script would, on install, be granted the
-ability to run code on every page the extension can see. So no `RegExp` is
-ever built from a pack-supplied pattern — only from declared *terms*, with
-metacharacters escaped.
+**Claim health** (`kriko/lookup/tree.py`) keeps four uncombined signals per
+claim: contradiction (`stance='refutes'`), corroboration, best trust tier,
+staleness (`sources.retrieved_at`). Read them at `GET /api/health/weakest` and
+`GET /api/health/subject/{id}`, or the `subject_health` and `weakest_claims`
+MCP tools. `stance` is written at acceptance (`app/findings.py`).
 
-Two vocabulary details the format documents:
+## Jobs plane
 
-- **Array order is precedence.** `"lokal boyalı"` contains `"boyalı"`, so the
-  narrower state is declared first or the broader one shadows it.
-  `test_the_cars_panel_declares_a_state_before_it_declares_a_narrower_one`
-  enforces it.
-- **`unless: [<rule-id>]`** is an else-branch written as data — the broad
-  "3 panels replaced" rule stays quiet when "2 on the same side" already
-  spoke. It buys the one bit of control flow the alerts needed without giving
-  the declarative format boolean expressions.
+Long work is a row, not a request.
 
-### 2. Background script POSTs to /api/analyze
-**`extension/background.js`** — `_requestScrape(tabId, labels, panel)` then the post
-
-`labels` and `panel` travel per request rather than being cached in the content
-script: the adapter list is refreshed in the service worker, and a scrape
-reading last week's rules would be invisible.
-
-`listing` is **deliberately absent** from the `/api/analyze` body. The engine
-has no schema for a damage silhouette and should not acquire one; the panel
-reads it straight out of the cached entry. That is also why the pack's
-presentation rules ride in `listing.panel` — they reach the renderer without
-reaching the engine.
-
-Results are cached in `chrome.storage.session` by URL.
-
-### 3. FastAPI /analyze endpoint
-**`src/app/web/app.py`** — `create_app()` and the `/api/analyze` route
-
-Always returns HTTP 200. Exceptions are caught and wrapped as `coverage_state: unavailable`.
-
-```python
-meta   = payload.ad_metadata or {}
-match  = match_variant(meta, db)       # → MatchResult
-claims = resolve_claims(match, db)     # → list[Claim]
+```mermaid
+flowchart LR
+    P["POST /api/research<br/>POST /api/packs/build"] --> R["JobRunner<br/>1 worker, web/jobs.py"]
+    R --> T["web/tasks.py<br/>(settings, params, progress)"]
+    R <--> S[("app.sqlite jobs")]
+    S --> V["GET /api/jobs/{id}<br/>/stream (SSE)"]
 ```
 
-### 4. Identity resolver
-**`src/kriko/lookup/match.py`** — generic identity and attribute matching
-
-Pre-pivot this section described a *variant* matcher that normalized
-`make`/`model`/`fuel` and hard-filtered on them. Those four `normalize_*`
-functions are gone, and could not come back: `kriko/` may not contain a
-car-shaped anything (`test_core_is_domain_free.py`). What replaced them takes
-the same three steps with the category supplied as data.
-
-Everything about one category — which attributes are required, which match
-within a numeric tolerance, which must match exactly — arrives as
-`terms.match_json` rows the pack ships. The engine reads them:
-
-- `load_terms(conn, pack_ids)` → the pack's `Term` rows, the match rules themselves.
-- `alias_map(conn, pack_ids)` and `value_alias_map(conn, pack_ids)` → key and
-  value aliases, per pack. Never merged across packs: the cars pack calls a key
-  `make` and accepts `brand` as an alias, drill does the exact opposite, and one
-  merged table makes those two fight until whichever pack loses is unreachable.
-- `normalize_identity(identity, aliases, values)` → caller-supplied keys and
-  values resolved onto the pack's own vocabulary. This is where "Benzinli" →
-  "petrol" happens now, off adapter and pack rows rather than a Python dict.
-- `resolve(conn, query, pack_ids)` → `Resolution`. Each pack resolves in its own
-  words and the engine unions the answers, so ambiguity stays a within-pack
-  question — two packs each confidently answering is not ambiguity.
-- `expand(conn, subject_ids, pack_ids, max_hops=2)` → related subjects, bounded.
-
-Two rules are easy to get wrong and are stated in the module's own docstring:
-
-**Matching is on attribute overlap, never on `subject_id` equality.** Two packs
-whose authors disagreed about identity keys hash the same product to different
-ids; keying lookup on the hash would mean their claims never meet, and the
-pivot's premise — install several packs, get the union — would quietly fail.
-
-**Narrowing is soft.** A hint matching no candidate must never turn a real match
-into `no_match`. A listing whose stated configuration contradicts the catalog
-keeps the subject and flags the contradiction, because dropping it tells the
-reader nothing while keeping it surfaces a coverage gap.
-
-`Resolution` (`src/kriko/lookup/query.py`) carries `subject_ids`, `method`,
-`notes` and `flags`, where `method` is:
-
-- `"exact"` — one subject
-- `"ambiguous"` — several, all returned, all their claims served
-- `"no_match"` — no pack recognised this
-- and `flags` holds the soft-narrowing steps that could not be applied — a
-  stated power that matched nothing, for instance. Never silently dropped;
-  it is the coverage signal.
-
-### 5. Claim resolver
-**`src/kriko/lookup/__init__.py`** — `lookup(query, conn)`
-
-Queries `claim_variants` join table for all matched variant IDs, returns only
-`status='verified'` and `is_current=True` claims.
-
-Visual-detection suppression (payload v2): a claim whose registry component
-(`claims.component_id`, filled by sync from `packs/cars/pipeline/catalog/components.yaml`)
-has `detection: visual` gets `ClaimResult.detection_factor = 0.35` — but ONLY
-when the claim has a component_id and a listing context exists. The claim is
-never dropped (fail-open); the API layer multiplies the factor into
-`relevance_score`.
-
-### 5b. Ranking & payload v2
-**`src/app/web/routers/analyze.py`** — the `/api/analyze` route
-
-`relevance_score = severity weight (low 0.3 / medium 0.6 / high 1.0)
-× mileage-gate match (satisfied 1.0 / unknown 0.7, fail-open)
-× detection factor (visual 0.35 / else 1.0)
-× source-trust weight (best tier across sources, NULL = neutral)`
-
-Risks sort by `-relevance_score` (strength → consequence → severity as
-tiebreak), then are capped to `MAX_RISKS_PER_LISTING`. Each risk carries
-`why_shown`: human-readable reasons the card is shown — config match (variant
-label), mileage gate ("187.000 km > 120.000 km threshold" or "mileage unknown
-— shown by default"), visual-detection suppression, source trust. The
-response also carries `subsystems: [{name, display_tr, risks}]` — the same
-risks grouped by registry subsystem (`claims.subsystem`) for the v2 UI; the
-flat `risks` array stays for the current extension.
-
-### Claim health — reading the evidence back out
-
-`kriko/lookup/tree.py` answers the question the serving path cannot: *how well
-supported is what we ship?* Four signals, never combined into a score —
-contradiction (`evidence.stance = 'refutes'`), corroboration (distinct
-independent supporting sources), the best source's trust tier, and staleness
-(`sources.retrieved_at`).
-
-Ordering is lexicographic and ascending on every element, exposed as
-`ClaimHealth.concern`, so the order is inspectable rather than implied by a
-weight nobody can justify. Two deliberate asymmetries:
-
-- **A claim with no evidence is not weak, it is uncovered.** It is excluded
-  from `weakest_claims()` and reported by the coverage report instead, matching
-  `rank.py`'s treatment of source-free interval claims as trust-neutral.
-- **An absent `retrieved_at` sorts LAST, not first.** No timestamp is not
-  evidence of staleness. Before 2026-08-31 all three producers wrote `''`
-  here; they now derive it (`documents.fetched_at` in the ledger, the
-  submission time over MCP), and legacy rows stay honestly blank. One
-  consequence follows from that choice: a claim with a known, fresh date
-  ranks *worse* on this element than a claim with no date at all, because
-  blank is deliberately treated as carrying no information rather than as
-  maximally stale. Until B45–B47 land and the other three signals stop
-  being near-universally inert, that makes the better-documented half of the
-  catalog look worse than the undocumented half on this one column.
-- **The three producers agree on the column, not on the semantic.** The
-  ledger exporter writes `MAX(d.fetched_at)` — "the last time we saw the
-  page." `mcp_server.py` and `packs/cars/build.py` both write it with
-  `INSERT OR IGNORE`, so a URL that is resubmitted, or shared by two claims,
-  keeps whatever stamp it was *first* given. `EvidenceRow.retrieved_at`'s
-  comment ("when WE last saw the page") is exactly true for the ledger path
-  and only approximately true for the other two.
-
-`stance` is not read-only: `app/findings.py::accept_findings` writes it from
-whatever an MCP submission or job result declares (`item.get("stance",
-"supports")`), so a claim's rebuttal evidence — `stance='refutes'` — reaches
-the store at acceptance time rather than only ever being read back by
-`tree.py`'s health check. `lang` is a row attribute threaded the same way
-everywhere the engine builds a subject tree — `subject_tree()`,
-`weakest_claims()`, `Query.lang` (`kriko/lookup/query.py`) and the `/api/query`
-door all default it to `"en"` for a caller that does not know better, and pass
-it through rather than hardcoding a language anywhere in `kriko/`.
-
-Served read-only via `GET /api/health/weakest` and `GET /api/health/subject/{id}`
-(`src/app/web/routers/health.py`) and the `subject_health`/`weakest_claims` MCP
-tools (`src/app/mcp_server.py`); the dashboard's Health tab
-(`src/app/web/static/`) renders the same JSON.
-
-### 6. Response rendering
-**`extension/hover_lite/hover_lite.js`**
-
-Renders the claims from the API response as severity-coloured risk cards
-(`hover_lite/risk_card.js`; icons in `hover_lite/icons.js`), and renders the
-local blocks from step 1 beneath them.
-
-`buildCriticalAlerts` is an interpreter, not a rule set: it walks
-`listing.panel.alerts` in order, tracking which rule ids fired so `unless` can
-suppress a broader one, and fills each rule's own `say` template. The detail
-rows take their names, tones and hints from `panel.states` and
-`panel.measures` — a state the pack declares with no `title` (an *original*
-panel, which is the absence of a finding) is read and counted but never shown.
-
-`extension/tests/local_panel.test.js` reads the shipped
-`packs/cars/adapters/sahibinden.json` rather than a copy, because a test
-carrying its own copy of the rules cannot notice the shipped ones going stale
-— and going stale is the exact failure this block exists to prevent.
-
----
-
-## Jobs Plane: long work with a state a browser can see
-
-Two operations grow the knowledge base — researching a subject and building a
-pack — and both used to be reachable only from a terminal, which contradicted
-G6's delivery constraint directly.
-
-**`src/app/web/state.py`** — the `jobs` table in `~/.kriko/app.sqlite` (never in
-the engine's store). Columns: `state`, `progress`, `message`, `log`,
-`result_json`, `cancel_requested`, plus the three timestamps. States are
-`queued`, `running`, and the terminal set `succeeded | failed | cancelled |
-interrupted`.
-
-**`src/app/web/jobs.py`** — `JobRunner` over a `ThreadPoolExecutor(max_workers=1)`.
-
-- *Rows first, thread second.* Every transition is a row write. `recover()`
-  runs from the app's lifespan and turns `running`/`queued` rows left by a dead
-  process into `interrupted` — a killed server leaves an explanation, not a row
-  that claims forever to be working.
-- *One worker.* Two concurrent builds writing the same pack directory is a bug
-  that should not be expressible.
-- *Cooperative cancel.* `Progress.check()` raises `Cancelled` between steps.
-  Killing a thread mid-write is how a half-installed pack happens.
-- Each job opens its own sqlite connection: connections are thread-bound and
-  the submitting request is long gone by the time the worker starts.
-
-**`src/app/web/tasks.py`** — the two handlers, signature
-`(settings, params, progress) -> dict`. `research` drives `kriko.research`'s
-`Researcher` protocol (`plan_task` → `brief` → `gather` → `extract`) and hands
-findings to `app/findings.py`'s `accept_findings` — the *same* grounding and
-gate path the MCP `submit_findings` tool uses, so a claim's provenance does not
-depend on which door it came in. On the default `agent` plane `gather()` returns
-nothing by design; the brief is the output, and that is the $0 path, not a
-degraded one. `pack_build` mirrors `kriko pack build`, including "a pack with
-its own `build.py` uses it" and "an artifact with no subjects and no claims is
-refused rather than installed".
-
-**`src/app/web/routers/jobs.py`** — `POST /api/research`, `POST /api/packs/build`,
-`GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs/{id}/cancel`, and
-`GET /api/jobs/{id}/stream`. The stream is SSE over a *poll of the row*, not a
-push from the worker: a queue would need plumbing through the pool and would
-still lose everything on reconnect, so the row stays the single source of
-truth. `ui/src/lib/jobs.ts` falls back to plain polling when `EventSource` is
-absent or the stream dies mid-job.
-
----
-
-## The other API surfaces
-
-The doors that the planes above do not open. Listed here because a surface
-nobody wrote down is a surface the next change treats as private —
-`test_docs_match_the_code.py` fails until each one names an endpoint.
-
-**`GET /api/history`, `GET /api/lookup/{id}`** (`routers/history.py`) — the
-reader's own record, out of `app.sqlite`'s `lookups`. Also the per-lookup
-annotations: `POST /api/lookups/{id}/notes` (a note the reader wrote),
-`GET|POST /api/lookups/{id}/checked` (claims ticked off on the question sheet)
-and `GET /api/lookups/{id}/triage`. All *per lookup* on purpose — a note is
-about the answer that was given, not about the knowledge. Mode and theme ride
-here too (`GET|POST /api/settings`), because they are interface state in the
-same file.
-
-**`GET|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`,
-`GET /api/marks/signals`** (`routers/marks.py`) — an author's verdict on a
-claim: `wrong`, `outdated`, and the rest. Keyed by pack rather than by lookup,
-because the judgement is about the knowledge and outlives the lookup that
-surfaced it, and a withdrawal is a `DELETE` rather than a flag — a mark that
-is gone should read as never made. `signals` aggregates them for the Knowledge
-screen's "what is marked" lens.
-
-**`GET /api/subjects`, `GET /api/subjects/{id}`, `GET /api/subjects/{id}/brief`**
-(`routers/subjects.py`) — what a pack knows about one subject, and the research
-brief for it. The brief is the $0 path's actual output: on the default `agent`
-plane nothing is gathered by the engine, so the brief *is* the deliverable
-rather than a degraded version of one.
-
-**`GET /api/pipeline/runs`, `GET /api/pipeline/runs/{id}`,
-`GET /api/pipeline/stream`** (`routers/pipeline.py`) — the event spine over
-`pipeline_runs` / `pipeline_stages` / `pipeline_events`. A job log answers
-"did long work happen and what did it print"; this answers "what came of it" —
-sources read, findings kept, refusals with a reason. A run that gathered
-nothing and a run that lost everything at the grounding check look identical in
-a job log, which is why this is a second surface rather than a column on the
-first. The stream is SSE over a poll of the rows, for the same reason the job
-stream is.
-
-**`GET /api/agenda`** (`routers/agenda.py`) — what to research next, ranked.
-`app/agenda.py` computes it on read from four signals kept separate: demand
-(how often the analyses log was asked about a subject), gaps, thinness, and a
-`fact_checks` verdict of `missing`. No table and no clock, because an agenda
-that recommended a subject researched an hour ago would be worse than none.
-Demand comes from the JSONL log rather than from `lookups` — the log is the
-demand corpus and survives a reader clearing their history, which is why
-`routers/analyze.py` writes both. One of its four row kinds is not an agent
-task: `unknown_subject` is a product this installation was asked about that no
-subject exists for, so it has no `subject_id`, nothing can be filed against it,
-and it is demand for *catalog* coverage. The MCP tool `research_agenda` is the
-same computation through the other door, and the generated skill embeds the
-top five with the sentence that the tool, not the file, is authoritative.
-
-**`GET|POST /api/factcheck`, `GET /api/factcheck/grounding`,
-`GET /api/factcheck/document`, `POST /api/verify`** (`routers/factcheck.py`) —
-one press: does the page a claim cites still contain the quote the pack
-shipped? The `POST /api/factcheck` takes a `(pack_id, claim_id)` and nothing
-else, because the quote is read out of the store rather than taken from the
-caller — the browser extension can reach this surface, and a door that
-accepted "does this URL contain this string" would be an open fetch oracle.
-Four verdicts, `quoted / missing / unreadable / unreachable`, and `missing`
-says the page changed, never that the claim is false: pages get rewritten and
-Kriko has no authority to retract anything, so the verdict ranks nothing,
-hides nothing, and lives in `app.sqlite`'s `fact_checks`. The `GET` returns the
-whole screen's verdicts in one request, which is what keeps a report of forty
-claims from opening forty requests.
-
-`GET /api/factcheck/grounding` is the offline half (B120/B128): per-evidence
-`grounded` / `ungrounded` / `not_kept` for one claim, against the page text
-kept in `app.sqlite` at acceptance time rather than a fresh fetch — it needs no
-network, and it is the only one of the four that can say "nothing was ever
-kept to check against" rather than confusing that with "the page still
-agrees". `GET /api/factcheck/document` returns the kept page text for one
-`source_id`, 404 as `not_kept` when this installation never retained one.
-`POST /api/verify` (`app/web/routers/factcheck.py`'s `verify_router`, mounted
-at `/api`, not under `/api/factcheck` — a whole-screen re-check is an
-*operation*, one claim is a fact check) starts a `verify` job over
-`(pack_id, subject_id, limit)`: no model, no agent, a substring test against
-every claim's evidence, because "does the quote still appear" is a question a
-model would answer confidently and a substring test answers honestly.
-
-**`GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`,
-`DELETE /api/sites/{host}`** (`routers/sites.py`) — which sites can be read
-here, and how one more is learned. Packs ship adapters; an installation may
-also learn one, and `app/sites.py` merges the two with the pack's always
-winning. `seen` is the extension reporting a page it could not read — the click
-is the grant, under `activeTab`, and the answer distinguishes "this site works,
-the panel should be there" from "nothing here reads this site". `register`
-starts an agent job that reads the page and writes the adapter, which is
-checked before it is stored because an adapter's `site` becomes a host
-permission in a browser.
-
-**`GET|PUT /api/prefs`, `GET /api/costs`** (`routers/prefs.py`) — which agent,
-which model, which search provider (`app/prefs.py`), and what it has cost
-(`app/costs.py`). Together because at the moment of choosing a plane they are
-one decision. Every choice falls back to the previous behaviour when unset, and
-**there is no credit balance**: no vendor exposes one to an API key, so the
-screen shows measured spend and says where the balance actually lives rather
-than inventing a number.
-
-**`GET /api/operations`, `GET /api/operations/stream`**
-(`routers/operations.py`) — the live feed of *operations*: one row per unit of
-agent-driven work, whichever door it came in by (`docs/AGENT_OPERATIONS.md`
-holds the vocabulary). `app/operations.py` records them, and the recorder is
-wrapped around every MCP tool, every job the runner starts and every
-`/api/analyze` — so a reader's own coding agent working through the MCP server
-is visible *while it works*, which it never was: that door showed up only
-afterwards, only as a `submissions` row, and only when the operation happened
-to be a submission. The row opens before the work and closes after it, so a
-call in flight reads `running` and a call that died with its process is marked
-`interrupted` at startup, exactly as a job row is. Payloads are summarised, not
-stored: a page of `document_text` is elided to its own measurement, because the
-page itself already has a table. `/stream` polls the table rather than being
-pushed to, because the MCP server is a different process writing the same
-`app.sqlite`.
-
-**`POST /api/packs/scaffold`, `GET /api/packs/drafts`,
-`GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`,
-`POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`,
-`DELETE /api/packs/drafts/{slug}`** (`routers/packs.py`, backed by
-`app/packauthor.py` and `app/packdraft.py`) — a pack an agent authored,
-before it is anything the store can hold. `scaffold` writes a contract-passing
-skeleton to disk and installs nothing, so a mistake here costs a directory,
-never a store row. A draft under `~/.kriko/drafts/<slug>/` is a small tree of
-JSON/YAML files (`packdraft.FILES`), of which **the adapter is `adapters/*.json`,
-not `.yaml`** — the suffix `kriko.pack.build` actually reads; a draft that
-wrote it as `.yaml` built and installed cheerfully with an adapter no listing
-page could ever reach, invisibly, until this was fixed.
-
-`packauthor.draft_state` refuses a draft outright when it has no `principle`
-or **no `lineup`** — a pack that names no line-up cannot be told apart from
-one that named every product in its category, and the coverage gap the pack
-should be reporting would silently read as zero instead. Every proposed
-subject is checked against that line-up (`_in_scope`, fuzzy substring match on
-normalised text) and against the pack's own `coverage.out_of_scope`; a subject
-neither names is **quarantined** rather than shipped or silently dropped — set
-aside with a reason ("not named anywhere in this pack's own line-up — likely a
-different category"), recorded in the draft's `research/coverage.yaml`, and
-surfaced back to the reader and to the amending agent, because refusing the
-whole draft for one stray subject would throw away the rest of the research,
-and shipping it would ship the mis-categorised row. `amend` (B127) asks an
-agent to cover what the line-up still lacks; nothing already in the draft is
-rewritten, so a refused amendment leaves it exactly as it was. `install`
-builds if needed and installs in one press, then marks the draft installed
-rather than deleting it — an installed draft still supports **Cover the
-gaps**: amend, rebuild, install again.
-
-**`GET /api/submissions`** (`routers/submissions.py`) — what came in through
-the agent door and what the gate did with it. The only place a *refusal* is
-legible: `app/findings.py` rejects on grounding, and without this the rejection
-is a log line nobody reads.
-
-**`GET|PUT /api/keys`, `DELETE /api/keys/{provider}`** (`routers/keys.py`) —
-the door to `~/.kriko/env`, which `app/sidecar.py` loads into `os.environ`
-before anything can read a key. Two providers only (`app/keys.py`'s
-`PROVIDERS`), because an endpoint that wrote any `KEY=value` into a file this
-process later loads into its own environment would be a localhost-reachable
-way to set `PATH` for the next launch. **No response body from this router may
-contain a key** — presence, source (`environment` beats `file`, because `load`
-never overwrites) and the last four characters is the whole shape any
-interface gets, and `test_api_keys.py` asserts it over the error paths too. A
-settings screen that can read a key back is one that can leak it into a
-screenshot or a support log, and replacing a key you cannot see costs one
-paste.
-
-**`GET /api/agent-config`, `GET /api/agent-targets`,
-`POST /api/agent-targets/{id}/skill`, `GET /api/agent-skill`,
-`POST /api/agent-targets/{id}/connect`, `POST /api/agent-verify`**
-(`routers/agent.py`, backed by `app/agentconfig.py`) — wiring a coding-agent
-harness to this installation's MCP server. `agent-config` answers *which
-command* — the exact `command`/`args`/`env` block to paste into `.mcp.json`,
-never the resolved venv interpreter (it dies off-machine with `No module
-named 'fastapi'`) — and `agent-targets` answers *where it goes*: which
-harnesses this machine has and whether each already has it. `env` carries
-`agentconfig.platform_env()`, which is non-empty **on Windows only** — a
-harness that spawns the advertised command merges its own environment with
-what this supplies, and a bare Python subprocess on Windows with no
-`SYSTEMROOT` on its path cannot resolve DNS at all, so the launched MCP server
-would look "connected" and answer every tool call with a socket error. `Connect`
-(`/connect`) writes the config into that harness's own file, and
-`/agent-verify` is the diagnostic the reader actually needs after pasting one
-in: it starts the exact advertised command, completes a real MCP `initialize`
-handshake and a `tools/list`, and reports failure with whatever the process
-said on stderr — because "the file was written" and "the agent can talk to
-it" are different facts, and a harness that starts, exits, and leaves an agent
-silently answering nothing has no other way to be caught. `agent-skill` and
-`{id}/skill` push Kriko's product-identity skill to a harness that supports
-one, versioned so a skill on disk that predates the current one is reported as
-`stale` rather than `present`.
-
-**`GET /api/research-planes`** (`routers/research.py`) — the two ways an
-installation grows its own knowledge, read off `AgentResearcher` and
-`ApiResearcher` rather than restated in the frontend, for the reason
-`/api/pipeline/runs` ships its stage labels: a second copy of a vocabulary is
-a second place to forget when a third plane arrives. It adds two things the
-engine does not own — a sentence in the reader's terms, because `per_token` is
-not an answer to "what will this cost me", and `ready`, which is the paid
-plane's key check and nothing else (the agent plane's readiness is a harness
-question `/api/agent-targets` already answers). Returns no key and no hint.
-
-**Cancelling a running harness researcher actually stops the process tree.**
-`AgentResearcher.check_cancelled` (`app/providers/harness.py`) is a hook the
-job runner wires to `Progress.check` (`app/web/tasks.py`, three call sites) and
-the drain loop calls it on every line of the CLI's stdout — checked before
-narration, so a run the coding agent has gone quiet on is still interruptible.
-Left to propagate rather than caught: whatever it raises reaches the `finally`
-that calls `_kill_tree(proc)`, so `POST /api/jobs/{id}/cancel` on a harness
-run reads as cancelled, not as a crash, and does not leave an orphaned CLI
-subprocess behind.
-
-**`POST /api/agenda/run`, `GET /api/research-runs`,
-`GET|DELETE /api/research-runs/{id}`** (`routers/research.py`) — the
-unattended run and the way back out of it. `agenda_run` walks `/api/agenda`'s
-ordering and researches each row's subject **inline**, reusing `_research`'s
-stages: `app/web/jobs.py` has a single worker, so a job that submits jobs and
-waits deadlocks silently. `unknown_subject` rows are skipped and counted, never
-researched — B82 ships them with no `subject_id` on purpose. The ceiling is
-shared across the whole run, not per row. The `DELETE` starts a
-`research_undo` job that retracts the run's claims through
-`app/findings.py::retract_claim` and tolerates already-absent ones ("removed 4
-of 6; 2 were already absent") — an unattended multi-row run that could not be
-reversed would be a liability rather than a feature, which is why the undo
-landed before the loop that needs it.
-
-**`GET|POST /api/bench`** (`routers/bench.py`, backed by `app/bench.py` and
-`app/protocols.py`) — B111/B126: measure the research planes against the same
-cases, derived from the installed store rather than enumerated (a fixed list
-of subjects in Python would be the hardcoded-car-data bug in benchmark
-clothing). `POST` starts a job — real minutes of work and, on the paid plane,
-real money — sweeping `planes`, `protocols` and (B126 §8) a search provider,
-`reps` times each, against a throwaway copy of the store that is discarded
-with whatever it wrote, so a benchmark never grows the pack it measures.
-Three case kinds (B126 §3/§9), each scored differently: `specific` (one
-subject, the default), `bulk` (many subjects in one call, B126 §2) and
-`validation` (re-fetches a source and checks it against a known answer, no
-model involved). `GET /api/bench` returns the runs, `bench.verdict()` (how
-each plane *failed*, not only how often — "four of five harness runs failed,
-all of them `auth`" is actionable), `bench.scored()` (recall, precision and
-hallucination with Wilson intervals, for cases carrying ground truth),
-`protocols.choose()` (which protocol a model's own measured history picks),
-and the **readout** (`protocols.readout()`): one row per model with the batch
-size, context budget, preamble and search provider it would run with right
-now, its measured cost per accepted claim, and its hallucination rate with
-interval — a model with fewer than two measured runs still gets a row, with
-`note` saying why it is showing the known-good default rather than a chosen
-protocol. `kriko bench` (`app/cli.py`) runs the same sweep in the terminal
-rather than as a job — a benchmark watched by nobody is a benchmark nobody
-trusts — and prints this same readout table.
-
-**`GET /api/extension`, `POST /api/extension/stage`,
-`POST /api/extension/reveal`** (`routers/extension.py`) — where the unpacked
-extension is on disk, staged into a stable directory the reader can point
-Chrome at, plus the version compatibility verdict described below. `reveal`
-opens the staged folder in the file manager — a convenience with a fallback,
-never a requirement: the response carries the path either way, because if the
-open fails the reader's next action is pasting it.
-
-**`GET /api/terminal/state`, `GET /api/terminal/stream`,
-`POST /api/terminal/input`, `POST /api/terminal/resize`,
-`POST /api/terminal/close`** (`routers/terminal.py`) — a real shell, because a
-harness (Claude Code, opencode) that needs a one-time `login` cannot do it from
-inside a sandboxed subprocess spawn. One PTY per app session
-(`app/providers/termpty.py`'s module-level `SESSION`), started on the first
-request that needs it.
-
-**Its client is `kriko tui`, not the app** (2026-09-16, §2.9). There was a
-panel in the dashboard on these same endpoints, and it was removed: it was a
-longer way round to the buyer flow, and a terminal emulator in a webview cost
-`@xterm/xterm` plus its DOM renderer — 335 KB of chunk and a bundle budget
-raised by 440 KB to admit it, both now given back. The endpoints stay because
-`app/tui/client.py` drives them for the console's Ctrl-] pass-through, which is
-where a one-time interactive `login` belonged all along: it is an operator's
-setup step, not a screen a reader keeps. A shell in the *operator's own*
-terminal needs no emulator at all.
-
-**This was a WebSocket until 0.7.12, and the WebSocket is why it never
-worked.** B107/B109 spent six releases closing real paths inside that handler —
-a missing `winpty-agent.exe`, a log that never reached `app.log`, an unreported
-`start()` crash, an unreported read failure, two rejections that closed before
-`accept()` — and after every one the reader reproduced and saw the same bare
-`[disconnected]`. 0.7.10's banner finally carried the fact that settled it:
-close code **1006**, the browser's "the opening handshake never finished",
-while a hand-made `Upgrade: websocket` against the *same frozen binary on the
-same machine* got `101` and real PTY bytes. The upgrade is refused above the
-application, so no fix inside it could ever have worked.
-
-The PTY now owns its own output. `TermSession` runs a reader thread that drains
-the pty into a bounded transcript (`SCROLLBACK`, 256 KB) whether or not anyone
-is connected, and every consumer asks the same question — *what came after byte
-N?* — over whatever transport it likes:
-
-* `GET /stream` is Server-Sent Events, resumable from `?offset=`. It is the
-  same transport `/api/jobs/{id}/stream` already uses, which is the transport
-  demonstrably working in the reader's install.
-* `GET /state` answers the identical fields in one request, which is both the
-  no-`EventSource` fallback and the first thing worth asking for in a bug
-  report.
-* `POST /input` and `POST /resize` carry keystrokes and geometry.
-* `POST /close` ends the shell and leaves it ended — a different event from
-  typing `exit`: it frees the child process and its pty, and `_ensure()`
-  never restarts a session this endpoint ended, so a client that keeps
-  polling `/state` sees a stable `ended: true` rather than a shell that
-  silently respawns underneath it.
-
-Three properties follow that a socket could not give:
-
-1. **A transport failure loses latency, not output.** A reconnect resumes at
-   its offset; a reader who opens the panel after the shell died still sees its
-   dying words.
-2. **Reporting a failure needs nobody connected.** `failure` is a field on the
-   session, not a frame someone had to be listening for.
-3. **The client cannot dial the wrong place.** `/api/terminal/stream` is
-   relative, so it resolves against the document. The old `wsUrl()` rebuilt an
-   absolute URL out of `location.host`, which was a second chance to disagree
-   about where the server was.
-
-The guards survive the change and are now a `Depends` shared by all four
-endpoints rather than two hand-written blocks: `terminal_origin_is_allowed` is
-stricter than the general `origin_is_allowed` by one exclusion, leaving
-`EXTENSION_SCHEMES` out on purpose — every other surface trusts the browser
-extension exactly as much as a page the reader chose to install, but hostile
-JavaScript reaching a real shell is a different order of consequence than
-reaching `/api/analyze` — and the endpoints also refuse any request that
-arrived on `EXTENSION_PORT` rather than the app's own port, belt and braces.
-(The general `Origin`/`Host` middleware does run on these, since they are
-ordinary HTTP now; it is simply not strict enough on its own.)
-
----
-
-## Interface State: what `app.sqlite` holds, and why it is not in the store
-
-Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine's
-store; `~/.kriko/app.sqlite` (`src/app/web/state.py`) is the *interface's* own
-history and settings. The split is a rule, not a convenience: uninstalling a
-pack must not drop your history, and a history row must not move a pack's
-`content_digest`. `/api/health` reports both paths.
-
-Every table, and the question it answers:
-
-| Table | What it holds |
-|-------|---------------|
-| `settings` | Mode and theme. The reader's preferences, not the engine's config. |
-| `lookups` | Every analysis, request and response as stored JSON. The History panel and `#/result/<id>` read it; nothing else is the record of what the app actually answered. |
-| `claim_notes` | A note the reader wrote against one claim of one lookup. |
-| `claim_checks` | The reader ticking off a claim on the question sheet — inspection-day state, per lookup. |
-| `claim_marks` | An author's verdict on a claim (`wrong`, `outdated`, …), per pack rather than per lookup, because the judgement is about the knowledge and outlives the lookup that surfaced it. |
-| `jobs` | The row that outlives the request. See the Jobs Plane above. |
-| `pipeline_runs`, `pipeline_stages`, `pipeline_events` | The event spine: what a knowledge run *did*, stage by stage, with sources read, findings kept, and refusals with a reason. A job log says whether work happened; this says what came of it. |
-| `submissions` | What came in through the agent door and what the gate did with it — the only place a refusal is legible. |
-| `fact_checks` | The last answer to "does the cited page still say this", per (pack, claim). A reader's fetch of someone else's web page: it cannot move a `content_digest`, must not travel to the next install, and a dead link is a signal here rather than a retraction in the pack. |
-| `extension_seen` | Which extension origin has called, how often, and the version it announced. A sighting is a side effect of the extension doing its real work, so it cannot be true while the install is broken. |
-| `research_runs` | One row per research run: the plane, the completion API and search provider by name (the column is `model`; the API calls it `llm`, because `model` is a pack identity key the frontend may not contain), the budget and what was actually spent, and an outcome that keeps `budget` separate from `failed`. Provenance is a fact about *this installation*, not about the knowledge — putting it in the engine store would make a pack's `content_digest` depend on who grew it, and pack-update refusal is built on two installations computing the same digest for the same version. |
-| `research_run_claims` | Which claims a run added, one row each, with `removed_at` set once an undo has taken one back out. Per-claim rather than a count because a count cannot be reversed, and undo is the whole reason the table exists. |
-| `operations` | One row per unit of agent-driven work, opened before the work and closed after it. What makes "is my agent doing anything right now" answerable — including through the MCP door, which this app does not start and cannot otherwise see. A feed, bounded at 2000 rows: what a run *produced* lives in `submissions`, `pipeline_runs` and `research_runs`, all of which outlive it. |
-| `job_messages` | What the reader has said *to* a run while it is running, and whether it has been handed over yet. The other direction of a job's log, and the thing B120 left open: a harness took its prompt on stdin once and streamed its transcript out, so a run that stopped to ask a question could be watched and stopped and nothing else. A row rather than a call because the handler is a thread in this process and the answer arrives on another — the same shape as `cancel_requested`, read between steps for the same reason. `taken_at` is marked in the same transaction as the read, so a line is never delivered twice and, for a harness, never paid for twice. Only a CLI that declares `--input-format` (Claude Code's `stream-json`) actually *hears* a line: `HarnessResearcher` then sends the brief as the first message on a pipe, frames each reply as the next, keeps the pipe open for `ANSWER_WAIT_SECONDS` when a turn ends on a question, and falls back to the one-shot vector if the child says nothing within `CONVERSATION_START_SECONDS` (the B125 shim). Every other harness gets the line written to a stdin nobody reads — a note in the transcript, not an answer. |
-| `local_adapters` | How to read a site this installation learned by itself, kept out of the store by the same rule everything else here is: a site the reader taught their own copy about is not pack content, must not enter a `content_digest`, and must not travel to anyone else's install as though an author had reviewed it. Always loses to a pack's adapter for the same host. |
-| `site_requests` | Sites somebody stood on and pressed the button, that nothing here can read. One row per host with a count and one sample page — the demand signal, and the only honest input to "which site should Kriko learn next". |
-| `site_activation` | What the *browser* made of each readable site, reported by the extension after every sync. The app can see that an adapter exists; only the extension can see whether Chrome granted the host permission that turns one into an injected content script — and `permissions.request` must come from a gesture inside the extension, so registering a site in the app can never be enough. Without this row the Sites screen said "readable" about a site the panel would never appear on, which is what the reader met as "kriko recognizes this site please reload" that no reload ever cleared. Replaced wholesale on each report, never merged: a site the extension stops naming is one it no longer has registered. |
-| `documents` | The page text a quote was proved against, keyed by `source_id` and bounded. The grounding check used to happen once, against text nobody kept; this is what lets `findings.regrounded()` ask it again with no network — and what lets "this source was never fetched" be distinguished from "the page is gone". Here rather than in the store because a page one install happened to read must not enter a pack's `content_digest`. |
-| `unmapped_labels` | Labels a reader's browsing found on a site that the pack's adapter reads nothing from. A pack's adapter is content; what a reader's browsing revealed about a site is not — so it lives here, never moves a `content_digest`, and survives clearing history. |
-
-**Schema changes reach an existing file.** `connect()` stamps `PRAGMA
-user_version` with `schema_stamp(SCHEMA)` — a content fingerprint, so any edit
-re-runs `executescript(SCHEMA)`. That handles a new *table* and does nothing at
-all for a new *column*, because `CREATE TABLE IF NOT EXISTS` is a no-op on a
-table that exists. Every schema change before 2026-09-08 happened to be a new
-table, which is why nobody noticed. So `add_missing_columns()` parses the
-`CREATE TABLE` blocks out of `SCHEMA` itself (`declared_columns()`) and
-reconciles them against `PRAGMA table_info`: additions only, and it raises on
-anything SQLite refuses rather than papering over it. The declaration is
-already the truth — the same rule the catalog follows. `app.sqlite` is history,
-not a cache: it can never be dropped and rebuilt.
-
-**The version handshake.** The extension and the app update on separate clocks,
-and neither waits for the other. Every request out carries
-`X-Kriko-Extension`; every response back carries `X-Kriko-Minimum-Extension`.
-No poll and no endpoint — a check-in on a timer is a third clock to keep wound,
-and one that is stale between winds is the failure being fixed. The rule is one
-number in one place, `app.extension.MINIMUM_VERSION`. Four states, because
-`unknown` (nothing has ever called) has to be separate from `too_old`: telling
-a reader who never installed the extension that theirs is out of date is worse
-than saying nothing. `behind` still works.
-
----
-
-## The plain CLI: `kriko`
-
-**`src/app/cli.py`.** Two shapes, deliberately.
-
-`packs`, `install`, `uninstall`, `enable`, `build` and `lookup` open the store
-directly (`kriko.store.db.connect`) and touch no app state — the reader's
-whole loop with no server, no network and no second process, exactly the
-docstring at the top of the file says.
-
-`prefs`, `costs`, `sites`, `verify`, `drafts`, `operations`, `bench` and `tui`
-need `app.sqlite` (preferences, spend, site adapters, fact checks, pack
-drafts, the operations feed) or a job runner, and go through
-`app.tui.client.Engine` — the same client the operator console uses, over
-HTTP — rather than opening `app.sqlite` a second time. That is not a style
-choice: `app/tui/client.py` documents why a second process opening the store
-directly would be a second writer fighting whatever app is already running,
-and the same argument applies to `app.sqlite`. Each of these subcommands
-attaches to a running engine when one answers on `EXTENSION_PORT`, or starts
-one of its own in-process (`--no-start` refuses that and fails instead), the
-same discovery order `kriko tui` uses. `bench` is the one exception among
-these: it measures in-process against its own copy of `app.sqlite`
-(`app/bench.py` — see the Benchmark section below), because a measurement is
-supposed to be watched by the terminal that started it, not handed to a job.
-
-Every one of these commands turns a failed attach or a failed call
-(`app.tui.client.EngineError`) into one line on stderr and a non-zero exit —
-`_with_engine` in `cli.py` is the one place that happens, so a reader never
-sees a Python traceback for "the engine is not running" or "that draft does
-not exist".
-
-```
-kriko prefs [--harness ID] [--model NAME] [--search ID]
-kriko costs
-kriko sites [list|register HOST|forget HOST]
-kriko verify [--list] [--pack ID] [--subject ID]
-kriko drafts [list|show|amend|build|install|discard SLUG]
-kriko operations [--limit N]
-kriko bench [--plane ...] [--cases N] [--protocol ...]
-```
-
----
-
-## Operator Console: `kriko tui`
-
-`src/app/tui/` is a fourth interface beside `cli`, `web` and `mcp`, and the only
-one whose audience is not the reader of a car listing. It drives **the same HTTP
-API the dashboard drives** — every keystroke below is an endpoint already
-documented above — from a terminal, with no webview anywhere in the path.
-
-**Why it exists.** Agent operations were invisible. "Research does nothing",
-"the terminal says disconnected" and "it reported success and kept nothing" were
-three symptoms of one condition: the operator plane had no instruments, and for
-six releases of B107/B109 the reader had no working surface of any kind because
-the surface itself was the broken thing. A second client on the same API costs
-almost nothing and cannot be taken out by whatever takes out a webview.
-
-It is also a standing test of the API: anything the console cannot do without a
-new endpoint is something the API was not really exposing.
-
-```
-kriko tui                 # attach to a running app, or start an engine
-kriko-sidecar --tui       # the same console, out of the frozen binary
-kriko tui --url http://127.0.0.1:8787
-kriko tui --no-start      # attach only; fail if nothing is serving
-```
-
-**One click, on Windows.** `tauri/src-tauri/installer.nsh`'s
-`NSIS_HOOK_POSTINSTALL` writes a **Kriko Console** shortcut into the Start menu
-aimed at `$INSTDIR\kriko-sidecar.exe --tui`, and `NSIS_HOOK_POSTUNINSTALL`
-removes it. No second artifact ships: that binary is the `externalBin` Tauri
-installs anyway. A console window appears, which is the point rather than an
-oversight — the sidecar is built `console=True` (see
-`packaging/kriko-sidecar.spec` for why), Tauri suppresses the window with
-`CREATE_NO_WINDOW` when *it* spawns the engine, and nothing suppresses it here
-because here the terminal is the UI.
-
-**It is standalone, and that is the point.** `app/tui/` is already in the wheel
-and therefore already inside the sidecar the installer ships, so `--tui` costs
-one branch in `sidecar.py` and adds no build artifact — and it means a machine
-with no Python, no Node and no working WebView2 can still drive research, watch
-a job and open a shell. A console whose reason for existing is a window that
-would not open should not itself require a source checkout. The flag returns
-before `reserve`, because the console attaches to a running app or starts its
-own engine in-process; a sidecar that bound a port first would be a second
-engine nobody asked for.
-
-`main()` calls `logs.silence_stderr()` before anything else. When nothing is
-serving, the console starts an engine in this process and `create_app` calls
-`logs.configure()` — whose stderr handler writes straight onto the alternate
-screen, underneath a frame differ with no idea it needs to repaint that row. The
-file handler is left alone: losing the terminal is the reason to keep `app.log`,
-not a reason to stop.
-
-| Module | What it owns |
+States: `queued`/`running` then `succeeded | failed | cancelled | interrupted`
+(`recover()` marks a dead process's rows `interrupted` at startup). Cancel is
+cooperative (`Progress.check`) and kills the harness process tree.
+`research` feeds `app/findings.py`, the same grounding path as MCP
+`submit_findings`; `pack_build` mirrors `kriko build`.
+
+## API surfaces
+
+Each `app/web/routers/*.py` module is one surface;
+`test_docs_match_the_code.py` fails until every surface has an endpoint named
+in the docs.
+
+| Surface | Endpoints | Notes |
+|---|---|---|
+| history | `GET /api/history`, `GET /api/lookup/{id}`, `POST /api/lookups/{id}/notes`, `GET\|POST /api/lookups/{id}/checked`, `GET /api/lookups/{id}/triage`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
+| marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`, `GET /api/marks/signals` | Author verdicts, pack-keyed. |
+| subjects | `GET /api/subjects[/{id}[/brief]]` | Pack knowledge and the $0 brief. |
+| query, control, live | `/api/query`, `/api/knowledge/clock`, `/api/packs/{pack_id}/revisions`, `/api/packs/{pack_id}/activate`, `/api/packs/{pack_id}/rollback`, `/api/identity-keys/{pack_id}` | Lookup, pack revisions, identity forms. |
+| jobs | `POST /api/research`, `POST /api/packs/build`, `GET /api/jobs[/{id}]`, `POST /api/jobs/{id}/cancel`, `GET /api/jobs/{id}/stream` | SSE polls the row, so reconnect is safe. |
+| pipeline | `GET /api/pipeline/runs[/{id}]`, `/stream` | What came of a run: sources, kept findings, refusals with reason. |
+| agenda | `GET /api/agenda`, `POST /api/agenda/run`, `GET\|DELETE /api/research-runs[/{id}]` | Computed on read from demand, gaps, thinness; `DELETE` is undo via `retract_claim`. |
+| factcheck | `GET\|POST /api/factcheck`, `GET /api/factcheck/grounding`, `GET /api/factcheck/document`, `POST /api/verify` | Quote comes from the store, never the caller. Verdicts `quoted/missing/unreadable/unreachable`; `missing` means the page changed, not that the claim is false. |
+| sites | `GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`, `DELETE /api/sites/{host}` | Pack adapters always beat learned ones (`app/sites.py`). |
+| prefs | `GET\|PUT /api/prefs`, `GET /api/costs` | Agent, model, search and measured spend. No credit balance (no vendor exposes one). |
+| operations | `GET /api/operations[/stream]` | Any-door live feed of agent work (`docs/AGENT_OPERATIONS.md`). |
+| packs | `POST /api/packs/scaffold`, `GET /api/packs/drafts[/{slug}]`, `POST /api/packs/drafts/{slug}/{build,amend,install}`, `DELETE /api/packs/drafts/{slug}` | Drafts in `~/.kriko/drafts/<slug>/`. Adapter is `adapters/*.json`, not `.yaml`. A draft without `principle` or `lineup` is refused; subjects named by neither line-up nor `coverage.out_of_scope` are quarantined in `research/coverage.yaml`. |
+| submissions | `GET /api/submissions` | Legible refusals only (`app/findings.py`). |
+| keys | `GET\|PUT /api/keys`, `DELETE /api/keys/{provider}` | Stored in `~/.kriko/env`. No response carries a key: presence, source and last four only. |
+| agent | `GET /api/agent-config`, `GET /api/agent-targets`, `POST /api/agent-targets/{id}/{skill,connect}`, `GET /api/agent-skill`, `POST /api/agent-verify` | `agent-verify` runs a real MCP `initialize` and `tools/list`. `env` is non-empty on Windows only. |
+| research | `GET /api/research-planes` | Planes read off the researcher classes, plus cost sentence and `ready`. |
+| bench | `GET\|POST /api/bench` | Store-derived cases; sweeps planes x protocols on a throwaway store copy. `kriko bench` is the same sweep in a terminal. |
+| extension | `GET /api/extension`, `POST /api/extension/stage`, `POST /api/extension/reveal` | Staged dir for Chrome plus version verdict. |
+| terminal | `GET /api/terminal/state`, `GET /api/terminal/stream`, `POST /api/terminal/input`, `POST /api/terminal/resize`, `POST /api/terminal/close` | One PTY per session (`app/providers/termpty.py`) for one-time harness `login`s. Client is `kriko tui`; 256 KB scrollback, resumable `?offset=`. Origin check excludes extension origins. |
+| focus | `POST /api/focus`, `GET /api/focus` | "Open in Kriko": the extension posts a route, the shell raises the window, the window consumes it once. |
+
+## Interface state: `app.sqlite`
+
+Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine store;
+`~/.kriko/app.sqlite` (`src/app/web/state.py`) is interface state. Uninstalling
+a pack must not drop history, and history must not move `content_digest`.
+`/api/health` reports both.
+
+| Table | Holds |
 |---|---|
-| `client.py` | engine discovery, and the calls. Stdlib `urllib` — a terminal client that only ever dials 127.0.0.1 does not justify a dependency in the reader's installer |
-| `term.py` | raw mode, the alternate screen, key decoding, the frame differ |
-| `screen.py` | the frame, as a **pure function** of state. No terminal in the file, which is why every layout decision is a unit test |
-| `app.py` | the loop: a poller thread owns snapshots, the UI thread renders and reads keys |
+| `settings` | Reader prefs (mode, theme). |
+| `lookups` | Every analysis request and response (History). |
+| `claim_notes`, `claim_checks` | Per-lookup note and question-sheet tick-offs. |
+| `claim_marks` | Author verdicts; outlive lookups. |
+| `jobs` | Job rows that outlive the request. |
+| `pipeline_runs`, `pipeline_stages`, `pipeline_events` | What a run did. |
+| `submissions` | Agent-door input and verdicts. |
+| `fact_checks` | Last "page still says this" per (pack, claim); a dead link is a signal, not a retraction. |
+| `extension_seen` | Extension origins, counts, versions. |
+| `research_runs`, `research_run_claims` | Plane, budget vs spend, outcome; per-claim `removed_at` for undo. Install-local. |
+| `operations` | Any-door work feed, bounded to 2000 rows. |
+| `job_messages` | Reader-to-run messages; `taken_at` set inside the read transaction, so never delivered twice. |
+| `local_adapters` | Self-taught site readers; never travel or digest. |
+| `site_requests` | Unreadable sites the reader stood on ("which site next"). |
+| `site_activation` | Browser's per-site permission verdict. |
+| `documents` | Quote-proving page text per `source_id`, bounded. |
+| `unmapped_labels` | Labels seen on pages that no adapter reads. |
 
-**Discovery order**, chosen so the least surprising thing happens: an explicit
-`--url`, then `KRIKO_URL`, then the fixed `EXTENSION_PORT` — a running desktop
-app is *always* serving there, so `kriko tui` with the app open attaches to the
-app's own engine, same store, same jobs, same shell. Only if nothing answers
-does it start an engine in-process on an OS-chosen port, which is what makes the
-console usable on a machine where the desktop shell will not open at all.
+**Migration:** `connect()` stamps `PRAGMA user_version` with
+`schema_stamp(SCHEMA)`; `add_missing_columns()` reconciles `declared_columns()`
+against `PRAGMA table_info` (additions only). History is never dropped.
 
-**A harness run is read as it happens.** `app/providers/harness.py` asks the
-CLI for `--output-format stream-json` (which the CLI refuses to start without
-`--verbose`) and reads its stdout line by line in the calling thread, draining
-stderr on its own so a full pipe cannot deadlock a run, with the timeout as a
-timer that kills rather than an argument to `subprocess.run`. `narrate()` turns
-each event into one line — `searched "…"`, `fetched …`, a tool call that
-failed — and `on_action`, set duck-typed by `app/web/tasks.py` to the job's
-`progress.log`, is where they go. So the actions appear in the job log both
-clients already show, live, rather than in a second transport; the transcript
-is bounded and the narration capped, because an agent in a tool loop must not
-be able to grow either without end.
+**Version handshake:** no poll. Requests carry `X-Kriko-Extension`, responses
+`X-Kriko-Minimum-Extension`; the floor is `app.extension.MINIMUM_VERSION`.
 
-**Four tabs and a shell.** *Planes* answers "why do agent operations do
-nothing" by naming the harness binary `harness.locate()` found, with its path —
-and, when it found none, where it looked. *Agenda* is `/api/agenda`, with Enter
-starting research on the selected subject. *Jobs* is `/api/jobs`, with the
-followed job's log tailing in the detail band. *Ops* is `/api/operations` —
-the live feed described below, one row per unit of agent-driven work
-regardless of which door it came in by, so an operator can see an MCP-door
-`submit_findings` in flight without switching to the dashboard. `s` drops the
-alternate screen and hands the real terminal to the PTY until Ctrl-] — a
-pass-through rather than an embedded emulator, because drawing a shell means
-writing a terminal emulator and there is already one running: the operator's.
-That is the surface a `claude` login needs.
+## Interfaces beside the web app
 
-**Efficiency is the frame differ.** `term.diff` rewrites only the rows that
-changed, cursor-addressed, so an idle console writes nothing at all and a
-ticking job log writes one line. That is what lets the loop poll for keys twenty
-times a second without cost.
+```mermaid
+flowchart LR
+    CLI["kriko (app/cli.py)"] -->|"packs, install, uninstall,<br/>enable, build, lookup"| ST[("knowledge.sqlite")]
+    CLI -->|"prefs, costs, sites, verify,<br/>drafts, operations, bench, tui"| ENG["Engine client<br/>app/tui/client.py"]
+    TUI["kriko tui"] --> ENG
+    ENG -->|HTTP| WEB["running app<br/>or in-process engine"]
+```
 
----
+Only the store commands open the database directly; everything else goes over
+HTTP (a second direct open would be a second writer). Discovery order:
+`--url`, `KRIKO_URL`, `EXTENSION_PORT` (8787), then an in-process engine
+(`--no-start` fails instead).
 
-## Desktop Shell: one store, two front doors
+**Operator console** (`src/app/tui/`): same HTTP API as the dashboard.
+`client.py` discovery and calls, `term.py` raw mode and frame differ,
+`screen.py` a pure function of state, `app.py` the loop. Tabs: Planes, Agenda,
+Jobs, Ops; `s` hands the terminal to the PTY until Ctrl-]. Reachable as
+`kriko tui` or `kriko-sidecar --tui`; the Windows installer adds a **Kriko
+Console** Start-menu shortcut.
 
-**`src/app/sidecar.py`** — the server as a child process. It binds port 0,
-holds the socket, prints `KRIKO_PORT <n>` as its first line of stdout, and
-passes the bound socket to uvicorn as `fd=`. The child chooses the port because
-a parent that finds a free one has already lost it by the time the child binds;
-handing over the socket means uvicorn cannot rebind and serve elsewhere. Paths
-resolve exactly as the CLI resolves them, so a pack installed in the app is
-visible to `python -m app.cli`.
+## Desktop shell
 
-**`tauri/src-tauri/src/main.rs`** — ~180 lines of process supervisor and no
-engine logic (`test_the_shell_holds_no_engine_logic` fails if that changes).
-The window is created hidden; Rust spawns the sidecar, reads the handshake,
-polls `/api/health`, then emits `kriko://ready` and shows it. On failure it
-emits `kriko://failed` with the captured stderr, which `tauri/shell-ui/index.html`
-renders through `textContent` — a blank window is a bug, and stderr is
-subprocess output, not markup. The child is killed on window `Destroyed` *and*
-on `RunEvent::Exit`: a quit from the dock destroys no window, and the orphan
-would hold the store's WAL lock into the next launch.
+`src/app/sidecar.py` binds port 0, prints `KRIKO_PORT <n>` first and passes the
+bound socket to uvicorn. `tauri/src-tauri/src/main.rs` spawns it, polls
+`/api/health`, then shows the window; a failure renders stderr. `--mcp` runs the
+MCP stdio server from the same binary, `--exit-with-parent` is the crash belt.
+`packaging/kriko-sidecar.spec` freezes it, `packaging/smoke_sidecar.py` gates
+handshake, health and frontend, `.github/workflows/desktop.yml` is the
+hand-run installer recipe. Supervisor rules are in `CLAUDE.md` and
+`tauri/README.md`.
 
-**`src/app/web/routers/focus.py`** — "Open in Kriko", which is the one handoff
-that cannot be a link. The extension's button was an `<a href>` at the app's
-own HTTP port: the route resolves, the SPA is served over HTTP, and the reader
-gets the report *in a browser tab* beside the desktop app they already have
-running. They asked for the app and got a web page that looks like it. A page
-cannot raise a native window, so the handoff runs the other way — the extension
-**posts a route** and the two processes that can act on it each take their half.
-The sidecar prints `KRIKO_FOCUS` on stdout (the shell is already reading that
-pipe for the port handshake, so it costs nothing) and the shell calls
-`show_window`; the window polls `GET /api/focus` and navigates. The shell can
-raise a window but has no business knowing the SPA's route table, and this
-module must not hold it either — so the posted route is validated as a *closed
-shape* (a name, optionally one `/`-separated id) rather than against a list of
-routes. It is in memory and expires: a nudge between two live processes is not
-history, and a route persisted across a restart resurfaces as the window
-jumping to a stale report days later. Consume-once on read, or two windows both
-navigate. `test_sidecar.py` fails if `FOCUS_LINE` and the Rust constant drift,
-because a renamed constant here reads as a dead button.
+## Knowledge plane: the ledger
 
-**`packaging/kriko-sidecar.spec`** freezes it (the `hiddenimports` list exists
-because uvicorn resolves its protocol implementations by string, and the `datas`
-entry because the frontend is read from the filesystem, not imported).
-`packaging/smoke_sidecar.py` checks handshake + health + a served frontend
-between freeze and bundle. `.github/workflows/desktop.yml` builds unsigned
-installers on three runners. As of 2026-09-01 none of these have been built on
-a machine with a Rust toolchain — see backlog B52.
+No human sign-off anywhere (`CLAUDE.md`, automation). Generic machinery is in
+`src/kriko/ledger/`; the cars policy is in `packs/cars/pipeline/`.
 
-## Knowledge Plane: Pipeline
+```mermaid
+flowchart LR
+    A["acquire<br/>discover, rank, fetch, ingest"] --> X["extract<br/>grounded quotes"]
+    X --> R["resolve<br/>component from evidence"]
+    R --> V["cluster + verdict<br/>one LLM call per cluster"]
+    V --> E["export<br/>parts YAML"]
+    E --> B["build<br/>YAML to SQLite"]
+```
 
-The pipeline is a ledger, not a curated-YAML approval queue: `app.pipeline.ledger_run`
-drives discovery through export with no human sign-off step (automation principle,
-CLAUDE.md). Each stage splits into a generic half in `src/kriko/ledger/` (orchestration —
-chunking loop, ingest, cost budgeting) and a cars-specific half in
-`packs/cars/pipeline/` (policy — what counts as signal, which sources are
-untrustworthy, which component an evidence chunk describes). A handful of legacy
-per-make/model curated YAMLs remain under
-`packs/cars/pipeline/sources/curated/part_{part_id}.yaml` (one file per *part*, not
-per make+model) as a residual manual-add path; they are not required by the live flow.
+| Stage | File |
+|---|---|
+| acquire | `packs/cars/pipeline/ledger/acquire.py` (no LLM) |
+| chunk, extract | `src/kriko/ledger/chunking.py`, `extraction.py`; noise gates via `kriko.gates` over `packs/cars/vocabulary/gates.yaml` |
+| resolve | `packs/cars/pipeline/ledger/resolve.py` (from evidence text vs catalog codes, never the query) |
+| verdict | `packs/cars/pipeline/ledger/verdict.py`; `eval_verdict.py` checks it against `packs/cars/pipeline/gold/gold.yaml` |
+| export, parity | `ledger/export.py` writes `packs/cars/data/parts/**`; `ledger/parity.py` diffs YAML vs export by stable identity |
+| build | `src/kriko/pack/build.py` (`kriko build packs/cars`); the ledger DB is never on the request path |
 
-### Acquisition
-**`packs/cars/pipeline/ledger/acquire.py`** — discover → rank → fetch → ingest for a
-part, no LLM involved. Results are ranked by part-code specificity before fetching
-(backlog B8), rather than taking the first N results in discovery order.
+## Data formats
 
-### Chunking and extraction
-**`src/kriko/ledger/chunking.py`** / **`src/kriko/ledger/extraction.py`** — generic chunk loop,
-cache, and budget charge. **`packs/cars/pipeline/ledger/chunking.py`** supplies the cars
-chunk gate (the failure lexicon plus catalog-derived engine/gearbox code tokens — a
-chunk is worth extracting if it names a failure word or a code, so a new part is
-covered the moment its stub exists). **`packs/cars/pipeline/ledger/extraction.py`**
-supplies langextract as the extractor via **`packs/cars/pipeline/langextract_client.py`**
-(grounded/few-shot extraction — each claim's quote is aligned to an exact character span
-in the source rather than trusted as a self-reported string) plus the low-value rules
-(`kriko.gates.gate_reason` over this pack's `vocabulary/gates.yaml`) that flag which
-extracted claims are noise. `packs/cars/pipeline/extract.py` is a separate, offline-only
-module (its own docstring: "never on the /analyze request path") — it is not part of
-this ledger loop.
+Variants (`packs/cars/data/variants/{make}_{model}_{gen}.yaml`):
 
-### Entity resolution
-**`packs/cars/pipeline/ledger/resolve.py`** — decides which component a piece of
-evidence describes, from the evidence's own text against catalog-derived codes, never
-from the search query that found the document (design_flaws.md Flaw 1).
-
-### Verdict
-**`packs/cars/pipeline/ledger/verdict.py`** — one strong-model (`deepseek-v4-flash`)
-verdict per claim-cluster. This replaced the old five-gate ministral stack
-(`gate_generic`/`gate_variant`/`gate_support`/`gate_refute`) and the separate scored
-promotion step (design_flaws.md Flaw 5): a single call sees the whole cluster, the
-component, its sibling codes, and the product principle, and returns attribution +
-support + value + severity + bilingual (EN/TR) copy in one JSON object. Verdicts are
-cached by input hash. **`packs/cars/pipeline/ledger/eval_verdict.py`** runs the
-acceptance eval against `packs/cars/pipeline/gold/gold.yaml` (11 hand-judged entries).
-
-### Export
-**`packs/cars/pipeline/ledger/export.py`** — claims as a deterministic view over
-verdicts, written as the part-dict YAML schema under `packs/cars/data/parts/**`. Part
-headers come from the served catalog itself, never hand-enumerated. The pack builder
-validates references and avoids shipping rows that cannot be served.
-
-### Regression check
-**`packs/cars/pipeline/ledger/parity.py`** — diffs existing claim YAMLs against a fresh
-ledger export; matching is by stable identity, not title text, because the verdict
-stage rewrites titles (backlog B1 blocker 2).
-
-### DB sync
-**`src/kriko/pack/build.py`** — build the pack into SQLite
-
-Builds the pack YAML into the local SQLite serving store. Rebuild explicitly with
-`python -m app.cli build packs/cars`.
-
-The serving store contains generic subjects, attributes, claims, evidence and
-relations. The evidence ledger uses its own SQLite database and is never read by
-the request path.
-
----
-
-## Data Formats
-
-### Variants YAML (`packs/cars/data/variants/{make}_{model}_{gen}.yaml`)
 ```yaml
-- id: megane4_h5h_140          # stable forever, never rename
-  make: renault                 # lowercase canonical
-  model: megane                 # lowercase canonical
+- id: megane4_h5h_140        # permanent; claims reference it
+  make: renault
+  model: megane
   generation: "IV"
   engine_code: H5H
-  fuel: petrol                  # petrol | diesel | hybrid | electric | lpg
+  fuel: petrol               # petrol | diesel | hybrid | electric | lpg
   displacement_cc: 1332
   power_min_hp: 115
   power_max_hp: 140
-  transmission: automatic       # manual | automatic
+  transmission: automatic    # manual | automatic
   year_from: 2018
-  year_to: null                 # null = still in production
+  year_to: null              # null = still in production
   market: TR
 ```
 
-### Claims YAML (`packs/cars/data/parts/{part_type}/{part_id}.yaml`)
+Claims (`packs/cars/data/parts/{part_type}/{part_id}.yaml`):
+
 ```yaml
-- id: megane4_h5h_timingchain_v1      # {claim_key}_v{version}
-  claim_key: megane4_h5h_timingchain  # stable across versions
+- id: megane4_h5h_timingchain_v1     # {claim_key}_v{version}
+  claim_key: megane4_h5h_timingchain # stable across versions
   version: 1
   is_current: true
   title: "1.3 TCe (H5H) timing chain stretch and tensioner wear"
-  domain: engine                      # engine|transmission|electrical|emissions|fuel system|brakes|suspension|general
-  severity: high                      # high|medium|low
-  confidence: 0.72                    # 0.0–1.0
-  rationale: "..."
-  inspection_advice: "..."
-  status: verified                    # verified|draft|held|review|rejected
-  promoted_by: human                  # human|auto|auto_audit
+  domain: engine
+  severity: high                     # high | medium | low
+  confidence: 0.72
+  status: verified                   # verified | draft | held | review | rejected
   variants:
     - variant_id: megane4_h5h_140
-      grounding_note: "..."
   sources:
     - source_url: "https://..."
-      site_or_channel: "Reddit r/Renault"
       quote: "verbatim quote..."
       independent: true
 ```
 
-### Curated sources YAML (`packs/cars/pipeline/sources/curated/part_{part_id}.yaml`, legacy manual-add path)
-```yaml
-- type: youtube                   # youtube | page
-  video_id: "abc123xyz"           # for youtube
-  # url: "https://..."            # for page
-  site_or_channel: "Auto Tanı TR"
-  notes: "human note"
-  status: pending                 # pending | processed | skipped
-  added_at: "2026-06-26"
-  processed_at: null
-```
+## Invariants
 
----
-
-## Key Invariants
-
-1. **Variant IDs are permanent.** Once a variant is in the DB, its ID never changes.
-   Claims reference variant IDs — renaming breaks the link silently.
-
-2. **Pack YAML is the source of truth, not the serving DB.** Rebuild the local
-   SQLite pack from YAML with `python -m app.cli build packs/cars`; never edit the
-   generated store directly.
-
-3. **The serving store is generic and local.** Pack data is compiled into SQLite;
-   the request path does not call the evidence ledger or an LLM.
-
-4. **Verdicts are pipeline-owned.** Deterministic gates and verdict stages decide
-   what can be exported; no human sign-off is part of the data path.
-
-5. **The serving plane never calls an LLM.** `/analyze` only reads the DB. All LLM
-   work happens offline in the knowledge plane.
-
-6. **Category vocabulary is pack-owned.** Cars-specific labels and aliases live
-   under `packs/cars/`; the generic engine does not contain car constants.
-
-7. **Nothing is deployed.** Kriko is a standalone app: one process, two SQLite
-   files, no container and no database server. The desktop shell's sidecar binds
-   an OS-chosen port precisely so two copies cannot fight over 8000, which is
-   what the retired Docker stack used to do to a `uvicorn` started in WSL.
-   `test_the_app_stays_standalone` fails if a Dockerfile, a compose file, or a
-   Postgres driver reappears.
+1. Variant IDs are permanent; a rename silently breaks claim links.
+2. Pack YAML is the source of truth: rebuild, never edit the store.
+3. Serving never calls an LLM or the ledger.
+4. Verdicts are pipeline-owned.
+5. Vocabulary is pack-owned; no car constants in `kriko/`.
+6. Nothing is deployed: one process, two SQLite files, no container or database
+   server (`test_the_app_stays_standalone`).

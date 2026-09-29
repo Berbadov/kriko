@@ -132,6 +132,20 @@ describe("the route table", () => {
         expect(activity?.also).toContain("submissions");
     });
 
+    // shell-8: the router's ALIASES table accepted "coverage" and "health"
+    // long before the palette's `also` lists did, so typing either word (the
+    // rail used to say Coverage and Health outright) turned up nothing. The
+    // alias table is now the source both read from, so a name added there is
+    // findable from the day it resolves.
+    it("makes every alias the router accepts findable in the palette too", () => {
+        const flat = destinationsFor("author");
+        const knowledge = flat.find((d) => d.name === "knowledge");
+        expect(knowledge?.also).toContain("coverage");
+        expect(knowledge?.also).toContain("health");
+        expect(knowledge?.also).toContain("subjects");
+        expect(knowledge?.also).toContain("marks");
+    });
+
     // The palette renders this. Derived from the same table as the rail, so a
     // screen added to one is reachable by name in the other on the same day —
     // the failure being prevented is a palette quietly one release behind.

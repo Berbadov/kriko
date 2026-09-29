@@ -8,6 +8,8 @@
 // wrong" is only possible if the panel says which one spoke.
 const test = require("node:test");
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const { loadPanel } = require("./hover_lite_harness.js");
 
@@ -85,7 +87,12 @@ test("the header shows what the engine understood, not what the page said", () =
   p.deliverEntry(ENTRY);
 
   const text = p.listing().textContent;
-  assert.match(text, /2014/);
+  // extension-11 (B145 audit): a fact prints only when the pack declared a
+  // unit for it. `build_year` has none here — the reader already sees the
+  // year in the identity line, and printing it again as a bare "2014" in the
+  // facts row was the same fact twice, the second time indistinguishable
+  // from a raw count.
+  assert.doesNotMatch(text, /2014/);
   assert.match(text, /190,000 km/);
   assert.match(text, /Dizel/);
   assert.match(text, /volkswagen golf/i);
@@ -257,6 +264,22 @@ const CLAIM = {
   domain: "engine",
 };
 
+test("a domain group's heading is a text transform, not a lookup keyed on car parts", () => {
+  // extension-22 (B145 audit, named must-fix): the panel used to hold a
+  // fixed engine/transmission/emissions/... map and fell back to a
+  // half-capitalized string for anything outside it. A pack the engine has
+  // never seen (a drill's "chuck/bearing" domain, say) must render its
+  // heading exactly as well as the cars pack's own domains do.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [
+    { ...CLAIM, domain: "chuck/bearing" },
+  ] } });
+
+  const text = p.claims().textContent;
+  assert.match(text, /Chuck\/Bearing/);
+});
+
 test("a verdict on a claim reaches the app with the claim's own id", () => {
   // The panel is where a reader is actually looking at the car, so it is the
   // only place a verdict is cheap to collect. It travels by claim_id: a
@@ -372,12 +395,70 @@ test("a subject the packs know but hold nothing on opens a consent form, not a r
             "a known subject never drafts by accident");
 });
 
+const ASKED = { questions: [{ id: "engine_code", ask: "Which engine code is it?",
+  options: ["BUG", "CASA"], default: "BUG", because: "BUG was common." }] };
+
+function askingPanel(state) {
+  const p = loadPanel({ workerResponse: {
+    ok: true, plane: { backend: "agent", budget_usd: 0 },
+    job: { job_id: "j1", kind: "pack_author", state, done: state !== "running",
+           attention: ASKED },
+    delivered: true, job_id: "j2", kind: "pack_author",
+  } });
+  p.openPanel();
+  p.deliverEntry(GAP_ENTRY);
+  p.click(".lite-gap-btn");
+  p.click(".lite-research-start");
+  return p;
+}
+
+test("a live run's question is a row of answers, and a press reaches the run (B147)", () => {
+  const p = askingPanel("running");
+  const asked = p.shadow().querySelector(".lite-asked");
+  assert.ok(asked, "the question is on the panel, not only in the app's log");
+  assert.match(asked.textContent, /Which engine code is it\?/);
+  assert.doesNotMatch(p.shadow().textContent, /stopped_at|"questions"/);
+
+  const casa = [...asked.querySelectorAll(".lite-chip")].find((b) => /CASA/.test(b.textContent));
+  casa.click();
+  const said = p.sent.find((m) => m.type === "JOB_SAY");
+  assert.ok(said, "the answer was said to the running job");
+  assert.equal(said.payload.job_id, "j1");
+  assert.match(said.payload.text, /CASA/);
+  assert.match(p.shadow().querySelector(".lite-asked").textContent, /It heard you\./);
+});
+
+test("a finished run's question runs it again with the answer applied (B147)", () => {
+  const p = askingPanel("interrupted");
+  const casa = [...p.shadow().querySelectorAll(".lite-chip")].find((b) => /CASA/.test(b.textContent));
+  casa.click();
+  assert.equal(p.sent.filter((m) => m.type === "JOB_SAY").length, 0);
+  const retry = p.sent.find((m) => m.type === "JOB_RETRY");
+  assert.ok(retry, "the run was started again");
+  assert.deepEqual(retry.payload, { job_id: "j1", answers: { engine_code: "CASA" } });
+});
+
 test("a subject that already has claims is not offered as a gap", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
     claims: [CLAIM],
     subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 4 }] } });
+
+  assert.equal(p.shadow().querySelector(".lite-gap"), null);
+});
+
+test("a subject reached only through its parts is not offered as a gap either", () => {
+  // extension-4 (B145 audit): `subject.claims` only ever counts claims
+  // reached *directly*, so a car whose 8 risks all reach it through a shared
+  // part still has `claims: 0` on the subject itself. The gap card used to
+  // read "couldn't find the knowledge" directly under those 8 risks — this
+  // asserts the panel trusts what's already on screen over that count.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result,
+    claims: [CLAIM],
+    subjects: [{ ...GAP_ENTRY.result.subjects[0], claims: 0 }] } });
 
   assert.equal(p.shadow().querySelector(".lite-gap"), null);
 });
@@ -681,6 +762,90 @@ test("pressing Analyze on a site nothing reads says so, and offers the fix", () 
                "sites");
 });
 
+test("a product nothing installed knows gets its name and one research button (B149)", () => {
+  // The reader's "new products aren't recognised": the page was read, the
+  // product was named, and no pack holds it. The dead end used to be "Not
+  // read here / Add this site", which was untrue and offered the wrong fix.
+  const p = loadPanel({
+    analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Bosch HSG 7584 B 1" },
+    workerResponse: (message) => {
+      if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+      if (message.type === "ANALYZE") {
+        return { ok: false, code: "UNKNOWN_PRODUCT", productName: "Bosch HSG 7584 B 1" };
+      }
+      return { ok: true };
+    },
+  });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "unknown-product");
+  assert.match(box.textContent.replace(/\s+/g, " "), /doesn't know Bosch HSG 7584 B 1 yet/);
+  assert.doesNotMatch(box.textContent, /Add this site/);
+  assert.equal(p.errorText(), null, "not a red banner");
+
+  p.click(".lite-unknown-research");
+  assert.equal(p.shadow().querySelector(".lite-research-name").value, "Bosch HSG 7584 B 1",
+    "the name the page gave is already typed in");
+  assert.ok(p.shadow().querySelector(".lite-research-start"));
+});
+
+test("a stored unknown-product answer reopens on the same card (B149)", () => {
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" });
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "unknown-product");
+  assert.match(box.textContent, /Acme Phone 5/);
+  p.deliverEntry(ENTRY);
+  assert.equal(p.shadow().querySelector(".lite-verdict[data-verdict='unknown-product']"), null);
+});
+
+test("a known site's page that just isn't a listing gets a quieter card, no 'Add this site'", () => {
+  // extension-5/extension-6/extension-8: a category page on a site Kriko
+  // already reads is not "nothing installed knows how to read this site" —
+  // that copy, and the offer to go write an adapter, belongs only to a host
+  // no pack has at all. `hostKnown` is background.js's own determination
+  // (any installed adapter's domain matches this hostname), so the panel
+  // never re-derives it from a site name.
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER", hostKnown: true } });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const box = p.shadow().querySelector(".lite-verdict");
+  assert.equal(box.dataset.verdict, "no-adapter");
+  assert.match(box.textContent.replace(/\s+/g, " "), /isn't one/);
+  assert.equal(box.querySelector(".lite-verdict-btn"), null);
+});
+
+test("the empty state doesn't promise a run time it doesn't always keep", () => {
+  // extension-13 (B145 audit): the copy claimed "under 2s" while the
+  // automatic run actually landed around 3.2s (a 1.5s fixed delay in
+  // content.js on top of the real work). Fixed the delay in content.js;
+  // this half drops the broken promise from the panel's own words instead
+  // of chasing a number that will drift again. Checked at the source level
+  // because reaching the idle empty state through the harness means racing
+  // the same auto-trigger this fix is about.
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
+  assert.doesNotMatch(source, /under 2/);
+  assert.match(source, /No analysis yet/);
+});
+
+test("pressing Refresh asks background.js to bypass its own cache", () => {
+  // extension-3 (B145 audit): the panel used to send a plain ANALYZE
+  // whichever control fired it, so background.js's 6-hour result cache
+  // answered a deliberate Refresh press exactly like the silent run at page
+  // load — there was no way to tell it "no, actually ask this time".
+  const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
+  p.openPanel();
+  p.click(".lite-cta");
+
+  const asked = p.sent.filter((m) => m.type === "ANALYZE").pop();
+  assert.equal(asked.payload.fresh, true);
+});
+
 test("it is not a red banner, because the reader did nothing wrong", () => {
   const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
   p.openPanel();
@@ -696,4 +861,74 @@ test("an answer clears it — something read the page after all", () => {
   assert.ok(p.shadow().querySelector(".lite-verdict"));
   p.deliverEntry(ENTRY);
   assert.equal(p.shadow().querySelector(".lite-verdict"), null);
+});
+
+test("an unknown product gets one button: quick cards now, then the deeper run (B148)", () => {
+  const RISK = { title: "Gearbox judder", body: "It judders.", advice: "Drive it cold.",
+    severity: "high", strength: "reported", source_count: 1, domain: "example.org", quick: true,
+    sources: [{ url: "https://example.org/a", domain: "example.org", quote: "it judders" }] };
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") {
+      return { ok: true, job: { job_id: "q1", kind: "quick_look", deepen_job_id: "d1" } };
+    }
+    if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
+      return { ok: true, job: { state: "succeeded", done: true, result: {
+        assumed: "the 1.6 diesel", risks: [RISK], dropped: 1, deepen_job_id: "d1" } } };
+    }
+    if (message.type === "JOB_STATUS") {
+      return { ok: true, job: { state: "running", done: false, progress: 0.2, message: "reading" } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  const buttons = [...p.shadow().querySelectorAll(".lite-research button")].map((b) => b.textContent.trim());
+  assert.ok(buttons.includes("Research this product"), buttons.join(" | "));
+  assert.equal(p.shadow().querySelector(".lite-research-draft"), null, "one button, not two");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  p.click(".lite-research-start");
+
+  const asked = p.sent.find((m) => m.type === "RESEARCH_PRODUCT");
+  assert.equal(asked.payload.allow_draft, true);
+  assert.equal(asked.payload.url, p.dom.window.location.href);
+  const slot = p.shadow().querySelector(".lite-research");
+  assert.match(slot.textContent, /Gearbox judder/);
+  assert.match(slot.textContent, /Taken as: the 1\.6 diesel/);
+  assert.match(slot.querySelector(".lite-quick-src").textContent, /it judders/);
+  assert.equal(slot.querySelector(".lite-quick-src a").getAttribute("href"), "https://example.org/a");
+  // The panel moved on to the deep run rather than stopping at "done".
+  assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"));
+  assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
+});
+
+test("a deep run that installed its pack refreshes the listing (B148)", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "d1", kind: "pack_author" } };
+    if (message.type === "JOB_STATUS") {
+      return { ok: true, job: { state: "succeeded", done: true,
+        result: { installed: true, pack_id: "mystery.car" } } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  const before = p.sent.filter((m) => m.type === "ANALYZE").length;
+  p.click(".lite-research-start");
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /installed/);
+  assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, before + 1,
+    "the listing was analysed again once the pack was in");
+});
+
+test("an answer leaves one refresh control, the header's (B152.8)", () => {
+  const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  const wrap = p.shadow().querySelector(".lite-cta-wrap");
+  assert.equal(wrap.style.display, "none", "no second full-width Refresh under the header");
+  assert.ok(p.shadow().querySelector(".lite-btn-density"), "the header icon still asks again");
 });

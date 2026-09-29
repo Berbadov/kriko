@@ -1,124 +1,62 @@
+> TL;DR (archived 2026-09-25): Design (2026-07-12, approved) fixing "~100+ claims per
+listing": bloat is flat-ranking + no-cap + empty context gates (506/527 sort identically;
+`due` tiers always empty — zero `maintenance` claims of 906). Fix: deterministic priority rank
+(strength, consequence tier, context specificity, corroboration) → cap (never below
+confirmed/due) → maintenance-kind backfill → gate coverage + suggester loop → value-gate fix.
+
 # Claim-serving overhaul — design spec
 
 **Date:** 2026-07-12 · **Branch:** `model-year-claim-windows` · **Status:** approved, ready to plan
 
 ## Problem
 
-Kriko surfaces ~100+ claims for a single listing. The user's requirement is "few
-data for one specific model/engine/transmission/year combination." Investigation
-(four measurements, 2026-07-12) established the bloat is **not** junk and **not** a
-consequence-ranking problem — it is a **flat-ranking + no-cap + empty-context-gate**
-problem in the serving pipeline.
-
-Serving today is `select → context-gate (fail-open) → cluster/dedup →
-sort(strength, severity)` in `backend/core/resolver.py` + `backend/api/main.py:74-77`.
-Both sort keys are dead in practice:
-
-- **severity** is 47% `high` / 4% `low` (LLM-provisional, inflated) — no spread.
-- **strength** has three tiers (`confirmed` > `due`/`due_stated` > `reported`) but
-  `due`/`due_stated` are **always empty**: they come from `_resolve_maintenance_strength`
-  and there are **zero `maintenance`-kind claims** (all 906 are `known_issue`). So
-  506 of 527 servable claims sort identically as `(reported, high|medium)`.
-- There is **no cap** — every servable, gated claim is returned.
+~100+ claims per listing; requirement is "few data for one model/engine/transmission/year". Measured 2026-07-12 (four measurements): **not junk, not consequence-ranking — flat-ranking + no-cap + empty-context-gate** in `resolver.py` + `main.py:74-77`. Both sort keys dead: **severity** 47% high / 4% low (inflated, no spread); **strength** tiers exist but `due`/`due_stated` are **always empty** (zero `maintenance`-kind of 906 claims) ⇒ 506/527 servable sort identically as `(reported, high|medium)`. **No cap** — everything gated is returned.
 
 ### Problem inventory
 
 | # | Problem | Consequence |
 |---|---|---|
-| A | Flat ranking (severity inflated; `due`/`due_stated` empty) | 506/527 sort identically |
-| B | No per-listing cap | Everything shows even with a good sort |
-| C | Context gates ~89% unpopulated (age/year/fuel ≈ 0%; mileage now ~11%) | High-mileage cars get no reduction |
-| D | Zero `maintenance`-kind claims | Highest-value category absent; strength signal dead |
-| E | Value-gate false positives (`gate_inspection_value` inspection-covered path lacks specificity escape valve) | Real keepers (DQ200 clutch) wrongly held |
-| F | Deterministic grounding reaches ~11% | Other 90% needs suggester→verify→sign-off loop (absent) |
+| A | Flat ranking (inflated severity; dead `due` tiers) | 506/527 sort identically |
+| B | No per-listing cap | Good sort still shows everything |
+| C | Context gates ~89% unpopulated (age/year/fuel ≈ 0%; mileage ~11%) | No high-mileage reduction |
+| D | Zero `maintenance`-kind claims | Best category absent; strength signal dead |
+| E | `gate_inspection_value` lacks specificity escape | Keepers (DQ200 clutch) wrongly held |
+| F | Deterministic grounding ~11% | 90% needs suggester→verify→sign-off loop (absent) |
 
 ## Target architecture
 
-One per-listing pipeline, unchanged in shape, fixed at each stage:
-
-```
-select → context-gate (fail-open) → cluster/dedup → RANK (real signal) → CAP → present
-```
-
-Guiding invariants (carry from the existing guards):
-- **Fail-open on missing data** — never hide a risk for absent listing data.
-- **Deterministic where possible; LLM only as a suggester behind a deterministic
-  verifier + human sign-off.** (Guards: `ground_year_window`, `ground_mileage_threshold`.)
-- **No hardcoded car data** — closed engineering vocabularies (fuel, subsystem
-  categories, cue words) are the allowed exception; nothing that grows with car coverage.
+Same shape, fixed stages: `select → context-gate (fail-open) → cluster/dedup → RANK (real signal) → CAP → present`. Invariants carried over: **fail-open on missing data**; **deterministic where possible, LLM only as suggester behind deterministic verifier + human sign-off**; **no hardcoded car data** (closed engineering vocabularies excepted).
 
 ## Phases
 
 ### Phase A — Real ranking signal (deterministic spine)
-Replace the flat `(strength, severity)` sort with a deterministic **priority key**:
-`(strength_rank, consequence_tier_rank, context_specificity_rank, corroboration)`.
-- New `knowledge/consequence_tier.py`: pure `consequence_tier(title, rationale) → "high"|"medium"|"low"`.
-  HIGH on expensive-subsystem vocab (timing, dual-clutch/mechatronic, DPF/SCR, turbo,
-  injection, EGR, engine internals) — **multilingual** (fix `mekatronik`≠`mechatronic`);
-  LOW only on unambiguous comfort/cosmetic/performance terms **and** no high-system term
-  (ambiguity guard: `software` on a radio claim is low, on an ECU/EDC claim is high);
-  else MEDIUM. Bias to never demote a real mechanical failure (asymmetric, like the
-  year/mileage guards). Rehabilitated as a *cross-car* ranking input (it fails only as a
-  *within-engine* discriminator).
-- `context_specificity_rank`: a claim the listing *specifically triggered* (a context
-  gate it just passed — mileage/age/year present and satisfied) outranks an ungated
-  generic claim.
-- Serving change: `backend/api/main.py` sort key + `resolver` expose the inputs. TDD.
+
+Replace `(strength, severity)` with `(strength_rank, consequence_tier_rank, context_specificity_rank, corroboration)`. New `knowledge/consequence_tier.py` (pure, asymmetric — never demote real mechanical failure): HIGH on expensive-subsystem vocab (timing, dual-clutch/mechatronic, DPF/SCR, turbo, injection, EGR, internals), **multilingual** (`mekatronik`=`mechatronic`); LOW only on unambiguous comfort/cosmetic terms **and** no high-system term (`software`+radio = low, +ECU/EDC = high); else MEDIUM. Cross-car ranking input only (fails as within-engine discriminator). `context_specificity_rank`: listing-triggered (passed gate with data present) outranks ungated generic. Serving: `main.py` sort key + resolver inputs. TDD.
 
 ### Phase B — Cap
-After ranking, cap to top-N per listing with per-domain balance (avoid all-engine).
-Never cap below `confirmed`/`due`/`due_stated` items (those always survive). Config
-constant `MAX_RISKS_PER_LISTING` (+ per-domain soft cap). TDD in `test_context_gating`
-/ a new serving test. Guarantees "few" for **all** cars incl. high-mileage.
+
+Top-N per listing + per-domain soft balance (never all-engine); never cap below `confirmed`/`due`/`due_stated`. Constant `MAX_RISKS_PER_LISTING`. TDD. Guarantees "few" incl. high-mileage.
 
 ### Phase C — Maintenance-kind (lights up the dead strength tiers)
-Reclassify interval-shaped `known_issue` claims (timing belt/chain service, DSG fluid,
-major service, clutch wear) to `kind: maintenance` with a `maintenance` interval block,
-so `_resolve_maintenance_strength` produces `due`/`due_stated`. Deterministic candidate
-detection (interval vocab + the mileage already grounded in Phase-mileage work) → a
-backfill script with dry-run + sign-off (no hand-YAML). Turns "timing belt" into "DUE
-at ~90k unless the ad proves otherwise." Highest product value; fixes ranking at source.
+
+Reclassify interval-shaped `known_issue` (belt/chain service, DSG fluid, major service, clutch wear) → `kind: maintenance` + interval block, so `_resolve_maintenance_strength` yields `due`/`due_stated`. Deterministic candidate detection (interval vocab + grounded mileage) → backfill script with dry-run + sign-off (no hand-YAML). "Timing belt" becomes "DUE at ~90k unless the ad proves otherwise." Biggest product-value lift.
 
 ### Phase D — Broaden gate coverage
-- Extend deterministic grounders to `min_age_years` and year windows where the claim
-  text states them (same guard pattern).
-- Build the **LLM-suggester → deterministic-verify → sign-off loop** for the ~90% that
-  don't state their thresholds: LLM proposes a gate with a cited quote; the existing
-  `ground_*` verifiers confirm the quote actually contains the figure; a human approves
-  the proposal table before write. Reuses `backfill_claim_mileage`/`backfill_claim_window`
-  as the write path. This is the only phase touching the distrusted LLM — contained by
-  verify + sign-off.
+
+Deterministic grounders for `min_age_years` + year windows (same guard pattern); **LLM-suggester → deterministic-verify → sign-off loop** for the ~90% unstated: LLM proposes gate + cited quote, `ground_*` verifiers confirm the figure is quoted, human approves the table, `backfill_claim_mileage`/`backfill_claim_window` write. Only LLM-in-loop phase — contained by verify + sign-off.
 
 ### Phase E — Value-gate hardening
-Add the specificity escape valve to `gate_inspection_value`'s inspection-covered
-stoplist path (mirror `gate_generic`: a config/mileage signal keeps an otherwise
-inspection-sounding claim), unburying keepers like the DQ200 clutch. Re-run the gates
-over the corpus to hold what should be held. TDD in `test_judge_inspection` /
-`test_specificity_checks`.
+
+Specificity escape valve on the inspection-covered stoplist path (mirror `gate_generic`): config/mileage signal keeps inspection-sounding claims; re-run corpus to hold what should hold. TDD (`test_judge_inspection`, `test_specificity_checks`).
 
 ## Sequencing & risk
 
-1. **A** (ranking) → 2. **B** (cap) — the spine; deterministic; delivers "few" for all cars.
-3. **C** (maintenance-kind) — deterministic backfill; biggest product-value lift.
-4. **E** (gate hardening) — small, deterministic, independent.
-5. **D** (coverage + suggester) — largest; the only LLM-in-loop part; last.
-
-A→B are sequential (B needs A's rank). C, E are independent of the serving code and of
-each other (candidates for subagents). D is independent but large. All phases TDD, each
-committed separately. Serving-plane edits (A, B) done in-session to avoid conflicting
-edits to `resolver.py`/`main.py`.
+**A → B** (spine; B needs A's rank) → **C** (deterministic backfill; biggest lift) → **E** (small, independent) → **D** (largest; only LLM part; last). C, E independent of serving code and each other (subagent candidates); D independent but large. All TDD, separate commits. A/B serving edits in-session (avoid `resolver.py`/`main.py` conflicts).
 
 ## Verification
-- Per-phase unit tests (TDD, fail-first).
-- End-to-end via `run_analysis`: a low-mileage and a high-mileage sample listing both
-  return ≤ `MAX_RISKS_PER_LISTING`, ordered by the new priority key, with a maintenance
-  item shown as "due" where applicable.
-- Full `knowledge/` + `backend/` suites green; corpus validates; `context.model_year`
-  etc. visible in the JSONL trace.
-- Migration: any new nullable columns need the commented `ALTER TABLE` lines applied to
-  live Postgres before sync (fresh-volume caveat).
+
+Per-phase TDD fail-first; `run_analysis` e2e (low- + high-mileage samples ≤ cap, new priority order, maintenance "due" shown); full suites green; corpus validates; `context.model_year` visible in JSONL trace. New nullable columns need commented `ALTER TABLE` applied to live Postgres pre-sync.
 
 ## Explicitly out of scope
-Recall importer (KBA license unconfirmed — see `reference_recall_data_sources`); the
-evidence-ledger's two open acceptance blockers (separate branch); listing granularity
-finer than model-year (unreachable — `content.js` scrapes year only).
+
+Recall importer (KBA license unconfirmed); evidence-ledger acceptance blockers (separate branch); sub-model-year granularity (`content.js` scrapes year only).

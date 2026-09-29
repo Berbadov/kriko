@@ -1,3 +1,7 @@
 # Store text as LF, whatever the editor wrote. Windows editors writing CRLF
 # turned one-line changes into whole-file conflicts (docs/DOCTRINE.md, section 6).
 * text=auto eol=lf
+
+# cmd.exe mis-parses labels and blocks in LF-only batch files; the walk
+# shims are the only .cmd in the tree (tools/walk/bin/).
+*.cmd text eol=crlf

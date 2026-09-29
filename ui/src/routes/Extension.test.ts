@@ -202,6 +202,24 @@ describe("adding the browser extension", () => {
         expect(screen.getByText(/matches \/listing\//)).toBeInTheDocument();
     });
 
+    it("lists two packs that read the same site under the same adapter id", async () => {
+        // An adapter id is unique within its pack, not across packs. Keyed on
+        // the id alone, the second pack covering a site threw
+        // each_key_duplicate and took the whole screen down — found by the
+        // screen walker, on an install with three packs for one site.
+        const one = { id: "a1", site: "example.invalid", match: [], labels: [] };
+        stubFetch({
+            "/api/extension": status({ staged: true }),
+            "/api/adapters": [
+                { ...one, pack_id: "org.kriko.cars" },
+                { ...one, pack_id: "org.kriko.other" },
+            ],
+        });
+        render(Extension);
+        expect(await screen.findByText("org.kriko.other")).toBeInTheDocument();
+        expect(screen.getAllByText("example.invalid")).toHaveLength(2);
+    });
+
     it("tells the reader the shortcut and where the address is changed", async () => {
         // Both are unfindable otherwise: a browser never advertises an
         // extension's keyboard command, and the options page lives two clicks
@@ -240,7 +258,7 @@ describe("the one click", () => {
         });
         render(Extension);
         fireEvent.click(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         );
         expect(await screen.findByText(/Started \/usr\/bin\/chromium/)).toBeTruthy();
         // Said before the reader wonders why none of their logins are there.
@@ -263,7 +281,7 @@ describe("the one click", () => {
         });
         render(Extension);
         fireEvent.click(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         );
         expect(await screen.findByText(/No Chrome, Chromium, Brave or Edge/)).toBeTruthy();
         expect(screen.getByText(/Developer mode/)).toBeTruthy();
@@ -275,7 +293,41 @@ describe("the one click", () => {
         stubFetch({ "/api/extension": status() });
         render(Extension);
         expect(
-            await screen.findByRole("button", { name: /Open a browser with Kriko/ }),
+            await screen.findByRole("button", { name: /Open a listing with Kriko/ }),
         ).toBeTruthy();
+    });
+});
+
+describe("opening the folder (settings-1)", () => {
+    // The server answers 200 with `{path, error: ""}` on a genuine success —
+    // that must never read as a request failure, or every successful press
+    // shows "Kriko's engine stopped answering".
+    it("shows nothing extra on a successful reveal", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/reveal": { path: "/home/reader/.kriko/extension", error: "" },
+        });
+        render(Extension);
+        fireEvent.click(await screen.findByRole("button", { name: /Open the folder/ }));
+        await waitFor(() =>
+            expect(screen.queryByText(/engine stopped answering/)).toBeNull(),
+        );
+        expect(screen.queryByText(/Show the details/)).toBeNull();
+    });
+
+    // A genuine failure (a non-empty `error`) still gets a quiet note, not
+    // the restart-the-app remedy.
+    it("shows the server's own note on a genuine reveal failure", async () => {
+        stubFetch({
+            "/api/extension": status({ staged: true, staged_version: "0.2.0" }),
+            "/api/extension/reveal": {
+                path: "/home/reader/.kriko/extension",
+                error: "No file manager found on this machine.",
+            },
+        });
+        render(Extension);
+        fireEvent.click(await screen.findByRole("button", { name: /Open the folder/ }));
+        expect(await screen.findByText(/No file manager found/)).toBeTruthy();
+        expect(screen.queryByText(/engine stopped answering/)).toBeNull();
     });
 });

@@ -1,243 +1,78 @@
+> TL;DR (archived 2026-09-25): Design (2026-09-14, unimplemented, B113) for extension↔app
+harmony: audit finds visual convergence already happened by copy (app default theme *is* the
+extension look; 2 shared token names of 66; severity inks identical, fills differ; one real
+algorithmic split: `claims`→`risks` rename). Fix in 4 phases: subtract (delete dead CSS,
+rename), generated single-owner palette with staleness gate, derived severity in both, document
+legitimate differences. Components/runtime sharing explicitly rejected.
+
 # Extension and app as one system — design
 
-**Status:** design, nothing implemented. Filed as backlog **B113**.
-**Date:** 2026-09-14.
-**Prompted by:** *"Harmony and compatibility between the web extension and the
-app. Both visually and algorithmically. This is very important."*
-
----
+**Status:** design, nothing implemented. Filed as backlog **B113**. **Date:** 2026-09-14. **Prompted by:** *"Harmony and compatibility between the web extension and the app. Both visually and algorithmically. This is very important."*
 
 ## 1. What is actually true today
 
-I assumed, before reading, that this was two design systems that had drifted
-apart and needed reconciling. That is wrong in an interesting way, and the real
-state changes what should be built.
+Pre-read assumption (two drifted design systems needing reconciliation) is **wrong**, and reality changes the build:
 
 ### The visual convergence already happened — by copy
 
-`ui/src/styles/themes/panel.css` opens by saying so:
-
-> *Ported from `extension/hover_lite/hover_lite.css`, which is the **live**
-> stylesheet … `extension/colors_and_type.css` is a cream/lemon design system
-> that nothing loads — the extension has no HTML at all — and the lemonade
-> theme beside this file was built from it by mistake.*
-
-So the app's default theme *is* the extension's look. Somebody already did this
-work. What they could not do was make it stay done.
+`ui/src/styles/themes/panel.css`: *ported from `extension/hover_lite/hover_lite.css` (the **live** stylesheet); `extension/colors_and_type.css` is a cream/lemon system nothing loads, and the lemonade theme was built from it by mistake.* The app default *is* the extension look. Done once, with nothing keeping it done.
 
 ### The two files share two token names out of sixty-six
 
-| | count |
-|---|---|
-| tokens defined in `ui/src/styles/themes/panel.css` | 38 |
-| tokens defined in `extension/hover_lite/hover_lite.css` | 28 |
-| **names in both** | **2** (`--accent`, `--font-mono`) |
-
-Two complete vocabularies for one palette.
+App 38 tokens, extension 28; only `--accent`, `--font-mono` in both — one palette, two names.
 
 ### The translation between them exists — in a comment
 
-`panel.css` annotates every grey with the extension's name for it:
-
-```css
---n-0: #0a0b0d; /* --bg-base   — the page */
---n-2: #15171c; /* --bg-panel  — cards, the rail */
---n-4: #2c313a; /* --border    — hairlines */
---n-9: #e7e9ed; /* --fg        — headings */
-```
-
-All ten greys map, and **all ten values still agree exactly today**. Checked
-pair by pair. Nothing has drifted.
-
-That is the finding. This is not a divergence to repair; it is a **fork that
-has not drifted yet**, with the mapping written in a comment that nothing
-reads. It is the same failure this repository keeps catching one layer further
-out — `SIBLING_CODE_FAMILIES` going stale, `_MAKE_MAP` in Python, then the
-site's own words in `extension/`, and now the palette. Every one of them was a
-hand-maintained correspondence that was correct on the day it was written.
-
-The right moment to build the mechanism is precisely now, while the two sides
-still agree and the change is provably a no-op.
+`panel.css` annotates every grey with the extension's name (`--n-0: #0a0b0d; /* --bg-base */`, …); all ten map, all ten values still agree pair-by-pair. **Not divergence to repair but a fork that hasn't drifted**, mapping held in an unread comment — the repo's recurring failure (stale `SIBLING_CODE_FAMILIES`, `_MAKE_MAP`, site words in `extension/`, now the palette): hand-maintained correspondence, correct on the day written. Build the mechanism **now, while agreement makes the change a provable no-op**.
 
 ### Severity: same intent, two derivations
 
-The three inks are identical in both (`#f0565b`, `#e2933f`, `#46b48c`). The
-shapes are not:
-
-| | app | extension |
-|---|---|---|
-| the colour | `--high: #f0565b` | `--high-ink: #f0565b` |
-| the fill | `--high-soft: #2a1719` (hand-picked opaque) | `--high-surface: rgba(240,86,91,0.10)` (**derived**) |
-| the edge | *(none)* | `--high-border: rgba(240,86,91,0.30)` |
-
-The extension's is better and should win: a fourth severity costs it one value,
-and costs the app three hand-mixed ones. The app also has no border token at
-all, which is a real visual difference and not only a naming one.
+Inks identical (`#f0565b`, `#e2933f`, `#46b48c`); app fills hand-mixed opaque (`--high-soft: #2a1719`), extension derived (`rgba(240,86,91,0.10)` + `0.30` border). Extension wins (a fourth severity costs one value vs three hand-mixes); app also lacks any border token — a real visual gap, not naming.
 
 ### The one genuine algorithmic divergence: `claims` become `risks`
 
-`extension/background.js:595`:
-
-```js
-risks: claims.map((claim) => { … })
-```
-
-The engine says `claims`. The app says `claims`. The extension renames them to
-`risks` at its own boundary and every downstream line — `risk.severity`,
-`risk.inspection_advice`, the badge count — speaks the new word.
-
-Nothing is gained. A shared component would have to translate, a bug report
-that says "risk" needs a mental hop to reach a `claims` table, and B119 has to
-carry the rename forever. This is the algorithmic half of the reader's request,
-and it is one word.
+`extension/background.js:595` renames at its boundary; every downstream line (`risk.severity`, badge counts) speaks the new word. Zero gain; shared components would translate forever; "risk" bug reports need a mental hop to the `claims` table (B119 carries it). The algorithmic half of the ask is one word.
 
 ### What is *correctly* divergent, and must stay so
 
-The `local_panel` block — the damage silhouette and the equipment list — is
-drawn from the reader's own page and **never reaches the engine**. It is absent
-from the `/api/analyze` body on purpose: the engine has no schema for a damage
-silhouette and should not acquire one.
-
-That is right, and this design must not "harmonise" it away. It does mean the
-two clients legitimately show different things, and a reader comparing them
-will see that. The answer is to *say* so in the panel, not to move the data.
-
----
+`local_panel` (damage silhouette, equipment list) — reader's own page data that **never reaches the engine** (absent from `/api/analyze` on purpose; the engine must not gain a damage-silhouette schema). Don't "harmonise" it away; *say* it in the panel instead of moving data.
 
 ## 2. What the problem actually is
 
-Stated precisely, so the fix can be judged against it:
-
-1. **One palette, two vocabularies, no mechanism** keeping them equal. Correct
-   today, and nothing would catch tomorrow.
-2. **Severity is hand-mixed in the app and derived in the extension**, so they
-   can disagree on the fill while agreeing on the ink.
-3. **One row has two names** (`claims` / `risks`) for no reason.
-4. **The dead stylesheet is still in the tree.** `extension/colors_and_type.css`
-   is 172 lines that nothing loads — it is not even in `SHIPPED` in
-   `app/extension.py`. It has already misled one effort into building a whole
-   theme from it.
-
-Everything else about these two clients is already shared: the engine, the
-store, the adapter rows, the `local_panel` contract.
-
----
+1. One palette, two vocabularies, no keeping-mechanism (correct today, uncaught tomorrow). 2. Hand-mixed vs derived severity (fill can disagree while inks agree). 3. One row, two names (`claims`/`risks`). 4. Dead 172-line `colors_and_type.css` still in tree (unloaded, not in `SHIPPED`, already misled one theme effort). Everything else is already shared (engine, store, adapters, `local_panel` contract).
 
 ## 3. Principles for the fix
 
-Drawn from what this repository already does, not invented here.
-
-- **Make the shared thing data, with one owner.** The same move as adapters,
-  `local_panel`, and pack vocabulary.
-- **A correspondence a person maintains is a bug waiting.** If the app and the
-  extension must agree, something must *make* them agree and fail when they do
-  not.
-- **Committed build output with a staleness gate is a pattern this repo already
-  runs.** `src/app/web/static/` is generated, committed, and `tools/gate.sh`
-  fails on a stale bundle. A generated token file inherits that discipline for
-  free — no new idea to teach.
-- **The extension may not gain a build step it does not already have.** It is
-  static files Chrome loads directly. Generation happens in the repo and the
-  output is committed, exactly like the frontend bundle.
-- **No pack vocabulary in either client.** Already enforced by
-  `test_ui_contains_no_pack_vocabulary` and
-  `test_the_extension_speaks_no_sites_own_language`. Nothing here weakens that.
-
----
+Shared thing = data with one owner (adapters, `local_panel`, pack vocab precedent) | person-maintained correspondence = pending bug (agreement must be *made* + failure on drift) | committed output + staleness gate is the running pattern (`src/app/web/static/` + `tools/gate.sh` — generated tokens inherit the discipline free) | extension gains no build step (static files Chrome loads; generation in-repo, output committed, like the frontend bundle) | no pack vocabulary in either client (both tests stay).
 
 ## 4. Proposal
 
-Four phases, each shippable alone and each leaving the tree better than it
-found it.
+Four shippable-alone phases, each leaving the tree better:
 
 ### Phase 0 — subtract (no mechanism yet)
 
-* **Delete `extension/colors_and_type.css`.** Nothing loads it, it is not in
-  `SHIPPED`, and it has already cost one wrong theme.
-* **Rename `risks` to `claims` in the extension.** One word, `background.js`
-  and its consumers, plus the tests that name it. Do it before anything shares
-  code, so nothing is built on the translation.
-
-Small, and it makes the next phases smaller.
+Delete `extension/colors_and_type.css`; rename extension `risks`→`claims` (`background.js` + consumers + naming tests) before anything shares code.
 
 ### Phase 1 — one palette, generated
 
-The comment becomes the mechanism.
-
-* `ui/src/styles/themes/panel.css` is the **source**. It is the app's default
-  theme, it already carries the mapping, and the app is where a theme is picked
-  — `slate` and `lemonade` exist there and have no meaning in a content script.
-* A generator (`tools/tokens.py`, or a step in the existing `ui` build) reads
-  the source and emits the extension's `:host` token block under its own alias
-  names, from an explicit `n-0 → bg-base` table that lives **in the generator,
-  not in a comment**.
-* The emitted block is committed into `extension/hover_lite/hover_lite.css`
-  between markers, or into a small generated file the stylesheet `@import`s —
-  whichever survives the shadow-root loading better; that is an implementation
-  detail to settle when writing it.
-* `tools/gate.sh` gains the staleness check it already performs for the
-  frontend bundle: regenerate, `git diff --exit-code`, fail if it moved.
-
-The first run must produce **no diff**, because the values already agree. That
-is the test that the mapping was transcribed correctly, and it is available
-exactly once — after any drift it is gone.
+Comment becomes mechanism: `panel.css` is **source** (app default theme, already carries the mapping; themes are picked in the app — meaningless in a content script). Generator (`tools/tokens.py` or a `ui` build step) reads it, emits the extension's `:host` block under its alias names from an explicit `n-0 → bg-base` table **living in the generator, not a comment**; committed between markers (or `@import`ed generated file — settle on shadow-root survivability when writing). `tools/gate.sh` gains regenerate + `git diff --exit-code`. **First run must be no-diff** (values agree today) — the one-time proof the mapping transcribed correctly.
 
 ### Phase 2 — severity derived, in both
 
-Adopt the extension's shape. One ink per severity; surface and border derived
-with `color-mix()` or explicit alpha. The app gains a border token it does not
-have, which is a small visual improvement as well as a structural one.
+Extension's shape wins: one ink per severity, surface/border via `color-mix()`/alpha. App gains its missing border token (visual improvement + structural fix).
 
 ### Phase 3 — say what is legitimately different
 
-The panel draws two blocks the app cannot: the damage silhouette and the
-equipment list, both read from the reader's own page. Rather than hiding that,
-the app's own view of a lookup should carry a line saying that the extension
-shows two further blocks that come from the listing page and never reach the
-engine — so a reader comparing them learns the rule rather than suspecting a
-bug.
-
----
+App's lookup view carries a line: the extension shows damage/equipment blocks read from the listing page that never reach the engine — comparison teaches the rule instead of suggesting a bug.
 
 ## 5. Deliberately not doing
 
-* **Not sharing components between the two clients.** Svelte in a content
-  script means a framework bundle injected into every page the extension
-  matches, plus a CSP argument on every site. The panel is ~1,200 lines of CSS
-  and some template strings; that is the right size for what it does.
-* **Not serving the tokens from the engine at runtime.** `local_panel` is
-  served because it is *pack* data and changes when a pack does. The palette
-  changes when this repository does, which is exactly what a committed build
-  artefact is for — and a runtime fetch buys a flash of unstyled panel in
-  exchange for nothing.
-* **Not moving `local_panel` into the engine.** See §1. The engine has no
-  schema for a damage silhouette and acquiring one would be a G6 violation
-  wearing a UX justification.
-* **Not unifying by copying again.** The copy is how we got here.
-
----
+No shared components (Svelte-in-content-script = framework bundle per matched page + per-site CSP fights; ~1,200 lines CSS + template strings is the right size) | no runtime token serving (palette changes with the repo = committed artefact; runtime fetch buys unstyled-panel flash for nothing; `local_panel` is served because it's *pack* data) | no `local_panel`-in-engine (G6 violation in UX clothing) | no more copying (the copy is the disease).
 
 ## 6. The one open decision
 
-**Which side owns the palette.** This design says the app, on the reasoning in
-Phase 1 — the app is where themes are chosen, and `panel.css` already holds the
-mapping. The argument for the other direction is real though: the extension's
-stylesheet is the *live* one, the one a reader actually looks at, and it was
-the original. If it is preferred as the source, everything above still stands
-with the arrow reversed; only the generator's direction changes.
-
-Worth settling before Phase 1 is written, and cheap to settle: it is one line
-in the generator either way.
-
----
+**Which side owns the palette.** Design says app (themes chosen there; mapping already there). Counter: extension stylesheet is the *live*, reader-visible original. Either way the generator changes one line — settle cheaply before Phase 1.
 
 ## 7. Relationship to the other filed ideas
 
-* **B115 (agents author adapters)** builds directly on this. An agent-authored
-  adapter changes what the panel renders, so the panel's contract — what is
-  pack data, what is palette, what is the client's own — needs to be settled
-  first. That is the reason to do this design before that one.
-* **B119 (glossary)** absorbs the `claims`/`risks` rename the moment Phase 0
-  lands, and the glossary is where the word is then pinned.
-* **B114 (Web Store)** decides how the extension is distributed, which changes
-  nothing here: a generated token file is committed either way.
+**B115** (agents author adapters) builds on this (panel contract — pack data vs palette vs client-owned — must settle first). **B119** (glossary) pins `claims` the moment Phase 0's rename lands. **B114** (Web Store) is distribution-orthogonal (generated tokens committed either way).

@@ -19,6 +19,12 @@
      * to say it is to print it.
      */
 
+    // null until the reader flips it; the {#await} below holds the stored value.
+    let closeNotice = $state<boolean | null>(null);
+    async function toggleCloseNotice(on: boolean) {
+        closeNotice = (await api.setCloseNotice(on)).close_notice;
+    }
+
     const MODE_WORDS: Record<string, string> = {
         buyer: "What to worry about, and what to ask — the default.",
         author: "The same answer plus why it ranked there, and which pack said so.",
@@ -55,6 +61,17 @@
 
     let keysPromise = $state(api.keys());
     let checks = $state<Record<string, Check>>({});
+    // Bumped whenever a key is saved or forgotten (settings-4): the "Check a
+    // provider key" list, the search-provider select and the LLM panel below
+    // each hold their own copy of the same facts and none of them re-fetch
+    // on their own when a sibling component changes the underlying key.
+    let keysVersion = $state(0);
+
+    function onKeysChanged() {
+        keysPromise = api.keys();
+        checks = {};
+        keysVersion += 1;
+    }
 
     const blank = (providerId: string, busy: boolean): Check => ({
         provider: providerId,
@@ -139,7 +156,25 @@
 
 <!-- Before "what is remembered", because it is the one thing on this page
      that is *not* in app.sqlite, and the section below says so. -->
-<Keys />
+<Keys onChange={onKeysChanged} />
+
+{#await api.window() then win}
+    {#if win.shell}
+        <section>
+            <h3>Closing the window</h3>
+            <label class="choice" class:on={closeNotice ?? win.close_notice}>
+                <input
+                    type="checkbox"
+                    checked={closeNotice ?? win.close_notice}
+                    onchange={(e) => toggleCloseNotice(e.currentTarget.checked)}
+                />
+                <span>Say that Kriko keeps running in the tray when I close the window</span>
+            </label>
+        </section>
+    {/if}
+{:catch}
+    <!-- No engine answer: nothing to switch, and the rest of Settings stands. -->
+{/await}
 
 <section>
     <h3>Check a provider key</h3>
@@ -194,7 +229,7 @@
 <!-- Which agent, which LLM, which search provider — and what the runs have
      actually cost. Under the keys because a choice between providers only
      means something once a key exists for one of them. -->
-<PlanePrefs />
+<PlanePrefs {keysVersion} />
 
 <section>
     <h3>What is remembered</h3>
@@ -247,12 +282,13 @@
     .choice.on {
         border-color: var(--accent);
     }
+    /* Four short rows side by side where they fit (B146). */
     .checks {
         list-style: none;
         padding: 0;
         margin-block: var(--s-3);
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
         gap: var(--s-2);
     }
     .check {

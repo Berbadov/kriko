@@ -191,6 +191,27 @@ def test_status_and_activity_are_control_plane_snapshots(client):
     assert client.get("/api/activity").json() == {"items": [], "malformed": 0}
 
 
+def test_status_counts_enabled_drop_a_disabled_packs_rows(client):
+    """knowledge-36: disabling a pack must not still count its claims.
+
+    A disabled pack's claims never reach a lookup, so a header that quotes the
+    same subjects/claims total whether the pack is on or off overstates what
+    the reader can actually get an answer about right now.
+    """
+    before = client.get("/api/status").json()["counts_enabled"]
+    assert before["claims"] > 0
+
+    (pack,) = client.get("/api/packs").json()
+    client.post(f"/api/packs/{pack['pack_id']}/enabled", params={"enabled": False})
+
+    after = client.get("/api/status").json()["counts_enabled"]
+    assert after["claims"] == 0
+    assert after["subjects"] == 0
+    # The raw, all-packs totals are unchanged — this is a second, narrower
+    # count, not a replacement for the first.
+    assert client.get("/api/status").json()["counts"]["claims"] == before["claims"]
+
+
 # ── packs ────────────────────────────────────────────────────────────────
 
 
@@ -298,6 +319,16 @@ def test_an_unknown_subject_is_a_404(client):
     assert client.get("/api/subjects/nope").status_code == 404
 
 
+def test_a_percent_in_the_search_box_matches_literally_not_every_subject(client):
+    # `%` and `_` are LIKE wildcards. Typed into Search they are two ordinary
+    # characters a reader might paste from a model number — "%" must not read
+    # as "match anything" and return the whole catalog (knowledge-18).
+    assert client.get("/api/subjects?q=%25").json() == []
+    assert client.get("/api/subjects?q=_").json() == []
+    # The escape must not break matching what is actually there.
+    assert client.get("/api/subjects?q=DHP484").json()
+
+
 def test_the_brief_endpoint_carries_the_packs_principle(client):
     subjects = client.get("/api/subjects?q=DHP484").json()
     brief = client.get(f"/api/subjects/{subjects[0]['subject_id']}/brief").json()
@@ -343,12 +374,48 @@ def test_a_scraped_page_becomes_a_query_through_the_packs_adapter(client):
     assert [c["title"] for c in body["claims"]] == ["Cell imbalance trips protection"]
 
 
-def test_a_site_no_installed_pack_can_read_is_a_404_not_an_empty_answer(client):
-    """Silence would look identical to "this product has no known issues"."""
+def test_compare_is_only_offered_once_there_are_two_saved_checks(client):
+    """extension-16: the panel's Compare button used to be built unconditionally,
+    opening onto Compare's own "needs two saved checks" empty state on the very
+    first analysis. `compare_ready` lets the extension withhold the button
+    instead of the app being the one to say no."""
+    body = {
+        "url": "https://toolshop.invalid/item/dhp484",
+        "title": "Makita DHP484 combi drill",
+        "fields": {"Model No": "DHP484"},
+    }
+    first = client.post("/api/analyze", json=body).json()
+    assert first["compare_ready"] is False
+    second = client.post("/api/analyze", json=body).json()
+    assert second["compare_ready"] is True
+
+
+def test_a_site_no_installed_pack_can_read_says_so_not_an_empty_answer(client):
+    """Silence would look identical to "this product has no known issues" — and
+    a site nothing reads is an expected, frequent answer (check-21), not a
+    server error, so it comes back 200 with a reason rather than a 404."""
     r = client.post(
         "/api/analyze", json={"url": "https://elsewhere.invalid/item/1", "fields": {}}
     )
-    assert r.status_code == 404
+    assert r.status_code == 200
+    body = r.json()
+    assert body["readable"] is False
+    assert body["reason"] == "no_adapter"
+
+
+def test_a_bare_url_with_no_scraped_fields_says_the_page_was_not_read(client):
+    """A pasted URL alone (check-1): the adapter matches the site, but there is
+    no scraped DOM to map, so `mapped.identity` is empty. Running the lookup
+    anyway would ask "what is known about no product in particular" and come
+    back `no_match` — indistinguishable from "no pack covers this category"."""
+    r = client.post(
+        "/api/analyze",
+        json={"url": "https://toolshop.invalid/item/dhp484", "fields": {}},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["readable"] is False
+    assert body["reason"] == "page_not_read"
 
 
 def test_analysis_is_visible_in_recent_activity(client):
@@ -677,7 +744,13 @@ def test_an_analysis_records_which_door_it_came_in_by(client):
     tell an answer their browser produced from one they asked for here — which
     is the first thing you want to know when a result surprises you.
     """
-    body = {"url": "https://toolshop.invalid/item/dhp484", "fields": {}}
+    # A field is required (check-1): an adapter matched but nothing scraped
+    # is now reported as "page not read" rather than run through the lookup,
+    # so this needs at least one field to reach the door-tracking it tests.
+    body = {
+        "url": "https://toolshop.invalid/item/dhp484",
+        "fields": {"Model No": "DHP484"},
+    }
     client.post("/api/analyze", json={**body, "origin": "extension"})
     client.post("/api/analyze", json=body)
 
@@ -685,6 +758,33 @@ def test_an_analysis_records_which_door_it_came_in_by(client):
     # read only the two this test just wrote.
     items = client.get("/api/history").json()["items"][:2]
     assert [item["source"] for item in items] == ["analyze", "extension"]
+
+
+def test_an_analysis_labels_history_by_the_matched_subject_not_the_url(client):
+    """check-15: the history row and Result heading used to be the raw,
+    150-character listing address. Once the adapter resolved a product, the
+    row should say what was found, not where it was pasted from."""
+    client.post(
+        "/api/analyze",
+        json={
+            "url": "https://toolshop.invalid/item/dhp484",
+            "fields": {"Model No": "DHP484"},
+        },
+    )
+    label = client.get("/api/history").json()["items"][0]["label"]
+    assert label == "Makita DHP484"
+
+
+def test_a_lookup_is_labelled_by_the_matched_subject_when_exact(client):
+    """check-14: identity values joined in alphabetical key order read as
+    value soup ("brand makita model DHP484"); the subject's own label reads
+    as a product name."""
+    client.post(
+        "/api/lookup",
+        json={"kind": "product", "identity": {"brand": "makita", "model": "DHP484"}},
+    )
+    label = client.get("/api/history").json()["items"][0]["label"]
+    assert label == "Makita DHP484"
 
 
 def test_an_unknown_origin_is_refused_rather_than_recorded(client):

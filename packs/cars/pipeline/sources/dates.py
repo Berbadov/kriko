@@ -13,7 +13,7 @@ today's date, or a URL-slug guess for a missing one.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +22,15 @@ log = logging.getLogger(__name__)
 # publish date for a source this pipeline would ever discover — a parser that
 # reports 1970 or 1899 has misread something, not found an antique. The
 # ceiling: a page cannot be published in the future relative to the moment
-# this process is fetching it, so "now" (UTC) is the honest upper bound.
+# this process is fetching it. A page dates itself in *its* time zone, so the
+# ceiling is the latest calendar date anywhere right now (UTC+14). Plain UTC
+# dropped every page published "today" in Istanbul between 00:00 and 03:00.
 _MIN_DATE = date(1995, 1, 1)
+_LATEST_OFFSET = timedelta(hours=14)
 
 
 def _today() -> date:
-    return datetime.now(timezone.utc).date()
+    return (datetime.now(timezone.utc) + _LATEST_OFFSET).date()
 
 
 def _bounded(d: date, *, source: str) -> str:

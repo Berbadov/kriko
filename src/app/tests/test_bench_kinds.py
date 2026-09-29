@@ -364,6 +364,59 @@ def test_llm_and_search_axes_sweep_only_the_named_values(settings, store, monkey
     assert len(result["rows"]) == 4
 
 
+def test_the_silent_progress_can_stand_in_for_a_harness_researcher(settings, store, monkeypatch):
+    """ops-1: `tasks._research` does `researcher.replies = progress.replies`
+    on any researcher that already has a `replies` attribute — a harness
+    researcher does. Before this fix, `bench._Silent` (the progress object
+    every bench case runs behind) had no `replies` at all, so reading
+    `progress.replies` there raised `AttributeError` and every harness-plane
+    case in a bench run crashed, though `tasks.bench` still reported the run
+    as succeeded (see ops-1's `run` in Runs)."""
+    from app.web import tasks
+
+    class FakeHarnessResearcher:
+        name = "harness"
+        cost_basis = "subscription"
+        replies = None
+
+        def brief(self, task):
+            return {"documents": 0, "accepted": [], "rejected": [], "llm": "x"}
+
+        def gather(self, brief):
+            return []
+
+    monkeypatch.setattr(tasks, "_researcher", lambda params: FakeHarnessResearcher())
+    row = bench.run_case(
+        settings, {"subject_id": "sa", "pack_id": "probe", "kind": "specific",
+                   "backend": "harness"},
+        plane="harness",
+    )
+    assert row["kind"] == "specific"
+    assert row.get("error") in (None, "")
+
+
+def test_a_run_where_every_case_errors_is_marked_failed_not_succeeded(
+    settings, store, monkeypatch,
+):
+    """ops-1: a bench job whose every case raised used to end `succeeded`
+    with an empty readout, so Bench kept showing "No benchmark runs yet"
+    after a run that in fact crashed every single time."""
+    from app.web import tasks
+
+    monkeypatch.setattr(
+        bench, "run_case",
+        lambda settings, case, **kw: {
+            "subject_id": case["subject_id"], "subject": case["label"],
+            "plane": kw["plane"], "model": kw["model"], "accepted": 0,
+            "refused": 0, "ms": 10, "documents": 0, "findings": 0,
+            "batch_id": kw.get("batch_id", ""),
+            "error": "AttributeError: boom",
+        },
+    )
+    with pytest.raises(RuntimeError, match="every case failed"):
+        tasks.bench(settings, {"planes": "api", "cases": 1}, bench._Silent())
+
+
 def test_an_unnamed_llm_axis_is_one_default_run_not_the_catalogue(settings, store, monkeypatch):
     from app.web import tasks
 

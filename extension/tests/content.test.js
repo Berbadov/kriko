@@ -178,3 +178,13 @@ test("a trailing colon on the page's label does not defeat the match", () => {
     <div class="row"><span>Yıl:</span><span>2014</span></div>`);
   assert.equal(s.buildScrape(["yıl"]).fields["Yıl:"], "2014");
 });
+
+test("the auto-trigger fires promptly, not seconds after the page settled", () => {
+  // extension-13 (B145 audit): document_idle already means the page is
+  // settled, so a further ~1.5s wait was pure added latency, pushing the
+  // automatic answer well past the panel's own time promise. A short tick
+  // is fine; seconds are not.
+  const s = loadContentScript("<html><body></body></html>");
+  assert.ok(s.__lastTimeoutDelay <= 300,
+             `auto-trigger delay was ${s.__lastTimeoutDelay}ms, expected <=300ms`);
+});

@@ -70,6 +70,9 @@ describe("Packs", () => {
     });
 
     it("says the index is unreachable rather than looking broken", async () => {
+        // The server sends the reader-facing sentence directly now (B145
+        // apicode-1/knowledge-21); Packs just shows it, plus the raw detail
+        // behind a disclosure.
         vi.stubGlobal(
             "fetch",
             vi.fn(async (path: string) =>
@@ -77,7 +80,8 @@ describe("Packs", () => {
                     ? new Response(
                           JSON.stringify({
                               index_url: "u",
-                              error: "URLError: refused",
+                              error: "The pack download site could not be reached.",
+                              error_detail: "URLError: refused",
                               packs: [],
                           }),
                       )
@@ -89,7 +93,7 @@ describe("Packs", () => {
             await screen.findByRole("button", { name: "Check for updates" }),
         );
         expect(
-            await screen.findByText(/Could not reach the pack index/),
+            await screen.findByText(/could not be reached/i),
         ).toBeInTheDocument();
     });
 

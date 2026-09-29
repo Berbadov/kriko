@@ -1,168 +1,87 @@
 # The pack contract
 
-A pack is a directory under `packs/`. This is the whole contract: what
-`src/kriko/pack/manifest.py` enforces when it loads one, plus the parts a pack
-grows into once it needs more than the minimum. It is written for someone who
-has never seen this repo and wants to ship a pack for a product category
-nobody has thought about yet.
+A pack is a directory under `packs/`: what `src/kriko/pack/manifest.py`
+enforces on load, plus what a pack grows into past the minimum. For someone
+shipping a pack for a new product category.
 
-Enforcement lives in one place: `src/kriko/tests/test_pack_contract.py`. It loads
-every pack under `packs/` and checks each against the rules below, plus a
-guard that the repo ships more than one pack — a contract validated against a
-single example proves nothing. If your pack fails that test, fix your pack,
-not the test.
+Enforcement: `src/kriko/tests/test_pack_contract.py` — loads every pack under
+`packs/`, checks the rules below, plus a guard of >1 pack in repo (one example
+proves nothing). Failing pack? Fix the pack, not the test.
+
+```mermaid
+flowchart LR
+    YAML["pack.toml + data/*.yaml"] --> BUILD["kriko pack build"]
+    BUILD --> KPACK[".kpack"] --> INSTALL["kriko install\n(refused if no subjects+claims)"]
+    INSTALL --> STORE["SQLite store"] --> LOOKUP["resolve + claim query"]
+```
 
 ## The required minimum
 
-1. **`pack.toml`** at the pack's root, with a `[pack]` table declaring:
-   - `id` — a stable identifier (e.g. `org.kriko.drill`).
-   - `name` — a human-readable name.
-   - `version` — a version string.
+1. **`pack.toml`** with `[pack]` declaring `id` (stable, e.g.
+   `org.kriko.drill`), `name`, `version`. `publisher`/`license`/`origin` read,
+   not enforced. Plus, once a pack ships searches: `languages` (codes, most
+   important first, e.g. `["en", "tr"]`; first = primary, assumed for queries
+   with no `lang`; default `["en"]`) and `markets` (free-form, e.g.
+   `["TR", "EU"]`; into the brief, never interpreted). Both reach agents via
+   the brief — undeclared mixed-language seeds produce searches returning
+   nothing. **Shipping `research/templates.yaml` requires declaring
+   `languages`.**
+2. **Non-empty `[identity]`**: each subject kind (`product`, `part`,
+   `battery_platform`) → ≥1 attribute key making that kind distinct.
+3. **`data/`** with ≥1 `*.yaml` (recursive). No rows = not a pack.
+4. **`README.md`**: what it covers, in prose.
 
-   `publisher`, `license`, and `origin` are read if present but are not
-   enforced. So are two declarations a pack needs the moment it ships
-   searches:
-
-   - `languages` — the language codes this pack's text and queries are written
-     in, most important first (e.g. `languages = ["en", "tr"]`). The first is
-     the pack's primary language, and it is what a query with no `lang` of its
-     own is assumed to be in. Defaults to `["en"]` if the pack never says.
-   - `markets` — the markets its claims are about (e.g. `markets = ["TR", "EU"]`).
-     Free-form codes; the engine passes them into the research brief and never
-     interprets them.
-
-   Both reach an agent through the brief, which is why they matter: a pack
-   whose seed queries are half in one language and half in another, with
-   nothing declaring either, produces exactly the mixed-language searches that
-   return nothing. **A pack that ships `research/templates.yaml` must declare
-   `languages`** — that half *is* enforced (see Enforcement below).
-
-2. **A non-empty `[identity]` table.** It maps each subject kind your pack
-   deals in (e.g. `product`, `part`, `battery_platform`) to the list of
-   attribute keys that make a subject of that kind distinct. Every kind you
-   declare must map to at least one key — an empty list is as invalid as a
-   missing table.
-
-3. **A `data/` directory** containing at least one `*.yaml` file (searched
-   recursively). A pack with no rows is not a pack — it is an announcement.
-
-4. **A `README.md`** at the pack's root. A pack is a thing someone installs;
-   it must say, in prose, what it covers.
-
-Nothing else is required. `packs/drill/` — five YAML files and a README — is
-already at this floor and passes the contract test exactly as it is.
+`packs/drill/` (five YAMLs + README) is this floor and passes.
 
 ## Why `[identity]` is the most consequential declaration
 
-`[identity]` is not bookkeeping — it decides what counts as "the same
-product". Two packs that both describe, say, cordless drills will only have
-their rows merge at lookup time if they hash a given drill to the same
-identity. Get the attribute set wrong (too narrow, and unrelated products
-collide into one subject; too specific, and the same real-world product ends
-up split across several subjects that never see each other's claims) and the
-result is silent — not a crash, just claims that never combine, or claims
-that combine when they shouldn't. As `src/kriko/pack/manifest.py` puts it in the
-error it raises when `[identity]` is empty: without declared identity keys,
-"every subject of a kind would hash to the same id."
-
-There is no single correct shape. `packs/cars/pack.toml` hashes a `product`
-on seven keys (make, model, engine code, fuel, displacement, transmission
-code, minimum power) because two cars that differ in any of those are not
-interchangeable for the claims this pack makes. `packs/drill/pack.toml`
-hashes its `product` kind on two keys (`brand`, `model`) and gives a
-`battery_platform` kind its own single-key identity — a shape a car-shaped
-schema could not express at all. A different author modelling the same
-category with a different identity table is not wrong; their rows simply
-won't collapse with yours. They'll still union at lookup by attribute
-overlap (see `src/kriko/tests/test_lookup.py`'s cross-pack union tests) — which
-is the intended failure mode, not a bug to fix.
+It decides "same product". Two packs describing the same drills merge rows
+only if they hash a drill identically. Too narrow → collisions; too specific
+→ one product split across subjects whose claims never meet. Both silent.
+Empty `[identity]` is rejected: without keys "every subject of a kind would
+hash to the same id." No single correct shape (cars: 7 keys for `product`;
+drill: `brand`+`model`, plus single-key `battery_platform`). Divergent shapes
+aren't wrong — rows union by attribute overlap (see
+`src/kriko/tests/test_lookup.py`) instead of collapsing.
 
 ## The optional parts
 
-None of these are enforced by the contract test. Each buys you something a
-mature pack needs; a pack that doesn't need it doesn't carry it.
+Unenforced; each buys what a mature pack needs.
 
-- **`vocabulary/`** — gate terms and adapter vocabulary the engine's generic
-  ranking/gating logic reads as pack-declared rows instead of hardcoded
-  Python. Present in both `packs/drill/vocabulary/` and
-  `packs/cars/vocabulary/`.
-- **`research/`** — everything an agent needs to research *this* category,
-  and the three files are read by name:
-  - `principle.md` — what is worth surfacing for this kind of product, and what
-    a reader could get more cheaply elsewhere. It is quoted verbatim into every
-    research brief and into the generated agent skill, so it is the pack's own
-    bar rather than the engine's.
-  - `templates.yaml` — the searches to run, with `{label}`, `{alias}` and any
-    of the pack's identity keys substituted in. Two shapes are legal per entry,
-    and they may be mixed in one file:
-
-    ```yaml
-    - "{alias} common problems"          # in the pack's primary language
-    - query: "{alias} arıza şikayet"     # in a language the manifest declares
-      lang: tr
-    ```
-
-    A `lang` the manifest does not name is a contract failure, and so is a
-    query containing a non-ASCII *word* in a single-language pack — the same
-    rule the client is held to, for the same reason: an undeclared language is
-    a query nobody types. The brief groups the rendered queries by language and
-    tells the agent they are seeds to adapt, not a script to run. **Effectively
-    required.** A pack that omits it renders *zero* queries, and its brief then
-    says what to keep without ever saying what to look for — which is what a
-    reader experiences as a Research button that does nothing. `kriko pack
-    scaffold` writes a starting set derived from the identity keys declared.
-  - `skill.md` — optional: how to resolve a subject's *identity* before
-    searching for it, since "the make and model" is a guess and the
-    discriminating attribute is a method. Where present it becomes a section of
-    the generated agent skill.
-
-  `kriko/pack/build.py` is the list that decides which of these ship; a file
-  not named there is not carried into the `.kpack`. Present in both
-  `packs/drill/research/` and `packs/cars/research/`.
-- **`trust/`** — source trust tiers, for a pack whose pipeline ingests from
-  sources of varying reliability. Present in `packs/cars/trust/`; drill has
-  none — its data is synthetic, so there's nothing to weigh.
-- **`adapters/`** — site-specific scraping/extraction rules, for a pack whose
-  pipeline reads live listings from named sites. Present in
-  `packs/cars/adapters/`; drill has none. An adapter maps the page's own
-  labels onto identity and context keys (`identity`, `context`, `derive`,
-  `ignore_labels`), and may also declare a **`local_panel`**: the selectors,
-  the site's own words, the English titles and hints, and the alert thresholds
-  for blocks the client renders from the page itself rather than from the
-  engine's answer — the cars pack uses it for a body-damage silhouette and an
-  equipment list. `GET /api/adapters` hands it to the client verbatim; the
-  engine never inspects it, and an adapter that declares none gets `{}`.
-
-  **All of it is data, and that is a security boundary.** A pack may not ship
-  JavaScript, a regex, or any other executable string, here or anywhere:
-  installing a pack would then mean granting its author the ability to run
-  code on every page the client can see. The format is a fixed vocabulary of
-  term lists, selectors and numbers, interpreted by `kriko/adapters.py` and by
-  the extension. Anything it cannot express is a reason to extend those two —
-  in review, once — never to open that door.
-- **`build.py`** — a custom builder, when the engine's generic build step
-  isn't enough to turn a pack's data into an installable artifact. Present as
-  `packs/cars/build.py`; drill relies on the generic path.
-- **`pipeline/`** — the category's own evidence pipeline: whatever turns raw
-  sources into the claims the pack ships. This is the part that scales with
-  category maturity — `packs/cars/pipeline/` is the bulk of that pack's
-  ~12,900 lines. Drill has none; its claims are hand-authored and synthetic
-  by design.
-- **`coverage.py`** — a category-specific coverage report, surfacing what the
-  pack's data is missing. Present as `packs/cars/coverage.py`; drill has none.
+- **`vocabulary/`** — gate/adapter terms the generic ranking/gating reads as
+  pack rows, not Python. (drill + cars)
+- **`research/`** — per-category agent research, read by name (`kriko/pack/
+  build.py` decides `.kpack` contents): `principle.md` (what's worth
+  surfacing; quoted verbatim into briefs + generated skill); `templates.yaml`
+  (searches with `{label}`/`{alias}`/identity keys; two mixable shapes:
+  `"{alias} common problems"` in the primary language, or `query:`+`lang: tr`
+  in a declared one — undeclared `lang` or non-ASCII *word* in a
+  single-language pack fails; brief groups by language as seeds, not script;
+  **effectively required** — without it the brief never says what to look for;
+  `kriko pack scaffold` derives starters from identity keys); `skill.md`
+  (optional identity-resolution method → skill section).
+- **`trust/`** — source trust tiers for varying-reliability ingestion. (cars;
+  drill's synthetic data has none.)
+- **`adapters/`** — per-site rules (`identity`, `context`, `derive`,
+  `ignore_labels`) + optional **`local_panel`** (selectors, site's own words,
+  English titles/hints, thresholds for client-rendered blocks; via
+  `GET /api/adapters` verbatim, engine never inspects, absent = `{}`).
+  **All data — a security boundary.** No JS/regex/executable strings anywhere:
+  install must never grant client-page code execution. Fixed vocabulary
+  interpreted by `kriko/adapters.py` + extension; gaps extend those two in
+  review, never open the door.
+- **`build.py`** — custom builder when generic build can't produce the
+  artifact. (cars; drill uses generic.)
+- **`pipeline/`** — raw sources → shipped claims. Scales with maturity
+  (`packs/cars/pipeline/` ≈ bulk of ~12,900 lines; drill: none, synthetic).
+- **`coverage.py`** — category coverage report. (cars; drill: none.)
 
 ## Start here
 
-Copy `packs/drill/` as the minimum viable pack. Read `packs/cars/` to see what
-a mature pack grows into once it has a real pipeline, real sources, and real
-scale behind it. Nothing in between those two shapes is required — only the
-four items in "The required minimum" are.
+Copy `packs/drill/` for the minimum; read `packs/cars/` for the mature shape.
+Only the four minimum items are required.
 
 ## Enforcement
 
-`src/kriko/tests/test_pack_contract.py` is the authority. It is parametrized over
-every pack the repo ships and checks each against the required minimum above,
-plus a guard that the repo ships more than one pack, that a pack shipping
-queries declares the language they are in, and that no query is written in a
-language the manifest does not name. If this document and that test ever
-disagree, the test is right and this document needs fixing.
+`src/kriko/tests/test_pack_contract.py` is the authority (minimum per pack,
+>1 pack, query-language declarations). Test beats document on disagreement.

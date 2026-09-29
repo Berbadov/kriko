@@ -47,6 +47,20 @@ test("cancellation posts to the existing job endpoint", async () => {
   assert.deepEqual(h.state.requests[0].body, {});
 });
 
+test("a run's question is answered through say, or retried with the answer (B147)", async () => {
+  const h = loadBackground({ routes: {
+    "/api/jobs/j1/say": { job_id: "j1", delivered: true },
+    "/api/jobs/j1/retry": { job_id: "j2", kind: "pack_author" },
+  } });
+  const said = await send(h, { type: "JOB_SAY", payload: { job_id: "j1", text: "CASA" } });
+  assert.equal(said.delivered, true);
+  assert.deepEqual(h.state.requests[0].body, { text: "CASA" });
+  const again = await send(h, { type: "JOB_RETRY",
+    payload: { job_id: "j1", answers: { engine_code: "CASA" } } });
+  assert.equal(again.job_id, "j2");
+  assert.deepEqual(h.state.requests[1].body, { answers: { engine_code: "CASA" } });
+});
+
 const MANIFEST = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "manifest.json"), "utf8"));
 
@@ -132,12 +146,103 @@ test("the labels the content script scans for come from the installed pack", asy
   assert.deepEqual(ask.message.labels, ADAPTERS[0].labels);
 });
 
-test("a site no installed pack can read is never scraped at all", async () => {
-  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+// ── a site no pack reads (B149) ─────────────────────────────────────────
+//
+// It used to be never scraped at all, which is the reader's "in new sites
+// products can't be grabbed". Now every page is read for the product it
+// publishes; only a page that names none stays silent.
+
+const ELSEWHERE = "https://elsewhere.invalid/x";
+const shopPage = (product) => ({
+  url: ELSEWHERE, title: "Shop", description: "",
+  fields: { "ld:@type": "product", "ld:brand": "Makita" }, listing: {}, product,
+});
+
+test("a page load on a site nobody reads, naming no product, asks the app nothing", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(shopPage({ name: "Shop", typed: false })),
+  });
   await assert.rejects(
-    () => h.sandbox.runAnalysisForTab(1, "https://elsewhere.invalid/x"));
-  assert.equal(h.state.tabMessages.length, 0);
+    () => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
+    (error) => error.code === "NO_ADAPTER");
   assert.ok(!h.state.requests.some((r) => r.method === "POST"));
+  assert.equal(h.state.badge[1], "", "an ordinary page gets no badge");
+});
+
+test("a product page on a site nobody reads is asked about by its name", async () => {
+  const h = loadBackground({
+    routes: routes(),
+    tabResponses: withTab(shopPage({ name: "Makita DHP484Z Combi Drill", typed: true })),
+  });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true });
+  const post = h.state.requests.find((r) => r.method === "POST");
+  assert.equal(post.body.product_name, "Makita DHP484Z Combi Drill");
+  assert.equal(post.body.fields["ld:brand"], "Makita");
+  const ask = h.state.tabMessages.find((m) => m.message.type === "GET_SCRAPE");
+  assert.deepEqual(ask.message.labels, [], "no site adapter, no site labels");
+});
+
+test("a product nothing installed knows comes back with its own name to research", async () => {
+  const h = loadBackground({
+    routes: routes({ readable: false, reason: "unknown_product",
+                     product: { name: "Bosch HSG 7584 B 1" } }),
+    tabResponses: withTab(shopPage({ name: "Bosch HSG 7584 B 1", typed: true })),
+  });
+  await assert.rejects(
+    () => h.sandbox.runAnalysisForTab(1, ELSEWHERE),
+    (error) => error.code === "UNKNOWN_PRODUCT" && error.productName === "Bosch HSG 7584 B 1");
+  const stored = h.state.session[`krikoAnalysis:${ELSEWHERE}`]
+    || Object.values(h.state.session).find((v) => v && v.code === "UNKNOWN_PRODUCT");
+  assert.equal(stored.code, "UNKNOWN_PRODUCT");
+  assert.equal(stored.productName, "Bosch HSG 7584 B 1");
+  assert.equal(h.state.badge[1], "?", "a question, not a red alarm");
+});
+
+test("the reader's click on an untyped page still asks, by the page's name", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(shopPage({ name: "Kelebek Duvar Sticker", typed: false })),
+  });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE);
+  const post = h.state.requests.find((r) => r.method === "POST");
+  assert.equal(post.body.product_name, "Kelebek Duvar Sticker");
+});
+
+// ── the toolbar click on a site Kriko has never run on ─────────────────
+
+test("the first click on an unknown site asks once for every site, then opens the panel there", async () => {
+  let injected = 0;
+  const h = loadBackground({
+    routes: routes(),
+    tabResponses: { TOGGLE_HOVER_LITE: () => { if (!injected) throw new Error("no receiver"); return { ok: true }; } },
+  });
+  const real = h.sandbox.chrome.scripting.executeScript;
+  h.sandbox.chrome.scripting.executeScript = async (opts) => {
+    if (opts && opts.files) injected += 1;
+    return real(opts);
+  };
+  await h.clickListeners[0]({ id: 7, url: "https://www.mediamarkt.example/p/1" });
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(h.state.permissionRequests, [["https://*/*"]]);
+  assert.equal(injected, 1, "the click is the grant for this tab: the panel goes in now");
+  assert.equal(h.state.tabMessages.filter((m) => m.message.type === "TOGGLE_HOVER_LITE").length, 2);
+});
+
+test("a click on the site the package already runs on never prompts", async () => {
+  const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } } });
+  await h.clickListeners[0]({ id: 7, url: "https://www.sahibinden.com/ilan/1" });
+  assert.deepEqual(h.state.permissionRequests, []);
+});
+
+test("once every site is granted, one registration covers them, skipping hosts already covered", async () => {
+  const h = loadBackground({ routes: routes(), grantedOrigins: ["https://*/*"] });
+  await h.sandbox.syncSites({ fresh: true });
+  const any = h.state.registered.find((s) => s.id === "kriko-anysite");
+  assert.ok(any, "no every-site registration");
+  assert.deepEqual(any.matches, ["https://*/*"]);
+  assert.ok(any.excludeMatches.includes("https://*.sahibinden.com/*"),
+    "the manifest's own site must not run the panel twice");
+  await h.sandbox.syncSites({ fresh: true });
+  assert.equal(h.state.registered.filter((s) => s.id === "kriko-anysite").length, 1);
 });
 
 // ── claims become the panel's view model ────────────────────────────────
@@ -206,8 +311,11 @@ test("the result is written to session storage under the listing url", async () 
   const entry = state.session["kriko_result_" + SCRAPE.url];
   assert.equal(entry.ok, true);
   assert.deepEqual(entry.result, result);
-  // The panel renders the damage and equipment panels from this.
-  assert.deepEqual(entry.listing, SCRAPE.listing);
+  // The panel renders the damage and equipment panels from this, and
+  // (extension-8/extension-11, B145 audit) the page's own title, which the
+  // scrape already carried separately from `listing` and which the stored
+  // entry used to drop on the floor.
+  assert.deepEqual(entry.listing, { ...SCRAPE.listing, title: SCRAPE.title });
 });
 
 test("the badge counts high-severity claims", async () => {
@@ -360,6 +468,18 @@ test("something that is not an address is refused, and the old one kept", async 
   assert.equal(h.state.local.krikoApiBaseUrl, "http://127.0.0.1:8787");
 });
 
+test("a phrase with no host in it is refused instead of becoming http://<phrase>", async () => {
+  // extension-20: the old normaliser prefixed http:// onto any string, so
+  // "not a url" was saved as "http://not a url" and blamed on the app being
+  // down instead of being told it was never a valid address.
+  const h = loadBackground({ routes: { "/api/health": {} } });
+  await send(h, { type: "SET_API_BASE", payload: { url: "http://127.0.0.1:8787" } });
+  const reply = await send(h, { type: "SET_API_BASE", payload: { url: "not a url" } });
+  assert.equal(reply.ok, false);
+  assert.match(reply.error, /not a url/i);
+  assert.equal(h.state.local.krikoApiBaseUrl, "http://127.0.0.1:8787");
+});
+
 test("changing the address drops the adapter list the old app gave us", async () => {
   const h = loadBackground({
     routes: routes(), tabResponses: withTab() });
@@ -391,7 +511,7 @@ test("the manifest ships that settings page", () => {
 
 test("a stored answer carries the two screens a reader acts from", async () => {
   const { result } = await analyse({
-    analysis: { ...ANALYSIS, lookup_id: "abc123" } });
+    analysis: { ...ANALYSIS, lookup_id: "abc123", compare_ready: true } });
   // Path segments, not query strings: `/api/focus` refuses a query on
   // purpose, so this is the only spelling that survives the handoff.
   assert.deepEqual(result.app_routes, {
@@ -404,6 +524,17 @@ test("a stored answer carries the two screens a reader acts from", async () => {
                "http://127.0.0.1:8787/#/questions?id=abc123");
   assert.equal(result.app_urls.compare,
                "http://127.0.0.1:8787/#/compare?left=abc123");
+});
+
+test("Compare is not offered before there are two saved checks (extension-16)", async () => {
+  // Compare's own empty state says "needs two saved checks", so a first-ever
+  // analysis handing back a compare route just opens the app to that dead
+  // end. The app tells us when there is something to compare against.
+  const { result } = await analyse({
+    analysis: { ...ANALYSIS, lookup_id: "abc123", compare_ready: false } });
+  assert.equal("compare" in result.app_routes, false);
+  assert.equal("compare" in (result.app_urls || {}), false);
+  assert.equal(result.app_routes.questions, "questions/abc123");
 });
 
 test("an answer the app did not store offers neither of them", async () => {
@@ -450,15 +581,35 @@ test("no shell attached opens the tab the reader asked for", async () => {
   assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
 });
 
-test("nothing running still falls back to a tab", async () => {
+test("nothing running is reported, not opened in a dead tab", async () => {
+  // extension-2 (B145 audit): a *transport* failure means there is no engine
+  // on the other end at all, so the old fallback opened a browser tab onto
+  // ERR_CONNECTION_REFUSED — a tab with nothing on it and nothing the reader
+  // can do about it. "no_shell" (above) is different: the engine answered,
+  // it just has no window to raise, and a tab is the right answer there.
   const h = loadBackground({ offline: true });
   const got = await send(h, {
     type: "OPEN_IN_APP",
     payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
   });
-  assert.equal(got.ok, true);
-  assert.equal(got.delivery, "unreachable");
-  assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
+  assert.equal(got.ok, false);
+  assert.equal(got.code, "APP_NOT_RUNNING");
+  assert.deepEqual(h.state.tabsCreated, []);
+});
+
+test("an app that is open but never answers is named as hung, not as closed", async () => {
+  // fetch has no timeout of its own: a wedged app held the panel's spinner
+  // forever. The worker's clock ends it, and the reader is told the app is
+  // open-but-stuck — "open the Kriko app" would be advice they already took.
+  const h = loadBackground({ hung: true });
+  const got = await send(h, {
+    type: "OPEN_IN_APP",
+    payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
+  });
+  assert.equal(got.ok, false);
+  assert.equal(got.code, "APP_NOT_RESPONDING");
+  assert.match(got.error, /did not answer/);
+  assert.deepEqual(h.state.tabsCreated, []);
 });
 
 test("a route the app refuses is reported, not opened in a tab", async () => {
@@ -530,6 +681,41 @@ test("a doubtful answer arrives as doubtful, with what was weighed", async () =>
   assert.equal(result.next_step.action, "confirm");
 });
 
+test("a second Refresh reuses the cache, but a fresh one re-asks the engine", async () => {
+  // extension-3 (B145 audit): every request served the 6-hour local cache
+  // once the scrape and installed packs matched, with no way to say "no,
+  // ask again" — even the reader pressing Refresh got the stale answer, and
+  // even a stopped engine never showed up in it.
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const postsAfterFirst = h.state.requests.filter((r) => r.method === "POST").length;
+
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  assert.equal(
+    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst,
+    "an ordinary re-run served the cache and asked nothing new"
+  );
+
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url, { fresh: true });
+  assert.equal(
+    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst + 1,
+    "fresh:true skipped the cache and asked the engine again"
+  );
+});
+
+test("a pack update changes the cache signature even when the scrape has not", async () => {
+  // The signature used to hash only the scrape, so a pack shipping a new
+  // claim for the same listing could not reach it: the cache would keep
+  // serving the pre-update answer for up to 6 hours. `_scrapeSignature` now
+  // takes the adapters list too, so a version bump on the same scrape must
+  // change what comes out.
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  const before = h.sandbox._scrapeSignature(SCRAPE, ADAPTERS);
+  const after = h.sandbox._scrapeSignature(
+    SCRAPE, ADAPTERS.map((a) => ({ ...a, version: "0.2.0" })));
+  assert.notEqual(before, after);
+});
+
 test("a missing verdict is empty rather than invented", async () => {
   // An older engine sends none. The panel must be able to tell "this engine
   // did not say" from "this engine said unrecognised" — the second is an
@@ -541,4 +727,74 @@ test("a missing verdict is empty rather than invented", async () => {
   const { result } = await analyse({ analysis: older });
   assert.equal(result.verdict, "");
   assert.equal(result.next_step, null);
+});
+
+// ── B150: the listing's facts travel with "Research this product" ───────
+
+test("research from a listing sends the page's own facts and description (B150)", async () => {
+  const h = loadBackground({
+    routes: { ...routes(), "/api/extension/research-plane": { job_id: "q1", kind: "quick_look" } },
+    tabResponses: withTab(),
+  });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  h.state.requests.length = 0;
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "2014 Volkswagen Golf", allow_draft: true, url: SCRAPE.url,
+  } });
+  const body = h.state.requests[0].body;
+  assert.deepEqual(body.facts, SCRAPE.fields);
+  assert.equal(body.description, SCRAPE.description);
+  assert.equal(body.url, SCRAPE.url);
+});
+
+test("research on a page never read sends its name alone (B150)", async () => {
+  const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "q1" } } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
+  } });
+  assert.deepEqual(h.state.requests[0].body,
+    { q: "Example device", allow_draft: true, url: "https://shop.example/p/1" });
+});
+
+// ── B152.4: an answer that follows the knowledge ─────────────────────────
+
+test("a refreshed answer replaces the listing's entry, which is what repaints the panel", async () => {
+  const url = "https://market.invalid/listing/42";
+  const claim = {
+    claim_id: "c2", pack_id: "p", title: "Added by the agent", severity: "high",
+    domain: "mech", sources: [],
+  };
+  const h = loadBackground({
+    routes: {
+      "/api/lookup/abc/refresh": {
+        lookup_id: "abc", refreshed: true,
+        response: { lookup_id: "abc", claims: [claim], subjects: [], packs: [] },
+      },
+    },
+  });
+  h.state.session["kriko_result_" + url] = {
+    ok: true, result: { lookup_id: "abc", claims: [] }, listing: { title: "x" },
+  };
+  const got = await send(h, { type: "REFRESH_ANSWER", payload: { url, lookupId: "abc" } });
+  assert.equal(got.ok, true);
+  const entry = h.state.session["kriko_result_" + url];
+  assert.deepEqual(entry.result.claims.map((c) => c.title), ["Added by the agent"]);
+  assert.equal(entry.result.lookup_id, "abc");
+  // The listing extras from the scrape survive; only the answer changed.
+  assert.equal(entry.listing.title, "x");
+  const posted = h.state.requests.find((r) => r.url.endsWith("/api/lookup/abc/refresh"));
+  assert.equal(posted.method, "POST");
+});
+
+test("an answer the app kept as it was leaves the entry alone", async () => {
+  const url = "https://market.invalid/listing/42";
+  const h = loadBackground({
+    routes: { "/api/lookup/abc/refresh": { lookup_id: "abc", refreshed: false } },
+  });
+  const before = { ok: true, result: { lookup_id: "abc", claims: [] } };
+  h.state.session["kriko_result_" + url] = before;
+  const got = await send(h, { type: "REFRESH_ANSWER", payload: { url, lookupId: "abc" } });
+  assert.equal(got.ok, true);
+  assert.equal(got.result, null);
+  assert.equal(h.state.session["kriko_result_" + url], before);
 });
