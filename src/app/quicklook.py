@@ -79,9 +79,16 @@ thing you say:
 """
 
 
-def parse(reply: str) -> dict:
-    """The agent's answer as cards, or an honest nothing. Never raises."""
+def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
+    """The agent's answer as cards, or an honest nothing. Never raises.
+
+    `sources` is url -> the text a search tool returned for it, when the
+    plane can say (the API agent, B153). Then a quote has to be *in* that
+    text, and is shown as the page's own characters (`loose_span`); a CLI's
+    reply carries no such text, so there it is only required to exist.
+    """
     from app.packauthor import _payload  # the one fence reader every door uses
+    from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
     if not isinstance(found, dict):
@@ -100,6 +107,11 @@ def parse(reply: str) -> dict:
         if not title or not host or not quote:
             dropped += 1
             continue
+        if sources is not None:
+            quote = loose_span(sources.get(url, ""), quote)
+            if not quote:
+                dropped += 1
+                continue
         if len(risks) == MAX_RISKS:
             break
         severity = str(raw.get("severity") or "").strip().lower()

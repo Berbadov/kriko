@@ -482,6 +482,37 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
+### B153 — "Agent operations are slow and not working properly": the agent runs on the API, not a CLI `[G5]`
+**Asked:** "Agent operations are slow and not working properly. check it and if you think they are ontologicvally unusable, work on api usage." (2026-09-29, on 0.10.12)
+**Where:** the extension panel on a listing → **Research this product** (the quick look, then the draft pack); Settings → Agents, where the agent is picked; Activity → Runs.
+**Reproduced (2026-09-29, installed 0.10.12, read-only, from `app.sqlite` jobs and `bench_runs`):**
+- claude-code quick look `0818dd2b`: 23 s, "nothing it could source". All three pages it opened answered 403 to WebFetch. The pack authors `7b3193d3` and `d0e0cfe0` each wrote "I did no web research in this session" in one turn and installed packs with 0 claims. The brief itself says "You have no Kriko tools in this session. Do not attempt to call any"; the agent read that as no tools at all.
+- The bench (claude-code) spent about 30 s and about 104k tokens per subject to keep 1–2 claims from 1 source.
+- The failures cluster by CLI and by release, not by subject:
+  - claude-code: OAuth expired ×9, weekly limit ×2, "no JSON object" ×2, stdin deadlock (a 3878 s job).
+  - opencode: "command line is too long", a 240 s timeout.
+  - mistral-vibe: "API error from mistral", and every bench case failed with "Failed to save session".
+  - antigravity: 626 s, then quarantined.
+- **Verdict:** a coding-agent CLI is a program for a person at a terminal, not a function. Its login, quota, session files, argv limits, shims and working folders are all failure points Kriko cannot see into. B124 found the same thing ("mis-used"). The CLI plane stays as an option but cannot be the way unattended operations run.
+- One Mistral Conversations call with its `web_search` tool (measured 2026-09-29) answered in 3.4–4.9 s with 10 results. Each result carried its page's description and snippets, so a quote can be checked against text Kriko itself received, with no page fetch that can 403.
+**Done when:**
+- Settings → Research takes a **Mistral** key. With it, the agent picker (Settings → Agents, and the picker where a run starts) offers **Mistral API**.
+- Picked, the extension's **Research this product** quick look answers in under 30 s with risks whose quotes appear in the search results for their own url; an ungrounded quote is dropped and counted. The draft pack, the disambiguation pass and a subject's research run go through the same call, with no CLI spawned.
+- It runs **only when picked**: a saved key alone never runs it, not even on a machine with no CLI. Every run on it has a ceiling: $0.20 for the panel's quick look, $0.50 for the draft, the paid plane's floor for a research run, and the agenda's shared ceiling. A spent ceiling refuses the next request. An agenda row whose cost could not be counted is counted at its whole ceiling. The unattended loop does not start a run on it until the schedule names a ceiling. The key saved for it does not, by itself, route the extension onto the paid plane; that plane is offered only when its own model has a key.
+- Tokens and cost, with every search billed at $0.03 on top of the tokens, reach the run's row. An unpriced model reads "cost unknown", never a smaller number. The paid plane (search, fetch, extract) can use Mistral as its completion model. It does not use Mistral for search: a forced one-search conversation per query bills a model call on top of every $0.03 search, and Exa or Tavily do that job for less.
+- Tests for each (`src/app/tests/test_the_api_agent_plane.py`). Observed on the installed build: one quick look on a real listing, its time and its risks.
+**Observed (2026-09-29, installed 0.10.13, through the panel's own door `POST /api/extension/research-plane`, not yet the panel screen):**
+- Key present, nothing picked: the plane stays `subscription` on claude-code.
+- Picked: `per_token`, at $0.20.
+- Quick look `482f0a8f` on "Dyson V15 Detect Absolute": 10 s, $0.09, 20,689 tokens, 3 searches. It kept 2 risks, each quoting its own url (ifixit, reddit), and dropped 4 unsourced.
+- The draft `544610c3` was cancelled on purpose before it spent anything.
+- Afterwards the pick went back to claude-code.
+- Seen: risk 1's title ("Motor/Capacitor failure") claims more than its grounded quote ("restricted airflow…"). The quote check proves the words, not the title.
+
+**Still open:** the same quick look seen on the panel screen, on a real listing, with Mistral API picked.
+**Not this:** removing any CLI harness; changing the default plane for a reader who never picks one; per-model tuning; registering a site on it (an adapter is selectors, and search text has no markup).
+**Owner:** this session, branch `b153/api-agent`.
+
 ### B152 — "Just look into each and if they are usable implement and merge": the abandoned worktrees land, and the rest of the reader's list is a work order `[G5]`
 **Asked:** "ok lets tidy up this mess. just look into each and if they are usable implement and merge. let set a to do list after that lean into the performance issues, half working buttons. go monster mode; remember the previous things that ive said I told you to. take the control of the computer to test." (2026-09-28)
 **Where:** `.claude/worktrees/*` → branch `b145/ship-ready`; then the installed app and the extension panel.
