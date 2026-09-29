@@ -67,7 +67,7 @@ def completer_for(model: str):
 __all__ = [
     "exa", "fetch", "harness", "llm",
     "agent_ready", "agents_available", "api_researcher", "bills_per_token",
-    "harness_researcher", "resolve_agent",
+    "harness_researcher", "local_researcher", "resolve_agent",
     "MissingKey", "NoHarness",
 ]
 
@@ -417,3 +417,45 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
         agent, model=model.strip(), home=KRIKO_HOME,
         timeout=timeout or mistral.TIMEOUT_SECONDS,
     )
+
+
+def local_researcher(*, base_url: str = "", serving_name: str = "",
+                     search_base_url: str = "", engine: str = "",
+                     scheduler=None, spend=None, model: str = ""):
+    """The free plane that gathers: this machine's own sockets do the work.
+
+    A local inference server completes, a self-hosted SERP searches, the
+    stock reader reads. Nothing here costs a key or a subscription, so
+    unlike `api_researcher` there is no `MissingKey` to raise and no budget
+    to enforce — but there *is* politeness, and the scheduler is passed in
+    by the caller rather than built here, for the same layering reason the
+    paid plane takes its sockets: choosing pace and rotation is a decision
+    about this installation's sources, and `app/web/tasks.py` is where a
+    reader's choices become arguments.
+
+    The completion adapter is the OpenAI-shaped one with a local base
+    URL, `llm.completer` with a placeholder key — a local server ignores
+    `Authorization`, and the adapter's `require("openai")` must not fire
+    for a plane that has no vendor. The serving name rides params exactly
+    the way the paid plane's model does, and lands on the instance for the
+    provenance row the same way.
+    """
+    from kriko.research import LocalPlane
+    from app.providers import openserp
+
+    name = serving_name or (llm.model_name(model) if model else "") or "local"
+    completer = llm.completer(
+        api_key="not-needed-for-a-local-server",
+        base_url=(base_url or llm._env("LLM_BASE_URL", "http://127.0.0.1:8080")),
+        model=name,
+    )
+    researcher = LocalPlane(
+        openserp.searcher(search_base_url, engine),
+        fetch.reader(),
+        completer,
+        scheduler=scheduler,
+        spend=spend,
+    )
+    researcher.model = name
+    researcher.search_provider = f"openserp:{engine or openserp.DEFAULT_ENGINE}"
+    return researcher

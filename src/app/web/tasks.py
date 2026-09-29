@@ -119,6 +119,27 @@ def _researcher(params: dict):
             # a stored per-harness choice applies, otherwise the CLI default.
             model=str(params.get("model") or ""),
         )
+    if backend == "local":
+        # Sockets and pacing are interface decisions, which is why this
+        # branch lives here rather than being a `get_researcher` backend:
+        # the engine owns no sockets and no politeness policy. The scheduler
+        # sources mirror the SERP adapter's engine names, so rotation maps
+        # one-to-one onto what a challenge page rotated away from.
+        from app.providers import local_researcher
+        from kriko.research.politeness import PolitenessScheduler
+        engines = str(params.get("engines") or "duckduckgo,bing,ecosia")
+        sources = {
+            engine.strip(): float(params.get("min_interval") or 3.5)
+            for engine in engines.split(",") if engine.strip()
+        }
+        return local_researcher(
+            base_url=str(params.get("llm_base_url") or ""),
+            serving_name=str(params.get("model") or ""),
+            search_base_url=str(params.get("search_base_url") or ""),
+            engine=sources and next(iter(sources)) or "",
+            scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
+            model=str(params.get("model") or ""),
+        )
     if backend != "api":
         return get_researcher({"backend": backend})
     from app.providers import api_researcher
