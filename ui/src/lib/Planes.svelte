@@ -82,7 +82,11 @@
     }
 
     const costWord = (plane: ResearchPlane) =>
-        plane.cost_basis === "subscription" ? "no marginal cost" : "costs per token";
+        plane.cost_basis === "subscription"
+            ? "no marginal cost"
+            : plane.cost_basis === "self_hosted"
+              ? "free, on this machine"
+              : "costs per token";
 
     /* Three planes now, and the names are the reader's question rather than
      * the engine's word: "who does the reading". `harness` is the one that
@@ -93,6 +97,7 @@
         harness: "Run my agent",
         agent: "I'll run it myself",
         api: "Kriko itself",
+        local: "This machine",
     };
     const nameOf = (plane: ResearchPlane) => NAMES[plane.id] ?? plane.id;
 
@@ -105,13 +110,14 @@
         harness: "agent",
         agent: "skill",
         api: "llm",
+        local: "knowledge",
     };
 </script>
 
 <article class="card">
     <h3><Icon name="knowledge" /> Build knowledge</h3>
     <p class="meta">
-        Three planes, the same claims at the end of all of them: whatever either one finds
+        Four planes, the same claims at the end of all of them: whatever any one finds
         goes through the same grounding check and the same acceptance path, tagged
         with which plane found it, and any run can be taken back out from
         <strong>Activity → Runs</strong>.
@@ -305,6 +311,13 @@
                                     <code>{(plane.search_dirs ?? []).join(", ")}</code>.
                                 </p>
                             {/if}
+                        {:else if plane.id === "local"}
+                            <p class="meta">
+                                Needs this machine's own services:
+                                <code>{plane.inference_url ?? "127.0.0.1:8080"}</code> (an
+                                OpenAI-compatible server, e.g. llama-server or Ollama) and
+                                <code>{plane.serp_url ?? "127.0.0.1:7000"}</code> (OpenSERP).
+                            </p>
                         {:else}
                             <p class="meta">
                                 Needs both keys before it can run.

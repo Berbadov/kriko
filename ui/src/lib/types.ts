@@ -954,6 +954,11 @@ export type ResearchPlane = {
      *  search, and the home-relative directories searched without it. */
     dirs_env?: string;
     search_dirs?: string[];
+    /** The local plane only: where this machine's inference server and SERP
+     *  were probed, so a card that cannot run names the two services to
+     *  start rather than just the absence. */
+    inference_url?: string;
+    serp_url?: string;
 };
 
 /** What `/api/keys` says about one provider — never the key itself.
