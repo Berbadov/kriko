@@ -1907,8 +1907,7 @@ class HarnessResearcher(AgentResearcher):
         # that has somewhere to put it. Where there is nowhere, `scale_args`
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
-        prompt = (self.brief(task) + "\n" + budget_clause(self.max_documents)
-                  + CONTRACT + self.harness.contract_note)
+        prompt = self.brief(task) + "\n" + self._contract()
         reply = self._run(prompt)
         payload = _payload(reply)
         reported = payload.get("queries")
@@ -1972,6 +1971,17 @@ class HarnessResearcher(AgentResearcher):
         if not documents:
             self.note = self.note or "the harness reported no usable findings"
         return documents
+
+    def _contract(self) -> str:
+        """What is appended to the brief: how much to read, and how to report.
+
+        A method so a plane that reports the same way but is *billed*
+        differently can add its own ceiling: the Mistral API agent
+        (`app/providers/apiagent.py`) pays per search, and a budget stated in
+        pages says nothing about dollars.
+        """
+        return (budget_clause(self.max_documents) + CONTRACT
+                + self.harness.contract_note)
 
     def extract(self, task: ResearchTask, document: Document) -> list[Finding]:
         """What `gather` already parsed, per document. No second model call."""

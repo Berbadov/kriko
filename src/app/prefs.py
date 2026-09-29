@@ -71,9 +71,11 @@ def harness_effort_key(harness_id: str) -> str:
 def _harness_ids() -> tuple[str, ...]:
     # Deferred: `app.providers.harness` is a heavier import than this module
     # wants at definition time, and nothing here needs it before first use.
+    from app.providers import apiagent
     from app.providers import harness as harness_mod
 
-    return tuple(one.id for one in harness_mod.KNOWN)
+    # The API agents take a model too (B153), and are picked in the same row.
+    return (*(one.id for one in harness_mod.KNOWN), *(one.id for one in apiagent.KNOWN))
 
 
 HARNESS_MODEL_KEYS = tuple(harness_model_key(one) for one in _harness_ids())
@@ -145,7 +147,7 @@ def effort_for_harness(conn, harness_id: str, override: str = "") -> str:
 
 def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> dict:
     from app import keys
-    from app.providers import harness as harness_mod
+    from app.providers import resolve_agent
     from app.web.settings import KRIKO_HOME
 
     stored = read(conn)
@@ -163,20 +165,80 @@ def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> 
     elif search not in searchers:
         reasons.append(f"selected search provider {search!r} is unavailable — add its key or change the selection")
     wanted = harness.strip() or stored[HARNESS]
-    installed = harness_mod.available()
-    selected = next((one for one in installed if one.id == wanted), None)
-    note = ""
-    if selected is None and installed:
-        selected = installed[0]
-        if wanted:
-            note = f"preferred harness {wanted!r} is not installed here — used {selected.id} instead"
+    # The run's own resolution, not a copy of it: a screen that named one
+    # agent while the run took another is the drift B117 fixed once already.
+    selected, note = resolve_agent(wanted)
     return {
         "llm": name, "completion_provider": provider, "search": search,
         "ready": not reasons, "reason": "; ".join(reasons),
         "harness": selected.id if selected else "",
         "harness_ready": selected is not None,
-        "harness_note": note if selected else "no usable coding-agent CLI installed",
+        "harness_note": note if selected else (
+            "no usable coding-agent CLI installed, and no API agent picked"),
     }
+
+
+def paid_plane_ready(app_state_path=None, env_path=None) -> bool:
+    """Whether a paid-plane run would work *with the model it would use*.
+
+    For the doors that choose the paid plane on the reader's behalf (the
+    extension, the scheduler). `keys.ready` alone counts any completion key,
+    and those two questions came apart once a key could be saved for another
+    use: the Mistral key an API agent needs is not a key for `gpt-4o-mini`.
+    """
+    from app import keys
+    from app.web import state
+    from app.web.settings import KRIKO_HOME
+
+    conn = None
+    try:
+        conn = state.connect(app_state_path) if app_state_path else None
+    except Exception:  # noqa: BLE001 — an unreadable preference is no preference
+        conn = None
+    try:
+        provider = modelcatalogue.provider_for(for_role(conn, "extract"), KRIKO_HOME)
+    finally:
+        if conn is not None:
+            conn.close()
+    return keys.ready(env_path, provider=provider)
+
+
+def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
+    """The API agents, shaped like the CLI rows: `(ready, missing)`.
+
+    Ready means its key is saved, and a ready row is one the reader can
+    *pick*; nothing runs on it until they do (`resolve_agent`). The row says
+    what it bills, because unlike a CLI's subscription this one is metered.
+    """
+    from app import keys
+    from app.providers import apiagent
+    from app.web.settings import KRIKO_HOME
+
+    ready = apiagent.available()
+    def bills(one) -> str:
+        return f"your {keys.BY_ID[one.key].label} key, per token and per search"
+
+    rows = [
+        {
+            "id": one.id, "label": one.label, "path": one.host, "command": "",
+            "needs_account": bills(one), "cost_basis": "per_token",
+            "llm": for_harness(conn, one.id),
+            "llms": apiagent.models_for(one, KRIKO_HOME),
+            "llm_hint": one.model_hint, "llm_selectable": True,
+            "effort": "", "efforts": [], "effort_hint": "",
+        }
+        for one in ready
+    ]
+    missing = [
+        {
+            "id": one.id, "label": one.label, "command": "", "download_url": one.key_url,
+            "install_hint": one.install_hint,
+            "needs_account": "Bills " + bills(one),
+        }
+        for one in apiagent.KNOWN
+        if one not in ready
+    ]
+    return rows, missing
 
 
 def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
@@ -232,12 +294,13 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         for one in harness.KNOWN
         if one.id not in have and not one.unusable
     ]
+    api_rows, api_missing = api_agent_rows(conn)
     return {
         "chosen": chosen,
         "effective": effective(conn),
-        "harnesses": installed,
+        "harnesses": installed + api_rows,
         "unusable": unusable,
-        "missing": missing,
+        "missing": missing + api_missing,
         "dirs_env": harness.DIRS_ENV,
         "search_providers": [
             {

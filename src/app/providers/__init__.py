@@ -47,8 +47,12 @@ def completer_for(model: str):
     from app.web.settings import KRIKO_HOME
 
     provider = modelcatalogue.provider_for(model, KRIKO_HOME)
-    if provider not in ("openai", "anthropic"):
+    if provider not in modelcatalogue.ADAPTERS:
         raise MissingKey(f"no completion adapter for {provider}")
+    if provider == "mistral":
+        from app.providers import mistral
+
+        return mistral.completer(model=model)
     if provider == "anthropic":
         # The prefix check is a fallback for a model released after the
         # reader's catalogue was written: `claude-` is Anthropic's own
@@ -58,9 +62,12 @@ def completer_for(model: str):
 
         return anthropic_llm.completer(model=model)
     return llm.completer(model=model)
+
+
 __all__ = [
     "exa", "fetch", "harness", "llm",
-    "api_researcher", "harness_researcher",
+    "agent_ready", "agents_available", "api_researcher", "bills_per_token",
+    "harness_researcher", "resolve_agent",
     "MissingKey", "NoHarness",
 ]
 
@@ -183,7 +190,8 @@ def _preferred_model(app_state_path) -> str:
 
 
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
-                       app_state_path=None, model: str = "", effort: str = ""):
+                       app_state_path=None, model: str = "", effort: str = "",
+                       api: bool = True):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
 
     The sibling of `api_researcher` in shape and its opposite in cost: this one
@@ -191,41 +199,26 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     raises `NoHarness` rather than returning a researcher that would fail on
     its first subject, for the same reason the paid plane raises `MissingKey` —
     "no agent installed" is a screen with an answer on it, not a failed run.
+
+    An API agent (`app/providers/apiagent.py`) answers here too, when it is
+    the reader's pick — never by omission, since it bills per token and says
+    so through `cost_basis`. `api=False` is for a job whose tool it
+    lacks: registering a site means reading the page's markup, and a search
+    result's text has none.
     """
     if not preferred and app_state_path is not None:
-        from app import prefs
-        from app.web import state
-
-        try:
-            conn = state.connect(app_state_path)
-        except Exception:  # noqa: BLE001 — see `_preferred_model`
-            conn = None
-        if conn is not None:
-            try:
-                preferred = prefs.read(conn).get(prefs.HARNESS, "")
-            finally:
-                conn.close()
-    found = harness.chosen(preferred)
-    note = ""
-    if found is None and preferred:
-        # The reader's preference names a CLI that is not installed here —
-        # `harness.chosen(preferred)` says so by returning `None` rather than
-        # silently substituting anything, which is correct for *it*. But a
-        # run failing outright when a different, perfectly usable CLI is
-        # sitting right there is the crash this function exists to avoid: an
-        # unknown or uninstalled choice must fall back visibly, not refuse.
-        fallback = harness.chosen("")
-        if fallback is not None:
-            found = fallback
-            note = (
-                f"preferred harness {preferred!r} is not installed here — "
-                f"used {fallback.id} instead"
-            )
+        preferred = _stored_pick(app_state_path)
+    found, note = resolve_agent(preferred, api=api)
     if found is None:
         names = ", ".join(h.executable for h in harness.KNOWN)
         raise harness.NoHarness(
-            f"no coding-agent CLI on PATH (looked for: {names})"
-        )
+            f"no coding-agent CLI on PATH (looked for: {names})" + _api_hint(api))
+    if _is_api_agent(found):
+        researcher = _api_agent(found, timeout=timeout, model=model,
+                                app_state_path=app_state_path)
+        if note:
+            researcher.note = note
+        return researcher
     # Resolved against the harness that will actually run, not the one that
     # was preferred: a model chosen for claude handed to agy would be a name
     # from the wrong namespace running as if it were right.
@@ -276,3 +269,138 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
         # never mentions it), which is a known gap: see the final report.
         researcher.note = note
     return researcher
+
+
+def resolve_agent(preferred: str = "", *, api: bool = True):
+    """`(agent, note)`: what a run asking for `preferred` gets, and why if it
+    is not that. `(None, "")` when nothing can run.
+
+    One answer, shared by `harness_researcher` (which runs it) and
+    `bills_per_token` (which asks what it would cost), so the two cannot
+    disagree about which agent a run gets.
+
+    Order: the reader's pick if it can run; else the first installed CLI,
+    with a note. An API agent runs only when it is the pick, never as a
+    fallback, not even on a machine with no CLI: a per-token bill because a
+    key happened to be saved is the surprise `default_backend` refuses for
+    the paid plane, and this plane must not bring it back.
+    """
+    from app.providers import apiagent
+
+    picked = apiagent.BY_ID.get(preferred)
+    if picked is not None and api:
+        if picked in apiagent.available():
+            return picked, ""
+        found = harness.chosen("")
+        if found is not None:
+            return found, f"{picked.label} has no key here — used {found.id} instead"
+        return None, ""
+    found = harness.chosen("" if picked is not None else preferred)
+    note = ""
+    if found is None and preferred:
+        # The reader's preference names a CLI that is not installed here —
+        # `harness.chosen(preferred)` says so by returning `None` rather than
+        # silently substituting anything, which is correct for *it*. But a
+        # run failing outright when a different, perfectly usable CLI is
+        # sitting right there is the crash this function exists to avoid: an
+        # unknown or uninstalled choice must fall back visibly, not refuse.
+        found = harness.chosen("")
+        if found is not None:
+            note = (f"preferred harness {preferred!r} is not installed here — "
+                    f"used {found.id} instead")
+    return found, note
+
+
+def _api_hint(api: bool) -> str:
+    """What to do when the only agent that could run is one nobody picked."""
+    from app.providers import apiagent
+
+    ready = apiagent.available() if api else []
+    if ready:
+        return (f"; {ready[0].label} has a key but bills per token, so it runs "
+                "only when picked — choose it under Settings → Agents")
+    return ", and no Mistral key for the API agent" if api else ""
+
+
+def agent_ready(app_state_path=None, preferred: str = "") -> bool:
+    """Whether a harness-plane run here would find an agent to run."""
+    if not preferred and app_state_path is not None:
+        preferred = _stored_pick(app_state_path)
+    try:
+        return resolve_agent(preferred)[0] is not None
+    except Exception:  # noqa: BLE001 — a gate answers no rather than crashing
+        return False
+
+
+def bills_per_token(app_state_path=None, preferred: str = "") -> bool:
+    """Whether a harness-plane run here would be billed per token.
+
+    Asked by whatever sets a ceiling: a run billed per token gets the paid
+    plane's floor, and the agenda one shared ceiling across its subjects.
+    """
+    if not preferred and app_state_path is not None:
+        preferred = _stored_pick(app_state_path)
+    found, _ = resolve_agent(preferred)
+    return _is_api_agent(found)
+
+
+def _is_api_agent(found) -> bool:
+    from app.providers import apiagent
+
+    return isinstance(found, apiagent.ApiAgent)
+
+
+def _stored_pick(app_state_path) -> str:
+    from app import prefs
+    from app.web import state
+
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 — see `_preferred_model`
+        return ""
+    try:
+        return prefs.read(conn).get(prefs.HARNESS, "")
+    finally:
+        conn.close()
+
+
+def agents_available() -> list:
+    """Every agent that could take a run here: installed CLIs, then API
+    agents with a key. Each has `id` and `label`, which is all a gate or a
+    picker reads.
+
+    What a picker lists. A gate asks `agent_ready` instead: an API agent
+    listed here still runs only once picked.
+    """
+    from app.providers import apiagent
+
+    return [*harness.available(), *apiagent.available()]
+
+
+def _api_agent(agent, *, timeout: float, model: str, app_state_path):
+    from app import modelcatalogue
+    from app.providers import apiagent, mistral
+    from app.web.settings import KRIKO_HOME
+
+    if not model.strip() and app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        try:
+            conn = state.connect(app_state_path)
+        except Exception:  # noqa: BLE001 — see `_preferred_model`
+            conn = None
+        if conn is not None:
+            try:
+                model = prefs.for_harness(conn, agent.id)
+            finally:
+                conn.close()
+    # A model name from another provider's namespace — chosen for a CLI, say —
+    # would be a 400 from Mistral. The agent's own default is the honest
+    # substitute, and the run's log line names the model that ran.
+    if model.strip() and modelcatalogue.provider_for(model.strip(), KRIKO_HOME) != agent.key:
+        model = ""
+    return apiagent.ApiAgentResearcher(
+        agent, model=model.strip(), home=KRIKO_HOME,
+        timeout=timeout or mistral.TIMEOUT_SECONDS,
+    )

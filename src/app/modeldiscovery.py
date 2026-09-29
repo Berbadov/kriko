@@ -45,6 +45,13 @@ def _request(provider_id: str, key: str) -> urllib.request.Request:
 
         base = os.environ.get("ANTHROPIC_BASE_URL") or anthropic_llm.DEFAULT_BASE_URL
         headers = {"x-api-key": key, "anthropic-version": anthropic_llm.API_VERSION}
+    elif provider_id == "mistral":
+        # Its own host, never the OpenAI-shaped fallback below: that would
+        # send a Mistral key to whoever `LLM_BASE_URL` names.
+        from app.providers import mistral
+
+        base = mistral.base_url()
+        headers = {"authorization": f"Bearer {key}"}
     else:
         from app.providers import llm
 
