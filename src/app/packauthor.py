@@ -48,6 +48,7 @@ from pathlib import Path
 import yaml
 
 from app import packdraft
+from kriko.research.agent import REFUSED_PAGE
 
 __all__ = ["brief", "CONTRACT", "author", "PackRefused",
            "amend", "amend_brief", "draft_state"]
@@ -119,6 +120,8 @@ Research the category first. Read what owners, forums, service bulletins and
 repair shops actually say about these things, in the languages the people who
 buy them use. Then make the decisions below from what you read, not from what
 sounds reasonable.
+
+{REFUSED_PAGE}
 
 ## Decision 1 — identity keys (the consequential one)
 

@@ -8,11 +8,11 @@ Seeded 2026-07-16 from git history; older history lives in `git log` and
 
 
 ```mermaid
-pie title Done entries by month (94)
+pie title Done entries by month (95)
 "2026-06" : 1
 "2026-07" : 4
 "2026-08" : 18
-"2026-09" : 71
+"2026-09" : 72
 %% versions 2026-06: -
 %% versions 2026-07: -
 %% versions 2026-08: -
@@ -23,10 +23,26 @@ pie title Done entries by month (94)
 | 2026-06 | 1 | - | 1 |
 | 2026-07 | 4 | - | 10 |
 | 2026-08 | 18 | - | 26 |
-| 2026-09 | 71 | 0.10.0, 3.1, 1.4, 2.10, 3.2, 3.3, 3.4, 2.5 | 99 |
+| 2026-09 | 72 | 0.10.0, 3.1, 1.4, 2.10, 3.2, 3.3, 3.4, 2.5, 0.10.14 | 100 |
 
 _Full verbose logs live in git history (`git show 27799af:done.md`). Entries compressed 2026-09-25: problem, decision/measurement._
 
+
+### 2026-09-29 — B154: each CLI gets the web its run needs, 0.10.14 (PR #56, `e393823`–`a4e3d92`)
+*"claude code wasnt able to open any website as well as opencode, antigravity guy is slow but created a new pack and returned results very good but failed quick look … web search on cc and opencode might be an external block?"*
+There were three causes, each reproduced on 0.10.13.
+- **opencode (not blocked by anyone).** opencode 2.x asks once which web-search provider to use, and a headless `run` has nobody to answer, so every search came back "Web search cancelled".
+  - Each run now gets its own `opencode.json` (`{"websearch":{"provider":"exa"}}`) in Kriko's per-run folder. The reader's global config is never touched.
+  - `PWD` is pinned to that folder, because opencode believes `PWD` over the real working directory.
+- **Antigravity (Kriko's bug).** The quick look passed `--effort low` beside a model id that already said `-medium`, and agy refused the pair before its first call.
+  - `settle_effort` moves the effort into a sibling id that agy itself lists. With no sibling, it keeps the reader's model and drops the flag.
+  - The run's log says which one happened.
+- **Claude Code (the site's call).** TechPowerUp answers 403 to WebFetch, and the run asked it three times.
+  - Every brief a CLI is handed now carries one line: a refused page is an answer, move to another source. The line is added at `HarnessResearcher._run`, so a new brief can't miss it.
+  - Kriko never changes the agent a CLI fetches with.
+
+**Observed on the installed 0.10.14:** Antigravity's quick look finished in 94 s with 4 risks. opencode's finished in 59 s with 5 sourced risks, and none of its searches said "cancelled". Claude Code was not run, to save the reader's subscription; a test covers its line.
+**Seen, still open:** a result's `model` field holds the harness id, not the model that ran. The Exa default is untested on opencode builds older than 2.0.16.
 
 ### 2026-09-24 — the implementing and testing doctrine (`b4b37e0`, reviewed and corrected in the next commit)
 *"Many implementations haven't worked the first try … let's determine the implementing and testing doctrine.
