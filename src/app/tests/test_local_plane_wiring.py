@@ -162,3 +162,69 @@ def _make_handler(payloads):
             pass
 
     return Handler
+
+
+class TestThePlanesEndpoint:
+    """The card the reader presses, not the plane the engine can build.
+
+    "Has its own place in the UI and easily testable" was the requirement,
+    and the planes endpoint is the whole of the first half: a row with the
+    local plane's id, its own cost basis, and a readiness answer that names
+    the two services rather than hiding the card. The probe is why this
+    lives here and not in the engine's suite — it is an interface question.
+    """
+
+    def _client(self, tmp_path):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+        from app.web.app import create_app
+        from app.web.settings import Settings
+
+        settings = Settings(store_path=tmp_path / "k.sqlite",
+                            app_state_path=tmp_path / "app.sqlite",
+                            analysis_log_path=tmp_path / "a.jsonl")
+        return TestClient(create_app(settings))
+
+    def test_the_local_plane_has_its_own_card(self, tmp_path):
+        row = next(p for p in
+                   self._client(tmp_path).get("/api/research-planes").json()["planes"]
+                   if p["id"] == "local")
+        assert row["cost_basis"] == "self_hosted"
+        assert row["needs_keys"] is False
+        assert "127.0.0.1:7000" in row["what"] and "127.0.0.1:8080" in row["what"]
+
+    def test_readiness_names_the_half_that_is_down(self, tmp_path, monkeypatch):
+        pytest.importorskip("fastapi")
+        from app.web.routers.research import local_endpoints
+
+        import urllib.request
+
+        seen = []
+
+        def fake(url, *args, **kwargs):
+            seen.append(str(url))
+
+            class Reply:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return False
+
+            return Reply()
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake)
+        row = local_endpoints()
+        assert row == {"ready": True, "reason": "",
+                       "inference_url": "http://127.0.0.1:8080",
+                       "serp_url": "http://127.0.0.1:7000"}
+        assert sorted(seen) == ["http://127.0.0.1:7000", "http://127.0.0.1:8080"]
+
+        def down(url, *args, **kwargs):
+            raise OSError("refused")
+
+        monkeypatch.setattr(urllib.request, "urlopen", down)
+        row = local_endpoints()
+        assert row["ready"] is False
+        assert row["reason"] == ("not running: the inference server "
+                                "and the SERP")
