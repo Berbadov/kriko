@@ -18,10 +18,9 @@ is how a hobby project produces a bill someone remembers.
 """
 
 import json
-import re
-import unicodedata
 from collections.abc import Callable
 
+from kriko.extract.grounding import comparable as _grounding_form
 from kriko.research.base import (
     STANDARD,
     Document,
@@ -30,32 +29,6 @@ from kriko.research.base import (
     ResearchTask,
     Spend,
 )
-
-#: Characters an extractor or a model is free to swap without changing the
-#: sentence. The same rule `app/factcheck.py` applies to a stored quote years
-#: later, applied here to a quote seconds after it was produced: a curly
-#: apostrophe or a collapsed run of whitespace is not evidence the quote was
-#: invented, and rejecting it on that basis would teach nobody anything except
-#: to distrust the gate.
-_SAME_CHARS = {
-    "‘": "'", "’": "'", "“": '"', "”": '"',
-    "–": "-", "—": "-", "−": "-", "…": "...",
-}
-
-
-def _grounding_form(text: str) -> str:
-    """The comparable form of a quote or a document, for the grounding check.
-
-    Deliberately loose about whitespace and case and strict about everything
-    else — a model that reconstructs a sentence from memory still has to fail,
-    and the two things this folds away are cosmetic in every language this
-    runs against. Case-folding does not make a fabricated quote harder to
-    catch: truth does not live in capitalisation.
-    """
-    text = unicodedata.normalize("NFKC", text or "")
-    for needle, plain in _SAME_CHARS.items():
-        text = text.replace(needle, plain)
-    return re.sub(r"\s+", " ", text).strip().casefold()
 
 
 class BudgetExceeded(RuntimeError):
