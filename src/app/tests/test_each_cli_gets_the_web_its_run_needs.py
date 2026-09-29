@@ -17,13 +17,15 @@ Three different answers, reproduced on the reader's machine on 0.10.13:
   asked the same site again twice. That one is the site's call; what Kriko
   owns is telling the agent to move on.
 
-None of these tests spawns a CLI.
+None of these tests spawns a real CLI; a few spawn a Python stand-in that
+reports what it was given.
 """
 
 import json
+import sys
 from pathlib import Path
 
-from app import packauthor, providers, quicklook
+from app import disambiguate, packauthor, providers, quicklook, sites
 from app.providers import harness as harness_mod
 from app.providers.harness import HarnessResearcher
 from kriko.research.agent import REFUSED_PAGE, AgentResearcher
@@ -132,30 +134,112 @@ def test_a_cli_without_levels_in_its_ids_is_left_alone(monkeypatch):
         "opencode/some-model-high", "low")
 
 
-def test_the_quick_look_on_a_suffixed_pick_builds_a_vector_agy_accepts(monkeypatch):
-    """End to end through the door the quick look uses, down to the argv."""
-    agy = _agy(monkeypatch)
+def test_a_tail_that_only_looks_like_a_level_keeps_its_flag(monkeypatch):
+    """Review's case: a dial that one day offers `max`, and a model named
+    `…-codex-max` with no `-low`/`-high` sibling. The name is a coincidence,
+    so the effort stays a flag instead of being silently dropped."""
+    agy = _agy(monkeypatch, models=["gpt-5.1-codex-max", "gpt-5.1-codex"])
+    monkeypatch.setattr(harness_mod, "efforts_for", lambda one: ["low", "high", "max"])
+    assert harness_mod.settle_effort(agy, "gpt-5.1-codex-max", "low") == (
+        "gpt-5.1-codex-max", "low")
+
+
+def test_an_unknown_list_drops_the_flag_rather_than_risk_the_refusal(monkeypatch):
+    """A cold model cache says nothing either way. The refusal fails the run;
+    the reader's own level only makes it slower — so the flag goes."""
+    agy = _agy(monkeypatch, models=[])
+    assert harness_mod.settle_effort(agy, "gemini-3.8-flash-medium", "low") == (
+        "gemini-3.8-flash-medium", "")
+
+
+def _door(monkeypatch, agy, **pick):
     monkeypatch.setattr(harness_mod, "chosen", lambda preferred="": agy)
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(harness_mod, "declared", lambda _: frozenset(
         {"--output-format", "--disable-slash-commands", "--model", "--effort", "-p"}))
-    researcher = providers.harness_researcher(
-        preferred="antigravity-cli", model="gemini-3.8-flash-medium", effort="low")
+    return providers.harness_researcher(preferred="antigravity-cli", **pick)
+
+
+def test_the_quick_look_on_a_suffixed_pick_builds_a_vector_agy_accepts(monkeypatch):
+    """End to end through the door the quick look uses, down to the argv."""
+    agy = _agy(monkeypatch)
+    researcher = _door(monkeypatch, agy, model="gemini-3.8-flash-medium", effort="low")
     vector = harness_mod.command_for(
         agy, model=researcher.requested_model, effort=researcher.requested_effort)
     assert vector[vector.index("--model") + 1] == "gemini-3.8-flash-low"
     assert "--effort" not in vector
 
 
+def test_a_run_not_on_the_readers_literal_pick_says_so_in_its_log(monkeypatch):
+    """A quick look on `-low` where the reader chose `-medium`, or on `-high`
+    with no flag, is quietly faster or slower unless the log says why."""
+    agy = _agy(monkeypatch)
+    moved = _door(monkeypatch, agy, model="gemini-3.8-flash-medium", effort="low")
+    assert "gemini-3.8-flash-low" in moved.effort_settled
+    kept = _door(monkeypatch, agy, model="gemini-3.1-pro-high", effort="medium")
+    assert "gemini-3.1-pro-high" in kept.effort_settled
+    assert "own level" in kept.effort_settled
+    plain = _door(monkeypatch, agy, model="claude-sonnet-4-6", effort="low")
+    assert plain.effort_settled == ""
+
+
+def _echo(tmp_path: Path) -> harness_mod.Harness:
+    """A real child that answers with what it was given, and nothing else."""
+    script = tmp_path / "echo.py"
+    script.write_text(
+        "import json, os, sys\n"
+        "print(json.dumps({'type': 'result', 'result': json.dumps({"
+        "'prompt': sys.argv[-1], 'pwd': os.environ.get('PWD'), 'cwd': os.getcwd()})}))\n",
+        encoding="utf-8")
+    return harness_mod.Harness("fake", "Fake CLI", sys.executable, (str(script),),
+                               structured=True)
+
+
+def test_the_log_line_reaches_the_run_before_the_cli_starts(tmp_path):
+    researcher = HarnessResearcher(_echo(tmp_path), timeout=30)
+    researcher.effort_settled = "Running gemini-3.8-flash-low: …"
+    said: list[str] = []
+    researcher.on_action = said.append
+    researcher.ask("brief")
+    assert said[0] == researcher.effort_settled
+
+
+def test_the_child_itself_sees_its_own_folder_as_pwd(tmp_path, monkeypatch):
+    """Not the dict, the process: a `PWD` handed down from a shell elsewhere,
+    and what the spawned child actually reads."""
+    monkeypatch.setenv("PWD", str(tmp_path))
+    got = json.loads(HarnessResearcher(_echo(tmp_path), timeout=30).ask("brief"))
+    assert Path(got["pwd"]).resolve() == Path(got["cwd"]).resolve()
+    assert Path(got["pwd"]).resolve() != tmp_path.resolve()
+
+
 # ── Claude Code: a refused page is an answer, not a retry ────────────────────
 
 
-def test_every_brief_that_lets_an_agent_fetch_says_to_move_on_from_a_refusal():
-    """One wording, in each of the three briefs a CLI is handed: research,
-    the quick look and the pack author."""
+def test_the_briefs_that_place_it_themselves_say_it_where_it_reads():
+    """One wording, placed in context in the briefs that open pages most:
+    research (also what an MCP agent is handed), quick look, pack author."""
     task = ResearchTask(subject_id="s", subject_label="A thing", subject_kind="product",
                         pack_id="things")
     assert "403" in REFUSED_PAGE and "another source" in REFUSED_PAGE
     assert REFUSED_PAGE in AgentResearcher().brief(task)
     assert REFUSED_PAGE in quicklook.brief("A thing")
     assert REFUSED_PAGE in packauthor.brief("things")
+
+
+def test_every_brief_a_cli_is_handed_says_it_once(tmp_path):
+    """Review found three briefs without it — amend, disambiguate, site
+    register. The door they all pass is where it is guaranteed, so a brief
+    written later is covered without anyone remembering to."""
+    one = _echo(tmp_path)
+    briefs = [
+        packauthor.amend_brief({"name": "things"}),
+        disambiguate.brief("A thing"),
+        sites.BRIEF.format(site="shop.example", url="https://shop.example/p/1", keys="model"),
+        quicklook.brief("A thing"),
+        "a brief nobody has written yet",
+    ]
+    for brief in briefs:
+        got = json.loads(HarnessResearcher(one, timeout=30).ask(brief))["prompt"]
+        assert got.count(REFUSED_PAGE) == 1, brief[:40]
+        assert got.startswith(brief.rstrip()), brief[:40]

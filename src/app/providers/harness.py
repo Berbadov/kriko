@@ -61,7 +61,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from kriko.research.agent import AgentResearcher
+from kriko.research.agent import REFUSED_PAGE, AgentResearcher
 from kriko.research.base import Document, Finding, ResearchTask
 
 #: Everything the spawned agent is allowed to do. Read the module docstring
@@ -969,12 +969,37 @@ def settle_effort(one: Harness, model: str, effort: str) -> tuple[str, str]:
     into the id: the `-low` sibling when the CLI lists one, otherwise the
     reader's model as picked. Both lists are the CLI's (`--help`, `agy
     models`); a CLI whose ids carry no level passes through untouched.
+
+    **A tail that only looks like a level is not one.** An id is read as
+    carrying its effort only when the CLI lists a sibling that differs from it
+    by another level: `gemini-3.1-pro-high` beside `gemini-3.1-pro-low` does,
+    a lone `…-codex-max` on a CLI that one day adds `max` to its dial does not,
+    and keeps its flag. An empty list (a cold cache) drops the flag rather than
+    risk the refusal: a run at the reader's own level is slower, not failed.
     """
     base, _, tail = model.rpartition("-")
-    if not (base and effort and tail in efforts_for(one)):
+    levels = efforts_for(one) if base and effort else []
+    if tail not in levels:
+        return model, effort
+    listed = models_for(one)
+    if listed and not ({f"{base}-{level}" for level in levels} - {model}) & set(listed):
         return model, effort
     sibling = f"{base}-{effort}"
-    return (sibling if sibling in models_for(one) else model), ""
+    return (sibling if sibling in listed else model), ""
+
+
+def with_refused_page(prompt: str) -> str:
+    """`prompt`, saying what a refused page means, once (B154).
+
+    Every brief a CLI is handed says it, whichever door wrote the brief: the
+    research, quick-look and pack-author briefs place it themselves, and review
+    found amend, disambiguate and site-register briefs that did not. Said at
+    the one door every CLI run passes, a brief written next month cannot
+    forget it.
+    """
+    if REFUSED_PAGE in prompt:
+        return prompt
+    return f"{prompt.rstrip()}\n\n{REFUSED_PAGE}\n"
 
 
 def _from_models_command(one: Harness, executable: str) -> list[str]:
@@ -1820,6 +1845,11 @@ class HarnessResearcher(AgentResearcher):
         #: same model at a lower effort far more often than it is a different
         #: model.
         self.requested_effort = effort
+        #: One line for the run's log when `settle_effort` changed the
+        #: reader's pick (B154), set by `providers.harness_researcher`: a run
+        #: on `-low` where the reader chose `-medium`, or on `-high` with no
+        #: effort flag, should say so rather than be quietly slower or faster.
+        self.effort_settled = ""
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
         self.harness = harness
@@ -2060,6 +2090,7 @@ class HarnessResearcher(AgentResearcher):
         nothing until the process is over; `on_line` (or `self.on_action`) now
         receives one line per action the agent takes, while it takes it.
         """
+        prompt = with_refused_page(prompt)
         with self._workspace():
             return self._invoke(prompt, on_line)
 
@@ -2198,6 +2229,8 @@ class HarnessResearcher(AgentResearcher):
         if self.requested_model and not self.harness.model_flag and self.harness.model_env:
             self._run_env[self.harness.model_env] = self.requested_model
         say = on_line if on_line is not None else self.on_action
+        if say is not None and self.effort_settled:
+            say(self.effort_settled)
 
         self._conversing = False
         if self._can_converse():

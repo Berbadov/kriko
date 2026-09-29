@@ -499,6 +499,15 @@ Still open: an observed double-click install and a finished analysis on 0.10.4; 
 - Every brief tells the agent that a refused page (403, 401, 429) is that site's refusal and to move to another source, not retry it.
 - Tests for each. Observed on the installed build: one quick look per CLI in the panel, its log and its risks.
 **Not this:** spoofing a fetch user agent; changing a CLI's global config; hand lists of models or providers.
+**Review (second agent, PR #56):** approved. Acted on:
+- Three more briefs let an agent search or fetch without the line: amend, disambiguate, site register. It is now added at `HarnessResearcher._run`, the one door every CLI run passes (`with_refused_page`), so a new brief can't miss it.
+- `settle_effort` read any tail equal to a level as an effort. It now does so only when the CLI lists a sibling id at another level, so a `…-max` model on a dial that offers `max` keeps its flag. A cold, empty list still drops the flag: slower beats refused.
+- A run that isn't on the reader's literal pick says so in its log (`effort_settled`).
+- The PWD test now reads the spawned child's environment, not the dict.
+- The wording says "most likely refuse", since a 429 can clear.
+**Open risk, not reproduced:**
+- The `opencode.json` is written for every opencode version. Only 2.0.16 was tried. An older build with a strict config schema could reject the `websearch` key.
+- It also sends Kriko's searches to Exa even if the reader chose another provider interactively.
 **Owner:** this session, branch `b154/cli-web-access`.
 
 ### B153 — "Agent operations are slow and not working properly": the agent runs on the API, not a CLI `[G5]`
