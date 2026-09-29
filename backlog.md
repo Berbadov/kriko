@@ -482,6 +482,25 @@ shows a raw `HTTPError` (apicode-1). Packs Disable/Enable fails silently
   Python + 570 JS. The installer is 33 MB (0.10.3: 66 MB).
 Still open: an observed double-click install and a finished analysis on 0.10.4; walk.sh; round 2.
 
+### B154 — "claude code wasnt able to open any website as well as opencode … antigravity … failed quick look": each CLI gets the web access its run needs `[G5]`
+**Asked:** "oh god, claude code wasnt able to open any website as well as opencode, antigravity guy is slow but created a new pack and returned results very good but failed quick look. others arent straight up working; will test apis. web search on cc and opencode might be an external block?" (2026-09-29, on 0.10.13)
+**Where:** the extension panel on a listing → **Research this product**, with opencode or Antigravity picked in Settings → Agents; Activity → Runs for the failed run's log.
+**Reproduced (2026-09-29, installed 0.10.13):**
+- **opencode: not an external block.** opencode 2.0.16 asks, once, which web-search provider to use. A headless `opencode run` cannot answer, so every `websearch` call returned "Web search cancelled". Its `webfetch` works; hepsiburada's 403 was that site's answer. A project `opencode.json` of `{"websearch":{"provider":"exa"}}` in the run's folder made the same command search (reproduced by hand). `random` is not safe: it can land on Firecrawl, which returns nothing without a key.
+- **Antigravity: Kriko's bug.** The quick look asks for `effort="low"` on top of the reader's model `gemini-3.8-flash-medium`. The effort lives in agy's model id, so `--model gemini-3.8-flash-medium --effort low` conflicts and agy exits 1. The draft pack, without a forced effort, worked.
+- **Claude Code: external, per site.** WebSearch worked. TechPowerUp answers 403 to WebFetch's `Claude-User` agent (a browser agent gets 200; Claude's own domain check says it may fetch). reddit, rtings, ifixit and the maker's site answered. The run retried the same refusing site three times. Kriko does not change the agent a CLI fetches with; that is the site's call.
+- **And a second opencode cause, found while proving the first fix.** With `opencode.json` in the run folder, the harness run still said "Web search cancelled": opencode takes its project folder from `PWD` when one is set, and a Kriko started from a shell hands that shell's `PWD` down. The same run with `PWD` set to its own folder (or unset) searched via Exa. A double-clicked Kriko has no `PWD`, so the installed app hit only the first cause.
+**Observed (2026-09-29, source tree, real CLIs, from a shell whose `PWD` was the repo):**
+- opencode through `HarnessResearcher` on `muse-spark-1.3-contributor-free`: 7.9 s, one Exa search, three dyson.com URLs, no "cancelled". Before the `PWD` line: 10.2 s, "search cancelled".
+- Antigravity through `harness_researcher(model="gemini-3.8-flash-medium", effort="low")`, the quick look's own call: argv `--model gemini-3.8-flash-low` and no `--effort`; agy answered in 9.5 s.
+**Done when:**
+- With opencode picked, the run's log shows `websearch` results, not "Web search cancelled". The reader's own opencode config and database are unchanged; the grant is a file in Kriko's per-run folder, gone when the run ends.
+- With Antigravity picked and an effort-suffixed model, the quick look starts and returns. The effort is carried by the model id agy itself lists (`-low` sibling), never a second flag that contradicts it; a model with no listed sibling keeps the reader's pick and drops the flag.
+- Every brief tells the agent that a refused page (403, 401, 429) is that site's refusal and to move to another source, not retry it.
+- Tests for each. Observed on the installed build: one quick look per CLI in the panel, its log and its risks.
+**Not this:** spoofing a fetch user agent; changing a CLI's global config; hand lists of models or providers.
+**Owner:** this session, branch `b154/cli-web-access`.
+
 ### B153 — "Agent operations are slow and not working properly": the agent runs on the API, not a CLI `[G5]`
 **Asked:** "Agent operations are slow and not working properly. check it and if you think they are ontologicvally unusable, work on api usage." (2026-09-29, on 0.10.12)
 **Where:** the extension panel on a listing → **Research this product** (the quick look, then the draft pack); Settings → Agents, where the agent is picked; Activity → Runs.

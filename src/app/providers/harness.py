@@ -957,6 +957,26 @@ def efforts_for(one: Harness) -> list[str]:
     return _from_help(helptext(executable), one.effort_flag) or list(one.effort_choices)
 
 
+def settle_effort(one: Harness, model: str, effort: str) -> tuple[str, str]:
+    """`(model, effort)` this CLI will take together (B154).
+
+    `agy` spells effort twice: as `--effort` and as the tail of its model ids
+    (`gemini-3.8-flash-medium`). Asked for both, it refuses the pair — "--model
+    gemini-3.8-flash-medium conflicts with --effort=low" — which is how every
+    Antigravity quick look died, since the quick look asks for `low` on top of
+    whichever model the reader picked. A model whose tail is one of the CLI's
+    own levels already carries an effort, so the flag goes and the effort moves
+    into the id: the `-low` sibling when the CLI lists one, otherwise the
+    reader's model as picked. Both lists are the CLI's (`--help`, `agy
+    models`); a CLI whose ids carry no level passes through untouched.
+    """
+    base, _, tail = model.rpartition("-")
+    if not (base and effort and tail in efforts_for(one)):
+        return model, effort
+    sibling = f"{base}-{effort}"
+    return (sibling if sibling in models_for(one) else model), ""
+
+
 def _from_models_command(one: Harness, executable: str) -> list[str]:
     # Through `_ask` for the reason `helptext` is: this runs a binary
     # `locate` only *guessed* at, and a wrong guess must cost a dropdown
@@ -2054,9 +2074,31 @@ class HarnessResearcher(AgentResearcher):
             # never the disk it happens to start on.
             with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
                 self._run_cwd = directory
+                # The folder said twice, because a CLI may believe either.
+                # opencode takes its project from `PWD` when one is set, and
+                # a Kriko started from a shell hands down that shell's `PWD`:
+                # the run then read the shell's folder (its `AGENTS.md`, its
+                # `opencode.json`) and not the one it was started in (B154).
+                self._run_env = {"PWD": directory}
+                if self.harness.id == "opencode":
+                    # **Why opencode "could not open any website" (B154).**
+                    # opencode 2.x asks, once, which provider its `websearch`
+                    # tool should use, and keeps the answer in its own
+                    # database. `opencode run` has nobody to ask, so every
+                    # search came back "Web search cancelled" while the agent
+                    # file allowed it. A project `opencode.json` in the folder
+                    # the run starts in answers the question for this run
+                    # only — the reader's config and database stay as found,
+                    # and the file goes with the folder. `exa`, because it
+                    # answers without a key of the reader's; `random` can
+                    # land on one that does not (Firecrawl) and return nothing.
+                    (Path(directory) / "opencode.json").write_text(json.dumps({
+                        "websearch": {"provider": "exa"},
+                    }), encoding="utf-8")
                 try:
                     yield
                 finally:
+                    self._run_env = {}
                     self._run_cwd = None
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
@@ -2066,7 +2108,7 @@ class HarnessResearcher(AgentResearcher):
             home.mkdir()
             work.mkdir()
             self._run_cwd = str(work)
-            self._run_env = {"HOME": str(home), "USERPROFILE": str(home)}
+            self._run_env = {"HOME": str(home), "USERPROFILE": str(home), "PWD": str(work)}
             if self.harness.protocol == "agy":
                 # **The run's own permission policy, and nobody else's.**
                 #
