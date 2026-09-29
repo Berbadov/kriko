@@ -6,6 +6,7 @@ from kriko.gates import load_gates
 
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher, BudgetExceeded
+from kriko.research.local import LocalPlane
 from kriko.research.base import (
     STANDARD,
     Document,
@@ -37,7 +38,9 @@ def get_researcher(config: dict | None = None, **kwargs):
         return AgentResearcher()
     if backend == "api":
         return ApiResearcher(**kwargs)
-    raise ValueError(f"unknown research backend {backend!r} (expected agent|api)")
+    if backend == "local":
+        return LocalPlane(**kwargs)
+    raise ValueError(f"unknown research backend {backend!r} (expected agent|api|local)")
 
 
 def pack_asset(conn, pack_id: str, name: str) -> str:
