@@ -29,9 +29,25 @@
      * engine's vocabulary rather than in a category's.
      */
 
+    /** Bumped by the parent whenever a key changes elsewhere on the page
+     * (settings-4) — the harness list itself does not depend on keys, but
+     * `needs_account` framing and the models a CLI reports can, and a reader
+     * who just saved a key should not need a reload to see it reflected. */
+    let { keysVersion = 0, onReask = () => {} }: {
+        keysVersion?: number;
+        onReask?: () => void;
+    } = $props();
+
     let prefs = $state<Promise<Prefs>>(api.prefs());
     let saved = $state("");
     let failure = $state<unknown>(null);
+
+    let seenKeysVersion = 0;
+    $effect(() => {
+        if (keysVersion === seenKeysVersion) return;
+        seenKeysVersion = keysVersion;
+        prefs = api.prefs();
+    });
 
     async function save(values: Record<string, string>) {
         failure = null;
@@ -47,11 +63,19 @@
     // After signing in to a CLI or updating it. Each CLI's list is cached for
     // ten minutes on the server, because asking costs a process start per CLI.
     let asking = $state(false);
+    let reasked = $state("");
     async function reask() {
         asking = true;
         failure = null;
+        reasked = "";
         try {
-            prefs = Promise.resolve(await api.prefs(true));
+            const data = await api.prefs(true);
+            prefs = Promise.resolve(data);
+            const listed = harnessesOf(data).filter((one) => (one.llms ?? []).length).length;
+            reasked = `Asked ${harnessesOf(data).length} CLIs — ${listed} listed LLMs`;
+            // The "Which LLM, which search" panel above pulls from the same
+            // /api/prefs and does not otherwise know this happened.
+            onReask();
         } catch (thrown) {
             failure = thrown;
         } finally {
@@ -74,24 +98,28 @@
     const key = (prefix: string, id: string) => `${prefix}_${id.replace(/-/g, "_")}`;
 </script>
 
+<!-- B146: "agent and settings section are very crowded and ugly". This was
+     a 19rem card per agent, each holding a path, two dials and two paragraphs
+     of help — three screens for four agents. It is one row per agent now: the
+     name and the two dials on one line, the help said once underneath. -->
 <article class="card">
-    <h3><Icon name="agents" /> Your agents</h3>
-    <p class="meta">
-        Every coding-agent command line found on this machine, with the two dials
-        that decide what one run costs. Left alone, each uses the CLI's own default,
-        so an installation that never opens this panel behaves exactly as it did.
-    </p>
+    <div class="head">
+        <h3><Icon name="agents" /> Your agents</h3>
+        <button class="ghost small" disabled={asking} onclick={reask}>
+            {asking ? "Asking the CLIs…" : "Re-ask the CLIs for their LLMs"}
+        </button>
+    </div>
 
     {#if failure}<Failure error={failure} />{/if}
 
     <Async promise={prefs} loading="Reading your choices…">
         {#snippet children(data)}
             {#if harnessesOf(data).length}
-                <div class="field">
-                    <label for="p-harness">Preferred agent</label>
+                <label class="preferred">
+                    <span>Preferred agent</span>
                     <select
                         id="p-harness"
-                        value={data.chosen?.preferred_harness ?? ''}
+                        value={data.chosen?.preferred_harness ?? ""}
                         onchange={(event) =>
                             save({ preferred_harness: event.currentTarget.value })}
                     >
@@ -100,36 +128,31 @@
                             <option value={one.id}>{one.label}</option>
                         {/each}
                     </select>
-                    <p class="meta">
-                        Which one Kriko starts when a run does not name one.
-                    </p>
-                    <button class="ghost small reask" disabled={asking} onclick={reask}>
-                        {asking ? "Asking the CLIs…" : "Re-ask the CLIs for their LLMs"}
-                    </button>
-                </div>
+                    <span class="meta">used when a run does not name one</span>
+                </label>
+                {#if reasked}<p class="state" role="status">{reasked}</p>{/if}
 
-                <div class="agentgrid">
+                <ul class="agents">
                     {#each harnessesOf(data) as one (one.id)}
-                        <section class="agentcard">
-                            <div class="agenthead">
-                                <Icon name="agent" size={20} />
-                                <strong>{one.label}</strong>
-                                {#if data.chosen?.preferred_harness === one.id}
-                                    <span class="badge" title="what a run uses unless told otherwise"
-                                        >preferred</span
-                                    >
+                        <li class="agentrow">
+                            <div class="who">
+                                <strong>
+                                    <Icon name="agent" size={16} />
+                                    {one.label}
+                                    {#if data.chosen?.preferred_harness === one.id}
+                                        <span class="badge">preferred</span>
+                                    {/if}
+                                </strong>
+                                <span class="meta mono" title={one.path || one.command}
+                                    >{one.path || one.command}</span
+                                >
+                                {#if one.needs_account}
+                                    <span class="meta">Bills to {one.needs_account}.</span>
                                 {/if}
                             </div>
-                            <p class="meta mono">{one.path || one.command}</p>
-                            {#if one.needs_account}
-                                <p class="meta">
-                                    <Icon name="cost" size={14} /> Bills to {one.needs_account}.
-                                </p>
-                            {/if}
-
-                            {#if one.llm_selectable}
-                                <label class="field">
-                                    <span class="dial"><Icon name="llm" size={15} /> LLM</span>
+                            <div class="dialbox">
+                                <span class="dial"><Icon name="llm" size={14} /> LLM</span>
+                                {#if one.llm_selectable}
                                     <Pick
                                         value={one.llm ?? ""}
                                         options={(one.llms ?? []).map((name) => ({ value: name }))}
@@ -138,39 +161,17 @@
                                         onpick={(chosen) =>
                                             save({ [key("harness_model", one.id)]: chosen })}
                                     />
-                                </label>
-                                <p class="meta">
-                                    {#if (one.llms ?? []).length}
-                                        These are the names this CLI itself reported.
-                                        "Something else…" sends whatever you type straight
-                                        through — the CLI judges the name, not Kriko.
-                                    {:else}
-                                        This CLI named nothing, so there is nothing to list.
-                                        Pick "Something else…" and type {one.llm_hint
-                                            || "a name it accepts"}.
-                                    {/if}
-                                </p>
-                            {:else}
-                                <p class="meta">
-                                    <Icon name="llm" size={14} />
-                                    Runs its own LLM — Kriko has no verified per-run switch
-                                    for this CLI yet.
-                                </p>
-                            {/if}
-
-                            <!-- The second dial, and the cheap one. Dropping a
-                                 survey run from high to low costs a fraction of
-                                 what switching the LLM does and changes nothing
-                                 about which account pays — so it belongs in the
-                                 same card, not a screen away.
-
-                                 Drawn only where this machine's CLI declares the
+                                {:else}
+                                    <span class="meta fixed">its own — no per-run switch</span>
+                                {/if}
+                            </div>
+                            <!-- Drawn only where this machine's CLI declares the
                                  flag in its own --help: a control whose every
                                  choice fails on argument parsing is worse than
                                  no control. -->
-                            {#if (one.efforts ?? []).length}
-                                <label class="field">
-                                    <span class="dial"><Icon name="effort" size={15} /> Effort</span>
+                            <div class="dialbox">
+                                <span class="dial"><Icon name="effort" size={14} /> Effort</span>
+                                {#if (one.efforts ?? []).length}
                                     <Pick
                                         value={one.effort ?? ""}
                                         options={(one.efforts ?? []).map((name) => ({ value: name }))}
@@ -179,15 +180,18 @@
                                         onpick={(chosen) =>
                                             save({ [key("harness_effort", one.id)]: chosen })}
                                     />
-                                </label>
-                                <p class="meta">
-                                    How hard it thinks, per run. Lower is cheaper and faster;
-                                    this CLI names {(one.efforts ?? []).join(", ")}.
-                                </p>
-                            {/if}
-                        </section>
+                                {:else}
+                                    <span class="meta fixed">not offered by this CLI</span>
+                                {/if}
+                            </div>
+                        </li>
                     {/each}
-                </div>
+                </ul>
+                <p class="meta legend">
+                    Lists are what each CLI reported itself; "Something else…" passes any
+                    name straight through. Lower effort answers sooner and costs less.
+                    Left on "CLI default", each behaves exactly as it does in a terminal.
+                </p>
             {:else}
                 <p class="state empty">
                     No coding-agent CLI was found on this machine. The harness plane is
@@ -198,9 +202,7 @@
 
             <!-- Not found, each with the way out. A missing CLI is the
                  ordinary state, not an error, and it is listed even when
-                 others were found: "detected harnesses aren't including the
-                 all" was a real report, and the first thing that screen owed
-                 the reader was the list of what it had looked for. -->
+                 others were found. -->
             {#if missingOf(data).length}
                 <details>
                     <summary>
@@ -235,9 +237,6 @@
                 </details>
             {/if}
 
-            <!-- Installed, found, and skipped on purpose. Left unsaid, this
-                 reads as Kriko failing to notice a tool the reader can see on
-                 their own PATH. -->
             {#each unusableOf(data) as one (one.id)}
                 <p class="meta">
                     <Icon name="warn" size={14} />
@@ -251,49 +250,85 @@
 </article>
 
 <style>
-    .reask {
-        align-self: flex-start;
-        margin-top: var(--s-1);
-    }
-    h3 {
+    .head {
         display: flex;
         align-items: center;
-        gap: var(--s-2);
-    }
-    .field {
-        margin-block: 0.9rem;
-    }
-    /* One box per agent, and they wrap. The grid is what makes the two dials
-       legible: a pick inside a bordered box with a name on it belongs to that
-       name, which a flat column of labels never managed to say. */
-    .agentgrid {
-        display: grid;
-        gap: var(--s-3);
-        grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
-        margin-block: var(--s-3);
-    }
-    .agentcard {
-        padding: var(--s-3);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-    }
-    .agenthead {
-        display: flex;
-        align-items: center;
+        justify-content: space-between;
         gap: var(--s-2);
         flex-wrap: wrap;
-        margin-bottom: var(--s-2);
     }
-    /* The icon sits on the label rather than beside the control, so the two
-       dials read as a pair down the card's left edge. */
+    h3,
+    .who strong {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        margin: 0;
+    }
+    .preferred {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin-block: var(--s-3);
+    }
+    .preferred > span:first-child {
+        font-weight: 600;
+    }
+    .agents {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-top: 1px solid var(--line);
+    }
+    /* Name, LLM, effort — one line per agent at desktop width, stacking only
+       when the window is too narrow for three columns. */
+    .agentrow {
+        display: grid;
+        grid-template-columns: minmax(12rem, 1.4fr) minmax(9rem, 1fr) minmax(9rem, 1fr);
+        gap: var(--s-2) var(--s-3);
+        align-items: start;
+        padding-block: var(--s-2);
+        border-bottom: 1px solid var(--line);
+    }
+    @media (max-width: 760px) {
+        .agentrow {
+            grid-template-columns: 1fr 1fr;
+        }
+        .who {
+            grid-column: 1 / -1;
+        }
+    }
+    .who {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 0;
+    }
+    .dialbox {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 0;
+    }
     .dial {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.35rem;
+        font-size: 0.8rem;
+        color: var(--ink-2);
+    }
+    .fixed {
+        padding-block: 0.4rem;
     }
     .mono {
-        font-family: var(--mono, monospace);
-        overflow-wrap: anywhere;
+        font-family: var(--font-mono);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .legend {
+        margin-block: var(--s-2) var(--s-3);
+        max-width: var(--measure);
     }
     .klabel {
         display: inline-flex;

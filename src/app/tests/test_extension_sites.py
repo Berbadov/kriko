@@ -48,8 +48,19 @@ def adapters() -> list[tuple[str, dict]]:
     """
     found = []
     for path in sorted((REPO / "packs").glob("*/adapters/*.json")):
-        found.append((path.parent.parent.name, json.loads(path.read_text(encoding="utf-8"))))
+        spec = json.loads(path.read_text(encoding="utf-8"))
+        if spec.get("any_site"):
+            continue        # no host to cover — see the any-site test below
+        found.append((path.parent.parent.name, spec))
     return found
+
+
+def any_site_adapters() -> list[tuple[str, dict]]:
+    return [
+        (path.parent.parent.name, spec)
+        for path in sorted((REPO / "packs").glob("*/adapters/*.json"))
+        if (spec := json.loads(path.read_text(encoding="utf-8"))).get("any_site")
+    ]
 
 
 def injected_patterns() -> list[str]:
@@ -155,6 +166,19 @@ def test_an_adapter_declares_its_match_patterns():
         assert adapter.get("match"), f"{pack_id}/{adapter.get('id')} matches no URL"
 
 
+def test_an_any_site_adapter_can_reach_every_site_and_claims_none():
+    """B149: an adapter that reads schema.org data runs wherever the reader
+    granted every-site access, and must never be routed to by URL — a `match`
+    on one would make it win over the site's own adapter."""
+    for pack_id, adapter in any_site_adapters():
+        assert not adapter.get("match"), f"{pack_id}/{adapter.get('id')} matches URLs"
+        assert adapter.get("requires"), (
+            f"{pack_id}/{adapter.get('id')} requires nothing, so any page reads as it")
+        assert covers(grantable_patterns(), "any.example"), (
+            "the extension cannot be granted every site, so an any-site "
+            "adapter is dead weight")
+
+
 def test_the_adapters_carry_no_executable_anything():
     """The rule that made adapters data in the first place.
 
@@ -164,7 +188,7 @@ def test_the_adapters_carry_no_executable_anything():
     discover a pack relying on it.
     """
     forbidden = {"js", "script", "code", "eval", "function"}
-    for pack_id, adapter in adapters():
+    for pack_id, adapter in adapters() + any_site_adapters():
         keys = _collect_keys(adapter)
         assert not (keys & forbidden), f"{pack_id}: adapter carries {keys & forbidden}"
 

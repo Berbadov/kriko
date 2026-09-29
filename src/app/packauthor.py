@@ -419,9 +419,26 @@ def _in_scope(label_flat: str, lineup_flat: set[str]) -> bool:
     """
     if not lineup_flat or not label_flat:
         return True
-    return any(
-        label_flat in seen or seen in label_flat for seen in lineup_flat
-    )
+    return any(_same_thing(label_flat, seen) for seen in lineup_flat)
+
+
+def _same_thing(one: str, other: str) -> bool:
+    """Whether two flattened names name the same thing, in either direction.
+
+    A substring either way, or every word of one among the other's words.
+    The word test is B150: the line-up said "Audi Q7 4L (2005-2015) 3.0 TDI
+    Quattro Tiptronic, 2008 model year, BUG engine code" and the subject said
+    "2008 Audi Q7 3.0 TDI Quattro Tiptronic (BUG)" — the same car in another
+    order, quarantined as off-category, and the run failed with no subjects.
+    A different model from the same maker still fails: its model word is not
+    among the line-up's words.
+    """
+    if not one or not other:
+        return False
+    if one in other or other in one:
+        return True
+    mine, theirs = set(one.split()), set(other.split())
+    return mine <= theirs or theirs <= mine
 
 
 def _subjects(
@@ -777,7 +794,7 @@ def _coverage(payload: dict, known: dict, quarantined: list[dict] | None = None)
         _flat(one) for one in known
     }
     uncovered = [one for one in lineup if _flat(one) not in covered and not any(
-        _flat(one) in seen or seen in _flat(one) for seen in covered if seen
+        _same_thing(_flat(one), seen) for seen in covered if seen
     )]
     block = payload.get("coverage")
     block = block if isinstance(block, dict) else {}

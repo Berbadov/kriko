@@ -9,7 +9,14 @@ export default defineConfig(({ mode }) => ({
     plugins: [svelte()],
     base: "/static/",
     build: { outDir: "../src/app/web/static", emptyOutDir: true },
-    server: { proxy: { "/api": "http://127.0.0.1:8787" } },
+    // KRIKO_API points the dev server at a sidecar on another port — the
+    // screen walker's `--dev` mode, which wants Svelte's unminified errors.
+    // (Read off globalThis: this tsconfig carries no Node types.)
+    server: {
+        proxy: {
+            "/api": (globalThis as any).process?.env?.KRIKO_API || "http://127.0.0.1:8787",
+        },
+    },
     // Under vitest, resolve svelte's browser build. Without this the plugin
     // hands back the server compilation and every component test dies on
     // `mount(...) is not available on the server` — these are client

@@ -1,6 +1,5 @@
 <script lang="ts">
     import { count, word } from "./plural";
-    import AgentPrefs from "./Agents.prefs.svelte";
     import Async from "./Async.svelte";
     import Icon from "./Icon.svelte";
     import Pick from "./Pick.svelte";
@@ -35,10 +34,26 @@
      * happens.
      */
 
+    /** Bumped by the parent (Settings.svelte) whenever a key changes
+     * elsewhere on the page, so this panel's stale "no anthropic key" /
+     * disabled search option does not wait for a reload (settings-4). `0` on
+     * first render, matched below with an `$effect` rather than in the
+     * `$state` initialiser, so a version bump always re-fetches even if the
+     * initial value happened to also be `0`. */
+    let { keysVersion = 0 }: { keysVersion?: number } = $props();
+
     let prefs = $state<Promise<Prefs>>(api.prefs());
     let costs = $state<Promise<Costs>>(api.costs());
     let saved = $state("");
     let failure = $state<unknown>(null);
+
+    let seenKeysVersion = 0;
+    $effect(() => {
+        if (keysVersion === seenKeysVersion) return;
+        seenKeysVersion = keysVersion;
+        prefs = api.prefs();
+        costs = api.costs();
+    });
 
     async function save(values: Record<string, string>) {
         failure = null;
@@ -80,7 +95,13 @@
         usd === null || usd === undefined ? "not measured" : `$${usd.toFixed(4)}`;
 </script>
 
-<AgentPrefs />
+<!-- B146: the full per-agent list rendered here as well as on Agents — the
+     same four rows twice, on the two screens the reader called "very crowded".
+     It lives on Agents; this is the pointer. -->
+<p class="meta pointer">
+    <Icon name="agents" size={15} /> Which coding agent runs, with which LLM and
+    effort, is set under <a href="#/agents">Agents</a>.
+</p>
 
 <section>
     <h3><Icon name="search" /> Which LLM, which search</h3>

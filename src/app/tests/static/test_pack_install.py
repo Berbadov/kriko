@@ -83,7 +83,7 @@ def test_invalid_upload_reports_error_and_removes_staged_file(client, monkeypatc
     staged = []
     real_installer = packs_router.packstore.install
 
-    def fail_install(store, path):
+    def fail_install(store, path, **_):
         staged.append(path)
         raise ValueError("not a valid pack")
 

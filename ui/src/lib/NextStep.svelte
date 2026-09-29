@@ -1,7 +1,10 @@
 <script lang="ts">
     import { api } from "./api";
+    import type { Mode } from "./mode";
     import { nextStep, type Step } from "./nextStep";
     import { hashWith, route } from "./router";
+
+    let { mode = "author" as Mode }: { mode?: Mode } = $props();
 
     // Guidance must never be an error surface. Every call here is optional and
     // every failure resolves to a neutral value: if the engine is unwell the
@@ -17,10 +20,19 @@
     const DISMISS_KEY = "nextstep_dismissed_id";
     let dismissedId = $state<string | null>(null);
 
+    // Every field this hint bar reads except pack updates is local data.
+    // Joining `packUpdates()` into the same Promise.all made a bar that is
+    // mounted on every screen wait on a remote fetch too — up to the
+    // server's own 15s timeout when the index was unreachable (B145
+    // desktop-2). It resolves separately below and only ever *adds* an
+    // "update available" suggestion once it lands; it never blocks or
+    // retracts the ones local data already earned.
+    let updatable = $state(0);
+    let args: Parameters<typeof nextStep>[0] | null = null;
+
     const load = async () => {
-        const [status, updates, targets, history, extension, settings] = await Promise.all([
+        const [status, targets, history, extension, settings] = await Promise.all([
             api.status().catch(() => null),
-            api.packUpdates().catch(() => null),
             api.agentTargets().catch(() => null),
             api.history(1).catch(() => null),
             api.extension().catch(() => null),
@@ -33,7 +45,7 @@
         );
         const stored = settings?.[DISMISS_KEY];
         dismissedId = typeof stored === "string" ? stored : null;
-        step = nextStep({
+        args = {
             packs: status.packs,
             enabled: status.enabled_packs,
             gaps: gapLists.flat().length,
@@ -41,8 +53,7 @@
                 (t) => t.state === "connected",
             ).length,
             agentsKnown: (targets?.targets ?? []).length,
-            updatable: (updates?.packs ?? []).filter((p) => p.state === "available")
-                .length,
+            updatable,
             checks: (history?.items ?? []).length,
             // Null, not false, when the status could not be read or this build
             // carries no extension: a suggestion to install something that is
@@ -53,9 +64,23 @@
             // to readers whose extension had worked for weeks.
             extensionConnected:
                 extension && extension.available ? extension.ever_connected : null,
-        });
+        };
+        step = nextStep(args, mode);
     };
-    void load();
+    // Re-run when the mode switch flips: a buyer step and an author step can
+    // point at different routes for the same signals (check-7), and staying
+    // on the load that ran before the switch would keep offering a dead end.
+    $effect(() => {
+        mode;
+        void load();
+    });
+
+    api.packUpdates()
+        .then((updates) => {
+            updatable = updates.packs.filter((p) => p.state === "available").length;
+            if (args) step = nextStep({ ...args, updatable }, mode);
+        })
+        .catch(() => {});
 
     function dismiss() {
         if (!step) return;
@@ -67,7 +92,7 @@
     }
 </script>
 
-{#if step && step.id !== dismissedId}
+{#if step && step.id !== dismissedId && step.route !== $route.name}
     <aside class="nextstep enter" aria-label="Suggested next step">
         <div>
             <strong>{step.title}</strong>

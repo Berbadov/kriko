@@ -64,6 +64,22 @@ describe("what a failure means to the reader", () => {
         );
     });
 
+    it("surfaces a pydantic 422's own field and bound, not the listing copy", () => {
+        // ops-4: a bench Sources value over the route's own limit, or a
+        // category under its min_length, both 422 with a message `api.ts`'s
+        // `explain` has already turned into "field: reason" — the generic
+        // "this is usually a listing" text would hide the one thing that
+        // actually tells the reader what to change.
+        const remedy = at(422, "max_documents: Input should be less than or equal to 20");
+        expect(remedy.next).toBe("max_documents: Input should be less than or equal to 20");
+        expect(remedy.next).not.toMatch(/a listing/);
+    });
+
+    it("keeps the generic 422 copy when the body names no field", () => {
+        const remedy = at(422, "not a pack directory: no/such/dir");
+        expect(remedy.next).toMatch(/a listing/);
+    });
+
     it("names a next step on every branch", () => {
         for (const status of [400, 403, 404, 409, 422, 500, 503, 418]) {
             expect(at(status).next.length).toBeGreaterThan(20);

@@ -27,7 +27,7 @@ function loadPanel({
   // do not want it to be the only thing they are about.
   operationsResponse = { ok: true, feed: { items: [] } },
 } = {}) {
-  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url });
+  const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url, pretendToBeVisual: true });
 
   const runtimeListeners = [];
   const storageListeners = [];
@@ -60,7 +60,7 @@ function loadPanel({
           if (message.type === "ANALYZE") return callback(analyzeResponse);
           if (message.type === "SEARCH") return callback(searchResponse);
           if (message.type === "OPERATIONS") return callback(operationsResponse);
-          callback(workerResponse);
+          callback(typeof workerResponse === "function" ? workerResponse(message) : workerResponse);
         },
         getURL: (p) => p,
       },

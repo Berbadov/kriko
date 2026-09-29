@@ -25,6 +25,13 @@
      * button that silently fails is worse than an explained absence.
      */
 
+    /** Called after a key is actually saved or forgotten — not on every
+     * render — so a parent screen showing the same provider elsewhere (the
+     * "Check a provider key" list, the LLM/search selects) can refresh
+     * itself instead of reading stale `present`/`hint` until the next
+     * reload (settings-4). */
+    let { onChange = () => {} }: { onChange?: () => void } = $props();
+
     let promise = $state(api.keys());
     /** Per provider, and cleared on save — never seeded from the server. */
     let drafts = $state<Record<string, string>>({});
@@ -47,6 +54,7 @@
             drafts[provider.id] = "";
             said = `${provider.label} saved`;
             refresh();
+            onChange();
         } catch (cause) {
             // B79: the remedy, not the exception. A reader who cannot save a
             // key needs to know whether the engine is up, not what threw.
@@ -63,6 +71,7 @@
             await api.forgetKey(provider.id);
             said = `${provider.label} forgotten`;
             refresh();
+            onChange();
         } catch (cause) {
             said = remedyFor(cause).headline;
         } finally {
@@ -187,5 +196,29 @@
     }
     .key > .meta {
         max-width: var(--measure);
+        margin-block: var(--s-1);
+    }
+    /* B146: the paste field, Save and Forget on one line rather than a
+       panel inside the card — four keys were two screens of Settings. */
+    .key form.ask {
+        display: flex;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin: var(--s-1) 0 0;
+        padding: 0;
+        background: none;
+        border: 0;
+    }
+    .key form.ask > .field {
+        flex: 1 1 16rem;
+        width: auto;
+        margin: 0;
+    }
+    .key {
+        padding: var(--s-2) var(--s-3);
+    }
+    .keys {
+        gap: var(--s-2);
     }
 </style>

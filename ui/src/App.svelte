@@ -3,11 +3,12 @@
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import Lazy from "./lib/Lazy.svelte";
-    import { initMode, mode } from "./lib/mode";
+    import { asMode, initMode, mode, setMode } from "./lib/mode";
     import NextStep from "./lib/NextStep.svelte";
     import { initTheme } from "./lib/theme";
     import { watchFocus } from "./lib/focus";
     import { hashWith, route } from "./lib/router";
+    import CloseNotice from "./lib/shell/CloseNotice.svelte";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
     import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
@@ -128,6 +129,25 @@
         }
         announced = labelOf(name);
         focusTheView();
+        // A route change resets scroll the way a real document load would —
+        // the main.work container is reused across every route (App.svelte
+        // is one page, not many), so without this a scroll position from the
+        // screen just left carries over and the new one opens part-way down.
+        const work = document.querySelector("main.work");
+        if (work) work.scrollTop = 0;
+    });
+
+    // The URL is read once at startup (`ready` above). mode.ts's own comment
+    // says a pasted link opens in the mode it was written for — that has to
+    // hold for a link followed *inside* a running app too, not only on a
+    // fresh load, or `?mode=author` in the address bar becomes a lie the
+    // moment the reader is already here (check-20, knowledge-20, settings-15).
+    $effect(() => {
+        const wanted = $route.query.mode;
+        // `mode.set`, not `setMode`: following a link is not the reader
+        // saying "remember this as my mode" the way clicking the rail's
+        // switch is, so this must not overwrite the stored preference.
+        if (wanted && asMode(wanted) !== $mode) mode.set(asMode(wanted));
     });
 </script>
 
@@ -149,6 +169,7 @@
 
     <Sidebar mode={$mode} />
     <Palette mode={$mode} />
+    <CloseNotice />
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
          replaced on navigation announces nothing, because the announcement
@@ -166,7 +187,7 @@
                      key because it is about the installation, not the page:
                      re-animating it on every navigation would be nagging. -->
                 {#if !firstRun}
-                    <NextStep />
+                    <NextStep mode={$mode} />
                 {/if}
                 {#key $route.name}
                     <div class="enter">
@@ -178,11 +199,31 @@
                             }}
                         />
                     {:else if authorOnly}
+                        <!-- Named by the rail's own label, not the route id
+                             (shell-11, knowledge-31, settings-15) — "packs is
+                             an author view" tells a reader nothing they can
+                             act on, and at a short window the rail's own mode
+                             switch can be scrolled out of reach, so the way
+                             back has to be right here. -->
                         <EmptyState
-                            title="{$route.name} is an author view"
+                            title="{labelOf($route.name)} is for pack authors"
                             detail="It is real work a pack author does, and none of it helps
-                                    someone deciding whether to go and look at a listing.
-                                    Switch to author mode in the rail to open it."
+                                    someone deciding whether to go and look at a listing."
+                            actionLabel="Switch to author mode"
+                            onAction={() => setMode("author")}
+                        />
+                    {:else if $route.name === "welcome"}
+                        <!-- #/welcome is the reopening address for the offer
+                             firstRun shows automatically — a reader who
+                             pressed Skip, or a link that wants to point
+                             someone at "install a pack" again, needs a real
+                             destination rather than "No such view" (shell-21,
+                             settings-14). -->
+                        <Welcome
+                            onDone={() => {
+                                dismissed = true;
+                                void api.status().then((s) => (empty = s.packs === 0));
+                            }}
                         />
                     {:else if $route.name === "check"}
                         <Check mode={$mode} />
@@ -236,7 +277,7 @@
                              resolve here rather than to "No such view" — same
                              contract as the Knowledge lenses above. -->
                         <Activity
-                            lens={view.lens ?? $route.query.lens ?? "runs"}
+                            lens={view.lens ?? $route.query.lens ?? "live"}
                         />
                     {:else if view.name === "agents"}
                         <Agents />

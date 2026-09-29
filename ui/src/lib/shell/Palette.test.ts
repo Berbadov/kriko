@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { fireEvent } from "@testing-library/dom";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Palette from "./Palette.svelte";
 
 const press = (key: string, init: KeyboardEventInit = {}) =>
@@ -78,6 +78,33 @@ describe("Palette", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
     });
 
+    // shell-8: "browse" is a substring of both "Browse" and "Browser
+    // extension" — an unranked filter left them in table order, and Enter
+    // opened whichever came first in NAV rather than the exact label match.
+    it("ranks an exact label match ahead of one that only starts the same way", async () => {
+        render(Palette, { mode: "author" });
+        await press("?");
+        await fireEvent.input(screen.getByRole("combobox"), {
+            target: { value: "browse" },
+        });
+        const options = screen.getAllByRole("option");
+        expect(options[0]).toHaveTextContent("Browse");
+    });
+
+    // shell-8: go() used to call navigate(), which copies the *entire*
+    // current query string into the destination — an id= left over from
+    // Questions followed the reader into whatever screen they picked next.
+    it("carries only the mode into the destination, not the current screen's own query", async () => {
+        window.location.hash = "#/questions?mode=author&id=abc123";
+        render(Palette, { mode: "author" });
+        await press("?");
+        await fireEvent.input(screen.getByRole("combobox"), {
+            target: { value: "packs" },
+        });
+        await press("Enter");
+        expect(window.location.hash).toBe("#/packs?mode=author");
+    });
+
     it("wraps the cursor rather than sticking at the ends", async () => {
         render(Palette, { mode: "buyer" });
         await press("?");
@@ -86,6 +113,22 @@ describe("Palette", () => {
         await press("ArrowUp");
         const last = screen.getAllByRole("option").at(-1)!;
         expect(last.getAttribute("aria-selected")).toBe("true");
+    });
+
+    // shell-7: the list is capped at 45vh, which is well under the full
+    // option count at a short window — arrow keys moved the highlight past
+    // the visible area with nothing to bring it back into view.
+    it("scrolls the highlighted option into view as the cursor moves", async () => {
+        // jsdom has no layout engine, so scrollIntoView is not implemented at
+        // all; the call itself, guarded so its absence never throws, is what
+        // this asserts.
+        const spy = vi.fn();
+        (HTMLElement.prototype as { scrollIntoView?: () => void }).scrollIntoView = spy;
+        render(Palette, { mode: "author" });
+        await press("?");
+        spy.mockClear();
+        await press("ArrowDown");
+        expect(spy).toHaveBeenCalledWith({ block: "nearest" });
     });
 
     // Without this, `?` typed into any note or search box would open the

@@ -8,24 +8,30 @@ JSON file in a pack.
 
 import logging
 from typing import Literal
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app import matching, operations, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
-from app.web.routers.history import label_for  # noqa: F401
+from app.web.routers.history import label_for
 from app.web.observability import log_analysis_jsonl
 from kriko.adapters import (
+    Adapted,
     adapt,
+    adapt_any_site,
+    best_reading,
     declared_labels,
     identity_vocabulary,
     load_adapters,
     local_panel,
 )
 from kriko.lookup import lookup
+from kriko.lookup.find import agreed_identity, by_name
 from kriko.lookup.query import Query
+from kriko.store import packstore
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +47,11 @@ class ScrapeRequest(BaseModel):
     description: str = ""
     lang: str = "en"
     limit: int = 8
+    #: The product's own name as the page states it (structured data, then the
+    #: heading, then the title), read by the extension on any site (B149). It
+    #: is what a page with no adapter is recognised by, and what the panel
+    #: offers to research when nothing installed knows it.
+    product_name: str = Field("", max_length=300)
     #: Which door this came in by. A closed vocabulary is safe here where a
     #: hardcoded make/model would not be: doors are a fixed property of the
     #: system, not data that grows with pack coverage.
@@ -56,13 +67,19 @@ _SOURCE_FOR_ORIGIN = {"app": "analyze", "extension": "extension"}
 def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
     """Which sites the installed packs can read, and what they match on.
 
-    The extension uses this to know where it is worth scraping at all.
+    The extension uses this to know where it is worth scraping at all, and —
+    since the pack's own version rides here — whether an answer it cached
+    against an earlier version of that pack is worth trusting (extension-3,
+    B145 audit): a stored answer keyed on the scrape alone can't tell a pack
+    update happened, and kept serving the pre-update claims for hours.
     """
+    pack_versions = {row["pack_id"]: row["version"] for row in packstore.installed_packs(store)}
     return [
         {
             "id": a.get("id"),
             "site": a.get("site"),
             "pack_id": a["pack_id"],
+            "version": pack_versions.get(a["pack_id"], ""),
             "match": a.get("match", []),
             "labels": declared_labels(a),
             # The panel the extension draws over the reader's own page. It
@@ -182,11 +199,17 @@ def _packs_behind(store, claims) -> list[dict]:
     return [{"pack_id": r["pack_id"], "version": r["version"]} for r in rows]
 
 
-def _record_analysis(request, body, mapped, result) -> None:
-    """One row in the operations feed for one analysis. Never raises."""
+def _record_analysis(request, app_state, body, mapped, result) -> None:
+    """One row in the operations feed for one analysis. Never raises.
+
+    Takes the endpoint's own `app_state` connection (B145 apicode-2) rather
+    than a path: this runs on every analysis, and a second connect-plus-
+    two-commits on top of the one the handler already opened was costing more
+    than the lookup it was recording.
+    """
     try:
         with operations.record(
-            request.app.state.settings.app_state_path,
+            conn=app_state,
             door="extension" if body.origin == "extension" else "app",
             kind="lookup",
             name="analyze",
@@ -204,32 +227,84 @@ def _record_analysis(request, body, mapped, result) -> None:
         pass
 
 
-@router.post("/analyze")
-def analyze(
-    request: Request,
-    body: ScrapeRequest,
-    store=Depends(get_store),
-    app_state=Depends(get_app_state),
-):
+def answer(store, app_state, body: ScrapeRequest):
+    """The analysis itself, recording nothing: `(payload, mapped, result)`.
+
+    `mapped` and `result` are `None` when the page could not be read — the
+    payload then says why. Split from `analyze` so a saved answer can be
+    re-answered in place when the knowledge under it changes (B152.4,
+    `routers/live.py`) without writing a second history row, operation or
+    log line for an analysis the reader did not ask for again.
+    """
     # The packs' adapters first, then whatever this installation has learned
     # about a site nobody shipped one for (`app/sites.py`). The order is the
     # design: a published adapter always wins over a local guess.
-    spec = sites.adapter_for(store, app_state, body.url)
+    vocabulary = identity_vocabulary(store)
+    spec, mapped = _read_site(store, app_state, body, vocabulary)
+    read_by = "site"
     if spec is None:
-        raise HTTPException(404, f"no installed pack has an adapter for {body.url}")
+        spec, mapped, read_by = _read_any_site(store, body, vocabulary)
+    if spec is None and read_by == "unknown":
+        # The page named a product and nothing installed knows it (B149).
+        # Its own name travels back so the panel can offer to research
+        # exactly that, instead of "add this site" — the site was never the
+        # problem.
+        return {
+            "readable": False,
+            "reason": "unknown_product",
+            "product": {"name": _page_name(body)},
+            "url": body.url,
+        }, None, None
+    if spec is None:
+        # Not a 404 (check-21): a listing site nothing reads is an expected,
+        # frequent answer — the reader's first paste is as likely to be a
+        # site with no adapter as one with — and raising for it meant every
+        # normal case of this logged a console error the same as a dead
+        # server would. `readable_sites` lets the client name what does work
+        # by its title instead of a bare `pack_id`.
+        return {
+            "readable": False,
+            "reason": "no_adapter",
+            "readable_sites": [
+                {"site": a["site"], "pack_id": a["pack_id"]}
+                for a in list_adapters(store, app_state)
+            ],
+        }, None, None
 
     # The vocabulary is the packs' own identity rows. It is what lets the
     # adapter read an identity value straight out of a page title when the
     # page has no label for it, without a single value being written down in
     # either the engine or the adapter JSON.
-    mapped = adapt(
-        spec,
-        body.fields,
-        url=body.url,
-        title=body.title,
-        description=body.description,
-        vocabulary=identity_vocabulary(store),
-    )
+    if mapped is None:
+        mapped = adapt(
+            spec,
+            body.fields,
+            url=body.url,
+            title=body.title,
+            description=body.description,
+            vocabulary=vocabulary,
+        )
+
+    # An adapter matching the URL is not the same as the page having been
+    # read: the extension sends fields scraped from the DOM, but a bare URL
+    # (typed or pasted into Check) has none, so `adapt` has nothing to map
+    # and `mapped.identity` comes back empty. Running the lookup anyway asks
+    # "what is known about no product in particular" and gets back
+    # `no_match` — which reads, wrongly, as "no pack covers this kind of
+    # product at all". This is a distinct, expected outcome, so it is
+    # reported as one rather than run through the lookup and recorded to
+    # history as an empty check.
+    if not body.fields and not mapped.identity:
+        return {
+            "readable": False,
+            "reason": "page_not_read",
+            "adapter": mapped.adapter_id,
+            "next_step": (
+                "Kriko cannot open listing pages by itself. Open this ad "
+                "with the browser extension, or describe it by hand."
+            ),
+        }, None, None
+
     result = lookup(
         store,
         Query(
@@ -243,6 +318,11 @@ def analyze(
 
     payload = {
         "adapter": mapped.adapter_id,
+        # How the page was read: a site's own adapter, the structured product
+        # data any page publishes, or the product's name alone. The last is
+        # the weakest evidence, and the panel says so rather than showing a
+        # name match with a listing's confidence (B149).
+        "read_by": read_by,
         # Whose knowledge this is. With several packs installed and no central
         # authority deciding between them, the byline is not a detail — it is
         # how a reader tells a manufacturer bulletin from a forum consensus,
@@ -302,6 +382,19 @@ def analyze(
             for c in result.claims
         ],
     }
+    return payload, mapped, result
+
+
+@router.post("/analyze")
+def analyze(
+    request: Request,
+    body: ScrapeRequest,
+    store=Depends(get_store),
+    app_state=Depends(get_app_state),
+):
+    payload, mapped, result = answer(store, app_state, body)
+    if mapped is None:
+        return payload
 
     # ── the one signal that a site changed its markup ────────────────────
     #
@@ -349,16 +442,107 @@ def analyze(
     # rather than around it: the work is a local lookup measured in
     # milliseconds, so a `running` row would never be seen, and a recorder that
     # can raise must not stand between a page and its claims.
-    _record_analysis(request, body, mapped, result)
+    _record_analysis(request, app_state, body, mapped, result)
 
     payload["lookup_id"] = state.record_lookup(
         app_state,
         source=_SOURCE_FOR_ORIGIN[body.origin],
-        label=body.title.strip() or body.url,
+        label=_analyze_label(store, body, mapped, result),
         request=body.model_dump(),
         response=payload,
     )
+    # The Result heading and "Open the listing" link both need the URL by
+    # itself, not folded into a label string (check-15).
+    payload["url"] = body.url
+    # Compare needs two saved checks to show anything; the panel's footer
+    # button should not exist before that, rather than opening the app to an
+    # empty-state screen (extension-16). Counted after this lookup was
+    # recorded, so the very check that makes two is the one that unlocks it.
+    payload["compare_ready"] = state.lookup_count(app_state) >= 2
     return payload
+
+
+def _read_site(store, app_state, body: ScrapeRequest, vocabulary):
+    """The adapter that reads this page best, and its reading — or `(None, None)`.
+
+    Several packs may claim one site (B150); each reads the page and the
+    fullest reading of values its own pack knows wins, so a car listing is
+    read by the car pack's reader whatever else also sells on that site.
+    """
+    specs = sites.adapters_for(store, app_state, body.url)
+    found = best_reading(store, specs, body.fields, url=body.url,
+                         title=body.title, description=body.description,
+                         vocabulary=vocabulary)
+    return found if found else (None, None)
+
+
+def _page_name(body: ScrapeRequest) -> str:
+    """The product's name as the page gave it, or the title's first part."""
+    name = (body.product_name or "").strip()
+    if not name:
+        name = (body.title or "").split(" | ")[0].strip()
+    return name[:300]
+
+
+def _read_any_site(store, body: ScrapeRequest, vocabulary):
+    """Read a page no site adapter claims: `(spec, mapped, read_by)`.
+
+    Two ways in, strongest first (B149). The packs' any-site adapters read the
+    schema.org product data the page publishes for search engines — a car's
+    make, model, year and mileage, when the page states them. Failing that,
+    the page's product name is matched against every subject's own name and
+    aliases, so a phone on a shop nobody wrote an adapter for still lands on
+    the phone.
+
+    `(None, None, "unknown")` when the page named a product nothing installed
+    knows; `(None, None, "")` when it named nothing at all, which keeps the old
+    `no_adapter` answer for a page that is not a product.
+    """
+    found = adapt_any_site(store, body.fields, url=body.url, title=body.title,
+                           description=body.description, vocabulary=vocabulary)
+    if found is not None:
+        spec, mapped = found
+        return spec, mapped, "any_site"
+
+    name = _page_name(body)
+    hits = by_name(store, name, limit=50) if name else []
+    identity = agreed_identity(hits)
+    if identity:
+        spec = {"id": "name", "pack_id": hits[0]["pack_id"]}
+        mapped = Adapted(adapter_id="name", kind=hits[0].get("kind", "product"),
+                         identity=identity)
+        return spec, mapped, "name"
+    if name and body.product_name:
+        return None, None, "unknown"
+    return None, None, ""
+
+
+def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
+    """A short title, not the raw 150-character URL (check-15).
+
+    A page's own <title> (`body.title`) is usually a listing site's own
+    boilerplate, not a product name, so it is preferred only when the
+    adapter found nothing to identify the product by. When it did, that
+    identity is the readable name; otherwise this falls back to naming the
+    site the listing came from, which is still shorter and more honest than
+    printing the address itself.
+
+    As in query.py's `_history_label`, the label is read straight off the
+    matched subject's own row rather than off a claim: ranking can surface
+    claims written against a related subject, so the matched subject need
+    not own any claim of its own.
+    """
+    if result.resolution.method in ("exact", "identity") and result.resolution.subject_ids:
+        row = store.execute(
+            "SELECT label FROM subjects WHERE subject_id = ?",
+            (result.resolution.subject_ids[0],),
+        ).fetchone()
+        if row and row["label"]:
+            return row["label"]
+    if mapped.identity:
+        return label_for(mapped.identity)
+    host = urlparse(body.url).netloc.removeprefix("www.") or body.url
+    return f"Listing on {host}"
 
 
 @router.post("/diagnose/identity")
@@ -386,7 +570,8 @@ def diagnose_identity(
     filled the reader's history with attempts would make the history useless
     exactly when they needed it.
     """
-    spec = sites.adapter_for(store, app_state, body.url)
+    vocabulary = identity_vocabulary(store)
+    spec, mapped = _read_site(store, app_state, body, vocabulary)
     if spec is None:
         # Not a 404. "Nothing here reads this site" is the single most common
         # answer this endpoint has, and it is a *finding* — the one that
@@ -410,14 +595,6 @@ def diagnose_identity(
             },
         }
 
-    mapped = adapt(
-        spec,
-        body.fields,
-        url=body.url,
-        title=body.title,
-        description=body.description,
-        vocabulary=identity_vocabulary(store),
-    )
     result = lookup(
         store,
         Query(kind=mapped.kind, identity=mapped.identity,

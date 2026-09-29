@@ -4,8 +4,10 @@
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
-    import { canCancel, follow, isLive, stateWord } from "../lib/jobs";
-    import type { Job } from "../lib/types";
+    import RunWith from "../lib/RunWith.svelte";
+    import { elapsed } from "../lib/time";
+    import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
+    import type { Job, Question } from "../lib/types";
 
     let jobs = $state<Job[]>([]);
     // The exception, not a rendering of it: Failure reads the status to
@@ -16,6 +18,12 @@
     let root = $state("");
     let busy = $state(false);
     let cancelPending = $state<string[]>([]);
+    // ops-5: `retry` had no pending guard at all, and a double-click sent two
+    // `POST /retry` before the first had come back — the server is now
+    // idempotent (it hands back the same child), but the button should not
+    // rely on that: a reader pressing it twice wants one run, not a lucky
+    // dedupe.
+    let retryPending = $state<string[]>([]);
     /* What the reader has typed back, per job and then per question id.
      *
      * Kept here rather than on the row because the row is replaced wholesale
@@ -51,11 +59,36 @@
         }
     };
 
+    // A job started from another screen, another agent, or the API never
+    // appeared here until the reader reloaded (B145 ops-8): `load` only ran
+    // once, on mount, so a row this screen had never seen had no way in. This
+    // re-reads the list on a slow clock and merges in anything new by id —
+    // never touching a row already in `jobs`, so a stream mid-flight for a job
+    // this screen is already following is not clobbered by a stale list read.
+    const REFRESH_MS = 4000;
+    let refresher: ReturnType<typeof setInterval> | undefined;
+
+    const checkForNew = async () => {
+        try {
+            const seen = new Set(jobs.map((job) => job.job_id));
+            const fetched = (await api.jobs()).items ?? [];
+            const arrived = fetched.filter((job) => !seen.has(job.job_id));
+            if (arrived.length) {
+                jobs = [...arrived, ...jobs];
+                arrived.forEach(watch);
+            }
+        } catch {
+            // A missed poll is not worth surfacing; the next one retries.
+        }
+    };
+
     $effect(() => {
         void load();
+        refresher = setInterval(() => void checkForNew(), REFRESH_MS);
         return () => {
             stops.forEach((stop) => stop());
             stops.clear();
+            if (refresher) clearInterval(refresher);
         };
     });
 
@@ -77,12 +110,34 @@
     // three steps and three different authorities, which is why nothing here
     // reaches the store.
     let category = $state("");
-    let authoring: HTMLDetailsElement;
     let categoryInput: HTMLInputElement;
+    /* B146: which agent, and how long it may take. The form used to be a
+     * collapsed <details> with none of these, so "how hard will it try, and
+     * when does it give up" had no answer anywhere near the button. */
+    let harness = $state("");
+    let timeout = $state(0);
+    const TIMEOUTS = [
+        { seconds: 0, label: "40 min (default)" },
+        { seconds: 600, label: "10 min" },
+        { seconds: 1200, label: "20 min" },
+        { seconds: 3600, label: "60 min" },
+    ];
+
+    /* A clock for live rows. A harness that is thinking prints nothing for
+     * minutes, and "running" with no sense of time read as stuck (B146). */
+    let now = $state(Date.now());
+    $effect(() => {
+        const ticker = setInterval(() => (now = Date.now()), 1000);
+        return () => clearInterval(ticker);
+    });
+    const lastLine = (job: Job) => {
+        const lines = String(job.log ?? "").trimEnd().split(/\r?\n/);
+        const last = lines[lines.length - 1]?.trim() ?? "";
+        return last && last !== job.message ? last : "";
+    };
 
     $effect(() => {
         if ($route.query.author !== "new") return;
-        authoring.open = true;
         let active = true;
         void tick().then(() => {
             if (!active) return;
@@ -92,12 +147,19 @@
         return () => { active = false; };
     });
 
+    // The server's own field (`app/web/routers/jobs.py`'s AuthorRequest)
+    // requires two characters — below that, `x` reached the server and came
+    // back a 422 the reader had no way to anticipate (ops-4). Matching the
+    // bound here means the button simply will not fire a request that could
+    // not succeed.
+    const CATEGORY_MIN = 2;
+
     async function authorPack() {
-        if (!category.trim()) return;
+        if (category.trim().length < CATEGORY_MIN) return;
         busy = true;
         error = null;
         try {
-            const { job_id } = await api.authorPack(category.trim());
+            const { job_id } = await api.authorPack(category.trim(), harness, timeout);
             const job = await api.job(job_id);
             replace(job);
             watch(job);
@@ -191,6 +253,8 @@
      * most useful thing on this screen and a retry must not overwrite it.
      */
     async function retry(job: Job) {
+        if (retryPending.includes(job.job_id)) return;
+        retryPending = [...retryPending, job.job_id];
         try {
             const { job_id } = await api.retryJob(job.job_id, answers[job.job_id] ?? {});
             delete answers[job.job_id];
@@ -200,28 +264,60 @@
             open = job_id;
         } catch (cause) {
             error = cause;
+        } finally {
+            retryPending = retryPending.filter((id) => id !== job.job_id);
         }
     }
+
+    /* One click on an answer (B147).
+     *
+     * The run that asked is usually still going: it stated a default and
+     * carried on. So a click on a *live* run is said to it at once, over the
+     * same pipe as the reply box, and the chip says whether it landed. On a
+     * finished run the click only picks; the submit is the retry that applies
+     * it. `told` is per job and question so a chip can show "sent" without
+     * the next poll wiping it. */
+    let told = $state<Record<string, "sending" | "sent" | "late">>({});
+
+    async function choose(job: Job, question: Question, option: string) {
+        answers[job.job_id] ??= {};
+        answers[job.job_id][question.id] = option;
+        if (isLive(job)) await tell(job, question);
+    }
+
+    async function tell(job: Job, question: Question) {
+        const value = (answers[job.job_id]?.[question.id] ?? "").trim();
+        const slot = `${job.job_id}/${question.id}`;
+        if (!value || told[slot] === "sending") return;
+        told = { ...told, [slot]: "sending" };
+        try {
+            const answer = await api.sayToJob(job.job_id, `Answer to "${question.ask}": ${value}`);
+            told = { ...told, [slot]: answer.delivered ? "sent" : "late" };
+        } catch (cause) {
+            delete told[slot];
+            told = { ...told };
+            error = cause;
+        }
+    }
+
+    async function answer(job: Job) {
+        if (!isLive(job)) return retry(job);
+        for (const question of job.attention?.questions ?? []) await tell(job, question);
+    }
+
+    const toldWord = (job: Job, question: Question) => {
+        const state = told[`${job.job_id}/${question.id}`];
+        return state === "sending" ? "Telling it…"
+            : state === "sent" ? "It heard you."
+            : state === "late" ? "The run had finished — press Answer and run again."
+            : "";
+    };
 
     const percent = (job: Job) => Math.round((job.progress ?? 0) * 100);
     const subjectOf = (job: Job) =>
         String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
 
-    /** What kind of work a row was, in the reader's words.
-     *
-     * A map rather than a ternary because there are now three kinds and the
-     * third one — an agent writing a whole pack — read as "Build", which is
-     * the one thing it deliberately does not do.
-     */
-    const KINDS: Record<string, string> = {
-        research: "Research",
-        agenda_run: "Research",
-        research_undo: "Undo",
-        pack_author: "New pack",
-        pack_build: "Build",
-        pack_update: "Update",
-    };
-    const kindWord = (job: Job) => KINDS[job.kind] ?? job.kind;
+    const kindWord = (job: Job) => libKindWord(job.kind);
 </script>
 
 <!-- "Runs", which is what the rail has always called it. The heading said
@@ -235,8 +331,8 @@
     may finish. Only checkpointed results survive a restart.
 </p>
 
-<details class="authoring" bind:this={authoring}>
-    <summary>Start a new pack</summary>
+<section class="card authoring">
+    <h3>Start a new pack</h3>
     <p class="meta">
         Name a category in a few words and your own coding agent writes the whole
         pack — what tells two of these apart, the bar a claim has to clear, what
@@ -249,28 +345,42 @@
     >
         <label class="field grow">
             <span>What is the category?</span>
+            <!-- svelte-ignore a11y_autofocus -- deliberate: App.svelte's
+                 focusTheView() reads this attribute to decide who gets focus
+                 on navigation, rather than racing its own container-focus
+                 fallback against this component's own tick().then() (shell-4).
+                 It only carries the attribute while ?author=new is present,
+                 which is itself the reader having just asked for this form. -->
             <input
                 bind:this={categoryInput}
                 bind:value={category}
                 placeholder="cordless drills, espresso machines, e-bikes"
+                autofocus={$route.query.author === "new"}
             />
         </label>
-        <button class="primary" type="submit" disabled={busy || !category.trim()}>
-            Have my agent write it
+        <button
+            class="primary"
+            type="submit"
+            disabled={busy || category.trim().length < CATEGORY_MIN}
+        >
+            {busy ? "Starting…" : "Have my agent write it"}
         </button>
     </form>
+    <RunWith bind:harness bind:timeout timeouts={TIMEOUTS} disabled={busy} />
+    {#if category.trim().length > 0 && category.trim().length < CATEGORY_MIN}
+        <p class="meta">At least {CATEGORY_MIN} characters.</p>
+    {/if}
     <p class="meta">
-        Needs a coding-agent command-line tool installed — the same one the
-        Research plane uses, and it costs nothing beyond the subscription you
-        already pay for. Without one, connect your agent under Agents and let it
-        use <code>draft_pack</code> instead.
+        Uses a coding-agent CLI you already have — no API cost. None installed?
+        Connect your agent under <a href="#/agents">Agents</a> and let it use
+        <code>draft_pack</code>.
     </p>
-</details>
+</section>
 
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
         <span>Build a pack from a directory</span>
-        <input bind:value={root} placeholder="packs/drill" />
+        <input bind:value={root} placeholder="e.g. packs/drill" />
     </label>
     <button type="submit" disabled={busy || !root.trim()}>Build and install</button>
 </form>
@@ -284,9 +394,9 @@
         title="No runs yet"
         detail="Long work is a row here rather than a request that hangs — research
                 and pack builds both land on this screen, and their log outlives
-                the page. Start one above, or from a gap on Coverage."
+                the page. Start one above, or from a gap on Knowledge."
         actionLabel="Find a gap"
-        actionHref="#/coverage"
+        actionHref="#/knowledge"
     />
 {/if}
 
@@ -303,6 +413,11 @@
                 {#if isLive(job)}<span class="live-dot"></span>{/if}
                 {stateWord(job)}
             </span>
+            {#if isLive(job)}
+                <span class="meta clock" title="Time since this run started">
+                    {elapsed(job.started_at ?? job.created_at, now)}
+                </span>
+            {/if}
         </h3>
         {#if isLive(job)}
             <div class="bar" role="progressbar" aria-valuenow={percent(job)}>
@@ -310,6 +425,9 @@
             </div>
         {/if}
         <p class="meta">{job.message || "…"}</p>
+        {#if isLive(job) && lastLine(job)}
+            <p class="meta tail" title="Latest line of the log">{lastLine(job)}</p>
+        {/if}
         <p class="row">
             <button
                 onclick={() => (open = open === job.job_id ? null : job.job_id)}
@@ -321,7 +439,10 @@
                     onclick={() => cancel(job)}
                 >{job.state === "cancelling" || cancelPending.includes(job.job_id) ? "Stopping…" : "Cancel"}</button>
             {:else}
-                <button onclick={() => retry(job)}>Run again</button>
+                <button
+                    disabled={retryPending.includes(job.job_id)}
+                    onclick={() => retry(job)}
+                >{retryPending.includes(job.job_id) ? "Starting…" : "Run again"}</button>
             {/if}
         </p>
         {#if isLive(job)}
@@ -354,45 +475,48 @@
             {/if}
         {/if}
         {#if job.attention?.questions?.length}
-            <!-- The answer form, and the reason this screen changed shape.
-                 The questions were only ever written into the run log, so a
-                 mechanism that already knew how to ask, normalise and re-apply
-                 an answer reached the reader as a paragraph of prose with
-                 nothing to type into. Rendering them as controls is the whole
-                 of the fix on this side.
-
-                 Not a modal, and it blocks nothing: the run already finished
-                 on its own assumptions. Answering changes the *next* run,
-                 which is why the submit is the retry rather than a "send". -->
+            <!-- B147: the question as something to press, not a dropdown under
+                 a paragraph with a raw JSON dump below it. On a live run a
+                 click reaches the agent now; on a finished one it shapes the
+                 retry. The panel slides in, so a question that arrives mid-run
+                 is seen rather than found. -->
             <form
                 class="asked"
-                onsubmit={(event) => { event.preventDefault(); retry(job); }}
+                aria-live="polite"
+                onsubmit={(event) => { event.preventDefault(); answer(job); }}
             >
-                <p class="meta">{job.attention.say}</p>
+                <p class="asked-lede">
+                    <span class="asked-mark" aria-hidden="true">?</span>
+                    {isLive(job)
+                        ? "Your agent has a question. Pick an answer and it hears it now."
+                        : "Your agent had a question and went with its own guess. Answer it and run again."}
+                </p>
                 {#each job.attention.questions as question (question.id)}
-                    <div class="field">
-                        <label for="{job.job_id}-{question.id}">{question.ask}</label>
+                    <fieldset class="field question">
+                        <legend>{question.ask}</legend>
                         {#if question.options.length}
-                            <select
-                                id="{job.job_id}-{question.id}"
-                                value={answers[job.job_id]?.[question.id] ?? ""}
-                                onchange={(event) => {
-                                    answers[job.job_id] ??= {};
-                                    answers[job.job_id][question.id] = event.currentTarget.value;
-                                }}
-                            >
-                                <!-- The assumption is the first option and the
-                                     selected one, so leaving the form alone
-                                     re-runs exactly what already ran. -->
-                                <option value="">It assumed {question.default}</option>
+                            <div class="chips" role="radiogroup" aria-label={question.ask}>
                                 {#each question.options as option (option)}
-                                    <option value={option}>{option}</option>
+                                    {@const picked = (answers[job.job_id]?.[question.id] ?? "") === option}
+                                    <button
+                                        type="button"
+                                        class="chip"
+                                        role="radio"
+                                        aria-checked={picked}
+                                        class:picked
+                                        onclick={() => choose(job, question, option)}
+                                    >
+                                        {option}
+                                        {#if option === question.default && !answers[job.job_id]?.[question.id]}
+                                            <span class="chip-note">its guess</span>
+                                        {/if}
+                                    </button>
                                 {/each}
-                            </select>
+                            </div>
                         {:else}
                             <input
-                                id="{job.job_id}-{question.id}"
-                                placeholder="It assumed {question.default}"
+                                aria-label={question.ask}
+                                placeholder="It guessed {question.default}"
                                 value={answers[job.job_id]?.[question.id] ?? ""}
                                 oninput={(event) => {
                                     answers[job.job_id] ??= {};
@@ -400,20 +524,29 @@
                                 }}
                             />
                         {/if}
-                        {#if question.because}
+                        {#if toldWord(job, question)}
+                            <p class="meta told">{toldWord(job, question)}</p>
+                        {:else if question.because}
                             <p class="meta">{question.because}</p>
                         {/if}
-                    </div>
+                    </fieldset>
                 {/each}
-                <p class="row">
-                    <button class="primary" type="submit">Answer and run again</button>
-                </p>
+                {#if !isLive(job) || job.attention.questions.some((q) => !q.options.length)}
+                    <p class="row">
+                        <button class="primary" type="submit" disabled={retryPending.includes(job.job_id)}>
+                            {isLive(job) ? "Tell the run" : "Answer and run again"}
+                        </button>
+                    </p>
+                {/if}
             </form>
         {/if}
         {#if open === job.job_id}
             <pre class="log">{job.log || "nothing logged yet"}</pre>
-            {#if job.result}
-                <pre class="log">{JSON.stringify(job.result, null, 2)}</pre>
+            {#if job.result && !job.attention?.questions?.length}
+                <details class="raw">
+                    <summary>What the run returned</summary>
+                    <pre class="log">{JSON.stringify(job.result, null, 2)}</pre>
+                </details>
             {/if}
         {/if}
     </article>

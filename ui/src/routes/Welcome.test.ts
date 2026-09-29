@@ -22,8 +22,16 @@ describe("Welcome", () => {
     });
 
     it("offers the file path when the index cannot be reached", async () => {
+        // The server now sends a reader-facing sentence in `error` (B145
+        // apicode-1/knowledge-21) — the raw exception text travels separately
+        // as `error_detail`, for a bug report rather than the headline.
         stubFetch({
-            "/api/packs/updates": { index_url: "u", error: "getaddrinfo failed", packs: [] },
+            "/api/packs/updates": {
+                index_url: "u",
+                error: "The pack download site could not be reached.",
+                error_detail: "URLError: getaddrinfo failed",
+                packs: [],
+            },
         });
         render(Welcome, { onDone: () => {} });
         expect(await screen.findByText(/could not be reached/i)).toBeInTheDocument();

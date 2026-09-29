@@ -67,7 +67,11 @@ describe("checking what the source says now", () => {
         // "Is this still true" is the question a reader has while reading the
         // claim. Behind a disclosure triangle it is a button nobody finds.
         render(ClaimCard, { claim: CITED, onCheckFacts: () => {} });
-        expect(screen.getByRole("button", { name: "Check the source" })).toBeVisible();
+        // Named with the claim's title (check-26): eight of these on one
+        // report all said "Check the source" with nothing telling them apart.
+        expect(
+            screen.getByRole("button", { name: `Check the source: ${CITED.title}` }),
+        ).toBeVisible();
     });
 
     it("says nothing at all when there is no page to re-read", () => {

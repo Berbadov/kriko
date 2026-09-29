@@ -74,14 +74,21 @@
         }
     }
 
+    let revealNote = $state("");
+
     async function reveal() {
         busy = "reveal";
         actionError = null;
+        revealNote = "";
         try {
             const done = await api.revealExtension();
-            // A machine with no file manager is not an error worth a banner —
-            // the path is on screen and copyable, which is what they need.
-            actionError = new Error(done.error);
+            // The server answers 200 with `{path, error}` even when the file
+            // manager could not be opened — that is not a request failure, so
+            // it must not go through Failure (whose OFFLINE remedy tells the
+            // reader to restart the app over an empty `error: ""`, on every
+            // single successful press). A non-empty `error` is a quiet note
+            // next to the path, which is on screen and copyable regardless.
+            if (done.error) revealNote = done.error;
         } catch (cause) {
             actionError = cause;
         } finally {
@@ -212,7 +219,7 @@
                 <p
                     class="state"
                     class:error={status.compatibility.state === "too_old"}
-                    class:warn={status.compatibility.state === "behind"}
+                    class:warn={status.compatibility.state === "behind" || status.compatibility.state === "stale_files"}
                 >
                     {status.compatibility.detail}
                 </p>
@@ -226,16 +233,17 @@
         <article class="card">
             <h3>One click</h3>
             <p class="meta">
-                Opens a new Chromium — Chrome, Chromium, Brave or Edge, whichever is on
-                this machine — with the extension already loaded, on a listing site your
-                packs can read. Open a listing there and Kriko's panel appears on the
-                page; the Status above turns green here while you do it.
+                Opens a listing site your packs can read — in the browser Kriko is
+                already installed in, or, if it has never checked in, in a new Chromium
+                window that tries to load it (recent Chrome refuses; the steps below
+                then). Open a listing and Kriko's panel appears on the page; the Status
+                above turns green here while you do it.
             </p>
             <p>
                 <button class="primary" disabled={busy === "launch"} onclick={launch}>
                     {busy === "launch"
                         ? "Opening a browser…"
-                        : "Open a browser with Kriko loaded"}
+                        : "Open a listing with Kriko"}
                 </button>
             </p>
             {#if launched}
@@ -251,9 +259,11 @@
                     </p>
                 {/if}
                 <p class="meta">{launched.note}</p>
-                <p class="meta">
-                    Its profile: <code class="path">{launched.profile}</code>
-                </p>
+                {#if launched.profile}
+                    <p class="meta">
+                        Its profile: <code class="path">{launched.profile}</code>
+                    </p>
+                {/if}
             {/if}
         </article>
 
@@ -286,6 +296,7 @@
             {#if status.staged}
                 <p><code class="path">{status.path}</code></p>
             {/if}
+            {#if revealNote}<p class="state warn">{revealNote} — the path above can be copied.</p>{/if}
             {#if actionError}<Failure error={actionError} />{/if}
         </article>
 
@@ -355,7 +366,7 @@
             <h3>Sites the installed packs can read</h3>
             {#if adapters.length}
                 <ul>
-                    {#each adapters as adapter (adapter.id)}
+                    {#each adapters as adapter (adapter.pack_id + "/" + adapter.id)}
                         <li class="target">
                             <code>{adapter.site}</code>
                             <span class="meta">{adapter.pack_id}</span>
