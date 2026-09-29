@@ -102,6 +102,16 @@ PROVIDERS = (
         "a run.",
         optional=True,
     ),
+    Provider(
+        id="mistral",
+        label="Mistral",
+        env="MISTRAL_API_KEY",
+        purpose="Runs the Mistral API agent: receives each run's brief — the "
+        "product's name and what its listing says about it — and searches the "
+        "web for it with Mistral's own search. Also a completion model for the "
+        "paid plane. Never your browsing history. One key does both.",
+        optional=True,
+    ),
 )
 
 BY_ID = {provider.id: provider for provider in PROVIDERS}
@@ -115,7 +125,7 @@ SEARCH_PROVIDERS = ("exa", "tavily")
 #: Same shape as SEARCH_PROVIDERS and for the same reason: once there are two,
 #: having one of them is enough, and requiring both would make adding a choice
 #: a way to break an installation that was working.
-COMPLETION_PROVIDERS = ("openai", "anthropic")
+COMPLETION_PROVIDERS = ("openai", "anthropic", "mistral")
 
 
 def env_path(home: Path | None = None) -> Path:
@@ -220,22 +230,28 @@ def status(path: Path | None = None, environ: dict | None = None) -> list[dict]:
     return out
 
 
-def ready(path: Path | None = None, environ: dict | None = None) -> bool:
+def ready(path: Path | None = None, environ: dict | None = None, *,
+          provider: str = "") -> bool:
     """Can the paid plane run at all?
 
     It searches *and* reads, so it needs a search key **and** a completion key.
     Half-configured is not a degraded mode, it is a run that fails on its first
     document, and the API card stays inert until both are there.
 
-    Both halves are a *choice* rather than a name: Exa or Tavily, OpenAI or
-    Anthropic. Requiring both of either pair would make adding a second
+    Both halves are a *choice* rather than a name: Exa or Tavily; OpenAI,
+    Anthropic or Mistral. Requiring every one of a group would make adding a second
     provider a way to break an installation that was working — the opposite of
     what a choice is for. Anything outside the two pairs and not optional is
     still required outright.
+
+    `provider` narrows the completion half to the one the run's model needs
+    (`prefs.paid_plane_ready`). Any key is the right answer for "are the keys
+    in", and the wrong one for "will a run work": a Mistral key saved for the
+    API agent made a plane on OpenAI's default model look runnable (B153).
     """
     rows = {item["id"]: item["present"] for item in status(path, environ)}
     searchers = [rows.get(one, False) for one in SEARCH_PROVIDERS]
-    completers = [rows.get(one, False) for one in COMPLETION_PROVIDERS]
+    completers = [rows.get(one, False) for one in ((provider,) if provider else COMPLETION_PROVIDERS)]
     required = [
         rows.get(provider.id, False)
         for provider in PROVIDERS
